@@ -1,1 +1,42 @@
 .idea
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Continuous Native Generation - regenerated via `expo prebuild`, never hand-edited
+/android
+/ios
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+src/uniwind-types.d.ts

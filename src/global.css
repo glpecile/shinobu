@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "uniwind";
+
+/*
+ * Shinobu color tokens - single source of truth for both themes.
+ * Every variable must be defined in both `light` and `dark` (Uniwind requirement).
+ * Accent is pinned to the same Vampiric Crimson in both themes (plan.md 1.1) - it's
+ * a brand color, not a theme-adaptive one.
+ */
+@layer theme {
+  :root {
+    @variant light {
+      --color-background: #ffffff;
+      --color-surface: #f5f5f5;
+      --color-foreground: #0a0a0a;
+      --color-muted: #666666;
+      --color-border: #e5e5e5;
+      --color-accent: #dc2626;
+      --color-accent-foreground: #ffffff;
+    }
+
+    @variant dark {
+      --color-background: #0a0a0a;
+      --color-surface: #111111;
+      --color-foreground: #ffffff;
+      --color-muted: #aaaaaa;
+      --color-border: #333333;
+      --color-accent: #dc2626;
+      --color-accent-foreground: #ffffff;
+    }
+  }
+}
