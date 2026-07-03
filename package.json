@@ -1,0 +1,44 @@
+{
+  "name": "shinobu",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.2",
+    "expo": "^57.0.1",
+    "expo-constants": "~57.0.2",
+    "expo-linking": "~57.0.1",
+    "expo-router": "~57.0.2",
+    "expo-status-bar": "~57.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-mmkv": "^4.3.2",
+    "react-native-nitro-fetch": "^1.4.2",
+    "react-native-nitro-modules": "0.35.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "^0.21.2",
+    "tailwindcss": "~4.1.16",
+    "uniwind": "~1.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.14",
+    "typescript": "~6.0.3"
+  },
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-nitro-fetch"
+        ],
+        "listUnknownPackages": false
+      }
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# Shinobu
+
+@AGENTS.md

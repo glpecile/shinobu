@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "scheme": "shinobu",
+    "userInterfaceStyle": "automatic",
+    "orientation": "default",
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "react-native-nitro-fetch"
+    ],
+    "name": "shinobu",
+    "slug": "shinobu",
+    "ios": {
+      "bundleIdentifier": "com.glpecile.shinobu"
+    }
+  }
+}
