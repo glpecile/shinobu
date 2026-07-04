@@ -80,17 +80,26 @@ This is the read half of the loop — 1.3 covers the write (log fan-out) half. I
 
 ### 2.2 System Schemas & Types
 
-Define an immutable interface inside `types/media.ts` so future agents understand the normalized shape explicitly without guessing variable definitions.
+The normalized shape lives in `src/types/media.ts` — **that file is the source of
+truth**; the snippet below mirrors it. `MediaType` and `ProgressUnit` are the
+deliberate extension points for future domains (games, books, music — see
+`docs/plans/0005-provider-capability-model.md`): new domains widen these unions and
+the provider registry (`src/lib/providers/registry.ts`), nothing else.
 
 ```typescript
+export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA'; // future: 'GAME' | 'BOOK' | 'ALBUM'
+export type ProgressUnit = 'episode' | 'chapter';           // future: 'page' | 'minute' | 'listen'
+
 export interface NormalizedMediaItem {
   id: string;          // Unique combined identifier: `trakt-${id}` or `anilist-${id}`
   title: string;
   coverImage: string;
-  type: 'TV' | 'MOVIE' | 'ANIME' | 'MANGA';
-  currentProgress: number; // Episode or Chapter index
+  type: MediaType;
+  isFilm?: boolean;    // Anime films: ANIME here, but a MOVIE to Trakt/Letterboxd (1.3)
+  currentProgress: number;
+  progressUnit: ProgressUnit; // What currentProgress counts — never assume "episode"
   totalEpisodes?: number;
-  lastUpdated: string;
+  lastUpdated: string; // ISO 8601 instant (with offset/Z), never a bare date
   externalIds: {
     tmdb?: number;
     trakt?: number;
