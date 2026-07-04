@@ -66,8 +66,9 @@ native regeneration:
 
 - **Hot reload (no action):** JS/TS-only edits — anything under `src/`, styles,
   assets consumed by the JS bundle. Metro reloads them into the running dev client.
-- **Rebuild required (`bun ios.clean` / `bun android.clean`, then `bun ios` /
-  `bun android`):** edits to `app.json` (icons, splash, plugins, schemes),
+- **Rebuild required (`bun ios.clean` / `bun android.clean` — regenerates the
+  native project, then builds and runs):** edits to `app.json` (icons, splash,
+  plugins, schemes),
   adding/removing/upgrading any dependency that ships native code, or config-plugin
   changes. The running app won't reflect these until the native project is
   regenerated and reinstalled.

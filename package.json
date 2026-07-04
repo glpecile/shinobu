@@ -31,9 +31,9 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "android.clean": "expo prebuild --platform android --clean",
+    "android.clean": "expo prebuild --platform android --clean && bun android",
     "ios": "expo run:ios",
-    "ios.clean": "expo prebuild --platform ios --clean",
+    "ios.clean": "expo prebuild --platform ios --clean && bun ios",
     "web": "expo start --web",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

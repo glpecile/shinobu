@@ -24,8 +24,7 @@ pod (`ExpoModulesCore`, then more). Since `ios/` is CNG-generated and gitignored
 regenerate it wholesale:
 
 ```sh
-bun ios.clean   # expo prebuild --platform ios --clean (regens ios/, runs pod install)
-bun ios         # build + run as usual
+bun ios.clean   # expo prebuild --platform ios --clean && bun ios (regens ios/, then builds + runs)
 ```
 
 **Rule going forward:** after adding/removing/upgrading any dependency that
