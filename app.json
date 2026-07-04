@@ -36,6 +36,7 @@
       }
     },
     "android": {
+      "package": "xyz.glpecile.shinobu",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",

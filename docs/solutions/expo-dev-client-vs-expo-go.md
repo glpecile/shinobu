@@ -28,6 +28,12 @@ installed on the simulator/device, replacing Expo Go for this project.
    },
 ```
 
+**Update (2026-07-04):** the HTTP 500 body
+(`UnexpectedServerData: ... No returned query result`) turned out to be a separate
+bug — a stale Expo account session, see
+`expo-stale-session-unexpected-server-data.md`. The Expo Go → dev client switch
+documented here was still necessary and correct on its own.
+
 **Rule going forward:** the moment any native module is linked, `expo start --ios`/
 `--android` stop being viable entry points for native platforms — always wire
 `expo run:ios`/`expo run:android` (or an EAS dev-client build) instead. `expo start
