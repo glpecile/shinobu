@@ -9,6 +9,7 @@
     "expo-dev-client": "~57.0.5",
     "expo-linking": "~57.0.1",
     "expo-router": "~57.0.3",
+    "expo-splash-screen": "~57.0.2",
     "expo-status-bar": "~57.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -30,7 +31,9 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "android.clean": "expo prebuild --platform android --clean",
     "ios": "expo run:ios",
+    "ios.clean": "expo prebuild --platform ios --clean",
     "web": "expo start --web",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

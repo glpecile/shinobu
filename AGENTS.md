@@ -60,6 +60,22 @@ hand-edit files inside `android/`/`ios/` — those edits are lost on the next
 `expo prebuild --clean`. Any native-level change belongs in `app.json`, a config
 plugin, or a dependency choice, not in the generated output.
 
+**Clean prebuild vs. hot reload — always tell the user which one a change needs.**
+After making a change, explicitly say whether it's picked up live or requires a
+native regeneration:
+
+- **Hot reload (no action):** JS/TS-only edits — anything under `src/`, styles,
+  assets consumed by the JS bundle. Metro reloads them into the running dev client.
+- **Rebuild required (`bun ios.clean` / `bun android.clean`, then `bun ios` /
+  `bun android`):** edits to `app.json` (icons, splash, plugins, schemes),
+  adding/removing/upgrading any dependency that ships native code, or config-plugin
+  changes. The running app won't reflect these until the native project is
+  regenerated and reinstalled.
+- **`pod install` version-mismatch errors** (e.g. "differs from the version stored
+  in `Pods/Local Podspecs`") mean the generated `ios/` is stale — clean-prebuild it;
+  never `pod update` individual pods
+  (`docs/solutions/pod-install-stale-podfile-lock.md`).
+
 ## Providers, Sessions & Log Fan-Out
 
 - **Opt-in, per-provider sessions.** There is no Shinobu account. A user connects any
