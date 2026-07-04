@@ -28,7 +28,7 @@
     "name": "Shinobu",
     "slug": "shinobu",
     "ios": {
-      "bundleIdentifier": "com.glpecile.shinobu",
+      "bundleIdentifier": "xyz.glpecile.shinobu",
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/ios-icon-dark.png",
