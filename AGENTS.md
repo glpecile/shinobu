@@ -60,6 +60,23 @@ hand-edit files inside `android/`/`ios/` — those edits are lost on the next
 `expo prebuild --clean`. Any native-level change belongs in `app.json`, a config
 plugin, or a dependency choice, not in the generated output.
 
+**Clean prebuild vs. hot reload — always tell the user which one a change needs.**
+After making a change, explicitly say whether it's picked up live or requires a
+native regeneration:
+
+- **Hot reload (no action):** JS/TS-only edits — anything under `src/`, styles,
+  assets consumed by the JS bundle. Metro reloads them into the running dev client.
+- **Rebuild required (`bun ios.clean` / `bun android.clean` — regenerates the
+  native project, then builds and runs):** edits to `app.json` (icons, splash,
+  plugins, schemes),
+  adding/removing/upgrading any dependency that ships native code, or config-plugin
+  changes. The running app won't reflect these until the native project is
+  regenerated and reinstalled.
+- **`pod install` version-mismatch errors** (e.g. "differs from the version stored
+  in `Pods/Local Podspecs`") mean the generated `ios/` is stale — clean-prebuild it;
+  never `pod update` individual pods
+  (`docs/solutions/pod-install-stale-podfile-lock.md`).
+
 ## Providers, Sessions & Log Fan-Out
 
 - **Opt-in, per-provider sessions.** There is no Shinobu account. A user connects any
@@ -73,10 +90,19 @@ plugin, or a dependency choice, not in the generated output.
   in parallel — it is never a single-provider write.
 - **Routing isn't a 1:1 type map.** Movies route to Trakt + Letterboxd. TV routes to
   Trakt. Manga routes to AniList. Anime *films* are the edge case: they're `ANIME` in
-  AniList but also a `MOVIE` for Trakt/Letterboxd purposes, so they can fan out to all
-  three. Keep this routing table explicit and testable (e.g.
-  `lib/providers/routing.ts`) rather than inlining `if (type === ...)` checks at each
-  call site.
+  AniList but also a `MOVIE` for Trakt/Letterboxd purposes (signaled by `isFilm` on
+  `NormalizedMediaItem`, not a fifth `MediaType`), so they can fan out to all three.
+  This lives in `src/lib/providers/routing.ts` (pure functions, unit-tested) — never
+  inline `if (type === ...)` or `if (provider === ...)` checks at call sites.
+- **Providers declare capabilities.** `src/lib/providers/registry.ts` is the single
+  provider registry: each provider declares which `MediaType`s it handles, `canRead`
+  (aggregated by `useUnifiedFeed`), and `canWrite` (a `useLogMedia` fan-out target).
+  Never assume a provider is symmetric read+write — future domains (games, books,
+  music) are routinely read-only or CSV-only (Goodreads' API is dead, RYM has none,
+  Steam is read-only), and even Letterboxd may end up degraded (`todos/004`). Adding
+  or degrading a provider — or a whole new domain — means widening the
+  `MediaType`/`ProviderId` unions and the registry, nothing else. See
+  `docs/plans/0005-provider-capability-model.md`.
 - **Surface partial failure.** If one connected provider's write fails while others
   succeed, the caller must know which one failed — don't swallow it into a single
   boolean/throw.
@@ -107,6 +133,25 @@ has (comparing calendar dates naively across a timezone boundary). Centralize th
 comparison in one utility (e.g. `lib/time/hasAired.ts`) rather than reimplementing it
 per provider or per screen.
 
+## Notifications
+
+Release notifications are **local-only, scheduled ahead of time**: air dates are
+known in advance, so on app foreground schedule local notifications
+(expo-notifications) for the next ~7–14 days of upcoming episodes/releases — no push
+server, ever. Scheduling must go through the same timezone-correct
+`lib/time/hasAired.ts` logic as Up Next (`todos/006` is a prerequisite). Web gets the
+in-app Up Next feed only — serverless web push doesn't exist. The only permissible
+future server exception is a tiny *stateless* push relay, and only if local-schedule
+staleness proves painful in practice (`docs/plans/0005`).
+
+## Web & CORS
+
+There is no backend, so on web the app calls provider APIs directly from the browser
+— which only works if the provider sends CORS headers. Policy: a provider that
+blocks browser origins is **native-only on web** ("connect on mobile"), never
+proxied. Verify each provider with a browser-origin spike before building its web
+read path (`todos/008`), and record findings in `docs/solutions/web-cors-*.md`.
+
 ## Golden Reference
 
 When unsure how to structure something cross-platform (web + iOS + Android), default
@@ -130,6 +175,13 @@ src/
   lib/http/       client.ts (nitro-fetch, native) + client.web.ts (fetch, web)
   types/          Shared contracts, e.g. types/media.ts (NormalizedMediaItem)
 ```
+
+## Import Alias
+
+`@/*` maps to `src/*` (`tsconfig.json` `paths`; Metro resolves it natively — no
+babel plugin needed). Use `@/` for any import that crosses directories
+(`import type { MediaType } from '@/types/media'`); plain `./` stays fine for
+same-directory siblings. Don't add new relative `../` imports.
 
 ## Platform-Specific Files
 

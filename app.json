@@ -3,18 +3,45 @@
     "scheme": "shinobu",
     "userInterfaceStyle": "automatic",
     "orientation": "default",
+    "icon": "./assets/images/icon.png",
     "web": {
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "react-native-nitro-fetch"
+      "react-native-nitro-fetch",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#0a0a0a"
+          }
+        }
+      ]
     ],
-    "name": "shinobu",
+    "name": "Shinobu",
     "slug": "shinobu",
     "ios": {
-      "bundleIdentifier": "com.glpecile.shinobu"
+      "bundleIdentifier": "xyz.glpecile.shinobu",
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/ios-icon-dark.png",
+        "tinted": "./assets/images/ios-icon-tinted.png"
+      }
+    },
+    "android": {
+      "package": "xyz.glpecile.shinobu",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
+        "backgroundColor": "#ffffff"
+      }
     }
   }
 }

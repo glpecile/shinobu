@@ -1,4 +1,4 @@
-import "../global.css";
+import "@/global.css";
 
 import { Slot } from "expo-router";
 
