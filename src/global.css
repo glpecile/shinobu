@@ -2,6 +2,19 @@
 @import "uniwind";
 
 /*
+ * Typography tokens - fonts are loaded at runtime in `src/app/_layout.tsx`
+ * (expo-font + @expo-google-fonts). React Native treats every weight as its own
+ * font family and won't synthesize bold/semibold for custom fonts, so each token
+ * names one exact loaded font. Use these classes (`font-display`, `font-sans`,
+ * `font-sans-semibold`) instead of `font-bold`/`font-semibold` on custom-font text.
+ */
+@theme {
+  --font-display: "SpaceGrotesk_700Bold";
+  --font-sans: "Inter_400Regular";
+  --font-sans-semibold: "Inter_600SemiBold";
+}
+
+/*
  * Shinobu color tokens - single source of truth for both themes.
  * Every variable must be defined in both `light` and `dark` (Uniwind requirement).
  * Accent is pinned to the same Vampiric Crimson in both themes (plan.md 1.1) - it's

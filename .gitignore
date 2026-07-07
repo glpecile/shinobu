@@ -40,3 +40,5 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 src/uniwind-types.d.ts
+# Claude Code local settings (machine-specific permissions)
+.claude/settings.local.json

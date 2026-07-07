@@ -1,0 +1,57 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "ios/**",
+    "android/**",
+    ".expo/**",
+    "node_modules/**",
+    ".claude/skills/**"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "no-underscore-dangle": ["warn", { "allow": ["_tag"] }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["../*", "../**"],
+            "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
+          },
+          {
+            "group": ["@legendapp/list", "@legendapp/list/*"],
+            "message": "Never import @legendapp/list directly - go through the components/List wrapper (AGENTS.md: Long Lists)."
+          }
+        ],
+        "paths": [
+          {
+            "name": "react-native",
+            "importNames": ["FlatList", "VirtualizedList", "SectionList"],
+            "message": "Use the components/List wrapper (Legend List), never raw FlatList (AGENTS.md: Long Lists)."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/components/List/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

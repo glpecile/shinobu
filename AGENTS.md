@@ -23,6 +23,16 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   Trakt/AniList (see `todos/004`), but treat API access itself as an open risk — the
   CSV diary export/import path is the documented fallback if access isn't granted,
   not the primary design.
+- **Effect** (`effect`) — typed errors, retries, and structured concurrency for the
+  provider service layer **only** (`lib/providers/`, `lib/http/`). Tagged errors
+  live in `lib/providers/errors.ts`; the fan-out's per-provider partial-failure
+  contract, the 401→refresh wrapper, and rate-limit backoff are written as Effects.
+  **Containment rule:** Effect never leaks upward — `state/queries/*` runs effects
+  at the boundary via `Effect.runPromise` inside `queryFn`/`mutationFn`, and no
+  `Effect<...>` type appears in any component, screen, or hook signature. TanStack
+  Query keeps caching/invalidation/React state; do not adopt effect-rx or run
+  Effect inside components. Rationale, risks, and exit criteria:
+  `docs/brainstorms/2026-07-07-effect-for-provider-layer.md`.
 - **`react-native-mmkv`** — persisted OAuth tokens (and any other local key/value
   state). No backend/DB: state is tied to external auth tokens only. Web works via
   MMKV's built-in `localStorage` fallback, so this stays universal across platforms.
@@ -33,7 +43,16 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   no browser equivalent, so use the platform-file convention below: a shared
   `lib/http/client.ts` (nitro-fetch) + `lib/http/client.web.ts` (plain `fetch`)
   exposing the same interface, so `state/queries/*` never imports either directly.
-- **bun** as the package manager and script runner.
+- **`@legendapp/list`** — virtualized lists everywhere (see "Long Lists" below).
+  Pure JS/TS, works on web via react-native-web, no native rebuild to adopt.
+- **bun** as the package manager and script runner. Tests use the built-in
+  `bun:test` runner (`bun test`) — no Jest.
+- **oxlint** for linting (`bun lint`, config in `.oxlintrc.json`) — chosen over
+  Biome/ESLint for speed. Conventions that can be lint rules *are* lint rules, not
+  just prose: the `@/` alias rule (no `../` imports), the `components/List` wrapper
+  rule (no direct `@legendapp/list` or raw `FlatList` imports) are enforced via
+  `no-restricted-imports`. When a new convention lands in this file, check whether
+  oxlint can enforce it and add the rule in the same PR.
 
 ## Nitro Modules
 
@@ -119,6 +138,38 @@ a brand color, not theme-adaptive. The app follows the OS theme by default (Uniw
 `system` mode) — dark is the primary/designed-for mode per `plan.md` 1.1, but light
 must render correctly too, not just "not crash." Never ship a new hardcoded hex color
 in a component; add a token to `global.css` instead.
+
+Typography works the same way: **Space Grotesk** (display — titles, headings,
+flash-frames) and **Inter** (UI text) are loaded via expo-font in `app/_layout.tsx`
+and exposed as font tokens in `global.css` (`font-display`, `font-sans`,
+`font-sans-semibold`). React Native treats each weight as its own font family and
+won't synthesize weights for custom fonts — so never combine `font-bold`/
+`font-semibold` with a custom font class; add a new weight token (and load its font
+in `_layout.tsx`) instead. The 忍 kanji intentionally renders in the OS fallback
+font (neither family ships kanji).
+
+## Long Lists
+
+Every core surface (unified feed, library grids, Up Next) is a long virtualized
+list of media cards — hundreds to thousands of items. Use
+[`@legendapp/list`](https://github.com/LegendApp/legend-list) (Legend List), never
+raw `FlatList`/`ScrollView`-with-`map`, for any data-driven list. It's written 100%
+in JS/TS: no native code (no prebuild/rebuild to adopt, hot-reload only) and it runs
+on web via `react-native-web` — one implementation for all four targets, no separate
+web retrofit needed by default.
+
+- **Wrap it once.** Screens never import `@legendapp/list` directly; they use a
+  shared `components/List` wrapper (bluesky-social does exactly this with its own
+  `List` component). If Legend List's web behavior ever disappoints, swap in a
+  web-specific implementation via `components/List/index.web.tsx` (e.g. TanStack
+  Virtual) without touching any call site.
+- **Recycling gotcha:** with `recycleItems` enabled, item components are reused
+  across rows — item state must derive from props; local `useState`/`useRef` inside
+  an item leaks into the row it gets recycled to. Leave recycling off unless a list
+  measurably needs it.
+- **Poster images in rows go through `expo-image`** (built-in memory/disk cache,
+  `recyclingKey` support) — long grids of remote covers through RN's core `Image`
+  will thrash memory on mobile.
 
 ## Up Next & Timezones
 
@@ -218,6 +269,12 @@ components. Components never see raw provider payload shapes.
 - `docs/brainstorms/` — raw exploration/ideation notes.
 - `docs/solutions/` — one file per solved bug or non-obvious pattern, searchable.
 - `todos/` — work items, named `NNN-status-priority-title.md`.
+- `.claude/skills/` — third-party agent skills vendored via the
+  [`skills` CLI](https://github.com/vercel-labs/skills) and pinned in
+  `skills-lock.json`. Add with `bunx skills add <repo> --skill <name> -y -a
+  claude-code`, update with `bunx skills update`. Don't hand-edit vendored
+  skills; if one contradicts AGENTS.md (e.g. a skill recommending NativeWind
+  over Uniwind), AGENTS.md wins — remove the skill.
 
 **Every time a network anomaly or non-obvious fix happens** (rate limits, pagination
 mismatches, OAuth refresh edge cases, GraphQL boundary quirks), write it to
