@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@tanstack/react-query": "^5.101.2",
     "expo": "~57.0.2",
     "expo-constants": "~57.0.3",
     "expo-dev-client": "~57.0.5",
+    "expo-font": "^57.0.0",
     "expo-linking": "~57.0.1",
     "expo-router": "~57.0.3",
     "expo-splash-screen": "~57.0.2",

@@ -129,6 +129,15 @@ a brand color, not theme-adaptive. The app follows the OS theme by default (Uniw
 must render correctly too, not just "not crash." Never ship a new hardcoded hex color
 in a component; add a token to `global.css` instead.
 
+Typography works the same way: **Space Grotesk** (display — titles, headings,
+flash-frames) and **Inter** (UI text) are loaded via expo-font in `app/_layout.tsx`
+and exposed as font tokens in `global.css` (`font-display`, `font-sans`,
+`font-sans-semibold`). React Native treats each weight as its own font family and
+won't synthesize weights for custom fonts — so never combine `font-bold`/
+`font-semibold` with a custom font class; add a new weight token (and load its font
+in `_layout.tsx`) instead. The 忍 kanji intentionally renders in the OS fallback
+font (neither family ships kanji).
+
 ## Long Lists
 
 Every core surface (unified feed, library grids, Up Next) is a long virtualized
