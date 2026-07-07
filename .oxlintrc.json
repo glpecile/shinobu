@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["ios/**", "android/**", ".expo/**", "node_modules/**"],
+  "ignorePatterns": [
+    "ios/**",
+    "android/**",
+    ".expo/**",
+    "node_modules/**",
+    ".claude/skills/**"
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
