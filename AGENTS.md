@@ -23,6 +23,16 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   Trakt/AniList (see `todos/004`), but treat API access itself as an open risk — the
   CSV diary export/import path is the documented fallback if access isn't granted,
   not the primary design.
+- **Effect** (`effect`) — typed errors, retries, and structured concurrency for the
+  provider service layer **only** (`lib/providers/`, `lib/http/`). Tagged errors
+  live in `lib/providers/errors.ts`; the fan-out's per-provider partial-failure
+  contract, the 401→refresh wrapper, and rate-limit backoff are written as Effects.
+  **Containment rule:** Effect never leaks upward — `state/queries/*` runs effects
+  at the boundary via `Effect.runPromise` inside `queryFn`/`mutationFn`, and no
+  `Effect<...>` type appears in any component, screen, or hook signature. TanStack
+  Query keeps caching/invalidation/React state; do not adopt effect-rx or run
+  Effect inside components. Rationale, risks, and exit criteria:
+  `docs/brainstorms/2026-07-07-effect-for-provider-layer.md`.
 - **`react-native-mmkv`** — persisted OAuth tokens (and any other local key/value
   state). No backend/DB: state is tied to external auth tokens only. Web works via
   MMKV's built-in `localStorage` fallback, so this stays universal across platforms.

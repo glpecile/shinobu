@@ -6,6 +6,7 @@
     "suspicious": "warn"
   },
   "rules": {
+    "no-underscore-dangle": ["warn", { "allow": ["_tag"] }],
     "no-restricted-imports": [
       "error",
       {

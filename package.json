@@ -6,6 +6,7 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@tanstack/react-query": "^5.101.2",
+    "effect": "^3.21.4",
     "expo": "~57.0.2",
     "expo-constants": "~57.0.3",
     "expo-dev-client": "~57.0.5",
