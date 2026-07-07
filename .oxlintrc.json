@@ -5,7 +5,8 @@
     "android/**",
     ".expo/**",
     "node_modules/**",
-    ".claude/skills/**"
+    ".claude/skills/**",
+    ".agents/skills/**"
   ],
   "categories": {
     "correctness": "error",

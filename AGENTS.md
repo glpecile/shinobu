@@ -269,12 +269,14 @@ components. Components never see raw provider payload shapes.
 - `docs/brainstorms/` — raw exploration/ideation notes.
 - `docs/solutions/` — one file per solved bug or non-obvious pattern, searchable.
 - `todos/` — work items, named `NNN-status-priority-title.md`.
-- `.claude/skills/` — third-party agent skills vendored via the
+- `.agents/skills/` — third-party agent skills vendored via the
   [`skills` CLI](https://github.com/vercel-labs/skills) and pinned in
-  `skills-lock.json`. Add with `bunx skills add <repo> --skill <name> -y -a
-  claude-code`, update with `bunx skills update`. Don't hand-edit vendored
-  skills; if one contradicts AGENTS.md (e.g. a skill recommending NativeWind
-  over Uniwind), AGENTS.md wins — remove the skill.
+  `skills-lock.json`. This is the canonical, agent-agnostic location;
+  `.claude/skills` is a symlink to it (other agents can symlink the same dir).
+  Add with `bunx skills add <repo> --skill <name> -y -a claude-code`, update
+  with `bunx skills update`. Don't hand-edit vendored skills; if one
+  contradicts AGENTS.md (e.g. a skill recommending NativeWind over Uniwind),
+  AGENTS.md wins — remove the skill.
 
 **Every time a network anomaly or non-obvious fix happens** (rate limits, pagination
 mismatches, OAuth refresh edge cases, GraphQL boundary quirks), write it to
