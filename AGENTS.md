@@ -33,6 +33,8 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   no browser equivalent, so use the platform-file convention below: a shared
   `lib/http/client.ts` (nitro-fetch) + `lib/http/client.web.ts` (plain `fetch`)
   exposing the same interface, so `state/queries/*` never imports either directly.
+- **`@legendapp/list`** — virtualized lists everywhere (see "Long Lists" below).
+  Pure JS/TS, works on web via react-native-web, no native rebuild to adopt.
 - **bun** as the package manager and script runner.
 
 ## Nitro Modules
@@ -119,6 +121,29 @@ a brand color, not theme-adaptive. The app follows the OS theme by default (Uniw
 `system` mode) — dark is the primary/designed-for mode per `plan.md` 1.1, but light
 must render correctly too, not just "not crash." Never ship a new hardcoded hex color
 in a component; add a token to `global.css` instead.
+
+## Long Lists
+
+Every core surface (unified feed, library grids, Up Next) is a long virtualized
+list of media cards — hundreds to thousands of items. Use
+[`@legendapp/list`](https://github.com/LegendApp/legend-list) (Legend List), never
+raw `FlatList`/`ScrollView`-with-`map`, for any data-driven list. It's written 100%
+in JS/TS: no native code (no prebuild/rebuild to adopt, hot-reload only) and it runs
+on web via `react-native-web` — one implementation for all four targets, no separate
+web retrofit needed by default.
+
+- **Wrap it once.** Screens never import `@legendapp/list` directly; they use a
+  shared `components/List` wrapper (bluesky-social does exactly this with its own
+  `List` component). If Legend List's web behavior ever disappoints, swap in a
+  web-specific implementation via `components/List/index.web.tsx` (e.g. TanStack
+  Virtual) without touching any call site.
+- **Recycling gotcha:** with `recycleItems` enabled, item components are reused
+  across rows — item state must derive from props; local `useState`/`useRef` inside
+  an item leaks into the row it gets recycled to. Leave recycling off unless a list
+  measurably needs it.
+- **Poster images in rows go through `expo-image`** (built-in memory/disk cache,
+  `recyclingKey` support) — long grids of remote covers through RN's core `Image`
+  will thrash memory on mobile.
 
 ## Up Next & Timezones
 
