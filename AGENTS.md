@@ -35,7 +35,14 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   exposing the same interface, so `state/queries/*` never imports either directly.
 - **`@legendapp/list`** — virtualized lists everywhere (see "Long Lists" below).
   Pure JS/TS, works on web via react-native-web, no native rebuild to adopt.
-- **bun** as the package manager and script runner.
+- **bun** as the package manager and script runner. Tests use the built-in
+  `bun:test` runner (`bun test`) — no Jest.
+- **oxlint** for linting (`bun lint`, config in `.oxlintrc.json`) — chosen over
+  Biome/ESLint for speed. Conventions that can be lint rules *are* lint rules, not
+  just prose: the `@/` alias rule (no `../` imports), the `components/List` wrapper
+  rule (no direct `@legendapp/list` or raw `FlatList` imports) are enforced via
+  `no-restricted-imports`. When a new convention lands in this file, check whether
+  oxlint can enforce it and add the rule in the same PR.
 
 ## Nitro Modules
 
