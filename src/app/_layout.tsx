@@ -11,6 +11,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { ErrorBoundary } from "react-error-boundary";
 import { useEffect, useState } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
@@ -39,8 +40,9 @@ export default function Layout() {
   }
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <KeyboardProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen
@@ -49,7 +51,8 @@ export default function Layout() {
             />
           </Stack>
         </QueryClientProvider>
-      </KeyboardProvider>
-    </ErrorBoundary>
+        </KeyboardProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

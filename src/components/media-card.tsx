@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
+import { PresstableScale } from '@/components/presstable';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface MediaCardProps {
@@ -19,8 +20,8 @@ export function MediaCard({ item, onPress }: MediaCardProps) {
   const progress = progressLabel(item);
 
   return (
-    <Pressable
-      className="w-40 h-60 rounded-card overflow-hidden border border-border/50 active:opacity-80"
+    <PresstableScale
+      className="w-40 h-60 rounded-card overflow-hidden border border-border/50"
       onPress={() => onPress?.(item)}
     >
       <Image
@@ -48,6 +49,6 @@ export function MediaCard({ item, onPress }: MediaCardProps) {
           )}
         </View>
       </View>
-    </Pressable>
+    </PresstableScale>
   );
 }

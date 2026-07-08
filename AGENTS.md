@@ -53,6 +53,13 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   rule (no direct `@legendapp/list` or raw `FlatList` imports) are enforced via
   `no-restricted-imports`. When a new convention lands in this file, check whether
   oxlint can enforce it and add the rule in the same PR.
+- **pressto** — every tappable surface. Never use react-native's `Pressable`
+  or the `Touchable*` family (oxlint-enforced); import `PresstableScale` /
+  `PresstableOpacity` from `components/presstable`. The wrapper adds a
+  leading-edge press debounce (a quick double-tap on a media card must not
+  push the details route twice) and the withUniwind className mapping. Built
+  on gesture-handler + reanimated — `GestureHandlerRootView` wraps the app in
+  `app/_layout.tsx`.
 - **`react-native-keyboard-controller`** — all keyboard avoidance/animation.
   Never use react-native's core `KeyboardAvoidingView` (inconsistent behavior
   per platform); import the app's `components/keyboard-avoiding-view` wrapper

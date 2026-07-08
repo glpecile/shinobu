@@ -25,6 +25,10 @@
           {
             "group": ["@legendapp/list", "@legendapp/list/*"],
             "message": "Never import @legendapp/list directly - go through the components/List wrapper (AGENTS.md: Long Lists)."
+          },
+          {
+            "group": ["pressto", "pressto/*"],
+            "message": "Never import pressto directly - go through @/components/presstable (adds press debouncing + the withUniwind className wrapper)."
           }
         ],
         "paths": [
@@ -44,6 +48,16 @@
             "message": "Use @/components/keyboard-avoiding-view (react-native-keyboard-controller) — core RN keyboard handling is inconsistent across platforms."
           },
           {
+            "name": "react-native",
+            "importNames": [
+              "Pressable",
+              "TouchableOpacity",
+              "TouchableHighlight",
+              "TouchableWithoutFeedback"
+            ],
+            "message": "Use PresstableScale/PresstableOpacity from @/components/presstable (pressto) — presses are debounced there so a double-tap can't navigate twice."
+          },
+          {
             "name": "react-native-keyboard-controller",
             "importNames": ["KeyboardAvoidingView"],
             "message": "Import KeyboardAvoidingView from @/components/keyboard-avoiding-view — the raw component drops className on native (needs the withUniwind wrapper)."
@@ -61,7 +75,8 @@
     {
       "files": [
         "src/components/image.tsx",
-        "src/components/keyboard-avoiding-view.tsx"
+        "src/components/keyboard-avoiding-view.tsx",
+        "src/components/presstable.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

@@ -3,10 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { Image } from '@/components/image';
+import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
@@ -83,14 +84,14 @@ function Overview({ text }: { text: string }) {
         {text}
       </Text>
       {clampable && (
-        <Pressable
-          className="self-start mt-1.5 active:opacity-80"
+        <PresstableOpacity
+          className="self-start mt-1.5"
           onPress={() => setExpanded(!expanded)}
         >
           <Text className="text-accent font-sans-semibold text-sm">
             {expanded ? 'Read less' : 'Read more'}
           </Text>
-        </Pressable>
+        </PresstableOpacity>
       )}
     </View>
   );
@@ -228,8 +229,10 @@ function PeopleRailSkeleton() {
   return (
     <View className="mt-8">
       <Skeleton className="h-6 w-24 rounded mb-4" />
+      {/* Enough cards to overflow any viewport up to the max-w-4xl container;
+          overflow-hidden clips the excess, reading as an off-screen carousel. */}
       <View className="flex-row overflow-hidden">
-        {Array.from({ length: 6 }).map((_, index) => (
+        {Array.from({ length: 10 }).map((_, index) => (
           <View className="w-24 items-center mr-4" key={index}>
             <Skeleton className="w-20 h-20 rounded-full" />
             <Skeleton className="h-3 w-16 rounded mt-2" />
@@ -238,6 +241,16 @@ function PeopleRailSkeleton() {
         ))}
       </View>
     </View>
+  );
+}
+
+/** One rail per section behind the boundary (Cast + Crew). */
+function PeopleSectionsSkeleton() {
+  return (
+    <>
+      <PeopleRailSkeleton />
+      <PeopleRailSkeleton />
+    </>
   );
 }
 
@@ -313,14 +326,14 @@ export default function DetailsScreen() {
         <Text className="text-muted font-sans text-center mb-6">
           This item is not in your current feed.
         </Text>
-        <Pressable
-          className="bg-accent px-5 py-3 rounded active:opacity-80"
+        <PresstableOpacity
+          className="bg-accent px-5 py-3 rounded"
           onPress={goBack}
         >
           <Text className="text-accent-foreground font-sans-semibold">
             Go back
           </Text>
-        </Pressable>
+        </PresstableOpacity>
       </View>
     );
   }
@@ -437,7 +450,7 @@ export default function DetailsScreen() {
           {traktId != null && (
             <>
               <SuspenseSection
-                fallback={<PeopleRailSkeleton />}
+                fallback={<PeopleSectionsSkeleton />}
                 resetKey={refreshCount}
               >
                 <PeopleSections traktId={traktId} type={item.type} />
@@ -453,9 +466,9 @@ export default function DetailsScreen() {
         </View>
       </RefreshableScrollView>
 
-      <Pressable
+      <PresstableOpacity
         accessibilityLabel="Back"
-        className="absolute top-12 left-4 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center active:opacity-80"
+        className="absolute top-12 left-4 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center"
         onPress={goBack}
       >
         <Ionicons
@@ -463,7 +476,7 @@ export default function DetailsScreen() {
           name="arrow-back"
           size={20}
         />
-      </Pressable>
+      </PresstableOpacity>
     </View>
   );
 }

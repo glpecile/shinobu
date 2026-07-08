@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
+import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -26,14 +27,14 @@ function ConnectedRow({ id }: { id: ProviderId }) {
         </Text>
         <Text className="text-muted font-sans text-xs mt-0.5">Connected</Text>
       </View>
-      <Pressable
-        className="border border-accent px-4 py-2 rounded active:opacity-80"
+      <PresstableOpacity
+        className="border border-accent px-4 py-2 rounded"
         onPress={() => disconnect(id)}
       >
         <Text className="text-accent font-sans-semibold text-sm">
           Disconnect
         </Text>
-      </Pressable>
+      </PresstableOpacity>
     </View>
   );
 }
@@ -83,7 +84,7 @@ export default function ConnectScreen() {
   return (
     <View className="flex-1 bg-background">
       <View className="flex-row items-center px-6 pt-16 pb-4">
-        <Pressable
+        <PresstableOpacity
           accessibilityLabel="Back"
           className="w-10 h-10 -ml-2 items-center justify-center"
           onPress={() =>
@@ -95,7 +96,7 @@ export default function ConnectScreen() {
             name="arrow-back"
             size={22}
           />
-        </Pressable>
+        </PresstableOpacity>
         <Text className="text-2xl font-display text-foreground ml-2">
           Manage Trackers
         </Text>

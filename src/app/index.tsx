@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
+import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
@@ -34,14 +35,14 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
           Connecting to Trakt failed. Please try again.
         </Text>
       )}
-      <Pressable
-        className="bg-accent px-8 py-3 rounded active:opacity-80 mt-8"
+      <PresstableOpacity
+        className="bg-accent px-8 py-3 rounded mt-8"
         onPress={() => router.push(routes.connect)}
       >
         <Text className="text-accent-foreground font-sans-semibold text-base">
           Get started
         </Text>
-      </Pressable>
+      </PresstableOpacity>
     </View>
   );
 }
@@ -131,9 +132,9 @@ export default function App() {
               : `Connected: ${connected.map((id) => PROVIDERS[id].label).join(', ')}`}
           </Text>
         </View>
-        <Pressable
+        <PresstableOpacity
           accessibilityLabel="Manage trackers"
-          className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border active:opacity-80"
+          className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border"
           onPress={() => router.push(routes.connect)}
         >
           <Ionicons
@@ -141,7 +142,7 @@ export default function App() {
             name="settings-outline"
             size={20}
           />
-        </Pressable>
+        </PresstableOpacity>
       </View>
 
       {connected.length === 0 ? (

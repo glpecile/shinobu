@@ -7,13 +7,13 @@ import { useState } from 'react';
 import {
   Linking,
   Platform,
-  Pressable,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { PresstableOpacity } from '@/components/presstable';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 import { getTraktRedirectUri } from '@/lib/providers/trakt/redirectUri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
@@ -118,14 +118,14 @@ export function ConnectTraktButton() {
           placeholderTextColor={typeof muted === 'string' ? muted : undefined}
           value={inputValue}
         />
-        <Pressable
-          className="bg-accent px-5 py-3 rounded active:opacity-80"
+        <PresstableOpacity
+          className="bg-accent px-5 py-3 rounded"
           onPress={() => saveClientId(inputValue.trim())}
         >
           <Text className="text-accent-foreground font-sans-semibold text-base text-center">
             Save Client ID
           </Text>
-        </Pressable>
+        </PresstableOpacity>
       </View>
     );
   }
@@ -142,18 +142,18 @@ export function ConnectTraktButton() {
           Could not connect. Tap Connect to try again.
         </Text>
       )}
-      <Pressable
-        className="bg-accent px-5 py-3 rounded active:opacity-80"
+      <PresstableOpacity
+        className="bg-accent px-5 py-3 rounded"
         disabled={status === 'connecting'}
         onPress={() => connect()}
       >
         <Text className="text-accent-foreground font-sans-semibold text-base">
           {status === 'connecting' ? 'Connecting…' : 'Connect Trakt'}
         </Text>
-      </Pressable>
-      <Pressable onPress={() => clearClientId()}>
+      </PresstableOpacity>
+      <PresstableOpacity onPress={() => clearClientId()}>
         <Text className="text-muted font-sans text-xs">Edit Client ID</Text>
-      </Pressable>
+      </PresstableOpacity>
     </View>
   );
 }
