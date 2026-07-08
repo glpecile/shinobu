@@ -94,6 +94,12 @@ export interface NormalizedMediaItem {
   id: string;          // Unique combined identifier: `trakt-${id}` or `anilist-${id}`
   title: string;
   coverImage: string;
+  backdropImage?: string; // Wide hero/fanart for detail views
+  overview?: string;
+  year?: number;
+  runtime?: number;    // Minutes (per episode for TV)
+  genres?: string[];
+  rating?: number;     // Provider community rating, 0–10
   type: MediaType;
   isFilm?: boolean;    // Anime films: ANIME here, but a MOVIE to Trakt/Letterboxd (1.3)
   currentProgress: number;

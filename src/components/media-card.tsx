@@ -1,7 +1,7 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, Text, View } from 'react-native';
 
+import { Image } from '@/components/image';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface MediaCardProps {

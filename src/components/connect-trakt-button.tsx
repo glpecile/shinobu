@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 import { getTraktRedirectUri } from '@/lib/providers/trakt/redirectUri';
@@ -38,6 +39,7 @@ export function ConnectTraktButton() {
   );
   const [inputValue, setInputValue] = useState(storedClientId ?? '');
   const [status, setStatus] = useState<ConnectionStatus>('idle');
+  const muted = useCSSVariable('--color-muted');
 
   const clientId = storedClientId ?? '';
   const redirectUri = getTraktRedirectUri();
@@ -113,7 +115,7 @@ export function ConnectTraktButton() {
           className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
           onChangeText={setInputValue}
           placeholder="Trakt Client ID"
-          placeholderTextColor="#666666"
+          placeholderTextColor={typeof muted === 'string' ? muted : undefined}
           value={inputValue}
         />
         <Pressable

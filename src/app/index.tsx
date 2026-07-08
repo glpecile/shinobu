@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
+import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
@@ -46,8 +47,14 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
 }
 
 function FeedScreen() {
-  const { trendingMovies, trendingShows, feedItems, isLoading, isError } =
-    useUnifiedFeed();
+  const {
+    trendingMovies,
+    trendingShows,
+    feedItems,
+    isLoading,
+    isError,
+    refetch,
+  } = useUnifiedFeed();
   const router = useRouter();
 
   function openDetails(item: NormalizedMediaItem) {
@@ -74,7 +81,11 @@ function FeedScreen() {
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" contentContainerClassName="pt-2 pb-8">
+      <RefreshableScrollView
+        className="flex-1"
+        contentContainerClassName="pt-2 pb-8"
+        onRefresh={refetch}
+      >
         {isError && (
           <Text className="text-muted font-sans text-xs px-4 pb-2">
             Some content could not be loaded.
@@ -95,7 +106,7 @@ function FeedScreen() {
           items={feedItems}
           onItemPress={openDetails}
         />
-      </ScrollView>
+      </RefreshableScrollView>
       <FeedSkeletonOverlay visible={isLoading && !hasData} />
     </View>
   );

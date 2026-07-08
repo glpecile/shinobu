@@ -34,6 +34,21 @@
             "message": "Use the components/List wrapper (Legend List), never raw FlatList (AGENTS.md: Long Lists)."
           },
           {
+            "name": "expo-image",
+            "importNames": ["Image"],
+            "message": "Import Image from @/components/image — className on raw expo-image is silently dropped on native (uniwind needs the withUniwind wrapper)."
+          },
+          {
+            "name": "react-native",
+            "importNames": ["KeyboardAvoidingView", "InputAccessoryView"],
+            "message": "Use @/components/keyboard-avoiding-view (react-native-keyboard-controller) — core RN keyboard handling is inconsistent across platforms."
+          },
+          {
+            "name": "react-native-keyboard-controller",
+            "importNames": ["KeyboardAvoidingView"],
+            "message": "Import KeyboardAvoidingView from @/components/keyboard-avoiding-view — the raw component drops className on native (needs the withUniwind wrapper)."
+          },
+          {
             "name": "react",
             "importNames": ["useMemo", "useCallback"],
             "message": "React Compiler handles memoization automatically — use plain values/functions instead. Opt out with 'use no memo' if absolutely necessary."
@@ -43,6 +58,25 @@
     ]
   },
   "overrides": [
+    {
+      "files": [
+        "src/components/image.tsx",
+        "src/components/keyboard-avoiding-view.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
+              }
+            ]
+          }
+        ]
+      }
+    },
     {
       "files": ["src/components/List/**"],
       "rules": {

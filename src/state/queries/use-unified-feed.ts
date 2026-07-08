@@ -23,6 +23,8 @@ export interface UnifiedFeedResult {
   isLoading: boolean;
   isError: boolean;
   errors: Array<{ provider: ProviderId; error: Error }>;
+  /** Refetches every feed query in parallel; resolves once all settle. */
+  refetch: () => Promise<unknown>;
 }
 
 interface FeedQueryConfig {
@@ -83,6 +85,12 @@ export function useUnifiedFeed(): UnifiedFeedResult {
         entry.error != null,
     );
 
+  function refetch() {
+    // allSettled, not all: one provider failing to refresh must not hide the
+    // outcome of the others (partial-failure contract, AGENTS.md).
+    return Promise.allSettled(results.map((result) => result.refetch()));
+  }
+
   return {
     trendingMovies,
     trendingShows,
@@ -90,5 +98,6 @@ export function useUnifiedFeed(): UnifiedFeedResult {
     isLoading,
     isError,
     errors,
+    refetch,
   };
 }

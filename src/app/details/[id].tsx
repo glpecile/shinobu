@@ -1,10 +1,23 @@
-import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
+import { Image } from '@/components/image';
+import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
+import { Skeleton } from '@/components/skeleton';
+import { SuspenseSection } from '@/components/suspense-section';
+import { routes } from '@/lib/routes';
+import {
+  traktQueryKeys,
+  useSuspenseTraktPeopleQuery,
+  useSuspenseTraktStudiosQuery,
+} from '@/state/queries/trakt';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 function findItemById(
   id: string,
@@ -13,20 +26,282 @@ function findItemById(
   return groups.flat().find((item) => item.id === id);
 }
 
+/** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
+function metaLine(item: NormalizedMediaItem): string {
+  return [
+    item.year != null ? String(item.year) : null,
+    item.runtime != null ? `${item.runtime} min` : null,
+    item.genres != null && item.genres.length > 0
+      ? item.genres.slice(0, 3).join(', ')
+      : null,
+  ]
+    .filter((part) => part != null)
+    .join(' · ');
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((word) => word[0] ?? '')
+    .join('')
+    .toUpperCase();
+}
+
+/**
+ * Synopsis clamped to two lines with a Read more toggle. Whether the text
+ * actually overflows two lines depends on viewport width and font metrics, so
+ * it's measured, not guessed: an invisible unclamped copy of the text lays
+ * out alongside the clamped one, and the toggle renders only when the full
+ * height exceeds the clamped height.
+ */
+function Overview({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [clampedHeight, setClampedHeight] = useState(0);
+  const [fullHeight, setFullHeight] = useState(0);
+  const clampable = fullHeight > clampedHeight + 1;
+
+  return (
+    <View className="mb-6">
+      <Text
+        className="text-foreground/90 font-sans text-base leading-relaxed"
+        {...(expanded ? {} : { numberOfLines: 2 })}
+        onLayout={(event) => {
+          // While expanded the visible text is the full text — measuring it
+          // would erase the clamped baseline and hide the "Read less" toggle.
+          if (!expanded) setClampedHeight(event.nativeEvent.layout.height);
+        }}
+      >
+        {text}
+      </Text>
+      <Text
+        aria-hidden
+        className="text-foreground/90 font-sans text-base leading-relaxed absolute top-0 left-0 right-0 opacity-0"
+        onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
+        pointerEvents="none"
+      >
+        {text}
+      </Text>
+      {clampable && (
+        <Pressable
+          className="self-start mt-1.5 active:opacity-80"
+          onPress={() => setExpanded(!expanded)}
+        >
+          <Text className="text-accent font-sans-semibold text-sm">
+            {expanded ? 'Read less' : 'Read more'}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+interface PersonCardProps {
+  id: string;
+  name: string;
+  /** Character for cast, job title(s) for crew. */
+  subtitle: string;
+  headshot: string;
+}
+
+function PersonCard({ name, subtitle, headshot }: Omit<PersonCardProps, 'id'>) {
+  return (
+    <View className="w-24 items-center mr-4">
+      {headshot !== '' ? (
+        <Image
+          source={{ uri: headshot }}
+          className="w-20 h-20 rounded-full bg-surface"
+          contentFit="cover"
+        />
+      ) : (
+        <View className="w-20 h-20 rounded-full bg-surface border border-border items-center justify-center">
+          <Text className="text-muted font-sans-semibold text-lg">
+            {initials(name)}
+          </Text>
+        </View>
+      )}
+      <Text
+        className="text-foreground font-sans-semibold text-xs text-center mt-2"
+        numberOfLines={1}
+      >
+        {name}
+      </Text>
+      {subtitle !== '' && (
+        <Text
+          className="text-muted font-sans text-xs text-center mt-0.5"
+          numberOfLines={2}
+        >
+          {subtitle}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function PeopleSection({
+  title,
+  people,
+}: {
+  title: string;
+  people: PersonCardProps[];
+}) {
+  if (people.length === 0) return null;
+
+  return (
+    <View className="mt-8">
+      <Text className="text-xl font-display text-foreground mb-4">{title}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {people.map(({ id, ...person }) => (
+          <PersonCard key={id} {...person} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Cast + crew share one /people request, so they live under one boundary. */
+function PeopleSections({
+  type,
+  traktId,
+}: {
+  type: MediaType;
+  traktId: number;
+}) {
+  const { data } = useSuspenseTraktPeopleQuery({ type, traktId });
+
+  return (
+    <>
+      <PeopleSection
+        title="Cast"
+        people={data.cast.map((member) => ({
+          id: member.id,
+          name: member.name,
+          subtitle: member.character,
+          headshot: member.headshot,
+        }))}
+      />
+      <PeopleSection
+        title="Crew"
+        people={data.crew.map((member) => ({
+          id: member.id,
+          name: member.name,
+          subtitle: member.job,
+          headshot: member.headshot,
+        }))}
+      />
+    </>
+  );
+}
+
+function StudiosSection({
+  type,
+  traktId,
+}: {
+  type: MediaType;
+  traktId: number;
+}) {
+  const { data: studios } = useSuspenseTraktStudiosQuery({ type, traktId });
+  if (studios.length === 0) return null;
+
+  return (
+    <View className="mt-8">
+      <Text className="text-xl font-display text-foreground mb-4">
+        Studios
+      </Text>
+      <View className="flex-row flex-wrap gap-2">
+        {studios.map((studio) => (
+          <View
+            className="bg-surface border border-border rounded-full px-4 py-2"
+            key={studio.id}
+          >
+            <Text className="text-foreground font-sans text-sm">
+              {studio.name}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function PeopleRailSkeleton() {
+  return (
+    <View className="mt-8">
+      <Skeleton className="h-6 w-24 rounded mb-4" />
+      <View className="flex-row overflow-hidden">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <View className="w-24 items-center mr-4" key={index}>
+            <Skeleton className="w-20 h-20 rounded-full" />
+            <Skeleton className="h-3 w-16 rounded mt-2" />
+            <Skeleton className="h-2.5 w-12 rounded mt-1.5" />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function StudiosSkeleton() {
+  return (
+    <View className="mt-8">
+      <Skeleton className="h-6 w-24 rounded mb-4" />
+      <View className="flex-row gap-2">
+        <Skeleton className="h-9 w-28 rounded-full" />
+        <Skeleton className="h-9 w-36 rounded-full" />
+        <Skeleton className="h-9 w-24 rounded-full" />
+      </View>
+    </View>
+  );
+}
+
+/** Mirrors the loaded layout so content lands without a shift. */
+function DetailsSkeleton() {
+  return (
+    <View className="flex-1 bg-background">
+      <Skeleton className="h-80 w-full" />
+      <View className="w-full max-w-4xl self-center px-6">
+        <View className="flex-row items-end -mt-24 mb-6">
+          <Skeleton className="w-28 h-40 rounded-card" />
+          <View className="flex-1 ml-4 pb-1">
+            <Skeleton className="h-3 w-16 rounded" />
+            <Skeleton className="h-8 w-56 rounded mt-2" />
+            <Skeleton className="h-3 w-40 rounded mt-2" />
+          </View>
+        </View>
+        <Skeleton className="h-4 w-full rounded" />
+        <Skeleton className="h-4 w-2/3 rounded mt-2" />
+      </View>
+    </View>
+  );
+}
+
 export default function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { trendingMovies, trendingShows, feedItems, isLoading } =
-    useUnifiedFeed();
+  const feed = useUnifiedFeed();
+  const queryClient = useQueryClient();
+  const accent = useCSSVariable('--color-accent');
+  const foreground = useCSSVariable('--color-foreground');
+  // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
+  const [refreshCount, setRefreshCount] = useState(0);
 
-  const item = findItemById(id, [trendingMovies, trendingShows, feedItems]);
+  const item = findItemById(id, [
+    feed.trendingMovies,
+    feed.trendingShows,
+    feed.feedItems,
+  ]);
+  const traktId = item?.externalIds.trakt;
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <Text className="text-muted font-sans">Loading…</Text>
-      </View>
-    );
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(routes.home);
+    }
+  }
+
+  if (feed.isLoading && item == null) {
+    return <DetailsSkeleton />;
   }
 
   if (item == null) {
@@ -40,7 +315,7 @@ export default function DetailsScreen() {
         </Text>
         <Pressable
           className="bg-accent px-5 py-3 rounded active:opacity-80"
-          onPress={() => router.back()}
+          onPress={goBack}
         >
           <Text className="text-accent-foreground font-sans-semibold">
             Go back
@@ -50,12 +325,37 @@ export default function DetailsScreen() {
     );
   }
 
+  const meta = metaLine(item);
+  // "0 episodes" on a movie is noise — only show progress where it means
+  // something (any TV/manga item, or a movie already logged at least once).
+  const showProgress = item.type !== 'MOVIE' || item.currentProgress > 0;
+
+  function refresh() {
+    // Sections that failed are unmounted, leaving their queries inactive and
+    // stuck in error state — remove those so the resetKey remount refetches
+    // from scratch. Healthy (active) ones refetch in the background instead,
+    // without re-suspending into a skeleton.
+    if (traktId != null && item != null) {
+      for (const key of [
+        traktQueryKeys.people(item.type, traktId),
+        traktQueryKeys.studios(item.type, traktId),
+      ]) {
+        queryClient.removeQueries({ queryKey: key, type: 'inactive' });
+      }
+    }
+    setRefreshCount((count) => count + 1);
+    return Promise.allSettled([
+      feed.refetch(),
+      queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
+    ]);
+  }
+
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1">
-        <View className="h-96 relative">
+      <RefreshableScrollView className="flex-1" onRefresh={refresh}>
+        <View className="h-80 relative">
           <Image
-            source={{ uri: item.coverImage }}
+            source={{ uri: item.backdropImage || item.coverImage }}
             className="w-full h-full"
             contentFit="cover"
           />
@@ -66,56 +366,104 @@ export default function DetailsScreen() {
               bottom: 0,
               left: 0,
               right: 0,
-              height: 200,
+              height: 220,
             }}
           />
-          <Pressable
-            className="absolute top-12 left-4 w-10 h-10 bg-black/40 rounded-full items-center justify-center"
-            onPress={() => router.back()}
-          >
-            <Text className="text-foreground font-sans-semibold text-lg">
-              ←
-            </Text>
-          </Pressable>
         </View>
 
-        <View className="px-6 -mt-16 pb-8">
-          <Text className="text-accent text-sm font-sans-semibold uppercase tracking-wider mb-2">
-            {item.type}
-          </Text>
-          <Text className="text-3xl font-display text-foreground mb-4">
-            {item.title}
-          </Text>
-
-          <View className="flex-row gap-4 mb-6">
-            <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-              <Text className="text-muted text-xs font-sans uppercase">
-                Progress
-              </Text>
-              <Text className="text-foreground text-lg font-sans-semibold">
-                {item.currentProgress}{' '}
-                {item.progressUnit === 'chapter' ? 'chapters' : 'episodes'}
-              </Text>
-            </View>
-            {item.totalEpisodes != null && (
-              <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-                <Text className="text-muted text-xs font-sans uppercase">
-                  Total
+        {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
+        <View className="w-full max-w-4xl self-center px-6 pb-12">
+          <View className="flex-row items-end -mt-24 mb-6">
+            <Image
+              source={{ uri: item.coverImage }}
+              className="w-28 h-40 rounded-card border border-border bg-surface"
+              contentFit="cover"
+            />
+            <View className="flex-1 ml-4 pb-1">
+              <View className="flex-row items-center gap-3">
+                <Text className="text-accent text-xs font-sans-semibold uppercase tracking-wider">
+                  {item.type}
                 </Text>
-                <Text className="text-foreground text-lg font-sans-semibold">
-                  {item.totalEpisodes} episodes
-                </Text>
+                {item.rating != null && (
+                  <View className="flex-row items-center gap-1">
+                    <Ionicons
+                      color={typeof accent === 'string' ? accent : undefined}
+                      name="star"
+                      size={12}
+                    />
+                    <Text className="text-foreground text-xs font-sans-semibold">
+                      {item.rating.toFixed(1)}
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
+              <Text className="text-3xl font-display text-foreground mt-1">
+                {item.title}
+              </Text>
+              {meta !== '' && (
+                <Text className="text-muted font-sans text-sm mt-1.5">
+                  {meta}
+                </Text>
+              )}
+            </View>
           </View>
 
-          <Pressable className="bg-accent px-5 py-3 rounded active:opacity-80">
-            <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-              Log {item.type === 'MOVIE' ? 'watched' : '+1 episode'}
-            </Text>
-          </Pressable>
+          {item.overview != null && <Overview text={item.overview} />}
+
+          {showProgress && (
+            <View className="flex-row gap-4">
+              <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
+                <Text className="text-muted text-xs font-sans uppercase">
+                  Progress
+                </Text>
+                <Text className="text-foreground text-lg font-sans-semibold">
+                  {item.currentProgress}{' '}
+                  {item.progressUnit === 'chapter' ? 'chapters' : 'episodes'}
+                </Text>
+              </View>
+              {item.totalEpisodes != null && (
+                <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
+                  <Text className="text-muted text-xs font-sans uppercase">
+                    Total
+                  </Text>
+                  <Text className="text-foreground text-lg font-sans-semibold">
+                    {item.totalEpisodes} episodes
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {traktId != null && (
+            <>
+              <SuspenseSection
+                fallback={<PeopleRailSkeleton />}
+                resetKey={refreshCount}
+              >
+                <PeopleSections traktId={traktId} type={item.type} />
+              </SuspenseSection>
+              <SuspenseSection
+                fallback={<StudiosSkeleton />}
+                resetKey={refreshCount}
+              >
+                <StudiosSection traktId={traktId} type={item.type} />
+              </SuspenseSection>
+            </>
+          )}
         </View>
-      </ScrollView>
+      </RefreshableScrollView>
+
+      <Pressable
+        accessibilityLabel="Back"
+        className="absolute top-12 left-4 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center active:opacity-80"
+        onPress={goBack}
+      >
+        <Ionicons
+          color={typeof foreground === 'string' ? foreground : undefined}
+          name="arrow-back"
+          size={20}
+        />
+      </Pressable>
     </View>
   );
 }

@@ -11,6 +11,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { ErrorBoundary } from "react-error-boundary";
 import { useEffect, useState } from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
 
@@ -39,14 +40,16 @@ export default function Layout() {
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen
-            name="index"
-            options={{ title: "Shinobu" }}
-          />
-        </Stack>
-      </QueryClientProvider>
+      <KeyboardProvider>
+        <QueryClientProvider client={queryClient}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
+              name="index"
+              options={{ title: "Shinobu" }}
+            />
+          </Stack>
+        </QueryClientProvider>
+      </KeyboardProvider>
     </ErrorBoundary>
   );
 }

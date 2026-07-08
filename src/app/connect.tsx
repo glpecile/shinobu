@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
+import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
+import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -71,6 +74,7 @@ function ComingSoonRow({ id }: { id: ProviderId }) {
 export default function ConnectScreen() {
   const router = useRouter();
   const connected = useConnectedProviders();
+  const queryClient = useQueryClient();
   const foreground = useCSSVariable('--color-foreground');
   const disconnected = (Object.keys(PROVIDERS) as ProviderId[]).filter(
     (id) => !connected.includes(id),
@@ -97,7 +101,15 @@ export default function ConnectScreen() {
         </Text>
       </View>
 
-      <ScrollView className="flex-1 px-6" contentContainerClassName="pb-8">
+      <KeyboardAvoidingView behavior="padding" className="flex-1">
+        <RefreshableScrollView
+          className="flex-1 px-6"
+          contentContainerClassName="pb-8"
+          keyboardShouldPersistTaps="handled"
+          // This screen has no server data of its own — the useful refresh is
+          // marking every cached query stale so the feed refetches on return.
+          onRefresh={() => queryClient.invalidateQueries()}
+        >
         {connected.length > 0 && (
           <View className="mb-6">
             <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
@@ -124,7 +136,8 @@ export default function ConnectScreen() {
               ))}
           </View>
         </View>
-      </ScrollView>
+        </RefreshableScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

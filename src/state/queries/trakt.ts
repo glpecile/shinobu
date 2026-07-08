@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -6,10 +6,13 @@ import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import { traktClientSecret } from '@/lib/providers/trakt/config';
 import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
 import {
+  getMediaPeople,
+  getMediaStudios,
   getTrendingMovies,
   getTrendingShows,
   getWatchedShows,
 } from '@/lib/providers/trakt/reads';
+import type { MediaType } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
 import {
   clearProviderSession,
@@ -58,7 +61,41 @@ export const traktQueryKeys = {
     [...traktQueryKeys.all, 'trending-movies', limit ?? 'default'] as const,
   trendingShows: (limit?: number) =>
     [...traktQueryKeys.all, 'trending-shows', limit ?? 'default'] as const,
+  people: (type: MediaType, traktId: number) =>
+    [...traktQueryKeys.all, 'people', type, traktId] as const,
+  studios: (type: MediaType, traktId: number) =>
+    [...traktQueryKeys.all, 'studios', type, traktId] as const,
 };
+
+/**
+ * Cast + crew credits for one movie/show — public read. Suspense variant:
+ * mount it under a `SuspenseSection` (skeleton fallback + error containment),
+ * and only once the Trakt id is known — suspense queries can't be disabled.
+ */
+export function useSuspenseTraktPeopleQuery(params: {
+  type: MediaType;
+  traktId: number;
+}) {
+  const { type, traktId } = params;
+  return useSuspenseQuery({
+    queryKey: traktQueryKeys.people(type, traktId),
+    queryFn: () =>
+      Effect.runPromise(getMediaPeople(traktDeps(), { type, traktId })),
+  });
+}
+
+/** Production studios for one movie/show — same suspense contract as above. */
+export function useSuspenseTraktStudiosQuery(params: {
+  type: MediaType;
+  traktId: number;
+}) {
+  const { type, traktId } = params;
+  return useSuspenseQuery({
+    queryKey: traktQueryKeys.studios(type, traktId),
+    queryFn: () =>
+      Effect.runPromise(getMediaStudios(traktDeps(), { type, traktId })),
+  });
+}
 
 /**
  * Authenticated read of the user's watched shows. Disabled until Trakt is

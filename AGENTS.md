@@ -53,6 +53,11 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   rule (no direct `@legendapp/list` or raw `FlatList` imports) are enforced via
   `no-restricted-imports`. When a new convention lands in this file, check whether
   oxlint can enforce it and add the rule in the same PR.
+- **`react-native-keyboard-controller`** — all keyboard avoidance/animation.
+  Never use react-native's core `KeyboardAvoidingView` (inconsistent behavior
+  per platform); import the app's `components/keyboard-avoiding-view` wrapper
+  (withUniwind-wrapped, oxlint-enforced). `KeyboardProvider` is mounted in
+  `app/_layout.tsx`. Native module — adding/upgrading it needs a clean rebuild.
 - **React Compiler** — enabled via `experiments.reactCompiler` in `app.json` and
   `babel-plugin-react-compiler`. The compiler automatically memoizes components and
   hooks, so do not use `useMemo` or `useCallback` manually. They are forbidden by
@@ -175,7 +180,10 @@ web retrofit needed by default.
   measurably needs it.
 - **Poster images in rows go through `expo-image`** (built-in memory/disk cache,
   `recyclingKey` support) — long grids of remote covers through RN's core `Image`
-  will thrash memory on mobile.
+  will thrash memory on mobile. Import it via the `components/image` wrapper
+  (`withUniwind(ExpoImage)`), never directly: uniwind silently drops `className`
+  on third-party components on native (oxlint-enforced; see
+  `docs/solutions/uniwind-classname-third-party-components.md`).
 
 ## Up Next & Timezones
 
