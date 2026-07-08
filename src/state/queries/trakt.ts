@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
+import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import { traktClientSecret } from '@/lib/providers/trakt/config';
 import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
 import {
@@ -9,6 +10,7 @@ import {
   getTrendingShows,
   getWatchedShows,
 } from '@/lib/providers/trakt/reads';
+import type { ProviderSession } from '@/types/session';
 import {
   clearProviderSession,
   getProviderSession,
@@ -34,6 +36,19 @@ export function traktDeps(): TraktDeps {
     clientId: getClientIdForProvider('trakt'),
     clientSecret: traktClientSecret(),
   };
+}
+
+/**
+ * Authorization-code → session exchange, run at the Effect boundary so
+ * components and session hooks never touch Effect directly (AGENTS.md
+ * containment rule). Persists the session on success, which flips
+ * `useConnectedProviders` for every subscriber.
+ */
+export function exchangeTraktCode(params: {
+  code: string;
+  redirectUri: string;
+}): Promise<ProviderSession> {
+  return Effect.runPromise(exchangeCodeForSession(traktDeps(), params));
 }
 
 export const traktQueryKeys = {

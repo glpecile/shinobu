@@ -44,6 +44,38 @@ support PKCE, the app disables it (`usePKCE: false` in `ConnectTraktButton`).
 The canonical production domain is stored in `src/lib/config.ts` as
 `SHINOBU_WEB_DOMAIN`.
 
+## Web: the `?code=` lands on the redirect-URI route, not the initiating route
+
+On web the connect flow is a same-window redirect, and Trakt sends the browser
+back to the **registered redirect URI** — the site origin, i.e. the home route
+`/` — regardless of which screen started the flow. The code-exchange handler
+must therefore be mounted on the home screen, not inside `ConnectTraktButton`
+(which lives on `/connect` and is never mounted when the browser returns).
+
+This bug shipped once: the handler lived in the button, the browser came back
+to `/?code=...`, nothing exchanged the code, and the app silently stayed
+disconnected. The handler now lives in
+`src/state/session/use-trakt-oauth-callback.ts`, mounted by `src/app/index.tsx`.
+If the web redirect URI ever changes (e.g. to a dedicated `/auth/trakt` route),
+move the hook's mount point to that route in the same change.
+
+Constraints inside that hook, all learned the hard way:
+
+- **Authorization codes are single-use with a short TTL.** Strip `?code=` (and
+  `error`/`state`) via `history.replaceState` the moment they are seen — before
+  the async exchange, and even on paths that don't exchange — so a refresh or a
+  restored tab never replays a consumed code (Trakt answers 400
+  `invalid_grant`, surfaced as `ProviderNetworkError`).
+- **Skip the exchange when Trakt is already connected.** A stale code in a
+  leftover tab otherwise produces a guaranteed-failure exchange and a scary
+  error for a user whose session is perfectly fine.
+- The web build is statically pre-rendered (`web.output: "static"`), so the
+  hook must not read `window` in a `useState` initializer — first client render
+  has to match the server HTML; do the URL check inside `useEffect`.
+- Log exchange failures with `console.warn`, not `console.error` — the failure
+  is already surfaced in the UI, and LogBox turns `console.error` into a
+  full-screen dev overlay for what is often just a replayed code.
+
 ## Common errors
 
 - **"The requested redirect uri is malformed or doesn't match client redirect

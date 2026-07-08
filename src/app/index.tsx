@@ -1,88 +1,46 @@
-import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
-import { ConnectTraktButton } from "@/components/connect-trakt-button";
-import { FeedSkeleton } from "@/components/feed-skeleton";
-import { MediaCarousel } from "@/components/media-carousel";
-import { PROVIDERS } from "@/lib/providers/registry";
-import type { ProviderId } from "@/lib/providers/types";
-import { useUnifiedFeed } from "@/state/queries/use-unified-feed";
-import {
-  useConnectedProviders,
-  useDisconnectProvider,
-} from "@/state/session";
-import type { NormalizedMediaItem } from "@/types/media";
+import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
+import { MediaCarousel } from '@/components/media-carousel';
+import { PROVIDERS } from '@/lib/providers/registry';
+import { routes } from '@/lib/routes';
+import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
+import { useConnectedProviders } from '@/state/session';
+import { useTraktOAuthCallback } from '@/state/session/use-trakt-oauth-callback';
+import type { NormalizedMediaItem } from '@/types/media';
 
-function ProviderRow({ id }: { id: ProviderId }) {
-  const connected = useConnectedProviders();
-  const disconnect = useDisconnectProvider();
-  const isConnected = connected.includes(id);
+function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
+  const router = useRouter();
 
-  if (id === "trakt") {
-    return isConnected ? (
-      <Pressable
-        className="border border-border rounded-xl px-6 py-4 items-center bg-surface"
-        onPress={() => disconnect("trakt")}
-      >
-        <Text className="text-foreground font-sans-semibold text-base">
-          Trakt connected
+  return (
+    <View className="flex-1 items-center justify-center px-8 -mt-16">
+      <Text className="text-5xl font-display text-foreground mb-3 text-center">
+        忍
+      </Text>
+      <Text className="text-2xl font-display text-foreground text-center">
+        Connect your trackers
+      </Text>
+      <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
+        Choose the providers you use. Your feed appears as soon as you connect
+        the first one.
+      </Text>
+      {connectFailed && (
+        <Text className="text-accent font-sans text-sm mt-4 text-center">
+          Connecting to Trakt failed. Please try again.
         </Text>
-        <Text className="text-muted font-sans text-xs mt-1">
-          Tap to disconnect
+      )}
+      <Pressable
+        className="bg-accent px-8 py-3 rounded active:opacity-80 mt-8"
+        onPress={() => router.push(routes.connect)}
+      >
+        <Text className="text-accent-foreground font-sans-semibold text-base">
+          Get started
         </Text>
       </Pressable>
-    ) : (
-      <View className="border border-border rounded-xl px-6 py-5 items-center bg-surface">
-        <ConnectTraktButton />
-      </View>
-    );
-  }
-
-  if (id === "letterboxd") {
-    return (
-      <View className="border border-border rounded-xl px-6 py-4 items-center bg-surface opacity-60">
-        <Text className="text-foreground font-sans-semibold text-base">
-          Letterboxd
-        </Text>
-        <Text className="text-muted font-sans text-xs mt-1">
-          Waiting on API access
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <View className="border border-border rounded-xl px-6 py-4 items-center bg-surface opacity-60">
-      <Text className="text-foreground font-sans-semibold text-base">
-        {PROVIDERS[id].label}
-      </Text>
-      <Text className="text-muted font-sans text-xs mt-1">Coming soon</Text>
-    </View>
-  );
-}
-
-function ConnectScreen() {
-  return (
-    <View className="flex-1 items-center justify-center px-8">
-      <View className="items-center mb-8">
-        <Text className="text-5xl font-display text-foreground mb-3 text-center">
-          忍
-        </Text>
-        <Text className="text-2xl font-display text-foreground text-center">
-          Connect your trackers
-        </Text>
-        <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
-          Choose the providers you use. Your feed appears as soon as you connect
-          the first one.
-        </Text>
-      </View>
-
-      <View className="w-full max-w-sm gap-3">
-        {(Object.keys(PROVIDERS) as ProviderId[]).map((id) => (
-          <ProviderRow id={id} key={id} />
-        ))}
-      </View>
     </View>
   );
 }
@@ -90,67 +48,100 @@ function ConnectScreen() {
 function FeedScreen() {
   const { trendingMovies, trendingShows, feedItems, isLoading, isError } =
     useUnifiedFeed();
-  const disconnect = useDisconnectProvider();
   const router = useRouter();
 
   function openDetails(item: NormalizedMediaItem) {
-    router.push(`/details/${item.id}`);
+    router.push(routes.details(item.id));
+  }
+
+  const hasData =
+    trendingMovies.length > 0 ||
+    trendingShows.length > 0 ||
+    feedItems.length > 0;
+
+  if (isError && !isLoading && !hasData) {
+    return (
+      <View className="flex-1 items-center justify-center px-8">
+        <Text className="text-accent font-sans text-center text-base">
+          Could not load your feed.
+        </Text>
+        <Text className="text-muted font-sans text-center mt-2 text-sm">
+          Pull to refresh or check your connection.
+        </Text>
+      </View>
+    );
   }
 
   return (
     <View className="flex-1">
-      {isLoading ? (
-        <FeedSkeleton />
-      ) : isError ? (
-        <Text className="text-accent font-sans text-center mt-12">
-          Could not load your feed.
-        </Text>
-      ) : (
-        <View className="pt-2 pb-4">
-          <MediaCarousel
-            title="Trending Movies"
-            items={trendingMovies}
-            onItemPress={openDetails}
-          />
-          <MediaCarousel
-            title="Trending TV Shows"
-            items={trendingShows}
-            onItemPress={openDetails}
-          />
-          <MediaCarousel
-            title="Your Shows"
-            items={feedItems}
-            onItemPress={openDetails}
-          />
-        </View>
-      )}
-
-      <Pressable className="py-4" onPress={() => disconnect("trakt")}>
-        <Text className="text-accent font-sans text-center">
-          Disconnect Trakt
-        </Text>
-      </Pressable>
+      <ScrollView className="flex-1" contentContainerClassName="pt-2 pb-8">
+        {isError && (
+          <Text className="text-muted font-sans text-xs px-4 pb-2">
+            Some content could not be loaded.
+          </Text>
+        )}
+        <MediaCarousel
+          title="Trending Movies"
+          items={trendingMovies}
+          onItemPress={openDetails}
+        />
+        <MediaCarousel
+          title="Trending TV Shows"
+          items={trendingShows}
+          onItemPress={openDetails}
+        />
+        <MediaCarousel
+          title="Your Shows"
+          items={feedItems}
+          onItemPress={openDetails}
+        />
+      </ScrollView>
+      <FeedSkeletonOverlay visible={isLoading && !hasData} />
     </View>
   );
 }
 
 export default function App() {
   const connected = useConnectedProviders();
+  const oauthStatus = useTraktOAuthCallback();
+  const router = useRouter();
+  const foreground = useCSSVariable('--color-foreground');
 
   return (
     <View className="flex-1 bg-background">
-      <View className="pt-16 px-6 pb-4">
-        <Text className="text-4xl font-display text-foreground tracking-tight">
-          忍 Shinobu
-        </Text>
-        <Text className="text-muted font-sans mt-1">
-          {connected.length === 0
-            ? "No providers connected"
-            : `Connected: ${connected.map((id) => PROVIDERS[id].label).join(", ")}`}
-        </Text>
+      <View className="flex-row items-center justify-between px-6 pt-16 pb-4">
+        <View>
+          <Text className="text-4xl font-display text-foreground tracking-tight">
+            忍 Shinobu
+          </Text>
+          <Text className="text-muted font-sans mt-1">
+            {connected.length === 0
+              ? 'No providers connected'
+              : `Connected: ${connected.map((id) => PROVIDERS[id].label).join(', ')}`}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityLabel="Manage trackers"
+          className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border active:opacity-80"
+          onPress={() => router.push(routes.connect)}
+        >
+          <Ionicons
+            color={typeof foreground === 'string' ? foreground : undefined}
+            name="settings-outline"
+            size={20}
+          />
+        </Pressable>
       </View>
 
-      {connected.length === 0 ? <ConnectScreen /> : <FeedScreen />}
+      {connected.length === 0 ? (
+        oauthStatus === 'exchanging' ? (
+          <FeedSkeleton />
+        ) : (
+          <EmptyFeed connectFailed={oauthStatus === 'error'} />
+        )
+      ) : (
+        <FeedScreen />
+      )}
 
       <StatusBar style="auto" />
     </View>

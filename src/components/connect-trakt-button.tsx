@@ -3,22 +3,19 @@ import {
   useAuthRequest,
 } from 'expo-auth-session';
 import { openAuthSessionAsync } from 'expo-web-browser';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
+  Linking,
+  Platform,
   Pressable,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
-import { Effect } from 'effect';
-import { Linking, Platform } from 'react-native';
-
-import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
-import type { ProviderSession } from '@/types/session';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 import { getTraktRedirectUri } from '@/lib/providers/trakt/redirectUri';
-import { traktDeps } from '@/state/queries/trakt';
+import { exchangeTraktCode } from '@/state/queries/trakt';
 import { useProviderClientId } from '@/state/session/use-provider-client-id';
 
 const discovery = {
@@ -28,20 +25,12 @@ const discovery = {
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
 
-function exchangeCode(
-  code: string,
-  redirectUri: string,
-): Promise<ProviderSession> {
-  return Effect.runPromise(
-    exchangeCodeForSession(traktDeps(), { code, redirectUri }),
-  );
-}
-
 /**
  * Trakt OAuth trigger. The client id is entered in-app (no env-file edits).
  * On native, auth opens in an embedded browser session via expo-web-browser
- * and returns to the app. On web, the current window navigates to Trakt and
- * is redirected back with ?code=..., which the mount handler exchanges.
+ * and returns to the app, and this component finishes the code exchange. On
+ * web, the current window navigates to Trakt and is redirected back to the
+ * home route with ?code=..., where `useTraktOAuthCallback` exchanges it.
  */
 export function ConnectTraktButton() {
   const [storedClientId, saveClientId, clearClientId] = useProviderClientId(
@@ -52,29 +41,6 @@ export function ConnectTraktButton() {
 
   const clientId = storedClientId ?? '';
   const redirectUri = getTraktRedirectUri();
-
-  // On web the OAuth popup may redirect the main window back with ?code=...
-  // instead of returning through openAuthSessionAsync. Handle that on mount.
-  useEffect(() => {
-    if (typeof window === 'undefined' || clientId === '') return;
-
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code == null) return;
-
-    // Remove the code from the URL so a refresh does not re-trigger exchange.
-    const url = new URL(window.location.href);
-    url.searchParams.delete('code');
-    window.history.replaceState({}, '', url.toString());
-
-    setStatus('connecting');
-    exchangeCode(code, redirectUri)
-      .then(() => setStatus('idle'))
-      .catch((error) => {
-        setStatus('error');
-        console.error('Trakt OAuth exchange failed', error);
-      });
-  }, [clientId, redirectUri]);
 
   const [request] = useAuthRequest(
     {
@@ -93,8 +59,9 @@ export function ConnectTraktButton() {
 
     if (Platform.OS === 'web') {
       // On web the most reliable flow is a same-window redirect: Trakt sends
-      // the user back to the app with ?code=..., and the mount handler above
-      // exchanges it. This avoids popup blockers and orphaned auth windows.
+      // the user back to the home route with ?code=..., where
+      // useTraktOAuthCallback exchanges it. This avoids popup blockers and
+      // orphaned auth windows.
       window.location.assign(request.url);
       return;
     }
@@ -113,7 +80,7 @@ export function ConnectTraktButton() {
       return;
     }
 
-    exchangeCode(code, redirectUri)
+    exchangeTraktCode({ code, redirectUri })
       .then(() => setStatus('idle'))
       .catch((error) => {
         setStatus('error');
