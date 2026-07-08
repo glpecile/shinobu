@@ -53,6 +53,12 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   rule (no direct `@legendapp/list` or raw `FlatList` imports) are enforced via
   `no-restricted-imports`. When a new convention lands in this file, check whether
   oxlint can enforce it and add the rule in the same PR.
+- **React Compiler** — enabled via `experiments.reactCompiler` in `app.json` and
+  `babel-plugin-react-compiler`. The compiler automatically memoizes components and
+  hooks, so do not use `useMemo` or `useCallback` manually. They are forbidden by
+  the `no-restricted-imports` rule in `.oxlintrc.json`. If a rare case genuinely
+  requires opting out, use the `'use no memo'` directive on that component and
+  document why in the PR.
 
 ## Nitro Modules
 
@@ -227,12 +233,17 @@ src/
   types/          Shared contracts, e.g. types/media.ts (NormalizedMediaItem)
 ```
 
-## Import Alias
+## File Naming
 
-`@/*` maps to `src/*` (`tsconfig.json` `paths`; Metro resolves it natively — no
-babel plugin needed). Use `@/` for any import that crosses directories
-(`import type { MediaType } from '@/types/media'`); plain `./` stays fine for
-same-directory siblings. Don't add new relative `../` imports.
+Component and hook files use **kebab-case** names:
+
+- `src/components/media-card.tsx`
+- `src/components/connect-trakt-button.tsx`
+- `src/state/session/use-provider-client-id.ts`
+
+Directory names stay lowercase. Exported React component names remain PascalCase
+and hook names remain camelCase because JSX/JS identifiers require it — the
+kebab-case rule applies to the filename, not the export.
 
 ## Platform-Specific Files
 

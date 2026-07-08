@@ -1,0 +1,62 @@
+import { createMMKV } from 'react-native-mmkv';
+
+import type { ProviderId } from '@/lib/providers/types';
+import type { ProviderSession } from '@/types/session';
+
+/**
+ * Per-provider OAuth token persistence. MMKV is synchronous and universal
+ * (localStorage fallback on web). Encryption at rest is deferred to todos/003
+ * on purpose — don't add an encryptionKey here without doing that todo.
+ */
+const storage = createMMKV({ id: 'session' });
+
+const keyFor = (id: ProviderId) => `session.${id}`;
+const PROVIDER_KEY_PATTERN = /^session\.(.+)$/;
+
+export function getProviderSession(id: ProviderId): ProviderSession | null {
+  const raw = storage.getString(keyFor(id));
+  if (raw == null) return null;
+  try {
+    return JSON.parse(raw) as ProviderSession;
+  } catch {
+    // Corrupt entry — treat as disconnected rather than crash the session layer.
+    storage.remove(keyFor(id));
+    return null;
+  }
+}
+
+export function setProviderSession(id: ProviderId, session: ProviderSession): void {
+  storage.set(keyFor(id), JSON.stringify(session));
+}
+
+export function clearProviderSession(id: ProviderId): void {
+  storage.remove(keyFor(id));
+}
+
+export function connectedProviderIds(): ProviderId[] {
+  return storage
+    .getAllKeys()
+    .map((key) => PROVIDER_KEY_PATTERN.exec(key)?.[1])
+    .filter((id): id is ProviderId => id != null);
+}
+
+const clientIdKeyFor = (id: ProviderId) => `clientId.${id}`;
+
+/** Per-provider API client id — avoids requiring env-file edits for user builds. */
+export function getProviderClientId(id: ProviderId): string | null {
+  return storage.getString(clientIdKeyFor(id)) ?? null;
+}
+
+export function setProviderClientId(id: ProviderId, clientId: string): void {
+  storage.set(clientIdKeyFor(id), clientId);
+}
+
+export function clearProviderClientId(id: ProviderId): void {
+  storage.remove(clientIdKeyFor(id));
+}
+
+/** Subscribe to any session change; returns an unsubscribe function. */
+export function onSessionChange(listener: () => void): () => void {
+  const subscription = storage.addOnValueChangedListener(() => listener());
+  return () => subscription.remove();
+}

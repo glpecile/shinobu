@@ -32,6 +32,11 @@
             "name": "react-native",
             "importNames": ["FlatList", "VirtualizedList", "SectionList"],
             "message": "Use the components/List wrapper (Legend List), never raw FlatList (AGENTS.md: Long Lists)."
+          },
+          {
+            "name": "react",
+            "importNames": ["useMemo", "useCallback"],
+            "message": "React Compiler handles memoization automatically — use plain values/functions instead. Opt out with 'use no memo' if absolutely necessary."
           }
         ]
       }
@@ -51,6 +56,15 @@
               }
             ]
           }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/**/*.tsx", "src/state/**/*.ts"],
+      "rules": {
+        "unicorn/filename-case": [
+          "error",
+          { "case": "kebabCase", "ignore": ["^index\\.tsx?$"] }
         ]
       }
     }

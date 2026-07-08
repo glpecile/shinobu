@@ -2,6 +2,9 @@
   "expo": {
     "scheme": "shinobu",
     "userInterfaceStyle": "automatic",
+    "experiments": {
+      "reactCompiler": true
+    },
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "web": {
@@ -23,7 +26,9 @@
             "backgroundColor": "#0a0a0a"
           }
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-image"
     ],
     "name": "Shinobu",
     "slug": "shinobu",
