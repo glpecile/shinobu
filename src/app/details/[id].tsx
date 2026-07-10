@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+
+import Head from '@/components/head';
 import { ScrollView, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -320,6 +322,9 @@ export default function DetailsScreen() {
   if (item == null) {
     return (
       <View className="flex-1 bg-background items-center justify-center px-8">
+        <Head>
+          <title>Not found — Shinobu</title>
+        </Head>
         <Text className="text-2xl font-display text-foreground mb-2">
           Not found
         </Text>
@@ -365,6 +370,12 @@ export default function DetailsScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      <Head>
+        <title>{`${item.title} — Shinobu`}</title>
+        {item.overview != null && (
+          <meta content={item.overview} name="description" />
+        )}
+      </Head>
       <RefreshableScrollView className="flex-1" onRefresh={refresh}>
         <View className="h-80 relative">
           <Image

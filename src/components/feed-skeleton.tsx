@@ -1,36 +1,29 @@
 import {
-  Animated,
-  Platform,
   ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
 } from 'react-native';
-import { useEffect, useState } from 'react';
+import { FadeOut } from 'react-native-reanimated';
 
-// react-native-web has no native animated module — passing true there only
-// logs a warning and falls back to the JS driver anyway.
-const USE_NATIVE_DRIVER = Platform.OS !== 'web';
+import { AnimatedView } from '@/components/animated-view';
 
 // Must stay in sync with MediaCard (w-40 = 160) and the mr-3 gap (12).
 const CARD_WIDTH = 160;
 const CARD_GAP = 12;
 
+// Reanimated CSS animation: declarative, runs on the UI thread, and cleans
+// itself up on unmount — no useEffect/Animated.loop lifecycle to manage.
+const shimmer = {
+  '0%': { transform: [{ translateX: -CARD_WIDTH }] },
+  '100%': { transform: [{ translateX: CARD_WIDTH }] },
+};
+
+// Defined at module scope so the builder isn't recreated per render
+// (react-native-best-practices: layout-animations).
+const fadeOut = FadeOut.duration(250);
+
 function ShimmerCard() {
-  const [translateX] = useState(() => new Animated.Value(-160));
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(translateX, {
-        toValue: 160,
-        duration: 1500,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [translateX]);
-
   return (
     <View className="w-40 h-60 rounded-card overflow-hidden border border-border/50 bg-surface mr-3 relative">
       <View className="w-full h-full bg-muted/20" />
@@ -39,9 +32,14 @@ function ShimmerCard() {
         <View className="h-4 bg-muted/30 rounded w-full mb-2" />
         <View className="h-3 bg-muted/20 rounded w-2/3" />
       </View>
-      <Animated.View
+      <AnimatedView
         className="absolute top-0 bottom-0 w-20 bg-white/5"
-        style={{ transform: [{ translateX }] }}
+        style={{
+          animationName: shimmer,
+          animationDuration: '1500ms',
+          animationIterationCount: 'infinite',
+          animationTimingFunction: 'ease-in-out',
+        }}
       />
     </View>
   );
@@ -86,41 +84,22 @@ export function FeedSkeleton() {
 
 /**
  * Cross-fade variant: rendered on top of the (still-loading) feed content and
- * faded out once `visible` flips false, so skeleton → content never swaps
- * abruptly. The opaque background is what hides the content underneath while
- * loading; keep it in sync with the screen background.
+ * removed once `visible` flips false — the exiting animation fades it out, so
+ * skeleton → content never swaps abruptly. The opaque background is what
+ * hides the content underneath while loading; keep it in sync with the screen
+ * background.
  */
 export function FeedSkeletonOverlay({ visible }: { visible: boolean }) {
-  const [opacity] = useState(() => new Animated.Value(visible ? 1 : 0));
-  const [rendered, setRendered] = useState(visible);
-
-  useEffect(() => {
-    if (visible) {
-      setRendered(true);
-      opacity.setValue(1);
-      return;
-    }
-
-    const fade = Animated.timing(opacity, {
-      toValue: 0,
-      duration: 250,
-      useNativeDriver: USE_NATIVE_DRIVER,
-    });
-    fade.start(({ finished }) => {
-      if (finished) setRendered(false);
-    });
-    return () => fade.stop();
-  }, [visible, opacity]);
-
-  if (!rendered) return null;
+  if (!visible) return null;
 
   return (
-    <Animated.View
+    <AnimatedView
       className="bg-background"
+      exiting={fadeOut}
       pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { opacity }]}
+      style={StyleSheet.absoluteFill}
     >
       <FeedSkeleton />
-    </Animated.View>
+    </AnimatedView>
   );
 }

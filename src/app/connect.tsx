@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+
+import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -83,6 +85,9 @@ export default function ConnectScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      <Head>
+        <title>Manage Trackers — Shinobu</title>
+      </Head>
       <View className="flex-row items-center px-6 pt-16 pb-4">
         <PresstableOpacity
           accessibilityLabel="Back"

@@ -66,6 +66,15 @@
             "name": "react",
             "importNames": ["useMemo", "useCallback"],
             "message": "React Compiler handles memoization automatically — use plain values/functions instead. Opt out with 'use no memo' if absolutely necessary."
+          },
+          {
+            "name": "react-native-reanimated",
+            "importNames": ["default"],
+            "message": "Import AnimatedView from @/components/animated-view — className on raw Animated.* components is silently dropped on native (needs the withUniwind wrapper). Named imports (FadeOut, withTiming, …) are fine."
+          },
+          {
+            "name": "expo-router/head",
+            "message": "Import Head from @/components/head — expo-router/head throws on iOS unless Handoff's `origin` is configured; the wrapper is web-only (docs/solutions/expo-router-head-ios-handoff.md)."
           }
         ]
       }
@@ -74,6 +83,8 @@
   "overrides": [
     {
       "files": [
+        "src/components/animated-view.tsx",
+        "src/components/head/index.web.tsx",
         "src/components/image.tsx",
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/presstable.tsx"

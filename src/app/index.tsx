@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+
+import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -121,6 +123,13 @@ export default function App() {
 
   return (
     <View className="flex-1 bg-background">
+      <Head>
+        <title>Shinobu</title>
+        <meta
+          content="Log a movie, show, or manga once — Shinobu fans it out to every tracker you've connected."
+          name="description"
+        />
+      </Head>
       <View className="flex-row items-center justify-between px-6 pt-16 pb-4">
         <View>
           <Text className="text-4xl font-display text-foreground tracking-tight">
