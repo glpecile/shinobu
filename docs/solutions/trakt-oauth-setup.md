@@ -27,10 +27,15 @@ support PKCE, the app disables it (`usePKCE: false` in `ConnectTraktButton`).
 
 ## Enter the Client ID in the app
 
-1. Open Shinobu and tap **Connect Trakt**.
+1. Open Shinobu and tap **Connect Trakt**. The setup state walks through the
+   Trakt form field by field: every redirect URI to register (the current
+   device's URI is marked), the CORS origins, and which permission boxes to
+   tick.
 2. Paste the Client ID into the input field and tap **Save Client ID**.
-3. The redirect URI shown under the input must exactly match one of the redirect
-   URIs registered in Trakt.
+3. The canonical URI/origin lists live in
+   `src/lib/providers/trakt/redirectUri.ts` (`TRAKT_REDIRECT_URIS`,
+   `TRAKT_CORS_ORIGINS`) — update those constants if a URI ever changes so the
+   in-app instructions stay correct.
 
 ## How the redirect URI is chosen
 

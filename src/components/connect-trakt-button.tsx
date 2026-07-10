@@ -1,9 +1,9 @@
-import {
-  ResponseType,
-  useAuthRequest,
-} from 'expo-auth-session';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { loadAsync, ResponseType } from 'expo-auth-session';
 import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   Linking,
   Platform,
@@ -14,8 +14,13 @@ import {
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { Steps } from '@/components/steps';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
-import { getTraktRedirectUri } from '@/lib/providers/trakt/redirectUri';
+import {
+  getTraktRedirectUri,
+  TRAKT_CORS_ORIGINS,
+  TRAKT_REDIRECT_URIS,
+} from '@/lib/providers/trakt/redirectUri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 import { useProviderClientId } from '@/state/session/use-provider-client-id';
 
@@ -25,6 +30,38 @@ const discovery = {
 };
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
+
+// A Trakt client id is a 64-char hex string. The check can't tell the id from
+// the secret (same shape), but it does catch the common paste mistakes:
+// URLs, app names, partial selections.
+const clientIdSchema = z.object({
+  clientId: z
+    .string()
+    .trim()
+    .min(1, 'Paste your Client ID first.')
+    .regex(
+      /^[0-9a-f]{64}$/i,
+      "That doesn't look like a Client ID — it's the 64-character hex string on your Trakt app's page.",
+    ),
+});
+
+type ClientIdForm = z.infer<typeof clientIdSchema>;
+
+/** Selectable value the user copies into a field of Trakt's application form. */
+function CopyValue({ value, hint }: { value: string; hint?: string }) {
+  return (
+    <View className="flex-row items-center gap-2">
+      <View className="border border-border bg-surface px-2 py-1 rounded">
+        <Text className="text-foreground font-sans text-xs" selectable>
+          {value}
+        </Text>
+      </View>
+      {hint != null && (
+        <Text className="text-muted font-sans text-xs">{hint}</Text>
+      )}
+    </View>
+  );
+}
 
 /**
  * Trakt OAuth trigger. The client id is entered in-app (no env-file edits).
@@ -37,27 +74,48 @@ export function ConnectTraktButton() {
   const [storedClientId, saveClientId, clearClientId] = useProviderClientId(
     'trakt',
   );
-  const [inputValue, setInputValue] = useState(storedClientId ?? '');
   const [status, setStatus] = useState<ConnectionStatus>('idle');
   const muted = useCSSVariable('--color-muted');
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ClientIdForm>({
+    defaultValues: { clientId: storedClientId ?? '' },
+    resolver: zodResolver(clientIdSchema),
+  });
+  // Saving the client id means the user wants to connect — go straight into
+  // the OAuth flow instead of asking for an extra tap on Connect.
+  const submitClientId = handleSubmit(async ({ clientId: value }) => {
+    saveClientId(value);
+    await connect(value);
+  });
 
   const clientId = storedClientId ?? '';
   const redirectUri = getTraktRedirectUri();
 
-  const [request] = useAuthRequest(
-    {
-      clientId,
-      responseType: ResponseType.Code,
-      redirectUri,
-      // Trakt does not support PKCE; including code_challenge causes the
-      // authorization endpoint to reject the request.
-      usePKCE: false,
-    },
-    discovery,
-  );
+  async function connect(id: string = clientId) {
+    if (id === '') return;
 
-  async function connect() {
-    if (request?.url == null) return;
+    setStatus('connecting');
+    // Built on demand (rather than via useAuthRequest) so a just-saved client
+    // id can connect immediately, without waiting for a re-render.
+    const request = await loadAsync(
+      {
+        clientId: id,
+        responseType: ResponseType.Code,
+        redirectUri,
+        // Trakt does not support PKCE; including code_challenge causes the
+        // authorization endpoint to reject the request.
+        usePKCE: false,
+      },
+      discovery,
+    );
+    if (request.url == null) {
+      setStatus('idle');
+      return;
+    }
 
     if (Platform.OS === 'web') {
       // On web the most reliable flow is a same-window redirect: Trakt sends
@@ -68,7 +126,6 @@ export function ConnectTraktButton() {
       return;
     }
 
-    setStatus('connecting');
     const result = await openAuthSessionAsync(request.url, redirectUri);
     if (result.type !== 'success') {
       setStatus('idle');
@@ -91,41 +148,116 @@ export function ConnectTraktButton() {
   }
 
   if (clientId === '') {
+    // If web dev runs on a non-default port the device URI won't be in the
+    // canonical list — surface it so the user registers the one that matters.
+    const redirectUris = TRAKT_REDIRECT_URIS.includes(redirectUri)
+      ? TRAKT_REDIRECT_URIS
+      : [...TRAKT_REDIRECT_URIS, redirectUri];
+
     return (
-      <View className="w-full gap-3">
+      <View className="w-full gap-4">
         <Text className="text-muted font-sans text-sm">
-          Paste your Trakt Client ID from{" "}
-          <Text
-            className="text-accent font-sans-semibold underline"
-            onPress={() =>
-              Linking.openURL("https://trakt.tv/oauth/applications/new")
-            }
-          >
-            trakt.tv/oauth/applications
-          </Text>
-          .
+          Shinobu talks to Trakt through your own (free) Trakt API app. One-time
+          setup, about a minute:
         </Text>
-        <Text className="text-muted font-sans text-xs">
-          Register this redirect URI:{" "}
-          <Text className="text-foreground font-sans-semibold">
-            {redirectUri}
-          </Text>
-        </Text>
-        <TextInput
-          className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
-          onChangeText={setInputValue}
-          placeholder="Trakt Client ID"
-          placeholderTextColor={typeof muted === 'string' ? muted : undefined}
-          value={inputValue}
-        />
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
-          onPress={() => saveClientId(inputValue.trim())}
-        >
-          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-            Save Client ID
-          </Text>
-        </PresstableOpacity>
+
+        <Steps>
+          <Steps.Item>
+            <Text className="text-muted font-sans text-sm">
+              Create an app at{" "}
+              <Text
+                className="text-accent font-sans-semibold underline"
+                onPress={() =>
+                  Linking.openURL("https://trakt.tv/oauth/applications/new")
+                }
+              >
+                trakt.tv/oauth/applications/new
+              </Text>
+              . Name and description can be anything (e.g. "Shinobu").
+            </Text>
+          </Steps.Item>
+
+          <Steps.Item>
+            <Text className="text-muted font-sans text-sm">
+              In <Text className="text-foreground font-sans-semibold">Redirect
+              uri</Text>, paste all of these (one per line) so the same app
+              works on every device:
+            </Text>
+            {redirectUris.map((uri) => (
+              <CopyValue
+                hint={uri === redirectUri ? "← this device" : undefined}
+                key={uri}
+                value={uri}
+              />
+            ))}
+          </Steps.Item>
+
+          <Steps.Item>
+            <Text className="text-muted font-sans text-sm">
+              In <Text className="text-foreground font-sans-semibold">
+              Javascript (cors) origins</Text> (needed for the web app):
+            </Text>
+            {TRAKT_CORS_ORIGINS.map((origin) => (
+              <CopyValue key={origin} value={origin} />
+            ))}
+          </Steps.Item>
+
+          <Steps.Item>
+            <Text className="text-muted font-sans text-sm">
+              Under <Text className="text-foreground font-sans-semibold">
+              Permissions</Text>, tick{" "}
+              <Text className="text-foreground font-sans-semibold">
+                /scrobble
+              </Text>
+              {" "}(required for logging watches).{" "}
+              <Text className="text-foreground font-sans-semibold">
+                /checkin
+              </Text>
+              {" "}is optional.
+            </Text>
+          </Steps.Item>
+
+          <Steps.Item>
+            <Text className="text-muted font-sans text-sm">
+              Save the app, copy its{" "}
+              <Text className="text-foreground font-sans-semibold">
+                Client ID
+              </Text>
+              , and paste it here:
+            </Text>
+            <Controller
+              control={control}
+              name="clientId"
+              render={({ field }) => (
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+                  onBlur={field.onBlur}
+                  onChangeText={field.onChange}
+                  onSubmitEditing={() => submitClientId()}
+                  placeholder="Trakt Client ID"
+                  placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+                  returnKeyType="done"
+                  value={field.value}
+                />
+              )}
+            />
+            {errors.clientId != null && (
+              <Text className="text-accent font-sans text-xs">
+                {errors.clientId.message}
+              </Text>
+            )}
+            <PresstableOpacity
+              className="bg-accent px-5 py-3 rounded"
+              onPress={() => submitClientId()}
+            >
+              <Text className="text-accent-foreground font-sans-semibold text-base text-center">
+                Save Client ID
+              </Text>
+            </PresstableOpacity>
+          </Steps.Item>
+        </Steps>
       </View>
     );
   }

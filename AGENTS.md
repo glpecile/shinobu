@@ -248,6 +248,17 @@ src/
   types/          Shared contracts, e.g. types/media.ts (NormalizedMediaItem)
 ```
 
+## Compound Components
+
+When a shared UI component is a parent/children structure with implicit shared
+state (numbering, selection, grouping), build it compound-component style: a
+parent that provides context, with subcomponents attached as properties —
+instead of prop-drilling indices or passing config arrays. Reference example:
+`src/components/steps.tsx` — `<Steps>` auto-numbers its `<Steps.Item>` children
+via context, so steps can be added or reordered without touching a `number`
+prop at any call site. Prefer promoting an inline sub-layout to this pattern
+once a second screen needs it.
+
 ## File Naming
 
 Component and hook files use **kebab-case** names:
