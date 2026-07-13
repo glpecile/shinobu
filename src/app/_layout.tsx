@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
+import { SheetProvider } from "@/components/sheet";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,12 +45,14 @@ export default function Layout() {
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen
-              name="index"
-              options={{ title: "Shinobu" }}
-            />
-          </Stack>
+          <SheetProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="index"
+                options={{ title: "Shinobu" }}
+              />
+            </Stack>
+          </SheetProvider>
         </QueryClientProvider>
         </KeyboardProvider>
       </ErrorBoundary>

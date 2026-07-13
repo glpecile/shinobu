@@ -13,14 +13,18 @@ import type { TraktDeps } from './deps';
 import {
   normalizeCastEntry,
   normalizeCrew,
+  normalizeSearchResult,
   normalizeStudio,
   normalizeTrendingMovie,
   normalizeTrendingShow,
+  normalizeWatchedMovie,
   normalizeWatchedShow,
   type TraktPeopleResponse,
+  type TraktSearchResult,
   type TraktStudio,
   type TraktTrendingMovie,
   type TraktTrendingShow,
+  type TraktWatchedMovie,
   type TraktWatchedShow,
 } from './normalize';
 
@@ -66,6 +70,31 @@ export function getTrendingShows(
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return raw.map((entry) => normalizeTrendingShow(entry, nowIso));
+  });
+}
+
+/**
+ * Text search across movies + TV shows in one public request (plan 0009).
+ * Rows Trakt indexes that we don't handle (episodes, people, …) drop out in
+ * normalization rather than failing the whole search. `fields=title,aliases`
+ * keeps relevance sane — Trakt's default searches overviews/taglines too,
+ * which buries exact title matches under plot-keyword noise.
+ */
+export function searchMedia(
+  deps: TraktDeps,
+  params: { query: string; limit?: number },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const limit = params.limit ?? 20;
+  return Effect.gen(function* () {
+    const raw = yield* traktRequest<TraktSearchResult[]>(
+      deps,
+      `/search/movie,show?query=${encodeURIComponent(params.query)}&fields=title,aliases&extended=full,images&limit=${limit}`,
+    );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return raw
+      .map((entry) => normalizeSearchResult(entry, nowIso))
+      .filter((item) => item != null);
   });
 }
 
@@ -118,4 +147,13 @@ export function getWatchedShows(
     deps,
     '/sync/watched/shows?extended=full,images',
   ).pipe(Effect.map((shows) => shows.map(normalizeWatchedShow)));
+}
+
+export function getWatchedMovies(
+  deps: TraktDeps,
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  return traktAuthedRequest<TraktWatchedMovie[]>(
+    deps,
+    '/sync/watched/movies?extended=full,images',
+  ).pipe(Effect.map((movies) => movies.map(normalizeWatchedMovie)));
 }

@@ -3,9 +3,14 @@ import { describe, expect, test } from 'bun:test';
 import {
   normalizeCastEntry,
   normalizeCrew,
+  normalizeSearchResult,
   normalizeStudio,
+  normalizeWatchedMovie,
   type TraktCastEntry,
   type TraktCrewEntry,
+  type TraktMovie,
+  type TraktShow,
+  type TraktWatchedMovie,
 } from './normalize';
 
 function person(id: number, name: string, headshot?: string) {
@@ -87,6 +92,90 @@ describe('normalizeCrew', () => {
     });
 
     expect(crew[0].job).toBe('Director of Photography');
+  });
+});
+
+describe('normalizeSearchResult', () => {
+  const NOW = '2026-07-10T12:00:00.000Z';
+
+  const movie: TraktMovie = {
+    title: 'Perfect Blue',
+    year: 1997,
+    ids: { trakt: 100, tmdb: 10494 },
+    images: { poster: ['walter.trakt.tv/movies/100/poster.jpg'] },
+  };
+
+  const show: TraktShow = {
+    title: 'Monogatari',
+    year: 2009,
+    ids: { trakt: 200, tmdb: 46004 },
+    aired_episodes: 15,
+  };
+
+  test('a movie row normalizes as MOVIE with the supplied instant', () => {
+    const normalized = normalizeSearchResult({ type: 'movie', movie }, NOW);
+
+    expect(normalized).toMatchObject({
+      id: 'trakt-100',
+      title: 'Perfect Blue',
+      type: 'MOVIE',
+      year: 1997,
+      coverImage: 'https://walter.trakt.tv/movies/100/poster.jpg',
+      lastUpdated: NOW,
+      externalIds: { trakt: 100, tmdb: 10494 },
+    });
+  });
+
+  test('a show row normalizes as TV and carries aired episodes', () => {
+    const normalized = normalizeSearchResult({ type: 'show', show }, NOW);
+
+    expect(normalized).toMatchObject({
+      id: 'trakt-200',
+      type: 'TV',
+      totalEpisodes: 15,
+      externalIds: { trakt: 200, tmdb: 46004 },
+    });
+  });
+
+  test('row kinds we do not handle drop out as null instead of throwing', () => {
+    expect(normalizeSearchResult({ type: 'episode' }, NOW)).toBeNull();
+    expect(normalizeSearchResult({ type: 'person' }, NOW)).toBeNull();
+  });
+
+  test('a row whose declared type is missing its payload drops out', () => {
+    expect(normalizeSearchResult({ type: 'movie' }, NOW)).toBeNull();
+    expect(normalizeSearchResult({ type: 'show', movie }, NOW)).toBeNull();
+  });
+});
+
+describe('normalizeWatchedMovie', () => {
+  const watched: TraktWatchedMovie = {
+    plays: 3,
+    last_watched_at: '2026-07-01T21:30:00.000Z',
+    last_updated_at: '2026-07-02T08:00:00.000Z',
+    movie: {
+      title: 'Perfect Blue',
+      year: 1997,
+      ids: { trakt: 100, tmdb: 10494 },
+      images: { poster: ['walter.trakt.tv/movies/100/poster.jpg'] },
+    },
+  };
+
+  test('plays becomes currentProgress and last_watched_at becomes lastUpdated', () => {
+    expect(normalizeWatchedMovie(watched)).toMatchObject({
+      id: 'trakt-100',
+      title: 'Perfect Blue',
+      type: 'MOVIE',
+      currentProgress: 3,
+      lastUpdated: '2026-07-01T21:30:00.000Z',
+      externalIds: { trakt: 100, tmdb: 10494 },
+    });
+  });
+
+  test('prefixes scheme-less poster paths with https', () => {
+    expect(normalizeWatchedMovie(watched).coverImage).toBe(
+      'https://walter.trakt.tv/movies/100/poster.jpg',
+    );
   });
 });
 

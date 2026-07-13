@@ -1,4 +1,8 @@
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -10,10 +14,13 @@ import {
   getMediaStudios,
   getTrendingMovies,
   getTrendingShows,
+  getWatchedMovies,
   getWatchedShows,
+  searchMedia,
 } from '@/lib/providers/trakt/reads';
-import type { MediaType } from '@/types/media';
+import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
+import { useConnectedProviders } from '@/state/session';
 import {
   clearProviderSession,
   getProviderSession,
@@ -57,10 +64,15 @@ export function exchangeTraktCode(params: {
 export const traktQueryKeys = {
   all: ['trakt'] as const,
   watchedShows: () => [...traktQueryKeys.all, 'watched-shows'] as const,
+  watchedMovies: () => [...traktQueryKeys.all, 'watched-movies'] as const,
   trendingMovies: (limit?: number) =>
     [...traktQueryKeys.all, 'trending-movies', limit ?? 'default'] as const,
   trendingShows: (limit?: number) =>
     [...traktQueryKeys.all, 'trending-shows', limit ?? 'default'] as const,
+  /** Prefix for every search entry — details/[id] scans this for cache hits. */
+  searchRoot: () => [...traktQueryKeys.all, 'search'] as const,
+  search: (query: string, limit: number) =>
+    [...traktQueryKeys.searchRoot(), query, limit] as const,
   people: (type: MediaType, traktId: number) =>
     [...traktQueryKeys.all, 'people', type, traktId] as const,
   studios: (type: MediaType, traktId: number) =>
@@ -107,6 +119,83 @@ export function useWatchedShowsQuery(options: { enabled?: boolean } = {}) {
     queryKey: traktQueryKeys.watchedShows(),
     queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
     enabled: options.enabled,
+  });
+}
+
+/**
+ * Authenticated read of the user's watched movies — same enable-on-connect
+ * contract as `useWatchedShowsQuery`.
+ */
+export function useWatchedMoviesQuery(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: traktQueryKeys.watchedMovies(),
+    queryFn: () => Effect.runPromise(getWatchedMovies(traktDeps())),
+    enabled: options.enabled,
+  });
+}
+
+export interface TraktWatchedInfo {
+  plays: number;
+  lastWatchedAt: string;
+}
+
+/**
+ * Whether Trakt already records this item as watched. Movie-like items (movies
+ * and anime films — the same `isFilm` reasoning as log routing) resolve
+ * against watched movies, where `plays` is the rewatch count; TV resolves
+ * against watched shows, where `plays` is the watched-episode count. Returns
+ * `null` while Trakt is disconnected, the read is still loading, or the item
+ * simply isn't watched.
+ */
+export function useTraktWatchedInfo(
+  item: NormalizedMediaItem,
+): TraktWatchedInfo | null {
+  const connected = useConnectedProviders();
+  const traktConnected = connected.includes('trakt');
+  const movieLike =
+    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+
+  const watchedMovies = useWatchedMoviesQuery({
+    enabled: traktConnected && movieLike,
+  });
+  const watchedShows = useWatchedShowsQuery({
+    enabled: traktConnected && item.type === 'TV',
+  });
+
+  const traktId = item.externalIds.trakt;
+  if (!traktConnected || traktId == null) return null;
+
+  const source = movieLike
+    ? watchedMovies.data
+    : item.type === 'TV'
+      ? watchedShows.data
+      : undefined;
+  const match = source?.find((entry) => entry.externalIds.trakt === traktId);
+  if (match == null || match.currentProgress <= 0) return null;
+
+  return { plays: match.currentProgress, lastWatchedAt: match.lastUpdated };
+}
+
+/** One-character queries return noise and burn rate limit — don't fire them. */
+export const SEARCH_MIN_QUERY_LENGTH = 2;
+
+/**
+ * Public movie/show text search (plan 0009). Disabled until the trimmed query
+ * reaches the minimum length; `keepPreviousData` keeps the last results on
+ * screen between debounced queries instead of flashing an empty list.
+ */
+export function useTraktSearchQuery(params: {
+  query: string;
+  limit?: number;
+}) {
+  const query = params.query.trim();
+  const limit = params.limit ?? 20;
+  return useQuery({
+    queryKey: traktQueryKeys.search(query, limit),
+    queryFn: () => Effect.runPromise(searchMedia(traktDeps(), { query, limit })),
+    enabled: query.length >= SEARCH_MIN_QUERY_LENGTH,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }
 

@@ -29,6 +29,24 @@
           {
             "group": ["pressto", "pressto/*"],
             "message": "Never import pressto directly - go through @/components/presstable (adds press debouncing + the withUniwind className wrapper)."
+          },
+          {
+            "group": [
+              "@swmansion/react-native-bottom-sheet",
+              "@swmansion/react-native-bottom-sheet/*"
+            ],
+            "message": "Import Sheet/SheetProvider from @/components/sheet — the native lib has no web build; the wrapper provides the Modal fallback via index.web.tsx."
+          },
+          {
+            "group": ["react-native-pulsar", "react-native-pulsar/*"],
+            "message": "Import { haptics } from @/lib/haptics — pulsar has no web implementation; the wrapper no-ops on web via index.web.ts."
+          },
+          {
+            "group": [
+              "@react-native-community/datetimepicker",
+              "@react-native-community/datetimepicker/*"
+            ],
+            "message": "Use @expo/ui/community/datetime-picker instead — drop-in replacement powered by SwiftUI/Jetpack Compose, no config plugin needed."
           }
         ],
         "paths": [
@@ -89,6 +107,22 @@
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/presstable.tsx"
       ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/sheet/**", "src/lib/haptics/**"],
       "rules": {
         "no-restricted-imports": [
           "error",

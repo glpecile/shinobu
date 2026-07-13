@@ -141,17 +141,30 @@ export default function App() {
               : `Connected: ${connected.map((id) => PROVIDERS[id].label).join(', ')}`}
           </Text>
         </View>
-        <PresstableOpacity
-          accessibilityLabel="Manage trackers"
-          className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border"
-          onPress={() => router.push(routes.connect)}
-        >
-          <Ionicons
-            color={typeof foreground === 'string' ? foreground : undefined}
-            name="settings-outline"
-            size={20}
-          />
-        </PresstableOpacity>
+        <View className="flex-row gap-3">
+          <PresstableOpacity
+            accessibilityLabel="Search"
+            className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border"
+            onPress={() => router.push(routes.search)}
+          >
+            <Ionicons
+              color={typeof foreground === 'string' ? foreground : undefined}
+              name="search-outline"
+              size={20}
+            />
+          </PresstableOpacity>
+          <PresstableOpacity
+            accessibilityLabel="Manage trackers"
+            className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border"
+            onPress={() => router.push(routes.connect)}
+          >
+            <Ionicons
+              color={typeof foreground === 'string' ? foreground : undefined}
+              name="settings-outline"
+              size={20}
+            />
+          </PresstableOpacity>
+        </View>
       </View>
 
       {connected.length === 0 ? (

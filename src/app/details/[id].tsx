@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -12,12 +12,14 @@ import { Image } from '@/components/image';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
+import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { SuspenseSection } from '@/components/suspense-section';
 import { routes } from '@/lib/routes';
 import {
   traktQueryKeys,
   useSuspenseTraktPeopleQuery,
   useSuspenseTraktStudiosQuery,
+  useTraktWatchedInfo,
 } from '@/state/queries/trakt';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
@@ -27,6 +29,23 @@ function findItemById(
   groups: NormalizedMediaItem[][],
 ): NormalizedMediaItem | undefined {
   return groups.flat().find((item) => item.id === id);
+}
+
+/**
+ * Search results aren't part of the unified feed, so a tap from the search
+ * screen resolves against the cached search queries instead (plan 0009). Cold
+ * deep links still miss — the provider-fetch fallback stays with plan 0007.
+ */
+function findInSearchCache(
+  queryClient: QueryClient,
+  id: string,
+): NormalizedMediaItem | undefined {
+  return queryClient
+    .getQueriesData<NormalizedMediaItem[]>({
+      queryKey: traktQueryKeys.searchRoot(),
+    })
+    .flatMap(([, data]) => data ?? [])
+    .find((item) => item.id === id);
 }
 
 /** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
@@ -40,6 +59,41 @@ function metaLine(item: NormalizedMediaItem): string {
   ]
     .filter((part) => part != null)
     .join(' · ');
+}
+
+/**
+ * "Watched 3× · Jul 13, 2026" under the meta line — rendered only when Trakt
+ * already records this item as watched (movies count plays, shows count
+ * logged episodes). Lives as its own element so the hook only runs once the
+ * screen has a resolved item.
+ */
+function WatchedLine({ item }: { item: NormalizedMediaItem }) {
+  const watched = useTraktWatchedInfo(item);
+  const accent = useCSSVariable('--color-accent');
+  if (watched == null) return null;
+
+  const date = new Date(watched.lastWatchedAt).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const label =
+    item.type === 'TV'
+      ? `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`
+      : watched.plays > 1
+        ? `Watched ${watched.plays}× · ${date}`
+        : `Watched · ${date}`;
+
+  return (
+    <View className="flex-row items-center gap-1.5 mt-1.5">
+      <Ionicons
+        color={typeof accent === 'string' ? accent : undefined}
+        name="checkmark-circle"
+        size={13}
+      />
+      <Text className="text-muted font-sans text-sm">{label}</Text>
+    </View>
+  );
 }
 
 function initials(name: string): string {
@@ -300,11 +354,12 @@ export default function DetailsScreen() {
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const item = findItemById(id, [
-    feed.trendingMovies,
-    feed.trendingShows,
-    feed.feedItems,
-  ]);
+  const item =
+    findItemById(id, [
+      feed.trendingMovies,
+      feed.trendingShows,
+      feed.feedItems,
+    ]) ?? findInSearchCache(queryClient, id);
   const traktId = item?.externalIds.trakt;
 
   function goBack() {
@@ -429,10 +484,13 @@ export default function DetailsScreen() {
                   {meta}
                 </Text>
               )}
+              <WatchedLine item={item} />
             </View>
           </View>
 
           {item.overview != null && <Overview text={item.overview} />}
+
+          <LogMediaButton item={item} />
 
           {showProgress && (
             <View className="flex-row gap-4">

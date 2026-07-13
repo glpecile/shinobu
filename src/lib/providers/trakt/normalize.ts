@@ -56,6 +56,13 @@ export interface TraktTrendingShow {
   show: TraktShow;
 }
 
+export interface TraktWatchedMovie {
+  plays: number;
+  last_watched_at: string;
+  last_updated_at: string;
+  movie: TraktMovie;
+}
+
 export interface TraktWatchedShow {
   plays: number;
   last_watched_at: string;
@@ -95,50 +102,90 @@ function detailFields(
 }
 
 /**
- * `nowIso` keeps this pure: trending entries carry no timestamp of their own,
- * and the read effect supplies the instant from Effect's Clock.
+ * `nowIso` keeps these pure: catalogue entries (trending, search) carry no
+ * timestamp of their own, and the read effect supplies the instant from
+ * Effect's Clock.
  */
-export function normalizeTrendingMovie(
-  raw: TraktTrendingMovie,
+export function normalizeMovie(
+  raw: TraktMovie,
   nowIso: string,
 ): NormalizedMediaItem {
   return {
-    id: `trakt-${raw.movie.ids.trakt}`,
-    title: raw.movie.title,
-    coverImage: imageUrl(raw.movie.images?.poster),
-    ...detailFields(raw.movie),
+    id: `trakt-${raw.ids.trakt}`,
+    title: raw.title,
+    coverImage: imageUrl(raw.images?.poster),
+    ...detailFields(raw),
     type: 'MOVIE',
     currentProgress: 0,
     progressUnit: 'episode',
     lastUpdated: nowIso,
     externalIds: {
-      ...(raw.movie.ids.trakt != null ? { trakt: raw.movie.ids.trakt } : {}),
-      ...(raw.movie.ids.tmdb != null ? { tmdb: raw.movie.ids.tmdb } : {}),
+      ...(raw.ids.trakt != null ? { trakt: raw.ids.trakt } : {}),
+      ...(raw.ids.tmdb != null ? { tmdb: raw.ids.tmdb } : {}),
     },
   };
+}
+
+export function normalizeShow(
+  raw: TraktShow,
+  nowIso: string,
+): NormalizedMediaItem {
+  return {
+    id: `trakt-${raw.ids.trakt}`,
+    title: raw.title,
+    coverImage: imageUrl(raw.images?.poster),
+    ...detailFields(raw),
+    type: 'TV',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    ...(raw.aired_episodes != null
+      ? { totalEpisodes: raw.aired_episodes }
+      : {}),
+    lastUpdated: nowIso,
+    externalIds: {
+      ...(raw.ids.trakt != null ? { trakt: raw.ids.trakt } : {}),
+      ...(raw.ids.tmdb != null ? { tmdb: raw.ids.tmdb } : {}),
+    },
+  };
+}
+
+export function normalizeTrendingMovie(
+  raw: TraktTrendingMovie,
+  nowIso: string,
+): NormalizedMediaItem {
+  return normalizeMovie(raw.movie, nowIso);
 }
 
 export function normalizeTrendingShow(
   raw: TraktTrendingShow,
   nowIso: string,
 ): NormalizedMediaItem {
-  return {
-    id: `trakt-${raw.show.ids.trakt}`,
-    title: raw.show.title,
-    coverImage: imageUrl(raw.show.images?.poster),
-    ...detailFields(raw.show),
-    type: 'TV',
-    currentProgress: 0,
-    progressUnit: 'episode',
-    ...(raw.show.aired_episodes != null
-      ? { totalEpisodes: raw.show.aired_episodes }
-      : {}),
-    lastUpdated: nowIso,
-    externalIds: {
-      ...(raw.show.ids.trakt != null ? { trakt: raw.show.ids.trakt } : {}),
-      ...(raw.show.ids.tmdb != null ? { tmdb: raw.show.ids.tmdb } : {}),
-    },
-  };
+  return normalizeShow(raw.show, nowIso);
+}
+
+/**
+ * From `/search/movie,show`. `type` is widened to `string` because Trakt's
+ * search can index other row kinds (episode, person, list) — anything we don't
+ * handle normalizes to `null` and drops out, never throws.
+ */
+export interface TraktSearchResult {
+  type: string;
+  score?: number;
+  movie?: TraktMovie;
+  show?: TraktShow;
+}
+
+export function normalizeSearchResult(
+  raw: TraktSearchResult,
+  nowIso: string,
+): NormalizedMediaItem | null {
+  if (raw.type === 'movie' && raw.movie != null) {
+    return normalizeMovie(raw.movie, nowIso);
+  }
+  if (raw.type === 'show' && raw.show != null) {
+    return normalizeShow(raw.show, nowIso);
+  }
+  return null;
 }
 
 /** From `/movies|shows/:id/people?extended=images`. */
@@ -249,6 +296,18 @@ export function normalizeStudio(raw: TraktStudio): NormalizedStudio {
   return {
     id: `trakt-studio-${raw.ids.trakt ?? raw.ids.slug}`,
     name: raw.name,
+  };
+}
+
+/**
+ * Watched entries carry their own instant (`last_watched_at`), so unlike the
+ * catalogue normalizers no external `nowIso` is needed; `plays` becomes the
+ * item's progress (a movie watched twice has `currentProgress: 2`).
+ */
+export function normalizeWatchedMovie(raw: TraktWatchedMovie): NormalizedMediaItem {
+  return {
+    ...normalizeMovie(raw.movie, raw.last_watched_at),
+    currentProgress: raw.plays,
   };
 }
 
