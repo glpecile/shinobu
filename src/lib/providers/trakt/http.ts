@@ -62,8 +62,15 @@ export function traktHttp<A>(
         cause: new Error(`Trakt responded ${response.status} for ${path}`),
       });
     }
+    // No endpoint we call returns 204 (reads are 200, /sync/history is 201,
+    // token grants are 200). Returning `undefined as A` here would silently
+    // hand a caller expecting JSON a lie — fail loudly instead; if a genuine
+    // no-content endpoint is ever added, give it an explicit void-typed path.
     if (response.status === 204) {
-      return undefined as A;
+      return yield* new ProviderDecodeError({
+        provider: 'trakt',
+        detail: `unexpected empty 204 response from ${path}`,
+      });
     }
 
     return yield* Effect.tryPromise({

@@ -55,6 +55,25 @@ export function clearProviderClientId(id: ProviderId): void {
   storage.remove(clientIdKeyFor(id));
 }
 
+const clientSecretKeyFor = (id: ProviderId) => `clientSecret.${id}`;
+
+/**
+ * Per-provider API client secret, stored alongside the client id — Trakt's
+ * token exchange requires the pair, so a user-entered client id without its
+ * secret cannot complete OAuth. Same todos/003 encryption caveat as above.
+ */
+export function getProviderClientSecret(id: ProviderId): string | null {
+  return storage.getString(clientSecretKeyFor(id)) ?? null;
+}
+
+export function setProviderClientSecret(id: ProviderId, clientSecret: string): void {
+  storage.set(clientSecretKeyFor(id), clientSecret);
+}
+
+export function clearProviderClientSecret(id: ProviderId): void {
+  storage.remove(clientSecretKeyFor(id));
+}
+
 /** Subscribe to any session change; returns an unsubscribe function. */
 export function onSessionChange(listener: () => void): () => void {
   const subscription = storage.addOnValueChangedListener(() => listener());

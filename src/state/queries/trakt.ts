@@ -7,7 +7,6 @@ import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
-import { traktClientSecret } from '@/lib/providers/trakt/config';
 import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
 import {
   getMediaPeople,
@@ -26,7 +25,19 @@ import {
   getProviderSession,
   setProviderSession,
 } from '@/state/session/tokens';
-import { getClientIdForProvider } from '@/state/session/provider-config';
+import {
+  getClientIdForProvider,
+  getClientSecretForProvider,
+} from '@/state/session/provider-config';
+
+// Module-level singleton (not rebuilt per traktDeps() call): the auth layer
+// coalesces concurrent token refreshes per token store, so the store's object
+// identity must be stable across queries.
+const tokenStore: TokenStore = {
+  get: () => getProviderSession('trakt'),
+  set: (session) => setProviderSession('trakt', session),
+  clear: () => clearProviderSession('trakt'),
+};
 
 /**
  * Real dependency wiring for Trakt effects. Lives in the query layer so the
@@ -34,17 +45,11 @@ import { getClientIdForProvider } from '@/state/session/provider-config';
  * lib/providers never imports state/).
  */
 export function traktDeps(): TraktDeps {
-  const tokenStore: TokenStore = {
-    get: () => getProviderSession('trakt'),
-    set: (session) => setProviderSession('trakt', session),
-    clear: () => clearProviderSession('trakt'),
-  };
-
   return {
     fetch: httpFetch,
     tokens: tokenStore,
     clientId: getClientIdForProvider('trakt'),
-    clientSecret: traktClientSecret(),
+    clientSecret: getClientSecretForProvider('trakt'),
   };
 }
 

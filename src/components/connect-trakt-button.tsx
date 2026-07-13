@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loadAsync, ResponseType } from 'expo-auth-session';
 import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, type Control } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Linking,
@@ -22,7 +22,7 @@ import {
   TRAKT_REDIRECT_URIS,
 } from '@/lib/providers/trakt/redirectUri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
-import { useProviderClientId } from '@/state/session/use-provider-client-id';
+import { useProviderCredentials } from '@/state/session/use-provider-credentials';
 
 const discovery = {
   authorizationEndpoint: TRAKT_AUTHORIZE_URL,
@@ -31,21 +31,25 @@ const discovery = {
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
 
-// A Trakt client id is a 64-char hex string. The check can't tell the id from
-// the secret (same shape), but it does catch the common paste mistakes:
-// URLs, app names, partial selections.
-const clientIdSchema = z.object({
-  clientId: z
+// Trakt's client id and secret are both 64-char hex strings. The check can't
+// tell the two apart (same shape), but it does catch the common paste
+// mistakes: URLs, app names, partial selections.
+const hex64 = (label: string) =>
+  z
     .string()
     .trim()
-    .min(1, 'Paste your Client ID first.')
+    .min(1, `Paste your ${label} first.`)
     .regex(
       /^[0-9a-f]{64}$/i,
-      "That doesn't look like a Client ID — it's the 64-character hex string on your Trakt app's page.",
-    ),
+      `That doesn't look like a ${label} — it's a 64-character hex string on your Trakt app's page.`,
+    );
+
+const credentialsSchema = z.object({
+  clientId: hex64('Client ID'),
+  clientSecret: hex64('Client Secret'),
 });
 
-type ClientIdForm = z.infer<typeof clientIdSchema>;
+type CredentialsForm = z.infer<typeof credentialsSchema>;
 
 /** Selectable value the user copies into a field of Trakt's application form. */
 function CopyValue({ value, hint }: { value: string; hint?: string }) {
@@ -63,57 +67,100 @@ function CopyValue({ value, hint }: { value: string; hint?: string }) {
   );
 }
 
+function CredentialInput({
+  control,
+  name,
+  placeholder,
+  onSubmit,
+}: {
+  control: Control<CredentialsForm>;
+  name: keyof CredentialsForm;
+  placeholder: string;
+  onSubmit: () => void;
+}) {
+  const muted = useCSSVariable('--color-muted');
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+          onBlur={field.onBlur}
+          onChangeText={field.onChange}
+          onSubmitEditing={onSubmit}
+          placeholder={placeholder}
+          placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+          returnKeyType="done"
+          value={field.value}
+        />
+      )}
+    />
+  );
+}
+
 /**
- * Trakt OAuth trigger. The client id is entered in-app (no env-file edits).
- * On native, auth opens in an embedded browser session via expo-web-browser
- * and returns to the app, and this component finishes the code exchange. On
- * web, the current window navigates to Trakt and is redirected back to the
- * home route with ?code=..., where `useTraktOAuthCallback` exchanges it.
+ * Trakt OAuth trigger. The API app credentials (client id + secret — the
+ * token exchange needs both) are entered in-app, no env-file edits. On
+ * native, auth opens in an embedded browser session via expo-web-browser and
+ * returns to the app, and this component finishes the code exchange. On web,
+ * the current window navigates to Trakt and is redirected back to the home
+ * route with ?code=..., where `useTraktOAuthCallback` exchanges it.
  */
 export function ConnectTraktButton() {
-  const [storedClientId, saveClientId, clearClientId] = useProviderClientId(
-    'trakt',
-  );
+  const [credentials, saveCredentials, clearCredentials] =
+    useProviderCredentials('trakt');
   const [status, setStatus] = useState<ConnectionStatus>('idle');
-  const muted = useCSSVariable('--color-muted');
 
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<ClientIdForm>({
-    defaultValues: { clientId: storedClientId ?? '' },
-    resolver: zodResolver(clientIdSchema),
+  } = useForm<CredentialsForm>({
+    defaultValues: {
+      clientId: credentials?.clientId ?? '',
+      clientSecret: credentials?.clientSecret ?? '',
+    },
+    resolver: zodResolver(credentialsSchema),
   });
-  // Saving the client id means the user wants to connect — go straight into
+  // Saving the credentials means the user wants to connect — go straight into
   // the OAuth flow instead of asking for an extra tap on Connect.
-  const submitClientId = handleSubmit(async ({ clientId: value }) => {
-    saveClientId(value);
-    await connect(value);
+  const submitCredentials = handleSubmit(async (values) => {
+    saveCredentials(values);
+    await connect(values.clientId);
   });
 
-  const clientId = storedClientId ?? '';
+  const clientId = credentials?.clientId ?? '';
   const redirectUri = getTraktRedirectUri();
 
   async function connect(id: string = clientId) {
     if (id === '') return;
 
     setStatus('connecting');
-    // Built on demand (rather than via useAuthRequest) so a just-saved client
-    // id can connect immediately, without waiting for a re-render.
-    const request = await loadAsync(
-      {
-        clientId: id,
-        responseType: ResponseType.Code,
-        redirectUri,
-        // Trakt does not support PKCE; including code_challenge causes the
-        // authorization endpoint to reject the request.
-        usePKCE: false,
-      },
-      discovery,
-    );
+    // Built on demand (rather than via useAuthRequest) so just-saved
+    // credentials can connect immediately, without waiting for a re-render.
+    let request;
+    try {
+      request = await loadAsync(
+        {
+          clientId: id,
+          responseType: ResponseType.Code,
+          redirectUri,
+          // Trakt does not support PKCE; including code_challenge causes the
+          // authorization endpoint to reject the request.
+          usePKCE: false,
+        },
+        discovery,
+      );
+    } catch (error) {
+      setStatus('error');
+      console.error('Trakt auth request could not be built', error);
+      return;
+    }
     if (request.url == null) {
-      setStatus('idle');
+      setStatus('error');
       return;
     }
 
@@ -128,6 +175,7 @@ export function ConnectTraktButton() {
 
     const result = await openAuthSessionAsync(request.url, redirectUri);
     if (result.type !== 'success') {
+      // User-cancelled/dismissed — not an error worth alarming about.
       setStatus('idle');
       return;
     }
@@ -135,7 +183,8 @@ export function ConnectTraktButton() {
     const url = new URL(result.url);
     const code = url.searchParams.get('code');
     if (code == null) {
-      setStatus('idle');
+      // Trakt redirected back without a code (?error=...): a real failure.
+      setStatus('error');
       return;
     }
 
@@ -147,7 +196,7 @@ export function ConnectTraktButton() {
       });
   }
 
-  if (clientId === '') {
+  if (credentials == null) {
     // If web dev runs on a non-default port the device URI won't be in the
     // canonical list — surface it so the user registers the one that matters.
     const redirectUris = TRAKT_REDIRECT_URIS.includes(redirectUri)
@@ -219,41 +268,44 @@ export function ConnectTraktButton() {
 
           <Steps.Item>
             <Text className="text-muted font-sans text-sm">
-              Save the app, copy its{" "}
+              Save the app, then copy its{" "}
               <Text className="text-foreground font-sans-semibold">
                 Client ID
               </Text>
-              , and paste it here:
+              {" "}and{" "}
+              <Text className="text-foreground font-sans-semibold">
+                Client Secret
+              </Text>
+              {" "}— connecting needs both — and paste them here:
             </Text>
-            <Controller
+            <CredentialInput
               control={control}
               name="clientId"
-              render={({ field }) => (
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
-                  onBlur={field.onBlur}
-                  onChangeText={field.onChange}
-                  onSubmitEditing={() => submitClientId()}
-                  placeholder="Trakt Client ID"
-                  placeholderTextColor={typeof muted === 'string' ? muted : undefined}
-                  returnKeyType="done"
-                  value={field.value}
-                />
-              )}
+              onSubmit={() => submitCredentials()}
+              placeholder="Trakt Client ID"
             />
             {errors.clientId != null && (
               <Text className="text-accent font-sans text-xs">
                 {errors.clientId.message}
               </Text>
             )}
+            <CredentialInput
+              control={control}
+              name="clientSecret"
+              onSubmit={() => submitCredentials()}
+              placeholder="Trakt Client Secret"
+            />
+            {errors.clientSecret != null && (
+              <Text className="text-accent font-sans text-xs">
+                {errors.clientSecret.message}
+              </Text>
+            )}
             <PresstableOpacity
               className="bg-accent px-5 py-3 rounded"
-              onPress={() => submitClientId()}
+              onPress={() => submitCredentials()}
             >
               <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-                Save Client ID
+                Save & Connect
               </Text>
             </PresstableOpacity>
           </Steps.Item>
@@ -283,8 +335,8 @@ export function ConnectTraktButton() {
           {status === 'connecting' ? 'Connecting…' : 'Connect Trakt'}
         </Text>
       </PresstableOpacity>
-      <PresstableOpacity onPress={() => clearClientId()}>
-        <Text className="text-muted font-sans text-xs">Edit Client ID</Text>
+      <PresstableOpacity onPress={() => clearCredentials()}>
+        <Text className="text-muted font-sans text-xs">Edit API credentials</Text>
       </PresstableOpacity>
     </View>
   );

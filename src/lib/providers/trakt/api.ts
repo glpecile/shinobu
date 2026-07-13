@@ -1,7 +1,7 @@
 import { Duration, Effect } from 'effect';
 
 import type { ProviderError } from '@/lib/providers/errors';
-import { refreshSession } from './auth';
+import { coalescedRefreshSession } from './auth';
 import type { TraktDeps } from './deps';
 import { traktHttp, type TraktHttpOptions } from './http';
 
@@ -35,27 +35,34 @@ export function traktRequest<A>(
 
 /**
  * An authenticated Trakt call implementing the AGENTS.md query convention:
- * a 401 triggers the refresh flow once, then the request retries with the new
- * token; if the refresh itself is rejected the session is dead and the error
- * carries `refreshFailed: true`.
+ * a 401 triggers the refresh flow once (coalesced — concurrent 401s share a
+ * single token grant, since Trakt rotates refresh tokens and parallel
+ * refreshes would race), then the request retries with the new token; if the
+ * refresh itself is rejected the session is dead and the error carries
+ * `refreshFailed: true`.
  */
 export function traktAuthedRequest<A>(
   deps: TraktDeps,
   path: string,
   options: Omit<TraktHttpOptions, 'accessToken'> = {},
 ): Effect.Effect<A, ProviderError> {
+  // Suspended so the token is read when the effect *runs*, not when it is
+  // composed — the post-refresh retry below is built before the refresh
+  // executes and must pick up the rotated token, not the stale one.
   const attempt = () =>
-    traktHttp<A>(deps, path, {
-      ...options,
-      accessToken: deps.tokens.get()?.accessToken,
-    });
+    Effect.suspend(() =>
+      traktHttp<A>(deps, path, {
+        ...options,
+        accessToken: deps.tokens.get()?.accessToken,
+      }),
+    );
 
   return withRateLimitRetry(
     attempt().pipe(
       Effect.catchTag('ProviderAuthError', (error) =>
         error.refreshFailed
           ? Effect.fail(error)
-          : refreshSession(deps).pipe(Effect.zipRight(attempt())),
+          : coalescedRefreshSession(deps).pipe(Effect.zipRight(attempt())),
       ),
     ),
   );

@@ -1,8 +1,8 @@
-import { Effect } from 'effect';
+import { Effect, type Either } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
-import type { TraktDeps } from './deps';
+import type { TokenStore, TraktDeps } from './deps';
 import { traktHttp } from './http';
 
 interface TraktTokenResponse {
@@ -76,4 +76,35 @@ export function refreshSession(
       Effect.sync(() => deps.tokens.clear()).pipe(Effect.zipRight(Effect.fail(dead))),
     ),
   );
+}
+
+const inflightRefreshes = new WeakMap<
+  TokenStore,
+  Promise<Either.Either<ProviderSession, ProviderError>>
+>();
+
+/**
+ * `refreshSession` with in-flight coalescing — what `traktAuthedRequest` uses.
+ * When the access token expires, every concurrent authed request 401s at
+ * once; Trakt rotates refresh tokens, so parallel refresh grants race and the
+ * losers get a definitive rejection — which the clear-on-rejection handling
+ * above would read as a dead session, wiping the fresh tokens the winner just
+ * stored and silently logging the user out. Keyed by token store identity
+ * (one per provider session; test fakes stay isolated). Bridged through a
+ * plain Promise because each query runs in its own `Effect.runPromise` fiber
+ * — there is no shared runtime for `Effect.cached` to live in.
+ */
+export function coalescedRefreshSession(
+  deps: TraktDeps,
+): Effect.Effect<ProviderSession, ProviderError> {
+  return Effect.promise(() => {
+    let inflight = inflightRefreshes.get(deps.tokens);
+    if (inflight == null) {
+      inflight = Effect.runPromise(Effect.either(refreshSession(deps))).finally(
+        () => inflightRefreshes.delete(deps.tokens),
+      );
+      inflightRefreshes.set(deps.tokens, inflight);
+    }
+    return inflight;
+  }).pipe(Effect.flatMap((outcome) => outcome));
 }

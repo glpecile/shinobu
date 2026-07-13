@@ -4,7 +4,10 @@ import { Platform } from 'react-native';
 import { getTraktRedirectUri } from '@/lib/providers/trakt/redirectUri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 
-import { getClientIdForProvider } from './provider-config';
+import {
+  getClientIdForProvider,
+  getClientSecretForProvider,
+} from './provider-config';
 import { connectedProviderIds } from './tokens';
 
 export type TraktOAuthCallbackStatus = 'idle' | 'exchanging' | 'error';
@@ -60,10 +63,12 @@ export function useTraktOAuthCallback(): TraktOAuthCallbackStatus {
 
     // A code can linger in a tab that predates the exchange (or failed it).
     // If Trakt is already connected there is nothing to gain from replaying
-    // it, and without a client id the exchange cannot be built at all.
+    // it, and without the client id + secret pair the exchange cannot be
+    // built at all.
     if (
       connectedProviderIds().includes('trakt') ||
-      getClientIdForProvider('trakt') === ''
+      getClientIdForProvider('trakt') === '' ||
+      getClientSecretForProvider('trakt') === ''
     ) {
       return;
     }
