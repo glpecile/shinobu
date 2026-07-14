@@ -16,6 +16,8 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
 import { SheetProvider } from "@/components/sheet";
+import { WebNavigation } from "@/components/web-navigation";
+import { View } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,12 +48,15 @@ export default function Layout() {
         <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <SheetProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen
-                name="index"
-                options={{ title: "Shinobu" }}
-              />
-            </Stack>
+            <View className="flex-1">
+              <WebNavigation />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen
+                  name="index"
+                  options={{ title: "Shinobu" }}
+                />
+              </Stack>
+            </View>
           </SheetProvider>
         </QueryClientProvider>
         </KeyboardProvider>

@@ -438,6 +438,10 @@ export default function DetailsScreen() {
   const artwork = useTraktMediaImages(item);
 
   function goBack() {
+    if (process.env.EXPO_OS === 'web') {
+      router.replace(routes.home);
+      return;
+    }
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -621,6 +625,9 @@ export default function DetailsScreen() {
                     </Text>
                     <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
                       {formatRuntime(item.totalEpisodes * item.runtime)}
+                    </Text>
+                    <Text className="text-sm text-muted font-sans">
+                      {item.runtime}m each
                     </Text>
                   </View>
                 )}

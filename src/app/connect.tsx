@@ -12,6 +12,7 @@ import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
+import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -121,13 +122,19 @@ export default function ConnectScreen() {
       <Head>
         <title>Manage Trackers — Shinobu</title>
       </Head>
-      <View className="flex-row items-center px-6 pt-16 pb-4">
+      <View className={`flex-row items-center px-6 ${screenHeaderTopPadding} pb-4`}>
         <PresstableOpacity
           accessibilityLabel="Back"
           className="w-10 h-10 -ml-2 items-center justify-center"
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace(routes.home)
-          }
+          onPress={() => {
+            if (process.env.EXPO_OS === 'web') {
+              router.replace(routes.home);
+            } else if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace(routes.home);
+            }
+          }}
         >
           <Ionicons
             color={typeof foreground === 'string' ? foreground : undefined}

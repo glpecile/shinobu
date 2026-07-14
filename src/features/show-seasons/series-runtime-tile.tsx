@@ -36,12 +36,22 @@ export function SeriesRuntimeTile({ item }: { item: NormalizedMediaItem }) {
     );
   }
 
+  const episodeRuntime =
+    item.runtime ?? seasons.flatMap((season) => season.episodes).find(
+      (episode) => episode.runtime != null,
+    )?.runtime;
+
   return (
     <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
       <Text className="text-muted text-xs font-sans uppercase">Total time</Text>
       <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
         {formatRuntime(seriesRuntimeMinutes(seasons))}
       </Text>
+      {episodeRuntime != null && (
+        <Text className="text-sm text-muted font-sans">
+          {episodeRuntime}m each
+        </Text>
+      )}
     </View>
   );
 }

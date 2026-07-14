@@ -76,7 +76,10 @@ export function getAnimeEpisodes(
       (episode): episode is AniListStreamingEpisode => episode != null,
     );
 
-    const count = media.episodes ?? streaming.length;
+    // Ongoing anime has no final `episodes` count and commonly no streaming
+    // metadata, but its airing schedule still identifies every known episode.
+    const scheduledCount = Math.max(0, ...airByEpisode.keys());
+    const count = media.episodes ?? Math.max(streaming.length, scheduledCount);
     const duration = media.duration ?? undefined;
 
     const episodes: NormalizedEpisode[] = [];

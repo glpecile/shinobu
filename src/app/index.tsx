@@ -10,6 +10,10 @@ import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
+import {
+  homeHeaderClassName,
+  homeHeaderTitleSize,
+} from '@/components/screen-header-spacing';
 import { routes } from '@/lib/routes';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
@@ -144,9 +148,9 @@ export default function App() {
           name="description"
         />
       </Head>
-      <View className="flex-row items-center justify-between px-6 pt-16 pb-4">
+      <View className={homeHeaderClassName}>
         {/* No connection status here (2026-07-14) — that lives on Manage Trackers. */}
-        <Text className="text-4xl font-display text-foreground tracking-tight">
+        <Text className={`${homeHeaderTitleSize} font-display text-foreground tracking-tight`}>
           忍 Shinobu
         </Text>
         <View className="flex-row gap-3">

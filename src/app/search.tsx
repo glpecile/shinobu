@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
@@ -9,7 +8,9 @@ import { useCSSVariable } from 'uniwind';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
+import { SearchBackButton } from '@/components/search-back-button';
 import { Skeleton } from '@/components/skeleton';
+import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { routes } from '@/lib/routes';
 import {
   SEARCH_MIN_QUERY_LENGTH,
@@ -98,7 +99,6 @@ export default function SearchScreen() {
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
-  const foreground = useCSSVariable('--color-foreground');
   const muted = useCSSVariable('--color-muted');
 
   // A real debounce (not useDeferredValue, which settles per keystroke and
@@ -119,6 +119,10 @@ export default function SearchScreen() {
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
 
   function goBack() {
+    if (process.env.EXPO_OS === 'web') {
+      router.replace(routes.home);
+      return;
+    }
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -135,18 +139,10 @@ export default function SearchScreen() {
       <Head>
         <title>Search — Shinobu</title>
       </Head>
-      <View className="flex-row items-center gap-3 px-6 pt-16 pb-4">
-        <PresstableOpacity
-          accessibilityLabel="Back"
-          className="w-10 h-10 rounded-full bg-surface border border-border items-center justify-center"
-          onPress={goBack}
-        >
-          <Ionicons
-            color={typeof foreground === 'string' ? foreground : undefined}
-            name="arrow-back"
-            size={20}
-          />
-        </PresstableOpacity>
+      <View
+        className={`relative z-20 flex-row items-center gap-3 px-6 ${screenHeaderTopPadding} pb-4`}
+      >
+        <SearchBackButton onPress={goBack} />
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
+import { useState } from 'react';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
@@ -23,13 +24,18 @@ interface ProviderToggleProps {
 
 function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
   const accent = useCSSVariable('--color-accent');
+  const muted = useCSSVariable('--color-muted');
   const accentColor = typeof accent === 'string' ? accent : undefined;
+  const mutedColor = typeof muted === 'string' ? muted : undefined;
   const descriptor = PROVIDERS[id];
 
   return (
     <PresstableOpacity
-      className={`flex-row items-center justify-between px-4 py-3 rounded-lg border ${
-        selected ? 'bg-accent/5 border-accent' : 'bg-surface border-border'
+      accessibilityLabel={`Log to ${descriptor.label}`}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
+      className={`flex-row items-center justify-between px-3 py-2.5 rounded-md ${
+        selected ? 'bg-accent/10' : 'bg-surface'
       }`}
       onPress={onToggle}
     >
@@ -39,16 +45,94 @@ function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
           {descriptor.label}
         </Text>
       </View>
-      <View
-        className={`w-5 h-5 rounded border items-center justify-center ${
-          selected ? 'bg-accent border-accent' : 'border-border'
-        }`}
-      >
-        {selected && (
-          <Ionicons color={accentColor} name="checkmark" size={14} />
-        )}
-      </View>
+      <Ionicons
+        color={selected ? accentColor : mutedColor}
+        name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+        size={20}
+      />
     </PresstableOpacity>
+  );
+}
+
+function ProviderPicker({
+  targets,
+  selectedProviders,
+  onSelectAll,
+  onSelectNone,
+  onToggle,
+}: {
+  targets: readonly ProviderId[];
+  selectedProviders: readonly ProviderId[];
+  onSelectAll: () => void;
+  onSelectNone: () => void;
+  onToggle: (id: ProviderId) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const muted = useCSSVariable('--color-muted');
+  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const selected = targets.filter((id) => selectedProviders.includes(id));
+  const selectionLabel =
+    selected.length === 0
+      ? 'Choose providers'
+      : selected.map((id) => PROVIDERS[id].label).join(', ');
+
+  return (
+    <View>
+      <PresstableOpacity
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        className={`flex-row items-center justify-between rounded-lg border px-4 py-3 ${
+          expanded ? 'border-accent bg-accent/5' : 'border-border bg-surface'
+        }`}
+        onPress={() => setExpanded(!expanded)}
+      >
+        <View className="flex-row items-center gap-2 flex-1 mr-3">
+          {selected.length > 0 && (
+            <View className="flex-row items-center gap-1">
+              {selected.map((id) => (
+                <ProviderIcon id={id} key={id} size={16} />
+              ))}
+            </View>
+          )}
+          <Text
+            className="text-foreground font-sans-semibold text-sm flex-1"
+            numberOfLines={1}
+          >
+            {selectionLabel}
+          </Text>
+        </View>
+        <Ionicons
+          color={mutedColor}
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={18}
+        />
+      </PresstableOpacity>
+      {expanded && (
+        <View className="mt-2 rounded-lg border border-border bg-background p-1">
+          {targets.length > 1 && (
+            <View className="flex-row justify-end gap-3 px-3 py-2 border-b border-border">
+              <PresstableOpacity onPress={onSelectAll}>
+                <Text className="text-accent font-sans-semibold text-xs">All</Text>
+              </PresstableOpacity>
+              <PresstableOpacity
+                accessibilityLabel="Select no providers"
+                onPress={onSelectNone}
+              >
+                <Text className="text-muted font-sans-semibold text-xs">None</Text>
+              </PresstableOpacity>
+            </View>
+          )}
+          {targets.map((id) => (
+            <ProviderToggle
+              id={id}
+              key={id}
+              onToggle={() => onToggle(id)}
+              selected={selectedProviders.includes(id)}
+            />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -96,10 +180,19 @@ export function LogConfirmSheet({
   const result = logMedia.data;
 
   function toggleProvider(id: ProviderId) {
-    const next = selectedProviders.includes(id)
-      ? selectedProviders.filter((provider) => provider !== id)
-      : [...selectedProviders, id];
-    onSelectedProvidersChange(next);
+    onSelectedProvidersChange(
+      selectedProviders.includes(id)
+        ? selectedProviders.filter((provider) => provider !== id)
+        : [...selectedProviders, id],
+    );
+  }
+
+  function selectAllProviders() {
+    onSelectedProvidersChange([...targets]);
+  }
+
+  function selectNoProviders() {
+    onSelectedProvidersChange([]);
   }
 
   const canConfirm = selectedProviders.length > 0 && !logMedia.isPending;
@@ -114,16 +207,13 @@ export function LogConfirmSheet({
       <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
         Write to
       </Text>
-      <View className="gap-2">
-        {targets.map((id) => (
-          <ProviderToggle
-            id={id}
-            key={id}
-            onToggle={() => toggleProvider(id)}
-            selected={selectedProviders.includes(id)}
-          />
-        ))}
-      </View>
+      <ProviderPicker
+        onSelectAll={selectAllProviders}
+        onSelectNone={selectNoProviders}
+        onToggle={toggleProvider}
+        selectedProviders={selectedProviders}
+        targets={targets}
+      />
       {selectedProviders.length === 0 && (
         <Text className="text-accent font-sans text-sm mt-2">
           Select at least one provider to log.
