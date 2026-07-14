@@ -19,6 +19,12 @@ export interface LogMediaVariables {
    * history entry; AniList: repeat+1 / REPEATING).
    */
   rewatch?: boolean;
+  /**
+   * Caller-override of which routed providers to actually write. The confirm
+   * sheet uses this to let the user opt out of individual providers while
+   * keeping the rest of the fan-out intact.
+   */
+  providers?: ProviderId[];
 }
 
 export type LogAdapter = (variables: LogMediaVariables) => Promise<void>;

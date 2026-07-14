@@ -10,6 +10,7 @@ import {
 } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
+import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargets } from '@/features/log-media/use-log-targets';
@@ -50,12 +51,14 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const logMedia = useLogMedia();
   const [pending, setPending] = useState<PendingLog | null>(null);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
+  const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>(targets);
 
   function openLog(next: PendingLog) {
     if (!canLog) return;
     haptics.selection();
     logMedia.reset();
     setWatchedAt(null);
+    setSelectedProviders(targets);
     setPending(next);
   }
 
@@ -67,6 +70,7 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         item,
         episodes: pending.episodes,
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
+        providers: selectedProviders,
       },
       {
         onSuccess: (outcome) => {
@@ -123,14 +127,16 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       ))}
 
       <LogConfirmSheet
-        confirmLabel={`Mark as watched on ${labels(targets)}`}
+        confirmLabel={`Mark as watched on ${labels(selectedProviders)}`}
         description={pending?.description ?? ''}
         logMedia={logMedia}
         onClose={() => setPending(null)}
         onConfirm={confirmLog}
+        onSelectedProvidersChange={setSelectedProviders}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
         pendingLabel="Marking as watched…"
+        selectedProviders={selectedProviders}
         targets={targets}
         title={pending?.title ?? ''}
         watchedAt={watchedAt}

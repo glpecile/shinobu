@@ -12,10 +12,20 @@ import { Image } from '@/components/image';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
+import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
-import { SeasonsSection, SeriesRuntimeTile } from '@/features/show-seasons';
+import {
+  formatRuntime,
+  SeasonsSection,
+  SeriesRuntimeTile,
+} from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
 import { routes } from '@/lib/routes';
+import {
+  anilistQueryKeys,
+  useAniListEntryStateQuery,
+  useSuspenseAniListCreditsQuery,
+} from '@/state/queries/anilist';
 import {
   traktQueryKeys,
   useSuspenseTraktPeopleQuery,
@@ -24,6 +34,7 @@ import {
   useTraktWatchedInfo,
 } from '@/state/queries/trakt';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
+import { useConnectedProviders } from '@/state/session';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 function findItemById(
@@ -283,6 +294,53 @@ function StudiosSection({
   );
 }
 
+/** AniList supplies people and studios from one public Media query. */
+function AnimeCreditsSections({ anilistId }: { anilistId: number }) {
+  const { data } = useSuspenseAniListCreditsQuery({ mediaId: anilistId });
+
+  return (
+    <>
+      <PeopleSection
+        title="Cast"
+        people={data.cast.map((member) => ({
+          id: member.id,
+          name: member.name,
+          subtitle: member.character,
+          headshot: member.headshot,
+        }))}
+      />
+      <PeopleSection
+        title="Crew"
+        people={data.crew.map((member) => ({
+          id: member.id,
+          name: member.name,
+          subtitle: member.job,
+          headshot: member.headshot,
+        }))}
+      />
+      {data.studios.length > 0 && (
+        <View className="mt-8">
+          <Text className="text-xl font-display text-foreground mb-4">
+            Studios
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {data.studios.map((studio) => (
+              <View
+                className="bg-surface border border-border rounded-full px-4 py-2"
+                key={studio.id}
+              >
+                <Text className="text-foreground font-sans text-sm">
+                  {studio.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </>
+  );
+}
+
 function PeopleRailSkeleton() {
   return (
     <View className="mt-8">
@@ -358,13 +416,23 @@ export default function DetailsScreen() {
 
   const item =
     findItemById(id, [
+      // Personal feeds first: an item can appear in both "Your Anime" and
+      // "Trending Anime", and the personal copy carries real progress.
+      feed.yourShows,
+      feed.yourAnime,
       feed.trendingMovies,
       feed.trendingShows,
       feed.trendingAnime,
-      feed.yourShows,
-      feed.yourAnime,
     ]) ?? findInSearchCache(queryClient, id);
   const traktId = item?.externalIds.trakt;
+  const anilistId = item?.externalIds.anilist;
+  const connected = useConnectedProviders();
+  // Items resolved from trending/search carry 0 progress even when the viewer
+  // has already watched episodes. The live entry state corrects the stat tile.
+  const anilistEntry = useAniListEntryStateQuery({
+    mediaId: anilistId,
+    enabled: item?.type === 'ANIME' && connected.includes('anilist'),
+  });
   // Items resolved from the watched feed arrive artless (Trakt dropped images
   // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
   const artwork = useTraktMediaImages(item);
@@ -409,6 +477,10 @@ export default function DetailsScreen() {
   // "0 episodes" on a movie is noise — only show progress where it means
   // something (any TV/manga item, or a movie already logged at least once).
   const showProgress = item.type !== 'MOVIE' || item.currentProgress > 0;
+  const displayedProgress =
+    item.type === 'ANIME'
+      ? (anilistEntry.data?.entry?.progress ?? item.currentProgress)
+      : item.currentProgress;
 
   function refresh() {
     // Sections that failed are unmounted, leaving their queries inactive and
@@ -426,10 +498,20 @@ export default function DetailsScreen() {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
     }
+    if (anilistId != null && item?.type === 'ANIME') {
+      for (const key of [
+        anilistQueryKeys.entryState(anilistId),
+        anilistQueryKeys.episodes(anilistId),
+        anilistQueryKeys.credits(anilistId),
+      ]) {
+        queryClient.removeQueries({ queryKey: key, type: 'inactive' });
+      }
+    }
     setRefreshCount((count) => count + 1);
     return Promise.allSettled([
       feed.refetch(),
       queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
     ]);
   }
 
@@ -512,7 +594,7 @@ export default function DetailsScreen() {
                     for "22 episodes" on one line, and an inline wrap leaves a
                     full 2xl line-height gap above the unit. */}
                 <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
-                  {item.currentProgress}
+                  {displayedProgress}
                 </Text>
                 <Text className="text-sm text-muted font-sans">
                   {item.progressUnit === 'chapter' ? 'chapters' : 'episodes'}
@@ -530,12 +612,39 @@ export default function DetailsScreen() {
                 </View>
               )}
               {item.type === 'TV' && <SeriesRuntimeTile item={item} />}
+              {item.type === 'ANIME' && item.isFilm !== true &&
+                item.totalEpisodes != null &&
+                item.runtime != null && (
+                  <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
+                    <Text className="text-muted text-xs font-sans uppercase">
+                      Total time
+                    </Text>
+                    <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
+                      {formatRuntime(item.totalEpisodes * item.runtime)}
+                    </Text>
+                  </View>
+                )}
             </View>
           )}
 
           {item.type === 'TV' && <SeasonsSection item={item} />}
+          {item.type === 'ANIME' && item.isFilm !== true && (
+            <AnimeSeasonsSection item={item} resetKey={refreshCount} />
+          )}
 
-          {traktId != null && (
+          {item.type === 'ANIME' && anilistId != null ? (
+            <SuspenseSection
+              fallback={
+                <>
+                  <PeopleSectionsSkeleton />
+                  <StudiosSkeleton />
+                </>
+              }
+              resetKey={refreshCount}
+            >
+              <AnimeCreditsSections anilistId={anilistId} />
+            </SuspenseSection>
+          ) : traktId != null ? (
             <>
               <SuspenseSection
                 fallback={<PeopleSectionsSkeleton />}
@@ -550,7 +659,7 @@ export default function DetailsScreen() {
                 <StudiosSection traktId={traktId} type={item.type} />
               </SuspenseSection>
             </>
-          )}
+          ) : null}
         </View>
       </RefreshableScrollView>
 

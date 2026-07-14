@@ -170,6 +170,9 @@ export function useLogMedia() {
       if (episodes != null && episodes.some((episode) => episode.season !== 1)) {
         targets = targets.filter((provider) => provider !== 'anilist');
       }
+      if (variables.providers != null && variables.providers.length > 0) {
+        targets = targets.filter((provider) => variables.providers!.includes(provider));
+      }
       if (targets.length === 0) {
         throw new Error(`No connected provider can log "${item.title}"`);
       }

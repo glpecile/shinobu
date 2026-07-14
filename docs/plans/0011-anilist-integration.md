@@ -113,16 +113,36 @@ Product requirements from this session (2026-07-14):
     rebuild). `components/provider-icon.tsx` maps `ProviderId` → asset; used
     on Manage Trackers rows and the log-confirm sheet's per-provider
     outcomes.
+11. **Per-provider opt-out in the log sheet** (product note 2026-07-14): the
+    confirm sheet renders a toggle row for every routed provider. Callers pass
+    `selectedProviders` / `onSelectedProvidersChange`; the mutation accepts an
+    optional `providers` override and filters routed targets to that subset.
+    Default state is all targets selected.
+12. **Anime detail parity with TV** (product note 2026-07-14): anime series
+    details show the same stat-tile layout (Progress/Total/Total time) and a
+    `Seasons` section. The section is backed by AniList's
+    `airingSchedule`/`streamingEpisodes` and reuses the TV
+    `SeasonAccordion`; episode progress/watched checkmarks come from the live
+    entry state so they match what AniList already knows.
+13. **Air-date gating for episodes** (product note 2026-07-14): both the TV
+    season picker and the anime "Log next episode" button use
+    `lib/time/has-aired.ts` so the user can never log an episode that hasn't
+    aired in their local timezone. Anime episodes without an air date (common
+    for catalogue entries) are treated as aired.
 
 ## Verification gates
 
 - Unit (`bun test`): anilist normalize fixtures, GraphQL error mapping,
   implicit-grant fragment parsing, routing widening, reconcile matrix
-  (unlogged/one-side/parity × film/episode), mapping response decode.
+  (unlogged/one-side/parity × film/episode), mapping response decode,
+  anime episode normalization.
 - Live: connect AniList in one tap on native + web dev client; Your Anime row
   renders; log an anime film → appears on both AniList and Trakt; log it
   again → Trakt plays+1 and AniList repeat+1; log an episode already on
-  Trakt → only AniList written.
+  Trakt → only AniList written; the log sheet lets you uncheck Trakt so only
+  AniList receives the write; an anime detail screen shows Progress/Total/
+  Total time and a Seasons accordion; the "Log episode N" button is disabled
+  until episode N has aired.
 - Any GraphQL/paging/mapping surprise → `docs/solutions/anilist-*.md` before
   todos/002 closes.
 

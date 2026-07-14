@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
+import { getAnimeCredits, type AnimeCredits } from '@/lib/providers/anilist/credits';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
+import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import {
   getCurrentAnime,
   getEntryState,
@@ -11,6 +13,7 @@ import {
   getViewerId,
   type AniListEntryState,
 } from '@/lib/providers/anilist/reads';
+import type { NormalizedSeason } from '@/types/media';
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { NormalizedMediaItem } from '@/types/media';
 import {
@@ -58,6 +61,12 @@ export const anilistQueryKeys = {
   /** The viewer's recorded state for one media — reconcile reads this (plan 0011). */
   entryState: (mediaId: number) =>
     [...anilistQueryKeys.all, 'entry-state', mediaId] as const,
+  /** Per-episode air dates + titles for one anime series (detail screen). */
+  episodes: (mediaId: number) =>
+    [...anilistQueryKeys.all, 'episodes', mediaId] as const,
+  /** Cast, staff, and studios for one anime detail screen. */
+  credits: (mediaId: number) =>
+    [...anilistQueryKeys.all, 'credits', mediaId] as const,
 };
 
 /**
@@ -114,5 +123,50 @@ export function useAniListEntryStateQuery(params: {
     queryFn: (): Promise<AniListEntryState> =>
       Effect.runPromise(getEntryState(anilistDeps(), { mediaId: mediaId ?? -1 })),
     enabled: enabled && mediaId != null,
+  });
+}
+
+/**
+ * Per-episode air dates and titles for an anime series. Public read, so it
+ * works even when AniList is not connected; used both for the detail-screen
+ * seasons UI and for gating "Log next episode" when the next episode hasn't
+ * aired yet.
+ */
+export function useAniListEpisodesQuery(params: {
+  mediaId: number | undefined;
+  enabled?: boolean;
+}) {
+  const { mediaId, enabled = true } = params;
+  return useQuery({
+    queryKey: anilistQueryKeys.episodes(mediaId ?? -1),
+    queryFn: (): Promise<NormalizedSeason> =>
+      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId: mediaId ?? -1 })),
+    enabled: enabled && mediaId != null,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Suspense variant for mounting under `SuspenseSection` on the detail screen.
+ */
+export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
+  const { mediaId } = params;
+  return useSuspenseQuery({
+    queryKey: anilistQueryKeys.episodes(mediaId),
+    queryFn: (): Promise<NormalizedSeason> =>
+      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId })),
+  });
+}
+
+/**
+ * Public detail credits. This one query covers cast (Japanese voice actors),
+ * staff, and studios, so the three UI sections suspend together.
+ */
+export function useSuspenseAniListCreditsQuery(params: { mediaId: number }) {
+  const { mediaId } = params;
+  return useSuspenseQuery({
+    queryKey: anilistQueryKeys.credits(mediaId),
+    queryFn: (): Promise<AnimeCredits> =>
+      Effect.runPromise(getAnimeCredits(anilistDeps(), { mediaId })),
   });
 }

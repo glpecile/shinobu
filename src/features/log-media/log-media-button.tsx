@@ -3,7 +3,11 @@ import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { haptics } from '@/lib/haptics';
-import { useAniListEntryStateQuery } from '@/state/queries/anilist';
+import { hasAired } from '@/lib/time/has-aired';
+import {
+  useAniListEntryStateQuery,
+  useAniListEpisodesQuery,
+} from '@/state/queries/anilist';
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -29,9 +33,14 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     mediaId: item.externalIds.anilist,
     enabled: connected.includes('anilist'),
   });
+  const anilistEpisodes = useAniListEpisodesQuery({
+    mediaId: item.externalIds.anilist,
+    enabled: item.type === 'ANIME' && item.externalIds.anilist != null,
+  });
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   const targets = useLogTargets(item);
+  const [selectedProviders, setSelectedProviders] = useState(targets);
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
@@ -39,23 +48,44 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   if ((!isFilmLike && !isAnimeSeries) || targets.length === 0) return null;
 
   const anilistStatus = anilistEntry.data?.entry?.status;
+  const anilistProgress = anilistEntry.data?.entry?.progress;
   const isRewatch =
     traktWatched != null ||
     anilistStatus === 'COMPLETED' ||
     anilistStatus === 'REPEATING';
 
-  // Anime series log the next unwatched episode; a completed series starts
-  // its rewatch back at episode 1 (AniList: REPEATING, progress resets).
+  // Anime series log the next unwatched episode. Prefer the live AniList
+  // entry progress over the feed's cached progress, so a detail screen opened
+  // from trending still recognizes already-watched episodes.
   const total = item.totalEpisodes;
+  const currentProgress = anilistProgress ?? item.currentProgress;
   const nextEpisode =
-    total != null && item.currentProgress >= total
-      ? 1
-      : item.currentProgress + 1;
+    total != null && currentProgress >= total ? 1 : currentProgress + 1;
+
+  // Never offer to log an episode that hasn't aired yet (todos/006).
+  // Only evaluate aired status once the episodes query has successfully loaded.
+  // While loading/pending/error, treat as not aired (disable button).
+  // Once loaded:
+  // - Episode not in schedule → not aired (new anime, episode not yet scheduled)
+  // - Episode in schedule but no air date → aired (catalogue entry)
+  // - Episode in schedule with air date → use hasAired
+  const episodeData = anilistEpisodes.data?.episodes.find(
+    (e) => e.number === nextEpisode,
+  );
+  const nextEpisodeAired =
+    !isAnimeSeries ||
+    (anilistEpisodes.status === 'success' &&
+      anilistEpisodes.data != null &&
+      (episodeData == null
+        ? false
+        : episodeData.firstAired == null
+          ? true
+          : hasAired(episodeData.firstAired)));
 
   const result = logMedia.data;
 
   function confirmLog() {
-    if (logMedia.isPending) return;
+    if (logMedia.isPending || selectedProviders.length === 0) return;
     haptics.confirm();
     logMedia.mutate(
       {
@@ -64,6 +94,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           ? { episode: { season: 1, number: nextEpisode } }
           : {}),
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
+        providers: selectedProviders,
       },
       {
         onSuccess: (outcome) => {
@@ -80,7 +111,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   }
 
   const buttonLabel = isAnimeSeries
-    ? `Log episode ${nextEpisode}`
+    ? nextEpisodeAired
+      ? `Log episode ${nextEpisode}`
+      : `Episode ${nextEpisode} not yet aired`
     : isRewatch
       ? 'Log rewatch'
       : 'Mark as watched';
@@ -88,11 +121,15 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   return (
     <View className="mb-6">
       <PresstableOpacity
-        className="bg-accent rounded px-5 py-3"
+        className={`rounded px-5 py-3 ${
+          nextEpisodeAired ? 'bg-accent' : 'bg-accent/40'
+        }`}
         onPress={() => {
+          if (!nextEpisodeAired) return;
           haptics.selection();
           logMedia.reset();
           setWatchedAt(null);
+          setSelectedProviders(targets);
           setOpen(true);
         }}
       >
@@ -118,10 +155,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         onClose={() => setOpen(false)}
         confirmLabel={
           isAnimeSeries
-            ? `Log episode ${nextEpisode} on ${labels(targets)}`
+            ? `Log episode ${nextEpisode} on ${labels(selectedProviders)}`
             : isRewatch
-              ? `Log rewatch on ${labels(targets)}`
-              : `Log watch on ${labels(targets)}`
+              ? `Log rewatch on ${labels(selectedProviders)}`
+              : `Log watch on ${labels(selectedProviders)}`
         }
         description={
           isAnimeSeries
@@ -132,9 +169,11 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         }
         logMedia={logMedia}
         onConfirm={confirmLog}
+        onSelectedProvidersChange={setSelectedProviders}
         onWatchedAtChange={setWatchedAt}
         open={open}
         pendingLabel="Logging…"
+        selectedProviders={selectedProviders}
         targets={targets}
         title={
           isAnimeSeries
