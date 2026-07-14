@@ -11,15 +11,29 @@ import {
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import {
+  anilistQueryKeys,
+  fetchCurrentAnime,
+  fetchTrendingAnime,
+} from './anilist';
 import { traktDeps, traktQueryKeys } from './trakt';
 
+/** One named row of the home feed — never index into the query array. */
+type FeedSlot =
+  | 'trendingMovies'
+  | 'trendingShows'
+  | 'trendingAnime'
+  | 'yourShows'
+  | 'yourAnime';
+
 export interface UnifiedFeedResult {
-  /** Public trending movies — always fetched. */
+  /** Public trending catalogues — always fetched, feed is never empty. */
   trendingMovies: NormalizedMediaItem[];
-  /** Public trending TV shows — always fetched. */
   trendingShows: NormalizedMediaItem[];
-  /** Personal in-progress items from connected providers. */
-  feedItems: NormalizedMediaItem[];
+  trendingAnime: NormalizedMediaItem[];
+  /** Personal in-progress rows from connected providers. */
+  yourShows: NormalizedMediaItem[];
+  yourAnime: NormalizedMediaItem[];
   isLoading: boolean;
   isError: boolean;
   errors: Array<{ provider: ProviderId; error: Error }>;
@@ -28,16 +42,18 @@ export interface UnifiedFeedResult {
 }
 
 interface FeedQueryConfig {
+  slot: FeedSlot;
   provider: ProviderId;
   queryKey: readonly unknown[];
   queryFn: () => Promise<NormalizedMediaItem[]>;
 }
 
 /**
- * Aggregates every connected, read-capable provider into one normalized list.
- * Today that is only Trakt (`todos/001`); AniList (`todos/002`) will add a second
- * parallel query here. A public trending catalogue is always included so the feed
- * is never empty before connection.
+ * Aggregates every connected, read-capable provider into one normalized feed
+ * (plan.md 2.1): Trakt (todos/001) and AniList (todos/002) today. Public
+ * trending catalogues are always included so the feed is never empty before
+ * connection. Results are keyed by named slot, not array position — the
+ * query list is conditional in two dimensions now.
  */
 export function useUnifiedFeed(): UnifiedFeedResult {
   const connected = useConnectedProviders();
@@ -46,32 +62,49 @@ export function useUnifiedFeed(): UnifiedFeedResult {
   const queries: FeedQueryConfig[] = [
     // Public catalogues — no session required.
     {
+      slot: 'trendingMovies',
       provider: 'trakt',
       queryKey: traktQueryKeys.trendingMovies(),
       queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps())),
     },
     {
+      slot: 'trendingShows',
       provider: 'trakt',
       queryKey: traktQueryKeys.trendingShows(),
       queryFn: () => Effect.runPromise(getTrendingShows(traktDeps())),
+    },
+    {
+      slot: 'trendingAnime',
+      provider: 'anilist',
+      queryKey: anilistQueryKeys.trendingAnime(),
+      queryFn: () => fetchTrendingAnime(),
     },
   ];
 
   if (feedProviders.includes('trakt')) {
     queries.push({
+      slot: 'yourShows',
       provider: 'trakt',
       queryKey: traktQueryKeys.watchedShows(),
       queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
     });
   }
+  if (feedProviders.includes('anilist')) {
+    queries.push({
+      slot: 'yourAnime',
+      provider: 'anilist',
+      queryKey: anilistQueryKeys.currentAnime(),
+      queryFn: fetchCurrentAnime,
+    });
+  }
 
   const results = useQueries({ queries });
 
-  // Index 0: trending movies; index 1: trending shows; index 2: watched feed
-  // when Trakt is connected.
-  const trendingMovies = results[0]?.data ?? [];
-  const trendingShows = results[1]?.data ?? [];
-  const feedItems = results[2]?.data ?? [];
+  const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => {
+    const index = queries.findIndex((query) => query.slot === slot);
+    return (index >= 0 ? results[index]?.data : undefined) ?? [];
+  };
+
   const isLoading = results.some((result) => result.isLoading);
   const isError = results.some((result) => result.isError);
 
@@ -92,9 +125,11 @@ export function useUnifiedFeed(): UnifiedFeedResult {
   }
 
   return {
-    trendingMovies,
-    trendingShows,
-    feedItems,
+    trendingMovies: bySlot('trendingMovies'),
+    trendingShows: bySlot('trendingShows'),
+    trendingAnime: bySlot('trendingAnime'),
+    yourShows: bySlot('yourShows'),
+    yourAnime: bySlot('yourAnime'),
     isLoading,
     isError,
     errors,

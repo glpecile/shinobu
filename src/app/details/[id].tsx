@@ -360,7 +360,9 @@ export default function DetailsScreen() {
     findItemById(id, [
       feed.trendingMovies,
       feed.trendingShows,
-      feed.feedItems,
+      feed.trendingAnime,
+      feed.yourShows,
+      feed.yourAnime,
     ]) ?? findInSearchCache(queryClient, id);
   const traktId = item?.externalIds.trakt;
   // Items resolved from the watched feed arrive artless (Trakt dropped images

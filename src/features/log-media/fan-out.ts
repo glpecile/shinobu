@@ -13,19 +13,31 @@ export interface LogMediaVariables {
   episodes?: Array<{ season: number; number: number }>;
   /** ISO instant; omitted = providers record "now". */
   watchedAt?: string;
+  /**
+   * Set by the reconcile step (plan 0011), never by callers: every target
+   * already records this watch, so adapters log it as a rewatch (Trakt: a new
+   * history entry; AniList: repeat+1 / REPEATING).
+   */
+  rewatch?: boolean;
 }
 
 export type LogAdapter = (variables: LogMediaVariables) => Promise<void>;
 
 export type ProviderLogOutcome =
   | { provider: ProviderId; status: 'ok' }
-  | { provider: ProviderId; status: 'error'; message: string };
+  | { provider: ProviderId; status: 'error'; message: string }
+  /** Already in sync ahead of the others — deliberately not written (plan 0011). */
+  | { provider: ProviderId; status: 'skipped' };
 
 export interface LogMediaResult {
-  /** One entry per target provider, in routing order. */
+  /** One entry per applicable provider (skips included), in routing order. */
   outcomes: ProviderLogOutcome[];
   succeeded: ProviderId[];
   failed: ProviderId[];
+  /** Providers that already recorded this watch and were left untouched. */
+  skipped: ProviderId[];
+  /** True when the write round was a parity rewatch (plan 0011). */
+  rewatch: boolean;
 }
 
 function errorMessage(error: unknown): string {
@@ -70,5 +82,9 @@ export async function fanOutLog(
     failed: outcomes
       .filter((outcome) => outcome.status === 'error')
       .map((outcome) => outcome.provider),
+    // The fan-out itself never skips — reconciliation removes skipped
+    // providers from `targets` and merges their outcomes back in useLogMedia.
+    skipped: [],
+    rewatch: variables.rewatch === true,
   };
 }

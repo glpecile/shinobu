@@ -234,6 +234,15 @@ documents exactly this kind of convention (query hook naming, platform-specific 
 grouping, import aliases). Adapt, don't copy verbatim: Shinobu has no backend/atproto
 and a much smaller design system.
 
+For anything AniList-specific, the reference is
+[lotusprey/otraku](https://github.com/lotusprey/otraku) — a mature open-source
+AniList client (Flutter, so adapt patterns, not code). Its auth flow is the model
+for Shinobu's seamless AniList connect: an app-owned embedded client id with the
+OAuth **implicit grant** (`response_type=token`, no secret, no user-supplied
+credentials), the token parsed from the redirect URL fragment by a dedicated auth
+route, and the client's single registered redirect URL pointing at the app's own
+deep link (plan `docs/plans/0011-anilist-integration.md`).
+
 ## Project Structure (target)
 
 ```

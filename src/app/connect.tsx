@@ -6,9 +6,11 @@ import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { ConnectAniListButton } from '@/components/connect-anilist-button';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
+import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -23,11 +25,14 @@ function ConnectedRow({ id }: { id: ProviderId }) {
 
   return (
     <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4">
-      <View>
-        <Text className="text-foreground font-sans-semibold text-base">
-          {PROVIDERS[id].label}
-        </Text>
-        <Text className="text-muted font-sans text-xs mt-0.5">Connected</Text>
+      <View className="flex-row items-center gap-3">
+        <ProviderIcon id={id} size={24} />
+        <View>
+          <Text className="text-foreground font-sans-semibold text-base">
+            {PROVIDERS[id].label}
+          </Text>
+          <Text className="text-muted font-sans text-xs mt-0.5">Connected</Text>
+        </View>
       </View>
       <PresstableOpacity
         className="border border-accent px-4 py-2 rounded"
@@ -51,10 +56,35 @@ function TraktConnectRow() {
 
   return (
     <View className="bg-surface border border-border rounded-xl p-5">
-      <Text className="text-foreground font-sans-semibold text-base mb-3">
-        Trakt
-      </Text>
+      <View className="flex-row items-center gap-3 mb-3">
+        <ProviderIcon id="trakt" size={24} />
+        <Text className="text-foreground font-sans-semibold text-base">
+          Trakt
+        </Text>
+      </View>
       <ConnectTraktButton />
+    </View>
+  );
+}
+
+function AniListConnectRow() {
+  const connected = useConnectedProviders();
+
+  if (connected.includes('anilist')) {
+    return null;
+  }
+
+  return (
+    <View className="bg-surface border border-border rounded-xl p-5">
+      <View className="flex-row items-center gap-3 mb-3">
+        <ProviderIcon id="anilist" size={24} />
+        <Text className="text-foreground font-sans-semibold text-base">
+          AniList
+        </Text>
+      </View>
+      {/* The button renders its own copy: one-tap when this build embeds a
+          client id, or the one-time client-id setup form when it doesn't. */}
+      <ConnectAniListButton />
     </View>
   );
 }
@@ -62,13 +92,16 @@ function TraktConnectRow() {
 function ComingSoonRow({ id }: { id: ProviderId }) {
   return (
     <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4 opacity-60">
-      <View>
-        <Text className="text-foreground font-sans-semibold text-base">
-          {PROVIDERS[id].label}
-        </Text>
-        <Text className="text-muted font-sans text-xs mt-0.5">
-          {id === 'letterboxd' ? 'Waiting on API access' : 'Coming soon'}
-        </Text>
+      <View className="flex-row items-center gap-3">
+        <ProviderIcon id={id} size={24} />
+        <View>
+          <Text className="text-foreground font-sans-semibold text-base">
+            {PROVIDERS[id].label}
+          </Text>
+          <Text className="text-muted font-sans text-xs mt-0.5">
+            {id === 'letterboxd' ? 'Waiting on API access' : 'Coming soon'}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -135,8 +168,9 @@ export default function ConnectScreen() {
           </Text>
           <View className="gap-3">
             <TraktConnectRow />
+            <AniListConnectRow />
             {disconnected
-              .filter((id) => id !== 'trakt')
+              .filter((id) => id !== 'trakt' && id !== 'anilist')
               .map((id) => (
                 <ComingSoonRow id={id} key={id} />
               ))}

@@ -3,7 +3,6 @@ import { Text, View } from 'react-native';
 import { SuspenseSection } from '@/components/suspense-section';
 import { Skeleton } from '@/components/skeleton';
 import { haptics } from '@/lib/haptics';
-import { providersForLog } from '@/lib/providers/routing';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useSuspenseTraktShowSeasonsQuery,
@@ -13,6 +12,7 @@ import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
+import { useLogTargets } from '@/features/log-media/use-log-targets';
 import { labels, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
 import { SeasonAccordion, type PendingLog } from './season-accordion';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
@@ -38,7 +38,8 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const traktId = item.externalIds.trakt!;
   const connected = useConnectedProviders();
   const { data: seasons } = useSuspenseTraktShowSeasonsQuery({ traktId });
-  const targets = providersForLog(item, connected);
+  // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
+  const targets = useLogTargets(item);
   const canLog = targets.length > 0;
   // No progress read when Trakt isn't connected — checkmarks just don't render.
   const { data: watched } = useTraktShowProgressQuery({

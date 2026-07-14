@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
-import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
+import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 
-const NATIVE_REDIRECT_URI = 'shinobu://redirect';
+const NATIVE_REDIRECT_URI = SHINOBU_NATIVE_REDIRECT_URI;
 const WEB_DEV_ORIGIN = 'http://localhost:8081';
 
 /**

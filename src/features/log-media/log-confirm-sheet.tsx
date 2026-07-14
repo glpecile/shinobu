@@ -1,6 +1,7 @@
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -56,9 +57,16 @@ export function LogConfirmSheet({
       <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
         {description}
       </Text>
-      <Text className="text-foreground font-sans text-sm mt-4">
-        Writes to <Text className="font-sans-semibold">{labels(targets)}</Text>
-      </Text>
+      <View className="flex-row items-center gap-2 mt-4">
+        <Text className="text-foreground font-sans text-sm">
+          Writes to <Text className="font-sans-semibold">{labels(targets)}</Text>
+        </Text>
+        <View className="flex-row items-center gap-1.5">
+          {targets.map((id) => (
+            <ProviderIcon id={id} key={id} size={16} />
+          ))}
+        </View>
+      </View>
       <WatchedAtField onChange={onWatchedAtChange} value={watchedAt} />
       {result != null && result.failed.length > 0 && (
         <Text className="text-accent font-sans text-sm mt-3">
@@ -66,6 +74,12 @@ export function LogConfirmSheet({
           {result.succeeded.length > 0
             ? ` — ${labels(result.succeeded)} was logged.`
             : '.'}
+        </Text>
+      )}
+      {result != null && result.skipped.length > 0 && (
+        <Text className="text-muted font-sans text-sm mt-3">
+          {labels(result.skipped)} already had this logged — skipped to keep
+          both in sync.
         </Text>
       )}
       {logMedia.isError && (

@@ -107,7 +107,7 @@ function CredentialInput({
  * native, auth opens in an embedded browser session via expo-web-browser and
  * returns to the app, and this component finishes the code exchange. On web,
  * the current window navigates to Trakt and is redirected back to the home
- * route with ?code=..., where `useTraktOAuthCallback` exchanges it.
+ * route with ?code=..., where `useOAuthCallback` exchanges it.
  */
 export function ConnectTraktButton() {
   const [credentials, saveCredentials, clearCredentials] =
@@ -167,7 +167,7 @@ export function ConnectTraktButton() {
     if (Platform.OS === 'web') {
       // On web the most reliable flow is a same-window redirect: Trakt sends
       // the user back to the home route with ?code=..., where
-      // useTraktOAuthCallback exchanges it. This avoids popup blockers and
+      // useOAuthCallback exchanges it. This avoids popup blockers and
       // orphaned auth windows.
       window.location.assign(request.url);
       return;
