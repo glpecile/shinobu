@@ -5,7 +5,8 @@
     "android/**",
     ".expo/**",
     "node_modules/**",
-    ".claude/skills/**"
+    ".claude/skills/**",
+    ".agents/skills/**"
   ],
   "categories": {
     "correctness": "error",
@@ -13,6 +14,7 @@
   },
   "rules": {
     "no-underscore-dangle": ["warn", { "allow": ["_tag"] }],
+    "unicorn/no-array-sort": "off",
     "no-restricted-imports": [
       "error",
       {
@@ -24,6 +26,28 @@
           {
             "group": ["@legendapp/list", "@legendapp/list/*"],
             "message": "Never import @legendapp/list directly - go through the components/List wrapper (AGENTS.md: Long Lists)."
+          },
+          {
+            "group": ["pressto", "pressto/*"],
+            "message": "Never import pressto directly - go through @/components/presstable (adds press debouncing + the withUniwind className wrapper)."
+          },
+          {
+            "group": [
+              "@swmansion/react-native-bottom-sheet",
+              "@swmansion/react-native-bottom-sheet/*"
+            ],
+            "message": "Import Sheet/SheetProvider from @/components/sheet — the native lib has no web build; the wrapper provides the Modal fallback via index.web.tsx."
+          },
+          {
+            "group": ["react-native-pulsar", "react-native-pulsar/*"],
+            "message": "Import { haptics } from @/lib/haptics — pulsar has no web implementation; the wrapper no-ops on web via index.web.ts."
+          },
+          {
+            "group": [
+              "@react-native-community/datetimepicker",
+              "@react-native-community/datetimepicker/*"
+            ],
+            "message": "Use @expo/ui/community/datetime-picker instead — drop-in replacement powered by SwiftUI/Jetpack Compose, no config plugin needed."
           }
         ],
         "paths": [
@@ -31,12 +55,89 @@
             "name": "react-native",
             "importNames": ["FlatList", "VirtualizedList", "SectionList"],
             "message": "Use the components/List wrapper (Legend List), never raw FlatList (AGENTS.md: Long Lists)."
+          },
+          {
+            "name": "expo-image",
+            "importNames": ["Image"],
+            "message": "Import Image from @/components/image — className on raw expo-image is silently dropped on native (uniwind needs the withUniwind wrapper)."
+          },
+          {
+            "name": "react-native",
+            "importNames": ["KeyboardAvoidingView", "InputAccessoryView"],
+            "message": "Use @/components/keyboard-avoiding-view (react-native-keyboard-controller) — core RN keyboard handling is inconsistent across platforms."
+          },
+          {
+            "name": "react-native",
+            "importNames": [
+              "Pressable",
+              "TouchableOpacity",
+              "TouchableHighlight",
+              "TouchableWithoutFeedback"
+            ],
+            "message": "Use PresstableScale/PresstableOpacity from @/components/presstable (pressto) — presses are debounced there so a double-tap can't navigate twice."
+          },
+          {
+            "name": "react-native-keyboard-controller",
+            "importNames": ["KeyboardAvoidingView"],
+            "message": "Import KeyboardAvoidingView from @/components/keyboard-avoiding-view — the raw component drops className on native (needs the withUniwind wrapper)."
+          },
+          {
+            "name": "react",
+            "importNames": ["useMemo", "useCallback"],
+            "message": "React Compiler handles memoization automatically — use plain values/functions instead. Opt out with 'use no memo' if absolutely necessary."
+          },
+          {
+            "name": "react-native-reanimated",
+            "importNames": ["default"],
+            "message": "Import AnimatedView from @/components/animated-view — className on raw Animated.* components is silently dropped on native (needs the withUniwind wrapper). Named imports (FadeOut, withTiming, …) are fine."
+          },
+          {
+            "name": "expo-router/head",
+            "message": "Import Head from @/components/head — expo-router/head throws on iOS unless Handoff's `origin` is configured; the wrapper is web-only (docs/solutions/expo-router-head-ios-handoff.md)."
           }
         ]
       }
     ]
   },
   "overrides": [
+    {
+      "files": [
+        "src/components/animated-view.tsx",
+        "src/components/head/index.web.tsx",
+        "src/components/image.tsx",
+        "src/components/keyboard-avoiding-view.tsx",
+        "src/components/presstable.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/sheet/**", "src/lib/haptics/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "Cross-directory imports use the @/ alias, not relative ../ paths (AGENTS.md: Import Alias)."
+              }
+            ]
+          }
+        ]
+      }
+    },
     {
       "files": ["src/components/List/**"],
       "rules": {
@@ -50,6 +151,15 @@
               }
             ]
           }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/**/*.tsx", "src/state/**/*.ts"],
+      "rules": {
+        "unicorn/filename-case": [
+          "error",
+          { "case": "kebabCase", "ignore": ["^index\\.tsx?$"] }
         ]
       }
     }

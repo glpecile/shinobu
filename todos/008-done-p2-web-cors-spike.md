@@ -1,7 +1,15 @@
 ---
-status: ready
+status: done
 priority: P2
+completed: 2026-07-07
 ---
+
+> **Outcome (2026-07-07):** Trakt PASS (API + OAuth token endpoint, see
+> `docs/solutions/web-cors-trakt.md`). AniList GraphQL PASS but its OAuth token
+> endpoint blocks browsers → web uses the implicit grant
+> (`docs/solutions/web-cors-anilist.md`). No provider failed API-level CORS, so no
+> registry platform-availability field was added. Letterboxd deferred until
+> `todos/004` unblocks.
 
 # Web CORS Spike — Verify Providers Are Browser-Callable
 

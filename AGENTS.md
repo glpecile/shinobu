@@ -53,6 +53,24 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   rule (no direct `@legendapp/list` or raw `FlatList` imports) are enforced via
   `no-restricted-imports`. When a new convention lands in this file, check whether
   oxlint can enforce it and add the rule in the same PR.
+- **pressto** — every tappable surface. Never use react-native's `Pressable`
+  or the `Touchable*` family (oxlint-enforced); import `PresstableScale` /
+  `PresstableOpacity` from `components/presstable`. The wrapper adds a
+  leading-edge press debounce (a quick double-tap on a media card must not
+  push the details route twice) and the withUniwind className mapping. Built
+  on gesture-handler + reanimated — `GestureHandlerRootView` wraps the app in
+  `app/_layout.tsx`.
+- **`react-native-keyboard-controller`** — all keyboard avoidance/animation.
+  Never use react-native's core `KeyboardAvoidingView` (inconsistent behavior
+  per platform); import the app's `components/keyboard-avoiding-view` wrapper
+  (withUniwind-wrapped, oxlint-enforced). `KeyboardProvider` is mounted in
+  `app/_layout.tsx`. Native module — adding/upgrading it needs a clean rebuild.
+- **React Compiler** — enabled via `experiments.reactCompiler` in `app.json` and
+  `babel-plugin-react-compiler`. The compiler automatically memoizes components and
+  hooks, so do not use `useMemo` or `useCallback` manually. They are forbidden by
+  the `no-restricted-imports` rule in `.oxlintrc.json`. If a rare case genuinely
+  requires opting out, use the `'use no memo'` directive on that component and
+  document why in the PR.
 
 ## Nitro Modules
 
@@ -169,7 +187,10 @@ web retrofit needed by default.
   measurably needs it.
 - **Poster images in rows go through `expo-image`** (built-in memory/disk cache,
   `recyclingKey` support) — long grids of remote covers through RN's core `Image`
-  will thrash memory on mobile.
+  will thrash memory on mobile. Import it via the `components/image` wrapper
+  (`withUniwind(ExpoImage)`), never directly: uniwind silently drops `className`
+  on third-party components on native (oxlint-enforced; see
+  `docs/solutions/uniwind-classname-third-party-components.md`).
 
 ## Up Next & Timezones
 
@@ -227,12 +248,28 @@ src/
   types/          Shared contracts, e.g. types/media.ts (NormalizedMediaItem)
 ```
 
-## Import Alias
+## Compound Components
 
-`@/*` maps to `src/*` (`tsconfig.json` `paths`; Metro resolves it natively — no
-babel plugin needed). Use `@/` for any import that crosses directories
-(`import type { MediaType } from '@/types/media'`); plain `./` stays fine for
-same-directory siblings. Don't add new relative `../` imports.
+When a shared UI component is a parent/children structure with implicit shared
+state (numbering, selection, grouping), build it compound-component style: a
+parent that provides context, with subcomponents attached as properties —
+instead of prop-drilling indices or passing config arrays. Reference example:
+`src/components/steps.tsx` — `<Steps>` auto-numbers its `<Steps.Item>` children
+via context, so steps can be added or reordered without touching a `number`
+prop at any call site. Prefer promoting an inline sub-layout to this pattern
+once a second screen needs it.
+
+## File Naming
+
+Component and hook files use **kebab-case** names:
+
+- `src/components/media-card.tsx`
+- `src/components/connect-trakt-button.tsx`
+- `src/state/session/use-provider-client-id.ts`
+
+Directory names stay lowercase. Exported React component names remain PascalCase
+and hook names remain camelCase because JSX/JS identifiers require it — the
+kebab-case rule applies to the filename, not the export.
 
 ## Platform-Specific Files
 
@@ -269,12 +306,14 @@ components. Components never see raw provider payload shapes.
 - `docs/brainstorms/` — raw exploration/ideation notes.
 - `docs/solutions/` — one file per solved bug or non-obvious pattern, searchable.
 - `todos/` — work items, named `NNN-status-priority-title.md`.
-- `.claude/skills/` — third-party agent skills vendored via the
+- `.agents/skills/` — third-party agent skills vendored via the
   [`skills` CLI](https://github.com/vercel-labs/skills) and pinned in
-  `skills-lock.json`. Add with `bunx skills add <repo> --skill <name> -y -a
-  claude-code`, update with `bunx skills update`. Don't hand-edit vendored
-  skills; if one contradicts AGENTS.md (e.g. a skill recommending NativeWind
-  over Uniwind), AGENTS.md wins — remove the skill.
+  `skills-lock.json`. This is the canonical, agent-agnostic location;
+  `.claude/skills` is a symlink to it (other agents can symlink the same dir).
+  Add with `bunx skills add <repo> --skill <name> -y -a claude-code`, update
+  with `bunx skills update`. Don't hand-edit vendored skills; if one
+  contradicts AGENTS.md (e.g. a skill recommending NativeWind over Uniwind),
+  AGENTS.md wins — remove the skill.
 
 **Every time a network anomaly or non-obvious fix happens** (rate limits, pagination
 mismatches, OAuth refresh edge cases, GraphQL boundary quirks), write it to

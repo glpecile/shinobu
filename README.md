@@ -5,3 +5,7 @@
 <h1 align="center">Shinobu (忍)</h1>
 
 <p align="center">A DB-less, cross-platform media tracker. Log once, fan out everywhere.</p>
+
+<p align="center">
+  <img src="./docs/images/screenshot-home.png" alt="Shinobu home feed on web and iOS — trending movies and TV shows from Trakt" />
+</p>
