@@ -9,14 +9,18 @@ import { httpFetch } from '@/lib/http/client';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
 import {
+  getMediaImages,
   getMediaPeople,
   getMediaStudios,
+  getShowSeasons,
+  getShowWatchedProgress,
   getTrendingMovies,
   getTrendingShows,
   getWatchedMovies,
   getWatchedShows,
   searchMedia,
 } from '@/lib/providers/trakt/reads';
+import type { NormalizedMediaImages } from '@/lib/providers/trakt/normalize';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
 import { useConnectedProviders } from '@/state/session';
@@ -82,7 +86,51 @@ export const traktQueryKeys = {
     [...traktQueryKeys.all, 'people', type, traktId] as const,
   studios: (type: MediaType, traktId: number) =>
     [...traktQueryKeys.all, 'studios', type, traktId] as const,
+  /** Full seasons + episodes for one show (plan 0010). */
+  seasons: (traktId: number) =>
+    [...traktQueryKeys.all, 'seasons', traktId] as const,
+  /** Per-episode watched completion for one show (plan 0010). */
+  showProgress: (traktId: number) =>
+    [...traktQueryKeys.all, 'show-progress', traktId] as const,
+  /** Lazy poster/backdrop recovery for artless watched items. */
+  images: (type: MediaType, traktId: number) =>
+    [...traktQueryKeys.all, 'images', type, traktId] as const,
 };
+
+/**
+ * Poster/backdrop for one item, recovered lazily: Trakt's 2026-06-30 API
+ * change removed images from `/sync/watched/*`, so items sourced from the
+ * watched feed arrive with an empty `coverImage`. Only those items trigger the
+ * per-item catalogue fetch — trending/search items already carry art and
+ * resolve without a request. Art never churns, so the cache entry never goes
+ * stale (docs/solutions/trakt-watched-endpoints-2026-api-changes.md).
+ */
+export function useTraktMediaImages(
+  item: NormalizedMediaItem | undefined,
+): NormalizedMediaImages {
+  const traktId = item?.externalIds.trakt;
+  const type = item?.type ?? 'MOVIE';
+  const missingArt = item != null && item.coverImage === '';
+  const { data } = useQuery({
+    queryKey: traktQueryKeys.images(type, traktId ?? -1),
+    queryFn: () =>
+      Effect.runPromise(
+        getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }),
+      ),
+    enabled: missingArt && traktId != null,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  if (item == null || item.coverImage !== '') {
+    return {
+      coverImage: item?.coverImage ?? '',
+      ...(item?.backdropImage != null
+        ? { backdropImage: item.backdropImage }
+        : {}),
+    };
+  }
+  return data ?? { coverImage: '' };
+}
 
 /**
  * Cast + crew credits for one movie/show — public read. Suspense variant:
@@ -111,6 +159,55 @@ export function useSuspenseTraktStudiosQuery(params: {
     queryKey: traktQueryKeys.studios(type, traktId),
     queryFn: () =>
       Effect.runPromise(getMediaStudios(traktDeps(), { type, traktId })),
+  });
+}
+
+/**
+ * Full seasons + episodes for one show (plan 0010). Public catalogue call, so
+ * it suspends regardless of whether Trakt is connected — seasons render even
+ * for a not-yet-connected user (without watch checkmarks). Mount under a
+ * `SuspenseSection`, only once the trakt id is known.
+ */
+export function useSuspenseTraktShowSeasonsQuery(params: { traktId: number }) {
+  const { traktId } = params;
+  return useSuspenseQuery({
+    queryKey: traktQueryKeys.seasons(traktId),
+    queryFn: () => Effect.runPromise(getShowSeasons(traktDeps(), { traktId })),
+  });
+}
+
+/**
+ * Non-suspense variant sharing the same cache key as the suspense hook above —
+ * the series-runtime stat tile reads the resolved structure without forcing the
+ * whole detail screen to wait on it; the suspense section drives the fetch.
+ */
+export function useTraktShowSeasonsQuery(params: {
+  traktId: number;
+  enabled?: boolean;
+}) {
+  const { traktId, enabled = true } = params;
+  return useQuery({
+    queryKey: traktQueryKeys.seasons(traktId),
+    queryFn: () => Effect.runPromise(getShowSeasons(traktDeps(), { traktId })),
+    enabled,
+  });
+}
+
+/**
+ * Per-episode watched completion for one show (plan 0010). Disabled until
+ * Trakt is connected — the seasons view stays usable without it, just no
+ * checkmarks. Not suspense: a loading progress read is fine to drop in async.
+ */
+export function useTraktShowProgressQuery(params: {
+  traktId: number;
+  enabled?: boolean;
+}) {
+  const { traktId, enabled = true } = params;
+  return useQuery({
+    queryKey: traktQueryKeys.showProgress(traktId),
+    queryFn: () =>
+      Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
+    enabled,
   });
 }
 

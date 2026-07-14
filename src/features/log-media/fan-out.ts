@@ -3,8 +3,14 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 export interface LogMediaVariables {
   item: NormalizedMediaItem;
-  /** Required when the item is TV — which episode was watched. */
+  /** Single episode watch (TV). Mutually exclusive with `episodes`. */
   episode?: { season: number; number: number };
+  /**
+   * One or more episode watches for the same show (TV) — a whole-season log
+   * passes every episode of that season, so the fan-out is one request per
+   * provider, not N. Mutually exclusive with `episode`.
+   */
+  episodes?: Array<{ season: number; number: number }>;
   /** ISO instant; omitted = providers record "now". */
   watchedAt?: string;
 }

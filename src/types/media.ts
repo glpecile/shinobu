@@ -81,3 +81,29 @@ export interface NormalizedStudio {
   id: string;
   name: string;
 }
+
+/**
+ * One episode within a `NormalizedSeason`. Detail-screen-only structure — these
+ * never reach the unified feed (which stays the flat `NormalizedMediaItem`).
+ */
+export interface NormalizedEpisode {
+  /** Season-relative episode number. */
+  number: number;
+  title: string;
+  overview?: string;
+  /** ISO instant with offset/Z, or absent when Trakt has no air date. */
+  firstAired?: string;
+  /** Minutes. */
+  runtime?: number;
+}
+
+/**
+ * One season of a TV show. `number: 0` is Trakt's "Specials" bucket; the
+ * normalizer reorders seasons so specials render last instead of first.
+ */
+export interface NormalizedSeason {
+  number: number;
+  /** "Season N"; "Specials" for season 0. */
+  title: string;
+  episodes: NormalizedEpisode[];
+}

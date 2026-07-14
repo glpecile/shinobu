@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
 import { PresstableScale } from '@/components/presstable';
+import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface MediaCardProps {
@@ -18,6 +19,9 @@ function progressLabel(item: NormalizedMediaItem): string | null {
 
 export function MediaCard({ item, onPress }: MediaCardProps) {
   const progress = progressLabel(item);
+  // Watched-feed items arrive artless (Trakt dropped images from /sync/
+  // watched/* in 2026) — this recovers the poster lazily, per visible card.
+  const { coverImage } = useTraktMediaImages(item);
 
   return (
     <PresstableScale
@@ -25,7 +29,7 @@ export function MediaCard({ item, onPress }: MediaCardProps) {
       onPress={() => onPress?.(item)}
     >
       <Image
-        source={{ uri: item.coverImage }}
+        source={{ uri: coverImage }}
         className="w-full h-full"
         contentFit="cover"
       />

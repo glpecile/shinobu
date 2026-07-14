@@ -5,6 +5,7 @@ import type {
   NormalizedCastMember,
   NormalizedCrewMember,
   NormalizedMediaItem,
+  NormalizedSeason,
   NormalizedStudio,
 } from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
@@ -13,14 +14,22 @@ import type { TraktDeps } from './deps';
 import {
   normalizeCastEntry,
   normalizeCrew,
+  normalizeMediaImages,
   normalizeSearchResult,
+  normalizeSeason,
   normalizeStudio,
   normalizeTrendingMovie,
   normalizeTrendingShow,
   normalizeWatchedMovie,
+  normalizeWatchedProgress,
   normalizeWatchedShow,
+  orderSeasons,
+  type NormalizedMediaImages,
+  type TraktImages,
   type TraktPeopleResponse,
   type TraktSearchResult,
+  type TraktShowProgress,
+  type TraktShowSeason,
   type TraktStudio,
   type TraktTrendingMovie,
   type TraktTrendingShow,
@@ -140,20 +149,104 @@ export function getMediaStudios(
   ).pipe(Effect.map((studios) => studios.map(normalizeStudio)));
 }
 
+/**
+ * Trakt enforces pagination on `/sync/watched/*` since 2026-06-30 — a single
+ * request no longer returns the full history (docs/solutions/
+ * trakt-watched-endpoints-2026-api-changes.md). Loop pages until a short page,
+ * capped so a huge library can't turn one query into dozens of round-trips.
+ */
+const WATCHED_MAX_PAGES = 10;
+
+function getWatchedPages<Raw>(
+  deps: TraktDeps,
+  path: string,
+  params: { extended?: string; limit: number },
+): Effect.Effect<Raw[], ProviderError> {
+  return Effect.gen(function* () {
+    const all: Raw[] = [];
+    for (let page = 1; page <= WATCHED_MAX_PAGES; page++) {
+      const batch = yield* traktAuthedRequest<Raw[]>(
+        deps,
+        `${path}?${params.extended != null ? `extended=${params.extended}&` : ''}page=${page}&limit=${params.limit}`,
+      );
+      all.push(...batch);
+      if (batch.length < params.limit) break;
+    }
+    return all;
+  });
+}
+
 export function getWatchedShows(
   deps: TraktDeps,
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
-  return traktAuthedRequest<TraktWatchedShow[]>(
-    deps,
-    '/sync/watched/shows?extended=full,images',
-  ).pipe(Effect.map((shows) => shows.map(normalizeWatchedShow)));
+  // `extended=progress` restores the per-season episode breakdown the 2026 API
+  // change dropped from the default response — `normalizeWatchedShow` derives
+  // `currentProgress` from it. It caps pages at 100 items (vs 250 default).
+  return getWatchedPages<TraktWatchedShow>(deps, '/sync/watched/shows', {
+    extended: 'progress',
+    limit: 100,
+  }).pipe(Effect.map((shows) => shows.map(normalizeWatchedShow)));
 }
 
 export function getWatchedMovies(
   deps: TraktDeps,
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
-  return traktAuthedRequest<TraktWatchedMovie[]>(
+  // No extended param: the 2026 default already carries full movie metadata,
+  // and `plays` lives on the wrapper. Images are gone either way — see
+  // `getMediaImages` for how feed art is recovered.
+  return getWatchedPages<TraktWatchedMovie>(deps, '/sync/watched/movies', {
+    limit: 250,
+  }).pipe(Effect.map((movies) => movies.map(normalizeWatchedMovie)));
+}
+
+/**
+ * Poster/backdrop for one item from the public catalogue detail endpoint —
+ * the recovery path for watched-feed items, since Trakt's 2026 API change
+ * removed images from `/sync/watched/*` responses entirely. Fetched lazily
+ * per item (`useTraktMediaImages`), never for the whole library up front.
+ */
+export function getMediaImages(
+  deps: TraktDeps,
+  params: { type: MediaType; traktId: number },
+): Effect.Effect<NormalizedMediaImages, ProviderError> {
+  return traktRequest<{ images?: TraktImages }>(
     deps,
-    '/sync/watched/movies?extended=full,images',
-  ).pipe(Effect.map((movies) => movies.map(normalizeWatchedMovie)));
+    `/${traktSegment(params.type)}/${params.traktId}?extended=full,images`,
+  ).pipe(Effect.map(normalizeMediaImages));
+}
+
+/**
+ * Full seasons + episodes for one show (plan 0010). Public catalogue call —
+ * client-id only, no OAuth — so the seasons view renders even before any
+ * provider is connected (no watch checkmarks in that case). Specials sort last
+ * via `orderSeasons`.
+ */
+export function getShowSeasons(
+  deps: TraktDeps,
+  params: { traktId: number },
+): Effect.Effect<NormalizedSeason[], ProviderError> {
+  return traktRequest<TraktShowSeason[]>(
+    deps,
+    `/shows/${params.traktId}/seasons?extended=full,episodes`,
+  ).pipe(
+    Effect.map((seasons) =>
+      orderSeasons(seasons.map(normalizeSeason)),
+    ),
+  );
+}
+
+/**
+ * Per-episode watched completion for one show, from the authenticated
+ * `/shows/:id/progress/watched` endpoint. Targeted (one show), so the seasons
+ * view doesn't rescan the whole watched-shows list; empty set when nothing's
+ * watched yet.
+ */
+export function getShowWatchedProgress(
+  deps: TraktDeps,
+  params: { traktId: number },
+): Effect.Effect<ReadonlySet<string>, ProviderError> {
+  return traktAuthedRequest<TraktShowProgress>(
+    deps,
+    `/shows/${params.traktId}/progress/watched`,
+  ).pipe(Effect.map(normalizeWatchedProgress));
 }

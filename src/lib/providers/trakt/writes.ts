@@ -9,8 +9,13 @@ import type { TraktIds } from './normalize';
 export interface TraktLogOptions {
   /** ISO instant; omitted = Trakt records "now". */
   watchedAt?: string;
-  /** Required when logging a TV item. */
+  /** A single TV episode watch. Mutually exclusive with `episodes`. */
   episode?: { season: number; number: number };
+  /**
+   * One or more TV episode watches for the same show (a whole-season batch is
+   * one `/sync/history` POST). Mutually exclusive with `episode`.
+   */
+  episodes?: Array<{ season: number; number: number }>;
 }
 
 interface TraktSyncHistoryResponse {
@@ -56,7 +61,11 @@ export function logToTrakt(
       movies: [{ ids, ...(options.watchedAt ? { watched_at: options.watchedAt } : {}) }],
     };
   } else if (item.type === 'TV') {
-    if (options.episode == null) {
+    // Unify single vs batch: a single `episode` is a one-element batch.
+    const batch =
+      options.episodes ??
+      (options.episode != null ? [options.episode] : null);
+    if (batch == null || batch.length === 0) {
       return Effect.fail(
         new ProviderDecodeError({
           provider: 'trakt',
@@ -64,21 +73,25 @@ export function logToTrakt(
         }),
       );
     }
+    // Group by season so a whole-season log is one request, not N — Trakt's
+    // /sync/history body is seasons[].episodes[].
+    const bySeason = new Map<number, number[]>();
+    for (const { season, number } of batch) {
+      const bucket = bySeason.get(season) ?? [];
+      bucket.push(number);
+      bySeason.set(season, bucket);
+    }
     body = {
       shows: [
         {
           ids,
-          seasons: [
-            {
-              number: options.episode.season,
-              episodes: [
-                {
-                  number: options.episode.number,
-                  ...(options.watchedAt ? { watched_at: options.watchedAt } : {}),
-                },
-              ],
-            },
-          ],
+          seasons: [...bySeason.entries()].map(([season, numbers]) => ({
+            number: season,
+            episodes: numbers.map((number) => ({
+              number,
+              ...(options.watchedAt ? { watched_at: options.watchedAt } : {}),
+            })),
+          })),
         },
       ],
     };

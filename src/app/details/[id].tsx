@@ -13,12 +13,14 @@ import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { SeasonsSection, SeriesRuntimeTile } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
 import { routes } from '@/lib/routes';
 import {
   traktQueryKeys,
   useSuspenseTraktPeopleQuery,
   useSuspenseTraktStudiosQuery,
+  useTraktMediaImages,
   useTraktWatchedInfo,
 } from '@/state/queries/trakt';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
@@ -361,6 +363,9 @@ export default function DetailsScreen() {
       feed.feedItems,
     ]) ?? findInSearchCache(queryClient, id);
   const traktId = item?.externalIds.trakt;
+  // Items resolved from the watched feed arrive artless (Trakt dropped images
+  // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
+  const artwork = useTraktMediaImages(item);
 
   function goBack() {
     if (router.canGoBack()) {
@@ -412,6 +417,9 @@ export default function DetailsScreen() {
       for (const key of [
         traktQueryKeys.people(item.type, traktId),
         traktQueryKeys.studios(item.type, traktId),
+        ...(item.type === 'TV'
+          ? [traktQueryKeys.seasons(traktId), traktQueryKeys.showProgress(traktId)]
+          : []),
       ]) {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
@@ -434,7 +442,7 @@ export default function DetailsScreen() {
       <RefreshableScrollView className="flex-1" onRefresh={refresh}>
         <View className="h-80 relative">
           <Image
-            source={{ uri: item.backdropImage || item.coverImage }}
+            source={{ uri: artwork.backdropImage || artwork.coverImage }}
             className="w-full h-full"
             contentFit="cover"
           />
@@ -454,7 +462,7 @@ export default function DetailsScreen() {
         <View className="w-full max-w-4xl self-center px-6 pb-12">
           <View className="flex-row items-end -mt-24 mb-6">
             <Image
-              source={{ uri: item.coverImage }}
+              source={{ uri: artwork.coverImage }}
               className="w-28 h-40 rounded-card border border-border bg-surface"
               contentFit="cover"
             />
@@ -498,8 +506,13 @@ export default function DetailsScreen() {
                 <Text className="text-muted text-xs font-sans uppercase">
                   Progress
                 </Text>
-                <Text className="text-foreground text-lg font-sans-semibold">
-                  {item.currentProgress}{' '}
+                {/* Deliberately stacked (not inline): the tiles are too narrow
+                    for "22 episodes" on one line, and an inline wrap leaves a
+                    full 2xl line-height gap above the unit. */}
+                <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
+                  {item.currentProgress}
+                </Text>
+                <Text className="text-sm text-muted font-sans">
                   {item.progressUnit === 'chapter' ? 'chapters' : 'episodes'}
                 </Text>
               </View>
@@ -508,13 +521,17 @@ export default function DetailsScreen() {
                   <Text className="text-muted text-xs font-sans uppercase">
                     Total
                   </Text>
-                  <Text className="text-foreground text-lg font-sans-semibold">
-                    {item.totalEpisodes} episodes
+                  <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
+                    {item.totalEpisodes}
                   </Text>
+                  <Text className="text-sm text-muted font-sans">episodes</Text>
                 </View>
               )}
+              {item.type === 'TV' && <SeriesRuntimeTile item={item} />}
             </View>
           )}
+
+          {item.type === 'TV' && <SeasonsSection item={item} />}
 
           {traktId != null && (
             <>

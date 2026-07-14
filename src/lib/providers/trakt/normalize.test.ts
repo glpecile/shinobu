@@ -4,12 +4,17 @@ import {
   normalizeCastEntry,
   normalizeCrew,
   normalizeSearchResult,
+  normalizeSeason,
   normalizeStudio,
   normalizeWatchedMovie,
+  normalizeWatchedProgress,
+  orderSeasons,
   type TraktCastEntry,
   type TraktCrewEntry,
   type TraktMovie,
   type TraktShow,
+  type TraktShowProgress,
+  type TraktShowSeason,
   type TraktWatchedMovie,
 } from './normalize';
 
@@ -185,5 +190,84 @@ describe('normalizeStudio', () => {
       id: 'trakt-studio-5',
       name: 'Legendary',
     });
+  });
+});
+
+describe('orderSeasons', () => {
+  test('numbers seasons ascending but moves specials (0) to the end', () => {
+    const ordered = orderSeasons([
+      { number: 0 },
+      { number: 2 },
+      { number: 1 },
+      { number: 0, extra: 1 },
+    ]);
+    expect(ordered.map((s) => s.number)).toEqual([1, 2, 0, 0]);
+  });
+});
+
+describe('normalizeSeason', () => {
+  const season: TraktShowSeason = {
+    number: 1,
+    ids: { trakt: 9 },
+    // Payload order is reversed so the ascending sort is observable.
+    episodes: [
+      { season: 1, number: 2, title: 'Two', runtime: 45 },
+      { season: 1, number: 1, title: '', runtime: 50, first_aired: '2022-01-01T00:00:00.000Z' },
+    ],
+  };
+
+  test('labels as "Season N", sorts episodes ascending, falls back blank titles', () => {
+    const normalized = normalizeSeason(season);
+    expect(normalized.title).toBe('Season 1');
+    expect(normalized.episodes.map((e) => e.number)).toEqual([1, 2]);
+    expect(normalized.episodes.map((e) => e.title)).toEqual(['Episode 1', 'Two']);
+  });
+
+  test('preserves runtime and airdate and drops empty/absent optionals', () => {
+    const normalized = normalizeSeason(season);
+    expect(normalized.episodes[0]).toEqual({
+      number: 1,
+      title: 'Episode 1',
+      firstAired: '2022-01-01T00:00:00.000Z',
+      runtime: 50,
+    });
+    expect(normalized.episodes[1]).toEqual({
+      number: 2,
+      title: 'Two',
+      runtime: 45,
+    });
+  });
+
+  test('season 0 is labelled "Specials"', () => {
+    expect(
+      normalizeSeason({ number: 0, ids: { trakt: 1 }, episodes: [] }).title,
+    ).toBe('Specials');
+  });
+});
+
+describe('normalizeWatchedProgress', () => {
+  test('collects "S-E" keys for completed episodes, tolerating 0/1 and true/false', () => {
+    // Real payload shape: progress episodes carry no `season` field — the
+    // season number lives only on the enclosing season object.
+    const progress: TraktShowProgress = {
+      seasons: [
+        { number: 1, episodes: [
+          { number: 1, completed: true },
+          { number: 2, completed: 1 },
+          { number: 3, completed: false },
+        ] },
+        { number: 2, episodes: [
+          { number: 1, completed: 0 },
+          { number: 2, completed: true },
+        ] },
+      ],
+    };
+    expect(normalizeWatchedProgress(progress)).toEqual(
+      new Set(['1-1', '1-2', '2-2']),
+    );
+  });
+
+  test('empty / missing seasons yield an empty set', () => {
+    expect(normalizeWatchedProgress({})).toEqual(new Set());
   });
 });

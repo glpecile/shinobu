@@ -19,10 +19,11 @@ import {
  * containment boundary `state/queries/*` uses — no Effect type escapes.
  */
 const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
-  trakt: ({ item, episode, watchedAt }) =>
+  trakt: ({ item, episode, episodes, watchedAt }) =>
     Effect.runPromise(
       logToTrakt(traktDeps(), item, {
         ...(episode != null ? { episode } : {}),
+        ...(episodes != null ? { episodes } : {}),
         ...(watchedAt != null ? { watchedAt } : {}),
       }),
     ),
@@ -48,7 +49,7 @@ export function useLogMedia() {
       }
       return fanOutLog(LOG_ADAPTERS, targets, variables);
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       // The write changed watch history — refresh the reads that show it.
       if (result.succeeded.includes('trakt')) {
         queryClient.invalidateQueries({
@@ -57,6 +58,13 @@ export function useLogMedia() {
         queryClient.invalidateQueries({
           queryKey: traktQueryKeys.watchedMovies(),
         });
+        // TV logs also change this show's seasons/progress views (plan 0010).
+        const traktId = variables.item.externalIds.trakt;
+        if (traktId != null) {
+          queryClient.invalidateQueries({
+            queryKey: traktQueryKeys.showProgress(traktId),
+          });
+        }
       }
     },
   });

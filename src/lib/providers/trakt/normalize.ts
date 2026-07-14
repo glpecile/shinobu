@@ -2,6 +2,7 @@ import type {
   NormalizedCastMember,
   NormalizedCrewMember,
   NormalizedMediaItem,
+  NormalizedSeason,
   NormalizedStudio,
 } from '@/types/media';
 
@@ -79,6 +80,27 @@ function imageUrl(paths: string[] | undefined): string {
   const path = paths?.[0];
   if (path == null) return '';
   return path.startsWith('http') ? path : `https://${path}`;
+}
+
+export interface NormalizedMediaImages {
+  coverImage: string;
+  backdropImage?: string;
+}
+
+/**
+ * Poster/backdrop from any raw movie/show payload. Trakt's 2026 API change
+ * removed images from `/sync/watched/*`, so watched items recover art through
+ * a per-item catalogue lookup normalized here (`getMediaImages`).
+ */
+export function normalizeMediaImages(raw: {
+  images?: TraktImages;
+}): NormalizedMediaImages {
+  return {
+    coverImage: imageUrl(raw.images?.poster),
+    ...(raw.images?.fanart != null && raw.images.fanart.length > 0
+      ? { backdropImage: imageUrl(raw.images.fanart) }
+      : {}),
+  };
 }
 
 /**
@@ -297,6 +319,113 @@ export function normalizeStudio(raw: TraktStudio): NormalizedStudio {
     id: `trakt-studio-${raw.ids.trakt ?? raw.ids.slug}`,
     name: raw.name,
   };
+}
+
+// ---- Seasons / episodes (detail-screen-only structure, plan 0010) ----
+
+/** One episode inside a `/shows/:id/seasons?extended=full,episodes` payload. */
+export interface TraktSeasonEpisode {
+  season: number;
+  number: number;
+  title?: string;
+  overview?: string;
+  /** ISO instant (UTC) or null while unaired; absent in older payloads. */
+  first_aired?: string | null;
+  /** Minutes. */
+  runtime?: number;
+}
+
+/** One season from `/shows/:id/seasons?extended=full,episodes`. */
+export interface TraktShowSeason {
+  number: number;
+  title?: string;
+  ids: TraktIds;
+  episodes?: TraktSeasonEpisode[];
+}
+
+/**
+ * Sort seasons ascending but move "Specials" (number 0) to the end — the way
+ * TV apps present them, instead of Trakt's specials-first payload order.
+ */
+export function orderSeasons<T extends { readonly number: number }>(
+  seasons: readonly T[],
+): T[] {
+  // .sort() on the .filter() copies, not .toSorted() — Hermes (iOS/Android JS
+  // engine) doesn't implement the ES2023 change-by-copy array methods.
+  return [
+    ...seasons
+      .filter((season) => season.number !== 0)
+      .sort((a, b) => a.number - b.number),
+    ...seasons
+      .filter((season) => season.number === 0)
+      .sort((a, b) => a.number - b.number),
+  ];
+}
+
+/** "Season N" with title fall-through; "Specials" for Trakt's season 0. */
+function seasonTitle(raw: TraktShowSeason): string {
+  if (raw.number === 0) return 'Specials';
+  // Trakt sometimes gives specials-named seasons a blank `title`; never trust
+  // it for the numeric seasons — keep the canonical "Season N" label.
+  return `Season ${raw.number}`;
+}
+
+export function normalizeSeason(raw: TraktShowSeason): NormalizedSeason {
+  return {
+    number: raw.number,
+    title: seasonTitle(raw),
+    episodes: orderSeasons(raw.episodes ?? []).map((episode) => ({
+      number: episode.number,
+      title: episode.title || `Episode ${episode.number}`,
+      ...(episode.overview != null && episode.overview !== ''
+        ? { overview: episode.overview }
+        : {}),
+      ...(episode.first_aired != null && episode.first_aired !== ''
+        ? { firstAired: episode.first_aired }
+        : {}),
+      ...(episode.runtime != null ? { runtime: episode.runtime } : {}),
+    })),
+  };
+}
+
+/**
+ * Per-episode watched completion for one show, from the authenticated
+ * `/shows/:id/progress/watched` endpoint. Returns the `"${season}-${number}"`
+ * keys that Trakt marks completed — the accordion rows match against this set
+ * to render watch checkmarks without touching the flat feed contract.
+ */
+export interface TraktProgressEpisode {
+  number: number;
+  completed: number | boolean;
+}
+
+export interface TraktProgressSeason {
+  number: number;
+  episodes?: TraktProgressEpisode[];
+}
+
+export interface TraktShowProgress {
+  aired?: number;
+  completed?: number;
+  last_watched_at?: string;
+  seasons?: TraktProgressSeason[];
+}
+
+export function normalizeWatchedProgress(
+  raw: TraktShowProgress,
+): ReadonlySet<string> {
+  const keys = new Set<string>();
+  for (const season of raw.seasons ?? []) {
+    for (const episode of season.episodes ?? []) {
+      // Trakt sends `completed` as both `0/1` (older) and `true/false` (newer).
+      // Progress episodes carry no `season` field of their own — the season
+      // number lives only on the enclosing season object.
+      if (episode.completed === true || episode.completed === 1) {
+        keys.add(`${season.number}-${episode.number}`);
+      }
+    }
+  }
+  return keys;
 }
 
 /**
