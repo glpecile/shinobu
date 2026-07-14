@@ -62,20 +62,34 @@ function personHeadshot(person: AniListPerson): string {
 function normalizeCast(
   edges: AniListCharacterEdge[] | null,
 ): NormalizedCastMember[] {
-  const cast: NormalizedCastMember[] = [];
+  const byPerson = new Map<string, { member: NormalizedCastMember; characters: string[] }>();
   for (const edge of edges ?? []) {
     const character = edge?.node?.name?.full ?? '';
     for (const voiceActor of edge?.voiceActors ?? []) {
       if (voiceActor == null) continue;
-      cast.push({
-        id: `anilist-person-${voiceActor.id}`,
-        name: personName(voiceActor),
-        character,
-        headshot: personHeadshot(voiceActor),
+      const id = `anilist-person-${voiceActor.id}`;
+      const existing = byPerson.get(id);
+      if (existing != null) {
+        if (character !== '') existing.characters.push(character);
+        continue;
+      }
+
+      byPerson.set(id, {
+        member: {
+          id,
+          name: personName(voiceActor),
+          character: '',
+          headshot: personHeadshot(voiceActor),
+        },
+        characters: character !== '' ? [character] : [],
       });
     }
   }
-  return cast;
+
+  return [...byPerson.values()].map(({ member, characters }) => ({
+    ...member,
+    character: [...new Set(characters)].join(', '),
+  }));
 }
 
 function normalizeCrew(
@@ -113,13 +127,13 @@ function normalizeCrew(
 function normalizeStudios(
   nodes: AniListStudio[] | null,
 ): NormalizedStudio[] {
-  return (nodes ?? [])
-    .filter((studio): studio is Exclude<AniListStudio, null> => studio != null)
-    .map((studio) => ({
-      id: `anilist-studio-${studio.id}`,
-      name: studio.name ?? '',
-    }))
-    .filter((studio) => studio.name !== '');
+  const studios = new Map<string, NormalizedStudio>();
+  for (const studio of nodes ?? []) {
+    if (studio == null || studio.name == null || studio.name === '') continue;
+    const id = `anilist-studio-${studio.id}`;
+    if (!studios.has(id)) studios.set(id, { id, name: studio.name });
+  }
+  return [...studios.values()];
 }
 
 /**

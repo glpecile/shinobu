@@ -36,6 +36,16 @@ describe('getAnimeCredits', () => {
                   },
                 ],
               },
+              {
+                node: { name: { full: 'Seiko Ayase' } },
+                voiceActors: [
+                  {
+                    id: 1,
+                    name: { full: 'Shion Wakayama' },
+                    image: { large: 'https://img/voice-actor.jpg' },
+                  },
+                ],
+              },
             ],
           },
           staff: {
@@ -61,6 +71,7 @@ describe('getAnimeCredits', () => {
           studios: {
             nodes: [
               { id: 3, name: 'Science SARU' },
+              { id: 3, name: 'Science SARU' },
               { id: 4, name: null },
             ],
           },
@@ -76,7 +87,7 @@ describe('getAnimeCredits', () => {
       {
         id: 'anilist-person-1',
         name: 'Shion Wakayama',
-        character: 'Momo Ayase',
+        character: 'Momo Ayase, Seiko Ayase',
         headshot: 'https://img/voice-actor.jpg',
       },
     ]);
