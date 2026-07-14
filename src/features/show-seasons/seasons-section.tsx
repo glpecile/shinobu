@@ -14,7 +14,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargets } from '@/features/log-media/use-log-targets';
-import { labels, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
+import { confirmLabelFor, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
 import { SeasonAccordion, type PendingLog } from './season-accordion';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 
@@ -127,7 +127,7 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       ))}
 
       <LogConfirmSheet
-        confirmLabel={`Mark as watched on ${labels(selectedProviders)}`}
+        confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}
         description={pending?.description ?? ''}
         logMedia={logMedia}
         onClose={() => setPending(null)}

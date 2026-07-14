@@ -14,6 +14,7 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
+import { animeSeasonLabel } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
@@ -56,7 +57,8 @@ function FeedScreen() {
   const {
     trendingMovies,
     trendingShows,
-    trendingAnime,
+    seasonalAnime,
+    animeSeason,
     yourShows,
     yourAnime,
     isLoading,
@@ -72,7 +74,7 @@ function FeedScreen() {
   const hasData =
     trendingMovies.length > 0 ||
     trendingShows.length > 0 ||
-    trendingAnime.length > 0 ||
+    seasonalAnime.length > 0 ||
     yourShows.length > 0 ||
     yourAnime.length > 0;
 
@@ -104,27 +106,32 @@ function FeedScreen() {
         {/* Personal rows first (2026-07-14 re-prioritization), trending after. */}
         <MediaCarousel
           title="Your Shows"
+          provider="trakt"
           items={yourShows}
           onItemPress={openDetails}
         />
         <MediaCarousel
           title="Your Anime"
+          provider="anilist"
           items={yourAnime}
           onItemPress={openDetails}
         />
         <MediaCarousel
           title="Trending Movies"
+          provider="trakt"
           items={trendingMovies}
           onItemPress={openDetails}
         />
         <MediaCarousel
           title="Trending TV Shows"
+          provider="trakt"
           items={trendingShows}
           onItemPress={openDetails}
         />
         <MediaCarousel
-          title="Trending Anime"
-          items={trendingAnime}
+          title={`${animeSeasonLabel(animeSeason)} Anime`}
+          provider="anilist"
+          items={seasonalAnime}
           onItemPress={openDetails}
         />
       </RefreshableScrollView>

@@ -16,6 +16,14 @@ export function labels(ids: readonly ProviderId[]): string {
   return ids.map((id) => PROVIDERS[id].label).join(', ');
 }
 
+/** "Log watch on Trakt, AniList" — no dangling "on" while nothing is selected. */
+export function confirmLabelFor(
+  action: string,
+  ids: readonly ProviderId[],
+): string {
+  return ids.length === 0 ? action : `${action} on ${labels(ids)}`;
+}
+
 interface ProviderToggleProps {
   id: ProviderId;
   selected: boolean;
@@ -32,7 +40,10 @@ function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
   return (
     <PresstableOpacity
       accessibilityLabel={`Log to ${descriptor.label}`}
-      accessibilityRole="checkbox"
+      // No accessibilityRole="checkbox" here: RNGH's web NativeViewGestureHandler
+      // only fires presses on elements whose DOM role is "button", so any other
+      // role on a pressto pressable silently kills onPress on web
+      // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
       accessibilityState={{ checked: selected }}
       className={`flex-row items-center justify-between px-3 py-2.5 rounded-md ${
         selected ? 'bg-accent/10' : 'bg-surface'

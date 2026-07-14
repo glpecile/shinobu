@@ -4,6 +4,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
 import { anilistAuthedRequest, anilistRequest } from './http';
+import type { AnimeSeasonWindow } from './season';
 import {
   normalizeAniListListEntry,
   normalizeAniListMedia,
@@ -118,6 +119,40 @@ export function getTrendingAnime(
         }
       }`,
       { variables: { perPage: limit } },
+    );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return (data.Page?.media ?? [])
+      .filter((media): media is AniListMedia => media != null)
+      .map((media) => normalizeAniListMedia(media, nowIso));
+  });
+}
+
+/**
+ * Public most-popular anime of one cour ("Summer 2026") — the home feed's
+ * anime row. Same no-session contract as trending; POPULARITY_DESC because
+ * TRENDING_DESC within a season over-weights week-to-week noise.
+ */
+export function getSeasonalAnime(
+  deps: AniListDeps,
+  params: { season: AnimeSeasonWindow['season']; year: number; limit?: number },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const limit = params.limit ?? 30;
+  return Effect.gen(function* () {
+    const data = yield* anilistRequest<TrendingResponse>(
+      deps,
+      `query ($perPage: Int, $season: MediaSeason, $seasonYear: Int) {
+        Page(page: 1, perPage: $perPage) {
+          media(type: ANIME, season: $season, seasonYear: $seasonYear, sort: POPULARITY_DESC) { ${MEDIA_FIELDS} }
+        }
+      }`,
+      {
+        variables: {
+          perPage: limit,
+          season: params.season,
+          seasonYear: params.year,
+        },
+      },
     );
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();

@@ -7,7 +7,7 @@ import { haptics } from '@/lib/haptics';
 import type { ProviderId } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
 import {
-  labels,
+  confirmLabelFor,
   LogConfirmSheet,
 } from '@/features/log-media/log-confirm-sheet';
 import { useLogMedia } from '@/features/log-media/use-log-media';
@@ -136,7 +136,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       />
 
       <LogConfirmSheet
-        confirmLabel={`Mark as watched on ${labels(selectedProviders)}`}
+        confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}
         description={pending?.description ?? ''}
         logMedia={logMedia}
         onClose={() => setPending(null)}

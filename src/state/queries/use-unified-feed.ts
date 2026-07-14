@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { providersForFeed } from '@/lib/providers/routing';
@@ -12,9 +12,13 @@ import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
+  animeSeasonAt,
+  type AnimeSeasonWindow,
+} from '@/lib/providers/anilist/season';
+import {
   anilistQueryKeys,
   fetchCurrentAnime,
-  fetchTrendingAnime,
+  fetchSeasonalAnime,
 } from './anilist';
 import { traktDeps, traktQueryKeys } from './trakt';
 
@@ -22,7 +26,7 @@ import { traktDeps, traktQueryKeys } from './trakt';
 type FeedSlot =
   | 'trendingMovies'
   | 'trendingShows'
-  | 'trendingAnime'
+  | 'seasonalAnime'
   | 'yourShows'
   | 'yourAnime';
 
@@ -30,7 +34,10 @@ export interface UnifiedFeedResult {
   /** Public trending catalogues — always fetched, feed is never empty. */
   trendingMovies: NormalizedMediaItem[];
   trendingShows: NormalizedMediaItem[];
-  trendingAnime: NormalizedMediaItem[];
+  /** Popular anime of the current cour (e.g. Summer 2026). */
+  seasonalAnime: NormalizedMediaItem[];
+  /** Which cour `seasonalAnime` covers — drives the row's title. */
+  animeSeason: AnimeSeasonWindow;
   /** Personal in-progress rows from connected providers. */
   yourShows: NormalizedMediaItem[];
   yourAnime: NormalizedMediaItem[];
@@ -46,7 +53,16 @@ interface FeedQueryConfig {
   provider: ProviderId;
   queryKey: readonly unknown[];
   queryFn: () => Promise<NormalizedMediaItem[]>;
+  staleTime?: number;
 }
+
+/**
+ * Public catalogue rows move slowly (trending/popularity rankings, not user
+ * state) — a long staleTime keeps home ↔ details navigation from re-spending
+ * provider rate budget on every remount (AniList's is 30 req/min,
+ * docs/solutions/anilist-rate-limit-retry-storm.md).
+ */
+const CATALOGUE_STALE_MS = 15 * 60_000;
 
 /**
  * Aggregates every connected, read-capable provider into one normalized feed
@@ -58,6 +74,8 @@ interface FeedQueryConfig {
 export function useUnifiedFeed(): UnifiedFeedResult {
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
+  const queryClient = useQueryClient();
+  const animeSeason = animeSeasonAt(new Date());
 
   const queries: FeedQueryConfig[] = [
     // Public catalogues — no session required.
@@ -66,18 +84,21 @@ export function useUnifiedFeed(): UnifiedFeedResult {
       provider: 'trakt',
       queryKey: traktQueryKeys.trendingMovies(),
       queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps())),
+      staleTime: CATALOGUE_STALE_MS,
     },
     {
       slot: 'trendingShows',
       provider: 'trakt',
       queryKey: traktQueryKeys.trendingShows(),
       queryFn: () => Effect.runPromise(getTrendingShows(traktDeps())),
+      staleTime: CATALOGUE_STALE_MS,
     },
     {
-      slot: 'trendingAnime',
+      slot: 'seasonalAnime',
       provider: 'anilist',
-      queryKey: anilistQueryKeys.trendingAnime(),
-      queryFn: () => fetchTrendingAnime(),
+      queryKey: anilistQueryKeys.seasonalAnime(animeSeason),
+      queryFn: () => fetchSeasonalAnime(animeSeason),
+      staleTime: CATALOGUE_STALE_MS,
     },
   ];
 
@@ -94,7 +115,7 @@ export function useUnifiedFeed(): UnifiedFeedResult {
       slot: 'yourAnime',
       provider: 'anilist',
       queryKey: anilistQueryKeys.currentAnime(),
-      queryFn: fetchCurrentAnime,
+      queryFn: () => fetchCurrentAnime(queryClient),
     });
   }
 
@@ -127,7 +148,8 @@ export function useUnifiedFeed(): UnifiedFeedResult {
   return {
     trendingMovies: bySlot('trendingMovies'),
     trendingShows: bySlot('trendingShows'),
-    trendingAnime: bySlot('trendingAnime'),
+    seasonalAnime: bySlot('seasonalAnime'),
+    animeSeason,
     yourShows: bySlot('yourShows'),
     yourAnime: bySlot('yourAnime'),
     isLoading,

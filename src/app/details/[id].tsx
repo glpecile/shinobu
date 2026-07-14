@@ -12,6 +12,7 @@ import { Image } from '@/components/image';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
+import { StatTile } from '@/components/stat-tile';
 import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import {
@@ -75,27 +76,65 @@ function metaLine(item: NormalizedMediaItem): string {
 }
 
 /**
- * "Watched 3× · Jul 13, 2026" under the meta line — rendered only when Trakt
- * already records this item as watched (movies count plays, shows count
- * logged episodes). Lives as its own element so the hook only runs once the
- * screen has a resolved item.
+ * Turns an AniList list entry into the same "Watched/Watching …" phrasing the
+ * Trakt line uses, so both providers' detail pages read identically. Null for
+ * plan-to-watch (nothing watched yet to report).
+ */
+function anilistWatchedLabel(entry: {
+  status: string | null;
+  progress: number;
+  repeat: number;
+}): string | null {
+  const episodes = `${entry.progress} ${entry.progress === 1 ? 'episode' : 'episodes'} logged`;
+  switch (entry.status) {
+    case 'CURRENT':
+      return `Watching · ${episodes}`;
+    case 'REPEATING':
+      return `Rewatching · ${episodes}`;
+    case 'COMPLETED':
+      return entry.repeat > 0 ? `Watched ${entry.repeat + 1}×` : 'Watched';
+    case 'PAUSED':
+      return `Paused · ${episodes}`;
+    case 'DROPPED':
+      return `Dropped · ${episodes}`;
+    default:
+      return null;
+  }
+}
+
+/**
+ * "Watched 3× · Jul 13, 2026" under the meta line — from whichever connected
+ * provider records this item as watched: Trakt first (movies count plays,
+ * shows count logged episodes), then the AniList list entry for anime, so
+ * Trakt-sourced and AniList-sourced pages carry the same line. Lives as its
+ * own element so the hooks only run once the screen has a resolved item.
  */
 function WatchedLine({ item }: { item: NormalizedMediaItem }) {
+  const connected = useConnectedProviders();
   const watched = useTraktWatchedInfo(item);
-  const accent = useCSSVariable('--color-accent');
-  if (watched == null) return null;
-
-  const date = new Date(watched.lastWatchedAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  const anilistEntry = useAniListEntryStateQuery({
+    mediaId: item.externalIds.anilist,
+    enabled: item.type === 'ANIME' && connected.includes('anilist'),
   });
-  const label =
-    item.type === 'TV'
-      ? `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`
-      : watched.plays > 1
-        ? `Watched ${watched.plays}× · ${date}`
-        : `Watched · ${date}`;
+  const accent = useCSSVariable('--color-accent');
+
+  let label: string | null = null;
+  if (watched != null) {
+    const date = new Date(watched.lastWatchedAt).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    label =
+      item.type === 'TV'
+        ? `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`
+        : watched.plays > 1
+          ? `Watched ${watched.plays}× · ${date}`
+          : `Watched · ${date}`;
+  } else if (anilistEntry.data?.entry != null) {
+    label = anilistWatchedLabel(anilistEntry.data.entry);
+  }
+  if (label == null) return null;
 
   return (
     <View className="flex-row items-center gap-1.5 mt-1.5">
@@ -263,14 +302,12 @@ function PeopleSections({
   );
 }
 
-function StudiosSection({
-  type,
-  traktId,
+/** One "Studios" pill list — both providers' sections render through this. */
+function StudiosList({
+  studios,
 }: {
-  type: MediaType;
-  traktId: number;
+  studios: ReadonlyArray<{ id: string | number; name: string }>;
 }) {
-  const { data: studios } = useSuspenseTraktStudiosQuery({ type, traktId });
   if (studios.length === 0) return null;
 
   return (
@@ -292,6 +329,17 @@ function StudiosSection({
       </View>
     </View>
   );
+}
+
+function StudiosSection({
+  type,
+  traktId,
+}: {
+  type: MediaType;
+  traktId: number;
+}) {
+  const { data: studios } = useSuspenseTraktStudiosQuery({ type, traktId });
+  return <StudiosList studios={studios} />;
 }
 
 /** AniList supplies people and studios from one public Media query. */
@@ -318,25 +366,7 @@ function AnimeCreditsSections({ anilistId }: { anilistId: number }) {
           headshot: member.headshot,
         }))}
       />
-      {data.studios.length > 0 && (
-        <View className="mt-8">
-          <Text className="text-xl font-display text-foreground mb-4">
-            Studios
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {data.studios.map((studio) => (
-              <View
-                className="bg-surface border border-border rounded-full px-4 py-2"
-                key={studio.id}
-              >
-                <Text className="text-foreground font-sans text-sm">
-                  {studio.name}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
+      <StudiosList studios={data.studios} />
     </>
   );
 }
@@ -417,12 +447,12 @@ export default function DetailsScreen() {
   const item =
     findItemById(id, [
       // Personal feeds first: an item can appear in both "Your Anime" and
-      // "Trending Anime", and the personal copy carries real progress.
+      // the seasonal anime row, and the personal copy carries real progress.
       feed.yourShows,
       feed.yourAnime,
       feed.trendingMovies,
       feed.trendingShows,
-      feed.trendingAnime,
+      feed.seasonalAnime,
     ]) ?? findInSearchCache(queryClient, id);
   const traktId = item?.externalIds.trakt;
   const anilistId = item?.externalIds.anilist;
@@ -590,46 +620,29 @@ export default function DetailsScreen() {
 
           {showProgress && (
             <View className="flex-row gap-4">
-              <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-                <Text className="text-muted text-xs font-sans uppercase">
-                  Progress
-                </Text>
-                {/* Deliberately stacked (not inline): the tiles are too narrow
-                    for "22 episodes" on one line, and an inline wrap leaves a
-                    full 2xl line-height gap above the unit. */}
-                <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
-                  {displayedProgress}
-                </Text>
-                <Text className="text-sm text-muted font-sans">
-                  {item.progressUnit === 'chapter' ? 'chapters' : 'episodes'}
-                </Text>
-              </View>
+              <StatTile
+                label="Progress"
+                value={displayedProgress}
+                caption={
+                  item.progressUnit === 'chapter' ? 'chapters' : 'episodes'
+                }
+              />
               {item.totalEpisodes != null && (
-                <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-                  <Text className="text-muted text-xs font-sans uppercase">
-                    Total
-                  </Text>
-                  <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
-                    {item.totalEpisodes}
-                  </Text>
-                  <Text className="text-sm text-muted font-sans">episodes</Text>
-                </View>
+                <StatTile
+                  label="Total"
+                  value={item.totalEpisodes}
+                  caption="episodes"
+                />
               )}
               {item.type === 'TV' && <SeriesRuntimeTile item={item} />}
               {item.type === 'ANIME' && item.isFilm !== true &&
                 item.totalEpisodes != null &&
                 item.runtime != null && (
-                  <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-                    <Text className="text-muted text-xs font-sans uppercase">
-                      Total time
-                    </Text>
-                    <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
-                      {formatRuntime(item.totalEpisodes * item.runtime)}
-                    </Text>
-                    <Text className="text-sm text-muted font-sans">
-                      {item.runtime}m each
-                    </Text>
-                  </View>
+                  <StatTile
+                    label="Total time"
+                    value={formatRuntime(item.totalEpisodes * item.runtime)}
+                    caption={`${item.runtime}m each`}
+                  />
                 )}
             </View>
           )}

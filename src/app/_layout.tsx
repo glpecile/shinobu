@@ -5,7 +5,7 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
+import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
 import { WebNavigation } from "@/components/web-navigation";
 import { View } from "react-native";
@@ -30,7 +31,7 @@ export default function Layout() {
 
   // One QueryClient per app lifetime. TanStack Query handles provider fetches,
   // token refresh retries, and feed invalidation on connect/disconnect.
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(createQueryClient);
 
   useEffect(() => {
     if (fontsLoaded) {
