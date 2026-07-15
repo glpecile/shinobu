@@ -448,8 +448,14 @@ export function normalizeWatchedMovie(raw: TraktWatchedMovie): NormalizedMediaIt
 }
 
 export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem {
+  // Specials (season 0) don't count toward progress — `aired_episodes` (the
+  // denominator on the card) excludes them, so counting them here overshoots.
   const watchedEpisodes =
-    raw.seasons?.reduce((count, season) => count + season.episodes.length, 0) ?? 0;
+    raw.seasons?.reduce(
+      (count, season) =>
+        season.number === 0 ? count : count + season.episodes.length,
+      0,
+    ) ?? 0;
 
   return {
     id: `trakt-${raw.show.ids.trakt}`,

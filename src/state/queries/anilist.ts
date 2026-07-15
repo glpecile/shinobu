@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useQuery,
   useQueryClient,
   useSuspenseQuery,
@@ -17,6 +18,7 @@ import {
   getSeasonalAnime,
   getTrendingAnime,
   getViewerId,
+  searchMedia,
   type AniListEntryState,
 } from '@/lib/providers/anilist/reads';
 import type { AnimeSeasonWindow } from '@/lib/providers/anilist/season';
@@ -28,6 +30,7 @@ import {
   getProviderSession,
   setProviderSession,
 } from '@/state/session/tokens';
+import { SEARCH_MIN_QUERY_LENGTH } from './trakt';
 
 // Module-level singleton for the same reason as trakt.ts: effects compare the
 // store by identity (and the MMKV listener contract expects one writer path).
@@ -82,6 +85,9 @@ export const anilistQueryKeys = {
   /** Cast, staff, and studios for one anime detail screen. */
   credits: (mediaId: number) =>
     [...anilistQueryKeys.all, 'credits', mediaId] as const,
+  /** Public anime + manga text search (search screen's AniList section). */
+  search: (query: string, limit: number) =>
+    [...anilistQueryKeys.all, 'search', query, limit] as const,
 };
 
 /**
@@ -125,6 +131,29 @@ export function useCurrentAnimeQuery(options: { enabled?: boolean } = {}) {
     queryKey: anilistQueryKeys.currentAnime(),
     queryFn: () => fetchCurrentAnime(queryClient),
     enabled: options.enabled,
+  });
+}
+
+/**
+ * Public anime/manga text search — the AniList half of the sectioned search
+ * screen. Same enable/keepPreviousData/staleTime contract as
+ * `useTraktSearchQuery` (the shared minimum-length constant lives there);
+ * the 60s staleTime also matters here for the 30 req/min budget
+ * (docs/solutions/anilist-rate-limit-retry-storm.md).
+ */
+export function useAniListSearchQuery(params: {
+  query: string;
+  limit?: number;
+}) {
+  const query = params.query.trim();
+  const limit = params.limit ?? 20;
+  return useQuery({
+    queryKey: anilistQueryKeys.search(query, limit),
+    queryFn: () =>
+      Effect.runPromise(searchMedia(anilistDeps(), { query, limit })),
+    enabled: query.length >= SEARCH_MIN_QUERY_LENGTH,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }
 

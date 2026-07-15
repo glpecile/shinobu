@@ -34,13 +34,11 @@ export function MediaCarousel({
       <PresstableOpacity
         accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
         accessibilityState={{ expanded: !collapsed }}
-        className="flex-row items-center justify-between px-4 mb-3"
+        className="flex-row items-center gap-2 self-start px-4 mb-3"
         onPress={() => setCollapsed(!collapsed)}
       >
-        <View className="flex-row items-center gap-2">
-          {provider != null && <ProviderIcon id={provider} size={16} />}
-          <Text className="text-xl font-display text-foreground">{title}</Text>
-        </View>
+        {provider != null && <ProviderIcon id={provider} size={16} />}
+        <Text className="text-xl font-display text-foreground">{title}</Text>
         <Ionicons
           color={typeof muted === 'string' ? muted : undefined}
           name={collapsed ? 'chevron-down' : 'chevron-up'}

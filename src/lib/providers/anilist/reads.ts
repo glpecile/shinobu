@@ -162,6 +162,35 @@ export function getSeasonalAnime(
   });
 }
 
+/**
+ * Public text search across anime + manga — no type filter, so one request
+ * covers everything AniList can log (registry: ANIME + MANGA). Same
+ * no-session contract as trending; SEARCH_MATCH keeps exact-title hits above
+ * popularity noise.
+ */
+export function searchMedia(
+  deps: AniListDeps,
+  params: { query: string; limit?: number },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const limit = params.limit ?? 20;
+  return Effect.gen(function* () {
+    const data = yield* anilistRequest<TrendingResponse>(
+      deps,
+      `query ($search: String, $perPage: Int) {
+        Page(page: 1, perPage: $perPage) {
+          media(search: $search, sort: SEARCH_MATCH) { ${MEDIA_FIELDS} }
+        }
+      }`,
+      { variables: { search: params.query, perPage: limit } },
+    );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return (data.Page?.media ?? [])
+      .filter((media): media is AniListMedia => media != null)
+      .map((media) => normalizeAniListMedia(media, nowIso));
+  });
+}
+
 export interface AniListEntryState {
   /** null when the viewer has no list entry for this media yet. */
   entry: { status: string | null; progress: number; repeat: number } | null;

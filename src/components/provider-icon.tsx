@@ -5,11 +5,12 @@ import traktIcon from '@/assets/providers/trakt.svg';
 import { Image } from '@/components/image';
 import type { ProviderId } from '@/lib/providers/types';
 
-// Official simple-icons brand marks, bundled (assets/providers/) so they work
-// offline and inside the strict web CSP. SVG assets render through expo-image
-// on every platform — no react-native-svg dependency. Letterboxd's mark is
-// recolored to its brand green: the simple-icons default (#202830) vanishes
-// on the dark theme.
+// Official brand marks in official brand colors, bundled (assets/providers/)
+// so they work offline and inside the strict web CSP. SVG assets render
+// through expo-image on every platform — no react-native-svg dependency.
+// Trakt is the post-2023-rebrand purple (#9F42C6), AniList the blue "A."
+// (#02A9FF), and Letterboxd's three dots carry their official orange/green/
+// blue — not the flat #202830 simple-icons default, which vanishes on dark.
 const ICONS: Record<ProviderId, number> = {
   trakt: traktIcon,
   anilist: anilistIcon,

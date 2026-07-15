@@ -8,10 +8,13 @@ import { useCSSVariable } from 'uniwind';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
+import { ProviderIcon } from '@/components/provider-icon';
 import { SearchBackButton } from '@/components/search-back-button';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
+import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useAniListSearchQuery } from '@/state/queries/anilist';
 import {
   SEARCH_MIN_QUERY_LENGTH,
   useTraktSearchQuery,
@@ -64,18 +67,41 @@ function SearchResultRow({
   );
 }
 
+function RowSkeleton() {
+  return (
+    <View className="flex-row items-center px-6 py-2.5">
+      <Skeleton className="w-12 h-[72px] rounded" />
+      <View className="flex-1 ml-4">
+        <Skeleton className="h-4 w-2/3 rounded" />
+        <Skeleton className="h-3 w-24 rounded mt-2" />
+      </View>
+    </View>
+  );
+}
+
 function ResultsSkeleton() {
   return (
-    <View className="px-6">
+    <View>
       {Array.from({ length: 6 }).map((_, index) => (
-        <View className="flex-row items-center py-2.5" key={index}>
-          <Skeleton className="w-12 h-[72px] rounded" />
-          <View className="flex-1 ml-4">
-            <Skeleton className="h-4 w-2/3 rounded" />
-            <Skeleton className="h-3 w-24 rounded mt-2" />
-          </View>
-        </View>
+        <RowSkeleton key={index} />
       ))}
+    </View>
+  );
+}
+
+function SectionHeader({
+  provider,
+  label,
+}: {
+  provider: ProviderId;
+  label: string;
+}) {
+  return (
+    <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
+      <ProviderIcon id={provider} size={14} />
+      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider">
+        {label}
+      </Text>
     </View>
   );
 }
@@ -91,6 +117,51 @@ function CenteredHint({ title, body }: { title: string; body: string }) {
       </Text>
     </View>
   );
+}
+
+/**
+ * One flat virtualized list holds both provider sections — headers and status
+ * rows are list items too, so Legend List keeps virtualizing long result sets
+ * instead of nesting per-section lists.
+ */
+type SearchRow =
+  | { kind: 'header'; key: string; provider: ProviderId; label: string }
+  | { kind: 'result'; key: string; item: NormalizedMediaItem }
+  | { kind: 'loading'; key: string }
+  | { kind: 'error'; key: string };
+
+interface SectionQueryState {
+  isLoading: boolean;
+  isError: boolean;
+  data?: NormalizedMediaItem[] | undefined;
+}
+
+function sectionRows(
+  provider: ProviderId,
+  label: string,
+  search: SectionQueryState,
+): SearchRow[] {
+  const header: SearchRow = {
+    kind: 'header',
+    key: `${provider}-header`,
+    provider,
+    label,
+  };
+  if (search.isLoading) {
+    return [header, { kind: 'loading', key: `${provider}-loading` }];
+  }
+  if (search.isError) {
+    return [header, { kind: 'error', key: `${provider}-error` }];
+  }
+  const items = search.data ?? [];
+  // A section with nothing to say disappears — the other one keeps the screen.
+  if (items.length === 0) return [];
+  return [
+    header,
+    ...items.map(
+      (item): SearchRow => ({ kind: 'result', key: item.id, item }),
+    ),
+  ];
 }
 
 export default function SearchScreen() {
@@ -113,10 +184,14 @@ export default function SearchScreen() {
     return () => clearTimeout(handle);
   }, [input, query, router]);
 
-  const search = useTraktSearchQuery({ query });
+  const traktSearch = useTraktSearchQuery({ query });
+  const anilistSearch = useAniListSearchQuery({ query });
 
-  const results = search.data ?? [];
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
+  const rows = [
+    ...sectionRows('trakt', 'Movies & TV', traktSearch),
+    ...sectionRows('anilist', 'Anime & Manga', anilistSearch),
+  ];
 
   function goBack() {
     if (process.env.EXPO_OS === 'web') {
@@ -149,7 +224,7 @@ export default function SearchScreen() {
           autoFocus
           className="flex-1 border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
           onChangeText={setInput}
-          placeholder="Search movies & TV shows"
+          placeholder="Search movies, shows, anime & manga"
           placeholderTextColor={typeof muted === 'string' ? muted : undefined}
           returnKeyType="search"
           value={input}
@@ -158,17 +233,17 @@ export default function SearchScreen() {
 
       {!searchable ? (
         <CenteredHint
-          body="Find any movie or TV show — open its details or log it to your trackers."
+          body="Find any movie, show, anime, or manga — open its details or log it to your trackers."
           title="Search"
         />
-      ) : search.isLoading ? (
+      ) : traktSearch.isLoading && anilistSearch.isLoading ? (
         <ResultsSkeleton />
-      ) : search.isError ? (
+      ) : traktSearch.isError && anilistSearch.isError ? (
         <CenteredHint
           body="Search failed. Check your connection and try again."
           title="Something went wrong"
         />
-      ) : results.length === 0 ? (
+      ) : rows.length === 0 ? (
         <CenteredHint
           body={`Nothing matched “${query.trim()}”.`}
           title="No results"
@@ -176,14 +251,30 @@ export default function SearchScreen() {
       ) : (
         // While a newer query is in flight the previous results stay visible
         // (keepPreviousData), dimmed so the staleness is legible.
-        <View className={search.isPlaceholderData ? 'flex-1 opacity-60' : 'flex-1'}>
+        <View
+          className={
+            traktSearch.isPlaceholderData || anilistSearch.isPlaceholderData
+              ? 'flex-1 opacity-60'
+              : 'flex-1'
+          }
+        >
           <List
-            data={results}
-            keyExtractor={(item) => item.id}
+            data={rows}
+            keyExtractor={(row) => row.key}
             keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <SearchResultRow item={item} onPress={openDetails} />
-            )}
+            renderItem={({ item: row }) =>
+              row.kind === 'header' ? (
+                <SectionHeader label={row.label} provider={row.provider} />
+              ) : row.kind === 'result' ? (
+                <SearchResultRow item={row.item} onPress={openDetails} />
+              ) : row.kind === 'loading' ? (
+                <RowSkeleton />
+              ) : (
+                <Text className="text-muted font-sans text-sm px-6 py-3">
+                  Search failed for this source — try again in a moment.
+                </Text>
+              )
+            }
           />
         </View>
       )}
