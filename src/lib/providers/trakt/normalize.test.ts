@@ -8,6 +8,7 @@ import {
   normalizeStudio,
   normalizeWatchedMovie,
   normalizeWatchedProgress,
+  normalizeWatchedShow,
   orderSeasons,
   type TraktCastEntry,
   type TraktCrewEntry,
@@ -16,6 +17,7 @@ import {
   type TraktShowProgress,
   type TraktShowSeason,
   type TraktWatchedMovie,
+  type TraktWatchedShow,
 } from './normalize';
 
 function person(id: number, name: string, headshot?: string) {
@@ -269,5 +271,40 @@ describe('normalizeWatchedProgress', () => {
 
   test('empty / missing seasons yield an empty set', () => {
     expect(normalizeWatchedProgress({})).toEqual(new Set());
+  });
+});
+
+describe('normalizeWatchedShow', () => {
+  test('counts watched episodes excluding specials (season 0)', () => {
+    const watched: TraktWatchedShow = {
+      plays: 12,
+      last_watched_at: '2026-07-01T20:00:00.000Z',
+      last_updated_at: '2026-07-01T20:00:00.000Z',
+      show: {
+        title: 'Saga of Tanya the Evil',
+        ids: { trakt: 115 },
+        aired_episodes: 12,
+      },
+      seasons: [
+        {
+          number: 0,
+          episodes: Array.from({ length: 10 }, (_, index) => ({
+            number: index + 1,
+            last_watched_at: '2026-07-01T20:00:00.000Z',
+          })),
+        },
+        {
+          number: 1,
+          episodes: [
+            { number: 1, last_watched_at: '2026-07-01T20:00:00.000Z' },
+            { number: 2, last_watched_at: '2026-07-01T20:00:00.000Z' },
+          ],
+        },
+      ],
+    };
+
+    const item = normalizeWatchedShow(watched);
+    expect(item.currentProgress).toBe(2);
+    expect(item.totalEpisodes).toBe(12);
   });
 });

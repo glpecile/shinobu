@@ -1,17 +1,9 @@
 import type { HttpFetch } from '@/lib/http/types';
-import type { ProviderSession } from '@/types/session';
+import type { TokenStore } from '@/lib/providers/token-store';
 
-/**
- * Read/write access to the persisted Trakt session. `state/session/` provides
- * the MMKV-backed implementation; tests inject an in-memory fake. Defined here
- * (not imported from state/) so the dependency arrow stays
- * state → lib/providers, never the reverse.
- */
-export interface TokenStore {
-  get(): ProviderSession | null;
-  set(session: ProviderSession): void;
-  clear(): void;
-}
+// The TokenStore contract moved to lib/providers/token-store.ts when AniList
+// landed (plan 0011); re-exported so existing Trakt imports keep working.
+export type { TokenStore } from '@/lib/providers/token-store';
 
 /**
  * Every Trakt effect takes this as its first argument — dependency injection

@@ -1,6 +1,5 @@
-import { Text, View } from 'react-native';
-
 import { Skeleton } from '@/components/skeleton';
+import { StatTile } from '@/components/stat-tile';
 import { useTraktShowSeasonsQuery } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
@@ -25,23 +24,27 @@ export function SeriesRuntimeTile({ item }: { item: NormalizedMediaItem }) {
   if (traktId == null) return null;
   if (seasons == null) {
     return (
-      <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-        <Text className="text-muted text-xs font-sans uppercase">Total time</Text>
-        {isLoading ? (
-          <Skeleton className="h-7 w-16 rounded mt-1" />
-        ) : (
-          <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">—</Text>
-        )}
-      </View>
+      <StatTile
+        label="Total time"
+        value={
+          isLoading ? <Skeleton className="h-7 w-16 rounded mt-1" /> : '—'
+        }
+      />
     );
   }
 
+  const episodeRuntime =
+    item.runtime ?? seasons.flatMap((season) => season.episodes).find(
+      (episode) => episode.runtime != null,
+    )?.runtime;
+
   return (
-    <View className="bg-surface border border-border rounded-lg px-4 py-3 flex-1">
-      <Text className="text-muted text-xs font-sans uppercase">Total time</Text>
-      <Text className="text-foreground text-2xl font-sans-semibold mt-0.5">
-        {formatRuntime(seriesRuntimeMinutes(seasons))}
-      </Text>
-    </View>
+    <StatTile
+      label="Total time"
+      value={formatRuntime(seriesRuntimeMinutes(seasons))}
+      {...(episodeRuntime != null
+        ? { caption: `${episodeRuntime}m each` }
+        : {})}
+    />
   );
 }

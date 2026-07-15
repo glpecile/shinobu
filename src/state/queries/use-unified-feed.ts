@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { providersForFeed } from '@/lib/providers/routing';
@@ -11,15 +11,36 @@ import {
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import {
+  animeSeasonAt,
+  type AnimeSeasonWindow,
+} from '@/lib/providers/anilist/season';
+import {
+  anilistQueryKeys,
+  fetchCurrentAnime,
+  fetchSeasonalAnime,
+} from './anilist';
 import { traktDeps, traktQueryKeys } from './trakt';
 
+/** One named row of the home feed — never index into the query array. */
+type FeedSlot =
+  | 'trendingMovies'
+  | 'trendingShows'
+  | 'seasonalAnime'
+  | 'yourShows'
+  | 'yourAnime';
+
 export interface UnifiedFeedResult {
-  /** Public trending movies — always fetched. */
+  /** Public trending catalogues — always fetched, feed is never empty. */
   trendingMovies: NormalizedMediaItem[];
-  /** Public trending TV shows — always fetched. */
   trendingShows: NormalizedMediaItem[];
-  /** Personal in-progress items from connected providers. */
-  feedItems: NormalizedMediaItem[];
+  /** Popular anime of the current cour (e.g. Summer 2026). */
+  seasonalAnime: NormalizedMediaItem[];
+  /** Which cour `seasonalAnime` covers — drives the row's title. */
+  animeSeason: AnimeSeasonWindow;
+  /** Personal in-progress rows from connected providers. */
+  yourShows: NormalizedMediaItem[];
+  yourAnime: NormalizedMediaItem[];
   isLoading: boolean;
   isError: boolean;
   errors: Array<{ provider: ProviderId; error: Error }>;
@@ -28,50 +49,83 @@ export interface UnifiedFeedResult {
 }
 
 interface FeedQueryConfig {
+  slot: FeedSlot;
   provider: ProviderId;
   queryKey: readonly unknown[];
   queryFn: () => Promise<NormalizedMediaItem[]>;
+  staleTime?: number;
 }
 
 /**
- * Aggregates every connected, read-capable provider into one normalized list.
- * Today that is only Trakt (`todos/001`); AniList (`todos/002`) will add a second
- * parallel query here. A public trending catalogue is always included so the feed
- * is never empty before connection.
+ * Public catalogue rows move slowly (trending/popularity rankings, not user
+ * state) — a long staleTime keeps home ↔ details navigation from re-spending
+ * provider rate budget on every remount (AniList's is 30 req/min,
+ * docs/solutions/anilist-rate-limit-retry-storm.md).
+ */
+const CATALOGUE_STALE_MS = 15 * 60_000;
+
+/**
+ * Aggregates every connected, read-capable provider into one normalized feed
+ * (plan.md 2.1): Trakt (todos/001) and AniList (todos/002) today. Public
+ * trending catalogues are always included so the feed is never empty before
+ * connection. Results are keyed by named slot, not array position — the
+ * query list is conditional in two dimensions now.
  */
 export function useUnifiedFeed(): UnifiedFeedResult {
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
+  const queryClient = useQueryClient();
+  const animeSeason = animeSeasonAt(new Date());
 
   const queries: FeedQueryConfig[] = [
     // Public catalogues — no session required.
     {
+      slot: 'trendingMovies',
       provider: 'trakt',
       queryKey: traktQueryKeys.trendingMovies(),
       queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps())),
+      staleTime: CATALOGUE_STALE_MS,
     },
     {
+      slot: 'trendingShows',
       provider: 'trakt',
       queryKey: traktQueryKeys.trendingShows(),
       queryFn: () => Effect.runPromise(getTrendingShows(traktDeps())),
+      staleTime: CATALOGUE_STALE_MS,
+    },
+    {
+      slot: 'seasonalAnime',
+      provider: 'anilist',
+      queryKey: anilistQueryKeys.seasonalAnime(animeSeason),
+      queryFn: () => fetchSeasonalAnime(animeSeason),
+      staleTime: CATALOGUE_STALE_MS,
     },
   ];
 
   if (feedProviders.includes('trakt')) {
     queries.push({
+      slot: 'yourShows',
       provider: 'trakt',
       queryKey: traktQueryKeys.watchedShows(),
       queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
     });
   }
+  if (feedProviders.includes('anilist')) {
+    queries.push({
+      slot: 'yourAnime',
+      provider: 'anilist',
+      queryKey: anilistQueryKeys.currentAnime(),
+      queryFn: () => fetchCurrentAnime(queryClient),
+    });
+  }
 
   const results = useQueries({ queries });
 
-  // Index 0: trending movies; index 1: trending shows; index 2: watched feed
-  // when Trakt is connected.
-  const trendingMovies = results[0]?.data ?? [];
-  const trendingShows = results[1]?.data ?? [];
-  const feedItems = results[2]?.data ?? [];
+  const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => {
+    const index = queries.findIndex((query) => query.slot === slot);
+    return (index >= 0 ? results[index]?.data : undefined) ?? [];
+  };
+
   const isLoading = results.some((result) => result.isLoading);
   const isError = results.some((result) => result.isError);
 
@@ -92,9 +146,12 @@ export function useUnifiedFeed(): UnifiedFeedResult {
   }
 
   return {
-    trendingMovies,
-    trendingShows,
-    feedItems,
+    trendingMovies: bySlot('trendingMovies'),
+    trendingShows: bySlot('trendingShows'),
+    seasonalAnime: bySlot('seasonalAnime'),
+    animeSeason,
+    yourShows: bySlot('yourShows'),
+    yourAnime: bySlot('yourAnime'),
     isLoading,
     isError,
     errors,

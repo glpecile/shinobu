@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 
 import type { ProviderId } from '@/lib/providers/types';
@@ -47,7 +48,13 @@ export function useConnectedProviders(): readonly ProviderId[] {
 }
 
 export function useDisconnectProvider(): (id: ProviderId) => void {
+  const queryClient = useQueryClient();
   return (id: ProviderId) => {
     clearProviderSession(id);
+    // Drop the provider's cached reads with its session — every provider's
+    // query-key root is its id. Reconnecting (possibly as a different account)
+    // must not serve the old account's data; the AniList viewer id is even
+    // cached forever (state/queries/anilist.ts).
+    queryClient.removeQueries({ queryKey: [id] });
   };
 }

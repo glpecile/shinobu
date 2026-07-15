@@ -107,6 +107,34 @@ export function searchMedia(
   });
 }
 
+/**
+ * Resolve a Trakt item from a foreign id (`/search/{id_type}/{id}`) — how an
+ * ani.zip-mapped anime acquires its Trakt identity before the log fan-out
+ * (plan 0011). Public read; null when Trakt doesn't index the id.
+ */
+export function lookupByExternalId(
+  deps: TraktDeps,
+  params: {
+    source: 'tvdb' | 'tmdb' | 'imdb';
+    id: number | string;
+    kind: 'movie' | 'show';
+  },
+): Effect.Effect<NormalizedMediaItem | null, ProviderError> {
+  return Effect.gen(function* () {
+    const raw = yield* traktRequest<TraktSearchResult[]>(
+      deps,
+      `/search/${params.source}/${params.id}?type=${params.kind}&extended=full,images`,
+    );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return (
+      raw
+        .map((entry) => normalizeSearchResult(entry, nowIso))
+        .find((item) => item != null) ?? null
+    );
+  });
+}
+
 export interface MediaPeople {
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];

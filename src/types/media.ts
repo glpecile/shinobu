@@ -48,6 +48,9 @@ export interface NormalizedMediaItem {
     anilist?: number;
     /** Letterboxd film IDs are opaque slugs, not numeric. */
     letterboxd?: string;
+    /** TVDB/IMDB bridge ids — how anime maps across providers (plan 0011). */
+    tvdb?: number;
+    imdb?: string;
   };
 }
 

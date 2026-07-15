@@ -24,11 +24,15 @@ interface TraktSyncHistoryResponse {
 }
 
 function idsFor(item: NormalizedMediaItem): TraktIds | null {
-  const { trakt, tmdb } = item.externalIds;
-  if (trakt == null && tmdb == null) return null;
+  // /sync/history matches on any of these; tvdb/imdb are what ani.zip-mapped
+  // anime carry when Trakt's own id isn't known yet (plan 0011 decision 5).
+  const { trakt, tmdb, tvdb, imdb } = item.externalIds;
+  if (trakt == null && tmdb == null && tvdb == null && imdb == null) return null;
   return {
     ...(trakt != null ? { trakt } : {}),
     ...(tmdb != null ? { tmdb } : {}),
+    ...(tvdb != null ? { tvdb } : {}),
+    ...(imdb != null ? { imdb } : {}),
   };
 }
 
@@ -48,7 +52,7 @@ export function logToTrakt(
     return Effect.fail(
       new ProviderDecodeError({
         provider: 'trakt',
-        detail: `"${item.title}" has no trakt/tmdb id to log against`,
+        detail: `"${item.title}" has no trakt/tmdb/tvdb/imdb id to log against`,
       }),
     );
   }
@@ -60,7 +64,7 @@ export function logToTrakt(
     body = {
       movies: [{ ids, ...(options.watchedAt ? { watched_at: options.watchedAt } : {}) }],
     };
-  } else if (item.type === 'TV') {
+  } else if (item.type === 'TV' || item.type === 'ANIME') {
     // Unify single vs batch: a single `episode` is a one-element batch.
     const batch =
       options.episodes ??

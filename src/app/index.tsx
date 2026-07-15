@@ -10,11 +10,15 @@ import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
-import { PROVIDERS } from '@/lib/providers/registry';
+import {
+  homeHeaderClassName,
+  homeHeaderTitleSize,
+} from '@/components/screen-header-spacing';
+import { animeSeasonLabel } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
-import { useTraktOAuthCallback } from '@/state/session/use-trakt-oauth-callback';
+import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
@@ -34,7 +38,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
       </Text>
       {connectFailed && (
         <Text className="text-accent font-sans text-sm mt-4 text-center">
-          Connecting to Trakt failed. Please try again.
+          Connecting your tracker failed. Please try again.
         </Text>
       )}
       <PresstableOpacity
@@ -53,7 +57,10 @@ function FeedScreen() {
   const {
     trendingMovies,
     trendingShows,
-    feedItems,
+    seasonalAnime,
+    animeSeason,
+    yourShows,
+    yourAnime,
     isLoading,
     isError,
     refetch,
@@ -67,7 +74,9 @@ function FeedScreen() {
   const hasData =
     trendingMovies.length > 0 ||
     trendingShows.length > 0 ||
-    feedItems.length > 0;
+    seasonalAnime.length > 0 ||
+    yourShows.length > 0 ||
+    yourAnime.length > 0;
 
   if (isError && !isLoading && !hasData) {
     return (
@@ -94,19 +103,35 @@ function FeedScreen() {
             Some content could not be loaded.
           </Text>
         )}
+        {/* Personal rows first (2026-07-14 re-prioritization), trending after. */}
+        <MediaCarousel
+          title="Your Shows"
+          provider="trakt"
+          items={yourShows}
+          onItemPress={openDetails}
+        />
+        <MediaCarousel
+          title="Your Anime"
+          provider="anilist"
+          items={yourAnime}
+          onItemPress={openDetails}
+        />
         <MediaCarousel
           title="Trending Movies"
+          provider="trakt"
           items={trendingMovies}
           onItemPress={openDetails}
         />
         <MediaCarousel
           title="Trending TV Shows"
+          provider="trakt"
           items={trendingShows}
           onItemPress={openDetails}
         />
         <MediaCarousel
-          title="Your Shows"
-          items={feedItems}
+          title={`${animeSeasonLabel(animeSeason)} Anime`}
+          provider="anilist"
+          items={seasonalAnime}
           onItemPress={openDetails}
         />
       </RefreshableScrollView>
@@ -117,7 +142,7 @@ function FeedScreen() {
 
 export default function App() {
   const connected = useConnectedProviders();
-  const oauthStatus = useTraktOAuthCallback();
+  const oauthStatus = useOAuthCallback();
   const router = useRouter();
   const foreground = useCSSVariable('--color-foreground');
 
@@ -130,17 +155,11 @@ export default function App() {
           name="description"
         />
       </Head>
-      <View className="flex-row items-center justify-between px-6 pt-16 pb-4">
-        <View>
-          <Text className="text-4xl font-display text-foreground tracking-tight">
-            忍 Shinobu
-          </Text>
-          <Text className="text-muted font-sans mt-1">
-            {connected.length === 0
-              ? 'No providers connected'
-              : `Connected: ${connected.map((id) => PROVIDERS[id].label).join(', ')}`}
-          </Text>
-        </View>
+      <View className={homeHeaderClassName}>
+        {/* No connection status here (2026-07-14) — that lives on Manage Trackers. */}
+        <Text className={`${homeHeaderTitleSize} font-display text-foreground tracking-tight`}>
+          忍 Shinobu
+        </Text>
         <View className="flex-row gap-3">
           <PresstableOpacity
             accessibilityLabel="Search"

@@ -1,3 +1,4 @@
+import { anilistClientId } from '@/lib/providers/anilist/config';
 import { traktClientId, traktClientSecret } from '@/lib/providers/trakt/config';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -11,7 +12,14 @@ import { getProviderClientId, getProviderClientSecret } from './tokens';
  */
 export const providerClientIds: Record<ProviderId, () => string> = {
   trakt: () => getProviderClientId('trakt') ?? traktClientId(),
-  anilist: () => '',
+  // Hybrid (2026-07-14): the embedded/env app-owned client (otraku-style
+  // implicit grant, plan 0011) when the build ships one, else the id the
+  // user entered in the connect form — Trakt-style, minus the secret (the
+  // implicit grant has none).
+  anilist: () => {
+    const embedded = anilistClientId();
+    return embedded !== '' ? embedded : (getProviderClientId('anilist') ?? '');
+  },
   letterboxd: () => '',
 };
 

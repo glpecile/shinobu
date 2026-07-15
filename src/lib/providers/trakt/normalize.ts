@@ -124,6 +124,19 @@ function detailFields(
 }
 
 /**
+ * TVDB/IMDB ride along with trakt/tmdb: they're the bridge ids that map an
+ * item into AniList's world via ani.zip (plan 0011 decision 5).
+ */
+function externalIdsFrom(ids: TraktIds): NormalizedMediaItem['externalIds'] {
+  return {
+    ...(ids.trakt != null ? { trakt: ids.trakt } : {}),
+    ...(ids.tmdb != null ? { tmdb: ids.tmdb } : {}),
+    ...(ids.tvdb != null ? { tvdb: ids.tvdb } : {}),
+    ...(ids.imdb != null ? { imdb: ids.imdb } : {}),
+  };
+}
+
+/**
  * `nowIso` keeps these pure: catalogue entries (trending, search) carry no
  * timestamp of their own, and the read effect supplies the instant from
  * Effect's Clock.
@@ -141,10 +154,7 @@ export function normalizeMovie(
     currentProgress: 0,
     progressUnit: 'episode',
     lastUpdated: nowIso,
-    externalIds: {
-      ...(raw.ids.trakt != null ? { trakt: raw.ids.trakt } : {}),
-      ...(raw.ids.tmdb != null ? { tmdb: raw.ids.tmdb } : {}),
-    },
+    externalIds: externalIdsFrom(raw.ids),
   };
 }
 
@@ -164,10 +174,7 @@ export function normalizeShow(
       ? { totalEpisodes: raw.aired_episodes }
       : {}),
     lastUpdated: nowIso,
-    externalIds: {
-      ...(raw.ids.trakt != null ? { trakt: raw.ids.trakt } : {}),
-      ...(raw.ids.tmdb != null ? { tmdb: raw.ids.tmdb } : {}),
-    },
+    externalIds: externalIdsFrom(raw.ids),
   };
 }
 
@@ -441,8 +448,14 @@ export function normalizeWatchedMovie(raw: TraktWatchedMovie): NormalizedMediaIt
 }
 
 export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem {
+  // Specials (season 0) don't count toward progress — `aired_episodes` (the
+  // denominator on the card) excludes them, so counting them here overshoots.
   const watchedEpisodes =
-    raw.seasons?.reduce((count, season) => count + season.episodes.length, 0) ?? 0;
+    raw.seasons?.reduce(
+      (count, season) =>
+        season.number === 0 ? count : count + season.episodes.length,
+      0,
+    ) ?? 0;
 
   return {
     id: `trakt-${raw.show.ids.trakt}`,
@@ -456,9 +469,6 @@ export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem
       ? { totalEpisodes: raw.show.aired_episodes }
       : {}),
     lastUpdated: raw.last_watched_at,
-    externalIds: {
-      ...(raw.show.ids.trakt != null ? { trakt: raw.show.ids.trakt } : {}),
-      ...(raw.show.ids.tmdb != null ? { tmdb: raw.show.ids.tmdb } : {}),
-    },
+    externalIds: externalIdsFrom(raw.show.ids),
   };
 }
