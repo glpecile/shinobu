@@ -16,6 +16,7 @@ import {
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 import { getWatchlist } from '@/lib/providers/letterboxd/watchlist';
+import { useHiddenItems } from '@/state/prefs/hidden-items';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import {
   anilistQueryKeys,
@@ -80,8 +81,14 @@ const CATALOGUE_STALE_MS = 15 * 60_000;
  * trending catalogues are always included so the feed is never empty before
  * connection. Results are keyed by named slot, not array position — the
  * query list is conditional in two dimensions now.
+ *
+ * `includeHidden` skips the hidden-items filter — for consumers that resolve
+ * an item by id rather than display rows (the details screen must render
+ * hidden items: Manage Trackers' hidden list links there).
  */
-export function useUnifiedFeed(): UnifiedFeedResult {
+export function useUnifiedFeed(
+  options: { includeHidden?: boolean } = {},
+): UnifiedFeedResult {
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
   const queryClient = useQueryClient();
@@ -144,9 +151,22 @@ export function useUnifiedFeed(): UnifiedFeedResult {
 
   const results = useQueries({ queries });
 
+  // Items the user hid (card actions dialog) drop out of every row here, at
+  // the aggregation boundary — screens never re-filter. Query caches keep the
+  // full lists, so unhiding is instant, no refetch.
+  const hiddenItems = useHiddenItems();
+  const hiddenIds = new Set(
+    options.includeHidden === true
+      ? []
+      : hiddenItems.map((hidden) => hidden.id),
+  );
+
   const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => {
     const index = queries.findIndex((query) => query.slot === slot);
-    return (index >= 0 ? results[index]?.data : undefined) ?? [];
+    const data = (index >= 0 ? results[index]?.data : undefined) ?? [];
+    return hiddenIds.size === 0
+      ? data
+      : data.filter((item) => !hiddenIds.has(item.id));
   };
 
   const isLoading = results.some((result) => result.isLoading);

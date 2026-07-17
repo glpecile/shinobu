@@ -1,81 +1,23 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { Effect } from 'effect';
 
-import { httpFetch } from '@/lib/http/client';
-import { fetchAniZipIds, type AniZipLookup } from '@/lib/providers/mapping/anizip';
-import { lookupByExternalId, searchMedia } from '@/lib/providers/trakt/reads';
+import type { AniZipLookup } from '@/lib/providers/mapping/anizip';
 import type { ProviderId } from '@/lib/providers/types';
-import { traktDeps } from '@/state/queries/trakt';
+import {
+  cachedAniZipIds,
+  cachedTraktLookup,
+  cachedTraktTextSearch,
+} from '@/state/queries/mapping';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
  * Cross-provider identity enrichment (plan 0011 decisions 5–6): before the
  * log fan-out routes, fill in the ids the item's origin provider couldn't
  * know — ani.zip bridges AniList ↔ TVDB/TMDB/IMDB, and a Trakt `/search`
- * lookup turns those into a real Trakt id. Every lookup is cached forever
- * (mappings don't churn) and degrades to "no widening" on a miss, so an
- * unmappable item just logs to its origin provider.
+ * lookup turns those into a real Trakt id. Lookups live in
+ * `state/queries/mapping.ts` (cached forever — mappings don't churn) and
+ * degrade to "no widening" on a miss, so an unmappable item just logs to its
+ * origin provider.
  */
-
-export const mappingQueryKeys = {
-  anizip: (lookup: AniZipLookup) => ['mapping', 'anizip', lookup] as const,
-  traktLookup: (source: string, id: number | string, kind: string) =>
-    ['mapping', 'trakt-lookup', source, id, kind] as const,
-  traktSearch: (title: string, year: number | undefined) =>
-    ['mapping', 'trakt-search', title, year ?? 'any'] as const,
-};
-
-const FOREVER = { staleTime: Number.POSITIVE_INFINITY, gcTime: Number.POSITIVE_INFINITY };
-
-function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.anizip(lookup),
-    queryFn: () => fetchAniZipIds(httpFetch, lookup),
-    ...FOREVER,
-  });
-}
-
-function cachedTraktLookup(
-  queryClient: QueryClient,
-  params: { source: 'tvdb' | 'tmdb' | 'imdb'; id: number | string; kind: 'movie' | 'show' },
-) {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.traktLookup(params.source, params.id, params.kind),
-    queryFn: () =>
-      Effect.runPromise(lookupByExternalId(traktDeps(), params)).catch(() => null),
-    ...FOREVER,
-  });
-}
-
-/**
- * Resolve a movie's Trakt/TMDB/IMDB ids from its title+year via Trakt text
- * search — the bridge for items whose origin provider carries no cross-id at
- * all (a Letterboxd watchlist film is just a slug + title + year). Prefer an
- * exact-year match to disambiguate remakes; fall back to the top hit. Cached
- * forever like the other mappings; a miss simply leaves the item unwidened.
- */
-function cachedTraktTextSearch(
-  queryClient: QueryClient,
-  title: string,
-  year: number | undefined,
-) {
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.traktSearch(title, year),
-    queryFn: () =>
-      Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 5 }))
-        .then((results) => {
-          const movies = results.filter((result) => result.type === 'MOVIE');
-          return (
-            (year != null ? movies.find((movie) => movie.year === year) : undefined) ??
-            movies[0] ??
-            null
-          );
-        })
-        .catch(() => null),
-    ...FOREVER,
-  });
-}
-
 export async function enrichExternalIds(
   queryClient: QueryClient,
   item: NormalizedMediaItem,

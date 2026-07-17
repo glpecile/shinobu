@@ -21,6 +21,7 @@ import {
   SeriesRuntimeTile,
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
+import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { routes } from '@/lib/routes';
 import {
   anilistQueryKeys,
@@ -34,6 +35,7 @@ import {
   useTraktMediaImages,
   useTraktWatchedInfo,
 } from '@/state/queries/trakt';
+import { useMovieCatalogueQuery } from '@/state/queries/mapping';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
@@ -437,14 +439,16 @@ function DetailsSkeleton() {
 export default function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const feed = useUnifiedFeed();
+  // includeHidden: hidden items must still resolve here — the Manage
+  // Trackers hidden list links straight to this screen.
+  const feed = useUnifiedFeed({ includeHidden: true });
   const queryClient = useQueryClient();
   const accent = useCSSVariable('--color-accent');
   const foreground = useCSSVariable('--color-foreground');
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const item =
+  const resolvedItem =
     findItemById(id, [
       // Personal feeds first: an item can appear in both "Your Anime" and
       // the seasonal anime row, and the personal copy carries real progress.
@@ -455,6 +459,15 @@ export default function DetailsScreen() {
       feed.trendingShows,
       feed.seasonalAnime,
     ]) ?? findInSearchCache(queryClient, id);
+  // Items whose origin carries no metadata (a Letterboxd watchlist film is
+  // just a slug + title + year) get a catalogue record resolved by title+year
+  // and merged in — the meta line, overview, rating, and (via the discovered
+  // trakt id) cast/studios then render like any other provider's page.
+  const catalogue = useMovieCatalogueQuery(resolvedItem);
+  const item =
+    resolvedItem != null && catalogue.data != null
+      ? mergeCatalogueMetadata(resolvedItem, catalogue.data)
+      : resolvedItem;
   const traktId = item?.externalIds.trakt;
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
