@@ -15,11 +15,18 @@ import {
   animeSeasonAt,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
+import { getWatchlist } from '@/lib/providers/letterboxd/watchlist';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import {
   anilistQueryKeys,
   fetchCurrentAnime,
   fetchSeasonalAnime,
 } from './anilist';
+import {
+  letterboxdDeps,
+  letterboxdQueryKeys,
+  letterboxdReadsAvailable,
+} from './letterboxd';
 import { traktDeps, traktQueryKeys } from './trakt';
 
 /** One named row of the home feed — never index into the query array. */
@@ -28,7 +35,8 @@ type FeedSlot =
   | 'trendingShows'
   | 'seasonalAnime'
   | 'yourShows'
-  | 'yourAnime';
+  | 'yourAnime'
+  | 'yourWatchlist';
 
 export interface UnifiedFeedResult {
   /** Public trending catalogues — always fetched, feed is never empty. */
@@ -41,6 +49,8 @@ export interface UnifiedFeedResult {
   /** Personal in-progress rows from connected providers. */
   yourShows: NormalizedMediaItem[];
   yourAnime: NormalizedMediaItem[];
+  /** Letterboxd watchlist (plan 0012) — empty on web, where reads are CORS-blocked. */
+  yourWatchlist: NormalizedMediaItem[];
   isLoading: boolean;
   isError: boolean;
   errors: Array<{ provider: ProviderId; error: Error }>;
@@ -118,6 +128,19 @@ export function useUnifiedFeed(): UnifiedFeedResult {
       queryFn: () => fetchCurrentAnime(queryClient),
     });
   }
+  if (feedProviders.includes('letterboxd') && letterboxdReadsAvailable()) {
+    // The platform gate also keeps this MMKV read out of web SSR renders
+    // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+    const letterboxdUsername = getLetterboxdUsername();
+    if (letterboxdUsername != null) {
+      queries.push({
+        slot: 'yourWatchlist',
+        provider: 'letterboxd',
+        queryKey: letterboxdQueryKeys.watchlist(letterboxdUsername),
+        queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
+      });
+    }
+  }
 
   const results = useQueries({ queries });
 
@@ -152,6 +175,7 @@ export function useUnifiedFeed(): UnifiedFeedResult {
     animeSeason,
     yourShows: bySlot('yourShows'),
     yourAnime: bySlot('yourAnime'),
+    yourWatchlist: bySlot('yourWatchlist'),
     isLoading,
     isError,
     errors,

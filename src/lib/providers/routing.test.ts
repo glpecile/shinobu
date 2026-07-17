@@ -8,6 +8,9 @@ const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd'];
 /** Routing inputs are enriched items — externalIds drive cross-provider matches. */
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
+// Letterboxd writes movies as diary entries (registry canWrite: true, plan
+// 0012 session-capture path), so it is a log target for movies and anime films
+// alongside Trakt.
 describe('providersForLog', () => {
   it('routes movies to Trakt + Letterboxd', () => {
     expect(providersForLog({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL)).toEqual([
@@ -38,7 +41,7 @@ describe('providersForLog', () => {
     ).toEqual(['trakt', 'anilist']);
   });
 
-  it('routes a mapped anime film to all three providers', () => {
+  it('routes a mapped anime film to all three (it is a MOVIE to Trakt + Letterboxd)', () => {
     expect(
       providersForLog(
         { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
@@ -65,7 +68,7 @@ describe('providersForLog', () => {
     ).toEqual(['trakt', 'anilist', 'letterboxd']);
   });
 
-  it('only fans out to connected providers (anime film, Letterboxd-only)', () => {
+  it('routes an anime film to a Letterboxd-only connection (it is a MOVIE there)', () => {
     expect(
       providersForLog(
         { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
