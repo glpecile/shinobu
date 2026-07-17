@@ -8,8 +8,8 @@ import {
   type ProviderError,
 } from '@/lib/providers/errors';
 import type { NormalizedMediaItem } from '@/types/media';
-import { LETTERBOXD_BASE_URL, LETTERBOXD_SAVE_DIARY_PATH } from './config';
-import type { LetterboxdDeps, LetterboxdSession } from './deps';
+import { LETTERBOXD_BASE_URL } from './config';
+import type { LetterboxdDeps, LetterboxdWebResponse } from './deps';
 
 const provider = 'letterboxd' as const;
 
@@ -32,40 +32,49 @@ function localDateStr(iso?: string): string {
 }
 
 /**
- * The film's numeric id, read from the production uid the diary form keys on.
- * Verified against a live film page (docs/solutions/letterboxd-no-api-fallback.md):
- * pages carry NO `data-film-id` — the id lives in `data-production-uid="film:N"`
- * (and the `production:identifier` meta), so match that first and fall back to a
- * bare `film:N` before giving up.
+ * The film's Letterboxd **LID** — the `productionId` the modern
+ * `/api/v0/production-log-entries` write keys on (NOT the `film:{numericId}` uid
+ * the dead form used). It lives in the page's `production:identifier` meta,
+ * HTML-entity-encoded: `content="{&quot;lid&quot;:&quot;UH8e&quot;,…}"`
+ * (docs/solutions/letterboxd-no-api-fallback.md). Match the encoded form first,
+ * then a plain `"lid":"…"` as a fallback.
  */
-function parseFilmId(html: string): number | null {
+function parseFilmLid(html: string): string | null {
   const match =
-    /data-production-uid="film:(\d+)"/.exec(html) ??
-    /"uid":"film:(\d+)"/.exec(html) ??
-    /data-film-id="(\d+)"/.exec(html) ??
-    /film:(\d+)/.exec(html);
-  return match == null ? null : Number(match[1]);
+    /production:identifier"\s+content="[^"]*?&quot;lid&quot;:&quot;([A-Za-z0-9]+)&quot;/.exec(
+      html,
+    ) ?? /"lid":"([A-Za-z0-9]+)"/.exec(html);
+  return match == null ? null : match[1];
 }
 
 /**
- * `save-diary-entry` keys on Letterboxd's numeric film id, but a movie routed
- * here can come from anywhere — a watchlist slug, or a Trakt/TMDB-sourced movie
- * with no Letterboxd identity at all. Resolve it from a full film page (which,
- * unlike the `/json/` AJAX endpoints, isn't Cloudflare-walled): the slug page
- * directly, or Letterboxd's external-id redirect `/tmdb/{id}/` → `/film/{slug}/`.
+ * The film page to load for a movie routed here: its Letterboxd slug page, or
+ * the external-id redirect `/tmdb/{id}/` → `/film/{slug}/` for a Trakt/TMDB
+ * movie with no Letterboxd identity. `null` when neither id is present. Used
+ * both to resolve the numeric id (nitro-fetch) and to navigate the write
+ * WebView to render the diary webpart.
  */
-function resolveFilmId(
-  deps: LetterboxdDeps,
-  item: NormalizedMediaItem,
-): Effect.Effect<number, ProviderError> {
+function filmPathFor(item: NormalizedMediaItem): string | null {
   const slug = item.externalIds.letterboxd;
   const tmdb = item.externalIds.tmdb;
-  const path =
-    slug != null && slug !== ''
-      ? `/film/${slug}/`
-      : tmdb != null
-        ? `/tmdb/${tmdb}/`
-        : null;
+  return slug != null && slug !== ''
+    ? `/film/${slug}/`
+    : tmdb != null
+      ? `/tmdb/${tmdb}/`
+      : null;
+}
+
+/**
+ * The API write keys on the film's LID (`productionId`). Resolve it from a full
+ * film page (which, unlike the `/json/` AJAX endpoints, isn't Cloudflare-walled).
+ * This is only a fallback — the write's injected script reads the LID off the
+ * page's own meta inside the WebView — so an unresolvable LID is not fatal.
+ */
+function resolveFilmLid(
+  deps: LetterboxdDeps,
+  item: NormalizedMediaItem,
+): Effect.Effect<string, ProviderError> {
+  const path = filmPathFor(item);
 
   if (path == null) {
     return Effect.fail(
@@ -77,6 +86,8 @@ function resolveFilmId(
   }
 
   return Effect.gen(function* () {
+    // Film pages are public — resolve the LID over plain nitro-fetch. Only the
+    // *write* needs the authenticated WebView (deps.webFetch).
     const response = yield* Effect.tryPromise({
       try: () => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`),
       catch: (cause) => new ProviderNetworkError({ provider, cause }),
@@ -101,111 +112,113 @@ function resolveFilmId(
         new ProviderDecodeError({ provider, detail: `unreadable film page ${path}` }),
     });
 
-    const filmId = parseFilmId(html);
-    if (filmId == null) {
+    const filmLid = parseFilmLid(html);
+    if (filmLid == null) {
       return yield* new ProviderDecodeError({
         provider,
-        detail: `no film id found on ${path}`,
+        detail: `no film LID found on ${path}`,
       });
     }
-    return filmId;
+    return filmLid;
   });
 }
 
-/**
- * The `save-diary-entry` form body, mirrored from the live `<form>` on a film
- * page (docs/solutions/letterboxd-no-api-fallback.md). Two things the old
- * reverse-engineered guess got wrong and caused a 404 / silent tag loss:
- *  - the film is identified by `viewingableUid` = `film:{id}` — there is NO
- *    `filmId` field; sending `filmId` alone is why the write 404'd;
- *  - tags are one comma-separated `tags` text field, not repeatable `tag` params.
- * Checkboxes (`rewatch`, `liked`, `specifiedDate`) submit by *presence*, so a
- * false one must be omitted, never sent as `=false` (that reads as checked).
- */
-function diaryBody(
-  filmId: number,
-  session: LetterboxdSession,
-  options: LetterboxdLogOptions,
-): string {
-  const params = new URLSearchParams();
-  params.set('__csrf', session.csrf);
-  params.set('viewingId', ''); // empty = create a new entry (not edit)
-  params.set('viewingableUid', `film:${filmId}`);
-  params.set('specifiedDate', 'true'); // we always send an explicit date
-  params.set('viewingDateStr', localDateStr(options.watchedAt));
-  params.set('review', '');
-  params.set('rating', '0'); // 0 = unrated
-  if (options.rewatch === true) params.set('rewatch', 'true');
-  const tags = (options.tags ?? []).map((tag) => tag.trim()).filter((tag) => tag !== '');
-  if (tags.length > 0) params.set('tags', tags.join(', '));
-  return params.toString();
+/** Trimmed, non-empty diary tags (the app's Letterboxd-only log field). The
+ * `/api/v0` write takes a JSON string array. */
+function tagList(options: LetterboxdLogOptions): string[] {
+  return (options.tags ?? [])
+    .map((tag) => tag.trim())
+    .filter((tag) => tag !== '');
+}
+
+/** A `messages` entry in the `/api/v0` response — the site treats any
+ * `type === 'Error'` as a failure even on a 2xx. */
+interface ApiMessage {
+  type?: string;
+  title?: string;
+  text?: string;
+}
+
+/** A useful human string out of an API message, whatever field it carries. */
+function messageText(message: ApiMessage): string {
+  return message.title ?? message.text ?? message.type ?? 'error';
 }
 
 /**
- * Reads the `save-diary-entry` outcome. The endpoint returns JSON
- * (`{ result, messages, csrf }`); a logged-out/expired session serves HTML
- * instead, which we treat as a dead session ("reconnect Letterboxd") rather
- * than a silent success.
+ * Reads the `/api/v0/production-log-entries` outcome. Success is `200
+ * { logEntry, messages }`; a validation failure is `400 { message | messages }`;
+ * `401`/`403` is an unauthenticated/expired session (or Cloudflare wall) we treat
+ * as a dead session ("reconnect Letterboxd"). Even a 200 can carry a
+ * `messages: [{ type: 'Error' }]`, which the site itself treats as a failure.
+ * `status`/`body` come from the WebView `fetch` relayed over the postMessage
+ * bridge, not a `Response` object.
  */
 function interpretDiaryResponse(
-  response: Response,
-  item: NormalizedMediaItem,
+  response: LetterboxdWebResponse,
 ): Effect.Effect<void, ProviderError> {
   return Effect.gen(function* () {
-    // 403 here is a CSRF/session rejection, not a Cloudflare wall — same
-    // reconnect move as 401.
+    // 403 is either a CSRF/session rejection or a Cloudflare wall; either way the
+    // in-session write failed to authenticate — same reconnect move as 401.
     if (response.status === 401 || response.status === 403) {
       return yield* new ProviderAuthError({ provider, refreshFailed: true });
     }
     if (response.status === 429) {
       return yield* new ProviderRateLimitError({ provider });
     }
-    if (!response.ok) {
-      return yield* new ProviderNetworkError({
-        provider,
-        cause: new Error(`Letterboxd responded ${response.status} saving diary entry`),
-      });
-    }
 
-    const text = yield* Effect.tryPromise({
-      try: () => response.text(),
-      catch: () =>
-        new ProviderDecodeError({
-          provider,
-          detail: 'unreadable save-diary-entry response',
-        }),
-    });
-
-    let parsed: { result?: boolean; messages?: string[] } | null;
+    let parsed: { message?: string; messages?: ApiMessage[] } | null;
     try {
-      parsed = JSON.parse(text) as { result?: boolean; messages?: string[] };
+      parsed = JSON.parse(response.body) as {
+        message?: string;
+        messages?: ApiMessage[];
+      };
     } catch {
       parsed = null;
     }
 
-    // Non-JSON body = the session isn't logged in (Letterboxd served a page).
+    // A 4xx with a documented error body — surface the message.
+    if (response.status < 200 || response.status >= 300) {
+      if (parsed != null) {
+        const errors = (parsed.messages ?? []).filter((m) => m.type === 'Error');
+        const detail =
+          errors.length > 0
+            ? errors.map(messageText).join('; ')
+            : (parsed.message ??
+              `Letterboxd responded ${response.status} saving the diary entry`);
+        return yield* new ProviderDecodeError({ provider, detail });
+      }
+      // A non-JSON body on a non-2xx = the session isn't logged in (Letterboxd
+      // served a page, not the API).
+      return yield* new ProviderAuthError({ provider, refreshFailed: true });
+    }
+
+    // Non-JSON body on a 2xx = the session isn't logged in (Letterboxd served a
+    // page instead of the API response).
     if (parsed == null) {
       return yield* new ProviderAuthError({ provider, refreshFailed: true });
     }
-    if (parsed.result === false) {
+    // Even a 200 can carry error messages the site treats as a failure.
+    const errors = (parsed.messages ?? []).filter((m) => m.type === 'Error');
+    if (errors.length > 0) {
       return yield* new ProviderDecodeError({
         provider,
-        detail:
-          parsed.messages != null && parsed.messages.length > 0
-            ? parsed.messages.join('; ')
-            : `Letterboxd rejected the diary entry for "${item.title}"`,
+        detail: errors.map(messageText).join('; '),
       });
     }
   });
 }
 
 /**
- * The Letterboxd write adapter `useLogMedia` fans out to (plan 0012,
- * session-capture path): resolve the film's numeric id, then POST a diary
- * entry as the signed-in web user (captured cookie + `__csrf`). Movies and
- * anime films only — routing.ts guarantees nothing else reaches here. A missing
- * session fails as a dead session so the caller surfaces "reconnect Letterboxd"
- * instead of posting anonymously.
+ * The Letterboxd write adapter `useLogMedia` fans out to (plan 0012). Resolve
+ * the film's LID over public nitro-fetch (a fallback — the injected script reads
+ * it off the page too), then run the diary POST *inside the authenticated login
+ * WebView* (`deps.webFetch`) — replaying the captured cookies over nitro-fetch
+ * lands as signed-out at the origin, so the WebView is the only channel that
+ * carries the real session (docs/solutions/letterboxd-no-api-fallback.md).
+ * Movies and anime films only; routing.ts guarantees nothing else reaches here.
+ * No captured session (or no WebView transport, e.g. web) fails as a dead session
+ * so the caller surfaces "reconnect Letterboxd" rather than silently dropping the
+ * write.
  */
 export function logToLetterboxd(
   deps: LetterboxdDeps,
@@ -213,7 +226,8 @@ export function logToLetterboxd(
   options: LetterboxdLogOptions = {},
 ): Effect.Effect<void, ProviderError> {
   const session = deps.session;
-  if (session == null || session.cookie === '' || session.csrf === '') {
+  const webFetch = deps.webFetch;
+  if (session == null || session.cookie === '' || webFetch == null) {
     return Effect.fail(new ProviderAuthError({ provider, refreshFailed: true }));
   }
 
@@ -228,24 +242,31 @@ export function logToLetterboxd(
     );
   }
 
-  return resolveFilmId(deps, item).pipe(
-    Effect.flatMap((filmId) =>
+  const filmPath = filmPathFor(item);
+  if (filmPath == null) {
+    return Effect.fail(
+      new ProviderDecodeError({
+        provider,
+        detail: `"${item.title}" has no Letterboxd slug or tmdb id to resolve a film id`,
+      }),
+    );
+  }
+
+  return resolveFilmLid(deps, item).pipe(
+    Effect.flatMap((filmLid) =>
       Effect.gen(function* () {
         const response = yield* Effect.tryPromise({
           try: () =>
-            deps.fetch(`${LETTERBOXD_BASE_URL}${LETTERBOXD_SAVE_DIARY_PATH}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                'X-Requested-With': 'XMLHttpRequest',
-                Referer: `${LETTERBOXD_BASE_URL}/`,
-                Cookie: session.cookie,
-              },
-              body: diaryBody(filmId, session, options),
+            webFetch({
+              filmPath,
+              filmLid,
+              viewingDateStr: localDateStr(options.watchedAt),
+              tags: tagList(options),
+              rewatch: options.rewatch === true,
             }),
           catch: (cause) => new ProviderNetworkError({ provider, cause }),
         });
-        yield* interpretDiaryResponse(response, item);
+        yield* interpretDiaryResponse(response);
       }),
     ),
   );

@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
+import { getLetterboxdWebFetch } from '@/lib/providers/letterboxd/webview-bridge';
 import {
   checkUsernameExists,
   getWatchlist,
@@ -16,13 +17,17 @@ import { useConnectedProviders } from '@/state/session';
 /**
  * Real dependency wiring for Letterboxd effects — same state → lib/providers
  * arrow as `traktDeps()`: the username (reads) and the captured web session
- * (writes) live here in state, injected into the provider lib.
+ * (writes) live here in state, injected into the provider lib. `webFetch` is
+ * the authenticated-WebView write transport (native only; `undefined` on web
+ * or when no WebView is mounted), since replayed cookies don't authenticate at
+ * Letterboxd's origin (plan 0012).
  */
 export function letterboxdDeps(): LetterboxdDeps {
   return {
     fetch: httpFetch,
     username: getLetterboxdUsername(),
     session: getLetterboxdSession(),
+    webFetch: getLetterboxdWebFetch(),
   };
 }
 

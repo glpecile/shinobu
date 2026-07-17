@@ -51,7 +51,16 @@ export function ConnectLetterboxdButton() {
     if (ref == null) return;
 
     const cookies = await ref.getCookies(LETTERBOXD_BASE_URL);
-    const captured = captureLoginFromCookies(cookies);
+    // Letterboxd binds the signed-in session (and Cloudflare binds cf_clearance)
+    // to the WebView's User-Agent; capture it so writes can replay it verbatim.
+    // A failed read must never sink the login — fall back to no UA.
+    let userAgent: string | undefined;
+    try {
+      userAgent = await ref.evaluateJavaScript('navigator.userAgent');
+    } catch {
+      userAgent = undefined;
+    }
+    const captured = captureLoginFromCookies(cookies, userAgent);
     // Not signed in yet — leave the WebView open for the user to finish.
     if (captured == null) return;
 
@@ -60,6 +69,7 @@ export function ConnectLetterboxdButton() {
       username: captured.username,
       cookie: captured.session.cookie,
       csrf: captured.session.csrf,
+      userAgent: captured.session.userAgent,
     });
     close();
   };

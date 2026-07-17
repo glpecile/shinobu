@@ -34,6 +34,7 @@ export interface CapturedLetterboxdLogin {
  */
 export function captureLoginFromCookies(
   cookies: readonly CookiePair[],
+  userAgent?: string,
 ): CapturedLetterboxdLogin | null {
   const present = cookies.filter(
     (cookie) => cookie.name !== '' && cookie.value !== '',
@@ -59,5 +60,13 @@ export function captureLoginFromCookies(
     decodedUsername = username;
   }
 
-  return { username: decodedUsername, session: { cookie, csrf } };
+  const trimmedUa = userAgent?.trim();
+  return {
+    username: decodedUsername,
+    session: {
+      cookie,
+      csrf,
+      userAgent: trimmedUa != null && trimmedUa !== '' ? trimmedUa : undefined,
+    },
+  };
 }

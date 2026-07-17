@@ -2,7 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
 import type { NormalizedMediaItem } from '@/types/media';
-import type { LetterboxdDeps, LetterboxdSession } from './deps';
+import type {
+  LetterboxdDeps,
+  LetterboxdSession,
+  LetterboxdWebRequest,
+  LetterboxdWebResponse,
+} from './deps';
 import { logToLetterboxd } from './writes';
 
 const SESSION: LetterboxdSession = {
@@ -10,10 +15,10 @@ const SESSION: LetterboxdSession = {
   csrf: 'csrf-token-123',
 };
 
-// A trimmed film page carrying the id the diary endpoint keys on. Real pages
-// have no `data-film-id` — the id lives in `data-production-uid="film:N"`
+// A trimmed film page carrying the LID the diary API keys on. The LID lives in
+// the entity-encoded `production:identifier` meta
 // (docs/solutions/letterboxd-no-api-fallback.md).
-const FILM_PAGE = `<html><body><div id="backdrop" data-production-uid="film:1234878"></div></body></html>`;
+const FILM_PAGE = `<html><head><meta name="production:identifier" content="{&quot;lid&quot;:&quot;UH8e&quot;,&quot;uid&quot;:&quot;film:1234878&quot;}"></head><body></body></html>`;
 
 function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
   return {
@@ -29,46 +34,37 @@ function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMedia
   };
 }
 
-interface Captured {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  body: URLSearchParams;
-}
-
 /**
- * Routes GETs (film-page resolution) and the diary POST, recording the POST so
- * tests can assert the exact request the signed-in web user would send.
+ * Fakes the two transports the write uses: `fetch` for public film-page
+ * resolution, and `webFetch` for the authenticated diary write that (on device)
+ * navigates to the film page and submits its form inside the login WebView.
+ * Records the request so tests can assert what the write drives.
  */
 function fakeDeps(options: {
   filmPageStatus?: number;
-  saveResponse?: Response;
+  webResponse?: LetterboxdWebResponse;
   session?: LetterboxdSession | null;
-  onPost?: (captured: Captured) => void;
+  withWebFetch?: boolean;
+  onWrite?: (request: LetterboxdWebRequest) => void;
 }): LetterboxdDeps {
+  const withWebFetch = options.withWebFetch ?? true;
   return {
     username: 'gian',
     session: options.session === undefined ? SESSION : options.session,
-    fetch: async (input, init) => {
-      const url = String(input);
-      if (init?.method === 'POST') {
-        options.onPost?.({
-          url,
-          method: init.method,
-          headers: (init.headers ?? {}) as Record<string, string>,
-          body: new URLSearchParams(String(init.body)),
-        });
-        return options.saveResponse ?? new Response('{"result":true}', { status: 200 });
-      }
-      return new Response(FILM_PAGE, { status: options.filmPageStatus ?? 200 });
-    },
+    fetch: async () => new Response(FILM_PAGE, { status: options.filmPageStatus ?? 200 }),
+    webFetch: withWebFetch
+      ? async (request) => {
+          options.onWrite?.(request);
+          return options.webResponse ?? { status: 200, body: '{"result":true}' };
+        }
+      : undefined,
   };
 }
 
 describe('logToLetterboxd', () => {
-  test('resolves the film id from the slug and posts a diary entry', async () => {
-    let captured: Captured | undefined;
-    const deps = fakeDeps({ onPost: (c) => (captured = c) });
+  test('navigates to the film page and drives the diary write in the WebView', async () => {
+    let captured: LetterboxdWebRequest | undefined;
+    const deps = fakeDeps({ onWrite: (r) => (captured = r) });
 
     await Effect.runPromise(
       logToLetterboxd(deps, movie({ letterboxd: 'tuner' }), {
@@ -77,41 +73,54 @@ describe('logToLetterboxd', () => {
       }),
     );
 
-    expect(captured?.url).toBe('https://letterboxd.com/s/save-diary-entry');
-    expect(captured?.headers.Cookie).toBe(SESSION.cookie);
-    expect(captured?.headers['X-Requested-With']).toBe('XMLHttpRequest');
-    expect(captured?.body.get('__csrf')).toBe('csrf-token-123');
-    // The film is identified by viewingableUid=film:{id}, not a `filmId` field.
-    expect(captured?.body.get('viewingableUid')).toBe('film:1234878');
-    expect(captured?.body.get('filmId')).toBeNull();
-    expect(captured?.body.get('specifiedDate')).toBe('true');
-    expect(captured?.body.get('viewingDateStr')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    // Tags are trimmed and sent as one comma-separated `tags` field.
-    expect(captured?.body.get('tags')).toBe('rewatch-night, imax');
+    expect(captured?.filmPath).toBe('/film/tuner/');
+    // The film is identified by its LID (productionId) for the /api/v0 write.
+    expect(captured?.filmLid).toBe('UH8e');
+    expect(captured?.viewingDateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // Tags are trimmed into a string array.
+    expect(captured?.tags).toEqual(['rewatch-night', 'imax']);
   });
 
   test('resolves via the /tmdb/ redirect when there is no Letterboxd slug', async () => {
-    let captured: Captured | undefined;
-    const deps = fakeDeps({ onPost: (c) => (captured = c) });
+    let captured: LetterboxdWebRequest | undefined;
+    const deps = fakeDeps({ onWrite: (r) => (captured = r) });
 
     await Effect.runPromise(logToLetterboxd(deps, movie({ tmdb: 999 })));
 
-    expect(captured?.body.get('viewingableUid')).toBe('film:1234878');
+    expect(captured?.filmPath).toBe('/tmdb/999/');
+    expect(captured?.filmLid).toBe('UH8e');
   });
 
   test('marks a parity rewatch', async () => {
-    let captured: Captured | undefined;
-    const deps = fakeDeps({ onPost: (c) => (captured = c) });
+    let captured: LetterboxdWebRequest | undefined;
+    const deps = fakeDeps({ onWrite: (r) => (captured = r) });
 
     await Effect.runPromise(
       logToLetterboxd(deps, movie({ letterboxd: 'tuner' }), { rewatch: true }),
     );
 
-    expect(captured?.body.get('rewatch')).toBe('true');
+    expect(captured?.rewatch).toBe(true);
+  });
+
+  test('does not mark a rewatch by default', async () => {
+    let captured: LetterboxdWebRequest | undefined;
+    const deps = fakeDeps({ onWrite: (r) => (captured = r) });
+
+    await Effect.runPromise(logToLetterboxd(deps, movie({ letterboxd: 'tuner' })));
+
+    expect(captured?.rewatch).toBe(false);
   });
 
   test('fails as a dead session when no web login was captured', async () => {
     const deps = fakeDeps({ session: null });
+    const outcome = await Effect.runPromise(
+      Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),
+    );
+    expect(outcome._tag).toBe('ProviderAuthError');
+  });
+
+  test('fails as a dead session when the WebView write transport is absent (web)', async () => {
+    const deps = fakeDeps({ withWebFetch: false });
     const outcome = await Effect.runPromise(
       Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),
     );
@@ -126,11 +135,12 @@ describe('logToLetterboxd', () => {
     expect(outcome._tag).toBe('ProviderDecodeError');
   });
 
-  test('maps a rejected entry (result:false) to a decode error with the message', async () => {
+  test('maps a 200 carrying an Error message to a decode error with the message', async () => {
     const deps = fakeDeps({
-      saveResponse: new Response('{"result":false,"messages":["Already logged"]}', {
+      webResponse: {
         status: 200,
-      }),
+        body: '{"messages":[{"type":"Error","title":"Already logged"}]}',
+      },
     });
     const outcome = await Effect.runPromise(
       Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),
@@ -139,8 +149,22 @@ describe('logToLetterboxd', () => {
     expect((outcome as { detail: string }).detail).toContain('Already logged');
   });
 
+  test('maps a 400 validation body to a decode error with the message', async () => {
+    const deps = fakeDeps({
+      webResponse: {
+        status: 400,
+        body: '{"messages":[{"type":"Error","title":"Invalid production"}]}',
+      },
+    });
+    const outcome = await Effect.runPromise(
+      Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),
+    );
+    expect(outcome._tag).toBe('ProviderDecodeError');
+    expect((outcome as { detail: string }).detail).toContain('Invalid production');
+  });
+
   test('maps a 403 (expired session / CSRF) to a dead-session auth error', async () => {
-    const deps = fakeDeps({ saveResponse: new Response('', { status: 403 }) });
+    const deps = fakeDeps({ webResponse: { status: 403, body: '' } });
     const outcome = await Effect.runPromise(
       Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),
     );
@@ -149,7 +173,7 @@ describe('logToLetterboxd', () => {
 
   test('treats an HTML (non-JSON) save response as a dead session', async () => {
     const deps = fakeDeps({
-      saveResponse: new Response('<html>Sign in</html>', { status: 200 }),
+      webResponse: { status: 200, body: '<html>Sign in</html>' },
     });
     const outcome = await Effect.runPromise(
       Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),

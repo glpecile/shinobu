@@ -11,6 +11,12 @@ export interface LetterboxdSession {
   cookie: string;
   /** Mirrors `com.xk72.webparts.csrf`; echoed as the `__csrf` body param. */
   csrf: string;
+  /**
+   * The `User-Agent` the login WebView ran under. Letterboxd binds the session
+   * to it, so every write must replay it verbatim or the origin treats the
+   * request as signed-out (plan 0012, docs/solutions/letterboxd-no-api-fallback.md).
+   */
+  userAgent?: string;
 }
 
 /**
@@ -26,4 +32,50 @@ export interface LetterboxdDeps {
   username: string | null;
   /** Present once a web login was captured; required for writes only. */
   session?: LetterboxdSession | null;
+  /**
+   * Same-origin write transport that runs *inside* the authenticated login
+   * WebView (native only). Replaying the captured cookies over nitro-fetch does
+   * NOT reconstitute the login — Letterboxd's origin still treats those requests
+   * as signed-out (proven empirically, plan 0012 /
+   * docs/solutions/letterboxd-no-api-fallback.md). The only channel that carries
+   * the real session is the WebView itself, so writes go through here. Absent on
+   * web (read-only) and in tests that don't exercise the write path.
+   */
+  webFetch?: LetterboxdWebFetch;
 }
+
+/**
+ * A diary write executed inside the authenticated Letterboxd WebView. The bridge
+ * navigates the WebView to `filmPath` first — the film page carries the live
+ * `window.supermodelCSRF` token and the `production:identifier` meta (the film
+ * LID) the write needs. It then POSTs Letterboxd's modern same-origin JSON API
+ * `/api/v0/production-log-entries` (the legacy `/s/save-diary-entry` form endpoint
+ * is dead and 404s — docs/solutions/letterboxd-no-api-fallback.md).
+ */
+export interface LetterboxdWebRequest {
+  /** Film page to render so the CSRF token + LID meta are in the session, e.g. `/film/tuner/`. */
+  filmPath: string;
+  /**
+   * The film's Letterboxd **LID** (`productionId` for the API, e.g. `UH8e`) —
+   * NOT the `film:{numericId}` uid. A fallback if the page's `production:identifier`
+   * meta can't be read inside the WebView; `''` when it couldn't be resolved.
+   */
+  filmLid: string;
+  /** `letterboxd.com`-local YYYY-MM-DD diary date. */
+  viewingDateStr: string;
+  /** Diary tags (the API takes a JSON string array), possibly empty. */
+  tags: string[];
+  /** Whether to mark the entry a rewatch. */
+  rewatch: boolean;
+}
+
+/** The status + text body the WebView `fetch` observed, relayed back over the
+ * `postMessage` bridge. */
+export interface LetterboxdWebResponse {
+  status: number;
+  body: string;
+}
+
+export type LetterboxdWebFetch = (
+  request: LetterboxdWebRequest,
+) => Promise<LetterboxdWebResponse>;

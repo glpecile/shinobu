@@ -5,13 +5,6 @@
 export const LETTERBOXD_BASE_URL = 'https://letterboxd.com';
 
 /**
- * The signed-in diary write endpoint (plan 0012, session-capture write path).
- * Keyed on the numeric `filmId`; needs the session cookie + `__csrf`
- * (docs/solutions/letterboxd-no-api-fallback.md).
- */
-export const LETTERBOXD_SAVE_DIARY_PATH = '/s/save-diary-entry';
-
-/**
  * The page the native sign-in WebView loads (plan 0012, session-capture path):
  * the user logs in here in a real browser context, then Shinobu harvests the
  * resulting session cookies (index.native.tsx). Detection is cookie-based, so a

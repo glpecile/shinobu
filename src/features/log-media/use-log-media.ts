@@ -55,10 +55,11 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
     ),
-  // Diary write as the signed-in web user (plan 0012 session-capture path):
-  // resolve the film id, POST /s/save-diary-entry with the captured cookie +
-  // __csrf. Tags are the app's Letterboxd-only log field; watchedAt sets the
-  // diary date; rewatch comes from the reconcile step. Registered now but only
+  // Diary write as the signed-in web user (plan 0012): run the write inside the
+  // authenticated WebView, POSTing the modern /api/v0/production-log-entries JSON
+  // API (the legacy /s/save-diary-entry form is dead). Tags are the app's
+  // Letterboxd-only log field; watchedAt sets the diary date; rewatch comes from
+  // the reconcile step. Registered now but only
   // reached once registry canWrite flips true (after the sign-in WebView lands)
   // — a missing session fails as ProviderAuthError, surfaced per-provider.
   letterboxd: ({ item, watchedAt, tags, rewatch }) =>

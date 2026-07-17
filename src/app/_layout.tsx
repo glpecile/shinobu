@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
+import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
 import { WebNavigation } from "@/components/web-navigation";
@@ -57,6 +58,9 @@ export default function Layout() {
                   options={{ title: "Shinobu" }}
                 />
               </Stack>
+              {/* Hidden authenticated WebView that runs Letterboxd writes
+                  (native only; renders null on web). */}
+              <LetterboxdWriteBridge />
             </View>
           </SheetProvider>
         </QueryClientProvider>

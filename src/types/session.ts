@@ -29,4 +29,12 @@ export interface ProviderSession {
    */
   cookie?: string;
   csrf?: string;
+  /**
+   * The exact `User-Agent` the login WebView ran under (plan 0012). Letterboxd
+   * binds the signed-in session (and Cloudflare binds `cf_clearance`) to the UA
+   * that logged in; replaying the cookies from a different UA lands as
+   * "remembered but not signed in" and every write 404s. Captured at login and
+   * sent verbatim on writes (docs/solutions/letterboxd-no-api-fallback.md).
+   */
+  userAgent?: string;
 }

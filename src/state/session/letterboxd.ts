@@ -1,6 +1,9 @@
+import { useSyncExternalStore } from 'react';
+
 import type { LetterboxdSession } from '@/lib/providers/letterboxd/deps';
 import {
   getProviderSession,
+  onSessionChange,
   setProviderSession,
 } from './tokens';
 
@@ -23,12 +26,14 @@ export function connectLetterboxdSession(params: {
   username: string;
   cookie: string;
   csrf: string;
+  userAgent?: string;
 }): void {
   setProviderSession('letterboxd', {
     accessToken: '',
     username: params.username,
     cookie: params.cookie,
     csrf: params.csrf,
+    userAgent: params.userAgent,
   });
 }
 
@@ -47,5 +52,23 @@ export function getLetterboxdSession(): LetterboxdSession | null {
   ) {
     return null;
   }
-  return { cookie: session.cookie, csrf: session.csrf };
+  return {
+    cookie: session.cookie,
+    csrf: session.csrf,
+    userAgent: session.userAgent,
+  };
+}
+
+/**
+ * Reactive "is a Letterboxd *write* session captured?" — drives the hidden
+ * authenticated WebView (`LetterboxdWriteBridge`): mount it only once a login
+ * exists, and tear it down on disconnect. Writes run inside that WebView
+ * because replayed cookies don't authenticate at the origin (plan 0012).
+ */
+export function useHasLetterboxdWriteSession(): boolean {
+  return useSyncExternalStore(
+    onSessionChange,
+    () => getLetterboxdSession() != null,
+    () => false,
+  );
 }

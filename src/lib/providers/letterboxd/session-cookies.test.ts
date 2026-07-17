@@ -59,6 +59,20 @@ describe('captureLoginFromCookies', () => {
     );
   });
 
+  it('carries the login User-Agent so writes can replay it', () => {
+    const ua =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15';
+    const captured = captureLoginFromCookies(signedIn(), ua);
+    expect(captured?.session.userAgent).toBe(ua);
+  });
+
+  it('leaves the User-Agent undefined when the WebView read fails', () => {
+    expect(captureLoginFromCookies(signedIn())?.session.userAgent).toBeUndefined();
+    expect(
+      captureLoginFromCookies(signedIn(), '  ')?.session.userAgent,
+    ).toBeUndefined();
+  });
+
   it('decodes a percent-encoded username value', () => {
     const captured = captureLoginFromCookies([
       { name: 'letterboxd.signed.in.as', value: 'gian%20p' },

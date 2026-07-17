@@ -60,7 +60,75 @@ e.g. film id `1234878`, slug `tuner` →
 is both. No reply to the access email. So the official OAuth API is out; the
 write channel is the signed-in web session below.
 
-## Write channel: signed-in web session (session capture)
+## Write channel: run the write INSIDE the WebView (corrected 2026-07-17)
+
+**The cookie-replay approach below does NOT work — superseded.** After many
+on-device rounds, two hard findings killed it:
+
+1. **Replayed cookies don't authenticate.** Harvesting the login cookies and
+   sending them from a *separate* HTTP client (nitro-fetch) lands as
+   *signed-out* at Letterboxd's origin — an authenticated GET with the exact
+   captured cookies returns the logged-out page (no `data-viewingable-identifier`,
+   no `js-nav-account`). The real session (httpOnly + Cloudflare `cf_clearance`,
+   UA/session-bound) can't be reconstituted outside the WebView that made it. So
+   the write must run *inside* the authenticated WebView regardless of endpoint.
+2. **`/s/save-diary-entry` is a DEAD endpoint — that is the 404 (corrected
+   2026-07-17, round 2).** The earlier CSRF-mismatch theory was wrong. Even
+   posting that page's own `<form.js-diary-entry-form>` from inside the
+   authenticated WebView, with `__csrf = window.supermodelCSRF`, still returned
+   `404 Letterboxd - Not Found`. Reason, read from the site's *current* bundle
+   (`static/js/es/…`): **the diary form no longer submits to `/s/save-diary-entry`
+   at all.** Its `<form action>` is a legacy no-op the site overrides. On submit,
+   the site's own JS (`_composeCreateLogEntryRequest` → `_doSubmission`) calls a
+   modern **same-origin JSON API**:
+
+   ```
+   POST /api/v0/production-log-entries          (baseUri = window.baseURL + "/api/v0",
+                                                 and window.baseURL === "" on the site,
+                                                 so it is same-origin — NOT api.letterboxd.com)
+   Content-Type: application/json; charset=UTF-8
+   X-CSRF-TOKEN: <window.supermodelCSRF>        ← the token rides in a HEADER, not the body
+   credentials: include                          ← session cookies (no OAuth Bearer on web)
+   body (JSON): {
+     productionId: "<film LID>",                 ← the film's LID (e.g. "UH8e"), NOT film:{numericId}
+     diaryDetails: { diaryDate: "YYYY-MM-DD", rewatch: <bool> },
+     tags: ["…"],                                ← a JSON array, not a comma-joined string
+     like: false,
+     rating?: <0–5, half-star; omit when unrated>,
+     review?: { text, containsSpoilers }
+   }
+   ```
+
+   The film **LID** (`productionId`) is on the page in the
+   `production:identifier` meta:
+   `<meta name="production:identifier" content='{"lid":"UH8e","uid":"film:1351217",…}'>`.
+   The old `film:{numericId}` uid is NOT what this API keys on. Success is
+   `200 {logEntry, messages}`; a validation failure is `400 {message | messages:[{type:"Error",…}]}`;
+   `401` unauthenticated. An unauthenticated probe from a server IP gets a
+   Cloudflare `403` ("Just a moment…"), which is why the write must run inside
+   the WebView (it holds `cf_clearance`).
+
+**Working design (plan 0012):** a hidden, always-mounted `LetterboxdWriteBridge`
+WebView (shares the login's WKWebView cookie store, so it's genuinely signed in)
+runs the write via `evaluateJavaScript`:
+- navigate it to the film page (`/film/{slug}/` or `/tmdb/{id}/`) — this is still
+  needed so `window.supermodelCSRF` and the `production:identifier` meta are on
+  the page for the session,
+- read the film LID from the `production:identifier` meta and `window.supermodelCSRF`,
+- `fetch('/api/v0/production-log-entries', { method:'POST', credentials:'include',
+  headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-CSRF-TOKEN': csrf },
+  body: JSON.stringify({ productionId, diaryDetails, tags, like:false }) })`,
+- relay `{status, body}` back over `window.ReactNativeWebView.postMessage` →
+  the WebView's `onMessage` (nitro-webview's `evaluateJavaScript` returns
+  `String(describing:)`, so it can't await the fetch promise — the postMessage
+  bridge is the async channel), matched by request id.
+
+Off-device automation was attempted (parse the simulator's binarycookies, drive
+the loop with curl) but the URLSession store holds only `letterboxd.user` +
+`letterboxd.signed.in.as`, which don't authenticate; the full session is in the
+WebView's (inaccessible) store. So the WebView-run write is validated on-device.
+
+### Superseded: cookie-replay session capture (does not authenticate)
 
 Decided 2026-07-16 (plan 0012): the user signs into letterboxd.com themselves
 (in a WebView on native), we harvest the session cookies, and issue the same
