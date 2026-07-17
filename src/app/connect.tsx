@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ConnectAniListButton } from '@/components/connect-anilist-button';
+import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -17,61 +17,18 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import {
-  setProviderHidden,
-  useHiddenProviders,
-} from '@/state/prefs/hidden-providers';
+import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
 import {
   useConnectedProviders,
   useDisconnectProvider,
 } from '@/state/session';
-
-/**
- * Overflow menu on a not-yet-connected provider row. "Hide" is a local-only
- * preference (state/prefs) — it tucks the card away (e.g. Letterboxd while
- * API access is pending) without touching sessions or the registry.
- */
-function RowMenu({ id }: { id: ProviderId }) {
-  const [open, setOpen] = useState(false);
-  const muted = useCSSVariable('--color-muted');
-
-  return (
-    <View className="relative z-20">
-      <PresstableOpacity
-        accessibilityLabel={`${PROVIDERS[id].label} options`}
-        className="w-8 h-8 items-center justify-center rounded-full hover:bg-border/50"
-        onPress={() => setOpen(!open)}
-      >
-        <Ionicons
-          color={typeof muted === 'string' ? muted : undefined}
-          name="ellipsis-horizontal"
-          size={18}
-        />
-      </PresstableOpacity>
-      {open && (
-        <View className="absolute right-0 top-9 z-20 min-w-28 bg-surface border border-border rounded-lg overflow-hidden">
-          <PresstableOpacity
-            className="flex-row items-center gap-2 px-4 py-2.5"
-            onPress={() => {
-              setOpen(false);
-              setProviderHidden(id, true);
-            }}
-          >
-            <Ionicons
-              color={typeof muted === 'string' ? muted : undefined}
-              name="eye-off-outline"
-              size={16}
-            />
-            <Text className="text-foreground font-sans text-sm">Hide</Text>
-          </PresstableOpacity>
-        </View>
-      )}
-    </View>
-  );
-}
+import { getProviderSession } from '@/state/session/tokens';
 
 function ConnectedRow({ id }: { id: ProviderId }) {
   const disconnect = useDisconnectProvider();
+  // Tokenless sessions (Letterboxd) carry the username — worth showing, since
+  // a wrong username is the only way that connection can be "broken".
+  const username = getProviderSession(id)?.username;
 
   return (
     <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4">
@@ -81,7 +38,9 @@ function ConnectedRow({ id }: { id: ProviderId }) {
           <Text className="text-foreground font-sans-semibold text-base">
             {PROVIDERS[id].label}
           </Text>
-          <Text className="text-muted font-sans text-xs mt-0.5">Connected</Text>
+          <Text className="text-muted font-sans text-xs mt-0.5">
+            {username != null ? `Connected as ${username}` : 'Connected'}
+          </Text>
         </View>
       </View>
       <PresstableOpacity
@@ -98,23 +57,19 @@ function ConnectedRow({ id }: { id: ProviderId }) {
 
 function TraktConnectRow() {
   const connected = useConnectedProviders();
-  const hidden = useHiddenProviders();
 
   // Already listed under the "Connected" section — don't render a second row.
-  if (connected.includes('trakt') || hidden.includes('trakt')) {
+  if (connected.includes('trakt')) {
     return null;
   }
 
   return (
     <View className="bg-surface border border-border rounded-xl p-5">
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center gap-3">
-          <ProviderIcon id="trakt" size={24} />
-          <Text className="text-foreground font-sans-semibold text-base">
-            Trakt
-          </Text>
-        </View>
-        <RowMenu id="trakt" />
+      <View className="flex-row items-center gap-3 mb-3">
+        <ProviderIcon id="trakt" size={24} />
+        <Text className="text-foreground font-sans-semibold text-base">
+          Trakt
+        </Text>
       </View>
       <ConnectTraktButton />
     </View>
@@ -123,22 +78,18 @@ function TraktConnectRow() {
 
 function AniListConnectRow() {
   const connected = useConnectedProviders();
-  const hidden = useHiddenProviders();
 
-  if (connected.includes('anilist') || hidden.includes('anilist')) {
+  if (connected.includes('anilist')) {
     return null;
   }
 
   return (
     <View className="bg-surface border border-border rounded-xl p-5">
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center gap-3">
-          <ProviderIcon id="anilist" size={24} />
-          <Text className="text-foreground font-sans-semibold text-base">
-            AniList
-          </Text>
-        </View>
-        <RowMenu id="anilist" />
+      <View className="flex-row items-center gap-3 mb-3">
+        <ProviderIcon id="anilist" size={24} />
+        <Text className="text-foreground font-sans-semibold text-base">
+          AniList
+        </Text>
       </View>
       {/* The button renders its own copy: one-tap when this build embeds a
           client id, or the one-time client-id setup form when it doesn't. */}
@@ -147,51 +98,69 @@ function AniListConnectRow() {
   );
 }
 
-function ComingSoonRow({ id }: { id: ProviderId }) {
+function LetterboxdConnectRow() {
+  const connected = useConnectedProviders();
+
+  if (connected.includes('letterboxd')) {
+    return null;
+  }
+
   return (
-    <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4 opacity-60">
-      <View className="flex-row items-center gap-3">
-        <ProviderIcon id={id} size={24} />
-        <View>
-          <Text className="text-foreground font-sans-semibold text-base">
-            {PROVIDERS[id].label}
-          </Text>
-          <Text className="text-muted font-sans text-xs mt-0.5">
-            {id === 'letterboxd' ? 'Waiting on API access' : 'Coming soon'}
-          </Text>
-        </View>
+    <View className="bg-surface border border-border rounded-xl p-5">
+      <View className="flex-row items-center gap-3 mb-3">
+        <ProviderIcon id="letterboxd" size={24} />
+        <Text className="text-foreground font-sans-semibold text-base">
+          Letterboxd
+        </Text>
       </View>
-      <RowMenu id={id} />
+      <ConnectLetterboxdButton />
     </View>
   );
 }
 
-/** Tucked-away rows live at the bottom so hiding is always reversible. */
-function HiddenSection() {
-  const hidden = useHiddenProviders();
+/**
+ * Feed items hidden from a card's actions dialog. Listed here (the only
+ * settings surface) so hiding is always reversible; the row itself opens the
+ * item's details page (which resolves hidden items too — includeHidden).
+ */
+function HiddenItemsSection() {
+  const router = useRouter();
+  const hidden = useHiddenItems();
+  const muted = useCSSVariable('--color-muted');
 
   if (hidden.length === 0) return null;
 
   return (
     <View className="mt-6">
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-        Hidden
+        Hidden items
       </Text>
       <View className="gap-3">
-        {hidden.map((id) => (
+        {hidden.map((item) => (
           <View
             className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4 opacity-60"
-            key={id}
+            key={item.id}
           >
-            <View className="flex-row items-center gap-3">
-              <ProviderIcon id={id} size={24} />
-              <Text className="text-foreground font-sans-semibold text-base">
-                {PROVIDERS[id].label}
+            <PresstableOpacity
+              accessibilityLabel={`Open ${item.title}`}
+              className="flex-1 flex-row items-center gap-3 mr-3"
+              onPress={() => router.push(routes.details(item.id))}
+            >
+              <Ionicons
+                color={typeof muted === 'string' ? muted : undefined}
+                name="eye-off-outline"
+                size={18}
+              />
+              <Text
+                className="flex-1 text-foreground font-sans-semibold text-base"
+                numberOfLines={1}
+              >
+                {item.title}
               </Text>
-            </View>
+            </PresstableOpacity>
             <PresstableOpacity
               className="border border-border px-4 py-2 rounded"
-              onPress={() => setProviderHidden(id, false)}
+              onPress={() => unhideItem(item.id)}
             >
               <Text className="text-foreground font-sans-semibold text-sm">
                 Show
@@ -207,11 +176,10 @@ function HiddenSection() {
 export default function ConnectScreen() {
   const router = useRouter();
   const connected = useConnectedProviders();
-  const hidden = useHiddenProviders();
   const queryClient = useQueryClient();
   const foreground = useCSSVariable('--color-foreground');
   const disconnected = (Object.keys(PROVIDERS) as ProviderId[]).filter(
-    (id) => !connected.includes(id) && !hidden.includes(id),
+    (id) => !connected.includes(id),
   );
 
   return (
@@ -274,16 +242,12 @@ export default function ConnectScreen() {
             <View className="gap-3">
               <TraktConnectRow />
               <AniListConnectRow />
-              {disconnected
-                .filter((id) => id !== 'trakt' && id !== 'anilist')
-                .map((id) => (
-                  <ComingSoonRow id={id} key={id} />
-                ))}
+              <LetterboxdConnectRow />
             </View>
           </View>
         )}
 
-        <HiddenSection />
+        <HiddenItemsSection />
         </RefreshableScrollView>
       </KeyboardAvoidingView>
     </View>

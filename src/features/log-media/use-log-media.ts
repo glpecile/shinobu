@@ -2,6 +2,8 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 import { Effect } from 'effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
+import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
+import { letterboxdDeps } from '@/state/queries/letterboxd';
 import { providersForLog } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
@@ -29,9 +31,8 @@ import {
 } from './fan-out';
 
 /**
- * One entry per write-capable provider; Letterboxd (todos/004) lands by
- * adding its entry. `Effect.runPromise` here is the same containment
- * boundary `state/queries/*` uses — no Effect type escapes.
+ * One entry per write-capable provider. `Effect.runPromise` here is the same
+ * containment boundary `state/queries/*` uses — no Effect type escapes.
  */
 const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
   trakt: ({ item, episode, episodes, watchedAt }) =>
@@ -51,6 +52,21 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
         ...(episodes != null && episodes.length > 0
           ? { progress: Math.max(...episodes.map((e) => e.number)) }
           : {}),
+        ...(rewatch === true ? { rewatch: true } : {}),
+      }),
+    ),
+  // Diary write as the signed-in web user (plan 0012): run the write inside the
+  // authenticated WebView, POSTing the modern /api/v0/production-log-entries JSON
+  // API (the legacy /s/save-diary-entry form is dead). Tags are the app's
+  // Letterboxd-only log field; watchedAt sets the diary date; rewatch comes from
+  // the reconcile step. Registered now but only
+  // reached once registry canWrite flips true (after the sign-in WebView lands)
+  // — a missing session fails as ProviderAuthError, surfaced per-provider.
+  letterboxd: ({ item, watchedAt, tags, rewatch }) =>
+    Effect.runPromise(
+      logToLetterboxd(letterboxdDeps(), item, {
+        ...(watchedAt != null ? { watchedAt } : {}),
+        ...(tags != null && tags.length > 0 ? { tags } : {}),
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
     ),
@@ -113,7 +129,7 @@ async function providerHasWatch(
   } catch {
     return false;
   }
-  // Providers without a state read yet (Letterboxd) always attempt the write.
+  // Letterboxd has no write adapter (and no state read) yet.
   return false;
 }
 

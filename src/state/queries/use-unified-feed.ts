@@ -15,11 +15,19 @@ import {
   animeSeasonAt,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
+import { getWatchlist } from '@/lib/providers/letterboxd/watchlist';
+import { useHiddenItems } from '@/state/prefs/hidden-items';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import {
   anilistQueryKeys,
   fetchCurrentAnime,
   fetchSeasonalAnime,
 } from './anilist';
+import {
+  letterboxdDeps,
+  letterboxdQueryKeys,
+  letterboxdReadsAvailable,
+} from './letterboxd';
 import { traktDeps, traktQueryKeys } from './trakt';
 
 /** One named row of the home feed — never index into the query array. */
@@ -28,7 +36,8 @@ type FeedSlot =
   | 'trendingShows'
   | 'seasonalAnime'
   | 'yourShows'
-  | 'yourAnime';
+  | 'yourAnime'
+  | 'yourWatchlist';
 
 export interface UnifiedFeedResult {
   /** Public trending catalogues — always fetched, feed is never empty. */
@@ -41,6 +50,8 @@ export interface UnifiedFeedResult {
   /** Personal in-progress rows from connected providers. */
   yourShows: NormalizedMediaItem[];
   yourAnime: NormalizedMediaItem[];
+  /** Letterboxd watchlist (plan 0012) — empty on web, where reads are CORS-blocked. */
+  yourWatchlist: NormalizedMediaItem[];
   isLoading: boolean;
   isError: boolean;
   errors: Array<{ provider: ProviderId; error: Error }>;
@@ -70,8 +81,14 @@ const CATALOGUE_STALE_MS = 15 * 60_000;
  * trending catalogues are always included so the feed is never empty before
  * connection. Results are keyed by named slot, not array position — the
  * query list is conditional in two dimensions now.
+ *
+ * `includeHidden` skips the hidden-items filter — for consumers that resolve
+ * an item by id rather than display rows (the details screen must render
+ * hidden items: Manage Trackers' hidden list links there).
  */
-export function useUnifiedFeed(): UnifiedFeedResult {
+export function useUnifiedFeed(
+  options: { includeHidden?: boolean } = {},
+): UnifiedFeedResult {
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
   const queryClient = useQueryClient();
@@ -118,12 +135,38 @@ export function useUnifiedFeed(): UnifiedFeedResult {
       queryFn: () => fetchCurrentAnime(queryClient),
     });
   }
+  if (feedProviders.includes('letterboxd') && letterboxdReadsAvailable()) {
+    // The platform gate also keeps this MMKV read out of web SSR renders
+    // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+    const letterboxdUsername = getLetterboxdUsername();
+    if (letterboxdUsername != null) {
+      queries.push({
+        slot: 'yourWatchlist',
+        provider: 'letterboxd',
+        queryKey: letterboxdQueryKeys.watchlist(letterboxdUsername),
+        queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
+      });
+    }
+  }
 
   const results = useQueries({ queries });
 
+  // Items the user hid (card actions dialog) drop out of every row here, at
+  // the aggregation boundary — screens never re-filter. Query caches keep the
+  // full lists, so unhiding is instant, no refetch.
+  const hiddenItems = useHiddenItems();
+  const hiddenIds = new Set(
+    options.includeHidden === true
+      ? []
+      : hiddenItems.map((hidden) => hidden.id),
+  );
+
   const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => {
     const index = queries.findIndex((query) => query.slot === slot);
-    return (index >= 0 ? results[index]?.data : undefined) ?? [];
+    const data = (index >= 0 ? results[index]?.data : undefined) ?? [];
+    return hiddenIds.size === 0
+      ? data
+      : data.filter((item) => !hiddenIds.has(item.id));
   };
 
   const isLoading = results.some((result) => result.isLoading);
@@ -152,6 +195,7 @@ export function useUnifiedFeed(): UnifiedFeedResult {
     animeSeason,
     yourShows: bySlot('yourShows'),
     yourAnime: bySlot('yourAnime'),
+    yourWatchlist: bySlot('yourWatchlist'),
     isLoading,
     isError,
     errors,

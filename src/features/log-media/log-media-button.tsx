@@ -39,6 +39,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   });
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
+  const [tags, setTags] = useState('');
   const targets = useLogTargets(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
 
@@ -87,6 +88,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   function confirmLog() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
     haptics.confirm();
+    const parsedTags = tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag !== '');
     logMedia.mutate(
       {
         item,
@@ -94,6 +99,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           ? { episode: { season: 1, number: nextEpisode } }
           : {}),
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
+        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
       },
       {
@@ -129,6 +135,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           haptics.selection();
           logMedia.reset();
           setWatchedAt(null);
+          setTags('');
           setSelectedProviders(targets);
           setOpen(true);
         }}
@@ -143,6 +150,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           {labels(result.succeeded)}.
           {result.skipped.length > 0 &&
             ` ${labels(result.skipped)} already had it.`}
+          {/* Queued ≠ synced (plan 0012) — don't let "Logged to Letterboxd"
+              read as "it's on your diary". */}
+          {result.succeeded.includes('letterboxd') &&
+            ' Letterboxd is queued — export the CSV from Manage Trackers.'}
         </Text>
       )}
       {result != null && result.failed.length > 0 && (
@@ -171,8 +182,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         logMedia={logMedia}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
+        onTagsChange={setTags}
         onWatchedAtChange={setWatchedAt}
         open={open}
+        tags={tags}
         pendingLabel="Logging…"
         selectedProviders={selectedProviders}
         targets={targets}

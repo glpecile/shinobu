@@ -20,9 +20,13 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     canRead: true,
     canWrite: true,
   },
-  // API access is request-only and excludes "personal projects" (todos/004).
-  // If access is denied, flip canRead/canWrite to false here — the CSV
-  // export/import fallback lives outside this registry, not as a fake write.
+  // No official API (todos/004, plan 0012). Reads scrape the public watchlist
+  // (native-only on web — docs/solutions/web-cors-letterboxd.md). canWrite is
+  // ON: movies log as diary entries via the captured signed-in web session
+  // (the CSV path was rejected 2026-07-15). Writes need that session, which
+  // only the native sign-in WebView captures — a movie logged before Letterboxd
+  // is connected on mobile surfaces a per-provider "reconnect" failure, exactly
+  // the partial-failure contract in AGENTS.md, not a silent drop.
   letterboxd: {
     id: 'letterboxd',
     label: 'Letterboxd',

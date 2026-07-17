@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
@@ -14,6 +15,8 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
+import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { haptics } from '@/lib/haptics';
 import { animeSeasonLabel } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
@@ -61,14 +64,27 @@ function FeedScreen() {
     animeSeason,
     yourShows,
     yourAnime,
+    yourWatchlist,
     isLoading,
     isError,
     refetch,
   } = useUnifiedFeed();
   const router = useRouter();
+  // The single actions dialog behind every card's long-press / web ⋯ button.
+  // Item is kept through close so content doesn't vanish mid-animation.
+  const [actionsItem, setActionsItem] = useState<NormalizedMediaItem | null>(
+    null,
+  );
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
+  }
+
+  function openActions(item: NormalizedMediaItem) {
+    haptics.selection();
+    setActionsItem(item);
+    setActionsOpen(true);
   }
 
   const hasData =
@@ -76,7 +92,8 @@ function FeedScreen() {
     trendingShows.length > 0 ||
     seasonalAnime.length > 0 ||
     yourShows.length > 0 ||
-    yourAnime.length > 0;
+    yourAnime.length > 0 ||
+    yourWatchlist.length > 0;
 
   if (isError && !isLoading && !hasData) {
     return (
@@ -106,36 +123,59 @@ function FeedScreen() {
         {/* Personal rows first (2026-07-14 re-prioritization), trending after. */}
         <MediaCarousel
           title="Your Shows"
+          collapseKey="your-shows"
           provider="trakt"
           items={yourShows}
           onItemPress={openDetails}
+          onItemActions={openActions}
         />
         <MediaCarousel
           title="Your Anime"
+          collapseKey="your-anime"
           provider="anilist"
           items={yourAnime}
           onItemPress={openDetails}
+          onItemActions={openActions}
+        />
+        <MediaCarousel
+          title="Your Watchlist"
+          collapseKey="your-watchlist"
+          provider="letterboxd"
+          items={yourWatchlist}
+          onItemPress={openDetails}
+          onItemActions={openActions}
         />
         <MediaCarousel
           title="Trending Movies"
+          collapseKey="trending-movies"
           provider="trakt"
           items={trendingMovies}
           onItemPress={openDetails}
+          onItemActions={openActions}
         />
         <MediaCarousel
           title="Trending TV Shows"
+          collapseKey="trending-shows"
           provider="trakt"
           items={trendingShows}
           onItemPress={openDetails}
+          onItemActions={openActions}
         />
         <MediaCarousel
           title={`${animeSeasonLabel(animeSeason)} Anime`}
+          collapseKey="seasonal-anime"
           provider="anilist"
           items={seasonalAnime}
           onItemPress={openDetails}
+          onItemActions={openActions}
         />
       </RefreshableScrollView>
       <FeedSkeletonOverlay visible={isLoading && !hasData} />
+      <CardActionsSheet
+        item={actionsItem}
+        onClose={() => setActionsOpen(false)}
+        open={actionsOpen}
+      />
     </View>
   );
 }
