@@ -61,6 +61,7 @@ function FeedScreen() {
     animeSeason,
     yourShows,
     yourAnime,
+    yourWatchlist,
     isLoading,
     isError,
     refetch,
@@ -76,7 +77,8 @@ function FeedScreen() {
     trendingShows.length > 0 ||
     seasonalAnime.length > 0 ||
     yourShows.length > 0 ||
-    yourAnime.length > 0;
+    yourAnime.length > 0 ||
+    yourWatchlist.length > 0;
 
   if (isError && !isLoading && !hasData) {
     return (
@@ -114,6 +116,12 @@ function FeedScreen() {
           title="Your Anime"
           provider="anilist"
           items={yourAnime}
+          onItemPress={openDetails}
+        />
+        <MediaCarousel
+          title="Your Watchlist"
+          provider="letterboxd"
+          items={yourWatchlist}
           onItemPress={openDetails}
         />
         <MediaCarousel

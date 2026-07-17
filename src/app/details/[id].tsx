@@ -450,6 +450,7 @@ export default function DetailsScreen() {
       // the seasonal anime row, and the personal copy carries real progress.
       feed.yourShows,
       feed.yourAnime,
+      feed.yourWatchlist,
       feed.trendingMovies,
       feed.trendingShows,
       feed.seasonalAnime,

@@ -8,6 +8,7 @@ import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ConnectAniListButton } from '@/components/connect-anilist-button';
+import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -25,6 +26,7 @@ import {
   useConnectedProviders,
   useDisconnectProvider,
 } from '@/state/session';
+import { getProviderSession } from '@/state/session/tokens';
 
 /**
  * Overflow menu on a not-yet-connected provider row. "Hide" is a local-only
@@ -72,6 +74,9 @@ function RowMenu({ id }: { id: ProviderId }) {
 
 function ConnectedRow({ id }: { id: ProviderId }) {
   const disconnect = useDisconnectProvider();
+  // Tokenless sessions (Letterboxd) carry the username — worth showing, since
+  // a wrong username is the only way that connection can be "broken".
+  const username = getProviderSession(id)?.username;
 
   return (
     <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4">
@@ -81,7 +86,9 @@ function ConnectedRow({ id }: { id: ProviderId }) {
           <Text className="text-foreground font-sans-semibold text-base">
             {PROVIDERS[id].label}
           </Text>
-          <Text className="text-muted font-sans text-xs mt-0.5">Connected</Text>
+          <Text className="text-muted font-sans text-xs mt-0.5">
+            {username != null ? `Connected as ${username}` : 'Connected'}
+          </Text>
         </View>
       </View>
       <PresstableOpacity
@@ -147,21 +154,26 @@ function AniListConnectRow() {
   );
 }
 
-function ComingSoonRow({ id }: { id: ProviderId }) {
+function LetterboxdConnectRow() {
+  const connected = useConnectedProviders();
+  const hidden = useHiddenProviders();
+
+  if (connected.includes('letterboxd') || hidden.includes('letterboxd')) {
+    return null;
+  }
+
   return (
-    <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4 opacity-60">
-      <View className="flex-row items-center gap-3">
-        <ProviderIcon id={id} size={24} />
-        <View>
+    <View className="bg-surface border border-border rounded-xl p-5">
+      <View className="flex-row items-center justify-between mb-3">
+        <View className="flex-row items-center gap-3">
+          <ProviderIcon id="letterboxd" size={24} />
           <Text className="text-foreground font-sans-semibold text-base">
-            {PROVIDERS[id].label}
-          </Text>
-          <Text className="text-muted font-sans text-xs mt-0.5">
-            {id === 'letterboxd' ? 'Waiting on API access' : 'Coming soon'}
+            Letterboxd
           </Text>
         </View>
+        <RowMenu id="letterboxd" />
       </View>
-      <RowMenu id={id} />
+      <ConnectLetterboxdButton />
     </View>
   );
 }
@@ -274,11 +286,7 @@ export default function ConnectScreen() {
             <View className="gap-3">
               <TraktConnectRow />
               <AniListConnectRow />
-              {disconnected
-                .filter((id) => id !== 'trakt' && id !== 'anilist')
-                .map((id) => (
-                  <ComingSoonRow id={id} key={id} />
-                ))}
+              <LetterboxdConnectRow />
             </View>
           </View>
         )}

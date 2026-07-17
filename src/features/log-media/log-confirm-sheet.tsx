@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import { useCSSVariable } from 'uniwind';
 
@@ -168,6 +168,13 @@ export interface LogConfirmSheetProps {
   logMedia: ReturnType<typeof useLogMedia>;
   watchedAt: Date | null;
   onWatchedAtChange: (value: Date | null) => void;
+  /**
+   * Raw comma-separated diary tags — Letterboxd-only (plan 0012), so the
+   * field renders only when the parent provides this pair *and* Letterboxd is
+   * among the selected targets. TV flows simply omit it.
+   */
+  tags?: string;
+  onTagsChange?: (value: string) => void;
   confirmLabel: string;
   pendingLabel: string;
   onConfirm: () => void;
@@ -184,11 +191,16 @@ export function LogConfirmSheet({
   logMedia,
   watchedAt,
   onWatchedAtChange,
+  tags,
+  onTagsChange,
   confirmLabel,
   pendingLabel,
   onConfirm,
 }: LogConfirmSheetProps) {
   const result = logMedia.data;
+  const muted = useCSSVariable('--color-muted');
+  const showTagsField =
+    onTagsChange != null && selectedProviders.includes('letterboxd');
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(
@@ -232,13 +244,43 @@ export function LogConfirmSheet({
       )}
 
       <WatchedAtField onChange={onWatchedAtChange} value={watchedAt} />
+      {showTagsField && (
+        <View className="mt-4">
+          <Text className="text-foreground font-sans-semibold text-sm mb-2">
+            Tags <Text className="text-muted font-sans text-xs">(Letterboxd)</Text>
+          </Text>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+            onChangeText={onTagsChange}
+            placeholder="tags, comma separated"
+            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+            value={tags ?? ''}
+          />
+        </View>
+      )}
       {result != null && result.failed.length > 0 && (
-        <Text className="text-accent font-sans text-sm mt-3">
-          Failed on {labels(result.failed)}
-          {result.succeeded.length > 0
-            ? ` — ${labels(result.succeeded)} was logged.`
-            : '.'}
-        </Text>
+        <View className="mt-3 gap-1">
+          <Text className="text-accent font-sans text-sm">
+            Failed on {labels(result.failed)}
+            {result.succeeded.length > 0
+              ? ` — ${labels(result.succeeded)} was logged.`
+              : '.'}
+          </Text>
+          {/* The per-provider reason (e.g. Letterboxd film not found, session
+              expired) — without it every failure looks identical (plan 0012). */}
+          {result.outcomes
+            .filter((outcome) => outcome.status === 'error')
+            .map((outcome) => (
+              <Text
+                key={outcome.provider}
+                className="text-muted font-sans text-xs"
+              >
+                {outcome.message}
+              </Text>
+            ))}
+        </View>
       )}
       {result != null && result.skipped.length > 0 && (
         <Text className="text-muted font-sans text-sm mt-3">
