@@ -14,6 +14,12 @@ export interface LogMediaVariables {
   /** ISO instant; omitted = providers record "now". */
   watchedAt?: string;
   /**
+   * Diary tags — a Letterboxd-only concept in the fan-out (plan 0012): the
+   * Letterboxd adapter sends them on the diary entry, every other adapter
+   * ignores them.
+   */
+  tags?: string[];
+  /**
    * Set by the reconcile step (plan 0011), never by callers: every target
    * already records this watch, so adapters log it as a rewatch (Trakt: a new
    * history entry; AniList: repeat+1 / REPEATING).
