@@ -1,4 +1,10 @@
-import { useQueries, useQueryClient } from '@tanstack/react-query';
+import {
+  useQueries,
+  useQueryClient,
+  useSuspenseQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
+import { allSettled } from 'better-all';
 import { Effect } from 'effect';
 
 import { providersForFeed } from '@/lib/providers/routing';
@@ -76,11 +82,158 @@ interface FeedQueryConfig {
 const CATALOGUE_STALE_MS = 15 * 60_000;
 
 /**
+ * Query options per feed slot — the single definition of each row's key and
+ * fetcher, shared by the per-row suspense hooks (home), the aggregate
+ * `useUnifiedFeed` (details by-id resolution), and `useRefetchUnifiedFeed`,
+ * so all three always hit the same cache entries.
+ */
+const feedOptions = {
+  // Public catalogues — no session required.
+  trendingMovies: () => ({
+    queryKey: traktQueryKeys.trendingMovies(),
+    queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps())),
+    staleTime: CATALOGUE_STALE_MS,
+  }),
+  trendingShows: () => ({
+    queryKey: traktQueryKeys.trendingShows(),
+    queryFn: () => Effect.runPromise(getTrendingShows(traktDeps())),
+    staleTime: CATALOGUE_STALE_MS,
+  }),
+  seasonalAnime: (season: AnimeSeasonWindow) => ({
+    queryKey: anilistQueryKeys.seasonalAnime(season),
+    queryFn: () => fetchSeasonalAnime(season),
+    staleTime: CATALOGUE_STALE_MS,
+  }),
+  // Personal rows — only fetched while their provider is connected.
+  yourShows: () => ({
+    queryKey: traktQueryKeys.watchedShows(),
+    queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
+  }),
+  yourAnime: (queryClient: QueryClient) => ({
+    queryKey: anilistQueryKeys.currentAnime(),
+    queryFn: () => fetchCurrentAnime(queryClient),
+  }),
+  yourWatchlist: (username: string) => ({
+    queryKey: letterboxdQueryKeys.watchlist(username),
+    queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
+  }),
+};
+
+/**
+ * The slot configs that apply right now: public catalogues always, personal
+ * rows only when their provider is connected (and, for Letterboxd, when reads
+ * work on this platform and a username is stored).
+ */
+function activeFeedConfigs(
+  connected: readonly ProviderId[],
+  queryClient: QueryClient,
+  season: AnimeSeasonWindow,
+): FeedQueryConfig[] {
+  const feedProviders = providersForFeed(connected);
+  const configs: FeedQueryConfig[] = [
+    { slot: 'trendingMovies', provider: 'trakt', ...feedOptions.trendingMovies() },
+    { slot: 'trendingShows', provider: 'trakt', ...feedOptions.trendingShows() },
+    {
+      slot: 'seasonalAnime',
+      provider: 'anilist',
+      ...feedOptions.seasonalAnime(season),
+    },
+  ];
+
+  if (feedProviders.includes('trakt')) {
+    configs.push({
+      slot: 'yourShows',
+      provider: 'trakt',
+      ...feedOptions.yourShows(),
+    });
+  }
+  if (feedProviders.includes('anilist')) {
+    configs.push({
+      slot: 'yourAnime',
+      provider: 'anilist',
+      ...feedOptions.yourAnime(queryClient),
+    });
+  }
+  if (feedProviders.includes('letterboxd') && letterboxdReadsAvailable()) {
+    // The platform gate also keeps this MMKV read out of web SSR renders
+    // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+    const letterboxdUsername = getLetterboxdUsername();
+    if (letterboxdUsername != null) {
+      configs.push({
+        slot: 'yourWatchlist',
+        provider: 'letterboxd',
+        ...feedOptions.yourWatchlist(letterboxdUsername),
+      });
+    }
+  }
+
+  return configs;
+}
+
+// --- Per-row suspense hooks -------------------------------------------------
+// Home mounts each feed row under its own `SuspenseSection` (AGENTS.md
+// "Loading & Error States"), so one provider failing hides one row, never the
+// whole feed. Each hook backs exactly one row component in features/feed.
+
+export function useSuspenseTrendingMoviesQuery() {
+  return useSuspenseQuery(feedOptions.trendingMovies());
+}
+
+export function useSuspenseTrendingShowsQuery() {
+  return useSuspenseQuery(feedOptions.trendingShows());
+}
+
+export function useSuspenseSeasonalAnimeQuery(season: AnimeSeasonWindow) {
+  return useSuspenseQuery(feedOptions.seasonalAnime(season));
+}
+
+export function useSuspenseYourShowsQuery() {
+  return useSuspenseQuery(feedOptions.yourShows());
+}
+
+export function useSuspenseYourAnimeQuery() {
+  const queryClient = useQueryClient();
+  return useSuspenseQuery(feedOptions.yourAnime(queryClient));
+}
+
+export function useSuspenseYourWatchlistQuery(username: string) {
+  return useSuspenseQuery(feedOptions.yourWatchlist(username));
+}
+
+/**
+ * Pull-to-refresh for the home feed: refetches every applicable feed query in
+ * parallel and resolves once all settle. Kept out of the row hooks so the
+ * screen-level `RefreshableScrollView` has one promise to wait on.
+ */
+export function useRefetchUnifiedFeed() {
+  const queryClient = useQueryClient();
+  const connected = useConnectedProviders();
+
+  function refetch() {
+    // allSettled, not all: one provider failing to refresh must not hide the
+    // outcome of the others (partial-failure contract, AGENTS.md).
+    return allSettled(
+      Object.fromEntries(
+        activeFeedConfigs(connected, queryClient, animeSeasonAt(new Date())).map(
+          (config): [string, () => Promise<void>] => [
+            config.slot,
+            () => queryClient.refetchQueries({ queryKey: config.queryKey }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  return refetch;
+}
+
+/**
  * Aggregates every connected, read-capable provider into one normalized feed
- * (plan.md 2.1): Trakt (todos/001) and AniList (todos/002) today. Public
- * trending catalogues are always included so the feed is never empty before
- * connection. Results are keyed by named slot, not array position — the
- * query list is conditional in two dimensions now.
+ * (plan.md 2.1). Home no longer consumes this — it renders per-row suspense
+ * hooks under boundaries; this aggregate remains for consumers that resolve
+ * an item by id across every row (the details screen, which must find an item
+ * wherever it came from). Results are keyed by named slot, not array
+ * position — the query list is conditional in two dimensions.
  *
  * `includeHidden` skips the hidden-items filter — for consumers that resolve
  * an item by id rather than display rows (the details screen must render
@@ -90,64 +243,9 @@ export function useUnifiedFeed(
   options: { includeHidden?: boolean } = {},
 ): UnifiedFeedResult {
   const connected = useConnectedProviders();
-  const feedProviders = providersForFeed(connected);
   const queryClient = useQueryClient();
   const animeSeason = animeSeasonAt(new Date());
-
-  const queries: FeedQueryConfig[] = [
-    // Public catalogues — no session required.
-    {
-      slot: 'trendingMovies',
-      provider: 'trakt',
-      queryKey: traktQueryKeys.trendingMovies(),
-      queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps())),
-      staleTime: CATALOGUE_STALE_MS,
-    },
-    {
-      slot: 'trendingShows',
-      provider: 'trakt',
-      queryKey: traktQueryKeys.trendingShows(),
-      queryFn: () => Effect.runPromise(getTrendingShows(traktDeps())),
-      staleTime: CATALOGUE_STALE_MS,
-    },
-    {
-      slot: 'seasonalAnime',
-      provider: 'anilist',
-      queryKey: anilistQueryKeys.seasonalAnime(animeSeason),
-      queryFn: () => fetchSeasonalAnime(animeSeason),
-      staleTime: CATALOGUE_STALE_MS,
-    },
-  ];
-
-  if (feedProviders.includes('trakt')) {
-    queries.push({
-      slot: 'yourShows',
-      provider: 'trakt',
-      queryKey: traktQueryKeys.watchedShows(),
-      queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
-    });
-  }
-  if (feedProviders.includes('anilist')) {
-    queries.push({
-      slot: 'yourAnime',
-      provider: 'anilist',
-      queryKey: anilistQueryKeys.currentAnime(),
-      queryFn: () => fetchCurrentAnime(queryClient),
-    });
-  }
-  if (feedProviders.includes('letterboxd') && letterboxdReadsAvailable()) {
-    // The platform gate also keeps this MMKV read out of web SSR renders
-    // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
-    const letterboxdUsername = getLetterboxdUsername();
-    if (letterboxdUsername != null) {
-      queries.push({
-        slot: 'yourWatchlist',
-        provider: 'letterboxd',
-        queryKey: letterboxdQueryKeys.watchlist(letterboxdUsername),
-        queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
-      });
-    }
-  }
+  const queries = activeFeedConfigs(connected, queryClient, animeSeason);
 
   const results = useQueries({ queries });
 
@@ -185,7 +283,14 @@ export function useUnifiedFeed(
   function refetch() {
     // allSettled, not all: one provider failing to refresh must not hide the
     // outcome of the others (partial-failure contract, AGENTS.md).
-    return Promise.allSettled(results.map((result) => result.refetch()));
+    return allSettled(
+      Object.fromEntries(
+        results.map((result, index): [string, () => Promise<unknown>] => [
+          queries[index].slot,
+          () => result.refetch(),
+        ]),
+      ),
+    );
   }
 
   return {

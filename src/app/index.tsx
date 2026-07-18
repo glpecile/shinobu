@@ -11,9 +11,8 @@ import {
 } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
+import { FeedRowSkeleton, FeedSkeleton } from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
-import { MediaCarousel } from '@/components/media-carousel';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
@@ -21,12 +20,24 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
+import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import {
+  SeasonalAnimeRow,
+  TrendingMoviesRow,
+  TrendingShowsRow,
+  YourAnimeRow,
+  YourShowsRow,
+  YourWatchlistRow,
+} from '@/features/feed/feed-rows';
 import { haptics } from '@/lib/haptics';
-import { animeSeasonLabel } from '@/lib/providers/anilist/season';
+import { animeSeasonAt } from '@/lib/providers/anilist/season';
+import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
-import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
+import { letterboxdReadsAvailable } from '@/state/queries/letterboxd';
+import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -111,19 +122,19 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
 }
 
 function FeedScreen() {
-  const {
-    trendingMovies,
-    trendingShows,
-    seasonalAnime,
-    animeSeason,
-    yourShows,
-    yourAnime,
-    yourWatchlist,
-    isLoading,
-    isError,
-    refetch,
-  } = useUnifiedFeed();
   const router = useRouter();
+  const connected = useConnectedProviders();
+  const feedProviders = providersForFeed(connected);
+  // The platform gate also keeps this MMKV read out of web SSR renders
+  // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+  const letterboxdUsername =
+    feedProviders.includes('letterboxd') && letterboxdReadsAvailable()
+      ? getLetterboxdUsername()
+      : null;
+  const animeSeason = animeSeasonAt(new Date());
+  const refetchFeed = useRefetchUnifiedFeed();
+  // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
+  const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   // Item is kept through close so content doesn't vanish mid-animation.
   const [actionsItem, setActionsItem] = useState<NormalizedMediaItem | null>(
@@ -141,25 +152,9 @@ function FeedScreen() {
     setActionsOpen(true);
   }
 
-  const hasData =
-    trendingMovies.length > 0 ||
-    trendingShows.length > 0 ||
-    seasonalAnime.length > 0 ||
-    yourShows.length > 0 ||
-    yourAnime.length > 0 ||
-    yourWatchlist.length > 0;
-
-  if (isError && !isLoading && !hasData) {
-    return (
-      <View className="flex-1 items-center justify-center px-8">
-        <Text className="text-accent font-sans text-center text-base">
-          Could not load your feed.
-        </Text>
-        <Text className="text-muted font-sans text-center mt-2 text-sm">
-          Pull to refresh or check your connection.
-        </Text>
-      </View>
-    );
+  async function refresh() {
+    await refetchFeed();
+    setRefreshCount((count) => count + 1);
   }
 
   return (
@@ -167,64 +162,65 @@ function FeedScreen() {
       <RefreshableScrollView
         className="flex-1"
         contentContainerClassName="pt-2 pb-8"
-        onRefresh={refetch}
+        onRefresh={refresh}
       >
-        {isError && (
-          <Text className="text-muted font-sans text-xs px-4 pb-2">
-            Some content could not be loaded.
-          </Text>
+        {/* Personal rows first (2026-07-14 re-prioritization), trending after.
+            Every row is its own suspense + error boundary: one provider
+            failing hides just that row, never the whole feed. */}
+        {feedProviders.includes('trakt') && (
+          <SuspenseSection
+            fallback={<FeedRowSkeleton />}
+            resetKey={refreshCount}
+          >
+            <YourShowsRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+            />
+          </SuspenseSection>
         )}
-        {/* Personal rows first (2026-07-14 re-prioritization), trending after. */}
-        <MediaCarousel
-          title="Your Shows"
-          collapseKey="your-shows"
-          provider="trakt"
-          items={yourShows}
-          onItemPress={openDetails}
-          onItemActions={openActions}
-        />
-        <MediaCarousel
-          title="Your Anime"
-          collapseKey="your-anime"
-          provider="anilist"
-          items={yourAnime}
-          onItemPress={openDetails}
-          onItemActions={openActions}
-        />
-        <MediaCarousel
-          title="Your Watchlist"
-          collapseKey="your-watchlist"
-          provider="letterboxd"
-          items={yourWatchlist}
-          onItemPress={openDetails}
-          onItemActions={openActions}
-        />
-        <MediaCarousel
-          title="Trending Movies"
-          collapseKey="trending-movies"
-          provider="trakt"
-          items={trendingMovies}
-          onItemPress={openDetails}
-          onItemActions={openActions}
-        />
-        <MediaCarousel
-          title="Trending TV Shows"
-          collapseKey="trending-shows"
-          provider="trakt"
-          items={trendingShows}
-          onItemPress={openDetails}
-          onItemActions={openActions}
-        />
-        <MediaCarousel
-          title={`${animeSeasonLabel(animeSeason)} Anime`}
-          collapseKey="seasonal-anime"
-          provider="anilist"
-          items={seasonalAnime}
-          onItemPress={openDetails}
-          onItemActions={openActions}
-        />
+        {feedProviders.includes('anilist') && (
+          <SuspenseSection
+            fallback={<FeedRowSkeleton />}
+            resetKey={refreshCount}
+          >
+            <YourAnimeRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+            />
+          </SuspenseSection>
+        )}
+        {letterboxdUsername != null && (
+          <SuspenseSection
+            fallback={<FeedRowSkeleton />}
+            resetKey={refreshCount}
+          >
+            <YourWatchlistRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+              username={letterboxdUsername}
+            />
+          </SuspenseSection>
+        )}
+        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <TrendingMoviesRow
+            onItemActions={openActions}
+            onItemPress={openDetails}
+          />
+        </SuspenseSection>
+        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <TrendingShowsRow
+            onItemActions={openActions}
+            onItemPress={openDetails}
+          />
+        </SuspenseSection>
+        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <SeasonalAnimeRow
+            onItemActions={openActions}
+            onItemPress={openDetails}
+            season={animeSeason}
+          />
+        </SuspenseSection>
       </RefreshableScrollView>
-      <FeedSkeletonOverlay visible={isLoading && !hasData} />
       <CardActionsSheet
         item={actionsItem}
         onClose={() => setActionsOpen(false)}

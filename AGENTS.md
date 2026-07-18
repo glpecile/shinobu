@@ -308,6 +308,41 @@ components. Components never see raw provider payload shapes.
   fan-out and per-provider routing belongs inside that one hook.
 - One query-key builder per domain, e.g. `createTraktQueryKey({...})`.
 - Wrap OAuth-token-bearing calls so a 401 triggers the refresh flow before failing.
+- Suspense variants are named `useSuspenseXQuery` and live next to their plain
+  `useXQuery` sibling in the same file (e.g. `state/queries/trakt.ts`) — added
+  for consumers mounted under a boundary, never as a replacement.
+
+## Loading & Error States
+
+Prefer Suspense and error boundaries over if-guard branching
+(`if (isLoading) return <Skeleton />`, `if (isError) return <Error />`) in
+screen components. Boundaries keep the happy path unindented and co-locate
+each failure with the section it affects, instead of one top-level guard that
+blanks the whole screen.
+
+- **Section level:** mount self-contained, query-backed sections under
+  `components/SuspenseSection` — a `<Suspense>` (skeleton `fallback`) wrapped
+  in an error boundary that hides just that section on failure and retries
+  when `resetKey` changes. Reference: `src/app/details/[id].tsx`,
+  `features/show-seasons/seasons-section.tsx`.
+- **Granularity preserves partial failure.** Give each independently-fetched
+  section its own boundary rather than one screen-wide guard: one provider
+  failing then degrades to a missing/skeleton row, not a blank feed — the same
+  per-provider partial-failure contract as the log fan-out. The home feed
+  (`src/app/index.tsx`) follows this: every carousel row is a `SuspenseSection`
+  wrapping a per-slot `useSuspense*Query` hook (`features/feed/feed-rows.tsx`
+  + `state/queries/use-unified-feed.ts`).
+- **App level:** `react-error-boundary` + `components/error-fallback` wraps the
+  root in `app/_layout.tsx` as the last-resort catch. A screen that needs its
+  own full-screen fallback exports Expo Router's `ErrorBoundary` from the
+  route file.
+- Legitimate remaining uses of derived flags: cross-provider aggregate status
+  (e.g. a "some content could not be loaded" notice computed from several
+  queries) and mutations. Rendering branches on a single query's
+  `isLoading`/`isError` are the smell this rule bans.
+
+Not oxlint-enforceable (a ban on reading `isLoading`/`isError` would also hit
+the legitimate aggregate cases) — enforced in review.
 
 ## Compound Knowledge
 

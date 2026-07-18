@@ -1,10 +1,4 @@
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
-import { FadeOut } from 'react-native-reanimated';
+import { ScrollView, View, useWindowDimensions } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
 
@@ -18,10 +12,6 @@ const shimmer = {
   '0%': { transform: [{ translateX: -CARD_WIDTH }] },
   '100%': { transform: [{ translateX: CARD_WIDTH }] },
 };
-
-// Defined at module scope so the builder isn't recreated per render
-// (react-native-best-practices: layout-animations).
-const fadeOut = FadeOut.duration(250);
 
 function ShimmerCard() {
   return (
@@ -63,43 +53,30 @@ function SkeletonRow({ cardCount }: { cardCount: number }) {
 }
 
 /**
- * Placeholder shown while the unified feed is loading. Mirrors the real feed:
- * two rows (the always-present trending carousels), with enough cards to fill
- * the viewport edge to edge — the real carousels overflow the window, so a
- * fixed short card count would leave trailing whitespace on wide (web)
- * viewports and cause a visible fill-in when content lands.
+ * Skeleton for a single feed row — the `SuspenseSection` fallback while that
+ * row's query is in flight. Enough cards to fill the viewport edge to edge:
+ * the real carousels overflow the window, so a fixed short card count would
+ * leave trailing whitespace on wide (web) viewports and cause a visible
+ * fill-in when content lands.
  */
-export function FeedSkeleton() {
+export function FeedRowSkeleton() {
   const { width } = useWindowDimensions();
   // +1 so the last card is clipped by the edge, like a real carousel.
   const cardCount = Math.ceil(width / (CARD_WIDTH + CARD_GAP)) + 1;
 
-  return (
-    <View className="pt-2">
-      <SkeletonRow cardCount={cardCount} />
-      <SkeletonRow cardCount={cardCount} />
-    </View>
-  );
+  return <SkeletonRow cardCount={cardCount} />;
 }
 
 /**
- * Cross-fade variant: rendered on top of the (still-loading) feed content and
- * removed once `visible` flips false — the exiting animation fades it out, so
- * skeleton → content never swaps abruptly. The opaque background is what
- * hides the content underneath while loading; keep it in sync with the screen
- * background.
+ * Whole-feed placeholder, shown while an OAuth connect is exchanging (the
+ * feed itself loads row-by-row via per-row suspense boundaries). Mirrors the
+ * real feed with two rows of shimmer cards.
  */
-export function FeedSkeletonOverlay({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-
+export function FeedSkeleton() {
   return (
-    <AnimatedView
-      className="bg-background"
-      exiting={fadeOut}
-      pointerEvents="none"
-      style={StyleSheet.absoluteFill}
-    >
-      <FeedSkeleton />
-    </AnimatedView>
+    <View className="pt-2">
+      <FeedRowSkeleton />
+      <FeedRowSkeleton />
+    </View>
   );
 }
