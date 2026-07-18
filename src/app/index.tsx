@@ -1,15 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Head from '@/components/head';
-import { Text, View } from 'react-native';
+import {
+  Text,
+  useWindowDimensions,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
+import { AnimatedView } from '@/components/animated-view';
 import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PresstableOpacity } from '@/components/presstable';
+import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import {
   homeHeaderClassName,
@@ -24,34 +41,129 @@ import { useConnectedProviders } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
-function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
-  const router = useRouter();
+/**
+ * One corner tile of the empty-state hero. Bobs gently up and down on a
+ * staggered loop so the provider marks feel alive; rotation stays constant
+ * inside the animated transform (an outer static transform would be replaced
+ * wholesale by the animated one).
+ */
+function FloatingTile({
+  children,
+  delay,
+  rotate,
+  style,
+}: {
+  children: React.ReactNode;
+  delay: number;
+  rotate: string;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const bob = useSharedValue(0);
+
+  useEffect(() => {
+    bob.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
+        -1,
+        true,
+      ),
+    );
+  }, [bob, delay]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(bob.value, [0, 1], [-5, 5]) },
+      { rotate },
+    ],
+  }));
 
   return (
-    <View className="flex-1 items-center justify-center px-8 -mt-16">
-      <Text className="text-5xl font-display text-foreground mb-3 text-center">
-        忍
+    <AnimatedView
+      className="absolute bg-surface border border-border rounded-2xl items-center justify-center"
+      style={[style, animatedStyle]}
+    >
+      {children}
+    </AnimatedView>
+  );
+}
+
+function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const compact = width < 640;
+  const tile = compact ? 56 : 72;
+  const icon = compact ? 28 : 36;
+  // Wide screens pull the tiles in toward the headline; narrow screens keep
+  // them near the edges so they never crowd the copy.
+  const inset = compact ? '7%' : '20%';
+
+  return (
+    <View className="flex-1 items-center justify-center px-8">
+      {/* Floating provider marks — the trackers Shinobu fans out to. The
+          fourth corner carries the 忍 brand mark. On narrow screens the
+          centered copy occupies the middle band, so the tiles retreat to the
+          genuinely empty regions: just under the header and just above the
+          bottom edge. */}
+      <FloatingTile
+        delay={0}
+        rotate="-8deg"
+        style={{ top: compact ? '6%' : '22%', left: inset, width: tile, height: tile }}
+      >
+        <ProviderIcon id="trakt" size={icon} />
+      </FloatingTile>
+      <FloatingTile
+        delay={650}
+        rotate="7deg"
+        style={{ top: compact ? '12%' : '26%', right: inset, width: tile, height: tile }}
+      >
+        <ProviderIcon id="anilist" size={icon} />
+      </FloatingTile>
+      <FloatingTile
+        delay={1300}
+        rotate="6deg"
+        style={{ bottom: compact ? '10%' : '24%', left: inset, width: tile, height: tile }}
+      >
+        <ProviderIcon id="letterboxd" size={icon} />
+      </FloatingTile>
+      <FloatingTile
+        delay={1950}
+        rotate="-6deg"
+        style={{ bottom: compact ? '5%' : '20%', right: inset, width: tile, height: tile }}
+      >
+        <Text className="text-accent" style={{ fontSize: icon }}>
+          忍
+        </Text>
+      </FloatingTile>
+
+      <Text
+        className={`${compact ? 'text-4xl' : 'text-6xl'} font-display text-foreground tracking-tight text-center`}
+      >
+        One log.{'\n'}Every tracker.
       </Text>
-      <Text className="text-2xl font-display text-foreground text-center">
-        Connect your trackers
-      </Text>
-      <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
-        Choose the providers you use. Your feed appears as soon as you connect
-        the first one.
+      <Text
+        className={`text-base font-sans text-muted mt-5 text-center leading-relaxed ${compact ? 'max-w-xs' : 'max-w-md'}`}
+      >
+        Shinobu is a harness for your media logging platforms — log a movie,
+        show, or manga once and it fans out to Trakt, AniList, and Letterboxd.
       </Text>
       {connectFailed && (
         <Text className="text-accent font-sans text-sm mt-4 text-center">
           Connecting your tracker failed. Please try again.
         </Text>
       )}
+      {/* Same accent button as the connect rows on Manage Trackers. */}
       <PresstableOpacity
-        className="bg-accent px-8 py-3 rounded mt-8"
+        className="bg-accent px-8 py-3 rounded mt-10"
         onPress={() => router.push(routes.connect)}
       >
-        <Text className="text-accent-foreground font-sans-semibold text-base">
-          Get started
+        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
+          Connect your trackers
         </Text>
       </PresstableOpacity>
+      <Text className="text-muted font-sans text-xs mt-5 text-center">
+        No Shinobu account — your provider tokens never leave this device.
+      </Text>
     </View>
   );
 }
@@ -191,7 +303,7 @@ export default function App() {
       <Head>
         <title>Shinobu</title>
         <meta
-          content="Log a movie, show, or manga once — Shinobu fans it out to every tracker you've connected."
+          content="Shinobu is a harness for your media logging platforms — log once and it fans out to Trakt, AniList, and Letterboxd."
           name="description"
         />
       </Head>
