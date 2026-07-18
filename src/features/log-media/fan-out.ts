@@ -1,3 +1,5 @@
+import { all } from 'better-all';
+
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -67,23 +69,35 @@ export async function fanOutLog(
   targets: readonly ProviderId[],
   variables: LogMediaVariables,
 ): Promise<LogMediaResult> {
-  const outcomes = await Promise.all(
-    targets.map(async (provider): Promise<ProviderLogOutcome> => {
-      const adapter = adapters[provider];
-      if (adapter == null) {
-        return {
+  const outcomesByProvider = await all(
+    Object.fromEntries(
+      targets.map(
+        (provider): [ProviderId, () => Promise<ProviderLogOutcome>] => [
           provider,
-          status: 'error',
-          message: `${provider} write adapter is not implemented yet`,
-        };
-      }
-      try {
-        await adapter(variables);
-        return { provider, status: 'ok' };
-      } catch (error) {
-        return { provider, status: 'error', message: errorMessage(error) };
-      }
-    }),
+          async () => {
+            const adapter = adapters[provider];
+            if (adapter == null) {
+              return {
+                provider,
+                status: 'error',
+                message: `${provider} write adapter is not implemented yet`,
+              };
+            }
+            try {
+              await adapter(variables);
+              return { provider, status: 'ok' };
+            } catch (error) {
+              return { provider, status: 'error', message: errorMessage(error) };
+            }
+          },
+        ],
+      ),
+    ),
+  );
+  // better-all keys its result in completion order, not input order — rebuild
+  // routing order from `targets` (LogMediaResult.outcomes contract).
+  const outcomes: ProviderLogOutcome[] = targets.map(
+    (provider) => outcomesByProvider[provider],
   );
 
   return {

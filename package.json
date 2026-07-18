@@ -12,6 +12,7 @@
     "@swmansion/react-native-bottom-sheet": "^0.16.1",
     "@tanstack/react-query": "^5.101.2",
     "babel-plugin-react-compiler": "^1.0.0",
+    "better-all": "^0.0.7",
     "effect": "^3.21.4",
     "expo": "~57.0.2",
     "expo-auth-session": "~57.0.2",
