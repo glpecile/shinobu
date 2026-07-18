@@ -7,5 +7,5 @@
 <p align="center">A DB-less, cross-platform media tracker. Log once, fan out everywhere.</p>
 
 <p align="center">
-  <img src="./docs/images/screenshot-home.png" alt="Shinobu home feed on web and iOS — trending movies and TV shows from Trakt" />
+  <img src="./docs/images/screenshot-home.png" alt="Shinobu home on web and iOS — “One log. Every tracker.” hero with floating Trakt, AniList, and Letterboxd tiles" />
 </p>
