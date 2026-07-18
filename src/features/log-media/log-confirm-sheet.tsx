@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import { useCSSVariable } from 'uniwind';

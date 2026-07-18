@@ -48,6 +48,10 @@
               "@react-native-community/datetimepicker/*"
             ],
             "message": "Use @expo/ui/community/datetime-picker instead — drop-in replacement powered by SwiftUI/Jetpack Compose, no config plugin needed."
+          },
+          {
+            "group": ["@expo/vector-icons", "@expo/vector-icons/*"],
+            "message": "@expo/vector-icons is deprecated by Expo — import from @react-native-vector-icons/<set>/static instead (e.g. @react-native-vector-icons/ionicons/static)."
           }
         ],
         "paths": [
