@@ -1,29 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import Head from '@/components/head';
 import {
   Text,
   useWindowDimensions,
   View,
-  type StyleProp,
-  type ViewStyle,
 } from 'react-native';
-import {
-  Easing,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
-import { AnimatedView } from '@/components/animated-view';
 import { FeedSkeleton, FeedSkeletonOverlay } from '@/components/feed-skeleton';
+import { FloatingTile } from '@/components/floating-tile';
 import { MediaCarousel } from '@/components/media-carousel';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -40,53 +29,6 @@ import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
-
-/**
- * One corner tile of the empty-state hero. Bobs gently up and down on a
- * staggered loop so the provider marks feel alive; rotation stays constant
- * inside the animated transform (an outer static transform would be replaced
- * wholesale by the animated one).
- */
-function FloatingTile({
-  children,
-  delay,
-  rotate,
-  style,
-}: {
-  children: React.ReactNode;
-  delay: number;
-  rotate: string;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const bob = useSharedValue(0);
-
-  useEffect(() => {
-    bob.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.quad) }),
-        -1,
-        true,
-      ),
-    );
-  }, [bob, delay]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: interpolate(bob.value, [0, 1], [-5, 5]) },
-      { rotate },
-    ],
-  }));
-
-  return (
-    <AnimatedView
-      className="absolute bg-surface border border-border rounded-2xl items-center justify-center"
-      style={[style, animatedStyle]}
-    >
-      {children}
-    </AnimatedView>
-  );
-}
 
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
   const router = useRouter();
