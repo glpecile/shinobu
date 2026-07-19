@@ -6,7 +6,8 @@
     ".expo/**",
     "node_modules/**",
     ".claude/skills/**",
-    ".agents/skills/**"
+    ".agents/skills/**",
+    "src/uniwind-types.d.ts"
   ],
   "categories": {
     "correctness": "error",
