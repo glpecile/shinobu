@@ -7,9 +7,11 @@ import {
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
 import { pickMovieMatch } from '@/lib/providers/pick-movie-match';
+import { findByTvdbId } from '@/lib/providers/tmdb/reads';
 import { lookupByExternalId, searchMedia } from '@/lib/providers/trakt/reads';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
 
 /**
@@ -27,6 +29,8 @@ export const mappingQueryKeys = {
     ['mapping', 'trakt-lookup', source, id, kind] as const,
   traktSearch: (title: string, year: number | undefined) =>
     ['mapping', 'trakt-search', title, year ?? 'any'] as const,
+  /** TVDB → TMDB tv-id bridge (`/find`), the anime-TV leg of plan 0014. */
+  tmdbFind: (tvdbId: number) => ['mapping', 'tmdb-find', tvdbId] as const,
 };
 
 const FOREVER = {
@@ -80,6 +84,23 @@ function movieSearchQuery(title: string, year: number | undefined) {
   };
 }
 
+/**
+ * TVDB id → TMDB tv id via TMDB `/find` — how a TV anime (ani.zip maps those
+ * to TVDB, not TMDB) acquires the id the TMDB-first detail read needs.
+ * Forever-cached like every mapping; null on a miss or without a TMDB token.
+ */
+export function cachedTmdbTvIdByTvdb(
+  queryClient: QueryClient,
+  tvdbId: number,
+): Promise<number | null> {
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.tmdbFind(tvdbId),
+    queryFn: (): Promise<number | null> =>
+      Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId })).catch(() => null),
+    ...FOREVER,
+  });
+}
+
 export function cachedTraktTextSearch(
   queryClient: QueryClient,
   title: string,
@@ -104,5 +125,31 @@ export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
       item.type === 'MOVIE' &&
       item.externalIds.trakt == null &&
       title !== '',
+  });
+}
+
+/**
+ * Trakt catalogue record for an item that knows its TMDB id but not its
+ * Trakt one — today that's a filmography credit opened from the person
+ * screen (TMDB-normalized, so MOVIE/TV only). The discovered record merges
+ * in via `mergeCatalogueMetadata`, lighting up the trakt-id-keyed detail
+ * sections (seasons, cast, studios). Shares its cache entry with the
+ * fan-out's `cachedTraktLookup`.
+ */
+export function useTraktIdentityQuery(item: NormalizedMediaItem | undefined) {
+  const tmdbId = item?.externalIds.tmdb;
+  const kind = item?.type === 'TV' ? 'show' : 'movie';
+  return useQuery({
+    queryKey: mappingQueryKeys.traktLookup('tmdb', tmdbId ?? 0, kind),
+    queryFn: (): Promise<NormalizedMediaItem | null> =>
+      Effect.runPromise(
+        lookupByExternalId(traktDeps(), { source: 'tmdb', id: tmdbId ?? 0, kind }),
+      ).catch(() => null),
+    ...FOREVER,
+    enabled:
+      item != null &&
+      (item.type === 'MOVIE' || item.type === 'TV') &&
+      item.externalIds.trakt == null &&
+      tmdbId != null,
   });
 }
