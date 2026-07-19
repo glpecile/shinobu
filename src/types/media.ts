@@ -66,6 +66,12 @@ export interface NormalizedCastMember {
   character: string;
   /** Headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;
+  /**
+   * TMDB person id when the origin provider carries one (Trakt does) — the
+   * person route is keyed by TMDB only. Absent (AniList people) means the
+   * route resolves by name search instead.
+   */
+  tmdbId?: number;
 }
 
 /** A crew credit — one entry per person, jobs merged across departments. */
@@ -77,12 +83,67 @@ export interface NormalizedCrewMember {
   job: string;
   /** Headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;
+  /** See NormalizedCastMember.tmdbId. */
+  tmdbId?: number;
+}
+
+/**
+ * The person behind a cast/crew credit, backing the `/person/[id]` route.
+ * TMDB is the single source of truth for people — there are no per-provider
+ * person variants, so this is keyed by the TMDB id directly.
+ */
+export interface NormalizedPerson {
+  tmdbId: number;
+  name: string;
+  /** Display headshot URL; '' when unavailable — render an initials fallback. */
+  headshot: string;
+  /** Full-resolution headshot for the zoom viewer; '' when unavailable. */
+  headshotFull: string;
+  biography?: string;
+  /** Bare calendar date (YYYY-MM-DD) as TMDB sends it — display only. */
+  birthday?: string;
+  /** Bare calendar date (YYYY-MM-DD) as TMDB sends it — display only. */
+  deathday?: string;
+  birthplace?: string;
+  /** TMDB department, e.g. "Acting" — that row leads on the person screen. */
+  knownForDepartment?: string;
+}
+
+/**
+ * A production company/studio backing the `/studio/[id]` route — TMDB-keyed
+ * for the same single-source-of-truth reason as NormalizedPerson.
+ */
+export interface NormalizedCompany {
+  tmdbId: number;
+  name: string;
+  /** Logo URL; '' when unavailable — render the 忍 placeholder. */
+  logo: string;
+  headquarters?: string;
+  homepage?: string;
+}
+
+/** One role-grouped row of a person's previous work ("Acting", "Directing", …). */
+export interface PersonCreditRow {
+  role: string;
+  items: NormalizedMediaItem[];
+  /**
+   * Per-item credit detail keyed by item id — character name(s) on the
+   * Acting row, job title(s) on crew rows ("Director"). Lives beside `items`
+   * rather than on NormalizedMediaItem: the role is a fact about this
+   * person's credit, not about the media.
+   */
+  details: Record<string, string>;
 }
 
 export interface NormalizedStudio {
   /** Unique combined identifier: `${providerId}-studio-${nativeId}`. */
   id: string;
   name: string;
+  /**
+   * TMDB company id when the origin carries one — the studio route is keyed
+   * by TMDB only. Absent (AniList studios) means name lookup instead.
+   */
+  tmdbId?: number;
 }
 
 /**

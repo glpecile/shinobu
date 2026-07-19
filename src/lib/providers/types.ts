@@ -4,6 +4,15 @@ import type { MediaType } from '@/types/media';
 // descriptor to registry.ts — nothing else in the app should need to change.
 export type ProviderId = 'trakt' | 'anilist' | 'letterboxd';
 
+// Metadata-only sources (no session, no registry entry, never a fan-out
+// target) that still ride the shared error taxonomy. TMDB backs the person
+// route; ani.zip stays out of this union because it degrades to null instead
+// of failing (lib/providers/mapping/anizip.ts).
+export type MetadataSourceId = 'tmdb';
+
+/** Anything a ProviderError can originate from. */
+export type ErrorSourceId = ProviderId | MetadataSourceId;
+
 /**
  * Capability declaration for one provider. Providers are NOT assumed to be
  * symmetric read+write: future integrations (games, books, music) are often

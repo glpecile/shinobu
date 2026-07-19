@@ -1,6 +1,6 @@
 import { Data } from 'effect';
 
-import type { ProviderId } from './types';
+import type { ErrorSourceId } from './types';
 
 /**
  * Tagged error vocabulary shared by every provider adapter. Each error carries
@@ -15,7 +15,7 @@ import type { ProviderId } from './types';
 // generic "Failed on <provider>" with no cause. The message is diagnostic
 // (carries the provider id + specifics); friendly copy lives at the UI layer.
 export class ProviderAuthError extends Data.TaggedError('ProviderAuthError')<{
-  readonly provider: ProviderId;
+  readonly provider: ErrorSourceId;
   /** True once a token refresh was attempted and also failed — session is dead. */
   readonly refreshFailed: boolean;
 }> {
@@ -27,7 +27,7 @@ export class ProviderAuthError extends Data.TaggedError('ProviderAuthError')<{
 export class ProviderRateLimitError extends Data.TaggedError(
   'ProviderRateLimitError',
 )<{
-  readonly provider: ProviderId;
+  readonly provider: ErrorSourceId;
   /** From the provider's Retry-After (or equivalent), when it sends one. */
   readonly retryAfterMs?: number;
 }> {
@@ -39,7 +39,7 @@ export class ProviderRateLimitError extends Data.TaggedError(
 export class ProviderNetworkError extends Data.TaggedError(
   'ProviderNetworkError',
 )<{
-  readonly provider: ProviderId;
+  readonly provider: ErrorSourceId;
   readonly cause: unknown;
 }> {
   get message() {
@@ -51,7 +51,7 @@ export class ProviderNetworkError extends Data.TaggedError(
 
 /** A response that failed to decode into the `NormalizedMediaItem` contract. */
 export class ProviderDecodeError extends Data.TaggedError('ProviderDecodeError')<{
-  readonly provider: ProviderId;
+  readonly provider: ErrorSourceId;
   readonly detail: string;
 }> {
   get message() {
