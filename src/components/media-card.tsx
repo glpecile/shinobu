@@ -5,12 +5,15 @@ import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { Image } from '@/components/image';
+import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface MediaCardProps {
   item: NormalizedMediaItem;
+  /** Extra context line under the type label (e.g. a person's character/job). */
+  subtitle?: string;
   onPress?: (item: NormalizedMediaItem) => void;
   /**
    * Opens the card actions dialog (quick log / hide). Triggered by long-press
@@ -29,7 +32,7 @@ function progressLabel(item: NormalizedMediaItem): string | null {
   return `${item.currentProgress} ${unit}`;
 }
 
-export function MediaCard({ item, onPress, onActionsPress }: MediaCardProps) {
+export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCardProps) {
   const progress = progressLabel(item);
   // Watched-feed items arrive artless (Trakt dropped images from /sync/
   // watched/* in 2026) — this recovers the poster lazily, per visible card.
@@ -56,11 +59,15 @@ export function MediaCard({ item, onPress, onActionsPress }: MediaCardProps) {
         }
         onPress={() => onPress?.(item)}
       >
-        <Image
-          source={{ uri: coverImage }}
-          className="w-full h-full"
-          contentFit="cover"
-        />
+        {coverImage !== '' ? (
+          <Image
+            source={{ uri: coverImage }}
+            className="w-full h-full"
+            contentFit="cover"
+          />
+        ) : (
+          <PosterPlaceholder className="w-full h-full border-0" />
+        )}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.85)']}
           style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 112 }}
@@ -80,6 +87,11 @@ export function MediaCard({ item, onPress, onActionsPress }: MediaCardProps) {
               <Text className="text-muted text-xs font-sans">{progress}</Text>
             )}
           </View>
+          {subtitle != null && subtitle !== '' && (
+            <Text className="text-muted text-xs font-sans mt-0.5" numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
         </View>
       </PresstableScale>
       {showActionsButton && (

@@ -9,11 +9,14 @@ import Head from '@/components/head';
 import { ScrollView, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { ExpandableText } from '@/components/expandable-text';
+import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
-import { PresstableOpacity } from '@/components/presstable';
+import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
+import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import {
@@ -22,24 +25,32 @@ import {
   SeriesRuntimeTile,
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
-import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
+import { initials } from '@/lib/initials';
+import {
+  applyPrimaryMetadata,
+  mergeCatalogueMetadata,
+} from '@/lib/providers/merge-metadata';
+import { tmdbToken } from '@/lib/providers/tmdb/config';
 import { routes } from '@/lib/routes';
 import {
   anilistQueryKeys,
   useAniListEntryStateQuery,
-  useSuspenseAniListCreditsQuery,
 } from '@/state/queries/anilist';
 import {
+  mediaDetailsQueryKeys,
+  useMediaDetailsQuery,
+  useSuspenseMediaDetailsQuery,
+} from '@/state/queries/media-details';
+import {
   traktQueryKeys,
-  useSuspenseTraktPeopleQuery,
-  useSuspenseTraktStudiosQuery,
   useTraktMediaImages,
   useTraktWatchedInfo,
 } from '@/state/queries/trakt';
-import { useMovieCatalogueQuery } from '@/state/queries/mapping';
+import { useMovieCatalogueQuery, useTraktIdentityQuery } from '@/state/queries/mapping';
+import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
-import type { MediaType, NormalizedMediaItem } from '@/types/media';
+import type { NormalizedMediaItem, NormalizedStudio } from '@/types/media';
 
 function findItemById(
   id: string,
@@ -62,6 +73,25 @@ function findInSearchCache(
       queryKey: traktQueryKeys.searchRoot(),
     })
     .flatMap(([, data]) => data ?? [])
+    .find((item) => item.id === id);
+}
+
+/**
+ * A card tapped on a person or studio page targets an item that exists in no
+ * feed and no search — but it *is* sitting in the cached TMDB page query the
+ * viewer just came from, so resolve against those rows (same trick as the
+ * search cache above; both page shapes expose `rows[].items`). Trakt
+ * identity is backfilled separately (`useTraktIdentityQuery`).
+ */
+function findInTmdbCache(
+  queryClient: QueryClient,
+  id: string,
+): NormalizedMediaItem | undefined {
+  return queryClient
+    .getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
+      queryKey: tmdbQueryKeys.all,
+    })
+    .flatMap(([, data]) => data?.rows?.flatMap((row) => row.items) ?? [])
     .find((item) => item.id === id);
 }
 
@@ -151,74 +181,24 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((word) => word[0] ?? '')
-    .join('')
-    .toUpperCase();
-}
-
-/**
- * Synopsis clamped to two lines with a Read more toggle. Whether the text
- * actually overflows two lines depends on viewport width and font metrics, so
- * it's measured, not guessed: an invisible unclamped copy of the text lays
- * out alongside the clamped one, and the toggle renders only when the full
- * height exceeds the clamped height.
- */
-function Overview({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [clampedHeight, setClampedHeight] = useState(0);
-  const [fullHeight, setFullHeight] = useState(0);
-  const clampable = fullHeight > clampedHeight + 1;
-
-  return (
-    <View className="mb-6">
-      <Text
-        className="text-foreground/90 font-sans text-base leading-relaxed"
-        {...(expanded ? {} : { numberOfLines: 2 })}
-        onLayout={(event) => {
-          // While expanded the visible text is the full text — measuring it
-          // would erase the clamped baseline and hide the "Read less" toggle.
-          if (!expanded) setClampedHeight(event.nativeEvent.layout.height);
-        }}
-      >
-        {text}
-      </Text>
-      <Text
-        aria-hidden
-        className="text-foreground/90 font-sans text-base leading-relaxed absolute top-0 left-0 right-0 opacity-0"
-        onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
-        pointerEvents="none"
-      >
-        {text}
-      </Text>
-      {clampable && (
-        <PresstableOpacity
-          className="self-start mt-1.5"
-          onPress={() => setExpanded(!expanded)}
-        >
-          <Text className="text-accent font-sans-semibold text-sm">
-            {expanded ? 'Read less' : 'Read more'}
-          </Text>
-        </PresstableOpacity>
-      )}
-    </View>
-  );
-}
-
 interface PersonCardProps {
   id: string;
   name: string;
   /** Character for cast, job title(s) for crew. */
   subtitle: string;
   headshot: string;
+  /** TMDB person id — absent for AniList people (name lookup instead). */
+  tmdbId?: number;
 }
 
-function PersonCard({ name, subtitle, headshot }: Omit<PersonCardProps, 'id'>) {
-  return (
-    <View className="w-24 items-center mr-4">
+function PersonCard({
+  name,
+  subtitle,
+  headshot,
+  onPress,
+}: Omit<PersonCardProps, 'id' | 'tmdbId'> & { onPress?: () => void }) {
+  const content = (
+    <>
       {headshot !== '' ? (
         <Image
           source={{ uri: headshot }}
@@ -246,7 +226,16 @@ function PersonCard({ name, subtitle, headshot }: Omit<PersonCardProps, 'id'>) {
           {subtitle}
         </Text>
       )}
-    </View>
+    </>
+  );
+
+  if (onPress == null) {
+    return <View className="w-24 items-center mr-4">{content}</View>;
+  }
+  return (
+    <PresstableScale className="w-24 items-center mr-4" onPress={onPress}>
+      {content}
+    </PresstableScale>
   );
 }
 
@@ -257,60 +246,43 @@ function PeopleSection({
   title: string;
   people: PersonCardProps[];
 }) {
+  const router = useRouter();
+  // No TMDB token, no person pages — cards stay informational.
+  const canOpenPeople = tmdbToken() !== '';
+
   if (people.length === 0) return null;
 
   return (
     <View className="mt-8">
       <Text className="text-xl font-display text-foreground mb-4">{title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {people.map(({ id, ...person }) => (
-          <PersonCard key={id} {...person} />
+        {people.map(({ id, tmdbId, ...person }) => (
+          <PersonCard
+            key={id}
+            {...person}
+            onPress={
+              canOpenPeople
+                ? () =>
+                    router.push(
+                      tmdbId != null
+                        ? routes.person(tmdbId)
+                        : routes.personLookup(person.name),
+                    )
+                : undefined
+            }
+          />
         ))}
       </ScrollView>
     </View>
   );
 }
 
-/** Cast + crew share one /people request, so they live under one boundary. */
-function PeopleSections({
-  type,
-  traktId,
-}: {
-  type: MediaType;
-  traktId: number;
-}) {
-  const { data } = useSuspenseTraktPeopleQuery({ type, traktId });
+/** One "Studios" pill list — every metadata source renders through this. */
+function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
+  const router = useRouter();
+  // No TMDB token, no studio pages — pills stay informational.
+  const canOpenStudios = tmdbToken() !== '';
 
-  return (
-    <>
-      <PeopleSection
-        title="Cast"
-        people={data.cast.map((member) => ({
-          id: member.id,
-          name: member.name,
-          subtitle: member.character,
-          headshot: member.headshot,
-        }))}
-      />
-      <PeopleSection
-        title="Crew"
-        people={data.crew.map((member) => ({
-          id: member.id,
-          name: member.name,
-          subtitle: member.job,
-          headshot: member.headshot,
-        }))}
-      />
-    </>
-  );
-}
-
-/** One "Studios" pill list — both providers' sections render through this. */
-function StudiosList({
-  studios,
-}: {
-  studios: ReadonlyArray<{ id: string | number; name: string }>;
-}) {
   if (studios.length === 0) return null;
 
   return (
@@ -319,35 +291,47 @@ function StudiosList({
         Studios
       </Text>
       <View className="flex-row flex-wrap gap-2">
-        {studios.map((studio) => (
-          <View
-            className="bg-surface border border-border rounded-full px-4 py-2"
-            key={studio.id}
-          >
+        {studios.map((studio) => {
+          const pill = (
             <Text className="text-foreground font-sans text-sm">
               {studio.name}
             </Text>
-          </View>
-        ))}
+          );
+          return canOpenStudios ? (
+            <PresstableOpacity
+              className="bg-surface border border-border rounded-full px-4 py-2"
+              key={studio.id}
+              onPress={() =>
+                router.push(
+                  studio.tmdbId != null
+                    ? routes.studio(studio.tmdbId)
+                    : routes.studioLookup(studio.name),
+                )
+              }
+            >
+              {pill}
+            </PresstableOpacity>
+          ) : (
+            <View
+              className="bg-surface border border-border rounded-full px-4 py-2"
+              key={studio.id}
+            >
+              {pill}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 }
 
-function StudiosSection({
-  type,
-  traktId,
-}: {
-  type: MediaType;
-  traktId: number;
-}) {
-  const { data: studios } = useSuspenseTraktStudiosQuery({ type, traktId });
-  return <StudiosList studios={studios} />;
-}
-
-/** AniList supplies people and studios from one public Media query. */
-function AnimeCreditsSections({ anilistId }: { anilistId: number }) {
-  const { data } = useSuspenseAniListCreditsQuery({ mediaId: anilistId });
+/**
+ * Cast + Crew + Studios from the one TMDB-first metadata query (plan 0014) —
+ * the same composed read regardless of the item's origin provider, with the
+ * Trakt/AniList fallback handled inside the query, not by this boundary.
+ */
+function CreditsSections({ item }: { item: NormalizedMediaItem }) {
+  const { data } = useSuspenseMediaDetailsQuery(item);
 
   return (
     <>
@@ -358,6 +342,7 @@ function AnimeCreditsSections({ anilistId }: { anilistId: number }) {
           name: member.name,
           subtitle: member.character,
           headshot: member.headshot,
+          ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
         }))}
       />
       <PeopleSection
@@ -367,6 +352,7 @@ function AnimeCreditsSections({ anilistId }: { anilistId: number }) {
           name: member.name,
           subtitle: member.job,
           headshot: member.headshot,
+          ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
         }))}
       />
       <StudiosList studios={data.studios} />
@@ -445,7 +431,6 @@ export default function DetailsScreen() {
   const feed = useUnifiedFeed({ includeHidden: true });
   const queryClient = useQueryClient();
   const accent = useCSSVariable('--color-accent');
-  const foreground = useCSSVariable('--color-foreground');
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
@@ -459,16 +444,28 @@ export default function DetailsScreen() {
       feed.trendingMovies,
       feed.trendingShows,
       feed.seasonalAnime,
-    ]) ?? findInSearchCache(queryClient, id);
+    ]) ??
+    findInSearchCache(queryClient, id) ??
+    findInTmdbCache(queryClient, id);
   // Items whose origin carries no metadata (a Letterboxd watchlist film is
   // just a slug + title + year) get a catalogue record resolved by title+year
   // and merged in — the meta line, overview, rating, and (via the discovered
   // trakt id) cast/studios then render like any other provider's page.
   const catalogue = useMovieCatalogueQuery(resolvedItem);
+  // Filmography credits arrive TMDB-keyed with no Trakt identity — the
+  // lookup discovers it so the trakt-id-keyed sections light up.
+  const traktIdentity = useTraktIdentityQuery(resolvedItem);
+  const enriched = catalogue.data ?? traktIdentity.data;
   const item =
-    resolvedItem != null && catalogue.data != null
-      ? mergeCatalogueMetadata(resolvedItem, catalogue.data)
+    resolvedItem != null && enriched != null
+      ? mergeCatalogueMetadata(resolvedItem, enriched)
       : resolvedItem;
+  // TMDB is the metadata source of truth (plan 0014): the same composed
+  // query that feeds the credit sections hands the header a catalogue
+  // record, and its display fields override whatever the origin provider
+  // carried. Non-suspending — the header renders instantly from the item
+  // and sharpens when TMDB answers.
+  const mediaDetails = useMediaDetailsQuery(item);
   const traktId = item?.externalIds.trakt;
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
@@ -522,27 +519,29 @@ export default function DetailsScreen() {
     );
   }
 
-  const meta = metaLine(item);
+  const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
+  const meta = metaLine(shown);
   // "0 episodes" on a movie is noise — only show progress where it means
   // something (any TV/manga item, or a movie already logged at least once).
-  const showProgress = item.type !== 'MOVIE' || item.currentProgress > 0;
+  const showProgress = shown.type !== 'MOVIE' || shown.currentProgress > 0;
   const displayedProgress =
-    item.type === 'ANIME'
-      ? (anilistEntry.data?.entry?.progress ?? item.currentProgress)
-      : item.currentProgress;
+    shown.type === 'ANIME'
+      ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
+      : shown.currentProgress;
 
   function refresh() {
     // Sections that failed are unmounted, leaving their queries inactive and
     // stuck in error state — remove those so the resetKey remount refetches
     // from scratch. Healthy (active) ones refetch in the background instead,
     // without re-suspending into a skeleton.
-    if (traktId != null && item != null) {
+    queryClient.removeQueries({
+      queryKey: mediaDetailsQueryKeys.all,
+      type: 'inactive',
+    });
+    if (traktId != null && item?.type === 'TV') {
       for (const key of [
-        traktQueryKeys.people(item.type, traktId),
-        traktQueryKeys.studios(item.type, traktId),
-        ...(item.type === 'TV'
-          ? [traktQueryKeys.seasons(traktId), traktQueryKeys.showProgress(traktId)]
-          : []),
+        traktQueryKeys.seasons(traktId),
+        traktQueryKeys.showProgress(traktId),
       ]) {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
@@ -551,7 +550,6 @@ export default function DetailsScreen() {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
         anilistQueryKeys.episodes(anilistId),
-        anilistQueryKeys.credits(anilistId),
       ]) {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
@@ -559,6 +557,11 @@ export default function DetailsScreen() {
     setRefreshCount((count) => count + 1);
     return allSettled({
       feed: () => feed.refetch(),
+      details: () =>
+        queryClient.refetchQueries({
+          queryKey: mediaDetailsQueryKeys.all,
+          type: 'active',
+        }),
       trakt: () =>
         queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
       anilist: () =>
@@ -569,15 +572,21 @@ export default function DetailsScreen() {
   return (
     <View className="flex-1 bg-background">
       <Head>
-        <title>{`${item.title} — Shinobu`}</title>
-        {item.overview != null && (
-          <meta content={item.overview} name="description" />
+        <title>{`${shown.title} — Shinobu`}</title>
+        {shown.overview != null && (
+          <meta content={shown.overview} name="description" />
         )}
       </Head>
       <RefreshableScrollView className="flex-1" onRefresh={refresh}>
         <View className="h-80 relative">
           <Image
-            source={{ uri: artwork.backdropImage || artwork.coverImage }}
+            source={{
+              uri:
+                shown.backdropImage ||
+                artwork.backdropImage ||
+                shown.coverImage ||
+                artwork.coverImage,
+            }}
             className="w-full h-full"
             contentFit="cover"
           />
@@ -596,17 +605,17 @@ export default function DetailsScreen() {
         {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
         <View className="w-full max-w-4xl self-center px-6 pb-12">
           <View className="flex-row items-end -mt-24 mb-6">
-            <Image
-              source={{ uri: artwork.coverImage }}
+            <ZoomableImage
+              uri={shown.coverImage || artwork.coverImage}
               className="w-28 h-40 rounded-card border border-border bg-surface"
               contentFit="cover"
             />
             <View className="flex-1 ml-4 pb-1">
               <View className="flex-row items-center gap-3">
                 <Text className="text-accent text-xs font-sans-semibold uppercase tracking-wider">
-                  {item.type}
+                  {shown.type}
                 </Text>
-                {item.rating != null && (
+                {shown.rating != null && (
                   <View className="flex-row items-center gap-1">
                     <Ionicons
                       color={typeof accent === 'string' ? accent : undefined}
@@ -614,26 +623,26 @@ export default function DetailsScreen() {
                       size={12}
                     />
                     <Text className="text-foreground text-xs font-sans-semibold">
-                      {item.rating.toFixed(1)}
+                      {shown.rating.toFixed(1)}
                     </Text>
                   </View>
                 )}
               </View>
               <Text className="text-3xl font-display text-foreground mt-1">
-                {item.title}
+                {shown.title}
               </Text>
               {meta !== '' && (
                 <Text className="text-muted font-sans text-sm mt-1.5">
                   {meta}
                 </Text>
               )}
-              <WatchedLine item={item} />
+              <WatchedLine item={shown} />
             </View>
           </View>
 
-          {item.overview != null && <Overview text={item.overview} />}
+          {shown.overview != null && <ExpandableText text={shown.overview} />}
 
-          <LogMediaButton item={item} />
+          <LogMediaButton item={shown} />
 
           {showProgress && (
             <View className="flex-row gap-4">
@@ -641,76 +650,49 @@ export default function DetailsScreen() {
                 label="Progress"
                 value={displayedProgress}
                 caption={
-                  item.progressUnit === 'chapter' ? 'chapters' : 'episodes'
+                  shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
                 }
               />
-              {item.totalEpisodes != null && (
+              {shown.totalEpisodes != null && (
                 <StatTile
                   label="Total"
-                  value={item.totalEpisodes}
+                  value={shown.totalEpisodes}
                   caption="episodes"
                 />
               )}
-              {item.type === 'TV' && <SeriesRuntimeTile item={item} />}
-              {item.type === 'ANIME' && item.isFilm !== true &&
-                item.totalEpisodes != null &&
-                item.runtime != null && (
+              {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
+              {shown.type === 'ANIME' && shown.isFilm !== true &&
+                shown.totalEpisodes != null &&
+                shown.runtime != null && (
                   <StatTile
                     label="Total time"
-                    value={formatRuntime(item.totalEpisodes * item.runtime)}
-                    caption={`${item.runtime}m each`}
+                    value={formatRuntime(shown.totalEpisodes * shown.runtime)}
+                    caption={`${shown.runtime}m each`}
                   />
                 )}
             </View>
           )}
 
-          {item.type === 'TV' && <SeasonsSection item={item} />}
-          {item.type === 'ANIME' && item.isFilm !== true && (
-            <AnimeSeasonsSection item={item} resetKey={refreshCount} />
+          {shown.type === 'TV' && <SeasonsSection item={shown} />}
+          {shown.type === 'ANIME' && shown.isFilm !== true && (
+            <AnimeSeasonsSection item={shown} resetKey={refreshCount} />
           )}
 
-          {item.type === 'ANIME' && anilistId != null ? (
-            <SuspenseSection
-              fallback={
-                <>
-                  <PeopleSectionsSkeleton />
-                  <StudiosSkeleton />
-                </>
-              }
-              resetKey={refreshCount}
-            >
-              <AnimeCreditsSections anilistId={anilistId} />
-            </SuspenseSection>
-          ) : traktId != null ? (
-            <>
-              <SuspenseSection
-                fallback={<PeopleSectionsSkeleton />}
-                resetKey={refreshCount}
-              >
-                <PeopleSections traktId={traktId} type={item.type} />
-              </SuspenseSection>
-              <SuspenseSection
-                fallback={<StudiosSkeleton />}
-                resetKey={refreshCount}
-              >
-                <StudiosSection traktId={traktId} type={item.type} />
-              </SuspenseSection>
-            </>
-          ) : null}
+          <SuspenseSection
+            fallback={
+              <>
+                <PeopleSectionsSkeleton />
+                <StudiosSkeleton />
+              </>
+            }
+            resetKey={refreshCount}
+          >
+            <CreditsSections item={item} />
+          </SuspenseSection>
         </View>
       </RefreshableScrollView>
 
-      <PresstableOpacity
-        accessibilityLabel="Back"
-        className="absolute top-12 left-4 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center"
-        onPress={goBack}
-      >
-        <Ionicons
-          color={typeof foreground === 'string' ? foreground : undefined}
-          name="arrow-back"
-          size={20}
-        />
-      </PresstableOpacity>
+      <FloatingBackButton onPress={goBack} />
     </View>
   );
 }

@@ -29,7 +29,15 @@
       ],
       "expo-web-browser",
       "expo-image",
-      "@react-native-vector-icons/ionicons"
+      "@react-native-vector-icons/ionicons",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ]
     ],
     "name": "Shinobu",
     "slug": "shinobu",

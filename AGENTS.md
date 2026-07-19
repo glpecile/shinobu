@@ -65,6 +65,25 @@ See `plan.md` (1.2, 1.3, 2.1) for the full product vision and architecture ratio
   per platform); import the app's `components/keyboard-avoiding-view` wrapper
   (withUniwind-wrapped, oxlint-enforced). `KeyboardProvider` is mounted in
   `app/_layout.tsx`. Native module — adding/upgrading it needs a clean rebuild.
+- **TMDB** is a **metadata source, not a tracker**: no session, no registry entry,
+  never a log fan-out target. It is the **primary metadata source for every detail
+  screen** (plan `docs/plans/0014-tmdb-first-details.md`): the composed
+  `getMediaDetails` read (`lib/providers/media-details.ts`) serves catalogue
+  metadata + cast/crew/studios TMDB-first and **fails over to Trakt/AniList inside
+  the effect** (no token, no TMDB id, or request failure) — never in a component.
+  Display fields merge TMDB-over-provider via `applyPrimaryMetadata`
+  (`lib/providers/merge-metadata.ts`); user state (progress, watched, seasons,
+  logging) always stays provider-sourced. TMDB is also the single source of truth
+  for the `/person/[id]` and `/studio/[id]` routes (both keyed by TMDB id;
+  provider-sourced people/studios without one resolve by name via the `/lookup`
+  sibling routes). Auth is the builder-supplied `EXPO_PUBLIC_TMDB_TOKEN` (v4 read
+  token); with it unset, detail screens use the provider paths and person/studio
+  pages stay dark. Browser-callable (`docs/solutions/web-cors-tmdb.md`).
+- **`@nandorojo/galeria`** — tap-to-zoom image viewer (details poster, person
+  headshot). Never import it directly (oxlint-enforced); use
+  `components/zoomable-image`, which pairs it with the withUniwind `Image` and
+  handles the empty-uri fallback. Native module — needs a clean rebuild — and it
+  pins iOS ≥ 16.4 (`expo-build-properties` in `app.json`).
 - **React Compiler** — enabled via `experiments.reactCompiler` in `app.json` and
   `babel-plugin-react-compiler`. The compiler automatically memoizes components and
   hooks, so do not use `useMemo` or `useCallback` manually. They are forbidden by
