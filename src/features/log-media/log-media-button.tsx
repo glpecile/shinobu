@@ -25,6 +25,11 @@ import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
  * natural log unit is "next episode": AniList entries are per-season, plan
  * 0011); TV uses the season picker.
  */
+// Letterboxd diary tag stamped on every log by default, so Shinobu-made
+// entries are filterable on Letterboxd. Prefilled, not forced — the field
+// stays editable per log.
+const DEFAULT_TAGS = 'shinobu';
+
 export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
   const logMedia = useLogMedia();
@@ -39,7 +44,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   });
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState(DEFAULT_TAGS);
   const targets = useLogTargets(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
 
@@ -135,7 +140,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           haptics.selection();
           logMedia.reset();
           setWatchedAt(null);
-          setTags('');
+          setTags(DEFAULT_TAGS);
           setSelectedProviders(targets);
           setOpen(true);
         }}
