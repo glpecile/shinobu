@@ -219,10 +219,10 @@ export function ConnectTraktButton() {
                 <Text
                   className="text-accent font-sans-semibold underline"
                   onPress={() =>
-                    Linking.openURL("https://trakt.tv/oauth/applications/new")
+                    Linking.openURL("https://app.trakt.tv/settings/apps/api/new")
                   }
                 >
-                  trakt.tv/oauth/applications/new
+                  app.trakt.tv/settings/apps/api/new
                 </Text>
                 . Name and description can be anything (e.g. "Shinobu").
               </Text>
