@@ -78,3 +78,73 @@ describe('mergeCatalogueMetadata', () => {
     expect(merged.coverImage).toBe('https://trakt.example/poster.jpg');
   });
 });
+
+import { applyPrimaryMetadata } from './merge-metadata';
+
+describe('applyPrimaryMetadata', () => {
+  const item: NormalizedMediaItem = {
+    id: 'trakt-1',
+    title: 'Arcane',
+    coverImage: 'https://trakt/poster.jpg',
+    overview: 'Trakt synopsis.',
+    rating: 8.5,
+    year: 2021,
+    type: 'TV',
+    currentProgress: 5,
+    progressUnit: 'episode',
+    totalEpisodes: 18,
+    lastUpdated: '2026-07-19T00:00:00Z',
+    externalIds: { trakt: 1, tmdb: 94605 },
+  };
+
+  test('primary display fields override the item where present', () => {
+    const merged = applyPrimaryMetadata(item, {
+      id: 'tmdb-tv-94605',
+      title: 'Arcane',
+      coverImage: 'https://tmdb/poster.jpg',
+      backdropImage: 'https://tmdb/backdrop.jpg',
+      overview: 'TMDB synopsis.',
+      rating: 8.8,
+      runtime: 41,
+      genres: ['Animation'],
+      type: 'TV',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      totalEpisodes: 27,
+      lastUpdated: '2026-07-19T01:00:00Z',
+      externalIds: { tmdb: 94605, imdb: 'tt11126994' },
+    });
+
+    expect(merged.coverImage).toBe('https://tmdb/poster.jpg');
+    expect(merged.backdropImage).toBe('https://tmdb/backdrop.jpg');
+    expect(merged.overview).toBe('TMDB synopsis.');
+    expect(merged.rating).toBe(8.8);
+    expect(merged.genres).toEqual(['Animation']);
+    // Identity + user state stay the item's.
+    expect(merged.id).toBe('trakt-1');
+    expect(merged.currentProgress).toBe(5);
+    expect(merged.lastUpdated).toBe('2026-07-19T00:00:00Z');
+    // totalEpisodes is fill-only: the provider's 18 (progress source) wins.
+    expect(merged.totalEpisodes).toBe(18);
+    // External ids merge with the item winning, primary filling gaps.
+    expect(merged.externalIds).toEqual({ trakt: 1, tmdb: 94605, imdb: 'tt11126994' });
+  });
+
+  test('keeps item fields when primary lacks them, and passes through on null', () => {
+    const sparse = applyPrimaryMetadata(item, {
+      id: 'tmdb-tv-94605',
+      title: 'Arcane',
+      coverImage: '',
+      type: 'TV',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '2026-07-19T01:00:00Z',
+      externalIds: { tmdb: 94605 },
+    });
+
+    expect(sparse.coverImage).toBe('https://trakt/poster.jpg');
+    expect(sparse.overview).toBe('Trakt synopsis.');
+    expect(sparse.rating).toBe(8.5);
+    expect(applyPrimaryMetadata(item, null)).toBe(item);
+  });
+});

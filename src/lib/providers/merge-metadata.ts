@@ -42,3 +42,42 @@ export function mergeCatalogueMetadata(
     externalIds: { ...catalogue.externalIds, ...item.externalIds },
   };
 }
+
+/**
+ * The TMDB-first inverse of `mergeCatalogueMetadata` (plan 0014): `primary`
+ * (the TMDB catalogue record) WINS for pure display fields when it has them —
+ * images, overview, genres, rating, runtime, year — because TMDB is the
+ * source of truth for metadata. Fill-only for `totalEpisodes` (provider
+ * totals drive the progress UI and must agree with `currentProgress`), and
+ * identity/user state (id, type, progress, lastUpdated) plus external-id
+ * precedence stay exactly as in `mergeCatalogueMetadata`. A null primary is
+ * the failover case: the item passes through untouched.
+ */
+export function applyPrimaryMetadata(
+  item: NormalizedMediaItem,
+  primary: NormalizedMediaItem | null | undefined,
+): NormalizedMediaItem {
+  if (primary == null) return item;
+
+  const primaryBackdrop =
+    primary.backdropImage != null && primary.backdropImage !== ''
+      ? primary.backdropImage
+      : null;
+
+  return {
+    ...item,
+    coverImage: primary.coverImage !== '' ? primary.coverImage : item.coverImage,
+    ...(primaryBackdrop != null ? { backdropImage: primaryBackdrop } : {}),
+    ...(primary.overview != null ? { overview: primary.overview } : {}),
+    ...(primary.genres != null && primary.genres.length > 0
+      ? { genres: primary.genres }
+      : {}),
+    ...(primary.rating != null ? { rating: primary.rating } : {}),
+    ...(primary.runtime != null ? { runtime: primary.runtime } : {}),
+    ...(primary.year != null ? { year: primary.year } : {}),
+    ...(item.totalEpisodes == null && primary.totalEpisodes != null
+      ? { totalEpisodes: primary.totalEpisodes }
+      : {}),
+    externalIds: { ...primary.externalIds, ...item.externalIds },
+  };
+}
