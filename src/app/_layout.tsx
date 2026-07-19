@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { ErrorFallback } from "@/components/error-fallback";
+import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
@@ -28,6 +29,9 @@ export default function Layout() {
     SpaceGrotesk_700Bold,
     Inter_400Regular,
     Inter_600SemiBold,
+    // Icon fonts are only populated on web — native bundles them via the
+    // config plugins (see lib/icon-fonts).
+    ...iconFonts,
   });
 
   // One QueryClient per app lifetime. TanStack Query handles provider fetches,

@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
+import { TRAKT_CREATE_APP_URL } from '@/lib/providers/external-urls';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 import {
   getTraktRedirectUri,
@@ -206,110 +208,111 @@ export function ConnectTraktButton() {
     return (
       <View className="w-full gap-4">
         <Text className="text-muted font-sans text-sm">
-          Shinobu talks to Trakt through your own (free) Trakt API app. One-time
-          setup, about a minute:
+          Shinobu talks to Trakt through your own (free) Trakt API app —
+          one-time setup, about a minute.
         </Text>
 
-        <Steps>
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              Create an app at{" "}
-              <Text
-                className="text-accent font-sans-semibold underline"
-                onPress={() =>
-                  Linking.openURL("https://trakt.tv/oauth/applications/new")
-                }
-              >
-                trakt.tv/oauth/applications/new
+        <Collapsible label="How to create the Trakt app">
+          <Steps>
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Create an app at{" "}
+                <Text
+                  className="text-accent font-sans-semibold underline"
+                  onPress={() => Linking.openURL(TRAKT_CREATE_APP_URL)}
+                >
+                  {TRAKT_CREATE_APP_URL.replace("https://", "")}
+                </Text>
+                . Name and description can be anything (e.g. "Shinobu").
               </Text>
-              . Name and description can be anything (e.g. "Shinobu").
-            </Text>
-          </Steps.Item>
+            </Steps.Item>
 
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              In <Text className="text-foreground font-sans-semibold">Redirect
-              uri</Text>, paste all of these (one per line) so the same app
-              works on every device:
-            </Text>
-            {redirectUris.map((uri) => (
-              <CopyValue
-                hint={uri === redirectUri ? "← this device" : undefined}
-                key={uri}
-                value={uri}
-              />
-            ))}
-          </Steps.Item>
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                In <Text className="text-foreground font-sans-semibold">Redirect
+                uri</Text>, paste all of these (one per line) so the same app
+                works on every device:
+              </Text>
+              {redirectUris.map((uri) => (
+                <CopyValue
+                  hint={uri === redirectUri ? "← this device" : undefined}
+                  key={uri}
+                  value={uri}
+                />
+              ))}
+            </Steps.Item>
 
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              In <Text className="text-foreground font-sans-semibold">
-              Javascript (cors) origins</Text> (needed for the web app):
-            </Text>
-            {TRAKT_CORS_ORIGINS.map((origin) => (
-              <CopyValue key={origin} value={origin} />
-            ))}
-          </Steps.Item>
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                In <Text className="text-foreground font-sans-semibold">
+                Javascript (cors) origins</Text> (needed for the web app):
+              </Text>
+              {TRAKT_CORS_ORIGINS.map((origin) => (
+                <CopyValue key={origin} value={origin} />
+              ))}
+            </Steps.Item>
 
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              Under <Text className="text-foreground font-sans-semibold">
-              Permissions</Text>, tick{" "}
-              <Text className="text-foreground font-sans-semibold">
-                /scrobble
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Under <Text className="text-foreground font-sans-semibold">
+                Permissions</Text>, tick{" "}
+                <Text className="text-foreground font-sans-semibold">
+                  /scrobble
+                </Text>
+                {" "}(required for logging watches).{" "}
+                <Text className="text-foreground font-sans-semibold">
+                  /checkin
+                </Text>
+                {" "}is optional.
               </Text>
-              {" "}(required for logging watches).{" "}
-              <Text className="text-foreground font-sans-semibold">
-                /checkin
-              </Text>
-              {" "}is optional.
-            </Text>
-          </Steps.Item>
+            </Steps.Item>
 
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              Save the app, then copy its{" "}
-              <Text className="text-foreground font-sans-semibold">
-                Client ID
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Save the app, then copy its{" "}
+                <Text className="text-foreground font-sans-semibold">
+                  Client ID
+                </Text>
+                {" "}and{" "}
+                <Text className="text-foreground font-sans-semibold">
+                  Client Secret
+                </Text>
+                {" "}— connecting needs both — and paste them below.
               </Text>
-              {" "}and{" "}
-              <Text className="text-foreground font-sans-semibold">
-                Client Secret
-              </Text>
-              {" "}— connecting needs both — and paste them here:
-            </Text>
-            <CredentialInput
-              control={control}
-              name="clientId"
-              onSubmit={() => submitCredentials()}
-              placeholder="Trakt Client ID"
-            />
-            {errors.clientId != null && (
-              <Text className="text-accent font-sans text-xs">
-                {errors.clientId.message}
-              </Text>
-            )}
-            <CredentialInput
-              control={control}
-              name="clientSecret"
-              onSubmit={() => submitCredentials()}
-              placeholder="Trakt Client Secret"
-            />
-            {errors.clientSecret != null && (
-              <Text className="text-accent font-sans text-xs">
-                {errors.clientSecret.message}
-              </Text>
-            )}
-            <PresstableOpacity
-              className="bg-accent px-5 py-3 rounded"
-              onPress={() => submitCredentials()}
-            >
-              <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-                Save & Connect
-              </Text>
-            </PresstableOpacity>
-          </Steps.Item>
-        </Steps>
+            </Steps.Item>
+          </Steps>
+        </Collapsible>
+
+        <CredentialInput
+          control={control}
+          name="clientId"
+          onSubmit={() => submitCredentials()}
+          placeholder="Trakt Client ID"
+        />
+        {errors.clientId != null && (
+          <Text className="text-accent font-sans text-xs">
+            {errors.clientId.message}
+          </Text>
+        )}
+        <CredentialInput
+          control={control}
+          name="clientSecret"
+          onSubmit={() => submitCredentials()}
+          placeholder="Trakt Client Secret"
+        />
+        {errors.clientSecret != null && (
+          <Text className="text-accent font-sans text-xs">
+            {errors.clientSecret.message}
+          </Text>
+        )}
+        <PresstableOpacity
+          className="bg-accent px-5 py-3 rounded"
+          onPress={() => submitCredentials()}
+        >
+          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
+            Save & Connect
+          </Text>
+        </PresstableOpacity>
       </View>
     );
   }

@@ -5,7 +5,16 @@ support PKCE, the app disables it (`usePKCE: false` in `ConnectTraktButton`).
 
 ## Register the app
 
-1. Go to https://trakt.tv/oauth/applications and click **New Application**.
+1. Go to https://app.trakt.tv/settings/apps/api/new (Settings → API Apps on
+   the new app.trakt.tv frontend). The old
+   `https://trakt.tv/oauth/applications` URL is dead as of July 2026 — it
+   301-redirects to `app.trakt.tv/oauth/applications`, which 404s. The OAuth
+   *endpoints* did not move: `https://trakt.tv/oauth/authorize` and
+   `https://api.trakt.tv/oauth/token` are still the documented ones
+   (docs now live at https://docs.trakt.tv; the authorize URL 307-redirects
+   internally to Trakt's new auth frontend, which is transparent to the flow).
+   This class of rot is now watched by `scripts/check-external-urls.ts`
+   (`bun check:links`), run daily by `.github/workflows/link-health.yml`.
 2. Fill the form:
    - **Name:** Shinobu
    - **Icon:** any square transparent PNG (≥ 256×256)

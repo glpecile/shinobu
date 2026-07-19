@@ -1,0 +1,26 @@
+# Probes the provider URLs the app depends on (setup pages, OAuth/API
+# endpoints) so a dead link is noticed days after it rots, not months later
+# when a user hits it. Daily because the checks are time-driven — see
+# scripts/check-external-urls.ts for the manifest and the Trakt precedent.
+# Also runs on PRs that touch the provider layer, so a URL change is probed
+# in the same PR that makes it. Note: the schedule only fires once this file
+# is on the default branch.
+name: Link health
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/check-external-urls.ts'
+      - 'src/lib/providers/**'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun check:links

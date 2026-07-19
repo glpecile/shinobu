@@ -1,5 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { allSettled } from 'better-all';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -556,11 +557,13 @@ export default function DetailsScreen() {
       }
     }
     setRefreshCount((count) => count + 1);
-    return Promise.allSettled([
-      feed.refetch(),
-      queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
-      queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
-    ]);
+    return allSettled({
+      feed: () => feed.refetch(),
+      trakt: () =>
+        queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
+      anilist: () =>
+        queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
+    });
   }
 
   return (

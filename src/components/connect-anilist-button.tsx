@@ -6,10 +6,12 @@ import { z } from 'zod';
 import { Linking, Platform, Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { anilistAuthorizeUrl, anilistClientId } from '@/lib/providers/anilist/config';
+import { ANILIST_CREATE_CLIENT_URL } from '@/lib/providers/external-urls';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import {
   clearProviderClientId,
@@ -105,80 +107,83 @@ export function ConnectAniListButton() {
     return (
       <View className="w-full gap-4">
         <Text className="text-muted font-sans text-sm">
-          Shinobu talks to AniList through your own (free) AniList API client.
-          One-time setup, under a minute — no secret needed:
+          Shinobu talks to AniList through your own (free) AniList API client —
+          one-time setup, under a minute, no secret needed.
         </Text>
 
-        <Steps>
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              Create a client at{' '}
-              <Text
-                className="text-accent font-sans-semibold underline"
-                onPress={() => Linking.openURL('https://anilist.co/settings/developer')}
-              >
-                anilist.co/settings/developer
+        <Collapsible label="How to create the AniList client">
+          <Steps>
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Create a client at{' '}
+                <Text
+                  className="text-accent font-sans-semibold underline"
+                  onPress={() => Linking.openURL(ANILIST_CREATE_CLIENT_URL)}
+                >
+                  {ANILIST_CREATE_CLIENT_URL.replace('https://', '')}
+                </Text>
+                . Name can be anything (e.g. "Shinobu").
               </Text>
-              . Name can be anything (e.g. "Shinobu").
-            </Text>
-          </Steps.Item>
+            </Steps.Item>
 
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              Set <Text className="text-foreground font-sans-semibold">Redirect URL</Text>{' '}
-              to exactly:
-            </Text>
-            <View className="border border-border bg-surface px-2 py-1 rounded self-start">
-              <Text className="text-foreground font-sans text-xs" selectable>
-                {redirectUri}
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Set <Text className="text-foreground font-sans-semibold">Redirect URL</Text>{' '}
+                to exactly:
               </Text>
-            </View>
-            <Text className="text-muted font-sans text-xs">
-              AniList allows one redirect URL per client — to connect on
-              another device type too, create a second client there.
-            </Text>
-          </Steps.Item>
+              <View className="border border-border bg-surface px-2 py-1 rounded self-start">
+                <Text className="text-foreground font-sans text-xs" selectable>
+                  {redirectUri}
+                </Text>
+              </View>
+              <Text className="text-muted font-sans text-xs">
+                AniList allows one redirect URL per client — to connect on
+                another device type too, create a second client there.
+              </Text>
+            </Steps.Item>
 
-          <Steps.Item>
-            <Text className="text-muted font-sans text-sm">
-              Save, then paste the client's{' '}
-              <Text className="text-foreground font-sans-semibold">ID</Text>{' '}
-              (a short number) here:
-            </Text>
-            <Controller
-              control={control}
-              name="clientId"
-              render={({ field }) => (
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
-                  inputMode="numeric"
-                  onBlur={field.onBlur}
-                  onChangeText={field.onChange}
-                  onSubmitEditing={() => submitClientId()}
-                  placeholder="AniList Client ID"
-                  placeholderTextColor={typeof muted === 'string' ? muted : undefined}
-                  returnKeyType="done"
-                  value={field.value}
-                />
-              )}
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Save, then copy the client's{' '}
+                <Text className="text-foreground font-sans-semibold">ID</Text>{' '}
+                (a short number) and paste it below.
+              </Text>
+            </Steps.Item>
+          </Steps>
+        </Collapsible>
+
+        <Controller
+          control={control}
+          name="clientId"
+          render={({ field }) => (
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+              inputMode="numeric"
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+              onSubmitEditing={() => submitClientId()}
+              placeholder="AniList Client ID"
+              placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+              returnKeyType="done"
+              value={field.value}
             />
-            {errors.clientId != null && (
-              <Text className="text-accent font-sans text-xs">
-                {errors.clientId.message}
-              </Text>
-            )}
-            <PresstableOpacity
-              className="bg-accent px-5 py-3 rounded"
-              onPress={() => submitClientId()}
-            >
-              <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-                Save & Connect
-              </Text>
-            </PresstableOpacity>
-          </Steps.Item>
-        </Steps>
+          )}
+        />
+        {errors.clientId != null && (
+          <Text className="text-accent font-sans text-xs">
+            {errors.clientId.message}
+          </Text>
+        )}
+        <PresstableOpacity
+          className="bg-accent px-5 py-3 rounded"
+          onPress={() => submitClientId()}
+        >
+          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
+            Save & Connect
+          </Text>
+        </PresstableOpacity>
       </View>
     );
   }

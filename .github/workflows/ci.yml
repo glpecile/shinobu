@@ -1,0 +1,25 @@
+# Deterministic merge gate: lint, typecheck, unit tests. Network-dependent
+# link health is deliberately NOT here — URL rot is time-driven, not
+# diff-driven, and a flaky provider outage must not block unrelated merges.
+# That lives in link-health.yml on a schedule.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun lint
+      - run: bun typecheck
+      - run: bun test

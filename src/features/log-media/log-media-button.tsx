@@ -11,6 +11,7 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
+import { parseTags } from './parse-tags';
 import { useLogMedia } from './use-log-media';
 import { useLogTargets } from './use-log-targets';
 import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
@@ -25,6 +26,12 @@ import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
  * natural log unit is "next episode": AniList entries are per-season, plan
  * 0011); TV uses the season picker.
  */
+// Letterboxd diary tag stamped on every log by default, so Shinobu-made
+// entries are filterable on Letterboxd. Prefilled, not forced — the field
+// stays editable per log. The trailing separator leaves the cursor ready
+// for the next tag; the parse filters the empty segment it creates.
+const DEFAULT_TAGS = 'shinobu, ';
+
 export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
   const logMedia = useLogMedia();
@@ -39,7 +46,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   });
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState(DEFAULT_TAGS);
   const targets = useLogTargets(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
 
@@ -88,10 +95,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   function confirmLog() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
     haptics.confirm();
-    const parsedTags = tags
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== '');
+    const parsedTags = parseTags(tags);
     logMedia.mutate(
       {
         item,
@@ -135,7 +139,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           haptics.selection();
           logMedia.reset();
           setWatchedAt(null);
-          setTags('');
+          setTags(DEFAULT_TAGS);
           setSelectedProviders(targets);
           setOpen(true);
         }}

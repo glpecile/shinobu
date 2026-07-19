@@ -28,7 +28,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      "@react-native-vector-icons/ionicons"
     ],
     "name": "Shinobu",
     "slug": "shinobu",

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { all } from 'better-all';
 import { Effect } from 'effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
@@ -193,11 +194,22 @@ export function useLogMedia() {
         throw new Error(`No connected provider can log "${item.title}"`);
       }
 
-      const records: ProviderWatchRecord[] = await Promise.all(
-        targets.map(async (provider) => ({
-          provider,
-          hasIt: await providerHasWatch(queryClient, provider, item, episodes),
-        })),
+      const recordsByProvider = await all(
+        Object.fromEntries(
+          targets.map(
+            (provider): [ProviderId, () => Promise<ProviderWatchRecord>] => [
+              provider,
+              async () => ({
+                provider,
+                hasIt: await providerHasWatch(queryClient, provider, item, episodes),
+              }),
+            ],
+          ),
+        ),
+      );
+      // better-all keys its result in completion order — rebuild routing order.
+      const records: ProviderWatchRecord[] = targets.map(
+        (provider) => recordsByProvider[provider],
       );
       const decisions = reconcileLogTargets(records);
       const writeTargets = decisions

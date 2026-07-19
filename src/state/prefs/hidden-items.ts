@@ -63,3 +63,17 @@ function subscribe(onStoreChange: () => void): () => void {
 export function useHiddenItems(): readonly HiddenItem[] {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
+
+/**
+ * `items` minus the ones the user hid (card actions dialog). The per-row
+ * counterpart to `useUnifiedFeed`'s aggregate filter — each suspense-backed
+ * feed row applies it to its own query result, so screens never re-filter.
+ */
+export function useVisibleItems<T extends { id: string }>(
+  items: readonly T[],
+): T[] {
+  const hiddenItems = useHiddenItems();
+  if (hiddenItems.length === 0) return items.slice();
+  const hiddenIds = new Set(hiddenItems.map((hidden) => hidden.id));
+  return items.filter((item) => !hiddenIds.has(item.id));
+}
