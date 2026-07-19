@@ -27,8 +27,9 @@ import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
  */
 // Letterboxd diary tag stamped on every log by default, so Shinobu-made
 // entries are filterable on Letterboxd. Prefilled, not forced — the field
-// stays editable per log.
-const DEFAULT_TAGS = 'shinobu';
+// stays editable per log. The trailing separator leaves the cursor ready
+// for the next tag; the parse filters the empty segment it creates.
+const DEFAULT_TAGS = 'shinobu, ';
 
 export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
