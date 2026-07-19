@@ -69,6 +69,7 @@
     "ios.clean": "expo prebuild --platform ios --clean && bun ios",
     "web": "expo start --web",
     "test": "bun test",
+    "check:links": "bun scripts/check-external-urls.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint"
   },

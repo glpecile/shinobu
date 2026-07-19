@@ -11,6 +11,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { anilistAuthorizeUrl, anilistClientId } from '@/lib/providers/anilist/config';
+import { ANILIST_CREATE_CLIENT_URL } from '@/lib/providers/external-urls';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import {
   clearProviderClientId,
@@ -117,9 +118,9 @@ export function ConnectAniListButton() {
                 Create a client at{' '}
                 <Text
                   className="text-accent font-sans-semibold underline"
-                  onPress={() => Linking.openURL('https://anilist.co/settings/developer')}
+                  onPress={() => Linking.openURL(ANILIST_CREATE_CLIENT_URL)}
                 >
-                  anilist.co/settings/developer
+                  {ANILIST_CREATE_CLIENT_URL.replace('https://', '')}
                 </Text>
                 . Name can be anything (e.g. "Shinobu").
               </Text>

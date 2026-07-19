@@ -16,6 +16,7 @@ import { useCSSVariable } from 'uniwind';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
+import { TRAKT_CREATE_APP_URL } from '@/lib/providers/external-urls';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 import {
   getTraktRedirectUri,
@@ -218,11 +219,9 @@ export function ConnectTraktButton() {
                 Create an app at{" "}
                 <Text
                   className="text-accent font-sans-semibold underline"
-                  onPress={() =>
-                    Linking.openURL("https://app.trakt.tv/settings/apps/api/new")
-                  }
+                  onPress={() => Linking.openURL(TRAKT_CREATE_APP_URL)}
                 >
-                  app.trakt.tv/settings/apps/api/new
+                  {TRAKT_CREATE_APP_URL.replace("https://", "")}
                 </Text>
                 . Name and description can be anything (e.g. "Shinobu").
               </Text>

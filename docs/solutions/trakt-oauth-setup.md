@@ -13,6 +13,8 @@ support PKCE, the app disables it (`usePKCE: false` in `ConnectTraktButton`).
    `https://api.trakt.tv/oauth/token` are still the documented ones
    (docs now live at https://docs.trakt.tv; the authorize URL 307-redirects
    internally to Trakt's new auth frontend, which is transparent to the flow).
+   This class of rot is now watched by `scripts/check-external-urls.ts`
+   (`bun check:links`), run daily by `.github/workflows/link-health.yml`.
 2. Fill the form:
    - **Name:** Shinobu
    - **Icon:** any square transparent PNG (≥ 256×256)

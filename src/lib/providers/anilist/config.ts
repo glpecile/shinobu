@@ -2,8 +2,11 @@ import { Platform } from 'react-native';
 
 // This module imports react-native (Platform), so the effect layer must not
 // depend on it — bun:test can't parse RN's entry point. The GraphQL URL
-// lives in http.ts for that reason; this file is UI/auth-side only.
-export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize';
+// lives in http.ts and the authorize URL in external-urls.ts for that
+// reason; this file is UI/auth-side only.
+import { ANILIST_AUTHORIZE_URL } from '@/lib/providers/external-urls';
+
+export { ANILIST_AUTHORIZE_URL };
 
 // Shinobu's registered AniList API clients — otraku-style implicit grant
 // (plan 0011 decision 1): the client id is embedded and public, there is no
