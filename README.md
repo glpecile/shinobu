@@ -4,7 +4,7 @@
 
 <h1 align="center">Shinobu (忍)</h1>
 
-<p align="center">A DB-less, cross-platform media tracker — log a movie, show, or anime once and every tracker you've connected stays in sync.</p>
+<p align="center">A DB-less, cross-platform harness for your media trackers — log a movie, show, or anime once and every one you've connected stays in sync.</p>
 
 <p align="center">
   <img src="./docs/images/screenshot-home.png" alt="Shinobu home on web and iOS — “One log. Every tracker.” hero with floating provider tiles" />

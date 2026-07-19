@@ -97,8 +97,8 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
       <Text
         className={`text-base font-sans text-muted mt-5 text-center leading-relaxed ${compact ? 'max-w-xs' : 'max-w-md'}`}
       >
-        Log a movie, show, or anime once — Shinobu keeps every media tracker
-        you&apos;ve connected in sync.
+        Shinobu is a harness for your media trackers — log a movie, show, or
+        anime once and every one you&apos;ve connected stays in sync.
       </Text>
       {connectFailed && (
         <Text className="text-accent font-sans text-sm mt-4 text-center">
@@ -241,7 +241,7 @@ export default function App() {
       <Head>
         <title>Shinobu</title>
         <meta
-          content="Shinobu is a cross-platform media tracker. Log a movie, show, or anime once and every tracker you've connected stays in sync."
+          content="Shinobu is a harness for your media trackers. Log a movie, show, or anime once and every one you've connected stays in sync."
           name="description"
         />
       </Head>
