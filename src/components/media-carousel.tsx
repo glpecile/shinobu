@@ -24,6 +24,8 @@ interface MediaCarouselProps {
   /** The provider this row is sourced from — renders its brand mark. */
   provider?: ProviderId;
   items: NormalizedMediaItem[];
+  /** Per-item context line under the type label (see MediaCard's `subtitle`). */
+  subtitles?: Record<string, string>;
   onItemPress?: (item: NormalizedMediaItem) => void;
   /** Opens the card actions dialog — see MediaCard's `onActionsPress`. */
   onItemActions?: (item: NormalizedMediaItem) => void;
@@ -34,6 +36,7 @@ export function MediaCarousel({
   collapseKey,
   provider,
   items,
+  subtitles,
   onItemPress,
   onItemActions,
 }: MediaCarouselProps) {
@@ -70,6 +73,7 @@ export function MediaCarousel({
                 item={item}
                 onActionsPress={onItemActions}
                 onPress={onItemPress}
+                subtitle={subtitles?.[item.id]}
               />
             </View>
           ))}

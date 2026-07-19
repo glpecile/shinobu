@@ -9,7 +9,6 @@ import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
-import { getAnimeCredits, type AnimeCredits } from '@/lib/providers/anilist/credits';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import {
@@ -82,9 +81,6 @@ export const anilistQueryKeys = {
   /** Per-episode air dates + titles for one anime series (detail screen). */
   episodes: (mediaId: number) =>
     [...anilistQueryKeys.all, 'episodes', mediaId] as const,
-  /** Cast, staff, and studios for one anime detail screen. */
-  credits: (mediaId: number) =>
-    [...anilistQueryKeys.all, 'credits', mediaId] as const,
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.all, 'search', query, limit] as const,
@@ -217,17 +213,3 @@ export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
   });
 }
 
-/**
- * Public detail credits. This one query covers cast (Japanese voice actors),
- * staff, and studios, so the three UI sections suspend together.
- */
-export function useSuspenseAniListCreditsQuery(params: { mediaId: number }) {
-  const { mediaId } = params;
-  return useSuspenseQuery({
-    queryKey: anilistQueryKeys.credits(mediaId),
-    queryFn: (): Promise<AnimeCredits> =>
-      Effect.runPromise(getAnimeCredits(anilistDeps(), { mediaId })),
-    // Cast/staff/studios are effectively static for an aired title.
-    staleTime: 60 * 60_000,
-  });
-}

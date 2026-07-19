@@ -254,6 +254,7 @@ export function normalizeCastEntry(raw: TraktCastEntry): NormalizedCastMember {
     name: raw.person.name,
     character: raw.characters?.join(', ') ?? raw.character ?? '',
     headshot: imageUrl(raw.person.images?.headshot),
+    ...(raw.person.ids.tmdb != null ? { tmdbId: raw.person.ids.tmdb } : {}),
   };
 }
 
@@ -302,6 +303,9 @@ export function normalizeCrew(
             name: entry.person.name,
             job: '',
             headshot: imageUrl(entry.person.images?.headshot),
+            ...(entry.person.ids.tmdb != null
+              ? { tmdbId: entry.person.ids.tmdb }
+              : {}),
           },
           jobs: [...jobs],
         });
@@ -325,6 +329,7 @@ export function normalizeStudio(raw: TraktStudio): NormalizedStudio {
   return {
     id: `trakt-studio-${raw.ids.trakt ?? raw.ids.slug}`,
     name: raw.name,
+    ...(raw.ids.tmdb != null ? { tmdbId: raw.ids.tmdb } : {}),
   };
 }
 

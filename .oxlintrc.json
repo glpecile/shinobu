@@ -53,6 +53,10 @@
           {
             "group": ["@expo/vector-icons", "@expo/vector-icons/*"],
             "message": "@expo/vector-icons is deprecated by Expo — import from @react-native-vector-icons/<set>/static instead (e.g. @react-native-vector-icons/ionicons/static)."
+          },
+          {
+            "group": ["@nandorojo/galeria", "@nandorojo/galeria/*"],
+            "message": "Import ZoomableImage from @/components/zoomable-image — the wrapper pairs galeria with the withUniwind Image and handles the empty-uri fallback."
           }
         ],
         "paths": [
@@ -111,7 +115,8 @@
         "src/components/head/index.web.tsx",
         "src/components/image.tsx",
         "src/components/keyboard-avoiding-view.tsx",
-        "src/components/presstable.tsx"
+        "src/components/presstable.tsx",
+        "src/components/zoomable-image.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

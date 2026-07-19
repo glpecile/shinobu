@@ -10,8 +10,6 @@ import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
 import {
   getMediaImages,
-  getMediaPeople,
-  getMediaStudios,
   getShowSeasons,
   getShowWatchedProgress,
   getTrendingMovies,
@@ -82,10 +80,6 @@ export const traktQueryKeys = {
   searchRoot: () => [...traktQueryKeys.all, 'search'] as const,
   search: (query: string, limit: number) =>
     [...traktQueryKeys.searchRoot(), query, limit] as const,
-  people: (type: MediaType, traktId: number) =>
-    [...traktQueryKeys.all, 'people', type, traktId] as const,
-  studios: (type: MediaType, traktId: number) =>
-    [...traktQueryKeys.all, 'studios', type, traktId] as const,
   /** Full seasons + episodes for one show (plan 0010). */
   seasons: (traktId: number) =>
     [...traktQueryKeys.all, 'seasons', traktId] as const,
@@ -130,36 +124,6 @@ export function useTraktMediaImages(
     };
   }
   return data ?? { coverImage: '' };
-}
-
-/**
- * Cast + crew credits for one movie/show — public read. Suspense variant:
- * mount it under a `SuspenseSection` (skeleton fallback + error containment),
- * and only once the Trakt id is known — suspense queries can't be disabled.
- */
-export function useSuspenseTraktPeopleQuery(params: {
-  type: MediaType;
-  traktId: number;
-}) {
-  const { type, traktId } = params;
-  return useSuspenseQuery({
-    queryKey: traktQueryKeys.people(type, traktId),
-    queryFn: () =>
-      Effect.runPromise(getMediaPeople(traktDeps(), { type, traktId })),
-  });
-}
-
-/** Production studios for one movie/show — same suspense contract as above. */
-export function useSuspenseTraktStudiosQuery(params: {
-  type: MediaType;
-  traktId: number;
-}) {
-  const { type, traktId } = params;
-  return useSuspenseQuery({
-    queryKey: traktQueryKeys.studios(type, traktId),
-    queryFn: () =>
-      Effect.runPromise(getMediaStudios(traktDeps(), { type, traktId })),
-  });
 }
 
 /**
