@@ -7,9 +7,12 @@ import { PresstableOpacity } from '@/components/presstable';
 export function PersonNotFound({
   detail,
   onGoBack,
+  onRetry,
 }: {
   detail: string;
   onGoBack: () => void;
+  /** Route-error variant: offer a retry alongside the escape hatch. */
+  onRetry?: () => void;
 }) {
   return (
     <View className="flex-1 bg-background items-center justify-center px-8">
@@ -20,14 +23,26 @@ export function PersonNotFound({
         Not found
       </Text>
       <Text className="text-muted font-sans text-center mb-6">{detail}</Text>
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
-        onPress={onGoBack}
-      >
-        <Text className="text-accent-foreground font-sans-semibold">
-          Go back
-        </Text>
-      </PresstableOpacity>
+      <View className="flex-row gap-3">
+        {onRetry != null && (
+          <PresstableOpacity
+            className="border border-border px-5 py-3 rounded"
+            onPress={onRetry}
+          >
+            <Text className="text-foreground font-sans-semibold">
+              Try again
+            </Text>
+          </PresstableOpacity>
+        )}
+        <PresstableOpacity
+          className="bg-accent px-5 py-3 rounded"
+          onPress={onGoBack}
+        >
+          <Text className="text-accent-foreground font-sans-semibold">
+            Go back
+          </Text>
+        </PresstableOpacity>
+      </View>
     </View>
   );
 }

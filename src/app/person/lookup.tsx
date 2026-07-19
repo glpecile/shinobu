@@ -1,4 +1,9 @@
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  Redirect,
+  useLocalSearchParams,
+  useRouter,
+  type ErrorBoundaryProps,
+} from 'expo-router';
 import { Suspense } from 'react';
 import { View } from 'react-native';
 
@@ -53,5 +58,20 @@ export default function PersonLookupScreen() {
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>
     </View>
+  );
+}
+
+/** Route-level containment — a failed search shows the not-found view with
+ * a retry instead of taking the whole app down via the root boundary. */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  const router = useRouter();
+  return (
+    <PersonNotFound
+      detail="This person couldn't be loaded."
+      onGoBack={() =>
+        router.canGoBack() ? router.back() : router.replace(routes.home)
+      }
+      onRetry={retry}
+    />
   );
 }

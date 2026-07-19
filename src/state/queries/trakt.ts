@@ -80,10 +80,6 @@ export const traktQueryKeys = {
   searchRoot: () => [...traktQueryKeys.all, 'search'] as const,
   search: (query: string, limit: number) =>
     [...traktQueryKeys.searchRoot(), query, limit] as const,
-  people: (type: MediaType, traktId: number) =>
-    [...traktQueryKeys.all, 'people', type, traktId] as const,
-  studios: (type: MediaType, traktId: number) =>
-    [...traktQueryKeys.all, 'studios', type, traktId] as const,
   /** Full seasons + episodes for one show (plan 0010). */
   seasons: (traktId: number) =>
     [...traktQueryKeys.all, 'seasons', traktId] as const,

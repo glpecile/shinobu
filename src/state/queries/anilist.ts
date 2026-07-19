@@ -81,9 +81,6 @@ export const anilistQueryKeys = {
   /** Per-episode air dates + titles for one anime series (detail screen). */
   episodes: (mediaId: number) =>
     [...anilistQueryKeys.all, 'episodes', mediaId] as const,
-  /** Cast, staff, and studios for one anime detail screen. */
-  credits: (mediaId: number) =>
-    [...anilistQueryKeys.all, 'credits', mediaId] as const,
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.all, 'search', query, limit] as const,

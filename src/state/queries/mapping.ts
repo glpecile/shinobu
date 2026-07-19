@@ -113,8 +113,10 @@ export function cachedTraktTextSearch(
  * Catalogue record backing a movie that arrived without one — today that's
  * Letterboxd items, whose origin carries no overview/runtime/genres/rating
  * and no cross-provider ids. Disabled once the item already has a Trakt id
- * (it *is* a catalogue record then). Merge the result with
- * `mergeCatalogueMetadata` (lib/providers/merge-metadata.ts).
+ * (it *is* a catalogue record then), or a TMDB id — those take the exact
+ * `useTraktIdentityQuery` id lookup instead of this fuzzy title+year text
+ * search (wrong-match risk: docs/solutions/trakt-text-search-wrong-movie-match.md).
+ * Merge the result with `mergeCatalogueMetadata` (lib/providers/merge-metadata.ts).
  */
 export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
   const title = item?.title ?? '';
@@ -124,6 +126,7 @@ export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
       item != null &&
       item.type === 'MOVIE' &&
       item.externalIds.trakt == null &&
+      item.externalIds.tmdb == null &&
       title !== '',
   });
 }

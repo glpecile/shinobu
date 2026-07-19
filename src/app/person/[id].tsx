@@ -1,4 +1,8 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  useLocalSearchParams,
+  useRouter,
+  type ErrorBoundaryProps,
+} from 'expo-router';
 import { Suspense } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
@@ -154,5 +158,23 @@ export default function PersonScreen() {
       </ScrollView>
       <FloatingBackButton onPress={goBack} />
     </View>
+  );
+}
+
+/**
+ * Route-level containment: a failed TMDB fetch (no token, 404, rate limit)
+ * surfaces as this screen's not-found view with a retry — not the root
+ * boundary unmounting the whole app (plan 0013 §5).
+ */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  const router = useRouter();
+  return (
+    <PersonNotFound
+      detail="This person couldn't be loaded."
+      onGoBack={() =>
+        router.canGoBack() ? router.back() : router.replace(routes.home)
+      }
+      onRetry={retry}
+    />
   );
 }
