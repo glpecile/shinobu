@@ -11,6 +11,7 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
+import { parseTags } from './parse-tags';
 import { useLogMedia } from './use-log-media';
 import { useLogTargets } from './use-log-targets';
 import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
@@ -94,10 +95,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   function confirmLog() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
     haptics.confirm();
-    const parsedTags = tags
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== '');
+    const parsedTags = parseTags(tags);
     logMedia.mutate(
       {
         item,
