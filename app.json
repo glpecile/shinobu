@@ -56,6 +56,12 @@
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
         "backgroundColor": "#ffffff"
       }
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bad1be1f-1fce-459f-827b-c288096fc64c"
+      }
+    },
+    "owner": "glpecile"
   }
 }
