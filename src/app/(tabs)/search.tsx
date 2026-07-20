@@ -9,7 +9,6 @@ import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
-import { SearchBackButton } from '@/components/search-back-button';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import type { ProviderId } from '@/lib/providers/types';
@@ -193,18 +192,6 @@ export default function SearchScreen() {
     ...sectionRows('anilist', 'Anime & Manga', anilistSearch),
   ];
 
-  function goBack() {
-    if (process.env.EXPO_OS === 'web') {
-      router.replace(routes.home);
-      return;
-    }
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace(routes.home);
-    }
-  }
-
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
   }
@@ -217,7 +204,6 @@ export default function SearchScreen() {
       <View
         className={`relative z-20 flex-row items-center gap-3 px-6 ${screenHeaderTopPadding} pb-4`}
       >
-        <SearchBackButton onPress={goBack} />
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
@@ -259,6 +245,11 @@ export default function SearchScreen() {
           }
         >
           <List
+            // Clear the native bottom tab bar (unmeasurable height) so the last
+            // result isn't hidden behind it; web has no tab bar.
+            contentContainerStyle={
+              process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
+            }
             data={rows}
             keyExtractor={(row) => row.key}
             keyboardShouldPersistTaps="handled"
