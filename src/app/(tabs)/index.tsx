@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -8,6 +9,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { FeedRowSkeleton, FeedSkeleton } from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
@@ -135,6 +137,10 @@ function FeedScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
+  // Fades the top of the scrolling feed into the header instead of a hard edge.
+  const background = useCSSVariable('--color-background');
+  const backgroundColor =
+    typeof background === 'string' ? background : 'transparent';
 
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
@@ -213,6 +219,16 @@ function FeedScreen() {
           />
         </SuspenseSection>
       </RefreshableScrollView>
+      {/* Soft fade under the header (native only — web home has no header).
+          className is dropped on third-party components on native, so the
+          overlay is positioned via style. */}
+      {process.env.EXPO_OS !== 'web' && (
+        <LinearGradient
+          colors={[backgroundColor, 'transparent']}
+          pointerEvents="none"
+          style={{ height: 28, left: 0, position: 'absolute', right: 0, top: 0 }}
+        />
+      )}
       <CardActionsSheet {...sheetProps} />
     </View>
   );
