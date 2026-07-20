@@ -22,7 +22,7 @@ import {
   getTraktRedirectUri,
   TRAKT_CORS_ORIGINS,
   TRAKT_REDIRECT_URIS,
-} from '@/lib/providers/trakt/redirectUri';
+} from '@/lib/providers/trakt/redirect-uri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 import { useProviderCredentials } from '@/state/session/use-provider-credentials';
 

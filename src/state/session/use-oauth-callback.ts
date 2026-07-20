@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { getTraktRedirectUri } from '@/lib/providers/trakt/redirectUri';
+import { getTraktRedirectUri } from '@/lib/providers/trakt/redirect-uri';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 
