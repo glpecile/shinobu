@@ -7,7 +7,7 @@ import {
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
 import { pickMovieMatch } from '@/lib/providers/pick-movie-match';
-import { findByTvdbId } from '@/lib/providers/tmdb/reads';
+import { findByTvdbId, searchMovie } from '@/lib/providers/tmdb/reads';
 import { lookupByExternalId, searchMedia } from '@/lib/providers/trakt/reads';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -31,6 +31,9 @@ export const mappingQueryKeys = {
     ['mapping', 'trakt-search', title, year ?? 'any'] as const,
   /** TVDB → TMDB tv-id bridge (`/find`), the anime-TV leg of plan 0014. */
   tmdbFind: (tvdbId: number) => ['mapping', 'tmdb-find', tvdbId] as const,
+  /** Title+year → TMDB movie id, for id-less films (Letterboxd). */
+  tmdbMovieSearch: (title: string, year: number | undefined) =>
+    ['mapping', 'tmdb-movie-search', title, year ?? 'any'] as const,
 };
 
 const FOREVER = {
@@ -107,6 +110,27 @@ export function cachedTraktTextSearch(
   year: number | undefined,
 ) {
   return queryClient.fetchQuery(movieSearchQuery(title, year));
+}
+
+/**
+ * Title+year → TMDB movie id via TMDB `/search/movie` — the tracker-free way a
+ * Letterboxd-only film (slug + title + year, no Trakt to text-search) acquires
+ * the id the TMDB-first detail read needs. `pickMovieMatch`'s year gate rejects
+ * a same-title different-year film rather than serving wrong metadata. Forever-
+ * cached like every mapping; null on a miss (or without a TMDB token).
+ */
+export function cachedTmdbMovieIdByTitle(
+  queryClient: QueryClient,
+  params: { title: string; year: number | undefined },
+): Promise<number | null> {
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year),
+    queryFn: (): Promise<number | null> =>
+      Effect.runPromise(searchMovie(tmdbDeps(), { query: params.title }))
+        .then((results) => pickMovieMatch(results, params.year)?.externalIds.tmdb ?? null)
+        .catch(() => null),
+    ...FOREVER,
+  });
 }
 
 /**

@@ -612,6 +612,28 @@ export function normalizeCompanySearch(
     .filter((entry) => entry.name !== '');
 }
 
+// ---- Title search (title+year → TMDB id, for id-less items) ----
+
+/** `/search/movie` (or `/tv`) result rows — the same slice as a credit row. */
+export interface TmdbSearchResponse {
+  results?: TmdbCreditBase[];
+}
+
+/**
+ * `/search/{kind}` rows → normalized items, so a title+year lookup can pick
+ * the match (`pickMovieMatch`) and read its `externalIds.tmdb`. Reuses the
+ * shared item mapping — untitled hits drop out.
+ */
+export function normalizeTitleSearch(
+  raw: TmdbSearchResponse,
+  kind: TmdbKind,
+  nowIso: string,
+): NormalizedMediaItem[] {
+  return (raw.results ?? [])
+    .map((entry) => normalizeKindedItem(entry, kind, nowIso))
+    .filter((item) => item != null);
+}
+
 // ---- /find external-id bridge ----
 
 export interface TmdbFindResponse {
