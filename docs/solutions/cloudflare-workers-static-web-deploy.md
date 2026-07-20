@@ -70,11 +70,76 @@ runtime would have provided.
 
 ```sh
 bun run deploy:web
-# = expo export --platform web && cp dist/+not-found.html dist/404.html && wrangler deploy
+# = bun run build:web && wrangler deploy
+# build:web = expo export --platform web && cp dist/+not-found.html dist/404.html
 ```
 
 Auth is `wrangler login`'s OAuth token (already set up locally); no secrets
 needed for this static-only deploy.
+
+## Automatic deploys on push (Cloudflare Workers Builds)
+
+**Set up 2026-07-20.** The `shinobu` Worker is connected to the
+`glpecile/shinobu` GitHub repo via **Workers Builds** (dashboard: Worker →
+Settings → Build → Connect Git repository). This is *not* GitHub Actions and
+*not* in any repo file — the connection, build commands, and env vars all
+live in the Cloudflare dashboard. Push to `main` → production deploy to
+`shinobu.glpecile.xyz`; pushes to non-production branches → preview versions
+(`wrangler versions upload`), not the production domain.
+
+Dashboard build configuration:
+
+- **Build command:** `bunx expo export --platform web && cp 'dist/+not-found.html' dist/404.html`
+- **Deploy command:** `npx wrangler deploy`
+- **Version command** (non-prod branches): `npx wrangler versions upload`
+- **Root directory:** `/`, **Production branch:** `main`
+
+### Gotcha: `expo: not found` — use a runner, not the bare binary
+
+First build failed at the build step with:
+
+```
+/bin/sh: 1: expo: not found
+Failed: error occurred while running build command
+```
+
+The install succeeded (678 packages, `expo` among them) — the problem is
+that the dashboard build command runs in a plain `/bin/sh` where
+`node_modules/.bin` is **not** on `PATH`. A bare `expo export …` can't be
+found even though the package is installed. (This is also why the deploy
+command uses `npx wrangler`, not bare `wrangler`.)
+
+Fix: invoke `expo` through a runner — `bunx expo export …` (`bunx` because
+Workers Builds detected `bun.lock` and installed with bun; `npx expo …`
+works too). Editing the dashboard build command and hitting **Retry build**
+re-runs against the same commit — no repo push needed for a build-command
+change.
+
+Durable fix now in the repo (2026-07-20): `package.json` has a
+`"build:web": "expo export --platform web && cp 'dist/+not-found.html' dist/404.html"`
+script (and `deploy:web` chains it: `bun run build:web && wrangler deploy`).
+Point the dashboard **Build command** at `bun run build:web` instead of the
+inline `bunx expo …` — inside a bun/npm script `node_modules/.bin` *is* on
+`PATH`, so bare `expo` resolves, and the build recipe stays version-controlled
+in one place rather than duplicated in the dashboard.
+
+### Env vars must be added in the dashboard, not just `.env.local`
+
+The four `EXPO_PUBLIC_*` vars the web build inlines at export time
+(`EXPO_PUBLIC_TMDB_TOKEN`, `EXPO_PUBLIC_TRAKT_CLIENT_ID`,
+`EXPO_PUBLIC_TRAKT_CLIENT_SECRET`, `EXPO_PUBLIC_ANILIST_CLIENT_ID`) live in
+`.env.local`, which is **gitignored** — so Cloudflare's build container never
+sees them. They must be re-entered under Workers Builds → **Variables and
+secrets**. Miss this and the build still *succeeds* (nothing errors on a
+missing `EXPO_PUBLIC_*`), but the shipped bundle has them undefined: TMDB
+detail/person/studio screens go dark and Trakt/AniList connect break.
+
+Because `EXPO_PUBLIC_*` values are inlined into the client JS at export, the
+`Variable` vs `Secret` type choice in the dashboard only controls encryption
+at rest in Cloudflare — it does *not* hide them at runtime; they're public in
+the shipped bundle either way. (The Trakt client-secret-in-bundle exposure is
+a pre-existing property of the BYO-client design, not introduced by this
+deploy path.)
 
 ## Verification
 

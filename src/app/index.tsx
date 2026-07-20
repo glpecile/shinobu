@@ -22,6 +22,7 @@ import {
 } from '@/components/screen-header-spacing';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { useCardActions } from '@/features/card-actions/use-card-actions';
 import {
   SeasonalAnimeRow,
   TrendingMoviesRow,
@@ -30,7 +31,6 @@ import {
   YourShowsRow,
   YourWatchlistRow,
 } from '@/features/feed/feed-rows';
-import { haptics } from '@/lib/haptics';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
@@ -136,20 +136,10 @@ function FeedScreen() {
   // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
-  // Item is kept through close so content doesn't vanish mid-animation.
-  const [actionsItem, setActionsItem] = useState<NormalizedMediaItem | null>(
-    null,
-  );
-  const [actionsOpen, setActionsOpen] = useState(false);
+  const { openActions, sheetProps } = useCardActions();
 
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
-  }
-
-  function openActions(item: NormalizedMediaItem) {
-    haptics.selection();
-    setActionsItem(item);
-    setActionsOpen(true);
   }
 
   async function refresh() {
@@ -221,11 +211,7 @@ function FeedScreen() {
           />
         </SuspenseSection>
       </RefreshableScrollView>
-      <CardActionsSheet
-        item={actionsItem}
-        onClose={() => setActionsOpen(false)}
-        open={actionsOpen}
-      />
+      <CardActionsSheet {...sheetProps} />
     </View>
   );
 }

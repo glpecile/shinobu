@@ -74,7 +74,8 @@
     "check:links": "bun scripts/check-external-urls.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "deploy:web": "expo export --platform web && cp 'dist/+not-found.html' dist/404.html && wrangler deploy"
+    "build:web": "expo export --platform web && cp 'dist/+not-found.html' dist/404.html",
+    "deploy:web": "bun run build:web && wrangler deploy"
   },
   "expo": {
     "doctor": {
