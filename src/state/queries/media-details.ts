@@ -14,7 +14,11 @@ import { tmdbToken } from '@/lib/providers/tmdb/config';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistDeps } from './anilist';
-import { cachedAniZipIds, cachedTmdbTvIdByTvdb } from './mapping';
+import {
+  cachedAniZipIds,
+  cachedTmdbMovieIdByTitle,
+  cachedTmdbTvIdByTvdb,
+} from './mapping';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
 
@@ -30,6 +34,10 @@ export const mediaDetailsQueryKeys = {
   details: (item: NormalizedMediaItem | undefined) =>
     [
       ...mediaDetailsQueryKeys.all,
+      // The item's own id keeps two id-less films (Letterboxd slugs, all
+      // externalIds null) from colliding on one cache entry — otherwise a
+      // title-resolved TMDB record would leak between them.
+      item?.id ?? 'none',
       item?.type ?? 'none',
       item?.isFilm === true,
       // All three ids key the entry: enrichment that discovers a new id
@@ -55,6 +63,25 @@ async function resolveTmdbId(
 ): Promise<number | undefined> {
   if (item.externalIds.tmdb != null) return item.externalIds.tmdb;
   if (tmdbToken() === '') return undefined;
+
+  // A movie with no cross-provider id at all (a Letterboxd watchlist film is
+  // slug + title + year) resolves its TMDB id by title+year directly — no
+  // tracker connection required, unlike the Trakt text-search enrichment. Only
+  // when there's no Trakt id either, whose exact lookup is preferred over this
+  // fuzzy search (same guard as mapping.ts's useMovieCatalogueQuery).
+  if (
+    item.type === 'MOVIE' &&
+    item.externalIds.trakt == null &&
+    item.title !== ''
+  ) {
+    return (
+      (await cachedTmdbMovieIdByTitle(queryClient, {
+        title: item.title,
+        year: item.year,
+      })) ?? undefined
+    );
+  }
+
   if (item.type !== 'ANIME' || item.externalIds.anilist == null) return undefined;
 
   const ids = await cachedAniZipIds(queryClient, {

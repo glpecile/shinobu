@@ -274,6 +274,7 @@ describe('normalizePersonSearch', () => {
 import {
   normalizeMovieCatalogue,
   normalizeStudioDetails,
+  normalizeTitleSearch,
   normalizeTvCatalogue,
 } from './normalize';
 
@@ -415,5 +416,29 @@ describe('normalizeStudioDetails', () => {
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].title).toBe('TV Shows');
     expect(result.rows[0].items.map((item) => item.id)).toEqual(['tmdb-tv-95479']);
+  });
+});
+
+describe('normalizeTitleSearch', () => {
+  test('maps movie hits with tmdb id + year, dropping untitled ones', () => {
+    const result = normalizeTitleSearch(
+      {
+        results: [
+          { id: 42, title: "Rabbit's Moon", release_date: '1971-01-01' },
+          { id: 7, title: '', release_date: '2000-01-01' },
+          { id: 9, title: 'Yearless', release_date: null },
+        ],
+      },
+      'movie',
+      NOW,
+    );
+    expect(result.map((item) => [item.id, item.externalIds.tmdb, item.year])).toEqual([
+      ['tmdb-movie-42', 42, 1971],
+      ['tmdb-movie-9', 9, undefined],
+    ]);
+  });
+
+  test('empty results yield an empty list', () => {
+    expect(normalizeTitleSearch({}, 'movie', NOW)).toEqual([]);
   });
 });

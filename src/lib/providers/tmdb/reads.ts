@@ -1,6 +1,7 @@
 import { Clock, Effect } from 'effect';
 
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
+import type { NormalizedMediaItem } from '@/types/media';
 import { tmdbRequest } from './api';
 import type { TmdbDeps } from './deps';
 import {
@@ -9,6 +10,7 @@ import {
   normalizePersonDetails,
   normalizePersonSearch,
   normalizeStudioDetails,
+  normalizeTitleSearch,
   normalizeTvCatalogue,
   type NormalizedPersonDetails,
   type NormalizedStudioDetails,
@@ -22,6 +24,7 @@ import {
   type TmdbMovieResponse,
   type TmdbPersonResponse,
   type TmdbPersonSearchResponse,
+  type TmdbSearchResponse,
   type TmdbTvResponse,
 } from './normalize';
 
@@ -123,6 +126,28 @@ export function getStudio(
     );
     const now = yield* Clock.currentTimeMillis;
     return normalizeStudioDetails(raw, new Date(now).toISOString());
+  });
+}
+
+/**
+ * Title → candidate movies, for items that carry no cross-provider id at all
+ * (a Letterboxd watchlist film is slug + title + year). The caller picks the
+ * real film with `pickMovieMatch`'s year gate — never the raw top hit
+ * (docs/solutions/trakt-text-search-wrong-movie-match.md) — then reads its
+ * `externalIds.tmdb`. Unlike the Trakt text-search path, this needs only the
+ * builder TMDB token, so a Letterboxd-only user still gets metadata.
+ */
+export function searchMovie(
+  deps: TmdbDeps,
+  params: { query: string },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  return Effect.gen(function* () {
+    const raw = yield* tmdbRequest<TmdbSearchResponse>(
+      deps,
+      `/search/movie?query=${encodeURIComponent(params.query)}&include_adult=false`,
+    );
+    const now = yield* Clock.currentTimeMillis;
+    return normalizeTitleSearch(raw, 'movie', new Date(now).toISOString());
   });
 }
 
