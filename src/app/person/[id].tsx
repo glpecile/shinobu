@@ -11,6 +11,8 @@ import { FloatingBackButton } from '@/components/floating-back-button';
 import Head from '@/components/head';
 import { MediaCarousel } from '@/components/media-carousel';
 import { ZoomableImage } from '@/components/zoomable-image';
+import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PersonNotFound, PersonSkeleton } from '@/features/person';
 import { initials } from '@/lib/initials';
 import { routes } from '@/lib/routes';
@@ -75,6 +77,8 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
   const router = useRouter();
   const { person, rows } = data;
   const meta = metaLine(person);
+  // Same per-card actions dialog as the home feed.
+  const { openActions, sheetProps } = useCardActions();
 
   return (
     <>
@@ -120,12 +124,14 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
             collapseKey={`person-${row.role.toLowerCase()}`}
             items={row.items}
             key={row.role}
+            onItemActions={openActions}
             onItemPress={(item) => router.push(routes.details(item.id))}
             subtitles={row.details}
             title={row.role}
           />
         ))}
       </View>
+      <CardActionsSheet {...sheetProps} />
     </>
   );
 }
