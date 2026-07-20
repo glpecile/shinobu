@@ -13,9 +13,15 @@ What still works on web:
 - **Connecting** (entering a username) — pure local state. The username is
   saved unvalidated on web because the validation fetch itself is
   CORS-blocked; native validates against `{username}/rss/`.
-- **The entire write path** — the log queue is local MMKV and the CSV export
-  is a Blob download; no Letterboxd network involved. Web users can log
-  movies to the Letterboxd queue and import the CSV themselves.
+- **The write fan-out fails cleanly** — the web `webFetch` dep is undefined,
+  so `useLogMedia` surfaces Letterboxd as a per-provider `ProviderAuthError`
+  ("connect on mobile") while other providers succeed.
+
+**Re-investigated 2026-07-20 and closed again:** an Expo Router API-route
+proxy would bypass CORS for reads (server-side GETs pass Cloudflare), but all
+state-changing POSTs (writes, sign-in) are Cloudflare client-fingerprint
+walled even with valid cookies/UA — so the proxy was abandoned
+(`docs/solutions/letterboxd-web-proxy.md`, plan 0015).
 
 Gate location: the platform branch lives in `state/queries/letterboxd.ts`
 (watchlist query disabled on web), not in the registry — `canRead` stays

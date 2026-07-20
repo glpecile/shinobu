@@ -154,10 +154,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           {labels(result.succeeded)}.
           {result.skipped.length > 0 &&
             ` ${labels(result.skipped)} already had it.`}
-          {/* Queued ≠ synced (plan 0012) — don't let "Logged to Letterboxd"
-              read as "it's on your diary". */}
-          {result.succeeded.includes('letterboxd') &&
-            ' Letterboxd is queued — export the CSV from Manage Trackers.'}
         </Text>
       )}
       {result != null && result.failed.length > 0 && (

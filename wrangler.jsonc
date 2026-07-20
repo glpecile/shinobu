@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Static-assets-only Worker (no `main` script) serving the Expo Router
+  // static web export. See docs/solutions/cloudflare-workers-static-web-deploy.md
+  // for why this replaced EAS Hosting for the web build: this project has
+  // no server-side API routes right now, so no server runtime is needed,
+  // and a custom domain on a Worker in the same Cloudflare account as the
+  // DNS zone auto-provisions its own DNS record + certificate — no manual
+  // TXT/CNAME juggling like EAS Hosting's cross-account flow required.
+  "name": "shinobu",
+  "compatibility_date": "2026-07-20",
+  "assets": {
+    "directory": "./dist",
+    // Expo Router's static export emits `search.html`, `details/[id].html`,
+    // etc. (no trailing slash in the route), matching how Expo Router's
+    // own Link/router generate hrefs.
+    "html_handling": "drop-trailing-slash",
+    // Paired with the `cp dist/+not-found.html dist/404.html` step in the
+    // deploy script below — Cloudflare's 404-page handling looks for
+    // `404.html`, not Expo's `+not-found.html` naming.
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "shinobu.glpecile.xyz", "custom_domain": true }]
+}

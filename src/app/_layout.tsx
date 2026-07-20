@@ -20,7 +20,7 @@ import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
 import { WebNavigation } from "@/components/web-navigation";
-import { View } from "react-native";
+import { useColorScheme, View } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -38,9 +38,23 @@ export default function Layout() {
   // token refresh retries, and feed invalidation on connect/disconnect.
   const [queryClient] = useState(createQueryClient);
 
+  // Matches --color-background in global.css. React Navigation's Stack
+  // paints this as an inline style independent of Uniwind's stylesheet, so
+  // without it the screen container flashes React Navigation's own default
+  // theme background (`rgb(242, 242, 242)`) instead of Shinobu's own
+  // light/dark background — see docs/solutions/web-fouc-on-boot.md.
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === "dark" ? "#0a0a0a" : "#ffffff";
+
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
+      // `#boot-loader` is static markup from `+html.tsx`, not part of this
+      // React tree — see the comment there for why it exists. Only web
+      // renders it (`document` doesn't exist on native).
+      if (typeof document !== "undefined") {
+        document.getElementById("boot-loader")?.remove();
+      }
     }
   }, [fontsLoaded]);
 
@@ -56,7 +70,12 @@ export default function Layout() {
           <SheetProvider>
             <View className="flex-1">
               <WebNavigation />
-              <Stack screenOptions={{ headerShown: false }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor },
+                }}
+              >
                 <Stack.Screen
                   name="index"
                   options={{ title: "Shinobu" }}

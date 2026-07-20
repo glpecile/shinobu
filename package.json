@@ -59,7 +59,8 @@
     "@types/react": "~19.2.14",
     "happy-dom": "^20.10.6",
     "oxlint": "^1.73.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "wrangler": "^4.112.0"
   },
   "private": true,
   "scripts": {
@@ -72,7 +73,8 @@
     "test": "bun test",
     "check:links": "bun scripts/check-external-urls.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "deploy:web": "expo export --platform web && cp 'dist/+not-found.html' dist/404.html && wrangler deploy"
   },
   "expo": {
     "doctor": {

@@ -310,3 +310,12 @@ watchlist feed); the tradeoff of shipping a backend or extension is not worth
 breaking the DB-less, credentials-never-leave-the-device thesis. Do not re-open
 without new browser capabilities or a deliberate reversal of the no-backend
 principle.
+
+**Update 2026-07-20: the stateless-proxy escape was actually tried and is
+also dead.** Plan 0015 deliberately reversed the no-proxy stance and spiked an
+Expo Router API-route relay. Result: server-side reads pass Cloudflare, but
+every state-changing POST (diary write *and* sign-in) is 403-challenged by
+Cloudflare client fingerprinting even from the user's own IP with the exact
+browser UA and valid cookies — so the proxy could never deliver writes, and
+it was abandoned (`docs/solutions/letterboxd-web-proxy.md`). "Keep writes
+native-only" is now confirmed from both sides of the wall.
