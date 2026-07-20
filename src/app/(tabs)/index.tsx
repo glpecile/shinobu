@@ -1,4 +1,4 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -137,6 +137,10 @@ function FeedScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
+  // Fades the top of the scrolling feed into the header instead of a hard edge.
+  const background = useCSSVariable('--color-background');
+  const backgroundColor =
+    typeof background === 'string' ? background : 'transparent';
 
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
@@ -151,7 +155,11 @@ function FeedScreen() {
     <View className="flex-1">
       <RefreshableScrollView
         className="flex-1"
-        contentContainerClassName="pt-2 pb-8"
+        // Web has no header (sidebar owns brand) so it needs top breathing room;
+        // native clears the bottom tab bar, whose height can't be measured.
+        contentContainerClassName={
+          process.env.EXPO_OS === 'web' ? 'pt-6 pb-8' : 'pt-2 pb-24'
+        }
         onRefresh={refresh}
       >
         {/* Personal rows first (2026-07-14 re-prioritization), trending after.
@@ -211,6 +219,16 @@ function FeedScreen() {
           />
         </SuspenseSection>
       </RefreshableScrollView>
+      {/* Soft fade under the header (native only — web home has no header).
+          className is dropped on third-party components on native, so the
+          overlay is positioned via style. */}
+      {process.env.EXPO_OS !== 'web' && (
+        <LinearGradient
+          colors={[backgroundColor, 'transparent']}
+          pointerEvents="none"
+          style={{ height: 28, left: 0, position: 'absolute', right: 0, top: 0 }}
+        />
+      )}
       <CardActionsSheet {...sheetProps} />
     </View>
   );
@@ -219,8 +237,6 @@ function FeedScreen() {
 export default function App() {
   const connected = useConnectedProviders();
   const oauthStatus = useOAuthCallback();
-  const router = useRouter();
-  const foreground = useCSSVariable('--color-foreground');
 
   return (
     <View className="flex-1 bg-background">
@@ -231,36 +247,19 @@ export default function App() {
           name="description"
         />
       </Head>
-      <View className={homeHeaderClassName}>
-        {/* No connection status here (2026-07-14) — that lives on Manage Trackers. */}
-        <Text className={`${homeHeaderTitleSize} font-display text-foreground tracking-tight`}>
-          忍 Shinobu
-        </Text>
-        <View className="flex-row gap-3">
-          <PresstableOpacity
-            accessibilityLabel="Search"
-            className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border"
-            onPress={() => router.push(routes.search)}
+      {/* The tab bar (native) / sidebar (web) now own navigation, so the header
+          is brand-only. On web the sidebar already carries the 忍 mark, so this
+          duplicate title is dropped there. */}
+      {process.env.EXPO_OS !== 'web' && (
+        <View className={homeHeaderClassName}>
+          {/* No connection status here (2026-07-14) — that lives on Manage Trackers. */}
+          <Text
+            className={`${homeHeaderTitleSize} font-display text-foreground tracking-tight`}
           >
-            <Ionicons
-              color={typeof foreground === 'string' ? foreground : undefined}
-              name="search-outline"
-              size={20}
-            />
-          </PresstableOpacity>
-          <PresstableOpacity
-            accessibilityLabel="Manage trackers"
-            className="w-10 h-10 items-center justify-center rounded-full bg-surface border border-border"
-            onPress={() => router.push(routes.connect)}
-          >
-            <Ionicons
-              color={typeof foreground === 'string' ? foreground : undefined}
-              name="settings-outline"
-              size={20}
-            />
-          </PresstableOpacity>
+            忍 Shinobu
+          </Text>
         </View>
-      </View>
+      )}
 
       {connected.length === 0 ? (
         oauthStatus === 'exchanging' ? (

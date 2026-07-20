@@ -174,10 +174,8 @@ function HiddenItemsSection() {
 }
 
 export default function ConnectScreen() {
-  const router = useRouter();
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
-  const foreground = useCSSVariable('--color-foreground');
   const disconnected = (Object.keys(PROVIDERS) as ProviderId[]).filter(
     (id) => !connected.includes(id),
   );
@@ -187,27 +185,9 @@ export default function ConnectScreen() {
       <Head>
         <title>Manage Trackers — Shinobu</title>
       </Head>
+      {/* A top-level tab now (native tab bar / web sidebar) — no back button. */}
       <View className={`flex-row items-center px-6 ${screenHeaderTopPadding} pb-4`}>
-        <PresstableOpacity
-          accessibilityLabel="Back"
-          className="w-10 h-10 -ml-2 items-center justify-center"
-          onPress={() => {
-            if (process.env.EXPO_OS === 'web') {
-              router.replace(routes.home);
-            } else if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace(routes.home);
-            }
-          }}
-        >
-          <Ionicons
-            color={typeof foreground === 'string' ? foreground : undefined}
-            name="arrow-back"
-            size={22}
-          />
-        </PresstableOpacity>
-        <Text className="text-2xl font-display text-foreground ml-2">
+        <Text className="text-2xl font-display text-foreground">
           Manage Trackers
         </Text>
       </View>
@@ -215,7 +195,10 @@ export default function ConnectScreen() {
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <RefreshableScrollView
           className="flex-1 px-6"
-          contentContainerClassName="pb-8"
+          // Native clears the bottom tab bar (unmeasurable height); web doesn't.
+          contentContainerClassName={
+            process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'
+          }
           keyboardShouldPersistTaps="handled"
           // This screen has no server data of its own — the useful refresh is
           // marking every cached query stale so the feed refetches on return.

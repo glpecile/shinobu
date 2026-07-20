@@ -7,20 +7,21 @@ import {
 import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { DarkTheme, DefaultTheme, Stack } from "expo-router";
+import { ThemeProvider } from "expo-router/react-navigation";
 import * as SplashScreen from "expo-splash-screen";
 import { ErrorBoundary } from "react-error-boundary";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
+import { AppShell } from "@/components/app-shell";
 import { ErrorFallback } from "@/components/error-fallback";
 import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
-import { WebNavigation } from "@/components/web-navigation";
-import { useColorScheme, View } from "react-native";
+import { useColorScheme } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -68,23 +69,32 @@ export default function Layout() {
         <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <SheetProvider>
-            <View className="flex-1">
-              <WebNavigation />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor },
-                }}
-              >
-                <Stack.Screen
-                  name="index"
-                  options={{ title: "Shinobu" }}
-                />
-              </Stack>
-              {/* Hidden authenticated WebView that runs Letterboxd writes
-                  (native only; renders null on web). */}
-              <LetterboxdWriteBridge />
-            </View>
+            {/* ThemeProvider keeps the native tab bar / navigator chrome themed
+                and prevents header-button flicker when switching tabs. */}
+            <ThemeProvider
+              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+            >
+              <AppShell>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor },
+                  }}
+                >
+                  {/* Bottom tabs (native) / sidebar-hosted (web). Detail routes
+                      sit at the root so they push over the tab bar. */}
+                  <Stack.Screen name="(tabs)" options={{ title: "Shinobu" }} />
+                  <Stack.Screen name="details/[id]" />
+                  <Stack.Screen name="person/[id]" />
+                  <Stack.Screen name="person/lookup" />
+                  <Stack.Screen name="studio/[id]" />
+                  <Stack.Screen name="studio/lookup" />
+                </Stack>
+                {/* Hidden authenticated WebView that runs Letterboxd writes
+                    (native only; renders null on web). */}
+                <LetterboxdWriteBridge />
+              </AppShell>
+            </ThemeProvider>
           </SheetProvider>
         </QueryClientProvider>
         </KeyboardProvider>
