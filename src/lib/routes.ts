@@ -6,6 +6,7 @@ export const routes = {
   home: '/',
   connect: '/connect',
   search: '/search',
+  diary: '/diary',
   details: (id: string) => `/details/${id}` as const,
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,

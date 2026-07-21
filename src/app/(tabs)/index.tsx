@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { EmptyStateTile } from '@/components/empty-state-tile';
 import { FeedRowSkeleton, FeedSkeleton } from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
-import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import {
@@ -95,31 +95,24 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
         </Text>
       </FloatingTile>
 
-      <Text
-        className={`${compact ? 'text-4xl' : 'text-6xl'} font-display text-foreground tracking-tight text-center`}
+      {/* The headline/copy/CTA is the shared empty-state tile (hero size); the
+          floating provider marks above and the account note below stay as
+          Home-specific chrome around it. */}
+      <EmptyStateTile
+        cta={{
+          label: 'Connect your trackers',
+          onPress: () => router.push(routes.connect),
+        }}
+        description="Shinobu is a harness for your media trackers — log a movie, show, or anime once and every one you've connected stays in sync."
+        size="hero"
+        title={`One log.\nEvery tracker.`}
       >
-        One log.{'\n'}Every tracker.
-      </Text>
-      <Text
-        className={`text-base font-sans text-muted mt-5 text-center leading-relaxed ${compact ? 'max-w-xs' : 'max-w-md'}`}
-      >
-        Shinobu is a harness for your media trackers — log a movie, show, or
-        anime once and every one you&apos;ve connected stays in sync.
-      </Text>
-      {connectFailed && (
-        <Text className="text-accent font-sans text-sm mt-4 text-center">
-          Connecting your tracker failed. Please try again.
-        </Text>
-      )}
-      {/* Same accent button as the connect rows on Manage Trackers. */}
-      <PresstableOpacity
-        className="bg-accent px-8 py-3 rounded mt-10"
-        onPress={() => router.push(routes.connect)}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-          Connect your trackers
-        </Text>
-      </PresstableOpacity>
+        {connectFailed && (
+          <Text className="text-accent font-sans text-sm mt-4 text-center">
+            Connecting your tracker failed. Please try again.
+          </Text>
+        )}
+      </EmptyStateTile>
       <Text className="text-muted font-sans text-xs mt-5 text-center">
         No Shinobu account — your provider tokens never leave this device.
       </Text>

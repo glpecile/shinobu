@@ -15,6 +15,10 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon md="home" sf="house.fill" />
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="diary">
+        <NativeTabs.Trigger.Icon md="book" sf="book.fill" />
+        <NativeTabs.Trigger.Label>Diary</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="connect">
         <NativeTabs.Trigger.Icon md="settings" sf="gearshape.fill" />
         <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>

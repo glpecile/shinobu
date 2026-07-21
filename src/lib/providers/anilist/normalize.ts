@@ -1,4 +1,7 @@
-import type { NormalizedMediaItem } from '@/types/media';
+import type {
+  NormalizedDiaryEntry,
+  NormalizedMediaItem,
+} from '@/types/media';
 
 /** Raw AniList payload shapes — these never escape lib/providers (AGENTS.md Data Contract). */
 
@@ -111,5 +114,78 @@ export function normalizeAniListListEntry(
     ...(entry.updatedAt != null
       ? { lastUpdated: new Date(entry.updatedAt * 1000).toISOString() }
       : {}),
+  };
+}
+
+// ---- Diary activity (plan 0016) ----
+
+/**
+ * One `ListActivity` from `Page.activities` — AniList's closest diary analogue.
+ * `status` is a phrase ("watched episode", "read chapter", "completed", "plans
+ * to watch", …); `progress` a number or hyphen range ("3 - 5"). AniList
+ * activity reflects *list updates* (including manual progress edits), and
+ * per-account/per-entry visibility settings can hide entries entirely — an
+ * empty slice is never proof of no history (plan 0016 U2 / Open Questions).
+ */
+export interface AniListListActivity {
+  id: number;
+  status?: string | null;
+  progress?: string | null;
+  /** Epoch seconds. */
+  createdAt?: number | null;
+  media?: AniListMedia | null;
+}
+
+// Only watch/read-shaped updates are diary logs: a "watched episode",
+// "rewatched episode", "read chapter", or "completed" activity. Plan/pause/drop
+// status changes are list bookkeeping, not a watch — they drop out.
+const DIARY_STATUS = /^(watched|rewatched|read|completed)/i;
+
+/**
+ * Parses an AniList activity `progress` string into the episode/chapter number
+ * set (plan 0016 KTD2). "3 - 5" → [3, 4, 5]; "12" → [12]; empty/absent → [].
+ */
+export function parseActivityProgress(
+  progress: string | null | undefined,
+): number[] {
+  if (progress == null) return [];
+  const cleaned = progress.trim();
+  const range = /^(\d+)\s*-\s*(\d+)$/.exec(cleaned);
+  if (range != null) {
+    const start = Number(range[1]);
+    const end = Number(range[2]);
+    if (start <= end) {
+      return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    }
+  }
+  const single = /^(\d+)$/.exec(cleaned);
+  return single != null ? [Number(single[1])] : [];
+}
+
+/**
+ * A media-list activity → one diary entry, or `null` for a non-diary status
+ * (plans/paused/dropped) or an activity with no media. `createdAt` (epoch
+ * seconds) becomes an ISO instant so day grouping stays timezone-correct
+ * (plan 0016 R4). A completed *film* carries no episode detail.
+ */
+export function normalizeListActivity(
+  raw: AniListListActivity,
+): NormalizedDiaryEntry | null {
+  if (raw.media == null) return null;
+  if (raw.status == null || !DIARY_STATUS.test(raw.status.trim())) return null;
+
+  const watchedAt =
+    raw.createdAt != null
+      ? new Date(raw.createdAt * 1000).toISOString()
+      : new Date(0).toISOString();
+  const item = normalizeAniListMedia(raw.media, watchedAt);
+  const episodes = item.isFilm === true ? [] : parseActivityProgress(raw.progress);
+
+  return {
+    id: `anilist-${raw.id}`,
+    provider: 'anilist',
+    watchedAt,
+    item,
+    ...(episodes.length > 0 ? { episodes } : {}),
   };
 }

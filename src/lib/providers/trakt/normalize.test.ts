@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   normalizeCastEntry,
   normalizeCrew,
+  normalizeHistoryItem,
   normalizeSearchResult,
   normalizeSeason,
   normalizeStudio,
@@ -12,6 +13,7 @@ import {
   orderSeasons,
   type TraktCastEntry,
   type TraktCrewEntry,
+  type TraktHistoryItem,
   type TraktMovie,
   type TraktShow,
   type TraktShowProgress,
@@ -306,5 +308,86 @@ describe('normalizeWatchedShow', () => {
     const item = normalizeWatchedShow(watched);
     expect(item.currentProgress).toBe(2);
     expect(item.totalEpisodes).toBe(12);
+  });
+});
+
+describe('normalizeHistoryItem', () => {
+  const movie: TraktMovie = {
+    title: 'Perfect Blue',
+    year: 1997,
+    ids: { trakt: 100, tmdb: 10494 },
+    images: { poster: ['walter.trakt.tv/movies/100/poster.jpg'] },
+  };
+
+  const show: TraktShow = {
+    title: 'Monogatari',
+    year: 2009,
+    ids: { trakt: 200, tmdb: 46004 },
+    aired_episodes: 15,
+  };
+
+  test('a movie row → entry keyed by the log id, item typed MOVIE', () => {
+    const raw: TraktHistoryItem = {
+      id: 987654321,
+      watched_at: '2026-07-20T18:30:00.000Z',
+      action: 'watch',
+      type: 'movie',
+      movie,
+    };
+
+    const entry = normalizeHistoryItem(raw);
+    expect(entry).toMatchObject({
+      id: 'trakt-987654321',
+      provider: 'trakt',
+      watchedAt: '2026-07-20T18:30:00.000Z',
+    });
+    expect(entry?.item.type).toBe('MOVIE');
+    expect(entry?.item.id).toBe('trakt-100');
+    // A movie log carries no episode detail.
+    expect(entry?.episodes).toBeUndefined();
+    expect(entry?.season).toBeUndefined();
+  });
+
+  test('an episode row → entry whose item is the show, with season+episode', () => {
+    const raw: TraktHistoryItem = {
+      id: 42,
+      watched_at: '2026-07-20T23:30:00.000Z',
+      action: 'watch',
+      type: 'episode',
+      show,
+      episode: { season: 2, number: 5, title: 'Nadeko Snake' },
+    };
+
+    const entry = normalizeHistoryItem(raw);
+    expect(entry).toMatchObject({
+      id: 'trakt-42',
+      provider: 'trakt',
+      season: 2,
+      episodes: [5],
+    });
+    // The media item is the show, not the episode.
+    expect(entry?.item.type).toBe('TV');
+    expect(entry?.item.id).toBe('trakt-200');
+  });
+
+  test('watched_at is preserved verbatim as an instant, not a bare date (AE4)', () => {
+    const raw: TraktHistoryItem = {
+      id: 7,
+      watched_at: '2026-07-20T23:30:00.000Z',
+      type: 'movie',
+      movie,
+    };
+    // The instant survives untouched — day grouping (not this normalizer)
+    // converts it to a local day, so no truncation happens here.
+    expect(normalizeHistoryItem(raw)?.watchedAt).toBe('2026-07-20T23:30:00.000Z');
+  });
+
+  test('a row of an unmodeled type drops out as null', () => {
+    const raw = {
+      id: 1,
+      watched_at: '2026-07-20T18:30:00.000Z',
+      type: 'person',
+    } as unknown as TraktHistoryItem;
+    expect(normalizeHistoryItem(raw)).toBeNull();
   });
 });

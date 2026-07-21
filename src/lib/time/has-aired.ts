@@ -21,7 +21,7 @@ export function hasAired(
   now: Date = new Date(),
 ): boolean {
   if (firstAired == null || firstAired === '') return false;
-  const airInstant = parseAirInstant(firstAired);
+  const airInstant = parseLocalInstant(firstAired);
   if (airInstant == null) return false;
   // Instant comparison is timezone-independent — both sides are absolute
   // points in time once parsed correctly above.
@@ -31,11 +31,16 @@ export function hasAired(
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Parses a provider air-date field into an absolute instant. Full ISO instants
+ * Parses a provider date field into an absolute instant. Full ISO instants
  * (with offset/Z) parse via the `Date` constructor; bare date-only strings are
- * rebuilt as local midnight so they don't silently shift to UTC.
+ * rebuilt as **local midnight** so they don't silently shift to UTC (the JS
+ * `Date` spec parses `"2022-01-01"` as UTC midnight, the origin-timezone bug).
+ *
+ * Centralized here so callers that treat a date-only value as an ordering key —
+ * Up Next's `hasAired` and the diary merge's date-only Letterboxd entries
+ * (plan 0016 KTD4) — share one parse instead of re-implementing it.
  */
-function parseAirInstant(value: string): Date | null {
+export function parseLocalInstant(value: string): Date | null {
   if (DATE_ONLY.test(value)) {
     const parts = value.split('-').map(Number);
     const [year, month, day] = parts;

@@ -3,6 +3,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   normalizeAniListListEntry,
   normalizeAniListMedia,
+  normalizeListActivity,
+  parseActivityProgress,
+  type AniListListActivity,
   type AniListListEntry,
   type AniListMedia,
 } from './normalize';
@@ -105,5 +108,103 @@ describe('normalizeAniListListEntry', () => {
     const item = normalizeAniListListEntry({ media: SERIES }, NOW_ISO);
     expect(item.lastUpdated).toBe(NOW_ISO);
     expect(item.currentProgress).toBe(0);
+  });
+});
+
+describe('parseActivityProgress', () => {
+  test('a single number becomes a one-element set', () => {
+    expect(parseActivityProgress('12')).toEqual([12]);
+  });
+
+  test('a hyphen range expands inclusively', () => {
+    expect(parseActivityProgress('3 - 5')).toEqual([3, 4, 5]);
+  });
+
+  test('empty / absent / unparseable progress → no episodes', () => {
+    expect(parseActivityProgress(null)).toEqual([]);
+    expect(parseActivityProgress(undefined)).toEqual([]);
+    expect(parseActivityProgress('')).toEqual([]);
+    expect(parseActivityProgress('all of them')).toEqual([]);
+  });
+});
+
+describe('normalizeListActivity', () => {
+  const MANGA: AniListMedia = {
+    id: 30002,
+    type: 'MANGA',
+    format: 'MANGA',
+    title: { romaji: 'Berserk' },
+    chapters: 380,
+  };
+
+  test('a watched-episode activity → ANIME entry with episode detail', () => {
+    const activity: AniListListActivity = {
+      id: 5001,
+      status: 'watched episode 3 - 5 of',
+      progress: '3 - 5',
+      createdAt: 1_752_000_000,
+      media: SERIES,
+    };
+
+    const entry = normalizeListActivity(activity);
+    expect(entry).toMatchObject({
+      id: 'anilist-5001',
+      provider: 'anilist',
+      episodes: [3, 4, 5],
+    });
+    expect(entry?.item.type).toBe('ANIME');
+    // Epoch seconds → the exact ISO instant (AE4's instant discipline).
+    expect(entry?.watchedAt).toBe(new Date(1_752_000_000 * 1000).toISOString());
+  });
+
+  test('a completed film activity carries no episode detail', () => {
+    const activity: AniListListActivity = {
+      id: 5002,
+      status: 'completed',
+      progress: null,
+      createdAt: 1_752_000_100,
+      media: FILM,
+    };
+
+    const entry = normalizeListActivity(activity);
+    expect(entry?.item.isFilm).toBe(true);
+    expect(entry?.episodes).toBeUndefined();
+  });
+
+  test('a read-chapter activity → MANGA entry with chapter detail', () => {
+    const activity: AniListListActivity = {
+      id: 5003,
+      status: 'read chapter 41 of',
+      progress: '41',
+      createdAt: 1_752_000_200,
+      media: MANGA,
+    };
+
+    const entry = normalizeListActivity(activity);
+    expect(entry?.item.type).toBe('MANGA');
+    expect(entry?.item.progressUnit).toBe('chapter');
+    expect(entry?.episodes).toEqual([41]);
+  });
+
+  test('a plans-to-watch activity is filtered out', () => {
+    const activity: AniListListActivity = {
+      id: 5004,
+      status: 'plans to watch',
+      progress: null,
+      createdAt: 1_752_000_300,
+      media: SERIES,
+    };
+    expect(normalizeListActivity(activity)).toBeNull();
+  });
+
+  test('an activity with no media is filtered out', () => {
+    const activity: AniListListActivity = {
+      id: 5005,
+      status: 'watched episode 1 of',
+      progress: '1',
+      createdAt: 1_752_000_400,
+      media: null,
+    };
+    expect(normalizeListActivity(activity)).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import type {
   NormalizedCastMember,
   NormalizedCrewMember,
+  NormalizedDiaryEntry,
   NormalizedMediaItem,
   NormalizedSeason,
   NormalizedStudio,
@@ -450,6 +451,65 @@ export function normalizeWatchedMovie(raw: TraktWatchedMovie): NormalizedMediaIt
     ...normalizeMovie(raw.movie, raw.last_watched_at),
     currentProgress: raw.plays,
   };
+}
+
+// ---- Diary history (plan 0016) ----
+
+/** One episode inside a `/sync/history` episode row (its own ids + numbering). */
+export interface TraktHistoryEpisode {
+  season: number;
+  number: number;
+  title?: string;
+  ids?: TraktIds;
+}
+
+/**
+ * One row from `/sync/history?extended=full`. Each row is a single log with its
+ * own unique `id`; movie rows embed `movie`, episode rows embed both `episode`
+ * and `show` (the diary entry's media item is the *show*, with episode detail
+ * attached — plan 0016 U1).
+ */
+export interface TraktHistoryItem {
+  /** Unique per-log id — the diary dedup key, not the media id. */
+  id: number;
+  /** ISO instant. */
+  watched_at: string;
+  action?: string;
+  type: string;
+  movie?: TraktMovie;
+  show?: TraktShow;
+  episode?: TraktHistoryEpisode;
+}
+
+/**
+ * A `/sync/history` row → one diary entry. Movie rows carry no episode detail;
+ * episode rows normalize the *show* as the media item and attach the season +
+ * episode number. `watched_at` is a real instant, parsed as such downstream
+ * (never a bare date) so day grouping stays timezone-correct (plan 0016 R4).
+ * Rows of a type we don't model (unlikely) normalize to `null` and drop out.
+ */
+export function normalizeHistoryItem(
+  raw: TraktHistoryItem,
+): NormalizedDiaryEntry | null {
+  if (raw.type === 'movie' && raw.movie != null) {
+    return {
+      id: `trakt-${raw.id}`,
+      provider: 'trakt',
+      watchedAt: raw.watched_at,
+      item: normalizeMovie(raw.movie, raw.watched_at),
+    };
+  }
+  if (raw.type === 'episode' && raw.show != null && raw.episode != null) {
+    return {
+      id: `trakt-${raw.id}`,
+      provider: 'trakt',
+      watchedAt: raw.watched_at,
+      item: normalizeShow(raw.show, raw.watched_at),
+      episodes: [raw.episode.number],
+      season: raw.episode.season,
+    };
+  }
+  return null;
 }
 
 export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem {
