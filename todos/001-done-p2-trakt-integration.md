@@ -3,6 +3,11 @@ status: done
 priority: P2
 ---
 
+> **Done (PR #4):** OAuth (web + native), `useWatchedShowsQuery` into the unified
+> feed, and the Trakt write adapter (`lib/providers/trakt/`) registered in the
+> routing table. `registry.ts` is `canRead`/`canWrite: true`. Filename was stale
+> (`ready`); renamed to match the `done` frontmatter.
+
 # Trakt Integration
 
 Wire up Trakt as a connected provider (`state/session/`): OAuth, the read side

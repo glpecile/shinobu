@@ -1,7 +1,18 @@
 ---
-status: in-progress
+status: done
 priority: P2
 ---
+
+> **Done (2026-07-20):** The blocker this todo tracked — "registry stays
+> `canWrite: false` until the authenticated diary-log request shape is captured" —
+> is resolved: `registry.ts` is `canWrite: true` and the WebView write path ships
+> in `lib/providers/letterboxd/writes.ts`. Username connect
+> (`ConnectLetterboxdButton`), `useLetterboxdWatchlistQuery` + the "Your Watchlist"
+> feed row, and cross-provider id enrichment all exist. The one unmet criterion —
+> a CSV export UI — is **void**: the CSV path was rejected and removed on
+> 2026-07-15 (see the shipping design below), so it is no longer a requirement.
+> If official API access is granted later, swap the transport per plan 0012
+> decision 9 (tracked as a fresh todo, not this one).
 
 # Letterboxd Provider Integration
 
@@ -36,17 +47,17 @@ shape.
   to Trakt instead of dead-ending.
 - Empirical findings: `docs/solutions/letterboxd-no-api-fallback.md`.
 
-## Remaining acceptance criteria
+## Acceptance criteria
 
-- [ ] Username connect flow on the connect screen; `useConnectedProviders`
+- [x] Username connect flow on the connect screen; `useConnectedProviders`
       includes `letterboxd`.
-- [ ] `useLetterboxdWatchlistQuery` (`state/queries/letterboxd.ts`) feeding a
+- [x] `useLetterboxdWatchlistQuery` (`state/queries/letterboxd.ts`) feeding a
       home-feed row, normalized into `NormalizedMediaItem`.
-- [ ] Letterboxd write adapter registered in the `useLogMedia` fan-out for
-      movies (incl. anime films), enqueueing with tags.
-- [ ] CSV export UI (share sheet on native, download on web) + explicit
-      "mark as imported" queue clearing.
-- [ ] New quirks written to `docs/solutions/letterboxd-*.md`.
+- [x] Letterboxd write adapter registered in the `useLogMedia` fan-out for
+      movies (incl. anime films) via the captured WebView session.
+- [x] ~~CSV export UI + "mark as imported" queue clearing.~~ **Void** — CSV path
+      rejected and removed 2026-07-15; writes go through the WebView session.
+- [x] New quirks written to `docs/solutions/letterboxd-*.md`.
 
 ## If official API access is granted later
 

@@ -61,28 +61,34 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
       <FloatingTile
         delay={0}
         rotate="-8deg"
-        style={{ top: compact ? '6%' : '22%', left: inset, width: tile, height: tile }}
+        style={{ top: compact ? '4%' : '22%', left: inset, width: tile, height: tile }}
       >
         <ProviderIcon id="trakt" size={icon} />
       </FloatingTile>
       <FloatingTile
         delay={650}
         rotate="7deg"
-        style={{ top: compact ? '12%' : '26%', right: inset, width: tile, height: tile }}
+        style={{ top: compact ? '10%' : '26%', right: inset, width: tile, height: tile }}
       >
         <ProviderIcon id="anilist" size={icon} />
       </FloatingTile>
       <FloatingTile
         delay={1300}
         rotate="6deg"
-        style={{ bottom: compact ? '10%' : '24%', left: inset, width: tile, height: tile }}
+        style={{
+          bottom: compact ? '16%' : '24%',
+          // Nudged further left than the shared inset on web only.
+          left: compact ? inset : '14%',
+          width: tile,
+          height: tile,
+        }}
       >
         <ProviderIcon id="letterboxd" size={icon} />
       </FloatingTile>
       <FloatingTile
         delay={1950}
         rotate="-6deg"
-        style={{ bottom: compact ? '5%' : '20%', right: inset, width: tile, height: tile }}
+        style={{ bottom: compact ? '15%' : '20%', right: inset, width: tile, height: tile }}
       >
         <Text className="text-accent" style={{ fontSize: icon }}>
           忍
