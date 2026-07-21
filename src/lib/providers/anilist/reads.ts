@@ -1,6 +1,9 @@
 import { Clock, Effect } from 'effect';
 
-import type { NormalizedMediaItem } from '@/types/media';
+import type {
+  NormalizedDiaryEntry,
+  NormalizedMediaItem,
+} from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
 import { anilistAuthedRequest, anilistRequest } from './http';
@@ -8,6 +11,8 @@ import type { AnimeSeasonWindow } from './season';
 import {
   normalizeAniListListEntry,
   normalizeAniListMedia,
+  normalizeListActivity,
+  type AniListListActivity,
   type AniListListEntry,
   type AniListMedia,
 } from './normalize';
@@ -95,6 +100,57 @@ export function getCurrentAnime(
     }
     return items.sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
   });
+}
+
+interface ListActivityResponse {
+  Page: {
+    activities: Array<AniListListActivity | null> | null;
+  } | null;
+}
+
+/**
+ * One page of the viewer's media-list activity — AniList's diary equivalent
+ * (plan 0016 U2). `type: MEDIA_LIST` + `sort: ID_DESC` gives newest-first log
+ * updates; non-watch/read statuses (plan/pause/drop) drop out in normalization.
+ * Reuses the cached `viewerId`. Page size stays inside the 30 req/min budget
+ * (docs/solutions/anilist-rate-limit-retry-storm.md) — the caller sets a
+ * generous staleTime and `maxPages` (plan 0016 KTD9).
+ */
+export function getListActivity(
+  deps: AniListDeps,
+  params: { viewerId: number; page: number; perPage?: number },
+): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
+  const perPage = params.perPage ?? 50;
+  return anilistAuthedRequest<ListActivityResponse>(
+    deps,
+    `query ($userId: Int, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        activities(userId: $userId, type: MEDIA_LIST, sort: ID_DESC) {
+          ... on ListActivity {
+            id
+            status
+            progress
+            createdAt
+            media { ${MEDIA_FIELDS} }
+          }
+        }
+      }
+    }`,
+    {
+      variables: {
+        userId: params.viewerId,
+        page: params.page,
+        perPage,
+      },
+    },
+  ).pipe(
+    Effect.map((data) =>
+      (data.Page?.activities ?? [])
+        .filter((activity): activity is AniListListActivity => activity != null)
+        .map((activity) => normalizeListActivity(activity))
+        .filter((entry): entry is NormalizedDiaryEntry => entry != null),
+    ),
+  );
 }
 
 interface TrendingResponse {

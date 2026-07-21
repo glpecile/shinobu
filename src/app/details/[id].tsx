@@ -46,6 +46,7 @@ import {
   useTraktMediaImages,
   useTraktWatchedInfo,
 } from '@/state/queries/trakt';
+import { findInDiaryCache } from '@/state/queries/diary-cache';
 import { useMovieCatalogueQuery, useTraktIdentityQuery } from '@/state/queries/mapping';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
@@ -446,6 +447,9 @@ export default function DetailsScreen() {
       feed.seasonalAnime,
     ]) ??
     findInSearchCache(queryClient, id) ??
+    // Diary rows live in no feed slot and no search — resolve them from the
+    // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).
+    findInDiaryCache(queryClient, id) ??
     findInTmdbCache(queryClient, id);
   // Items whose origin carries no metadata (a Letterboxd watchlist film is
   // just a slug + title + year) get a catalogue record resolved by title+year

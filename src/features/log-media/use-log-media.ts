@@ -4,7 +4,8 @@ import { Effect } from 'effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
-import { letterboxdDeps } from '@/state/queries/letterboxd';
+import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { providersForLog } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
@@ -145,6 +146,9 @@ function invalidateAfterLog(
   if (succeeded.includes('trakt')) {
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() });
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedMovies() });
+    // The fan-out landed a new log in Trakt history — the diary must show it on
+    // its next visit (plan 0016 KTD9).
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.history() });
     const traktId = item.externalIds.trakt;
     if (traktId != null) {
       // TV logs also change this show's seasons/progress views (plan 0010).
@@ -155,10 +159,20 @@ function invalidateAfterLog(
   }
   if (succeeded.includes('anilist')) {
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnime() });
+    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.listActivity() });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
       queryClient.invalidateQueries({
         queryKey: anilistQueryKeys.entryState(mediaId),
+      });
+    }
+  }
+  if (succeeded.includes('letterboxd')) {
+    // A fanned-out Letterboxd diary write appears in the RSS window next visit.
+    const username = getLetterboxdUsername();
+    if (username != null) {
+      queryClient.invalidateQueries({
+        queryKey: letterboxdQueryKeys.diary(username),
       });
     }
   }

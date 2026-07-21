@@ -4,6 +4,7 @@ import type {
   MediaType,
   NormalizedCastMember,
   NormalizedCrewMember,
+  NormalizedDiaryEntry,
   NormalizedMediaItem,
   NormalizedSeason,
   NormalizedStudio,
@@ -14,6 +15,7 @@ import type { TraktDeps } from './deps';
 import {
   normalizeCastEntry,
   normalizeCrew,
+  normalizeHistoryItem,
   normalizeMediaImages,
   normalizeSearchResult,
   normalizeSeason,
@@ -25,6 +27,7 @@ import {
   normalizeWatchedShow,
   orderSeasons,
   type NormalizedMediaImages,
+  type TraktHistoryItem,
   type TraktImages,
   type TraktPeopleResponse,
   type TraktSearchResult,
@@ -214,6 +217,31 @@ export function getWatchedShows(
     extended: 'progress',
     limit: 100,
   }).pipe(Effect.map((shows) => shows.map(normalizeWatchedShow)));
+}
+
+/**
+ * One page of the authenticated watch history — the Diary source (plan 0016
+ * U1). Unlike `/sync/watched/*` (a deduped library snapshot), `/sync/history`
+ * is per-log and reverse-chronological: a binge day or a rewatch is several
+ * rows. One page per infinite-query cursor (no internal loop — the diary feed
+ * hook owns pagination); a short page signals end-of-history. `extended=full`
+ * carries the movie/show metadata the rows would otherwise omit.
+ */
+export function getHistory(
+  deps: TraktDeps,
+  params: { page: number; limit?: number },
+): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
+  const limit = params.limit ?? 50;
+  return traktAuthedRequest<TraktHistoryItem[]>(
+    deps,
+    `/sync/history?extended=full&page=${params.page}&limit=${limit}`,
+  ).pipe(
+    Effect.map((rows) =>
+      rows
+        .map((row) => normalizeHistoryItem(row))
+        .filter((entry): entry is NormalizedDiaryEntry => entry != null),
+    ),
+  );
 }
 
 export function getWatchedMovies(

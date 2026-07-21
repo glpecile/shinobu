@@ -8,6 +8,7 @@ import {
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
+import { DIARY_QUERY_ROOTS } from '@/state/queries/diary-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
@@ -84,6 +85,9 @@ export const anilistQueryKeys = {
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.all, 'search', query, limit] as const,
+  /** The viewer's media-list activity — the AniList diary source (plan 0016).
+   *  Derived from the shared root so the diary cache scan stays in sync. */
+  listActivity: () => [...DIARY_QUERY_ROOTS.anilist],
 };
 
 /**

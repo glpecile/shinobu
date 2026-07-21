@@ -53,6 +53,7 @@ interface NavItem {
 // filled glyph (the solid variants read poorly when selected).
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: routes.home, icon: 'home-outline' },
+  { label: 'Diary', href: routes.diary, icon: 'book-outline' },
   { label: 'Search', href: routes.search, icon: 'search-outline' },
   { label: 'Settings', href: routes.connect, icon: 'settings-outline' },
 ];

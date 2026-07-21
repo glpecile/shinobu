@@ -55,6 +55,14 @@ export const letterboxdQueryKeys = {
   all: ['letterboxd'] as const,
   watchlist: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist', username] as const,
+  /**
+   * The user's public diary (RSS window) — the Letterboxd diary source
+   * (plan 0016). Keyed by username so reconnecting as a different account
+   * never serves the prior account's entries. Native-only on web via
+   * `letterboxdReadsAvailable` (no CORS), same gate as the watchlist read.
+   */
+  diary: (username: string) =>
+    [...letterboxdQueryKeys.all, 'diary', username] as const,
 };
 
 /**

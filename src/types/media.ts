@@ -6,6 +6,11 @@
  * `plan.md` 2.2 mirrors it.
  */
 
+// Type-only import — erased at build, so the (media ↔ providers/types) type
+// cycle never becomes a runtime one. Kept because a diary entry's provider is
+// part of the normalized contract, alongside the item it embeds.
+import type { ProviderId } from '@/lib/providers/types';
+
 // Extension point for future domains (e.g. 'GAME' | 'BOOK' | 'ALBUM').
 // Widen this union + the provider registry (lib/providers/registry.ts) only —
 // never branch on new types inline in hooks or components.
@@ -170,4 +175,73 @@ export interface NormalizedSeason {
   /** "Season N"; "Specials" for season 0. */
   title: string;
   episodes: NormalizedEpisode[];
+}
+
+/**
+ * One per-log history entry (the Diary contract, plan 0016). Every provider's
+ * history payload normalizes to this before it reaches the merge/grouping
+ * layer — components never see raw history shapes (AGENTS.md Data Contract).
+ *
+ * A diary entry is a *log*, not a media item: the same film logged twice is two
+ * entries. Cross-provider same-day collapse and day-header grouping are derived
+ * by pure functions in `features/diary/` and never stored here.
+ */
+export interface NormalizedDiaryEntry {
+  /**
+   * Stable per-log id `${provider}-${nativeLogId}` — the dedup key that lets
+   * page N+1 re-return the tail of page N (prepend-mutable histories) without
+   * showing a row twice.
+   */
+  id: string;
+  provider: ProviderId;
+  /**
+   * ISO 8601 instant of the log. Trakt/AniList carry a true instant; Letterboxd
+   * RSS carries only a bare calendar date (`YYYY-MM-DD`), flagged by `dateOnly`
+   * so grouping parses it as local midnight and orders it after instant-bearing
+   * entries within the same day (plan 0016 KTD4).
+   */
+  watchedAt: string;
+  /** True when `watchedAt` is a bare date (Letterboxd), not a full instant. */
+  dateOnly?: boolean;
+  /** The logged media — the *show* for an episode log, the film for a movie. */
+  item: NormalizedMediaItem;
+  /**
+   * Episode/chapter numbers this one log covers, sorted ascending (plan 0016
+   * KTD2): an AniList "watched episode 3 - 5" activity is one entry carrying
+   * `[3, 4, 5]`; a movie carries none. This set is the fan-out signature two
+   * cross-provider entries must share to collapse into one row.
+   */
+  episodes?: number[];
+  /** Season number for a TV episode log (Trakt), for the "S2E5" detail line. */
+  season?: number;
+}
+
+/**
+ * The presentation-side collapse of same-day, same-item logs from *different*
+ * providers into one row (plan 0016 KTD4). Derived by `groupDiaryEntries`,
+ * never stored. Two logs from the same provider never merge (a binge day / a
+ * same-day rewatch stay distinct rows).
+ */
+export interface MergedDiaryEntry {
+  /** Row key — the highest-precedence contributor's log id. */
+  id: string;
+  /** Every provider that logged this item on this day, precedence-ordered. */
+  providers: ProviderId[];
+  /** Display item: merge-metadata precedence across contributors. */
+  item: NormalizedMediaItem;
+  /** Union of every contributor's episode numbers, sorted ascending. */
+  episodes: number[];
+  /** Season number when contributors carry one (TV). */
+  season?: number;
+  /** Representative instant (or date) for within-day ordering. */
+  watchedAt: string;
+  /** True when every contributor is date-only (Letterboxd-only merge). */
+  dateOnly: boolean;
+}
+
+/** One day bucket in the diary, newest-first, under a `YYYY-MM-DD` local key. */
+export interface DiaryDay {
+  /** Local calendar day key `YYYY-MM-DD` — the header derives from this. */
+  key: string;
+  entries: MergedDiaryEntry[];
 }
