@@ -1,7 +1,14 @@
 ---
-status: pending
+status: done
 priority: P1
 ---
+
+> **Done (2026-07-20):** `useLogMedia` (`src/features/log-media/use-log-media.ts`)
+> + the `fanOutLog` fan-out (`fan-out.ts`) ship with per-provider partial-failure
+> results, driven by the explicit, unit-tested routing table
+> (`lib/providers/routing.ts` + `routing.test.ts`, `fan-out.test.ts`). Wired into
+> the log button and the season/anime-season log surfaces. All acceptance criteria
+> below are met.
 
 # Unified Log Fan-Out (`useLogMedia`)
 
