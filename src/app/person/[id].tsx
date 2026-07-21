@@ -92,8 +92,10 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
         <View className="flex-row items-center gap-5 mb-6">
           {person.headshot !== '' ? (
             <ZoomableImage
+              alt={person.name}
               uri={person.headshot}
               zoomUri={person.headshotFull}
+              type="circle-avi"
               className="w-28 h-28 rounded-full bg-surface border border-border"
               contentFit="cover"
             />

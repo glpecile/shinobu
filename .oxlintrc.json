@@ -120,7 +120,7 @@
         "src/components/image.tsx",
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/presstable.tsx",
-        "src/components/zoomable-image.tsx"
+        "src/components/zoomable-image/index.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
