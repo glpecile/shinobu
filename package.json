@@ -49,6 +49,7 @@
     "react-native-web": "^0.21.2",
     "react-native-worklets": "0.10.0",
     "tailwindcss": "~4.1.16",
+    "torph": "^0.0.9",
     "uniwind": "~1.0.0",
     "zod": "^4.4.3"
   },

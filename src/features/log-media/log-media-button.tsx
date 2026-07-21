@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { haptics } from '@/lib/haptics';
 import { hasAired } from '@/lib/time/has-aired';
@@ -144,9 +145,11 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           setOpen(true);
         }}
       >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
+        {/* self-center (not text-center): the morph span shrink-wraps, so it
+            must center as a flex item, not align text inside a full-width box. */}
+        <MorphText className="text-accent-foreground font-sans-semibold text-base self-center">
           {buttonLabel}
-        </Text>
+        </MorphText>
       </PresstableOpacity>
       {result != null && result.succeeded.length > 0 && (
         <Text className="text-muted font-sans text-sm mt-2">

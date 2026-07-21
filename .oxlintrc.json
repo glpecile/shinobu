@@ -59,6 +59,10 @@
             "message": "Import ZoomableImage from @/components/zoomable-image — the wrapper pairs galeria with the withUniwind Image and handles the empty-uri fallback."
           },
           {
+            "group": ["torph", "torph/*"],
+            "message": "Import MorphText from @/components/morph-text — torph is DOM-only; the wrapper falls back to a plain Text on native via index.tsx."
+          },
+          {
             "group": ["effect-rx", "effect-rx/*", "@effect-rx/*"],
             "message": "Do not adopt effect-rx. TanStack Query owns caching/invalidation/React state; Effect stays contained in lib/providers + lib/http and runs at the boundary via Effect.runPromise (AGENTS.md: Tech Stack → Effect)."
           }
@@ -137,7 +141,11 @@
       }
     },
     {
-      "files": ["src/components/sheet/**", "src/lib/haptics/**"],
+      "files": [
+        "src/components/sheet/**",
+        "src/components/morph-text/**",
+        "src/lib/haptics/**"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",

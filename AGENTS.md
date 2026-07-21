@@ -83,6 +83,16 @@ connected into one unified feed. Full product vision + architecture rationale:
   `components/zoomable-image`, which pairs it with the withUniwind `Image` and
   handles the empty-uri fallback. Native module — needs a clean rebuild — and it
   pins iOS ≥ 16.4 (`expo-build-properties` in `app.json`).
+- **torph** — dependency-free animated text morphing (https://torph.lochie.me),
+  **web only** (renders DOM, no native build). Never import `torph/react` directly
+  (oxlint-enforced); use `MorphText` from `components/morph-text` — its
+  `index.web.tsx` morphs in-place text changes (shared characters slide, the rest
+  crossfades) while `index.tsx` falls back to a plain `Text` on native, so the
+  animation is an enhancement, never part of the contract. Reserve it for text
+  that *changes in place* as a result of user state (progress counts, watched
+  lines, the log button's episode number) — not for static or mount-time text
+  (first render never animates) and not for high-frequency churn. Pure JS: hot
+  reload, no rebuild.
 - **React Compiler** — enabled via `experiments.reactCompiler` in `app.json` and
   `babel-plugin-react-compiler`. Auto-memoizes components and hooks, so don't use
   `useMemo` or `useCallback` manually — forbidden by the `no-restricted-imports`

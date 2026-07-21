@@ -12,6 +12,7 @@ import { useCSSVariable } from 'uniwind';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
+import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
@@ -177,7 +178,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
         name="checkmark-circle"
         size={13}
       />
-      <Text className="text-muted font-sans text-sm">{label}</Text>
+      <MorphText className="text-muted font-sans text-sm">{label}</MorphText>
     </View>
   );
 }
