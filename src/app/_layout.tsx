@@ -19,6 +19,8 @@ import { AppShell } from "@/components/app-shell";
 import { ErrorFallback } from "@/components/error-fallback";
 import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
+import { Lightbox } from "@/components/lightbox";
+import { LightboxProvider } from "@/components/lightbox/state";
 import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
 import { useColorScheme } from "react-native";
@@ -69,6 +71,7 @@ export default function Layout() {
         <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <SheetProvider>
+           <LightboxProvider>
             {/* ThemeProvider keeps the native tab bar / navigator chrome themed
                 and prevents header-button flicker when switching tabs. */}
             <ThemeProvider
@@ -93,8 +96,12 @@ export default function Layout() {
                 {/* Hidden authenticated WebView that runs Letterboxd writes
                     (native only; renders null on web). */}
                 <LetterboxdWriteBridge />
+                {/* Fullscreen image viewer overlay (web); null on native,
+                    where galeria renders the zoom inline. */}
+                <Lightbox />
               </AppShell>
             </ThemeProvider>
+           </LightboxProvider>
           </SheetProvider>
         </QueryClientProvider>
         </KeyboardProvider>

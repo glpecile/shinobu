@@ -606,7 +606,9 @@ export default function DetailsScreen() {
         <View className="w-full max-w-4xl self-center px-6 pb-12">
           <View className="flex-row items-end -mt-24 mb-6">
             <ZoomableImage
+              alt={shown.title}
               uri={shown.coverImage || artwork.coverImage}
+              type="image"
               className="w-28 h-40 rounded-card border border-border bg-surface"
               contentFit="cover"
             />
