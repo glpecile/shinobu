@@ -350,3 +350,88 @@ describe('formatDayHeader', () => {
     expect(formatDayHeader('2025-07-20', now, TZ_MINUS_5)).toBe('July 20, 2025');
   });
 });
+
+// --- Serializd (plan 0017 U7) ---
+describe('Serializd diary in the unified merge', () => {
+  const tvItem = (id: string) =>
+    item({ id, title: 'Breaking Bad', type: 'TV', externalIds: { tmdb: 1396 } });
+
+  test('a Serializd TV entry collapses with a same-day Trakt entry of the same show+episode', () => {
+    const day = '2026-07-20T18:00:00.000Z';
+    const trakt = entry('trakt', 't1', day, {
+      episodes: [5],
+      season: 1,
+      item: tvItem('trakt-1396-item'),
+    });
+    const serializd = entry('serializd', 's1', day, {
+      episodes: [5],
+      season: 1,
+      item: tvItem('serializd-1396'),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('trakt', [trakt]), state('serializd', [serializd])]),
+      TZ_MINUS_5,
+    );
+
+    expect(days).toHaveLength(1);
+    const rows = days[0].entries;
+    expect(rows).toHaveLength(1);
+    // Both providers on one row (priority order) — two icons, one entry.
+    expect(rows[0].providers).toEqual(['trakt', 'serializd']);
+    expect(rows[0].episodes).toEqual([5]);
+    expect(rows[0].season).toBe(1);
+  });
+
+  test('a failed Serializd read leaves the other providers rendered (partial failure)', () => {
+    const trakt = entry('trakt', 't1', '2026-07-20T18:00:00.000Z');
+    const merged = mergeDiaryEntries([
+      state('trakt', [trakt]),
+      state('serializd', [], { failed: true }),
+    ]);
+    expect(merged.map((e) => e.id)).toContain('trakt-t1');
+  });
+
+  test('entries group by dateAdded (watchedAt), so a backdated log surfaces on its page day (KTD8)', () => {
+    // watchedAt carries dateAdded (KTD8): a log added on the 20th but backdated
+    // to an old watch groups under the 20th — it surfaces when its page loads,
+    // not at a chronological slot the merge can't reach.
+    const recent = entry('serializd', 's-recent', '2026-07-20T18:00:00.000Z', {
+      episodes: [5],
+      season: 1,
+      item: tvItem('serializd-1396'),
+    });
+    const older = entry('serializd', 's-older', '2026-07-10T18:00:00.000Z', {
+      episodes: [1],
+      season: 1,
+      item: tvItem('serializd-1396'),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('serializd', [recent, older])]),
+      TZ_MINUS_5,
+    );
+
+    expect(days.map((d) => d.key)).toEqual(['2026-07-20', '2026-07-10']);
+  });
+
+  test('a season-level entry (no episodes) stays its own row, not collapsed with an episode log', () => {
+    const day = '2026-07-20T18:00:00.000Z';
+    const episodeLog = entry('serializd', 's-ep', day, {
+      episodes: [5],
+      season: 1,
+      item: tvItem('serializd-1396'),
+    });
+    const seasonLog = entry('trakt', 't-season', day, {
+      season: 1,
+      item: tvItem('trakt-1396-item'),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('serializd', [episodeLog]), state('trakt', [seasonLog])]),
+      TZ_MINUS_5,
+    );
+    // Different episode signatures ([5] vs none) don't collapse.
+    expect(days[0].entries).toHaveLength(2);
+  });
+});

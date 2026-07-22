@@ -10,6 +10,10 @@ import { Effect } from 'effect';
 
 import { getListActivity, getViewerId } from '@/lib/providers/anilist/reads';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
+import {
+  getSerializdDiary,
+  serializdNextPage,
+} from '@/lib/providers/serializd/diary';
 import { providersForFeed } from '@/lib/providers/routing';
 import { getHistory } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
@@ -22,12 +26,14 @@ import {
 } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
+import { getSerializdUsername } from '@/state/session/serializd';
 import { anilistDeps, anilistQueryKeys } from './anilist';
 import {
   letterboxdDeps,
   letterboxdQueryKeys,
   letterboxdReadsAvailable,
 } from './letterboxd';
+import { serializdDeps, serializdQueryKeys } from './serializd';
 import { traktDeps, traktQueryKeys } from './trakt';
 
 // Trakt/AniList paginate at 50; history is append-mostly so a generous
@@ -94,6 +100,13 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
       ? (getLetterboxdUsername() ?? '')
       : '';
   const letterboxdEnabled = letterboxdUsername !== '';
+  // Serializd reads work on every platform via the proxy (R13) — no platform
+  // gate. `readable` is empty on the server (useConnectedProviders' SSR
+  // snapshot), so this MMKV read only runs on the client (R16).
+  const serializdUsername = readable.includes('serializd')
+    ? (getSerializdUsername() ?? '')
+    : '';
+  const serializdEnabled = serializdUsername !== '';
 
   const trakt = useInfiniteQuery({
     queryKey: traktQueryKeys.history(),
@@ -135,16 +148,47 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     enabled: letterboxdEnabled,
   });
 
-  const wired: Array<{ provider: ProviderId; query: InfiniteDiaryQuery; enabled: boolean }> = [
-    { provider: 'trakt', query: trakt, enabled: traktEnabled },
-    { provider: 'anilist', query: anilist, enabled: anilistEnabled },
-    { provider: 'letterboxd', query: letterboxd, enabled: letterboxdEnabled },
+  // Serializd is a real paginated infinite query (unlike Letterboxd's single RSS
+  // window): its page carries `{ entries, totalPages }`, so the next-page param
+  // comes from totalPages. Watermark ordering keys on `dateAdded` (KTD8), which
+  // normalize.ts already sets as `watchedAt`.
+  const serializd = useInfiniteQuery({
+    queryKey: serializdQueryKeys.diary(serializdUsername),
+    queryFn: ({ pageParam }) =>
+      Effect.runPromise(getSerializdDiary(serializdDeps(), { page: pageParam })),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _all, lastPageParam) =>
+      serializdNextPage(lastPage, lastPageParam),
+    getPreviousPageParam: (_first, _all, firstPageParam) =>
+      firstPageParam > 1 ? firstPageParam - 1 : undefined,
+    maxPages: MAX_PAGES,
+    staleTime: DIARY_STALE_MS,
+    enabled: serializdEnabled,
+  });
+
+  // `entries` is precomputed per provider (Serializd's page shape differs), so
+  // the merge/watermark plumbing below stays provider-shape-agnostic.
+  const wired: Array<{
+    provider: ProviderId;
+    query: AnyInfiniteDiaryQuery;
+    enabled: boolean;
+    entries: NormalizedDiaryEntry[];
+  }> = [
+    { provider: 'trakt', query: trakt, enabled: traktEnabled, entries: (trakt.data?.pages ?? []).flat() },
+    { provider: 'anilist', query: anilist, enabled: anilistEnabled, entries: (anilist.data?.pages ?? []).flat() },
+    { provider: 'letterboxd', query: letterboxd, enabled: letterboxdEnabled, entries: (letterboxd.data?.pages ?? []).flat() },
+    {
+      provider: 'serializd',
+      query: serializd,
+      enabled: serializdEnabled,
+      entries: (serializd.data?.pages ?? []).flatMap((page) => page.entries),
+    },
   ];
   const active = wired.filter((w) => w.enabled);
 
-  const states: DiaryProviderState[] = active.map(({ provider, query }) => ({
+  const states: DiaryProviderState[] = active.map(({ provider, query, entries }) => ({
     provider,
-    entries: (query.data?.pages ?? []).flat(),
+    entries,
     // A provider whose read errored drops out of the watermark so it never
     // holds back the providers that did load (partial-failure contract).
     hasMore: query.status === 'error' ? false : (query.hasNextPage ?? false),
@@ -199,10 +243,11 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   };
 }
 
-type InfiniteDiaryQuery = UseInfiniteQueryResult<
-  InfiniteData<NormalizedDiaryEntry[]>,
-  Error
->;
+// Page-type-agnostic: the merge plumbing reads only status/hasNextPage/error/
+// fetchNextPage/refetch, which every UseInfiniteQueryResult exposes regardless
+// of its page shape (Serializd's `{ entries, totalPages }` vs the others' flat
+// arrays). `entries` is extracted per provider where the concrete type is known.
+type AnyInfiniteDiaryQuery = UseInfiniteQueryResult<InfiniteData<unknown>, Error>;
 
 export interface DiaryFeedResult {
   days: DiaryDay[];

@@ -34,4 +34,17 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     canRead: true,
     canWrite: true,
   },
+  // Unofficial JSON API (plan 0017), TMDB-keyed TV tracking. Symmetric
+  // read+write like Trakt: a TV (or TMDB-enriched anime series) log fans out
+  // to it and its diary feeds the unified diary. `canWrite` replays a bearer
+  // token from plain HTTP (native) or the same-origin CORS proxy (web), so —
+  // unlike Letterboxd — no in-session WebView write bridge is needed. Reads
+  // and writes both work on web via the proxy (docs/solutions/web-cors-serializd.md).
+  serializd: {
+    id: 'serializd',
+    label: 'Serializd',
+    mediaTypes: ['TV'],
+    canRead: true,
+    canWrite: true,
+  },
 };

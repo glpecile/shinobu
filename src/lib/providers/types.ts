@@ -2,7 +2,7 @@ import type { MediaType } from '@/types/media';
 
 // Extension point: adding a provider means widening this union and adding a
 // descriptor to registry.ts — nothing else in the app should need to change.
-export type ProviderId = 'trakt' | 'anilist' | 'letterboxd';
+export type ProviderId = 'trakt' | 'anilist' | 'letterboxd' | 'serializd';
 
 // Metadata-only sources (no session, no registry entry, never a fan-out
 // target) that still ride the shared error taxonomy. TMDB backs the person

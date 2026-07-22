@@ -35,13 +35,29 @@ export interface LogMediaVariables {
   providers?: ProviderId[];
 }
 
-export type LogAdapter = (variables: LogMediaVariables) => Promise<void>;
+/**
+ * What one provider's write adapter resolves: a successful write, or a
+ * deliberate skip carrying the reason it couldn't proceed (plan 0017 R9) — e.g.
+ * Serializd cannot resolve a `seasonId`, or a routed item lacks the `tmdb` join
+ * key. A skip is a *success value*, not a thrown error, so it reports through
+ * the contract instead of failing the fan-out. Adapters with nothing to report
+ * resolve `{ status: 'ok' }`.
+ */
+export type LogWriteResult =
+  | { status: 'ok' }
+  | { status: 'skipped'; reason: string };
+
+export type LogAdapter = (variables: LogMediaVariables) => Promise<LogWriteResult>;
 
 export type ProviderLogOutcome =
   | { provider: ProviderId; status: 'ok' }
   | { provider: ProviderId; status: 'error'; message: string }
-  /** Already in sync ahead of the others — deliberately not written (plan 0011). */
-  | { provider: ProviderId; status: 'skipped' };
+  /**
+   * Left untouched: either already in sync ahead of the others (reconcile,
+   * plan 0011, no `reason`), or an adapter-reported skip (plan 0017 R9, e.g. a
+   * Serializd season that can't be resolved) carrying the reason.
+   */
+  | { provider: ProviderId; status: 'skipped'; reason?: string };
 
 export interface LogMediaResult {
   /** One entry per applicable provider (skips included), in routing order. */
@@ -84,7 +100,12 @@ export async function fanOutLog(
               };
             }
             try {
-              await adapter(variables);
+              const result = await adapter(variables);
+              // An adapter-reported skip (plan 0017 R9) carries its reason
+              // through as a non-failing outcome; anything else is a success.
+              if (result != null && result.status === 'skipped') {
+                return { provider, status: 'skipped', reason: result.reason };
+              }
               return { provider, status: 'ok' };
             } catch (error) {
               return { provider, status: 'error', message: errorMessage(error) };
@@ -108,9 +129,11 @@ export async function fanOutLog(
     failed: outcomes
       .filter((outcome) => outcome.status === 'error')
       .map((outcome) => outcome.provider),
-    // The fan-out itself never skips — reconciliation removes skipped
-    // providers from `targets` and merges their outcomes back in useLogMedia.
-    skipped: [],
+    // Reconcile-skips are merged back in useLogMedia; adapter-reported skips
+    // (plan 0017 R9) surface here directly since the adapter ran.
+    skipped: outcomes
+      .filter((outcome) => outcome.status === 'skipped')
+      .map((outcome) => outcome.provider),
     rewatch: variables.rewatch === true,
   };
 }

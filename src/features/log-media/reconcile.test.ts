@@ -46,6 +46,22 @@ describe('reconcileLogTargets (the plan 0011 sync rule)', () => {
     ]);
   });
 
+  // Serializd rides the same provider-agnostic rule (plan 0017). When its
+  // two-call log left the diary entry absent, `providerHasWatch` returns false
+  // (R12), so reconcile marks it `log` to re-attempt — while a provider already
+  // in sync is skipped (AE6 catch-up side).
+  test('a Serializd episode whose diary entry is absent re-logs, Trakt skips', () => {
+    expect(
+      reconcileLogTargets([
+        { provider: 'trakt', hasIt: true },
+        { provider: 'serializd', hasIt: false },
+      ]),
+    ).toEqual([
+      { provider: 'trakt', action: 'skip' },
+      { provider: 'serializd', action: 'log' },
+    ]);
+  });
+
   test('single unwatched provider logs normally (no rewatch)', () => {
     expect(reconcileLogTargets([{ provider: 'trakt', hasIt: false }])).toEqual([
       { provider: 'trakt', action: 'log' },

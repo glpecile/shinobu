@@ -1,5 +1,8 @@
 import anilistIcon from '@/assets/providers/anilist.svg';
 import letterboxdIcon from '@/assets/providers/letterboxd.svg';
+// Serializd ships no simple-icons SVG mark — this is their own favicon
+// (converted from serializd.com/favicon.ico), the actual brand logo.
+import serializdIcon from '@/assets/providers/serializd.png';
 import traktIcon from '@/assets/providers/trakt.svg';
 
 import { Image } from '@/components/image';
@@ -15,6 +18,9 @@ const ICONS: Record<ProviderId, number> = {
   trakt: traktIcon,
   anilist: anilistIcon,
   letterboxd: letterboxdIcon,
+  // Serializd's own favicon (teal badge + white mark) — its own background
+  // keeps it visible on both themes, per the note above.
+  serializd: serializdIcon,
 };
 
 export function ProviderIcon({ id, size = 20 }: { id: ProviderId; size?: number }) {

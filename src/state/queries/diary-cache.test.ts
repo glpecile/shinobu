@@ -52,4 +52,21 @@ describe('findInDiaryCache', () => {
 
     expect(findInDiaryCache(queryClient, 'trakt-999')).toBeUndefined();
   });
+
+  test('scans the serializd root whose pages are { entries, totalPages } objects', () => {
+    const queryClient = new QueryClient();
+    // Serializd's infinite pages differ in shape from the flat-array providers.
+    queryClient.setQueryData([...DIARY_QUERY_ROOTS.serializd, 'diary', 'gian'], {
+      pages: [{ entries: [diaryEntry('serializd-1396')], totalPages: 1 }],
+      pageParams: [1],
+    });
+    // A non-diary query sharing the ['serializd'] root (progress → a Set, no
+    // `pages`) must not break the scan.
+    queryClient.setQueryData(
+      [...DIARY_QUERY_ROOTS.serializd, 'progress', 'gian', 1396],
+      new Set(['1-5']),
+    );
+
+    expect(findInDiaryCache(queryClient, 'serializd-1396')?.title).toBe('Perfect Blue');
+  });
 });

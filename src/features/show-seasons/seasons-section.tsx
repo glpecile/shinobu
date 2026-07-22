@@ -15,6 +15,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargets } from '@/features/log-media/use-log-targets';
 import { confirmLabelFor, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
+import { parseTags } from '@/features/log-media/parse-tags';
 import { SeasonAccordion, type PendingLog } from './season-accordion';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 
@@ -51,6 +52,9 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const logMedia = useLogMedia();
   const [pending, setPending] = useState<PendingLog | null>(null);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
+  // Diary tags — accepted by Serializd's TV diary payload (plan 0017 R10). The
+  // confirm sheet only surfaces the field when Serializd is a selected target.
+  const [tags, setTags] = useState('');
   const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>(targets);
 
   function openLog(next: PendingLog) {
@@ -58,6 +62,7 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     haptics.selection();
     logMedia.reset();
     setWatchedAt(null);
+    setTags('');
     setSelectedProviders(targets);
     setPending(next);
   }
@@ -65,11 +70,13 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   function confirmLog() {
     if (pending == null || logMedia.isPending) return;
     haptics.confirm();
+    const parsedTags = parseTags(tags);
     logMedia.mutate(
       {
         item,
         episodes: pending.episodes,
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
+        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
       },
       {
@@ -133,10 +140,12 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         onClose={() => setPending(null)}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
+        onTagsChange={setTags}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
         pendingLabel="Marking as watched…"
         selectedProviders={selectedProviders}
+        tags={tags}
         targets={targets}
         title={pending?.title ?? ''}
         watchedAt={watchedAt}
