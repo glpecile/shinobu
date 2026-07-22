@@ -2,16 +2,20 @@ import { describe, expect, test } from 'bun:test';
 
 import type {
   MediaType,
+  MergedDiaryEntry,
   NormalizedDiaryEntry,
   NormalizedMediaItem,
 } from '@/types/media';
 import type { ProviderId } from '@/lib/providers/types';
 import {
+  clusterDayEntries,
+  formatClusterCount,
   formatDayHeader,
   formatEpisodeDetail,
   formatEpisodeRange,
   groupDiaryEntries,
   mergeDiaryEntries,
+  summarizeCluster,
   watermarkProviders,
   type DiaryProviderState,
 } from './merge';
@@ -348,5 +352,119 @@ describe('formatDayHeader', () => {
   });
   test('a prior-year day appends the year', () => {
     expect(formatDayHeader('2025-07-20', now, TZ_MINUS_5)).toBe('July 20, 2025');
+  });
+});
+
+// --- Within-day episode clustering (presentation grouping) ---
+
+function mergedEntry(
+  overrides: Partial<MergedDiaryEntry> & { id: string },
+): MergedDiaryEntry {
+  return {
+    providers: ['trakt'],
+    item: item({ id: `${overrides.id}-item`, type: 'TV' }),
+    episodes: [],
+    watchedAt: '2026-07-20T12:00:00.000Z',
+    dateOnly: false,
+    ...overrides,
+  };
+}
+
+// A same-show TV entry keyed by a shared tmdb id, so the identity matches.
+function ep(id: string, season: number, episode: number): MergedDiaryEntry {
+  return mergedEntry({
+    id,
+    item: item({ id: `${id}-item`, type: 'TV', externalIds: { tmdb: 555 } }),
+    episodes: [episode],
+    season,
+  });
+}
+
+describe('clusterDayEntries', () => {
+  test('a run of same-show episode logs folds into one cluster', () => {
+    const clusters = clusterDayEntries([
+      ep('e10', 6, 10),
+      ep('e9', 6, 9),
+      ep('e8', 6, 8),
+    ]);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].entries).toHaveLength(3);
+    // Anchored at the first (newest) member's id.
+    expect(clusters[0].key).toBe('e10');
+  });
+
+  test('a lone episode log stays a singleton cluster', () => {
+    const clusters = clusterDayEntries([ep('solo', 1, 1)]);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].entries).toHaveLength(1);
+  });
+
+  test('movies (no episodes) never fold, even same-title rewatches', () => {
+    const movie = mergedEntry({
+      id: 'm1',
+      item: item({ id: 'fc', type: 'MOVIE', externalIds: { tmdb: 603 } }),
+    });
+    const rewatch = mergedEntry({
+      id: 'm2',
+      item: item({ id: 'fc2', type: 'MOVIE', externalIds: { tmdb: 603 } }),
+    });
+    const clusters = clusterDayEntries([movie, rewatch]);
+    expect(clusters).toHaveLength(2);
+  });
+
+  test('different seasons of the same show do not fold together', () => {
+    const clusters = clusterDayEntries([ep('s6', 6, 1), ep('s5', 5, 12)]);
+    expect(clusters).toHaveLength(2);
+  });
+
+  test('same-show episodes interleaved with another show still fold, anchored at newest', () => {
+    const other = mergedEntry({
+      id: 'other',
+      item: item({ id: 'ot', type: 'TV', externalIds: { tmdb: 999 } }),
+      episodes: [1],
+      season: 1,
+    });
+    const clusters = clusterDayEntries([ep('a', 6, 3), other, ep('b', 6, 2)]);
+    // The show cluster anchors at its newest member (`a`), then the other row.
+    expect(clusters.map((c) => c.key)).toEqual(['a', 'other']);
+    expect(clusters[0].entries.map((e) => e.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('summarizeCluster', () => {
+  test('unions episodes and providers, counts distinct episodes', () => {
+    const cluster = clusterDayEntries([
+      mergedEntry({
+        id: 'x',
+        item: item({ id: 'x-item', type: 'TV', externalIds: { tmdb: 555 } }),
+        episodes: [3],
+        season: 6,
+        providers: ['anilist'],
+      }),
+      mergedEntry({
+        id: 'y',
+        item: item({ id: 'y-item', type: 'TV', externalIds: { tmdb: 555 } }),
+        episodes: [1, 2],
+        season: 6,
+        providers: ['trakt'],
+      }),
+    ])[0];
+    const summary = summarizeCluster(cluster);
+    expect(summary.episodes).toEqual([1, 2, 3]);
+    expect(summary.count).toBe(3);
+    expect(summary.season).toBe(6);
+    // Precedence-ordered provider union, and the anchor (newest) item wins.
+    expect(summary.providers).toEqual(['trakt', 'anilist']);
+    expect(summary.item.id).toBe('x-item');
+  });
+});
+
+describe('formatClusterCount', () => {
+  test('episodes for TV/anime', () => {
+    expect(formatClusterCount('TV', 10)).toBe('10 episodes');
+    expect(formatClusterCount('ANIME', 1)).toBe('1 episode');
+  });
+  test('chapters for manga', () => {
+    expect(formatClusterCount('MANGA', 12)).toBe('12 chapters');
   });
 });

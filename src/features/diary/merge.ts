@@ -6,6 +6,7 @@ import type {
   MediaType,
   MergedDiaryEntry,
   NormalizedDiaryEntry,
+  NormalizedMediaItem,
 } from '@/types/media';
 
 /**
@@ -238,6 +239,91 @@ export function groupDiaryEntries(
     .sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : 0));
 }
 
+// ---- Within-day episode clustering (presentation only) ----
+
+/**
+ * A run of same-show episode logs from one day, gathered into a collapsible
+ * group so a binge (S6E1…E10) reads as one row instead of ten. Purely a
+ * presentation grouping *over* `MergedDiaryEntry` — it never re-merges logs, so
+ * the merge layer's contracts (per-log identity, cross-provider collapse,
+ * rewatch/partial-failure separation) are untouched. A single-entry cluster is
+ * just an ordinary row; only clusters of two or more collapse.
+ */
+export interface DiaryCluster {
+  /** Stable key — the anchor (newest) entry's log id. */
+  key: string;
+  /** The grouped entries, newest-first. Length ≥ 1. */
+  entries: MergedDiaryEntry[];
+}
+
+/** The collapsed summary of a cluster (union across its entries). */
+export interface DiaryClusterSummary {
+  /** Display item — the anchor (newest) entry's, richest of the run. */
+  item: NormalizedMediaItem;
+  /** Season shared by the run (TV); absent for anime/manga without one. */
+  season?: number;
+  /** Union of every entry's episode/chapter numbers, sorted ascending. */
+  episodes: number[];
+  /** Union of every provider that logged any entry, precedence-ordered. */
+  providers: ProviderId[];
+  /** How many episode/chapter numbers the run covers (union size). */
+  count: number;
+}
+
+/**
+ * A cluster identity — same show (identity) + same season — or null for rows
+ * that must never fold together: movies and season-level logs (no episodes)
+ * are each their own entry, exactly as the merge layer left them.
+ */
+function clusterKey(entry: MergedDiaryEntry): string | null {
+  if (entry.episodes.length === 0) return null;
+  return `${identityKey(entry.item)}::${entry.season ?? ''}`;
+}
+
+/**
+ * Groups one day's already-collapsed entries into episode clusters, anchoring
+ * each cluster at its newest member's position (input is newest-first, so the
+ * anchor is the first occurrence) and preserving that relative order. Entries
+ * that share a show + season fold together even if interleaved with another
+ * show's logs; movies and season-level logs always pass through as singletons.
+ */
+export function clusterDayEntries(
+  entries: readonly MergedDiaryEntry[],
+): DiaryCluster[] {
+  const clusters: DiaryCluster[] = [];
+  const byKey = new Map<string, DiaryCluster>();
+  for (const entry of entries) {
+    const key = clusterKey(entry);
+    const existing = key == null ? undefined : byKey.get(key);
+    if (existing != null) {
+      existing.entries.push(entry);
+      continue;
+    }
+    const cluster: DiaryCluster = { key: entry.id, entries: [entry] };
+    if (key != null) byKey.set(key, cluster);
+    clusters.push(cluster);
+  }
+  return clusters;
+}
+
+/** The collapsed-row summary for a cluster: unioned episodes/providers + count. */
+export function summarizeCluster(cluster: DiaryCluster): DiaryClusterSummary {
+  const episodes = [
+    ...new Set(cluster.entries.flatMap((entry) => entry.episodes)),
+  ].sort((a, b) => a - b);
+  const providers = [
+    ...new Set(cluster.entries.flatMap((entry) => entry.providers)),
+  ].sort((a, b) => PROVIDER_PRIORITY[a] - PROVIDER_PRIORITY[b]);
+  const season = cluster.entries.find((entry) => entry.season != null)?.season;
+  return {
+    item: cluster.entries[0].item,
+    ...(season != null ? { season } : {}),
+    episodes,
+    providers,
+    count: episodes.length,
+  };
+}
+
 // ---- Presentation helpers (pure) ----
 
 /** "3–5" for a contiguous run, "2, 5" across a gap (plan 0016 KTD2). */
@@ -274,6 +360,12 @@ export function formatEpisodeDetail(params: {
   if (params.type === 'MANGA') return `Ch ${range}`;
   if (params.season != null) return `S${params.season}E${range}`;
   return `Ep ${range}`;
+}
+
+/** "10 episodes" / "12 chapters" — the count line under a collapsed cluster. */
+export function formatClusterCount(type: MediaType, count: number): string {
+  const noun = type === 'MANGA' ? 'chapter' : 'episode';
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 const MONTHS = [
