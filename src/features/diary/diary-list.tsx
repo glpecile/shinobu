@@ -10,6 +10,10 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import {
+  setDiaryDayCollapsed,
+  useCollapsedDiaryDays,
+} from '@/state/prefs/collapsed-diary-days';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
@@ -24,7 +28,14 @@ import {
 
 /** Flattened list rows: a sticky-ish day header, then that day's entries. */
 type DiaryListItem =
-  | { kind: 'header'; key: string; label: string }
+  | {
+      kind: 'header';
+      key: string;
+      dayKey: string;
+      label: string;
+      count: number;
+      collapsed: boolean;
+    }
   | { kind: 'entry'; key: string; entry: MergedDiaryEntry }
   | { kind: 'cluster'; key: string; cluster: DiaryCluster; expanded: boolean }
   | { kind: 'child'; key: string; entry: MergedDiaryEntry; last: boolean };
@@ -34,14 +45,21 @@ function flattenDays(
   now: Date,
   timeZone: string,
   expanded: ReadonlySet<string>,
+  collapsedDays: ReadonlySet<string>,
 ): DiaryListItem[] {
   const items: DiaryListItem[] = [];
   for (const day of days) {
+    const collapsed = collapsedDays.has(day.key);
     items.push({
       kind: 'header',
       key: `h-${day.key}`,
+      dayKey: day.key,
       label: formatDayHeader(day.key, now, timeZone),
+      count: day.entries.length,
+      collapsed,
     });
+    // A minimized day shows its header alone — its rows are omitted entirely.
+    if (collapsed) continue;
     for (const cluster of clusterDayEntries(day.entries)) {
       // A lone log is an ordinary row; a run of same-show episodes collapses.
       if (cluster.entries.length === 1) {
@@ -66,13 +84,41 @@ function flattenDays(
   return items;
 }
 
-function DiaryDayHeader({ label }: { label: string }) {
+function DiaryDayHeader({
+  label,
+  count,
+  collapsed,
+  onToggle,
+}: {
+  label: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  const muted = useCSSVariable('--color-muted');
   return (
-    <View className="px-6 pt-5 pb-1.5">
+    <PresstableOpacity
+      accessibilityHint={collapsed ? 'Expands this day' : 'Minimizes this day'}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: !collapsed }}
+      className="flex-row items-center px-6 pt-5 pb-1.5"
+      onPress={onToggle}
+    >
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider">
         {label}
       </Text>
-    </View>
+      {collapsed && (
+        <Text className="text-muted/60 font-sans text-xs ml-2">
+          {count} {count === 1 ? 'entry' : 'entries'}
+        </Text>
+      )}
+      <View className="flex-1" />
+      <Ionicons
+        color={typeof muted === 'string' ? muted : undefined}
+        name={collapsed ? 'chevron-down' : 'chevron-up'}
+        size={14}
+      />
+    </PresstableOpacity>
   );
 }
 
@@ -214,13 +260,22 @@ function DiaryChildRow({
   });
 
   return (
-    <View className="flex-row px-6">
-      {/* Vertical rail tying the episode to its group; stops at the last row. */}
-      <View className="w-12 items-center">
-        <View className={`w-px bg-border ${last ? 'h-1/2' : 'flex-1'}`} />
+    // Fixed row height so the connector geometry is pixel-exact (labels are a
+    // single line — numberOfLines={1} — so nothing needs to grow the row).
+    <View className="flex-row px-6 h-11">
+      {/* Terminal-style tree connector: a vertical trunk centered under the
+          poster and a horizontal branch into the row — ├─ for a middle child,
+          └─ for the last, whose trunk stops at the branch (mid-row) instead of
+          running through. `left-6` is the 48px column's centre; `top-[22px]` is
+          the 44px (h-11) row's middle. */}
+      <View className="w-12 relative">
+        <View
+          className={`absolute left-6 top-0 w-px bg-border ${last ? 'h-[22px]' : 'bottom-0'}`}
+        />
+        <View className="absolute left-6 top-[22px] w-4 h-px bg-border" />
       </View>
       <PresstableScale
-        className="flex-1 flex-row items-center py-2.5"
+        className="flex-1 flex-row items-center"
         onPress={() => onOpen(entry.item.id)}
       >
         <Text
@@ -305,10 +360,12 @@ export function DiaryList({
   onOpen,
 }: DiaryListProps) {
   const [refreshing, setRefreshing] = useState(false);
-  // Which episode clusters are open. Expansion is view state that lives here in
-  // the list (not in a recycled row), keyed by the cluster's stable anchor id.
+  // Which episode clusters are open. Expansion is ephemeral view state that
+  // lives here in the list (not in a recycled row), keyed by the cluster's
+  // stable anchor id — unlike day-minimize, which persists across restarts.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const items = flattenDays(days, new Date(), timeZone, expanded);
+  const collapsedDays = useCollapsedDiaryDays();
+  const items = flattenDays(days, new Date(), timeZone, expanded, collapsedDays);
 
   function toggleCluster(key: string) {
     setExpanded((prev) => {
@@ -317,6 +374,10 @@ export function DiaryList({
       else next.add(key);
       return next;
     });
+  }
+
+  function toggleDay(dayKey: string) {
+    setDiaryDayCollapsed(dayKey, !collapsedDays.has(dayKey));
   }
 
   async function refresh() {
@@ -335,7 +396,14 @@ export function DiaryList({
       renderItem={({ item }) => {
         switch (item.kind) {
           case 'header':
-            return <DiaryDayHeader label={item.label} />;
+            return (
+              <DiaryDayHeader
+                collapsed={item.collapsed}
+                count={item.count}
+                label={item.label}
+                onToggle={() => toggleDay(item.dayKey)}
+              />
+            );
           case 'cluster':
             return (
               <DiaryClusterRow
