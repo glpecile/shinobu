@@ -48,10 +48,50 @@ preview deployment (datacenter IP). Results were **identical from both IPs**.
   authenticated session on web buys nothing for public data. Web stays
   username-only (now actually functional), connect-on-mobile for writes.
 
+## Re-spike 2026-07-22 (plan 0018): Workers egress changes nothing for writes; reads ship
+
+The Serializd Worker proxy (plan 0017) made a reads relay nearly free, so the
+proxy was revisited as a Cloudflare Worker `main`-handler relay
+(worker/letterboxd-proxy.ts) instead of plan 0015's `+api`/EAS design. The
+reads half shipped: `GET /api/letterboxd/{user}/watchlist/` and
+`/api/letterboxd/{user}/rss/` relay live on `shinobu.glpecile.xyz`, verified
+byte-faithful against direct fetches (RSS: 100 real diary items; watchlist
+pages structurally identical to direct, incl. empty-watchlist accounts).
+
+The writes question was re-run from **Workers egress** — the one transport the
+2026-07-20 spike never tried (Cloudflare's own network, its own TLS
+fingerprint) via a throwaway relay (worker/letterboxd-write-spike.ts):
+
+- `POST /api/v0/production-log-entries` with junk cookies/CSRF → **403
+  "Just a moment…"** (`challenged: true`). The challenge fires before any
+  credential check, same as from EAS/undici and residential IPs. Cloudflare
+  challenges its own egress exactly like everyone else's.
+
+That completes the matrix: three server-side transports (undici, EAS Hosting,
+Workers), four attempts, all 403-challenged. Writes stay native-WebView-only;
+plan 0012's verdict holds a third time. The one cell never tested is *valid*
+cookies from Workers egress — the junk-credential test can't rule out a
+cookie-validity-sensitive wall, but the fingerprint-check reasoning
+(server-side fetch ≠ browser TLS) predicts it changes nothing. If a real
+captured session is ever replayed through the spike route and returns
+`challenged: false`, promote the POST rule into worker/letterboxd-proxy.ts and
+reopen writes; until then the spike route stays as the standing test harness.
+
 ## Incidental findings
 
 - `eas deploy` failed once with `The specified bucket does not exist` and
   succeeded on immediate retry — transient; retry before debugging.
+- `wrangler deploy` versions propagate unevenly for ~30 s: the first
+  post-deploy requests can hit the *previous* version (e.g. proxy paths
+  answered with the assets 404 page). Wait and re-curl before debugging a
+  "my route isn't running" symptom (2026-07-22).
+- Dot-segment traversal (`/api/letterboxd/../secret`) never reaches the
+  Worker: WHATWG URL normalization collapses it before routing, so the assets
+  404 page answers. The handler's `isUnsafePath` check is defense-in-depth for
+  non-URL-normalized callers only, not the primary guard (2026-07-22).
+- An *empty* watchlist page renders zero `LazyPoster` components
+  (davidehrlich, letterboxd, jack all do) — don't use the component count as a
+  proxy-health signal. Use the RSS `<item>` count instead (2026-07-22).
 - `production:identifier` meta is HTML-encoded (`&quot;lid&quot;:`) — regex
   for the LID must handle encoded quotes.
 - The normal Letterboxd page HTML contains the string `challenge-platform`

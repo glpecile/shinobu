@@ -6,10 +6,7 @@ import { Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
-import {
-  letterboxdReadsAvailable,
-  validateLetterboxdUsername,
-} from '@/state/queries/letterboxd';
+import { validateLetterboxdUsername } from '@/state/queries/letterboxd';
 import { connectLetterboxd } from '@/state/session/letterboxd';
 
 type ConnectionStatus = 'idle' | 'checking' | 'not-found' | 'error';
@@ -32,10 +29,10 @@ type UsernameForm = z.infer<typeof usernameSchema>;
 /**
  * Web Letterboxd connect: read-only, a public username (plan 0012 decision 1).
  * There's no OAuth and no write path on web — logging needs a signed-in web
- * session, which only the native sign-in WebView can capture (index.native.tsx);
- * the browser can't reach Letterboxd cross-origin (CORS) to validate or write
- * (docs/solutions/web-cors-letterboxd.md), so this saves the username unvalidated
- * for the watchlist feed row and nothing else.
+ * session, which only the native sign-in WebView can capture (index.native.tsx).
+ * Reads and the validation fetch below run through the same-origin Worker
+ * proxy (plan 0018), so the username is validated against the live RSS feed
+ * before saving, same as native.
  */
 export function ConnectLetterboxdButton() {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
@@ -52,10 +49,6 @@ export function ConnectLetterboxdButton() {
 
   const submit = handleSubmit(async (values) => {
     const username = values.username.trim();
-    if (!letterboxdReadsAvailable()) {
-      connectLetterboxd(username);
-      return;
-    }
     setStatus('checking');
     try {
       const exists = await validateLetterboxdUsername(username);

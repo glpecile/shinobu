@@ -5,6 +5,16 @@
 export const LETTERBOXD_BASE_URL = 'https://letterboxd.com';
 
 /**
+ * Same-origin path the web read transport hits; the Cloudflare Worker proxy
+ * owns this prefix (plan 0018 — the second bounded exception to the AGENTS.md
+ * "never proxied" policy, after Serializd). GET-only and unauthenticated:
+ * every state-changing POST is Cloudflare client-fingerprint walled, so no
+ * proxy can carry writes or sign-in (docs/solutions/letterboxd-web-proxy.md).
+ * Kept here (no RN/Expo imports in this file) so the Worker shares it verbatim.
+ */
+export const LETTERBOXD_WEB_PROXY_BASE_URL = '/api/letterboxd';
+
+/**
  * The page the native sign-in WebView loads (plan 0012, session-capture path):
  * the user logs in here in a real browser context, then Shinobu harvests the
  * resulting session cookies (index.native.tsx). Detection is cookie-based, so a

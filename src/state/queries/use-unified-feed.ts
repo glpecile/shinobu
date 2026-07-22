@@ -29,11 +29,7 @@ import {
   fetchCurrentAnime,
   fetchSeasonalAnime,
 } from './anilist';
-import {
-  letterboxdDeps,
-  letterboxdQueryKeys,
-  letterboxdReadsAvailable,
-} from './letterboxd';
+import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { traktDeps, traktQueryKeys } from './trakt';
 
 /** One named row of the home feed — never index into the query array. */
@@ -154,9 +150,9 @@ function activeFeedConfigs(
       ...feedOptions.yourAnime(queryClient),
     });
   }
-  if (feedProviders.includes('letterboxd') && letterboxdReadsAvailable()) {
-    // The platform gate also keeps this MMKV read out of web SSR renders
-    // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+  if (feedProviders.includes('letterboxd')) {
+    // The `feedProviders` gate also keeps this MMKV read out of web SSR renders
+    // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
     const letterboxdUsername = getLetterboxdUsername();
     if (letterboxdUsername != null) {
       configs.push({

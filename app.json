@@ -37,7 +37,8 @@
             "deploymentTarget": "16.4"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "name": "Shinobu",
     "slug": "shinobu",

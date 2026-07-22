@@ -1,11 +1,15 @@
 ---
-status: abandoned
+status: superseded by plan 0018 (2026-07-22)
 date: 2026-07-20
 ---
 
 # 0015 — Letterboxd Web Parity via Expo Router API Routes (stateless proxy)
 
-**ABANDONED 2026-07-20, after the phase-0 spike ran.** The spike
+**ABANDONED 2026-07-20, after the phase-0 spike ran; READS HALF SUPERSEDED BY
+PLAN 0018 (2026-07-22).** Plan 0018 shipped web reads via the Cloudflare
+Worker `main`-handler relay (the mechanism plan 0017 proved) instead of this
+plan's `+api`/EAS Hosting design — writes and sign-in remain dead, re-confirmed
+by a Workers-egress re-spike the same day. The spike
 (`docs/solutions/letterboxd-web-proxy.md`) confirmed: server-side GET reads
 pass Cloudflare (even from a datacenter IP), but every state-changing POST —
 `POST /api/v0/production-log-entries` *and* `POST /user/login.do` — is

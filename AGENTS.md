@@ -247,8 +247,9 @@ staleness proves painful in practice (`docs/plans/0005`).
 
 No backend, so on web the app calls provider APIs directly from the browser — works
 only if the provider sends CORS headers. Policy: a provider that blocks browser
-origins is **native-only on web** ("connect on mobile"), never proxied — with **one
-bounded exception (Serializd, plan 0017 U4/R14, owner decision 2026-07-21).** Verify
+origins is **native-only on web** ("connect on mobile"), never proxied — with **two
+bounded exceptions (Serializd, plan 0017 U4/R14, owner decision 2026-07-21;
+Letterboxd reads, plan 0018, owner decision 2026-07-22).** Verify
 each provider with a browser-origin spike before building its web read path
 (`todos/008`); record findings in `docs/solutions/web-cors-*.md`.
 
@@ -282,6 +283,40 @@ is reviewed against them:
 The upstream base + app headers live in one place (`lib/providers/serializd/config.ts`)
 shared by the native transport and the Worker (KTD4); the probe evidence and rationale
 are in `docs/solutions/web-cors-serializd.md`.
+
+**Letterboxd reads-proxy exception — second contract, same license limits.**
+Letterboxd blocks browser origins *and* fingerprint-walls every state-changing POST
+(three spike rounds: undici, EAS Hosting, Workers egress — all 403-challenged), so
+`worker/letterboxd-proxy.ts` is **GET-only, reads-only, unauthenticated**: the two
+public path shapes (`/{user}/watchlist/`, `/{user}/rss/`), username-locked. Its
+invariants differ from Serializd's where the payload demands it, and edits are
+reviewed against them the same way:
+
+- **No credentials exist to forward.** No `Authorization`, no cookies either
+  direction, no client headers at all — one fixed server-side `User-Agent` is
+  attached so requests aren't UA-less. Never add a POST rule without a spike proving
+  the fingerprint wall changed (`worker/letterboxd-write-spike.ts` is the standing
+  harness; `docs/solutions/letterboxd-web-proxy.md` is the evidence log).
+- **Relayed HTML/XML is the payload** (the client scrapes it), so instead of forcing
+  JSON it allowlists content types (html/rss/atom/xml) and serves every relayed body
+  under a script-killing CSP (`default-src 'none'; frame-ancestors 'none';
+  base-uri 'none'; form-action 'none'`) + `nosniff` — direct navigation to a proxy
+  URL must never execute Letterboxd markup under the app origin (which holds OAuth
+  tokens in localStorage). The Cloudflare challenge page (403 + `Just a moment`)
+  maps to a clean 502 JSON, never relayed.
+- Same shared constants as Serializd: no `Access-Control-Allow-Origin`, ~30 s
+  upstream timeout (504), traversal rejection, stateless/no logging.
+  `LETTERBOXD_WEB_PROXY_BASE_URL` lives in `lib/providers/letterboxd/config.ts`.
+
+The web transports hide behind each provider's injected fetch
+(`state/queries/letterboxd.ts` for Letterboxd) — provider lib code never knows
+whether it's talking to the origin or the relay.
+
+**Local web dev needs the Worker too.** `/api/*` doesn't exist on Metro, so
+run `bun run dev:worker` (wrangler dev on :8787) alongside `bun web`;
+`metro.config.js`'s `enhanceMiddleware` forwards the proxy prefixes to it and
+answers a JSON 502 when it's down. Restart `bun web` after metro.config.js
+edits (`docs/solutions/local-web-dev-proxy-middleware.md`).
 
 ## Golden Reference
 

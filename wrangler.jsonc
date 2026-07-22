@@ -3,6 +3,7 @@
   // Full-stack Worker (plan 0017 KTD3): a `main` handler now sits in front of
   // the same static-assets serving this Worker has always done. The handler
   // relays only the allowlisted Serializd CORS proxy (`/api/serializd/*`) and
+  // the GET-only Letterboxd reads proxy (`/api/letterboxd/*`, plan 0018), and
   // falls through to `env.ASSETS.fetch` for everything else — the static export,
   // custom-domain auto-provisioning, and Workers Builds pipeline are unchanged
   // (docs/solutions/cloudflare-workers-static-web-deploy.md pre-plotted this
@@ -15,10 +16,10 @@
     // Bound so the `main` handler can serve assets for non-proxy paths.
     "binding": "ASSETS",
     // The proxy paths must hit the Worker first — otherwise the assets router
-    // could answer a non-matching `/api/serializd/*` GET with the 404 page
+    // could answer a non-matching `/api/*` GET with the 404 page
     // (HTML) before the Worker ever runs. Everything else still serves assets
     // first (Worker only runs on a miss).
-    "run_worker_first": ["/api/serializd/*"],
+    "run_worker_first": ["/api/serializd/*", "/api/letterboxd/*"],
     // Expo Router's static export emits `search.html`, `details/[id].html`,
     // etc. (no trailing slash in the route), matching how Expo Router's
     // own Link/router generate hrefs.

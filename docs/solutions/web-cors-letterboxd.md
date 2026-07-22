@@ -1,28 +1,29 @@
 # Web CORS: Letterboxd (public pages + RSS)
 
-**Date:** 2026-07-15 · **Verdict: reads are native-only on web.**
+**Date:** 2026-07-15 · **Verdict: superseded 2026-07-22 — reads go through the
+Worker proxy on web (plan 0018); writes stay native-only.**
 
 `letterboxd.com` sends **no `Access-Control-Allow-Origin` header** on the
 diary RSS feed or public pages (verified with an `Origin:` request header,
 2026-07-15), and there is no official API access to fall back to (plan 0012).
-Per the AGENTS.md Web & CORS policy this makes Letterboxd **reads** a
-"connect on mobile" provider on web — no proxy.
 
-What still works on web:
+**Resolved 2026-07-22 (plan 0018):** reads run through the same-origin
+Cloudflare Worker relay (`/api/letterboxd/{user}/watchlist/`,
+`/api/letterboxd/{user}/rss/` — GET-only, unauthenticated), the repo's second
+bounded exception to the "never proxied" policy after Serializd. The web
+transport rewrite lives behind the injected fetch in
+`state/queries/letterboxd.ts`; the old `letterboxdReadsAvailable()` platform
+gate is gone. Web connect now validates the username against the live RSS
+feed, and the watchlist + diary read on web exactly as on native.
 
-- **Connecting** (entering a username) — pure local state. The username is
-  saved unvalidated on web because the validation fetch itself is
-  CORS-blocked; native validates against `{username}/rss/`.
-- **The write fan-out fails cleanly** — the web `webFetch` dep is undefined,
-  so `useLogMedia` surfaces Letterboxd as a per-provider `ProviderAuthError`
-  ("connect on mobile") while other providers succeed.
+What still holds:
 
-**Re-investigated 2026-07-20 and closed again:** an Expo Router API-route
-proxy would bypass CORS for reads (server-side GETs pass Cloudflare), but all
-state-changing POSTs (writes, sign-in) are Cloudflare client-fingerprint
-walled even with valid cookies/UA — so the proxy was abandoned
-(`docs/solutions/letterboxd-web-proxy.md`, plan 0015).
-
-Gate location: the platform branch lives in `state/queries/letterboxd.ts`
-(watchlist query disabled on web), not in the registry — `canRead` stays
-`true` because the capability exists, just not on this platform.
+- **Writes are native-only.** Every state-changing POST is Cloudflare
+  client-fingerprint walled — confirmed from undici, EAS Hosting, AND Workers
+  egress (`docs/solutions/letterboxd-web-proxy.md`, three spike rounds). The
+  web `webFetch` dep stays undefined and `useLogMedia` surfaces Letterboxd as
+  a per-provider `ProviderAuthError` ("connect on mobile") while other
+  providers succeed.
+- Gate location for writes: the platform branch stays out of the registry —
+  `canWrite` stays `true` because the capability exists, just not on this
+  platform.
