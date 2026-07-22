@@ -95,7 +95,7 @@ export function loginToSerializd(
     const detail =
       raw != null
         ? (raw.message ?? raw.error ?? `Serializd rejected the login (${response.status})`)
-        : `Serializd sign-in isn't reachable (${response.status}). On web this needs the Serializd proxy — use the deployed build or run \`wrangler dev\`.`;
+        : `Serializd sign-in isn't reachable (${response.status}). On web this needs the Serializd proxy — locally run \`bun run dev:worker\` alongside \`bun web\`, or use the deployed build.`;
     return yield* new ProviderDecodeError({ provider, detail });
   });
 }

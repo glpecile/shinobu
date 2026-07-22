@@ -34,7 +34,6 @@ import {
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
-import { letterboxdReadsAvailable } from '@/state/queries/letterboxd';
 import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -124,12 +123,11 @@ function FeedScreen() {
   const router = useRouter();
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
-  // The platform gate also keeps this MMKV read out of web SSR renders
-  // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
-  const letterboxdUsername =
-    feedProviders.includes('letterboxd') && letterboxdReadsAvailable()
-      ? getLetterboxdUsername()
-      : null;
+  // The `feedProviders` gate also keeps this MMKV read out of web SSR renders
+  // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+  const letterboxdUsername = feedProviders.includes('letterboxd')
+    ? getLetterboxdUsername()
+    : null;
   const animeSeason = animeSeasonAt(new Date());
   const refetchFeed = useRefetchUnifiedFeed();
   // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.

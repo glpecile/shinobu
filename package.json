@@ -71,6 +71,7 @@
     "ios": "expo run:ios",
     "ios.clean": "expo prebuild --platform ios --clean && bun ios",
     "web": "expo start --web",
+    "dev:worker": "wrangler dev",
     "test": "bun test",
     "check:links": "bun scripts/check-external-urls.ts",
     "typecheck": "tsc --noEmit",

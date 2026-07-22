@@ -28,11 +28,7 @@ import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import { anilistDeps, anilistQueryKeys } from './anilist';
-import {
-  letterboxdDeps,
-  letterboxdQueryKeys,
-  letterboxdReadsAvailable,
-} from './letterboxd';
+import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { serializdDeps, serializdQueryKeys } from './serializd';
 import { traktDeps, traktQueryKeys } from './trakt';
 
@@ -93,12 +89,13 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   const readable = providersForFeed(connected);
   const traktEnabled = readable.includes('trakt');
   const anilistEnabled = readable.includes('anilist');
-  // Letterboxd reads are native-only (no CORS on web) and need a stored
-  // username. The platform gate also keeps this MMKV read out of web SSR.
-  const letterboxdUsername =
-    readable.includes('letterboxd') && letterboxdReadsAvailable()
-      ? (getLetterboxdUsername() ?? '')
-      : '';
+  // Letterboxd reads need a stored username; on web they run through the
+  // Worker proxy (plan 0018), native reads letterboxd.com directly. The
+  // `readable` gate also keeps this MMKV read out of web SSR renders (it is
+  // empty in the server snapshot — the Serializd R16 pattern below).
+  const letterboxdUsername = readable.includes('letterboxd')
+    ? (getLetterboxdUsername() ?? '')
+    : '';
   const letterboxdEnabled = letterboxdUsername !== '';
   // Serializd reads work on every platform via the proxy (R13) — no platform
   // gate. `readable` is empty on the server (useConnectedProviders' SSR
