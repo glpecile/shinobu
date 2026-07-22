@@ -21,8 +21,8 @@ describe('fanOutLog', () => {
   test('all providers succeeding yields ok outcomes in target order', async () => {
     const result = await fanOutLog(
       {
-        trakt: () => Promise.resolve(),
-        letterboxd: () => Promise.resolve(),
+        trakt: () => Promise.resolve({ status: 'ok' as const }),
+        letterboxd: () => Promise.resolve({ status: 'ok' as const }),
       },
       ['trakt', 'letterboxd'],
       variables,
@@ -39,7 +39,7 @@ describe('fanOutLog', () => {
   test('one failure surfaces per-provider, never collapsing the others', async () => {
     const result = await fanOutLog(
       {
-        trakt: () => Promise.resolve(),
+        trakt: () => Promise.resolve({ status: 'ok' as const }),
         letterboxd: () => Promise.reject(new Error('api access revoked')),
       },
       ['trakt', 'letterboxd'],
@@ -57,7 +57,7 @@ describe('fanOutLog', () => {
 
   test('a routed target without an adapter is a loud error, not a skip', async () => {
     const result = await fanOutLog(
-      { trakt: () => Promise.resolve() },
+      { trakt: () => Promise.resolve({ status: 'ok' as const }) },
       ['trakt', 'anilist'],
       variables,
     );
@@ -77,11 +77,11 @@ describe('fanOutLog', () => {
         trakt: () => {
           started.push('trakt');
           // Slowest adapter first — its outcome must still come first.
-          return new Promise((resolve) => setTimeout(resolve, 20));
+          return new Promise((resolve) => setTimeout(() => resolve({ status: 'ok' as const }), 20));
         },
         letterboxd: () => {
           started.push('letterboxd');
-          return Promise.resolve();
+          return Promise.resolve({ status: 'ok' as const });
         },
       },
       ['trakt', 'letterboxd'],
@@ -94,6 +94,53 @@ describe('fanOutLog', () => {
       'trakt',
       'letterboxd',
     ]);
+  });
+
+  test('an adapter-reported skip surfaces as a skipped outcome with its reason', async () => {
+    const result = await fanOutLog(
+      {
+        trakt: () => Promise.resolve({ status: 'ok' as const }),
+        serializd: () =>
+          Promise.resolve({ status: 'skipped' as const, reason: 'season unavailable' }),
+      },
+      ['trakt', 'serializd'],
+      variables,
+    );
+
+    // A skip is a success value: it never joins `failed`, and the other
+    // provider's write still succeeds (plan 0017 R9 / AE4).
+    expect(result.succeeded).toEqual(['trakt']);
+    expect(result.failed).toEqual([]);
+    expect(result.skipped).toEqual(['serializd']);
+    expect(result.outcomes[1]).toEqual({
+      provider: 'serializd',
+      status: 'skipped',
+      reason: 'season unavailable',
+    });
+  });
+
+  test('Covers AE2 — a Serializd auth failure is per-provider; Trakt still succeeds, nothing retried', async () => {
+    let serializdCalls = 0;
+    const result = await fanOutLog(
+      {
+        trakt: () => Promise.resolve({ status: 'ok' as const }),
+        serializd: () => {
+          serializdCalls++;
+          return Promise.reject(
+            new Error('serializd: session expired or was rejected — reconnect serializd'),
+          );
+        },
+      },
+      ['trakt', 'serializd'],
+      variables,
+    );
+
+    expect(result.succeeded).toEqual(['trakt']);
+    expect(result.failed).toEqual(['serializd']);
+    expect(result.outcomes[1]).toMatchObject({ provider: 'serializd', status: 'error' });
+    expect((result.outcomes[1] as { message: string }).message).toContain('reconnect');
+    // fanOutLog fires each adapter exactly once — the fan-out never retries.
+    expect(serializdCalls).toBe(1);
   });
 
   test('non-Error rejections stringify into the outcome message', async () => {

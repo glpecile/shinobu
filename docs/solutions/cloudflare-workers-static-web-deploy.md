@@ -36,6 +36,18 @@ Letterboxd write path, etc.), this doesn't have to be reworked — add a
 (`assets` + `main` together), same as EAS Hosting's own Cloudflare Workers
 runtime would have provided.
 
+**Update (plan 0017, 2026-07-21): the `main`-handler path is now realized.**
+The Serializd web CORS proxy needed exactly this — `wrangler.jsonc` gained
+`"main": "worker/index.ts"` and `assets` gained `"binding": "ASSETS"`, so
+`assets` + `main` now coexist as pre-plotted. `web.output` stays `"static"`;
+the handler relays only `/api/serializd/*` and falls through to
+`env.ASSETS.fetch(request)` for everything else, so static serving, the
+auto-provisioned custom domain, and the Workers Builds automation below are
+all unchanged. `wrangler deploy` bundles the TS Worker (esbuild resolves the
+`@/` tsconfig alias — `worker/serializd-proxy.ts` shares the upstream-base +
+app-header constants from `src/lib/providers/serializd/config.ts`), no extra
+build step. See `docs/solutions/web-cors-serializd.md` for the proxy contract.
+
 ## Config
 
 `wrangler.jsonc` (repo root):
@@ -62,9 +74,11 @@ runtime would have provided.
   `dist/+not-found.html` → `dist/404.html` after export, before deploying,
   so Expo's real not-found screen (not a generic Cloudflare 404) is what
   users see.
-- No `main` field: this is a pure-assets Worker, no server-side script.
-  `main` is optional at the wrangler config schema level specifically for
-  this case.
+- `main` was originally absent (a pure-assets Worker) — `main` is optional at
+  the wrangler config schema level specifically for that case. Since plan 0017
+  it points at `worker/index.ts` (the Serializd proxy above), and `assets`
+  carries a `"binding": "ASSETS"` so the handler can serve assets for non-proxy
+  paths.
 
 ## Deploy
 
