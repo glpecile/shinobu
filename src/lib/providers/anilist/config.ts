@@ -21,16 +21,32 @@ const ANILIST_WEB_CLIENT_ID = '';
 
 /**
  * Platform-appropriate embedded client id; '' when this build ships none.
- * EXPO_PUBLIC_ANILIST_CLIENT_ID overrides both — which is also how localhost
- * web dev connects (a personal dev client whose registered redirect URL is
- * http://localhost:8081). When this resolves to '', the connect UI falls
- * back to a Trakt-style in-app form (one field, no secret) and the id lands
- * in MMKV via `state/session/provider-config.ts` (hybrid model, 2026-07-14).
+ * When this resolves to '', the connect UI falls back to a Trakt-style in-app
+ * form (one field, no secret) and the id lands in MMKV via
+ * `state/session/provider-config.ts` (hybrid model, 2026-07-14).
+ *
+ * The dev override is **per-platform**, and deliberately so: AniList pins ONE
+ * redirect URL per client, and a client is registered for exactly one of them
+ * — a `http://localhost:8081` web-dev client CANNOT be used on native. On
+ * iOS/Android the token comes back via `openAuthSessionAsync`, whose
+ * ASWebAuthenticationSession can only intercept the app's **custom scheme**
+ * (`shinobu://redirect`); it never sees an `http://localhost` redirect, so the
+ * browser would just navigate to localhost and never return the token. So:
+ *   - web    → EXPO_PUBLIC_ANILIST_CLIENT_ID (client registered to the origin,
+ *              e.g. http://localhost:8081)
+ *   - native → EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID (client registered to
+ *              `shinobu://redirect`)
+ * A single env var used for both breaks native — that was the bug.
  */
 export function anilistClientId(): string {
-  const override = process.env.EXPO_PUBLIC_ANILIST_CLIENT_ID;
-  if (override != null && override !== '') return override;
-  return Platform.OS === 'web' ? ANILIST_WEB_CLIENT_ID : ANILIST_NATIVE_CLIENT_ID;
+  if (Platform.OS === 'web') {
+    const webOverride = process.env.EXPO_PUBLIC_ANILIST_CLIENT_ID;
+    return webOverride != null && webOverride !== '' ? webOverride : ANILIST_WEB_CLIENT_ID;
+  }
+  const nativeOverride = process.env.EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID;
+  return nativeOverride != null && nativeOverride !== ''
+    ? nativeOverride
+    : ANILIST_NATIVE_CLIENT_ID;
 }
 
 /**

@@ -31,11 +31,14 @@ export interface DiaryProviderState {
 // Precedence when the same log lands on several providers: the richest metadata
 // source wins the display item, deterministically regardless of match order
 // (plan 0016 KTD4). Trakt/AniList carry full catalogue metadata; Letterboxd RSS
-// carries only slug/title/year, so it sinks last.
+// carries only slug/title/year, so it sinks last. Serializd diary rows carry
+// show/season/episode detail (richer than Letterboxd RSS), so they rank
+// directly after Trakt (plan 0017 U1).
 const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   trakt: 0,
-  anilist: 1,
-  letterboxd: 2,
+  serializd: 1,
+  anilist: 2,
+  letterboxd: 3,
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */

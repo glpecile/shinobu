@@ -53,14 +53,15 @@ export async function enrichExternalIds(
   }
 
   // AniList-origin anime → movie/TV-side ids (only useful when a movie/TV
-  // provider is connected).
+  // provider is connected). Serializd needs the tmdb id this yields (KTD2), so
+  // an AniList+Serializd-only user must run this too, not just Trakt users.
   if (
     isAnime &&
     externalIds.anilist != null &&
     externalIds.trakt == null &&
     externalIds.tmdb == null &&
     externalIds.tvdb == null &&
-    connected.includes('trakt')
+    (connected.includes('trakt') || connected.includes('serializd'))
   ) {
     const mapped = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,

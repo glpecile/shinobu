@@ -1,11 +1,11 @@
 # Shinobu Agent Conventions
 
-Shinobu (忍): DB-less, cross-platform media tracker. Trakt.tv, AniList, and
-Letterboxd are three **symmetric, opt-in providers** — not a primary store with
-satellite imports. Core purpose: log media once, Shinobu fans that write out to
-every connected provider it applies to. Reads aggregate whichever providers are
-connected into one unified feed. Full product vision + architecture rationale:
-`plan.md` (1.2, 1.3, 2.1).
+Shinobu (忍): DB-less, cross-platform media tracker. Trakt.tv, AniList,
+Letterboxd, and Serializd are four **symmetric, opt-in providers** — not a primary
+store with satellite imports. Core purpose: log media once, Shinobu fans that write
+out to every connected provider it applies to. Reads aggregate whichever providers
+are connected into one unified feed. Full product vision + architecture rationale:
+`plan.md` (1.2, 1.3, 2.1); Serializd's addition: `docs/plans/0017-serializd-provider.md`.
 
 ## Tech Stack
 
@@ -13,8 +13,8 @@ connected into one unified feed. Full product vision + architecture rationale:
 - **Uniwind** — Tailwind CSS for React Native (drop-in NativeWind replacement,
   faster, by the Unistyles team). https://docs.uniwind.dev
 - **TanStack Query** — all data fetching/mutations across Trakt REST, AniList
-  GraphQL, Letterboxd REST. Engine behind the `useUnifiedFeed` read hook and the
-  `useLogMedia` write fan-out (`plan.md`).
+  GraphQL, Letterboxd REST, Serializd REST. Engine behind the `useUnifiedFeed` read
+  hook and the `useLogMedia` write fan-out (`plan.md`).
 - **Letterboxd** *does* have an official write API (OAuth Authorization Code flow,
   creates log entries — diary and/or review). **Not** self-serve: access by request
   only (email `api@letterboxd.com`), and Letterboxd policy explicitly excludes
@@ -142,20 +142,23 @@ After a change, state whether it's picked up live or requires native regeneratio
 ## Providers, Sessions & Log Fan-Out
 
 - **Opt-in, per-provider sessions.** No Shinobu account. A user connects any subset
-  of {Trakt, AniList, Letterboxd} via that provider's own OAuth flow; the resulting
-  token (stored via `react-native-mmkv`) *is* the session for that provider.
-  `state/session/` tracks which providers are connected, mirroring bluesky-social's
-  `state/session` pattern.
+  of {Trakt, AniList, Letterboxd, Serializd} via that provider's own flow — OAuth,
+  or (Serializd) a WebView token capture on mobile / an email-password exchange on
+  web; the resulting token (stored via `react-native-mmkv`) *is* the session for
+  that provider. `state/session/` tracks which providers are connected, mirroring
+  bluesky-social's `state/session` pattern.
 - **Logging fans out.** The core write path is `useLogMedia`: given a
   `NormalizedMediaItem` and a log intent (watched/read), it routes to every
   *connected* provider *applicable to that item's type* and fires the writes in
   parallel — never a single-provider write.
-- **Routing isn't a 1:1 type map.** Movies → Trakt + Letterboxd. TV → Trakt.
-  Manga → AniList. Anime *films* are the edge case: they're `ANIME` in AniList but
-  also a `MOVIE` for Trakt/Letterboxd (signaled by `isFilm` on
-  `NormalizedMediaItem`, not a fifth `MediaType`), so they fan out to all three.
-  Lives in `src/lib/providers/routing.ts` (pure functions, unit-tested) — never
-  inline `if (type === ...)` or `if (provider === ...)` checks at call sites.
+- **Routing isn't a 1:1 type map.** Movies → Trakt + Letterboxd. TV → Trakt +
+  Serializd (a TMDB-enriched anime *series* fans out to Serializd too, exactly as it
+  does to Trakt). Manga → AniList. Anime *films* are the edge case: they're `ANIME`
+  in AniList but also a `MOVIE` for Trakt/Letterboxd (signaled by `isFilm` on
+  `NormalizedMediaItem`, not a fifth `MediaType`), so they fan out to all three
+  movie targets (Serializd is TV-only, so it's excluded from films). Lives in
+  `src/lib/providers/routing.ts` (pure functions, unit-tested) — never inline
+  `if (type === ...)` or `if (provider === ...)` checks at call sites.
 - **Providers declare capabilities.** `src/lib/providers/registry.ts` is the single
   provider registry: each provider declares which `MediaType`s it handles, `canRead`
   (aggregated by `useUnifiedFeed`), and `canWrite` (a `useLogMedia` fan-out target).
@@ -244,9 +247,41 @@ staleness proves painful in practice (`docs/plans/0005`).
 
 No backend, so on web the app calls provider APIs directly from the browser — works
 only if the provider sends CORS headers. Policy: a provider that blocks browser
-origins is **native-only on web** ("connect on mobile"), never proxied. Verify each
-provider with a browser-origin spike before building its web read path (`todos/008`);
-record findings in `docs/solutions/web-cors-*.md`.
+origins is **native-only on web** ("connect on mobile"), never proxied — with **one
+bounded exception (Serializd, plan 0017 U4/R14, owner decision 2026-07-21).** Verify
+each provider with a browser-origin spike before building its web read path
+(`todos/008`); record findings in `docs/solutions/web-cors-*.md`.
+
+**Serializd proxy exception — a contract, not a general license.** Serializd's
+unofficial API blocks browser origins (its `Access-Control-Allow-Origin` echoes only
+serializd.com), but unlike Letterboxd it has *no* fingerprint wall — server-side
+forwarding just works. So Shinobu web reaches it through a same-origin Cloudflare
+Worker `main` handler (`worker/serializd-proxy.ts`) added to the existing
+static-assets Worker. This is the first "never proxied" exception; it does **not**
+license a general proxy. Its invariants are load-bearing and any edit to the handler
+is reviewed against them:
+
+- **Serializd-only, path+method allowlist.** Forwards only the documented Serializd
+  path+method pairs (`GET show/*`, `GET user/*`; `POST login`, `validateauthtoken`,
+  `episode_log/*`, `watched_v2`, `watched/remove_v2`, `show/reviews/add`). Wrong
+  method on an allowlisted path → 405; anything else (incl. `../`/absolute-URL
+  traversal) → 404. Never grows into a backend.
+- **No `Access-Control-Allow-Origin` emitted** — same-origin needs none, and its
+  absence stops foreign browsers using the relay as a CORS bypass.
+- **No cookies either direction, `Authorization` only.** Forwards just the
+  `Authorization` header upstream (never the incoming `Cookie` or any other client
+  header); attaches the `Origin`/`Referer`/`X-Requested-With` app headers server-side;
+  strips upstream cookies.
+- **Size + timeout caps.** Rejects bodies over 64 KB (413) and aborts upstream after
+  ~30 s (504).
+- **Stateless, no secret logging.** Holds no credentials, stores nothing, and logs no
+  request body or `Authorization` on any path (incl. error/catch).
+- **Forces JSON + `nosniff`** on every relayed response — never relays an upstream
+  HTML error body (Render cold-start 502) verbatim under the app origin.
+
+The upstream base + app headers live in one place (`lib/providers/serializd/config.ts`)
+shared by the native transport and the Worker (KTD4); the probe evidence and rationale
+are in `docs/solutions/web-cors-serializd.md`.
 
 ## Golden Reference
 
@@ -306,8 +341,8 @@ platform variants automatically from the filename.
 
 ## Data Contract
 
-All network responses (Trakt, AniList, Letterboxd) must be normalized into
-`NormalizedMediaItem` (`types/media.ts`, see `plan.md` 2.2) before reaching
+All network responses (Trakt, AniList, Letterboxd, Serializd) must be normalized
+into `NormalizedMediaItem` (`types/media.ts`, see `plan.md` 2.2) before reaching
 components. Components never see raw provider payload shapes.
 
 ## Query Hook Conventions

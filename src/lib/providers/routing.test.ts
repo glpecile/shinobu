@@ -90,6 +90,45 @@ describe('providersForLog', () => {
       providersForLog({ type: 'MOVIE', isFilm: true, ...ids({ trakt: 1 }) }, ALL),
     ).toEqual(['trakt', 'letterboxd']);
   });
+
+  // Serializd (plan 0017): TV-only, symmetric write. Routing derives inclusion
+  // from the registry's mediaTypes — the no-tmdb skip lives in the writes layer,
+  // never here, so routing includes Serializd for any TV/mapped-anime item.
+  it('routes TV to Trakt + Serializd when both connected', () => {
+    expect(
+      providersForLog({ type: 'TV', ...ids({ trakt: 1 }) }, ['trakt', 'serializd']),
+    ).toEqual(['trakt', 'serializd']);
+  });
+
+  it('routes a mapped anime series (a TV show there) to AniList + Serializd', () => {
+    expect(
+      providersForLog({ type: 'ANIME', ...ids({ anilist: 1, tmdb: 2 }) }, [
+        'anilist',
+        'serializd',
+      ]),
+    ).toEqual(['anilist', 'serializd']);
+  });
+
+  it('excludes Serializd for an unmapped anime series (no movie/TV type)', () => {
+    expect(
+      providersForLog({ type: 'ANIME', ...ids({ anilist: 1 }) }, ['anilist', 'serializd']),
+    ).toEqual(['anilist']);
+  });
+
+  it('excludes Serializd for a MOVIE (TV-only provider)', () => {
+    expect(
+      providersForLog({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ['trakt', 'serializd']),
+    ).toEqual(['trakt']);
+  });
+
+  it('excludes Serializd for a mapped anime film (a MOVIE there, not TV)', () => {
+    expect(
+      providersForLog(
+        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+        ['anilist', 'serializd'],
+      ),
+    ).toEqual(['anilist']);
+  });
 });
 
 describe('providersForFeed', () => {
@@ -99,5 +138,9 @@ describe('providersForFeed', () => {
     // changes the registry, not the routing logic.
     expect(providersForFeed(['anilist', 'trakt'])).toEqual(['anilist', 'trakt']);
     expect(providersForFeed([])).toEqual([]);
+  });
+
+  it('includes Serializd when connected (canRead)', () => {
+    expect(providersForFeed(['trakt', 'serializd'])).toEqual(['trakt', 'serializd']);
   });
 });

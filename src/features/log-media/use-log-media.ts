@@ -4,8 +4,20 @@ import { Effect } from 'effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
+import { logToSerializd } from '@/lib/providers/serializd/writes';
+import {
+  diaryHasEpisode,
+  getSerializdDiary,
+  type SerializdDiaryPage,
+} from '@/lib/providers/serializd/diary';
+import {
+  getWatchedEpisodeKeys,
+  serializdHasEpisodes,
+} from '@/lib/providers/serializd/progress';
 import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
+import { getSerializdUsername } from '@/state/session/serializd';
 import { providersForLog } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
@@ -29,6 +41,7 @@ import {
   type LogAdapter,
   type LogMediaResult,
   type LogMediaVariables,
+  type LogWriteResult,
   type ProviderLogOutcome,
 } from './fan-out';
 
@@ -44,7 +57,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
         ...(episodes != null ? { episodes } : {}),
         ...(watchedAt != null ? { watchedAt } : {}),
       }),
-    ),
+    ).then(okResult),
   anilist: ({ item, episode, episodes, rewatch }) =>
     Effect.runPromise(
       logToAniList(anilistDeps(), item, {
@@ -56,7 +69,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
           : {}),
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
-    ),
+    ).then(okResult),
   // Diary write as the signed-in web user (plan 0012): run the write inside the
   // authenticated WebView, POSTing the modern /api/v0/production-log-entries JSON
   // API (the legacy /s/save-diary-entry form is dead). Tags are the app's
@@ -71,8 +84,31 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
         ...(tags != null && tags.length > 0 ? { tags } : {}),
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
+    ).then(okResult),
+  // Serializd (plan 0017 R8): logToSerializd already resolves a LogWriteResult
+  // (ok | skipped) that maps straight through the fan-out contract — a season
+  // that can't be resolved or an item with no tmdb becomes a `skipped` outcome
+  // (R9), not a thrown error. A partial write (episode watched, diary failed)
+  // fails loudly so reconcile re-attempts the diary entry (R12).
+  serializd: ({ item, episode, episodes, watchedAt, tags, rewatch }) =>
+    Effect.runPromise(
+      logToSerializd(serializdDeps(), item, {
+        ...(episode != null ? { episode } : {}),
+        ...(episodes != null ? { episodes } : {}),
+        ...(watchedAt != null ? { watchedAt } : {}),
+        ...(tags != null && tags.length > 0 ? { tags } : {}),
+        ...(rewatch === true ? { rewatch: true } : {}),
+      }),
     ),
 };
+
+/** Adapters that resolve `void` report a plain success through the contract. */
+function okResult(): LogWriteResult {
+  return { status: 'ok' };
+}
+
+/** Serializd reconcile/progress reads share this staleness (KTD7/R17). */
+const SERIALIZD_STALE_MS = 5 * 60_000;
 
 function intendedEpisodes(
   variables: LogMediaVariables,
@@ -128,11 +164,60 @@ async function providerHasWatch(
         ? anilistHasFilm(state.entry)
         : anilistHasEpisodes(state.entry, episodes);
     }
+
+    if (provider === 'serializd') {
+      const tmdbId = item.externalIds.tmdb;
+      const username = getSerializdUsername();
+      // TV-only: no join key, no session, or a movie (no episodes) → nothing to
+      // reconcile against, so treat as "doesn't have it" (write is the intent).
+      if (tmdbId == null || username == null || episodes == null) return false;
+
+      const watchedKeys = await queryClient.fetchQuery({
+        queryKey: serializdQueryKeys.progress(username, tmdbId),
+        queryFn: () =>
+          Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(), { tmdbId })),
+        staleTime: SERIALIZD_STALE_MS,
+      });
+      if (!serializdHasEpisodes(watchedKeys, episodes)) return false;
+
+      // R12/AE6: a Serializd log is a two-call sequence, so episode-watched
+      // progress alone doesn't prove the diary entry landed. A single-episode
+      // log creates a diary entry — require its presence, else a retry after a
+      // partial write would skip and silently drop the diary write. A whole-
+      // season batch (/watched_v2) creates no diary entry, so progress suffices.
+      if (episodes.length === 1) {
+        return await serializdDiaryHasEpisode(queryClient, username, tmdbId, episodes[0]);
+      }
+      return true;
+    }
   } catch {
     return false;
   }
-  // Letterboxd has no write adapter (and no state read) yet.
+  // Letterboxd has no readable watch state (RSS diary only) — treat as absent.
   return false;
+}
+
+/**
+ * R12 diary-evidence check: is the intended episode present in Serializd's
+ * diary? Reuses the diary screen's cached pages when loaded, else fetches a
+ * fresh page 1 (recent logs surface first) without writing under the infinite
+ * query key.
+ */
+async function serializdDiaryHasEpisode(
+  queryClient: QueryClient,
+  username: string,
+  tmdbId: number,
+  episode: { season: number; number: number },
+): Promise<boolean> {
+  const params = { tmdbId, episodeNumber: episode.number, season: episode.season };
+  const cached = queryClient.getQueryData<{ pages?: SerializdDiaryPage[] }>(
+    serializdQueryKeys.diary(username),
+  );
+  const cachedEntries = (cached?.pages ?? []).flatMap((page) => page.entries);
+  if (diaryHasEpisode(cachedEntries, params)) return true;
+
+  const page = await Effect.runPromise(getSerializdDiary(serializdDeps(), { page: 1 }));
+  return diaryHasEpisode(page.entries, params);
 }
 
 function invalidateAfterLog(
@@ -174,6 +259,20 @@ function invalidateAfterLog(
       queryClient.invalidateQueries({
         queryKey: letterboxdQueryKeys.diary(username),
       });
+    }
+  }
+  if (succeeded.includes('serializd')) {
+    // The write landed a new diary entry (and moved progress) — refresh both so
+    // the unified diary and the next reconcile see it.
+    const username = getSerializdUsername();
+    if (username != null) {
+      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.diary(username) });
+      const tmdbId = item.externalIds.tmdb;
+      if (tmdbId != null) {
+        queryClient.invalidateQueries({
+          queryKey: serializdQueryKeys.progress(username, tmdbId),
+        });
+      }
     }
   }
 }

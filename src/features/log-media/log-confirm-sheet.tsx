@@ -169,9 +169,9 @@ export interface LogConfirmSheetProps {
   watchedAt: Date | null;
   onWatchedAtChange: (value: Date | null) => void;
   /**
-   * Raw comma-separated diary tags — Letterboxd-only (plan 0012), so the
-   * field renders only when the parent provides this pair *and* Letterboxd is
-   * among the selected targets. TV flows simply omit it.
+   * Raw comma-separated diary tags — accepted by Letterboxd's and Serializd's
+   * diary payloads (plan 0012/0017), so the field renders only when the parent
+   * provides this pair *and* one of those is among the selected targets.
    */
   tags?: string;
   onTagsChange?: (value: string) => void;
@@ -200,7 +200,9 @@ export function LogConfirmSheet({
   const result = logMedia.data;
   const muted = useCSSVariable('--color-muted');
   const showTagsField =
-    onTagsChange != null && selectedProviders.includes('letterboxd');
+    onTagsChange != null &&
+    (selectedProviders.includes('letterboxd') ||
+      selectedProviders.includes('serializd'));
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(

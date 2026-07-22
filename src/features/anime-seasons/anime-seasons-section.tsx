@@ -12,6 +12,7 @@ import {
 } from '@/features/log-media/log-confirm-sheet';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargets } from '@/features/log-media/use-log-targets';
+import { parseTags } from '@/features/log-media/parse-tags';
 import {
   SeasonAccordion,
   type PendingLog,
@@ -60,6 +61,8 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const logMedia = useLogMedia();
   const [pending, setPending] = useState<PendingLog | null>(null);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
+  // Diary tags — Serializd accepts them on a mapped anime-series log (plan 0017 R10).
+  const [tags, setTags] = useState('');
   const [selectedProviders, setSelectedProviders] =
     useState<ProviderId[]>(targets);
 
@@ -71,6 +74,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     haptics.selection();
     logMedia.reset();
     setWatchedAt(null);
+    setTags('');
     setSelectedProviders(targets);
     setPending(next);
   }
@@ -79,11 +83,13 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     if (pending == null || logMedia.isPending || selectedProviders.length === 0)
       return;
     haptics.confirm();
+    const parsedTags = parseTags(tags);
     logMedia.mutate(
       {
         item,
         episodes: pending.episodes,
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
+        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
       },
       {
@@ -142,10 +148,12 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         onClose={() => setPending(null)}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
+        onTagsChange={setTags}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
         pendingLabel="Marking as watched…"
         selectedProviders={selectedProviders}
+        tags={tags}
         targets={targets}
         title={pending?.title ?? ''}
         watchedAt={watchedAt}

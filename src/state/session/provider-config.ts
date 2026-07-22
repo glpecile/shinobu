@@ -21,6 +21,10 @@ export const providerClientIds: Record<ProviderId, () => string> = {
     return embedded !== '' ? embedded : (getProviderClientId('anilist') ?? '');
   },
   letterboxd: () => '',
+  // No OAuth app registration (plan 0017): Serializd auth is a bearer token
+  // captured from the sign-in WebView (native) or exchanged from the
+  // email/password `/login` form (web) — no client id.
+  serializd: () => '',
 };
 
 export function getClientIdForProvider(id: ProviderId): string {
@@ -40,6 +44,7 @@ export const providerClientSecrets: Record<ProviderId, () => string> = {
       : traktClientSecret(),
   anilist: () => '',
   letterboxd: () => '',
+  serializd: () => '',
 };
 
 export function getClientSecretForProvider(id: ProviderId): string {

@@ -8,6 +8,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { ConnectAniListButton } from '@/components/connect-anilist-button';
 import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
+import { ConnectSerializdButton } from '@/components/connect-serializd-button';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -114,6 +115,27 @@ function LetterboxdConnectRow() {
         </Text>
       </View>
       <ConnectLetterboxdButton />
+    </View>
+  );
+}
+
+function SerializdConnectRow() {
+  const connected = useConnectedProviders();
+
+  if (connected.includes('serializd')) {
+    return null;
+  }
+
+  return (
+    <View className="bg-surface border border-border rounded-xl p-5">
+      <View className="flex-row items-center gap-3 mb-3">
+        <ProviderIcon id="serializd" size={24} />
+        <Text className="text-foreground font-sans-semibold text-base">
+          Serializd
+        </Text>
+      </View>
+      {/* WebView token capture on native, email/password form on web. */}
+      <ConnectSerializdButton />
     </View>
   );
 }
@@ -226,6 +248,7 @@ export default function ConnectScreen() {
               <TraktConnectRow />
               <AniListConnectRow />
               <LetterboxdConnectRow />
+              <SerializdConnectRow />
             </View>
           </View>
         )}
