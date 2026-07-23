@@ -36,6 +36,21 @@ export interface UpNextSectionProps {
 // empty-state line, so tapping between days never shifts the feed below.
 const DAY_CONTENT_MIN_HEIGHT = 188;
 
+// Beyond this the dots would overflow the ~56px cell; several shows sharing a
+// day is already the busy case, so an exact tally past it earns nothing.
+const MAX_DAY_DOTS = 5;
+
+/**
+ * The empty-day line. "Today" is special: its episodes have already aired (and
+ * live in Continue Watching), so it reads as done rather than as if nothing
+ * happened — anything still to come today would occupy the cell, not this line.
+ */
+function emptyDayCopy(offset: number, label: string): string {
+  if (offset === 0) return "That's all for today.";
+  if (offset === 1) return 'Nothing airing tomorrow.';
+  return `Nothing airing on ${label}.`;
+}
+
 export function UpNextSection({
   onItemPress,
   onItemActions,
@@ -117,17 +132,22 @@ export function UpNextSection({
                 >
                   {day.date.getDate()}
                 </Text>
-                {/* A dot, not a count: the strip answers "is there anything
-                    that day", the cards below answer what. */}
-                <View
-                  className={`w-1.5 h-1.5 rounded-full mt-1 ${
-                    day.entries.length > 0
-                      ? isSelected
-                        ? 'bg-accent-foreground'
-                        : 'bg-accent'
-                      : 'bg-transparent'
-                  }`}
-                />
+                {/* One dot per episode airing that day (capped), so the strip
+                    conveys *how much* at a glance, not just whether. The row is
+                    a fixed height whether it holds dots or not, so cells never
+                    change size across days. */}
+                <View className="flex-row items-center gap-0.5 mt-1 h-1.5">
+                  {Array.from({
+                    length: Math.min(day.entries.length, MAX_DAY_DOTS),
+                  }).map((_, index) => (
+                    <View
+                      key={index}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected ? 'bg-accent-foreground' : 'bg-accent'
+                      }`}
+                    />
+                  ))}
+                </View>
               </PresstableScale>
             );
           })}
@@ -138,12 +158,15 @@ export function UpNextSection({
             card row would occupy. */}
         <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }}>
           {selected.entries.length === 0 ? (
-            <Text className="text-muted font-sans text-sm px-4">
-              {/* "today"/"tomorrow" read as adverbs; a weekday needs its "on". */}
-              {selected.offset <= 1
-                ? `Nothing airing ${selected.label.toLowerCase()}.`
-                : `Nothing airing on ${selected.label}.`}
-            </Text>
+            // Centered in the reserved space so the empty day reads as a
+            // deliberate state, not a layout gap. The 忍 mark renders in the OS
+            // fallback font (neither app family ships kanji, AGENTS.md Theming).
+            <View className="flex-1 items-center justify-center px-4">
+              <Text className="text-muted/40 text-4xl mb-2">忍</Text>
+              <Text className="text-muted font-sans text-sm text-center">
+                {emptyDayCopy(selected.offset, selected.label)}
+              </Text>
+            </View>
           ) : (
             <ScrollView
               horizontal

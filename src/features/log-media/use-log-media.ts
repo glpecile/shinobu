@@ -291,6 +291,39 @@ export function invalidateAfterLog(
 }
 
 /**
+ * Warm the reads a log of `item` will make, so a confirmed write doesn't stall
+ * on cold reconcile fetches (plan 0019 quick-log). Runs the mutation's own
+ * front matter — identity enrichment, then each applicable provider's
+ * watch-state read — against the shared cache while the confirm modal is open,
+ * so `useLogMedia` finds everything warm on confirm. Best-effort: it never
+ * throws (every read already degrades to "doesn't have it").
+ */
+export async function prefetchLogReconcile(
+  queryClient: QueryClient,
+  item: NormalizedMediaItem,
+  connected: readonly ProviderId[],
+  episodes: Array<{ season: number; number: number }> | null,
+): Promise<void> {
+  try {
+    const enriched = await enrichExternalIds(queryClient, item, connected);
+    let targets = providersForLog(enriched, connected);
+    if (episodes != null && episodes.some((episode) => episode.season !== 1)) {
+      targets = targets.filter((provider) => provider !== 'anilist');
+    }
+    await all(
+      Object.fromEntries(
+        targets.map((provider): [ProviderId, () => Promise<boolean>] => [
+          provider,
+          () => providerHasWatch(queryClient, provider, enriched, episodes),
+        ]),
+      ),
+    );
+  } catch {
+    // Prefetch is an optimization — a miss just means the write pays the read.
+  }
+}
+
+/**
  * The unified log fan-out (plans 0008 + 0011, todos/005 + 002): enrich the
  * item's cross-provider identity (ani.zip), route to every connected provider
  * applicable to it, reconcile against what each provider already records
