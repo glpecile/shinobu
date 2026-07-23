@@ -33,6 +33,12 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['MOVIE'],
     canRead: true,
     canWrite: true,
+    // The diary write needs the native sign-in WebView's captured session
+    // (plan 0012) — there is none on web, and proxying the write is banned
+    // (three failed spikes, docs/solutions/letterboxd-web-proxy.md). Routing
+    // still lists Letterboxd as an applicable target on web; it's just routed
+    // to the manual-log fallback instead of the fan-out (plan 0022).
+    unsupportedWritePlatforms: ['web'],
   },
   // Unofficial JSON API (plan 0017), TMDB-keyed TV tracking. Symmetric
   // read+write like Trakt: a TV (or TMDB-enriched anime series) log fans out

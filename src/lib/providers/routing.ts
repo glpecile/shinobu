@@ -52,3 +52,26 @@ export function providersForLog(
 export function providersForFeed(connected: readonly ProviderId[]): ProviderId[] {
   return connected.filter((id) => PROVIDERS[id].canRead);
 }
+
+/** Whether `provider`'s write is structurally unsupported on `platform` (plan 0022 KTD-1). */
+export function isManualWriteTarget(provider: ProviderId, platform: string): boolean {
+  return PROVIDERS[provider].unsupportedWritePlatforms?.includes(platform) ?? false;
+}
+
+/**
+ * Splits `providersForLog`'s targets into what the fan-out can actually write
+ * (`writable`) and what it can't on this platform but should still offer as a
+ * manual external link (`manual` — plan 0022 R1/R2). Platform is passed in by
+ * the caller (`use-log-targets.ts`, from `process.env.EXPO_OS`) so this stays
+ * pure and unit-testable, never reading `Platform.OS` itself.
+ */
+export function splitLogTargets(
+  item: RoutableItem,
+  connected: readonly ProviderId[],
+  platform: string,
+): { writable: ProviderId[]; manual: ProviderId[] } {
+  const targets = providersForLog(item, connected);
+  const manual = targets.filter((id) => isManualWriteTarget(id, platform));
+  const writable = targets.filter((id) => !manual.includes(id));
+  return { writable, manual };
+}

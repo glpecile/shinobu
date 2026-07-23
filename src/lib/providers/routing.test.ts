@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import type { ProviderId } from './types';
-import { providersForFeed, providersForLog } from './routing';
+import { providersForFeed, providersForLog, splitLogTargets } from './routing';
 
 const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd'];
 
@@ -142,5 +142,49 @@ describe('providersForFeed', () => {
 
   it('includes Serializd when connected (canRead)', () => {
     expect(providersForFeed(['trakt', 'serializd'])).toEqual(['trakt', 'serializd']);
+  });
+});
+
+// Plan 0022: Letterboxd's diary write needs the native sign-in WebView
+// session, so its write is unsupported on web (registry
+// unsupportedWritePlatforms) — routing splits it into a manual target there,
+// not out of the target list entirely.
+describe('splitLogTargets', () => {
+  it('routes Letterboxd to manual on web, Trakt stays writable', () => {
+    expect(
+      splitLogTargets(
+        { type: 'MOVIE', ...ids({ trakt: 1 }) },
+        ['trakt', 'letterboxd'],
+        'web',
+      ),
+    ).toEqual({ writable: ['trakt'], manual: ['letterboxd'] });
+  });
+
+  it('both are writable on ios (no unsupportedWritePlatforms match)', () => {
+    expect(
+      splitLogTargets(
+        { type: 'MOVIE', ...ids({ trakt: 1 }) },
+        ['trakt', 'letterboxd'],
+        'ios',
+      ),
+    ).toEqual({ writable: ['trakt', 'letterboxd'], manual: [] });
+  });
+
+  it('a TV item never includes Letterboxd in either bucket (not applicable)', () => {
+    expect(
+      splitLogTargets(
+        { type: 'TV', ...ids({ trakt: 1 }) },
+        ['trakt', 'letterboxd'],
+        'web',
+      ),
+    ).toEqual({ writable: ['trakt'], manual: [] });
+  });
+
+  it('a provider without the flag is unaffected on every platform', () => {
+    for (const platform of ['web', 'ios', 'android']) {
+      expect(
+        splitLogTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ['trakt'], platform),
+      ).toEqual({ writable: ['trakt'], manual: [] });
+    }
   });
 });

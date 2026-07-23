@@ -18,7 +18,7 @@ import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd'
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { providersForLog } from '@/lib/providers/routing';
+import { isManualWriteTarget, providersForLog } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
@@ -349,6 +349,11 @@ export function useLogMedia() {
       if (variables.providers != null && variables.providers.length > 0) {
         targets = targets.filter((provider) => variables.providers!.includes(provider));
       }
+      // Defensive (plan 0022 R2/KTD-3): the sheet already excludes manual-only
+      // targets (e.g. Letterboxd on web) from `variables.providers`, but a
+      // caller passing one anyway must never reach the adapter for it.
+      const platform = process.env.EXPO_OS ?? '';
+      targets = targets.filter((provider) => !isManualWriteTarget(provider, platform));
       if (targets.length === 0) {
         throw new Error(`No connected provider can log "${item.title}"`);
       }

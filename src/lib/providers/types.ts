@@ -27,4 +27,12 @@ export interface ProviderDescriptor {
   mediaTypes: readonly MediaType[];
   canRead: boolean;
   canWrite: boolean;
+  /**
+   * Platforms (`process.env.EXPO_OS` values) where this provider's write is
+   * structurally impossible even though `canWrite` is true overall — e.g.
+   * Letterboxd on web needs the native WebView session (plan 0018/0022).
+   * Routing splits these into a "manual" target: shown as a log target, but
+   * excluded from the fan-out and given an external link instead.
+   */
+  unsupportedWritePlatforms?: readonly string[];
 }
