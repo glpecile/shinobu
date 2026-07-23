@@ -13,7 +13,7 @@ import { useState } from 'react';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
-import { useLogTargets } from '@/features/log-media/use-log-targets';
+import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { confirmLabelFor, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { SeasonAccordion, type PendingLog } from './season-accordion';
@@ -41,8 +41,10 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
   const { data: seasons } = useSuspenseTraktShowSeasonsQuery({ traktId });
   // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
-  const targets = useLogTargets(item);
-  const canLog = targets.length > 0;
+  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
+  // A manual-only target still needs the sheet openable (plan 0022 R3) —
+  // matches LogMediaButton's gate.
+  const canLog = targets.length > 0 || manualTargets.length > 0;
   // No progress read when Trakt isn't connected — checkmarks just don't render.
   const { data: watched } = useTraktShowProgressQuery({
     traktId,
@@ -136,7 +138,9 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       <LogConfirmSheet
         confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}
         description={pending?.description ?? ''}
+        item={item}
         logMedia={logMedia}
+        manualTargets={manualTargets}
         onClose={() => setPending(null)}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}

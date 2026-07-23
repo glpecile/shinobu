@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
@@ -12,9 +13,11 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
+import { errorOutcomeLinks } from './manual-log-links';
 import { parseTags } from './parse-tags';
+import { OutcomeLink } from './outcome-link';
 import { useLogMedia } from './use-log-media';
-import { useLogTargets } from './use-log-targets';
+import { useLogTargetsSplit } from './use-log-targets';
 import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
 
 /**
@@ -48,13 +51,23 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   const [tags, setTags] = useState(DEFAULT_TAGS);
-  const targets = useLogTargets(item);
+  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
+  const accent = useCSSVariable('--color-accent');
+  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
-  if ((!isFilmLike && !isAnimeSeries) || targets.length === 0) return null;
+  // A manual-only target (e.g. Letterboxd on web) still needs the button and
+  // its "log manually" row (plan 0022 R3) — only hide when there's truly
+  // nothing to offer.
+  if (
+    (!isFilmLike && !isAnimeSeries) ||
+    (targets.length === 0 && manualTargets.length === 0)
+  ) {
+    return null;
+  }
 
   const anilistStatus = anilistEntry.data?.entry?.status;
   const anilistProgress = anilistEntry.data?.entry?.progress;
@@ -160,9 +173,19 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         </Text>
       )}
       {result != null && result.failed.length > 0 && (
-        <Text className="text-accent font-sans text-sm mt-2">
-          Failed on {labels(result.failed)}.
-        </Text>
+        <View className="mt-2 gap-1">
+          <Text className="text-accent font-sans text-sm">
+            Failed on {labels(result.failed)}.
+          </Text>
+          {errorOutcomeLinks(result.outcomes, item).map(({ provider, url }) => (
+            <OutcomeLink
+              accentColor={accentColor}
+              key={provider}
+              provider={provider}
+              url={url}
+            />
+          ))}
+        </View>
       )}
 
       <LogConfirmSheet
@@ -182,7 +205,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
               ? `“${item.title}” is already in your history — this logs another watch.`
               : `Mark “${item.title}” as watched.`
         }
+        item={item}
         logMedia={logMedia}
+        manualTargets={manualTargets}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}

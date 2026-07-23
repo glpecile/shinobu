@@ -20,6 +20,7 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
 import {
   formatRuntime,
   SeasonsSection,
@@ -696,6 +697,8 @@ export default function DetailsScreen() {
           >
             <CreditsSections item={item} />
           </SuspenseSection>
+
+          <ProviderLinksSection item={shown} />
         </View>
       </RefreshableScrollView>
 

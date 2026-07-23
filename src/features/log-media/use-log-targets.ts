@@ -1,27 +1,39 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { providersForLog } from '@/lib/providers/routing';
+import { splitLogTargets } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
 
+interface LogTargetsSplit {
+  writable: ProviderId[];
+  manual: ProviderId[];
+}
+
+/** `process.env.EXPO_OS` is always one of these at runtime; '' never matches a platform flag. */
+export function currentPlatform(): string {
+  return process.env.EXPO_OS ?? '';
+}
+
 /**
- * The providers a log of `item` would actually fan out to, *after* identity
- * enrichment — so the confirm sheet's "Writes to …" shows Trakt for a mapped
- * anime instead of under-reporting (plan 0011). Falls back to the unenriched
- * routing while the mapping loads (it only ever widens). The mutation runs
- * the same enrichment through the same cache, so confirming doesn't refetch.
+ * The providers a log of `item` would actually target, *after* identity
+ * enrichment (plan 0011) — split into what the fan-out can write on this
+ * platform and what can only be logged manually (plan 0022 R1/R2, e.g.
+ * Letterboxd on web). Falls back to the unenriched split while the mapping
+ * loads (it only ever widens). The mutation runs the same enrichment through
+ * the same cache, so confirming doesn't refetch.
  */
-export function useLogTargets(item: NormalizedMediaItem): ProviderId[] {
+export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
+  const platform = currentPlatform();
 
   const { data } = useQuery({
-    queryKey: ['log-targets', item.id, ...connected],
+    queryKey: ['log-targets', item.id, ...connected, platform],
     queryFn: async () =>
-      providersForLog(await enrichExternalIds(queryClient, item, connected), connected),
+      splitLogTargets(await enrichExternalIds(queryClient, item, connected), connected, platform),
   });
 
-  return data ?? providersForLog(item, connected);
+  return data ?? splitLogTargets(item, connected, platform);
 }
