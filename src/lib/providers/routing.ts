@@ -75,3 +75,36 @@ export function splitLogTargets(
   const writable = targets.filter((id) => !manual.includes(id));
   return { writable, manual };
 }
+
+export interface LogWriteTargetOptions {
+  /** Season 2+ logs stay off AniList (plan 0011) — a mapped entry only represents season 1. */
+  nonSeasonOneEpisodes?: boolean;
+  /** Caller opt-out — narrows to this subset of the routed targets (the confirm sheet's picker). */
+  onlyProviders?: readonly ProviderId[];
+  /** `process.env.EXPO_OS` — excludes anything manual-only on this platform (plan 0022 R2/KTD-3). */
+  platform: string;
+}
+
+/**
+ * The full target-resolution pipeline behind a confirmed log write: routed
+ * targets, minus AniList for a non-season-1 batch, minus caller opt-outs,
+ * minus anything manual-only on this platform. Extracted out of `useLogMedia`
+ * so the defensive manual-exclusion — the second line of defense against ever
+ * writing to a banned target, e.g. Letterboxd on web — is unit-testable
+ * without mocking the mutation's QueryClient/adapters.
+ */
+export function resolveLogWriteTargets(
+  item: RoutableItem,
+  connected: readonly ProviderId[],
+  options: LogWriteTargetOptions,
+): ProviderId[] {
+  let targets = providersForLog(item, connected);
+  if (options.nonSeasonOneEpisodes === true) {
+    targets = targets.filter((provider) => provider !== 'anilist');
+  }
+  if (options.onlyProviders != null && options.onlyProviders.length > 0) {
+    const only = options.onlyProviders;
+    targets = targets.filter((provider) => only.includes(provider));
+  }
+  return targets.filter((provider) => !isManualWriteTarget(provider, options.platform));
+}

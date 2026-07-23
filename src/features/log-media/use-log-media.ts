@@ -18,7 +18,7 @@ import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd'
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { isManualWriteTarget, providersForLog } from '@/lib/providers/routing';
+import { providersForLog, resolveLogWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
@@ -340,20 +340,15 @@ export function useLogMedia() {
       const item = await enrichExternalIds(queryClient, variables.item, connected);
       const episodes = intendedEpisodes(variables);
 
-      let targets = providersForLog(item, connected);
-      // Single-season scope (plan 0011): an AniList entry can only represent
-      // season 1 of a mapped TV show — season 2+ logs stay off AniList.
-      if (episodes != null && episodes.some((episode) => episode.season !== 1)) {
-        targets = targets.filter((provider) => provider !== 'anilist');
-      }
-      if (variables.providers != null && variables.providers.length > 0) {
-        targets = targets.filter((provider) => variables.providers!.includes(provider));
-      }
       // Defensive (plan 0022 R2/KTD-3): the sheet already excludes manual-only
       // targets (e.g. Letterboxd on web) from `variables.providers`, but a
       // caller passing one anyway must never reach the adapter for it.
-      const platform = process.env.EXPO_OS ?? '';
-      targets = targets.filter((provider) => !isManualWriteTarget(provider, platform));
+      const targets = resolveLogWriteTargets(item, connected, {
+        nonSeasonOneEpisodes:
+          episodes != null && episodes.some((episode) => episode.season !== 1),
+        onlyProviders: variables.providers,
+        platform: process.env.EXPO_OS ?? '',
+      });
       if (targets.length === 0) {
         throw new Error(`No connected provider can log "${item.title}"`);
       }

@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'bun:test';
 
 import type { ProviderId } from './types';
-import { providersForFeed, providersForLog, splitLogTargets } from './routing';
+import {
+  providersForFeed,
+  providersForLog,
+  resolveLogWriteTargets,
+  splitLogTargets,
+} from './routing';
 
 const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd'];
 
@@ -186,5 +191,50 @@ describe('splitLogTargets', () => {
         splitLogTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ['trakt'], platform),
       ).toEqual({ writable: ['trakt'], manual: [] });
     }
+  });
+});
+
+// Plan 0022 U3 scenario 5: useLogMedia's own defensive re-check must exclude a
+// manual-only provider even if a caller forces it via variables.providers —
+// this is the second (and last) line of defense against a banned write.
+describe('resolveLogWriteTargets', () => {
+  it('excludes a manual-only provider even when forced via onlyProviders (web)', () => {
+    expect(
+      resolveLogWriteTargets(
+        { type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) },
+        ['trakt', 'letterboxd'],
+        { onlyProviders: ['letterboxd'], platform: 'web' },
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps the manual-only provider on ios (write is supported there)', () => {
+    expect(
+      resolveLogWriteTargets(
+        { type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) },
+        ['trakt', 'letterboxd'],
+        { onlyProviders: ['letterboxd'], platform: 'ios' },
+      ),
+    ).toEqual(['letterboxd']);
+  });
+
+  it('drops AniList for a non-season-1 episode batch', () => {
+    expect(
+      resolveLogWriteTargets(
+        { type: 'TV', ...ids({ trakt: 1, anilist: 2 }) },
+        ['trakt', 'anilist'],
+        { nonSeasonOneEpisodes: true, platform: 'ios' },
+      ),
+    ).toEqual(['trakt']);
+  });
+
+  it('applies routing, opt-out, and platform filters together', () => {
+    expect(
+      resolveLogWriteTargets(
+        { type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) },
+        ['trakt', 'letterboxd'],
+        { platform: 'web' },
+      ),
+    ).toEqual(['trakt']);
   });
 });
