@@ -111,6 +111,11 @@
           {
             "name": "expo-router/head",
             "message": "Import Head from @/components/head — expo-router/head throws on iOS unless Handoff's `origin` is configured; the wrapper is web-only (docs/solutions/expo-router-head-ios-handoff.md)."
+          },
+          {
+            "name": "expo-web-browser",
+            "importNames": ["openBrowserAsync"],
+            "message": "Import openExternalUrl from @/lib/open-external-url — the wrapper picks in-app browser (native) vs new tab (web) so components never touch expo-web-browser/window directly."
           }
         ]
       }
@@ -124,7 +129,8 @@
         "src/components/image.tsx",
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/presstable.tsx",
-        "src/components/zoomable-image/index.tsx"
+        "src/components/zoomable-image/index.tsx",
+        "src/lib/open-external-url/index.native.ts"
       ],
       "rules": {
         "no-restricted-imports": [
