@@ -53,11 +53,21 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const [tags, setTags] = useState(DEFAULT_TAGS);
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
+  const accent = useCSSVariable('--color-accent');
+  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
-  if ((!isFilmLike && !isAnimeSeries) || targets.length === 0) return null;
+  // A manual-only target (e.g. Letterboxd on web) still needs the button and
+  // its "log manually" row (plan 0022 R3) — only hide when there's truly
+  // nothing to offer.
+  if (
+    (!isFilmLike && !isAnimeSeries) ||
+    (targets.length === 0 && manualTargets.length === 0)
+  ) {
+    return null;
+  }
 
   const anilistStatus = anilistEntry.data?.entry?.status;
   const anilistProgress = anilistEntry.data?.entry?.progress;
@@ -95,8 +105,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           : hasAired(episodeData.firstAired)));
 
   const result = logMedia.data;
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   function confirmLog() {
     if (logMedia.isPending || selectedProviders.length === 0) return;

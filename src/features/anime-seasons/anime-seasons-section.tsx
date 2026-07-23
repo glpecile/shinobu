@@ -56,7 +56,9 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     enabled: connected.includes('anilist'),
   });
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
-  const canLog = targets.length > 0;
+  // A manual-only target still needs the sheet openable (plan 0022 R3) —
+  // matches LogMediaButton's gate.
+  const canLog = targets.length > 0 || manualTargets.length > 0;
 
   const logMedia = useLogMedia();
   const [pending, setPending] = useState<PendingLog | null>(null);

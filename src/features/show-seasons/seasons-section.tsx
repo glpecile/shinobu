@@ -42,7 +42,9 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const { data: seasons } = useSuspenseTraktShowSeasonsQuery({ traktId });
   // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
-  const canLog = targets.length > 0;
+  // A manual-only target still needs the sheet openable (plan 0022 R3) —
+  // matches LogMediaButton's gate.
+  const canLog = targets.length > 0 || manualTargets.length > 0;
   // No progress read when Trakt isn't connected — checkmarks just don't render.
   const { data: watched } = useTraktShowProgressQuery({
     traktId,
