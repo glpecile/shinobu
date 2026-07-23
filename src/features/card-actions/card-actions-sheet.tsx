@@ -4,11 +4,16 @@ import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { haptics } from '@/lib/haptics';
+import { openExternalUrl } from '@/lib/open-external-url';
+import { PROVIDERS } from '@/lib/providers/registry';
+import { providerLinksFor, sourceProviderOf } from '@/lib/providers/provider-links';
 import { routes } from '@/lib/routes';
 import { hideItem } from '@/state/prefs/hidden-items';
+import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface CardActionsSheetProps {
@@ -28,8 +33,19 @@ interface CardActionsSheetProps {
  */
 export function CardActionsSheet({ item, open, onClose }: CardActionsSheetProps) {
   const router = useRouter();
+  const connected = useConnectedProviders();
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
+
+  // KTD-3 (plan 0023): "[0]-when-source" — providerLinksFor always orders the
+  // source provider first when its URL is buildable, so index 0 is the
+  // source link exactly when it corresponds to `sourceProviderOf`. If the
+  // source's URL isn't buildable (or the id has no recognizable provider
+  // prefix), index 0 would be some other connected provider instead — the
+  // sheet only ever shows the *source* provider's row, never a substitute.
+  const source = item != null ? sourceProviderOf(item) : null;
+  const links = item != null ? providerLinksFor(item, connected) : [];
+  const sourceLink = links[0]?.provider === source ? links[0] : undefined;
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
@@ -69,6 +85,27 @@ export function CardActionsSheet({ item, open, onClose }: CardActionsSheetProps)
               View details
             </Text>
           </PresstableOpacity>
+          {sourceLink != null && (
+            <PresstableOpacity
+              className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
+              onPress={() => {
+                haptics.selection();
+                void openExternalUrl(sourceLink.url);
+                // A new tab steals focus on web — closing the sheet here would
+                // animate it shut in a now-backgrounded tab, which reads as
+                // broken when the user switches back. Native's in-app browser
+                // has no such background reflow, so it closes right after
+                // opening, like every other action row.
+                if (process.env.EXPO_OS !== 'web') onClose();
+              }}
+            >
+              <ProviderIcon id={sourceLink.provider} size={18} />
+              <Text className="text-foreground font-sans-semibold text-base flex-1">
+                View on {PROVIDERS[sourceLink.provider].label}
+              </Text>
+              <Ionicons color={mutedColor} name="open-outline" size={16} />
+            </PresstableOpacity>
+          )}
           <PresstableOpacity
             className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
             onPress={() => {
