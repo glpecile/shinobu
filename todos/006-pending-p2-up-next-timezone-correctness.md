@@ -15,16 +15,18 @@ per-show next-unwatched-episode computation lives in `features/up-next/compute.t
 (pure, `now` injected), fed by a `state/queries/up-next.ts` slot that pools the ~20
 most recently watched Trakt shows plus the AniList currently-watching list. It splits
 into **Continue Watching** (aired, quick-loggable through the `useLogMedia` fan-out)
-and **Calendar** (unaired, within the local 7-day window), rendered on the home route
-in three comparison variants (carousel / agenda / week strip) pending an owner verdict.
+and **Calendar** (unaired, within the local 7-day window). Three treatments were
+prototyped on the home route and compared against real data; the owner picked the
+**7-day week strip** (2026-07-23) and the other two were deleted —
+`features/up-next/up-next-section.tsx` is now the single surface.
 
 Every acceptance criterion below is discharged and covered by
 `features/up-next/compute.test.ts` + `lib/time/relative-day.test.ts`; provider-shape
 findings are written up in `docs/solutions/up-next-airing-classification.md`.
 
-**Remaining:** pick the winning variant and delete the other two (explicitly deferred
-follow-up), and the notification build-out in `todos/007`, which now has data to
-schedule from.
+**Remaining:** the notification build-out in `todos/007`, which now has data to
+schedule from, and TMDB per-episode stills on the cards (they use the show backdrop
+for now).
 
 ## Progress (2026-07-20)
 

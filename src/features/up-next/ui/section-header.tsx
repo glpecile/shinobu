@@ -13,9 +13,6 @@ import {
  * A collapsible Up Next sub-section header, mirroring `media-carousel`'s (same
  * chevron, same persisted-collapse contract, same accessibility shape) without
  * dragging a media-item list through it.
- *
- * `collapseKey`s in the comparison variants are prefixed `up-next-variant-` so
- * the losing variants' preferences are greppable when the winner is picked.
  */
 export function UpNextSectionHeader({
   title,
@@ -46,14 +43,5 @@ export function UpNextSectionHeader({
       </PresstableOpacity>
       {!collapsed && children}
     </View>
-  );
-}
-
-/** The "Variant A — …" label that only exists during the comparison. */
-export function VariantLabel({ text }: { text: string }) {
-  return (
-    <Text className="text-muted font-sans text-xs uppercase tracking-widest px-4 mb-2">
-      {text}
-    </Text>
   );
 }

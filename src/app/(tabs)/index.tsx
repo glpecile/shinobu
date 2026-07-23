@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -9,7 +8,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { EmptyStateTile } from '@/components/empty-state-tile';
 import {
@@ -35,9 +33,7 @@ import {
   YourShowsRow,
   YourWatchlistRow,
 } from '@/features/feed/feed-rows';
-import { UpNextAgendaVariant } from '@/features/up-next/variants/variant-agenda';
-import { UpNextCarouselVariant } from '@/features/up-next/variants/variant-carousel';
-import { UpNextWeekStripVariant } from '@/features/up-next/variants/variant-week-strip';
+import { UpNextSection } from '@/features/up-next/up-next-section';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
@@ -145,10 +141,6 @@ function FeedScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
-  // Fades the top of the scrolling feed into the header instead of a hard edge.
-  const background = useCSSVariable('--color-background');
-  const backgroundColor =
-    typeof background === 'string' ? background : 'transparent';
 
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
@@ -170,39 +162,17 @@ function FeedScreen() {
         }
         onRefresh={refresh}
       >
-        {/* Up Next, three ways (plan 0019): the same data hook rendered in
-            three treatments, stacked for a side-by-side comparison against
-            real data. Two of the three get deleted once a winner is picked. */}
+        {/* What to watch next, above everything the user merely tracks. */}
         {upNextConnected && (
-          <>
-            <SuspenseSection
-              fallback={<UpNextSectionSkeleton />}
-              resetKey={refreshCount}
-            >
-              <UpNextCarouselVariant
-                onItemActions={openActions}
-                onItemPress={openDetails}
-              />
-            </SuspenseSection>
-            <SuspenseSection
-              fallback={<UpNextSectionSkeleton />}
-              resetKey={refreshCount}
-            >
-              <UpNextAgendaVariant
-                onItemActions={openActions}
-                onItemPress={openDetails}
-              />
-            </SuspenseSection>
-            <SuspenseSection
-              fallback={<UpNextSectionSkeleton />}
-              resetKey={refreshCount}
-            >
-              <UpNextWeekStripVariant
-                onItemActions={openActions}
-                onItemPress={openDetails}
-              />
-            </SuspenseSection>
-          </>
+          <SuspenseSection
+            fallback={<UpNextSectionSkeleton />}
+            resetKey={refreshCount}
+          >
+            <UpNextSection
+              onItemActions={openActions}
+              onItemPress={openDetails}
+            />
+          </SuspenseSection>
         )}
         {/* Personal rows first (2026-07-14 re-prioritization), trending after.
             Every row is its own suspense + error boundary: one provider
@@ -261,16 +231,6 @@ function FeedScreen() {
           />
         </SuspenseSection>
       </RefreshableScrollView>
-      {/* Soft fade under the header (native only — web home has no header).
-          className is dropped on third-party components on native, so the
-          overlay is positioned via style. */}
-      {process.env.EXPO_OS !== 'web' && (
-        <LinearGradient
-          colors={[backgroundColor, 'transparent']}
-          pointerEvents="none"
-          style={{ height: 28, left: 0, position: 'absolute', right: 0, top: 0 }}
-        />
-      )}
       <CardActionsSheet {...sheetProps} />
     </View>
   );

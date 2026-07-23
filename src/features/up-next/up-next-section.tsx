@@ -10,27 +10,31 @@ import { calendarWeek } from '@/features/up-next/compute';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { EpisodeCard } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
-import {
-  UpNextSectionHeader,
-  VariantLabel,
-} from '@/features/up-next/ui/section-header';
+import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
 import { shortWeekdayName } from '@/lib/time/relative-day';
-
-import type { UpNextVariantProps } from './variant-carousel';
+import type { NormalizedMediaItem } from '@/types/media';
 
 /**
- * Variant C (plan 0019 U8) — a 7-day strip that filters the cards beneath it.
+ * Up Next on the home feed (plan 0019): what's ready to watch, and what's
+ * coming this week. Chosen from three prototyped treatments on 2026-07-23 —
+ * a 7-day strip that filters the cards beneath it.
+ *
  * The strip spans exactly the Calendar window (today … today+6), so every
- * entry has a selectable day and the cells derive their membership from the
+ * entry has a selectable day, and the cells derive their membership from the
  * same local-day grouping the badges use — no drift between the two.
  *
  * Continue Watching sits above the strip as a constant row: it is not part of
  * any day. The selected day is ephemeral UI state, deliberately not persisted.
  */
-export function UpNextWeekStripVariant({
+export interface UpNextSectionProps {
+  onItemPress: (item: NormalizedMediaItem) => void;
+  onItemActions: (item: NormalizedMediaItem) => void;
+}
+
+export function UpNextSection({
   onItemPress,
   onItemActions,
-}: UpNextVariantProps) {
+}: UpNextSectionProps) {
   const { continueWatching, calendar, now } = useUpNextSections();
   const [selectedOffset, setSelectedOffset] = useState(0);
 
@@ -41,10 +45,9 @@ export function UpNextWeekStripVariant({
 
   return (
     <View>
-      <VariantLabel text="Variant C — Week strip" />
       {continueWatching.length > 0 && (
         <UpNextSectionHeader
-          collapseKey="up-next-variant-c-continue"
+          collapseKey="up-next-continue"
           title="Continue Watching"
         >
           <ScrollView
@@ -68,7 +71,7 @@ export function UpNextWeekStripVariant({
       )}
 
       <UpNextSectionHeader
-        collapseKey="up-next-variant-c-calendar"
+        collapseKey="up-next-calendar"
         title="This week"
       >
         <ScrollView
