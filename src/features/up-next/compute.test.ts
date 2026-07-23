@@ -5,7 +5,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 import {
   calendarWeek,
   computeUpNext,
-  groupCalendarByDay,
   selectUpNextPool,
   UP_NEXT_POOL_SIZE,
 } from './compute';
@@ -539,7 +538,7 @@ describe('computeUpNext — empty and degraded inputs (R12/R4)', () => {
   });
 });
 
-describe('calendar day grouping (Variants B and C)', () => {
+describe('calendarWeek — the week strip buckets (U8)', () => {
   function upcoming(id: number, month: number, day: number) {
     return computeUpNext(
       inputs({
@@ -555,6 +554,54 @@ describe('calendar day grouping (Variants B and C)', () => {
     ).calendar;
   }
 
+  test("today's already-aired episodes land on the today cell (not just upcoming)", () => {
+    // The whole point of feeding the strip *both* sections: an episode that
+    // aired earlier today is in Continue Watching, but the today cell must
+    // still show it — a "This week" schedule that reads "nothing today" when
+    // something aired today is wrong.
+    const data = computeUpNext(
+      inputs({
+        trakt: [
+          traktInput(show(50), {
+            season: 1,
+            number: 3,
+            firstAired: localInstant(2026, 7, 23, 9, 0), // aired 09:00 today
+          }),
+          traktInput(show(51), {
+            season: 1,
+            number: 2,
+            firstAired: localInstant(2026, 7, 25, 12, 0), // upcoming
+          }),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.continueWatching).toHaveLength(1); // the aired one
+    expect(data.calendar).toHaveLength(1); // the upcoming one
+
+    const week = calendarWeek([...data.continueWatching, ...data.calendar], NOW);
+    expect(week[0].entries.map((e) => e.item.externalIds.trakt)).toEqual([50]);
+    expect(week[2].entries.map((e) => e.item.externalIds.trakt)).toEqual([51]);
+  });
+
+  test('an episode aired on a previous day has no cell in the future strip', () => {
+    const data = computeUpNext(
+      inputs({
+        trakt: [
+          traktInput(show(52), {
+            season: 1,
+            number: 3,
+            firstAired: localInstant(2026, 7, 21, 12, 0), // two days ago
+          }),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.continueWatching).toHaveLength(1);
+    const week = calendarWeek([...data.continueWatching, ...data.calendar], NOW);
+    expect(week.every((day) => day.entries.length === 0)).toBe(true);
+  });
+
   test('the week always has one cell per window day, empty ones included', () => {
     const week = calendarWeek(upcoming(40, 7, 25), NOW);
     expect(week).toHaveLength(7);
@@ -565,18 +612,6 @@ describe('calendar day grouping (Variants B and C)', () => {
     ]);
     expect(week[2].entries).toHaveLength(1); // 2026-07-25 is two days out
     expect(week[0].entries).toEqual([]);
-  });
-
-  test('the agenda drops empty days and keeps them in order', () => {
-    const entries = [
-      ...upcoming(41, 7, 26),
-      ...upcoming(42, 7, 24),
-      ...upcoming(43, 7, 24),
-    ];
-    const groups = groupCalendarByDay(entries, NOW);
-    expect(groups.map((group) => group.offset)).toEqual([1, 3]);
-    expect(groups[0].entries).toHaveLength(2);
-    expect(groups[0].label).toBe('Tomorrow');
   });
 
   test('day buckets come from the same local-day logic as the badges', () => {

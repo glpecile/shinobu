@@ -31,6 +31,11 @@ export interface UpNextSectionProps {
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
+// A landscape card row's height (art h-36 = 144, + mt-2 gap and two text
+// lines). The day's content area reserves this whether it holds cards or the
+// empty-state line, so tapping between days never shifts the feed below.
+const DAY_CONTENT_MIN_HEIGHT = 188;
+
 export function UpNextSection({
   onItemPress,
   onItemActions,
@@ -40,7 +45,11 @@ export function UpNextSection({
 
   if (continueWatching.length === 0 && calendar.length === 0) return null;
 
-  const week = calendarWeek(calendar, now);
+  // Feed the strip *both* sections: today's already-aired episodes (which live
+  // in Continue Watching) still belong on the today cell — the strip is a
+  // schedule, not a second view of the aired/upcoming split. Off-window and
+  // instant-less entries fall out inside `calendarWeek`.
+  const week = calendarWeek([...continueWatching, ...calendar], now);
   const selected = week.find((day) => day.offset === selectedOffset) ?? week[0];
 
   return (
@@ -124,31 +133,48 @@ export function UpNextSection({
           })}
         </ScrollView>
 
-        {selected.entries.length === 0 ? (
-          <Text className="text-muted font-sans text-sm px-4 mt-3">
-            {/* "today"/"tomorrow" read as adverbs; a weekday needs its "on". */}
-            {selected.offset <= 1
-              ? `Nothing airing ${selected.label.toLowerCase()}.`
-              : `Nothing airing on ${selected.label}.`}
-          </Text>
-        ) : (
-          <ScrollView
-            horizontal
-            className="px-4 mt-3"
-            showsHorizontalScrollIndicator={false}
-          >
-            {selected.entries.map((entry) => (
-              <View key={entry.item.id} className="mr-3">
-                <EpisodeCard
-                  badges={calendarBadges(entry, now)}
-                  entry={entry}
-                  onActionsPress={onItemActions}
-                  onPress={onItemPress}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        )}
+        {/* Fixed height so switching to an empty day never collapses the row
+            and shifts the feed beneath it — the empty line sits in the space a
+            card row would occupy. */}
+        <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }}>
+          {selected.entries.length === 0 ? (
+            <Text className="text-muted font-sans text-sm px-4">
+              {/* "today"/"tomorrow" read as adverbs; a weekday needs its "on". */}
+              {selected.offset <= 1
+                ? `Nothing airing ${selected.label.toLowerCase()}.`
+                : `Nothing airing on ${selected.label}.`}
+            </Text>
+          ) : (
+            <ScrollView
+              horizontal
+              className="px-4"
+              showsHorizontalScrollIndicator={false}
+            >
+              {selected.entries.map((entry) => (
+                <View key={entry.item.id} className="mr-3">
+                  <EpisodeCard
+                    // Aired-today episodes are watchable right now, so they
+                    // keep the quick-log checkmark here too; still-upcoming
+                    // ones only carry their day badge.
+                    action={
+                      entry.status === 'aired' ? (
+                        <QuickLogButton entry={entry} />
+                      ) : undefined
+                    }
+                    badges={
+                      entry.status === 'aired'
+                        ? continueWatchingBadges(entry, now)
+                        : calendarBadges(entry, now)
+                    }
+                    entry={entry}
+                    onActionsPress={onItemActions}
+                    onPress={onItemPress}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
       </UpNextSectionHeader>
     </View>
   );

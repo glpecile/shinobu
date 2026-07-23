@@ -145,9 +145,11 @@ export interface UpNextDayGroup {
 
 /**
  * The whole window as day buckets, empty days included — the week strip needs
- * a cell for every day, and the agenda just drops the empty ones. Both read
- * their day membership from here, so a badge, a bucket header and a strip cell
- * can never disagree about which day an episode belongs to.
+ * a cell for every day. Buckets whatever entries it is given by their air day,
+ * so passing *both* sections lands today's already-aired episodes on the today
+ * cell alongside what is still upcoming: the strip is a schedule, not a
+ * mirror of the aired/upcoming split. Entries with no air instant (AniList
+ * back-episodes) or one outside the window fall out — they have no cell.
  */
 export function calendarWeek(
   entries: readonly UpNextEntry[],
@@ -164,14 +166,6 @@ export function calendarWeek(
       ),
     };
   });
-}
-
-/** The agenda's buckets: the same days, minus the ones with nothing in them. */
-export function groupCalendarByDay(
-  entries: readonly UpNextEntry[],
-  now: Date,
-): UpNextDayGroup[] {
-  return calendarWeek(entries, now).filter((day) => day.entries.length > 0);
 }
 
 /** Inside the local window today … today+6 (R2, shared with the week strip). */

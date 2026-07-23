@@ -175,8 +175,21 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {/* Personal rows first (2026-07-14 re-prioritization), trending after.
-            Every row is its own suspense + error boundary: one provider
-            failing hides just that row, never the whole feed. */}
+            Watchlist leads the personal block, seasonal leads the public one
+            (owner ordering, 2026-07-23). Every row is its own suspense + error
+            boundary: one provider failing hides just that row, never the feed. */}
+        {letterboxdUsername != null && (
+          <SuspenseSection
+            fallback={<FeedRowSkeleton />}
+            resetKey={refreshCount}
+          >
+            <YourWatchlistRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+              username={letterboxdUsername}
+            />
+          </SuspenseSection>
+        )}
         {feedProviders.includes('trakt') && (
           <SuspenseSection
             fallback={<FeedRowSkeleton />}
@@ -199,18 +212,13 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {letterboxdUsername != null && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton />}
-            resetKey={refreshCount}
-          >
-            <YourWatchlistRow
-              onItemActions={openActions}
-              onItemPress={openDetails}
-              username={letterboxdUsername}
-            />
-          </SuspenseSection>
-        )}
+        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <SeasonalAnimeRow
+            onItemActions={openActions}
+            onItemPress={openDetails}
+            season={animeSeason}
+          />
+        </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
           <TrendingMoviesRow
             onItemActions={openActions}
@@ -221,13 +229,6 @@ function FeedScreen() {
           <TrendingShowsRow
             onItemActions={openActions}
             onItemPress={openDetails}
-          />
-        </SuspenseSection>
-        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
-          <SeasonalAnimeRow
-            onItemActions={openActions}
-            onItemPress={openDetails}
-            season={animeSeason}
           />
         </SuspenseSection>
       </RefreshableScrollView>
