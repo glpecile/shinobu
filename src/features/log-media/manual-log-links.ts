@@ -63,3 +63,35 @@ export function errorOutcomeLinks(
   }
   return links;
 }
+
+type ReasonedSkip = Extract<ProviderLogOutcome, { status: 'skipped' }> & { reason: string };
+
+export interface SkippedOutcomesSplit {
+  /** No reason — already in sync (reconcile). Keeps the existing combined "already had this logged" copy. */
+  reconcileSkipped: ProviderId[];
+  /** Adapter-reported skips (plan 0017 R9, e.g. an unresolvable Serializd season) — each gets its own line + manual link. */
+  reasonedSkips: ReasonedSkip[];
+}
+
+function hasSkipReason(outcome: ProviderLogOutcome): outcome is ReasonedSkip {
+  return outcome.status === 'skipped' && outcome.reason != null;
+}
+
+/**
+ * Splits skip outcomes per plan 0022 R6: a reconcile skip (no reason —
+ * already in sync) keeps its existing combined copy untouched; an
+ * adapter-reported skip (a reason) renders individually alongside its own
+ * "Log on {Provider}" link, exactly like an error outcome.
+ */
+export function splitSkippedOutcomes(
+  outcomes: readonly ProviderLogOutcome[],
+): SkippedOutcomesSplit {
+  const reconcileSkipped: ProviderId[] = [];
+  const reasonedSkips: ReasonedSkip[] = [];
+  for (const outcome of outcomes) {
+    if (outcome.status !== 'skipped') continue;
+    if (hasSkipReason(outcome)) reasonedSkips.push(outcome);
+    else reconcileSkipped.push(outcome.provider);
+  }
+  return { reconcileSkipped, reasonedSkips };
+}

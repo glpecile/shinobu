@@ -10,7 +10,11 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
-import { manualLinkForOutcome, manualRowsFor } from './manual-log-links';
+import {
+  manualLinkForOutcome,
+  manualRowsFor,
+  splitSkippedOutcomes,
+} from './manual-log-links';
 import type { ProviderLogOutcome } from './fan-out';
 import { OutcomeLink } from './outcome-link';
 import { useLogMedia } from './use-log-media';
@@ -27,13 +31,6 @@ export function confirmLabelFor(
   ids: readonly ProviderId[],
 ): string {
   return ids.length === 0 ? action : `${action} on ${labels(ids)}`;
-}
-
-/** Narrows to an adapter-reported skip (plan 0017 R9) — a reconcile skip carries no reason. */
-function hasSkipReason(
-  outcome: ProviderLogOutcome,
-): outcome is Extract<ProviderLogOutcome, { status: 'skipped' }> & { reason: string } {
-  return outcome.status === 'skipped' && outcome.reason != null;
 }
 
 interface ProviderToggleProps {
@@ -298,11 +295,10 @@ export function LogConfirmSheet({
   // Reconcile skips (no reason — already in sync) keep the original combined
   // copy; adapter-reported skips (a reason, e.g. an unresolvable Serializd
   // season, plan 0017 R9) get their own line + manual link (plan 0022 R6).
-  const reconcileSkipped: ProviderId[] =
-    result?.outcomes
-      .filter((outcome) => outcome.status === 'skipped' && outcome.reason == null)
-      .map((outcome) => outcome.provider) ?? [];
-  const reasonedSkips = result?.outcomes.filter(hasSkipReason) ?? [];
+  const { reconcileSkipped, reasonedSkips } =
+    result != null
+      ? splitSkippedOutcomes(result.outcomes)
+      : { reconcileSkipped: [], reasonedSkips: [] };
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 
-import { errorOutcomeLinks, manualLinkForOutcome, manualRowsFor } from './manual-log-links';
+import {
+  errorOutcomeLinks,
+  manualLinkForOutcome,
+  manualRowsFor,
+  splitSkippedOutcomes,
+} from './manual-log-links';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
@@ -79,5 +84,30 @@ describe('errorOutcomeLinks', () => {
 
   it('returns an empty array when no error outcomes exist', () => {
     expect(errorOutcomeLinks([{ provider: 'trakt', status: 'ok' }], item)).toEqual([]);
+  });
+});
+
+describe('splitSkippedOutcomes', () => {
+  it('puts a no-reason skip in reconcileSkipped and a reasoned skip in reasonedSkips', () => {
+    expect(
+      splitSkippedOutcomes([
+        { provider: 'trakt', status: 'skipped' },
+        { provider: 'serializd', status: 'skipped', reason: 'season unresolved' },
+        { provider: 'anilist', status: 'ok' },
+        { provider: 'letterboxd', status: 'error', message: 'boom' },
+      ]),
+    ).toEqual({
+      reconcileSkipped: ['trakt'],
+      reasonedSkips: [
+        { provider: 'serializd', status: 'skipped', reason: 'season unresolved' },
+      ],
+    });
+  });
+
+  it('returns empty buckets when there are no skipped outcomes', () => {
+    expect(splitSkippedOutcomes([{ provider: 'trakt', status: 'ok' }])).toEqual({
+      reconcileSkipped: [],
+      reasonedSkips: [],
+    });
   });
 });

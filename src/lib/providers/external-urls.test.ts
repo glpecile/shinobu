@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { providerItemUrl } from './external-urls';
+import { providerHomeUrl, providerItemUrl } from './external-urls';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
@@ -78,5 +78,20 @@ describe('providerItemUrl', () => {
     expect(
       providerItemUrl('trakt', { type: 'ANIME', ...ids({ trakt: 222 }) }),
     ).toBe('https://trakt.tv/shows/222');
+  });
+
+  it('builds an AniList anime URL (non-manga branch)', () => {
+    expect(
+      providerItemUrl('anilist', { type: 'ANIME', ...ids({ anilist: 555 }) }),
+    ).toBe('https://anilist.co/anime/555');
+  });
+});
+
+describe('providerHomeUrl', () => {
+  it('returns each provider log surface root', () => {
+    expect(providerHomeUrl('trakt')).toBe('https://trakt.tv');
+    expect(providerHomeUrl('anilist')).toBe('https://anilist.co');
+    expect(providerHomeUrl('letterboxd')).toBe('https://letterboxd.com');
+    expect(providerHomeUrl('serializd')).toBe('https://serializd.com');
   });
 });
