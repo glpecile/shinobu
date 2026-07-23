@@ -10,6 +10,7 @@
 // `providerItemUrl` only pulls in type-only imports (erased at build), so it
 // doesn't break that constraint.
 
+import { animeEffectiveMovieTvType } from './routing';
 import type { ProviderId } from './types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -22,20 +23,27 @@ export const ANILIST_CREATE_CLIENT_URL = 'https://anilist.co/settings/developer'
 /** AniList implicit-grant authorize endpoint (re-exported by anilist/config). */
 export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize';
 
-type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
+export type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
 
 /**
  * Whether `item` is movie-shaped in Trakt/Letterboxd's world: a MOVIE, or an
- * anime film (mirrors `routing.ts`'s `effectiveTypes` — the same flag that
- * lets `providersForLog` fan an anime film out to Trakt + Letterboxd).
+ * anime film — via the single shared `animeEffectiveMovieTvType` mapping
+ * `routing.ts`'s `effectiveTypes` also uses, so the two can't silently
+ * diverge on which anime counts as which shape.
  */
 function isMovieShaped(item: UrlItem): boolean {
-  return item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  return (
+    item.type === 'MOVIE' ||
+    (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'MOVIE')
+  );
 }
 
 /** Whether `item` is show-shaped in Trakt's world: TV, or a non-film anime. */
 function isShowShaped(item: UrlItem): boolean {
-  return item.type === 'TV' || (item.type === 'ANIME' && item.isFilm !== true);
+  return (
+    item.type === 'TV' ||
+    (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'TV')
+  );
 }
 
 function traktUrl(item: UrlItem): string | null {

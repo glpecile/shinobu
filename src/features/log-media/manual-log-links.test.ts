@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { manualLinkForOutcome, manualRowsFor } from './manual-log-links';
+import { errorOutcomeLinks, manualLinkForOutcome, manualRowsFor } from './manual-log-links';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
@@ -57,5 +57,27 @@ describe('manualLinkForOutcome', () => {
 
   it('returns null for an ok outcome', () => {
     expect(manualLinkForOutcome({ provider: 'letterboxd', status: 'ok' }, item)).toBeNull();
+  });
+});
+
+describe('errorOutcomeLinks', () => {
+  const item = { type: 'MOVIE' as const, ...ids({ letterboxd: 'heat' }) };
+
+  it('includes only error outcomes with a buildable link', () => {
+    expect(
+      errorOutcomeLinks(
+        [
+          { provider: 'letterboxd', status: 'error', message: 'boom' },
+          { provider: 'serializd', status: 'error', message: 'no url' },
+          { provider: 'trakt', status: 'ok' },
+          { provider: 'anilist', status: 'skipped', reason: 'x' },
+        ],
+        item,
+      ),
+    ).toEqual([{ provider: 'letterboxd', url: 'https://letterboxd.com/film/heat/' }]);
+  });
+
+  it('returns an empty array when no error outcomes exist', () => {
+    expect(errorOutcomeLinks([{ provider: 'trakt', status: 'ok' }], item)).toEqual([]);
   });
 });

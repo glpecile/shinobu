@@ -10,10 +10,9 @@ import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { providerLinksFor, sourceProviderOf } from '@/lib/providers/provider-links';
+import { sourceLinkFor } from '@/lib/providers/provider-links';
 import { routes } from '@/lib/routes';
 import { hideItem } from '@/state/prefs/hidden-items';
-import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface CardActionsSheetProps {
@@ -33,19 +32,9 @@ interface CardActionsSheetProps {
  */
 export function CardActionsSheet({ item, open, onClose }: CardActionsSheetProps) {
   const router = useRouter();
-  const connected = useConnectedProviders();
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
-
-  // KTD-3 (plan 0023): "[0]-when-source" — providerLinksFor always orders the
-  // source provider first when its URL is buildable, so index 0 is the
-  // source link exactly when it corresponds to `sourceProviderOf`. If the
-  // source's URL isn't buildable (or the id has no recognizable provider
-  // prefix), index 0 would be some other connected provider instead — the
-  // sheet only ever shows the *source* provider's row, never a substitute.
-  const source = item != null ? sourceProviderOf(item) : null;
-  const links = item != null ? providerLinksFor(item, connected) : [];
-  const sourceLink = links[0]?.provider === source ? links[0] : undefined;
+  const sourceLink = item != null ? sourceLinkFor(item) : undefined;
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>

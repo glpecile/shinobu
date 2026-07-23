@@ -12,7 +12,7 @@ interface LogTargetsSplit {
 }
 
 /** `process.env.EXPO_OS` is always one of these at runtime; '' never matches a platform flag. */
-function currentPlatform(): string {
+export function currentPlatform(): string {
   return process.env.EXPO_OS ?? '';
 }
 
@@ -36,9 +36,4 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   });
 
   return data ?? splitLogTargets(item, connected, platform);
-}
-
-/** The writable subset of `useLogTargetsSplit` — what every existing "Writes to …" call site wants. */
-export function useLogTargets(item: NormalizedMediaItem): ProviderId[] {
-  return useLogTargetsSplit(item).writable;
 }

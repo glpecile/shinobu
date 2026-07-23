@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { providerLinksFor, sourceProviderOf } from './provider-links';
+import { providerLinksFor, sourceLinkFor, sourceProviderOf } from './provider-links';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
@@ -12,6 +12,37 @@ describe('sourceProviderOf', () => {
 
   it('returns null for an unknown prefix', () => {
     expect(sourceProviderOf({ id: 'tmdb-123' })).toBeNull();
+  });
+
+  it('returns null for an id with no separator at all', () => {
+    expect(sourceProviderOf({ id: 'nope' })).toBeNull();
+  });
+
+  it('treats a bare id matching a provider id as that provider (no separator needed)', () => {
+    expect(sourceProviderOf({ id: 'trakt' })).toBe('trakt');
+  });
+});
+
+describe('sourceLinkFor', () => {
+  it('returns the source provider link when buildable', () => {
+    expect(
+      sourceLinkFor({ id: 'trakt-1', type: 'MOVIE', ...ids({ trakt: 1 }) }),
+    ).toEqual({ provider: 'trakt', url: 'https://trakt.tv/movies/1' });
+  });
+
+  it('returns undefined — never a substitute — when the source URL is not buildable', () => {
+    // Source is Letterboxd but the item is a TV show (Letterboxd is movies-only,
+    // so its own URL can't be built) — this must not fall back to some other
+    // provider's link even if one happens to be buildable.
+    expect(
+      sourceLinkFor({ id: 'letterboxd-not-a-film', type: 'TV', ...ids({ trakt: 1 }) }),
+    ).toBeUndefined();
+  });
+
+  it('returns undefined for an unknown source prefix', () => {
+    expect(
+      sourceLinkFor({ id: 'tmdb-123', type: 'MOVIE', ...ids({ trakt: 1 }) }),
+    ).toBeUndefined();
   });
 });
 

@@ -13,7 +13,7 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
-import { manualLinkForOutcome } from './manual-log-links';
+import { errorOutcomeLinks } from './manual-log-links';
 import { parseTags } from './parse-tags';
 import { OutcomeLink } from './outcome-link';
 import { useLogMedia } from './use-log-media';
@@ -177,19 +177,14 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           <Text className="text-accent font-sans text-sm">
             Failed on {labels(result.failed)}.
           </Text>
-          {result.outcomes
-            .filter((outcome) => outcome.status === 'error')
-            .map((outcome) => {
-              const link = manualLinkForOutcome(outcome, item);
-              return link != null ? (
-                <OutcomeLink
-                  accentColor={accentColor}
-                  key={outcome.provider}
-                  provider={outcome.provider}
-                  url={link}
-                />
-              ) : null;
-            })}
+          {errorOutcomeLinks(result.outcomes, item).map(({ provider, url }) => (
+            <OutcomeLink
+              accentColor={accentColor}
+              key={provider}
+              provider={provider}
+              url={url}
+            />
+          ))}
         </View>
       )}
 

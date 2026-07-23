@@ -11,6 +11,16 @@ function hasMovieTvIds(item: RoutableItem): boolean {
 }
 
 /**
+ * The single "is this anime a film or a series" mapping (plan.md 1.3, plan
+ * 0011) — the one rule both routing (`effectiveTypes` below) and the
+ * per-provider URL shape (`external-urls.ts`'s `isMovieShaped`/`isShowShaped`)
+ * must agree on, so it lives here instead of two hand-written copies.
+ */
+export function animeEffectiveMovieTvType(item: Pick<NormalizedMediaItem, 'isFilm'>): 'MOVIE' | 'TV' {
+  return item.isFilm === true ? 'MOVIE' : 'TV';
+}
+
+/**
  * Anime exists on both sides of the fence (plan.md 1.3, plan 0011): a film is
  * ANIME to AniList but a MOVIE to Trakt/Letterboxd, and an anime *series* is
  * ANIME to AniList but a TV show to Trakt. The cross-provider match only
@@ -20,7 +30,7 @@ function hasMovieTvIds(item: RoutableItem): boolean {
  */
 function effectiveTypes(item: RoutableItem): readonly MediaType[] {
   if (item.type === 'ANIME') {
-    const movieTvType: MediaType = item.isFilm === true ? 'MOVIE' : 'TV';
+    const movieTvType = animeEffectiveMovieTvType(item);
     return hasMovieTvIds(item) ? ['ANIME', movieTvType] : ['ANIME'];
   }
   if ((item.type === 'TV' || item.type === 'MOVIE') && item.externalIds.anilist != null) {

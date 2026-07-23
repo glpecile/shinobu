@@ -1,9 +1,6 @@
-import { providerHomeUrl, providerItemUrl } from '@/lib/providers/external-urls';
+import { providerHomeUrl, providerItemUrl, type UrlItem } from '@/lib/providers/external-urls';
 import type { ProviderId } from '@/lib/providers/types';
-import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderLogOutcome } from './fan-out';
-
-type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
 
 export interface ManualLogRow {
   provider: ProviderId;
@@ -41,4 +38,28 @@ export function manualLinkForOutcome(
     return providerItemUrl(outcome.provider, item);
   }
   return null;
+}
+
+export interface ErrorOutcomeLink {
+  provider: ProviderId;
+  url: string;
+}
+
+/**
+ * Error outcomes paired with their buildable manual link — for surfaces like
+ * `LogMediaButton`'s inline notice that have room only for "Log on
+ * {Provider}", not the full per-outcome message `log-confirm-sheet.tsx`
+ * renders alongside every error regardless of link buildability.
+ */
+export function errorOutcomeLinks(
+  outcomes: readonly ProviderLogOutcome[],
+  item: UrlItem,
+): ErrorOutcomeLink[] {
+  const links: ErrorOutcomeLink[] = [];
+  for (const outcome of outcomes) {
+    if (outcome.status !== 'error') continue;
+    const url = manualLinkForOutcome(outcome, item);
+    if (url != null) links.push({ provider: outcome.provider, url });
+  }
+  return links;
 }

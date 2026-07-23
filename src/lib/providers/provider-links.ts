@@ -13,7 +13,8 @@ const PROVIDER_IDS = new Set(Object.keys(PROVIDERS));
  * hide the row rather than guess.
  */
 export function sourceProviderOf(item: Pick<NormalizedMediaItem, 'id'>): ProviderId | null {
-  const prefix = item.id.slice(0, item.id.indexOf('-'));
+  const separatorIndex = item.id.indexOf('-');
+  const prefix = separatorIndex === -1 ? item.id : item.id.slice(0, separatorIndex);
   return PROVIDER_IDS.has(prefix) ? (prefix as ProviderId) : null;
 }
 
@@ -23,6 +24,21 @@ export interface ProviderLink {
 }
 
 type LinkItem = Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalIds'>;
+
+/**
+ * The source provider's own link, or undefined when the source is unknown or
+ * its URL isn't buildable — never a substitute from another connected
+ * provider. The card-actions sheet's "View on {SourceProvider}" row (plan
+ * 0023 R1) is specifically about the *source*, so this encodes that as its
+ * own contract instead of the sheet reverse-engineering it from
+ * `providerLinksFor`'s general-purpose ordering.
+ */
+export function sourceLinkFor(item: LinkItem): ProviderLink | undefined {
+  const source = sourceProviderOf(item);
+  if (source == null) return undefined;
+  const url = providerItemUrl(source, item);
+  return url != null ? { provider: source, url } : undefined;
+}
 
 /**
  * The provider links for `item` (plan 0023 R3/KTD-3): the source provider

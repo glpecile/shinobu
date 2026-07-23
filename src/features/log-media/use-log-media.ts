@@ -29,6 +29,7 @@ import { upNextQueryKeys } from '@/state/queries/up-next';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
+import { currentPlatform } from './use-log-targets';
 import {
   anilistHasEpisodes,
   anilistHasFilm,
@@ -347,7 +348,7 @@ export function useLogMedia() {
         nonSeasonOneEpisodes:
           episodes != null && episodes.some((episode) => episode.season !== 1),
         onlyProviders: variables.providers,
-        platform: process.env.EXPO_OS ?? '',
+        platform: currentPlatform(),
       });
       if (targets.length === 0) {
         throw new Error(`No connected provider can log "${item.title}"`);
