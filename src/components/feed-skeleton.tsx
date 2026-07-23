@@ -67,6 +67,56 @@ export function FeedRowSkeleton() {
   return <SkeletonRow cardCount={cardCount} />;
 }
 
+// Must stay in sync with the Up Next card (w-64 = 256, h-36 art = 144).
+const LANDSCAPE_WIDTH = 256;
+
+function ShimmerLandscapeCard() {
+  return (
+    <View className="w-64 mr-3">
+      <View className="w-full h-36 rounded-card overflow-hidden border border-border/50 bg-surface relative">
+        <View className="w-full h-full bg-muted/20" />
+        <AnimatedView
+          className="absolute top-0 bottom-0 w-24 bg-white/5"
+          style={{
+            animationName: shimmer,
+            animationDuration: '1500ms',
+            animationIterationCount: 'infinite',
+            animationTimingFunction: 'ease-in-out',
+          }}
+        />
+      </View>
+      <View className="h-4 bg-muted/30 rounded w-2/3 mt-2" />
+      <View className="h-3 bg-muted/20 rounded w-1/2 mt-1.5" />
+    </View>
+  );
+}
+
+/**
+ * Fallback for an Up Next section (plan 0019): landscape cards, since a
+ * poster-shaped skeleton would resolve into a differently sized row and shift
+ * everything under it.
+ */
+export function UpNextSectionSkeleton() {
+  const { width } = useWindowDimensions();
+  const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
+
+  return (
+    <View className="mb-6">
+      <View className="h-3 w-24 bg-muted/20 rounded mb-2 mx-4" />
+      <View className="h-7 w-44 bg-muted/20 rounded mb-3 mx-4" />
+      <ScrollView
+        horizontal
+        className="px-4"
+        showsHorizontalScrollIndicator={false}
+      >
+        {Array.from({ length: cardCount }).map((_, index) => (
+          <ShimmerLandscapeCard key={index} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 /**
  * Whole-feed placeholder, shown while an OAuth connect is exchanging (the
  * feed itself loads row-by-row via per-row suspense boundaries). Mirrors the

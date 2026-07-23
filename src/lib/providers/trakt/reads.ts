@@ -32,6 +32,7 @@ import {
   type TraktPeopleResponse,
   type TraktSearchResult,
   type TraktShowProgress,
+  type TraktShowProgressResult,
   type TraktShowSeason,
   type TraktStudio,
   type TraktTrendingMovie,
@@ -294,15 +295,20 @@ export function getShowSeasons(
 /**
  * Per-episode watched completion for one show, from the authenticated
  * `/shows/:id/progress/watched` endpoint. Targeted (one show), so the seasons
- * view doesn't rescan the whole watched-shows list; empty set when nothing's
- * watched yet.
+ * view doesn't rescan the whole watched-shows list; empty key set when
+ * nothing's watched yet.
+ *
+ * `extended=full` costs nothing extra in requests and upgrades the response's
+ * `next_episode` pointer from bare ids to a full episode object — `first_aired`
+ * and `runtime` included — which is what Up Next classifies per show (plan
+ * 0019 KTD-1). One authed call per show, already invalidated after a log.
  */
 export function getShowWatchedProgress(
   deps: TraktDeps,
   params: { traktId: number },
-): Effect.Effect<ReadonlySet<string>, ProviderError> {
+): Effect.Effect<TraktShowProgressResult, ProviderError> {
   return traktAuthedRequest<TraktShowProgress>(
     deps,
-    `/shows/${params.traktId}/progress/watched`,
+    `/shows/${params.traktId}/progress/watched?extended=full`,
   ).pipe(Effect.map(normalizeWatchedProgress));
 }

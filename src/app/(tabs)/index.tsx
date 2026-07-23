@@ -12,7 +12,11 @@ import {
 import { useCSSVariable } from 'uniwind';
 
 import { EmptyStateTile } from '@/components/empty-state-tile';
-import { FeedRowSkeleton, FeedSkeleton } from '@/components/feed-skeleton';
+import {
+  FeedRowSkeleton,
+  FeedSkeleton,
+  UpNextSectionSkeleton,
+} from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
@@ -31,6 +35,9 @@ import {
   YourShowsRow,
   YourWatchlistRow,
 } from '@/features/feed/feed-rows';
+import { UpNextAgendaVariant } from '@/features/up-next/variants/variant-agenda';
+import { UpNextCarouselVariant } from '@/features/up-next/variants/variant-carousel';
+import { UpNextWeekStripVariant } from '@/features/up-next/variants/variant-week-strip';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
@@ -129,6 +136,10 @@ function FeedScreen() {
     ? getLetterboxdUsername()
     : null;
   const animeSeason = animeSeasonAt(new Date());
+  // Up Next is computed from Trakt shows and AniList anime only — with neither
+  // connected there is nothing to compute, so the sections never mount.
+  const upNextConnected =
+    feedProviders.includes('trakt') || feedProviders.includes('anilist');
   const refetchFeed = useRefetchUnifiedFeed();
   // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
@@ -159,6 +170,40 @@ function FeedScreen() {
         }
         onRefresh={refresh}
       >
+        {/* Up Next, three ways (plan 0019): the same data hook rendered in
+            three treatments, stacked for a side-by-side comparison against
+            real data. Two of the three get deleted once a winner is picked. */}
+        {upNextConnected && (
+          <>
+            <SuspenseSection
+              fallback={<UpNextSectionSkeleton />}
+              resetKey={refreshCount}
+            >
+              <UpNextCarouselVariant
+                onItemActions={openActions}
+                onItemPress={openDetails}
+              />
+            </SuspenseSection>
+            <SuspenseSection
+              fallback={<UpNextSectionSkeleton />}
+              resetKey={refreshCount}
+            >
+              <UpNextAgendaVariant
+                onItemActions={openActions}
+                onItemPress={openDetails}
+              />
+            </SuspenseSection>
+            <SuspenseSection
+              fallback={<UpNextSectionSkeleton />}
+              resetKey={refreshCount}
+            >
+              <UpNextWeekStripVariant
+                onItemActions={openActions}
+                onItemPress={openDetails}
+              />
+            </SuspenseSection>
+          </>
+        )}
         {/* Personal rows first (2026-07-14 re-prioritization), trending after.
             Every row is its own suspense + error boundary: one provider
             failing hides just that row, never the whole feed. */}

@@ -31,6 +31,7 @@ import {
 } from './anilist';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { traktDeps, traktQueryKeys } from './trakt';
+import { upNextQueryKeys } from './up-next';
 
 /** One named row of the home feed — never index into the query array. */
 type FeedSlot =
@@ -197,6 +198,33 @@ export function useSuspenseYourWatchlistQuery(username: string) {
 }
 
 /**
+ * Home sections that are query-backed but not `NormalizedMediaItem[]` rows, so
+ * they never join `activeFeedConfigs` (the details screen's by-id resolution
+ * must not trigger Up Next's per-show request fan). Pull-to-refresh still owns
+ * them — this is the sibling registration plan 0019 U4 calls for.
+ */
+function activeSectionKeys(
+  connected: readonly ProviderId[],
+): Array<{ slot: string; queryKey: readonly unknown[] }> {
+  const feedProviders = providersForFeed(connected);
+  if (!feedProviders.includes('trakt') && !feedProviders.includes('anilist')) {
+    return [];
+  }
+  const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [
+    { slot: 'upNext', queryKey: upNextQueryKeys.inputs() },
+  ];
+  if (feedProviders.includes('anilist')) {
+    // The network read behind the "Your Anime" row: refetching only the
+    // derived items key would re-derive from this cached entry (plan 0019 U2).
+    keys.push({
+      slot: 'currentAnimeEntries',
+      queryKey: anilistQueryKeys.currentAnimeEntries(),
+    });
+  }
+  return keys;
+}
+
+/**
  * Pull-to-refresh for the home feed: refetches every applicable feed query in
  * parallel and resolves once all settle. Kept out of the row hooks so the
  * screen-level `RefreshableScrollView` has one promise to wait on.
@@ -206,16 +234,18 @@ export function useRefetchUnifiedFeed() {
   const connected = useConnectedProviders();
 
   function refetch() {
+    const targets = [
+      ...activeFeedConfigs(connected, queryClient, animeSeasonAt(new Date())),
+      ...activeSectionKeys(connected),
+    ];
     // allSettled, not all: one provider failing to refresh must not hide the
     // outcome of the others (partial-failure contract, AGENTS.md).
     return allSettled(
       Object.fromEntries(
-        activeFeedConfigs(connected, queryClient, animeSeasonAt(new Date())).map(
-          (config): [string, () => Promise<void>] => [
-            config.slot,
-            () => queryClient.refetchQueries({ queryKey: config.queryKey }),
-          ],
-        ),
+        targets.map((target): [string, () => Promise<void>] => [
+          target.slot,
+          () => queryClient.refetchQueries({ queryKey: target.queryKey }),
+        ]),
       ),
     );
   }

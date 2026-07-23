@@ -31,6 +31,18 @@ export interface AniListMedia {
   episodes?: number | null;
   chapters?: number | null;
   idMal?: number | null;
+  /**
+   * Only requested by the currently-watching read (plan 0019 U2) — one scalar
+   * object per entry instead of a per-media airing-schedule request each.
+   * Null for finished and hiatus/unscheduled series alike.
+   */
+  nextAiringEpisode?: AniListNextAiringEpisode | null;
+}
+
+/** AniList's pointer at the next episode to air. `airingAt` is Unix seconds. */
+export interface AniListNextAiringEpisode {
+  episode: number;
+  airingAt: number;
 }
 
 /** One MediaListCollection entry (the viewer's list row for a media). */
@@ -114,6 +126,43 @@ export function normalizeAniListListEntry(
     ...(entry.updatedAt != null
       ? { lastUpdated: new Date(entry.updatedAt * 1000).toISOString() }
       : {}),
+  };
+}
+
+/**
+ * A currently-watching list entry with the airing info Up Next classifies it
+ * by (plan 0019 U2). Deliberately a wrapper around the item rather than extra
+ * fields on `NormalizedMediaItem`: airing schedules are an AniList-shaped
+ * detail, and the shared data contract stays provider-agnostic.
+ */
+export interface AniListCurrentEntry {
+  item: NormalizedMediaItem;
+  /**
+   * The next episode AniList has scheduled, as an ISO instant (KTD-4: every
+   * air time reaches `hasAired` as an instant, never a raw epoch or date).
+   * Null for finished series and for hiatus/unconfirmed schedules alike —
+   * `totalEpisodes` is what separates those two.
+   */
+  nextAiring: { episode: number; airingAt: string } | null;
+  /** Total episodes when AniList knows it; null while unannounced. */
+  totalEpisodes: number | null;
+}
+
+export function normalizeCurrentAnimeEntry(
+  entry: AniListListEntry,
+  nowIso: string,
+): AniListCurrentEntry {
+  const airing = entry.media.nextAiringEpisode;
+  return {
+    item: normalizeAniListListEntry(entry, nowIso),
+    nextAiring:
+      airing == null
+        ? null
+        : {
+            episode: airing.episode,
+            airingAt: new Date(airing.airingAt * 1000).toISOString(),
+          },
+    totalEpisodes: entry.media.episodes ?? null,
   };
 }
 
