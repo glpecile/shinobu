@@ -24,6 +24,11 @@ import { LightboxProvider } from "@/components/lightbox/state";
 import { createQueryClient } from "@/state/queries/query-client";
 import { SheetProvider } from "@/components/sheet";
 import { useColorScheme } from "react-native";
+// Side-effect import: TaskManager.defineTask must run at module-evaluation
+// time so a headless background launch can find the task (plan 0020 KTD-4).
+import "@/features/notifications/background-task";
+import { NotificationsRuntime } from "@/features/notifications/notifications-runtime";
+import { useNotificationTapNavigation } from "@/features/notifications/use-notification-tap-navigation";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,6 +53,9 @@ export default function Layout() {
   // light/dark background — see docs/solutions/web-fouc-on-boot.md.
   const colorScheme = useColorScheme();
   const backgroundColor = colorScheme === "dark" ? "#0a0a0a" : "#ffffff";
+
+  // Notification tap → details route, in all three app states (R10).
+  useNotificationTapNavigation();
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -96,6 +104,9 @@ export default function Layout() {
                 {/* Hidden authenticated WebView that runs Letterboxd writes
                     (native only; renders null on web). */}
                 <LetterboxdWriteBridge />
+                {/* Release-notification refresh + background task lifecycle
+                    (native only; renders null on web). */}
+                <NotificationsRuntime />
                 {/* Fullscreen image viewer overlay (web); null on native,
                     where galeria renders the zoom inline. */}
                 <Lightbox />

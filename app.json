@@ -38,7 +38,15 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/adaptive-icon-monochrome.png",
+          "color": "#DC2626"
+        }
+      ]
     ],
     "name": "Shinobu",
     "slug": "shinobu",
