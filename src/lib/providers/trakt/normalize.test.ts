@@ -249,6 +249,34 @@ describe('normalizeSeason', () => {
   });
 });
 
+/**
+ * `/shows/:id/progress/watched` response, copied verbatim from Trakt's API
+ * blueprint (fixture from the real payload shape, never from our own
+ * interfaces — docs/solutions/trakt-progress-episodes-have-no-season-field.md).
+ * Note what it proves: episodes carry no `season`, and specials never appear
+ * (the app doesn't send `specials=true`).
+ */
+const PROGRESS_PAYLOAD: TraktShowProgress = {
+  aired: 8,
+  completed: 6,
+  last_watched_at: '2015-03-21T19:03:58.000Z',
+  seasons: [
+    {
+      number: 1,
+      episodes: [
+        { number: 1, completed: true },
+        { number: 2, completed: true },
+        { number: 3, completed: true },
+        { number: 4, completed: true },
+        { number: 5, completed: true },
+        { number: 6, completed: true },
+        { number: 7, completed: false },
+        { number: 8, completed: false },
+      ],
+    },
+  ],
+};
+
 describe('normalizeWatchedProgress', () => {
   test('collects "S-E" keys for completed episodes, tolerating 0/1 and true/false', () => {
     // Real payload shape: progress episodes carry no `season` field — the
@@ -266,13 +294,74 @@ describe('normalizeWatchedProgress', () => {
         ] },
       ],
     };
-    expect(normalizeWatchedProgress(progress)).toEqual(
+    expect(normalizeWatchedProgress(progress).watchedKeys).toEqual(
       new Set(['1-1', '1-2', '2-2']),
     );
   });
 
   test('empty / missing seasons yield an empty set', () => {
-    expect(normalizeWatchedProgress({})).toEqual(new Set());
+    expect(normalizeWatchedProgress({}).watchedKeys).toEqual(new Set());
+  });
+
+  test('specials (season 0) are excluded by the request, not the normalizer', () => {
+    // Trakt omits season 0 unless `specials=true` is sent, which the app never
+    // does — so a progress payload simply never carries specials, and the
+    // watched-key set stays free of "0-x" entries.
+    expect(normalizeWatchedProgress(PROGRESS_PAYLOAD).watchedKeys).toEqual(
+      new Set(['1-1', '1-2', '1-3', '1-4', '1-5', '1-6']),
+    );
+  });
+});
+
+describe('normalizeWatchedProgress next_episode (plan 0019 U1)', () => {
+  test('carries season/number/title and the extended=full air instant', () => {
+    const { nextEpisode } = normalizeWatchedProgress({
+      ...PROGRESS_PAYLOAD,
+      next_episode: {
+        // Trakt's documented next_episode fields plus what extended=full adds
+        // to any episode object (first_aired, runtime).
+        season: 1,
+        number: 7,
+        title: 'Water',
+        first_aired: '2015-04-19T01:00:00.000Z',
+        runtime: 58,
+      },
+    });
+    expect(nextEpisode).toEqual({
+      season: 1,
+      number: 7,
+      title: 'Water',
+      firstAired: '2015-04-19T01:00:00.000Z',
+      runtime: 58,
+    });
+  });
+
+  test('next_episode: null (caught up) leaves nextEpisode undefined', () => {
+    const result = normalizeWatchedProgress({
+      ...PROGRESS_PAYLOAD,
+      next_episode: null,
+    });
+    expect(result.nextEpisode).toBeUndefined();
+    // The watched-key half is unaffected by the pointer's absence.
+    expect(result.watchedKeys.has('1-6')).toBe(true);
+  });
+
+  test('a missing next_episode key behaves like null', () => {
+    expect(normalizeWatchedProgress(PROGRESS_PAYLOAD).nextEpisode).toBeUndefined();
+  });
+
+  test('first_aired: null is carried as null, not dropped', () => {
+    // An unknown air date must stay distinguishable from "aired" — the Up Next
+    // split excludes it knowingly instead of guessing.
+    const { nextEpisode } = normalizeWatchedProgress({
+      next_episode: { season: 2, number: 1, title: 'TBA', first_aired: null },
+    });
+    expect(nextEpisode).toEqual({
+      season: 2,
+      number: 1,
+      title: 'TBA',
+      firstAired: null,
+    });
   });
 });
 

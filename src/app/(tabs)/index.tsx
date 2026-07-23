@@ -1,7 +1,6 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Head from '@/components/head';
 import {
@@ -9,10 +8,13 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { EmptyStateTile } from '@/components/empty-state-tile';
-import { FeedRowSkeleton, FeedSkeleton } from '@/components/feed-skeleton';
+import {
+  FeedRowSkeleton,
+  FeedSkeleton,
+  UpNextSectionSkeleton,
+} from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
@@ -31,6 +33,8 @@ import {
   YourShowsRow,
   YourWatchlistRow,
 } from '@/features/feed/feed-rows';
+import { UpNextSection } from '@/features/up-next/up-next-section';
+import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
@@ -123,21 +127,27 @@ function FeedScreen() {
   const router = useRouter();
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
+  // Warm each provider host's connection pool as the feed mounts — a beat ahead
+  // of the Up Next request waterfall, so its first reads skip the cold
+  // handshake. Native-only (no-op on web); self-guarded to run once.
+  useEffect(() => {
+    warmProviderConnections(connected);
+  }, [connected]);
   // The `feedProviders` gate also keeps this MMKV read out of web SSR renders
   // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
   const letterboxdUsername = feedProviders.includes('letterboxd')
     ? getLetterboxdUsername()
     : null;
   const animeSeason = animeSeasonAt(new Date());
+  // Up Next is computed from Trakt shows and AniList anime only — with neither
+  // connected there is nothing to compute, so the sections never mount.
+  const upNextConnected =
+    feedProviders.includes('trakt') || feedProviders.includes('anilist');
   const refetchFeed = useRefetchUnifiedFeed();
   // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
-  // Fades the top of the scrolling feed into the header instead of a hard edge.
-  const background = useCSSVariable('--color-background');
-  const backgroundColor =
-    typeof background === 'string' ? background : 'transparent';
 
   function openDetails(item: NormalizedMediaItem) {
     router.push(routes.details(item.id));
@@ -159,9 +169,34 @@ function FeedScreen() {
         }
         onRefresh={refresh}
       >
+        {/* What to watch next, above everything the user merely tracks. */}
+        {upNextConnected && (
+          <SuspenseSection
+            fallback={<UpNextSectionSkeleton />}
+            resetKey={refreshCount}
+          >
+            <UpNextSection
+              onItemActions={openActions}
+              onItemPress={openDetails}
+            />
+          </SuspenseSection>
+        )}
         {/* Personal rows first (2026-07-14 re-prioritization), trending after.
-            Every row is its own suspense + error boundary: one provider
-            failing hides just that row, never the whole feed. */}
+            Watchlist leads the personal block, seasonal leads the public one
+            (owner ordering, 2026-07-23). Every row is its own suspense + error
+            boundary: one provider failing hides just that row, never the feed. */}
+        {letterboxdUsername != null && (
+          <SuspenseSection
+            fallback={<FeedRowSkeleton />}
+            resetKey={refreshCount}
+          >
+            <YourWatchlistRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+              username={letterboxdUsername}
+            />
+          </SuspenseSection>
+        )}
         {feedProviders.includes('trakt') && (
           <SuspenseSection
             fallback={<FeedRowSkeleton />}
@@ -184,18 +219,13 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {letterboxdUsername != null && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton />}
-            resetKey={refreshCount}
-          >
-            <YourWatchlistRow
-              onItemActions={openActions}
-              onItemPress={openDetails}
-              username={letterboxdUsername}
-            />
-          </SuspenseSection>
-        )}
+        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <SeasonalAnimeRow
+            onItemActions={openActions}
+            onItemPress={openDetails}
+            season={animeSeason}
+          />
+        </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
           <TrendingMoviesRow
             onItemActions={openActions}
@@ -208,24 +238,7 @@ function FeedScreen() {
             onItemPress={openDetails}
           />
         </SuspenseSection>
-        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
-          <SeasonalAnimeRow
-            onItemActions={openActions}
-            onItemPress={openDetails}
-            season={animeSeason}
-          />
-        </SuspenseSection>
       </RefreshableScrollView>
-      {/* Soft fade under the header (native only — web home has no header).
-          className is dropped on third-party components on native, so the
-          overlay is positioned via style. */}
-      {process.env.EXPO_OS !== 'web' && (
-        <LinearGradient
-          colors={[backgroundColor, 'transparent']}
-          pointerEvents="none"
-          style={{ height: 28, left: 0, position: 'absolute', right: 0, top: 0 }}
-        />
-      )}
       <CardActionsSheet {...sheetProps} />
     </View>
   );

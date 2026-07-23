@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
+import { hasAired } from '@/lib/time/has-aired';
 import {
   normalizeAniListListEntry,
   normalizeAniListMedia,
+  normalizeCurrentAnimeEntry,
   normalizeListActivity,
   parseActivityProgress,
   type AniListListActivity,
@@ -206,5 +208,64 @@ describe('normalizeListActivity', () => {
       media: null,
     };
     expect(normalizeListActivity(activity)).toBeNull();
+  });
+});
+
+describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
+  test('a releasing series carries the next episode as an ISO instant', () => {
+    const entry: AniListListEntry = {
+      status: 'CURRENT',
+      progress: 5,
+      updatedAt: 1_752_000_000,
+      media: {
+        ...SERIES,
+        episodes: 24,
+        // 2026-07-18T16:00:00.000Z
+        nextAiringEpisode: { episode: 7, airingAt: 1_784_390_400 },
+      },
+    };
+    const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
+    expect(normalized.nextAiring).toEqual({
+      episode: 7,
+      airingAt: '2026-07-18T16:00:00.000Z',
+    });
+    expect(normalized.totalEpisodes).toBe(24);
+    expect(normalized.item.currentProgress).toBe(5);
+  });
+
+  test('a finished series keeps its total and reports no airing pointer', () => {
+    const entry: AniListListEntry = {
+      status: 'CURRENT',
+      progress: 3,
+      media: { ...SERIES, episodes: 12, nextAiringEpisode: null },
+    };
+    const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
+    expect(normalized.nextAiring).toBeNull();
+    expect(normalized.totalEpisodes).toBe(12);
+  });
+
+  test('a hiatus/unannounced series reports neither pointer nor total', () => {
+    const entry: AniListListEntry = {
+      status: 'CURRENT',
+      progress: 3,
+      media: { ...SERIES, episodes: null, nextAiringEpisode: null },
+    };
+    const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
+    expect(normalized.nextAiring).toBeNull();
+    expect(normalized.totalEpisodes).toBeNull();
+  });
+
+  test('the converted instant round-trips through hasAired (KTD-4)', () => {
+    // The airing seconds → ISO conversion must produce something the single
+    // shared air comparison parses — no second date path anywhere.
+    const airingAt = 1_784_390_400;
+    const entry: AniListListEntry = {
+      status: 'CURRENT',
+      progress: 6,
+      media: { ...SERIES, nextAiringEpisode: { episode: 7, airingAt } },
+    };
+    const instant = normalizeCurrentAnimeEntry(entry, NOW_ISO).nextAiring!.airingAt;
+    expect(hasAired(instant, new Date(airingAt * 1000 - 1))).toBe(false);
+    expect(hasAired(instant, new Date(airingAt * 1000))).toBe(true);
   });
 });

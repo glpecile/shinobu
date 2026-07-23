@@ -25,6 +25,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { getEntryState } from '@/lib/providers/anilist/reads';
 import { traktDeps, traktQueryKeys } from '@/state/queries/trakt';
+import { upNextQueryKeys } from '@/state/queries/up-next';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
@@ -144,12 +145,12 @@ async function providerHasWatch(
       }
       const traktId = item.externalIds.trakt;
       if (traktId == null) return false;
-      const completed = await queryClient.fetchQuery({
+      const progress = await queryClient.fetchQuery({
         queryKey: traktQueryKeys.showProgress(traktId),
         queryFn: () =>
           Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
       });
-      return traktHasEpisodes(completed, episodes);
+      return traktHasEpisodes(progress.watchedKeys, episodes);
     }
 
     if (provider === 'anilist') {
@@ -220,7 +221,7 @@ async function serializdDiaryHasEpisode(
   return diaryHasEpisode(page.entries, params);
 }
 
-function invalidateAfterLog(
+export function invalidateAfterLog(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
   succeeded: readonly ProviderId[],
@@ -244,6 +245,11 @@ function invalidateAfterLog(
   }
   if (succeeded.includes('anilist')) {
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnime() });
+    // The items key derives from this one — invalidating only the derived key
+    // would refetch it straight off a stale entries cache (plan 0019 U2).
+    queryClient.invalidateQueries({
+      queryKey: anilistQueryKeys.currentAnimeEntries(),
+    });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.listActivity() });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
@@ -261,6 +267,13 @@ function invalidateAfterLog(
       });
     }
   }
+  // Up Next is computed from Trakt/AniList watch state, so a successful log to
+  // either must recompute the sections — not just the per-show progress the
+  // branches above refresh. This invalidation is also the settle signal the
+  // quick-log card waits on before advancing (plan 0019 KTD-6).
+  if (succeeded.includes('trakt') || succeeded.includes('anilist')) {
+    queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
+  }
   if (succeeded.includes('serializd')) {
     // The write landed a new diary entry (and moved progress) — refresh both so
     // the unified diary and the next reconcile see it.
@@ -274,6 +287,39 @@ function invalidateAfterLog(
         });
       }
     }
+  }
+}
+
+/**
+ * Warm the reads a log of `item` will make, so a confirmed write doesn't stall
+ * on cold reconcile fetches (plan 0019 quick-log). Runs the mutation's own
+ * front matter — identity enrichment, then each applicable provider's
+ * watch-state read — against the shared cache while the confirm modal is open,
+ * so `useLogMedia` finds everything warm on confirm. Best-effort: it never
+ * throws (every read already degrades to "doesn't have it").
+ */
+export async function prefetchLogReconcile(
+  queryClient: QueryClient,
+  item: NormalizedMediaItem,
+  connected: readonly ProviderId[],
+  episodes: Array<{ season: number; number: number }> | null,
+): Promise<void> {
+  try {
+    const enriched = await enrichExternalIds(queryClient, item, connected);
+    let targets = providersForLog(enriched, connected);
+    if (episodes != null && episodes.some((episode) => episode.season !== 1)) {
+      targets = targets.filter((provider) => provider !== 'anilist');
+    }
+    await all(
+      Object.fromEntries(
+        targets.map((provider): [ProviderId, () => Promise<boolean>] => [
+          provider,
+          () => providerHasWatch(queryClient, provider, enriched, episodes),
+        ]),
+      ),
+    );
+  } catch {
+    // Prefetch is an optimization — a miss just means the write pays the read.
   }
 }
 

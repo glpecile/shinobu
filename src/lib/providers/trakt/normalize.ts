@@ -403,9 +403,11 @@ export function normalizeSeason(raw: TraktShowSeason): NormalizedSeason {
 
 /**
  * Per-episode watched completion for one show, from the authenticated
- * `/shows/:id/progress/watched` endpoint. Returns the `"${season}-${number}"`
+ * `/shows/:id/progress/watched` endpoint. Yields the `"${season}-${number}"`
  * keys that Trakt marks completed — the accordion rows match against this set
- * to render watch checkmarks without touching the flat feed contract.
+ * to render watch checkmarks without touching the flat feed contract — plus
+ * the show's `next_episode` pointer (plan 0019 KTD-1), which is what Up Next
+ * is computed from.
  */
 export interface TraktProgressEpisode {
   number: number;
@@ -417,28 +419,84 @@ export interface TraktProgressSeason {
   episodes?: TraktProgressEpisode[];
 }
 
+/**
+ * `next_episode` from `/shows/:id/progress/watched?extended=full`. Unlike the
+ * progress *seasons* episodes above, this one does carry its own `season`, and
+ * `extended=full` adds the episode-level fields (`first_aired`, `runtime`) the
+ * bare request omits. Trakt sets it to `null` once there is nothing left to
+ * watch, and it points at an upcoming episode when the user is caught up on
+ * everything aired — that case is exactly what the Calendar section surfaces.
+ */
+export interface TraktNextEpisodeRaw {
+  season: number;
+  number: number;
+  title?: string | null;
+  /** ISO instant; absent/null while Trakt has no air date for the episode. */
+  first_aired?: string | null;
+  runtime?: number | null;
+}
+
 export interface TraktShowProgress {
   aired?: number;
   completed?: number;
   last_watched_at?: string;
   seasons?: TraktProgressSeason[];
+  next_episode?: TraktNextEpisodeRaw | null;
+}
+
+/** The show's next unwatched episode, normalized (plan 0019 U1). */
+export interface TraktNextEpisode {
+  season: number;
+  number: number;
+  title?: string;
+  /**
+   * ISO instant, or `null` when Trakt knows the episode but not when it airs.
+   * Carried rather than dropped so the Up Next split can exclude it knowingly
+   * (an unknown air date is not the same as "not aired yet").
+   */
+  firstAired: string | null;
+  /** Minutes, when `extended=full` carried one. */
+  runtime?: number;
+}
+
+export interface TraktShowProgressResult {
+  /** `"${season}-${number}"` for every completed episode. */
+  watchedKeys: ReadonlySet<string>;
+  /** Absent when the user has nothing left to watch (Trakt sends null). */
+  nextEpisode?: TraktNextEpisode;
 }
 
 export function normalizeWatchedProgress(
   raw: TraktShowProgress,
-): ReadonlySet<string> {
-  const keys = new Set<string>();
+): TraktShowProgressResult {
+  const watchedKeys = new Set<string>();
   for (const season of raw.seasons ?? []) {
     for (const episode of season.episodes ?? []) {
       // Trakt sends `completed` as both `0/1` (older) and `true/false` (newer).
       // Progress episodes carry no `season` field of their own — the season
       // number lives only on the enclosing season object.
       if (episode.completed === true || episode.completed === 1) {
-        keys.add(`${season.number}-${episode.number}`);
+        watchedKeys.add(`${season.number}-${episode.number}`);
       }
     }
   }
-  return keys;
+
+  const next = raw.next_episode;
+  if (next == null) return { watchedKeys };
+
+  return {
+    watchedKeys,
+    nextEpisode: {
+      season: next.season,
+      number: next.number,
+      ...(next.title != null && next.title !== '' ? { title: next.title } : {}),
+      firstAired:
+        next.first_aired != null && next.first_aired !== ''
+          ? next.first_aired
+          : null,
+      ...(next.runtime != null ? { runtime: next.runtime } : {}),
+    },
+  };
 }
 
 /**

@@ -129,7 +129,7 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
             });
           }}
           season={season}
-          watched={watched ?? null}
+          watched={watched?.watchedKeys ?? null}
         />
       ))}
 

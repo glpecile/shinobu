@@ -21,6 +21,7 @@ import {
   searchMedia,
   type AniListEntryState,
 } from '@/lib/providers/anilist/reads';
+import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
 import type { AnimeSeasonWindow } from '@/lib/providers/anilist/season';
 import type { NormalizedSeason } from '@/types/media';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -71,6 +72,14 @@ export const anilistQueryKeys = {
   all: ['anilist'] as const,
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
   currentAnime: () => [...anilistQueryKeys.all, 'current-anime'] as const,
+  /**
+   * The same currently-watching read, cached with its airing info intact
+   * (plan 0019 U2). `currentAnime` is derived from *this* entry, so the feed
+   * row keeps its plain `NormalizedMediaItem[]` contract while Up Next reads
+   * the richer shape — one network request feeds both.
+   */
+  currentAnimeEntries: () =>
+    [...anilistQueryKeys.all, 'current-anime-entries'] as const,
   trendingAnime: (limit?: number) =>
     [...anilistQueryKeys.all, 'trending-anime', limit ?? 'default'] as const,
   /** Popular anime of one cour — keyed by season so a boundary crossing refetches. */
@@ -91,23 +100,48 @@ export const anilistQueryKeys = {
 };
 
 /**
- * The viewer's currently-watching list. The viewer-id prefix request is
- * cached forever under its own key (it never changes for a session; the
- * disconnect flow purges it), so steady-state refreshes spend 1 request of
- * the 30/min budget instead of 2. Exposed as a plain promise so
- * `useUnifiedFeed` can consume it as a queryFn.
+ * Two consumers want the currently-watching list at different fidelities (the
+ * feed row wants items, Up Next wants airing info), and the 30 req/min budget
+ * says they share one request. So the *entries* key owns the network read and
+ * the items key derives from it; this window keeps the second reader off the
+ * wire without letting either go visibly stale (a log invalidates both).
+ */
+const CURRENT_ANIME_STALE_MS = 60_000;
+
+/**
+ * The viewer's currently-watching list with airing info (plan 0019 U2). The
+ * viewer-id prefix request is cached forever under its own key (it never
+ * changes for a session; the disconnect flow purges it), so steady-state
+ * refreshes spend 1 request of the 30/min budget instead of 2.
+ */
+export function fetchCurrentAnimeEntries(
+  queryClient: QueryClient,
+): Promise<AniListCurrentEntry[]> {
+  return queryClient.fetchQuery({
+    queryKey: anilistQueryKeys.currentAnimeEntries(),
+    queryFn: async () => {
+      const deps = anilistDeps();
+      const viewerId = await queryClient.fetchQuery({
+        queryKey: anilistQueryKeys.viewer(),
+        queryFn: () => Effect.runPromise(getViewerId(deps)),
+        staleTime: Number.POSITIVE_INFINITY,
+        gcTime: Number.POSITIVE_INFINITY,
+      });
+      return Effect.runPromise(getCurrentAnime(deps, { viewerId }));
+    },
+    staleTime: CURRENT_ANIME_STALE_MS,
+  });
+}
+
+/**
+ * The same list as flat feed items — the "Your Anime" row's contract. Exposed
+ * as a plain promise so `useUnifiedFeed` can consume it as a queryFn.
  */
 export async function fetchCurrentAnime(
   queryClient: QueryClient,
 ): Promise<NormalizedMediaItem[]> {
-  const deps = anilistDeps();
-  const viewerId = await queryClient.fetchQuery({
-    queryKey: anilistQueryKeys.viewer(),
-    queryFn: () => Effect.runPromise(getViewerId(deps)),
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: Number.POSITIVE_INFINITY,
-  });
-  return Effect.runPromise(getCurrentAnime(deps, { viewerId }));
+  const entries = await fetchCurrentAnimeEntries(queryClient);
+  return entries.map((entry) => entry.item);
 }
 
 export function fetchTrendingAnime(options: { limit?: number } = {}): Promise<NormalizedMediaItem[]> {

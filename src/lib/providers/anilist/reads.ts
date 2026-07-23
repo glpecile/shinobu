@@ -9,9 +9,10 @@ import type { AniListDeps } from './deps';
 import { anilistAuthedRequest, anilistRequest } from './http';
 import type { AnimeSeasonWindow } from './season';
 import {
-  normalizeAniListListEntry,
   normalizeAniListMedia,
+  normalizeCurrentAnimeEntry,
   normalizeListActivity,
+  type AniListCurrentEntry,
   type AniListListActivity,
   type AniListListEntry,
   type AniListMedia,
@@ -58,13 +59,17 @@ interface MediaListCollectionResponse {
 /**
  * The viewer's currently-watching anime (`MediaListCollection(status:
  * CURRENT)` — plan.md 1.2), flattened across AniList's custom lists and
- * normalized. Feeds the "Your Anime" row. Sorted most-recently-updated first
- * to match the Trakt watched feed's ordering.
+ * normalized. Feeds the "Your Anime" row and, through the same single
+ * request, Up Next's anime half (plan 0019 U2): `nextAiringEpisode` rides
+ * along on each media instead of costing one airing-schedule request per
+ * series, which the 30 req/min budget cannot afford
+ * (docs/solutions/anilist-rate-limit-retry-storm.md). Sorted
+ * most-recently-updated first to match the Trakt watched feed's ordering.
  */
 export function getCurrentAnime(
   deps: AniListDeps,
   params: { viewerId: number },
-): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+): Effect.Effect<AniListCurrentEntry[], ProviderError> {
   return Effect.gen(function* () {
     const data = yield* anilistAuthedRequest<MediaListCollectionResponse>(
       deps,
@@ -76,7 +81,10 @@ export function getCurrentAnime(
               progress
               repeat
               updatedAt
-              media { ${MEDIA_FIELDS} }
+              media {
+                ${MEDIA_FIELDS}
+                nextAiringEpisode { episode airingAt }
+              }
             }
           }
         }
@@ -92,13 +100,15 @@ export function getCurrentAnime(
 
     // A media can sit on several custom lists — dedupe by media id.
     const seen = new Set<number>();
-    const items: NormalizedMediaItem[] = [];
+    const current: AniListCurrentEntry[] = [];
     for (const entry of entries) {
       if (seen.has(entry.media.id)) continue;
       seen.add(entry.media.id);
-      items.push(normalizeAniListListEntry(entry, nowIso));
+      current.push(normalizeCurrentAnimeEntry(entry, nowIso));
     }
-    return items.sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+    return current.sort((a, b) =>
+      b.item.lastUpdated.localeCompare(a.item.lastUpdated),
+    );
   });
 }
 
