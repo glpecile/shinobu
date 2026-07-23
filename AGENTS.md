@@ -171,6 +171,13 @@ After a change, state whether it's picked up live or requires native regeneratio
 - **Surface partial failure.** If one connected provider's write fails while others
   succeed, the caller must know which one failed — don't swallow it into a single
   boolean/throw.
+- **Never a dead-end error.** An unsupported-or-failed provider write (a
+  platform where the write is structurally impossible, e.g. Letterboxd on
+  web — `registry.ts`'s `unsupportedWritePlatforms` — or any runtime write
+  failure/reasoned skip) surfaces a manual deep link to that provider's page
+  for the item instead, built by `lib/providers/external-urls.ts`'s
+  `providerItemUrl` (plan 0022). Not oxlint-enforceable — reviewer-enforced,
+  like the Suspense rule above.
 
 ## Theming
 
