@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
@@ -12,9 +13,11 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
+import { manualLinkForOutcome } from './manual-log-links';
 import { parseTags } from './parse-tags';
+import { OutcomeLink } from './outcome-link';
 import { useLogMedia } from './use-log-media';
-import { useLogTargets } from './use-log-targets';
+import { useLogTargetsSplit } from './use-log-targets';
 import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
 
 /**
@@ -48,7 +51,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   const [tags, setTags] = useState(DEFAULT_TAGS);
-  const targets = useLogTargets(item);
+  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
 
   const isFilmLike =
@@ -92,6 +95,8 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           : hasAired(episodeData.firstAired)));
 
   const result = logMedia.data;
+  const accent = useCSSVariable('--color-accent');
+  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   function confirmLog() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
@@ -160,9 +165,24 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         </Text>
       )}
       {result != null && result.failed.length > 0 && (
-        <Text className="text-accent font-sans text-sm mt-2">
-          Failed on {labels(result.failed)}.
-        </Text>
+        <View className="mt-2 gap-1">
+          <Text className="text-accent font-sans text-sm">
+            Failed on {labels(result.failed)}.
+          </Text>
+          {result.outcomes
+            .filter((outcome) => outcome.status === 'error')
+            .map((outcome) => {
+              const link = manualLinkForOutcome(outcome, item);
+              return link != null ? (
+                <OutcomeLink
+                  accentColor={accentColor}
+                  key={outcome.provider}
+                  provider={outcome.provider}
+                  url={link}
+                />
+              ) : null;
+            })}
+        </View>
       )}
 
       <LogConfirmSheet
@@ -182,7 +202,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
               ? `“${item.title}” is already in your history — this logs another watch.`
               : `Mark “${item.title}” as watched.`
         }
+        item={item}
         logMedia={logMedia}
+        manualTargets={manualTargets}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}

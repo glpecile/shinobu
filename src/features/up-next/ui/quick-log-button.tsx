@@ -14,7 +14,7 @@ import {
   prefetchLogReconcile,
   useLogMedia,
 } from '@/features/log-media/use-log-media';
-import { useLogTargets } from '@/features/log-media/use-log-targets';
+import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { UpNextEntry } from '@/features/up-next/types';
 import { haptics } from '@/lib/haptics';
 import { useConnectedProviders } from '@/state/session';
@@ -49,7 +49,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
   const queryClient = useQueryClient();
   const connected = useConnectedProviders();
   const logMedia = useLogMedia();
-  const targets = useLogTargets(entry.item);
+  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(entry.item);
   const fetching = useUpNextSettling();
 
   const [open, setOpen] = useState(false);
@@ -167,7 +167,9 @@ export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
           selectedProviders,
         )}
         description={`Log episode ${entry.episode.number} of “${entry.item.title}”.`}
+        item={entry.item}
         logMedia={logMedia}
+        manualTargets={manualTargets}
         onClose={() => setOpen(false)}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}

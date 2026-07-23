@@ -90,3 +90,19 @@ export function providerItemUrl(providerId: ProviderId, item: UrlItem): string |
       return serializdUrl(item);
   }
 }
+
+const PROVIDER_HOME_URLS: Record<ProviderId, string> = {
+  trakt: 'https://trakt.tv',
+  anilist: 'https://anilist.co',
+  letterboxd: 'https://letterboxd.com',
+  serializd: 'https://serializd.com',
+};
+
+/**
+ * The provider's log surface root — the degrade target for the manual-log
+ * row (plan 0022 R4) when `providerItemUrl` can't build an item-specific URL.
+ * The affordance must never vanish silently.
+ */
+export function providerHomeUrl(providerId: ProviderId): string {
+  return PROVIDER_HOME_URLS[providerId];
+}

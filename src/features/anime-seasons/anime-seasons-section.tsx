@@ -11,7 +11,7 @@ import {
   LogConfirmSheet,
 } from '@/features/log-media/log-confirm-sheet';
 import { useLogMedia } from '@/features/log-media/use-log-media';
-import { useLogTargets } from '@/features/log-media/use-log-targets';
+import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { parseTags } from '@/features/log-media/parse-tags';
 import {
   SeasonAccordion,
@@ -55,7 +55,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     mediaId,
     enabled: connected.includes('anilist'),
   });
-  const targets = useLogTargets(item);
+  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const canLog = targets.length > 0;
 
   const logMedia = useLogMedia();
@@ -144,7 +144,9 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       <LogConfirmSheet
         confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}
         description={pending?.description ?? ''}
+        item={item}
         logMedia={logMedia}
+        manualTargets={manualTargets}
         onClose={() => setPending(null)}
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}

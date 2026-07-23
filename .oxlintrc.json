@@ -130,7 +130,7 @@
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/presstable.tsx",
         "src/components/zoomable-image/index.tsx",
-        "src/lib/open-external-url/index.native.ts"
+        "src/lib/open-external-url/index.ts"
       ],
       "rules": {
         "no-restricted-imports": [

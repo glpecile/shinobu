@@ -6,8 +6,13 @@ import { useCSSVariable } from 'uniwind';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import type { NormalizedMediaItem } from '@/types/media';
+import { manualLinkForOutcome, manualRowsFor } from './manual-log-links';
+import type { ProviderLogOutcome } from './fan-out';
+import { OutcomeLink } from './outcome-link';
 import { useLogMedia } from './use-log-media';
 import { WatchedAtField } from './watched-at-field';
 
@@ -22,6 +27,13 @@ export function confirmLabelFor(
   ids: readonly ProviderId[],
 ): string {
   return ids.length === 0 ? action : `${action} on ${labels(ids)}`;
+}
+
+/** Narrows to an adapter-reported skip (plan 0017 R9) — a reconcile skip carries no reason. */
+function hasSkipReason(
+  outcome: ProviderLogOutcome,
+): outcome is Extract<ProviderLogOutcome, { status: 'skipped' }> & { reason: string } {
+  return outcome.status === 'skipped' && outcome.reason != null;
 }
 
 interface ProviderToggleProps {
@@ -148,6 +160,74 @@ function ProviderPicker({
 }
 
 /**
+ * The upfront "log manually" rows (plan 0022 R3/R4) — informational, not a
+ * toggle: muted styling (not accent) so it reads as distinct from the
+ * writable providers above it, and it never affects `canConfirm` or
+ * `confirmLabelFor` (those only ever see `targets`/`selectedProviders`,
+ * which exclude manual-only providers entirely).
+ */
+function ManualLogRows({
+  manual,
+  item,
+}: {
+  manual: readonly ProviderId[];
+  item: NormalizedMediaItem;
+}) {
+  const muted = useCSSVariable('--color-muted');
+  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const rows = manualRowsFor(manual, item);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <View className="mt-2 rounded-lg border border-border bg-background p-1">
+      {rows.map(({ provider, url }) => (
+        <PresstableOpacity
+          accessibilityLabel={`Log manually on ${PROVIDERS[provider].label}`}
+          className="flex-row items-center justify-between px-3 py-2.5 rounded-md"
+          key={provider}
+          onPress={() => openExternalUrl(url)}
+        >
+          <View className="flex-row items-center gap-3">
+            <ProviderIcon id={provider} size={18} />
+            <Text className="text-muted font-sans-semibold text-sm">
+              Log manually on {PROVIDERS[provider].label}
+            </Text>
+          </View>
+          <Ionicons color={mutedColor} name="open-outline" size={16} />
+        </PresstableOpacity>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * One failure/skip message line, with a "Log on {Provider}" external link
+ * beneath it when the provider's item URL is buildable (plan 0022 R5/R6).
+ */
+function OutcomeMessage({
+  outcome,
+  message,
+  item,
+  accentColor,
+}: {
+  outcome: ProviderLogOutcome;
+  message: string;
+  item: NormalizedMediaItem;
+  accentColor?: string;
+}) {
+  const link = manualLinkForOutcome(outcome, item);
+  return (
+    <View>
+      <Text className="text-muted font-sans text-xs">{message}</Text>
+      {link != null && (
+        <OutcomeLink accentColor={accentColor} provider={outcome.provider} url={link} />
+      )}
+    </View>
+  );
+}
+
+/**
  * The shared confirm/backdate sheet behind every log action (plan 0010
  * extracts this from the movie `LogMediaButton`). It shows the write targets,
  * a backdate field, per-provider partial failure (kept in context rather than
@@ -160,7 +240,15 @@ export interface LogConfirmSheetProps {
   onClose: () => void;
   title: string;
   description: string;
+  /** The item being logged — needed to build manual/outcome provider links (plan 0022). */
+  item: NormalizedMediaItem;
   targets: readonly ProviderId[];
+  /**
+   * Targets whose write is unsupported on this platform (e.g. Letterboxd on
+   * web, plan 0022 R1–R4) — shown as a non-toggleable "log manually" row,
+   * never part of `targets`/`selectedProviders`.
+   */
+  manualTargets?: readonly ProviderId[];
   /** Which of `targets` are actually selected — defaults to all targets. */
   selectedProviders: ProviderId[];
   onSelectedProvidersChange: (ids: ProviderId[]) => void;
@@ -185,7 +273,9 @@ export function LogConfirmSheet({
   onClose,
   title,
   description,
+  item,
   targets,
+  manualTargets = [],
   selectedProviders,
   onSelectedProvidersChange,
   logMedia,
@@ -199,10 +289,20 @@ export function LogConfirmSheet({
 }: LogConfirmSheetProps) {
   const result = logMedia.data;
   const muted = useCSSVariable('--color-muted');
+  const accent = useCSSVariable('--color-accent');
+  const accentColor = typeof accent === 'string' ? accent : undefined;
   const showTagsField =
     onTagsChange != null &&
     (selectedProviders.includes('letterboxd') ||
       selectedProviders.includes('serializd'));
+  // Reconcile skips (no reason — already in sync) keep the original combined
+  // copy; adapter-reported skips (a reason, e.g. an unresolvable Serializd
+  // season, plan 0017 R9) get their own line + manual link (plan 0022 R6).
+  const reconcileSkipped: ProviderId[] =
+    result?.outcomes
+      .filter((outcome) => outcome.status === 'skipped' && outcome.reason == null)
+      .map((outcome) => outcome.provider) ?? [];
+  const reasonedSkips = result?.outcomes.filter(hasSkipReason) ?? [];
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(
@@ -239,6 +339,7 @@ export function LogConfirmSheet({
         selectedProviders={selectedProviders}
         targets={targets}
       />
+      <ManualLogRows item={item} manual={manualTargets} />
       {selectedProviders.length === 0 && (
         <Text className="text-accent font-sans text-sm mt-2">
           Select at least one provider to log.
@@ -271,24 +372,40 @@ export function LogConfirmSheet({
               : '.'}
           </Text>
           {/* The per-provider reason (e.g. Letterboxd film not found, session
-              expired) — without it every failure looks identical (plan 0012). */}
+              expired) — without it every failure looks identical (plan 0012).
+              Each line gets a "Log on {Provider}" manual link when buildable
+              (plan 0022 R5). */}
           {result.outcomes
             .filter((outcome) => outcome.status === 'error')
             .map((outcome) => (
-              <Text
+              <OutcomeMessage
+                accentColor={accentColor}
+                item={item}
                 key={outcome.provider}
-                className="text-muted font-sans text-xs"
-              >
-                {outcome.message}
-              </Text>
+                message={outcome.message}
+                outcome={outcome}
+              />
             ))}
         </View>
       )}
-      {result != null && result.skipped.length > 0 && (
+      {reconcileSkipped.length > 0 && (
         <Text className="text-muted font-sans text-sm mt-3">
-          {labels(result.skipped)} already had this logged — skipped to keep
+          {labels(reconcileSkipped)} already had this logged — skipped to keep
           both in sync.
         </Text>
+      )}
+      {reasonedSkips.length > 0 && (
+        <View className="mt-3 gap-1">
+          {reasonedSkips.map((outcome) => (
+            <OutcomeMessage
+              accentColor={accentColor}
+              item={item}
+              key={outcome.provider}
+              message={`${PROVIDERS[outcome.provider].label}: ${outcome.reason}`}
+              outcome={outcome}
+            />
+          ))}
+        </View>
       )}
       {logMedia.isError && (
         <Text className="text-accent font-sans text-sm mt-3">
