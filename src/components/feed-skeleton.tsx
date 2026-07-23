@@ -159,11 +159,21 @@ export function UpNextSectionSkeleton() {
             <ShimmerDayCell key={index} />
           ))}
         </ScrollView>
-        {/* The content area below the strip — reserved, not filled: today
-            (the default selection) is usually empty since its episodes have
-            already aired into Continue Watching, so an empty box is the most
-            faithful placeholder for the resolved state. */}
-        <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }} />
+        {/* The content area below the strip — a landscape card row, mirroring a
+            selected day that holds upcoming episodes. Same height as the
+            reserved box either way (card height ≈ DAY_CONTENT_MIN_HEIGHT), so a
+            day that resolves empty still doesn't shift the feed. */}
+        <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }}>
+          <ScrollView
+            horizontal
+            className="px-4"
+            showsHorizontalScrollIndicator={false}
+          >
+            {Array.from({ length: cardCount }).map((_, index) => (
+              <ShimmerLandscapeCard key={index} />
+            ))}
+          </ScrollView>
+        </View>
       </View>
     </View>
   );
