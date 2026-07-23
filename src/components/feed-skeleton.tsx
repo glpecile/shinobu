@@ -91,28 +91,80 @@ function ShimmerLandscapeCard() {
   );
 }
 
+// Must equal the day-content area's reserved height in `up-next-section.tsx`
+// (DAY_CONTENT_MIN_HEIGHT). The real section locks this height whether the
+// selected day holds cards or the centered empty state, so the skeleton
+// reserves the same box — otherwise the row still jumps when it resolves.
+const DAY_CONTENT_MIN_HEIGHT = 188;
+
+function ShimmerDayCell() {
+  // Mirrors the real cell's internal stack (weekday · date · dot row) so the
+  // strip is the same height here as once it resolves.
+  return (
+    <View className="w-14 py-2 mr-2 items-center rounded-md border border-border/60 bg-surface">
+      <View className="h-4 w-7 bg-muted/20 rounded" />
+      <View className="h-6 w-6 bg-muted/30 rounded mt-0.5" />
+      <View className="h-1.5 mt-1" />
+    </View>
+  );
+}
+
+function SkeletonSectionHeader({ widthClass }: { widthClass: string }) {
+  // text-xl title height (no eyebrow — the real header dropped it), mb-3 gap.
+  return <View className={`h-7 ${widthClass} bg-muted/20 rounded mb-3 mx-4`} />;
+}
+
 /**
- * Fallback for an Up Next section (plan 0019): landscape cards, since a
- * poster-shaped skeleton would resolve into a differently sized row and shift
- * everything under it.
+ * Fallback for the whole Up Next block (plan 0019). It mirrors the *resolved*
+ * layout — a Continue Watching landscape row **and** the "This week" header,
+ * 7-day strip, and its fixed-height content area — because the section is the
+ * heaviest home query and resolves last: a single-row skeleton would grow by
+ * ~300px on resolve and shove every row beneath it down after the user is
+ * already reading. Reserving both sub-sections' height keeps that from moving.
+ *
+ * (If a user has no Continue Watching, the real section omits that row and the
+ * feed nudges *up* on resolve — the far rarer, far gentler case than the
+ * downward jump this prevents for the common "has continue-watching" user.)
  */
 export function UpNextSectionSkeleton() {
   const { width } = useWindowDimensions();
   const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
+  const dayCount = 7;
 
   return (
-    <View className="mb-6">
-      <View className="h-3 w-24 bg-muted/20 rounded mb-2 mx-4" />
-      <View className="h-7 w-44 bg-muted/20 rounded mb-3 mx-4" />
-      <ScrollView
-        horizontal
-        className="px-4"
-        showsHorizontalScrollIndicator={false}
-      >
-        {Array.from({ length: cardCount }).map((_, index) => (
-          <ShimmerLandscapeCard key={index} />
-        ))}
-      </ScrollView>
+    <View>
+      {/* Continue Watching */}
+      <View className="mb-6">
+        <SkeletonSectionHeader widthClass="w-48" />
+        <ScrollView
+          horizontal
+          className="px-4"
+          showsHorizontalScrollIndicator={false}
+        >
+          {Array.from({ length: cardCount }).map((_, index) => (
+            <ShimmerLandscapeCard key={index} />
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* This week */}
+      <View className="mb-6">
+        <SkeletonSectionHeader widthClass="w-28" />
+        <ScrollView
+          horizontal
+          className="px-4"
+          showsHorizontalScrollIndicator={false}
+        >
+          {Array.from({ length: dayCount }).map((_, index) => (
+            <ShimmerDayCell key={index} />
+          ))}
+        </ScrollView>
+        {/* The content area below the strip — reserved, not filled: today
+            (the default selection) is usually empty since its episodes have
+            already aired into Continue Watching, so an empty box is the most
+            faithful placeholder for the resolved state. */}
+        <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }} />
+      </View>
     </View>
   );
 }

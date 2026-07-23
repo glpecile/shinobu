@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Head from '@/components/head';
 import {
@@ -34,6 +34,7 @@ import {
   YourWatchlistRow,
 } from '@/features/feed/feed-rows';
 import { UpNextSection } from '@/features/up-next/up-next-section';
+import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { routes } from '@/lib/routes';
@@ -126,6 +127,12 @@ function FeedScreen() {
   const router = useRouter();
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
+  // Warm each provider host's connection pool as the feed mounts — a beat ahead
+  // of the Up Next request waterfall, so its first reads skip the cold
+  // handshake. Native-only (no-op on web); self-guarded to run once.
+  useEffect(() => {
+    warmProviderConnections(connected);
+  }, [connected]);
   // The `feedProviders` gate also keeps this MMKV read out of web SSR renders
   // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
   const letterboxdUsername = feedProviders.includes('letterboxd')
