@@ -78,6 +78,27 @@ jobs:
             echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_PASSWORD=${{ secrets.SHINOBU_UPLOAD_KEY_PASSWORD }}"
           } >> "$GITHUB_ENV"
 
+      # Builder-supplied provider credentials (AGENTS.md: TMDB is
+      # "builder-supplied"; Trakt/AniList follow the same one-tap-connect
+      # pattern) baked into the shipped APK via Expo's standard
+      # EXPO_PUBLIC_* env handling — the same file Metro reads locally
+      # (.env.local). A missing secret just writes an empty value, which
+      # every consumer already treats as "ship without this credential"
+      # (falls back to per-user guided setup, never a build failure).
+      # EXPO_PUBLIC_ANILIST_CLIENT_ID (the *web* client) is a no-op here —
+      # native only reads EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID
+      # (src/lib/providers/anilist/config.ts) — included anyway for parity
+      # with local dev's .env.local.
+      - name: Write provider credentials
+        run: |
+          cat > .env.local <<'ENVFILE'
+          EXPO_PUBLIC_TRAKT_CLIENT_ID=${{ secrets.EXPO_PUBLIC_TRAKT_CLIENT_ID }}
+          EXPO_PUBLIC_TRAKT_CLIENT_SECRET=${{ secrets.EXPO_PUBLIC_TRAKT_CLIENT_SECRET }}
+          EXPO_PUBLIC_ANILIST_CLIENT_ID=${{ secrets.EXPO_PUBLIC_ANILIST_CLIENT_ID }}
+          EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID=${{ secrets.EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID }}
+          EXPO_PUBLIC_TMDB_TOKEN=${{ secrets.EXPO_PUBLIC_TMDB_TOKEN }}
+          ENVFILE
+
       - name: Prebuild Android project
         run: bunx expo prebuild --platform android
 

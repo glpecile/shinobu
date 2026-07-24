@@ -65,6 +65,31 @@ back to Android's own debug signing and suffixes artifacts
 `-unsigned-debug`. That's what makes the `workflow_dispatch` dry-run
 agent-verifiable without ever touching real signing material.
 
+### 3. Provider credentials (optional, but recommended)
+
+These aren't signing material — they're the same builder-supplied
+`EXPO_PUBLIC_*` credentials `.env.local` provides for local dev (AGENTS.md:
+TMDB is "builder-supplied"; Trakt/AniList follow the same one-tap-connect
+pattern). Baking them into the release build means the shipped APK connects
+to each provider in one tap instead of falling back to per-user guided setup.
+Unlike the signing key, these are inherently extractable from a public
+APK once shipped — that's expected for embedded OAuth client credentials
+(same threat model as any "public client" mobile app), not a leak.
+
+| Secret name | Value |
+| --- | --- |
+| `EXPO_PUBLIC_TRAKT_CLIENT_ID` | your Trakt app's client id |
+| `EXPO_PUBLIC_TRAKT_CLIENT_SECRET` | your Trakt app's client secret |
+| `EXPO_PUBLIC_ANILIST_CLIENT_ID` | AniList **web** client id — no-op for Android, included for parity with local `.env.local` |
+| `EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID` | AniList client registered to `shinobu://redirect` — the one Android actually uses |
+| `EXPO_PUBLIC_TMDB_TOKEN` | TMDB v4 read token |
+
+`release.yml`'s "Write provider credentials" step writes these into a
+`.env.local` file before `expo prebuild`, exactly mirroring local dev. Any
+subset can be absent — each consumer already treats a missing value as "ship
+without this credential" (falls back to guided per-user setup), never a
+build failure.
+
 ## Cutting a release
 
 ### 1. Bump the version
