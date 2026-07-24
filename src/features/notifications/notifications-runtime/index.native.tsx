@@ -1,15 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
-import { AppState, Platform, type AppStateStatus } from 'react-native';
-
-import { useNotificationsEnabled } from '@/state/prefs/notifications';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import {
   registerNotificationsBackgroundTask,
   unregisterNotificationsBackgroundTask,
-} from './background-task';
-import { createRefreshDeps, refreshNotifications } from './refresh';
+} from '@/features/notifications/background-task';
+import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
+import { useNotificationsEnabled } from '@/state/prefs/notifications';
 
 // Module-eval side effect (this file is imported eagerly from
 // `app/_layout.tsx`, same as `background-task`'s `defineTask`): without a
@@ -39,8 +38,6 @@ export function NotificationsRuntime(): null {
   const enabled = useNotificationsEnabled();
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-
     void refreshNotifications(createRefreshDeps(queryClient));
 
     // refreshNotifications reads the toggle live on every call (R8), so this
@@ -58,7 +55,6 @@ export function NotificationsRuntime(): null {
   }, [queryClient]);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
     if (enabled) {
       void registerNotificationsBackgroundTask();
     } else {

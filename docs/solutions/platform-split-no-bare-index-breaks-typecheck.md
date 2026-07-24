@@ -42,5 +42,10 @@ scheduler/
 ```
 
 Applies to plan 0020 (release notifications) — `features/notifications/scheduler`,
-`features/notifications/notifications-settings`, and
-`features/notifications/use-notification-tap-navigation` all follow this shape.
+`features/notifications/notifications-settings`,
+`features/notifications/use-notification-tap-navigation`,
+`features/notifications/notifications-runtime`, and
+`features/notifications/background-task` all follow this shape (the latter two
+were fixed after initially landing as bare, non-split files that pulled
+`expo-notifications`/`expo-task-manager`/`expo-background-task` into the web
+bundle — see `docs/solutions/expo-notifications-foreground-handler.md`).
