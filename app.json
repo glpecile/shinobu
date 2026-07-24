@@ -35,6 +35,9 @@
         {
           "ios": {
             "deploymentTarget": "16.4"
+          },
+          "android": {
+            "extraMavenRepos": ["https://maven.mozilla.org/maven2"]
           }
         }
       ],
