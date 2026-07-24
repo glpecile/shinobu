@@ -1,5 +1,7 @@
 import { Redirect } from 'expo-router';
 
+import { routes } from '@/lib/routes';
+
 /**
  * Lands `shinobu://redirect` (Trakt's `?code=...&state=...`, AniList's
  * `#access_token=...`) on a real matched route instead of expo-router's
@@ -16,5 +18,5 @@ import { Redirect } from 'expo-router';
  * give it somewhere real to land — send it straight to the Connect screen.
  */
 export default function OAuthRedirect() {
-  return <Redirect href="/(tabs)/connect" />;
+  return <Redirect href={routes.connect} />;
 }
