@@ -35,10 +35,21 @@
         {
           "ios": {
             "deploymentTarget": "16.4"
+          },
+          "android": {
+            "extraMavenRepos": ["https://maven.mozilla.org/maven2"]
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/adaptive-icon-monochrome.png",
+          "color": "#DC2626"
+        }
+      ]
     ],
     "name": "Shinobu",
     "slug": "shinobu",

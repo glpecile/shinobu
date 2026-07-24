@@ -1,7 +1,14 @@
 ---
-status: pending
+status: done
 priority: P3
 ---
+
+> **Done (2026-07-23):** Implemented per `docs/plans/0020-release-notifications.md`.
+> Episode-airing notifications only (movie releases stay deferred — see that
+> plan's Scope Boundaries). Local-only via expo-notifications, refreshed on
+> app foreground (throttled) and by an `expo-background-task` WorkManager
+> task (~12h, Android; opportunistic on iOS), gated by an opt-in toggle on
+> Manage Trackers. All acceptance criteria below are met.
 
 # Release Notifications (New Episodes / Movie Releases)
 

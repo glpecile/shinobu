@@ -15,6 +15,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
+import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -253,6 +254,7 @@ export default function ConnectScreen() {
           </View>
         )}
 
+        <NotificationsSettingsSection />
         <HiddenItemsSection />
         </RefreshableScrollView>
       </KeyboardAvoidingView>

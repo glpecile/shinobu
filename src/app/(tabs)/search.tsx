@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import Head from '@/components/head';
 import { Text, TextInput, View } from 'react-native';
@@ -11,6 +11,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
+import { onSearchTabPressed } from '@/features/search/focus-signal';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useAniListSearchQuery } from '@/state/queries/anilist';
@@ -170,6 +171,14 @@ export default function SearchScreen() {
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const muted = useCSSVariable('--color-muted');
+  const inputRef = useRef<TextInput>(null);
+
+  // The native "search" tab role only auto-focuses the field on iOS (its
+  // dedicated search-tab UIKit affordance) — Android has no equivalent, so
+  // tapping an already-active search tab did nothing. `onSearchTabPressed`
+  // fires on every tap of that tab (see app/(tabs)/_layout.tsx), so this
+  // opens the keyboard the same way on both platforms.
+  useEffect(() => onSearchTabPressed(() => inputRef.current?.focus()), []);
 
   // A real debounce (not useDeferredValue, which settles per keystroke and
   // fired a request for every character): the query — and the shareable
@@ -212,6 +221,7 @@ export default function SearchScreen() {
           onChangeText={setInput}
           placeholder="Search movies, shows, anime & manga"
           placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+          ref={inputRef}
           returnKeyType="search"
           value={input}
         />
