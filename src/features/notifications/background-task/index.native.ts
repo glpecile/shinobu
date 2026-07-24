@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 
-import { createRefreshDeps, refreshNotifications } from './refresh';
+import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
 
 /**
  * The Android WorkManager / iOS BGTaskScheduler background refresh (plan
