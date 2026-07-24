@@ -1,0 +1,41 @@
+# Applies a release-notes category label from the PR's conventional-commit
+# title prefix (feat:/fix:/chore:/...). Exists because GitHub's own
+# .github/release.yml auto-generated notes categorize by label only, never by
+# title (docs/plans/0021 R7/KTD-4) — this is the missing glue, using nothing
+# but the preinstalled `gh` CLI (no third-party actions, matching KTD-4).
+name: PR labels
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure release-note labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create feature --repo "$GITHUB_REPOSITORY" --color 0e8a16 --description "Included in release notes as a Feature" --force
+          gh label create fix --repo "$GITHUB_REPOSITORY" --color d73a4a --description "Included in release notes as a Fix" --force
+          gh label create maintenance --repo "$GITHUB_REPOSITORY" --color ededed --description "Included in release notes as Maintenance" --force
+
+      - name: Apply label from title prefix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          case "$TITLE" in
+            feat:*|feat\(*) LABEL=feature ;;
+            fix:*|fix\(*) LABEL=fix ;;
+            chore:*|chore\(*|refactor:*|refactor\(*|docs:*|docs\(*|test:*|test\(*|build:*|build\(*|ci:*|ci\(*) LABEL=maintenance ;;
+            *) LABEL="" ;;
+          esac
+          if [ -n "$LABEL" ]; then
+            gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label "$LABEL"
+          fi

@@ -1,0 +1,27 @@
+# Configures `gh release create --generate-notes` categorization (used by
+# .github/workflows/release.yml on tag pushes). GitHub only categorizes by PR
+# label, never by title (docs/plans/0021 R7) — labels are applied
+# automatically from each PR's conventional-commit title prefix by
+# .github/workflows/pr-labels.yml, so this stays in sync with the feat:/fix:
+# convention the repo already follows without anyone hand-labeling PRs.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+      - app/dependabot
+      - app/github-actions
+  categories:
+    - title: Features
+      labels:
+        - feature
+    - title: Fixes
+      labels:
+        - fix
+    - title: Maintenance
+      labels:
+        - maintenance
+    - title: Other Changes
+      labels:
+        - '*'

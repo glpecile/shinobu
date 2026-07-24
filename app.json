@@ -43,6 +43,7 @@
       ],
       "expo-font",
       "expo-background-task",
+      "./plugins/with-release-signing.js",
       [
         "expo-notifications",
         {
@@ -53,6 +54,7 @@
     ],
     "name": "Shinobu",
     "slug": "shinobu",
+    "version": "0.1.0",
     "ios": {
       "bundleIdentifier": "xyz.glpecile.shinobu",
       "icon": {
@@ -63,6 +65,7 @@
     },
     "android": {
       "package": "xyz.glpecile.shinobu",
+      "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
