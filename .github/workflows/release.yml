@@ -1,0 +1,139 @@
+# Otraku-style release channel (docs/plans/0021): tag `vX.Y.Z` builds signed
+# Android APKs and attaches them to a GitHub Release; `workflow_dispatch` runs
+# the same build unsigned (falls back to debug signing, KTD-2) and uploads
+# the APKs as workflow artifacts instead of publishing — the agent-verifiable
+# dry-run path (never creates a tag or release itself). No EAS, no paid
+# services: plain `expo prebuild` + gradle on ubuntu runners (KTD-1).
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Read expo.version
+        id: version
+        run: echo "value=$(bun -e "console.log(require('./app.json').expo.version)")" >> "$GITHUB_OUTPUT"
+
+      # Tag runs only (R3) — workflow_dispatch has no tag to compare against.
+      - name: Verify tag matches expo.version
+        if: github.event_name == 'push'
+        run: |
+          if [ "${{ github.ref_name }}" != "v${{ steps.version.outputs.value }}" ]; then
+            echo "::error::Tag ${{ github.ref_name }} does not match expo.version ${{ steps.version.outputs.value }} (expected v${{ steps.version.outputs.value }})"
+            exit 1
+          fi
+
+      # No keystore secret -> unsigned dry-run build (debug signing fallback,
+      # R5). This is independent of trigger type: a tag push with no secret
+      # configured yet also produces an -unsigned-debug build rather than
+      # failing, so early tags before the owner runs the runbook (U5) still work.
+      - name: Determine signing mode
+        id: signing
+        run: |
+          if [ -n "${{ secrets.SHINOBU_KEYSTORE_BASE64 }}" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "suffix=" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "suffix=-unsigned-debug" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Decode release keystore
+        if: steps.signing.outputs.signed == 'true'
+        run: echo "${{ secrets.SHINOBU_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      # Only set when signed — leaving these unset (rather than set-but-empty)
+      # is what makes `plugins/with-release-signing.js`'s
+      # `project.hasProperty(...)` fallback to debug signing actually fire.
+      - name: Configure release signing properties
+        if: steps.signing.outputs.signed == 'true'
+        run: |
+          {
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_STORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_STORE_PASSWORD=${{ secrets.SHINOBU_UPLOAD_STORE_PASSWORD }}"
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_ALIAS=${{ secrets.SHINOBU_UPLOAD_KEY_ALIAS }}"
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_PASSWORD=${{ secrets.SHINOBU_UPLOAD_KEY_PASSWORD }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Prebuild Android project
+        run: bunx expo prebuild --platform android
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Build universal release APK
+        working-directory: android
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Stage universal APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk \
+            "dist/shinobu-v${{ steps.version.outputs.value }}-universal${{ steps.signing.outputs.suffix }}.apk"
+
+      - name: Build arm64-v8a release APK
+        working-directory: android
+        run: ./gradlew :app:assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+
+      - name: Stage arm64-v8a APK
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk \
+            "dist/shinobu-v${{ steps.version.outputs.value }}-arm64-v8a${{ steps.signing.outputs.suffix }}.apk"
+
+      - name: Checksum artifacts
+        working-directory: dist
+        run: for f in *.apk; do sha256sum "$f" > "$f.sha256"; done
+
+      # workflow_dispatch never creates a tag or release (Goal Capsule stop
+      # condition) — the dry-run path is inspecting these workflow artifacts.
+      - name: Upload dry-run artifacts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shinobu-dry-run-apks
+          path: dist/*
+          retention-days: 14
+
+      - name: Create/update GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG" \
+              --generate-notes
+          fi
