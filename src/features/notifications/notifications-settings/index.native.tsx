@@ -1,8 +1,8 @@
-import { Switch } from '@expo/ui';
+import { Host, Switch } from '@expo/ui';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useColorScheme, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
@@ -27,6 +27,7 @@ export function NotificationsSettingsSection() {
   const queryClient = useQueryClient();
   const [requesting, setRequesting] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const colorScheme = useColorScheme();
 
   async function handleToggle(next: boolean): Promise<void> {
     if (!next) {
@@ -66,7 +67,17 @@ export function NotificationsSettingsSection() {
               Local notifications when a tracked show's next episode airs.
             </Text>
           </View>
-          <Switch disabled={requesting} onValueChange={handleToggle} value={enabled} />
+          {/* Android's Jetpack Compose Switch must live under a Host — without
+              one it throws "SwitchView must be rendered as a direct child of
+              a <Host> component" the moment this section mounts (e.g. on tab
+              switch). iOS's SwiftUI Toggle self-hosts and doesn't need it.
+              `seedColor` themes the switch with the brand accent (matching
+              `--color-accent` / NativeTabs' tintColor) instead of the
+              platform's default Material blue; `colorScheme` follows the
+              device theme instead of Compose's own default (light). */}
+          <Host colorScheme={colorScheme ?? undefined} ignoreSafeArea="all" matchContents seedColor="#DC2626">
+            <Switch disabled={requesting} onValueChange={handleToggle} value={enabled} />
+          </Host>
         </View>
         {permissionDenied && (
           <Text className="text-muted font-sans text-xs">
@@ -74,7 +85,7 @@ export function NotificationsSettingsSection() {
             system settings.
           </Text>
         )}
-        {enabled && (
+        {__DEV__ && enabled && (
           <PresstableOpacity
             className="border border-border px-4 py-2 rounded self-start"
             onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}

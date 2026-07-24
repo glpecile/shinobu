@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 
@@ -9,6 +10,21 @@ import {
   unregisterNotificationsBackgroundTask,
 } from './background-task';
 import { createRefreshDeps, refreshNotifications } from './refresh';
+
+// Module-eval side effect (this file is imported eagerly from
+// `app/_layout.tsx`, same as `background-task`'s `defineTask`): without a
+// handler, expo-notifications' default policy is to NOT display a banner
+// while the app is foregrounded — every scheduled notification (including
+// the settings screen's "Send test notification", which fires ~5s later
+// while the app is still open) was silently swallowed instead of shown.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 /**
  * Mounted once at the app root (plan 0020 U5): refreshes the scheduled
