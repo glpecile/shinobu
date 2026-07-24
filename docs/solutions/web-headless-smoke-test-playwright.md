@@ -125,6 +125,28 @@ node probe.mjs http://localhost:8081/details/123   poster.png  "[data-testid=pos
 
 Prints `No console errors.` or the collected errors, and writes the PNG.
 
+## Screenshotting real content with no tracker connected
+
+A fresh Playwright profile has no tokens in `localStorage`, so every
+provider-backed surface (home feed, diary, Up Next) renders the logged-out hero.
+The TMDB-keyed routes don't need a session — `EXPO_PUBLIC_TMDB_TOKEN` is a
+builder credential, not a user one — so `/person/<tmdbId>` and
+`/studio/<tmdbId>` render fully populated on a cold visit. Expect 403s in the
+console from the Trakt/AniList calls that *do* need a token; they're the
+unconnected state, not a break.
+
+`/details/<id>` is the exception: it resolves its item out of the feed/search/
+diary/TMDB **query caches** (`src/app/details/[id].tsx`), so navigating straight
+to the URL renders nothing. Reach it by clicking a credit card on a person page
+in the same page session:
+
+```js
+await page.locator('text=The Boy and the Heron').first().click();
+```
+
+Give remote posters/backdrops ~4s to decode after `networkidle` before
+screenshotting, or the shot catches 忍 placeholder tiles.
+
 ## Before/after PR screenshots (on request)
 
 When asked for before/after shots on a PR, screenshot the **base branch** and the

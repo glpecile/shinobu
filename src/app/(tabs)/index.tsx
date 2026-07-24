@@ -56,11 +56,10 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
 
   return (
     <View className="flex-1 items-center justify-center px-8">
-      {/* Floating provider marks — the trackers Shinobu fans out to. The
-          fourth corner carries the 忍 brand mark. On narrow screens the
-          centered copy occupies the middle band, so the tiles retreat to the
-          genuinely empty regions: just under the header and just above the
-          bottom edge. */}
+      {/* Floating provider marks — one corner per tracker Shinobu writes to.
+          On narrow screens the centered copy occupies the middle band, so the
+          tiles retreat to the genuinely empty regions: just under the header
+          and just above the bottom edge. */}
       <FloatingTile
         delay={0}
         rotate="-8deg"
@@ -93,9 +92,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
         rotate="-6deg"
         style={{ bottom: compact ? '15%' : '20%', right: inset, width: tile, height: tile }}
       >
-        <Text className="text-accent" style={{ fontSize: icon }}>
-          忍
-        </Text>
+        <ProviderIcon id="serializd" size={icon} />
       </FloatingTile>
 
       {/* The headline/copy/CTA is the shared empty-state tile (hero size); the
