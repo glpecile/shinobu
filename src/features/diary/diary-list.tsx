@@ -1,5 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -167,10 +167,11 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
 }
 
 /**
- * Web-only ⋯ that opens the row's actions dialog, revealed while the pointer is
- * over the row — long-press is the native gesture and isn't discoverable with a
- * mouse (same reasoning as the media card's hover ⋯). The slot keeps its width
- * whether or not the button shows, so hovering never reflows the row.
+ * Web-only ⋯ that opens the row's actions dialog, sitting just past the title
+ * and revealed while the pointer is over the row — long-press is the native
+ * gesture and isn't discoverable with a mouse (same reasoning as the media
+ * card's hover ⋯). The slot keeps its width whether or not the button shows, so
+ * hovering never nudges the title.
  */
 function DiaryRowActionsButton({
   item,
@@ -182,9 +183,8 @@ function DiaryRowActionsButton({
   onActions: (item: NormalizedMediaItem) => void;
 }) {
   const muted = useCSSVariable('--color-muted');
-  if (process.env.EXPO_OS !== 'web') return null;
   return (
-    <View className="w-9 items-end">
+    <View className="w-10 items-center">
       {visible && (
         <PresstableOpacity
           accessibilityLabel={`More options for ${item.title}`}
@@ -202,42 +202,103 @@ function DiaryRowActionsButton({
   );
 }
 
+/** Accessibility props forwarded to a row's pressable(s). */
+type RowAccessibility = Pick<
+  ComponentProps<typeof PresstableScale>,
+  'accessibilityHint' | 'accessibilityLabel' | 'accessibilityRole' | 'accessibilityState'
+>;
+
+interface DiaryRowShellProps {
+  item: NormalizedMediaItem;
+  /** ⌘/Ctrl+click target on web. */
+  href: string;
+  onPress: () => void;
+  onActions: (item: NormalizedMediaItem) => void;
+  /** Poster + text, up to where the ⋯ sits. Shrinks; never `flex-1`. */
+  leading: ReactNode;
+  /** Provider marks, chevron — pushed to the row's right edge. */
+  trailing: ReactNode;
+  /** Padding/height for the row container. */
+  className: string;
+  accessibility?: RowAccessibility;
+}
+
 /**
- * The interaction wiring every diary row shares: long-press opens the card
- * actions dialog, ⌘/Ctrl+click opens details in a new tab on web, and hovering
- * reveals the ⋯ that opens the same dialog. `actionsButton` is rendered as a
- * *sibling* of the row's pressable, never a child — nesting two
- * gesture-handler buttons would let a ⋯ press bubble into the row press.
+ * The interaction shell every diary row shares: press opens details (⌘/Ctrl
+ * +click opens them in a new tab on web), long-press opens the card actions
+ * dialog, and hovering reveals the ⋯ that opens that same dialog.
+ *
+ * The ⋯ belongs beside the title, but it can't be a *child* of the row's
+ * pressable — nesting two gesture-handler buttons would let a ⋯ press bubble
+ * into the row press. So on web the row is split into two sibling pressables,
+ * leading (poster + title) and trailing (provider marks), with the ⋯ between
+ * them: the button sits exactly where the title ends, and both halves carry the
+ * same press/long-press, so the whole row stays one target. Native has no ⋯ —
+ * long-press is its gesture — so it stays a single pressable and keeps a
+ * whole-row press-scale.
  */
-function useDiaryRowActions({
+function DiaryRowShell({
   item,
   href,
+  onPress,
   onActions,
-}: {
-  item: NormalizedMediaItem;
-  /** ⌘/Ctrl+click target; omitted on rows whose press doesn't navigate. */
-  href?: string;
-  onActions: (item: NormalizedMediaItem) => void;
-}) {
+  leading,
+  trailing,
+  className,
+  accessibility,
+}: DiaryRowShellProps) {
   const [hovered, setHovered] = useState(false);
-  const newTab = useNewTabPress(href ?? '');
+  const newTab = useNewTabPress(href);
 
-  return {
-    hoverProps: {
-      onPointerDown: newTab.onPointerDown,
-      onPointerEnter: () => setHovered(true),
-      onPointerLeave: () => setHovered(false),
-    },
-    openedInNewTab: () => href != null && newTab.opened(),
+  const pressProps = {
+    ...accessibility,
     onLongPress: () => onActions(item),
-    actionsButton: (
+    onPress: () => {
+      if (newTab.opened()) return;
+      onPress();
+    },
+  };
+
+  if (process.env.EXPO_OS !== 'web') {
+    return (
+      <PresstableScale
+        className={`flex-row items-center ${className}`}
+        {...pressProps}
+      >
+        {leading}
+        <View className="flex-1" />
+        {trailing}
+      </PresstableScale>
+    );
+  }
+
+  return (
+    <View
+      className={`flex-row items-center ${className}`}
+      onPointerDown={newTab.onPointerDown}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
+      <PresstableScale className="flex-row items-center shrink" {...pressProps}>
+        {leading}
+      </PresstableScale>
       <DiaryRowActionsButton
         item={item}
         onActions={onActions}
         visible={hovered}
       />
-    ),
-  };
+      {/* The empty stretch past the ⋯ is the same target as the title — a click
+          anywhere on the row still opens the item. No a11y props here: the
+          leading half already announces the row. */}
+      <PresstableScale
+        className="flex-1 flex-row items-center justify-end self-stretch"
+        onLongPress={pressProps.onLongPress}
+        onPress={pressProps.onPress}
+      >
+        {trailing}
+      </PresstableScale>
+    </View>
+  );
 }
 
 function DiaryRow({
@@ -254,38 +315,32 @@ function DiaryRow({
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
   });
-  const row = useDiaryRowActions({
-    item: entry.item,
-    href: routes.details(entry.item.id),
-    onActions,
-  });
 
   return (
-    <View className="flex-row items-center px-6 py-2.5" {...row.hoverProps}>
-      <PresstableScale
-        className="flex-1 flex-row items-center"
-        onLongPress={row.onLongPress}
-        onPress={() => {
-          if (row.openedInNewTab()) return;
-          onOpen(entry.item.id);
-        }}
-      >
-        <DiaryPoster item={entry.item} />
-        <View className="flex-1 ml-4">
-          <Text
-            className="text-foreground font-sans-semibold text-base"
-            numberOfLines={1}
-          >
-            {entry.item.title}
-          </Text>
-          {detail !== '' && (
-            <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
-          )}
-        </View>
-        <ProviderCluster providers={entry.providers} />
-      </PresstableScale>
-      {row.actionsButton}
-    </View>
+    <DiaryRowShell
+      className="px-6 py-2.5"
+      href={routes.details(entry.item.id)}
+      item={entry.item}
+      leading={
+        <>
+          <DiaryPoster item={entry.item} />
+          <View className="shrink ml-4">
+            <Text
+              className="text-foreground font-sans-semibold text-base"
+              numberOfLines={1}
+            >
+              {entry.item.title}
+            </Text>
+            {detail !== '' && (
+              <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
+            )}
+          </View>
+        </>
+      }
+      onActions={onActions}
+      onPress={() => onOpen(entry.item.id)}
+      trailing={<ProviderCluster providers={entry.providers} />}
+    />
   );
 }
 
@@ -314,48 +369,48 @@ function DiaryClusterRow({
   });
   const count = formatClusterCount(summary.item.type, summary.count);
   const detail = range !== '' ? `${range} · ${count}` : count;
-  // ⌘/Ctrl+click opens the show in a new tab even though a plain press toggles
-  // the run — the modifier means the same thing on every row of the list.
-  const row = useDiaryRowActions({
-    item: summary.item,
-    href: routes.details(summary.item.id),
-    onActions,
-  });
 
   return (
-    <View className="flex-row items-center px-6 py-2.5" {...row.hoverProps}>
-      <PresstableScale
-        accessibilityHint={expanded ? 'Collapses this run' : 'Expands this run'}
-        accessibilityLabel={`${summary.item.title}, ${count}`}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        className="flex-1 flex-row items-center"
-        onLongPress={row.onLongPress}
-        onPress={() => {
-          if (row.openedInNewTab()) return;
-          onToggle(cluster.key);
-        }}
-      >
-        <DiaryPoster item={summary.item} />
-        <View className="flex-1 ml-4">
-          <Text
-            className="text-foreground font-sans-semibold text-base"
-            numberOfLines={1}
-          >
-            {summary.item.title}
-          </Text>
-          <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
-        </View>
-        <ProviderCluster providers={summary.providers} />
-        <Ionicons
-          color={typeof muted === 'string' ? muted : undefined}
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          style={{ marginLeft: 10 }}
-        />
-      </PresstableScale>
-      {row.actionsButton}
-    </View>
+    <DiaryRowShell
+      accessibility={{
+        accessibilityHint: expanded ? 'Collapses this run' : 'Expands this run',
+        accessibilityLabel: `${summary.item.title}, ${count}`,
+        accessibilityRole: 'button',
+        accessibilityState: { expanded },
+      }}
+      className="px-6 py-2.5"
+      // ⌘/Ctrl+click opens the show in a new tab even though a plain press
+      // toggles the run — the modifier means the same thing on every row.
+      href={routes.details(summary.item.id)}
+      item={summary.item}
+      leading={
+        <>
+          <DiaryPoster item={summary.item} />
+          <View className="shrink ml-4">
+            <Text
+              className="text-foreground font-sans-semibold text-base"
+              numberOfLines={1}
+            >
+              {summary.item.title}
+            </Text>
+            <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
+          </View>
+        </>
+      }
+      onActions={onActions}
+      onPress={() => onToggle(cluster.key)}
+      trailing={
+        <>
+          <ProviderCluster providers={summary.providers} />
+          <Ionicons
+            color={typeof muted === 'string' ? muted : undefined}
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            style={{ marginLeft: 10 }}
+          />
+        </>
+      }
+    />
   );
 }
 
@@ -376,16 +431,11 @@ function DiaryChildRow({
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
   });
-  const row = useDiaryRowActions({
-    item: entry.item,
-    href: routes.details(entry.item.id),
-    onActions,
-  });
 
   return (
     // Fixed row height so the connector geometry is pixel-exact (labels are a
     // single line — numberOfLines={1} — so nothing needs to grow the row).
-    <View className="flex-row px-6 h-11" {...row.hoverProps}>
+    <View className="flex-row px-6 h-11">
       {/* Terminal-style tree connector: a vertical trunk centered under the
           poster and a horizontal branch into the row — ├─ for a middle child,
           └─ for the last, whose trunk stops at the branch (mid-row) instead of
@@ -397,23 +447,22 @@ function DiaryChildRow({
         />
         <View className="absolute left-6 top-[22px] w-4 h-px bg-border" />
       </View>
-      <PresstableScale
-        className="flex-1 flex-row items-center"
-        onLongPress={row.onLongPress}
-        onPress={() => {
-          if (row.openedInNewTab()) return;
-          onOpen(entry.item.id);
-        }}
-      >
-        <Text
-          className="flex-1 text-foreground font-sans text-sm"
-          numberOfLines={1}
-        >
-          {detail !== '' ? detail : entry.item.title}
-        </Text>
-        <ProviderCluster providers={entry.providers} />
-      </PresstableScale>
-      {row.actionsButton}
+      <DiaryRowShell
+        className="flex-1"
+        href={routes.details(entry.item.id)}
+        item={entry.item}
+        leading={
+          <Text
+            className="shrink text-foreground font-sans text-sm"
+            numberOfLines={1}
+          >
+            {detail !== '' ? detail : entry.item.title}
+          </Text>
+        }
+        onActions={onActions}
+        onPress={() => onOpen(entry.item.id)}
+        trailing={<ProviderCluster providers={entry.providers} />}
+      />
     </View>
   );
 }
