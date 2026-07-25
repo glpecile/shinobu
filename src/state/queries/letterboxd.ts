@@ -8,6 +8,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
+import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import { getLetterboxdWebFetch } from '@/lib/providers/letterboxd/webview-bridge';
 import {
   checkUsernameExists,
@@ -88,7 +89,22 @@ export const letterboxdQueryKeys = {
    */
   diary: (username: string) =>
     [...letterboxdQueryKeys.all, 'diary', username] as const,
+  /**
+   * The member's public tag vocabulary (`/{user}/tags/`) — the log sheet's tag
+   * suggestions. Keyed by username so reconnecting as a different account never
+   * suggests the prior account's tags.
+   */
+  tags: (username: string) => [...letterboxdQueryKeys.all, 'tags', username] as const,
 };
+
+/**
+ * A tag vocabulary changes on the order of weeks, and this query fires every
+ * time a log sheet opens — so it is cached hard, and kept in the cache well
+ * past the sheet's lifetime (the default 5-minute gcTime would evict it
+ * between two logs and refetch a 69 KB page for nothing).
+ */
+const TAGS_STALE_MS = 6 * 60 * 60_000;
+const TAGS_GC_MS = 24 * 60 * 60_000;
 
 /**
  * The user's public watchlist (first page, 28 films) for the home feed's
@@ -109,6 +125,35 @@ export function useLetterboxdWatchlistQuery(options: { enabled?: boolean } = {})
     queryKey: letterboxdQueryKeys.watchlist(username),
     queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
     enabled: (options.enabled ?? true) && username !== '',
+  });
+}
+
+/**
+ * The tags this member already uses, most-used first — the suggestion source
+ * behind the log sheet's tag picker. Disabled until Letterboxd is connected;
+ * on web the read runs through the Worker proxy's third allowlist rule
+ * (plan 0018 contract unchanged — `worker/letterboxd-proxy.ts`).
+ *
+ * Suggestions are an enhancement, never a dependency: a failed or unparseable
+ * read resolves to `[]` at this boundary (no chips) rather than surfacing an
+ * error the sheet would have to render.
+ */
+export function useLetterboxdTagsQuery() {
+  const connected = useConnectedProviders();
+  // Same SSR gate as the watchlist hooks: `connected` is empty in the server
+  // snapshot (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md), so the
+  // MMKV username read below only ever runs on the client.
+  const username = connected.includes('letterboxd')
+    ? (getLetterboxdUsername() ?? '')
+    : '';
+
+  return useQuery({
+    queryKey: letterboxdQueryKeys.tags(username),
+    queryFn: (): Promise<LetterboxdTag[]> =>
+      Effect.runPromise(getUserTags(letterboxdDeps())).catch(() => []),
+    enabled: username !== '',
+    staleTime: TAGS_STALE_MS,
+    gcTime: TAGS_GC_MS,
   });
 }
 

@@ -5,5 +5,6 @@ export {
   type CapturedLetterboxdLogin,
   type CookiePair,
 } from './session-cookies';
+export { getUserTags, parseTagsPage, type LetterboxdTag } from './tags';
 export { checkUsernameExists, getWatchlist } from './watchlist';
 export { logToLetterboxd, type LetterboxdLogOptions } from './writes';
