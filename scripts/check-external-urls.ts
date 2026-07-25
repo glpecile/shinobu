@@ -70,11 +70,13 @@ export const URL_CHECKS: UrlCheck[] = [
     expect: [400],
   },
   {
-    // Signed-out visitors are redirected to the login page (200 either way) —
-    // this only has to prove the settings page users are sent to still exists.
+    // An account-settings page: signed-out (which this probe always is)
+    // TMDB answers 401 rather than redirecting to a login page. That's the
+    // "exists and refused me" signal — a moved or dead page would 404. A 200
+    // is accepted too, in case TMDB ever starts redirecting instead.
     name: 'TMDB API settings page',
     url: TMDB_API_SETTINGS_URL,
-    expect: [200],
+    expect: [200, 401],
   },
 ];
 
