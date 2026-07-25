@@ -47,7 +47,13 @@ export function EpisodeCard({
   return (
     <View className={className}>
       <PresstableScale
-        accessibilityLabel={`${entry.item.title}, ${episodeLabel(entry)}`}
+        // The badges carry information that exists nowhere else on the card —
+        // the air time above all — so they belong in the spoken label too.
+        accessibilityLabel={[
+          entry.item.title,
+          episodeLabel(entry),
+          ...badges.map((badge) => badge.label),
+        ].join(', ')}
         className="w-full h-36 rounded-card overflow-hidden border border-border/50"
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(entry.item)

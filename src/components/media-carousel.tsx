@@ -1,7 +1,9 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { AnimatedView } from '@/components/animated-view';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -23,6 +25,8 @@ import { MediaCard } from './media-card';
 const CARD_WIDTH = 160;
 const CARD_HEIGHT = 240;
 const CARD_GAP = 12;
+/** Matches the section header's `px-4`, so a row starts under its own title. */
+const EDGE_GUTTER = 16;
 
 interface MediaCarouselProps {
   title: string;
@@ -60,6 +64,11 @@ export function MediaCarousel({
 }: MediaCarouselProps) {
   const collapsed = useSectionCollapsed(collapseKey);
   const muted = useCSSVariable('--color-muted');
+  const accent = useCSSVariable('--color-accent');
+  // JS hover state, not CSS: uniwind has no `group-hover:`, so the pointer
+  // events drive a Reanimated CSS transition instead (same approach as
+  // `MediaCard`'s web-only ⋯ reveal).
+  const [viewAllHovered, setViewAllHovered] = useState(false);
 
   if (items.length === 0) return null;
 
@@ -83,20 +92,42 @@ export function MediaCarousel({
         {/* Sibling of the collapse toggle, never nested inside it — two
             gesture-handler buttons in one tree would double-fire the tap. */}
         {onViewAll != null && !collapsed && (
-          <PresstableOpacity
-            accessibilityLabel={`View all in ${title}`}
-            className="flex-row items-center gap-1"
-            onPress={onViewAll}
+          // Hover lives on a plain wrapper: pressto's pressables take
+          // gesture-handler props, not RN-web pointer ones.
+          <View
+            onPointerEnter={() => setViewAllHovered(true)}
+            onPointerLeave={() => setViewAllHovered(false)}
           >
-            <Text className="text-accent font-sans-semibold text-sm">
-              View all
-            </Text>
-            <Ionicons
-              color={typeof muted === 'string' ? muted : undefined}
-              name="chevron-forward"
-              size={14}
-            />
-          </PresstableOpacity>
+            <PresstableOpacity
+              accessibilityLabel={`View all in ${title}`}
+              className="flex-row items-center gap-1"
+              onPress={onViewAll}
+            >
+              <Text className="text-accent font-sans-semibold text-sm">
+                View all
+              </Text>
+              {/* Only the chevron travels — the label stays anchored, so the
+                  arrow reads as pointing onward rather than the whole control
+                  drifting. Accent, not muted: a grey arrow after red text read
+                  as two separate things. The nudge is a Reanimated CSS
+                  transition (the same declarative style the floating tiles
+                  use), so native simply never triggers it. */}
+              <AnimatedView
+                style={{
+                  transform: [{ translateX: viewAllHovered ? 3 : 0 }],
+                  transitionProperty: 'transform',
+                  transitionDuration: 160,
+                  transitionTimingFunction: 'ease-out',
+                }}
+              >
+                <Ionicons
+                  color={typeof accent === 'string' ? accent : undefined}
+                  name="chevron-forward"
+                  size={14}
+                />
+              </AnimatedView>
+            </PresstableOpacity>
+          </View>
         )}
       </View>
       {!collapsed && (
@@ -107,10 +138,18 @@ export function MediaCarousel({
         // local `hovered` state, which would leak across recycled cells.
         <List
           data={items}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
           estimatedItemSize={CARD_WIDTH + CARD_GAP}
           horizontal
           keyExtractor={(item) => item.id}
+          // Spacer elements, not `contentContainerStyle` padding: Legend List
+          // drops that on web for *horizontal* lists (vertical ones honor it),
+          // which left the rows butted against the sidebar and bleeding off the
+          // right edge while their section headers stayed inset
+          // (docs/solutions/legend-list-horizontal-content-padding-web.md).
+          // The trailing spacer is short by one gutter — every card already
+          // carries `mr-3`.
+          ListHeaderComponent={<View style={{ width: EDGE_GUTTER }} />}
+          ListFooterComponent={<View style={{ width: EDGE_GUTTER - CARD_GAP }} />}
           renderItem={({ item }) => (
             <View className="mr-3">
               <MediaCard

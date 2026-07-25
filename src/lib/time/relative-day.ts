@@ -1,4 +1,4 @@
-import { parseLocalInstant } from '@/lib/time/has-aired';
+import { isDateOnly, parseLocalInstant } from '@/lib/time/has-aired';
 
 /**
  * Relative-day labels for upcoming releases (plan 0019 KTD-10) — "Today",
@@ -52,6 +52,32 @@ export function formatRelativeDay(
   if (offset === 1) return 'Tomorrow';
   if (offset === -1) return 'Yesterday';
   return offset > 0 ? `In ${offset} days` : `${-offset} days ago`;
+}
+
+/**
+ * The clock time an episode airs, in the *user's* timezone — "21:30". A
+ * relative day alone ("Today") can't answer "have I missed it?", which is
+ * exactly the question on the day something airs.
+ *
+ * 24-hour on every platform and locale, for the same reason the weekday names
+ * below are hardcoded: identical output everywhere, and a two-digit "21:30"
+ * keeps the badge a fixed width where "9:30 PM" would not. Built from the
+ * local-time getters rather than `Intl`, which buys nothing once the clock is
+ * fixed and can be absent from a slim Hermes build.
+ *
+ * Null when the value is unparseable *or* carries no time of day: a date-only
+ * provider field parses to local midnight, and rendering that would assert a
+ * 00:00 airing nobody stated.
+ */
+export function formatLocalTime(
+  instant: string | null | undefined,
+): string | null {
+  if (instant == null || instant === '' || isDateOnly(instant)) return null;
+  const parsed = parseLocalInstant(instant);
+  if (parsed == null) return null;
+  const hours = String(parsed.getHours()).padStart(2, '0');
+  const minutes = String(parsed.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
 }
 
 // Hardcoded rather than Intl-formatted, for the same reason the diary hardcodes

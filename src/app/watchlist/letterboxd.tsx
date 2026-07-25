@@ -1,33 +1,20 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRouter, type ErrorBoundaryProps } from 'expo-router';
 import { useState } from 'react';
-import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import Head from '@/components/head';
-import { List } from '@/components/List';
-import { MediaCard } from '@/components/media-card';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { PosterWall } from '@/features/watchlist/poster-wall';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
-
-/** `MediaCard`'s width plus its gutter — the grid column pitch, in px. */
-const COLUMN_PITCH = 172;
-const ROW_HEIGHT = 252;
-/** Matches the `max-w-4xl` content column the rest of the app uses. */
-const MAX_CONTENT_WIDTH = 896;
-
-function useColumnCount(): number {
-  const { width } = useWindowDimensions();
-  const usable = Math.min(width, MAX_CONTENT_WIDTH) - 32;
-  return Math.max(2, Math.floor(usable / COLUMN_PITCH));
-}
 
 /**
  * Centered message with an action — the initial-load failure and the empty
@@ -108,7 +95,6 @@ function GridFooter({
 
 export default function LetterboxdWatchlistScreen() {
   const router = useRouter();
-  const columns = useColumnCount();
   const foreground = useCSSVariable('--color-foreground');
   const { openActions, sheetProps } = useCardActions();
   const [refreshing, setRefreshing] = useState(false);
@@ -173,39 +159,24 @@ export default function LetterboxdWatchlistScreen() {
           title="Nothing here yet"
         />
       ) : (
-        <List
-          key={`columns-${columns}`}
-          className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-          data={items}
-          estimatedItemSize={ROW_HEIGHT}
-          keyExtractor={(item) => item.id}
-          numColumns={columns}
-          onEndReached={
-            watchlist.hasNextPage && !watchlist.isFetchingNextPage
-              ? () => void watchlist.fetchNextPage()
-              : undefined
-          }
-          onEndReachedThreshold={0.6}
-          refreshControl={
-            <RefreshControl onRefresh={refresh} refreshing={refreshing} />
-          }
-          renderItem={({ item }) => (
-            <View className="items-center mb-3">
-              <MediaCard
-                item={item}
-                onActionsPress={openActions}
-                onPress={(pressed) => router.push(routes.details(pressed.id))}
-              />
-            </View>
-          )}
-          ListFooterComponent={
+        <PosterWall
+          footer={
             <GridFooter
               failed={watchlist.isError}
               loading={watchlist.isFetchingNextPage}
               onRetry={() => void watchlist.fetchNextPage()}
             />
           }
+          items={items}
+          onEndReached={
+            watchlist.hasNextPage && !watchlist.isFetchingNextPage
+              ? () => void watchlist.fetchNextPage()
+              : undefined
+          }
+          onItemActions={openActions}
+          onItemPress={(item) => router.push(routes.details(item.id))}
+          onRefresh={() => void refresh()}
+          refreshing={refreshing}
         />
       )}
       <CardActionsSheet {...sheetProps} />

@@ -1,4 +1,8 @@
-import { formatRelativeDay, localDayOffset } from '@/lib/time/relative-day';
+import {
+  formatLocalTime,
+  formatRelativeDay,
+  localDayOffset,
+} from '@/lib/time/relative-day';
 
 import type { UpNextEntry } from './types';
 
@@ -34,8 +38,18 @@ export function continueWatchingBadges(
   return badges;
 }
 
-/** Calendar leads with when — the card exists to answer exactly that. */
+/**
+ * Calendar leads with when — the card exists to answer exactly that, so the
+ * day carries the accent and the local air time follows it in a neutral pill.
+ * "Today" on its own is the ambiguous case (already out, or later tonight?),
+ * which is precisely the one the clock time resolves; providers that state
+ * only a calendar day contribute no time badge rather than a bogus midnight.
+ */
 export function calendarBadges(entry: UpNextEntry, now: Date): CardBadge[] {
+  const badges: CardBadge[] = [];
   const day = formatRelativeDay(entry.episode.firstAired, now);
-  return day == null ? [] : [{ label: day, tone: 'accent' }];
+  if (day != null) badges.push({ label: day, tone: 'accent' });
+  const time = formatLocalTime(entry.episode.firstAired);
+  if (time != null) badges.push({ label: time });
+  return badges;
 }
