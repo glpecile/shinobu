@@ -8,6 +8,8 @@ export const routes = {
   search: '/search',
   diary: '/diary',
   details: (id: string) => `/details/${id}` as const,
+  /** Full paginated Letterboxd watchlist — the feed row's "View all" target. */
+  letterboxdWatchlist: '/watchlist/letterboxd',
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,
   /** For credits without a TMDB person id (AniList people): resolve by name. */

@@ -5,7 +5,9 @@ import type { LetterboxdDeps } from './deps';
 import {
   checkUsernameExists,
   getWatchlist,
+  getWatchlistPage,
   parseWatchlistPage,
+  WATCHLIST_PAGE_SIZE,
 } from './watchlist';
 
 // Verbatim (whitespace-trimmed) LazyPoster component captured from a real
@@ -93,6 +95,85 @@ describe('getWatchlist', () => {
     const deps = depsRespondingWith(new Response('', { status: 404 }));
     const outcome = await Effect.runPromise(Effect.flip(getWatchlist(deps)));
     expect(outcome._tag).toBe('ProviderAuthError');
+  });
+});
+
+/** Records the requested URL so page-path construction is assertable. */
+function recordingDeps(
+  response: () => Response,
+  urls: string[],
+  username = 'gian',
+): LetterboxdDeps {
+  return {
+    username,
+    fetch: async (input) => {
+      urls.push(String(input));
+      return response();
+    },
+  };
+}
+
+/** A full page (28 films) — the "there is more" signal. */
+const FULL_PAGE = `<html><body><ul>${Array.from(
+  { length: WATCHLIST_PAGE_SIZE },
+  (_, index) =>
+    `<div class="react-component" data-component-class="LazyPoster" data-item-name="Film ${index} (2025)" data-item-slug="film-${index}" >`,
+).join('')}</ul></body></html>`;
+
+describe('getWatchlistPage', () => {
+  test('page 1 keeps the bare watchlist path', async () => {
+    const urls: string[] = [];
+    await Effect.runPromise(
+      getWatchlistPage(recordingDeps(() => new Response(PAGE), urls), { page: 1 }),
+    );
+    expect(urls[0]).toBe('https://letterboxd.com/gian/watchlist/');
+  });
+
+  test('page 2+ takes the /page/N/ suffix', async () => {
+    const urls: string[] = [];
+    await Effect.runPromise(
+      getWatchlistPage(recordingDeps(() => new Response(PAGE), urls), { page: 2 }),
+    );
+    expect(urls[0]).toBe('https://letterboxd.com/gian/watchlist/page/2/');
+  });
+
+  test('parses a deeper page into normalized items like page 1', async () => {
+    const items = await Effect.runPromise(
+      getWatchlistPage(depsRespondingWith(new Response(PAGE, { status: 200 })), {
+        page: 3,
+      }),
+    );
+    expect(items).toHaveLength(3);
+    expect(items[0].id).toBe('letterboxd-tuner');
+  });
+
+  // The cursor contract the infinite query reads: a full page has a successor,
+  // anything shorter (including empty) ends the list.
+  test('a full page yields exactly the page size; short and empty pages are shorter', async () => {
+    const full = await Effect.runPromise(
+      getWatchlistPage(depsRespondingWith(new Response(FULL_PAGE)), { page: 1 }),
+    );
+    const short = await Effect.runPromise(
+      getWatchlistPage(depsRespondingWith(new Response(PAGE)), { page: 2 }),
+    );
+    const empty = await Effect.runPromise(
+      getWatchlistPage(depsRespondingWith(new Response('<html></html>')), { page: 3 }),
+    );
+
+    expect(full).toHaveLength(WATCHLIST_PAGE_SIZE);
+    expect(short.length).toBeLessThan(WATCHLIST_PAGE_SIZE);
+    expect(empty).toHaveLength(0);
+  });
+
+  test('a failing page surfaces the tagged provider error', async () => {
+    const outcome = await Effect.runPromise(
+      Effect.flip(
+        getWatchlistPage(depsRespondingWith(new Response('', { status: 500 })), {
+          page: 4,
+        }),
+      ),
+    );
+    expect(outcome._tag).toBe('ProviderNetworkError');
   });
 });
 

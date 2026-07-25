@@ -1,3 +1,4 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
@@ -11,7 +12,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
-import { onSearchTabPressed } from '@/features/search/focus-signal';
+import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useAniListSearchQuery } from '@/state/queries/anilist';
@@ -175,10 +176,32 @@ export default function SearchScreen() {
 
   // The native "search" tab role only auto-focuses the field on iOS (its
   // dedicated search-tab UIKit affordance) — Android has no equivalent, so
-  // tapping an already-active search tab did nothing. `onSearchTabPressed`
-  // fires on every tap of that tab (see app/(tabs)/_layout.tsx), so this
-  // opens the keyboard the same way on both platforms.
-  useEffect(() => onSearchTabPressed(() => inputRef.current?.focus()), []);
+  // tapping an already-active search tab did nothing. `onSearchFocusRequest`
+  // fires on every tap of that tab (see app/(tabs)/_layout.tsx) — and on web's
+  // ⌘K while search is already open — so this opens the keyboard the same way
+  // on every platform.
+  useEffect(() => {
+    let handle: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = onSearchFocusRequest(() => {
+      const field = inputRef.current;
+      if (field == null) return;
+      // Android keeps the field *focused* after the keyboard is dismissed
+      // (back gesture, scroll-away), so `.focus()` on an already-focused
+      // input is a no-op and the keyboard never returns — blur first to force
+      // a real focus transition. iOS's search-tab role handles its own
+      // re-focus, so it's left alone.
+      if (process.env.EXPO_OS === 'android' && field.isFocused()) field.blur();
+      // Deferred past the tab-press frame: focusing synchronously inside the
+      // native tab transition gets swallowed (and the blur above needs a tick
+      // to land before the re-focus counts as a transition).
+      clearTimeout(handle);
+      handle = setTimeout(() => inputRef.current?.focus(), 50);
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(handle);
+    };
+  }, []);
 
   // A real debounce (not useDeferredValue, which settles per keystroke and
   // fired a request for every character): the query — and the shareable
@@ -205,6 +228,17 @@ export default function SearchScreen() {
     router.push(routes.details(item.id));
   }
 
+  // Resets all three representations of the query at once. Leaving `query`
+  // behind would keep the stale results mounted until the debounce catches up
+  // (and re-push the old `?q=`), so the button clears input, debounced query,
+  // and route param together, then hands focus back for the next search.
+  function clearSearch() {
+    setInput('');
+    setQuery('');
+    router.setParams({ q: undefined });
+    inputRef.current?.focus();
+  }
+
   return (
     <View className="flex-1 bg-background">
       <Head>
@@ -213,18 +247,40 @@ export default function SearchScreen() {
       <View
         className={`relative z-20 flex-row items-center gap-3 px-6 ${screenHeaderTopPadding} pb-4`}
       >
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoFocus
-          className="flex-1 border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
-          onChangeText={setInput}
-          placeholder="Search movies, shows, anime & manga"
-          placeholderTextColor={typeof muted === 'string' ? muted : undefined}
-          ref={inputRef}
-          returnKeyType="search"
-          value={input}
-        />
+        {/* Relative wrapper so the clear button can overlay the field's right
+            edge; the input reserves `pr-11` for it. */}
+        <View className="flex-1 relative">
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            // First mount only — every later focus request (tab re-press,
+            // ⌘K, the clear button) goes through the handlers above rather
+            // than through a re-mount.
+            autoFocus
+            className="border border-border bg-surface text-foreground pl-4 pr-11 py-3 rounded font-sans"
+            onChangeText={setInput}
+            placeholder="Search movies, shows, anime & manga"
+            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+            ref={inputRef}
+            returnKeyType="search"
+            value={input}
+          />
+          {input !== '' && (
+            <View className="absolute right-1.5 top-0 bottom-0 items-center justify-center">
+              <PresstableOpacity
+                accessibilityLabel="Clear search"
+                className="w-8 h-8 items-center justify-center rounded-full"
+                onPress={clearSearch}
+              >
+                <Ionicons
+                  color={typeof muted === 'string' ? muted : undefined}
+                  name="close-circle"
+                  size={20}
+                />
+              </PresstableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
       {!searchable ? (

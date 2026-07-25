@@ -67,6 +67,7 @@
       "package": "xyz.glpecile.shinobu",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",

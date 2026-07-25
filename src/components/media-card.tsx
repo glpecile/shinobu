@@ -1,12 +1,15 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { PointerEvent } from 'react-native';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { openExternalUrl } from '@/lib/open-external-url';
+import { routes } from '@/lib/routes';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -44,11 +47,34 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
   const showActionsButton =
     onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
+  // Web only: ⌘/Ctrl+click opens details in a new tab, like any other link.
+  // Cards can't *be* anchors — RNGH kills `onPress` for any accessibility role
+  // other than "button" (docs/solutions/web-pressto-accessibility-role-kills-
+  // onpress.md) — and pressto's press callback carries no DOM event, so the
+  // modifier state is latched on pointer-down (it bubbles up from the
+  // pressable) and read back when the press lands.
+  const modifierHeldRef = useRef(false);
+
+  function onPointerDown(event: PointerEvent) {
+    modifierHeldRef.current =
+      event.nativeEvent.metaKey || event.nativeEvent.ctrlKey;
+  }
+
+  function onCardPress() {
+    if (process.env.EXPO_OS === 'web' && modifierHeldRef.current) {
+      modifierHeldRef.current = false;
+      void openExternalUrl(routes.details(item.id));
+      return;
+    }
+    onPress?.(item);
+  }
+
   return (
     // The ⋯ button is a *sibling* of the pressable, not a child — nesting two
     // gesture-handler buttons would let a ⋯ click bubble into the card press.
     <View
       className="w-40 h-60 relative"
+      onPointerDown={onPointerDown}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
@@ -57,7 +83,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(item)
         }
-        onPress={() => onPress?.(item)}
+        onPress={onCardPress}
       >
         {coverImage !== '' ? (
           <Image

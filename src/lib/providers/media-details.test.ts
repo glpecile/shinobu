@@ -140,6 +140,32 @@ describe('getMediaDetails', () => {
     expect(result.studios[0].name).toBe('TOHO animation STUDIO');
   });
 
+  // Plan 0024 U8: manga details are AniList-sourced only. Nothing may reach
+  // for TMDB — there is no manga there, and a stray request would 404 the
+  // screen instead of degrading to the basic view.
+  test('manga performs no TMDB request and returns the empty credits shape', async () => {
+    const requested: string[] = [];
+    const trackingFetch = (input: RequestInfo | URL): Promise<Response> => {
+      requested.push(String(input));
+      return Promise.resolve(new Response('{}', { status: 404 }));
+    };
+
+    const result = await Effect.runPromise(
+      getMediaDetails(
+        {
+          tmdb: { fetch: trackingFetch, token: 'test-token' },
+          trakt: { fetch: trackingFetch, tokens, clientId: 'cid', clientSecret: 's' },
+          anilist: { fetch: trackingFetch, tokens },
+        },
+        { type: 'MANGA', anilistId: 42, tmdbId: 603 },
+      ),
+    );
+
+    expect(requested.some((url) => url.includes('themoviedb'))).toBe(false);
+    expect(result.source).toBe('none');
+    expect(result.catalogue).toBeNull();
+  });
+
   test('yields the empty result when no source can serve', async () => {
     const result = await Effect.runPromise(
       getMediaDetails(deps([]), { type: 'MOVIE' }),

@@ -6,11 +6,16 @@ import {
   fetchAniZipIds,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
-import { pickMovieMatch } from '@/lib/providers/pick-movie-match';
+import { searchAnimeFilms } from '@/lib/providers/anilist/reads';
+import {
+  pickAnimeFilmMatch,
+  pickMovieMatch,
+} from '@/lib/providers/pick-movie-match';
 import { findByTvdbId, searchMovie } from '@/lib/providers/tmdb/reads';
 import { lookupByExternalId, searchMedia } from '@/lib/providers/trakt/reads';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { anilistDeps } from './anilist';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
 
@@ -34,6 +39,9 @@ export const mappingQueryKeys = {
   /** Title+year → TMDB movie id, for id-less films (Letterboxd). */
   tmdbMovieSearch: (title: string, year: number | undefined) =>
     ['mapping', 'tmdb-movie-search', title, year ?? 'any'] as const,
+  /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
+  anilistFilmSearch: (title: string, year: number | undefined) =>
+    ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
 };
 
 const FOREVER = {
@@ -81,7 +89,7 @@ function movieSearchQuery(title: string, year: number | undefined) {
       // limit 10, not 5: an upcoming film can rank below a popular classic
       // sharing its title, and the year gate needs it in the result set.
       Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }))
-        .then((results) => pickMovieMatch(results, year))
+        .then((results) => pickMovieMatch(results, year, title))
         .catch(() => null),
     ...FOREVER,
   };
@@ -126,8 +134,65 @@ export function cachedTmdbMovieIdByTitle(
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year),
     queryFn: (): Promise<number | null> =>
-      Effect.runPromise(searchMovie(tmdbDeps(), { query: params.title }))
-        .then((results) => pickMovieMatch(results, params.year)?.externalIds.tmdb ?? null)
+      searchTmdbMovieId(params).catch(() => null),
+    ...FOREVER,
+  });
+}
+
+/**
+ * `primary_release_year` is a recall fix — TMDB ranks by popularity, so a
+ * brand-new film sharing its title with a classic falls off page 1 and the
+ * year gate never sees it (Labyrinth 2025, Motor City 2025). But it filters
+ * *exactly*, which would also delete `pickMovieMatch`'s ±1 festival-vs-wide-
+ * release tolerance — so a miss retries unfiltered and re-runs the same gate.
+ * The second request only ever fires on a miss.
+ */
+async function searchTmdbMovieId(params: {
+  title: string;
+  year: number | undefined;
+}): Promise<number | null> {
+  const gated = await Effect.runPromise(
+    searchMovie(tmdbDeps(), { query: params.title, year: params.year }),
+  ).then((results) => pickMovieMatch(results, params.year, params.title));
+  if (gated != null || params.year == null) {
+    return gated?.externalIds.tmdb ?? null;
+  }
+  return Effect.runPromise(
+    searchMovie(tmdbDeps(), { query: params.title }),
+  ).then(
+    (results) =>
+      pickMovieMatch(results, params.year, params.title)?.externalIds.tmdb ??
+      null,
+  );
+}
+
+/**
+ * Title+year → AniList id for an anime *film* (plan 0024 KTD3). ani.zip's
+ * `themoviedb_id` index is TV-oriented, so a TMDB/Trakt-first anime film
+ * (ChaO, 2025) reverse-maps to nothing and the log fan-out silently drops
+ * AniList. This is the miss-path fallback, never the first attempt: ani.zip
+ * runs first and this only fires when it comes back empty.
+ *
+ * Forever-cached **including the miss** — a `null` here means "AniList has no
+ * film under that title+year", which won't change, and re-asking would spend
+ * the 30 req/min budget (docs/solutions/anilist-rate-limit-retry-storm.md) on
+ * every ordinary movie the user logs.
+ */
+export function cachedAniListFilmId(
+  queryClient: QueryClient,
+  params: { title: string; year: number | undefined },
+): Promise<number | null> {
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.anilistFilmSearch(params.title, params.year),
+    queryFn: (): Promise<number | null> =>
+      Effect.runPromise(
+        searchAnimeFilms(anilistDeps(), { query: params.title }),
+      )
+        .then(
+          (results) =>
+            pickAnimeFilmMatch(results, params.year, params.title)?.externalIds
+              .anilist ?? null,
+        )
         .catch(() => null),
     ...FOREVER,
   });

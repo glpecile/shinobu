@@ -15,6 +15,7 @@
 import {
   ANILIST_AUTHORIZE_URL,
   ANILIST_CREATE_CLIENT_URL,
+  TMDB_API_SETTINGS_URL,
   TRAKT_CREATE_APP_URL,
 } from '@/lib/providers/external-urls';
 import { ANILIST_GRAPHQL_URL } from '@/lib/providers/anilist/http';
@@ -67,6 +68,13 @@ export const URL_CHECKS: UrlCheck[] = [
     method: 'POST',
     body: '{}',
     expect: [400],
+  },
+  {
+    // Signed-out visitors are redirected to the login page (200 either way) —
+    // this only has to prove the settings page users are sent to still exists.
+    name: 'TMDB API settings page',
+    url: TMDB_API_SETTINGS_URL,
+    expect: [200],
   },
 ];
 

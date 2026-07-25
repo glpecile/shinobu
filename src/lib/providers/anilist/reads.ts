@@ -257,6 +257,38 @@ export function searchMedia(
   });
 }
 
+/**
+ * Anime *films* by title — the discovery fallback for an anime movie that
+ * arrived from TMDB/Trakt with no AniList id (plan 0024 KTD3). ani.zip's
+ * `themoviedb_id` index is TV-oriented and misses many films (ChaO, 2025), so
+ * without this the log fan-out silently drops AniList for exactly the items an
+ * AniList user most wants logged. Narrowed to `type: ANIME, format: MOVIE` so
+ * the caller's year gate only ever sees films; `SEARCH_MATCH` ranks by title
+ * relevance, not popularity.
+ */
+export function searchAnimeFilms(
+  deps: AniListDeps,
+  params: { query: string; limit?: number },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const limit = params.limit ?? 10;
+  return Effect.gen(function* () {
+    const data = yield* anilistRequest<TrendingResponse>(
+      deps,
+      `query ($search: String, $perPage: Int) {
+        Page(page: 1, perPage: $perPage) {
+          media(search: $search, type: ANIME, format: MOVIE, sort: SEARCH_MATCH) { ${MEDIA_FIELDS} }
+        }
+      }`,
+      { variables: { search: params.query, perPage: limit } },
+    );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return (data.Page?.media ?? [])
+      .filter((media): media is AniListMedia => media != null)
+      .map((media) => normalizeAniListMedia(media, nowIso));
+  });
+}
+
 export interface AniListEntryState {
   /** null when the viewer has no list entry for this media yet. */
   entry: { status: string | null; progress: number; repeat: number } | null;

@@ -136,15 +136,22 @@ export function getStudio(
  * (docs/solutions/trakt-text-search-wrong-movie-match.md) — then reads its
  * `externalIds.tmdb`. Unlike the Trakt text-search path, this needs only the
  * builder TMDB token, so a Letterboxd-only user still gets metadata.
+ *
+ * Pass `year` whenever the caller knows it: TMDB ranks by popularity, so a
+ * 2025 film sharing its title with a classic can fall off page 1 entirely and
+ * the year gate never sees it. `primary_release_year` is a recall fix, not a
+ * substitute for `pickMovieMatch` — TMDB still returns near-year rows.
  */
 export function searchMovie(
   deps: TmdbDeps,
-  params: { query: string },
+  params: { query: string; year?: number | undefined },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   return Effect.gen(function* () {
+    const yearParam =
+      params.year == null ? '' : `&primary_release_year=${params.year}`;
     const raw = yield* tmdbRequest<TmdbSearchResponse>(
       deps,
-      `/search/movie?query=${encodeURIComponent(params.query)}&include_adult=false`,
+      `/search/movie?query=${encodeURIComponent(params.query)}&include_adult=false${yearParam}`,
     );
     const now = yield* Clock.currentTimeMillis;
     return normalizeTitleSearch(raw, 'movie', new Date(now).toISOString());

@@ -6,6 +6,7 @@ import { Text, useWindowDimensions, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { routes } from '@/lib/routes';
 import {
   toggleSidebarCollapsed,
@@ -210,6 +211,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  // ⌘/Ctrl+K jumps to search from anywhere. The modifier is the whole guard —
+  // a bare "k" typed into any field must never be hijacked. Already on search?
+  // Navigating again wouldn't re-mount the field (so `autoFocus` wouldn't
+  // fire); the focus signal covers that case instead.
+  const onSearch = isActive(pathname, routes.search);
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      if (onSearch) emitSearchFocusRequest();
+      else router.push(routes.search);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onSearch, router]);
 
   return (
     <View className="flex-1 flex-row">

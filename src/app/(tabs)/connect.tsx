@@ -9,6 +9,7 @@ import { useCSSVariable } from 'uniwind';
 import { ConnectAniListButton } from '@/components/connect-anilist-button';
 import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
 import { ConnectSerializdButton } from '@/components/connect-serializd-button';
+import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -254,6 +255,7 @@ export default function ConnectScreen() {
           </View>
         )}
 
+        <ConnectTmdbTokenSection />
         <NotificationsSettingsSection />
         <HiddenItemsSection />
         </RefreshableScrollView>

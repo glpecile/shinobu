@@ -69,6 +69,64 @@ describe('allowlist', () => {
     }
   });
 
+  // Plan 0024 U9's one bounded widening — everything else about the rule is
+  // unchanged, so these pin exactly what it does and does not now accept.
+  test('accepts the paginated watchlist suffix', async () => {
+    for (const path of [
+      '/api/letterboxd/gian/watchlist/page/2/',
+      '/api/letterboxd/gian/watchlist/page/9999/',
+    ]) {
+      const upstream = capturingUpstream(htmlResponse());
+      const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);
+      expect(res.status).toBe(200);
+      expect(upstream.captured).toHaveLength(1);
+    }
+  });
+
+  test('forwards a paged watchlist to letterboxd.com verbatim', async () => {
+    const upstream = capturingUpstream(htmlResponse());
+    await handleLetterboxdProxy(
+      proxyRequest('/api/letterboxd/gian/watchlist/page/2/'),
+      upstream.fetch,
+    );
+    expect(upstream.captured[0].url).toBe(
+      'https://letterboxd.com/gian/watchlist/page/2/',
+    );
+  });
+
+  test('rejects malformed and out-of-shape page suffixes', async () => {
+    for (const path of [
+      '/api/letterboxd/gian/watchlist/page/0/',
+      '/api/letterboxd/gian/watchlist/page/01/',
+      '/api/letterboxd/gian/watchlist/page/99999/',
+      '/api/letterboxd/gian/watchlist/page/2',
+      '/api/letterboxd/gian/watchlist/page/',
+      '/api/letterboxd/gian/watchlist/page/two/',
+      '/api/letterboxd/gian/watchlist/page/2/extra/',
+      // The suffix is watchlist-only — it must not unlock other paths.
+      '/api/letterboxd/gian/rss/page/2/',
+      '/api/letterboxd/gian/films/page/2/',
+    ]) {
+      const upstream = capturingUpstream(htmlResponse());
+      const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);
+      expect(res.status).toBe(404);
+      expect(upstream.captured).toHaveLength(0);
+    }
+  });
+
+  test('a paged watchlist path still refuses non-GET methods', async () => {
+    const upstream = capturingUpstream(htmlResponse());
+    const res = await handleLetterboxdProxy(
+      proxyRequest('/api/letterboxd/gian/watchlist/page/2/', {
+        method: 'POST',
+        body: '{}',
+      }),
+      upstream.fetch,
+    );
+    expect(res.status).toBe(405);
+    expect(upstream.captured).toHaveLength(0);
+  });
+
   test('forwards to letterboxd.com with the sub-path verbatim', async () => {
     const upstream = capturingUpstream(htmlResponse());
     await handleLetterboxdProxy(

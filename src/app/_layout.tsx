@@ -100,6 +100,7 @@ export default function Layout() {
                   <Stack.Screen name="person/lookup" />
                   <Stack.Screen name="studio/[id]" />
                   <Stack.Screen name="studio/lookup" />
+                  <Stack.Screen name="watchlist/letterboxd" />
                 </Stack>
                 {/* Hidden authenticated WebView that runs Letterboxd writes
                     (native only; renders null on web). */}

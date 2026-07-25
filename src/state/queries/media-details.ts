@@ -10,7 +10,7 @@ import {
   getMediaDetails,
   type MediaDetails,
 } from '@/lib/providers/media-details';
-import { tmdbToken } from '@/lib/providers/tmdb/config';
+import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistDeps } from './anilist';

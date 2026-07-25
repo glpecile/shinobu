@@ -23,6 +23,9 @@ export const ANILIST_CREATE_CLIENT_URL = 'https://anilist.co/settings/developer'
 /** AniList implicit-grant authorize endpoint (re-exported by anilist/config). */
 export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize';
 
+/** Where a user copies their own TMDB v4 read token (BYO key, plan 0024 U10). */
+export const TMDB_API_SETTINGS_URL = 'https://www.themoviedb.org/settings/api';
+
 export type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
 
 /**

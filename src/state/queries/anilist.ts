@@ -9,6 +9,7 @@ import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { DIARY_QUERY_ROOTS } from '@/state/queries/diary-cache';
+import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
@@ -91,9 +92,13 @@ export const anilistQueryKeys = {
   /** Per-episode air dates + titles for one anime series (detail screen). */
   episodes: (mediaId: number) =>
     [...anilistQueryKeys.all, 'episodes', mediaId] as const,
+  /** Prefix over every search entry — details/[id] scans this for cache hits
+   *  (the only route a manga result can resolve through). Shared root so the
+   *  scan in `search-cache.ts` can't drift from the key built here. */
+  searchRoot: () => [...SEARCH_QUERY_ROOTS.anilist],
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
-    [...anilistQueryKeys.all, 'search', query, limit] as const,
+    [...anilistQueryKeys.searchRoot(), query, limit] as const,
   /** The viewer's media-list activity — the AniList diary source (plan 0016).
    *  Derived from the shared root so the diary cache scan stays in sync. */
   listActivity: () => [...DIARY_QUERY_ROOTS.anilist],
