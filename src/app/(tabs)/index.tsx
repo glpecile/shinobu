@@ -44,56 +44,60 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
+/**
+ * The four provider marks decorating the zero-providers hero — one per tracker
+ * Shinobu writes to. `position` is the wide-viewport absolute placement (the
+ * corners around the centred copy); compact viewports ignore it and lay the
+ * tiles out in a row above the copy instead — see `EmptyFeed`.
+ */
+const EMPTY_HERO_TILES = [
+  { delay: 0, id: 'trakt', position: { left: '20%', top: '22%' }, rotate: '-8deg' },
+  { delay: 650, id: 'anilist', position: { right: '20%', top: '26%' }, rotate: '7deg' },
+  // Nudged further left than the shared 20% inset.
+  { delay: 1300, id: 'letterboxd', position: { bottom: '24%', left: '14%' }, rotate: '6deg' },
+  { delay: 1950, id: 'serializd', position: { bottom: '20%', right: '20%' }, rotate: '-6deg' },
+] as const;
+
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const compact = width < 640;
   const tile = compact ? 56 : 72;
   const icon = compact ? 28 : 36;
-  // Wide screens pull the tiles in toward the headline; narrow screens keep
-  // them near the edges so they never crowd the copy.
-  const inset = compact ? '7%' : '20%';
 
   return (
     <View className="flex-1 items-center justify-center px-8">
-      {/* Floating provider marks — one corner per tracker Shinobu writes to.
-          On narrow screens the centered copy occupies the middle band, so the
-          tiles retreat to the genuinely empty regions: just under the header
-          and just above the bottom edge. */}
-      <FloatingTile
-        delay={0}
-        rotate="-8deg"
-        style={{ top: compact ? '4%' : '22%', left: inset, width: tile, height: tile }}
-      >
-        <ProviderIcon id="trakt" size={icon} />
-      </FloatingTile>
-      <FloatingTile
-        delay={650}
-        rotate="7deg"
-        style={{ top: compact ? '10%' : '26%', right: inset, width: tile, height: tile }}
-      >
-        <ProviderIcon id="anilist" size={icon} />
-      </FloatingTile>
-      <FloatingTile
-        delay={1300}
-        rotate="6deg"
-        style={{
-          bottom: compact ? '16%' : '24%',
-          // Nudged further left than the shared inset on web only.
-          left: compact ? inset : '14%',
-          width: tile,
-          height: tile,
-        }}
-      >
-        <ProviderIcon id="letterboxd" size={icon} />
-      </FloatingTile>
-      <FloatingTile
-        delay={1950}
-        rotate="-6deg"
-        style={{ bottom: compact ? '15%' : '20%', right: inset, width: tile, height: tile }}
-      >
-        <ProviderIcon id="serializd" size={icon} />
-      </FloatingTile>
+      {/* Percentage offsets can't guarantee clearance at phone heights — the
+          centred copy fills the middle band and the tiles were painting over
+          the headline, the CTA, and the account note. So compact drops the
+          absolute placement entirely and puts the marks in normal flow above
+          the copy; only wide viewports keep the floating corners. */}
+      {compact ? (
+        <View className="flex-row items-center justify-center gap-2 mb-6">
+          {EMPTY_HERO_TILES.map((mark) => (
+            <FloatingTile
+              delay={mark.delay}
+              floating={false}
+              key={mark.id}
+              rotate={mark.rotate}
+              style={{ width: tile, height: tile }}
+            >
+              <ProviderIcon id={mark.id} size={icon} />
+            </FloatingTile>
+          ))}
+        </View>
+      ) : (
+        EMPTY_HERO_TILES.map((mark) => (
+          <FloatingTile
+            delay={mark.delay}
+            key={mark.id}
+            rotate={mark.rotate}
+            style={{ ...mark.position, width: tile, height: tile }}
+          >
+            <ProviderIcon id={mark.id} size={icon} />
+          </FloatingTile>
+        ))
+      )}
 
       {/* The headline/copy/CTA is the shared empty-state tile (hero size); the
           floating provider marks above and the account note below stay as

@@ -5,7 +5,7 @@ import { useCSSVariable } from 'uniwind';
 import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { haptics } from '@/lib/haptics';
-import { hasAired } from '@/lib/time/has-aired';
+import { hasAired, hasReleased } from '@/lib/time/has-aired';
 import {
   useAniListEntryStateQuery,
   useAniListEpisodesQuery,
@@ -104,6 +104,13 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           ? true
           : hasAired(episodeData.firstAired)));
 
+  // The movie counterpart of that gate (`hasReleased`): a film that isn't out
+  // yet can't be watched, so it can't be logged. Permissive when the date is
+  // unknown — exactly like an episode with no air date — so a provider that
+  // simply carries no release date never blocks a legitimate log.
+  const released = !isFilmLike || hasReleased(item.releaseDate);
+  const canLog = nextEpisodeAired && released;
+
   const result = logMedia.data;
 
   function confirmLog() {
@@ -138,18 +145,18 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     ? nextEpisodeAired
       ? `Log episode ${nextEpisode}`
       : `Episode ${nextEpisode} not yet aired`
-    : isRewatch
-      ? 'Log rewatch'
-      : 'Mark as watched';
+    : !released
+      ? 'Not yet released'
+      : isRewatch
+        ? 'Log rewatch'
+        : 'Mark as watched';
 
   return (
     <View className="mb-6">
       <PresstableOpacity
-        className={`rounded px-5 py-3 ${
-          nextEpisodeAired ? 'bg-accent' : 'bg-accent/40'
-        }`}
+        className={`rounded px-5 py-3 ${canLog ? 'bg-accent' : 'bg-accent/40'}`}
         onPress={() => {
-          if (!nextEpisodeAired) return;
+          if (!canLog) return;
           haptics.selection();
           logMedia.reset();
           setWatchedAt(null);

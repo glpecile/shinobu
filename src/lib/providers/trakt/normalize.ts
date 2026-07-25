@@ -38,6 +38,13 @@ export interface TraktMovie extends TraktExtendedFields {
   year?: number;
   ids: TraktIds;
   images?: TraktImages;
+  /**
+   * Theatrical release, bare `YYYY-MM-DD` (movies only — a show's equivalent
+   * is its episodes' `first_aired`). Rides along on every movie read, which
+   * all request `extended=full`. Feeds the unreleased-film log gate on
+   * surfaces that never load the TMDB catalogue, e.g. the card-actions sheet.
+   */
+  released?: string;
 }
 
 export interface TraktShow extends TraktExtendedFields {
@@ -151,6 +158,9 @@ export function normalizeMovie(
     title: raw.title,
     coverImage: imageUrl(raw.images?.poster),
     ...detailFields(raw),
+    ...(raw.released != null && raw.released !== ''
+      ? { releaseDate: raw.released }
+      : {}),
     type: 'MOVIE',
     currentProgress: 0,
     progressUnit: 'episode',

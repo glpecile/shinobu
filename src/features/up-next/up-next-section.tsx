@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import {
+  FadeIn,
+  Keyframe,
+  useReducedMotion,
+  type EntryOrExitLayoutType,
+} from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { PresstableScale } from '@/components/presstable';
 import {
   calendarBadges,
@@ -11,6 +18,7 @@ import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { EpisodeCard } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
+import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { shortWeekdayName } from '@/lib/time/relative-day';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -41,6 +49,40 @@ const DAY_CONTENT_MIN_HEIGHT = 188;
 const MAX_DAY_DOTS = 5;
 
 /**
+ * The day's cards settle in when the user picks a different day, instead of the
+ * old hard cut where one set of cards was replaced by another mid-blink. The
+ * travel is deliberately tiny (6px): the tiles above already say *what*
+ * changed, so this only needs to say *that* something did. Module scope, per
+ * Reanimated's animation-builder performance rule.
+ */
+const DAY_CONTENT_RISE = 6;
+
+const dayContentEntering = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: DAY_CONTENT_RISE }] },
+  100: {
+    opacity: 1,
+    transform: [{ translateY: 0 }],
+    easing: KEYFRAME_EASE_OUT,
+  },
+}).duration(DURATION.swap);
+
+/** Reduced motion keeps the fade and drops the travel (matches the lightbox). */
+const dayContentFading = FadeIn.duration(DURATION.swap);
+
+/**
+ * `undefined` until the user has actually switched days: an element sitting in
+ * its resting position when the feed first paints has no reason to play an
+ * entrance — the motion belongs to the state change, not the page load.
+ */
+function dayContentAnimation(
+  switched: boolean,
+  reduceMotion: boolean,
+): EntryOrExitLayoutType | undefined {
+  if (!switched) return undefined;
+  return reduceMotion ? dayContentFading : dayContentEntering;
+}
+
+/**
  * The empty-day line. "Today" is special: its episodes have already aired (and
  * live in Continue Watching), so it reads as done rather than as if nothing
  * happened — anything still to come today would occupy the cell, not this line.
@@ -57,6 +99,8 @@ export function UpNextSection({
 }: UpNextSectionProps) {
   const { continueWatching, calendar, now } = useUpNextSections();
   const [selectedOffset, setSelectedOffset] = useState(0);
+  const [switchedDay, setSwitchedDay] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   if (continueWatching.length === 0 && calendar.length === 0) return null;
 
@@ -111,42 +155,67 @@ export function UpNextSection({
                 accessibilityLabel={`${day.label}, ${day.entries.length} airing`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
-                className={`w-14 py-2 mr-2 items-center rounded-md border ${
-                  isSelected
-                    ? 'bg-accent border-accent'
-                    : 'bg-surface border-border/60'
-                }`}
-                onPress={() => setSelectedOffset(day.offset)}
+                className="mr-2"
+                onPress={() => {
+                  setSwitchedDay(true);
+                  setSelectedOffset(day.offset);
+                }}
               >
-                <Text
-                  className={`font-sans text-xs ${
-                    isSelected ? 'text-accent-foreground' : 'text-muted'
-                  }`}
-                >
-                  {shortWeekdayName(day.date)}
-                </Text>
-                <Text
-                  className={`font-sans-semibold text-base ${
-                    isSelected ? 'text-accent-foreground' : 'text-foreground'
-                  }`}
-                >
-                  {day.date.getDate()}
-                </Text>
-                {/* One dot per episode airing that day (capped), so the strip
-                    conveys *how much* at a glance, not just whether. The row is
-                    a fixed height whether it holds dots or not, so cells never
-                    change size across days. */}
-                <View className="flex-row items-center gap-0.5 mt-1 h-1.5">
-                  {Array.from({
-                    length: Math.min(day.entries.length, MAX_DAY_DOTS),
-                  }).map((_, index) => (
-                    <View
-                      key={index}
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isSelected ? 'bg-accent-foreground' : 'bg-accent'
-                      }`}
-                    />
-                  ))}
+                <View className="w-14 py-2 items-center">
+                  {/* Selection crossfades instead of hard-flipping classNames.
+                      Two stacked full-bleed layers rather than an animated
+                      colour: opacity is the one property that's free on the
+                      GPU, and it keeps both states expressed as theme tokens
+                      (an animated `backgroundColor` would need the hex resolved
+                      out of the token and would lose the unselected border's
+                      /60 alpha). The resting layer sits underneath, so a
+                      dropped/unresolved animation still renders a correct
+                      tile. */}
+                  <View className="absolute inset-0 rounded-md border border-border/60 bg-surface" />
+                  <AnimatedView
+                    className="absolute inset-0 rounded-md border border-accent bg-accent"
+                    style={{
+                      opacity: isSelected ? 1 : 0,
+                      transitionProperty: 'opacity',
+                      // Strong ease-out, not `ease`: the fill is >60% of the
+                      // way there within ~40ms, so the label and dots — which
+                      // flip colour instantly, there being no animated Text
+                      // wrapper in the app — are never stranded on the wrong
+                      // background long enough to read as a flash.
+                      transitionDuration: DURATION.color,
+                      transitionTimingFunction: EASE_OUT,
+                    }}
+                  />
+                  <Text
+                    className={`font-sans text-xs ${
+                      isSelected ? 'text-accent-foreground' : 'text-muted'
+                    }`}
+                  >
+                    {shortWeekdayName(day.date)}
+                  </Text>
+                  <Text
+                    className={`font-sans-semibold text-base ${
+                      isSelected ? 'text-accent-foreground' : 'text-foreground'
+                    }`}
+                  >
+                    {day.date.getDate()}
+                  </Text>
+                  {/* One dot per episode airing that day (capped), so the strip
+                      conveys *how much* at a glance, not just whether. The row
+                      is a fixed height whether it holds dots or not, so cells
+                      never change size across days. */}
+                  <View className="flex-row items-center gap-0.5 mt-1 h-1.5">
+                    {Array.from({
+                      length: Math.min(day.entries.length, MAX_DAY_DOTS),
+                    }).map((_, index) => (
+                      <View
+                        key={index}
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isSelected ? 'bg-accent-foreground' : 'bg-accent'
+                        }`}
+                      />
+                    ))}
+                  </View>
                 </View>
               </PresstableScale>
             );
@@ -157,46 +226,57 @@ export function UpNextSection({
             and shifts the feed beneath it — the empty line sits in the space a
             card row would occupy. */}
         <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }}>
-          {selected.entries.length === 0 ? (
-            // Centered in the reserved space so the empty day reads as a
-            // deliberate state, not a layout gap. The 忍 mark renders in the OS
-            // fallback font (neither app family ships kanji, AGENTS.md Theming).
-            <View className="flex-1 items-center justify-center px-4">
-              <Text className="text-muted/40 text-4xl mb-2">忍</Text>
-              <Text className="text-muted font-sans text-sm text-center">
-                {emptyDayCopy(selected.offset, selected.label)}
-              </Text>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              className="px-4"
-              showsHorizontalScrollIndicator={false}
-            >
-              {selected.entries.map((entry) => (
-                <View key={entry.item.id} className="mr-3">
-                  <EpisodeCard
-                    // Aired-today episodes are watchable right now, so they
-                    // keep the quick-log checkmark here too; still-upcoming
-                    // ones only carry their day badge.
-                    action={
-                      entry.status === 'aired' ? (
-                        <QuickLogButton entry={entry} />
-                      ) : undefined
-                    }
-                    badges={
-                      entry.status === 'aired'
-                        ? continueWatchingBadges(entry, now)
-                        : calendarBadges(entry, now)
-                    }
-                    entry={entry}
-                    onActionsPress={onItemActions}
-                    onPress={onItemPress}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          )}
+          {/* Keyed on the day so picking a new one remounts and replays the
+              enter. Enter-only, no exit: an exiting copy would sit in flow
+              beside the incoming one and shove the feed around — the reserved
+              minHeight above is what keeps the swap visually still. */}
+          <AnimatedView
+            key={selected.offset}
+            className="flex-1"
+            entering={dayContentAnimation(switchedDay, reduceMotion)}
+          >
+            {selected.entries.length === 0 ? (
+              // Centered in the reserved space so the empty day reads as a
+              // deliberate state, not a layout gap. The 忍 mark renders in the
+              // OS fallback font (neither app family ships kanji, AGENTS.md
+              // Theming).
+              <View className="flex-1 items-center justify-center px-4">
+                <Text className="text-muted/40 text-4xl mb-2">忍</Text>
+                <Text className="text-muted font-sans text-sm text-center">
+                  {emptyDayCopy(selected.offset, selected.label)}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                className="px-4"
+                showsHorizontalScrollIndicator={false}
+              >
+                {selected.entries.map((entry) => (
+                  <View key={entry.item.id} className="mr-3">
+                    <EpisodeCard
+                      // Aired-today episodes are watchable right now, so they
+                      // keep the quick-log checkmark here too; still-upcoming
+                      // ones only carry their day badge.
+                      action={
+                        entry.status === 'aired' ? (
+                          <QuickLogButton entry={entry} />
+                        ) : undefined
+                      }
+                      badges={
+                        entry.status === 'aired'
+                          ? continueWatchingBadges(entry, now)
+                          : calendarBadges(entry, now)
+                      }
+                      entry={entry}
+                      onActionsPress={onItemActions}
+                      onPress={onItemPress}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </AnimatedView>
         </View>
       </UpNextSectionHeader>
     </View>

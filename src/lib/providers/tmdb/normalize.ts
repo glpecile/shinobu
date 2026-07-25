@@ -1,4 +1,5 @@
 import type {
+  HomeReleaseKind,
   NormalizedCastMember,
   NormalizedCompany,
   NormalizedCrewMember,
@@ -117,6 +118,9 @@ function normalizeKindedItem(
       ? { overview: raw.overview }
       : {}),
     ...(Number.isFinite(year) && year > 0 ? { year } : {}),
+    // Keep the full date, not just the derived year: the log button needs it
+    // to refuse a film that isn't out yet (same gate as an unaired episode).
+    ...(date != null ? { releaseDate: date } : {}),
     // TMDB reports 0 for unrated titles, not null — treat it as "no rating".
     ...(rating > 0 ? { rating } : {}),
     type: kind === 'movie' ? 'MOVIE' : 'TV',
@@ -336,6 +340,18 @@ export interface TmdbAggregateCrewEntry extends TmdbPersonRef {
   jobs?: Array<{ job?: string | null }>;
 }
 
+/** One country's release calendar from `append_to_response=release_dates`. */
+export interface TmdbReleaseDatesCountry {
+  iso_3166_1?: string | null;
+  release_dates?: Array<{
+    /** 1 Premiere, 2 Theatrical (limited), 3 Theatrical, 4 Digital, 5 Physical, 6 TV. */
+    type?: number | null;
+    /** ISO instant at UTC midnight — TMDB's encoding of a calendar date. */
+    release_date?: string | null;
+    note?: string | null;
+  }> | null;
+}
+
 export interface TmdbMovieResponse extends TmdbCreditBase {
   genres?: TmdbGenre[];
   runtime?: number | null;
@@ -344,6 +360,54 @@ export interface TmdbMovieResponse extends TmdbCreditBase {
     cast?: TmdbMovieCastEntry[];
     crew?: TmdbMovieCrewEntry[];
   } | null;
+  release_dates?: { results?: TmdbReleaseDatesCountry[] | null } | null;
+}
+
+const TMDB_RELEASE_TYPE_DIGITAL = 4;
+const TMDB_RELEASE_TYPE_PHYSICAL = 5;
+
+/**
+ * The earliest **worldwide** digital-or-physical release across every region —
+ * deliberately not the device locale and not US-only: "when can I actually
+ * watch this at home" has one answer per film, and the first territory to
+ * publish it is that answer (owner decision, plan 0025-era polish pass).
+ *
+ * Returns a bare `YYYY-MM-DD` (TMDB encodes these as UTC-midnight instants,
+ * so the calendar day is the only meaningful part) plus which type produced
+ * it — `'both'` when digital and physical land on the same day, which is what
+ * lets the caller label it honestly instead of guessing.
+ */
+export function earliestHomeRelease(
+  results: TmdbReleaseDatesCountry[] | null | undefined,
+): { date: string; kind: HomeReleaseKind } | null {
+  let digital: string | null = null;
+  let physical: string | null = null;
+
+  for (const country of results ?? []) {
+    for (const entry of country.release_dates ?? []) {
+      const date = entry.release_date;
+      if (date == null || date === '') continue;
+      const day = date.slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+      if (entry.type === TMDB_RELEASE_TYPE_DIGITAL) {
+        if (digital == null || day < digital) digital = day;
+      } else if (entry.type === TMDB_RELEASE_TYPE_PHYSICAL) {
+        if (physical == null || day < physical) physical = day;
+      }
+    }
+  }
+
+  // Ordered so each branch narrows on its own — an `??` fallback here would
+  // let a bug surface as an empty date string rather than a type error.
+  if (digital != null && physical != null) {
+    if (digital === physical) return { date: digital, kind: 'both' };
+    return digital < physical
+      ? { date: digital, kind: 'digital' }
+      : { date: physical, kind: 'physical' };
+  }
+  if (digital != null) return { date: digital, kind: 'digital' };
+  if (physical != null) return { date: physical, kind: 'physical' };
+  return null;
 }
 
 export interface TmdbTvResponse extends TmdbCreditBase {
@@ -483,10 +547,14 @@ export function normalizeMovieCatalogue(
 ): TmdbMediaCatalogue | null {
   const item = normalizeKindedItem(raw, 'movie', nowIso);
   if (item == null) return null;
+  const home = earliestHomeRelease(raw.release_dates?.results);
   return {
     catalogue: {
       ...item,
       ...catalogueExtras(raw, raw.runtime ?? undefined, undefined),
+      ...(home != null
+        ? { homeReleaseDate: home.date, homeReleaseKind: home.kind }
+        : {}),
     },
     cast: normalizeCastEntries(
       (raw.credits?.cast ?? []).map((entry) => ({

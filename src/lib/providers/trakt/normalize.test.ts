@@ -4,6 +4,7 @@ import {
   normalizeCastEntry,
   normalizeCrew,
   normalizeHistoryItem,
+  normalizeMovie,
   normalizeSearchResult,
   normalizeSeason,
   normalizeStudio,
@@ -185,6 +186,27 @@ describe('normalizeWatchedMovie', () => {
     expect(normalizeWatchedMovie(watched).coverImage).toBe(
       'https://walter.trakt.tv/movies/100/poster.jpg',
     );
+  });
+});
+
+describe('normalizeMovie release date', () => {
+  const NOW = '2026-07-10T12:00:00.000Z';
+  const base: TraktMovie = { title: 'Dune', ids: { trakt: 7 } };
+
+  test('carries `released` through as releaseDate', () => {
+    expect(
+      normalizeMovie({ ...base, released: '2026-12-18' }, NOW).releaseDate,
+    ).toBe('2026-12-18');
+  });
+
+  test('omits releaseDate when Trakt has none', () => {
+    expect(normalizeMovie(base, NOW).releaseDate).toBeUndefined();
+  });
+
+  test('treats an empty string as no release date, not a blocked log', () => {
+    expect(
+      normalizeMovie({ ...base, released: '' }, NOW).releaseDate,
+    ).toBeUndefined();
   });
 });
 
