@@ -8,12 +8,15 @@ import { List } from '@/components/List';
 import { PresstableScale, PresstableOpacity } from '@/components/presstable';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
+import { useNewTabPress } from '@/components/use-new-tab-press';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { routes } from '@/lib/routes';
 import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
+import { useHiddenItems } from '@/state/prefs/hidden-items';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
@@ -46,21 +49,30 @@ function flattenDays(
   timeZone: string,
   expanded: ReadonlySet<string>,
   collapsedDays: ReadonlySet<string>,
+  hiddenIds: ReadonlySet<string>,
 ): DiaryListItem[] {
   const items: DiaryListItem[] = [];
   for (const day of days) {
+    // Hiding is one global set (feed, watchlist, Up Next, diary), so a hidden
+    // item's logs drop out here too — and a day left with nothing loses its
+    // header rather than standing empty.
+    const entries =
+      hiddenIds.size === 0
+        ? day.entries
+        : day.entries.filter((entry) => !hiddenIds.has(entry.item.id));
+    if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
     items.push({
       kind: 'header',
       key: `h-${day.key}`,
       dayKey: day.key,
       label: formatDayHeader(day.key, now, timeZone),
-      count: day.entries.length,
+      count: entries.length,
       collapsed,
     });
     // A minimized day shows its header alone — its rows are omitted entirely.
     if (collapsed) continue;
-    for (const cluster of clusterDayEntries(day.entries)) {
+    for (const cluster of clusterDayEntries(entries)) {
       // A lone log is an ordinary row; a run of same-show episodes collapses.
       if (cluster.entries.length === 1) {
         const entry = cluster.entries[0];
@@ -154,38 +166,126 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
+/**
+ * Web-only ⋯ that opens the row's actions dialog, revealed while the pointer is
+ * over the row — long-press is the native gesture and isn't discoverable with a
+ * mouse (same reasoning as the media card's hover ⋯). The slot keeps its width
+ * whether or not the button shows, so hovering never reflows the row.
+ */
+function DiaryRowActionsButton({
+  item,
+  visible,
+  onActions,
+}: {
+  item: NormalizedMediaItem;
+  visible: boolean;
+  onActions: (item: NormalizedMediaItem) => void;
+}) {
+  const muted = useCSSVariable('--color-muted');
+  if (process.env.EXPO_OS !== 'web') return null;
+  return (
+    <View className="w-9 items-end">
+      {visible && (
+        <PresstableOpacity
+          accessibilityLabel={`More options for ${item.title}`}
+          className="w-8 h-8 items-center justify-center rounded-full bg-surface border border-border/60"
+          onPress={() => onActions(item)}
+        >
+          <Ionicons
+            color={typeof muted === 'string' ? muted : undefined}
+            name="ellipsis-horizontal"
+            size={16}
+          />
+        </PresstableOpacity>
+      )}
+    </View>
+  );
+}
+
+/**
+ * The interaction wiring every diary row shares: long-press opens the card
+ * actions dialog, ⌘/Ctrl+click opens details in a new tab on web, and hovering
+ * reveals the ⋯ that opens the same dialog. `actionsButton` is rendered as a
+ * *sibling* of the row's pressable, never a child — nesting two
+ * gesture-handler buttons would let a ⋯ press bubble into the row press.
+ */
+function useDiaryRowActions({
+  item,
+  href,
+  onActions,
+}: {
+  item: NormalizedMediaItem;
+  /** ⌘/Ctrl+click target; omitted on rows whose press doesn't navigate. */
+  href?: string;
+  onActions: (item: NormalizedMediaItem) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const newTab = useNewTabPress(href ?? '');
+
+  return {
+    hoverProps: {
+      onPointerDown: newTab.onPointerDown,
+      onPointerEnter: () => setHovered(true),
+      onPointerLeave: () => setHovered(false),
+    },
+    openedInNewTab: () => href != null && newTab.opened(),
+    onLongPress: () => onActions(item),
+    actionsButton: (
+      <DiaryRowActionsButton
+        item={item}
+        onActions={onActions}
+        visible={hovered}
+      />
+    ),
+  };
+}
+
 function DiaryRow({
   entry,
   onOpen,
+  onActions,
 }: {
   entry: MergedDiaryEntry;
   onOpen: (id: string) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   const detail = formatEpisodeDetail({
     type: entry.item.type,
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
   });
+  const row = useDiaryRowActions({
+    item: entry.item,
+    href: routes.details(entry.item.id),
+    onActions,
+  });
 
   return (
-    <PresstableScale
-      className="flex-row items-center px-6 py-2.5"
-      onPress={() => onOpen(entry.item.id)}
-    >
-      <DiaryPoster item={entry.item} />
-      <View className="flex-1 ml-4">
-        <Text
-          className="text-foreground font-sans-semibold text-base"
-          numberOfLines={1}
-        >
-          {entry.item.title}
-        </Text>
-        {detail !== '' && (
-          <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
-        )}
-      </View>
-      <ProviderCluster providers={entry.providers} />
-    </PresstableScale>
+    <View className="flex-row items-center px-6 py-2.5" {...row.hoverProps}>
+      <PresstableScale
+        className="flex-1 flex-row items-center"
+        onLongPress={row.onLongPress}
+        onPress={() => {
+          if (row.openedInNewTab()) return;
+          onOpen(entry.item.id);
+        }}
+      >
+        <DiaryPoster item={entry.item} />
+        <View className="flex-1 ml-4">
+          <Text
+            className="text-foreground font-sans-semibold text-base"
+            numberOfLines={1}
+          >
+            {entry.item.title}
+          </Text>
+          {detail !== '' && (
+            <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
+          )}
+        </View>
+        <ProviderCluster providers={entry.providers} />
+      </PresstableScale>
+      {row.actionsButton}
+    </View>
   );
 }
 
@@ -198,10 +298,12 @@ function DiaryClusterRow({
   cluster,
   expanded,
   onToggle,
+  onActions,
 }: {
   cluster: DiaryCluster;
   expanded: boolean;
   onToggle: (key: string) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   const muted = useCSSVariable('--color-muted');
   const summary = summarizeCluster(cluster);
@@ -212,34 +314,48 @@ function DiaryClusterRow({
   });
   const count = formatClusterCount(summary.item.type, summary.count);
   const detail = range !== '' ? `${range} · ${count}` : count;
+  // ⌘/Ctrl+click opens the show in a new tab even though a plain press toggles
+  // the run — the modifier means the same thing on every row of the list.
+  const row = useDiaryRowActions({
+    item: summary.item,
+    href: routes.details(summary.item.id),
+    onActions,
+  });
 
   return (
-    <PresstableScale
-      accessibilityHint={expanded ? 'Collapses this run' : 'Expands this run'}
-      accessibilityLabel={`${summary.item.title}, ${count}`}
-      accessibilityRole="button"
-      accessibilityState={{ expanded }}
-      className="flex-row items-center px-6 py-2.5"
-      onPress={() => onToggle(cluster.key)}
-    >
-      <DiaryPoster item={summary.item} />
-      <View className="flex-1 ml-4">
-        <Text
-          className="text-foreground font-sans-semibold text-base"
-          numberOfLines={1}
-        >
-          {summary.item.title}
-        </Text>
-        <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
-      </View>
-      <ProviderCluster providers={summary.providers} />
-      <Ionicons
-        color={typeof muted === 'string' ? muted : undefined}
-        name={expanded ? 'chevron-up' : 'chevron-down'}
-        size={18}
-        style={{ marginLeft: 10 }}
-      />
-    </PresstableScale>
+    <View className="flex-row items-center px-6 py-2.5" {...row.hoverProps}>
+      <PresstableScale
+        accessibilityHint={expanded ? 'Collapses this run' : 'Expands this run'}
+        accessibilityLabel={`${summary.item.title}, ${count}`}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        className="flex-1 flex-row items-center"
+        onLongPress={row.onLongPress}
+        onPress={() => {
+          if (row.openedInNewTab()) return;
+          onToggle(cluster.key);
+        }}
+      >
+        <DiaryPoster item={summary.item} />
+        <View className="flex-1 ml-4">
+          <Text
+            className="text-foreground font-sans-semibold text-base"
+            numberOfLines={1}
+          >
+            {summary.item.title}
+          </Text>
+          <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
+        </View>
+        <ProviderCluster providers={summary.providers} />
+        <Ionicons
+          color={typeof muted === 'string' ? muted : undefined}
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          style={{ marginLeft: 10 }}
+        />
+      </PresstableScale>
+      {row.actionsButton}
+    </View>
   );
 }
 
@@ -248,21 +364,28 @@ function DiaryChildRow({
   entry,
   last,
   onOpen,
+  onActions,
 }: {
   entry: MergedDiaryEntry;
   last: boolean;
   onOpen: (id: string) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   const detail = formatEpisodeDetail({
     type: entry.item.type,
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
   });
+  const row = useDiaryRowActions({
+    item: entry.item,
+    href: routes.details(entry.item.id),
+    onActions,
+  });
 
   return (
     // Fixed row height so the connector geometry is pixel-exact (labels are a
     // single line — numberOfLines={1} — so nothing needs to grow the row).
-    <View className="flex-row px-6 h-11">
+    <View className="flex-row px-6 h-11" {...row.hoverProps}>
       {/* Terminal-style tree connector: a vertical trunk centered under the
           poster and a horizontal branch into the row — ├─ for a middle child,
           └─ for the last, whose trunk stops at the branch (mid-row) instead of
@@ -276,7 +399,11 @@ function DiaryChildRow({
       </View>
       <PresstableScale
         className="flex-1 flex-row items-center"
-        onPress={() => onOpen(entry.item.id)}
+        onLongPress={row.onLongPress}
+        onPress={() => {
+          if (row.openedInNewTab()) return;
+          onOpen(entry.item.id);
+        }}
       >
         <Text
           className="flex-1 text-foreground font-sans text-sm"
@@ -286,6 +413,7 @@ function DiaryChildRow({
         </Text>
         <ProviderCluster providers={entry.providers} />
       </PresstableScale>
+      {row.actionsButton}
     </View>
   );
 }
@@ -341,6 +469,8 @@ export interface DiaryListProps {
   onRetry: () => void;
   onRefresh: () => Promise<unknown>;
   onOpen: (id: string) => void;
+  /** Opens the card actions dialog — long-press, or the web hover ⋯. */
+  onItemActions: (item: NormalizedMediaItem) => void;
 }
 
 /**
@@ -358,6 +488,7 @@ export function DiaryList({
   onRetry,
   onRefresh,
   onOpen,
+  onItemActions,
 }: DiaryListProps) {
   const [refreshing, setRefreshing] = useState(false);
   // Which episode clusters are open. Expansion is ephemeral view state that
@@ -365,7 +496,15 @@ export function DiaryList({
   // stable anchor id — unlike day-minimize, which persists across restarts.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const collapsedDays = useCollapsedDiaryDays();
-  const items = flattenDays(days, new Date(), timeZone, expanded, collapsedDays);
+  const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
+  const items = flattenDays(
+    days,
+    new Date(),
+    timeZone,
+    expanded,
+    collapsedDays,
+    hiddenIds,
+  );
 
   function toggleCluster(key: string) {
     setExpanded((prev) => {
@@ -409,15 +548,27 @@ export function DiaryList({
               <DiaryClusterRow
                 cluster={item.cluster}
                 expanded={item.expanded}
+                onActions={onItemActions}
                 onToggle={toggleCluster}
               />
             );
           case 'child':
             return (
-              <DiaryChildRow entry={item.entry} last={item.last} onOpen={onOpen} />
+              <DiaryChildRow
+                entry={item.entry}
+                last={item.last}
+                onActions={onItemActions}
+                onOpen={onOpen}
+              />
             );
           default:
-            return <DiaryRow entry={item.entry} onOpen={onOpen} />;
+            return (
+              <DiaryRow
+                entry={item.entry}
+                onActions={onItemActions}
+                onOpen={onOpen}
+              />
+            );
         }
       }}
       ListHeaderComponent={

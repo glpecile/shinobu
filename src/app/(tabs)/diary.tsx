@@ -10,6 +10,8 @@ import {
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
 import { Skeleton } from '@/components/skeleton';
+import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList } from '@/features/diary/diary-list';
 import { routes } from '@/lib/routes';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
@@ -73,6 +75,7 @@ export default function DiaryScreen() {
   const router = useRouter();
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
+  const { openActions, sheetProps } = useCardActions();
 
   function openDetails(id: string) {
     router.push(routes.details(id));
@@ -135,6 +138,7 @@ export default function DiaryScreen() {
         hasNextPage={diary.hasNextPage}
         isFetchingNextPage={diary.isFetchingNextPage}
         onEndReached={diary.fetchNextPage}
+        onItemActions={openActions}
         onOpen={openDetails}
         onRefresh={diary.refetch}
         onRetry={() => {
@@ -153,6 +157,9 @@ export default function DiaryScreen() {
       </Head>
       <DiaryHeader />
       {content}
+      {/* Same dialog as the feed's cards, opened by a row long-press (or the
+          web hover ⋯) — the hide row names this surface. */}
+      <CardActionsSheet {...sheetProps} hideLabel="Hide from diary" />
     </View>
   );
 }
