@@ -84,12 +84,31 @@ export function parseWatchlistPage(html: string): LetterboxdWatchlistFilm[] {
 }
 
 /**
- * The user's public watchlist, first page (28 films), normalized. A 404 means
+ * Films per full watchlist page. Letterboxd's grid is fixed at 28, which is
+ * also the end-of-list signal: a short page has no successor (the same cursor
+ * contract `getHistory` uses).
+ */
+export const WATCHLIST_PAGE_SIZE = 28;
+
+/** Page 1 is the bare path; deeper pages take the `/page/N/` suffix. */
+function watchlistPath(username: string, page: number): string {
+  return page <= 1
+    ? `/${username}/watchlist/`
+    : `/${username}/watchlist/page/${page}/`;
+}
+
+/**
+ * One page of the user's public watchlist (28 films), normalized. A 404 means
  * the username no longer resolves (renamed/deleted account) — surfaced as a
  * dead session so the UI's move is "reconnect Letterboxd".
+ *
+ * The web transport relays this through the Worker proxy, whose watchlist rule
+ * accepts the `page/N/` suffix (plan 0024 U9; every other proxy invariant
+ * unchanged — see `worker/letterboxd-proxy.ts`).
  */
-export function getWatchlist(
+export function getWatchlistPage(
   deps: LetterboxdDeps,
+  params: { page: number },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const username = deps.username;
   if (username == null || username === '') {
@@ -97,10 +116,11 @@ export function getWatchlist(
       new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true }),
     );
   }
+  const path = watchlistPath(username, params.page);
 
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/watchlist/`),
+      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`),
       catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
     });
 
@@ -116,7 +136,7 @@ export function getWatchlist(
     if (!response.ok) {
       return yield* new ProviderNetworkError({
         provider: 'letterboxd',
-        cause: new Error(`Letterboxd responded ${response.status} for /${username}/watchlist/`),
+        cause: new Error(`Letterboxd responded ${response.status} for ${path}`),
       });
     }
 
@@ -134,6 +154,13 @@ export function getWatchlist(
       normalizeWatchlistFilm(film, fetchedAt),
     );
   });
+}
+
+/** The first page alone — what the home feed's capped carousel row needs. */
+export function getWatchlist(
+  deps: LetterboxdDeps,
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  return getWatchlistPage(deps, { page: 1 });
 }
 
 /**

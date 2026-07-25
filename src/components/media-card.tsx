@@ -7,6 +7,8 @@ import { useCSSVariable } from 'uniwind';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { useNewTabPress } from '@/components/use-new-tab-press';
+import { routes } from '@/lib/routes';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -44,11 +46,20 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
   const showActionsButton =
     onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
+  // Web only: ⌘/Ctrl+click opens details in a new tab, like any other link.
+  const newTab = useNewTabPress(routes.details(item.id));
+
+  function onCardPress() {
+    if (newTab.opened()) return;
+    onPress?.(item);
+  }
+
   return (
     // The ⋯ button is a *sibling* of the pressable, not a child — nesting two
     // gesture-handler buttons would let a ⋯ click bubble into the card press.
     <View
       className="w-40 h-60 relative"
+      onPointerDown={newTab.onPointerDown}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
@@ -57,7 +68,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(item)
         }
-        onPress={() => onPress?.(item)}
+        onPress={onCardPress}
       >
         {coverImage !== '' ? (
           <Image

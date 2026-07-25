@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   formatDayHeading,
+  formatLocalTime,
   formatRelativeDay,
   localDayAt,
   localDayOffset,
@@ -87,6 +88,27 @@ describe('formatRelativeDay', () => {
 
   test('unparseable input renders no label', () => {
     expect(formatRelativeDay(undefined, NOW)).toBeNull();
+  });
+});
+
+describe('formatLocalTime', () => {
+  test('renders the air time in the user’s timezone, on a 24-hour clock', () => {
+    expect(formatLocalTime(localInstant(2026, 7, 24, 21, 30))).toBe('21:30');
+    // Zero-padded on both halves, so badges keep one width across a row.
+    expect(formatLocalTime(localInstant(2026, 7, 24, 9, 5))).toBe('09:05');
+    expect(formatLocalTime(localInstant(2026, 7, 24, 0, 15))).toBe('00:15');
+  });
+
+  test('a date-only value has no time to render', () => {
+    // It parses to local midnight for ordering — showing "00:00" would
+    // invent an air time the provider never stated.
+    expect(formatLocalTime('2026-07-24')).toBeNull();
+  });
+
+  test('null, empty and unparseable values render nothing', () => {
+    expect(formatLocalTime(null)).toBeNull();
+    expect(formatLocalTime('')).toBeNull();
+    expect(formatLocalTime('not a date')).toBeNull();
   });
 });
 

@@ -2,7 +2,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
-import { tmdbToken } from '@/lib/providers/tmdb/config';
+import { tmdbToken } from '@/state/session/tmdb-token';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import {
   getPerson,

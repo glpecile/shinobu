@@ -15,6 +15,7 @@
 import {
   ANILIST_AUTHORIZE_URL,
   ANILIST_CREATE_CLIENT_URL,
+  TMDB_API_SETTINGS_URL,
   TRAKT_CREATE_APP_URL,
 } from '@/lib/providers/external-urls';
 import { ANILIST_GRAPHQL_URL } from '@/lib/providers/anilist/http';
@@ -67,6 +68,15 @@ export const URL_CHECKS: UrlCheck[] = [
     method: 'POST',
     body: '{}',
     expect: [400],
+  },
+  {
+    // An account-settings page: signed-out (which this probe always is)
+    // TMDB answers 401 rather than redirecting to a login page. That's the
+    // "exists and refused me" signal — a moved or dead page would 404. A 200
+    // is accepted too, in case TMDB ever starts redirecting instead.
+    name: 'TMDB API settings page',
+    url: TMDB_API_SETTINGS_URL,
+    expect: [200, 401],
   },
 ];
 

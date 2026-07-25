@@ -100,3 +100,32 @@ reopen writes; until then the spike route stays as the standing test harness.
 - Signed-in state is not reliably detectable from page HTML markers
   (`js-nav-account`, `data-viewingable-identifier` absent even when
   authenticated). Use `GET /settings/` (200 vs redirect) as the auth probe.
+
+## Allowlist widening 2026-07-25 (plan 0024 U9): paginated watchlist
+
+The watchlist rule now accepts an optional page suffix:
+
+```
+/^[A-Za-z0-9_-]{1,39}\/watchlist\/(page\/[1-9][0-9]{0,3}\/)?$/
+```
+
+**Why:** the watchlist row only ever showed page 1 (28 films). The "View all"
+grid pages through `/{user}/watchlist/page/N/`, which the old regex (anchored
+at `watchlist/$`) rejected as a 404 on web.
+
+**What did *not* change** — every other invariant holds and was re-asserted in
+`worker/letterboxd-proxy.test.ts`: GET-only (405 on any other method, including
+on a paged path), unauthenticated (no `Authorization`, no cookies either
+direction, no client headers relayed), username-locked to the same charset, the
+content-type allowlist, the script-killing CSP + `nosniff`, no
+`Access-Control-Allow-Origin`, the ~30 s timeout, and traversal rejection.
+
+**Bounds on `N`:** `[1-9][0-9]{0,3}` — 1–9999. `page/0/`, `page/01/`,
+`page/99999/`, non-numeric suffixes, a missing trailing slash, and anything
+after the suffix are all 404s, and the suffix is watchlist-only (it does not
+unlock `/{user}/rss/page/N/` or any other path).
+
+**Still no POST rule.** This widening is a read-path recall fix; the
+fingerprint wall on state-changing requests is untouched, and
+`worker/letterboxd-write-spike.ts` remains the standing harness that must prove
+otherwise before any write rule is considered.

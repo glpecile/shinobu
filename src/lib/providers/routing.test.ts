@@ -134,6 +134,20 @@ describe('providersForLog', () => {
       ),
     ).toEqual(['anilist']);
   });
+
+  // The ChaO (2025) shape: a TMDB/Trakt-first anime film whose AniList id the
+  // enrichment fallback discovered (plan 0024 U6). No routing change was
+  // needed — `effectiveTypes` already widens a MOVIE on `externalIds.anilist`.
+  it('routes an anime film discovered from the movie side to all three movie targets, never Serializd', () => {
+    expect(
+      providersForLog({ type: 'MOVIE', ...ids({ trakt: 1, tmdb: 2, anilist: 3 }) }, [
+        'trakt',
+        'anilist',
+        'letterboxd',
+        'serializd',
+      ]),
+    ).toEqual(['trakt', 'anilist', 'letterboxd']);
+  });
 });
 
 describe('providersForFeed', () => {

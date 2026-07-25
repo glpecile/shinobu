@@ -7,8 +7,8 @@ import {
  * The Letterboxd same-origin reads proxy (plan 0018) — the repo's second
  * bounded exception to the AGENTS.md "never proxied" policy, modeled on
  * worker/serializd-proxy.ts. It forwards ONLY two public, unauthenticated
- * GET path shapes (`/{user}/watchlist/`, `/{user}/rss/` — the entire Letterboxd
- * read surface), attaches no client headers, caps upstream latency, relays only
+ * GET path shapes (`/{user}/watchlist/` with an optional `page/N/` suffix, and
+ * `/{user}/rss/` — the entire Letterboxd read surface), attaches no client headers, caps upstream latency, relays only
  * HTML/XML bodies under a script-killing CSP + `nosniff`, maps the Cloudflare
  * challenge page to a clean 502, emits no `Access-Control-Allow-Origin`, and
  * stores/logs nothing. Everything else falls through to static-asset serving
@@ -40,7 +40,12 @@ const RELAY_USER_AGENT =
  * on a matched path is a 405, anything unmatched is a 404 (KTD3 pattern).
  */
 const RULES: Array<{ match: (path: string) => boolean }> = [
-  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/watchlist\/$/.test(p) },
+  // The optional `page/N/` suffix (plan 0024 U9) is the ONE widening this rule
+  // has taken: the watchlist grid pages past the first 28 films. Still one
+  // username, still the watchlist path, still GET-only and unauthenticated —
+  // `N` is bounded to 1–9999 so no unbounded path segment reaches upstream, and
+  // `page/0/` (and any non-numeric suffix) stays a 404.
+  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/watchlist\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/rss\/$/.test(p) },
 ];
 

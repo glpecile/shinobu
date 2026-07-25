@@ -32,7 +32,7 @@ import {
   applyPrimaryMetadata,
   mergeCatalogueMetadata,
 } from '@/lib/providers/merge-metadata';
-import { tmdbToken } from '@/lib/providers/tmdb/config';
+import { useTmdbToken } from '@/state/session/tmdb-token';
 import { routes } from '@/lib/routes';
 import {
   anilistQueryKeys,
@@ -49,6 +49,7 @@ import {
   useTraktWatchedInfo,
 } from '@/state/queries/trakt';
 import { findInDiaryCache } from '@/state/queries/diary-cache';
+import { findInSearchCache } from '@/state/queries/search-cache';
 import { useMovieCatalogueQuery, useTraktIdentityQuery } from '@/state/queries/mapping';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
@@ -60,23 +61,6 @@ function findItemById(
   groups: NormalizedMediaItem[][],
 ): NormalizedMediaItem | undefined {
   return groups.flat().find((item) => item.id === id);
-}
-
-/**
- * Search results aren't part of the unified feed, so a tap from the search
- * screen resolves against the cached search queries instead (plan 0009). Cold
- * deep links still miss — the provider-fetch fallback stays with plan 0007.
- */
-function findInSearchCache(
-  queryClient: QueryClient,
-  id: string,
-): NormalizedMediaItem | undefined {
-  return queryClient
-    .getQueriesData<NormalizedMediaItem[]>({
-      queryKey: traktQueryKeys.searchRoot(),
-    })
-    .flatMap(([, data]) => data ?? [])
-    .find((item) => item.id === id);
 }
 
 /**
@@ -251,7 +235,7 @@ function PeopleSection({
 }) {
   const router = useRouter();
   // No TMDB token, no person pages — cards stay informational.
-  const canOpenPeople = tmdbToken() !== '';
+  const canOpenPeople = useTmdbToken() !== '';
 
   if (people.length === 0) return null;
 
@@ -284,7 +268,7 @@ function PeopleSection({
 function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   const router = useRouter();
   // No TMDB token, no studio pages — pills stay informational.
-  const canOpenStudios = tmdbToken() !== '';
+  const canOpenStudios = useTmdbToken() !== '';
 
   if (studios.length === 0) return null;
 
@@ -448,6 +432,8 @@ export default function DetailsScreen() {
       feed.trendingShows,
       feed.seasonalAnime,
     ]) ??
+    // Search results belong to no feed slot (plan 0009) — and manga belongs to
+    // no feed row at all, so this is the only way it resolves (plan 0024 U8).
     findInSearchCache(queryClient, id) ??
     // Diary rows live in no feed slot and no search — resolve them from the
     // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).
@@ -583,7 +569,13 @@ export default function DetailsScreen() {
           <meta content={shown.overview} name="description" />
         )}
       </Head>
-      <RefreshableScrollView className="flex-1" onRefresh={refresh}>
+      {/* Full-bleed backdrop starts at y=0, so the Android spinner would
+          otherwise land inside the notch. */}
+      <RefreshableScrollView
+        className="flex-1"
+        onRefresh={refresh}
+        spinnerBelowStatusBar
+      >
         <View className="h-80 relative">
           <Image
             source={{
@@ -665,7 +657,11 @@ export default function DetailsScreen() {
                 <StatTile
                   label="Total"
                   value={shown.totalEpisodes}
-                  caption="episodes"
+                  // Manga counts chapters here (AniList's `chapters` lands in
+                  // the same field) — the label must follow the unit.
+                  caption={
+                    shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
+                  }
                 />
               )}
               {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}

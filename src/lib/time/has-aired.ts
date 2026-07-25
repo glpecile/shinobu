@@ -31,6 +31,16 @@ export function hasAired(
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * Whether a provider date field carries a calendar day but no time of day.
+ * Anything *displaying* an air time has to ask: the local-midnight parse below
+ * is the right ordering key, but rendering it would claim a 12:00 AM airing
+ * the provider never stated.
+ */
+export function isDateOnly(value: string): boolean {
+  return DATE_ONLY.test(value);
+}
+
+/**
  * Parses a provider date field into an absolute instant. Full ISO instants
  * (with offset/Z) parse via the `Date` constructor; bare date-only strings are
  * rebuilt as **local midnight** so they don't silently shift to UTC (the JS

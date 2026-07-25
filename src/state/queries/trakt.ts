@@ -7,6 +7,7 @@ import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { DIARY_QUERY_ROOTS } from '@/state/queries/diary-cache';
+import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
 import {
@@ -80,8 +81,9 @@ export const traktQueryKeys = {
     [...traktQueryKeys.all, 'trending-movies', limit ?? 'default'] as const,
   trendingShows: (limit?: number) =>
     [...traktQueryKeys.all, 'trending-shows', limit ?? 'default'] as const,
-  /** Prefix for every search entry — details/[id] scans this for cache hits. */
-  searchRoot: () => [...traktQueryKeys.all, 'search'] as const,
+  /** Prefix for every search entry — details/[id] scans this for cache hits.
+   *  Shared root so `search-cache.ts`'s scan can't drift from this key. */
+  searchRoot: () => [...SEARCH_QUERY_ROOTS.trakt],
   search: (query: string, limit: number) =>
     [...traktQueryKeys.searchRoot(), query, limit] as const,
   /** Full seasons + episodes for one show (plan 0010). */

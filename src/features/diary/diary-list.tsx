@@ -1,5 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -8,12 +8,15 @@ import { List } from '@/components/List';
 import { PresstableScale, PresstableOpacity } from '@/components/presstable';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
+import { useNewTabPress } from '@/components/use-new-tab-press';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { routes } from '@/lib/routes';
 import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
+import { useHiddenItems } from '@/state/prefs/hidden-items';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
@@ -46,21 +49,30 @@ function flattenDays(
   timeZone: string,
   expanded: ReadonlySet<string>,
   collapsedDays: ReadonlySet<string>,
+  hiddenIds: ReadonlySet<string>,
 ): DiaryListItem[] {
   const items: DiaryListItem[] = [];
   for (const day of days) {
+    // Hiding is one global set (feed, watchlist, Up Next, diary), so a hidden
+    // item's logs drop out here too — and a day left with nothing loses its
+    // header rather than standing empty.
+    const entries =
+      hiddenIds.size === 0
+        ? day.entries
+        : day.entries.filter((entry) => !hiddenIds.has(entry.item.id));
+    if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
     items.push({
       kind: 'header',
       key: `h-${day.key}`,
       dayKey: day.key,
       label: formatDayHeader(day.key, now, timeZone),
-      count: day.entries.length,
+      count: entries.length,
       collapsed,
     });
     // A minimized day shows its header alone — its rows are omitted entirely.
     if (collapsed) continue;
-    for (const cluster of clusterDayEntries(day.entries)) {
+    for (const cluster of clusterDayEntries(entries)) {
       // A lone log is an ordinary row; a run of same-show episodes collapses.
       if (cluster.entries.length === 1) {
         const entry = cluster.entries[0];
@@ -154,12 +166,149 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
+/**
+ * Web-only ⋯ that opens the row's actions dialog, sitting just past the title
+ * and revealed while the pointer is over the row — long-press is the native
+ * gesture and isn't discoverable with a mouse (same reasoning as the media
+ * card's hover ⋯). The slot keeps its width whether or not the button shows, so
+ * hovering never nudges the title.
+ */
+function DiaryRowActionsButton({
+  item,
+  visible,
+  onActions,
+}: {
+  item: NormalizedMediaItem;
+  visible: boolean;
+  onActions: (item: NormalizedMediaItem) => void;
+}) {
+  const muted = useCSSVariable('--color-muted');
+  return (
+    <View className="w-10 items-center">
+      {visible && (
+        <PresstableOpacity
+          accessibilityLabel={`More options for ${item.title}`}
+          className="w-8 h-8 items-center justify-center rounded-full bg-surface border border-border/60"
+          onPress={() => onActions(item)}
+        >
+          <Ionicons
+            color={typeof muted === 'string' ? muted : undefined}
+            name="ellipsis-horizontal"
+            size={16}
+          />
+        </PresstableOpacity>
+      )}
+    </View>
+  );
+}
+
+/** Accessibility props forwarded to a row's pressable(s). */
+type RowAccessibility = Pick<
+  ComponentProps<typeof PresstableScale>,
+  'accessibilityHint' | 'accessibilityLabel' | 'accessibilityRole' | 'accessibilityState'
+>;
+
+interface DiaryRowShellProps {
+  item: NormalizedMediaItem;
+  /** ⌘/Ctrl+click target on web. */
+  href: string;
+  onPress: () => void;
+  onActions: (item: NormalizedMediaItem) => void;
+  /** Poster + text, up to where the ⋯ sits. Shrinks; never `flex-1`. */
+  leading: ReactNode;
+  /** Provider marks, chevron — pushed to the row's right edge. */
+  trailing: ReactNode;
+  /** Padding/height for the row container. */
+  className: string;
+  accessibility?: RowAccessibility;
+}
+
+/**
+ * The interaction shell every diary row shares: press opens details (⌘/Ctrl
+ * +click opens them in a new tab on web), long-press opens the card actions
+ * dialog, and hovering reveals the ⋯ that opens that same dialog.
+ *
+ * The ⋯ belongs beside the title, but it can't be a *child* of the row's
+ * pressable — nesting two gesture-handler buttons would let a ⋯ press bubble
+ * into the row press. So on web the row is split into two sibling pressables,
+ * leading (poster + title) and trailing (provider marks), with the ⋯ between
+ * them: the button sits exactly where the title ends, and both halves carry the
+ * same press/long-press, so the whole row stays one target. Native has no ⋯ —
+ * long-press is its gesture — so it stays a single pressable and keeps a
+ * whole-row press-scale.
+ */
+function DiaryRowShell({
+  item,
+  href,
+  onPress,
+  onActions,
+  leading,
+  trailing,
+  className,
+  accessibility,
+}: DiaryRowShellProps) {
+  const [hovered, setHovered] = useState(false);
+  const newTab = useNewTabPress(href);
+
+  const pressProps = {
+    ...accessibility,
+    onLongPress: () => onActions(item),
+    onPress: () => {
+      if (newTab.opened()) return;
+      onPress();
+    },
+  };
+
+  if (process.env.EXPO_OS !== 'web') {
+    return (
+      <PresstableScale
+        className={`flex-row items-center ${className}`}
+        {...pressProps}
+      >
+        {leading}
+        <View className="flex-1" />
+        {trailing}
+      </PresstableScale>
+    );
+  }
+
+  return (
+    <View
+      className={`flex-row items-center ${className}`}
+      onPointerDown={newTab.onPointerDown}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
+      <PresstableScale className="flex-row items-center shrink" {...pressProps}>
+        {leading}
+      </PresstableScale>
+      <DiaryRowActionsButton
+        item={item}
+        onActions={onActions}
+        visible={hovered}
+      />
+      {/* The empty stretch past the ⋯ is the same target as the title — a click
+          anywhere on the row still opens the item. No a11y props here: the
+          leading half already announces the row. */}
+      <PresstableScale
+        className="flex-1 flex-row items-center justify-end self-stretch"
+        onLongPress={pressProps.onLongPress}
+        onPress={pressProps.onPress}
+      >
+        {trailing}
+      </PresstableScale>
+    </View>
+  );
+}
+
 function DiaryRow({
   entry,
   onOpen,
+  onActions,
 }: {
   entry: MergedDiaryEntry;
   onOpen: (id: string) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   const detail = formatEpisodeDetail({
     type: entry.item.type,
@@ -168,24 +317,30 @@ function DiaryRow({
   });
 
   return (
-    <PresstableScale
-      className="flex-row items-center px-6 py-2.5"
+    <DiaryRowShell
+      className="px-6 py-2.5"
+      href={routes.details(entry.item.id)}
+      item={entry.item}
+      leading={
+        <>
+          <DiaryPoster item={entry.item} />
+          <View className="shrink ml-4">
+            <Text
+              className="text-foreground font-sans-semibold text-base"
+              numberOfLines={1}
+            >
+              {entry.item.title}
+            </Text>
+            {detail !== '' && (
+              <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
+            )}
+          </View>
+        </>
+      }
+      onActions={onActions}
       onPress={() => onOpen(entry.item.id)}
-    >
-      <DiaryPoster item={entry.item} />
-      <View className="flex-1 ml-4">
-        <Text
-          className="text-foreground font-sans-semibold text-base"
-          numberOfLines={1}
-        >
-          {entry.item.title}
-        </Text>
-        {detail !== '' && (
-          <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
-        )}
-      </View>
-      <ProviderCluster providers={entry.providers} />
-    </PresstableScale>
+      trailing={<ProviderCluster providers={entry.providers} />}
+    />
   );
 }
 
@@ -198,10 +353,12 @@ function DiaryClusterRow({
   cluster,
   expanded,
   onToggle,
+  onActions,
 }: {
   cluster: DiaryCluster;
   expanded: boolean;
   onToggle: (key: string) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   const muted = useCSSVariable('--color-muted');
   const summary = summarizeCluster(cluster);
@@ -214,32 +371,46 @@ function DiaryClusterRow({
   const detail = range !== '' ? `${range} · ${count}` : count;
 
   return (
-    <PresstableScale
-      accessibilityHint={expanded ? 'Collapses this run' : 'Expands this run'}
-      accessibilityLabel={`${summary.item.title}, ${count}`}
-      accessibilityRole="button"
-      accessibilityState={{ expanded }}
-      className="flex-row items-center px-6 py-2.5"
+    <DiaryRowShell
+      accessibility={{
+        accessibilityHint: expanded ? 'Collapses this run' : 'Expands this run',
+        accessibilityLabel: `${summary.item.title}, ${count}`,
+        accessibilityRole: 'button',
+        accessibilityState: { expanded },
+      }}
+      className="px-6 py-2.5"
+      // ⌘/Ctrl+click opens the show in a new tab even though a plain press
+      // toggles the run — the modifier means the same thing on every row.
+      href={routes.details(summary.item.id)}
+      item={summary.item}
+      leading={
+        <>
+          <DiaryPoster item={summary.item} />
+          <View className="shrink ml-4">
+            <Text
+              className="text-foreground font-sans-semibold text-base"
+              numberOfLines={1}
+            >
+              {summary.item.title}
+            </Text>
+            <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
+          </View>
+        </>
+      }
+      onActions={onActions}
       onPress={() => onToggle(cluster.key)}
-    >
-      <DiaryPoster item={summary.item} />
-      <View className="flex-1 ml-4">
-        <Text
-          className="text-foreground font-sans-semibold text-base"
-          numberOfLines={1}
-        >
-          {summary.item.title}
-        </Text>
-        <Text className="text-muted font-sans text-xs mt-1">{detail}</Text>
-      </View>
-      <ProviderCluster providers={summary.providers} />
-      <Ionicons
-        color={typeof muted === 'string' ? muted : undefined}
-        name={expanded ? 'chevron-up' : 'chevron-down'}
-        size={18}
-        style={{ marginLeft: 10 }}
-      />
-    </PresstableScale>
+      trailing={
+        <>
+          <ProviderCluster providers={summary.providers} />
+          <Ionicons
+            color={typeof muted === 'string' ? muted : undefined}
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            style={{ marginLeft: 10 }}
+          />
+        </>
+      }
+    />
   );
 }
 
@@ -248,10 +419,12 @@ function DiaryChildRow({
   entry,
   last,
   onOpen,
+  onActions,
 }: {
   entry: MergedDiaryEntry;
   last: boolean;
   onOpen: (id: string) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   const detail = formatEpisodeDetail({
     type: entry.item.type,
@@ -274,18 +447,22 @@ function DiaryChildRow({
         />
         <View className="absolute left-6 top-[22px] w-4 h-px bg-border" />
       </View>
-      <PresstableScale
-        className="flex-1 flex-row items-center"
+      <DiaryRowShell
+        className="flex-1"
+        href={routes.details(entry.item.id)}
+        item={entry.item}
+        leading={
+          <Text
+            className="shrink text-foreground font-sans text-sm"
+            numberOfLines={1}
+          >
+            {detail !== '' ? detail : entry.item.title}
+          </Text>
+        }
+        onActions={onActions}
         onPress={() => onOpen(entry.item.id)}
-      >
-        <Text
-          className="flex-1 text-foreground font-sans text-sm"
-          numberOfLines={1}
-        >
-          {detail !== '' ? detail : entry.item.title}
-        </Text>
-        <ProviderCluster providers={entry.providers} />
-      </PresstableScale>
+        trailing={<ProviderCluster providers={entry.providers} />}
+      />
     </View>
   );
 }
@@ -341,6 +518,8 @@ export interface DiaryListProps {
   onRetry: () => void;
   onRefresh: () => Promise<unknown>;
   onOpen: (id: string) => void;
+  /** Opens the card actions dialog — long-press, or the web hover ⋯. */
+  onItemActions: (item: NormalizedMediaItem) => void;
 }
 
 /**
@@ -358,6 +537,7 @@ export function DiaryList({
   onRetry,
   onRefresh,
   onOpen,
+  onItemActions,
 }: DiaryListProps) {
   const [refreshing, setRefreshing] = useState(false);
   // Which episode clusters are open. Expansion is ephemeral view state that
@@ -365,7 +545,15 @@ export function DiaryList({
   // stable anchor id — unlike day-minimize, which persists across restarts.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const collapsedDays = useCollapsedDiaryDays();
-  const items = flattenDays(days, new Date(), timeZone, expanded, collapsedDays);
+  const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
+  const items = flattenDays(
+    days,
+    new Date(),
+    timeZone,
+    expanded,
+    collapsedDays,
+    hiddenIds,
+  );
 
   function toggleCluster(key: string) {
     setExpanded((prev) => {
@@ -409,15 +597,27 @@ export function DiaryList({
               <DiaryClusterRow
                 cluster={item.cluster}
                 expanded={item.expanded}
+                onActions={onItemActions}
                 onToggle={toggleCluster}
               />
             );
           case 'child':
             return (
-              <DiaryChildRow entry={item.entry} last={item.last} onOpen={onOpen} />
+              <DiaryChildRow
+                entry={item.entry}
+                last={item.last}
+                onActions={onItemActions}
+                onOpen={onOpen}
+              />
             );
           default:
-            return <DiaryRow entry={item.entry} onOpen={onOpen} />;
+            return (
+              <DiaryRow
+                entry={item.entry}
+                onActions={onItemActions}
+                onOpen={onOpen}
+              />
+            );
         }
       }}
       ListHeaderComponent={

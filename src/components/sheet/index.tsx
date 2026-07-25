@@ -5,6 +5,8 @@ import {
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
+
 export interface SheetProps {
   open: boolean;
   /** Called when the sheet reaches its closed detent (drag, scrim tap, …). */
@@ -37,8 +39,30 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         <View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />
       }
     >
-      <View className="p-6 pb-12">{children}</View>
+      <SheetContent>{children}</SheetContent>
     </ModalBottomSheet>
+  );
+}
+
+/**
+ * The sheet lib does no keyboard handling of its own, so on Android the soft
+ * keyboard covered the log sheet's tags and watched-at fields outright (plan
+ * 0024 U11 / R8). Padding the content by the keyboard height grows the
+ * `'content'` detent, which lifts the fields clear.
+ *
+ * Android only, deliberately: iOS's sheet host already moves with the keyboard,
+ * and adding a second compensation there would over-shoot. `KeyboardProvider`
+ * is mounted in `app/_layout.tsx`; this is the mandated wrapper
+ * (react-native-keyboard-controller), never RN's core `KeyboardAvoidingView`.
+ */
+function SheetContent({ children }: { children: ReactNode }) {
+  if (process.env.EXPO_OS !== 'android') {
+    return <View className="p-6 pb-12">{children}</View>;
+  }
+  return (
+    <KeyboardAvoidingView behavior="padding">
+      <View className="p-6 pb-12">{children}</View>
+    </KeyboardAvoidingView>
   );
 }
 

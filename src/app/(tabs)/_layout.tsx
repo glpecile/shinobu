@@ -1,7 +1,7 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
-import { emitSearchTabPressed } from '@/features/search/focus-signal';
+import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 
 /**
  * Native bottom tab bar for iOS/Android — liquid glass on iOS 26, Material 3
@@ -51,7 +51,7 @@ export default function TabsLayout() {
           `listeners` fires on every tap (active tab or not) — see
           `features/search/focus-signal` for why the search screen needs it. */}
       <NativeTabs.Trigger
-        listeners={{ tabPress: () => emitSearchTabPressed() }}
+        listeners={{ tabPress: () => emitSearchFocusRequest() }}
         name="search"
         role="search"
       >

@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { AniZipLookup } from '@/lib/providers/mapping/anizip';
 import type { ProviderId } from '@/lib/providers/types';
 import {
+  cachedAniListFilmId,
   cachedAniZipIds,
   cachedTraktLookup,
   cachedTraktTextSearch,
@@ -110,6 +111,28 @@ export async function enrichExternalIds(
         externalIds = { ...externalIds, anilist: mapped.anilist };
       }
     }
+  }
+
+  // ani.zip's TMDB index is TV-oriented and misses many anime *films* (ChaO,
+  // 2025), so a film opened from a TMDB/Trakt-first details page reverse-maps
+  // to nothing above and logs only to Trakt + Letterboxd. Discovery fallback:
+  // ask AniList directly, accepting only an exact-year film (KTD3). The
+  // discovered id needs no routing change — `effectiveTypes` already widens on
+  // `externalIds.anilist != null`. Miss path only, and the lookup (including
+  // its misses) is cached forever, so an ordinary live-action film costs one
+  // AniList request ever.
+  if (
+    item.type === 'MOVIE' &&
+    externalIds.anilist == null &&
+    item.title !== '' &&
+    item.year != null &&
+    connected.includes('anilist')
+  ) {
+    const anilistId = await cachedAniListFilmId(queryClient, {
+      title: item.title,
+      year: item.year,
+    });
+    if (anilistId != null) externalIds = { ...externalIds, anilist: anilistId };
   }
 
   return { ...item, externalIds };

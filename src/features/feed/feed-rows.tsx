@@ -1,9 +1,13 @@
+import { useRouter } from 'expo-router';
+
 import { MediaCarousel } from '@/components/media-carousel';
 import {
   animeSeasonLabel,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
+import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
+import { capFeedRow } from './row-cap';
 import {
   useSuspenseSeasonalAnimeQuery,
   useSuspenseTrendingMoviesQuery,
@@ -29,7 +33,10 @@ interface FeedRowCallbacks {
 
 export function YourShowsRow({ onItemPress, onItemActions }: FeedRowCallbacks) {
   const { data } = useSuspenseYourShowsQuery();
-  const items = useVisibleItems(data);
+  // The one row whose source is unbounded (`/sync/watched/shows` pages to the
+  // whole library) — capped here rather than in the query, because the details
+  // screen resolves items by id out of that same cache entry.
+  const items = capFeedRow(useVisibleItems(data));
   return (
     <MediaCarousel
       collapseKey="your-shows"
@@ -63,6 +70,7 @@ export function YourWatchlistRow({
   onItemActions,
 }: FeedRowCallbacks & { username: string }) {
   const { data } = useSuspenseYourWatchlistQuery(username);
+  const router = useRouter();
   const items = useVisibleItems(data);
   return (
     <MediaCarousel
@@ -70,6 +78,9 @@ export function YourWatchlistRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
+      // The row shows page 1 (28 films); the rest of the watchlist lives
+      // behind the paginated grid (plan 0024 U9).
+      onViewAll={() => router.push(routes.letterboxdWatchlist)}
       provider="letterboxd"
       title="Your Watchlist"
     />

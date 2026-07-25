@@ -83,13 +83,29 @@ describe('continueWatchingBadges', () => {
 });
 
 describe('calendarBadges', () => {
-  test('leads with the relative day', () => {
-    expect(calendarBadges(entry({ firstAired: localInstant(7, 24) }), NOW)).toEqual(
+  test('leads with the relative day, then the local air time', () => {
+    expect(
+      calendarBadges(entry({ firstAired: localInstant(7, 24, 21) }), NOW),
+    ).toEqual([{ label: 'Tomorrow', tone: 'accent' }, { label: '21:00' }]);
+  });
+
+  test('an episode airing later today says so to the minute', () => {
+    // The ambiguous case the time badge exists for: "Today" alone can't tell
+    // an episode that already dropped from one still hours out.
+    const airsTonight = new Date(2026, 6, 23, 22, 15).toISOString();
+    expect(calendarBadges(entry({ firstAired: airsTonight }), NOW)).toEqual(
+      [{ label: 'Today', tone: 'accent' }, { label: '22:15' }],
+    );
+  });
+
+  test('a date-only air date keeps the day badge and drops the time', () => {
+    // Local midnight is the right ordering key but the wrong thing to show.
+    expect(calendarBadges(entry({ firstAired: '2026-07-24' }), NOW)).toEqual(
       [{ label: 'Tomorrow', tone: 'accent' }],
     );
   });
 
-  test('an entry with no instant carries no day badge', () => {
+  test('an entry with no instant carries no badges at all', () => {
     expect(calendarBadges(entry(), NOW)).toEqual([]);
   });
 });
