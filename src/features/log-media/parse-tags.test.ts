@@ -2,8 +2,9 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   activeTagFragment,
+  committedTags,
   filterTagSuggestions,
-  hasTag,
+  isTagSelected,
   parseTags,
   toggleTag,
 } from './parse-tags';
@@ -27,15 +28,40 @@ describe('parseTags', () => {
   });
 });
 
-describe('hasTag', () => {
+describe('committedTags', () => {
+  test('excludes the tail, which is still being typed', () => {
+    expect(committedTags('shinobu, net')).toEqual(['shinobu']);
+    expect(committedTags('net')).toEqual([]);
+  });
+
+  test('takes everything once the tail is committed with a comma', () => {
+    expect(committedTags('shinobu, netflix, ')).toEqual(['shinobu', 'netflix']);
+    expect(committedTags('shinobu, netflix,')).toEqual(['shinobu', 'netflix']);
+  });
+
+  test('is narrower than parseTags, which is the submit path', () => {
+    // A value typed without a trailing comma still submits both tags...
+    expect(parseTags('shinobu, netflix')).toEqual(['shinobu', 'netflix']);
+    // ...but to the picker the tail is a filter query, not a selection.
+    expect(committedTags('shinobu, netflix')).toEqual(['shinobu']);
+  });
+});
+
+describe('isTagSelected', () => {
   test('matches case-insensitively', () => {
-    expect(hasTag('shinobu, Horror', 'horror')).toBe(true);
-    expect(hasTag('shinobu, horror', 'Horror')).toBe(true);
+    expect(isTagSelected('shinobu, Horror, ', 'horror')).toBe(true);
+    expect(isTagSelected('shinobu, horror, ', 'Horror')).toBe(true);
   });
 
   test('does not match a prefix of another tag', () => {
-    expect(hasTag('shinobu, horror-night', 'horror')).toBe(false);
-    expect(hasTag('', 'horror')).toBe(false);
+    expect(isTagSelected('shinobu, horror-night, ', 'horror')).toBe(false);
+    expect(isTagSelected('', 'horror')).toBe(false);
+  });
+
+  test('a tag still being typed is a query, not a selection', () => {
+    // Otherwise the tap that commits "netflix" would look like a no-op.
+    expect(isTagSelected('shinobu, netflix', 'netflix')).toBe(false);
+    expect(isTagSelected('shinobu, netflix, ', 'netflix')).toBe(true);
   });
 });
 
@@ -55,28 +81,55 @@ describe('toggleTag', () => {
     for (const input of ['', 'imax', 'imax, rewatch-night', 'shinobu, ']) {
       expect(activeTagFragment(toggleTag(input, 'horror'))).toBe('');
     }
-    expect(toggleTag('imax', 'horror')).toBe('imax, horror, ');
     expect(toggleTag('', 'horror')).toBe('horror, ');
+    // "imax" here is an uncommitted tail, so the chip replaces it.
+    expect(toggleTag('imax', 'horror')).toBe('horror, ');
+    expect(toggleTag('imax, ', 'horror')).toBe('imax, horror, ');
   });
 
   test('add then remove restores the prefill convention', () => {
     const prefill = 'shinobu, ';
     expect(toggleTag(toggleTag(prefill, 'horror'), 'horror')).toBe(prefill);
-    // A value typed without a trailing separator gains one — cursor-ready, and
-    // still the same tag set.
-    expect(parseTags(toggleTag(toggleTag('imax', 'horror'), 'horror'))).toEqual([
-      'imax',
-    ]);
+    // Committed values round-trip; an uncommitted tail does not, because the
+    // first press consumed it by design.
+    expect(toggleTag(toggleTag('imax, ', 'horror'), 'horror')).toBe('imax, ');
   });
 
-  test('removing the last tag empties the field rather than leaving a comma', () => {
+  test('removing the last committed tag empties the field', () => {
     expect(toggleTag('horror, ', 'horror')).toBe('');
-    expect(toggleTag('horror', 'horror')).toBe('');
+  });
+
+  test('pressing the chip for a tag you are mid-way through typing commits it', () => {
+    // Not a removal: "horror" with no trailing comma is still a query, so its
+    // chip reads unselected and the press finishes the word.
+    expect(isTagSelected('horror', 'horror')).toBe(false);
+    expect(toggleTag('horror', 'horror')).toBe('horror, ');
   });
 
   test('removes case-insensitively and normalizes stray whitespace', () => {
-    expect(toggleTag('  imax  ,Horror', 'horror')).toBe('imax, ');
-    expect(toggleTag(' , shinobu , ,horror ', 'shinobu')).toBe('horror, ');
+    expect(toggleTag('  imax  ,Horror, ', 'horror')).toBe('imax, ');
+    expect(toggleTag(' , shinobu , ,horror , ', 'shinobu')).toBe('horror, ');
+  });
+
+  test('replaces what is being typed rather than keeping it as a tag', () => {
+    // The reported bug: typing "net" then pressing netflix left a stray "net".
+    expect(toggleTag('shinobu, net', 'netflix')).toBe('shinobu, netflix, ');
+    expect(toggleTag('net', 'netflix')).toBe('netflix, ');
+    expect(toggleTag('shinobu, netfl', 'netflix')).toBe('shinobu, netflix, ');
+  });
+
+  test('committing a fully typed tag does not duplicate it', () => {
+    expect(toggleTag('shinobu, netflix', 'netflix')).toBe(
+      'shinobu, netflix, ',
+    );
+    expect(parseTags(toggleTag('shinobu, netflix', 'netflix'))).toEqual([
+      'shinobu',
+      'netflix',
+    ]);
+  });
+
+  test('the tail is dropped on removal too, since it is only a query', () => {
+    expect(toggleTag('shinobu, netflix, net', 'netflix')).toBe('shinobu, ');
   });
 });
 

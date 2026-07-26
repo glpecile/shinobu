@@ -12,14 +12,32 @@ export function parseTags(input: string): string[] {
 }
 
 /**
- * Whether the field already carries this tag. Case-insensitive: a typed
- * "horror" and the suggested "Horror" chip are the same tag to Letterboxd and
- * Serializd, so the chip must read as selected rather than offering a
- * duplicate.
+ * The tags the user has actually committed — everything before the last
+ * separator. The tail is excluded because it is still being typed.
+ *
+ * This is deliberately narrower than `parseTags`, which is the submit path and
+ * must take the tail too (a value typed without a trailing comma still means
+ * every tag in it). The picker is the one place that needs the distinction:
+ * to it, the tail is a filter query, not a tag.
  */
-export function hasTag(input: string, tag: string): boolean {
+export function committedTags(input: string): string[] {
+  return parseTags(input.slice(0, input.lastIndexOf(',') + 1));
+}
+
+/**
+ * Whether a chip should render as selected. Case-insensitive: a typed "horror"
+ * and the suggested "Horror" chip are the same tag to Letterboxd and Serializd,
+ * so the chip must read as selected rather than offering a duplicate.
+ *
+ * Committed tags only. While "netflix" is still being typed it is a query, not
+ * a selection — showing its own chip as already-selected would make the tap
+ * that commits it look like a no-op.
+ */
+export function isTagSelected(input: string, tag: string): boolean {
   const needle = tag.toLowerCase();
-  return parseTags(input).some((existing) => existing.toLowerCase() === needle);
+  return committedTags(input).some(
+    (existing) => existing.toLowerCase() === needle,
+  );
 }
 
 /**
@@ -37,7 +55,12 @@ export function hasTag(input: string, tag: string): boolean {
  * string exactly.
  */
 export function toggleTag(input: string, tag: string): string {
-  const tags = parseTags(input);
+  // Committed tags only, so the half-typed tail is *replaced* rather than left
+  // behind: typing "net" and pressing the netflix chip means "I meant netflix",
+  // not "add netflix alongside a tag literally called net". Dropping it applies
+  // to removal too — the tail is a filter query either way, and the chips the
+  // user can even see are the ones that query matched.
+  const tags = committedTags(input);
   const needle = tag.toLowerCase();
   const without = tags.filter((existing) => existing.toLowerCase() !== needle);
   const next = without.length === tags.length ? [...tags, tag] : without;

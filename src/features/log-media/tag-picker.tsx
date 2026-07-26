@@ -13,7 +13,7 @@ import { useLetterboxdTagsQuery } from '@/state/queries/letterboxd';
 import {
   activeTagFragment,
   filterTagSuggestions,
-  hasTag,
+  isTagSelected,
   toggleTag,
 } from './parse-tags';
 
@@ -246,7 +246,7 @@ export function TagPicker({
               key={tag.toLowerCase()}
               onMeasure={index === 0 ? measureRow : undefined}
               onToggle={() => onChange(toggleTag(value, tag))}
-              selected={hasTag(value, tag)}
+              selected={isTagSelected(value, tag)}
               tag={tag}
             />
           ))}
