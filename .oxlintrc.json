@@ -95,8 +95,8 @@
           },
           {
             "name": "react-native-keyboard-controller",
-            "importNames": ["KeyboardAvoidingView"],
-            "message": "Import KeyboardAvoidingView from @/components/keyboard-avoiding-view — the raw component drops className on native (needs the withUniwind wrapper)."
+            "importNames": ["KeyboardAvoidingView", "KeyboardAwareScrollView"],
+            "message": "Import KeyboardAvoidingView from @/components/keyboard-avoiding-view (or KeyboardAwareScrollView from @/components/keyboard-aware-scroll-view) — the raw components drop className on native (they need the withUniwind wrapper)."
           },
           {
             "name": "react",
@@ -128,6 +128,7 @@
         "src/components/head/index.web.tsx",
         "src/components/image.tsx",
         "src/components/keyboard-avoiding-view.tsx",
+        "src/components/keyboard-aware-scroll-view.tsx",
         "src/components/presstable.tsx",
         "src/components/zoomable-image/index.tsx",
         "src/lib/open-external-url/index.ts"

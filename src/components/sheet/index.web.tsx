@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { Modal, View } from 'react-native';
+import { Modal, ScrollView, View } from 'react-native';
 import {
   FadeIn,
   FadeOut,
@@ -117,7 +117,11 @@ export function Sheet({ open, onClose, children }: SheetProps) {
               />
             </AnimatedView>
             <AnimatedView
-              className="w-full max-w-xl self-center bg-surface border border-border rounded-t-3xl p-6 pb-12"
+              // Mirrors the native sheet's detent cap: the panel grows with its
+              // content up to 90% of the viewport, then the scroller inside it
+              // takes over. Without the cap a tall sheet (the log sheet's tag
+              // picker) ran off the top of the window with nothing to scroll.
+              className="w-full max-w-xl self-center max-h-[90%] bg-surface border border-border rounded-t-3xl"
               // Reduced motion keeps the fade (it explains that a layer
               // arrived) and drops the travel, matching the lightbox.
               entering={
@@ -125,7 +129,13 @@ export function Sheet({ open, onClose, children }: SheetProps) {
               }
               exiting={reduceMotion ? FadeOut.duration(EXIT_MS) : panelExiting}
             >
-              {children}
+              <ScrollView
+                className="shrink"
+                contentContainerClassName="p-6 pb-12"
+                keyboardShouldPersistTaps="handled"
+              >
+                {children}
+              </ScrollView>
             </AnimatedView>
           </>
         )}

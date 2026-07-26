@@ -3,9 +3,9 @@ import {
   ModalBottomSheet,
 } from '@swmansion/react-native-bottom-sheet';
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 export interface SheetProps {
   open: boolean;
@@ -44,25 +44,55 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   );
 }
 
+/** Padding lives on the scroll content, not the scroller, so the indicator
+ * tracks the sheet's edge rather than floating inside the padding. */
+const CONTENT_PADDING = 'p-6 pb-12';
+
 /**
- * The sheet lib does no keyboard handling of its own, so on Android the soft
- * keyboard covered the log sheet's tags and watched-at fields outright (plan
- * 0024 U11 / R8). Padding the content by the keyboard height grows the
- * `'content'` detent, which lifts the fields clear.
+ * Sheet content scrolls. The `'content'` detent is clamped natively to the
+ * detent cap (sheet height minus the status-bar overlap), and the lib lays the
+ * children out at their full natural height inside that cap — so anything
+ * taller than the screen was simply cut off with no way to reach it (the log
+ * sheet's tag picker, once a few tags exist).
  *
- * Android only, deliberately: iOS's sheet host already moves with the keyboard,
- * and adding a second compensation there would over-shoot. `KeyboardProvider`
- * is mounted in `app/_layout.tsx`; this is the mandated wrapper
- * (react-native-keyboard-controller), never RN's core `KeyboardAvoidingView`.
+ * `shrink` is the whole fix, and it needs no measured heights: the lib's own
+ * content wrapper is a `flex: 1` child of a node padded down to the cap, so a
+ * shrinkable scroller inside it sizes to its content while it fits and clamps
+ * to the cap when it doesn't. Short sheets still size to content exactly as
+ * before. Nested-scrollable gesture negotiation is automatic in the lib — the
+ * drag-to-dismiss handoff needs no wiring here.
+ *
+ * `keyboardShouldPersistTaps="handled"` matters more than usual now: with a
+ * scroller in the tree, a tap on Confirm while the tags field is focused would
+ * otherwise be swallowed as a keyboard dismissal.
  */
 function SheetContent({ children }: { children: ReactNode }) {
-  if (process.env.EXPO_OS !== 'android') {
-    return <View className="p-6 pb-12">{children}</View>;
+  // Android's soft keyboard covers the sheet outright (plan 0024 U11 / R8), so
+  // it gets the keyboard-aware scroller: its bottom padding grows the
+  // `'content'` detent to lift a short sheet clear, and once the sheet is at
+  // the cap the same padding gives the focused field somewhere to scroll to.
+  // iOS keeps the plain scroller, deliberately — its sheet host already moves
+  // with the keyboard, and a second compensation would over-shoot.
+  if (process.env.EXPO_OS === 'android') {
+    return (
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        className="shrink"
+        contentContainerClassName={CONTENT_PADDING}
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
+      </KeyboardAwareScrollView>
+    );
   }
   return (
-    <KeyboardAvoidingView behavior="padding">
-      <View className="p-6 pb-12">{children}</View>
-    </KeyboardAvoidingView>
+    <ScrollView
+      className="shrink"
+      contentContainerClassName={CONTENT_PADDING}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
+    </ScrollView>
   );
 }
 
