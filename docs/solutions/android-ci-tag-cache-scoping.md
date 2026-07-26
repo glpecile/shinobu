@@ -107,11 +107,21 @@ AGENTS.md.
 | Warm workflow, cold ([30181017585](https://github.com/glpecile/shinobu/actions/runs/30181017585)) | 37m33s | — | 39m05s |
 | Warm workflow, warm ([30182224405](https://github.com/glpecile/shinobu/actions/runs/30182224405)) | **8m13s** | — | 9m51s |
 | `release.yml` warm dry-run ([30182550322](https://github.com/glpecile/shinobu/actions/runs/30182550322)) | **9m47s** | 1m16s | **12m07s** |
+| Real warm tag `v0.1.2` ([30205881828](https://github.com/glpecile/shinobu/actions/runs/30205881828)) | **10m16s** | 1m19s | **12m44s** |
 
 The first warm-workflow run is ~2 minutes *slower* than the cold baseline —
 that's ccache storing 820 objects it can't yet hit. It pays for itself once.
 
-What the warm release run's log shows, against the cold one:
+The `v0.1.2` row is the one that settles it: a genuine tag push, on a ref that
+by construction has no cache of its own, restoring `main`'s — **3.5× faster
+than the identical build at `v0.1.1`**. Note its ccache key,
+`ccache-android-Linux-b613f390…-30183164587`: a version bump edits `app.json`,
+which is in the key's hash, so the entry it hit was the one written by the warm
+run that the bump commit itself triggered. That is the mechanism working as
+designed, not luck — and had that run not finished in time, the broader
+`ccache-android-Linux-` restore-key would still have hit.
+
+What the warm release runs' logs show, against the cold one:
 
 - No `Downloading https://services.gradle.org/...` line at all.
 - `ccache -s`: **820 / 820 direct hits (100%)**, versus 820/820 misses cold.
