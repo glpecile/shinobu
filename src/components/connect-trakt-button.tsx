@@ -61,7 +61,7 @@ type CredentialsForm = z.infer<typeof credentialsSchema>;
 function CopyValue({ value, hint }: { value: string; hint?: string }) {
   return (
     <View className="flex-row items-center gap-2">
-      <View className="border border-border bg-surface px-2 py-1 rounded">
+      <View className="border border-border bg-surface px-2 py-1 rounded-md">
         <Text className="text-foreground font-sans text-xs" selectable>
           {value}
         </Text>
@@ -93,7 +93,7 @@ function CredentialInput({
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
-          className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+          className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
           onBlur={field.onBlur}
           onChangeText={field.onChange}
           onSubmitEditing={onSubmit}
@@ -319,7 +319,7 @@ export function ConnectTraktButton() {
           </Text>
         )}
         <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
+          className="bg-accent px-5 py-3 rounded-md"
           onPress={() => submitCredentials()}
         >
           <Text className="text-accent-foreground font-sans-semibold text-base text-center">
@@ -343,7 +343,7 @@ export function ConnectTraktButton() {
         </Text>
       )}
       <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
+        className="bg-accent px-5 py-3 rounded-md"
         disabled={status === 'connecting'}
         onPress={() => connect()}
       >

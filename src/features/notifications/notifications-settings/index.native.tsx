@@ -53,11 +53,11 @@ export function NotificationsSettingsSection() {
   }
 
   return (
-    <View className="mt-6">
+    <View>
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
         Notifications
       </Text>
-      <View className="bg-surface border border-border rounded-xl px-5 py-4 gap-3">
+      <View className="bg-surface border border-border rounded-xl p-5 gap-3">
         <View className="flex-row items-center justify-between">
           <View className="flex-1 mr-3">
             <Text className="text-foreground font-sans-semibold text-base">
@@ -87,7 +87,7 @@ export function NotificationsSettingsSection() {
         )}
         {__DEV__ && enabled && (
           <PresstableOpacity
-            className="border border-border px-4 py-2 rounded self-start"
+            className="border border-border px-4 py-2 rounded-md self-start"
             onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
           >
             <Text className="text-foreground font-sans-semibold text-sm">

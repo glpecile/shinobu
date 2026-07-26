@@ -56,7 +56,7 @@ export function ConnectSerializdButton() {
         </Text>
       )}
       <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
+        className="bg-accent px-5 py-3 rounded-md"
         disabled={status === 'validating'}
         onPress={() => {
           setStatus('idle');

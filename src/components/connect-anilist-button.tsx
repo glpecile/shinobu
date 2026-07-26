@@ -131,7 +131,7 @@ export function ConnectAniListButton() {
                 Set <Text className="text-foreground font-sans-semibold">Redirect URL</Text>{' '}
                 to exactly:
               </Text>
-              <View className="border border-border bg-surface px-2 py-1 rounded self-start">
+              <View className="border border-border bg-surface px-2 py-1 rounded-md self-start">
                 <Text className="text-foreground font-sans text-xs" selectable>
                   {redirectUri}
                 </Text>
@@ -159,7 +159,7 @@ export function ConnectAniListButton() {
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
               inputMode="numeric"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
@@ -177,7 +177,7 @@ export function ConnectAniListButton() {
           </Text>
         )}
         <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
+          className="bg-accent px-5 py-3 rounded-md"
           onPress={() => submitClientId()}
         >
           <Text className="text-accent-foreground font-sans-semibold text-base text-center">
@@ -196,7 +196,7 @@ export function ConnectAniListButton() {
         </Text>
       )}
       <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
+        className="bg-accent px-5 py-3 rounded-md"
         disabled={status === 'connecting'}
         onPress={() => connect()}
       >

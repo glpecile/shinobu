@@ -77,7 +77,7 @@ export function ConnectLetterboxdButton() {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+            className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
@@ -104,7 +104,7 @@ export function ConnectLetterboxdButton() {
         </Text>
       )}
       <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
+        className="bg-accent px-5 py-3 rounded-md"
         disabled={status === 'checking'}
         onPress={() => submit()}
       >

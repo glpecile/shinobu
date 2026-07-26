@@ -47,7 +47,7 @@ export function ConnectLetterboxdButton() {
         password is ever sent to Shinobu.
       </Text>
       <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
+        className="bg-accent px-5 py-3 rounded-md"
         onPress={() => setSigningIn(true)}
       >
         <Text className="text-accent-foreground font-sans-semibold text-base text-center">

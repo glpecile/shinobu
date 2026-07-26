@@ -128,11 +128,11 @@ export function ConnectTmdbTokenSection() {
   if (hasBuilderTmdbToken()) return null;
 
   return (
-    <View className="mt-6">
+    <View>
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
         TMDB token
       </Text>
-      <View className="bg-surface border border-border rounded-xl px-5 py-4 gap-4">
+      <View className="bg-surface border border-border rounded-xl p-5 gap-4">
         {saved != null ? (
           <>
             <Text className="text-foreground font-sans-semibold text-base">
@@ -144,7 +144,7 @@ export function ConnectTmdbTokenSection() {
             </Text>
             <PresstableOpacity
               accessibilityLabel="Remove TMDB token"
-              className="border border-accent px-4 py-2 rounded self-start"
+              className="border border-accent px-4 py-2 rounded-md self-start"
               onPress={clear}
             >
               <Text className="text-accent font-sans-semibold text-sm">
@@ -204,7 +204,7 @@ export function ConnectTmdbTokenSection() {
                 <TextInput
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="border border-border bg-background text-foreground px-4 py-3 rounded font-sans"
+                  className="border border-border bg-background text-foreground px-4 py-3 rounded-md font-sans"
                   onBlur={field.onBlur}
                   onChangeText={field.onChange}
                   onSubmitEditing={() => void submit()}
@@ -231,7 +231,7 @@ export function ConnectTmdbTokenSection() {
               </Text>
             )}
             <PresstableOpacity
-              className="bg-accent px-5 py-3 rounded"
+              className="bg-accent px-5 py-3 rounded-md"
               disabled={status === 'checking'}
               onPress={() => void submit()}
             >
