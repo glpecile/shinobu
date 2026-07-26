@@ -137,6 +137,18 @@ On the tag push, `release.yml`:
    automatically from each PR's `feat:`/`fix:`/`chore:`-style title prefix,
    so nobody has to hand-label PRs for this to work.
 
+A warm run takes **~12 minutes**; a cold one takes **~38**. The difference is
+the Gradle + ccache state that `.github/workflows/android-warm.yml` keeps warm
+on `main` — tag runs can only restore caches from the default branch, never
+from another tag (`docs/solutions/android-ci-tag-cache-scoping.md`). It stays
+warm on its own via a weekly schedule, with one exception: **GitHub disables
+scheduled workflows after ~60 days of repository inactivity.** If the repo has
+been quiet that long, warm it before tagging, or just accept the slow release:
+
+```sh
+gh workflow run android-warm.yml --ref main
+```
+
 ### 4. Dry-run verification (agent-verifiable, no secrets needed)
 
 Run the workflow manually from a branch, without pushing a tag:
