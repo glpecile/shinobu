@@ -4,6 +4,9 @@
 # the APKs as workflow artifacts instead of publishing — the agent-verifiable
 # dry-run path (never creates a tag or release itself). No EAS, no paid
 # services: plain `expo prebuild` + gradle on ubuntu runners (KTD-1).
+# Build caches are read-only here and warmed from `main` by
+# `android-warm.yml`: GitHub scopes caches per ref, so a tag run can never see
+# another tag's cache (docs/solutions/android-ci-tag-cache-scoping.md).
 name: Release
 
 on:
@@ -22,6 +25,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Must match android-warm.yml exactly — CMake >= 3.17 initializes
+      # CMAKE_<LANG>_COMPILER_LAUNCHER from these, routing the NDK C++ compile
+      # (the dominant share of a cold build) through ccache (KTD-3).
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 1.5G
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
     steps:
       - uses: actions/checkout@v4
 
@@ -102,18 +114,52 @@ jobs:
       - name: Prebuild Android project
         run: bunx expo prebuild --platform android
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
+      - name: Install ccache
+        run: |
+          if ! command -v ccache >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ccache
+          fi
+          ccache --version
 
+      # Restore-only: a save from a tag run is invisible to every future run
+      # (per-ref cache scoping) and would only burn the 10 GB repo quota.
+      # `android-warm.yml` is the sole writer. The run_id-suffixed key never
+      # hits exactly; the prefix restore-keys pick up the warm entry.
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-android-${{ runner.os }}-${{ hashFiles('bun.lock', 'app.json') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-android-${{ runner.os }}-${{ hashFiles('bun.lock', 'app.json') }}-
+            ccache-android-${{ runner.os }}-
+
+      - name: Reset ccache stats
+        run: ccache -z
+
+      # `cache-read-only: true` is explicit, not inherited from the default
+      # (write-on-default-branch): workflow_dispatch dry-runs execute on `main`
+      # *with* signing secrets in the environment, and the secretless warm
+      # workflow must stay the only cache writer (KTD-1 integrity invariant).
+      # `gradle-home-cache-strict-match` stays unset so entries written under
+      # the warm workflow's job correlator are still restored here.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      # `--build-cache` reuses task outputs warmed on `main`; the daemon is left
+      # running so the arm64 invocation below reuses it; the heap override
+      # replaces the generated `-Xmx2048m` default. Flags, not edits to
+      # `android/gradle.properties` — that file is CNG output (KTD-4).
       - name: Build universal release APK
         working-directory: android
-        run: ./gradlew :app:assembleRelease --no-daemon
+        run: ./gradlew :app:assembleRelease --build-cache -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+
+      - name: Print ccache stats
+        if: always()
+        run: ccache -s
 
       - name: Stage universal APK
         run: |
@@ -123,7 +169,7 @@ jobs:
 
       - name: Build arm64-v8a release APK
         working-directory: android
-        run: ./gradlew :app:assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+        run: ./gradlew :app:assembleRelease --build-cache -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" -PreactNativeArchitectures=arm64-v8a
 
       - name: Stage arm64-v8a APK
         run: |
