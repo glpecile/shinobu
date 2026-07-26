@@ -77,6 +77,31 @@ describe('mergeCatalogueMetadata', () => {
 
     expect(merged.coverImage).toBe('https://trakt.example/poster.jpg');
   });
+
+  // Both merge functions enumerate fields explicitly, so an unlisted one is
+  // silently dropped — and dropping releaseDate would quietly un-gate the
+  // log button for unreleased films.
+  test('forwards release and home-release dates when the item lacks them', () => {
+    const merged = mergeCatalogueMetadata(letterboxdItem, {
+      ...catalogue,
+      releaseDate: '2025-11-14',
+      homeReleaseDate: '2026-01-20',
+      homeReleaseKind: 'digital',
+    });
+
+    expect(merged.releaseDate).toBe('2025-11-14');
+    expect(merged.homeReleaseDate).toBe('2026-01-20');
+    expect(merged.homeReleaseKind).toBe('digital');
+  });
+
+  test('keeps the item’s own release date over the catalogue’s', () => {
+    const merged = mergeCatalogueMetadata(
+      { ...letterboxdItem, releaseDate: '2025-01-01' },
+      { ...catalogue, releaseDate: '2025-11-14' },
+    );
+
+    expect(merged.releaseDate).toBe('2025-01-01');
+  });
 });
 
 import { applyPrimaryMetadata } from './merge-metadata';
@@ -146,5 +171,51 @@ describe('applyPrimaryMetadata', () => {
     expect(sparse.overview).toBe('Trakt synopsis.');
     expect(sparse.rating).toBe(8.5);
     expect(applyPrimaryMetadata(item, null)).toBe(item);
+  });
+
+  // Release dates are catalogue metadata, not user state: TMDB wins, and the
+  // fields must survive the explicit field enumeration (silent-drop trap).
+  test('TMDB release + home-release dates override the item’s', () => {
+    const merged = applyPrimaryMetadata(
+      { ...item, type: 'MOVIE', releaseDate: '2020-01-01' },
+      {
+        id: 'tmdb-movie-1',
+        title: 'Arcane',
+        coverImage: '',
+        type: 'MOVIE',
+        currentProgress: 0,
+        progressUnit: 'episode',
+        lastUpdated: '2026-07-19T01:00:00Z',
+        releaseDate: '2026-09-18',
+        homeReleaseDate: '2026-11-25',
+        homeReleaseKind: 'both',
+        externalIds: { tmdb: 1 },
+      },
+    );
+
+    expect(merged.releaseDate).toBe('2026-09-18');
+    expect(merged.homeReleaseDate).toBe('2026-11-25');
+    expect(merged.homeReleaseKind).toBe('both');
+    // User state still untouched.
+    expect(merged.currentProgress).toBe(5);
+  });
+
+  test('a primary without release dates leaves the item’s intact', () => {
+    const merged = applyPrimaryMetadata(
+      { ...item, releaseDate: '2021-11-06', homeReleaseDate: '2021-12-01' },
+      {
+        id: 'tmdb-tv-94605',
+        title: 'Arcane',
+        coverImage: '',
+        type: 'TV',
+        currentProgress: 0,
+        progressUnit: 'episode',
+        lastUpdated: '2026-07-19T01:00:00Z',
+        externalIds: { tmdb: 94605 },
+      },
+    );
+
+    expect(merged.releaseDate).toBe('2021-11-06');
+    expect(merged.homeReleaseDate).toBe('2021-12-01');
   });
 });

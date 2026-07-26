@@ -52,9 +52,13 @@ interface NavItem {
 
 // Outline icons only — active state is the accent colour + pill, never a heavy
 // filled glyph (the solid variants read poorly when selected).
+// Diary uses `journal-outline` (a closed notebook), not `book-outline`: the
+// open-book glyph is much wider and optically heavier than its home/search/
+// settings siblings at size 22, which made the rail look uneven. Native's tab
+// bar keeps `book`/`book.fill` — this is a web-rail-only optical fix.
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: routes.home, icon: 'home-outline' },
-  { label: 'Diary', href: routes.diary, icon: 'book-outline' },
+  { label: 'Diary', href: routes.diary, icon: 'journal-outline' },
   { label: 'Search', href: routes.search, icon: 'search-outline' },
   { label: 'Settings', href: routes.connect, icon: 'settings-outline' },
 ];

@@ -96,6 +96,41 @@ function metaLine(item: NormalizedMediaItem): string {
 }
 
 /**
+ * TMDB sends bare calendar dates (YYYY-MM-DD). Parsing them through
+ * `new Date(string)` lands at UTC midnight, which `toLocaleDateString` would
+ * render a day early west of Greenwich — so the date is formatted in UTC
+ * explicitly. Display-only; the log gate compares through `hasReleased`.
+ */
+function formatCalendarDate(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) return date;
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/**
+ * "Digital release · Jul 3, 2026" under the meta line — the earliest
+ * worldwide digital/physical date TMDB knows (plan 0014's catalogue record
+ * carries it). Null whenever TMDB isn't in play (no token, no tmdb id, a TV
+ * item, or no region has published a home release), so the line simply
+ * doesn't render rather than leaving an empty slot.
+ */
+function homeReleaseLine(item: NormalizedMediaItem): string | null {
+  if (item.homeReleaseDate == null) return null;
+  const label =
+    item.homeReleaseKind === 'physical'
+      ? 'Physical release'
+      : item.homeReleaseKind === 'both'
+        ? 'Digital & physical release'
+        : 'Digital release';
+  return `${label} · ${formatCalendarDate(item.homeReleaseDate)}`;
+}
+
+/**
  * Turns an AniList list entry into the same "Watched/Watching …" phrasing the
  * Trakt line uses, so both providers' detail pages read identically. Null for
  * plan-to-watch (nothing watched yet to report).
@@ -120,6 +155,31 @@ function anilistWatchedLabel(entry: {
     default:
       return null;
   }
+}
+
+/**
+ * "3 / 12" as a single stat value, replacing the old side-by-side
+ * Progress + Total tiles. Only the progress half goes through MorphText:
+ * AGENTS.md reserves the morph for text that changes in place from user
+ * state, and the total is static catalogue data that would just churn the
+ * animation. Caller renders the bare number instead when no total is known,
+ * so a dangling "3 / " is impossible.
+ */
+function ProgressOfTotal({
+  progress,
+  total,
+}: {
+  progress: number;
+  total: number;
+}) {
+  return (
+    <View className="flex-row items-baseline mt-0.5">
+      <MorphText className="text-foreground text-2xl font-sans-semibold">
+        {progress}
+      </MorphText>
+      <Text className="text-muted text-2xl font-sans-semibold">{` / ${total}`}</Text>
+    </View>
+  );
 }
 
 /**
@@ -513,6 +573,10 @@ export default function DetailsScreen() {
 
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
   const meta = metaLine(shown);
+  // Only the TMDB *movie* catalogue populates this, so it self-gates to
+  // films — no TV item ever carries one, and a tokenless/id-less page
+  // simply renders no line.
+  const homeRelease = homeReleaseLine(shown);
   // "0 episodes" on a movie is noise — only show progress where it means
   // something (any TV/manga item, or a movie already logged at least once).
   const showProgress = shown.type !== 'MOVIE' || shown.currentProgress > 0;
@@ -636,6 +700,11 @@ export default function DetailsScreen() {
                   {meta}
                 </Text>
               )}
+              {homeRelease != null && (
+                <Text className="text-muted font-sans text-sm mt-1">
+                  {homeRelease}
+                </Text>
+              )}
               <WatchedLine item={shown} />
             </View>
           </View>
@@ -648,22 +717,22 @@ export default function DetailsScreen() {
             <View className="flex-row gap-4">
               <StatTile
                 label="Progress"
-                value={displayedProgress}
+                value={
+                  shown.totalEpisodes == null ? (
+                    displayedProgress
+                  ) : (
+                    <ProgressOfTotal
+                      progress={displayedProgress}
+                      total={shown.totalEpisodes}
+                    />
+                  )
+                }
+                // Manga counts chapters here (AniList's `chapters` lands in
+                // the same field) — the label must follow the unit.
                 caption={
                   shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
                 }
               />
-              {shown.totalEpisodes != null && (
-                <StatTile
-                  label="Total"
-                  value={shown.totalEpisodes}
-                  // Manga counts chapters here (AniList's `chapters` lands in
-                  // the same field) — the label must follow the unit.
-                  caption={
-                    shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
-                  }
-                />
-              )}
               {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
               {shown.type === 'ANIME' && shown.isFilm !== true &&
                 shown.totalEpisodes != null &&

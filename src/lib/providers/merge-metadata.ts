@@ -30,6 +30,17 @@ export function mergeCatalogueMetadata(
     ...(item.year == null && catalogue.year != null
       ? { year: catalogue.year }
       : {}),
+    ...(item.releaseDate == null && catalogue.releaseDate != null
+      ? { releaseDate: catalogue.releaseDate }
+      : {}),
+    ...(item.homeReleaseDate == null && catalogue.homeReleaseDate != null
+      ? {
+          homeReleaseDate: catalogue.homeReleaseDate,
+          ...(catalogue.homeReleaseKind != null
+            ? { homeReleaseKind: catalogue.homeReleaseKind }
+            : {}),
+        }
+      : {}),
     ...(item.runtime == null && catalogue.runtime != null
       ? { runtime: catalogue.runtime }
       : {}),
@@ -75,6 +86,17 @@ export function applyPrimaryMetadata(
     ...(primary.rating != null ? { rating: primary.rating } : {}),
     ...(primary.runtime != null ? { runtime: primary.runtime } : {}),
     ...(primary.year != null ? { year: primary.year } : {}),
+    // Catalogue metadata, not user state — TMDB wins, same as year/runtime.
+    // Load-bearing beyond display: the log button refuses an unreleased film.
+    ...(primary.releaseDate != null ? { releaseDate: primary.releaseDate } : {}),
+    ...(primary.homeReleaseDate != null
+      ? {
+          homeReleaseDate: primary.homeReleaseDate,
+          ...(primary.homeReleaseKind != null
+            ? { homeReleaseKind: primary.homeReleaseKind }
+            : {}),
+        }
+      : {}),
     ...(item.totalEpisodes == null && primary.totalEpisodes != null
       ? { totalEpisodes: primary.totalEpisodes }
       : {}),

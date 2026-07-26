@@ -79,7 +79,9 @@ export function getMediaCatalogue(
         ? normalizeMovieCatalogue(
             yield* tmdbRequest<TmdbMovieResponse>(
               deps,
-              `/movie/${params.tmdbId}?append_to_response=credits`,
+              // `release_dates` rides the same document — the digital/physical
+              // date is a detail-screen field, never a second round-trip.
+              `/movie/${params.tmdbId}?append_to_response=credits,release_dates`,
             ),
             nowIso,
           )

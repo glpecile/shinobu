@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { searchMovie } from './reads';
+import { getMediaCatalogue, searchMovie } from './reads';
 
 /** Records every requested URL and answers with an empty result set. */
 function recordingFetch(urls: string[]) {
@@ -42,5 +42,53 @@ describe('searchMovie', () => {
 
     expect(urls).toHaveLength(1);
     expect(urls[0]).not.toContain('primary_release_year');
+  });
+});
+
+describe('getMediaCatalogue', () => {
+  test('appends release_dates to the movie document — one round-trip, not two', async () => {
+    const urls: string[] = [];
+    const fetch = (input: RequestInfo | URL): Promise<Response> => {
+      urls.push(String(input));
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: 603, title: 'The Matrix' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    };
+
+    await Effect.runPromise(
+      getMediaCatalogue(
+        { fetch, token: 'test-token' },
+        { kind: 'movie', tmdbId: 603 },
+      ),
+    );
+
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toContain('append_to_response=credits,release_dates');
+  });
+
+  test('leaves the tv document alone — release_dates is movie-only', async () => {
+    const urls: string[] = [];
+    const fetch = (input: RequestInfo | URL): Promise<Response> => {
+      urls.push(String(input));
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: 94605, name: 'Arcane' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    };
+
+    await Effect.runPromise(
+      getMediaCatalogue(
+        { fetch, token: 'test-token' },
+        { kind: 'tv', tmdbId: 94605 },
+      ),
+    );
+
+    expect(urls[0]).toContain('append_to_response=aggregate_credits');
+    expect(urls[0]).not.toContain('release_dates');
   });
 });

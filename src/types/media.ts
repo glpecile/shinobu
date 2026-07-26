@@ -21,6 +21,12 @@ export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA';
 // an episode index.
 export type ProgressUnit = 'episode' | 'chapter';
 
+/**
+ * Which TMDB release type backs a `homeReleaseDate` — `'both'` when digital
+ * and physical share the same earliest date, so the label can say so.
+ */
+export type HomeReleaseKind = 'digital' | 'physical' | 'both';
+
 export interface NormalizedMediaItem {
   /** Unique combined identifier: `${providerId}-${nativeId}`, e.g. `trakt-12345`. */
   id: string;
@@ -42,6 +48,22 @@ export interface NormalizedMediaItem {
    * fifth MediaType — is what lets `providersForLog` fan out to all three.
    */
   isFilm?: boolean;
+  /**
+   * First release: a movie's theatrical release date, a show's first air date.
+   * ISO instant with offset/Z, or the bare `YYYY-MM-DD` calendar date TMDB
+   * sends; absent when the source carries none. Same contract as
+   * `NormalizedEpisode.firstAired` — compare it through `lib/time/has-aired`
+   * (a bare date parses as *local* midnight), never with a naive `new Date`.
+   */
+  releaseDate?: string;
+  /**
+   * Earliest worldwide digital-or-physical ("home") release, bare
+   * `YYYY-MM-DD`; absent when no region has published one. Display only —
+   * TMDB is the sole source (`release_dates` types 4/5).
+   */
+  homeReleaseDate?: string;
+  /** Which home-release type produced `homeReleaseDate`, for its label. */
+  homeReleaseKind?: HomeReleaseKind;
   currentProgress: number;
   progressUnit: ProgressUnit;
   totalEpisodes?: number;

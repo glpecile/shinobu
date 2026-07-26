@@ -35,19 +35,25 @@ function ConnectedRow({ id }: { id: ProviderId }) {
 
   return (
     <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4">
-      <View className="flex-row items-center gap-3">
+      {/* Flexible + truncating so a long username can never push the
+          Disconnect button past the card's right edge (same shape as
+          HiddenItemsSection below). */}
+      <View className="flex-1 flex-row items-center gap-3 mr-3">
         <ProviderIcon id={id} size={24} />
-        <View>
-          <Text className="text-foreground font-sans-semibold text-base">
+        <View className="flex-1">
+          <Text
+            className="text-foreground font-sans-semibold text-base"
+            numberOfLines={1}
+          >
             {PROVIDERS[id].label}
           </Text>
-          <Text className="text-muted font-sans text-xs mt-0.5">
+          <Text className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>
             {username != null ? `Connected as ${username}` : 'Connected'}
           </Text>
         </View>
       </View>
       <PresstableOpacity
-        className="border border-accent px-4 py-2 rounded"
+        className="shrink-0 border border-accent px-4 py-2 rounded"
         onPress={() => disconnect(id)}
       >
         <Text className="text-accent font-sans-semibold text-sm">

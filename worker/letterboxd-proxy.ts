@@ -6,9 +6,10 @@ import {
 /**
  * The Letterboxd same-origin reads proxy (plan 0018) — the repo's second
  * bounded exception to the AGENTS.md "never proxied" policy, modeled on
- * worker/serializd-proxy.ts. It forwards ONLY two public, unauthenticated
- * GET path shapes (`/{user}/watchlist/` with an optional `page/N/` suffix, and
- * `/{user}/rss/` — the entire Letterboxd read surface), attaches no client headers, caps upstream latency, relays only
+ * worker/serializd-proxy.ts. It forwards ONLY three public, unauthenticated
+ * GET path shapes (`/{user}/watchlist/` with an optional `page/N/` suffix,
+ * `/{user}/rss/`, and `/{user}/tags/` — the entire Letterboxd read surface),
+ * attaches no client headers, caps upstream latency, relays only
  * HTML/XML bodies under a script-killing CSP + `nosniff`, maps the Cloudflare
  * challenge page to a clean 502, emits no `Access-Control-Allow-Origin`, and
  * stores/logs nothing. Everything else falls through to static-asset serving
@@ -47,6 +48,15 @@ const RULES: Array<{ match: (path: string) => boolean }> = [
   // `page/0/` (and any non-numeric suffix) stays a 404.
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/watchlist\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/rss\/$/.test(p) },
+  // The member's public tag index — the vocabulary the log sheet's tag picker
+  // suggests from. Spiked 2026-07-25 (`GET /{user}/tags/`, browser UA):
+  // **200, ~69 KB, NOT Cloudflare-challenged**, unlike the deeper diary pages
+  // in docs/solutions/letterboxd-diary-html-cloudflare-walled.md. Stays inside
+  // the plan 0018 contract exactly as the two rules above do: one username, one
+  // public page, GET-only, unauthenticated, no new headers. The trailing slash
+  // is required, so the deeper filtered shapes (`/tags/films/by/name/`) stay
+  // 404s — this rule never widens into the tag *browse* surface.
+  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/tags\/$/.test(p) },
 ];
 
 /** Reject traversal, protocol-relative, and absolute-URL sub-paths outright. */

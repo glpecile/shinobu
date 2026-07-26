@@ -14,6 +14,7 @@ import { ZoomableImage } from '@/components/zoomable-image';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PersonNotFound, PersonSkeleton } from '@/features/person';
+import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { initials } from '@/lib/initials';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
@@ -132,6 +133,11 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
             title={row.role}
           />
         ))}
+        {/* px-4 matches the carousels' internal padding, so the "View on"
+            pills line up with the rows above and the px-6 header. */}
+        <View className="px-4">
+          <PersonLinksSection person={person} />
+        </View>
       </View>
       <CardActionsSheet {...sheetProps} />
     </>

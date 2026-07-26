@@ -14,6 +14,7 @@ import {
   getWatchedEpisodeKeys,
   serializdHasEpisodes,
 } from '@/lib/providers/serializd/progress';
+import { recordRecentTags } from '@/state/prefs/recent-tags';
 import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -387,6 +388,19 @@ export function useLogMedia() {
       });
 
       invalidateAfterLog(queryClient, item, result.succeeded);
+
+      // Tags that actually landed become local suggestions on the next sheet
+      // (state/prefs/recent-tags.ts) — the offline half of the tag picker's
+      // two-source list, and the only source that knows a tag invented seconds
+      // ago. Only on a write that succeeded somewhere, and never for a log
+      // that carried no tags.
+      if (
+        variables.tags != null &&
+        variables.tags.length > 0 &&
+        result.succeeded.length > 0
+      ) {
+        recordRecentTags(variables.tags);
+      }
 
       // Merge skips back so the caller sees one outcome per applicable
       // provider, in routing order (partial-failure contract, AGENTS.md).

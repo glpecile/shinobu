@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 
-import { providerHomeUrl, providerItemUrl } from './external-urls';
+import {
+  letterboxdPersonSlug,
+  providerHomeUrl,
+  providerItemUrl,
+  providerPersonUrl,
+} from './external-urls';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
@@ -84,6 +89,117 @@ describe('providerItemUrl', () => {
     expect(
       providerItemUrl('anilist', { type: 'ANIME', ...ids({ anilist: 555 }) }),
     ).toBe('https://anilist.co/anime/555');
+  });
+});
+
+describe('letterboxdPersonSlug', () => {
+  it('lowercases and hyphenates a plain name', () => {
+    expect(letterboxdPersonSlug('Greta Gerwig')).toBe('greta-gerwig');
+  });
+
+  it('strips diacritics onto their base letter', () => {
+    expect(letterboxdPersonSlug('Joaquín Phoenix')).toBe('joaquin-phoenix');
+    expect(letterboxdPersonSlug('Chloë Sevigny')).toBe('chloe-sevigny');
+    expect(letterboxdPersonSlug("Lupita Nyong'o")).toBe('lupita-nyong-o');
+  });
+
+  it('collapses apostrophes and periods into single hyphens', () => {
+    expect(letterboxdPersonSlug("Conan O'Brien")).toBe('conan-o-brien');
+    expect(letterboxdPersonSlug('Robert Downey Jr.')).toBe('robert-downey-jr');
+    expect(letterboxdPersonSlug('J.K. Simmons')).toBe('j-k-simmons');
+  });
+
+  it('collapses middle dots and interpunct-style separators', () => {
+    expect(letterboxdPersonSlug('WALL·E Doe')).toBe('wall-e-doe');
+    expect(letterboxdPersonSlug('Jean-Luc  Godard')).toBe('jean-luc-godard');
+  });
+
+  it('collapses runs of whitespace and trims stray hyphens', () => {
+    expect(letterboxdPersonSlug('  Bong   Joon Ho  ')).toBe('bong-joon-ho');
+    expect(letterboxdPersonSlug('-Wes Anderson-')).toBe('wes-anderson');
+  });
+
+  it('returns an empty slug for a name with no latin alphanumerics', () => {
+    expect(letterboxdPersonSlug('宮崎 駿')).toBe('');
+    expect(letterboxdPersonSlug('新海誠')).toBe('');
+    expect(letterboxdPersonSlug('   ')).toBe('');
+  });
+
+  it('keeps digits', () => {
+    expect(letterboxdPersonSlug('Travis Scott 2')).toBe('travis-scott-2');
+  });
+});
+
+describe('providerPersonUrl', () => {
+  it('maps each known TMDB department to its Letterboxd role segment', () => {
+    const cases: [string, string][] = [
+      ['Acting', 'actor'],
+      ['Directing', 'director'],
+      ['Writing', 'writer'],
+      ['Production', 'producer'],
+      ['Sound', 'composer'],
+      ['Editing', 'editor'],
+      ['Camera', 'cinematography'],
+    ];
+    for (const [department, role] of cases) {
+      expect(
+        providerPersonUrl('letterboxd', {
+          name: 'Ada Lovelace',
+          knownForDepartment: department,
+        }),
+      ).toBe(`https://letterboxd.com/${role}/ada-lovelace/`);
+    }
+  });
+
+  it('defaults to the actor role for a missing or unmapped department', () => {
+    expect(providerPersonUrl('letterboxd', { name: 'Ada Lovelace' })).toBe(
+      'https://letterboxd.com/actor/ada-lovelace/',
+    );
+    expect(
+      providerPersonUrl('letterboxd', {
+        name: 'Ada Lovelace',
+        knownForDepartment: 'Visual Effects',
+      }),
+    ).toBe('https://letterboxd.com/actor/ada-lovelace/');
+  });
+
+  it('matches the department case-insensitively', () => {
+    expect(
+      providerPersonUrl('letterboxd', {
+        name: 'Ada Lovelace',
+        knownForDepartment: ' directing ',
+      }),
+    ).toBe('https://letterboxd.com/director/ada-lovelace/');
+  });
+
+  it('returns null for Letterboxd when the name yields no slug', () => {
+    expect(
+      providerPersonUrl('letterboxd', { name: '宮崎 駿', knownForDepartment: 'Directing' }),
+    ).toBeNull();
+  });
+
+  it('builds an AniList staff search URL', () => {
+    expect(providerPersonUrl('anilist', { name: 'Hayao Miyazaki' })).toBe(
+      'https://anilist.co/search/staff?search=Hayao%20Miyazaki',
+    );
+  });
+
+  it('percent-encodes and preserves non-latin names for the AniList search', () => {
+    expect(providerPersonUrl('anilist', { name: '宮崎 駿' })).toBe(
+      'https://anilist.co/search/staff?search=%E5%AE%AE%E5%B4%8E%20%E9%A7%BF',
+    );
+    expect(providerPersonUrl('anilist', { name: "Conan O'Brien" })).toBe(
+      "https://anilist.co/search/staff?search=Conan%20O'Brien",
+    );
+  });
+
+  it('returns null for AniList on a blank name', () => {
+    expect(providerPersonUrl('anilist', { name: '   ' })).toBeNull();
+  });
+
+  it('returns null for Trakt and Serializd (no addressable person surface)', () => {
+    expect(providerPersonUrl('trakt', { name: 'Ada Lovelace' })).toBeNull();
+    expect(providerPersonUrl('serializd', { name: 'Ada Lovelace' })).toBeNull();
   });
 });
 

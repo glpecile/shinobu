@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  earliestHomeRelease,
   normalizeCreditRows,
   normalizePersonDetails,
   normalizePersonSearch,
@@ -104,6 +105,7 @@ describe('normalizeCreditRows', () => {
       coverImage: 'https://image.tmdb.org/t/p/w342/poster-1.jpg',
       backdropImage: '',
       year: 1986,
+      releaseDate: '1986-05-16',
       type: 'MOVIE',
       currentProgress: 0,
       progressUnit: 'episode',
@@ -316,6 +318,7 @@ describe('normalizeMovieCatalogue', () => {
       backdropImage: 'https://image.tmdb.org/t/p/w1280/matrix-wide.jpg',
       overview: 'A hacker learns the truth.',
       year: 1999,
+      releaseDate: '1999-03-30',
       runtime: 136,
       rating: 8.2,
       genres: ['Action'],
@@ -440,5 +443,121 @@ describe('normalizeTitleSearch', () => {
 
   test('empty results yield an empty list', () => {
     expect(normalizeTitleSearch({}, 'movie', NOW)).toEqual([]);
+  });
+});
+
+/** TMDB release types: 4 Digital, 5 Physical. */
+const digital = (iso: string, date: string) => ({
+  iso_3166_1: iso,
+  release_dates: [{ type: 4, release_date: date }],
+});
+const physical = (iso: string, date: string) => ({
+  iso_3166_1: iso,
+  release_dates: [{ type: 5, release_date: date }],
+});
+
+describe('earliestHomeRelease', () => {
+
+  test('picks the earliest digital date across regions', () => {
+    expect(
+      earliestHomeRelease([
+        digital('US', '2026-03-04T00:00:00.000Z'),
+        digital('FR', '2026-02-11T00:00:00.000Z'),
+        digital('JP', '2026-05-20T00:00:00.000Z'),
+      ]),
+    ).toEqual({ date: '2026-02-11', kind: 'digital' });
+  });
+
+  test('falls back to physical when no region has a digital release', () => {
+    expect(
+      earliestHomeRelease([
+        physical('US', '2026-06-09T00:00:00.000Z'),
+        physical('DE', '2026-07-01T00:00:00.000Z'),
+      ]),
+    ).toEqual({ date: '2026-06-09', kind: 'physical' });
+  });
+
+  test('with both present, the earlier one wins and names its own type', () => {
+    expect(
+      earliestHomeRelease([
+        physical('US', '2026-06-09T00:00:00.000Z'),
+        digital('US', '2026-04-15T00:00:00.000Z'),
+      ]),
+    ).toEqual({ date: '2026-04-15', kind: 'digital' });
+    expect(
+      earliestHomeRelease([
+        physical('GB', '2026-01-05T00:00:00.000Z'),
+        digital('US', '2026-04-15T00:00:00.000Z'),
+      ]),
+    ).toEqual({ date: '2026-01-05', kind: 'physical' });
+  });
+
+  test('a shared earliest date reports both, so the label can say so', () => {
+    expect(
+      earliestHomeRelease([
+        {
+          iso_3166_1: 'US',
+          release_dates: [
+            { type: 4, release_date: '2026-04-15T00:00:00.000Z' },
+            { type: 5, release_date: '2026-04-15T00:00:00.000Z' },
+          ],
+        },
+      ]),
+    ).toEqual({ date: '2026-04-15', kind: 'both' });
+  });
+
+  test('theatrical/premiere/TV types and junk never count as a home release', () => {
+    expect(
+      earliestHomeRelease([
+        {
+          iso_3166_1: 'US',
+          release_dates: [
+            { type: 1, release_date: '2025-09-01T00:00:00.000Z' },
+            { type: 2, release_date: '2025-10-01T00:00:00.000Z' },
+            { type: 3, release_date: '2025-10-10T00:00:00.000Z' },
+            { type: 6, release_date: '2026-08-01T00:00:00.000Z' },
+            { type: 4, release_date: '' },
+            { type: 4, release_date: null },
+            { type: 5, release_date: 'not a date' },
+          ],
+        },
+      ]),
+    ).toBeNull();
+  });
+
+  test('degrades silently on an absent or empty payload', () => {
+    expect(earliestHomeRelease(undefined)).toBeNull();
+    expect(earliestHomeRelease(null)).toBeNull();
+    expect(earliestHomeRelease([])).toBeNull();
+    expect(earliestHomeRelease([{ iso_3166_1: 'US', release_dates: null }])).toBeNull();
+  });
+});
+
+describe('normalizeMovieCatalogue release dates', () => {
+  test('carries the full release date and the earliest home release', () => {
+    const result = normalizeMovieCatalogue(
+      {
+        id: 616,
+        title: 'Jinsei',
+        release_date: '2026-01-30',
+        release_dates: {
+          results: [
+            { iso_3166_1: 'US', release_dates: [{ type: 3, release_date: '2026-01-30T00:00:00.000Z' }] },
+            { iso_3166_1: 'US', release_dates: [{ type: 4, release_date: '2026-03-11T00:00:00.000Z' }] },
+          ],
+        },
+      },
+      NOW,
+    );
+    expect(result?.catalogue.releaseDate).toBe('2026-01-30');
+    expect(result?.catalogue.homeReleaseDate).toBe('2026-03-11');
+    expect(result?.catalogue.homeReleaseKind).toBe('digital');
+  });
+
+  test('omits both fields entirely when TMDB has neither', () => {
+    const result = normalizeMovieCatalogue({ id: 7, title: 'Undated' }, NOW);
+    expect(result?.catalogue.releaseDate).toBeUndefined();
+    expect(result?.catalogue.homeReleaseDate).toBeUndefined();
+    expect(result?.catalogue.homeReleaseKind).toBeUndefined();
   });
 });

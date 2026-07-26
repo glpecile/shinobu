@@ -28,6 +28,28 @@ export function hasAired(
   return airInstant.getTime() <= now.getTime();
 }
 
+/**
+ * Whether a release date is *not known to be in the future* — the permissive
+ * counterpart to `hasAired`, for gating an action rather than revealing
+ * content. An absent, empty, or unparseable date returns `true`: a provider
+ * that simply doesn't carry a release date is no evidence the title is
+ * unreleased, and the log button must never block on missing data. (`hasAired`
+ * answers `false` for the same input because *showing* an episode as available
+ * is the spoiler-shaped failure; *refusing* a log is the annoying one.)
+ *
+ * Mirrors the unaired-episode rule in `features/log-media`: a `null` air date
+ * counts as airable, only a known future one blocks. The actual comparison is
+ * delegated to `hasAired` — there is exactly one date comparison here.
+ */
+export function hasReleased(
+  releaseDate: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (releaseDate == null || releaseDate === '') return true;
+  if (parseLocalInstant(releaseDate) == null) return true;
+  return hasAired(releaseDate, now);
+}
+
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

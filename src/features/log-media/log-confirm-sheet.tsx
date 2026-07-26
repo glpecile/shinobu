@@ -17,8 +17,20 @@ import {
 } from './manual-log-links';
 import type { ProviderLogOutcome } from './fan-out';
 import { OutcomeLink } from './outcome-link';
+import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
 import { WatchedAtField } from './watched-at-field';
+
+/**
+ * The providers whose diary payload actually carries tags — Letterboxd's diary
+ * entry (plan 0012) and Serializd's `show/reviews/add` body (plan 0017). Both
+ * gate the field *and* name it, so the label can never drift from the gate the
+ * way a hardcoded "(Letterboxd)" did on a TV log.
+ */
+const TAG_PROVIDERS = [
+  'letterboxd',
+  'serializd',
+] as const satisfies readonly ProviderId[];
 
 /** Joins provider labels for "Writes to ..." and outcome copy in both sheets. */
 export function labels(ids: readonly ProviderId[]): string {
@@ -288,10 +300,12 @@ export function LogConfirmSheet({
   const muted = useCSSVariable('--color-muted');
   const accent = useCSSVariable('--color-accent');
   const accentColor = typeof accent === 'string' ? accent : undefined;
-  const showTagsField =
-    onTagsChange != null &&
-    (selectedProviders.includes('letterboxd') ||
-      selectedProviders.includes('serializd'));
+  // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
+  // tags, so narrowing this would silently drop working Serializd functionality.
+  const tagProviders = TAG_PROVIDERS.filter((id) =>
+    selectedProviders.includes(id),
+  );
+  const showTagsField = onTagsChange != null && tagProviders.length > 0;
   // Reconcile skips (no reason — already in sync) keep the original combined
   // copy; adapter-reported skips (a reason, e.g. an unresolvable Serializd
   // season, plan 0017 R9) get their own line + manual link (plan 0022 R6).
@@ -346,7 +360,10 @@ export function LogConfirmSheet({
       {showTagsField && (
         <View className="mt-4">
           <Text className="text-foreground font-sans-semibold text-sm mb-2">
-            Tags <Text className="text-muted font-sans text-xs">(Letterboxd)</Text>
+            Tags{' '}
+            <Text className="text-muted font-sans text-xs">
+              ({labels(tagProviders)})
+            </Text>
           </Text>
           <TextInput
             autoCapitalize="none"
@@ -357,6 +374,7 @@ export function LogConfirmSheet({
             placeholderTextColor={typeof muted === 'string' ? muted : undefined}
             value={tags ?? ''}
           />
+          <TagPicker onChange={onTagsChange} value={tags ?? ''} />
         </View>
       )}
       {result != null && result.failed.length > 0 && (

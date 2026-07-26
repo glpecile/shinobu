@@ -56,10 +56,11 @@ describe('isLetterboxdProxyRequest', () => {
 });
 
 describe('allowlist', () => {
-  test('passes the two read shapes through to upstream', async () => {
+  test('passes the three read shapes through to upstream', async () => {
     for (const path of [
       '/api/letterboxd/gian/watchlist/',
       '/api/letterboxd/gian/rss/',
+      '/api/letterboxd/gian/tags/',
       '/api/letterboxd/User_Name-9/watchlist/',
     ]) {
       const upstream = capturingUpstream(htmlResponse());
@@ -125,6 +126,68 @@ describe('allowlist', () => {
     );
     expect(res.status).toBe(405);
     expect(upstream.captured).toHaveLength(0);
+  });
+
+  // The third rule (the tag picker's vocabulary source). Spiked 2026-07-25:
+  // `/{user}/tags/` answers 200 uncthallenged, unlike the walled deeper pages
+  // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md). These pin
+  // exactly what it does and does not unlock.
+  test('accepts the public tag index and forwards it verbatim', async () => {
+    const upstream = capturingUpstream(htmlResponse());
+    const res = await handleLetterboxdProxy(
+      proxyRequest('/api/letterboxd/davidehrlich/tags/'),
+      upstream.fetch,
+    );
+    expect(res.status).toBe(200);
+    expect(upstream.captured[0].url).toBe('https://letterboxd.com/davidehrlich/tags/');
+  });
+
+  test('rejects everything around the tag index — deeper shapes, no trailing slash, bad usernames', async () => {
+    for (const path of [
+      // The filtered tag-browse surface is NOT unlocked by the tags rule.
+      '/api/letterboxd/gian/tags/films/by/name/',
+      '/api/letterboxd/gian/tags/films/',
+      '/api/letterboxd/gian/tag/criterion-collection/films/',
+      '/api/letterboxd/gian/tags',
+      '/api/letterboxd/tags/',
+      '/api/letterboxd/gi an/tags/',
+      '/api/letterboxd/gian/tags/page/2/',
+      '/api/letterboxd/../gian/tags/',
+      '/api/letterboxd/gian/../../etc/tags/',
+      '/api/letterboxd/https://evil.test/tags/',
+    ]) {
+      const upstream = capturingUpstream(htmlResponse());
+      const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);
+      expect(res.status).toBe(404);
+      expect(upstream.captured).toHaveLength(0);
+    }
+  });
+
+  test('the tag index refuses non-GET methods', async () => {
+    for (const method of ['POST', 'PUT', 'DELETE']) {
+      const upstream = capturingUpstream(htmlResponse());
+      const res = await handleLetterboxdProxy(
+        proxyRequest('/api/letterboxd/gian/tags/', { method, body: '{}' }),
+        upstream.fetch,
+      );
+      expect(res.status).toBe(405);
+      expect(upstream.captured).toHaveLength(0);
+    }
+  });
+
+  test('the tag index forwards no client headers and emits no CORS header', async () => {
+    const upstream = capturingUpstream(htmlResponse());
+    const res = await handleLetterboxdProxy(
+      proxyRequest('/api/letterboxd/gian/tags/', {
+        headers: { Cookie: 'session=secret', Authorization: 'Bearer tok' },
+      }),
+      upstream.fetch,
+    );
+    const headers = upstream.captured[0].init?.headers as Record<string, string>;
+    expect(headers.Cookie).toBeUndefined();
+    expect(headers.Authorization).toBeUndefined();
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+    expect(res.headers.get('content-security-policy')).toContain("default-src 'none'");
   });
 
   test('forwards to letterboxd.com with the sub-path verbatim', async () => {
