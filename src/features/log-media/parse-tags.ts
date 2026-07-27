@@ -70,6 +70,50 @@ export function toggleTag(input: string, tag: string): string {
 }
 
 /**
+ * The suggestion pool with the tags committed in `input` pinned to the front,
+ * in the order that field lists them.
+ *
+ * The picker collapses to a single row, so position is visibility: a pool that
+ * arrives from Letterboxd mid-sheet (the query resolves a beat after the sheet
+ * opens) used to push the prefilled tag off the visible row, and the one tag
+ * the user could see was selected vanished as the suggestions loaded. Pinning
+ * makes the selection the part of the list that can't be displaced.
+ *
+ * The caller passes the field as it stood when the picker mounted, not the
+ * live value — see `TagPicker`'s `openedWith`.
+ *
+ * A committed tag the pool has never seen is pinned too, not dropped — the user
+ * typed it, so it earns a chip, and that chip is the only way to remove it
+ * without editing the text. Where both know a tag, the pool's casing wins:
+ * "Horror" is Letterboxd's own spelling of the tag a user typed as "horror",
+ * and the chip should read the way the provider stores it.
+ */
+export function pinSelectedTags(
+  suggestions: readonly string[],
+  input: string,
+): string[] {
+  const canonical = new Map<string, string>();
+  for (const tag of suggestions) {
+    const key = tag.toLowerCase();
+    if (!canonical.has(key)) canonical.set(key, tag);
+  }
+
+  const pinned = new Set<string>();
+  const ordered: string[] = [];
+  for (const tag of committedTags(input)) {
+    const key = tag.toLowerCase();
+    if (pinned.has(key)) continue;
+    pinned.add(key);
+    ordered.push(canonical.get(key) ?? tag);
+  }
+  for (const tag of suggestions) {
+    if (!pinned.has(tag.toLowerCase())) ordered.push(tag);
+  }
+
+  return ordered;
+}
+
+/**
  * The segment after the last comma — the tag the user is part-way through
  * typing, which is what the picker filters its suggestions by.
  *

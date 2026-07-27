@@ -1,7 +1,11 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useDeferredValue, useState } from 'react';
 import { type LayoutChangeEvent, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import {
+  type EntryOrExitLayoutType,
+  FadeIn,
+  useReducedMotion,
+} from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -14,6 +18,7 @@ import {
   activeTagFragment,
   filterTagSuggestions,
   isTagSelected,
+  pinSelectedTags,
   toggleTag,
 } from './parse-tags';
 
@@ -21,8 +26,59 @@ import {
  * Generous, because the row collapses to a single line anyway — the cap is
  * only here so an enormous tag vocabulary can't make the expanded state
  * unusable. A bigger pool also gives the type-to-filter more to match against.
+ *
+ * Applied *after* `pinSelectedTags`, so a selected tag can never be the one the
+ * cap drops — the tags the sheet opened with are the ones that must survive
+ * every trim.
  */
 const MAX_SUGGESTIONS = 24;
+
+/**
+ * Stagger between chips, and the index past which they stop staggering. The
+ * common arrival is the whole vocabulary at once (the Letterboxd query resolves
+ * a beat after the sheet opens), so an uncapped stagger would put the last chip
+ * half a second behind the first. Five steps is enough to read as a cascade;
+ * everything after rides the last one in.
+ */
+const CHIP_STAGGER = 20;
+const CHIP_STAGGER_STEPS = 5;
+
+/**
+ * **A preset (`FadeIn`), never a custom `Keyframe`.** On web, Reanimated pins
+ * any element animated by a *custom* keyframe to `position: absolute` once the
+ * animation is cleaned up (`setElementPosition`, only reached when the
+ * animation name isn't one of its own presets). Every chip then leaves the
+ * flow, the wrapping row measures 0px tall, and the sheet's buttons ride up
+ * over the chips — `docs/solutions/reanimated-web-keyframe-pins-position.md`.
+ * A rise-and-fade would be marginally nicer; keeping the chips in the layout
+ * they are measured by is worth more.
+ *
+ * Module scope, per Reanimated's animation-builder performance rule — one
+ * builder per stagger step, rather than a new one per chip per render.
+ */
+const chipEntering = Array.from({ length: CHIP_STAGGER_STEPS }, (_, step) =>
+  FadeIn.duration(DURATION.swap).delay(step * CHIP_STAGGER),
+);
+
+/** Reduced motion keeps the fade and drops the stagger. */
+const chipFading = FadeIn.duration(DURATION.swap);
+
+function chipAnimation(
+  index: number,
+  reduceMotion: boolean,
+): EntryOrExitLayoutType {
+  if (reduceMotion) return chipFading;
+  return chipEntering[Math.min(index, CHIP_STAGGER_STEPS - 1)];
+}
+
+/**
+ * The "Show more" row, which lands after the chips it belongs to — it waits on
+ * their measurement. Delayed past the chip cascade so it reads as the tail of
+ * one arrival rather than a second, unrelated one.
+ */
+const toggleEntering = FadeIn.duration(DURATION.swap).delay(
+  CHIP_STAGGER_STEPS * CHIP_STAGGER,
+);
 
 /** Sub-pixel layout noise must not read as a second row. */
 const ROW_EPSILON = 2;
@@ -80,6 +136,9 @@ function useFilterFragment(fragment: string): string {
  * that Letterboxd hasn't seen. Deduped case-insensitively — "Horror" and
  * "horror" are one tag to both providers, so showing both would offer the user
  * a duplicate.
+ *
+ * Uncapped: `MAX_SUGGESTIONS` is applied after the selected tags are pinned, so
+ * that trimming a long vocabulary can't cut the user's own selection.
  */
 function mergeTagSuggestions(
   letterboxdTags: readonly LetterboxdTag[],
@@ -93,7 +152,6 @@ function mergeTagSuggestions(
     if (tag === '' || seen.has(key)) continue;
     seen.add(key);
     merged.push(tag);
-    if (merged.length === MAX_SUGGESTIONS) break;
   }
 
   return merged;
@@ -104,12 +162,14 @@ function TagChip({
   selected,
   onToggle,
   onMeasure,
+  entering,
 }: {
   tag: string;
   selected: boolean;
   onToggle: () => void;
   /** Set on the first chip only — its height is one row's height. */
   onMeasure?: (height: number) => void;
+  entering: EntryOrExitLayoutType;
 }) {
   const accent = useCSSVariable('--color-accent');
   const muted = useCSSVariable('--color-muted');
@@ -117,53 +177,60 @@ function TagChip({
   const mutedColor = typeof muted === 'string' ? muted : undefined;
 
   return (
-    <PresstableOpacity
-      accessibilityLabel={selected ? `Remove tag ${tag}` : `Add tag ${tag}`}
-      // Only ever "button" on a pressto pressable — RNGH's web gesture handler
-      // fires presses on nothing else
-      // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onToggle}
-    >
-      {/* onLayout sits on the chip's own box, not the pressable: pressto's
-          wrapper does not forward it. */}
-      <View
-        className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-        onLayout={
-          onMeasure == null
-            ? undefined
-            : (event: LayoutChangeEvent) =>
-                onMeasure(event.nativeEvent.layout.height)
-        }
+    // The animation goes on a wrapper, not the pressable: pressto's wrapper
+    // forwards neither `entering` nor a ref Reanimated could drive. Chips are
+    // keyed by tag, so only the ones that genuinely just appeared play it —
+    // a chip that survives a keystroke or a pool refresh sits still.
+    <AnimatedView entering={entering}>
+      <PresstableOpacity
+        accessibilityLabel={selected ? `Remove tag ${tag}` : `Add tag ${tag}`}
+        // Only ever "button" on a pressto pressable — RNGH's web gesture handler
+        // fires presses on nothing else
+        // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        onPress={onToggle}
       >
-        {/* Selection crossfades between two stacked full-bleed layers instead
-            of hard-flipping classNames: opacity is free on the GPU, both states
-            stay expressed as theme tokens (an animated backgroundColor would
-            lose the accent's /10 alpha), and the resting layer underneath means
-            a dropped animation still renders a correct chip — same recipe as
-            the Up Next day tiles. */}
-        <View className="absolute inset-0 rounded-full border border-border bg-surface" />
-        <AnimatedView
-          className="absolute inset-0 rounded-full border border-accent bg-accent/10"
-          style={{
-            opacity: selected ? 1 : 0,
-            transitionProperty: 'opacity',
-            transitionDuration: DURATION.color,
-            transitionTimingFunction: EASE_OUT,
-          }}
-        />
-        {/* The unselected chip keeps an outline dot rather than dropping the
-            icon: a chip that grows on tap would reflow the whole wrapped row
-            under the user's finger. Matches ProviderToggle's checkmark idiom. */}
-        <Ionicons
-          color={selected ? accentColor : mutedColor}
-          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-          size={14}
-        />
-        <Text className="text-foreground font-sans text-sm">{tag}</Text>
-      </View>
-    </PresstableOpacity>
+        {/* onLayout sits on the chip's own box, not the pressable: pressto's
+            wrapper does not forward it. */}
+        <View
+          className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+          onLayout={
+            onMeasure == null
+              ? undefined
+              : (event: LayoutChangeEvent) =>
+                  onMeasure(event.nativeEvent.layout.height)
+          }
+        >
+          {/* Selection crossfades between two stacked full-bleed layers instead
+              of hard-flipping classNames: opacity is free on the GPU, both
+              states stay expressed as theme tokens (an animated
+              backgroundColor would lose the accent's /10 alpha), and the
+              resting layer underneath means a dropped animation still renders a
+              correct chip — same recipe as the Up Next day tiles. */}
+          <View className="absolute inset-0 rounded-full border border-border bg-surface" />
+          <AnimatedView
+            className="absolute inset-0 rounded-full border border-accent bg-accent/10"
+            style={{
+              opacity: selected ? 1 : 0,
+              transitionProperty: 'opacity',
+              transitionDuration: DURATION.color,
+              transitionTimingFunction: EASE_OUT,
+            }}
+          />
+          {/* The unselected chip keeps an outline dot rather than dropping the
+              icon: a chip that grows on tap would reflow the whole wrapped row
+              under the user's finger. Matches ProviderToggle's checkmark
+              idiom. */}
+          <Ionicons
+            color={selected ? accentColor : mutedColor}
+            name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+            size={14}
+          />
+          <Text className="text-foreground font-sans text-sm">{tag}</Text>
+        </View>
+      </PresstableOpacity>
+    </AnimatedView>
   );
 }
 
@@ -197,6 +264,13 @@ export function TagPicker({
   const recentTags = useRecentTags();
   const reduceMotion = useReducedMotion();
   const muted = useCSSVariable('--color-muted');
+  // The field as the sheet opened, and the only thing the pinning reads.
+  // Pinning off the *live* value would re-sort the row on every tap, sliding
+  // the chips out from under the finger that just pressed one — the same
+  // reflow the chip's fixed-width icon exists to avoid. What the row owes the
+  // user is that the tags they arrived with are visible in the collapsed row;
+  // a tag they select here is already visible, by definition.
+  const [openedWith] = useState(value);
   const [expanded, setExpanded] = useState(false);
   const [rowHeight, setRowHeight] = useState(0);
   // Heights are only comparable within one set of chips, so they are cached
@@ -210,10 +284,15 @@ export function TagPicker({
     () => new Map(),
   );
 
-  const suggestions = filterTagSuggestions(
+  const fragment = useFilterFragment(activeTagFragment(value));
+  // Pin before capping, filter after: the tags the sheet opened with lead the
+  // row whatever the vocabulary does, and typing still re-ranks the whole
+  // visible pool by what matches.
+  const pool = pinSelectedTags(
     mergeTagSuggestions(letterboxdTags.data ?? [], recentTags),
-    useFilterFragment(activeTagFragment(value)),
-  );
+    openedWith,
+  ).slice(0, MAX_SUGGESTIONS);
+  const suggestions = filterTagSuggestions(pool, fragment);
   const key = measureKey(suggestions);
   const contentHeight = heights.get(key) ?? 0;
 
@@ -267,6 +346,7 @@ export function TagPicker({
         <View className="flex-row flex-wrap gap-2" onLayout={measureContent}>
           {suggestions.map((tag, index) => (
             <TagChip
+              entering={chipAnimation(index, reduceMotion)}
               key={tag.toLowerCase()}
               onMeasure={index === 0 ? measureRow : undefined}
               onToggle={() => onChange(toggleTag(value, tag))}
@@ -280,33 +360,44 @@ export function TagPicker({
           allowed to clip for a frame, but a toggle that appears and then
           vanishes again reads as a glitch. */}
       {measured && overflows && (
-        <PresstableOpacity
-          accessibilityLabel={
-            expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'
-          }
-          accessibilityRole="button"
-          accessibilityState={{ expanded }}
-          className="flex-row items-center gap-1 self-start mt-2 py-1"
-          onPress={() => setExpanded(!expanded)}
+        // Fade only, no travel: this row appears a beat after the sheet does
+        // (it waits on the measurement, which waits on the tag query), and it
+        // pushes the confirm button down when it lands. A hard cut reads as the
+        // sheet glitching; the fade makes the same shift read as arriving.
+        <AnimatedView
+          className="self-start"
+          entering={reduceMotion ? undefined : toggleEntering}
         >
-          <Text className="text-muted font-sans text-xs">
-            {expanded ? 'Show less' : 'Show more'}
-          </Text>
-          <AnimatedView
-            style={{
-              transform: [{ rotate: expanded ? '180deg' : '0deg' }],
-              transitionProperty: 'transform',
-              transitionDuration: reduceMotion ? 0 : DURATION.toggle,
-              transitionTimingFunction: EASE_IN_OUT,
-            }}
+          <PresstableOpacity
+            accessibilityLabel={
+              expanded
+                ? 'Show fewer tag suggestions'
+                : 'Show more tag suggestions'
+            }
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            className="flex-row items-center gap-1 self-start mt-2 py-1"
+            onPress={() => setExpanded(!expanded)}
           >
-            <Ionicons
-              color={typeof muted === 'string' ? muted : undefined}
-              name="chevron-down"
-              size={12}
-            />
-          </AnimatedView>
-        </PresstableOpacity>
+            <Text className="text-muted font-sans text-xs">
+              {expanded ? 'Show less' : 'Show more'}
+            </Text>
+            <AnimatedView
+              style={{
+                transform: [{ rotate: expanded ? '180deg' : '0deg' }],
+                transitionProperty: 'transform',
+                transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+                transitionTimingFunction: EASE_IN_OUT,
+              }}
+            >
+              <Ionicons
+                color={typeof muted === 'string' ? muted : undefined}
+                name="chevron-down"
+                size={12}
+              />
+            </AnimatedView>
+          </PresstableOpacity>
+        </AnimatedView>
       )}
     </View>
   );
