@@ -65,7 +65,14 @@ export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
   const iconColor =
     typeof accentForeground === 'string' ? accentForeground : undefined;
 
-  const episode = { season: entry.episode.season, number: entry.episode.number };
+  // Which numbering domain this card's episode lives in (plan 0027 KTD2). A
+  // Trakt-sourced pointer carries its canonical season; an AniList entry has
+  // none to carry — its episode number is entry-relative, and the fan-out
+  // resolves the canonical season from ani.zip. Never fabricate a `season: 1`.
+  const episodeVariables =
+    entry.episode.season != null
+      ? { episodes: [{ season: entry.episode.season, number: entry.episode.number }] }
+      : { entryEpisodes: [entry.episode.number] };
 
   // The settle watcher: `invalidateAfterLog` is fire-and-forget, so this is how
   // the button notices the refetch it caused — and how it stops waiting for one
@@ -100,7 +107,10 @@ export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
     setOpen(true);
     // Warm the reconcile reads while the user reads the modal, so confirming
     // doesn't wait on cold fetches.
-    void prefetchLogReconcile(queryClient, entry.item, connected, [episode]);
+    void prefetchLogReconcile(queryClient, connected, {
+      item: entry.item,
+      ...episodeVariables,
+    });
   }
 
   function confirmLog() {
@@ -112,7 +122,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
     logMedia.mutate(
       {
         item: entry.item,
-        episodes: [episode],
+        ...episodeVariables,
         providers: selectedProviders,
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),

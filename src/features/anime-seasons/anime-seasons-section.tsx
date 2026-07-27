@@ -25,7 +25,9 @@ import {
   useAniListEntryStateQuery,
   useSuspenseAniListEpisodesQuery,
 } from '@/state/queries/anilist';
+import { useAniZipEpisodeMapQuery } from '@/state/queries/mapping';
 import { useConnectedProviders } from '@/state/session';
+import { canonicalSeasonTitle } from './season-label';
 import type { NormalizedMediaItem } from '@/types/media';
 
 function SeasonsSkeleton() {
@@ -39,6 +41,12 @@ function SeasonsSkeleton() {
   );
 }
 
+/**
+ * Entry-relative, always (plan 0027 U5): the accordion's section index stays 1
+ * and the keys derive from the AniList entry's own progress, no matter which
+ * canonical season the header ends up displaying. Keying these off the mapped
+ * season would tick every checkmark off by a whole season.
+ */
 function watchedKeys(progress: number): ReadonlySet<string> {
   const keys = new Set<string>();
   for (let number = 1; number <= progress; number++) {
@@ -71,6 +79,16 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const progress = entryState?.entry?.progress ?? item.currentProgress;
   const watched = watchedKeys(progress);
 
+  // R8, display only: show the entry's *true* canonical season in the header
+  // ("Season 2" for a sequel entry) instead of the synthesized label. Mounting
+  // this query here is R7's one sanctioned render-path episode-map read — a
+  // details screen, not a feed row — and it doubles as the pre-warm for a log
+  // started from this very screen, so the confirm doesn't wait on ani.zip.
+  const { data: episodeMap } = useAniZipEpisodeMapQuery(mediaId);
+  const canonicalTitle = canonicalSeasonTitle(episodeMap);
+  const labelled =
+    canonicalTitle == null ? season : { ...season, title: canonicalTitle };
+
   function openLog(next: PendingLog) {
     if (!canLog) return;
     haptics.selection();
@@ -89,7 +107,9 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     logMedia.mutate(
       {
         item,
-        episodes: pending.episodes,
+        ...(pending.entryEpisodes != null
+          ? { entryEpisodes: pending.entryEpisodes }
+          : {}),
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
@@ -119,26 +139,31 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         </Text>
       )}
       <SeasonAccordion
-        season={season}
+        season={labelled}
         watched={watched}
-        onMarkEpisode={(s, episode) =>
+        onMarkEpisode={(_s, episode) =>
           openLog({
             title: 'Mark episode as watched',
-            description: `“${item.title}” — ${s.title}, E${episode.number}: ${episode.title}`,
-            episodes: [{ season: s.number, number: episode.number }],
+            // The entry title already names the season ("… Season 2"), so the
+            // episode line doesn't repeat it — and can't claim one when the
+            // mapping is unknown.
+            description: `“${item.title}” — E${episode.number}: ${episode.title}`,
+            // Entry-relative (plan 0027): the number the AniList entry itself
+            // uses. The header may read "Season 2", but what gets logged is
+            // episode N *of this entry* — the fan-out maps it to a canonical
+            // season, and a mapping miss becomes an honest skip.
+            entryEpisodes: [episode.number],
           })
         }
         onMarkSeason={(s) => {
           // Same unaired guard as the Trakt season picker.
           const aired = s.episodes.filter((e) => hasAired(e.firstAired));
           if (aired.length === 0) return;
+          const label = canonicalTitle ?? 'all episodes';
           openLog({
-            title: `Mark ${s.title} as watched`,
-            description: `Mark every aired episode of ${s.title} of “${item.title}” as watched.`,
-            episodes: aired.map((episode) => ({
-              season: s.number,
-              number: episode.number,
-            })),
+            title: `Mark ${label} as watched`,
+            description: `Mark every aired episode of “${item.title}” as watched.`,
+            entryEpisodes: aired.map((episode) => episode.number),
           });
         }}
       />

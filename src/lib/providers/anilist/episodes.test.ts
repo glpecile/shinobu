@@ -41,8 +41,11 @@ describe('getAnimeEpisodes', () => {
       getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }),
     );
 
+    // `number: 1` is the section index, not a canonical-season claim, and the
+    // title stays neutral — a sequel entry's episodes are not "Season 1"
+    // (plan 0027 R8; the details accordion overlays the mapped season).
     expect(season.number).toBe(1);
-    expect(season.title).toBe('Season 1');
+    expect(season.title).toBe('Episodes');
     expect(season.episodes).toHaveLength(2);
     expect(season.episodes[0]).toMatchObject({
       number: 1,

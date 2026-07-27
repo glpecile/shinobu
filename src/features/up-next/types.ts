@@ -12,7 +12,15 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 /** The single next unwatched episode of one tracked show. */
 export interface UpNextEpisode {
-  season: number;
+  /**
+   * The canonical season, when the source knows one — Trakt's pointer does.
+   * **Absent for AniList entries** (plan 0027): an AniList entry counts its own
+   * episodes 1..n and carries no canonical season, so `number` is
+   * entry-relative and the log fan-out translates it via ani.zip. The old
+   * `season: 1` literal here was the fabrication that wrote phantom season-1
+   * history for every sequel-season anime.
+   */
+  season?: number;
   number: number;
   title?: string;
   /** ISO air instant. Absent when the source provider exposes none. */

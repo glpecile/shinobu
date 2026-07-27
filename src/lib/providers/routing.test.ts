@@ -232,7 +232,7 @@ describe('resolveLogWriteTargets', () => {
     ).toEqual(['letterboxd']);
   });
 
-  it('drops AniList for a non-season-1 episode batch', () => {
+  it('drops AniList for a non-season-1 canonical episode batch', () => {
     expect(
       resolveLogWriteTargets(
         { type: 'TV', ...ids({ trakt: 1, anilist: 2 }) },
@@ -240,6 +240,20 @@ describe('resolveLogWriteTargets', () => {
         { nonSeasonOneEpisodes: true, platform: 'ios' },
       ),
     ).toEqual(['trakt']);
+  });
+
+  // Plan 0027 R6/KTD2: an AniList-origin log reaches routing already
+  // translated, so `useLogMedia` leaves the flag false and AniList survives
+  // even when the batch maps to canonical season 2. Routing stays pure — it
+  // never learns which domain the caller started in.
+  it('keeps AniList when the caller does not raise the canonical-season flag', () => {
+    expect(
+      resolveLogWriteTargets(
+        { type: 'ANIME', ...ids({ trakt: 1, tvdb: 9, anilist: 2 }) },
+        ['trakt', 'anilist'],
+        { platform: 'ios' },
+      ),
+    ).toEqual(['trakt', 'anilist']);
   });
 
   it('applies routing, opt-out, and platform filters together', () => {

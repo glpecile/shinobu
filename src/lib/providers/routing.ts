@@ -87,7 +87,19 @@ export function splitLogTargets(
 }
 
 export interface LogWriteTargetOptions {
-  /** Season 2+ logs stay off AniList (plan 0011) — a mapped entry only represents season 1. */
+  /**
+   * A **canonical**-domain batch (the Trakt seasons UI) touching season 2+
+   * stays off AniList: a reverse map from a canonical season to the sibling
+   * AniList entry that represents it is out of scope (plan 0027 R6/A2), so the
+   * only safe move is not to write.
+   *
+   * This is *not* the anime case any more. An AniList-origin log arrives in the
+   * entry's own 1..n numbering, and `useLogMedia` translates it to a canonical
+   * season for Trakt/Serializd before routing — so a sequel entry keeps AniList
+   * as a target whatever season it maps to, and this flag stays false for it.
+   * Routing itself remains pure and network-free (plan 0011 decision 6): it
+   * only ever sees the already-translated result.
+   */
   nonSeasonOneEpisodes?: boolean;
   /** Caller opt-out — narrows to this subset of the routed targets (the confirm sheet's picker). */
   onlyProviders?: readonly ProviderId[];
@@ -97,7 +109,7 @@ export interface LogWriteTargetOptions {
 
 /**
  * The full target-resolution pipeline behind a confirmed log write: routed
- * targets, minus AniList for a non-season-1 batch, minus caller opt-outs,
+ * targets, minus AniList for a non-season-1 *canonical* batch, minus caller opt-outs,
  * minus anything manual-only on this platform. Extracted out of `useLogMedia`
  * so the defensive manual-exclusion — the second line of defense against ever
  * writing to a banned target, e.g. Letterboxd on web — is unit-testable

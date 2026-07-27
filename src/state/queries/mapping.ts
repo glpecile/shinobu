@@ -3,7 +3,9 @@ import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import {
+  fetchAniZipEpisodeMap,
   fetchAniZipIds,
+  type AniZipEpisodeMap,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
 import { searchAnimeFilms } from '@/lib/providers/anilist/reads';
@@ -30,6 +32,9 @@ import { traktDeps } from './trakt';
 
 export const mappingQueryKeys = {
   anizip: (lookup: AniZipLookup) => ['mapping', 'anizip', lookup] as const,
+  /** AniList entry → canonical season/episode numbering (plan 0027 KTD4). */
+  anizipEpisodes: (anilistId: number) =>
+    ['mapping', 'anizip-episodes', anilistId] as const,
   traktLookup: (source: string, id: number | string, kind: string) =>
     ['mapping', 'trakt-lookup', source, id, kind] as const,
   traktSearch: (title: string, year: number | undefined) =>
@@ -54,6 +59,57 @@ export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) 
     queryKey: mappingQueryKeys.anizip(lookup),
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
+  });
+}
+
+/**
+ * Not `FOREVER`, unlike every other mapping here: the episode table is the one
+ * ani.zip read whose *content* changes — a just-aired episode lands in the
+ * dataset hours after it airs, and a forever-cached miss would keep skipping
+ * Trakt/Serializd for the rest of the session (plan 0027 KTD4). One flat window
+ * for hits and misses alike — deliberately not a content-dependent
+ * hit-long/miss-short scheme, which no query in this app has — is what
+ * self-heals that lag on the next log action.
+ */
+const EPISODE_MAP_STALE_MS = 60 * 60_000;
+
+function episodeMapQuery(anilistId: number) {
+  return {
+    queryKey: mappingQueryKeys.anizipEpisodes(anilistId),
+    queryFn: (): Promise<AniZipEpisodeMap | null> =>
+      fetchAniZipEpisodeMap(httpFetch, { anilistId }),
+    staleTime: EPISODE_MAP_STALE_MS,
+    // Match gcTime to the window: the default 5 min would evict the decode of a
+    // ~1 MB document long before it goes stale, re-downloading it per log.
+    gcTime: EPISODE_MAP_STALE_MS,
+  };
+}
+
+/**
+ * The AniList-entry → canonical season/episode table behind the log fan-out's
+ * translation step (plan 0027 U2). **Write actions only** (R7): the underlying
+ * document is ~1 MB (docs/solutions/web-cors-anizip.md), so no feed or list
+ * render path may call this. The one sanctioned render-path consumer is the
+ * anime details accordion's header query (`useAniZipEpisodeMapQuery`), which
+ * doubles as the pre-warm for a log started from that screen.
+ */
+export function cachedAniZipEpisodeMap(
+  queryClient: QueryClient,
+  anilistId: number,
+): Promise<AniZipEpisodeMap | null> {
+  return queryClient.fetchQuery(episodeMapQuery(anilistId));
+}
+
+/**
+ * R8's display half: the anime seasons accordion header shows the entry's true
+ * canonical season ("Season 2") instead of the synthesized "Season 1". Shares
+ * its cache entry with `cachedAniZipEpisodeMap`, so mounting it on the details
+ * screen also warms the log path. Never mount this on a list/feed row.
+ */
+export function useAniZipEpisodeMapQuery(anilistId: number | undefined) {
+  return useQuery({
+    ...episodeMapQuery(anilistId ?? -1),
+    enabled: anilistId != null,
   });
 }
 

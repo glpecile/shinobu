@@ -30,7 +30,10 @@ interface EpisodeCardProps {
 }
 
 export function episodeLabel(entry: UpNextEntry): string {
-  const code = `S${entry.episode.season}E${entry.episode.number}`;
+  // An AniList entry carries no canonical season (plan 0027), so it reads as
+  // "E7" rather than a made-up "S1E7" — the entry itself *is* the season.
+  const { season, number } = entry.episode;
+  const code = season == null ? `E${number}` : `S${season}E${number}`;
   return entry.episode.title == null ? code : `${code} · ${entry.episode.title}`;
 }
 

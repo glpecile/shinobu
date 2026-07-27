@@ -76,7 +76,8 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     logMedia.mutate(
       {
         item,
-        episodes: pending.episodes,
+        // Canonical domain: this screen is Trakt's own season numbering.
+        ...(pending.episodes != null ? { episodes: pending.episodes } : {}),
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
