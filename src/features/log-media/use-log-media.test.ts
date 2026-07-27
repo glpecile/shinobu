@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
+import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -36,6 +37,7 @@ mock.module('@/lib/providers/serializd/transport', () => ({
 }));
 
 let episodeMap: AniZipEpisodeMap | null = null;
+let seasonLayout: SeasonLayout | null = null;
 const mappingCalls: string[] = [];
 
 mock.module('@/state/queries/mapping', () => ({
@@ -48,6 +50,10 @@ mock.module('@/state/queries/mapping', () => ({
     mappingCalls.push(`episode-map:${anilistId}`);
     return Promise.resolve(episodeMap);
   },
+  cachedSeasonLayout: (_client: unknown, ids: Record<string, number>) => {
+    mappingCalls.push(`season-layout:${JSON.stringify(ids)}`);
+    return Promise.resolve(seasonLayout);
+  },
 }));
 
 const { planLogWrite, withMappingSkips } = await import('./use-log-media');
@@ -58,22 +64,35 @@ const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
 const { traktQueryKeys } = await import('@/state/queries/trakt');
 const { anilistQueryKeys } = await import('@/state/queries/anilist');
 
-/** Dan Da Dan S2: entry 1..12 → canonical S02E01..12 (real ani.zip shape). */
+/**
+ * Real Dan Da Dan S2 data: ani.zip maps the entry's 1..12 to TVDB S02E01..12,
+ * absolute 13..24 — while Trakt *and* TMDB both hold one continuous
+ * 24-episode season. So episode 3 of this entry is S01E15 on both trackers,
+ * not S02E03 (docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md).
+ */
 function sequelMap(): AniZipEpisodeMap {
   return new Map(
     Array.from({ length: 12 }, (_, index) => [
       index + 1,
-      { season: 2, number: index + 1 },
+      { season: 2, number: index + 1, absolute: index + 13 },
     ]),
   );
 }
+
+const ONE_CONTINUOUS_SEASON: SeasonLayout = [{ season: 1, episodeCount: 24 }];
+
+/** The other real shape (Mushoku Tensei): the tracker splits like TVDB does. */
+const SPLIT_BY_SEASON: SeasonLayout = [
+  { season: 1, episodeCount: 12 },
+  { season: 2, episodeCount: 24 },
+];
 
 /** A first-season entry: identity mapping, the regression-guard case. */
 function seasonOneMap(): AniZipEpisodeMap {
   return new Map(
     Array.from({ length: 12 }, (_, index) => [
       index + 1,
-      { season: 1, number: index + 1 },
+      { season: 1, number: index + 1, absolute: index + 1 },
     ]),
   );
 }
@@ -135,12 +154,13 @@ function recordingAdapters(seen: Map<ProviderId, LogMediaVariables>) {
 
 beforeEach(() => {
   episodeMap = sequelMap();
+  seasonLayout = ONE_CONTINUOUS_SEASON;
   mappingCalls.length = 0;
   store.clear();
 });
 
 describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () => {
-  test('a sequel entry writes canonical S2 to Trakt while AniList keeps entry progress', async () => {
+  test('a sequel entry writes the tracker’s own numbering while AniList keeps entry progress', async () => {
     const queryClient = client();
     const item = animeSeries();
     seedTrakt(queryClient, 999, []);
@@ -155,7 +175,9 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     // canonical-domain input now (R6/KTD2).
     expect(plan.targets).toEqual(['trakt', 'anilist']);
     expect(plan.mappingSkips.size).toBe(0);
-    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+    // ani.zip says S02E03, but Trakt/TMDB hold one 24-episode season, so the
+    // episode the trackers can actually resolve is S01E15 (absolute).
+    expect(plan.variables.episodes).toEqual([{ season: 1, number: 15 }]);
     expect(plan.variables.entryEpisodes).toEqual([3]);
     // The caller's fields never survive as their own — one domain each.
     expect(plan.variables.episode).toBeUndefined();
@@ -163,11 +185,24 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     const seen = new Map<ProviderId, LogMediaVariables>();
     await fanOutLog(recordingAdapters(seen), plan.writeTargets, plan.variables);
 
-    expect(seen.get('trakt')?.episodes).toEqual([{ season: 2, number: 3 }]);
+    expect(seen.get('trakt')?.episodes).toEqual([{ season: 1, number: 15 }]);
     expect(seen.get('anilist')?.entryEpisodes).toEqual([3]);
   });
 
-  test('Serializd receives the canonical season too', async () => {
+  test('a tracker that does split by season gets the TVDB pair instead', async () => {
+    seasonLayout = SPLIT_BY_SEASON;
+    const queryClient = client();
+    const item = animeSeries();
+    seedTrakt(queryClient, 999, []);
+
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
+      'trakt',
+    ]);
+
+    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+  });
+
+  test('Serializd receives the same resolved numbering as Trakt', async () => {
     const queryClient = client();
     const item = animeSeries();
     seedTrakt(queryClient, 999, []);
@@ -178,7 +213,7 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     ]);
 
     expect(plan.targets).toEqual(['trakt', 'serializd']);
-    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+    expect(plan.variables.episodes).toEqual([{ season: 1, number: 15 }]);
   });
 
   test('a whole-entry batch translates every episode, all-or-nothing', async () => {
@@ -194,11 +229,26 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     );
 
     expect(plan.variables.episodes).toEqual([
-      { season: 2, number: 1 },
-      { season: 2, number: 2 },
-      { season: 2, number: 3 },
+      { season: 1, number: 13 },
+      { season: 1, number: 14 },
+      { season: 1, number: 15 },
     ]);
     expect(plan.variables.entryEpisodes).toEqual([1, 2, 3]);
+  });
+
+  test('an unreadable season layout skips rather than writing a raw TVDB season', async () => {
+    seasonLayout = null;
+    const queryClient = client();
+    const item = animeSeries();
+    seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
+
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
+      'trakt',
+      'anilist',
+    ]);
+
+    expect([...plan.mappingSkips.keys()]).toEqual(['trakt']);
+    expect(plan.variables.episodes).toBeUndefined();
   });
 
   test('an unmappable entry skips Trakt and Serializd with a reason, AniList still writes', async () => {
@@ -321,10 +371,12 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
 });
 
 describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => {
-  test('season-1 history does not satisfy a canonical season-2 intent', async () => {
+  test('early-season history does not satisfy a later-episode intent', async () => {
     const queryClient = client();
     const item = animeSeries();
-    // The user watched S1E3 last year; the intent is S2E3.
+    // The user watched the show's first three episodes; this entry's episode 3
+    // is the show's fifteenth. Before plan 0027 it arrived as S1E3 and was
+    // wrongly skipped as "already in sync".
     seedTrakt(queryClient, 999, ['1-1', '1-2', '1-3']);
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
 
@@ -339,10 +391,10 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
     expect(plan.rewatch).toBe(false);
   });
 
-  test('Trakt already at S2E3 with AniList behind → AniList catch-up, Trakt reconcile-skip', async () => {
+  test('Trakt already at S1E15 with AniList behind → AniList catch-up, Trakt reconcile-skip', async () => {
     const queryClient = client();
     const item = animeSeries();
-    seedTrakt(queryClient, 999, ['2-1', '2-2', '2-3']);
+    seedTrakt(queryClient, 999, ['1-13', '1-14', '1-15']);
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
 
     const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
@@ -358,7 +410,7 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
   test('parity on the sequel entry is a rewatch on both', async () => {
     const queryClient = client();
     const item = animeSeries();
-    seedTrakt(queryClient, 999, ['2-1', '2-2', '2-3']);
+    seedTrakt(queryClient, 999, ['1-13', '1-14', '1-15']);
     seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 3 });
 
     const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [

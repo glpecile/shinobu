@@ -41,6 +41,10 @@ mock.module('@/state/queries/mapping', () => ({
     calls.push('anizip-episodes');
     return Promise.resolve(null);
   },
+  cachedSeasonLayout: () => {
+    calls.push('season-layout');
+    return Promise.resolve(null);
+  },
 }));
 
 const { enrichExternalIds } = await import('./enrich');

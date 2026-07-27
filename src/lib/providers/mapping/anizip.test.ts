@@ -184,14 +184,16 @@ describe('fetchAniZipEpisodeMap', () => {
       anilistId: 178025,
     });
 
-    expect(map?.get(1)).toEqual({ season: 1, number: 1 });
+    expect(map?.get(1)).toEqual({ season: 1, number: 1, absolute: 1 });
   });
 
   test('a sequel entry maps entry-relative episodes into its canonical season', async () => {
     const map = await fetchAniZipEpisodeMap(jsonFetch(DANDADAN_S2), LOOKUP);
 
-    expect(map?.get(1)).toEqual({ season: 2, number: 1 });
-    expect(map?.get(12)).toEqual({ season: 2, number: 12 });
+    // `absolute` rides along because TVDB's seasons are frequently not the
+    // trackers' — see season-layout.ts.
+    expect(map?.get(1)).toEqual({ season: 2, number: 1, absolute: 13 });
+    expect(map?.get(12)).toEqual({ season: 2, number: 12, absolute: 24 });
   });
 
   test('a split-cour entry keeps its mid-season offset per episode', async () => {
@@ -199,8 +201,8 @@ describe('fetchAniZipEpisodeMap', () => {
       anilistId: 166873,
     });
 
-    expect(map?.get(1)).toEqual({ season: 2, number: 13 });
-    expect(map?.get(2)).toEqual({ season: 2, number: 14 });
+    expect(map?.get(1)).toEqual({ season: 2, number: 13, absolute: 38 });
+    expect(map?.get(2)).toEqual({ season: 2, number: 14, absolute: 39 });
   });
 
   test('specials keys and season-less entries drop out, numbered episodes survive', async () => {

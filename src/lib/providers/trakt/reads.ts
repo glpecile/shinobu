@@ -10,6 +10,10 @@ import type {
   NormalizedStudio,
 } from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
+import type {
+  SeasonLayout,
+  SeasonSlot,
+} from '@/lib/providers/mapping/season-layout';
 import { traktAuthedRequest, traktRequest } from './api';
 import type { TraktDeps } from './deps';
 import {
@@ -310,6 +314,35 @@ export function getShowSeasons(
   ).pipe(
     Effect.map((seasons) =>
       orderSeasons(seasons.map(normalizeSeason)),
+    ),
+  );
+}
+
+/**
+ * The season/episode-count skeleton only — the fallback arbiter for placing an
+ * ani.zip row when TMDB is unavailable (plan 0027; see
+ * `lib/providers/mapping/season-layout.ts`). Deliberately *not*
+ * `getShowSeasons`: that pulls every episode of every season (`extended=
+ * full,episodes`), which for a long-runner is a large payload to answer "how
+ * many episodes does season 2 hold". Public catalogue call, client-id only.
+ *
+ * `episode_count`, not `aired_episodes`: this is a question about the show's
+ * structure, so an episode that aired an hour ago must still place correctly.
+ */
+export function getShowSeasonLayout(
+  deps: TraktDeps,
+  params: { traktId: number },
+): Effect.Effect<SeasonLayout, ProviderError> {
+  return traktRequest<Array<{ number?: number; episode_count?: number }>>(
+    deps,
+    `/shows/${params.traktId}/seasons?extended=full`,
+  ).pipe(
+    Effect.map((seasons) =>
+      seasons.flatMap((season): SeasonSlot[] =>
+        season.number == null || season.episode_count == null
+          ? []
+          : [{ season: season.number, episodeCount: season.episode_count }],
+      ),
     ),
   );
 }

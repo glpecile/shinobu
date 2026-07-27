@@ -59,9 +59,15 @@ becoming a feed-path cost:
   (`useAniZipEpisodeMapQuery`), which shares the cache entry and doubles as the
   pre-warm for a log started from that screen. Never mount it on a list row.
 
-A miss (no document, empty/gapped/multi-season table, or an episode more than
-two past the table's end) is an honest skip with a reason, never a guessed
-season — see `lib/providers/mapping/episode-translation.ts`.
+A miss (no document, empty/gapped table, or an episode more than two past the
+table's end) is an honest skip with a reason, never a guessed season — see
+`lib/providers/mapping/episode-translation.ts`.
+
+**The `seasonNumber` is TVDB's, and the trackers often disagree.** `episodes`
+rows are decoded with `absoluteEpisodeNumber` alongside the season/episode
+pair, because Trakt and TMDB frequently hold one continuous season where TVDB
+splits by broadcast season — writing the TVDB pair verbatim 404s. Evidence and
+the placement rule: `docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md`.
 
 ## Probes
 

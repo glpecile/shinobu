@@ -20,7 +20,10 @@ import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import { translateEntryEpisodes } from '@/lib/providers/mapping/episode-translation';
-import { cachedAniZipEpisodeMap } from '@/state/queries/mapping';
+import {
+  cachedAniZipEpisodeMap,
+  cachedSeasonLayout,
+} from '@/state/queries/mapping';
 import { resolveLogWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
@@ -234,14 +237,28 @@ async function resolveLogPlan(
   }
 
   const anilistId = item.externalIds.anilist;
+  // Two reads, one round trip: ani.zip's entry→TVDB rows, and how the
+  // destination trackers themselves split this show into seasons. The second
+  // is not optional — TVDB's seasons frequently aren't the trackers'
+  // (docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md).
+  const [episodeMap, layout] = await Promise.all([
+    anilistId == null
+      ? Promise.resolve(null)
+      : cachedAniZipEpisodeMap(queryClient, anilistId),
+    cachedSeasonLayout(queryClient, {
+      ...(item.externalIds.tmdb != null ? { tmdb: item.externalIds.tmdb } : {}),
+      ...(item.externalIds.trakt != null ? { trakt: item.externalIds.trakt } : {}),
+    }),
+  ]);
   const translated =
     anilistId == null
       ? ({ ok: false, reason: 'no AniList id to resolve a canonical season from' } as const)
-      : translateEntryEpisodes(
-          await cachedAniZipEpisodeMap(queryClient, anilistId),
-          entryInput,
-          item.totalEpisodes,
-        );
+      : translateEntryEpisodes(episodeMap, entryInput, {
+          layout,
+          ...(item.totalEpisodes != null
+            ? { declaredEpisodeCount: item.totalEpisodes }
+            : {}),
+        });
 
   if (!translated.ok) {
     // Wrong identity is strictly worse than none

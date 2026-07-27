@@ -30,6 +30,15 @@ export type AniZipLookup =
 export interface AniZipCanonicalEpisode {
   season: number;
   number: number;
+  /**
+   * The episode's position counting from the show's very first episode,
+   * ignoring seasons entirely. Load-bearing, not a nicety: TVDB splits anime
+   * into broadcast seasons while Trakt and TMDB overwhelmingly keep one
+   * continuous season, so for many shows this — not `{season, number}` — is
+   * what the trackers can actually resolve
+   * (docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md).
+   */
+  absolute?: number;
 }
 
 /** Entry-relative episode number → its canonical `{season, number}`. */
@@ -54,7 +63,11 @@ interface AniZipResponse {
 interface AniZipEpisodesResponse {
   episodes?: Record<
     string,
-    { seasonNumber?: number | null; episodeNumber?: number | null } | null
+    {
+      seasonNumber?: number | null;
+      episodeNumber?: number | null;
+      absoluteEpisodeNumber?: number | null;
+    } | null
   > | null;
 }
 
@@ -132,7 +145,14 @@ export async function fetchAniZipEpisodeMap(
       const number = episode?.episodeNumber;
       if (season == null || number == null) continue;
       if (!Number.isInteger(season) || !Number.isInteger(number)) continue;
-      map.set(entryNumber, { season, number });
+      const absolute = episode?.absoluteEpisodeNumber;
+      map.set(entryNumber, {
+        season,
+        number,
+        ...(absolute != null && Number.isInteger(absolute) && absolute > 0
+          ? { absolute }
+          : {}),
+      });
     }
     return map;
   } catch {

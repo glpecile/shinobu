@@ -1,6 +1,10 @@
 import { Clock, Effect } from 'effect';
 
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
+import type {
+  SeasonLayout,
+  SeasonSlot,
+} from '@/lib/providers/mapping/season-layout';
 import type { NormalizedMediaItem } from '@/types/media';
 import { tmdbRequest } from './api';
 import type { TmdbDeps } from './deps';
@@ -100,6 +104,40 @@ export function getMediaCatalogue(
     }
     return catalogue;
   });
+}
+
+interface TmdbSeasonLayoutResponse {
+  seasons?: Array<{
+    season_number?: number | null;
+    episode_count?: number | null;
+  } | null> | null;
+}
+
+/**
+ * How TMDB carves this show into seasons — season numbers and their episode
+ * counts, nothing else. The arbiter the anime log fan-out places an ani.zip
+ * row against (plan 0027; see `lib/providers/mapping/season-layout.ts`),
+ * because ani.zip's seasons are TVDB's and TMDB's frequently aren't.
+ *
+ * TMDB is the primary source for this rather than Trakt because it needs no
+ * user session (the builder token) and because Serializd is TMDB-keyed by
+ * construction — its season ids *are* these seasons. Season 0 (specials) rides
+ * along; `placeInLayout` drops it.
+ */
+export function getTvSeasonLayout(
+  deps: TmdbDeps,
+  params: { tmdbId: number },
+): Effect.Effect<SeasonLayout, ProviderError> {
+  return tmdbRequest<TmdbSeasonLayoutResponse>(deps, `/tv/${params.tmdbId}`).pipe(
+    Effect.map((raw) =>
+      (raw.seasons ?? []).flatMap((season): SeasonSlot[] => {
+        const number = season?.season_number;
+        const count = season?.episode_count;
+        if (number == null || count == null) return [];
+        return [{ season: number, episodeCount: count }];
+      }),
+    ),
+  );
 }
 
 /**

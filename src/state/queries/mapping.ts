@@ -13,8 +13,17 @@ import {
   pickAnimeFilmMatch,
   pickMovieMatch,
 } from '@/lib/providers/pick-movie-match';
-import { findByTvdbId, searchMovie } from '@/lib/providers/tmdb/reads';
-import { lookupByExternalId, searchMedia } from '@/lib/providers/trakt/reads';
+import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
+import {
+  findByTvdbId,
+  getTvSeasonLayout,
+  searchMovie,
+} from '@/lib/providers/tmdb/reads';
+import {
+  getShowSeasonLayout,
+  lookupByExternalId,
+  searchMedia,
+} from '@/lib/providers/trakt/reads';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistDeps } from './anilist';
@@ -35,6 +44,9 @@ export const mappingQueryKeys = {
   /** AniList entry → canonical season/episode numbering (plan 0027 KTD4). */
   anizipEpisodes: (anilistId: number) =>
     ['mapping', 'anizip-episodes', anilistId] as const,
+  /** A show's own season/episode-count skeleton (plan 0027 season placement). */
+  seasonLayout: (tmdbId: number | null, traktId: number | null) =>
+    ['mapping', 'season-layout', tmdbId, traktId] as const,
   traktLookup: (source: string, id: number | string, kind: string) =>
     ['mapping', 'trakt-lookup', source, id, kind] as const,
   traktSearch: (title: string, year: number | undefined) =>
@@ -110,6 +122,51 @@ export function useAniZipEpisodeMapQuery(anilistId: number | undefined) {
   return useQuery({
     ...episodeMapQuery(anilistId ?? -1),
     enabled: anilistId != null,
+  });
+}
+
+/**
+ * How the trackers themselves carve this show into seasons — the arbiter the
+ * anime log fan-out places an ani.zip row against (plan 0027;
+ * `lib/providers/mapping/season-layout.ts` explains why TVDB's seasons aren't
+ * enough). TMDB first: no user session needed, and Serializd's season ids
+ * *are* TMDB's seasons. Trakt is the fallback for a build with no TMDB token —
+ * a public catalogue call, so it works before Trakt is even connected. Live
+ * probes found the two agreeing on every sampled show, so whichever answers
+ * serves both write targets.
+ *
+ * Cached like the episode map rather than forever: a currently-airing season
+ * gains episodes, and a show TMDB hasn't split yet may get split later.
+ * `null` when neither source can answer → the log skips with a reason.
+ */
+export function cachedSeasonLayout(
+  queryClient: QueryClient,
+  ids: { tmdb?: number; trakt?: number },
+): Promise<SeasonLayout | null> {
+  const tmdbId = ids.tmdb;
+  const traktId = ids.trakt;
+  if (tmdbId == null && traktId == null) return Promise.resolve(null);
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.seasonLayout(tmdbId ?? null, traktId ?? null),
+    queryFn: async (): Promise<SeasonLayout | null> => {
+      if (tmdbId != null) {
+        const layout = await Effect.runPromise(
+          getTvSeasonLayout(tmdbDeps(), { tmdbId }),
+        ).catch(() => null);
+        // An empty array means TMDB answered but knows no seasons — fall
+        // through to Trakt rather than treating "no data" as an answer.
+        if (layout != null && layout.length > 0) return layout;
+      }
+      if (traktId != null) {
+        const layout = await Effect.runPromise(
+          getShowSeasonLayout(traktDeps(), { traktId }),
+        ).catch(() => null);
+        if (layout != null && layout.length > 0) return layout;
+      }
+      return null;
+    },
+    staleTime: EPISODE_MAP_STALE_MS,
+    gcTime: EPISODE_MAP_STALE_MS,
   });
 }
 
