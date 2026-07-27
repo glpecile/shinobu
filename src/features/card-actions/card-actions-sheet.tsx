@@ -9,6 +9,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -86,6 +87,10 @@ export function CardActionsSheet({
 }: CardActionsSheetProps) {
   const router = useRouter();
   const connected = useConnectedProviders();
+  // Same read `LogMediaButton` uses (one cache entry, one request): a series
+  // whose next episode Trakt can name gets the button, so the pointer to the
+  // season picker below is only for the shows that don't.
+  const seriesNext = useSeriesNextEpisode(item);
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
   const links =
@@ -122,7 +127,7 @@ export function CardActionsSheet({
           <View className="mt-5">
             {/* key: the button's sheet/result state must not leak between items. */}
             <LogMediaButton item={item} key={item.id} />
-            {item.type === 'TV' && (
+            {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.
               </Text>
