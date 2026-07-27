@@ -33,13 +33,8 @@ export function mergeCatalogueMetadata(
     ...(item.releaseDate == null && catalogue.releaseDate != null
       ? { releaseDate: catalogue.releaseDate }
       : {}),
-    ...(item.homeReleaseDate == null && catalogue.homeReleaseDate != null
-      ? {
-          homeReleaseDate: catalogue.homeReleaseDate,
-          ...(catalogue.homeReleaseKind != null
-            ? { homeReleaseKind: catalogue.homeReleaseKind }
-            : {}),
-        }
+    ...(item.releaseCalendar == null && catalogue.releaseCalendar != null
+      ? { releaseCalendar: catalogue.releaseCalendar }
       : {}),
     ...(item.runtime == null && catalogue.runtime != null
       ? { runtime: catalogue.runtime }
@@ -102,13 +97,11 @@ export function applyPrimaryMetadata(
     // Catalogue metadata, not user state — TMDB wins, same as year/runtime.
     // Load-bearing beyond display: the log button refuses an unreleased film.
     ...(primary.releaseDate != null ? { releaseDate: primary.releaseDate } : {}),
-    ...(primary.homeReleaseDate != null
-      ? {
-          homeReleaseDate: primary.homeReleaseDate,
-          ...(primary.homeReleaseKind != null
-            ? { homeReleaseKind: primary.homeReleaseKind }
-            : {}),
-        }
+    // Whole-object override, not a per-kind merge: the calendar always arrives
+    // from one TMDB read, so a provider-sourced half and a TMDB-sourced half
+    // could only disagree, never combine.
+    ...(primary.releaseCalendar != null
+      ? { releaseCalendar: primary.releaseCalendar }
       : {}),
     ...(item.totalEpisodes == null && primary.totalEpisodes != null
       ? { totalEpisodes: primary.totalEpisodes }

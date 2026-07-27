@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  earliestHomeRelease,
+  earliestReleaseDates,
   normalizeCreditRows,
   normalizePersonDetails,
   normalizePersonSearch,
@@ -446,7 +446,7 @@ describe('normalizeTitleSearch', () => {
   });
 });
 
-/** TMDB release types: 4 Digital, 5 Physical. */
+/** TMDB release types: 2 Theatrical (limited), 3 Theatrical, 4 Digital, 5 Physical. */
 const digital = (iso: string, date: string) => ({
   iso_3166_1: iso,
   release_dates: [{ type: 4, release_date: date }],
@@ -455,46 +455,77 @@ const physical = (iso: string, date: string) => ({
   iso_3166_1: iso,
   release_dates: [{ type: 5, release_date: date }],
 });
+const theatrical = (iso: string, date: string) => ({
+  iso_3166_1: iso,
+  release_dates: [{ type: 3, release_date: date }],
+});
 
-describe('earliestHomeRelease', () => {
+describe('earliestReleaseDates', () => {
 
   test('picks the earliest digital date across regions', () => {
     expect(
-      earliestHomeRelease([
+      earliestReleaseDates([
         digital('US', '2026-03-04T00:00:00.000Z'),
         digital('FR', '2026-02-11T00:00:00.000Z'),
         digital('JP', '2026-05-20T00:00:00.000Z'),
       ]),
-    ).toEqual({ date: '2026-02-11', kind: 'digital' });
+    ).toEqual({ digital: '2026-02-11' });
   });
 
-  test('falls back to physical when no region has a digital release', () => {
+  test('keeps each kind separately instead of collapsing to one date', () => {
     expect(
-      earliestHomeRelease([
+      earliestReleaseDates([
+        theatrical('US', '2026-01-30T00:00:00.000Z'),
+        digital('US', '2026-04-15T00:00:00.000Z'),
+        physical('US', '2026-06-09T00:00:00.000Z'),
+      ]),
+    ).toEqual({
+      theatrical: '2026-01-30',
+      digital: '2026-04-15',
+      physical: '2026-06-09',
+    });
+  });
+
+  test('a physical-only film reports physical alone', () => {
+    expect(
+      earliestReleaseDates([
         physical('US', '2026-06-09T00:00:00.000Z'),
         physical('DE', '2026-07-01T00:00:00.000Z'),
       ]),
-    ).toEqual({ date: '2026-06-09', kind: 'physical' });
+    ).toEqual({ physical: '2026-06-09' });
   });
 
-  test('with both present, the earlier one wins and names its own type', () => {
+  test('limited and wide theatrical share one slot, earliest wins', () => {
     expect(
-      earliestHomeRelease([
-        physical('US', '2026-06-09T00:00:00.000Z'),
-        digital('US', '2026-04-15T00:00:00.000Z'),
+      earliestReleaseDates([
+        {
+          iso_3166_1: 'US',
+          release_dates: [
+            { type: 3, release_date: '2026-01-30T00:00:00.000Z' },
+            { type: 2, release_date: '2026-01-16T00:00:00.000Z' },
+          ],
+        },
       ]),
-    ).toEqual({ date: '2026-04-15', kind: 'digital' });
-    expect(
-      earliestHomeRelease([
-        physical('GB', '2026-01-05T00:00:00.000Z'),
-        digital('US', '2026-04-15T00:00:00.000Z'),
-      ]),
-    ).toEqual({ date: '2026-01-05', kind: 'physical' });
+    ).toEqual({ theatrical: '2026-01-16' });
   });
 
-  test('a shared earliest date reports both, so the label can say so', () => {
+  test('a premiere is not a theatrical release', () => {
     expect(
-      earliestHomeRelease([
+      earliestReleaseDates([
+        {
+          iso_3166_1: 'US',
+          release_dates: [
+            { type: 1, release_date: '2025-09-01T00:00:00.000Z' },
+            { type: 3, release_date: '2026-01-30T00:00:00.000Z' },
+          ],
+        },
+      ]),
+    ).toEqual({ theatrical: '2026-01-30' });
+  });
+
+  test('digital and physical on the same day are two entries, not one', () => {
+    expect(
+      earliestReleaseDates([
         {
           iso_3166_1: 'US',
           release_dates: [
@@ -503,18 +534,15 @@ describe('earliestHomeRelease', () => {
           ],
         },
       ]),
-    ).toEqual({ date: '2026-04-15', kind: 'both' });
+    ).toEqual({ digital: '2026-04-15', physical: '2026-04-15' });
   });
 
-  test('theatrical/premiere/TV types and junk never count as a home release', () => {
+  test('TV airings and junk dates never make it onto the calendar', () => {
     expect(
-      earliestHomeRelease([
+      earliestReleaseDates([
         {
           iso_3166_1: 'US',
           release_dates: [
-            { type: 1, release_date: '2025-09-01T00:00:00.000Z' },
-            { type: 2, release_date: '2025-10-01T00:00:00.000Z' },
-            { type: 3, release_date: '2025-10-10T00:00:00.000Z' },
             { type: 6, release_date: '2026-08-01T00:00:00.000Z' },
             { type: 4, release_date: '' },
             { type: 4, release_date: null },
@@ -526,15 +554,17 @@ describe('earliestHomeRelease', () => {
   });
 
   test('degrades silently on an absent or empty payload', () => {
-    expect(earliestHomeRelease(undefined)).toBeNull();
-    expect(earliestHomeRelease(null)).toBeNull();
-    expect(earliestHomeRelease([])).toBeNull();
-    expect(earliestHomeRelease([{ iso_3166_1: 'US', release_dates: null }])).toBeNull();
+    expect(earliestReleaseDates(undefined)).toBeNull();
+    expect(earliestReleaseDates(null)).toBeNull();
+    expect(earliestReleaseDates([])).toBeNull();
+    expect(
+      earliestReleaseDates([{ iso_3166_1: 'US', release_dates: null }]),
+    ).toBeNull();
   });
 });
 
 describe('normalizeMovieCatalogue release dates', () => {
-  test('carries the full release date and the earliest home release', () => {
+  test('carries the full release date and the release calendar', () => {
     const result = normalizeMovieCatalogue(
       {
         id: 616,
@@ -550,14 +580,15 @@ describe('normalizeMovieCatalogue release dates', () => {
       NOW,
     );
     expect(result?.catalogue.releaseDate).toBe('2026-01-30');
-    expect(result?.catalogue.homeReleaseDate).toBe('2026-03-11');
-    expect(result?.catalogue.homeReleaseKind).toBe('digital');
+    expect(result?.catalogue.releaseCalendar).toEqual({
+      theatrical: '2026-01-30',
+      digital: '2026-03-11',
+    });
   });
 
   test('omits both fields entirely when TMDB has neither', () => {
     const result = normalizeMovieCatalogue({ id: 7, title: 'Undated' }, NOW);
     expect(result?.catalogue.releaseDate).toBeUndefined();
-    expect(result?.catalogue.homeReleaseDate).toBeUndefined();
-    expect(result?.catalogue.homeReleaseKind).toBeUndefined();
+    expect(result?.catalogue.releaseCalendar).toBeUndefined();
   });
 });

@@ -22,6 +22,7 @@ import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { PersonCreditSheet, type PersonCredit } from '@/features/person';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
+import { ReleaseTimeline } from '@/features/release-timeline';
 import {
   formatRuntime,
   SeasonsSection,
@@ -95,41 +96,6 @@ function metaLine(item: NormalizedMediaItem): string {
   ]
     .filter((part) => part != null)
     .join(' · ');
-}
-
-/**
- * TMDB sends bare calendar dates (YYYY-MM-DD). Parsing them through
- * `new Date(string)` lands at UTC midnight, which `toLocaleDateString` would
- * render a day early west of Greenwich — so the date is formatted in UTC
- * explicitly. Display-only; the log gate compares through `hasReleased`.
- */
-function formatCalendarDate(date: string): string {
-  const [year, month, day] = date.split('-').map(Number);
-  if (!year || !month || !day) return date;
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-/**
- * "Digital release · Jul 3, 2026" under the meta line — the earliest
- * worldwide digital/physical date TMDB knows (plan 0014's catalogue record
- * carries it). Null whenever TMDB isn't in play (no token, no tmdb id, a TV
- * item, or no region has published a home release), so the line simply
- * doesn't render rather than leaving an empty slot.
- */
-function homeReleaseLine(item: NormalizedMediaItem): string | null {
-  if (item.homeReleaseDate == null) return null;
-  const label =
-    item.homeReleaseKind === 'physical'
-      ? 'Physical release'
-      : item.homeReleaseKind === 'both'
-        ? 'Digital & physical release'
-        : 'Digital release';
-  return `${label} · ${formatCalendarDate(item.homeReleaseDate)}`;
 }
 
 /**
@@ -635,10 +601,6 @@ export default function DetailsScreen() {
 
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
   const meta = metaLine(shown);
-  // Only the TMDB *movie* catalogue populates this, so it self-gates to
-  // films — no TV item ever carries one, and a tokenless/id-less page
-  // simply renders no line.
-  const homeRelease = homeReleaseLine(shown);
   // "0 episodes" on a movie is noise — only show progress where it means
   // something (any TV/manga item, or a movie already logged at least once).
   const showProgress = shown.type !== 'MOVIE' || shown.currentProgress > 0;
@@ -762,14 +724,11 @@ export default function DetailsScreen() {
                   {meta}
                 </Text>
               )}
-              {homeRelease != null && (
-                <Text className="text-muted font-sans text-sm mt-1">
-                  {homeRelease}
-                </Text>
-              )}
               <WatchedLine item={shown} />
             </View>
           </View>
+
+          <ReleaseTimeline item={shown} />
 
           {shown.overview != null && <ExpandableText text={shown.overview} />}
 

@@ -81,17 +81,18 @@ describe('mergeCatalogueMetadata', () => {
   // Both merge functions enumerate fields explicitly, so an unlisted one is
   // silently dropped — and dropping releaseDate would quietly un-gate the
   // log button for unreleased films.
-  test('forwards release and home-release dates when the item lacks them', () => {
+  test('forwards the release date and release calendar when the item lacks them', () => {
     const merged = mergeCatalogueMetadata(letterboxdItem, {
       ...catalogue,
       releaseDate: '2025-11-14',
-      homeReleaseDate: '2026-01-20',
-      homeReleaseKind: 'digital',
+      releaseCalendar: { theatrical: '2025-11-14', digital: '2026-01-20' },
     });
 
     expect(merged.releaseDate).toBe('2025-11-14');
-    expect(merged.homeReleaseDate).toBe('2026-01-20');
-    expect(merged.homeReleaseKind).toBe('digital');
+    expect(merged.releaseCalendar).toEqual({
+      theatrical: '2025-11-14',
+      digital: '2026-01-20',
+    });
   });
 
   test('keeps the item’s own release date over the catalogue’s', () => {
@@ -216,22 +217,27 @@ describe('applyPrimaryMetadata', () => {
         progressUnit: 'episode',
         lastUpdated: '2026-07-19T01:00:00Z',
         releaseDate: '2026-09-18',
-        homeReleaseDate: '2026-11-25',
-        homeReleaseKind: 'both',
+        releaseCalendar: { digital: '2026-11-25', physical: '2026-11-25' },
         externalIds: { tmdb: 1 },
       },
     );
 
     expect(merged.releaseDate).toBe('2026-09-18');
-    expect(merged.homeReleaseDate).toBe('2026-11-25');
-    expect(merged.homeReleaseKind).toBe('both');
+    expect(merged.releaseCalendar).toEqual({
+      digital: '2026-11-25',
+      physical: '2026-11-25',
+    });
     // User state still untouched.
     expect(merged.currentProgress).toBe(5);
   });
 
   test('a primary without release dates leaves the item’s intact', () => {
     const merged = applyPrimaryMetadata(
-      { ...item, releaseDate: '2021-11-06', homeReleaseDate: '2021-12-01' },
+      {
+        ...item,
+        releaseDate: '2021-11-06',
+        releaseCalendar: { digital: '2021-12-01' },
+      },
       {
         id: 'tmdb-tv-94605',
         title: 'Arcane',
@@ -245,6 +251,6 @@ describe('applyPrimaryMetadata', () => {
     );
 
     expect(merged.releaseDate).toBe('2021-11-06');
-    expect(merged.homeReleaseDate).toBe('2021-12-01');
+    expect(merged.releaseCalendar).toEqual({ digital: '2021-12-01' });
   });
 });
