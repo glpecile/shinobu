@@ -212,7 +212,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       {/* The finished-show state earns a line of its own: the button below
           reads "Log rewatch", and this is what makes that make sense. */}
       {seriesNext?.rewatch === true && result == null && (
-        <Text className="text-muted font-sans text-sm mt-2">
+        <Text className="text-muted font-sans text-sm mt-2 text-center">
           🎉 You’ve watched every aired episode.
         </Text>
       )}
