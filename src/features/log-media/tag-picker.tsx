@@ -71,15 +71,6 @@ function chipAnimation(
   return chipEntering[Math.min(index, CHIP_STAGGER_STEPS - 1)];
 }
 
-/**
- * The "Show more" row, which lands after the chips it belongs to — it waits on
- * their measurement. Delayed past the chip cascade so it reads as the tail of
- * one arrival rather than a second, unrelated one.
- */
-const toggleEntering = FadeIn.duration(DURATION.swap).delay(
-  CHIP_STAGGER_STEPS * CHIP_STAGGER,
-);
-
 /** Sub-pixel layout noise must not read as a second row. */
 const ROW_EPSILON = 2;
 
@@ -356,49 +347,62 @@ export function TagPicker({
           ))}
         </View>
       </View>
-      {/* `measured` and not just `overflows`: the pre-measurement guess above is
-          allowed to clip for a frame, but a toggle that appears and then
-          vanishes again reads as a glitch. */}
-      {measured && overflows && (
-        // Fade only, no travel: this row appears a beat after the sheet does
-        // (it waits on the measurement, which waits on the tag query), and it
-        // pushes the confirm button down when it lands. A hard cut reads as the
-        // sheet glitching; the fade makes the same shift read as arriving.
-        <AnimatedView
-          className="self-start"
-          entering={reduceMotion ? undefined : toggleEntering}
+      {/* The toggle's row is **always** in the layout — it only fades in and
+          out. It can't be there when the sheet opens: it waits on the tag
+          query, then on a measurement of what that query returned, so mounting
+          it late shoved the confirm button ~34px down a beat after the user
+          was already reaching for it. Reserving its height costs an empty band
+          under a picker whose whole vocabulary fits on one line; that band is
+          invisible, and the shove was not.
+
+          Reserved by keeping the real row mounted rather than by a constant:
+          a hardcoded height would drift from the font the moment `text-xs` or
+          `py-1` changed, on the one row whose whole job is to not move.
+
+          `measured` and not just `overflows`: the pre-measurement guess above
+          is allowed to clip for a frame, but a toggle that turns on and then
+          off again reads as a glitch. */}
+      <AnimatedView
+        // Hidden means *gone* to a pointer and to assistive tech — an
+        // invisible spacer must never take a tap or a screen-reader stop.
+        aria-hidden={!(measured && overflows)}
+        className="self-start"
+        pointerEvents={measured && overflows ? 'auto' : 'none'}
+        style={{
+          opacity: measured && overflows ? 1 : 0,
+          transitionProperty: 'opacity',
+          transitionDuration: reduceMotion ? 0 : DURATION.swap,
+          transitionTimingFunction: EASE_OUT,
+        }}
+      >
+        <PresstableOpacity
+          accessibilityLabel={
+            expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'
+          }
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          className="flex-row items-center gap-1 self-start mt-2 py-1"
+          onPress={() => setExpanded(!expanded)}
         >
-          <PresstableOpacity
-            accessibilityLabel={
-              expanded
-                ? 'Show fewer tag suggestions'
-                : 'Show more tag suggestions'
-            }
-            accessibilityRole="button"
-            accessibilityState={{ expanded }}
-            className="flex-row items-center gap-1 self-start mt-2 py-1"
-            onPress={() => setExpanded(!expanded)}
+          <Text className="text-muted font-sans text-xs">
+            {expanded ? 'Show less' : 'Show more'}
+          </Text>
+          <AnimatedView
+            style={{
+              transform: [{ rotate: expanded ? '180deg' : '0deg' }],
+              transitionProperty: 'transform',
+              transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+              transitionTimingFunction: EASE_IN_OUT,
+            }}
           >
-            <Text className="text-muted font-sans text-xs">
-              {expanded ? 'Show less' : 'Show more'}
-            </Text>
-            <AnimatedView
-              style={{
-                transform: [{ rotate: expanded ? '180deg' : '0deg' }],
-                transitionProperty: 'transform',
-                transitionDuration: reduceMotion ? 0 : DURATION.toggle,
-                transitionTimingFunction: EASE_IN_OUT,
-              }}
-            >
-              <Ionicons
-                color={typeof muted === 'string' ? muted : undefined}
-                name="chevron-down"
-                size={12}
-              />
-            </AnimatedView>
-          </PresstableOpacity>
-        </AnimatedView>
-      )}
+            <Ionicons
+              color={typeof muted === 'string' ? muted : undefined}
+              name="chevron-down"
+              size={12}
+            />
+          </AnimatedView>
+        </PresstableOpacity>
+      </AnimatedView>
     </View>
   );
 }
