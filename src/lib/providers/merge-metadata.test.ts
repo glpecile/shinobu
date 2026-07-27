@@ -122,7 +122,7 @@ describe('applyPrimaryMetadata', () => {
     externalIds: { trakt: 1, tmdb: 94605 },
   };
 
-  test('primary display fields override the item where present', () => {
+  test('primary text fields override the item where present', () => {
     const merged = applyPrimaryMetadata(item, {
       id: 'tmdb-tv-94605',
       title: 'Arcane',
@@ -140,7 +140,10 @@ describe('applyPrimaryMetadata', () => {
       externalIds: { tmdb: 94605, imdb: 'tt11126994' },
     });
 
-    expect(merged.coverImage).toBe('https://tmdb/poster.jpg');
+    // Artwork is fill-only: the item already showed this poster on the card
+    // the viewer tapped, so TMDB must not swap it out from under them.
+    expect(merged.coverImage).toBe('https://trakt/poster.jpg');
+    // …but the item carried no backdrop, so TMDB's fills the gap.
     expect(merged.backdropImage).toBe('https://tmdb/backdrop.jpg');
     expect(merged.overview).toBe('TMDB synopsis.');
     expect(merged.rating).toBe(8.8);
@@ -171,6 +174,32 @@ describe('applyPrimaryMetadata', () => {
     expect(sparse.overview).toBe('Trakt synopsis.');
     expect(sparse.rating).toBe(8.5);
     expect(applyPrimaryMetadata(item, null)).toBe(item);
+  });
+
+  // The failover artwork actually exists for: a Trakt watched row or a
+  // Letterboxd slug arrives artless, so TMDB's poster is the only one there is.
+  test('TMDB artwork fills an artless item but never replaces existing art', () => {
+    const primary: NormalizedMediaItem = {
+      id: 'tmdb-tv-94605',
+      title: 'Arcane',
+      coverImage: 'https://tmdb/poster.jpg',
+      backdropImage: 'https://tmdb/backdrop.jpg',
+      type: 'TV',
+      currentProgress: 0,
+      progressUnit: 'episode',
+      lastUpdated: '2026-07-19T01:00:00Z',
+      externalIds: { tmdb: 94605 },
+    };
+
+    const artless = applyPrimaryMetadata({ ...item, coverImage: '' }, primary);
+    expect(artless.coverImage).toBe('https://tmdb/poster.jpg');
+
+    const arted = applyPrimaryMetadata(
+      { ...item, backdropImage: 'https://trakt/backdrop.jpg' },
+      primary,
+    );
+    expect(arted.coverImage).toBe('https://trakt/poster.jpg');
+    expect(arted.backdropImage).toBe('https://trakt/backdrop.jpg');
   });
 
   // Release dates are catalogue metadata, not user state: TMDB wins, and the

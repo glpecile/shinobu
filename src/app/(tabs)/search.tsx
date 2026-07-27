@@ -6,12 +6,15 @@ import Head from '@/components/head';
 import { Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
+import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { cn } from '@/lib/cn';
 import { hasCoarsePointer } from '@/lib/pointer';
@@ -32,41 +35,59 @@ function resultMeta(item: NormalizedMediaItem): string {
     .join(' · ');
 }
 
+/**
+ * A result row carries the same actions as a feed card (plan 0028 R2): press
+ * opens details, long-press (web: the hover ⋯) opens the actions dialog, so a
+ * title you searched for can be logged without a round trip through its details
+ * page. `ActionableRow` is the shared shell the diary already uses.
+ */
 function SearchResultRow({
   item,
   onPress,
+  onActions,
 }: {
   item: NormalizedMediaItem;
   onPress: (item: NormalizedMediaItem) => void;
+  onActions: (item: NormalizedMediaItem) => void;
 }) {
   return (
-    <PresstableOpacity
-      className="flex-row items-center px-6 py-2.5"
+    <ActionableRow
+      accessibility={{
+        accessibilityLabel: `${item.title}, ${resultMeta(item)}`,
+        accessibilityRole: 'button',
+      }}
+      className="px-6 py-2.5"
+      href={routes.details(item.id)}
+      item={item}
+      leading={
+        <>
+          {item.coverImage !== '' ? (
+            <Image
+              source={{ uri: item.coverImage }}
+              className="w-12 h-[72px] rounded bg-surface border border-border/50"
+              contentFit="cover"
+            />
+          ) : (
+            <View className="w-12 h-[72px] rounded bg-surface border border-border items-center justify-center">
+              <Text className="text-muted font-display text-lg">忍</Text>
+            </View>
+          )}
+          <View className="shrink ml-4">
+            <Text
+              className="text-foreground font-sans-semibold text-base"
+              numberOfLines={1}
+            >
+              {item.title}
+            </Text>
+            <Text className="text-muted font-sans text-xs mt-1 uppercase tracking-wider">
+              {resultMeta(item)}
+            </Text>
+          </View>
+        </>
+      }
+      onActions={onActions}
       onPress={() => onPress(item)}
-    >
-      {item.coverImage !== '' ? (
-        <Image
-          source={{ uri: item.coverImage }}
-          className="w-12 h-[72px] rounded bg-surface border border-border/50"
-          contentFit="cover"
-        />
-      ) : (
-        <View className="w-12 h-[72px] rounded bg-surface border border-border items-center justify-center">
-          <Text className="text-muted font-display text-lg">忍</Text>
-        </View>
-      )}
-      <View className="flex-1 ml-4">
-        <Text
-          className="text-foreground font-sans-semibold text-base"
-          numberOfLines={1}
-        >
-          {item.title}
-        </Text>
-        <Text className="text-muted font-sans text-xs mt-1 uppercase tracking-wider">
-          {resultMeta(item)}
-        </Text>
-      </View>
-    </PresstableOpacity>
+    />
   );
 }
 
@@ -176,6 +197,9 @@ export default function SearchScreen() {
   const [focused, setFocused] = useState(false);
   const muted = useCSSVariable('--color-muted');
   const inputRef = useRef<TextInput>(null);
+  // The same actions dialog the feed and diary open — quick log, details, and
+  // the provider links, from a result row.
+  const { openActions, sheetProps } = useCardActions();
 
   // The native "search" tab role only auto-focuses the field on iOS (its
   // dedicated search-tab UIKit affordance) — Android has no equivalent, so
@@ -293,14 +317,25 @@ export default function SearchScreen() {
           {input !== '' && (
             <PresstableOpacity
               accessibilityLabel="Clear search"
-              className="w-10 h-10 mr-1 items-center justify-center rounded-full"
+              accessibilityRole="button"
+              // The pressable is the 44pt touch target; the *drawn* chip inside
+              // is smaller. `close-circle` (one solid 20px glyph) painted a
+              // light-grey blob the size of the text next to it — heaviest
+              // thing in the header, and on Firefox Android the font's circle
+              // rasterised with a ragged edge on top of that. A hairline chip
+              // around a thin `close` stroke reads as field chrome instead, and
+              // its circle is drawn by the layout engine rather than the icon
+              // font, so no browser gets a say in how round it is.
+              className="w-11 h-11 items-center justify-center"
               onPress={clearSearch}
             >
-              <Ionicons
-                color={typeof muted === 'string' ? muted : undefined}
-                name="close-circle"
-                size={20}
-              />
+              <View className="w-6 h-6 items-center justify-center rounded-full bg-border">
+                <Ionicons
+                  color={typeof muted === 'string' ? muted : undefined}
+                  name="close"
+                  size={14}
+                />
+              </View>
             </PresstableOpacity>
           )}
         </View>
@@ -346,7 +381,11 @@ export default function SearchScreen() {
               row.kind === 'header' ? (
                 <SectionHeader label={row.label} provider={row.provider} />
               ) : row.kind === 'result' ? (
-                <SearchResultRow item={row.item} onPress={openDetails} />
+                <SearchResultRow
+                  item={row.item}
+                  onActions={openActions}
+                  onPress={openDetails}
+                />
               ) : row.kind === 'loading' ? (
                 <RowSkeleton />
               ) : (
@@ -358,6 +397,15 @@ export default function SearchScreen() {
           />
         </View>
       )}
+      {/* `canHide={false}`: a search result is not a feed entry, and hiding one
+          would quietly suppress it everywhere. `providerLinks="connected"`
+          because a result's source provider is an accident of which search
+          answered — what the user wants is the tracker they actually use. */}
+      <CardActionsSheet
+        {...sheetProps}
+        canHide={false}
+        providerLinks="connected"
+      />
     </View>
   );
 }

@@ -12,9 +12,13 @@ import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { sourceLinkFor } from '@/lib/providers/provider-links';
+import {
+  providerLinksFor,
+  sourceLinkFor,
+} from '@/lib/providers/provider-links';
 import { routes } from '@/lib/routes';
 import { hideItem } from '@/state/prefs/hidden-items';
+import { useConnectedProviders } from '@/state/session';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -30,6 +34,22 @@ interface CardActionsSheetProps {
    * Settings → Hidden items.
    */
   hideLabel?: string;
+  /**
+   * Which "View on …" rows to offer.
+   *
+   * `'source'` (default) is the feed/diary contract from plan 0023 R1: one row,
+   * for the provider the item *came from*. `'connected'` widens it to every
+   * connected provider that can address the item — search results have no
+   * meaningful source (they're whichever provider answered the query first), so
+   * "open this in the tracker I actually use" is the useful question there.
+   */
+  providerLinks?: 'source' | 'connected';
+  /**
+   * Whether to offer the hide row. Off for surfaces whose items aren't feed
+   * entries: hiding a *search result* would silently poison the feed for an
+   * item the user only looked up.
+   */
+  canHide?: boolean;
 }
 
 /** The item's artwork, recovered lazily when the log it came from is artless. */
@@ -48,9 +68,9 @@ function SheetPoster({ item }: { item: NormalizedMediaItem }) {
 }
 
 /**
- * Per-item actions dialog for the feed and the diary: quick log, view details,
- * view on the source provider, hide. Opened by long-press on a card or diary
- * row everywhere, plus the hover ⋯ button on web (long-press is not a
+ * Per-item actions dialog for the feed, the diary and search: quick log, view
+ * details, view on the relevant provider(s), hide. Opened by long-press on a
+ * card or row everywhere, plus the hover ⋯ button on web (long-press is not a
  * discoverable web gesture). Quick log reuses
  * `LogMediaButton` wholesale — its confirm sheet (provider picker, backdate,
  * tags, partial-failure report) stacks above this one, and its outcome copy
@@ -61,11 +81,19 @@ export function CardActionsSheet({
   open,
   onClose,
   hideLabel = 'Hide from feed',
+  providerLinks = 'source',
+  canHide = true,
 }: CardActionsSheetProps) {
   const router = useRouter();
+  const connected = useConnectedProviders();
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
-  const sourceLink = item != null ? sourceLinkFor(item) : undefined;
+  const links =
+    item == null
+      ? []
+      : providerLinks === 'connected'
+        ? providerLinksFor(item, connected)
+        : [sourceLinkFor(item)].filter((link) => link != null);
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
@@ -113,12 +141,13 @@ export function CardActionsSheet({
               View details
             </Text>
           </PresstableOpacity>
-          {sourceLink != null && (
+          {links.map((link) => (
             <PresstableOpacity
               className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
+              key={link.provider}
               onPress={() => {
                 haptics.selection();
-                void openExternalUrl(sourceLink.url);
+                void openExternalUrl(link.url);
                 // A new tab steals focus on web — closing the sheet here would
                 // animate it shut in a now-backgrounded tab, which reads as
                 // broken when the user switches back. Native's in-app browser
@@ -127,26 +156,28 @@ export function CardActionsSheet({
                 if (process.env.EXPO_OS !== 'web') onClose();
               }}
             >
-              <ProviderIcon id={sourceLink.provider} size={18} />
+              <ProviderIcon id={link.provider} size={18} />
               <Text className="text-foreground font-sans-semibold text-base flex-1">
-                View on {PROVIDERS[sourceLink.provider].label}
+                View on {PROVIDERS[link.provider].label}
               </Text>
               <Ionicons color={mutedColor} name="open-outline" size={16} />
             </PresstableOpacity>
+          ))}
+          {canHide && (
+            <PresstableOpacity
+              className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
+              onPress={() => {
+                haptics.confirm();
+                hideItem({ id: item.id, title: item.title });
+                onClose();
+              }}
+            >
+              <Ionicons color={mutedColor} name="eye-off-outline" size={18} />
+              <Text className="text-foreground font-sans-semibold text-base">
+                {hideLabel}
+              </Text>
+            </PresstableOpacity>
           )}
-          <PresstableOpacity
-            className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
-            onPress={() => {
-              haptics.confirm();
-              hideItem({ id: item.id, title: item.title });
-              onClose();
-            }}
-          >
-            <Ionicons color={mutedColor} name="eye-off-outline" size={18} />
-            <Text className="text-foreground font-sans-semibold text-base">
-              {hideLabel}
-            </Text>
-          </PresstableOpacity>
         </>
       )}
     </Sheet>
