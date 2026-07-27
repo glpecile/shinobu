@@ -11,6 +11,12 @@ export interface SeriesNextEpisode {
    * so a catalogue gap never blocks a legitimate log.
    */
   aired: boolean;
+  /**
+   * True when this isn't a *next* episode at all — the show is finished and
+   * the episode is the wrap back to the start. Callers must say so rather
+   * than presenting S1E1 as if it were up next.
+   */
+  rewatch: boolean;
 }
 
 /** A show with nothing left to watch restarts here — see the wrap below. */
@@ -28,14 +34,16 @@ export function nextEpisodeFromProgress(
   const next = progress.nextEpisode;
   // Trakt sends `next_episode: null` once every aired episode is watched.
   // Wrapping to S1E1 mirrors the anime button (`progress >= total → 1`): a
-  // finished show offers a rewatch rather than going dead.
-  if (next == null) return { ...FIRST_EPISODE, aired: true };
+  // finished show offers a rewatch rather than going dead. Flagged, because
+  // a button reading "Log S1E1" on a show you finished is a lie.
+  if (next == null) return { ...FIRST_EPISODE, aired: true, rewatch: true };
 
   return {
     season: next.season,
     number: next.number,
     ...(next.title != null ? { title: next.title } : {}),
     aired: next.firstAired == null ? true : hasAired(next.firstAired),
+    rewatch: false,
   };
 }
 

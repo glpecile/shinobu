@@ -81,9 +81,15 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     seriesNextState.status === 'ready' ? seriesNextState.episode : null;
   const seriesLabel = seriesNext == null ? '' : seriesEpisodeLabel(seriesNext);
   // The one action the series button performs, reused by the confirm sheet's
-  // title and confirm label so all three read identically.
+  // title and confirm label so all three read identically. A finished show
+  // says "rewatch" rather than naming S1E1 as if it were up next — the same
+  // word the movie path uses for the same situation.
   const seriesAction =
-    seriesNext == null ? 'Log next episode' : `Log ${seriesLabel}`;
+    seriesNext == null
+      ? 'Log next episode'
+      : seriesNext.rewatch
+        ? 'Log rewatch'
+        : `Log ${seriesLabel}`;
 
   const anilistStatus = anilistEntry.data?.entry?.status;
   const anilistProgress = anilistEntry.data?.entry?.progress;
@@ -167,7 +173,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   }
 
   const buttonLabel = isSeries
-    ? seriesNext == null
+    ? seriesNext == null || seriesNext.rewatch
       ? seriesAction
       : seriesNext.aired
         ? `Log ${seriesLabel}`
@@ -203,6 +209,13 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           setOpen(true);
         }}
       />
+      {/* The finished-show state earns a line of its own: the button below
+          reads "Log rewatch", and this is what makes that make sense. */}
+      {seriesNext?.rewatch === true && result == null && (
+        <Text className="text-muted font-sans text-sm mt-2">
+          🎉 You’ve watched every aired episode.
+        </Text>
+      )}
       {result != null && result.succeeded.length > 0 && (
         <Text className="text-muted font-sans text-sm mt-2">
           {result.rewatch ? 'Logged rewatch to' : 'Logged to'}{' '}
@@ -241,9 +254,11 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         )}
         description={
           isSeries
-            ? seriesNext?.title != null
-              ? `“${item.title}” — ${seriesLabel}: ${seriesNext.title}`
-              : `Log ${seriesLabel} of “${item.title}”.`
+            ? seriesNext?.rewatch === true
+              ? `You’ve watched every aired episode of “${item.title}” — this starts a rewatch at ${seriesLabel}.`
+              : seriesNext?.title != null
+                ? `“${item.title}” — ${seriesLabel}: ${seriesNext.title}`
+                : `Log ${seriesLabel} of “${item.title}”.`
             : isAnimeSeries
               ? `Log episode ${nextEpisode} of “${item.title}”.`
               : isRewatch

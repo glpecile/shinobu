@@ -24,6 +24,7 @@ describe('nextEpisodeFromProgress', () => {
       number: 5,
       title: 'The One With The Thing',
       aired: true,
+      rewatch: false,
     });
   });
 
@@ -33,7 +34,7 @@ describe('nextEpisodeFromProgress', () => {
       nextEpisode: { season: 1, number: 4, firstAired: '2099-01-01T00:00:00.000Z' },
     });
     // Named so the button can say *which* episode is waiting, not just "wait".
-    expect(next).toEqual({ season: 1, number: 4, aired: false });
+    expect(next).toEqual({ season: 1, number: 4, aired: false, rewatch: false });
   });
 
   test('an unknown air date stays permissive', () => {
@@ -47,13 +48,16 @@ describe('nextEpisodeFromProgress', () => {
     ).toBe(true);
   });
 
-  test('a fully watched show wraps to S1E1 for a rewatch', () => {
+  test('a fully watched show wraps to S1E1, flagged as a rewatch', () => {
     // Trakt omits `next_episode` when nothing aired is left; the button must
-    // still have something to offer, exactly like the anime wrap to episode 1.
+    // still have something to offer, exactly like the anime wrap to episode 1
+    // — but flagged, so the UI says "Log rewatch" instead of naming S1E1 as
+    // if it were up next.
     expect(nextEpisodeFromProgress({ watchedKeys: NO_WATCHED })).toEqual({
       season: 1,
       number: 1,
       aired: true,
+      rewatch: true,
     });
   });
 });
