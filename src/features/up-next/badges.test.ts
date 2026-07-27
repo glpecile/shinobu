@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { calendarBadges, continueWatchingBadges, isNewEpisode } from './badges';
-import type { UpNextEntry } from './types';
+import type { UpNextEntry, UpNextEpisode } from './types';
 
 const NOW = new Date(2026, 6, 23, 20, 0);
 
@@ -23,10 +23,11 @@ const ITEM: NormalizedMediaItem = {
 };
 
 function entry(
-  episode: Partial<UpNextEntry['episode']> = {},
+  episode: Partial<UpNextEpisode> = {},
   item: NormalizedMediaItem = ITEM,
 ): UpNextEntry {
   return {
+    kind: 'episode',
     id: 'trakt-1-s1e4',
     item,
     episode: { season: 1, number: 4, ...episode },
@@ -107,5 +108,21 @@ describe('calendarBadges', () => {
 
   test('an entry with no instant carries no badges at all', () => {
     expect(calendarBadges(entry(), NOW)).toEqual([]);
+  });
+
+  test('a film release is badged from its date through the same accessor', () => {
+    // The union's payoff: the badge never touched `.episode`, so a release
+    // lands on its relative day and — being date-only — carries no time.
+    const release: UpNextEntry = {
+      kind: 'release',
+      id: 'trakt-9-theatrical',
+      item: { ...ITEM, id: 'trakt-9', title: 'Film', type: 'MOVIE' },
+      release: { kind: 'theatrical', date: '2026-07-24' },
+      status: 'upcoming',
+      source: 'trakt',
+    };
+    expect(calendarBadges(release, NOW)).toEqual([
+      { label: 'Tomorrow', tone: 'accent' },
+    ]);
   });
 });

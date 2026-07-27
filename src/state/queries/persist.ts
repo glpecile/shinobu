@@ -31,7 +31,12 @@ const PERSIST_KEY = 'shinobu.query-cache';
  * Bump to discard every persisted entry — the escape hatch for a normalizer or
  * query-key change that would otherwise restore data in the old shape.
  */
-const BUSTER = 'v1';
+// v2 (plan 0030): `UpNextInputs` gained required `traktCalendar`/`releases`
+// arrays and `AniListCurrentEntry` gained `status`. Both keys are persisted, so
+// without this bump a snapshot written by the previous build restores in the
+// old shape and `computeUpNext` throws on `inputs.traktCalendar.map` during the
+// first render after upgrade — taking the whole Up Next section down with it.
+const BUSTER = 'v2';
 
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;

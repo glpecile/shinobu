@@ -31,6 +31,13 @@ export const tmdbQueryKeys = {
   studio: (tmdbId: number) => [...tmdbQueryKeys.studioRoot(), tmdbId] as const,
   studioSearch: (name: string) =>
     [...tmdbQueryKeys.all, 'studio-search', name] as const,
+  /**
+   * One title's catalogue record (`getMediaCatalogue`). Keyed by kind *and* id
+   * because TMDB numbers movies and shows in separate spaces — id 550 is a film
+   * and a series, and one key would serve one as the other.
+   */
+  catalogue: (kind: 'movie' | 'tv', tmdbId: number) =>
+    [...tmdbQueryKeys.all, 'catalogue', kind, tmdbId] as const,
 };
 
 // People's filmographies barely churn — a day of staleness is invisible, and

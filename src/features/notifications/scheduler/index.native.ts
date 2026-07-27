@@ -1,6 +1,9 @@
 import * as Notifications from 'expo-notifications';
 
-import type { NotificationCandidate } from '@/features/notifications/compute-schedule';
+import type {
+  NotificationCandidate,
+  ReleaseNotificationCandidate,
+} from '@/features/notifications/compute-schedule';
 import { hashSchedule } from '@/features/notifications/compute-schedule';
 
 import { checkAndStoreHash, clearStoredHash } from './hash-guard';
@@ -26,15 +29,29 @@ async function ensureChannel(): Promise<void> {
   channelEnsured = true;
 }
 
-function episodeLabel(candidate: NotificationCandidate): string {
-  return `S${candidate.season}E${candidate.episode}`;
+/** Which release just landed, in the words a schedule reader uses (plan 0030 R3). */
+const RELEASE_BODIES: Record<ReleaseNotificationCandidate['release'], string> = {
+  digital: 'Out today — streaming',
+  physical: 'Out today — on disc',
+  theatrical: 'Out today — in theaters',
+};
+
+/**
+ * The notification's second line. The title above it is already the item's
+ * title, so a release reads as "Dune: Part Three" / "Out today — in theaters"
+ * rather than repeating the name inside the body (plan 0030 U7). Episode copy
+ * is unchanged.
+ */
+function notificationBody(candidate: NotificationCandidate): string {
+  if (candidate.kind === 'release') return RELEASE_BODIES[candidate.release];
+  return `S${candidate.season}E${candidate.episode} aired — ready to watch`;
 }
 
 async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     content: {
       title: candidate.title,
-      body: `${episodeLabel(candidate)} aired — ready to watch`,
+      body: notificationBody(candidate),
       data: { itemId: candidate.itemId },
     },
     trigger: {

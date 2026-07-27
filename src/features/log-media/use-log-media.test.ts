@@ -46,6 +46,9 @@ mock.module('@/state/queries/mapping', () => ({
   cachedAniListFilmId: () => Promise.resolve(null),
   cachedTraktLookup: () => Promise.resolve(null),
   cachedTraktTextSearch: () => Promise.resolve(null),
+  // Unreachable from the log path, but `mock.module` is process-wide and Up
+  // Next's Letterboxd release resolve imports it by name.
+  cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
   cachedAniZipEpisodeMap: (_client: unknown, anilistId: number) => {
     mappingCalls.push(`episode-map:${anilistId}`);
     return Promise.resolve(episodeMap);

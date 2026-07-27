@@ -124,10 +124,21 @@ export function UpNextSection({
             className="px-4"
             showsHorizontalScrollIndicator={false}
           >
+            {/* Keyed on the *entry* id, not the item's: one film contributes a
+                theatrical and a streaming row that share an item id (R3), so
+                keying on the item would collide the moment both land on the
+                same day. The entry id carries the episode or release kind. */}
             {continueWatching.map((entry) => (
-              <View key={entry.item.id} className="mr-3">
+              <View key={entry.id} className="mr-3">
                 <EpisodeCard
-                  action={<QuickLogButton entry={entry} />}
+                  // Continue Watching is aired episodes by construction; the
+                  // narrowing is what the union buys — no release row can slip
+                  // in here and render a quick-log for something with no episode.
+                  action={
+                    entry.kind === 'episode' ? (
+                      <QuickLogButton entry={entry} />
+                    ) : undefined
+                  }
                   badges={continueWatchingBadges(entry, now)}
                   entry={entry}
                   onActionsPress={onItemActions}
@@ -256,14 +267,16 @@ export function UpNextSection({
                 className="px-4"
                 showsHorizontalScrollIndicator={false}
               >
+                {/* Entry id, for the same reason as Continue Watching above. */}
                 {selected.entries.map((entry) => (
-                  <View key={entry.item.id} className="mr-3">
+                  <View key={entry.id} className="mr-3">
                     <EpisodeCard
                       // Aired-today episodes are watchable right now, so they
                       // keep the quick-log checkmark here too; still-upcoming
-                      // ones only carry their day badge.
+                      // ones — and release rows, which are never loggable —
+                      // only carry their day badge.
                       action={
-                        entry.status === 'aired' ? (
+                        entry.status === 'aired' && entry.kind === 'episode' ? (
                           <QuickLogButton entry={entry} />
                         ) : undefined
                       }

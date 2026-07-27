@@ -7,6 +7,7 @@ import { MorphText } from '@/components/morph-text';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableScale } from '@/components/presstable';
 import type { CardBadge } from '@/features/up-next/badges';
+import { entryLabel } from '@/features/up-next/entry';
 import type { UpNextEntry } from '@/features/up-next/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -15,8 +16,9 @@ import { useCardArt } from './use-card-art';
 
 /**
  * The landscape Up Next card (plan 0019 U5) — art (see `useCardArt`), title,
- * the episode line, a badge slot over the art and an optional trailing action.
- * Per-episode stills are deferred follow-up work; the show backdrop stands in.
+ * the entry line (`entryLabel`: an episode code, or a film's release kind), a
+ * badge slot over the art and an optional trailing action. Per-episode stills
+ * are deferred follow-up work; the show backdrop stands in.
  */
 interface EpisodeCardProps {
   entry: UpNextEntry;
@@ -27,14 +29,6 @@ interface EpisodeCardProps {
   onActionsPress?: (item: NormalizedMediaItem) => void;
   /** Card width class; the agenda row overrides the carousel default. */
   className?: string;
-}
-
-export function episodeLabel(entry: UpNextEntry): string {
-  // An AniList entry carries no canonical season (plan 0027), so it reads as
-  // "E7" rather than a made-up "S1E7" — the entry itself *is* the season.
-  const { season, number } = entry.episode;
-  const code = season == null ? `E${number}` : `S${season}E${number}`;
-  return entry.episode.title == null ? code : `${code} · ${entry.episode.title}`;
 }
 
 export function EpisodeCard({
@@ -54,7 +48,7 @@ export function EpisodeCard({
         // the air time above all — so they belong in the spoken label too.
         accessibilityLabel={[
           entry.item.title,
-          episodeLabel(entry),
+          entryLabel(entry),
           ...badges.map((badge) => badge.label),
         ].join(', ')}
         className="w-full h-36 rounded-card overflow-hidden border border-border/50"
@@ -93,7 +87,7 @@ export function EpisodeCard({
               episode — the one text on screen that changes as a result of user
               state rather than navigation. */}
           <MorphText className="text-muted font-sans text-xs mt-0.5">
-            {episodeLabel(entry)}
+            {entryLabel(entry)}
           </MorphText>
         </View>
         {action}

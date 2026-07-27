@@ -25,7 +25,13 @@ mock.module('react-native', () => ({
 const { refreshNotifications } = await import('./refresh');
 type RefreshNotificationsDeps = Parameters<typeof refreshNotifications>[0];
 
-const EMPTY_INPUTS: UpNextInputs = { trakt: [], anilist: [], errors: [] };
+const EMPTY_INPUTS: UpNextInputs = {
+  trakt: [],
+  traktCalendar: [],
+  releases: [],
+  anilist: [],
+  errors: [],
+};
 
 function makeDeps(overrides: Partial<RefreshNotificationsDeps> = {}) {
   const calls = { gather: 0, schedule: 0 };
@@ -85,8 +91,7 @@ describe('refreshNotifications', () => {
   test('a provider rejection surfaced as inputs.errors still schedules the rest', async () => {
     const { deps, calls } = makeDeps({
       gatherInputs: async () => ({
-        trakt: [],
-        anilist: [],
+        ...EMPTY_INPUTS,
         errors: [{ provider: 'trakt', message: 'down' }],
       }),
     });

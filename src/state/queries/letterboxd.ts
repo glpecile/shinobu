@@ -1,8 +1,19 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { Effect } from 'effect';
 
+import {
+  letterboxdReleaseInputs,
+  type ResolveWatchlistFilm,
+} from '@/features/up-next/letterboxd-releases';
+import type { ReleaseUpNextInput } from '@/features/up-next/types';
 import { httpFetch } from '@/lib/http/client';
 import type { HttpFetch } from '@/lib/http/types';
+import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
+import { getMediaCatalogue } from '@/lib/providers/tmdb/reads';
 import {
   LETTERBOXD_BASE_URL,
   LETTERBOXD_WEB_PROXY_BASE_URL,
@@ -21,7 +32,11 @@ import {
   getLetterboxdUsername,
 } from '@/state/session/letterboxd';
 import { useConnectedProviders } from '@/state/session';
+import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
+
+import { cachedTmdbMovieIdByTitle } from './mapping';
+import { tmdbDeps, tmdbQueryKeys } from './tmdb';
 
 /**
  * The web read transport (plan 0018): letterboxd.com sends no CORS headers, so
@@ -181,4 +196,87 @@ export function useLetterboxdWatchlistPagesQuery() {
       lastPage.length < WATCHLIST_PAGE_SIZE ? undefined : lastPageParam + 1,
     enabled: username !== '',
   });
+}
+
+/**
+ * A watchlist changes when the user adds a film, which they do from Letterboxd
+ * itself — the same slow-moving-personal-row window the home feed uses for its
+ * catalogue slots. This read shares its cache entry with the "Your Watchlist"
+ * row, so on the home screen the scrape behind Up Next's Letterboxd releases
+ * has usually already happened.
+ */
+const WATCHLIST_STALE_MS = 15 * 60_000;
+
+/**
+ * A film's release dates only move when a studio moves them, so the catalogue
+ * read rides the feed's stale window rather than refetching per gather
+ * (`CATALOGUE_STALE_MS` in `use-unified-feed.ts` — deliberately re-stated here
+ * rather than imported, since that module imports *this* one).
+ */
+const CATALOGUE_STALE_MS = 15 * 60_000;
+
+/**
+ * The two-call resolve behind Calendar's Letterboxd releases (plan 0030 KTD-5).
+ *
+ * Leg 1 is title+year → TMDB id, forever-cached and — critically — *year-gated*:
+ * `cachedTmdbMovieIdByTitle` runs `pickMovieMatch`, which returns `null` rather
+ * than the popular same-title classic when the year disagrees or the ±1 window
+ * is ambiguous (docs/solutions/trakt-text-search-wrong-movie-match.md). A
+ * dropped candidate is a missing agenda row; a guessed one puts the wrong film
+ * in the user's week, so this leg never guesses.
+ *
+ * Leg 2 is the catalogue read, whose `release_dates` append carries the
+ * `releaseCalendar` this whole resolve exists to learn. Merging rather than
+ * replacing keeps the Letterboxd item's identity (its slug id routes the card)
+ * while picking up the TMDB id and the dates.
+ */
+function resolveWatchlistFilm(
+  queryClient: QueryClient,
+): ResolveWatchlistFilm {
+  return async (film) => {
+    const tmdbId =
+      film.externalIds.tmdb ??
+      (await cachedTmdbMovieIdByTitle(queryClient, {
+        title: film.title,
+        year: film.year,
+      }));
+    if (tmdbId == null) return null;
+
+    const catalogue = await queryClient.fetchQuery({
+      queryKey: tmdbQueryKeys.catalogue('movie', tmdbId),
+      queryFn: () =>
+        Effect.runPromise(getMediaCatalogue(tmdbDeps(), { kind: 'movie', tmdbId })),
+      staleTime: CATALOGUE_STALE_MS,
+    });
+    return mergeCatalogueMetadata(film, catalogue.catalogue);
+  };
+}
+
+/**
+ * Calendar's Letterboxd film releases — the watchlist's first page, year-
+ * filtered and capped before any resolve runs (KTD-5). **First page only**, on
+ * purpose: Letterboxd orders a watchlist most-recently-added first, so page 1
+ * is where the films a user just put on their radar live, and paging the whole
+ * 600-film list would trade ~22 HTML page fetches per gather for candidates the
+ * year filter drops anyway.
+ *
+ * Without a TMDB token there is no resolve to run, so the source contributes
+ * nothing rather than firing a fan that can only fail.
+ */
+export function fetchLetterboxdReleaseInputs(
+  queryClient: QueryClient,
+  now: Date,
+): Promise<ReleaseUpNextInput[]> {
+  const username = getLetterboxdUsername() ?? '';
+  if (username === '' || tmdbToken() === '') return Promise.resolve([]);
+
+  return queryClient
+    .fetchQuery({
+      queryKey: letterboxdQueryKeys.watchlist(username),
+      queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
+      staleTime: WATCHLIST_STALE_MS,
+    })
+    .then((films: NormalizedMediaItem[]) =>
+      letterboxdReleaseInputs(films, now, resolveWatchlistFilm(queryClient)),
+    );
 }
