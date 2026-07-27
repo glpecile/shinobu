@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { ProviderCard } from '@/features/trackers/provider-card';
-import { splitProviders } from '@/features/trackers/provider-connections';
+import {
+  shouldAutoCloseSheet,
+  splitProviders,
+} from '@/features/trackers/provider-connections';
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
@@ -27,16 +30,33 @@ function SectionLabel({ children }: { children: string }) {
  * (`provider-sheet.tsx`).
  */
 export function ProviderCardsSection() {
-  const { connected, disconnected } = splitProviders(useConnectedProviders());
+  const connectedIds = useConnectedProviders();
+  const { connected, disconnected } = splitProviders(connectedIds);
   // `sheetId` is kept while closing so the content doesn't vanish mid-animation
   // (the shape `card-actions-sheet` uses for its `item`).
   const [sheetId, setSheetId] = useState<ProviderId | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Whether the sheet was opened *to connect*. A sheet opened on an already
+  // connected provider must not close itself the instant it appears.
+  const [sheetWasConnected, setSheetWasConnected] = useState(false);
 
   function openSheet(id: ProviderId) {
     setSheetId(id);
+    setSheetWasConnected(connectedIds.includes(id));
     setSheetOpen(true);
   }
+
+  // The decision itself is a pure function, unit-tested in
+  // provider-connections.test.ts; this effect only applies it.
+  const autoClose = shouldAutoCloseSheet({
+    open: sheetOpen,
+    sheetId,
+    openedConnected: sheetWasConnected,
+    connectedIds,
+  });
+  useEffect(() => {
+    if (autoClose) setSheetOpen(false);
+  }, [autoClose]);
 
   return (
     <>

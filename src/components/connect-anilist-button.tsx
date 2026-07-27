@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Linking, Platform, Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
@@ -119,7 +120,7 @@ export function ConnectAniListButton() {
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<ClientIdForm>({
     defaultValues: { clientId: '' },
     resolver: zodResolver(clientIdSchema),
@@ -206,14 +207,12 @@ export function ConnectAniListButton() {
             {errors.clientId.message}
           </Text>
         )}
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded-md"
-          onPress={() => submitClientId()}
-        >
-          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-            Save & Connect
-          </Text>
-        </PresstableOpacity>
+        <Button
+          label="Save & Connect"
+          loading={isSubmitting || status === 'connecting'}
+          loadingLabel="Connecting…"
+          onPress={() => void submitClientId()}
+        />
       </View>
     );
   }
@@ -225,15 +224,12 @@ export function ConnectAniListButton() {
           Could not connect. Tap Connect to try again.
         </Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded-md"
-        disabled={status === 'connecting'}
-        onPress={() => connect()}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base">
-          {status === 'connecting' ? 'Connecting…' : 'Connect AniList'}
-        </Text>
-      </PresstableOpacity>
+      <Button
+        label="Connect AniList"
+        loading={status === 'connecting'}
+        loadingLabel="Connecting…"
+        onPress={() => void connect()}
+      />
       {embeddedClientId === '' && storedClientId != null && (
         <PresstableOpacity
           onPress={() => {

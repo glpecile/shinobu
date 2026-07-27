@@ -4,7 +4,9 @@ import * as Notifications from 'expo-notifications';
 import { useState } from 'react';
 import { Text, useColorScheme, View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
+import { CARD_SHELL } from '@/components/card-shell';
+import { cn } from '@/lib/cn';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
 import { cancelAllScheduledNotifications, scheduleTestNotification } from '@/features/notifications/scheduler';
 import type { UpNextInputs } from '@/features/up-next/types';
@@ -57,7 +59,7 @@ export function NotificationsSettingsSection() {
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
         Notifications
       </Text>
-      <View className="bg-surface border border-border rounded-xl p-5 gap-3">
+      <View className={cn(CARD_SHELL, 'gap-3')}>
         <View className="flex-row items-center justify-between">
           <View className="flex-1 mr-3">
             <Text className="text-foreground font-sans-semibold text-base">
@@ -86,14 +88,13 @@ export function NotificationsSettingsSection() {
           </Text>
         )}
         {__DEV__ && enabled && (
-          <PresstableOpacity
-            className="border border-border px-4 py-2 rounded-md self-start"
+          <Button
+            className="self-start"
+            label="Send test notification"
             onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
-          >
-            <Text className="text-foreground font-sans-semibold text-sm">
-              Send test notification
-            </Text>
-          </PresstableOpacity>
+            size="sm"
+            variant="quiet"
+          />
         )}
       </View>
     </View>

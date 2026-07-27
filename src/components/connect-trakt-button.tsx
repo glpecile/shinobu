@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
@@ -229,7 +230,7 @@ export function ConnectTraktButton() {
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<CredentialsForm>({
     defaultValues: {
       clientId: credentials?.clientId ?? '',
@@ -351,39 +352,29 @@ export function ConnectTraktButton() {
             {errors.clientSecret.message}
           </Text>
         )}
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded-md"
-          onPress={() => submitCredentials()}
-        >
-          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-            Save & Connect
-          </Text>
-        </PresstableOpacity>
+        <Button
+          label="Save & Connect"
+          loading={isSubmitting || status === 'connecting'}
+          loadingLabel="Connecting…"
+          onPress={() => void submitCredentials()}
+        />
       </View>
     );
   }
 
   return (
     <View className="items-center gap-3">
-      {status === 'connecting' && (
-        <Text className="text-muted font-sans text-sm">
-          Connecting to Trakt…
-        </Text>
-      )}
       {status === 'error' && (
         <Text className="text-accent font-sans text-sm text-center">
           Could not connect. Tap Connect to try again.
         </Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded-md"
-        disabled={status === 'connecting'}
-        onPress={() => connect()}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base">
-          {status === 'connecting' ? 'Connecting…' : 'Connect Trakt'}
-        </Text>
-      </PresstableOpacity>
+      <Button
+        label="Connect Trakt"
+        loading={status === 'connecting'}
+        loadingLabel="Connecting…"
+        onPress={() => void connect()}
+      />
       {!hasEnvCredentials && credentials != null && (
         <PresstableOpacity onPress={() => clearCredentials()}>
           <Text className="text-muted font-sans text-xs">

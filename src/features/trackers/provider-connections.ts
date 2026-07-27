@@ -28,3 +28,37 @@ export function splitProviders(
   }
   return split;
 }
+
+export interface SheetAutoCloseInput {
+  /** Whether the provider sheet is currently open. */
+  open: boolean;
+  /** The provider it is open on (kept while closing, hence nullable). */
+  sheetId: ProviderId | null;
+  /** Whether that provider was *already* connected when the sheet opened. */
+  openedConnected: boolean;
+  /** Live session state. */
+  connectedIds: readonly ProviderId[];
+}
+
+/**
+ * Should the provider sheet dismiss itself?
+ *
+ * Yes exactly once: a sheet opened *to connect* whose provider has since become
+ * connected. Otherwise every flow ends by stranding the user on a sheet whose
+ * job is done — the Serializd WebView closes on capture and hands back a panel
+ * that now reads "Connected as glp", which is the moment it has nothing left to
+ * offer. Keyed off session state rather than each connect button's success
+ * callback, so it covers all four providers (and any fifth) without a new prop.
+ *
+ * `openedConnected` is what stops a sheet opened on an already-connected
+ * provider (to disconnect, say) from vanishing the instant it appears.
+ */
+export function shouldAutoCloseSheet({
+  open,
+  sheetId,
+  openedConnected,
+  connectedIds,
+}: SheetAutoCloseInput): boolean {
+  if (!open || sheetId == null || openedConnected) return false;
+  return connectedIds.includes(sheetId);
+}

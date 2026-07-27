@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import {
   ProviderSigninWebView,
   type CookiePair,
 } from '@/components/provider-signin-webview';
-import { PresstableOpacity } from '@/components/presstable';
 import {
   LETTERBOXD_BASE_URL,
   LETTERBOXD_SIGN_IN_URL,
@@ -46,14 +46,10 @@ export function ConnectLetterboxdButton() {
         as you in a secure web view. Your session stays on this device — no
         password is ever sent to Shinobu.
       </Text>
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded-md"
+      <Button
+        label="Sign in to Letterboxd"
         onPress={() => setSigningIn(true)}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-          Sign in to Letterboxd
-        </Text>
-      </PresstableOpacity>
+      />
 
       <ProviderSigninWebView<CapturedLetterboxdLogin>
         captureUserAgent

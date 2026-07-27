@@ -18,6 +18,7 @@ import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { EpisodeCard } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
+import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { shortWeekdayName } from '@/lib/time/relative-day';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -187,16 +188,18 @@ export function UpNextSection({
                     }}
                   />
                   <Text
-                    className={`font-sans text-xs ${
-                      isSelected ? 'text-accent-foreground' : 'text-muted'
-                    }`}
+                    className={cn(
+                      'font-sans text-xs',
+                      isSelected ? 'text-accent-foreground' : 'text-muted',
+                    )}
                   >
                     {shortWeekdayName(day.date)}
                   </Text>
                   <Text
-                    className={`font-sans-semibold text-base ${
-                      isSelected ? 'text-accent-foreground' : 'text-foreground'
-                    }`}
+                    className={cn(
+                      'font-sans-semibold text-base',
+                      isSelected ? 'text-accent-foreground' : 'text-foreground',
+                    )}
                   >
                     {day.date.getDate()}
                   </Text>
@@ -210,9 +213,10 @@ export function UpNextSection({
                     }).map((_, index) => (
                       <View
                         key={index}
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isSelected ? 'bg-accent-foreground' : 'bg-accent'
-                        }`}
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full',
+                          isSelected ? 'bg-accent-foreground' : 'bg-accent',
+                        )}
                       />
                     ))}
                   </View>

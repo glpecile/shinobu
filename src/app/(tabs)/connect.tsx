@@ -6,14 +6,16 @@ import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
+import { CARD_SHELL } from '@/components/card-shell';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
-import { CARD_SHELL, CONTROL_RADIUS } from '@/features/trackers/card-shell';
 import { ProviderCardsSection } from '@/features/trackers/provider-cards-section';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
 
@@ -47,7 +49,7 @@ function HiddenItemsSection() {
       <View className="gap-3">
         {hidden.map((item) => (
           <View
-            className={`flex-row items-center justify-between opacity-60 ${CARD_SHELL}`}
+            className={cn('flex-row items-center justify-between opacity-60', CARD_SHELL)}
             key={item.id}
           >
             <PresstableOpacity
@@ -67,14 +69,13 @@ function HiddenItemsSection() {
                 {item.title}
               </Text>
             </PresstableOpacity>
-            <PresstableOpacity
-              className={`border border-border px-4 py-2 ${CONTROL_RADIUS}`}
+            <Button
+              accessibilityLabel={`Show ${item.title} again`}
+              label="Show"
               onPress={() => unhideItem(item.id)}
-            >
-              <Text className="text-foreground font-sans-semibold text-sm">
-                Show
-              </Text>
-            </PresstableOpacity>
+              size="sm"
+              variant="quiet"
+            />
           </View>
         ))}
       </View>
@@ -94,7 +95,13 @@ export default function ConnectScreen() {
           Same column + gutter as the content so the title sits on the cards'
           left edge at every width. */}
       <View
-        className={`flex-row items-center ${CONTENT_COLUMN} ${CONTENT_GUTTER} ${screenHeaderTopPadding} pb-4`}
+        className={cn(
+          'flex-row items-center',
+          CONTENT_COLUMN,
+          CONTENT_GUTTER,
+          screenHeaderTopPadding,
+          'pb-4',
+        )}
       >
         <Text className="text-2xl font-display text-foreground">
           Manage Trackers
@@ -119,7 +126,7 @@ export default function ConnectScreen() {
               space at all, and the first one is never flush under the header:
               `pt-2` on top of the header's `pb-4` makes that first break the
               same 24px as every gap below it. */}
-          <View className={`${CONTENT_COLUMN} ${CONTENT_GUTTER} gap-6 pt-2`}>
+          <View className={cn(CONTENT_COLUMN, CONTENT_GUTTER, 'gap-6 pt-2')}>
             <ProviderCardsSection />
             <ConnectTmdbTokenSection />
             <NotificationsSettingsSection />

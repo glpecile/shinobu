@@ -1,4 +1,5 @@
 import { AnimatedView } from '@/components/animated-view';
+import { cn } from '@/lib/cn';
 
 // Reanimated CSS animation: declarative, runs on the UI thread, and cleans
 // itself up on unmount — no useEffect/Animated.loop lifecycle to manage.
@@ -16,7 +17,7 @@ const pulse = {
 export function Skeleton({ className }: { className?: string }) {
   return (
     <AnimatedView
-      className={`bg-muted/20 ${className ?? ''}`}
+      className={cn('bg-muted/20', className)}
       style={{
         animationName: pulse,
         animationDuration: '1400ms',

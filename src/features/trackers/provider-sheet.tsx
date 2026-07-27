@@ -1,12 +1,16 @@
 import { Text, View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
-import { CONTROL_RADIUS } from '@/features/trackers/card-shell';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
-import { capabilityLabels } from '@/features/trackers/provider-style';
+import {
+  capabilityLabels,
+  PROVIDER_DOT,
+  statusLine,
+} from '@/features/trackers/provider-style';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
+import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders, useDisconnectProvider } from '@/state/session';
@@ -52,34 +56,47 @@ function ProviderSheetContent({
 
   return (
     <>
-      <View className="flex-row items-center gap-3 mb-1">
-        <ProviderIcon id={id} size={24} />
-        <Text className="text-foreground font-display text-xl">
-          {PROVIDERS[id].label}
-        </Text>
+      {/* Same identity block as the row it was opened from — icon chip, name,
+          then dot + status — so the sheet reads as that row expanded rather
+          than as a different screen. */}
+      <View className="flex-row items-center">
+        <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
+          <ProviderIcon id={id} size={22} />
+        </View>
+        <View className="flex-1 ml-3">
+          <Text className="text-foreground font-display text-xl">
+            {PROVIDERS[id].label}
+          </Text>
+          <View className="flex-row items-center gap-1.5 mt-0.5">
+            {connected && (
+              <View className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])} />
+            )}
+            <Text
+              className="flex-1 text-muted font-sans text-xs"
+              numberOfLines={1}
+            >
+              {connected
+                ? statusLine(connected, username)
+                : capabilityLabels(id).join(' · ')}
+            </Text>
+          </View>
+        </View>
       </View>
-      <Text className="text-muted font-sans text-sm mb-4">
-        {connected
-          ? `Connected${username != null ? ` as ${username}` : ''}`
-          : capabilityLabels(id).join(' · ')}
-      </Text>
-      {connected ? (
-        <View className="flex-row">
-          <PresstableOpacity
-            className={`shrink-0 border border-accent px-4 py-2 ${CONTROL_RADIUS}`}
+
+      <View className="mt-5">
+        {connected ? (
+          <Button
+            label="Disconnect"
             onPress={() => {
               disconnect(id);
               onDone();
             }}
-          >
-            <Text className="text-accent font-sans-semibold text-sm">
-              Disconnect
-            </Text>
-          </PresstableOpacity>
-        </View>
-      ) : (
-        <ConnectButton />
-      )}
+            variant="outline"
+          />
+        ) : (
+          <ConnectButton />
+        )}
+      </View>
     </>
   );
 }

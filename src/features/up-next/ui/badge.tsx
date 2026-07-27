@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import type { BadgeTone } from '@/features/up-next/badges';
+import { cn } from '@/lib/cn';
 
 /**
  * The small pill on an Up Next card — runtime, "New", or a relative-day label
@@ -17,9 +18,10 @@ export function Badge({
   const accent = tone === 'accent';
   return (
     <View
-      className={`rounded-sm px-1.5 py-0.5 ${
-        accent ? 'bg-accent' : 'bg-black/60 border border-border/60'
-      }`}
+      className={cn(
+        'rounded-sm px-1.5 py-0.5',
+        accent ? 'bg-accent' : 'bg-black/60 border border-border/60',
+      )}
     >
       {/* Both tones sit on artwork, so both take the on-accent (always light)
           foreground — `text-foreground` would vanish into the scrim in the

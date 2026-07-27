@@ -17,16 +17,6 @@ export const PROVIDER_DOT: Record<ProviderId, string> = {
   serializd: 'bg-provider-serializd',
 };
 
-export const PROVIDER_STRIPE: Record<ProviderId, string> = PROVIDER_DOT;
-
-/** Icon chip: a 10% wash of the brand color behind a 30% brand hairline. */
-export const PROVIDER_CHIP: Record<ProviderId, string> = {
-  trakt: 'bg-provider-trakt/10 border-provider-trakt/30',
-  anilist: 'bg-provider-anilist/10 border-provider-anilist/30',
-  letterboxd: 'bg-provider-letterboxd/10 border-provider-letterboxd/30',
-  serializd: 'bg-provider-serializd/10 border-provider-serializd/30',
-};
-
 const MEDIA_TYPE_LABEL: Record<MediaType, string> = {
   MOVIE: 'Movies',
   TV: 'TV',
@@ -41,4 +31,31 @@ const MEDIA_TYPE_LABEL: Record<MediaType, string> = {
  */
 export function capabilityLabels(id: ProviderId): string[] {
   return PROVIDERS[id].mediaTypes.map((type) => MEDIA_TYPE_LABEL[type]);
+}
+
+/**
+ * A provider's connection state in one line, for surfaces with room for it
+ * (the sheet). `username` is absent while the read that resolves it is in
+ * flight, or if it failed — the line degrades to "Connected", never to a gap.
+ */
+export function statusLine(
+  connected: boolean,
+  username: string | undefined,
+): string {
+  if (!connected) return 'Not connected';
+  return username != null ? `Connected as ${username}` : 'Connected';
+}
+
+/**
+ * The same status, short enough to survive a 390px viewport minus the 64px web
+ * nav rail *and* an always-visible action button beside it. The colored dot in
+ * front of it already carries "connected", so the username alone says the rest
+ * — the long form truncated to "Connecte…" in that column, which reads as a bug.
+ */
+export function compactStatus(
+  connected: boolean,
+  username: string | undefined,
+): string {
+  if (!connected) return 'Not connected';
+  return username ?? 'Connected';
 }

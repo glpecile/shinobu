@@ -10,6 +10,8 @@ export interface ConnectAction {
   needsSheet: boolean;
   /** Only meaningful when `needsSheet` is false. */
   connect: () => void;
+  /** A connect started from the row is still in flight — drives the spinner. */
+  connecting: boolean;
 }
 
 /**
@@ -38,13 +40,16 @@ export function useConnectAction(id: ProviderId): ConnectAction {
     trakt: {
       needsSheet: trakt.needsSetup,
       connect: () => void trakt.connect(),
+      connecting: trakt.status === 'connecting',
     },
     anilist: {
       needsSheet: anilist.needsSetup,
       connect: () => void anilist.connect(),
+      connecting: anilist.status === 'connecting',
     },
-    letterboxd: { needsSheet: true, connect: () => undefined },
-    serializd: { needsSheet: true, connect: () => undefined },
+    // Sheet-only, so the row never spins for these — their own buttons do.
+    letterboxd: { needsSheet: true, connect: () => undefined, connecting: false },
+    serializd: { needsSheet: true, connect: () => undefined, connecting: false },
   };
   return actions[id];
 }

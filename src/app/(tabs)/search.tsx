@@ -13,6 +13,7 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
+import { cn } from '@/lib/cn';
 import { hasCoarsePointer } from '@/lib/pointer';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -247,7 +248,11 @@ export default function SearchScreen() {
         <title>Search — Shinobu</title>
       </Head>
       <View
-        className={`relative z-20 flex-row items-center gap-3 px-6 ${screenHeaderTopPadding} pb-4`}
+        className={cn(
+          'relative z-20 flex-row items-center gap-3 px-6',
+          screenHeaderTopPadding,
+          'pb-4',
+        )}
       >
         {/* The field's chrome lives on this row, not on the TextInput, so the
             clear button can sit *beside* the input instead of on top of it.
