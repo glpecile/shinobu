@@ -22,10 +22,19 @@ export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA';
 export type ProgressUnit = 'episode' | 'chapter';
 
 /**
- * Which TMDB release type backs a `homeReleaseDate` — `'both'` when digital
- * and physical share the same earliest date, so the label can say so.
+ * When a film became available, by how you'd watch it — each the earliest
+ * **worldwide** date TMDB knows, as a bare `YYYY-MM-DD`, absent when no region
+ * has published that kind of release. Ordered as released, which is the order
+ * the details timeline renders them in.
  */
-export type HomeReleaseKind = 'digital' | 'physical' | 'both';
+export interface ReleaseCalendar {
+  /** In cinemas — TMDB release types 2 (limited) and 3 (wide), earliest of the two. */
+  theatrical?: string;
+  /** Buy/rent at home — TMDB release type 4. */
+  digital?: string;
+  /** Disc — TMDB release type 5. */
+  physical?: string;
+}
 
 export interface NormalizedMediaItem {
   /** Unique combined identifier: `${providerId}-${nativeId}`, e.g. `trakt-12345`. */
@@ -57,13 +66,12 @@ export interface NormalizedMediaItem {
    */
   releaseDate?: string;
   /**
-   * Earliest worldwide digital-or-physical ("home") release, bare
-   * `YYYY-MM-DD`; absent when no region has published one. Display only —
-   * TMDB is the sole source (`release_dates` types 4/5).
+   * Theatrical/digital/physical release dates for a film — what the details
+   * screen's release timeline renders. Display only, and TMDB is the sole
+   * source (`release_dates`), so it is absent for every TV/manga item and for
+   * any movie the TMDB catalogue didn't answer for.
    */
-  homeReleaseDate?: string;
-  /** Which home-release type produced `homeReleaseDate`, for its label. */
-  homeReleaseKind?: HomeReleaseKind;
+  releaseCalendar?: ReleaseCalendar;
   currentProgress: number;
   progressUnit: ProgressUnit;
   totalEpisodes?: number;

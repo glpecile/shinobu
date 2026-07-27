@@ -1,5 +1,4 @@
 import type {
-  HomeReleaseKind,
   NormalizedCastMember,
   NormalizedCompany,
   NormalizedCrewMember,
@@ -7,6 +6,7 @@ import type {
   NormalizedPerson,
   NormalizedStudio,
   PersonCreditRow,
+  ReleaseCalendar,
 } from '@/types/media';
 import { tmdbImageUrl } from './config';
 
@@ -363,51 +363,61 @@ export interface TmdbMovieResponse extends TmdbCreditBase {
   release_dates?: { results?: TmdbReleaseDatesCountry[] | null } | null;
 }
 
+const TMDB_RELEASE_TYPE_THEATRICAL_LIMITED = 2;
+const TMDB_RELEASE_TYPE_THEATRICAL = 3;
 const TMDB_RELEASE_TYPE_DIGITAL = 4;
 const TMDB_RELEASE_TYPE_PHYSICAL = 5;
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * The earliest **worldwide** digital-or-physical release across every region —
- * deliberately not the device locale and not US-only: "when can I actually
- * watch this at home" has one answer per film, and the first territory to
- * publish it is that answer (owner decision, plan 0025-era polish pass).
+ * The earliest **worldwide** date per release kind, across every region —
+ * deliberately not the device locale and not US-only: "when could I actually
+ * watch this" has one answer per film, and the first territory to publish it
+ * is that answer (owner decision, plan 0025-era polish pass; kept when the
+ * single home-release line became the release timeline, plan 0029).
  *
- * Returns a bare `YYYY-MM-DD` (TMDB encodes these as UTC-midnight instants,
- * so the calendar day is the only meaningful part) plus which type produced
- * it — `'both'` when digital and physical land on the same day, which is what
- * lets the caller label it honestly instead of guessing.
+ * Each value is a bare `YYYY-MM-DD` — TMDB encodes these as UTC-midnight
+ * instants, so the calendar day is the only meaningful part. Type 1 (Premiere)
+ * is *not* theatrical: a festival screening months ahead of release would
+ * otherwise read as "in theaters" and mislead every date after it. Returns
+ * null when no region published any of the four types, so the caller renders
+ * no section rather than an empty one.
  */
-export function earliestHomeRelease(
+export function earliestReleaseDates(
   results: TmdbReleaseDatesCountry[] | null | undefined,
-): { date: string; kind: HomeReleaseKind } | null {
-  let digital: string | null = null;
-  let physical: string | null = null;
+): ReleaseCalendar | null {
+  const earliest = new Map<keyof ReleaseCalendar, string>();
+  const keep = (kind: keyof ReleaseCalendar, day: string): void => {
+    const current = earliest.get(kind);
+    if (current == null || day < current) earliest.set(kind, day);
+  };
 
   for (const country of results ?? []) {
     for (const entry of country.release_dates ?? []) {
       const date = entry.release_date;
       if (date == null || date === '') continue;
       const day = date.slice(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
-      if (entry.type === TMDB_RELEASE_TYPE_DIGITAL) {
-        if (digital == null || day < digital) digital = day;
-      } else if (entry.type === TMDB_RELEASE_TYPE_PHYSICAL) {
-        if (physical == null || day < physical) physical = day;
+      if (!DATE_ONLY.test(day)) continue;
+      switch (entry.type) {
+        case TMDB_RELEASE_TYPE_THEATRICAL_LIMITED:
+        case TMDB_RELEASE_TYPE_THEATRICAL:
+          keep('theatrical', day);
+          break;
+        case TMDB_RELEASE_TYPE_DIGITAL:
+          keep('digital', day);
+          break;
+        case TMDB_RELEASE_TYPE_PHYSICAL:
+          keep('physical', day);
+          break;
+        default:
+          break;
       }
     }
   }
 
-  // Ordered so each branch narrows on its own — an `??` fallback here would
-  // let a bug surface as an empty date string rather than a type error.
-  if (digital != null && physical != null) {
-    if (digital === physical) return { date: digital, kind: 'both' };
-    return digital < physical
-      ? { date: digital, kind: 'digital' }
-      : { date: physical, kind: 'physical' };
-  }
-  if (digital != null) return { date: digital, kind: 'digital' };
-  if (physical != null) return { date: physical, kind: 'physical' };
-  return null;
+  if (earliest.size === 0) return null;
+  return Object.fromEntries(earliest) as ReleaseCalendar;
 }
 
 export interface TmdbTvResponse extends TmdbCreditBase {
@@ -547,14 +557,12 @@ export function normalizeMovieCatalogue(
 ): TmdbMediaCatalogue | null {
   const item = normalizeKindedItem(raw, 'movie', nowIso);
   if (item == null) return null;
-  const home = earliestHomeRelease(raw.release_dates?.results);
+  const releaseCalendar = earliestReleaseDates(raw.release_dates?.results);
   return {
     catalogue: {
       ...item,
       ...catalogueExtras(raw, raw.runtime ?? undefined, undefined),
-      ...(home != null
-        ? { homeReleaseDate: home.date, homeReleaseKind: home.kind }
-        : {}),
+      ...(releaseCalendar != null ? { releaseCalendar } : {}),
     },
     cast: normalizeCastEntries(
       (raw.credits?.cast ?? []).map((entry) => ({

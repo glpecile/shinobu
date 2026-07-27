@@ -1,24 +1,8 @@
+import { formatCalendarDate } from '@/lib/time/calendar-date';
 import type { NormalizedPerson } from '@/types/media';
 
 /**
- * TMDB sends bare calendar dates (YYYY-MM-DD). Parsing them through
- * `new Date(string)` lands at UTC midnight, which `toLocaleDateString`
- * would render a day early west of Greenwich — so the date is formatted
- * in UTC explicitly. Display-only; never compared against "now".
- */
-export function formatPersonDate(date: string): string {
-  const [year, month, day] = date.split('-').map(Number);
-  if (!year || !month || !day) return date;
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-/**
- * Whole years between two bare dates (UTC-parsed like `formatPersonDate`) — the
+ * Whole years between two bare dates (UTC-parsed like `formatCalendarDate`) — the
  * person's age, or age at death when `until` is the deathday.
  */
 export function yearsBetween(from: string, until: Date): number | null {
@@ -44,12 +28,12 @@ export function personMetaLine(person: NormalizedPerson): string {
       const [y, m, d] = person.deathday.split('-').map(Number);
       const died = y && m && d ? new Date(Date.UTC(y, m - 1, d)) : null;
       const age = died != null ? yearsBetween(person.birthday, died) : null;
-      lifespan = `${formatPersonDate(person.birthday)} – ${formatPersonDate(person.deathday)}${
+      lifespan = `${formatCalendarDate(person.birthday)} – ${formatCalendarDate(person.deathday)}${
         age != null ? ` (${age})` : ''
       }`;
     } else {
       const age = yearsBetween(person.birthday, new Date());
-      lifespan = `${formatPersonDate(person.birthday)}${age != null ? ` (${age})` : ''}`;
+      lifespan = `${formatCalendarDate(person.birthday)}${age != null ? ` (${age})` : ''}`;
     }
   }
   return [person.knownForDepartment ?? null, lifespan, person.birthplace ?? null]
