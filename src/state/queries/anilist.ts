@@ -18,7 +18,7 @@ import {
   getEntryState,
   getSeasonalAnime,
   getTrendingAnime,
-  getViewerId,
+  getViewer,
   searchMedia,
   type AniListEntryState,
 } from '@/lib/providers/anilist/reads';
@@ -126,13 +126,13 @@ export function fetchCurrentAnimeEntries(
     queryKey: anilistQueryKeys.currentAnimeEntries(),
     queryFn: async () => {
       const deps = anilistDeps();
-      const viewerId = await queryClient.fetchQuery({
+      const viewer = await queryClient.fetchQuery({
         queryKey: anilistQueryKeys.viewer(),
-        queryFn: () => Effect.runPromise(getViewerId(deps)),
+        queryFn: () => Effect.runPromise(getViewer(deps)),
         staleTime: Number.POSITIVE_INFINITY,
         gcTime: Number.POSITIVE_INFINITY,
       });
-      return Effect.runPromise(getCurrentAnime(deps, { viewerId }));
+      return Effect.runPromise(getCurrentAnime(deps, { viewerId: viewer.id }));
     },
     staleTime: CURRENT_ANIME_STALE_MS,
   });
@@ -158,6 +158,23 @@ export function fetchSeasonalAnime(window: AnimeSeasonWindow): Promise<Normalize
   return Effect.runPromise(
     getSeasonalAnime(anilistDeps(), { season: window.season, year: window.year }),
   );
+}
+
+/**
+ * The connected AniList account (id + handle), on the same forever-cached key
+ * the list reads already prime — so the Manage Trackers card showing "who am I
+ * connected as" costs no extra request once anything else has run, and at most
+ * one on a cold settings visit (the 30 req/min budget is the constraint here,
+ * `docs/solutions/anilist-rate-limit-retry-storm.md`).
+ */
+export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: anilistQueryKeys.viewer(),
+    queryFn: () => Effect.runPromise(getViewer(anilistDeps())),
+    enabled: options.enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+  });
 }
 
 /**

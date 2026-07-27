@@ -2,8 +2,13 @@ import {
   BottomSheetProvider,
   ModalBottomSheet,
 } from '@swmansion/react-native-bottom-sheet';
-import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import {
+  ScrollView,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
@@ -49,49 +54,74 @@ export function Sheet({ open, onClose, children }: SheetProps) {
 const CONTENT_PADDING = 'p-6 pb-12';
 
 /**
- * Sheet content scrolls. The `'content'` detent is clamped natively to the
- * detent cap (sheet height minus the status-bar overlap), and the lib lays the
- * children out at their full natural height inside that cap — so anything
- * taller than the screen was simply cut off with no way to reach it (the log
- * sheet's tag picker, once a few tags exist).
+ * How much of the window a sheet may occupy before its content starts
+ * scrolling. The lib's own `'content'` detent cap is a little higher; staying
+ * under it means the scroller appears before the sheet is pinned, never after.
+ */
+const MAX_SHEET_FRACTION = 0.85;
+
+/**
+ * Sheet content scrolls **only once it has to**.
  *
- * `shrink` is the whole fix, and it needs no measured heights: the lib's own
- * content wrapper is a `flex: 1` child of a node padded down to the cap, so a
- * shrinkable scroller inside it sizes to its content while it fits and clamps
- * to the cap when it doesn't. Short sheets still size to content exactly as
- * before. Nested-scrollable gesture negotiation is automatic in the lib — the
- * drag-to-dismiss handoff needs no wiring here.
+ * The `'content'` detent is measured natively from this subtree, and a
+ * `ScrollView` has no intrinsic height to report — it always answers "as much
+ * as you have". So an unconditional scroller (the first shape of this fix)
+ * pinned *every* sheet to the full detent cap: a two-line sheet opened
+ * full-screen. Neither `flexShrink`, `flexGrow: 0` nor `maxHeight` changes
+ * that; all three were measured on device and none moved the sheet. The
+ * scroller has to be absent from the tree for the detent to see real content.
  *
- * `keyboardShouldPersistTaps="handled"` matters more than usual now: with a
- * scroller in the tree, a tap on Confirm while the tags field is focused would
- * otherwise be swallowed as a keyboard dismissal.
+ * So: render the children in a plain `View` and watch its laid-out height. Only
+ * when that exceeds the cap does the scroller wrap them — which is exactly the
+ * case the scroller existed for (the log sheet's tag picker, once a few tags
+ * exist, used to render its buttons past the bottom edge with no way to reach
+ * them). The measurement stays live inside the scroller, so content that
+ * shrinks again drops back to hugging.
+ *
+ * `keyboardShouldPersistTaps="handled"` matters more than usual in the scroll
+ * branch: a tap on Confirm while the tags field is focused would otherwise be
+ * swallowed as a keyboard dismissal.
  */
 function SheetContent({ children }: { children: ReactNode }) {
+  const maxHeight = Math.round(
+    useWindowDimensions().height * MAX_SHEET_FRACTION,
+  );
+  const [overflows, setOverflows] = useState(false);
+
+  // Measures the children's *natural* height in both branches — inside the
+  // scroller they still lay out unbounded — so this settles rather than
+  // oscillating between the two.
+  function measure(event: LayoutChangeEvent) {
+    setOverflows(event.nativeEvent.layout.height > maxHeight);
+  }
+
+  const body = (
+    <View className={CONTENT_PADDING} onLayout={measure}>
+      {children}
+    </View>
+  );
+
+  if (!overflows) return body;
+
   // Android's soft keyboard covers the sheet outright (plan 0024 U11 / R8), so
-  // it gets the keyboard-aware scroller: its bottom padding grows the
-  // `'content'` detent to lift a short sheet clear, and once the sheet is at
-  // the cap the same padding gives the focused field somewhere to scroll to.
-  // iOS keeps the plain scroller, deliberately — its sheet host already moves
-  // with the keyboard, and a second compensation would over-shoot.
+  // it gets the keyboard-aware scroller: once the sheet is at the cap its
+  // bottom padding gives the focused field somewhere to scroll to. iOS keeps
+  // the plain scroller, deliberately — its sheet host already moves with the
+  // keyboard, and a second compensation would over-shoot.
   if (process.env.EXPO_OS === 'android') {
     return (
       <KeyboardAwareScrollView
         bottomOffset={24}
-        className="shrink"
-        contentContainerClassName={CONTENT_PADDING}
         keyboardShouldPersistTaps="handled"
+        style={{ maxHeight }}
       >
-        {children}
+        {body}
       </KeyboardAwareScrollView>
     );
   }
   return (
-    <ScrollView
-      className="shrink"
-      contentContainerClassName={CONTENT_PADDING}
-      keyboardShouldPersistTaps="handled"
-    >
-      {children}
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight }}>
+      {body}
     </ScrollView>
   );
 }
