@@ -12,6 +12,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PosterWall } from '@/features/watchlist/poster-wall';
 import { cn } from '@/lib/cn';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
@@ -96,6 +97,7 @@ function GridFooter({
 
 export default function LetterboxdWatchlistScreen() {
   const router = useRouter();
+  const pushRoute = usePushRoute();
   const foreground = useCSSVariable('--color-foreground');
   const { openActions, sheetProps } = useCardActions();
   const [refreshing, setRefreshing] = useState(false);
@@ -179,7 +181,7 @@ export default function LetterboxdWatchlistScreen() {
               : undefined
           }
           onItemActions={openActions}
-          onItemPress={(item) => router.push(routes.details(item.id))}
+          onItemPress={(item) => pushRoute(routes.details(item.id))}
           onRefresh={() => void refresh()}
           refreshing={refreshing}
         />

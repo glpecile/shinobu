@@ -1,5 +1,4 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -9,6 +8,7 @@ import { Sheet } from '@/components/sheet';
 import { Skeleton } from '@/components/skeleton';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { initials } from '@/lib/initials';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useTmdbPersonQuery } from '@/state/queries/tmdb';
 import { useTmdbToken } from '@/state/session/tmdb-token';
@@ -123,7 +123,7 @@ export function PersonCreditSheet({
   open,
   onClose,
 }: PersonCreditSheetProps) {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
   // No TMDB token, no person pages and no bio — same gate the cards use.
@@ -171,7 +171,7 @@ export function PersonCreditSheet({
               className="flex-row items-center gap-3 rounded px-5 py-3 mt-6 border border-border"
               onPress={() => {
                 onClose();
-                router.push(
+                pushRoute(
                   credit.tmdbId != null
                     ? routes.person(credit.tmdbId)
                     : routes.personLookup(credit.name),

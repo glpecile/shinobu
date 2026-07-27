@@ -1,5 +1,4 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -14,6 +13,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList } from '@/features/diary/diary-list';
 import { cn } from '@/lib/cn';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
@@ -76,13 +76,13 @@ function DiarySkeleton() {
  * allows), not single-query branching.
  */
 export default function DiaryScreen() {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
 
   function openDetails(id: string) {
-    router.push(routes.details(id));
+    pushRoute(routes.details(id));
   }
 
   let content: React.ReactNode;
@@ -91,7 +91,7 @@ export default function DiaryScreen() {
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile
-          cta={{ label: 'Connect your trackers', onPress: () => router.push(routes.connect) }}
+          cta={{ label: 'Connect your trackers', onPress: () => pushRoute(routes.connect) }}
           description="Connect a tracker to see everything you've logged — from Shinobu and from the providers directly — in one place."
           icon={<StateIcon name="book-outline" />}
           title="Your diary lives here"

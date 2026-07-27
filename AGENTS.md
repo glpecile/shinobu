@@ -55,10 +55,20 @@ are connected into one unified feed. Full product vision + architecture rational
 - **pressto** — every tappable surface. Never use react-native's `Pressable`
   or the `Touchable*` family (oxlint-enforced); import `PresstableScale` /
   `PresstableOpacity` from `components/presstable`. The wrapper adds a
-  leading-edge press debounce (a quick double-tap on a media card must not
-  push the details route twice) and the withUniwind className mapping. Built
-  on gesture-handler + reanimated — `GestureHandlerRootView` wraps the app in
-  `app/_layout.tsx`.
+  leading-edge press debounce (one button's action must not fire twice) and the
+  withUniwind className mapping. Built on gesture-handler + reanimated —
+  `GestureHandlerRootView` wraps the app in `app/_layout.tsx`.
+  **That debounce is per-component-instance and does not protect navigation** —
+  the stack is global, and two instances of one item (a show is both a Continue
+  Watching card and a Calendar cell), a sheet action over the card that opened
+  it, or a Suspense remount all push twice without any pressable being pressed
+  twice. So **navigate with `usePushRoute()` (`@/lib/navigation`), never
+  `useRouter().push`** — it drops a repeat of the same href inside 700ms.
+  `useRouter` stays the way to `back()`/`replace()`. Enforced by
+  `bun check:router-push` (`scripts/check-router-push.ts`, in CI — oxlint has no
+  `no-restricted-syntax`); non-press navigation opts out with a
+  `// push-guard-exempt: <reason>` comment. Why:
+  `docs/solutions/double-tap-pushes-two-detail-screens.md`.
 - **`react-native-keyboard-controller`** — all keyboard avoidance/animation.
   Never use react-native's core `KeyboardAvoidingView` (inconsistent per platform);
   import the `components/keyboard-avoiding-view` wrapper (withUniwind-wrapped,

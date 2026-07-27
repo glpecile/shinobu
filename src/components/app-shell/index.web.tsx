@@ -8,6 +8,7 @@ import { useCSSVariable } from 'uniwind';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import {
   toggleSidebarCollapsed,
@@ -201,6 +202,7 @@ function SidebarItem({
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const pushRoute = usePushRoute();
   const { width } = useWindowDimensions();
   const forced = width < RAIL_BREAKPOINT;
   const userCollapsed = useSidebarCollapsed();
@@ -231,6 +233,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       if (event.key !== 'k' || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
       if (onSearch) emitSearchFocusRequest();
+      // push-guard-exempt: a ⌘K keypress, not a press — and it already can't
+      // repeat, since a second ⌘K on /search takes the focus branch above.
       else router.push(routes.search);
     }
     document.addEventListener('keydown', onKeyDown);
@@ -265,7 +269,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               collapsed={collapsed}
               item={item}
               key={item.href}
-              onPress={() => router.push(item.href)}
+              onPress={() => pushRoute(item.href)}
             />
           ))}
         </View>

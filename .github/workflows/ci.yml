@@ -22,5 +22,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun lint
       - run: bun check:classnames
+      - run: bun check:router-push
       - run: bun typecheck
       - run: bun test

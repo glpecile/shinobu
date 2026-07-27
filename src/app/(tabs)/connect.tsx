@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
@@ -16,6 +15,7 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
 import { ProviderCardsSection } from '@/features/trackers/provider-cards-section';
 import { cn } from '@/lib/cn';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
 
@@ -35,7 +35,7 @@ const CONTENT_GUTTER = process.env.EXPO_OS === 'web' ? 'px-4' : 'px-6';
  * item's details page (which resolves hidden items too — includeHidden).
  */
 function HiddenItemsSection() {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const hidden = useHiddenItems();
   const muted = useCSSVariable('--color-muted');
 
@@ -55,7 +55,7 @@ function HiddenItemsSection() {
             <PresstableOpacity
               accessibilityLabel={`Open ${item.title}`}
               className="flex-1 flex-row items-center gap-3 mr-3"
-              onPress={() => router.push(routes.details(item.id))}
+              onPress={() => pushRoute(routes.details(item.id))}
             >
               <Ionicons
                 color={typeof muted === 'string' ? muted : undefined}
