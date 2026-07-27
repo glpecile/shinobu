@@ -48,6 +48,10 @@ question a viewer opens an unreleased film to ask) is unanswerable.
   all (every TV/manga item, any movie TMDB didn't answer for, no TMDB token)
   means **no section** — not an empty shell.
 - The old inline home-release line is gone. The section replaces it.
+- A film with **no release date at all** can no longer be logged as watched.
+  The log button reads "No release date yet" and is disabled — an announced
+  project (cast, crew, synopsis, no date anywhere) is not something you can
+  have watched.
 
 ---
 
@@ -104,6 +108,25 @@ because every row is a single line; the connector trunk and dot are absolutely p
 the same technique as the diary's tree connector — the trunk stops at the dot
 on the first and last row, and a lone stop draws no trunk at all.
 
+### KTD5 — an undated film is not loggable (reverses the permissive gate)
+
+`hasReleased` — "an absent, empty or unparseable date returns true; the log
+button must never block on missing data" (plan 0014-era) — loses its only
+consumer and goes away. `features/log-media/release-gate.ts` replaces it with a
+three-way `filmReleaseStatus`: `released` / `unreleased` / `unknown`, so the
+button can say *why* it's disabled instead of collapsing "not out yet" and "we
+have no idea" into one sentence.
+
+Films get the strict rule; **episodes keep the permissive one** (`firstAired ==
+null → aired`). A released film's date is a fact every source carries; an
+episode inside an already-airing season routinely has none.
+
+The `year` fallback keeps the strict rule from over-blocking: a Letterboxd item
+(slug + title + year) carries no release date until a TMDB read backfills one,
+and with no TMDB token that read never happens — so a year already behind us
+counts as proof the film is out. Only *no date and no past year* is refused,
+which is exactly the unannounced-project case.
+
 ---
 
 ## Verification
@@ -113,5 +136,8 @@ on the first and last row, and a lone stop draws no trunk at all.
   extraction, premiere exclusion, limited-vs-wide, empty payloads; both
   metadata merges carrying `releaseCalendar`.
 - `bun typecheck`, `bun lint`, `bun check:classnames`.
+- `bun test` — `filmReleaseStatus` across released/unreleased/unknown, the
+  today boundary, the year fallback, and date-beats-year.
 - Manual: a released film (three rows), an unreleased-digital film (accented
-  countdown row), a TV show (no section).
+  countdown row), a TV show (no section), an undated film (disabled
+  "No release date yet" button).

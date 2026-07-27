@@ -4,7 +4,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { haptics } from '@/lib/haptics';
-import { hasAired, hasReleased } from '@/lib/time/has-aired';
+import { hasAired } from '@/lib/time/has-aired';
 import {
   useAniListEntryStateQuery,
   useAniListEpisodesQuery,
@@ -13,6 +13,7 @@ import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { errorOutcomeLinks } from './manual-log-links';
+import { filmReleaseStatus } from './release-gate';
 import { parseTags } from './parse-tags';
 import { OutcomeLink } from './outcome-link';
 import { useLogMedia } from './use-log-media';
@@ -126,11 +127,11 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           ? true
           : hasAired(episodeData.firstAired)));
 
-  // The movie counterpart of that gate (`hasReleased`): a film that isn't out
-  // yet can't be watched, so it can't be logged. Permissive when the date is
-  // unknown — exactly like an episode with no air date — so a provider that
-  // simply carries no release date never blocks a legitimate log.
-  const released = !isFilmLike || hasReleased(item.releaseDate);
+  // The movie counterpart of that gate: a film that isn't out yet can't be
+  // watched, so it can't be logged — and unlike the episode rule above, an
+  // *unknown* release date blocks too (see `filmReleaseStatus`).
+  const releaseStatus = isFilmLike ? filmReleaseStatus(item) : 'released';
+  const released = releaseStatus === 'released';
   // Same gate on the TV side, from Trakt's air date rather than AniList's.
   const seriesEpisodeAired = !isSeries || seriesNext?.aired === true;
   const canLog = nextEpisodeAired && released && seriesEpisodeAired;
@@ -182,11 +183,13 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       ? nextEpisodeAired
         ? `Log episode ${nextEpisode}`
         : `Episode ${nextEpisode} not yet aired`
-      : !released
-        ? 'Not yet released'
-        : isRewatch
-          ? 'Log rewatch'
-          : 'Mark as watched';
+      : releaseStatus === 'unknown'
+        ? 'No release date yet'
+        : releaseStatus === 'unreleased'
+          ? 'Not yet released'
+          : isRewatch
+            ? 'Log rewatch'
+            : 'Mark as watched';
 
   return (
     <View className="mb-6">
