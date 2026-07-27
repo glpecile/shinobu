@@ -9,6 +9,7 @@ import type {
 } from '@/features/up-next/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import type { NotificationCandidate } from './compute-schedule';
 import { computeNotificationSchedule, hashSchedule } from './compute-schedule';
 
 const NOW = new Date('2026-07-23T12:00:00.000Z');
@@ -385,8 +386,191 @@ describe('computeNotificationSchedule — watchlisted episodes (R9)', () => {
   });
 });
 
+/**
+ * A whole season landing at once is one event (owner decision 2026-07-27). Ten
+ * notifications for one show on one morning is the tray version of the ten
+ * identical Calendar cards `groupDayEntries` collapses — and at ten a single
+ * drop takes a fifth of `MAX_SCHEDULED`.
+ */
+describe('computeNotificationSchedule — season drops', () => {
+  const now = localTime('2026-07-27', 12);
+  const dropDay = localDay(now, 4);
+
+  /**
+   * `count` episodes of one show, all landing on the same local day. Staggered
+   * a minute apart on purpose: Trakt routinely spreads a batch's `first_aired`,
+   * and "the season dropped" is a claim about the day, not the second.
+   */
+  function seasonDrop(
+    id: string,
+    count: number,
+    season = 2,
+  ): TraktCalendarUpNextInput[] {
+    return Array.from({ length: count }, (_, index) =>
+      calendarInput(id, localTime(dropDay, 4, index).toISOString(), {
+        season,
+        number: index + 1,
+      }),
+    );
+  }
+
+  test('a whole season landing at once is one notification', () => {
+    const result = computeNotificationSchedule(
+      inputs([], [], [], seasonDrop('bat', 10)),
+      now,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      kind: 'episode',
+      itemId: 'bat',
+      season: 2,
+      // Names the *first* of the batch, which is the airing it fires on.
+      episode: 1,
+      count: 10,
+    });
+    expect(result[0].fireInstant).toBe(localTime(dropDay, 4, 0).toISOString());
+  });
+
+  test('a lone episode carries no count at all', () => {
+    const result = computeNotificationSchedule(
+      inputs([], [], [], seasonDrop('bat', 1)),
+      now,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty('count');
+  });
+
+  test('two shows dropping the same day stay two notifications', () => {
+    const result = computeNotificationSchedule(
+      inputs([], [], [], [...seasonDrop('bat', 4), ...seasonDrop('andor', 3)]),
+      now,
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result.map((candidate) => candidate.itemId)).toEqual(['bat', 'andor']);
+  });
+
+  test('one show airing on two days is two notifications, neither batched', () => {
+    const result = computeNotificationSchedule(
+      inputs(
+        [],
+        [],
+        [],
+        [
+          calendarInput('weekly', localTime(localDay(now, 2), 21).toISOString(), {
+            season: 3,
+            number: 1,
+          }),
+          calendarInput('weekly', localTime(localDay(now, 5), 21).toISOString(), {
+            season: 3,
+            number: 2,
+          }),
+        ],
+      ),
+      now,
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result.every((candidate) => !('count' in candidate))).toBe(true);
+  });
+
+  test('a batch already half-landed counts only what is still ahead', () => {
+    const today = localDay(now, 0);
+    const result = computeNotificationSchedule(
+      inputs(
+        [],
+        [],
+        [],
+        [
+          // 09:00 is behind `now` — already out, already dropped by the window.
+          calendarInput('bat', localTime(today, 9).toISOString(), { season: 2, number: 1 }),
+          calendarInput('bat', localTime(today, 9, 1).toISOString(), { season: 2, number: 2 }),
+          calendarInput('bat', localTime(today, 14).toISOString(), { season: 2, number: 3 }),
+          calendarInput('bat', localTime(today, 15).toISOString(), { season: 2, number: 4 }),
+        ],
+      ),
+      now,
+    );
+
+    expect(result).toHaveLength(1);
+    // The count states what the user has yet to see, not what Trakt listed.
+    expect(result[0]).toMatchObject({ episode: 3, count: 2 });
+  });
+
+  test('a season drop costs one slot against the 50-notification cap', () => {
+    const result = computeNotificationSchedule(
+      inputs(
+        [],
+        [],
+        [],
+        [
+          ...seasonDrop('bat', 60),
+          calendarInput('andor', localTime(localDay(now, 5), 21).toISOString(), {
+            season: 2,
+            number: 9,
+          }),
+        ],
+      ),
+      now,
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result.map((candidate) => candidate.itemId)).toEqual(['bat', 'andor']);
+  });
+
+  test('a film’s theatrical and digital dates on one day stay two notifications', () => {
+    // Releases never batch: they say different things ("in theaters" /
+    // "streaming"), which is the one fact each notification carries.
+    const day = localDay(now, 3);
+    const result = computeNotificationSchedule(
+      inputs(
+        [],
+        [],
+        [releaseInput('dune', day, 'theatrical'), releaseInput('dune', day, 'digital')],
+      ),
+      now,
+    );
+
+    expect(result).toHaveLength(2);
+  });
+});
+
 describe('hashSchedule', () => {
   test('empty schedule hashes to a stable empty value', () => {
     expect(hashSchedule([])).toBe('');
+  });
+
+  test('an unbatched episode hashes exactly as it did before batching', () => {
+    // Byte-identical to the pre-batch subject, so shipping this doesn't
+    // invalidate every stored hash and reschedule everyone once on upgrade (R7).
+    const single: NotificationCandidate = {
+      kind: 'episode',
+      itemId: 'a',
+      title: 'Show a',
+      season: 1,
+      episode: 2,
+      fireInstant: '2026-07-31T04:00:00.000Z',
+    };
+
+    expect(hashSchedule([single])).toBe('a/1/2/2026-07-31T04:00:00.000Z');
+  });
+
+  test('a batch that gains an episode reschedules', () => {
+    const base: NotificationCandidate = {
+      kind: 'episode',
+      itemId: 'bat',
+      title: 'Batman: Caped Crusader',
+      season: 2,
+      episode: 1,
+      fireInstant: '2026-07-31T04:00:00.000Z',
+    };
+
+    // Keying on the lead episode alone would leave the tray claiming ten.
+    expect(hashSchedule([{ ...base, count: 10 }])).not.toBe(
+      hashSchedule([{ ...base, count: 11 }]),
+    );
+    expect(hashSchedule([{ ...base, count: 10 }])).not.toBe(hashSchedule([base]));
   });
 });

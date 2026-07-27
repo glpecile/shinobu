@@ -7,6 +7,7 @@ import type {
   UpNextRelease,
 } from '@/features/up-next/types';
 import { hasAired, isDateOnly, parseLocalInstant } from '@/lib/time/has-aired';
+import { localDayOffset } from '@/lib/time/relative-day';
 
 /**
  * One notification's worth of local schedule, ready to fire (plan 0020 U3).
@@ -25,6 +26,18 @@ export interface EpisodeNotificationCandidate extends NotificationCandidateBase 
   kind: 'episode';
   season: number;
   episode: number;
+  /**
+   * How many episodes of this show land the same local day, when more than one
+   * does — a season drop notifies once (see `collapseBatches`). `season` and
+   * `episode` then name the *first* of the batch, which is the airing this
+   * candidate still fires on.
+   *
+   * Absent, never `1`, for the ordinary single-episode candidate: the batch
+   * hash is built from these fields, and an optional field left unset keeps a
+   * single episode's hash byte-identical to the pre-batch one, so shipping this
+   * doesn't reschedule everyone's whole batch once on upgrade (R7).
+   */
+  count?: number;
 }
 
 /**
@@ -224,6 +237,54 @@ function dedupeReleases(releases: readonly RawCandidate[]): RawCandidate[] {
   });
 }
 
+/**
+ * What counts as "the same event" for collapsing. Keyed on the local **day**
+ * rather than the exact instant: Trakt routinely staggers a batch's
+ * `first_aired` by a minute or two, and "the season dropped" is a claim about
+ * the day, not the second. Releases are excluded by construction — they are
+ * already one row per kind (`dedupeReleases`), and a film's theatrical and
+ * digital dates are different events even when they share a day.
+ */
+function batchKey(candidate: RawCandidate, now: Date): string {
+  return candidate.kind === 'episode'
+    ? `episode/${candidate.itemId}/${localDayOffset(candidate.fireInstant, now)}`
+    : `release/${candidate.itemId}/${candidate.release}`;
+}
+
+/**
+ * A whole season landing at once is **one** notification, not ten (owner
+ * decision 2026-07-27) — the tray version of the ten identical Calendar cards
+ * `groupDayEntries` collapses. It is also a cap problem: at ten episodes a
+ * single season drop takes a fifth of `MAX_SCHEDULED`, and at twenty-four it
+ * would push every other show's airing out of the batch entirely.
+ *
+ * The surviving candidate is the **earliest** of the batch, so the notification
+ * still fires when the first episode actually lands rather than at some
+ * averaged or last instant. Deliberately runs *after* the window filter: an
+ * episode that aired an hour ago has already dropped out, so a partially-landed
+ * batch collapses only what is still ahead and its count states what the user
+ * has yet to see — not what the provider listed.
+ */
+function collapseBatches(
+  candidates: readonly RawCandidate[],
+  now: Date,
+): RawCandidate[] {
+  const batches = new Map<string, { lead: RawCandidate; count: number }>();
+  for (const candidate of candidates) {
+    const key = batchKey(candidate, now);
+    const batch = batches.get(key);
+    if (batch == null) {
+      batches.set(key, { lead: candidate, count: 1 });
+      continue;
+    }
+    batch.count += 1;
+    if (fireOrder(candidate) < fireOrder(batch.lead)) batch.lead = candidate;
+  }
+  return [...batches.values()].map(({ lead, count }) =>
+    count > 1 && lead.kind === 'episode' ? { ...lead, count } : lead,
+  );
+}
+
 /** Future-only, inside the 7-day window: `now < instant < now + 7d` (half-open). */
 function inWindow(candidate: RawCandidate, now: Date): boolean {
   const instant = parseLocalInstant(candidate.fireInstant);
@@ -280,8 +341,13 @@ export function computeNotificationSchedule(
     ...releaseCandidates,
   ];
 
-  return deduped
-    .filter((candidate) => inWindow(candidate, now))
+  // Collapse before the cap, not after: the whole point is that a season drop
+  // costs one slot. Sorting last keeps a collapsed batch filed under the
+  // instant it actually fires on.
+  return collapseBatches(
+    deduped.filter((candidate) => inWindow(candidate, now)),
+    now,
+  )
     .sort((a, b) => fireOrder(a) - fireOrder(b))
     .slice(0, MAX_SCHEDULED)
     .map(stripTmdbId);
@@ -290,12 +356,15 @@ export function computeNotificationSchedule(
 /**
  * The part of a candidate that identifies *what* it is about, alongside its
  * instant. Episodes keep their exact pre-0030 shape so widening the union does
- * not invalidate an already-stored hash and reschedule everyone's batch once.
+ * not invalidate an already-stored hash and reschedule everyone's batch once —
+ * which is also why the batch count only appears once there *is* one. A batch
+ * that gains an eleventh episode changes subject and so reschedules, where
+ * keying on the lead episode alone would leave the tray claiming ten.
  */
 function candidateSubject(candidate: NotificationCandidate): string {
-  return candidate.kind === 'episode'
-    ? `${candidate.season}/${candidate.episode}`
-    : `release:${candidate.release}`;
+  if (candidate.kind === 'release') return `release:${candidate.release}`;
+  const code = `${candidate.season}/${candidate.episode}`;
+  return candidate.count == null ? code : `${code}x${candidate.count}`;
 }
 
 /**
