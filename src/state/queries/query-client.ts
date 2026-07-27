@@ -59,12 +59,18 @@ export function retryDelay(attemptIndex: number): number {
  * default `staleTime: 0` refetched *everything* on every remount — enough to
  * blow AniList's 30 req/min budget from ordinary browsing. One minute keeps
  * navigation free; per-query overrides tune slow-moving reads higher.
+ *
+ * `gcTime` matches the persister's `maxAge` (`state/queries/persist.ts`) on
+ * purpose: only queries still *in* the cache get dehydrated, so leaving the
+ * 5-minute default would let the home feed's entries be collected mid-session
+ * and quietly written out of the snapshot the next launch restores from.
  */
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60_000,
+        gcTime: 24 * 60 * 60_000,
         retry: (failureCount, error) => failureCount < retryCountFor(error),
         retryDelay,
       },

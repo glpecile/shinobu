@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 
 import type { ProviderId } from '@/lib/providers/types';
+import { UP_NEXT_QUERY_ROOT } from '@/state/queries/up-next-cache';
 import {
   clearProviderSession,
   connectedProviderIds,
@@ -56,5 +57,9 @@ export function useDisconnectProvider(): (id: ProviderId) => void {
     // must not serve the old account's data; the AniList viewer id is even
     // cached forever (state/queries/anilist.ts).
     queryClient.removeQueries({ queryKey: [id] });
+    // Up Next is the exception to "every root is a provider id": it merges both
+    // providers under one key, so the line above can't reach it and its entry
+    // is persisted to disk (state/queries/up-next-cache.ts explains why here).
+    queryClient.removeQueries({ queryKey: [...UP_NEXT_QUERY_ROOT] });
   };
 }

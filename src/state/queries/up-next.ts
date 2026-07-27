@@ -24,6 +24,7 @@ import { useConnectedProviders } from '@/state/session';
 import { fetchCurrentAnimeEntries } from './anilist';
 import { cachedAniZipIds } from './mapping';
 import { traktDeps, traktQueryKeys } from './trakt';
+import { UP_NEXT_QUERY_ROOT } from './up-next-cache';
 
 /**
  * The Up Next feed slot (plan 0019 U4): gathers the raw per-provider inputs
@@ -37,7 +38,8 @@ import { traktDeps, traktQueryKeys } from './trakt';
  */
 
 export const upNextQueryKeys = {
-  all: ['up-next'] as const,
+  /** Shared root so the disconnect purge in `state/session` can't drift. */
+  all: [...UP_NEXT_QUERY_ROOT],
   /** The gathered provider inputs — what `invalidateAfterLog` refreshes. */
   inputs: () => [...upNextQueryKeys.all, 'inputs'] as const,
 };
@@ -205,6 +207,18 @@ function upNextOptions(
     queryKey: upNextQueryKeys.inputs(),
     queryFn: () => fetchUpNextInputs(queryClient, connected),
   };
+}
+
+/**
+ * Warm the slot without observing it — the app-foreground path (`UpNextPrefetch`).
+ * `prefetchQuery` honours the client's `staleTime`, so returning to a still-fresh
+ * app is a no-op rather than another run of the fan.
+ */
+export function prefetchUpNextInputs(
+  queryClient: QueryClient,
+  connected: readonly ProviderId[],
+): Promise<void> {
+  return queryClient.prefetchQuery(upNextOptions(queryClient, connected));
 }
 
 export interface UpNextResult extends UpNextData {

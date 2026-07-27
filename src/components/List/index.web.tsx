@@ -22,9 +22,11 @@ export type ListProps<T> = LegendListProps<T>;
 export function List<T>({
   keyboardShouldPersistTaps,
   keyboardDismissMode,
+  recycleItems = false,
   ...props
 }: ListProps<T>): ReactElement {
   void keyboardShouldPersistTaps;
   void keyboardDismissMode;
-  return <LegendList {...props} />;
+  // Defaulted, not omitted — see index.tsx for why `false` is the app-wide answer.
+  return <LegendList {...props} recycleItems={recycleItems} />;
 }
