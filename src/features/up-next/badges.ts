@@ -4,6 +4,7 @@ import {
   localDayOffset,
 } from '@/lib/time/relative-day';
 
+import { entryInstant } from './entry';
 import type { UpNextEntry } from './types';
 
 /**
@@ -22,7 +23,7 @@ export interface CardBadge {
 export const NEW_EPISODE_WINDOW_DAYS = 7;
 
 export function isNewEpisode(entry: UpNextEntry, now: Date): boolean {
-  const offset = localDayOffset(entry.episode.firstAired, now);
+  const offset = localDayOffset(entryInstant(entry), now);
   return offset != null && offset <= 0 && offset > -NEW_EPISODE_WINDOW_DAYS;
 }
 
@@ -32,7 +33,10 @@ export function continueWatchingBadges(
   now: Date,
 ): CardBadge[] {
   const badges: CardBadge[] = [];
-  const runtime = entry.episode.runtime ?? entry.item.runtime;
+  // Only an episode carries its own runtime; a release has nothing but the
+  // film's, which is the same fallback an episode without one already uses.
+  const episodeRuntime = entry.kind === 'episode' ? entry.episode.runtime : null;
+  const runtime = episodeRuntime ?? entry.item.runtime;
   if (runtime != null && runtime > 0) badges.push({ label: `${runtime}m` });
   if (isNewEpisode(entry, now)) badges.push({ label: 'New', tone: 'accent' });
   return badges;
@@ -47,9 +51,10 @@ export function continueWatchingBadges(
  */
 export function calendarBadges(entry: UpNextEntry, now: Date): CardBadge[] {
   const badges: CardBadge[] = [];
-  const day = formatRelativeDay(entry.episode.firstAired, now);
+  const instant = entryInstant(entry);
+  const day = formatRelativeDay(instant, now);
   if (day != null) badges.push({ label: day, tone: 'accent' });
-  const time = formatLocalTime(entry.episode.firstAired);
+  const time = formatLocalTime(instant);
   if (time != null) badges.push({ label: time });
   return badges;
 }

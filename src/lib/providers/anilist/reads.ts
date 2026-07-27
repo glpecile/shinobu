@@ -68,13 +68,21 @@ interface MediaListCollectionResponse {
 }
 
 /**
- * The viewer's currently-watching anime (`MediaListCollection(status:
- * CURRENT)` — plan.md 1.2), flattened across AniList's custom lists and
- * normalized. Feeds the "Your Anime" row and, through the same single
- * request, Up Next's anime half (plan 0019 U2): `nextAiringEpisode` rides
- * along on each media instead of costing one airing-schedule request per
- * series, which the 30 req/min budget cannot afford
- * (docs/solutions/anilist-rate-limit-retry-storm.md). Sorted
+ * The viewer's watching **and** planned anime (`MediaListCollection(status_in:
+ * [CURRENT, PLANNING])` — plan.md 1.2, widened by plan 0030 R12), flattened
+ * across AniList's custom lists and normalized. Feeds the "Your Anime" row and,
+ * through the same single request, Up Next's anime half (plan 0019 U2):
+ * `nextAiringEpisode` rides along on each media instead of costing one
+ * airing-schedule request per series, which the 30 req/min budget cannot afford
+ * (docs/solutions/anilist-rate-limit-retry-storm.md). `status_in` is why the
+ * widening stayed **one** request rather than a second PLANNING read — the same
+ * budget forbids doubling this call.
+ *
+ * The two statuses are not interchangeable and are *not* separated here: every
+ * consumer takes its own slice of one cached list — "Your Anime" filters to
+ * CURRENT (`state/queries/anilist.ts`), Up Next confines PLANNING to Calendar
+ * (`features/up-next/compute.ts`) — which is only possible because
+ * `normalizeCurrentAnimeEntry` now carries `status` through (KTD-3). Sorted
  * most-recently-updated first to match the Trakt watched feed's ordering.
  */
 export function getCurrentAnime(
@@ -85,7 +93,7 @@ export function getCurrentAnime(
     const data = yield* anilistAuthedRequest<MediaListCollectionResponse>(
       deps,
       `query ($userId: Int) {
-        MediaListCollection(userId: $userId, type: ANIME, status: CURRENT) {
+        MediaListCollection(userId: $userId, type: ANIME, status_in: [CURRENT, PLANNING]) {
           lists {
             entries {
               status
@@ -111,13 +119,13 @@ export function getCurrentAnime(
 
     // A media can sit on several custom lists — dedupe by media id.
     const seen = new Set<number>();
-    const current: AniListCurrentEntry[] = [];
+    const listed: AniListCurrentEntry[] = [];
     for (const entry of entries) {
       if (seen.has(entry.media.id)) continue;
       seen.add(entry.media.id);
-      current.push(normalizeCurrentAnimeEntry(entry, nowIso));
+      listed.push(normalizeCurrentAnimeEntry(entry, nowIso));
     }
-    return current.sort((a, b) =>
+    return listed.sort((a, b) =>
       b.item.lastUpdated.localeCompare(a.item.lastUpdated),
     );
   });

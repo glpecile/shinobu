@@ -80,6 +80,7 @@
     "dev:worker": "wrangler dev",
     "test": "bun test",
     "check:classnames": "bun scripts/check-classnames.ts",
+    "check:router-push": "bun scripts/check-router-push.ts",
     "check:links": "bun scripts/check-external-urls.ts",
     "release:bump": "bun scripts/bump-version.ts",
     "typecheck": "tsc --noEmit",

@@ -34,6 +34,12 @@ mock.module('@/state/queries/mapping', () => ({
     calls.push('trakt-search');
     return Promise.resolve(null);
   },
+  // Same process-wide reason as `cachedAniZipEpisodeMap` below: unreachable
+  // from `enrich.ts`, but Up Next's Letterboxd release resolve imports it.
+  cachedTmdbMovieIdByTitle: () => {
+    calls.push('tmdb-movie-search');
+    return Promise.resolve(null);
+  },
   // Never reached from `enrich.ts` (plan 0027 translates *after* enrichment) —
   // present because `mock.module` is process-wide, so the fake must expose
   // every named export any module loaded later imports.

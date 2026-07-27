@@ -14,8 +14,9 @@ import {
   continueWatchingBadges,
 } from '@/features/up-next/badges';
 import { calendarWeek } from '@/features/up-next/compute';
+import { groupDayEntries, soloGroup } from '@/features/up-next/group';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
-import { EpisodeCard } from '@/features/up-next/ui/episode-card';
+import { EpisodeCard, STACK_OFFSET } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
 import { cn } from '@/lib/cn';
@@ -40,10 +41,17 @@ export interface UpNextSectionProps {
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
+// Headroom above the day's cards for a stacked group's card backs, which sit
+// `STACK_OFFSET * 2` px above the face card and would otherwise be clipped by
+// the row. Applied whether or not the day holds a stack: paying it only
+// sometimes would move every card down by 10px the moment a season dropped.
+const STACK_HEADROOM = STACK_OFFSET * 2;
+
 // A landscape card row's height (art h-36 = 144, + mt-2 gap and two text
-// lines). The day's content area reserves this whether it holds cards or the
-// empty-state line, so tapping between days never shifts the feed below.
-const DAY_CONTENT_MIN_HEIGHT = 188;
+// lines), plus the stack headroom above it. The day's content area reserves
+// this whether it holds cards or the empty-state line, so tapping between days
+// never shifts the feed below.
+const DAY_CONTENT_MIN_HEIGHT = 188 + STACK_HEADROOM;
 
 // Beyond this the dots would overflow the ~56px cell; several shows sharing a
 // day is already the busy case, so an exact tally past it earns nothing.
@@ -109,7 +117,14 @@ export function UpNextSection({
   // in Continue Watching) still belong on the today cell — the strip is a
   // schedule, not a second view of the aired/upcoming split. Off-window and
   // instant-less entries fall out inside `calendarWeek`.
-  const week = calendarWeek([...continueWatching, ...calendar], now);
+  //
+  // Grouped straight after bucketing, so everything below this line — the dots
+  // and the cards alike — counts *cards*, not entries. That is what stops a
+  // ten-episode season drop reading as five dots (the cap) on a day that holds
+  // two shows, while a genuinely busy five-show day reads identically.
+  const week = calendarWeek([...continueWatching, ...calendar], now).map(
+    (day) => ({ ...day, groups: groupDayEntries(day.entries) }),
+  );
   const selected = week.find((day) => day.offset === selectedOffset) ?? week[0];
 
   return (
@@ -124,12 +139,26 @@ export function UpNextSection({
             className="px-4"
             showsHorizontalScrollIndicator={false}
           >
+            {/* Keyed on the *entry* id, not the item's: one film contributes a
+                theatrical and a streaming row that share an item id (R3), so
+                keying on the item would collide the moment both land on the
+                same day. The entry id carries the episode or release kind. */}
             {continueWatching.map((entry) => (
-              <View key={entry.item.id} className="mr-3">
+              <View key={entry.id} className="mr-3">
                 <EpisodeCard
-                  action={<QuickLogButton entry={entry} />}
+                  // Continue Watching is aired episodes by construction; the
+                  // narrowing is what the union buys — no release row can slip
+                  // in here and render a quick-log for something with no episode.
+                  action={
+                    entry.kind === 'episode' ? (
+                      <QuickLogButton entry={entry} />
+                    ) : undefined
+                  }
                   badges={continueWatchingBadges(entry, now)}
-                  entry={entry}
+                  // Wrapped, not grouped: this section holds one entry per show
+                  // by construction (the pool fan answers with a single
+                  // `next_episode` pointer each), so it can't produce a batch.
+                  group={soloGroup(entry)}
                   onActionsPress={onItemActions}
                   onPress={onItemPress}
                 />
@@ -153,7 +182,7 @@ export function UpNextSection({
             return (
               <PresstableScale
                 key={day.offset}
-                accessibilityLabel={`${day.label}, ${day.entries.length} airing`}
+                accessibilityLabel={`${day.label}, ${day.groups.length} airing`}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
                 className="mr-2"
@@ -203,13 +232,16 @@ export function UpNextSection({
                   >
                     {day.date.getDate()}
                   </Text>
-                  {/* One dot per episode airing that day (capped), so the strip
-                      conveys *how much* at a glance, not just whether. The row
-                      is a fixed height whether it holds dots or not, so cells
-                      never change size across days. */}
+                  {/* One dot per *card* airing that day (capped), so the strip
+                      conveys *how much* at a glance, not just whether. Cards,
+                      not episodes: a season drop is one thing happening that
+                      day, and counting its ten episodes would peg the cap and
+                      make it indistinguishable from a five-show day. The row is
+                      a fixed height whether it holds dots or not, so cells never
+                      change size across days. */}
                   <View className="flex-row items-center gap-0.5 mt-1 h-1.5">
                     {Array.from({
-                      length: Math.min(day.entries.length, MAX_DAY_DOTS),
+                      length: Math.min(day.groups.length, MAX_DAY_DOTS),
                     }).map((_, index) => (
                       <View
                         key={index}
@@ -239,7 +271,7 @@ export function UpNextSection({
             className="flex-1"
             entering={dayContentAnimation(switchedDay, reduceMotion)}
           >
-            {selected.entries.length === 0 ? (
+            {selected.groups.length === 0 ? (
               // Centered in the reserved space so the empty day reads as a
               // deliberate state, not a layout gap. The 忍 mark renders in the
               // OS fallback font (neither app family ships kanji, AGENTS.md
@@ -253,26 +285,37 @@ export function UpNextSection({
             ) : (
               <ScrollView
                 horizontal
+                // The top padding is the stack headroom: a grouped card's backs
+                // sit above its face card, and a horizontal ScrollView clips at
+                // its own frame.
                 className="px-4"
+                contentContainerStyle={{ paddingTop: STACK_HEADROOM }}
                 showsHorizontalScrollIndicator={false}
               >
-                {selected.entries.map((entry) => (
-                  <View key={entry.item.id} className="mr-3">
+                {/* Entry id, for the same reason as Continue Watching above —
+                    carried on the group by its lead. */}
+                {selected.groups.map((group) => (
+                  <View key={group.id} className="mr-3">
                     <EpisodeCard
                       // Aired-today episodes are watchable right now, so they
                       // keep the quick-log checkmark here too; still-upcoming
-                      // ones only carry their day badge.
+                      // ones — and release rows, which are never loggable —
+                      // only carry their day badge. A batch never gets one
+                      // either: the checkmark logs a single episode, and there
+                      // is no honest answer to which of ten it would advance.
                       action={
-                        entry.status === 'aired' ? (
-                          <QuickLogButton entry={entry} />
+                        group.entries.length === 1 &&
+                        group.lead.status === 'aired' &&
+                        group.lead.kind === 'episode' ? (
+                          <QuickLogButton entry={group.lead} />
                         ) : undefined
                       }
                       badges={
-                        entry.status === 'aired'
-                          ? continueWatchingBadges(entry, now)
-                          : calendarBadges(entry, now)
+                        group.lead.status === 'aired'
+                          ? continueWatchingBadges(group.lead, now)
+                          : calendarBadges(group.lead, now)
                       }
-                      entry={entry}
+                      group={group}
                       onActionsPress={onItemActions}
                       onPress={onItemPress}
                     />

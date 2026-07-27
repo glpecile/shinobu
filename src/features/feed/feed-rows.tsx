@@ -1,10 +1,10 @@
-import { useRouter } from 'expo-router';
 
 import { MediaCarousel } from '@/components/media-carousel';
 import {
   animeSeasonLabel,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { capFeedRow } from './row-cap';
@@ -70,7 +70,7 @@ export function YourWatchlistRow({
   onItemActions,
 }: FeedRowCallbacks & { username: string }) {
   const { data } = useSuspenseYourWatchlistQuery(username);
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const items = useVisibleItems(data);
   return (
     <MediaCarousel
@@ -80,7 +80,7 @@ export function YourWatchlistRow({
       onItemPress={onItemPress}
       // The row shows page 1 (28 films); the rest of the watchlist lives
       // behind the paginated grid (plan 0024 U9).
-      onViewAll={() => router.push(routes.letterboxdWatchlist)}
+      onViewAll={() => pushRoute(routes.letterboxdWatchlist)}
       provider="letterboxd"
       title="Your Watchlist"
     />

@@ -1,9 +1,12 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
+import type { ComponentProps } from 'react';
 import { Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { releaseStops, type ReleaseStop } from '@/features/release-timeline/stops';
 import { cn } from '@/lib/cn';
 import { formatCalendarDate } from '@/lib/time/calendar-date';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { NormalizedMediaItem, ReleaseCalendar } from '@/types/media';
 
 /**
  * Row geometry, shared by the dot and the trunk so the connector is
@@ -12,6 +15,19 @@ import type { NormalizedMediaItem } from '@/types/media';
  */
 const ROW_HEIGHT = 36;
 const ROW_CENTER = ROW_HEIGHT / 2;
+
+/**
+ * How you'd actually watch it, one glyph per stop — the labels read alike
+ * ("Digital"/"Physical" are both just words) while a film strip, a phone and a
+ * disc are separable at a glance. Ionicons ships no popcorn, so theatrical
+ * takes the film strip; every name here is font-based, so the three render
+ * identically on web, iOS and Android with no per-platform fallback.
+ */
+const ICONS: Record<keyof ReleaseCalendar, ComponentProps<typeof Ionicons>['name']> = {
+  theatrical: 'film-outline',
+  digital: 'phone-portrait-outline',
+  physical: 'disc-outline',
+};
 
 function Stop({
   stop,
@@ -22,6 +38,10 @@ function Stop({
   first: boolean;
   last: boolean;
 }) {
+  const accent = useCSSVariable('--color-accent');
+  const muted = useCSSVariable('--color-muted');
+  const iconColor = stop.upcoming ? accent : muted;
+
   return (
     <View className="flex-row items-center h-9">
       <View className="w-4 h-9 relative">
@@ -44,6 +64,15 @@ function Stop({
               ? 'left-[3px] top-[13px] w-2.5 h-2.5 border-2 border-accent bg-background'
               : 'left-1 top-[14px] w-2 h-2 bg-muted',
           )}
+        />
+      </View>
+      {/* Fixed-width and centered: the three glyphs aren't the same width, and
+          the labels have to start on one line for the rail to read as a rail. */}
+      <View className="w-5 items-center mr-2">
+        <Ionicons
+          color={typeof iconColor === 'string' ? iconColor : undefined}
+          name={ICONS[stop.kind]}
+          size={15}
         />
       </View>
       <Text

@@ -16,12 +16,13 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PersonNotFound, PersonSkeleton, personMetaLine } from '@/features/person';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { initials } from '@/lib/initials';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
 
 function PersonContent({ tmdbId }: { tmdbId: number }) {
   const { data } = useSuspenseTmdbPersonQuery({ tmdbId });
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const { person, rows } = data;
   const meta = personMetaLine(person);
   // Same per-card actions dialog as the home feed.
@@ -74,7 +75,7 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
             items={row.items}
             key={row.role}
             onItemActions={openActions}
-            onItemPress={(item) => router.push(routes.details(item.id))}
+            onItemPress={(item) => pushRoute(routes.details(item.id))}
             subtitles={row.details}
             title={row.role}
           />

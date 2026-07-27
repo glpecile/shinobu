@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  normalizeCalendarMovieRow,
+  normalizeCalendarShowRow,
   normalizeCastEntry,
   normalizeCrew,
   normalizeHistoryItem,
@@ -500,5 +502,207 @@ describe('normalizeHistoryItem', () => {
       type: 'person',
     } as unknown as TraktHistoryItem;
     expect(normalizeHistoryItem(raw)).toBeNull();
+  });
+});
+
+// ---- My calendars (plan 0030 U3) ----
+
+const NOW_ISO = '2026-07-27T12:00:00.000Z';
+
+const CALENDAR_SHOW: TraktShow = {
+  title: 'Frieren',
+  year: 2023,
+  ids: { trakt: 300, tmdb: 209867 },
+  images: { poster: ['walter.trakt.tv/shows/300/poster.jpg'] },
+};
+
+const CALENDAR_MOVIE: TraktMovie = {
+  title: 'Dune: Part Three',
+  year: 2026,
+  ids: { trakt: 400, tmdb: 1234 },
+};
+
+describe('normalizeCalendarShowRow', () => {
+  test('normalizes the show as the item and the episode alongside it', () => {
+    const entry = normalizeCalendarShowRow(
+      {
+        first_aired: '2026-07-29T01:00:00.000Z',
+        episode: { season: 2, number: 4, title: 'Aura the Guillotine', runtime: 24 },
+        show: CALENDAR_SHOW,
+      },
+      NOW_ISO,
+    );
+
+    expect(entry?.item.id).toBe('trakt-300');
+    expect(entry?.item.type).toBe('TV');
+    expect(entry?.item.coverImage).toBe(
+      'https://walter.trakt.tv/shows/300/poster.jpg',
+    );
+    expect(entry?.episode).toEqual({
+      season: 2,
+      number: 4,
+      title: 'Aura the Guillotine',
+      firstAired: '2026-07-29T01:00:00.000Z',
+      runtime: 24,
+    });
+  });
+
+  test('the row-level air instant wins over the episode copy', () => {
+    // Both carry one under extended=full; the row is what Trakt bucketed the
+    // day by, so a disagreement must not move the entry to another day.
+    const entry = normalizeCalendarShowRow(
+      {
+        first_aired: '2026-07-29T01:00:00.000Z',
+        episode: {
+          season: 1,
+          number: 1,
+          first_aired: '2026-07-30T01:00:00.000Z',
+        },
+        show: CALENDAR_SHOW,
+      },
+      NOW_ISO,
+    );
+    expect(entry?.episode.firstAired).toBe('2026-07-29T01:00:00.000Z');
+  });
+
+  test('falls back to the episode air instant when the row omits one', () => {
+    const entry = normalizeCalendarShowRow(
+      {
+        episode: { season: 1, number: 1, first_aired: '2026-07-30T01:00:00.000Z' },
+        show: CALENDAR_SHOW,
+      },
+      NOW_ISO,
+    );
+    expect(entry?.episode.firstAired).toBe('2026-07-30T01:00:00.000Z');
+  });
+
+  test('omits an empty title and a missing runtime rather than emitting blanks', () => {
+    const entry = normalizeCalendarShowRow(
+      {
+        first_aired: '2026-07-29T01:00:00.000Z',
+        episode: { season: 1, number: 1, title: '', runtime: null },
+        show: CALENDAR_SHOW,
+      },
+      NOW_ISO,
+    );
+    expect(entry?.episode).toEqual({
+      season: 1,
+      number: 1,
+      firstAired: '2026-07-29T01:00:00.000Z',
+    });
+  });
+
+  test('a malformed row drops instead of throwing', () => {
+    const airing = '2026-07-29T01:00:00.000Z';
+    const episode = { season: 1, number: 1 };
+
+    // No show at all.
+    expect(
+      normalizeCalendarShowRow({ first_aired: airing, episode }, NOW_ISO),
+    ).toBeNull();
+    // A show Trakt can't identify — the item id would be `trakt-undefined`.
+    expect(
+      normalizeCalendarShowRow(
+        { first_aired: airing, episode, show: { title: 'Nameless', ids: {} } },
+        NOW_ISO,
+      ),
+    ).toBeNull();
+    // No episode numbering to render or log against.
+    expect(
+      normalizeCalendarShowRow({ first_aired: airing, show: CALENDAR_SHOW }, NOW_ISO),
+    ).toBeNull();
+    expect(
+      normalizeCalendarShowRow(
+        { first_aired: airing, episode: { season: 1 }, show: CALENDAR_SHOW },
+        NOW_ISO,
+      ),
+    ).toBeNull();
+    // A numbering of the wrong type is as unusable as an absent one.
+    expect(
+      normalizeCalendarShowRow(
+        {
+          first_aired: airing,
+          episode: { season: '1', number: 1 } as unknown as { season: number },
+          show: CALENDAR_SHOW,
+        },
+        NOW_ISO,
+      ),
+    ).toBeNull();
+    // Nothing to bucket the entry on any day by.
+    expect(
+      normalizeCalendarShowRow({ episode, show: CALENDAR_SHOW }, NOW_ISO),
+    ).toBeNull();
+    expect(
+      normalizeCalendarShowRow(
+        { first_aired: '', episode, show: CALENDAR_SHOW },
+        NOW_ISO,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('normalizeCalendarMovieRow', () => {
+  test('fills the ReleaseCalendar slot its calendar answers for', () => {
+    const theatrical = normalizeCalendarMovieRow(
+      { released: '2026-07-31', movie: CALENDAR_MOVIE },
+      'theatrical',
+      NOW_ISO,
+    );
+    expect(theatrical).toMatchObject({ kind: 'theatrical', date: '2026-07-31' });
+    expect(theatrical?.item.id).toBe('trakt-400');
+    expect(theatrical?.item.type).toBe('MOVIE');
+    // Exactly one slot — an absent sibling means "Trakt didn't answer for it",
+    // not "no such release" (the TMDB catalogue may fill it later).
+    expect(theatrical?.item.releaseCalendar).toEqual({ theatrical: '2026-07-31' });
+
+    expect(
+      normalizeCalendarMovieRow(
+        { released: '2026-08-12', movie: CALENDAR_MOVIE },
+        'digital',
+        NOW_ISO,
+      )?.item.releaseCalendar,
+    ).toEqual({ digital: '2026-08-12' });
+
+    expect(
+      normalizeCalendarMovieRow(
+        { released: '2026-09-01', movie: CALENDAR_MOVIE },
+        'physical',
+        NOW_ISO,
+      )?.item.releaseCalendar,
+    ).toEqual({ physical: '2026-09-01' });
+  });
+
+  test('a malformed row drops instead of throwing', () => {
+    // No date to release on.
+    expect(
+      normalizeCalendarMovieRow({ movie: CALENDAR_MOVIE }, 'theatrical', NOW_ISO),
+    ).toBeNull();
+    expect(
+      normalizeCalendarMovieRow(
+        { released: null, movie: CALENDAR_MOVIE },
+        'theatrical',
+        NOW_ISO,
+      ),
+    ).toBeNull();
+    // An instant is never truncated to a day — that would name the UTC day,
+    // which is the wrong local day west of Greenwich.
+    expect(
+      normalizeCalendarMovieRow(
+        { released: '2026-07-31T00:00:00.000Z', movie: CALENDAR_MOVIE },
+        'theatrical',
+        NOW_ISO,
+      ),
+    ).toBeNull();
+    // No movie, or one Trakt can't identify.
+    expect(
+      normalizeCalendarMovieRow({ released: '2026-07-31' }, 'theatrical', NOW_ISO),
+    ).toBeNull();
+    expect(
+      normalizeCalendarMovieRow(
+        { released: '2026-07-31', movie: { title: 'Untitled', ids: {} } },
+        'theatrical',
+        NOW_ISO,
+      ),
+    ).toBeNull();
   });
 });

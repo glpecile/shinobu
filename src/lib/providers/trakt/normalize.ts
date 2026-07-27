@@ -5,7 +5,9 @@ import type {
   NormalizedMediaItem,
   NormalizedSeason,
   NormalizedStudio,
+  ReleaseCalendar,
 } from '@/types/media';
+import { isDateOnly } from '@/lib/time/has-aired';
 
 /** Raw Trakt payload shapes — these never escape lib/providers (AGENTS.md Data Contract). */
 
@@ -578,6 +580,138 @@ export function normalizeHistoryItem(
     };
   }
   return null;
+}
+
+// ---- My calendars (plan 0030) ----
+
+/**
+ * The episode embedded in a `/calendars/*` show row. Every field is optional
+ * because calendar rows are *validated*, not assumed: Trakt indexes episodes
+ * whose numbering or air date it only partly knows, and one such row must cost
+ * its own entry, never the whole section (plan 0030 U3).
+ */
+export interface TraktCalendarEpisodeRaw {
+  season?: number | null;
+  number?: number | null;
+  title?: string | null;
+  /** Repeated from the row under `extended=full`; the row's is authoritative. */
+  first_aired?: string | null;
+  runtime?: number | null;
+}
+
+/**
+ * One row from `/calendars/my/shows/{start_date}/{days}` — episodes of shows
+ * the user has watched **or watchlisted**, already minus the shows they hid
+ * from their Trakt calendar (KTD-2). The air instant lives at the *row* level.
+ */
+export interface TraktCalendarShowRow {
+  /** ISO instant (UTC) — compare through `lib/time/has-aired`, never naively. */
+  first_aired?: string | null;
+  episode?: TraktCalendarEpisodeRaw | null;
+  show?: TraktShow | null;
+}
+
+/** One upcoming airing: the show as a normalized item + the episode airing. */
+export interface TraktCalendarEpisode {
+  item: NormalizedMediaItem;
+  /**
+   * Deliberately the same shape as the `progress/watched` pointer, so Up Next
+   * reads one episode type whichever Trakt path produced it.
+   */
+  episode: TraktNextEpisode;
+}
+
+export function normalizeCalendarShowRow(
+  raw: TraktCalendarShowRow,
+  nowIso: string,
+): TraktCalendarEpisode | null {
+  const show = raw.show;
+  const episode = raw.episode;
+  if (show?.ids?.trakt == null || show.title == null || show.title === '') {
+    return null;
+  }
+
+  // `typeof`, not `!= null`: a numbering Trakt sent as something other than a
+  // number is as unusable as an absent one, and both must drop.
+  const season = episode?.season;
+  const number = episode?.number;
+  if (typeof season !== 'number' || typeof number !== 'number') return null;
+  // Season 0 is specials, and the calendar returns them. `normalizeWatchedShow`
+  // already excludes season 0 from progress for the same reason: an OVA or recap
+  // airing Wednesday is not the next thing to watch, and rendering it as
+  // "S0E1" on a show the user is caught up on reads as a bug.
+  if (season <= 0) return null;
+
+  // A calendar row exists *because* it airs on a date — one without an air
+  // instant can neither be bucketed into a day nor ordered, so it drops.
+  const firstAired = raw.first_aired ?? episode?.first_aired;
+  if (firstAired == null || firstAired === '') return null;
+
+  const title = episode?.title;
+  const runtime = episode?.runtime;
+  return {
+    item: normalizeShow(show, nowIso),
+    episode: {
+      season,
+      number,
+      ...(title != null && title !== '' ? { title } : {}),
+      firstAired,
+      ...(typeof runtime === 'number' ? { runtime } : {}),
+    },
+  };
+}
+
+/**
+ * One row from a `/calendars/my/{movies|streaming|dvd}` response. All three
+ * share this shape — only the meaning of `released` differs, which is why the
+ * release kind is passed in rather than inferred from the payload.
+ */
+export interface TraktCalendarMovieRow {
+  /** Bare `YYYY-MM-DD` — a release is a calendar day, not an instant. */
+  released?: string | null;
+  movie?: TraktMovie | null;
+}
+
+/** One dated film release, keyed to the `ReleaseCalendar` slot it fills. */
+export interface TraktCalendarRelease {
+  item: NormalizedMediaItem;
+  /**
+   * Which calendar produced it: `/movies` → theatrical, `/streaming` →
+   * digital, `/dvd` → physical. Same union as `ReleaseCalendar`'s keys so a
+   * Trakt-sourced date and a TMDB-sourced one stay interchangeable (KTD-4).
+   */
+  kind: keyof ReleaseCalendar;
+  /** Bare `YYYY-MM-DD`, as Trakt states it. */
+  date: string;
+}
+
+export function normalizeCalendarMovieRow(
+  raw: TraktCalendarMovieRow,
+  kind: keyof ReleaseCalendar,
+  nowIso: string,
+): TraktCalendarRelease | null {
+  const movie = raw.movie;
+  if (movie?.ids?.trakt == null || movie.title == null || movie.title === '') {
+    return null;
+  }
+
+  // Bare date or nothing. An ISO instant is *not* truncated to its first ten
+  // characters here: that names the UTC day, which is the wrong local day west
+  // of Greenwich — exactly the bug `lib/time` exists to prevent. An unexpected
+  // shape drops rather than releasing a film on the wrong day.
+  const date = raw.released;
+  if (date == null || !isDateOnly(date)) return null;
+
+  return {
+    item: {
+      ...normalizeMovie(movie, nowIso),
+      // Trakt fills exactly the one slot this calendar answers for; the other
+      // two stay absent unless TMDB's catalogue read supplies them later.
+      releaseCalendar: { [kind]: date },
+    },
+    kind,
+    date,
+  };
 }
 
 export function normalizeWatchedShow(raw: TraktWatchedShow): NormalizedMediaItem {

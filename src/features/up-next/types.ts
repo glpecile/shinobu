@@ -1,5 +1,8 @@
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
-import type { TraktNextEpisode } from '@/lib/providers/trakt/normalize';
+import type {
+  TraktCalendarEpisode,
+  TraktNextEpisode,
+} from '@/lib/providers/trakt/normalize';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -29,11 +32,22 @@ export interface UpNextEpisode {
   runtime?: number;
 }
 
-export interface UpNextEntry {
-  /** Stable list key: item id + episode, so an advance re-keys the row. */
+/** One dated release of a film, as the provider's calendars state it. */
+export interface UpNextRelease {
+  /** Which release this row is — each gets its own labelled entry (R3). */
+  kind: 'theatrical' | 'digital' | 'physical';
+  /**
+   * Bare `YYYY-MM-DD`: a release is a calendar day, not an instant. `lib/time`
+   * reads it as *local* midnight (so it buckets on the user's day) and
+   * `isDateOnly` keeps it from rendering a 00:00 time nobody stated.
+   */
+  date: string;
+}
+
+interface UpNextEntryBase {
+  /** Stable list key: item id + episode or release, so an advance re-keys the row. */
   id: string;
   item: NormalizedMediaItem;
-  episode: UpNextEpisode;
   /** `aired` → Continue Watching, `upcoming` → Calendar. Never both (R3). */
   status: 'aired' | 'upcoming';
   /**
@@ -44,6 +58,27 @@ export interface UpNextEntry {
   source: ProviderId;
 }
 
+/** The next unwatched episode of a tracked show — quick-loggable once aired. */
+export interface UpNextEpisodeEntry extends UpNextEntryBase {
+  kind: 'episode';
+  episode: UpNextEpisode;
+}
+
+/** A film release date: no episode to log, and none to fabricate. */
+export interface UpNextReleaseEntry extends UpNextEntryBase {
+  kind: 'release';
+  release: UpNextRelease;
+}
+
+/**
+ * Discriminated on `kind` rather than an optional `episode` (KTD-1): the
+ * discriminant makes an unhandled arm a compile error, where an optional field
+ * would only scatter null checks that nothing forces a consumer to write. Read
+ * the two arms through `entryInstant`/`entryLabel` (`./entry`) rather than
+ * re-deriving them per call site.
+ */
+export type UpNextEntry = UpNextEpisodeEntry | UpNextReleaseEntry;
+
 export interface UpNextData {
   /** Aired and waiting — quick-loggable. */
   continueWatching: UpNextEntry[];
@@ -51,10 +86,38 @@ export interface UpNextData {
   calendar: UpNextEntry[];
 }
 
-/** One pooled Trakt show plus its `next_episode` pointer (undefined = ended). */
+/**
+ * One pooled Trakt show plus its `next_episode` pointer (undefined = ended).
+ * Continue Watching's only Trakt source since KTD-2 — it is the sole read that
+ * can answer "your next *unwatched* episode", which the calendars cannot.
+ */
 export interface TraktUpNextInput {
   item: NormalizedMediaItem;
   nextEpisode?: TraktNextEpisode;
+}
+
+/**
+ * One upcoming airing from `/calendars/my/shows` — Calendar's Trakt source
+ * since KTD-2. A different question from `TraktUpNextInput`: "what airs this
+ * week for a show you watch *or* watchlist", not "what you haven't seen yet".
+ * That is why it feeds only the upcoming split and never Continue Watching
+ * (R4) — a watchlisted show's airing is not something you can quick-log.
+ */
+export type TraktCalendarUpNextInput = TraktCalendarEpisode;
+
+/**
+ * One dated film release, as a provider's calendar stated it. Carries its own
+ * `source` because more than one provider feeds this array (Trakt's movie
+ * calendars now, Letterboxd's resolved watchlist next) and nothing downstream
+ * can re-derive which one a row came from.
+ */
+export interface ReleaseUpNextInput {
+  item: NormalizedMediaItem;
+  /** Which release this is — one input per kind, never one row that moves (R3). */
+  kind: UpNextRelease['kind'];
+  /** Bare `YYYY-MM-DD`, for the reason `UpNextRelease.date` spells out. */
+  date: string;
+  source: ProviderId;
 }
 
 /**
@@ -67,7 +130,12 @@ export interface AniListUpNextInput extends AniListCurrentEntry {
 }
 
 export interface UpNextInputs {
+  /** Pooled `next_episode` pointers — Continue Watching's source (KTD-2). */
   trakt: TraktUpNextInput[];
+  /** This week's Trakt airings — Calendar's source (KTD-2). */
+  traktCalendar: TraktCalendarUpNextInput[];
+  /** Dated film releases from every watchlist source, one per kind (R3). */
+  releases: ReleaseUpNextInput[];
   anilist: AniListUpNextInput[];
   /** Providers whose inputs failed — surfaced, never silently empty (R4). */
   errors: Array<{ provider: ProviderId; message: string }>;

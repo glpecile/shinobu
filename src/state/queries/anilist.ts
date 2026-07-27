@@ -74,10 +74,11 @@ export const anilistQueryKeys = {
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
   currentAnime: () => [...anilistQueryKeys.all, 'current-anime'] as const,
   /**
-   * The same currently-watching read, cached with its airing info intact
+   * The same list read, cached with its airing info and list status intact
    * (plan 0019 U2). `currentAnime` is derived from *this* entry, so the feed
    * row keeps its plain `NormalizedMediaItem[]` contract while Up Next reads
-   * the richer shape — one network request feeds both.
+   * the richer shape — one network request feeds both, now including the
+   * PLANNING entries only Up Next's Calendar half wants (plan 0030 R12).
    */
   currentAnimeEntries: () =>
     [...anilistQueryKeys.all, 'current-anime-entries'] as const,
@@ -141,12 +142,21 @@ export function fetchCurrentAnimeEntries(
 /**
  * The same list as flat feed items — the "Your Anime" row's contract. Exposed
  * as a plain promise so `useUnifiedFeed` can consume it as a queryFn.
+ *
+ * Filtered to CURRENT *here* rather than at the read (plan 0030 KTD-3): the
+ * request also carries PLANNING entries, which exist for Up Next's Calendar
+ * half alone. "Your Anime" means what you are watching — listing plan-to-watch
+ * titles in it is the first regression widening the query invites, and doing
+ * the filtering in the selector is what lets one cached request keep serving
+ * both consumers on the 30 req/min budget.
  */
 export async function fetchCurrentAnime(
   queryClient: QueryClient,
 ): Promise<NormalizedMediaItem[]> {
   const entries = await fetchCurrentAnimeEntries(queryClient);
-  return entries.map((entry) => entry.item);
+  return entries
+    .filter((entry) => entry.status === 'CURRENT')
+    .map((entry) => entry.item);
 }
 
 export function fetchTrendingAnime(options: { limit?: number } = {}): Promise<NormalizedMediaItem[]> {

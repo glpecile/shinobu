@@ -8,15 +8,19 @@ import type {
   NormalizedMediaItem,
   NormalizedSeason,
   NormalizedStudio,
+  ReleaseCalendar,
 } from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
 import type {
   SeasonLayout,
   SeasonSlot,
 } from '@/lib/providers/mapping/season-layout';
+import { isDateOnly } from '@/lib/time/has-aired';
 import { traktAuthedRequest, traktRequest } from './api';
 import type { TraktDeps } from './deps';
 import {
+  normalizeCalendarMovieRow,
+  normalizeCalendarShowRow,
   normalizeCastEntry,
   normalizeCrew,
   normalizeHistoryItem,
@@ -31,6 +35,10 @@ import {
   normalizeWatchedShow,
   orderSeasons,
   type NormalizedMediaImages,
+  type TraktCalendarEpisode,
+  type TraktCalendarMovieRow,
+  type TraktCalendarRelease,
+  type TraktCalendarShowRow,
   type TraktHistoryItem,
   type TraktImages,
   type TraktPeopleResponse,
@@ -366,4 +374,145 @@ export function getShowWatchedProgress(
     deps,
     `/shows/${params.traktId}/progress/watched?extended=full`,
   ).pipe(Effect.map(normalizeWatchedProgress));
+}
+
+// ---- My calendars (plan 0030) ----
+
+/**
+ * Trakt rejects a calendar range longer than 33 days, so the cap is enforced
+ * here: a caller asking for more gets 33 days of results rather than a 4xx
+ * that would take the whole Calendar section down.
+ */
+const CALENDAR_MAX_DAYS = 33;
+
+/** Calendar's window is today … today+6 — seven local days (plan 0030 R1). */
+const CALENDAR_DEFAULT_DAYS = 7;
+
+export interface TraktCalendarParams {
+  /** Bare `YYYY-MM-DD`; defaults to the user's *local* today. */
+  startDate?: string;
+  /** Clamped to 1…33 (`CALENDAR_MAX_DAYS`). */
+  days?: number;
+}
+
+/**
+ * The local calendar day of `now`, never the UTC one: the window a user means
+ * by "this week" is the one their own clock is in, and `toISOString().slice(0,
+ * 10)` would start the range on yesterday for anyone west of Greenwich after
+ * their local evening.
+ */
+function localCalendarDate(now: Date): string {
+  const month = `${now.getMonth() + 1}`.padStart(2, '0');
+  const day = `${now.getDate()}`.padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * The `{start_date}/{days}` path segments for any calendar read — exported
+ * because the clamping (and the local-day default) is the part worth testing
+ * without a round-trip.
+ */
+export function traktCalendarRange(
+  params: TraktCalendarParams,
+  now: Date,
+): { startDate: string; days: number } {
+  const requested = params.days ?? CALENDAR_DEFAULT_DAYS;
+  const days = Number.isFinite(requested)
+    ? Math.min(Math.max(Math.trunc(requested), 1), CALENDAR_MAX_DAYS)
+    : CALENDAR_DEFAULT_DAYS;
+  // A start date that isn't a bare calendar day would make Trakt 4xx the whole
+  // request; fall back to today rather than fail the section over a bad caller.
+  const startDate =
+    params.startDate != null && isDateOnly(params.startDate)
+      ? params.startDate
+      : localCalendarDate(now);
+  return { startDate, days };
+}
+
+/**
+ * Upcoming episodes of every show the user has watched **or watchlisted**, in
+ * one authed call (KTD-2) — which is why this replaces the pooled
+ * `progress/watched` fan as Calendar's Trakt source: that fan caps at 20 shows
+ * and can only speak for shows already started. Trakt applies the user's
+ * hidden-from-calendar setting server-side, so nothing is re-filtered here.
+ *
+ * `extended=full,images` for the episode's title/runtime and the show's
+ * poster — calendars still carry `images`, unlike `/sync/watched/*` since the
+ * 2026 change (docs/solutions/trakt-watched-endpoints-2026-api-changes.md).
+ */
+export function getMyShowsCalendar(
+  deps: TraktDeps,
+  params: TraktCalendarParams = {},
+): Effect.Effect<TraktCalendarEpisode[], ProviderError> {
+  return Effect.gen(function* () {
+    const now = new Date(yield* Clock.currentTimeMillis);
+    const { startDate, days } = traktCalendarRange(params, now);
+    const raw = yield* traktAuthedRequest<TraktCalendarShowRow[]>(
+      deps,
+      `/calendars/my/shows/${startDate}/${days}?extended=full,images`,
+    );
+    const nowIso = now.toISOString();
+    return raw
+      .map((row) => normalizeCalendarShowRow(row, nowIso))
+      .filter((entry) => entry != null);
+  });
+}
+
+/**
+ * The three movie calendars differ only in path segment and in which
+ * `ReleaseCalendar` slot their `released` date fills — the payload shape is
+ * identical, so they share one read.
+ */
+function getMyMovieCalendar(
+  deps: TraktDeps,
+  segment: 'movies' | 'streaming' | 'dvd',
+  kind: keyof ReleaseCalendar,
+  params: TraktCalendarParams,
+): Effect.Effect<TraktCalendarRelease[], ProviderError> {
+  return Effect.gen(function* () {
+    const now = new Date(yield* Clock.currentTimeMillis);
+    const { startDate, days } = traktCalendarRange(params, now);
+    const raw = yield* traktAuthedRequest<TraktCalendarMovieRow[]>(
+      deps,
+      `/calendars/my/${segment}/${startDate}/${days}?extended=full,images`,
+    );
+    const nowIso = now.toISOString();
+    return raw
+      .map((row) => normalizeCalendarMovieRow(row, kind, nowIso))
+      .filter((entry) => entry != null);
+  });
+}
+
+/** Theatrical release dates for the user's watchlisted/collected films. */
+export function getMyMoviesCalendar(
+  deps: TraktDeps,
+  params: TraktCalendarParams = {},
+): Effect.Effect<TraktCalendarRelease[], ProviderError> {
+  return getMyMovieCalendar(deps, 'movies', 'theatrical', params);
+}
+
+/**
+ * Streaming (digital) release dates. `streaming` is the calendar *type* Trakt
+ * actually names — `digital` 404s with "'type' is required", which is what the
+ * published summaries disagreed about
+ * (docs/solutions/trakt-streaming-calendar-path.md). If this ever stops
+ * answering, KTD-4's fallback is TMDB's `releaseCalendar.digital`, which the
+ * details screen already renders — no new normalization either way.
+ */
+export function getMyStreamingCalendar(
+  deps: TraktDeps,
+  params: TraktCalendarParams = {},
+): Effect.Effect<TraktCalendarRelease[], ProviderError> {
+  return getMyMovieCalendar(deps, 'streaming', 'digital', params);
+}
+
+/**
+ * Physical (disc) release dates — carried for completeness; plan 0030 R3
+ * renders only theatrical and digital rows in v1.
+ */
+export function getMyDvdCalendar(
+  deps: TraktDeps,
+  params: TraktCalendarParams = {},
+): Effect.Effect<TraktCalendarRelease[], ProviderError> {
+  return getMyMovieCalendar(deps, 'dvd', 'physical', params);
 }

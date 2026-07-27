@@ -1,4 +1,4 @@
-import { hasAired } from '@/lib/time/has-aired';
+import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
 import {
   formatDayHeading,
   localDayAt,
@@ -6,8 +6,11 @@ import {
 } from '@/lib/time/relative-day';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { entryInstant } from './entry';
 import type {
   AniListUpNextInput,
+  ReleaseUpNextInput,
+  TraktCalendarUpNextInput,
   TraktUpNextInput,
   UpNextData,
   UpNextEntry,
@@ -26,8 +29,10 @@ import type {
  * How many recently-watched Trakt shows get a per-show progress request. The
  * budget, not the product, sets this: each pooled show is one authed call
  * against 1000 per 5 minutes (docs/solutions/trakt-watched-endpoints-2026-api-changes.md).
- * Shows past the cap simply don't surface — including in Calendar, since both
- * sections share the pool (KTD-2).
+ * Shows past the cap don't reach **Continue Watching** — that is the whole
+ * remaining cost of the cap. Calendar no longer pays it: it reads
+ * `/calendars/my/shows` instead, one call for every watched *or watchlisted*
+ * show (KTD-2).
  */
 export const UP_NEXT_POOL_SIZE = 20;
 
@@ -36,10 +41,10 @@ export const UP_NEXT_WINDOW_DAYS = 7;
 
 /**
  * The shows worth spending progress requests on: most recently watched first
- * (`lastUpdated` is Trakt's `last_watched_at` on watched-show items). Caught-up
- * shows stay in — their `next_episode` is an *upcoming* one, which is exactly
- * what Calendar is made of, so filtering on "not caught up" would structurally
- * empty the Trakt half of it (KTD-2). Called before the fetch fan, never after.
+ * (`lastUpdated` is Trakt's `last_watched_at` on watched-show items). Called
+ * before the fetch fan, so it can only rank by recency — whether a show is
+ * caught up is what the progress call itself answers, and a caught-up show's
+ * upcoming pointer is now the calendar's business rather than the pool's.
  */
 export function selectUpNextPool(
   watchedShows: readonly NormalizedMediaItem[],
@@ -61,10 +66,16 @@ function entryId(
 }
 
 /**
- * Trakt's pointer is authoritative about *which* episode is next; `hasAired`
- * decides which section it lands in. A pointer with no air date at all is
- * excluded from both: unknown is not "aired", and pretending otherwise would
- * offer a quick-log for something that may not exist yet.
+ * Trakt's pointer is authoritative about *which* episode is next, and this
+ * source now answers for Continue Watching **only** (KTD-2): an unaired pointer
+ * yields nothing here, because `/calendars/my/shows` states the same airing for
+ * a strictly larger set of shows. Emitting it from both would put the same
+ * episode in the section twice for pooled shows and once for everything else —
+ * a double source is worse than either one alone.
+ *
+ * A pointer with no air date at all is still excluded: unknown is not "aired",
+ * and pretending otherwise would offer a quick-log for something that may not
+ * exist yet.
  */
 function traktEntry(
   input: TraktUpNextInput,
@@ -73,8 +84,10 @@ function traktEntry(
   const next = input.nextEpisode;
   if (next == null) return null;
   if (next.firstAired == null) return null;
+  if (!hasAired(next.firstAired, now)) return null;
 
   return {
+    kind: 'episode',
     id: entryId(input.item, next.season, next.number),
     item: input.item,
     episode: {
@@ -84,8 +97,61 @@ function traktEntry(
       firstAired: next.firstAired,
       ...(next.runtime != null ? { runtime: next.runtime } : {}),
     },
-    status: hasAired(next.firstAired, now) ? 'aired' : 'upcoming',
+    status: 'aired',
     source: 'trakt',
+  };
+}
+
+/**
+ * The mirror of `traktEntry`: Calendar's Trakt half, and never Continue
+ * Watching. An airing the calendar reports for *earlier today* is dropped
+ * rather than promoted to `aired` — the calendar speaks for watchlisted and
+ * un-started shows too, and "episode 1 of a show you have never opened aired
+ * this morning" is not something waiting to be quick-logged (R4). When the user
+ * *is* watching that show, the pool fan already produced the same episode.
+ */
+function traktCalendarEntry(
+  input: TraktCalendarUpNextInput,
+  now: Date,
+): UpNextEntry | null {
+  const { episode } = input;
+  if (hasAired(episode.firstAired, now)) return null;
+
+  return {
+    kind: 'episode',
+    id: entryId(input.item, episode.season, episode.number),
+    item: input.item,
+    episode: {
+      season: episode.season,
+      number: episode.number,
+      ...(episode.title != null ? { title: episode.title } : {}),
+      ...(episode.firstAired != null ? { firstAired: episode.firstAired } : {}),
+      ...(episode.runtime != null ? { runtime: episode.runtime } : {}),
+    },
+    status: 'upcoming',
+    source: 'trakt',
+  };
+}
+
+/**
+ * A film release is `upcoming` unconditionally — never `aired` (R3/R5). A
+ * release has nothing to log and no progress to advance, so classifying one as
+ * aired would drop a film into Continue Watching, which means "waiting for
+ * you, one tap away". Whether it is *still* upcoming is the window's job:
+ * `inCalendarWindow` drops anything whose local day is already past, so a film
+ * that came out yesterday contributes nothing while one out today still shows
+ * on the today cell.
+ */
+function releaseEntry(input: ReleaseUpNextInput): UpNextEntry {
+  return {
+    kind: 'release',
+    // The kind is part of the key, not decoration: theatrical and digital are
+    // two rows for one film and must not collide as list keys (R3).
+    id: `${input.item.id}-${input.kind}`,
+    item: input.item,
+    release: { kind: input.kind, date: input.date },
+    status: 'upcoming',
+    source: input.source,
   };
 }
 
@@ -101,8 +167,11 @@ function traktEntry(
  * - past the pointer → unknowable (the schedule doesn't reach that far);
  * - no pointer at all → aired iff the total says the episode exists; both
  *   unknown means hiatus/unconfirmed, which is excluded rather than guessed.
+ *
+ * Status-blind on purpose — `anilistEntry` gates the result. Classifying and
+ * gating in one pass would mean checking PLANNING at four separate returns.
  */
-function anilistEntry(
+function classifyAnilistEntry(
   input: AniListUpNextInput,
   now: Date,
 ): UpNextEntry | null {
@@ -116,6 +185,7 @@ function anilistEntry(
 
   const airing = input.nextAiring;
   const base = {
+    kind: 'episode' as const,
     id: entryId(input.item, undefined, next),
     item: input.item,
     // No season at all (plan 0027): `next` is entry-relative — the AniList
@@ -140,6 +210,30 @@ function anilistEntry(
   };
 }
 
+/**
+ * A PLANNING entry can only ever be `upcoming` (KTD-3). The list read now
+ * carries plan-to-watch entries (R12), and their progress is 0 — so a PLANNING
+ * series that is already five episodes into its run computes `next = 1`, falls
+ * below the airing pointer, and classifies as `aired`: without this gate the
+ * user's entire plan-to-watch backlog pours into Continue Watching, which means
+ * "aired, waiting, one tap away" (R4).
+ *
+ * A mid-run PLANNING series therefore yields *nothing at all* rather than
+ * moving to Calendar. It is not up next (nothing has been started), and
+ * episode 1 having aired weeks ago is not a calendar event either — only a
+ * PLANNING series whose next airing is still ahead has anything to say about
+ * this week.
+ */
+function anilistEntry(
+  input: AniListUpNextInput,
+  now: Date,
+): UpNextEntry | null {
+  const entry = classifyAnilistEntry(input, now);
+  if (entry == null) return null;
+  if (input.status === 'PLANNING' && entry.status !== 'upcoming') return null;
+  return entry;
+}
+
 /** One local day of the Calendar window, with the entries airing that day. */
 export interface UpNextDayGroup {
   /** Days from today: 0 … UP_NEXT_WINDOW_DAYS - 1. */
@@ -156,7 +250,7 @@ export interface UpNextDayGroup {
  * a cell for every day. Buckets whatever entries it is given by their air day,
  * so passing *both* sections lands today's already-aired episodes on the today
  * cell alongside what is still upcoming: the strip is a schedule, not a
- * mirror of the aired/upcoming split. Entries with no air instant (AniList
+ * mirror of the aired/upcoming split. Entries with no instant (AniList
  * back-episodes) or one outside the window fall out — they have no cell.
  */
 export function calendarWeek(
@@ -170,7 +264,7 @@ export function calendarWeek(
       date,
       label: formatDayHeading(offset, date),
       entries: entries.filter(
-        (entry) => localDayOffset(entry.episode.firstAired, now) === offset,
+        (entry) => localDayOffset(entryInstant(entry), now) === offset,
       ),
     };
   });
@@ -178,7 +272,7 @@ export function calendarWeek(
 
 /** Inside the local window today … today+6 (R2, shared with the week strip). */
 function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
-  const offset = localDayOffset(entry.episode.firstAired, now);
+  const offset = localDayOffset(entryInstant(entry), now);
   return offset != null && offset >= 0 && offset < UP_NEXT_WINDOW_DAYS;
 }
 
@@ -187,23 +281,70 @@ function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
  * carries the user's anime progress and the airing schedule, and its entry is
  * what the AniList write path advances. Unresolvable TMDB ids leave the
  * duplicate standing — R5 is explicitly best-effort.
+ *
+ * Films dedupe on the *pair* `(tmdbId, release.kind)` instead (KTD-6): one film
+ * on two watchlists is one TMDB id, but its theatrical and digital rows are
+ * different events with different dates, so keying on the id alone would show
+ * whichever one arrived first and silently swallow the other.
  */
 function dedupeByTmdb(
   anilist: readonly UpNextEntry[],
-  trakt: readonly UpNextEntry[],
+  others: readonly UpNextEntry[],
   anilistTmdbIds: ReadonlySet<number>,
 ): UpNextEntry[] {
-  const traktKept = trakt.filter((entry) => {
+  const kept = others.filter((entry) => {
+    // Only an episode can be an AniList entry's twin: anime *films* never
+    // produce an AniList entry, so a numeric collision between a TMDB movie id
+    // and a TMDB series id must not eat a release row.
+    if (entry.kind !== 'episode') return true;
     const tmdbId = entry.item.externalIds.tmdb;
     return tmdbId == null || !anilistTmdbIds.has(tmdbId);
   });
-  return [...anilist, ...traktKept];
+  return dedupeReleases([...anilist, ...kept]);
+}
+
+/**
+ * Collapses repeat release rows across sources. Episodes pass through
+ * untouched on purpose: one show legitimately contributes both an aired episode
+ * (Continue Watching) and next week's (Calendar), and they share a TMDB id.
+ */
+function dedupeReleases(entries: readonly UpNextEntry[]): UpNextEntry[] {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (entry.kind !== 'release') return true;
+    const tmdbId = entry.item.externalIds.tmdb;
+    // No id is not "same film" — an unmatchable duplicate stands, exactly as it
+    // does for shows.
+    if (tmdbId == null) return true;
+    const key = `${tmdbId}-${entry.release.kind}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * Ordering key for the schedule: the parsed instant, not the raw string.
+ * Episodes state a full ISO instant (usually UTC) and releases a bare local
+ * day, so a lexical compare of the two is not a comparison of times at all — it
+ * would file a release ahead of an episode airing earlier that same evening,
+ * and mis-order every entry whose UTC day differs from its local one. Entries
+ * with no instant sort last; they have no place in a schedule to begin with.
+ */
+function entryOrder(entry: UpNextEntry): number {
+  const instant = entryInstant(entry);
+  const parsed = instant == null ? null : parseLocalInstant(instant);
+  return parsed?.getTime() ?? Number.POSITIVE_INFINITY;
 }
 
 /**
  * Both home sections from one pass. Entries appear in exactly one of them
  * (R3): aired → Continue Watching, unaired and inside the 7-day window →
  * Calendar, anything further out or unknowable → neither.
+ *
+ * Which source can reach which section is fixed here rather than filtered
+ * later (KTD-2): the pool fan produces only aired episodes, the calendars only
+ * unaired ones, and film releases only ever land in Calendar.
  */
 export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   const anilistPairs = inputs.anilist
@@ -216,6 +357,10 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   const traktEntries = inputs.trakt
     .map((input) => traktEntry(input, now))
     .filter((entry): entry is UpNextEntry => entry != null);
+  const calendarEntries = inputs.traktCalendar
+    .map((input) => traktCalendarEntry(input, now))
+    .filter((entry): entry is UpNextEntry => entry != null);
+  const releaseEntries = inputs.releases.map(releaseEntry);
 
   // Only *surviving* AniList entries suppress their Trakt twin — an AniList
   // entry that classified to nothing (hiatus, caught up) must not silently
@@ -226,7 +371,11 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
       .filter((id): id is number => id != null),
   );
 
-  const entries = dedupeByTmdb(anilistEntries, traktEntries, anilistTmdbIds);
+  const entries = dedupeByTmdb(
+    anilistEntries,
+    [...traktEntries, ...calendarEntries, ...releaseEntries],
+    anilistTmdbIds,
+  );
 
   return {
     // Most recently watched first — the same ordering the pool arrives in, so
@@ -234,11 +383,11 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
     continueWatching: entries
       .filter((entry) => entry.status === 'aired')
       .sort((a, b) => b.item.lastUpdated.localeCompare(a.item.lastUpdated)),
-    // Soonest first: Calendar is read as a schedule, not as a library.
+    // Soonest first, releases and episodes interleaved: Calendar is read as a
+    // schedule, not as a library, and a film out on Friday belongs between
+    // Thursday's and Saturday's episodes rather than in a group of its own.
     calendar: entries
       .filter((entry) => entry.status === 'upcoming' && inCalendarWindow(entry, now))
-      .sort((a, b) =>
-        (a.episode.firstAired ?? '').localeCompare(b.episode.firstAired ?? ''),
-      ),
+      .sort((a, b) => entryOrder(a) - entryOrder(b)),
   };
 }

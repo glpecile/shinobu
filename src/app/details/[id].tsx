@@ -36,6 +36,7 @@ import {
   mergeCatalogueMetadata,
 } from '@/lib/providers/merge-metadata';
 import { useTmdbToken } from '@/state/session/tmdb-token';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import {
   anilistQueryKeys,
@@ -299,7 +300,7 @@ function PeopleSection({
   people: PersonCredit[];
   onCreditActions: (credit: PersonCredit) => void;
 }) {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   // No TMDB token, no person pages — press falls back to the credit sheet.
   const canOpenPeople = useTmdbToken() !== '';
 
@@ -317,7 +318,7 @@ function PeopleSection({
             {...(canOpenPeople
               ? {
                   onPress: () =>
-                    router.push(
+                    pushRoute(
                       credit.tmdbId != null
                         ? routes.person(credit.tmdbId)
                         : routes.personLookup(credit.name),
@@ -333,7 +334,7 @@ function PeopleSection({
 
 /** One "Studios" pill list — every metadata source renders through this. */
 function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   // No TMDB token, no studio pages — pills stay informational.
   const canOpenStudios = useTmdbToken() !== '';
 
@@ -356,7 +357,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
               className="bg-surface border border-border rounded-full px-4 py-2"
               key={studio.id}
               onPress={() =>
-                router.push(
+                pushRoute(
                   studio.tmdbId != null
                     ? routes.studio(studio.tmdbId)
                     : routes.studioLookup(studio.name),

@@ -138,6 +138,16 @@ export function normalizeAniListListEntry(
 export interface AniListCurrentEntry {
   item: NormalizedMediaItem;
   /**
+   * The viewer's list status for this entry. The list read asks for CURRENT
+   * *and* PLANNING in one request (plan 0030 R12), and the two mean opposite
+   * things downstream — a PLANNING entry may only ever reach Calendar, and the
+   * "Your Anime" row shows CURRENT alone. This field used to be selected by the
+   * query and then dropped right here, which is exactly what made widening the
+   * request dangerous: with the status gone, nothing downstream could tell a
+   * plan-to-watch title from something the user is halfway through (KTD-3).
+   */
+  status: 'CURRENT' | 'PLANNING';
+  /**
    * The next episode AniList has scheduled, as an ISO instant (KTD-4: every
    * air time reaches `hasAired` as an instant, never a raw epoch or date).
    * Null for finished series and for hiatus/unconfirmed schedules alike —
@@ -155,6 +165,12 @@ export function normalizeCurrentAnimeEntry(
   const airing = entry.media.nextAiringEpisode;
   return {
     item: normalizeAniListListEntry(entry, nowIso),
+    // Only an explicit PLANNING is planned. The read asks for exactly these two
+    // statuses, so the fallback is unreachable in practice — and it defaults to
+    // CURRENT deliberately: PLANNING is the *restricted* status here, and
+    // guessing it for a missing/unknown value would silently drop entries the
+    // user really is watching.
+    status: entry.status === 'PLANNING' ? 'PLANNING' : 'CURRENT',
     nextAiring:
       airing == null
         ? null

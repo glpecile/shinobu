@@ -1,4 +1,8 @@
-import { useVisibleItems } from '@/state/prefs/hidden-items';
+import {
+  useHiddenItems,
+  visibleItems,
+  type HiddenItem,
+} from '@/state/prefs/hidden-items';
 import { useSuspenseUpNextQuery, type UpNextResult } from '@/state/queries/up-next';
 
 import type { UpNextEntry } from './types';
@@ -18,13 +22,30 @@ export function useUpNextSections(): UpNextResult {
 }
 
 /**
- * `useVisibleItems` filters by media id; an entry's own id carries its episode
- * (so a card re-keys when it advances), so the filter is applied to the items
- * and mapped back rather than run over entry ids.
+ * `entries` minus the ones whose item the user hid. Hiding is keyed by *media*
+ * id while an entry's own id carries its episode or release kind (so a card
+ * re-keys when it advances), so the filter runs over the items and maps back
+ * rather than over entry ids. A film therefore loses **both** of its release
+ * rows when hidden — they share one item id, and hiding a film means hiding the
+ * film, not one of its dates (plan 0030 R8).
+ *
+ * Returns `entries` itself when nothing was hidden, keeping the identity
+ * contract `visibleItems` documents. Pure and exported for the same reason that
+ * one is: the contract is testable without touching the store.
  */
-function useVisibleEntries(entries: UpNextEntry[]): UpNextEntry[] {
-  const visible = useVisibleItems(entries.map((entry) => entry.item));
+export function visibleEntries(
+  entries: UpNextEntry[],
+  hidden: readonly HiddenItem[],
+): UpNextEntry[] {
+  const visible = visibleItems(
+    entries.map((entry) => entry.item),
+    hidden,
+  );
   if (visible.length === entries.length) return entries;
   const visibleIds = new Set(visible.map((item) => item.id));
   return entries.filter((entry) => visibleIds.has(entry.item.id));
+}
+
+function useVisibleEntries(entries: UpNextEntry[]): UpNextEntry[] {
+  return visibleEntries(entries, useHiddenItems());
 }

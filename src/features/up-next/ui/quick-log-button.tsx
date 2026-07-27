@@ -16,7 +16,7 @@ import {
   useLogMedia,
 } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import type { UpNextEntry } from '@/features/up-next/types';
+import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { haptics } from '@/lib/haptics';
 import { useConnectedProviders } from '@/state/session';
 import { useUpNextSettling } from '@/state/queries/up-next';
@@ -42,11 +42,15 @@ import {
  * recomputed data — which is why an advancing card simply unmounts (its entry
  * id carries the episode number) rather than animating a local counter. The
  * card advances only when the entry's own *source* provider succeeded (R8/R9).
+ *
+ * Typed to the `episode` arm of the union, not `UpNextEntry`: a release entry
+ * has no episode to log and no quick-log to offer (plan 0030 R5), so callers
+ * narrow rather than this component null-checking a field it always needs.
  */
 const SETTLE_TIMEOUT_MS = 10_000;
 const DEFAULT_TAGS = 'shinobu, ';
 
-export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
+export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
   const queryClient = useQueryClient();
   const connected = useConnectedProviders();
   const logMedia = useLogMedia();

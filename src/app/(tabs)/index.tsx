@@ -1,5 +1,4 @@
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import Head from '@/components/head';
@@ -38,6 +37,7 @@ import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
@@ -60,7 +60,7 @@ const EMPTY_HERO_TILES = [
 ] as const;
 
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const { width } = useWindowDimensions();
   const compact = width < 640;
   const tile = compact ? 56 : 72;
@@ -108,7 +108,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
       <EmptyStateTile
         cta={{
           label: 'Connect your trackers',
-          onPress: () => router.push(routes.connect),
+          onPress: () => pushRoute(routes.connect),
         }}
         description="Shinobu is a harness for your media trackers — log a movie, show, or anime once and every one you've connected stays in sync."
         size="hero"
@@ -128,7 +128,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
 }
 
 function FeedScreen() {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
   // Warm each provider host's connection pool as the feed mounts — a beat ahead
@@ -154,7 +154,7 @@ function FeedScreen() {
   const { openActions, sheetProps } = useCardActions();
 
   function openDetails(item: NormalizedMediaItem) {
-    router.push(routes.details(item.id));
+    pushRoute(routes.details(item.id));
   }
 
   async function refresh() {

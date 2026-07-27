@@ -16,12 +16,13 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 // Layout-generic despite the name — the studio page shares the person
 // page's header-plus-rows shape, so its skeleton and miss state fit as-is.
 import { PersonNotFound, PersonSkeleton } from '@/features/person';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbStudioQuery } from '@/state/queries/tmdb';
 
 function StudioContent({ tmdbId }: { tmdbId: number }) {
   const { data } = useSuspenseTmdbStudioQuery({ tmdbId });
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const { company, rows } = data;
   // Same per-card actions dialog as the home feed.
   const { openActions, sheetProps } = useCardActions();
@@ -66,7 +67,7 @@ function StudioContent({ tmdbId }: { tmdbId: number }) {
             items={row.items}
             key={row.title}
             onItemActions={openActions}
-            onItemPress={(item) => router.push(routes.details(item.id))}
+            onItemPress={(item) => pushRoute(routes.details(item.id))}
             title={row.title}
           />
         ))}

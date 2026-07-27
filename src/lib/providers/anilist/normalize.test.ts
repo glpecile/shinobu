@@ -255,6 +255,46 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     expect(normalized.totalEpisodes).toBeNull();
   });
 
+  // Plan 0030 KTD-3: the read asks for CURRENT *and* PLANNING in one request,
+  // so the status has to survive normalization — it is what tells the "Your
+  // Anime" row and Up Next's gate apart from each other downstream. It was
+  // selected by the query and dropped here before this plan.
+  test('a CURRENT entry carries its status through', () => {
+    const entry: AniListListEntry = {
+      status: 'CURRENT',
+      progress: 5,
+      media: { ...SERIES, episodes: 24 },
+    };
+    expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).status).toBe('CURRENT');
+  });
+
+  test('a PLANNING entry is marked planned rather than flattened to CURRENT', () => {
+    const entry: AniListListEntry = {
+      status: 'PLANNING',
+      progress: 0,
+      media: {
+        ...SERIES,
+        episodes: 12,
+        nextAiringEpisode: { episode: 5, airingAt: 1_784_390_400 },
+      },
+    };
+    const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
+    expect(normalized.status).toBe('PLANNING');
+    // Still a full entry otherwise — the airing pointer is exactly what decides
+    // whether it is a calendar event or nothing at all.
+    expect(normalized.nextAiring?.episode).toBe(5);
+  });
+
+  test('a missing status falls back to CURRENT, never to planned', () => {
+    // PLANNING is the restricted status (Calendar only), so guessing it for an
+    // absent value would silently hide a series the user is watching.
+    const entry: AniListListEntry = {
+      progress: 2,
+      media: { ...SERIES, episodes: 12 },
+    };
+    expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).status).toBe('CURRENT');
+  });
+
   test('the converted instant round-trips through hasAired (KTD-4)', () => {
     // The airing seconds → ISO conversion must produce something the single
     // shared air comparison parses — no second date path anywhere.

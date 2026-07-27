@@ -6,22 +6,34 @@ import {
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
-import { computeUpNext, selectUpNextPool } from '@/features/up-next/compute';
+import {
+  computeUpNext,
+  selectUpNextPool,
+  UP_NEXT_WINDOW_DAYS,
+} from '@/features/up-next/compute';
 import type {
   AniListUpNextInput,
+  ReleaseUpNextInput,
+  TraktCalendarUpNextInput,
   TraktUpNextInput,
   UpNextData,
   UpNextInputs,
 } from '@/features/up-next/types';
 import { providersForFeed } from '@/lib/providers/routing';
+import type { TraktCalendarRelease } from '@/lib/providers/trakt/normalize';
 import type { ProviderId } from '@/lib/providers/types';
 import {
+  getMyMoviesCalendar,
+  getMyShowsCalendar,
+  getMyStreamingCalendar,
   getShowWatchedProgress,
   getWatchedShows,
+  traktCalendarRange,
 } from '@/lib/providers/trakt/reads';
 import { useConnectedProviders } from '@/state/session';
 
 import { fetchCurrentAnimeEntries } from './anilist';
+import { fetchLetterboxdReleaseInputs } from './letterboxd';
 import { cachedAniZipIds } from './mapping';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { UP_NEXT_QUERY_ROOT } from './up-next-cache';
@@ -73,8 +85,10 @@ function errorMessage(error: unknown): string {
 }
 
 /**
- * Trakt half: pool first (KTD-2), then one `next_episode`-bearing progress call
- * per pooled show. A single show's failure omits that show — never the section.
+ * Continue Watching's Trakt source: pool first (KTD-2), then one
+ * `next_episode`-bearing progress call per pooled show. A single show's failure
+ * omits that show — never the section. Since plan 0030 this fan answers for the
+ * aired half only; Calendar reads the my-calendars endpoints below.
  */
 async function traktInputs(queryClient: QueryClient): Promise<TraktUpNextInput[]> {
   const shows = await queryClient.fetchQuery({
@@ -118,11 +132,108 @@ async function traktInputs(queryClient: QueryClient): Promise<TraktUpNextInput[]
 }
 
 /**
+ * A calendar answers for a whole week and only moves when a broadcaster does,
+ * so this window keeps every Up Next mount off the wire. Staleness can't
+ * outlive the day either way: the key carries the local start date (see
+ * `traktQueryKeys.myCalendar`).
+ */
+const CALENDAR_STALE_MS = 15 * 60_000;
+
+/**
+ * The window every calendar read asks for, resolved here rather than left to
+ * the read's own default so the cache key names exactly the range requested.
+ */
+function calendarRange() {
+  return traktCalendarRange({ days: UP_NEXT_WINDOW_DAYS }, new Date());
+}
+
+/**
+ * Calendar's Trakt half (KTD-2): one call covering every show the user watches
+ * **or watchlists**, over exactly the window the section renders. This is what
+ * replaced the pooled progress fan as the upcoming source — that fan caps at 20
+ * shows and can only speak for shows already started, so a watchlisted premiere
+ * could never reach Calendar through it.
+ */
+function traktCalendarInputs(
+  queryClient: QueryClient,
+): Promise<TraktCalendarUpNextInput[]> {
+  const range = calendarRange();
+  return queryClient.fetchQuery({
+    queryKey: traktQueryKeys.myCalendar('shows', range.startDate, range.days),
+    queryFn: () => Effect.runPromise(getMyShowsCalendar(traktDeps(), range)),
+    staleTime: CALENDAR_STALE_MS,
+  });
+}
+
+/**
+ * Theatrical and digital are two calendars because they are two events (R3) —
+ * a film out in cinemas Friday and streaming next month is two rows with two
+ * dates, not one row that moves. `/calendars/my/dvd` is deliberately not
+ * requested: physical rows don't render in v1, so the call would buy nothing.
+ */
+const MOVIE_CALENDARS = [
+  { type: 'movies', read: getMyMoviesCalendar },
+  { type: 'streaming', read: getMyStreamingCalendar },
+] as const;
+
+type MovieCalendar = (typeof MOVIE_CALENDARS)[number];
+
+/**
+ * One movie calendar's rows as release inputs. Deliberately *one* calendar per
+ * call so `fetchUpNextInputs` can settle each separately (R7):
+ * `/calendars/my/streaming` is the single path plan 0030 could not confirm
+ * against an authed response (docs/solutions/trakt-streaming-calendar-path.md,
+ * KTD-4's fallback), and folding it into the same try block as
+ * `/calendars/my/movies` would let that one uncertain endpoint delete every
+ * theatrical row too. A missing streaming row is a gap the fallback covers; the
+ * theatrical rows disappearing with it is the section failing quietly.
+ */
+async function traktReleaseInputs(
+  queryClient: QueryClient,
+  calendar: MovieCalendar,
+): Promise<ReleaseUpNextInput[]> {
+  const range = calendarRange();
+  const rows = await queryClient.fetchQuery({
+    queryKey: traktQueryKeys.myCalendar(
+      calendar.type,
+      range.startDate,
+      range.days,
+    ),
+    queryFn: () => Effect.runPromise(calendar.read(traktDeps(), range)),
+    staleTime: CALENDAR_STALE_MS,
+  });
+  return rows.map(releaseInput);
+}
+
+/** The normalized row plus the provider that stated it — see `ReleaseUpNextInput`. */
+function releaseInput(release: TraktCalendarRelease): ReleaseUpNextInput {
+  return {
+    item: release.item,
+    kind: release.kind,
+    date: release.date,
+    source: 'trakt',
+  };
+}
+
+/**
  * AniList half: one widened list request (U2), plus — only when Trakt is also
  * connected, since dedupe is the sole consumer — a bounded ani.zip lookup per
  * pool anime to learn its TMDB id (R5). Every lookup is forever-cached and
  * degrades to "no id", which just leaves a duplicate card standing.
  */
+/**
+ * Only entries that can actually *produce* a card are worth an ani.zip lookup.
+ * Widening the list read to PLANNING (U2) also widened the mapping fan below:
+ * a 400-title plan-to-watch list would otherwise cost ~400 external lookups at
+ * concurrency 4 — blocking the whole slot on its skeleton — to resolve dedupe
+ * ids for entries the KTD-3 gate then discards anyway. A PLANNING entry only
+ * survives that gate while it is still unaired, which is exactly the condition
+ * `nextAiring` states.
+ */
+function worthMapping(entry: AniListUpNextInput): boolean {
+  return entry.status !== 'PLANNING' || entry.nextAiring != null;
+}
+
 async function anilistInputs(
   queryClient: QueryClient,
   needsTmdbIds: boolean,
@@ -130,9 +241,9 @@ async function anilistInputs(
   const entries = await fetchCurrentAnimeEntries(queryClient);
   if (!needsTmdbIds) return entries;
 
-  return Effect.runPromise(
+  const resolved = await Effect.runPromise(
     Effect.forEach(
-      entries,
+      entries.filter(worthMapping),
       (entry) =>
         Effect.promise(async (): Promise<AniListUpNextInput> => {
           const known = entry.item.externalIds.tmdb;
@@ -145,13 +256,22 @@ async function anilistInputs(
       { concurrency: MAPPING_CONCURRENCY },
     ),
   );
+
+  // The skipped entries still belong in the inputs — they simply carry no
+  // resolved TMDB id, which is the same best-effort degradation an ani.zip
+  // miss already produces (R5 leaves the duplicate card standing).
+  return [...resolved, ...entries.filter((entry) => !worthMapping(entry))];
 }
 
 /**
- * Both providers in parallel, each failing independently: a disconnected or
- * broken provider contributes an error entry and zero inputs, and the other
- * one's entries still render (R4 — the unified-feed partial-failure contract,
- * not a thrown slot).
+ * Every source in parallel, each failing independently: a disconnected or
+ * broken source contributes an error entry and zero inputs, and the others
+ * still render (R4/R7 — the unified-feed partial-failure contract, not a
+ * thrown slot). Each of the four Trakt reads settles *separately* on purpose —
+ * down to the two movie calendars individually: a calendar outage must not take
+ * Continue Watching down with it, and one calendar's outage must not take the
+ * other's rows, which is precisely what folding them into one try block would
+ * do.
  */
 export async function fetchUpNextInputs(
   queryClient: QueryClient,
@@ -160,20 +280,51 @@ export async function fetchUpNextInputs(
   const feedProviders = providersForFeed(connected);
   const wantsTrakt = feedProviders.includes('trakt');
   const wantsAniList = feedProviders.includes('anilist');
+  const wantsLetterboxd = feedProviders.includes('letterboxd');
 
-  const [trakt, anilist] = await Promise.all([
-    wantsTrakt
-      ? settle('trakt', () => traktInputs(queryClient))
-      : none<TraktUpNextInput>(),
-    wantsAniList
-      ? settle('anilist', () => anilistInputs(queryClient, wantsTrakt))
-      : none<AniListUpNextInput>(),
-  ]);
+  const [trakt, traktCalendar, movieCalendars, letterboxd, anilist] =
+    await Promise.all([
+      wantsTrakt
+        ? settle('trakt', () => traktInputs(queryClient))
+        : none<TraktUpNextInput>(),
+      wantsTrakt
+        ? settle('trakt', () => traktCalendarInputs(queryClient))
+        : none<TraktCalendarUpNextInput>(),
+      Promise.all(
+        MOVIE_CALENDARS.map((calendar) =>
+          wantsTrakt
+            ? settle('trakt', () => traktReleaseInputs(queryClient, calendar))
+            : none<ReleaseUpNextInput>(),
+        ),
+      ),
+      wantsLetterboxd
+        ? settle('letterboxd', () =>
+            fetchLetterboxdReleaseInputs(queryClient, new Date()),
+          )
+        : none<ReleaseUpNextInput>(),
+      wantsAniList
+        ? settle('anilist', () => anilistInputs(queryClient, wantsTrakt))
+        : none<AniListUpNextInput>(),
+    ]);
 
   return {
     trakt: trakt.inputs,
+    traktCalendar: traktCalendar.inputs,
+    // One array, three sources: dedupe collapses a film watchlisted on both to
+    // a single row per release kind (KTD-6), which is only possible because the
+    // Letterboxd resolve attaches the TMDB id Trakt's rows already carry.
+    releases: [
+      ...movieCalendars.flatMap((calendar) => calendar.inputs),
+      ...letterboxd.inputs,
+    ],
     anilist: anilist.inputs,
-    errors: [...trakt.errors, ...anilist.errors],
+    errors: [
+      ...trakt.errors,
+      ...traktCalendar.errors,
+      ...movieCalendars.flatMap((calendar) => calendar.errors),
+      ...letterboxd.errors,
+      ...anilist.errors,
+    ],
   };
 }
 

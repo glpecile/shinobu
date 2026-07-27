@@ -19,6 +19,7 @@ import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { cn } from '@/lib/cn';
 import { hasCoarsePointer } from '@/lib/pointer';
 import type { ProviderId } from '@/lib/providers/types';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useAniListSearchQuery } from '@/state/queries/anilist';
 import {
@@ -190,6 +191,7 @@ function sectionRows(
 
 export default function SearchScreen() {
   const router = useRouter();
+  const pushRoute = usePushRoute();
   const params = useLocalSearchParams<{ q?: string }>();
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
@@ -252,7 +254,7 @@ export default function SearchScreen() {
   ];
 
   function openDetails(item: NormalizedMediaItem) {
-    router.push(routes.details(item.id));
+    pushRoute(routes.details(item.id));
   }
 
   // Resets all three representations of the query at once. Leaving `query`

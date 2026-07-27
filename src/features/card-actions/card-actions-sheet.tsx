@@ -1,5 +1,4 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -17,6 +16,7 @@ import {
   providerLinksFor,
   sourceLinkFor,
 } from '@/lib/providers/provider-links';
+import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { hideItem } from '@/state/prefs/hidden-items';
 import { useConnectedProviders } from '@/state/session';
@@ -85,7 +85,7 @@ export function CardActionsSheet({
   providerLinks = 'source',
   canHide = true,
 }: CardActionsSheetProps) {
-  const router = useRouter();
+  const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   // Same read `LogMediaButton` uses (one cache entry, one request): a series
   // whose next episode Trakt can name gets the button, so the pointer to the
@@ -138,7 +138,7 @@ export function CardActionsSheet({
             className="flex-row items-center gap-3 rounded px-5 py-3 border border-border"
             onPress={() => {
               onClose();
-              router.push(routes.details(item.id));
+              pushRoute(routes.details(item.id));
             }}
           >
             <Ionicons color={mutedColor} name="open-outline" size={18} />

@@ -67,9 +67,11 @@ export interface NormalizedMediaItem {
   releaseDate?: string;
   /**
    * Theatrical/digital/physical release dates for a film — what the details
-   * screen's release timeline renders. Display only, and TMDB is the sole
-   * source (`release_dates`), so it is absent for every TV/manga item and for
-   * any movie the TMDB catalogue didn't answer for.
+   * screen's release timeline renders, and what the agenda dates an unreleased
+   * film by (plan 0030). Absent for every TV/manga item. TMDB's `release_dates`
+   * fills all three slots at once; Trakt's per-kind movie calendars fill
+   * exactly the one slot they answer for, so a partly-populated value is
+   * normal — never read an absent slot as "no such release".
    */
   releaseCalendar?: ReleaseCalendar;
   currentProgress: number;

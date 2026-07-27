@@ -99,6 +99,17 @@ export const traktQueryKeys = {
   /** Lazy poster/backdrop recovery for artless watched items. */
   images: (type: MediaType, traktId: number) =>
     [...traktQueryKeys.all, 'images', type, traktId] as const,
+  /**
+   * One `/calendars/my/*` window (plan 0030). The start date is part of the
+   * key on purpose: it is the user's *local* today, so the cache rolls over at
+   * local midnight instead of serving yesterday's week to whoever left the app
+   * open overnight. `type` is Trakt's own calendar segment.
+   */
+  myCalendar: (
+    type: 'shows' | 'movies' | 'streaming' | 'dvd',
+    startDate: string,
+    days: number,
+  ) => [...traktQueryKeys.all, 'my-calendar', type, startDate, days] as const,
 };
 
 /**
