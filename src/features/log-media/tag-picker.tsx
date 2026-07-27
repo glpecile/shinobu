@@ -10,6 +10,8 @@ import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
+import { Skeleton } from '@/components/skeleton';
+import { cn } from '@/lib/cn';
 import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import type { LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import { useRecentTags } from '@/state/prefs/recent-tags';
@@ -146,6 +148,54 @@ function mergeTagSuggestions(
   }
 
   return merged;
+}
+
+/**
+ * Placeholder widths, in the order they render. Uneven on purpose — four
+ * identical pills read as a progress bar, not as tags.
+ */
+const SKELETON_WIDTHS = ['w-16', 'w-10', 'w-20', 'w-14'] as const;
+
+/**
+ * A chip-shaped placeholder for the frame where the vocabulary is still in
+ * flight and there is nothing local to show yet.
+ *
+ * Deliberately built out of `TagChip`'s own box — same `px-4 py-2`, same
+ * `h-5` line box the `text-sm` label occupies — so it measures the height a
+ * real chip will, and `measureRow` can take that height from it. The row is
+ * therefore already the right height before the first real chip exists, which
+ * is the whole point of rendering it.
+ */
+function TagChipSkeleton({
+  width,
+  onMeasure,
+}: {
+  width: string;
+  onMeasure?: (height: number) => void;
+}) {
+  return (
+    <View
+      className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+      onLayout={
+        onMeasure == null
+          ? undefined
+          : (event: LayoutChangeEvent) =>
+              onMeasure(event.nativeEvent.layout.height)
+      }
+    >
+      {/* The outline is a full-bleed layer, not a border on the box — same as
+          `TagChip`. A real border would add its 2px to the row height and put
+          the placeholder out of step with the chips it stands in for. */}
+      <View className="absolute inset-0 rounded-full border border-border bg-surface" />
+      <Skeleton className="h-3.5 w-3.5 rounded-full" />
+      {/* The h-5 wrapper is the text's line box; the bar inside is shorter, the
+          way a text placeholder should be. Collapsing them into one 20px bar
+          would keep the height and lose the resemblance. */}
+      <View className="h-5 justify-center">
+        <Skeleton className={cn('h-3 rounded-full', width)} />
+      </View>
+    </View>
+  );
 }
 
 function TagChip({
@@ -307,7 +357,15 @@ export function TagPicker({
     );
   }
 
-  if (suggestions.length === 0) return null;
+  // Nothing local to show *and* the vocabulary is still on the wire: hold a
+  // row of placeholders so the block the tags will land in already occupies
+  // its final height. `isFetching`, not `isPending` — a disabled query (no
+  // Letterboxd session) is permanently "pending", and reserving space for tags
+  // that are never coming is how you get a dead band instead of a jump.
+  const loading = suggestions.length === 0 && letterboxdTags.isFetching;
+
+  // A picker with no suggestions and nothing in flight has nothing to say.
+  if (suggestions.length === 0 && !loading) return null;
 
   const measured = rowHeight > 0 && contentHeight > 0;
   // Until both heights are in, assume anything past a single chip wraps. The
@@ -317,7 +375,13 @@ export function TagPicker({
   const overflows = measured
     ? contentHeight > rowHeight + ROW_EPSILON
     : suggestions.length > 1;
-  const collapsed = overflows && !expanded;
+  // Placeholders are clipped to one row like everything else — four of them
+  // wrap on a narrow phone, and a two-row skeleton resolving into a one-row
+  // list is the same shift by another name.
+  const collapsed = loading || (overflows && !expanded);
+  // The toggle stays hidden while loading: `overflows` would be answering a
+  // question about the placeholders, not about the tags.
+  const showToggle = !loading && measured && overflows;
 
   return (
     <View className="mt-2">
@@ -335,16 +399,27 @@ export function TagPicker({
         }
       >
         <View className="flex-row flex-wrap gap-2" onLayout={measureContent}>
-          {suggestions.map((tag, index) => (
-            <TagChip
-              entering={chipAnimation(index, reduceMotion)}
-              key={tag.toLowerCase()}
-              onMeasure={index === 0 ? measureRow : undefined}
-              onToggle={() => onChange(toggleTag(value, tag))}
-              selected={isTagSelected(value, tag)}
-              tag={tag}
-            />
-          ))}
+          {loading
+            ? SKELETON_WIDTHS.map((width, index) => (
+                <TagChipSkeleton
+                  key={width}
+                  // The placeholder is chip-shaped, so its height *is* a row's
+                  // height — taking it here means the collapsed row is exact
+                  // from the first frame rather than ESTIMATED_ROW_HEIGHT.
+                  onMeasure={index === 0 ? measureRow : undefined}
+                  width={width}
+                />
+              ))
+            : suggestions.map((tag, index) => (
+                <TagChip
+                  entering={chipAnimation(index, reduceMotion)}
+                  key={tag.toLowerCase()}
+                  onMeasure={index === 0 ? measureRow : undefined}
+                  onToggle={() => onChange(toggleTag(value, tag))}
+                  selected={isTagSelected(value, tag)}
+                  tag={tag}
+                />
+              ))}
         </View>
       </View>
       {/* The toggle's row is **always** in the layout — it only fades in and
@@ -365,11 +440,11 @@ export function TagPicker({
       <AnimatedView
         // Hidden means *gone* to a pointer and to assistive tech — an
         // invisible spacer must never take a tap or a screen-reader stop.
-        aria-hidden={!(measured && overflows)}
+        aria-hidden={!showToggle}
         className="self-start"
-        pointerEvents={measured && overflows ? 'auto' : 'none'}
+        pointerEvents={showToggle ? 'auto' : 'none'}
         style={{
-          opacity: measured && overflows ? 1 : 0,
+          opacity: showToggle ? 1 : 0,
           transitionProperty: 'opacity',
           transitionDuration: reduceMotion ? 0 : DURATION.swap,
           transitionTimingFunction: EASE_OUT,
@@ -377,7 +452,9 @@ export function TagPicker({
       >
         <PresstableOpacity
           accessibilityLabel={
-            expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'
+            expanded
+              ? 'Show fewer tag suggestions'
+              : 'Show more tag suggestions'
           }
           accessibilityRole="button"
           accessibilityState={{ expanded }}

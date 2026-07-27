@@ -44,6 +44,41 @@ screen-reader-visible target sitting under the chips; `pointerEvents="none"` and
 The cost is an empty ~34px band under a picker whose whole vocabulary fits on
 one line. That band is invisible; the shove was not.
 
+## The other half: the picker itself arriving late
+
+Same shift, one level up. With no recent tags *and* an empty field there are no
+suggestions at all, so the picker rendered nothing — and then the whole block
+(chip row + reserved toggle row) mounted when the query landed.
+
+Reserved the same way, with a row of chip-shaped placeholders:
+
+```tsx
+// `isFetching`, not `isPending` — a disabled query (no Letterboxd session) is
+// permanently "pending", and holding space for tags that are never coming is a
+// dead band instead of a jump.
+const loading = suggestions.length === 0 && letterboxdTags.isFetching;
+if (suggestions.length === 0 && !loading) return null;
+```
+
+Two details make the placeholder actually the same height as what replaces it:
+
+- It is built from `TagChip`'s box — same `px-4 py-2`, same `h-5` line box the
+  `text-sm` label occupies — and its outline is a full-bleed `absolute inset-0`
+  layer, **not** a `border` on the box. A real border adds 2px the chip doesn't
+  have: measured 38px against the chip's 36px until it was moved to a layer.
+- The first placeholder feeds `measureRow`, so the collapsed row's height is the
+  real measured chip height from the first frame rather than
+  `ESTIMATED_ROW_HEIGHT`.
+
+Placeholders are clipped to one row like real chips: four of them wrap on a
+narrow phone, and a two-row skeleton resolving into a one-row list is the same
+shift by another name.
+
+Residual, accepted: if the query returns *no* tags and there were no recents,
+the block unmounts and the sheet shrinks once. That's the standard skeleton
+contract, it only happens on a Letterboxd account with an empty tag vocabulary,
+and the alternative is a permanent empty band for everyone.
+
 ## Rule
 
 If a control's *existence* depends on an async answer — a query, a measurement,
