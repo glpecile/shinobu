@@ -117,7 +117,15 @@ function CredentialInput({
  * navigates to Trakt and is redirected back to the home route with ?code=...,
  * where `useOAuthCallback` exchanges it.
  */
-export function ConnectTraktButton() {
+/**
+ * Trakt's OAuth trigger, without any of its UI.
+ *
+ * Extracted so a caller that already knows no setup is needed — the Manage
+ * Trackers row, when this build ships credentials — can connect in one tap
+ * instead of opening a sheet whose only content is this button. The button
+ * below consumes the same hook, so there is exactly one copy of the flow.
+ */
+export function useTraktConnect() {
   const [credentials, saveCredentials, clearCredentials] =
     useProviderCredentials('trakt');
   const [status, setStatus] = useState<ConnectionStatus>('idle');
@@ -128,24 +136,6 @@ export function ConnectTraktButton() {
   const envId = traktClientId();
   const envSecret = traktClientSecret();
   const hasEnvCredentials = envId !== '' && envSecret !== '';
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CredentialsForm>({
-    defaultValues: {
-      clientId: credentials?.clientId ?? '',
-      clientSecret: credentials?.clientSecret ?? '',
-    },
-    resolver: zodResolver(credentialsSchema),
-  });
-  // Saving the credentials means the user wants to connect — go straight into
-  // the OAuth flow instead of asking for an extra tap on Connect.
-  const submitCredentials = handleSubmit(async (values) => {
-    saveCredentials(values);
-    await connect(values.clientId);
-  });
 
   const clientId = hasEnvCredentials ? envId : (credentials?.clientId ?? '');
   const redirectUri = getTraktRedirectUri();
@@ -210,6 +200,49 @@ export function ConnectTraktButton() {
         console.error('Trakt OAuth exchange failed', error);
       });
   }
+
+  return {
+    connect,
+    status,
+    credentials,
+    saveCredentials,
+    clearCredentials,
+    hasEnvCredentials,
+    clientId,
+    redirectUri,
+    /** True when connecting first requires the client id + secret form. */
+    needsSetup: !hasEnvCredentials && credentials == null,
+  };
+}
+
+export function ConnectTraktButton() {
+  const {
+    connect,
+    status,
+    credentials,
+    saveCredentials,
+    clearCredentials,
+    hasEnvCredentials,
+    redirectUri,
+  } = useTraktConnect();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CredentialsForm>({
+    defaultValues: {
+      clientId: credentials?.clientId ?? '',
+      clientSecret: credentials?.clientSecret ?? '',
+    },
+    resolver: zodResolver(credentialsSchema),
+  });
+  // Saving the credentials means the user wants to connect — go straight into
+  // the OAuth flow instead of asking for an extra tap on Connect.
+  const submitCredentials = handleSubmit(async (values) => {
+    saveCredentials(values);
+    await connect(values.clientId);
+  });
 
   if (!hasEnvCredentials && credentials == null) {
     // If web dev runs on a non-default port the device URI won't be in the

@@ -6,6 +6,7 @@ import {
   VariantTwoCard,
   type VariantCardProps,
 } from '@/features/trackers/provider-card-variants';
+import { useConnectAction } from '@/features/trackers/use-connect-action';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import type { ProviderId } from '@/lib/providers/types';
 import { useDisconnectProvider } from '@/state/session';
@@ -47,6 +48,7 @@ export function ProviderCard({
 }) {
   const disconnect = useDisconnectProvider();
   const username = useProviderUsername(id, connected);
+  const { needsSheet, connect } = useConnectAction(id);
   const Variant = VARIANTS[CARD_VARIANT];
 
   return (
@@ -54,7 +56,12 @@ export function ProviderCard({
       connected={connected}
       id={id}
       onDisconnect={() => disconnect(id)}
-      onOpenSheet={onOpenSheet}
+      // Variant 3's whole row opens the sheet by design — it is the provider's
+      // detail surface there, not just a connect step. The button variants only
+      // open it when there is something in it to do.
+      onOpenSheet={
+        CARD_VARIANT === 3 || connected || needsSheet ? onOpenSheet : connect
+      }
       username={username}
     />
   );

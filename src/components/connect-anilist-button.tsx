@@ -54,30 +54,22 @@ function redirectUriForThisDevice(): string {
  * navigates to AniList and returns to the home route with `#access_token=…`,
  * where `useOAuthCallback` consumes it.
  */
-export function ConnectAniListButton() {
+/**
+ * AniList's OAuth trigger, without any of its UI.
+ *
+ * Extracted so a caller that already knows no setup is needed — the Manage
+ * Trackers row, when this build embeds a client id — can connect in one tap
+ * instead of opening a sheet whose only content is this button. The button
+ * below consumes the same hook, so there is exactly one copy of the flow.
+ */
+export function useAniListConnect() {
   const [storedClientId, setStoredClientId] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : getProviderClientId('anilist'),
   );
   const [status, setStatus] = useState<ConnectionStatus>('idle');
-  const muted = useCSSVariable('--color-muted');
 
   const embeddedClientId = anilistClientId();
   const clientId = embeddedClientId !== '' ? embeddedClientId : (storedClientId ?? '');
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ClientIdForm>({
-    defaultValues: { clientId: '' },
-    resolver: zodResolver(clientIdSchema),
-  });
-  // Saving the id means the user wants to connect — go straight into OAuth.
-  const submitClientId = handleSubmit(async (values) => {
-    setProviderClientId('anilist', values.clientId);
-    setStoredClientId(values.clientId);
-    await connect(values.clientId);
-  });
 
   async function connect(id: string = clientId) {
     if (id === '') return;
@@ -100,6 +92,44 @@ export function ConnectAniListButton() {
     }
     setStatus(connectAniListFromRedirect(result.url) ? 'idle' : 'error');
   }
+
+  return {
+    connect,
+    status,
+    clientId,
+    embeddedClientId,
+    storedClientId,
+    setStoredClientId,
+    /** True when connecting first requires the one-time client-id form. */
+    needsSetup: clientId === '',
+  };
+}
+
+export function ConnectAniListButton() {
+  const {
+    connect,
+    status,
+    clientId,
+    embeddedClientId,
+    storedClientId,
+    setStoredClientId,
+  } = useAniListConnect();
+  const muted = useCSSVariable('--color-muted');
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ClientIdForm>({
+    defaultValues: { clientId: '' },
+    resolver: zodResolver(clientIdSchema),
+  });
+  // Saving the id means the user wants to connect — go straight into OAuth.
+  const submitClientId = handleSubmit(async (values) => {
+    setProviderClientId('anilist', values.clientId);
+    setStoredClientId(values.clientId);
+    await connect(values.clientId);
+  });
 
   if (clientId === '') {
     const redirectUri = redirectUriForThisDevice();
