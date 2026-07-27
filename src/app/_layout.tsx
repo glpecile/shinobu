@@ -5,7 +5,7 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack } from "expo-router";
 import { ThemeProvider } from "expo-router/react-navigation";
@@ -21,7 +21,9 @@ import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { Lightbox } from "@/components/lightbox";
 import { LightboxProvider } from "@/components/lightbox/state";
+import { createQueryPersister, persistOptions } from "@/state/queries/persist";
 import { createQueryClient } from "@/state/queries/query-client";
+import { UpNextPrefetch } from "@/features/up-next/up-next-prefetch";
 import { SheetProvider } from "@/components/sheet";
 import { useColorScheme } from "react-native";
 // Side-effect import: TaskManager.defineTask must run at module-evaluation
@@ -45,6 +47,9 @@ export default function Layout() {
   // One QueryClient per app lifetime. TanStack Query handles provider fetches,
   // token refresh retries, and feed invalidation on connect/disconnect.
   const [queryClient] = useState(createQueryClient);
+  // …and one persister, so the home feed's critical path restores from MMKV on
+  // launch and revalidates behind the restored data (state/queries/persist.ts).
+  const [persister] = useState(createQueryPersister);
 
   // Matches --color-background in global.css. React Navigation's Stack
   // paints this as an inline style independent of Uniwind's stylesheet, so
@@ -77,7 +82,10 @@ export default function Layout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <KeyboardProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, ...persistOptions }}
+        >
           <SheetProvider>
            <LightboxProvider>
             {/* ThemeProvider keeps the native tab bar / navigator chrome themed
@@ -108,6 +116,9 @@ export default function Layout() {
                 {/* Release-notification refresh + background task lifecycle
                     (native only; renders null on web). */}
                 <NotificationsRuntime />
+                {/* Warms the Up Next slot on launch and on every foreground
+                    transition, so its waterfall overlaps app start. */}
+                <UpNextPrefetch />
                 {/* Fullscreen image viewer overlay (web); null on native,
                     where galeria renders the zoom inline. */}
                 <Lightbox />
@@ -115,7 +126,7 @@ export default function Layout() {
             </ThemeProvider>
            </LightboxProvider>
           </SheetProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
         </KeyboardProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>

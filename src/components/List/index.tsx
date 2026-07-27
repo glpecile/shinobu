@@ -8,6 +8,16 @@ import type { ReactElement } from 'react';
  */
 export type ListProps<T> = LegendListProps<T>;
 
-export function List<T>(props: ListProps<T>): ReactElement {
-  return <LegendList {...props} />;
+/**
+ * `recycleItems` is defaulted here rather than left unset: Legend List warns on
+ * every mount when the prop is absent, and the app-wide answer is `false` —
+ * rows like `MediaCard` keep local state (hover, quick-log) that would leak
+ * into whichever row the cell got recycled to (AGENTS.md "Long Lists"). A list
+ * whose rows are provably prop-derived can still opt in per call site.
+ */
+export function List<T>({
+  recycleItems = false,
+  ...props
+}: ListProps<T>): ReactElement {
+  return <LegendList {...props} recycleItems={recycleItems} />;
 }
