@@ -73,21 +73,23 @@ function Stop({
 }
 
 /**
- * "In theaters · Digital · Physical" as a small rail under the details header
- * (plan 0029), replacing the single muted "Digital release · …" line. Movie-
- * only in practice: `releaseCalendar` comes from the TMDB movie catalogue
- * alone, so a TV/manga item or a tokenless page renders nothing — no guard at
- * the call site.
+ * "In theaters · Digital · Physical" as a rail below Studios (plan 0029),
+ * replacing the single muted "Digital release · …" line that used to sit under
+ * the meta line. It takes the same `mt-8` + display-heading shell as its
+ * neighbours down there (Seasons, Cast, Studios, View on) rather than the
+ * small uppercase label a header-adjacent block would use.
+ *
+ * Movie-only in practice: `releaseCalendar` comes from the TMDB movie
+ * catalogue alone, so a TV/manga item or a tokenless page renders nothing —
+ * no guard at the call site.
  */
 export function ReleaseTimeline({ item }: { item: NormalizedMediaItem }) {
   const stops = releaseStops(item.releaseCalendar);
   if (stops.length === 0) return null;
 
   return (
-    <View className="mb-6">
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-1">
-        Release
-      </Text>
+    <View className="mt-8">
+      <Text className="text-xl font-display text-foreground mb-2">Release</Text>
       {stops.map((stop, index) => (
         <Stop
           first={index === 0}

@@ -39,9 +39,9 @@ question a viewer opens an unreleased film to ask) is unanswerable.
 
 ### Behaviour
 
-- A movie shows a **Release** section under the header: one row per known
-  release kind — In theaters / Digital / Physical — ordered by date, connected
-  by a rail.
+- A movie shows a **Release** section below Studios (owner placement call):
+  one row per known release kind — In theaters / Digital / Physical — ordered
+  by date, connected by a rail.
 - A row whose date has **not** yet arrived in the viewer's timezone is
   accented and leads with a countdown: "In 12 days · Aug 8, 2026".
 - Fewer kinds means fewer rows; one kind is a valid one-row rail. No kinds at
@@ -97,8 +97,10 @@ The two parses answer different questions and are documented as such;
 ### KTD4 — the section is a feature, its geometry is pixel-fixed
 
 `features/release-timeline/` splits pure (`stops.ts`, unit-tested) from render
-(`release-timeline.tsx`). Rows are a fixed 36px because every row is a single
-line; the connector trunk and dot are absolutely positioned off that constant,
+(`release-timeline.tsx`). The section takes the `mt-8` + display-heading shell
+its neighbours down the page use (Seasons, Cast, Studios, View on), not the
+small uppercase label a header-adjacent block would. Rows are a fixed 36px
+because every row is a single line; the connector trunk and dot are absolutely positioned off that constant,
 the same technique as the diary's tree connector — the trunk stops at the dot
 on the first and last row, and a lone stop draws no trunk at all.
 

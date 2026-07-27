@@ -728,8 +728,6 @@ export default function DetailsScreen() {
             </View>
           </View>
 
-          <ReleaseTimeline item={shown} />
-
           {shown.overview != null && <ExpandableText text={shown.overview} />}
 
           <LogMediaButton item={shown} />
@@ -783,6 +781,8 @@ export default function DetailsScreen() {
           >
             <CreditsSections item={item} />
           </SuspenseSection>
+
+          <ReleaseTimeline item={shown} />
 
           <ProviderLinksSection item={shown} />
         </View>
