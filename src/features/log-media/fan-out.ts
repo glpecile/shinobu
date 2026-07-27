@@ -13,6 +13,21 @@ export interface LogMediaVariables {
    * provider, not N. Mutually exclusive with `episode`.
    */
   episodes?: Array<{ season: number; number: number }>;
+  /**
+   * The *entry-relative* numbering domain (plan 0027 KTD2): an AniList entry
+   * counts its own episodes 1..n, so a sequel-season entry's "episode 3" is
+   * neither S01E03 nor S02E03 until ani.zip's table says which. AniList-origin
+   * callers pass this — and never fabricate a season — while the AniList
+   * adapter reads it verbatim.
+   *
+   * Mutually exclusive with `episode`/`episodes` **as caller input only**:
+   * `useLogMedia` translates entry → canonical before `fanOutLog`, so the
+   * variables an adapter sees carry both domains at once (Trakt and Serializd
+   * read the canonical `episodes`, AniList reads these). When translation
+   * fails, this is present and the canonical fields are absent — those two
+   * providers are wrapped into reasoned skips rather than written (R3).
+   */
+  entryEpisodes?: number[];
   /** ISO instant; omitted = providers record "now". */
   watchedAt?: string;
   /**

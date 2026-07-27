@@ -9,6 +9,15 @@ import type { NormalizedMediaItem } from '@/types/media';
  *   double-logged.
  * - Every provider already has it (parity) → this log is a rewatch, written
  *   to all of them.
+ *
+ * Every record must be compared **in its own numbering domain** (plan 0027
+ * KTD5): Trakt and Serializd against canonical `${season}-${number}` keys,
+ * AniList against the entry's own 1..n progress. `useLogMedia` picks the domain
+ * per provider before calling in here — a season-2 intent compared against
+ * season-1 keys is the false in-sync skip this plan removes. Providers whose
+ * canonical mapping couldn't be resolved never reach these records at all:
+ * they are reasoned skips, and including them would make a genuine parity
+ * rewatch look like a catch-up.
  */
 
 export type LogAction = 'log' | 'skip' | 'rewatch';
@@ -55,7 +64,9 @@ export function traktHasFilm(
 /**
  * Trakt show progress (`normalizeWatchedProgress`'s `"season-number"` key
  * set): the intended episodes all have to be completed for the batch to
- * count as "already recorded".
+ * count as "already recorded". `episodes` is always the **canonical** batch —
+ * for an AniList-origin log that is the ani.zip-translated one, never the
+ * entry's own numbering (plan 0027 R4).
  */
 export function traktHasEpisodes(
   completedKeys: ReadonlySet<string>,
@@ -77,15 +88,17 @@ export function anilistHasFilm(entry: AniListEntrySnapshot | null): boolean {
 }
 
 /**
- * Single-season scope (plan 0011): AniList entry progress ≡ season-1 episode
- * number, and a COMPLETED entry has every episode.
+ * AniList's own domain (plan 0027 KTD5): `entryNumbers` are the entry's
+ * relative 1..n episodes — the same scalar its `progress` counts — so a sequel
+ * entry's episode 3 compares against progress 3 no matter which canonical
+ * season Trakt received. A COMPLETED entry has every episode of *that entry*.
  */
 export function anilistHasEpisodes(
   entry: AniListEntrySnapshot | null,
-  episodes: readonly { season: number; number: number }[],
+  entryNumbers: readonly number[],
 ): boolean {
   if (entry == null) return false;
   if (entry.status === 'COMPLETED') return true;
-  const highest = Math.max(...episodes.map((episode) => episode.number));
-  return entry.progress >= highest;
+  if (entryNumbers.length === 0) return false;
+  return entry.progress >= Math.max(...entryNumbers);
 }

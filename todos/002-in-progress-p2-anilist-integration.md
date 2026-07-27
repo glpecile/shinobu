@@ -28,6 +28,23 @@ Remaining before this closes:
 - [ ] Any GraphQL boundary quirks or paging mismatches discovered get written
       to `docs/solutions/anilist-*.md`.
 
+## Update (2026-07-27 — plan `docs/plans/0027-anime-season-mapping.md`)
+
+Plan 0011 decision 7's explicit deferral — *"multi-season absolute numbering
+defers to a follow-up using ani.zip's episode table"* — **is shipped**. AniList
+entry-relative episode numbers are now translated to canonical
+`{season, number}` pairs via ani.zip's per-episode table before any
+Trakt/Serializd write, so a sequel-season or split-cour entry no longer logs
+phantom season-1 history. AniList's own write is unchanged (entry-relative
+`progress`), and an unresolvable mapping becomes a reasoned skip with plan
+0022's manual link rather than a guessed season. No `season: 1` literal remains
+in any AniList-origin write path.
+
+Still deferred (plan 0027 Scope Boundaries): the reverse direction (logging a
+canonical season from the Trakt seasons UI into the sibling AniList entry) —
+today's drop-AniList rule stands — and the `season: 1` in
+`features/notifications/compute-schedule.ts`, which writes to no provider.
+
 ## Acceptance Criteria
 
 - Anime/manga progress renders in the unified feed via a `useCurrentAnimeQuery`

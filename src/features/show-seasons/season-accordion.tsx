@@ -14,8 +14,17 @@ export interface PendingLog {
   title: string;
   /** Sheet description, e.g. the episode/season label. */
   description: string;
-  /** One or more episode watches fanned out in a single request. */
-  episodes: Array<{ season: number; number: number }>;
+  /**
+   * Canonical `{season, number}` watches fanned out in a single request — the
+   * TV/Trakt domain. Mutually exclusive with `entryEpisodes` (plan 0027 KTD2).
+   */
+  episodes?: Array<{ season: number; number: number }>;
+  /**
+   * AniList-entry-relative episode numbers, for the anime accordion: the entry
+   * numbers its own episodes 1..n and carries no canonical season, so the log
+   * fan-out translates them via ani.zip rather than the caller guessing.
+   */
+  entryEpisodes?: number[];
 }
 
 export interface SeasonAccordionProps {

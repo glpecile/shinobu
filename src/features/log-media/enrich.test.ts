@@ -34,6 +34,17 @@ mock.module('@/state/queries/mapping', () => ({
     calls.push('trakt-search');
     return Promise.resolve(null);
   },
+  // Never reached from `enrich.ts` (plan 0027 translates *after* enrichment) —
+  // present because `mock.module` is process-wide, so the fake must expose
+  // every named export any module loaded later imports.
+  cachedAniZipEpisodeMap: () => {
+    calls.push('anizip-episodes');
+    return Promise.resolve(null);
+  },
+  cachedSeasonLayout: () => {
+    calls.push('season-layout');
+    return Promise.resolve(null);
+  },
 }));
 
 const { enrichExternalIds } = await import('./enrich');

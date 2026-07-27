@@ -50,8 +50,14 @@ export function selectUpNextPool(
     .slice(0, Math.max(0, limit));
 }
 
-function entryId(item: NormalizedMediaItem, season: number, number: number) {
-  return `${item.id}-s${season}e${number}`;
+function entryId(
+  item: NormalizedMediaItem,
+  season: number | undefined,
+  number: number,
+) {
+  return season == null
+    ? `${item.id}-e${number}`
+    : `${item.id}-s${season}e${number}`;
 }
 
 /**
@@ -110,11 +116,13 @@ function anilistEntry(
 
   const airing = input.nextAiring;
   const base = {
-    id: entryId(input.item, 1, next),
+    id: entryId(input.item, undefined, next),
     item: input.item,
-    // Anime keeps the season-1 convention every other AniList write uses
-    // (KTD-7) — the fan-out's own rule drops AniList for season ≠ 1.
-    episode: { season: 1, number: next },
+    // No season at all (plan 0027): `next` is entry-relative — the AniList
+    // entry's own numbering — and only ani.zip's table knows which canonical
+    // season it belongs to. Stamping `season: 1` here is what made a
+    // sequel-season quick log write phantom season-1 history to Trakt.
+    episode: { number: next },
     source: 'anilist' as const,
   };
 

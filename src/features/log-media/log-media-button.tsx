@@ -119,9 +119,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     logMedia.mutate(
       {
         item,
-        ...(isAnimeSeries
-          ? { episode: { season: 1, number: nextEpisode } }
-          : {}),
+        // Entry-relative, no season (plan 0027 KTD2): `nextEpisode` counts the
+        // AniList entry's own episodes, and the fan-out resolves the canonical
+        // season from ani.zip before Trakt/Serializd see it.
+        ...(isAnimeSeries ? { entryEpisodes: [nextEpisode] } : {}),
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,

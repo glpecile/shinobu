@@ -9,8 +9,14 @@ import { getEntryState } from './reads';
 export interface AniListLogOptions {
   /**
    * Episode (or chapter) progress to record — required for series, ignored
-   * for films. Single-season scope: entry progress ≡ season-1 episode number
-   * (plan 0011 decision 7).
+   * for films.
+   *
+   * Always **entry-relative**: an AniList entry counts its own episodes from 1,
+   * so a sequel-season entry's third episode is `progress: 3` here even though
+   * Trakt and Serializd receive S02E03 for the same log (plan 0027 R2/KTD5).
+   * The caller does that split — `useLogMedia` hands this adapter
+   * `entryEpisodes` and the canonical batch to the others; it is *not*
+   * "season-1 episode number" any more (plan 0011 decision 7's original scope).
    */
   progress?: number;
   /**

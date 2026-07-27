@@ -22,6 +22,28 @@ export type AniZipLookup =
   | { tvdbId: number }
   | { tmdbId: number };
 
+/**
+ * One canonical `{season, number}` pair — the numbering Trakt and Serializd
+ * (via TMDB) speak, as opposed to an AniList entry's own 1..n episodes.
+ * ani.zip's `seasonNumber` is TVDB-derived (plan 0027 KTD6).
+ */
+export interface AniZipCanonicalEpisode {
+  season: number;
+  number: number;
+  /**
+   * The episode's position counting from the show's very first episode,
+   * ignoring seasons entirely. Load-bearing, not a nicety: TVDB splits anime
+   * into broadcast seasons while Trakt and TMDB overwhelmingly keep one
+   * continuous season, so for many shows this — not `{season, number}` — is
+   * what the trackers can actually resolve
+   * (docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md).
+   */
+  absolute?: number;
+}
+
+/** Entry-relative episode number → its canonical `{season, number}`. */
+export type AniZipEpisodeMap = ReadonlyMap<number, AniZipCanonicalEpisode>;
+
 interface AniZipResponse {
   mappings?: {
     anilist_id?: number | null;
@@ -31,6 +53,22 @@ interface AniZipResponse {
     imdb_id?: string | null;
     type?: string | null;
   } | null;
+}
+
+/**
+ * The per-episode half of the same document. Deliberately a separate interface
+ * from `AniZipResponse`: the ids decode stays byte-for-byte what it was, so the
+ * feed path never starts retaining this block (plan 0027 KTD1).
+ */
+interface AniZipEpisodesResponse {
+  episodes?: Record<
+    string,
+    {
+      seasonNumber?: number | null;
+      episodeNumber?: number | null;
+      absoluteEpisodeNumber?: number | null;
+    } | null
+  > | null;
 }
 
 function queryFor(lookup: AniZipLookup): string {
@@ -66,6 +104,57 @@ export async function fetchAniZipIds(
       ...(mappings.imdb_id != null ? { imdb: mappings.imdb_id } : {}),
       ...(mappings.type != null ? { type: mappings.type } : {}),
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The *numbering* bridge, sibling to `fetchAniZipIds`'s identity bridge (plan
+ * 0027 KTD1): AniList models every anime season as its own series entry with
+ * episodes 1..n, while Trakt/Serializd/TMDB model one show with numbered
+ * seasons. ani.zip's `episodes` block keys AniList-entry-relative numbers to
+ * the canonical `{seasonNumber, episodeNumber}` pair, so a sequel entry's
+ * episode 3 resolves to S02E03 instead of the phantom S01E03 the fan-out used
+ * to write.
+ *
+ * Same non-failable contract as the ids fetch — `null` on any miss, never a
+ * throw — and the same ~1 MB payload hazard
+ * (docs/solutions/web-cors-anizip.md), which is why only `{season, number}`
+ * survives the decode and only *write actions* ever call this (KTD4). Keys are
+ * AniDB-entry-derived: `"S1"`-style specials keys and any entry without a
+ * season/episode number are dropped rather than guessed at.
+ */
+export async function fetchAniZipEpisodeMap(
+  fetch: HttpFetch,
+  lookup: AniZipLookup,
+): Promise<AniZipEpisodeMap | null> {
+  try {
+    const response = await fetch(`${ANIZIP_MAPPINGS_URL}?${queryFor(lookup)}`);
+    if (!response.ok) return null;
+    const body = (await response.json()) as AniZipEpisodesResponse;
+    const episodes = body.episodes;
+    if (episodes == null) return null;
+
+    const map = new Map<number, AniZipCanonicalEpisode>();
+    for (const [key, episode] of Object.entries(episodes)) {
+      const entryNumber = Number(key);
+      // "S1"/"S2" (specials) parse to NaN and drop out here.
+      if (!Number.isInteger(entryNumber) || entryNumber < 1) continue;
+      const season = episode?.seasonNumber;
+      const number = episode?.episodeNumber;
+      if (season == null || number == null) continue;
+      if (!Number.isInteger(season) || !Number.isInteger(number)) continue;
+      const absolute = episode?.absoluteEpisodeNumber;
+      map.set(entryNumber, {
+        season,
+        number,
+        ...(absolute != null && Number.isInteger(absolute) && absolute > 0
+          ? { absolute }
+          : {}),
+      });
+    }
+    return map;
   } catch {
     return null;
   }

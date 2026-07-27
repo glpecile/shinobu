@@ -331,8 +331,9 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
     expect(data.continueWatching[0]).toMatchObject({
       source: 'anilist',
       status: 'aired',
-      episode: { season: 1, number: 6 },
+      episode: { number: 6 },
     });
+    expect(data.continueWatching[0].episode.season).toBeUndefined();
     expect(data.continueWatching[0].episode.firstAired).toBeUndefined();
   });
 
@@ -395,7 +396,7 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
       NOW,
     );
     expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0].episode).toEqual({ season: 1, number: 4 });
+    expect(data.continueWatching[0].episode).toEqual({ number: 4 });
   });
 
   test('no pointer + caught up to the total → excluded', () => {
@@ -434,7 +435,11 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
     expect(data.continueWatching).toHaveLength(0);
   });
 
-  test('anime entries keep the season-1 convention (KTD-7)', () => {
+  // Plan 0027 U5: the season-1 convention is gone. An AniList entry emits no
+  // season at all — its episode number is entry-relative, and the log fan-out
+  // resolves the canonical season from ani.zip. The old literal is what wrote
+  // phantom S01 history for every sequel-season anime quick log.
+  test('anime entries carry no fabricated season, and the id reflects it', () => {
     const data = computeUpNext(
       inputs({
         anilist: [
@@ -443,7 +448,10 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
       }),
       NOW,
     );
-    expect(data.continueWatching[0].episode.season).toBe(1);
+    const entry = data.continueWatching[0];
+    expect(entry.episode.season).toBeUndefined();
+    expect(entry.episode.number).toBe(1);
+    expect(entry.id).toBe('anilist-9-e1');
   });
 });
 

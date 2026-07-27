@@ -99,10 +99,20 @@ export function getAnimeEpisodes(
   });
 }
 
+/**
+ * One AniList entry is one section, and its episodes are numbered 1..n
+ * *relative to that entry* — which is all this function knows. `number: 1` is
+ * the section's index, not a claim about the canonical season: a sequel entry's
+ * episode 1 may well be S02E01 or S03E13 (plan 0027). The neutral "Episodes"
+ * title is the honest default; the details accordion replaces it with the real
+ * canonical season once ani.zip's table resolves one, and never with
+ * "Season 1". Watched-checkmark keys stay `1-{n}` for the same reason — they
+ * derive from the entry's own progress.
+ */
 function buildSeason(episodes: NormalizedEpisode[]): NormalizedSeason {
   return {
     number: 1,
-    title: 'Season 1',
+    title: 'Episodes',
     episodes,
   };
 }
