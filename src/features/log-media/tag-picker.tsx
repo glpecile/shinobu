@@ -1,11 +1,17 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useDeferredValue, useState } from 'react';
 import { type LayoutChangeEvent, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import {
+  type EntryOrExitLayoutType,
+  FadeIn,
+  useReducedMotion,
+} from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
+import { Skeleton } from '@/components/skeleton';
+import { cn } from '@/lib/cn';
 import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import type { LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import { useRecentTags } from '@/state/prefs/recent-tags';
@@ -14,6 +20,7 @@ import {
   activeTagFragment,
   filterTagSuggestions,
   isTagSelected,
+  pinSelectedTags,
   toggleTag,
 } from './parse-tags';
 
@@ -21,8 +28,50 @@ import {
  * Generous, because the row collapses to a single line anyway — the cap is
  * only here so an enormous tag vocabulary can't make the expanded state
  * unusable. A bigger pool also gives the type-to-filter more to match against.
+ *
+ * Applied *after* `pinSelectedTags`, so a selected tag can never be the one the
+ * cap drops — the tags the sheet opened with are the ones that must survive
+ * every trim.
  */
 const MAX_SUGGESTIONS = 24;
+
+/**
+ * Stagger between chips, and the index past which they stop staggering. The
+ * common arrival is the whole vocabulary at once (the Letterboxd query resolves
+ * a beat after the sheet opens), so an uncapped stagger would put the last chip
+ * half a second behind the first. Five steps is enough to read as a cascade;
+ * everything after rides the last one in.
+ */
+const CHIP_STAGGER = 20;
+const CHIP_STAGGER_STEPS = 5;
+
+/**
+ * **A preset (`FadeIn`), never a custom `Keyframe`.** On web, Reanimated pins
+ * any element animated by a *custom* keyframe to `position: absolute` once the
+ * animation is cleaned up (`setElementPosition`, only reached when the
+ * animation name isn't one of its own presets). Every chip then leaves the
+ * flow, the wrapping row measures 0px tall, and the sheet's buttons ride up
+ * over the chips — `docs/solutions/reanimated-web-keyframe-pins-position.md`.
+ * A rise-and-fade would be marginally nicer; keeping the chips in the layout
+ * they are measured by is worth more.
+ *
+ * Module scope, per Reanimated's animation-builder performance rule — one
+ * builder per stagger step, rather than a new one per chip per render.
+ */
+const chipEntering = Array.from({ length: CHIP_STAGGER_STEPS }, (_, step) =>
+  FadeIn.duration(DURATION.swap).delay(step * CHIP_STAGGER),
+);
+
+/** Reduced motion keeps the fade and drops the stagger. */
+const chipFading = FadeIn.duration(DURATION.swap);
+
+function chipAnimation(
+  index: number,
+  reduceMotion: boolean,
+): EntryOrExitLayoutType {
+  if (reduceMotion) return chipFading;
+  return chipEntering[Math.min(index, CHIP_STAGGER_STEPS - 1)];
+}
 
 /** Sub-pixel layout noise must not read as a second row. */
 const ROW_EPSILON = 2;
@@ -80,6 +129,9 @@ function useFilterFragment(fragment: string): string {
  * that Letterboxd hasn't seen. Deduped case-insensitively — "Horror" and
  * "horror" are one tag to both providers, so showing both would offer the user
  * a duplicate.
+ *
+ * Uncapped: `MAX_SUGGESTIONS` is applied after the selected tags are pinned, so
+ * that trimming a long vocabulary can't cut the user's own selection.
  */
 function mergeTagSuggestions(
   letterboxdTags: readonly LetterboxdTag[],
@@ -93,10 +145,57 @@ function mergeTagSuggestions(
     if (tag === '' || seen.has(key)) continue;
     seen.add(key);
     merged.push(tag);
-    if (merged.length === MAX_SUGGESTIONS) break;
   }
 
   return merged;
+}
+
+/**
+ * Placeholder widths, in the order they render. Uneven on purpose — four
+ * identical pills read as a progress bar, not as tags.
+ */
+const SKELETON_WIDTHS = ['w-16', 'w-10', 'w-20', 'w-14'] as const;
+
+/**
+ * A chip-shaped placeholder for the frame where the vocabulary is still in
+ * flight and there is nothing local to show yet.
+ *
+ * Deliberately built out of `TagChip`'s own box — same `px-4 py-2`, same
+ * `h-5` line box the `text-sm` label occupies — so it measures the height a
+ * real chip will, and `measureRow` can take that height from it. The row is
+ * therefore already the right height before the first real chip exists, which
+ * is the whole point of rendering it.
+ */
+function TagChipSkeleton({
+  width,
+  onMeasure,
+}: {
+  width: string;
+  onMeasure?: (height: number) => void;
+}) {
+  return (
+    <View
+      className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+      onLayout={
+        onMeasure == null
+          ? undefined
+          : (event: LayoutChangeEvent) =>
+              onMeasure(event.nativeEvent.layout.height)
+      }
+    >
+      {/* The outline is a full-bleed layer, not a border on the box — same as
+          `TagChip`. A real border would add its 2px to the row height and put
+          the placeholder out of step with the chips it stands in for. */}
+      <View className="absolute inset-0 rounded-full border border-border bg-surface" />
+      <Skeleton className="h-3.5 w-3.5 rounded-full" />
+      {/* The h-5 wrapper is the text's line box; the bar inside is shorter, the
+          way a text placeholder should be. Collapsing them into one 20px bar
+          would keep the height and lose the resemblance. */}
+      <View className="h-5 justify-center">
+        <Skeleton className={cn('h-3 rounded-full', width)} />
+      </View>
+    </View>
+  );
 }
 
 function TagChip({
@@ -104,12 +203,14 @@ function TagChip({
   selected,
   onToggle,
   onMeasure,
+  entering,
 }: {
   tag: string;
   selected: boolean;
   onToggle: () => void;
   /** Set on the first chip only — its height is one row's height. */
   onMeasure?: (height: number) => void;
+  entering: EntryOrExitLayoutType;
 }) {
   const accent = useCSSVariable('--color-accent');
   const muted = useCSSVariable('--color-muted');
@@ -117,53 +218,60 @@ function TagChip({
   const mutedColor = typeof muted === 'string' ? muted : undefined;
 
   return (
-    <PresstableOpacity
-      accessibilityLabel={selected ? `Remove tag ${tag}` : `Add tag ${tag}`}
-      // Only ever "button" on a pressto pressable — RNGH's web gesture handler
-      // fires presses on nothing else
-      // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onToggle}
-    >
-      {/* onLayout sits on the chip's own box, not the pressable: pressto's
-          wrapper does not forward it. */}
-      <View
-        className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-        onLayout={
-          onMeasure == null
-            ? undefined
-            : (event: LayoutChangeEvent) =>
-                onMeasure(event.nativeEvent.layout.height)
-        }
+    // The animation goes on a wrapper, not the pressable: pressto's wrapper
+    // forwards neither `entering` nor a ref Reanimated could drive. Chips are
+    // keyed by tag, so only the ones that genuinely just appeared play it —
+    // a chip that survives a keystroke or a pool refresh sits still.
+    <AnimatedView entering={entering}>
+      <PresstableOpacity
+        accessibilityLabel={selected ? `Remove tag ${tag}` : `Add tag ${tag}`}
+        // Only ever "button" on a pressto pressable — RNGH's web gesture handler
+        // fires presses on nothing else
+        // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        onPress={onToggle}
       >
-        {/* Selection crossfades between two stacked full-bleed layers instead
-            of hard-flipping classNames: opacity is free on the GPU, both states
-            stay expressed as theme tokens (an animated backgroundColor would
-            lose the accent's /10 alpha), and the resting layer underneath means
-            a dropped animation still renders a correct chip — same recipe as
-            the Up Next day tiles. */}
-        <View className="absolute inset-0 rounded-full border border-border bg-surface" />
-        <AnimatedView
-          className="absolute inset-0 rounded-full border border-accent bg-accent/10"
-          style={{
-            opacity: selected ? 1 : 0,
-            transitionProperty: 'opacity',
-            transitionDuration: DURATION.color,
-            transitionTimingFunction: EASE_OUT,
-          }}
-        />
-        {/* The unselected chip keeps an outline dot rather than dropping the
-            icon: a chip that grows on tap would reflow the whole wrapped row
-            under the user's finger. Matches ProviderToggle's checkmark idiom. */}
-        <Ionicons
-          color={selected ? accentColor : mutedColor}
-          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-          size={14}
-        />
-        <Text className="text-foreground font-sans text-sm">{tag}</Text>
-      </View>
-    </PresstableOpacity>
+        {/* onLayout sits on the chip's own box, not the pressable: pressto's
+            wrapper does not forward it. */}
+        <View
+          className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+          onLayout={
+            onMeasure == null
+              ? undefined
+              : (event: LayoutChangeEvent) =>
+                  onMeasure(event.nativeEvent.layout.height)
+          }
+        >
+          {/* Selection crossfades between two stacked full-bleed layers instead
+              of hard-flipping classNames: opacity is free on the GPU, both
+              states stay expressed as theme tokens (an animated
+              backgroundColor would lose the accent's /10 alpha), and the
+              resting layer underneath means a dropped animation still renders a
+              correct chip — same recipe as the Up Next day tiles. */}
+          <View className="absolute inset-0 rounded-full border border-border bg-surface" />
+          <AnimatedView
+            className="absolute inset-0 rounded-full border border-accent bg-accent/10"
+            style={{
+              opacity: selected ? 1 : 0,
+              transitionProperty: 'opacity',
+              transitionDuration: DURATION.color,
+              transitionTimingFunction: EASE_OUT,
+            }}
+          />
+          {/* The unselected chip keeps an outline dot rather than dropping the
+              icon: a chip that grows on tap would reflow the whole wrapped row
+              under the user's finger. Matches ProviderToggle's checkmark
+              idiom. */}
+          <Ionicons
+            color={selected ? accentColor : mutedColor}
+            name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+            size={14}
+          />
+          <Text className="text-foreground font-sans text-sm">{tag}</Text>
+        </View>
+      </PresstableOpacity>
+    </AnimatedView>
   );
 }
 
@@ -197,6 +305,13 @@ export function TagPicker({
   const recentTags = useRecentTags();
   const reduceMotion = useReducedMotion();
   const muted = useCSSVariable('--color-muted');
+  // The field as the sheet opened, and the only thing the pinning reads.
+  // Pinning off the *live* value would re-sort the row on every tap, sliding
+  // the chips out from under the finger that just pressed one — the same
+  // reflow the chip's fixed-width icon exists to avoid. What the row owes the
+  // user is that the tags they arrived with are visible in the collapsed row;
+  // a tag they select here is already visible, by definition.
+  const [openedWith] = useState(value);
   const [expanded, setExpanded] = useState(false);
   const [rowHeight, setRowHeight] = useState(0);
   // Heights are only comparable within one set of chips, so they are cached
@@ -210,10 +325,15 @@ export function TagPicker({
     () => new Map(),
   );
 
-  const suggestions = filterTagSuggestions(
+  const fragment = useFilterFragment(activeTagFragment(value));
+  // Pin before capping, filter after: the tags the sheet opened with lead the
+  // row whatever the vocabulary does, and typing still re-ranks the whole
+  // visible pool by what matches.
+  const pool = pinSelectedTags(
     mergeTagSuggestions(letterboxdTags.data ?? [], recentTags),
-    useFilterFragment(activeTagFragment(value)),
-  );
+    openedWith,
+  ).slice(0, MAX_SUGGESTIONS);
+  const suggestions = filterTagSuggestions(pool, fragment);
   const key = measureKey(suggestions);
   const contentHeight = heights.get(key) ?? 0;
 
@@ -237,7 +357,15 @@ export function TagPicker({
     );
   }
 
-  if (suggestions.length === 0) return null;
+  // Nothing local to show *and* the vocabulary is still on the wire: hold a
+  // row of placeholders so the block the tags will land in already occupies
+  // its final height. `isFetching`, not `isPending` — a disabled query (no
+  // Letterboxd session) is permanently "pending", and reserving space for tags
+  // that are never coming is how you get a dead band instead of a jump.
+  const loading = suggestions.length === 0 && letterboxdTags.isFetching;
+
+  // A picker with no suggestions and nothing in flight has nothing to say.
+  if (suggestions.length === 0 && !loading) return null;
 
   const measured = rowHeight > 0 && contentHeight > 0;
   // Until both heights are in, assume anything past a single chip wraps. The
@@ -247,7 +375,13 @@ export function TagPicker({
   const overflows = measured
     ? contentHeight > rowHeight + ROW_EPSILON
     : suggestions.length > 1;
-  const collapsed = overflows && !expanded;
+  // Placeholders are clipped to one row like everything else — four of them
+  // wrap on a narrow phone, and a two-row skeleton resolving into a one-row
+  // list is the same shift by another name.
+  const collapsed = loading || (overflows && !expanded);
+  // The toggle stays hidden while loading: `overflows` would be answering a
+  // question about the placeholders, not about the tags.
+  const showToggle = !loading && measured && overflows;
 
   return (
     <View className="mt-2">
@@ -265,24 +399,62 @@ export function TagPicker({
         }
       >
         <View className="flex-row flex-wrap gap-2" onLayout={measureContent}>
-          {suggestions.map((tag, index) => (
-            <TagChip
-              key={tag.toLowerCase()}
-              onMeasure={index === 0 ? measureRow : undefined}
-              onToggle={() => onChange(toggleTag(value, tag))}
-              selected={isTagSelected(value, tag)}
-              tag={tag}
-            />
-          ))}
+          {loading
+            ? SKELETON_WIDTHS.map((width, index) => (
+                <TagChipSkeleton
+                  key={width}
+                  // The placeholder is chip-shaped, so its height *is* a row's
+                  // height — taking it here means the collapsed row is exact
+                  // from the first frame rather than ESTIMATED_ROW_HEIGHT.
+                  onMeasure={index === 0 ? measureRow : undefined}
+                  width={width}
+                />
+              ))
+            : suggestions.map((tag, index) => (
+                <TagChip
+                  entering={chipAnimation(index, reduceMotion)}
+                  key={tag.toLowerCase()}
+                  onMeasure={index === 0 ? measureRow : undefined}
+                  onToggle={() => onChange(toggleTag(value, tag))}
+                  selected={isTagSelected(value, tag)}
+                  tag={tag}
+                />
+              ))}
         </View>
       </View>
-      {/* `measured` and not just `overflows`: the pre-measurement guess above is
-          allowed to clip for a frame, but a toggle that appears and then
-          vanishes again reads as a glitch. */}
-      {measured && overflows && (
+      {/* The toggle's row is **always** in the layout — it only fades in and
+          out. It can't be there when the sheet opens: it waits on the tag
+          query, then on a measurement of what that query returned, so mounting
+          it late shoved the confirm button ~34px down a beat after the user
+          was already reaching for it. Reserving its height costs an empty band
+          under a picker whose whole vocabulary fits on one line; that band is
+          invisible, and the shove was not.
+
+          Reserved by keeping the real row mounted rather than by a constant:
+          a hardcoded height would drift from the font the moment `text-xs` or
+          `py-1` changed, on the one row whose whole job is to not move.
+
+          `measured` and not just `overflows`: the pre-measurement guess above
+          is allowed to clip for a frame, but a toggle that turns on and then
+          off again reads as a glitch. */}
+      <AnimatedView
+        // Hidden means *gone* to a pointer and to assistive tech — an
+        // invisible spacer must never take a tap or a screen-reader stop.
+        aria-hidden={!showToggle}
+        className="self-start"
+        pointerEvents={showToggle ? 'auto' : 'none'}
+        style={{
+          opacity: showToggle ? 1 : 0,
+          transitionProperty: 'opacity',
+          transitionDuration: reduceMotion ? 0 : DURATION.swap,
+          transitionTimingFunction: EASE_OUT,
+        }}
+      >
         <PresstableOpacity
           accessibilityLabel={
-            expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'
+            expanded
+              ? 'Show fewer tag suggestions'
+              : 'Show more tag suggestions'
           }
           accessibilityRole="button"
           accessibilityState={{ expanded }}
@@ -307,7 +479,7 @@ export function TagPicker({
             />
           </AnimatedView>
         </PresstableOpacity>
-      )}
+      </AnimatedView>
     </View>
   );
 }

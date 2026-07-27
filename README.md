@@ -109,29 +109,6 @@ triggers [`release.yml`](.github/workflows/release.yml), which builds a signed
 universal and arm64-v8a APK, checksums both, and publishes a GitHub Release with
 auto-categorized notes. Full runbook: [`docs/releasing.md`](docs/releasing.md).
 
-### 🤖 F-Droid & IzzyOnDroid
-
-**IzzyOnDroid is the target; the main F-Droid repo is deferred.** The two repos
-have different acceptance models, and only one fits a solo-maintained Expo app
-today:
-
-- **IzzyOnDroid** mirrors official, developer-signed APKs straight from GitHub
-  Releases — no source build, no reproducibility bar. Shinobu already satisfies
-  the license (GPL-3.0-only) and source (tagged releases with attached APKs)
-  requirements. The one open blocker is size: their limit is ~30 MB per APK, and
-  the arm64-v8a split currently measures ~67 MB. R8 minification and resource
-  shrinking are still off, and turning them on is the concrete next step before
-  submitting.
-- **F-Droid's main repo** builds from source on its own infrastructure with
-  pinned FOSS toolchains and a reproducible-build check. For a CNG app that means
-  provisioning a JS toolchain and running `expo prebuild` inside the build recipe
-  — a documented, unresolved friction point for React Native apps generally — on
-  top of the Firebase classes `expo-notifications` drags in on Android. Not a
-  permanent blocker, but real ongoing maintenance for no immediate gain.
-
-The full analysis, current policy links, and the submission checklist live in
-[`docs/releasing.md`](docs/releasing.md#f-droid--izzyondroid-distribution-analysis).
-
 ## 📚 Docs
 
 - [`AGENTS.md`](AGENTS.md) — the conventions everything here is held to.

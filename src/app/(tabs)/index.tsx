@@ -67,7 +67,9 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
   const icon = compact ? 28 : 36;
 
   return (
-    <View className="flex-1 items-center justify-center px-8">
+    // No horizontal padding here: `EmptyStateTile` brings its own `px-8`, and
+    // stacking the two halved the width the CTA's label had to lay out in.
+    <View className="flex-1 items-center justify-center">
       {/* Percentage offsets can't guarantee clearance at phone heights — the
           centred copy fills the middle band and the tiles were painting over
           the headline, the CTA, and the account note. So compact drops the
@@ -118,7 +120,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
           </Text>
         )}
       </EmptyStateTile>
-      <Text className="text-muted font-sans text-xs mt-5 text-center">
+      <Text className="text-muted font-sans text-xs mt-5 px-8 text-center">
         No Shinobu account — your provider tokens never leave this device.
       </Text>
     </View>

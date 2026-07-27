@@ -6,6 +6,7 @@ import {
   filterTagSuggestions,
   isTagSelected,
   parseTags,
+  pinSelectedTags,
   toggleTag,
 } from './parse-tags';
 
@@ -119,9 +120,7 @@ describe('toggleTag', () => {
   });
 
   test('committing a fully typed tag does not duplicate it', () => {
-    expect(toggleTag('shinobu, netflix', 'netflix')).toBe(
-      'shinobu, netflix, ',
-    );
+    expect(toggleTag('shinobu, netflix', 'netflix')).toBe('shinobu, netflix, ');
     expect(parseTags(toggleTag('shinobu, netflix', 'netflix'))).toEqual([
       'shinobu',
       'netflix',
@@ -178,5 +177,62 @@ describe('filterTagSuggestions', () => {
 
   test('no match yields nothing, not everything', () => {
     expect(filterTagSuggestions(all, 'zzz')).toEqual([]);
+  });
+});
+
+describe('pinSelectedTags', () => {
+  const pool = ['netflix', 'xgimi', 'p', 'cinepolis-recoleta', 'shinobu'];
+
+  test('moves the selected tags to the front, pool order otherwise intact', () => {
+    expect(pinSelectedTags(pool, 'shinobu, ')).toEqual([
+      'shinobu',
+      'netflix',
+      'xgimi',
+      'p',
+      'cinepolis-recoleta',
+    ]);
+  });
+
+  test('pins in the order the field lists them, not the pool order', () => {
+    expect(pinSelectedTags(pool, 'p, netflix, ')).toEqual([
+      'p',
+      'netflix',
+      'xgimi',
+      'cinepolis-recoleta',
+      'shinobu',
+    ]);
+  });
+
+  test('a committed tag the pool has never seen still gets a chip', () => {
+    expect(pinSelectedTags(pool, 'rewatch, ')[0]).toBe('rewatch');
+    expect(pinSelectedTags(pool, 'rewatch, ')).toHaveLength(pool.length + 1);
+  });
+
+  test('matches case-insensitively and keeps the pool spelling', () => {
+    expect(pinSelectedTags(['Netflix'], 'netflix, ')).toEqual(['Netflix']);
+  });
+
+  test('the tag still being typed is a filter query, not a selection', () => {
+    expect(pinSelectedTags(pool, 'shinobu, net')).toEqual([
+      'shinobu',
+      'netflix',
+      'xgimi',
+      'p',
+      'cinepolis-recoleta',
+    ]);
+  });
+
+  test('an empty field leaves the pool exactly as it was', () => {
+    expect(pinSelectedTags(pool, '')).toEqual(pool);
+  });
+
+  test('a tag repeated in the field is pinned once', () => {
+    expect(pinSelectedTags(pool, 'p, P, ')).toEqual([
+      'p',
+      'netflix',
+      'xgimi',
+      'cinepolis-recoleta',
+      'shinobu',
+    ]);
   });
 });

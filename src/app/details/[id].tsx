@@ -20,6 +20,7 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { PersonCreditSheet, type PersonCredit } from '@/features/person';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
 import {
   formatRuntime,
@@ -27,6 +28,7 @@ import {
   SeriesRuntimeTile,
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
+import { haptics } from '@/lib/haptics';
 import { initials } from '@/lib/initials';
 import {
   applyPrimaryMetadata,
@@ -228,34 +230,34 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-interface PersonCardProps {
-  id: string;
-  name: string;
-  /** Character for cast, job title(s) for crew. */
-  subtitle: string;
-  headshot: string;
-  /** TMDB person id — absent for AniList people (name lookup instead). */
-  tmdbId?: number;
-}
-
 function PersonCard({
-  name,
-  subtitle,
-  headshot,
+  credit,
   onPress,
-}: Omit<PersonCardProps, 'id' | 'tmdbId'> & { onPress?: () => void }) {
+  onActions,
+}: {
+  credit: PersonCredit;
+  onPress?: () => void;
+  onActions: (credit: PersonCredit) => void;
+}) {
+  const accentForeground = useCSSVariable('--color-accent-foreground');
+  // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
+  // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
+  // the media card's).
+  const [hovered, setHovered] = useState(false);
+  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
+
   const content = (
     <>
-      {headshot !== '' ? (
+      {credit.headshot !== '' ? (
         <Image
-          source={{ uri: headshot }}
+          source={{ uri: credit.headshot }}
           className="w-20 h-20 rounded-full bg-surface"
           contentFit="cover"
         />
       ) : (
         <View className="w-20 h-20 rounded-full bg-surface border border-border items-center justify-center">
           <Text className="text-muted font-sans-semibold text-lg">
-            {initials(name)}
+            {initials(credit.name)}
           </Text>
         </View>
       )}
@@ -263,38 +265,76 @@ function PersonCard({
         className="text-foreground font-sans-semibold text-xs text-center mt-2"
         numberOfLines={1}
       >
-        {name}
+        {credit.name}
       </Text>
-      {subtitle !== '' && (
+      {credit.role !== '' && (
         <Text
           className="text-muted font-sans text-xs text-center mt-0.5"
           numberOfLines={2}
         >
-          {subtitle}
+          {credit.role}
         </Text>
       )}
     </>
   );
 
-  if (onPress == null) {
-    return <View className="w-24 items-center mr-4">{content}</View>;
-  }
   return (
-    <PresstableScale className="w-24 items-center mr-4" onPress={onPress}>
-      {content}
-    </PresstableScale>
+    // The ⋯ is a *sibling* of the pressable, not a child — nesting two
+    // gesture-handler buttons would let a ⋯ press bubble into the card press.
+    <View
+      className="w-24 mr-4 relative"
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
+      {onPress == null ? (
+        // No TMDB token means no person page to open, but the credit sheet
+        // still has the full role to show, so the card stays pressable.
+        <PresstableScale
+          className="items-center"
+          onPress={() => onActions(credit)}
+        >
+          {content}
+        </PresstableScale>
+      ) : (
+        <PresstableScale
+          className="items-center"
+          onLongPress={() => onActions(credit)}
+          onPress={onPress}
+        >
+          {content}
+        </PresstableScale>
+      )}
+      {showActionsButton && (
+        <PresstableOpacity
+          accessibilityLabel={`More about ${credit.name}`}
+          accessibilityRole="button"
+          className="absolute top-0 right-0 w-7 h-7 items-center justify-center rounded-full bg-black/70"
+          onPress={() => onActions(credit)}
+        >
+          <Ionicons
+            color={
+              typeof accentForeground === 'string' ? accentForeground : undefined
+            }
+            name="ellipsis-horizontal"
+            size={14}
+          />
+        </PresstableOpacity>
+      )}
+    </View>
   );
 }
 
 function PeopleSection({
   title,
   people,
+  onCreditActions,
 }: {
   title: string;
-  people: PersonCardProps[];
+  people: PersonCredit[];
+  onCreditActions: (credit: PersonCredit) => void;
 }) {
   const router = useRouter();
-  // No TMDB token, no person pages — cards stay informational.
+  // No TMDB token, no person pages — press falls back to the credit sheet.
   const canOpenPeople = useTmdbToken() !== '';
 
   if (people.length === 0) return null;
@@ -303,20 +343,21 @@ function PeopleSection({
     <View className="mt-8">
       <Text className="text-xl font-display text-foreground mb-4">{title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {people.map(({ id, tmdbId, ...person }) => (
+        {people.map((credit) => (
           <PersonCard
-            key={id}
-            {...person}
-            onPress={
-              canOpenPeople
-                ? () =>
+            credit={credit}
+            key={credit.id}
+            onActions={onCreditActions}
+            {...(canOpenPeople
+              ? {
+                  onPress: () =>
                     router.push(
-                      tmdbId != null
-                        ? routes.person(tmdbId)
-                        : routes.personLookup(person.name),
-                    )
-                : undefined
-            }
+                      credit.tmdbId != null
+                        ? routes.person(credit.tmdbId)
+                        : routes.personLookup(credit.name),
+                    ),
+                }
+              : {})}
           />
         ))}
       </ScrollView>
@@ -379,30 +420,51 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
  */
 function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
+  // Long-press (web: the hover ⋯) on a credit card opens this instead of
+  // navigating — the role text a 96px card had to clip is the whole point.
+  const [credit, setCredit] = useState<PersonCredit | null>(null);
+  const [creditOpen, setCreditOpen] = useState(false);
+
+  function openCredit(next: PersonCredit) {
+    haptics.selection();
+    setCredit(next);
+    setCreditOpen(true);
+  }
 
   return (
     <>
       <PeopleSection
+        onCreditActions={openCredit}
         title="Cast"
         people={data.cast.map((member) => ({
           id: member.id,
           name: member.name,
-          subtitle: member.character,
+          role: member.character,
+          kind: 'cast' as const,
           headshot: member.headshot,
           ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
         }))}
       />
       <PeopleSection
+        onCreditActions={openCredit}
         title="Crew"
         people={data.crew.map((member) => ({
           id: member.id,
           name: member.name,
-          subtitle: member.job,
+          role: member.job,
+          kind: 'crew' as const,
           headshot: member.headshot,
           ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
         }))}
       />
       <StudiosList studios={data.studios} />
+      {/* `credit` is kept (not nulled) while closing so the sheet's content
+          doesn't vanish mid-animation — same contract as the card actions. */}
+      <PersonCreditSheet
+        credit={credit}
+        onClose={() => setCreditOpen(false)}
+        open={creditOpen}
+      />
     </>
   );
 }

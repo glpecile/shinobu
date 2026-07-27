@@ -173,15 +173,18 @@ export function useTraktShowSeasonsQuery(params: {
  * checkmarks. Not suspense: a loading progress read is fine to drop in async.
  */
 export function useTraktShowProgressQuery(params: {
-  traktId: number;
+  /** Optional so callers that only learn the id conditionally can still hook. */
+  traktId: number | undefined;
   enabled?: boolean;
 }) {
   const { traktId, enabled = true } = params;
   return useQuery({
-    queryKey: traktQueryKeys.showProgress(traktId),
+    queryKey: traktQueryKeys.showProgress(traktId ?? -1),
     queryFn: () =>
-      Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
-    enabled,
+      Effect.runPromise(
+        getShowWatchedProgress(traktDeps(), { traktId: traktId ?? -1 }),
+      ),
+    enabled: enabled && traktId != null,
   });
 }
 

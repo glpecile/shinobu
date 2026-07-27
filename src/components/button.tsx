@@ -33,11 +33,21 @@ const SIZE: Record<ButtonSize, { container: string; label: string }> = {
   md: { container: 'px-5 py-3 gap-2', label: 'text-base' },
 };
 
+/** The corner treatment, applied to the pressable and its drawn box alike. */
+const SHAPE: Record<ButtonShape, string> = {
+  rounded: 'rounded-md',
+  pill: 'rounded-full',
+};
+
+export type ButtonShape = 'rounded' | 'pill';
+
 export interface ButtonProps {
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** `rounded` (default, 8px) or `pill` — a fully-round hero/onboarding CTA. */
+  shape?: ButtonShape;
   /**
    * Shows a spinner, swaps in `loadingLabel`, and blocks the press. Every
    * button that awaits something — an OAuth round-trip, a token validation, a
@@ -57,8 +67,15 @@ export interface ButtonProps {
   morphLabel?: boolean;
   accessibilityLabel?: string;
   /**
-   * Layout only — `shrink-0`, `self-start`, `mt-2`. Deliberately last in the
-   * `cn` chain so it wins, but appearance belongs to `variant`/`size`.
+   * Layout only — `shrink-0`, `self-start`, `self-stretch`, `mt-2`.
+   * Deliberately last in the `cn` chain so it wins, but appearance belongs to
+   * `variant`/`size`/`shape`.
+   *
+   * **Not padding.** It lands on the pressable, which wraps the drawn box, so a
+   * `px-8` here doesn't widen the button — it wraps it in 32px of invisible
+   * padding and takes that width away from the label instead. That is how the
+   * Home CTA ended up rendering "Connect your trackers" over three lines inside
+   * a squat red block on a phone. Reach for `size`, or `self-stretch`.
    */
   className?: string;
 }
@@ -86,6 +103,7 @@ export function Button({
   onPress,
   variant = 'primary',
   size = 'md',
+  shape = 'rounded',
   loading = false,
   loadingLabel,
   disabled = false,
@@ -114,7 +132,7 @@ export function Button({
       // `backgroundColor` survives (a filled button looked fine; every outlined
       // one rendered as bare text).
       // docs/solutions/pressto-border-not-drawn-on-android.md
-      className={cn('rounded-md', className)}
+      className={cn(SHAPE[shape], className)}
       // `disabled` really does gate the press (pressto → RNGH `enabled`,
       // verified on web), but it reaches the DOM as nothing at all: neither it
       // nor `accessibilityState` becomes an ARIA attribute, so a screen reader
@@ -127,7 +145,8 @@ export function Button({
     >
       <View
         className={cn(
-          'flex-row items-center justify-center rounded-md',
+          'flex-row items-center justify-center',
+          SHAPE[shape],
           SIZE[size].container,
           unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
         )}

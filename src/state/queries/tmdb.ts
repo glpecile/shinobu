@@ -1,4 +1,4 @@
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -43,6 +43,26 @@ export function useSuspenseTmdbPersonQuery(params: { tmdbId: number }) {
     queryKey: tmdbQueryKeys.person(params.tmdbId),
     queryFn: () =>
       Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: params.tmdbId })),
+    staleTime: PERSON_STALE_TIME_MS,
+  });
+}
+
+/**
+ * The non-suspending sibling: the credit sheet opens on a long-press with no
+ * route transition behind it, so it must render its header instantly from the
+ * credit it was handed and let the bio arrive after. Same key and staleness as
+ * the route query, so opening the sheet warms the person page and vice versa.
+ */
+export function useTmdbPersonQuery(params: {
+  tmdbId: number | undefined;
+  enabled?: boolean;
+}) {
+  const { tmdbId } = params;
+  return useQuery({
+    queryKey: tmdbQueryKeys.person(tmdbId ?? 0),
+    queryFn: () =>
+      Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: tmdbId as number })),
+    enabled: tmdbId != null && params.enabled !== false,
     staleTime: PERSON_STALE_TIME_MS,
   });
 }

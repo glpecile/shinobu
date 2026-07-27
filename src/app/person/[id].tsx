@@ -13,71 +13,17 @@ import { MediaCarousel } from '@/components/media-carousel';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import { PersonNotFound, PersonSkeleton } from '@/features/person';
+import { PersonNotFound, PersonSkeleton, personMetaLine } from '@/features/person';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { initials } from '@/lib/initials';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
-import type { NormalizedPerson } from '@/types/media';
-
-/**
- * TMDB sends bare calendar dates (YYYY-MM-DD). Parsing them through
- * `new Date(string)` lands at UTC midnight, which `toLocaleDateString`
- * would render a day early west of Greenwich — so the date is formatted
- * in UTC explicitly. Display-only; never compared against "now".
- */
-function formatDate(date: string): string {
-  const [year, month, day] = date.split('-').map(Number);
-  if (!year || !month || !day) return date;
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-/**
- * Whole years between two bare dates (UTC-parsed like `formatDate`) — the
- * person's age, or age at death when `until` is the deathday.
- */
-function yearsBetween(from: string, until: Date): number | null {
-  const [year, month, day] = from.split('-').map(Number);
-  if (!year || !month || !day) return null;
-  const hadBirthday =
-    until.getUTCMonth() + 1 > month ||
-    (until.getUTCMonth() + 1 === month && until.getUTCDate() >= day);
-  const age = until.getUTCFullYear() - year - (hadBirthday ? 0 : 1);
-  return age >= 0 ? age : null;
-}
-
-/** "Acting · Nov 12, 1980 (45) · London, Ontario, Canada" — TMDB has no
- * height field, so age is the one derivable extra stat. */
-function metaLine(person: NormalizedPerson): string {
-  let lifespan: string | null = null;
-  if (person.birthday != null) {
-    if (person.deathday != null) {
-      const [y, m, d] = person.deathday.split('-').map(Number);
-      const died = y && m && d ? new Date(Date.UTC(y, m - 1, d)) : null;
-      const age = died != null ? yearsBetween(person.birthday, died) : null;
-      lifespan = `${formatDate(person.birthday)} – ${formatDate(person.deathday)}${
-        age != null ? ` (${age})` : ''
-      }`;
-    } else {
-      const age = yearsBetween(person.birthday, new Date());
-      lifespan = `${formatDate(person.birthday)}${age != null ? ` (${age})` : ''}`;
-    }
-  }
-  return [person.knownForDepartment ?? null, lifespan, person.birthplace ?? null]
-    .filter((part) => part != null)
-    .join(' · ');
-}
 
 function PersonContent({ tmdbId }: { tmdbId: number }) {
   const { data } = useSuspenseTmdbPersonQuery({ tmdbId });
   const router = useRouter();
   const { person, rows } = data;
-  const meta = metaLine(person);
+  const meta = personMetaLine(person);
   // Same per-card actions dialog as the home feed.
   const { openActions, sheetProps } = useCardActions();
 

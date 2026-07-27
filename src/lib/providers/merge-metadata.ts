@@ -56,13 +56,23 @@ export function mergeCatalogueMetadata(
 
 /**
  * The TMDB-first inverse of `mergeCatalogueMetadata` (plan 0014): `primary`
- * (the TMDB catalogue record) WINS for pure display fields when it has them —
- * images, overview, genres, rating, runtime, year — because TMDB is the
- * source of truth for metadata. Fill-only for `totalEpisodes` (provider
+ * (the TMDB catalogue record) WINS for pure *text* display fields when it has
+ * them — overview, genres, rating, runtime, year, release dates — because TMDB
+ * is the source of truth for metadata. Fill-only for `totalEpisodes` (provider
  * totals drive the progress UI and must agree with `currentProgress`), and
  * identity/user state (id, type, progress, lastUpdated) plus external-id
  * precedence stay exactly as in `mergeCatalogueMetadata`. A null primary is
  * the failover case: the item passes through untouched.
+ *
+ * **Artwork is the deliberate exception — fill-only, never an override**
+ * (owner decision, 2026-07-27). Posters and backdrops are the one field the
+ * viewer has already *seen* before this merge runs: they tapped a card whose
+ * poster was painted from the feed/search item, and the details screen renders
+ * that same poster instantly, then TMDB answers a beat later. Overriding it
+ * swapped the hero and the poster under the viewer mid-read for no gain — the
+ * provider art is already correct, only different. So TMDB art now lands only
+ * where the item carries none (a Trakt watched row, a Letterboxd slug), which
+ * is the case it was actually valuable for.
  */
 export function applyPrimaryMetadata(
   item: NormalizedMediaItem,
@@ -70,6 +80,7 @@ export function applyPrimaryMetadata(
 ): NormalizedMediaItem {
   if (primary == null) return item;
 
+  const hasBackdrop = item.backdropImage != null && item.backdropImage !== '';
   const primaryBackdrop =
     primary.backdropImage != null && primary.backdropImage !== ''
       ? primary.backdropImage
@@ -77,8 +88,10 @@ export function applyPrimaryMetadata(
 
   return {
     ...item,
-    coverImage: primary.coverImage !== '' ? primary.coverImage : item.coverImage,
-    ...(primaryBackdrop != null ? { backdropImage: primaryBackdrop } : {}),
+    coverImage: item.coverImage !== '' ? item.coverImage : primary.coverImage,
+    ...(!hasBackdrop && primaryBackdrop != null
+      ? { backdropImage: primaryBackdrop }
+      : {}),
     ...(primary.overview != null ? { overview: primary.overview } : {}),
     ...(primary.genres != null && primary.genres.length > 0
       ? { genres: primary.genres }

@@ -1,14 +1,14 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
-import { PresstableScale, PresstableOpacity } from '@/components/presstable';
+import { PresstableOpacity } from '@/components/presstable';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
-import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -167,141 +167,6 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/**
- * Web-only ⋯ that opens the row's actions dialog, sitting just past the title
- * and revealed while the pointer is over the row — long-press is the native
- * gesture and isn't discoverable with a mouse (same reasoning as the media
- * card's hover ⋯). The slot keeps its width whether or not the button shows, so
- * hovering never nudges the title.
- */
-function DiaryRowActionsButton({
-  item,
-  visible,
-  onActions,
-}: {
-  item: NormalizedMediaItem;
-  visible: boolean;
-  onActions: (item: NormalizedMediaItem) => void;
-}) {
-  const muted = useCSSVariable('--color-muted');
-  return (
-    <View className="w-10 items-center">
-      {visible && (
-        <PresstableOpacity
-          accessibilityLabel={`More options for ${item.title}`}
-          className="w-8 h-8 items-center justify-center rounded-full bg-surface border border-border/60"
-          onPress={() => onActions(item)}
-        >
-          <Ionicons
-            color={typeof muted === 'string' ? muted : undefined}
-            name="ellipsis-horizontal"
-            size={16}
-          />
-        </PresstableOpacity>
-      )}
-    </View>
-  );
-}
-
-/** Accessibility props forwarded to a row's pressable(s). */
-type RowAccessibility = Pick<
-  ComponentProps<typeof PresstableScale>,
-  'accessibilityHint' | 'accessibilityLabel' | 'accessibilityRole' | 'accessibilityState'
->;
-
-interface DiaryRowShellProps {
-  item: NormalizedMediaItem;
-  /** ⌘/Ctrl+click target on web. */
-  href: string;
-  onPress: () => void;
-  onActions: (item: NormalizedMediaItem) => void;
-  /** Poster + text, up to where the ⋯ sits. Shrinks; never `flex-1`. */
-  leading: ReactNode;
-  /** Provider marks, chevron — pushed to the row's right edge. */
-  trailing: ReactNode;
-  /** Padding/height for the row container. */
-  className: string;
-  accessibility?: RowAccessibility;
-}
-
-/**
- * The interaction shell every diary row shares: press opens details (⌘/Ctrl
- * +click opens them in a new tab on web), long-press opens the card actions
- * dialog, and hovering reveals the ⋯ that opens that same dialog.
- *
- * The ⋯ belongs beside the title, but it can't be a *child* of the row's
- * pressable — nesting two gesture-handler buttons would let a ⋯ press bubble
- * into the row press. So on web the row is split into two sibling pressables,
- * leading (poster + title) and trailing (provider marks), with the ⋯ between
- * them: the button sits exactly where the title ends, and both halves carry the
- * same press/long-press, so the whole row stays one target. Native has no ⋯ —
- * long-press is its gesture — so it stays a single pressable and keeps a
- * whole-row press-scale.
- */
-function DiaryRowShell({
-  item,
-  href,
-  onPress,
-  onActions,
-  leading,
-  trailing,
-  className,
-  accessibility,
-}: DiaryRowShellProps) {
-  const [hovered, setHovered] = useState(false);
-  const newTab = useNewTabPress(href);
-
-  const pressProps = {
-    ...accessibility,
-    onLongPress: () => onActions(item),
-    onPress: () => {
-      if (newTab.opened()) return;
-      onPress();
-    },
-  };
-
-  if (process.env.EXPO_OS !== 'web') {
-    return (
-      <PresstableScale
-        className={cn('flex-row items-center', className)}
-        {...pressProps}
-      >
-        {leading}
-        <View className="flex-1" />
-        {trailing}
-      </PresstableScale>
-    );
-  }
-
-  return (
-    <View
-      className={cn('flex-row items-center', className)}
-      onPointerDown={newTab.onPointerDown}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
-    >
-      <PresstableScale className="flex-row items-center shrink" {...pressProps}>
-        {leading}
-      </PresstableScale>
-      <DiaryRowActionsButton
-        item={item}
-        onActions={onActions}
-        visible={hovered}
-      />
-      {/* The empty stretch past the ⋯ is the same target as the title — a click
-          anywhere on the row still opens the item. No a11y props here: the
-          leading half already announces the row. */}
-      <PresstableScale
-        className="flex-1 flex-row items-center justify-end self-stretch"
-        onLongPress={pressProps.onLongPress}
-        onPress={pressProps.onPress}
-      >
-        {trailing}
-      </PresstableScale>
-    </View>
-  );
-}
-
 function DiaryRow({
   entry,
   onOpen,
@@ -318,7 +183,7 @@ function DiaryRow({
   });
 
   return (
-    <DiaryRowShell
+    <ActionableRow
       className="px-6 py-2.5"
       href={routes.details(entry.item.id)}
       item={entry.item}
@@ -372,7 +237,7 @@ function DiaryClusterRow({
   const detail = range !== '' ? `${range} · ${count}` : count;
 
   return (
-    <DiaryRowShell
+    <ActionableRow
       accessibility={{
         accessibilityHint: expanded ? 'Collapses this run' : 'Expands this run',
         accessibilityLabel: `${summary.item.title}, ${count}`,
@@ -451,7 +316,7 @@ function DiaryChildRow({
         />
         <View className="absolute left-6 top-[22px] w-4 h-px bg-border" />
       </View>
-      <DiaryRowShell
+      <ActionableRow
         className="flex-1"
         href={routes.details(entry.item.id)}
         item={entry.item}
