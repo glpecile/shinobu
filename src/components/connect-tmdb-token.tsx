@@ -6,9 +6,11 @@ import { Linking, Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 import { z } from 'zod';
 
+import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
-import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
+import { CARD_SHELL } from '@/components/card-shell';
+import { cn } from '@/lib/cn';
 import { TMDB_API_SETTINGS_URL } from '@/lib/providers/external-urls';
 import { TMDB_API_BASE_URL } from '@/lib/providers/tmdb/config';
 import { mediaDetailsQueryKeys } from '@/state/queries/media-details';
@@ -128,11 +130,11 @@ export function ConnectTmdbTokenSection() {
   if (hasBuilderTmdbToken()) return null;
 
   return (
-    <View className="mt-6">
+    <View>
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
         TMDB token
       </Text>
-      <View className="bg-surface border border-border rounded-xl px-5 py-4 gap-4">
+      <View className={cn(CARD_SHELL, 'gap-4')}>
         {saved != null ? (
           <>
             <Text className="text-foreground font-sans-semibold text-base">
@@ -142,15 +144,14 @@ export function ConnectTmdbTokenSection() {
               Detail pages use TMDB for artwork, cast, crew, and studios, and
               the people and studio pages are available.
             </Text>
-            <PresstableOpacity
+            <Button
               accessibilityLabel="Remove TMDB token"
-              className="border border-accent px-4 py-2 rounded self-start"
+              className="self-start"
+              label="Remove token"
               onPress={clear}
-            >
-              <Text className="text-accent font-sans-semibold text-sm">
-                Remove token
-              </Text>
-            </PresstableOpacity>
+              size="sm"
+              variant="outline"
+            />
           </>
         ) : (
           <>
@@ -204,7 +205,7 @@ export function ConnectTmdbTokenSection() {
                 <TextInput
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="border border-border bg-background text-foreground px-4 py-3 rounded font-sans"
+                  className="border border-border bg-background text-foreground px-4 py-3 rounded-md font-sans"
                   onBlur={field.onBlur}
                   onChangeText={field.onChange}
                   onSubmitEditing={() => void submit()}
@@ -230,15 +231,14 @@ export function ConnectTmdbTokenSection() {
                 {STATUS_MESSAGE[status]}
               </Text>
             )}
-            <PresstableOpacity
-              className="bg-accent px-5 py-3 rounded"
-              disabled={status === 'checking'}
+            <Button
+              label="Save token"
+              // Validated against TMDB before it is stored, so this waits on a
+              // real round-trip.
+              loading={status === 'checking'}
+              loadingLabel="Checking…"
               onPress={() => void submit()}
-            >
-              <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-                {status === 'checking' ? 'Checking…' : 'Save token'}
-              </Text>
-            </PresstableOpacity>
+            />
           </>
         )}
       </View>

@@ -13,6 +13,8 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
+import { cn } from '@/lib/cn';
+import { hasCoarsePointer } from '@/lib/pointer';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useAniListSearchQuery } from '@/state/queries/anilist';
@@ -171,6 +173,7 @@ export default function SearchScreen() {
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
+  const [focused, setFocused] = useState(false);
   const muted = useCSSVariable('--color-muted');
   const inputRef = useRef<TextInput>(null);
 
@@ -245,20 +248,42 @@ export default function SearchScreen() {
         <title>Search — Shinobu</title>
       </Head>
       <View
-        className={`relative z-20 flex-row items-center gap-3 px-6 ${screenHeaderTopPadding} pb-4`}
+        className={cn(
+          'relative z-20 flex-row items-center gap-3 px-6',
+          screenHeaderTopPadding,
+          'pb-4',
+        )}
       >
-        {/* Relative wrapper so the clear button can overlay the field's right
-            edge; the input reserves `pr-11` for it. */}
-        <View className="flex-1 relative">
+        {/* The field's chrome lives on this row, not on the TextInput, so the
+            clear button can sit *beside* the input instead of on top of it.
+            An absolutely-positioned pressable overlapping the input looked
+            identical but never fired on Android — the EditText claims the
+            touch first (docs/solutions/android-pressable-over-textinput.md). */}
+        <View
+          className={
+            focused
+              ? 'flex-1 flex-row items-center border bg-surface rounded-md border-accent'
+              : 'flex-1 flex-row items-center border bg-surface rounded-md border-border'
+          }
+        >
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
             // First mount only — every later focus request (tab re-press,
             // ⌘K, the clear button) goes through the handlers above rather
-            // than through a re-mount.
-            autoFocus
-            className="border border-border bg-surface text-foreground pl-4 pr-11 py-3 rounded font-sans"
+            // than through a re-mount. Off on touch browsers: they refuse to
+            // open the keyboard for a focus with no user gesture behind it,
+            // and Firefox Android answers with a flash-open-then-close that
+            // makes the field unusable (src/lib/pointer.ts).
+            autoFocus={!hasCoarsePointer()}
+            // `outline-none`: the browser's focus ring would now draw around
+            // the inner input, inside the wrapper that carries the field's
+            // border — the accent border below is the focus affordance instead,
+            // and it works on native too.
+            className="flex-1 text-foreground px-4 py-3 font-sans outline-none"
+            onBlur={() => setFocused(false)}
             onChangeText={setInput}
+            onFocus={() => setFocused(true)}
             placeholder="Search movies, shows, anime & manga"
             placeholderTextColor={typeof muted === 'string' ? muted : undefined}
             ref={inputRef}
@@ -266,19 +291,17 @@ export default function SearchScreen() {
             value={input}
           />
           {input !== '' && (
-            <View className="absolute right-1.5 top-0 bottom-0 items-center justify-center">
-              <PresstableOpacity
-                accessibilityLabel="Clear search"
-                className="w-8 h-8 items-center justify-center rounded-full"
-                onPress={clearSearch}
-              >
-                <Ionicons
-                  color={typeof muted === 'string' ? muted : undefined}
-                  name="close-circle"
-                  size={20}
-                />
-              </PresstableOpacity>
-            </View>
+            <PresstableOpacity
+              accessibilityLabel="Clear search"
+              className="w-10 h-10 mr-1 items-center justify-center rounded-full"
+              onPress={clearSearch}
+            >
+              <Ionicons
+                color={typeof muted === 'string' ? muted : undefined}
+                name="close-circle"
+                size={20}
+              />
+            </PresstableOpacity>
           )}
         </View>
       </View>

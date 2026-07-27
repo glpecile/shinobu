@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { MorphText } from '@/components/morph-text';
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { haptics } from '@/lib/haptics';
 import { hasAired, hasReleased } from '@/lib/time/has-aired';
 import {
@@ -153,10 +152,14 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
 
   return (
     <View className="mb-6">
-      <PresstableOpacity
-        className={`rounded px-5 py-3 ${canLog ? 'bg-accent' : 'bg-accent/40'}`}
+      {/* morphLabel: this label changes in place as the user logs — "Mark as
+          watched" → "Log episode 4" → "Log rewatch" — which is exactly what
+          MorphText is for. */}
+      <Button
+        disabled={!canLog}
+        label={buttonLabel}
+        morphLabel
         onPress={() => {
-          if (!canLog) return;
           haptics.selection();
           logMedia.reset();
           setWatchedAt(null);
@@ -164,13 +167,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           setSelectedProviders(targets);
           setOpen(true);
         }}
-      >
-        {/* self-center (not text-center): the morph span shrink-wraps, so it
-            must center as a flex item, not align text inside a full-width box. */}
-        <MorphText className="text-accent-foreground font-sans-semibold text-base self-center">
-          {buttonLabel}
-        </MorphText>
-      </PresstableOpacity>
+      />
       {result != null && result.succeeded.length > 0 && (
         <Text className="text-muted font-sans text-sm mt-2">
           {result.rewatch ? 'Logged rewatch to' : 'Logged to'}{' '}

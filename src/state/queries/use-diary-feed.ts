@@ -8,7 +8,7 @@ import {
 import { allSettled } from 'better-all';
 import { Effect } from 'effect';
 
-import { getListActivity, getViewerId } from '@/lib/providers/anilist/reads';
+import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
 import {
   getSerializdDiary,
@@ -61,14 +61,14 @@ async function fetchAniListActivityPage(
   page: number,
 ): Promise<NormalizedDiaryEntry[]> {
   const deps = anilistDeps();
-  const viewerId = await queryClient.fetchQuery({
+  const viewer = await queryClient.fetchQuery({
     queryKey: anilistQueryKeys.viewer(),
-    queryFn: () => Effect.runPromise(getViewerId(deps)),
+    queryFn: () => Effect.runPromise(getViewer(deps)),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
   });
   return Effect.runPromise(
-    getListActivity(deps, { viewerId, page, perPage: PAGE_SIZE }),
+    getListActivity(deps, { viewerId: viewer.id, page, perPage: PAGE_SIZE }),
   );
 }
 

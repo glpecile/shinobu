@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { validateLetterboxdUsername } from '@/state/queries/letterboxd';
 import { connectLetterboxd } from '@/state/session/letterboxd';
 
@@ -77,7 +77,7 @@ export function ConnectLetterboxdButton() {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+            className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
@@ -103,15 +103,12 @@ export function ConnectLetterboxdButton() {
           Could not reach Letterboxd. Try again.
         </Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
-        disabled={status === 'checking'}
-        onPress={() => submit()}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-          {status === 'checking' ? 'Checking…' : 'Connect Letterboxd'}
-        </Text>
-      </PresstableOpacity>
+      <Button
+        label="Connect Letterboxd"
+        loading={status === 'checking'}
+        loadingLabel="Checking…"
+        onPress={() => void submit()}
+      />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
+import { cn } from '@/lib/cn';
 
 // Must stay in sync with MediaCard (w-40 = 160) and the mr-3 gap (12).
 const CARD_WIDTH = 160;
@@ -111,7 +112,9 @@ function ShimmerDayCell() {
 
 function SkeletonSectionHeader({ widthClass }: { widthClass: string }) {
   // text-xl title height (no eyebrow — the real header dropped it), mb-3 gap.
-  return <View className={`h-7 ${widthClass} bg-muted/20 rounded mb-3 mx-4`} />;
+  return (
+    <View className={cn('h-7', widthClass, 'bg-muted/20 rounded mb-3 mx-4')} />
+  );
 }
 
 /**

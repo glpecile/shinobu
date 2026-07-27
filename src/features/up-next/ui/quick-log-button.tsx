@@ -5,6 +5,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableScale } from '@/components/presstable';
+import { cn } from '@/lib/cn';
 import {
   confirmLabelFor,
   LogConfirmSheet,
@@ -140,9 +141,12 @@ export function QuickLogButton({ entry }: { entry: UpNextEntry }) {
         accessibilityLabel={`Log episode ${entry.episode.number} of ${entry.item.title}`}
         accessibilityRole="button"
         accessibilityState={{ busy: pending, disabled: pending }}
-        className={`w-9 h-9 items-center justify-center rounded-full ${
-          phase === 'settle-failed' ? 'bg-surface border border-accent' : 'bg-accent'
-        }`}
+        className={cn(
+          'w-9 h-9 items-center justify-center rounded-full',
+          phase === 'settle-failed'
+            ? 'bg-surface border border-accent'
+            : 'bg-accent',
+        )}
         onPress={openConfirm}
       >
         {pending ? (

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/skeleton';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList } from '@/features/diary/diary-list';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
@@ -23,7 +24,10 @@ function DiaryHeader() {
   return (
     <View className={homeHeaderClassName}>
       <Text
-        className={`${homeHeaderTitleSize} font-display text-foreground tracking-tight`}
+        className={cn(
+          homeHeaderTitleSize,
+          'font-display text-foreground tracking-tight',
+        )}
       >
         Diary
       </Text>

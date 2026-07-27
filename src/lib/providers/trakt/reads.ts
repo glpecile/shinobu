@@ -208,6 +208,28 @@ function getWatchedPages<Raw>(
   });
 }
 
+interface TraktSettingsResponse {
+  user?: { username?: string | null } | null;
+}
+
+/**
+ * The connected account's Trakt username, for "connected as who" on Manage
+ * Trackers. A Trakt session is an OAuth token and carries no handle of its own,
+ * and `/users/settings` is the only authenticated endpoint that names the
+ * account behind the token.
+ *
+ * Returns `null` rather than failing when the payload doesn't carry a username:
+ * the caller degrades to a plain "Connected" line, and a settings-shape change
+ * must never take the card down with it.
+ */
+export function getViewerUsername(
+  deps: TraktDeps,
+): Effect.Effect<string | null, ProviderError> {
+  return traktAuthedRequest<TraktSettingsResponse>(deps, '/users/settings').pipe(
+    Effect.map((data) => data.user?.username ?? null),
+  );
+}
+
 export function getWatchedShows(
   deps: TraktDeps,
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {

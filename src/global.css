@@ -26,6 +26,15 @@
  * Every variable must be defined in both `light` and `dark` (Uniwind requirement).
  * Accent is pinned to the same Vampiric Crimson in both themes (plan.md 1.1) - it's
  * a brand color, not a theme-adaptive one.
+ *
+ * `--color-provider-*` are each tracker's own brand color, lifted out of
+ * `src/assets/providers/*` so components can tint by provider without a hardcoded
+ * hex (plan 0026 KTD6). Like accent, they are identical in both themes - they
+ * belong to Trakt/AniList/Letterboxd/Serializd, not to Shinobu's palette - and
+ * they are only ever used as small tints (icon chips, edge stripes, status dots),
+ * never as text-on-background, so they need no per-theme contrast tuning.
+ * Letterboxd's mark is three dots (orange/green/blue); its green is the one that
+ * reads as "Letterboxd" at a glance.
  */
 @layer theme {
   :root {
@@ -37,6 +46,11 @@
       --color-border: #e5e5e5;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
+
+      --color-provider-trakt: #9f42c6;
+      --color-provider-anilist: #02a9ff;
+      --color-provider-letterboxd: #00e054;
+      --color-provider-serializd: #44bba4;
     }
 
     @variant dark {
@@ -47,6 +61,11 @@
       --color-border: #333333;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
+
+      --color-provider-trakt: #9f42c6;
+      --color-provider-anilist: #02a9ff;
+      --color-provider-letterboxd: #00e054;
+      --color-provider-serializd: #44bba4;
     }
   }
 }

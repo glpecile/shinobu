@@ -28,6 +28,16 @@ const MAX_SUGGESTIONS = 24;
 const ROW_EPSILON = 2;
 
 /**
+ * One chip's height before anything has been measured — `py-2` either side of
+ * a `text-sm` line. Off by a pixel or two at most, and only for the first
+ * frame, but that frame is the one that decides how tall the sheet *opens*: a
+ * picker that paints its whole vocabulary before collapsing opens the sheet at
+ * its cap and then snaps it down. Guessing low and clipping is the cheaper
+ * mistake (docs/solutions/sheet-scroller-swap-render-loop.md).
+ */
+const ESTIMATED_ROW_HEIGHT = 36;
+
+/**
  * Measured row heights, keyed by the rendered chip list. Bounded because the
  * key is a filtered list and typing produces a new one per character.
  */
@@ -229,7 +239,14 @@ export function TagPicker({
 
   if (suggestions.length === 0) return null;
 
-  const overflows = rowHeight > 0 && contentHeight > rowHeight + ROW_EPSILON;
+  const measured = rowHeight > 0 && contentHeight > 0;
+  // Until both heights are in, assume anything past a single chip wraps. The
+  // guess only ever costs a frame of a clipped row; the alternative — assuming
+  // it fits — costs the sheet's entire opening height (see
+  // ESTIMATED_ROW_HEIGHT).
+  const overflows = measured
+    ? contentHeight > rowHeight + ROW_EPSILON
+    : suggestions.length > 1;
   const collapsed = overflows && !expanded;
 
   return (
@@ -238,7 +255,14 @@ export function TagPicker({
           Measuring a list that is itself being hidden would mean the collapsed
           height feeds back into the decision to collapse. */}
       <View
-        style={collapsed ? { height: rowHeight, overflow: 'hidden' } : undefined}
+        style={
+          collapsed
+            ? {
+                height: rowHeight > 0 ? rowHeight : ESTIMATED_ROW_HEIGHT,
+                overflow: 'hidden',
+              }
+            : undefined
+        }
       >
         <View className="flex-row flex-wrap gap-2" onLayout={measureContent}>
           {suggestions.map((tag, index) => (
@@ -252,7 +276,10 @@ export function TagPicker({
           ))}
         </View>
       </View>
-      {overflows && (
+      {/* `measured` and not just `overflows`: the pre-measurement guess above is
+          allowed to clip for a frame, but a toggle that appears and then
+          vanishes again reads as a glitch. */}
+      {measured && overflows && (
         <PresstableOpacity
           accessibilityLabel={
             expanded ? 'Show fewer tag suggestions' : 'Show more tag suggestions'

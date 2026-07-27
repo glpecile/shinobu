@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
@@ -61,7 +62,7 @@ type CredentialsForm = z.infer<typeof credentialsSchema>;
 function CopyValue({ value, hint }: { value: string; hint?: string }) {
   return (
     <View className="flex-row items-center gap-2">
-      <View className="border border-border bg-surface px-2 py-1 rounded">
+      <View className="border border-border bg-surface px-2 py-1 rounded-md">
         <Text className="text-foreground font-sans text-xs" selectable>
           {value}
         </Text>
@@ -93,7 +94,7 @@ function CredentialInput({
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
-          className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+          className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
           onBlur={field.onBlur}
           onChangeText={field.onChange}
           onSubmitEditing={onSubmit}
@@ -117,7 +118,15 @@ function CredentialInput({
  * navigates to Trakt and is redirected back to the home route with ?code=...,
  * where `useOAuthCallback` exchanges it.
  */
-export function ConnectTraktButton() {
+/**
+ * Trakt's OAuth trigger, without any of its UI.
+ *
+ * Extracted so a caller that already knows no setup is needed — the Manage
+ * Trackers row, when this build ships credentials — can connect in one tap
+ * instead of opening a sheet whose only content is this button. The button
+ * below consumes the same hook, so there is exactly one copy of the flow.
+ */
+export function useTraktConnect() {
   const [credentials, saveCredentials, clearCredentials] =
     useProviderCredentials('trakt');
   const [status, setStatus] = useState<ConnectionStatus>('idle');
@@ -128,24 +137,6 @@ export function ConnectTraktButton() {
   const envId = traktClientId();
   const envSecret = traktClientSecret();
   const hasEnvCredentials = envId !== '' && envSecret !== '';
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CredentialsForm>({
-    defaultValues: {
-      clientId: credentials?.clientId ?? '',
-      clientSecret: credentials?.clientSecret ?? '',
-    },
-    resolver: zodResolver(credentialsSchema),
-  });
-  // Saving the credentials means the user wants to connect — go straight into
-  // the OAuth flow instead of asking for an extra tap on Connect.
-  const submitCredentials = handleSubmit(async (values) => {
-    saveCredentials(values);
-    await connect(values.clientId);
-  });
 
   const clientId = hasEnvCredentials ? envId : (credentials?.clientId ?? '');
   const redirectUri = getTraktRedirectUri();
@@ -210,6 +201,49 @@ export function ConnectTraktButton() {
         console.error('Trakt OAuth exchange failed', error);
       });
   }
+
+  return {
+    connect,
+    status,
+    credentials,
+    saveCredentials,
+    clearCredentials,
+    hasEnvCredentials,
+    clientId,
+    redirectUri,
+    /** True when connecting first requires the client id + secret form. */
+    needsSetup: !hasEnvCredentials && credentials == null,
+  };
+}
+
+export function ConnectTraktButton() {
+  const {
+    connect,
+    status,
+    credentials,
+    saveCredentials,
+    clearCredentials,
+    hasEnvCredentials,
+    redirectUri,
+  } = useTraktConnect();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<CredentialsForm>({
+    defaultValues: {
+      clientId: credentials?.clientId ?? '',
+      clientSecret: credentials?.clientSecret ?? '',
+    },
+    resolver: zodResolver(credentialsSchema),
+  });
+  // Saving the credentials means the user wants to connect — go straight into
+  // the OAuth flow instead of asking for an extra tap on Connect.
+  const submitCredentials = handleSubmit(async (values) => {
+    saveCredentials(values);
+    await connect(values.clientId);
+  });
 
   if (!hasEnvCredentials && credentials == null) {
     // If web dev runs on a non-default port the device URI won't be in the
@@ -318,39 +352,29 @@ export function ConnectTraktButton() {
             {errors.clientSecret.message}
           </Text>
         )}
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
-          onPress={() => submitCredentials()}
-        >
-          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-            Save & Connect
-          </Text>
-        </PresstableOpacity>
+        <Button
+          label="Save & Connect"
+          loading={isSubmitting || status === 'connecting'}
+          loadingLabel="Connecting…"
+          onPress={() => void submitCredentials()}
+        />
       </View>
     );
   }
 
   return (
     <View className="items-center gap-3">
-      {status === 'connecting' && (
-        <Text className="text-muted font-sans text-sm">
-          Connecting to Trakt…
-        </Text>
-      )}
       {status === 'error' && (
         <Text className="text-accent font-sans text-sm text-center">
           Could not connect. Tap Connect to try again.
         </Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
-        disabled={status === 'connecting'}
-        onPress={() => connect()}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base">
-          {status === 'connecting' ? 'Connecting…' : 'Connect Trakt'}
-        </Text>
-      </PresstableOpacity>
+      <Button
+        label="Connect Trakt"
+        loading={status === 'connecting'}
+        loadingLabel="Connecting…"
+        onPress={() => void connect()}
+      />
       {!hasEnvCredentials && credentials != null && (
         <PresstableOpacity onPress={() => clearCredentials()}>
           <Text className="text-muted font-sans text-xs">

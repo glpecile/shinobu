@@ -3,9 +3,11 @@ import { Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
+import { cn } from '@/lib/cn';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -66,9 +68,10 @@ function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
       // role on a pressto pressable silently kills onPress on web
       // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
       accessibilityState={{ checked: selected }}
-      className={`flex-row items-center justify-between px-3 py-2.5 rounded-md ${
-        selected ? 'bg-accent/10' : 'bg-surface'
-      }`}
+      className={cn(
+        'flex-row items-center justify-between px-3 py-2.5 rounded-md',
+        selected ? 'bg-accent/10' : 'bg-surface',
+      )}
       onPress={onToggle}
     >
       <View className="flex-row items-center gap-3">
@@ -113,9 +116,10 @@ function ProviderPicker({
       <PresstableOpacity
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        className={`flex-row items-center justify-between rounded-lg border px-4 py-3 ${
-          expanded ? 'border-accent bg-accent/5' : 'border-border bg-surface'
-        }`}
+        className={cn(
+          'flex-row items-center justify-between rounded-lg border px-4 py-3',
+          expanded ? 'border-accent bg-accent/5' : 'border-border bg-surface',
+        )}
         onPress={() => setExpanded(!expanded)}
       >
         <View className="flex-row items-center gap-2 flex-1 mr-3">
@@ -330,8 +334,6 @@ export function LogConfirmSheet({
     onSelectedProvidersChange([]);
   }
 
-  const canConfirm = selectedProviders.length > 0 && !logMedia.isPending;
-
   return (
     <Sheet onClose={onClose} open={open}>
       <Text className="text-2xl font-display text-foreground">{title}</Text>
@@ -426,24 +428,22 @@ export function LogConfirmSheet({
           Could not log. Try again.
         </Text>
       )}
-      <PresstableOpacity
-        className={`rounded px-5 py-3 mt-6 ${
-          canConfirm ? 'bg-accent' : 'bg-accent/40'
-        }`}
-        onPress={canConfirm ? onConfirm : undefined}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-          {logMedia.isPending ? pendingLabel : confirmLabel}
-        </Text>
-      </PresstableOpacity>
-      <PresstableOpacity
-        className="rounded px-5 py-3 mt-2 border border-border"
+      {/* The fan-out can take seconds across four providers — a text swap to
+          "Logging…" alone read as a stuck button. */}
+      <Button
+        className="mt-6"
+        disabled={selectedProviders.length === 0}
+        label={confirmLabel}
+        loading={logMedia.isPending}
+        loadingLabel={pendingLabel}
+        onPress={onConfirm}
+      />
+      <Button
+        className="mt-2"
+        label="Cancel"
         onPress={onClose}
-      >
-        <Text className="text-foreground font-sans-semibold text-base text-center">
-          Cancel
-        </Text>
-      </PresstableOpacity>
+        variant="quiet"
+      />
     </Sheet>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Modal, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   NitroWebView,
@@ -100,31 +101,45 @@ export function ProviderSigninWebView<T>({
       presentationStyle="pageSheet"
       visible={visible}
     >
-      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-          <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
-          <PresstableOpacity
-            accessibilityLabel={`Cancel ${title}`}
-            className="px-3 py-1.5"
-            onPress={onClose}
-          >
-            <Text className="text-accent font-sans-semibold text-sm">Cancel</Text>
-          </PresstableOpacity>
+      {/* React Native's `Modal` hosts its children in a *separate* native view
+          hierarchy, which the app-level `GestureHandlerRootView` in
+          `app/_layout.tsx` does not reach — so every gesture-handler pressable
+          inside a Modal is dead until its own root wraps it. That is why the
+          Cancel button did nothing: it's a pressto (RNGH) pressable, and there
+          was no handler root above it. */}
+      {/* Plain `style`, no className — uniwind drops className on third-party
+          components on native
+          (docs/solutions/uniwind-classname-third-party-components.md). */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View
+          className="flex-1 bg-background"
+          style={{ paddingTop: insets.top }}
+        >
+          <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+            <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
+            <PresstableOpacity
+              accessibilityLabel={`Cancel ${title}`}
+              className="px-3 py-1.5"
+              onPress={onClose}
+            >
+              <Text className="text-accent font-sans-semibold text-sm">Cancel</Text>
+            </PresstableOpacity>
+          </View>
+          {visible && (
+            <NitroWebView
+              // Nitro dispatches event props across the JSI boundary — each one
+              // must be wrapped in callback(...) or it throws at render time.
+              onLoadEnd={callback(() => void tryCapture())}
+              onNavigationStateChange={callback(onNavigationStateChange)}
+              source={{ uri }}
+              style={{ flex: 1 }}
+              hybridRef={callback((ref) => {
+                webViewRef.current = ref;
+              })}
+            />
+          )}
         </View>
-        {visible && (
-          <NitroWebView
-            // Nitro dispatches event props across the JSI boundary — each one
-            // must be wrapped in callback(...) or it throws at render time.
-            onLoadEnd={callback(() => void tryCapture())}
-            onNavigationStateChange={callback(onNavigationStateChange)}
-            source={{ uri }}
-            style={{ flex: 1 }}
-            hybridRef={callback((ref) => {
-              webViewRef.current = ref;
-            })}
-          />
-        )}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

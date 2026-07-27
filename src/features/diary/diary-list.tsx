@@ -9,6 +9,7 @@ import { PresstableScale, PresstableOpacity } from '@/components/presstable';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
+import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -262,7 +263,7 @@ function DiaryRowShell({
   if (process.env.EXPO_OS !== 'web') {
     return (
       <PresstableScale
-        className={`flex-row items-center ${className}`}
+        className={cn('flex-row items-center', className)}
         {...pressProps}
       >
         {leading}
@@ -274,7 +275,7 @@ function DiaryRowShell({
 
   return (
     <View
-      className={`flex-row items-center ${className}`}
+      className={cn('flex-row items-center', className)}
       onPointerDown={newTab.onPointerDown}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
@@ -443,7 +444,10 @@ function DiaryChildRow({
           the 44px (h-11) row's middle. */}
       <View className="w-12 relative">
         <View
-          className={`absolute left-6 top-0 w-px bg-border ${last ? 'h-[22px]' : 'bottom-0'}`}
+          className={cn(
+            'absolute left-6 top-0 w-px bg-border',
+            last ? 'h-[22px]' : 'bottom-0',
+          )}
         />
         <View className="absolute left-6 top-[22px] w-4 h-px bg-border" />
       </View>

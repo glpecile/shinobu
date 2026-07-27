@@ -34,6 +34,7 @@ import {
   YourWatchlistRow,
 } from '@/features/feed/feed-rows';
 import { UpNextSection } from '@/features/up-next/up-next-section';
+import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
@@ -265,7 +266,10 @@ export default function App() {
         <View className={homeHeaderClassName}>
           {/* No connection status here (2026-07-14) — that lives on Manage Trackers. */}
           <Text
-            className={`${homeHeaderTitleSize} font-display text-foreground tracking-tight`}
+            className={cn(
+              homeHeaderTitleSize,
+              'font-display text-foreground tracking-tight',
+            )}
           >
             忍 Shinobu
           </Text>

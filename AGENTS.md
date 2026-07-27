@@ -201,6 +201,41 @@ with a custom font class; add a new weight token (and load its font in
 `_layout.tsx`) instead. The 忍 kanji intentionally renders in the OS fallback font
 (neither family ships kanji).
 
+## Class Names & Buttons
+
+**Every composed `className` goes through `cn()`** (`@/lib/cn`, backed by
+[cnfast](https://github.com/aidenybai/cnfast) — clsx + tailwind-merge semantics,
+~3x faster, no runtime deps). Never build one with a template literal:
+
+```tsx
+// no
+className={`border border-border px-4 py-2 ${CONTROL_RADIUS}`}
+className={`px-4 ${active ? 'bg-accent' : ''}`}
+// yes
+className={cn('border border-border px-4 py-2', CONTROL_RADIUS)}
+className={cn('px-4', active && 'bg-accent')}
+```
+
+Readability is the small reason; **conflict resolution is the real one**. A
+template literal happily emits `border-border border-accent` and leaves the
+winner to whichever layer parses the string last — `cn` emits only
+`border-accent`, so a caller's `className` override actually overrides. That is
+what lets `components/button` accept layout classes without a variant explosion.
+Enforced by `bun check:classnames` (`scripts/check-classnames.ts`, in CI):
+oxlint has no `no-restricted-syntax`, so this one check is a script, not a lint
+rule. The raw `cnfast` import is oxlint-banned — go through the wrapper. cnfast's
+tagged-template form is deliberately unused: one form app-wide keeps "no
+backticks in a className" mechanical.
+
+**Buttons are `components/button`, not hand-rolled `PresstableOpacity` + `Text`.**
+That is how `rounded` (4px) ended up next to `rounded-md`, and how "Connecting…"
+shipped as a text swap with no spinner. `variant` (`primary` | `outline` |
+`quiet`) and `size` (`sm` | `md`) cover the app's needs; `className` is for
+layout only (`self-start`, `mt-2`, a wider `px-*`). Any button that awaits
+something — an OAuth round-trip, a token validation, a log fan-out — passes
+`loading` (spinner + optional `loadingLabel` + press blocked), never just a
+label swap. A label that *changes in place* from user state takes `morphLabel`.
+
 ## Long Lists
 
 Every core surface (unified feed, library grids, Up Next) is a long virtualized

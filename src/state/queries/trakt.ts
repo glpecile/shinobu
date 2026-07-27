@@ -16,6 +16,7 @@ import {
   getShowWatchedProgress,
   getTrendingMovies,
   getTrendingShows,
+  getViewerUsername,
   getWatchedMovies,
   getWatchedShows,
   searchMedia,
@@ -72,6 +73,9 @@ export function exchangeTraktCode(params: {
 
 export const traktQueryKeys = {
   all: ['trakt'] as const,
+  /** The connected account itself — cached forever; disconnect purges the
+   *  whole `['trakt']` root, so a reconnect as another user can't reuse it. */
+  viewer: () => [...traktQueryKeys.all, 'viewer'] as const,
   watchedShows: () => [...traktQueryKeys.all, 'watched-shows'] as const,
   watchedMovies: () => [...traktQueryKeys.all, 'watched-movies'] as const,
   /** Per-log watch history — the Trakt diary source (plan 0016). Derived from
@@ -186,6 +190,21 @@ export function useTraktShowProgressQuery(params: {
  * connected; enabling flips from false → true on OAuth completion, which
  * triggers an automatic fetch.
  */
+/**
+ * The connected Trakt account's username, for "connected as who" on Manage
+ * Trackers. Cached forever: it can't change under a live session, and this is
+ * a settings-screen nicety that must not cost a request per visit.
+ */
+export function useTraktViewerQuery(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: traktQueryKeys.viewer(),
+    queryFn: () => Effect.runPromise(getViewerUsername(traktDeps())),
+    enabled: options.enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+  });
+}
+
 export function useWatchedShowsQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: traktQueryKeys.watchedShows(),

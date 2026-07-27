@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
+import { cn } from '@/lib/cn';
 
 /**
  * The shared empty-state tile — icon + headline + optional body + optional CTA
@@ -40,38 +41,40 @@ export function EmptyStateTile({
   const titleSize = hero ? (compact ? 'text-4xl' : 'text-6xl') : 'text-xl';
 
   return (
-    <View className={`items-center justify-center px-8 ${className ?? ''}`}>
+    <View className={cn('items-center justify-center px-8', className)}>
       {icon != null && <View className={hero ? 'mb-6' : 'mb-3'}>{icon}</View>}
       <Text
-        className={`font-display text-foreground text-center tracking-tight ${titleSize}`}
+        className={cn(
+          'font-display text-foreground text-center tracking-tight',
+          titleSize,
+        )}
       >
         {title}
       </Text>
       {description != null && (
         <Text
-          className={`font-sans text-muted text-center leading-relaxed ${
+          className={cn(
+            'font-sans text-muted text-center leading-relaxed',
             hero
-              ? `text-base mt-5 ${compact ? 'max-w-xs' : 'max-w-md'}`
-              : 'text-sm mt-2 max-w-xs'
-          }`}
+              ? cn('text-base mt-5', compact ? 'max-w-xs' : 'max-w-md')
+              : 'text-sm mt-2 max-w-xs',
+          )}
         >
           {description}
         </Text>
       )}
       {children}
       {cta != null && (
-        <PresstableOpacity
-          className={`bg-accent rounded ${hero ? 'px-8 py-3 mt-8' : 'px-6 py-2.5 mt-5'}`}
+        // The CTA keeps its own horizontal padding — an empty state's one
+        // action is wider than a row button — but everything else (radius,
+        // colors, press behaviour) comes from the primitive. `cn` inside
+        // Button resolves the px-* collision in favour of these.
+        <Button
+          className={hero ? 'px-8 mt-8' : 'px-6 py-2.5 mt-5'}
+          label={cta.label}
           onPress={cta.onPress}
-        >
-          <Text
-            className={`text-accent-foreground font-sans-semibold text-center ${
-              hero ? 'text-base' : 'text-sm'
-            }`}
-          >
-            {cta.label}
-          </Text>
-        </PresstableOpacity>
+          size={hero ? 'md' : 'sm'}
+        />
       )}
     </View>
   );

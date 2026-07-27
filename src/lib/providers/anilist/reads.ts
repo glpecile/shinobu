@@ -37,17 +37,28 @@ const MEDIA_FIELDS = `
   chapters
 `;
 
+/** The authenticated account: its id, and the handle to show for it. */
+export interface AniListViewer {
+  id: number;
+  name: string;
+}
+
 /**
- * The authenticated account's AniList user id. MediaListCollection requires
- * it; the query layer caches it under its own key (it never changes for a
- * session), so this stays a separate tiny request instead of a per-read
- * prefix.
+ * The authenticated account. MediaListCollection requires the id; the query
+ * layer caches this under its own key (it never changes for a session), so it
+ * stays a separate tiny request instead of a per-read prefix.
+ *
+ * `name` rides along for free on the same request — AniList's OAuth session
+ * carries no username of its own, so the Manage Trackers card has no other way
+ * to say *which* account is connected.
  */
-export function getViewerId(deps: AniListDeps): Effect.Effect<number, ProviderError> {
-  return anilistAuthedRequest<{ Viewer: { id: number } }>(
+export function getViewer(
+  deps: AniListDeps,
+): Effect.Effect<AniListViewer, ProviderError> {
+  return anilistAuthedRequest<{ Viewer: AniListViewer }>(
     deps,
-    `query { Viewer { id } }`,
-  ).pipe(Effect.map((data) => data.Viewer.id));
+    `query { Viewer { id name } }`,
+  ).pipe(Effect.map((data) => data.Viewer));
 }
 
 interface MediaListCollectionResponse {

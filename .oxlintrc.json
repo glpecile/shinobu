@@ -63,6 +63,10 @@
             "message": "Import MorphText from @/components/morph-text — torph is DOM-only; the wrapper falls back to a plain Text on native via index.tsx."
           },
           {
+            "group": ["cnfast", "cnfast/*"],
+            "message": "Import { cn } from @/lib/cn — the wrapper is the one swap point for the class-name composer (AGENTS.md: Class Names)."
+          },
+          {
             "group": ["effect-rx", "effect-rx/*", "@effect-rx/*"],
             "message": "Do not adopt effect-rx. TanStack Query owns caching/invalidation/React state; Effect stays contained in lib/providers + lib/http and runs at the boundary via Effect.runPromise (AGENTS.md: Tech Stack → Effect)."
           }
@@ -131,6 +135,7 @@
         "src/components/keyboard-aware-scroll-view.tsx",
         "src/components/presstable.tsx",
         "src/components/zoomable-image/index.tsx",
+        "src/lib/cn.ts",
         "src/lib/open-external-url/index.ts"
       ],
       "rules": {

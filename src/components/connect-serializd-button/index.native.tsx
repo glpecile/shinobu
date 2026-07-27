@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Effect } from 'effect';
 
+import { Button } from '@/components/button';
 import {
   ProviderSigninWebView,
   type CookiePair,
 } from '@/components/provider-signin-webview';
-import { PresstableOpacity } from '@/components/presstable';
 import {
   extractSerializdLogin,
   SERIALIZD_SIGN_IN_URL,
@@ -55,18 +55,18 @@ export function ConnectSerializdButton() {
           Could not verify your Serializd session. Try signing in again.
         </Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
-        disabled={status === 'validating'}
+      <Button
+        label="Sign in to Serializd"
+        // The WebView closes on capture and the token is validated *after* it
+        // is gone, so without a spinner here that gap looks like nothing
+        // happened.
+        loading={status === 'validating'}
+        loadingLabel="Verifying…"
         onPress={() => {
           setStatus('idle');
           setSigningIn(true);
         }}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-          {status === 'validating' ? 'Verifying…' : 'Sign in to Serializd'}
-        </Text>
-      </PresstableOpacity>
+      />
 
       <ProviderSigninWebView<CapturedSerializdLogin>
         cookieDomain={SERIALIZD_WEB_ORIGIN}

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Linking, Platform, Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
@@ -54,30 +55,22 @@ function redirectUriForThisDevice(): string {
  * navigates to AniList and returns to the home route with `#access_token=…`,
  * where `useOAuthCallback` consumes it.
  */
-export function ConnectAniListButton() {
+/**
+ * AniList's OAuth trigger, without any of its UI.
+ *
+ * Extracted so a caller that already knows no setup is needed — the Manage
+ * Trackers row, when this build embeds a client id — can connect in one tap
+ * instead of opening a sheet whose only content is this button. The button
+ * below consumes the same hook, so there is exactly one copy of the flow.
+ */
+export function useAniListConnect() {
   const [storedClientId, setStoredClientId] = useState<string | null>(() =>
     typeof window === 'undefined' ? null : getProviderClientId('anilist'),
   );
   const [status, setStatus] = useState<ConnectionStatus>('idle');
-  const muted = useCSSVariable('--color-muted');
 
   const embeddedClientId = anilistClientId();
   const clientId = embeddedClientId !== '' ? embeddedClientId : (storedClientId ?? '');
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ClientIdForm>({
-    defaultValues: { clientId: '' },
-    resolver: zodResolver(clientIdSchema),
-  });
-  // Saving the id means the user wants to connect — go straight into OAuth.
-  const submitClientId = handleSubmit(async (values) => {
-    setProviderClientId('anilist', values.clientId);
-    setStoredClientId(values.clientId);
-    await connect(values.clientId);
-  });
 
   async function connect(id: string = clientId) {
     if (id === '') return;
@@ -100,6 +93,44 @@ export function ConnectAniListButton() {
     }
     setStatus(connectAniListFromRedirect(result.url) ? 'idle' : 'error');
   }
+
+  return {
+    connect,
+    status,
+    clientId,
+    embeddedClientId,
+    storedClientId,
+    setStoredClientId,
+    /** True when connecting first requires the one-time client-id form. */
+    needsSetup: clientId === '',
+  };
+}
+
+export function ConnectAniListButton() {
+  const {
+    connect,
+    status,
+    clientId,
+    embeddedClientId,
+    storedClientId,
+    setStoredClientId,
+  } = useAniListConnect();
+  const muted = useCSSVariable('--color-muted');
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ClientIdForm>({
+    defaultValues: { clientId: '' },
+    resolver: zodResolver(clientIdSchema),
+  });
+  // Saving the id means the user wants to connect — go straight into OAuth.
+  const submitClientId = handleSubmit(async (values) => {
+    setProviderClientId('anilist', values.clientId);
+    setStoredClientId(values.clientId);
+    await connect(values.clientId);
+  });
 
   if (clientId === '') {
     const redirectUri = redirectUriForThisDevice();
@@ -131,7 +162,7 @@ export function ConnectAniListButton() {
                 Set <Text className="text-foreground font-sans-semibold">Redirect URL</Text>{' '}
                 to exactly:
               </Text>
-              <View className="border border-border bg-surface px-2 py-1 rounded self-start">
+              <View className="border border-border bg-surface px-2 py-1 rounded-md self-start">
                 <Text className="text-foreground font-sans text-xs" selectable>
                   {redirectUri}
                 </Text>
@@ -159,7 +190,7 @@ export function ConnectAniListButton() {
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
               inputMode="numeric"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
@@ -176,14 +207,12 @@ export function ConnectAniListButton() {
             {errors.clientId.message}
           </Text>
         )}
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
-          onPress={() => submitClientId()}
-        >
-          <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-            Save & Connect
-          </Text>
-        </PresstableOpacity>
+        <Button
+          label="Save & Connect"
+          loading={isSubmitting || status === 'connecting'}
+          loadingLabel="Connecting…"
+          onPress={() => void submitClientId()}
+        />
       </View>
     );
   }
@@ -195,15 +224,12 @@ export function ConnectAniListButton() {
           Could not connect. Tap Connect to try again.
         </Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
-        disabled={status === 'connecting'}
-        onPress={() => connect()}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base">
-          {status === 'connecting' ? 'Connecting…' : 'Connect AniList'}
-        </Text>
-      </PresstableOpacity>
+      <Button
+        label="Connect AniList"
+        loading={status === 'connecting'}
+        loadingLabel="Connecting…"
+        onPress={() => void connect()}
+      />
       {embeddedClientId === '' && storedClientId != null && (
         <PresstableOpacity
           onPress={() => {

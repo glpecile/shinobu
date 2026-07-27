@@ -6,6 +6,7 @@ import { Text, useWindowDimensions, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { cn } from '@/lib/cn';
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { routes } from '@/lib/routes';
 import {
@@ -167,14 +168,17 @@ function SidebarItem({
   return (
     <PresstableOpacity
       accessibilityLabel={item.label}
-      className={`h-11 flex-row items-center rounded-lg ${active ? 'bg-surface' : ''}`}
+      className={cn('h-11 flex-row items-center rounded-lg', active && 'bg-surface')}
       onPress={onPress}
     >
       <View className="items-center justify-center" style={{ width: ICON_COL }}>
         <Ionicons color={color} name={item.icon} size={22} />
       </View>
       <RevealLabel
-        className={`font-sans-semibold text-base ${active ? 'text-accent' : 'text-foreground'}`}
+        className={cn(
+          'font-sans-semibold text-base',
+          active ? 'text-accent' : 'text-foreground',
+        )}
         collapsed={collapsed}
       >
         {item.label}

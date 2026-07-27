@@ -6,7 +6,7 @@ import { useCSSVariable } from 'uniwind';
 import { Effect } from 'effect';
 import { z } from 'zod';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd';
 import { serializdDeps } from '@/state/queries/serializd';
 import { connectSerializd } from '@/state/session/serializd';
@@ -83,7 +83,7 @@ export function ConnectSerializdButton() {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+            className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
             keyboardType="email-address"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
@@ -103,7 +103,7 @@ export function ConnectSerializdButton() {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+            className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
@@ -121,15 +121,12 @@ export function ConnectSerializdButton() {
       {errorMessage != null && (
         <Text className="text-accent font-sans text-xs">{errorMessage}</Text>
       )}
-      <PresstableOpacity
-        className="bg-accent px-5 py-3 rounded"
-        disabled={status === 'submitting'}
-        onPress={() => submit()}
-      >
-        <Text className="text-accent-foreground font-sans-semibold text-base text-center">
-          {status === 'submitting' ? 'Connecting…' : 'Connect Serializd'}
-        </Text>
-      </PresstableOpacity>
+      <Button
+        label="Connect Serializd"
+        loading={status === 'submitting'}
+        loadingLabel="Connecting…"
+        onPress={() => void submit()}
+      />
     </View>
   );
 }

@@ -11,6 +11,7 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PosterWall } from '@/features/watchlist/poster-wall';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
@@ -127,7 +128,11 @@ export default function LetterboxdWatchlistScreen() {
         <title>Watchlist — Shinobu</title>
       </Head>
       <View
-        className={`flex-row items-center gap-3 px-6 ${screenHeaderTopPadding} pb-4`}
+        className={cn(
+          'flex-row items-center gap-3 px-6',
+          screenHeaderTopPadding,
+          'pb-4',
+        )}
       >
         <PresstableOpacity
           accessibilityLabel="Back"

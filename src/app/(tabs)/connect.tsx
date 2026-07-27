@@ -6,147 +6,28 @@ import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { ConnectAniListButton } from '@/components/connect-anilist-button';
-import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
-import { ConnectSerializdButton } from '@/components/connect-serializd-button';
+import { Button } from '@/components/button';
+import { CARD_SHELL } from '@/components/card-shell';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
-import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
-import { ProviderIcon } from '@/components/provider-icon';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
-import { PROVIDERS } from '@/lib/providers/registry';
-import type { ProviderId } from '@/lib/providers/types';
+import { ProviderCardsSection } from '@/features/trackers/provider-cards-section';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
-import {
-  useConnectedProviders,
-  useDisconnectProvider,
-} from '@/state/session';
-import { getProviderSession } from '@/state/session/tokens';
 
-function ConnectedRow({ id }: { id: ProviderId }) {
-  const disconnect = useDisconnectProvider();
-  // Tokenless sessions (Letterboxd) carry the username — worth showing, since
-  // a wrong username is the only way that connection can be "broken".
-  const username = getProviderSession(id)?.username;
-
-  return (
-    <View className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4">
-      {/* Flexible + truncating so a long username can never push the
-          Disconnect button past the card's right edge (same shape as
-          HiddenItemsSection below). */}
-      <View className="flex-1 flex-row items-center gap-3 mr-3">
-        <ProviderIcon id={id} size={24} />
-        <View className="flex-1">
-          <Text
-            className="text-foreground font-sans-semibold text-base"
-            numberOfLines={1}
-          >
-            {PROVIDERS[id].label}
-          </Text>
-          <Text className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>
-            {username != null ? `Connected as ${username}` : 'Connected'}
-          </Text>
-        </View>
-      </View>
-      <PresstableOpacity
-        className="shrink-0 border border-accent px-4 py-2 rounded"
-        onPress={() => disconnect(id)}
-      >
-        <Text className="text-accent font-sans-semibold text-sm">
-          Disconnect
-        </Text>
-      </PresstableOpacity>
-    </View>
-  );
-}
-
-function TraktConnectRow() {
-  const connected = useConnectedProviders();
-
-  // Already listed under the "Connected" section — don't render a second row.
-  if (connected.includes('trakt')) {
-    return null;
-  }
-
-  return (
-    <View className="bg-surface border border-border rounded-xl p-5">
-      <View className="flex-row items-center gap-3 mb-3">
-        <ProviderIcon id="trakt" size={24} />
-        <Text className="text-foreground font-sans-semibold text-base">
-          Trakt
-        </Text>
-      </View>
-      <ConnectTraktButton />
-    </View>
-  );
-}
-
-function AniListConnectRow() {
-  const connected = useConnectedProviders();
-
-  if (connected.includes('anilist')) {
-    return null;
-  }
-
-  return (
-    <View className="bg-surface border border-border rounded-xl p-5">
-      <View className="flex-row items-center gap-3 mb-3">
-        <ProviderIcon id="anilist" size={24} />
-        <Text className="text-foreground font-sans-semibold text-base">
-          AniList
-        </Text>
-      </View>
-      {/* The button renders its own copy: one-tap when this build embeds a
-          client id, or the one-time client-id setup form when it doesn't. */}
-      <ConnectAniListButton />
-    </View>
-  );
-}
-
-function LetterboxdConnectRow() {
-  const connected = useConnectedProviders();
-
-  if (connected.includes('letterboxd')) {
-    return null;
-  }
-
-  return (
-    <View className="bg-surface border border-border rounded-xl p-5">
-      <View className="flex-row items-center gap-3 mb-3">
-        <ProviderIcon id="letterboxd" size={24} />
-        <Text className="text-foreground font-sans-semibold text-base">
-          Letterboxd
-        </Text>
-      </View>
-      <ConnectLetterboxdButton />
-    </View>
-  );
-}
-
-function SerializdConnectRow() {
-  const connected = useConnectedProviders();
-
-  if (connected.includes('serializd')) {
-    return null;
-  }
-
-  return (
-    <View className="bg-surface border border-border rounded-xl p-5">
-      <View className="flex-row items-center gap-3 mb-3">
-        <ProviderIcon id="serializd" size={24} />
-        <Text className="text-foreground font-sans-semibold text-base">
-          Serializd
-        </Text>
-      </View>
-      {/* WebView token capture on native, email/password form on web. */}
-      <ConnectSerializdButton />
-    </View>
-  );
-}
+/**
+ * One column width and one gutter for the whole screen. Web's navigation rail
+ * eats 64px of a phone-sized viewport before this screen sees it, so the gutter
+ * is a notch tighter there to leave the card interiors the same room native
+ * gets; `max-w-2xl` is the detail screens' centering pattern, narrowed because
+ * settings read better in a shorter measure than a details page.
+ */
+const CONTENT_COLUMN = 'w-full max-w-2xl self-center';
+const CONTENT_GUTTER = process.env.EXPO_OS === 'web' ? 'px-4' : 'px-6';
 
 /**
  * Feed items hidden from a card's actions dialog. Listed here (the only
@@ -161,14 +42,14 @@ function HiddenItemsSection() {
   if (hidden.length === 0) return null;
 
   return (
-    <View className="mt-6">
+    <View>
       <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
         Hidden items
       </Text>
       <View className="gap-3">
         {hidden.map((item) => (
           <View
-            className="flex-row items-center justify-between bg-surface border border-border rounded-xl px-5 py-4 opacity-60"
+            className={cn('flex-row items-center justify-between opacity-60', CARD_SHELL)}
             key={item.id}
           >
             <PresstableOpacity
@@ -188,14 +69,13 @@ function HiddenItemsSection() {
                 {item.title}
               </Text>
             </PresstableOpacity>
-            <PresstableOpacity
-              className="border border-border px-4 py-2 rounded"
+            <Button
+              accessibilityLabel={`Show ${item.title} again`}
+              label="Show"
               onPress={() => unhideItem(item.id)}
-            >
-              <Text className="text-foreground font-sans-semibold text-sm">
-                Show
-              </Text>
-            </PresstableOpacity>
+              size="sm"
+              variant="quiet"
+            />
           </View>
         ))}
       </View>
@@ -204,19 +84,25 @@ function HiddenItemsSection() {
 }
 
 export default function ConnectScreen() {
-  const connected = useConnectedProviders();
   const queryClient = useQueryClient();
-  const disconnected = (Object.keys(PROVIDERS) as ProviderId[]).filter(
-    (id) => !connected.includes(id),
-  );
 
   return (
     <View className="flex-1 bg-background">
       <Head>
         <title>Manage Trackers — Shinobu</title>
       </Head>
-      {/* A top-level tab now (native tab bar / web sidebar) — no back button. */}
-      <View className={`flex-row items-center px-6 ${screenHeaderTopPadding} pb-4`}>
+      {/* A top-level tab now (native tab bar / web sidebar) — no back button.
+          Same column + gutter as the content so the title sits on the cards'
+          left edge at every width. */}
+      <View
+        className={cn(
+          'flex-row items-center',
+          CONTENT_COLUMN,
+          CONTENT_GUTTER,
+          screenHeaderTopPadding,
+          'pb-4',
+        )}
+      >
         <Text className="text-2xl font-display text-foreground">
           Manage Trackers
         </Text>
@@ -224,7 +110,7 @@ export default function ConnectScreen() {
 
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <RefreshableScrollView
-          className="flex-1 px-6"
+          className="flex-1"
           // Native clears the bottom tab bar (unmeasurable height); web doesn't.
           contentContainerClassName={
             process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'
@@ -234,36 +120,18 @@ export default function ConnectScreen() {
           // marking every cached query stale so the feed refetches on return.
           onRefresh={() => queryClient.invalidateQueries()}
         >
-        {connected.length > 0 && (
-          <View className="mb-6">
-            <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-              Connected
-            </Text>
-            <View className="gap-3">
-              {connected.map((id) => (
-                <ConnectedRow id={id} key={id} />
-              ))}
-            </View>
+          {/* One `gap-6` owns the rhythm between sections instead of each
+              section carrying its own `mt-6`/`mb-6` — sections that render
+              nothing (no hidden items, notifications on web) then cost no
+              space at all, and the first one is never flush under the header:
+              `pt-2` on top of the header's `pb-4` makes that first break the
+              same 24px as every gap below it. */}
+          <View className={cn(CONTENT_COLUMN, CONTENT_GUTTER, 'gap-6 pt-2')}>
+            <ProviderCardsSection />
+            <ConnectTmdbTokenSection />
+            <NotificationsSettingsSection />
+            <HiddenItemsSection />
           </View>
-        )}
-
-        {disconnected.length > 0 && (
-          <View>
-            <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-              Accounts
-            </Text>
-            <View className="gap-3">
-              <TraktConnectRow />
-              <AniListConnectRow />
-              <LetterboxdConnectRow />
-              <SerializdConnectRow />
-            </View>
-          </View>
-        )}
-
-        <ConnectTmdbTokenSection />
-        <NotificationsSettingsSection />
-        <HiddenItemsSection />
         </RefreshableScrollView>
       </KeyboardAvoidingView>
     </View>
