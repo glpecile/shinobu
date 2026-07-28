@@ -12,7 +12,7 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
-import { errorOutcomeLinks } from './manual-log-links';
+import { errorOutcomeLinks } from './manual-write-links';
 import { filmReleaseStatus } from './release-gate';
 import { parseTags } from './parse-tags';
 import { OutcomeLink } from './outcome-link';

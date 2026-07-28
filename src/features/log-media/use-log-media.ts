@@ -24,7 +24,7 @@ import {
   cachedAniZipEpisodeMap,
   cachedSeasonLayout,
 } from '@/state/queries/mapping';
-import { resolveLogWriteTargets } from '@/lib/providers/routing';
+import { resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
@@ -46,18 +46,18 @@ import {
 } from './reconcile';
 import {
   fanOutLog,
-  type LogAdapter,
+  type WriteAdapter,
   type LogMediaResult,
   type LogMediaVariables,
-  type LogWriteResult,
-  type ProviderLogOutcome,
+  type ProviderWriteResult,
+  type ProviderWriteOutcome,
 } from './fan-out';
 
 /**
  * One entry per write-capable provider. `Effect.runPromise` here is the same
  * containment boundary `state/queries/*` uses — no Effect type escapes.
  */
-const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
+const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> = {
   trakt: ({ item, episode, episodes, watchedAt }) =>
     Effect.runPromise(
       logToTrakt(traktDeps(), item, {
@@ -100,7 +100,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
     ).then(okResult),
-  // Serializd (plan 0017 R8): logToSerializd already resolves a LogWriteResult
+  // Serializd (plan 0017 R8): logToSerializd already resolves a ProviderWriteResult
   // (ok | skipped) that maps straight through the fan-out contract — a season
   // that can't be resolved or an item with no tmdb becomes a `skipped` outcome
   // (R9), not a thrown error. A partial write (episode watched, diary failed)
@@ -118,24 +118,24 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, LogAdapter>> = {
 };
 
 /** Adapters that resolve `void` report a plain success through the contract. */
-function okResult(): LogWriteResult {
+function okResult(): ProviderWriteResult {
   return { status: 'ok' };
 }
 
 /**
  * Turn each mapping-blocked provider's adapter into a no-op that resolves its
- * reason (plan 0027 R3/KTD3). Deliberately *not* a new `ProviderLogOutcome`
+ * reason (plan 0027 R3/KTD3). Deliberately *not* a new `ProviderWriteOutcome`
  * status or a pre-fan-out filter: routing it through the ordinary adapter path
  * means `fanOutLog`, the outcome merge, and plan 0022's manual-link affordance
  * all treat it exactly like Serializd's own unresolvable-season skip.
  */
 export function withMappingSkips(
-  adapters: Partial<Record<ProviderId, LogAdapter>>,
+  adapters: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>,
   mappingSkips: ReadonlyMap<ProviderId, string>,
-): Partial<Record<ProviderId, LogAdapter>> {
+): Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> {
   if (mappingSkips.size === 0) return adapters;
   const overrides = Object.fromEntries(
-    [...mappingSkips].map(([provider, reason]): [ProviderId, LogAdapter] => [
+    [...mappingSkips].map(([provider, reason]): [ProviderId, WriteAdapter<LogMediaVariables>] => [
       provider,
       () => Promise.resolve({ status: 'skipped', reason }),
     ]),
@@ -198,7 +198,8 @@ async function resolveLogPlan(
       ? variables.entryEpisodes
       : null;
 
-  const targets = resolveLogWriteTargets(item, connected, {
+  const targets = resolveWriteTargets(item, connected, {
+    capability: 'log',
     // Only a *canonical*-domain batch can drop AniList (plan 0011 / R6): that
     // guard exists because a canonical season 2 has no place on a season-1
     // AniList entry. An entry-domain batch is already in AniList's own
@@ -633,7 +634,7 @@ export function useLogMedia() {
       // provider, in routing order (partial-failure contract, AGENTS.md).
       // Iterates `targets`, not `decisions`: mapping-skipped providers have no
       // decision but must still report their reasoned skip.
-      const outcomes: ProviderLogOutcome[] = targets.map((provider) =>
+      const outcomes: ProviderWriteOutcome[] = targets.map((provider) =>
         skipped.includes(provider)
           ? { provider, status: 'skipped' }
           : (result.outcomes.find((o) => o.provider === provider) ?? {
@@ -643,7 +644,9 @@ export function useLogMedia() {
             }),
       );
 
-      return { ...result, outcomes, skipped };
+      // `rewatch` is the log verb's own field, not the shared write core's
+      // (plan 0031 KTD-4) — spliced back from the plan that computed it.
+      return { ...result, outcomes, skipped, rewatch: plan.rewatch };
     },
   });
 }

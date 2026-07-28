@@ -16,8 +16,8 @@ import {
   manualLinkForOutcome,
   manualRowsFor,
   splitSkippedOutcomes,
-} from './manual-log-links';
-import type { ProviderLogOutcome } from './fan-out';
+} from './manual-write-links';
+import type { ProviderWriteOutcome } from './fan-out';
 import { OutcomeLink } from './outcome-link';
 import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
@@ -224,7 +224,7 @@ function OutcomeMessage({
   item,
   accentColor,
 }: {
-  outcome: ProviderLogOutcome;
+  outcome: ProviderWriteOutcome;
   message: string;
   item: NormalizedMediaItem;
   accentColor?: string;

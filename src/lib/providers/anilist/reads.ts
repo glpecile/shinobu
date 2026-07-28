@@ -309,8 +309,22 @@ export function searchAnimeFilms(
 }
 
 export interface AniListEntryState {
-  /** null when the viewer has no list entry for this media yet. */
-  entry: { status: string | null; progress: number; repeat: number } | null;
+  /**
+   * null when the viewer has no list entry for this media yet.
+   *
+   * `id` is the **MediaList entry** id, not the media id — the only handle
+   * `DeleteMediaListEntry` accepts (plan 0031 R34/R36), so an un-watchlist has
+   * no other way to name what it removes. Nullable because the field is only
+   * as trustworthy as the payload: an entry that decodes without one is not a
+   * deletion target, and the caller must say so rather than delete an
+   * arbitrary id.
+   */
+  entry: {
+    id: number | null;
+    status: string | null;
+    progress: number;
+    repeat: number;
+  } | null;
   /** Total episodes when AniList knows it (null for ongoing shows). */
   episodes: number | null;
 }
@@ -319,6 +333,7 @@ interface MediaEntryResponse {
   Media: {
     episodes: number | null;
     mediaListEntry: {
+      id: number | null;
       status: string | null;
       progress: number | null;
       repeat: number | null;
@@ -328,8 +343,9 @@ interface MediaEntryResponse {
 
 /**
  * The viewer's current recorded state for one media — what the log
- * reconciliation (plan 0011 decision 7) compares against, and what the write
- * adapter reads to compute rewatch counters.
+ * reconciliation (plan 0011 decision 7) compares against, what the write
+ * adapter reads to compute rewatch counters, and what the watchlist add
+ * (`planOnAniList`) refuses to overwrite on (plan 0031 KTD-2).
  */
 export function getEntryState(
   deps: AniListDeps,
@@ -340,7 +356,7 @@ export function getEntryState(
     `query ($mediaId: Int) {
       Media(id: $mediaId) {
         episodes
-        mediaListEntry { status progress repeat }
+        mediaListEntry { id status progress repeat }
       }
     }`,
     { variables: { mediaId: params.mediaId } },
@@ -353,6 +369,7 @@ export function getEntryState(
           raw == null
             ? null
             : {
+                id: raw.id ?? null,
                 status: raw.status,
                 progress: raw.progress ?? 0,
                 repeat: raw.repeat ?? 0,

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { splitLogTargets } from '@/lib/providers/routing';
+import { splitWriteTargets } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -32,8 +32,13 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const { data } = useQuery({
     queryKey: ['log-targets', item.id, ...connected, platform],
     queryFn: async () =>
-      splitLogTargets(await enrichExternalIds(queryClient, item, connected), connected, platform),
+      splitWriteTargets(
+        await enrichExternalIds(queryClient, item, connected),
+        connected,
+        platform,
+        'log',
+      ),
   });
 
-  return data ?? splitLogTargets(item, connected, platform);
+  return data ?? splitWriteTargets(item, connected, platform, 'log');
 }

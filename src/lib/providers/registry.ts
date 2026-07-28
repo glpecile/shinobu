@@ -12,6 +12,11 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['TV', 'MOVIE'],
     canRead: true,
     canWrite: true,
+    // `POST /sync/watchlist` and `/sync/watchlist/remove` — both documented,
+    // both symmetric with the diary write's ids and auth wrapper (plan 0031
+    // R1/R34).
+    watchlistWrite: 'write',
+    watchlistRemove: 'write',
   },
   anilist: {
     id: 'anilist',
@@ -19,6 +24,13 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['ANIME', 'MANGA'],
     canRead: true,
     canWrite: true,
+    // `SaveMediaListEntry(status: PLANNING)` / `DeleteMediaListEntry(id)`, both
+    // confirmed by live introspection. The add is guarded read-then-decide and
+    // never overwrites an existing status (plan 0031 R8/KTD-2) — that guard
+    // lives in the adapter, not here: the capability is "possible", not
+    // "unconditional".
+    watchlistWrite: 'write',
+    watchlistRemove: 'write',
   },
   // No official API (todos/004, plan 0012). Reads scrape the public watchlist
   // (native-only on web — docs/solutions/web-cors-letterboxd.md). canWrite is
@@ -39,6 +51,13 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // still lists Letterboxd as an applicable target on web; it's just routed
     // to the manual-log fallback instead of the fan-out (plan 0022).
     unsupportedWritePlatforms: ['web'],
+    // No verified watchlist endpoint yet: plan 0031 U6's account-bound spike
+    // gates both verbs, and until it runs Letterboxd is a manual watchlist
+    // target on *every* platform (R7/R37) — never absent, never an error. If
+    // the spike succeeds these become 'write' and the web ban is still applied
+    // by `unsupportedWritePlatforms` above, so web stays manual regardless.
+    watchlistWrite: 'manual',
+    watchlistRemove: 'manual',
   },
   // Unofficial JSON API (plan 0017), TMDB-keyed TV tracking. Symmetric
   // read+write like Trakt: a TV (or TMDB-enriched anime series) log fans out
@@ -52,5 +71,11 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['TV'],
     canRead: true,
     canWrite: true,
+    // `watchlist_v2` / `watchlist/remove_v2` exist and are authorised (plan
+    // 0031 R6), but both the season-id guard and the Worker path allowlist
+    // land in U9 — until then Serializd is a manual watchlist target rather
+    // than an adapter target with no adapter behind it.
+    watchlistWrite: 'manual',
+    watchlistRemove: 'manual',
   },
 };

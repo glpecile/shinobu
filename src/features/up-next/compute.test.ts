@@ -938,6 +938,65 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
   });
 });
 
+/**
+ * Plan 0031 R9. The gate above was written for PLANNING entries the *user* had
+ * already made; this app now **creates** them — `planOnAniList` writes
+ * `status: PLANNING` on every AniList watchlist add
+ * (`src/lib/providers/anilist/writes.ts`, plan 0031 KTD-2). So the hole
+ * `docs/solutions/anilist-shared-list-query-status-gate.md` describes is no
+ * longer bounded by how much plan-to-watch the user happened to have: adding a
+ * long-running series you have never started is now a one-tap action, and every
+ * one of those entries arrives at `computeUpNext` at progress 0 with episodes
+ * long since aired — the exact flood shape.
+ *
+ * Watchlist is not the agenda. This asserts it as an absence across the whole
+ * result, not per section, so a future third section cannot quietly become the
+ * new leak.
+ */
+describe('computeUpNext — watchlist adds never reach the agenda (plan 0031 R9)', () => {
+  test('a series watchlisted mid-run appears nowhere, least of all Continue Watching', () => {
+    const data = computeUpNext(
+      inputs({
+        anilist: [
+          // Exactly what a fresh `planOnAniList` write reads back: PLANNING,
+          // progress 0, and the run already 11 episodes deep.
+          anilistInput(anime(4031, { currentProgress: 0 }), {
+            status: 'PLANNING',
+            nextAiring: { episode: 12, airingAt: localInstant(2026, 7, 25, 12, 0) },
+            totalEpisodes: 24,
+          }),
+        ],
+      }),
+      NOW,
+    );
+    const everywhere = [...data.continueWatching, ...data.calendar];
+    expect(everywhere.filter((entry) => entry.item.id === 'anilist-4031')).toEqual([]);
+    expect(data.continueWatching).toHaveLength(0);
+    expect(everywhere).toHaveLength(0);
+  });
+
+  test('a whole watchlisted backlog cannot flood Continue Watching', () => {
+    // The volume half of the same claim: ten adds, ten entries, zero rows.
+    const data = computeUpNext(
+      inputs({
+        anilist: Array.from({ length: 10 }, (_, index) =>
+          anilistInput(anime(4100 + index, { currentProgress: 0 }), {
+            status: 'PLANNING',
+            nextAiring: {
+              episode: 5 + index,
+              airingAt: localInstant(2026, 7, 25, 12, 0),
+            },
+            totalEpisodes: 24,
+          }),
+        ),
+      }),
+      NOW,
+    );
+    expect(data.continueWatching).toHaveLength(0);
+    expect(data.calendar).toHaveLength(0);
+  });
+});
+
 describe('computeUpNext — cross-provider dedupe (R5)', () => {
   const AIRED = localInstant(2026, 7, 21, 12, 0);
 

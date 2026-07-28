@@ -5,7 +5,7 @@ import {
   manualLinkForOutcome,
   manualRowsFor,
   splitSkippedOutcomes,
-} from './manual-log-links';
+} from './manual-write-links';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 

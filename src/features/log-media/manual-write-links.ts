@@ -1,6 +1,6 @@
 import { providerHomeUrl, providerItemUrl, type UrlItem } from '@/lib/providers/external-urls';
 import type { ProviderId } from '@/lib/providers/types';
-import type { ProviderLogOutcome } from './fan-out';
+import type { ProviderWriteOutcome } from './fan-out';
 
 export interface ManualLogRow {
   provider: ProviderId;
@@ -30,7 +30,7 @@ export function manualRowsFor(
  * URL fallback here, unlike the manual row (R4 is sheet-only).
  */
 export function manualLinkForOutcome(
-  outcome: ProviderLogOutcome,
+  outcome: ProviderWriteOutcome,
   item: UrlItem,
 ): string | null {
   if (outcome.status === 'error') return providerItemUrl(outcome.provider, item);
@@ -52,7 +52,7 @@ export interface ErrorOutcomeLink {
  * renders alongside every error regardless of link buildability.
  */
 export function errorOutcomeLinks(
-  outcomes: readonly ProviderLogOutcome[],
+  outcomes: readonly ProviderWriteOutcome[],
   item: UrlItem,
 ): ErrorOutcomeLink[] {
   const links: ErrorOutcomeLink[] = [];
@@ -64,7 +64,7 @@ export function errorOutcomeLinks(
   return links;
 }
 
-type ReasonedSkip = Extract<ProviderLogOutcome, { status: 'skipped' }> & { reason: string };
+type ReasonedSkip = Extract<ProviderWriteOutcome, { status: 'skipped' }> & { reason: string };
 
 export interface SkippedOutcomesSplit {
   /** No reason — already in sync (reconcile). Keeps the existing combined "already had this logged" copy. */
@@ -73,7 +73,7 @@ export interface SkippedOutcomesSplit {
   reasonedSkips: ReasonedSkip[];
 }
 
-function hasSkipReason(outcome: ProviderLogOutcome): outcome is ReasonedSkip {
+function hasSkipReason(outcome: ProviderWriteOutcome): outcome is ReasonedSkip {
   return outcome.status === 'skipped' && outcome.reason != null;
 }
 
@@ -84,7 +84,7 @@ function hasSkipReason(outcome: ProviderLogOutcome): outcome is ReasonedSkip {
  * "Log on {Provider}" link, exactly like an error outcome.
  */
 export function splitSkippedOutcomes(
-  outcomes: readonly ProviderLogOutcome[],
+  outcomes: readonly ProviderWriteOutcome[],
 ): SkippedOutcomesSplit {
   const reconcileSkipped: ProviderId[] = [];
   const reasonedSkips: ReasonedSkip[] = [];

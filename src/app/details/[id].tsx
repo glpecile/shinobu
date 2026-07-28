@@ -20,6 +20,8 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
+import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import { PersonCreditSheet, type PersonCredit } from '@/features/person';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
 import { ReleaseTimeline } from '@/features/release-timeline';
@@ -731,7 +733,13 @@ export default function DetailsScreen() {
 
           {shown.overview != null && <ExpandableText text={shown.overview} />}
 
-          <LogMediaButton item={shown} />
+          {/* Placement only, film-like only (plan 0031 R11): a film that isn't
+              out yet can't be logged, so the want-to-watch CTA is the primary
+              control and the disabled log button doesn't render. Everything
+              else — including an airing series with no release date — keeps the
+              log button and gets the CTA beneath it. */}
+          {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
+          <WatchlistMediaButton item={shown} />
 
           {showProgress && (
             <View className="flex-row gap-4">

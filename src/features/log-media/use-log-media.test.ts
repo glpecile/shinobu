@@ -6,7 +6,7 @@ import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import type { LogAdapter, LogMediaVariables } from './fan-out';
+import type { LogMediaVariables, WriteAdapter } from './fan-out';
 
 /**
  * The plan 0027 chain end to end at the decision layer: enrich → translate →
@@ -62,7 +62,7 @@ mock.module('@/state/queries/mapping', () => ({
 const { planLogWrite, withMappingSkips } = await import('./use-log-media');
 const { fanOutLog } = await import('./fan-out');
 const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
-  './manual-log-links'
+  './manual-write-links'
 );
 const { traktQueryKeys } = await import('@/state/queries/trakt');
 const { anilistQueryKeys } = await import('@/state/queries/anilist');
@@ -143,7 +143,7 @@ function seedAniList(
 
 /** Records exactly what each adapter was handed, then reports success. */
 function recordingAdapters(seen: Map<ProviderId, LogMediaVariables>) {
-  const make = (provider: ProviderId): LogAdapter => (variables) => {
+  const make = (provider: ProviderId): WriteAdapter<LogMediaVariables> => (variables) => {
     seen.set(provider, variables);
     return Promise.resolve({ status: 'ok' as const });
   };

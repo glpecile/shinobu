@@ -58,13 +58,19 @@ export interface LogMediaVariables {
  * the contract instead of failing the fan-out. Adapters with nothing to report
  * resolve `{ status: 'ok' }`.
  */
-export type LogWriteResult =
+export type ProviderWriteResult =
   | { status: 'ok' }
   | { status: 'skipped'; reason: string };
 
-export type LogAdapter = (variables: LogMediaVariables) => Promise<LogWriteResult>;
+/**
+ * One provider's write for *some* verb. Generic in its payload `V` because the
+ * core is verb-neutral (plan 0031 KTD-4): the log verb passes
+ * `LogMediaVariables`, the watchlist verbs pass their own payload, and the
+ * partial-failure contract below is shared rather than re-derived per verb.
+ */
+export type WriteAdapter<V> = (variables: V) => Promise<ProviderWriteResult>;
 
-export type ProviderLogOutcome =
+export type ProviderWriteOutcome =
   | { provider: ProviderId; status: 'ok' }
   | { provider: ProviderId; status: 'error'; message: string }
   /**
@@ -74,16 +80,24 @@ export type ProviderLogOutcome =
    */
   | { provider: ProviderId; status: 'skipped'; reason?: string };
 
-export interface LogMediaResult {
+export interface ProviderWriteReport {
   /** One entry per applicable provider (skips included), in routing order. */
-  outcomes: ProviderLogOutcome[];
+  outcomes: ProviderWriteOutcome[];
   succeeded: ProviderId[];
   failed: ProviderId[];
-  /** Providers that already recorded this watch and were left untouched. */
+  /** Providers that already recorded this write and were left untouched. */
   skipped: ProviderId[];
+}
+
+/**
+ * The log verb's report: the shared core's report plus the one field that is
+ * genuinely log-specific (plan 0031 KTD-4). `useLogMedia` splices `rewatch`
+ * back in from its own plan, so `runProviderWrites` stays payload-agnostic.
+ */
+export type LogMediaResult = ProviderWriteReport & {
   /** True when the write round was a parity rewatch (plan 0011). */
   rewatch: boolean;
-}
+};
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -94,16 +108,22 @@ function errorMessage(error: unknown): string {
  * target provider's adapter in parallel and report per-provider outcomes —
  * never one collapsed boolean/throw (AGENTS.md partial-failure contract).
  * A target without an adapter is a loud error outcome, not a silent skip.
+ *
+ * Verb-neutral and payload-generic (plan 0031 KTD-4): the log verb, the
+ * watchlist add and the watchlist remove are all callers of *this* function,
+ * never of a copy — the two non-obvious rules below (completion-order →
+ * routing-order rebuild, and the loud missing-adapter error) are exactly what
+ * a second file would silently diverge on.
  */
-export async function fanOutLog(
-  adapters: Partial<Record<ProviderId, LogAdapter>>,
+export async function runProviderWrites<V>(
+  adapters: Partial<Record<ProviderId, WriteAdapter<V>>>,
   targets: readonly ProviderId[],
-  variables: LogMediaVariables,
-): Promise<LogMediaResult> {
+  variables: V,
+): Promise<ProviderWriteReport> {
   const outcomesByProvider = await all(
     Object.fromEntries(
       targets.map(
-        (provider): [ProviderId, () => Promise<ProviderLogOutcome>] => [
+        (provider): [ProviderId, () => Promise<ProviderWriteOutcome>] => [
           provider,
           async () => {
             const adapter = adapters[provider];
@@ -131,8 +151,8 @@ export async function fanOutLog(
     ),
   );
   // better-all keys its result in completion order, not input order — rebuild
-  // routing order from `targets` (LogMediaResult.outcomes contract).
-  const outcomes: ProviderLogOutcome[] = targets.map(
+  // routing order from `targets` (ProviderWriteReport.outcomes contract).
+  const outcomes: ProviderWriteOutcome[] = targets.map(
     (provider) => outcomesByProvider[provider],
   );
 
@@ -149,6 +169,19 @@ export async function fanOutLog(
     skipped: outcomes
       .filter((outcome) => outcome.status === 'skipped')
       .map((outcome) => outcome.provider),
-    rewatch: variables.rewatch === true,
   };
+}
+
+/**
+ * The log verb's entry point into the shared core. Kept as its own symbol (and
+ * in this file) so `todos/010`'s mechanism-word rename stays a one-file
+ * exercise — plan 0031 KTD-4 deliberately leaves `fan-out.ts`/`fanOutLog`
+ * alone and gives every *new* shared identifier a mechanism-free root.
+ */
+export function fanOutLog(
+  adapters: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>,
+  targets: readonly ProviderId[],
+  variables: LogMediaVariables,
+): Promise<ProviderWriteReport> {
+  return runProviderWrites(adapters, targets, variables);
 }

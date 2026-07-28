@@ -42,3 +42,28 @@ export function filmReleaseStatus(
   if (item.year != null && item.year < now.getFullYear()) return 'released';
   return 'unknown';
 }
+
+/**
+ * Placement only, and film-like only (plan 0031 R11): should the want-to-watch
+ * CTA be the *primary* control on this item, with `LogMediaButton` not rendered
+ * at all?
+ *
+ * Exported as one predicate — never re-derived at a call site — because the
+ * film-like guard is the whole safety of it. `filmReleaseStatus` reads only
+ * `releaseDate`/`year`, so an airing series with neither answers `'unknown'`;
+ * consulted unguarded it would suppress the log button on exactly the shows
+ * people watch weekly and delete episode logging from them. The guard is the
+ * same one `log-media-button.tsx` uses for its own release check.
+ *
+ * This is never a gate on the watchlist verb itself — R2: released, unreleased
+ * and unknown are all valid watchlist targets.
+ */
+export function watchlistCtaIsPrimary(
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'releaseDate' | 'year'>,
+  now: Date = new Date(),
+): boolean {
+  const isFilmLike =
+    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  if (!isFilmLike) return false;
+  return filmReleaseStatus(item, now) !== 'released';
+}
