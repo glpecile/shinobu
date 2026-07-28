@@ -122,11 +122,17 @@ export function WatchlistMediaButton({
           changes in place from user state, which is exactly what MorphText is
           for. The settled state also locks the retry — but only when the report
           is complete, never on a mixed one. */}
-      {/* `outline`, never `primary`: this sits directly under the log CTA, and
-          two accent-filled blocks of identical weight made "watch it" and
-          "watch it later" look like the same decision. The filled one is the
-          action you came for; this is the alternative to it. `quiet` once
-          settled keeps that hierarchy going as it recedes. */}
+      {/* `quiet` — neutral border, foreground label — the same treatment
+          Manage Trackers' Disconnect uses (`provider-card.tsx`), chosen by the
+          owner. Never `primary`: this sits directly under the log CTA, and two
+          accent-filled blocks of identical weight made "watch it" and "watch it
+          later" read as the same decision. Not `outline` either — accent on
+          transparent still reads as a second *accent* action competing with the
+          first. Neutral says "the other thing you can do here".
+
+          One variant for both states: `settled` sets `disabled`, and `quiet`'s
+          own off-treatment (dimmed border, muted label) is exactly the recede
+          this wants — so the settled look needs no second variant to drift. */}
       <Button
         disabled={settled}
         icon={<Button.Icon name={settled ? 'bookmark' : 'bookmark-outline'} />}
@@ -135,7 +141,7 @@ export function WatchlistMediaButton({
         loadingLabel={copy.pending}
         morphLabel
         onPress={add}
-        variant={settled ? 'quiet' : 'outline'}
+        variant="quiet"
       />
 
       {/* Family 1 — rendered before any tap. Centred under the buttons it
