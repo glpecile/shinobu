@@ -19,10 +19,14 @@ block; this todo replaces that surface afterwards rather than racing it.
 
 1. **A target picker modal for watchlisting.** Choose which trackers receive it,
    instead of one silent tap that goes everywhere.
-2. **Icons on both CTAs** — the log/watch button and the watchlist button.
-3. **The watchlist button must look different from the watch button.** They read as
-   the same control today, which is the core complaint: two different verbs wearing
-   one skin.
+2. ~~**Icons on both CTAs**~~ — **done** (2026-07-28): `Button.Icon`, a
+   context-driven compound subcomponent that inherits its button's colour and size.
+   `eye`/`eye-outline` on the log CTA, `bookmark`/`bookmark-outline` on the watchlist
+   one, filled meaning "already done" on both.
+3. ~~**The watchlist button must look different**~~ — **done** (2026-07-28): it is
+   `outline` (accent on transparent) against the log CTA's filled `primary`, and
+   `quiet` once settled. The manual "Add on …" row is centred under the pair, and the
+   log CTA drops to `mb-3` so the two read as two options rather than two blocks.
 4. **Write results move to toasts**, via [`sonner-native`](https://github.com/gunnartorfis/sonner-native-toasts)
    — "where it got watchlisted" is toast content, not an inline block under a button.
 
@@ -65,16 +69,15 @@ block; this todo replaces that surface afterwards rather than racing it.
 - **Does the log path adopt toasts too?** Two result idioms for two near-identical
   verbs would be worse than the current inconsistency. Probably yes, which makes this
   a change to `LogMediaButton` and `LogConfirmSheet` as well — price that in.
-- **Icons:** does `ProviderIcon` cover it, or is this a verb icon (eye vs bookmark)
-  on the CTA itself? The owner's phrasing ("icons next to the log/watch and
-  watchlist") reads as the latter.
+- ~~**Icons:**~~ resolved 2026-07-28 — verb icons (eye vs bookmark) on the CTA
+  itself, via `Button.Icon`. `ProviderIcon` stays for provider rows.
 
 ## Acceptance criteria
 
-- [ ] The watchlist CTA is visually distinct from the log CTA at a glance — different
-      variant/affordance, not just different label text.
-- [ ] Both CTAs carry an icon, from the existing icon set, sized and aligned per the
-      `components/button` contract rather than hand-placed.
+- [x] The watchlist CTA is visually distinct from the log CTA at a glance — different
+      variant/affordance, not just different label text. *(2026-07-28)*
+- [x] Both CTAs carry an icon, from the existing icon set, sized and aligned per the
+      `components/button` contract rather than hand-placed. *(2026-07-28 — `Button.Icon`)*
 - [ ] Watchlisting opens a picker; every applicable connected provider starts
       selected; deselecting narrows the write; the confirm label names what will
       happen without naming providers in a tagline.
@@ -84,8 +87,9 @@ block; this todo replaces that surface afterwards rather than racing it.
       the user with a working `providerItemUrl` link, and neither is lost to an
       auto-dismiss.
 - [ ] The log path and the watchlist path use one result idiom, not two.
-- [ ] `components/button`'s API absorbs the icon rather than call sites hand-rolling
+- [x] `components/button`'s API absorbs the icon rather than call sites hand-rolling
       it (AGENTS.md: buttons are `components/button`, `className` is layout only).
+      *(2026-07-28 — `icon` prop + `Button.Icon`)*
 
 ## Not in scope
 

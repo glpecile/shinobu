@@ -122,19 +122,27 @@ export function WatchlistMediaButton({
           changes in place from user state, which is exactly what MorphText is
           for. The settled state also locks the retry — but only when the report
           is complete, never on a mixed one. */}
+      {/* `outline`, never `primary`: this sits directly under the log CTA, and
+          two accent-filled blocks of identical weight made "watch it" and
+          "watch it later" look like the same decision. The filled one is the
+          action you came for; this is the alternative to it. `quiet` once
+          settled keeps that hierarchy going as it recedes. */}
       <Button
         disabled={settled}
+        icon={<Button.Icon name={settled ? 'bookmark' : 'bookmark-outline'} />}
         label={settled ? copy.settled : copy.idle}
         loading={pending}
         loadingLabel={copy.pending}
         morphLabel
         onPress={add}
-        variant={settled ? 'quiet' : 'primary'}
+        variant={settled ? 'quiet' : 'outline'}
       />
 
-      {/* Family 1 — rendered before any tap. */}
+      {/* Family 1 — rendered before any tap. Centred under the buttons it
+          belongs to: left-aligned, it read as a stray orphan rather than the
+          third option in a stack of three. */}
       {upfrontManual.length > 0 && (
-        <View className="mt-2 gap-1">
+        <View className="mt-3 gap-1 items-center">
           {upfrontManual.map(({ provider, url }) => (
             <OutcomeLink
               accentColor={accentColor}
