@@ -1,5 +1,4 @@
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import {
@@ -82,8 +81,6 @@ export function WatchlistMediaButton({
   const pending = useIsWatchlistWritePending(item.id);
   const result = useLatestWatchlistResult(item.id);
   const { writable, manual } = useWatchlistTargetsSplit(item);
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   const onList = useIsWatchlisted(item);
 
@@ -151,9 +148,9 @@ export function WatchlistMediaButton({
         <View className="mt-3 gap-1 items-center">
           {upfrontManual.map(({ provider, url }) => (
             <OutcomeLink
-              accentColor={accentColor}
               key={provider}
               provider={provider}
+              tone="neutral"
               url={url}
               verb="Add on"
             />
@@ -181,7 +178,6 @@ export function WatchlistMediaButton({
           </Text>
           {view.errorLinks.map(({ provider, url }) => (
             <OutcomeLink
-              accentColor={accentColor}
               key={provider}
               provider={provider}
               url={url}
@@ -205,7 +201,7 @@ export function WatchlistMediaButton({
                 </Text>
                 {url != null && (
                   <OutcomeLink
-                    accentColor={accentColor}
+                    tone="neutral"
                     provider={outcome.provider}
                     url={url}
                     verb="Add on"

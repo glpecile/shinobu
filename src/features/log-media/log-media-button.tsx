@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { haptics } from '@/lib/haptics';
@@ -58,8 +57,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const [tags, setTags] = useState(DEFAULT_TAGS);
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
@@ -243,7 +240,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           </Text>
           {errorOutcomeLinks(result.outcomes, item).map(({ provider, url }) => (
             <OutcomeLink
-              accentColor={accentColor}
               key={provider}
               provider={provider}
               url={url}
