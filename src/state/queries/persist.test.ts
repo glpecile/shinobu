@@ -79,6 +79,48 @@ describe('serialize / deserialize', () => {
     expect(restored.a.b.has(1)).toBe(true);
     expect(restored.c.size).toBe(0);
   });
+
+  // Regression, and a real crash rather than a hypothetical: ani.zip episode
+  // maps are `ReadonlyMap` and `['mapping','anizip-episodes']` has been on the
+  // allowlist since the home-feed restore landed. Without a codec they restored
+  // as `{}`, which is the *worst* shape — `canonicalSeasonTitle`'s
+  // `map.size === 0` guard passes (`undefined === 0` is false) and the next
+  // line calls `map.values()`, so every cold-started anime details screen with
+  // a mapping threw "undefined is not a function".
+  test('round-trips a Map instead of flattening it to {}', () => {
+    const data = new Map([
+      [1, { season: 1, number: 1 }],
+      [2, { season: 1, number: 2 }],
+    ]);
+    const restored = restoredData(
+      clientWith(['mapping', 'anizip-episodes', 154587], data),
+    ) as Map<number, { season: number; number: number }>;
+
+    expect(restored).toBeInstanceOf(Map);
+    expect(restored.size).toBe(2);
+    expect(restored.get(2)).toEqual({ season: 1, number: 2 });
+    // The exact call that threw.
+    expect([...restored.values()].map((episode) => episode.season)).toEqual([1, 1]);
+  });
+
+  test('survives a nested and an empty Map, and a Map beside a Set', () => {
+    const data = {
+      a: { b: new Map([['k', 1]]) },
+      c: new Map<string, number>(),
+      d: new Set(['x']),
+    };
+    const restored = restoredData(
+      clientWith(['mapping', 'anizip-episodes', 1], data),
+    ) as {
+      a: { b: Map<string, number> };
+      c: Map<string, number>;
+      d: Set<string>;
+    };
+
+    expect(restored.a.b.get('k')).toBe(1);
+    expect(restored.c.size).toBe(0);
+    expect(restored.d.has('x')).toBe(true);
+  });
 });
 
 describe('isPersistedQueryKey', () => {

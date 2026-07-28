@@ -93,7 +93,7 @@ export function invalidateAfterWatchlist(
   // The gather key *is* persisted (plan 0031 U13 added it to
   // `PERSISTED_PREFIXES`), but invalidating it changes no *shape*: its value is
   // arrays all the way down, with no `Set` to corrupt on rehydration
-  // (docs/solutions/persisted-query-cache-set-corruption.md), so there is still
+  // (docs/solutions/persisted-query-cache-set-and-map-corruption.md), so there is still
   // no cache-version BUSTER to bump here.
 }
 

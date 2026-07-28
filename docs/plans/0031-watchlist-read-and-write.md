@@ -1329,7 +1329,7 @@ and routing reads a single capability flag (`routing.ts:55`).
   rest of the feed restores together, and `useIsWatchlisted` is `undefined` on
   the first details screen after a restart, which would make KTD-14's
   "correct after an app restart" claim false. `WatchlistInputs` is arrays only —
-  no `Set`-shaped value (`docs/solutions/persisted-query-cache-set-corruption.md`).
+  no `Set`-shaped value (`docs/solutions/persisted-query-cache-set-and-map-corruption.md`).
 
   Rejected: **a fifth tab / sidebar item** — it would put a bookmark list at the
   same altitude as Home, Diary, Search and Settings, and crowd the deliberately
@@ -1774,7 +1774,7 @@ judged with `entryInstant`/`hasAired`) — `refreshNotifications(createRefreshDe
 regather against keys just invalidated, so bypassing `THROTTLE_MS` for an item
 that cannot produce a candidate is pure cost. Nothing about this verb is
 persisted, so no `BUSTER` bump and no `Set`-shaped cache value
-(`docs/solutions/persisted-query-cache-set-corruption.md`).
+(`docs/solutions/persisted-query-cache-set-and-map-corruption.md`).
 **Test scenarios:** all providers ok → outcomes in routing order, all `ok`;
 one provider throws → that provider `error`, the others `ok`, the report names
 it; a manual target never enters the adapter map; a released 1997 film added
