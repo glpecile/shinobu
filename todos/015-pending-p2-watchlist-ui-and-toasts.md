@@ -55,13 +55,25 @@ block; this todo replaces that surface afterwards rather than racing it.
 
 ## Open questions the plan must answer
 
-- **Does `sonner-native` work on web?** Shinobu targets web + iOS + iPadOS + Android
-  from one codebase. If it is native-only, the result surface forks by platform and
-  half the value evaporates. **Verify before designing anything on top of it.**
-- **Does it need a native rebuild?** It builds on reanimated (4.5.0) and
-  gesture-handler (~2.32.0), both already linked, so it is plausibly pure JS — but
-  confirm against its install docs rather than assuming, and state the answer, per
-  AGENTS.md's hot-reload-vs-clean-prebuild rule.
+- ~~**Does `sonner-native` work on web?**~~ **Answered 2026-07-28, and it costs
+  more than assumed.** Its own README says: *"Even though Sonner Native works on the
+  web, it is not recommended to use it there. Instead, use the original Sonner."* It
+  recommends a `.ts` / `.web.ts` split — which is already AGENTS.md's platform-file
+  convention, so the shape is familiar, but it means **two toast implementations and
+  two APIs to keep in agreement**, and the web one (DOM `sonner`) is a separate
+  dependency. Price that in before committing to toasts as *the* result surface.
+- ~~**Does it need a native rebuild?**~~ **Yes.** Peer deps are reanimated,
+  gesture-handler, safe-area-context, worklets — all already linked — **plus
+  `react-native-svg` and `react-native-screens`, neither of which is installed.**
+  Both ship native code, so adopting it is `bun ios.clean` / `bun android.clean`, not
+  hot reload. That is not a blocker, but it is a real cost for a presentation change
+  and it should be a deliberate decision rather than a surprise mid-PR.
+- **Given both of the above: is a toast library the right call at all?** The
+  alternative is a small in-app toast/snackbar built on reanimated (already linked,
+  no rebuild, one implementation for all four targets) — less polished than sonner,
+  but it carries the partial-failure payload this app actually needs and adds no
+  native dependency. Worth a genuine comparison in the plan rather than defaulting to
+  the named library.
 - **Is a toast the right carrier for a partial failure?** "Logged to Trakt, failed on
   AniList, Letterboxd needs a manual add" is three outcomes with a tappable link on
   two of them. That may want a persistent surface, or a toast that expands, or one
