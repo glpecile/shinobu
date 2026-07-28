@@ -56,6 +56,26 @@ export function traktHttp<A>(
           : {}),
       });
     }
+    // 420 is Trakt's account-limit response (a full watchlist/list on a free
+    // account), not a rate limit: `X-Account-Limit` carries the cap and
+    // `X-Upgrade-URL` where to lift it. Deliberately *not* a
+    // ProviderRateLimitError — that tag is what `withRateLimitRetry` (api.ts)
+    // retries on, and an account limit is permanent for the request, so a retry
+    // can only fail again (and would double the write attempt). Without this
+    // branch it falls through to the generic non-2xx path and surfaces as the
+    // meaningless "Trakt responded 420".
+    if (response.status === 420) {
+      const limit = response.headers.get('X-Account-Limit');
+      const upgradeUrl = response.headers.get('X-Upgrade-URL');
+      return yield* new ProviderNetworkError({
+        provider: 'trakt',
+        cause: new Error(
+          `Trakt account limit exceeded for ${path}${limit != null ? ` (limit ${limit})` : ''}${
+            upgradeUrl != null ? ` — upgrade at ${upgradeUrl}` : ''
+          }`,
+        ),
+      });
+    }
     if (!response.ok) {
       return yield* new ProviderNetworkError({
         provider: 'trakt',

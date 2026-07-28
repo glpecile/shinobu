@@ -163,7 +163,13 @@ export default function DiaryScreen() {
       {content}
       {/* Same dialog as the feed's cards, opened by a row long-press (or the
           web hover ⋯) — the hide row names this surface. */}
-      <CardActionsSheet {...sheetProps} hideLabel="Hide from diary" />
+      {/* No want-to-watch row here (plan 0031 R12): every diary entry is
+          already watched, so offering to add it is incoherent. */}
+      <CardActionsSheet
+        {...sheetProps}
+        canWatchlist={false}
+        hideLabel="Hide from diary"
+      />
     </View>
   );
 }

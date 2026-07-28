@@ -8,7 +8,9 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
+import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -51,6 +53,13 @@ interface CardActionsSheetProps {
    * item the user only looked up.
    */
   canHide?: boolean;
+  /**
+   * Whether to offer the want-to-watch CTA (plan 0031 R12). Defaults **on** —
+   * search, the home feed, person and studio all show items that are plausibly
+   * unseen, so they need no opt-in. The diary opts out: every row there is
+   * already watched.
+   */
+  canWatchlist?: boolean;
 }
 
 /** The item's artwork, recovered lazily when the log it came from is artless. */
@@ -75,7 +84,9 @@ function SheetPoster({ item }: { item: NormalizedMediaItem }) {
  * discoverable web gesture). Quick log reuses
  * `LogMediaButton` wholesale — its confirm sheet (provider picker, backdate,
  * tags, partial-failure report) stacks above this one, and its outcome copy
- * lands here, so feed logging and details-page logging are one code path.
+ * lands here, so feed logging and details-page logging are one code path. The
+ * want-to-watch CTA sits beside it under the same rules (plan 0031 U8) — on by
+ * default, off on the diary.
  */
 export function CardActionsSheet({
   item,
@@ -84,6 +95,7 @@ export function CardActionsSheet({
   hideLabel = 'Hide from feed',
   providerLinks = 'source',
   canHide = true,
+  canWatchlist = true,
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
@@ -126,7 +138,27 @@ export function CardActionsSheet({
 
           <View className="mt-5">
             {/* key: the button's sheet/result state must not leak between items. */}
-            <LogMediaButton item={item} key={item.id} />
+            {/* Same placement predicate the details screen uses (plan 0031
+                R11) — this sheet renders `LogMediaButton` wholesale, so an
+                unreleased film would otherwise show a permanently disabled
+                "Not yet released" above the CTA that actually applies. */}
+            {!watchlistCtaIsPrimary(item) && (
+              <LogMediaButton item={item} key={item.id} />
+            )}
+            {/* Stays mounted through the write, unlike the hide row below: that
+                is a synchronous local MMKV toggle with no per-provider outcome,
+                this is a multi-provider network write. The app has no toast and
+                the user is usually on search or the feed with no details screen
+                behind this sheet, so closing on tap would surface a Trakt 420,
+                an expired session or a manual row to nobody. Only a report with
+                nothing left to read closes it. */}
+            {canWatchlist && (
+              <WatchlistMediaButton
+                item={item}
+                key={`watchlist-${item.id}`}
+                onCleanReport={onClose}
+              />
+            )}
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.

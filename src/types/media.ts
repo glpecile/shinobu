@@ -54,7 +54,7 @@ export interface NormalizedMediaItem {
   /**
    * Anime films (AniList `format: MOVIE`) are `ANIME` here but count as a
    * `MOVIE` for Trakt/Letterboxd routing (`plan.md` 1.3). This flag — not a
-   * fifth MediaType — is what lets `providersForLog` fan out to all three.
+   * fifth MediaType — is what lets `providersForWrite` fan out to all three.
    */
   isFilm?: boolean;
   /**

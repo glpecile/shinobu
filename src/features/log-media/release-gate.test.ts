@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { filmReleaseStatus } from './release-gate';
+import { filmReleaseStatus, watchlistCtaIsPrimary } from './release-gate';
 
 // Local noon: a bare release date parses as local midnight, so a UTC-anchored
 // "now" would flip these assertions in far-east/far-west timezones.
@@ -50,5 +50,46 @@ describe('filmReleaseStatus', () => {
     expect(filmReleaseStatus({ year: 2019, releaseDate: '2030-01-01' }, NOW)).toBe(
       'unreleased',
     );
+  });
+});
+
+describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
+  test('an unreleased film promotes the CTA and drops the log button', () => {
+    expect(
+      watchlistCtaIsPrimary(
+        { type: 'MOVIE', releaseDate: '2030-01-01', year: 2030 },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  test('a film with no date at all counts too — "unknown" is not "released"', () => {
+    expect(watchlistCtaIsPrimary({ type: 'MOVIE' }, NOW)).toBe(true);
+  });
+
+  test('an anime film is film-like; an anime series is not', () => {
+    expect(
+      watchlistCtaIsPrimary({ type: 'ANIME', isFilm: true, year: 2030 }, NOW),
+    ).toBe(true);
+    expect(watchlistCtaIsPrimary({ type: 'ANIME', isFilm: false }, NOW)).toBe(false);
+  });
+
+  test('an airing series with no release date still keeps its log button', () => {
+    // The whole reason this is one exported predicate: unguarded,
+    // `filmReleaseStatus` answers "unknown" here and would delete episode
+    // logging from exactly the shows people watch weekly.
+    expect(filmReleaseStatus({}, NOW)).toBe('unknown');
+    expect(watchlistCtaIsPrimary({ type: 'TV' }, NOW)).toBe(false);
+  });
+
+  test('MANGA never consults the release gate', () => {
+    expect(watchlistCtaIsPrimary({ type: 'MANGA' }, NOW)).toBe(false);
+  });
+
+  test('a released film keeps both controls', () => {
+    expect(
+      watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '1997-01-01' }, NOW),
+    ).toBe(false);
+    expect(watchlistCtaIsPrimary({ type: 'MOVIE', year: 2019 }, NOW)).toBe(false);
   });
 });

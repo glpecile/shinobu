@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 
 import type { ProviderError } from '@/lib/providers/errors';
-import type { LogWriteResult } from '@/features/log-media/fan-out';
+import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
@@ -25,7 +25,7 @@ function tagList(options: SerializdLogOptions): string[] {
   return (options.tags ?? []).map((tag) => tag.trim()).filter((tag) => tag !== '');
 }
 
-function skip(reason: string): LogWriteResult {
+function skip(reason: string): ProviderWriteResult {
   return { status: 'skipped', reason };
 }
 
@@ -87,7 +87,7 @@ export function logToSerializd(
   deps: SerializdDeps,
   item: NormalizedMediaItem,
   options: SerializdLogOptions = {},
-): Effect.Effect<LogWriteResult, ProviderError> {
+): Effect.Effect<ProviderWriteResult, ProviderError> {
   const tmdbId = item.externalIds.tmdb;
   if (tmdbId == null) {
     return Effect.succeed(
@@ -161,6 +161,6 @@ export function logToSerializd(
     if (!wroteAny) {
       return skip(firstSkipReason ?? 'Serializd could not resolve any logged season yet');
     }
-    return { status: 'ok' } satisfies LogWriteResult;
+    return { status: 'ok' } satisfies ProviderWriteResult;
   });
 }

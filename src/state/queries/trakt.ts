@@ -109,7 +109,15 @@ export const traktQueryKeys = {
     type: 'shows' | 'movies' | 'streaming' | 'dvd',
     startDate: string,
     days: number,
-  ) => [...traktQueryKeys.all, 'my-calendar', type, startDate, days] as const,
+  ) => [...traktQueryKeys.myCalendarRoot(), type, startDate, days] as const,
+  /**
+   * Prefix over every `/calendars/my/*` window (plan 0031 KTD-5). A write path
+   * cannot know the `startDate`/`days` the key above carries — they are
+   * computed from the user's local today inside `calendarRange()`
+   * (`up-next.ts`) — so naming a per-window key from an invalidation would be
+   * a bug that silently refreshes nothing. Invalidate the prefix instead.
+   */
+  myCalendarRoot: () => [...traktQueryKeys.all, 'my-calendar'] as const,
 };
 
 /**

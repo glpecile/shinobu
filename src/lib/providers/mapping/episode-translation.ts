@@ -11,7 +11,7 @@ import { placeInLayout, type SeasonLayout } from './season-layout';
  * guess; an honest `ok: false` here turns it into a reasoned skip carrying a
  * manual deep link (plan 0022 R6) instead.
  *
- * Resolution is all-or-nothing per batch: `ProviderLogOutcome` has no
+ * Resolution is all-or-nothing per batch: `ProviderWriteOutcome` has no
  * per-episode granularity, so a half-mappable batch must not half-write.
  */
 export type EpisodeTranslation =
