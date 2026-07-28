@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import type { ProviderId } from '@/lib/providers/types';
 import { UP_NEXT_QUERY_ROOT } from '@/state/queries/up-next-cache';
+import { WATCHLIST_QUERY_ROOT } from '@/state/queries/watchlist-cache';
 import {
   clearProviderSession,
   connectedProviderIds,
@@ -61,5 +62,10 @@ export function useDisconnectProvider(): (id: ProviderId) => void {
     // providers under one key, so the line above can't reach it and its entry
     // is persisted to disk (state/queries/up-next-cache.ts explains why here).
     queryClient.removeQueries({ queryKey: [...UP_NEXT_QUERY_ROOT] });
+    // The second exception, for the same reason (plan 0031 U13): the merged
+    // watchlist holds every provider's rows under one key that names none of
+    // them. Without this, disconnecting Trakt leaves that account's rows on the
+    // surface for the whole stale window — and on disk, since it is persisted.
+    queryClient.removeQueries({ queryKey: [...WATCHLIST_QUERY_ROOT] });
   };
 }

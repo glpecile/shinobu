@@ -32,6 +32,7 @@ import {
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
+import { watchlistQueryKeys } from './watchlist';
 
 /** One named row of the home feed — never index into the query array. */
 type FeedSlot =
@@ -193,9 +194,11 @@ export function useSuspenseYourAnimeQuery() {
   return useSuspenseQuery(feedOptions.yourAnime(queryClient));
 }
 
-export function useSuspenseYourWatchlistQuery(username: string) {
-  return useSuspenseQuery(feedOptions.yourWatchlist(username));
-}
+// No `useSuspenseYourWatchlistQuery`: the home row is no longer one provider's
+// watchlist — it reads the merged gather (plan 0031 R25,
+// `features/watchlist/use-watchlist-entries.ts`). The `yourWatchlist` slot
+// stays because the details screen still resolves Letterboxd films by id out
+// of that cache entry, which Up Next's release resolve keeps warm anyway.
 
 /**
  * Home sections that are query-backed but not `NormalizedMediaItem[]` rows, so
@@ -207,12 +210,19 @@ function activeSectionKeys(
   connected: readonly ProviderId[],
 ): Array<{ slot: string; queryKey: readonly unknown[] }> {
   const feedProviders = providersForFeed(connected);
-  if (!feedProviders.includes('trakt') && !feedProviders.includes('anilist')) {
-    return [];
+  if (feedProviders.length === 0) return [];
+  const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [];
+  if (feedProviders.includes('trakt') || feedProviders.includes('anilist')) {
+    keys.push({ slot: 'upNext', queryKey: upNextQueryKeys.inputs() });
   }
-  const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [
-    { slot: 'upNext', queryKey: upNextQueryKeys.inputs() },
-  ];
+  // The merged watchlist (plan 0031 KTD-11) — registered here for
+  // pull-to-refresh, **never** as a `feedOptions` slot: the slot contract is
+  // `NormalizedMediaItem[]` and `useUnifiedFeed` is also mounted by the details
+  // screen, so a slot would break the type *and* run the whole gather on every
+  // details open. The old `trakt`/`anilist` early return moved into the branch
+  // above for the same unit: a Letterboxd-only user — the one user who has this
+  // row today — must still reach their own watchlist through refresh.
+  keys.push({ slot: 'watchlist', queryKey: watchlistQueryKeys.inputs() });
   if (feedProviders.includes('anilist')) {
     // The network read behind the "Your Anime" row: refetching only the
     // derived items key would re-derive from this cached entry (plan 0019 U2).

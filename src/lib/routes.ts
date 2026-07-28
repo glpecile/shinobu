@@ -8,8 +8,13 @@ export const routes = {
   search: '/search',
   diary: '/diary',
   details: (id: string) => `/details/${id}` as const,
-  /** Full paginated Letterboxd watchlist — the feed row's "View all" target. */
-  letterboxdWatchlist: '/watchlist/letterboxd',
+  /**
+   * The cross-provider watchlist grid — the feed row's "View all" target. No
+   * provider suffix: it merges every connected provider's watchlist (plan 0031
+   * R24), so `/watchlist/letterboxd` survives only as a redirect for the URL
+   * that already shipped.
+   */
+  watchlist: '/watchlist',
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,
   /** For credits without a TMDB person id (AniList people): resolve by name. */

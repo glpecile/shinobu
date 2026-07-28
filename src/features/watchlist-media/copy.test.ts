@@ -10,6 +10,7 @@ import {
   alreadyOnSentence,
   failedOnSentence,
   isCleanWatchlistReport,
+  isWatchlistCtaSettled,
   watchlistCtaCopy,
   watchlistResultView,
   type WatchlistReportLike,
@@ -82,8 +83,8 @@ describe('watchlistCtaCopy (plan 0031 R14)', () => {
   });
 });
 
-describe('watchlistResultView settled condition (plan 0031 R14)', () => {
-  test('an all-ok report settles the label', () => {
+describe('watchlistResultView report families (plan 0031 R14)', () => {
+  test('an all-ok report names what took it', () => {
     const view = watchlistResultView(
       report([
         { provider: 'trakt', status: 'ok' },
@@ -91,24 +92,22 @@ describe('watchlistResultView settled condition (plan 0031 R14)', () => {
       ]),
       FILM,
     );
-    expect(view.settled).toBe(true);
     expect(view.allSkip).toBe(false);
     expect(addedToSentence(view.succeeded)).toBe('Added to Trakt, AniList.');
   });
 
-  test('an already-there skip settles it exactly like a success', () => {
+  test('an already-there skip is its own headline, not a success', () => {
     const view = watchlistResultView(
       report([
         { provider: 'trakt', status: 'skipped', reason: 'already on your watchlist' },
       ]),
       FILM,
     );
-    expect(view.settled).toBe(true);
     expect(view.allSkip).toBe(true);
     expect(alreadyOnSentence(view.reasonedSkips)).toBe('Already on Trakt.');
   });
 
-  test('a mixed report does not settle it, and names the failure', () => {
+  test('a mixed report names the failure', () => {
     const view = watchlistResultView(
       report([
         { provider: 'trakt', status: 'ok' },
@@ -116,18 +115,52 @@ describe('watchlistResultView settled condition (plan 0031 R14)', () => {
       ]),
       FILM,
     );
-    expect(view.settled).toBe(false);
     expect(failedOnSentence(view.failed)).toBe('Failed on AniList.');
   });
 
-  test('a reason-less skip alone does not settle it', () => {
+  test('a reason-less skip contributes no line at all', () => {
     const view = watchlistResultView(
       report([{ provider: 'trakt', status: 'skipped' }]),
       FILM,
     );
-    expect(view.settled).toBe(false);
     expect(view.reasonedSkips).toEqual([]);
     expect(view.allSkip).toBe(false);
+  });
+});
+
+describe('isWatchlistCtaSettled (plan 0031 U15, R14, KTD-14)', () => {
+  test('a known-watchlisted item settles on first mount, with no report', () => {
+    // The app-restart / other-device / added-on-the-website case the old
+    // mutation-derived condition could never answer: no write ever fired here.
+    expect(isWatchlistCtaSettled(true, null)).toBe(true);
+  });
+
+  test('a cold cache renders the unsettled label, never a claim of absence', () => {
+    expect(isWatchlistCtaSettled(undefined, null)).toBe(false);
+  });
+
+  test('a known-absent item is unsettled', () => {
+    expect(isWatchlistCtaSettled(false, null)).toBe(false);
+  });
+
+  test('a mixed report keeps the CTA actionable even once membership is known', () => {
+    const view = watchlistResultView(
+      report([
+        { provider: 'trakt', status: 'ok' },
+        { provider: 'anilist', status: 'error', message: 'token expired' },
+      ]),
+      FILM,
+    );
+    expect(isWatchlistCtaSettled(true, view)).toBe(false);
+  });
+
+  test('an all-ok report settles once membership lands, not before', () => {
+    const view = watchlistResultView(
+      report([{ provider: 'trakt', status: 'ok' }]),
+      FILM,
+    );
+    expect(isWatchlistCtaSettled(undefined, view)).toBe(false);
+    expect(isWatchlistCtaSettled(true, view)).toBe(true);
   });
 });
 

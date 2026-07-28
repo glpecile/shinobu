@@ -14,8 +14,8 @@ import {
   useSuspenseTrendingShowsQuery,
   useSuspenseYourAnimeQuery,
   useSuspenseYourShowsQuery,
-  useSuspenseYourWatchlistQuery,
 } from '@/state/queries/use-unified-feed';
+import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface FeedRowCallbacks {
@@ -64,24 +64,31 @@ export function YourAnimeRow({ onItemPress, onItemActions }: FeedRowCallbacks) {
   );
 }
 
+/**
+ * The one row whose source is **every** connected provider's watchlist, merged
+ * (plan 0031 R25). No `provider` mark and no `username`: it is no longer
+ * Letterboxd's row, which is also why a Trakt-only or AniList-only user finally
+ * sees it. Its single `SuspenseSection` is unchanged and still correct — one
+ * row is one slot; the merged *grid*'s per-leg failure handling is the
+ * divergence, and it lives on the screen (KTD-12).
+ */
 export function YourWatchlistRow({
-  username,
   onItemPress,
   onItemActions,
-}: FeedRowCallbacks & { username: string }) {
-  const { data } = useSuspenseYourWatchlistQuery(username);
+}: FeedRowCallbacks) {
+  const { entries } = useSuspenseWatchlistQuery();
   const pushRoute = usePushRoute();
-  const items = useVisibleItems(data);
+  // Capped like the other unbounded personal row: a Trakt watchlist is
+  // routinely hundreds of items and this is browse, not the archive — the
+  // whole list is one "View all" away.
+  const items = capFeedRow(entries.map((entry) => entry.item));
   return (
     <MediaCarousel
       collapseKey="your-watchlist"
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      // The row shows page 1 (28 films); the rest of the watchlist lives
-      // behind the paginated grid (plan 0024 U9).
-      onViewAll={() => pushRoute(routes.letterboxdWatchlist)}
-      provider="letterboxd"
+      onViewAll={() => pushRoute(routes.watchlist)}
       title="Your Watchlist"
     />
   );

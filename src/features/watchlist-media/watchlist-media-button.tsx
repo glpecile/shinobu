@@ -7,6 +7,7 @@ import {
   manualRowsFor,
 } from '@/features/log-media/manual-write-links';
 import { OutcomeLink } from '@/features/log-media/outcome-link';
+import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { haptics } from '@/lib/haptics';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -16,6 +17,7 @@ import {
   alreadyOnSentence,
   failedOnSentence,
   isCleanWatchlistReport,
+  isWatchlistCtaSettled,
   watchlistCtaCopy,
   watchlistResultView,
 } from './copy';
@@ -46,6 +48,21 @@ import {
  * 3. reasoned skips as individual lines, each with its own link — plus the
  *    all-skip headline, the most common repeat interaction and the one the log
  *    button's rendering (a suffix to a success line) would show as nothing.
+ *
+ * **The settled label is derived from data, not from the mutation** (U15,
+ * KTD-14). `useIsWatchlisted(item)` reads the gathered watchlists out of the
+ * cache, so "On your watchlist" is right after an app restart, right for an
+ * item added on another device, and right for one added on the provider's own
+ * site — none of which the PR A report-derived version could ever be. That
+ * read **never fetches**: `undefined` (surface never opened) is a first-class
+ * answer meaning "we haven't read the watchlist" and renders as today's
+ * "Add to watchlist", never as a claim of absence. Making it fetch would turn
+ * it into the per-item membership read KTD-3 rejected.
+ *
+ * R18's shared pending guard is untouched by that swap and must stay: it is
+ * about concurrency, not evidence — pressto's debounce is per-instance, a card
+ * and the sheet over it are two instances, and no read surface makes two
+ * simultaneous taps safe.
  */
 export function WatchlistMediaButton({
   item,
@@ -68,11 +85,14 @@ export function WatchlistMediaButton({
   const accent = useCSSVariable('--color-accent');
   const accentColor = typeof accent === 'string' ? accent : undefined;
 
+  const onList = useIsWatchlisted(item);
+
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
-  // R14's single expression behind one local: U15 swaps this line for
-  // `useIsWatchlisted(item)` and deletes nothing else.
-  const settled = view?.settled === true;
+  // R14/U15's single expression behind one local — membership first, with the
+  // mixed-report exception. The rule itself lives in `copy.ts` so it is
+  // testable without a renderer.
+  const settled = isWatchlistCtaSettled(onList, view);
 
   // Nothing connected can take this item — the same silence `LogMediaButton`
   // keeps rather than offering an action that can only fail.

@@ -2,7 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
-import { addToTraktWatchlist, logToTrakt, type TraktLogOptions } from './writes';
+import {
+  addToTraktWatchlist,
+  logToTrakt,
+  removeFromTraktWatchlist,
+  type TraktLogOptions,
+} from './writes';
 import type { TokenStore, TraktDeps } from './deps';
 
 const SESSION: ProviderSession = {
@@ -378,5 +383,104 @@ describe('addToTraktWatchlist', () => {
 
     expect(result._tag).toBe('Left');
     expect(calls.bodies).toHaveLength(2);
+  });
+});
+
+/**
+ * The same queue-and-record stub as `watchlistDeps`, pointed at the remove
+ * endpoint — a wrong path must fail the test loudly, not quietly pass.
+ */
+function removeDeps(responses: Array<() => Response>, calls: { bodies: unknown[] }) {
+  const deps: TraktDeps = {
+    tokens: TOKENS,
+    clientId: 'id',
+    clientSecret: 'secret',
+    fetch: async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (path !== '/sync/watchlist/remove' || init?.method !== 'POST') {
+        throw new Error(`unexpected ${init?.method} ${path}`);
+      }
+      calls.bodies.push(JSON.parse(String(init.body)));
+      const next = responses[calls.bodies.length - 1];
+      if (next == null) throw new Error('more calls than queued responses');
+      return next();
+    },
+  };
+  return deps;
+}
+
+describe('removeFromTraktWatchlist (plan 0031 R34)', () => {
+  test('a deleted movie reports ok, posting ids only', async () => {
+    const calls = { bodies: [] as unknown[] };
+    const deps = removeDeps(
+      [json({ deleted: { ...ZERO, movies: 1 }, not_found: EMPTY_NOT_FOUND })],
+      calls,
+    );
+
+    const result = await Effect.runPromise(removeFromTraktWatchlist(deps, MOVIE_ITEM));
+
+    expect(result).toEqual({ status: 'ok' });
+    expect(calls.bodies[0]).toEqual({ movies: [{ ids: { trakt: 42, tmdb: 43 } }] });
+  });
+
+  test('a TV show posts under `shows`', async () => {
+    const calls = { bodies: [] as unknown[] };
+    const deps = removeDeps(
+      [json({ deleted: { ...ZERO, shows: 1 }, not_found: EMPTY_NOT_FOUND })],
+      calls,
+    );
+
+    const result = await Effect.runPromise(removeFromTraktWatchlist(deps, TV_ITEM));
+
+    expect(result).toEqual({ status: 'ok' });
+    expect(calls.bodies[0]).toEqual({ shows: [{ ids: { trakt: 7, tmdb: 8 } }] });
+  });
+
+  test('nothing deleted and nothing unmatched is a reasoned skip, not a failure', async () => {
+    const calls = { bodies: [] as unknown[] };
+    const deps = removeDeps([json({ deleted: ZERO, not_found: EMPTY_NOT_FOUND })], calls);
+
+    const result = await Effect.runPromise(removeFromTraktWatchlist(deps, MOVIE_ITEM));
+
+    // Trakt matched the item and had nothing to remove — the user's intent
+    // already holds, so this is `skipped`, never an error.
+    expect(result).toEqual({ status: 'skipped', reason: 'was not on your watchlist' });
+    expect(calls.bodies).toHaveLength(1);
+  });
+
+  test('a non-empty not_found fails naming the item', async () => {
+    const calls = { bodies: [] as unknown[] };
+    const deps = removeDeps(
+      [
+        json({
+          deleted: ZERO,
+          not_found: { ...EMPTY_NOT_FOUND, movies: [{ ids: { tmdb: 43 } }] },
+        }),
+      ],
+      calls,
+    );
+
+    const result = await Effect.runPromise(
+      Effect.either(removeFromTraktWatchlist(deps, MOVIE_ITEM)),
+    );
+
+    expect(result._tag).toBe('Left');
+    if (result._tag === 'Left') {
+      expect(result.left.message).toContain('Sinners');
+    }
+  });
+
+  test('an item with no usable id fails before any request', async () => {
+    const calls = { bodies: [] as unknown[] };
+    const deps = removeDeps([], calls);
+
+    const result = await Effect.runPromise(
+      Effect.either(
+        removeFromTraktWatchlist(deps, { ...MOVIE_ITEM, externalIds: {} }),
+      ),
+    );
+
+    expect(result._tag).toBe('Left');
+    expect(calls.bodies).toHaveLength(0);
   });
 });

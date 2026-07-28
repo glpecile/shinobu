@@ -81,9 +81,16 @@ interface MediaListCollectionResponse {
  * The two statuses are not interchangeable and are *not* separated here: every
  * consumer takes its own slice of one cached list — "Your Anime" filters to
  * CURRENT (`state/queries/anilist.ts`), Up Next confines PLANNING to Calendar
- * (`features/up-next/compute.ts`) — which is only possible because
- * `normalizeCurrentAnimeEntry` now carries `status` through (KTD-3). Sorted
- * most-recently-updated first to match the Trakt watched feed's ordering.
+ * (`features/up-next/compute.ts`), and the cross-provider watchlist takes
+ * PLANNING alone (`fetchPlannedAnime`, plan 0031 U12) — which is only possible
+ * because `normalizeCurrentAnimeEntry` carries `status` through (KTD-3). Adding
+ * that third consumer cost **zero** extra requests for exactly this reason;
+ * see `docs/solutions/anilist-shared-list-query-status-gate.md` for the gate the
+ * slices have to keep. Sorted most-recently-updated first to match the Trakt
+ * watched feed's ordering.
+ *
+ * The entry `id` rides along as `entryId` for the removal path (plan 0031 U12).
+ * It is a hint, never a guard — see `AniListCurrentEntry.entryId` (R36).
  */
 export function getCurrentAnime(
   deps: AniListDeps,
@@ -96,6 +103,7 @@ export function getCurrentAnime(
         MediaListCollection(userId: $userId, type: ANIME, status_in: [CURRENT, PLANNING]) {
           lists {
             entries {
+              id
               status
               progress
               repeat

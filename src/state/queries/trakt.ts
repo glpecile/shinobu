@@ -118,6 +118,19 @@ export const traktQueryKeys = {
    * a bug that silently refreshes nothing. Invalidate the prefix instead.
    */
   myCalendarRoot: () => [...traktQueryKeys.all, 'my-calendar'] as const,
+  /**
+   * Prefix over every watchlist read, whatever type/sort it was keyed by (plan
+   * 0031 U11) — the same shape, and the same reason, as `myCalendarRoot()`: a
+   * write path knows the item, never the sort the surface happened to request,
+   * so an invalidation names the prefix.
+   */
+  watchlistRoot: () => [...traktQueryKeys.all, 'watchlist'] as const,
+  /** One `/sync/watchlist/{type}/{sortBy}/{sortHow}` read. */
+  watchlist: (
+    type: 'all' | 'movies' | 'shows',
+    sortBy: 'rank' | 'added' | 'released' | 'title',
+    sortHow: 'asc' | 'desc',
+  ) => [...traktQueryKeys.watchlistRoot(), type, sortBy, sortHow] as const,
 };
 
 /**

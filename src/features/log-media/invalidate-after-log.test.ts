@@ -60,6 +60,16 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).toContain('trakt/show-progress/1');
   });
 
+  test('a successful Trakt log refreshes the watchlist Trakt already changed', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterLog(client, ITEM, ['trakt']);
+    // Trakt auto-removes a watched show from the watchlist server-side, so the
+    // cached read is stale the moment the log lands — and the prefix is what
+    // gets named, because this path can't know the type/sort the surface used
+    // (plan 0031 U11/KTD-5).
+    expect(keys).toContain('trakt/watchlist');
+  });
+
   test('a successful AniList log recomputes them, and the entries read behind them', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['anilist']);
@@ -68,6 +78,16 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // former would re-derive from a stale cache (U2).
     expect(keys).toContain('anilist/current-anime-entries');
     expect(keys).toContain('anilist/current-anime');
+  });
+
+  test('a successful AniList log drops the entry out of the watchlist slice', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterLog(client, ITEM, ['anilist']);
+    // Logging an episode makes the entry CURRENT, so it is no longer plan-to-
+    // watch — the watchlist's AniList leg is a third derived key over the same
+    // entries read and goes stale on this write too (plan 0031 U12/KTD-5).
+    expect(keys).toContain('anilist/planned-anime');
+    expect(keys).toContain('anilist/current-anime-entries');
   });
 
   test('a log that reached neither provider leaves the slot alone', () => {

@@ -40,8 +40,8 @@ import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
+import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
-import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -137,11 +137,11 @@ function FeedScreen() {
   useEffect(() => {
     warmProviderConnections(connected);
   }, [connected]);
-  // The `feedProviders` gate also keeps this MMKV read out of web SSR renders
-  // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
-  const letterboxdUsername = feedProviders.includes('letterboxd')
-    ? getLetterboxdUsername()
-    : null;
+  // The watchlist row is no longer Letterboxd's (plan 0031 R25): it mounts for
+  // *any* provider that contributes a watchlist read, so a Trakt-only or
+  // AniList-only user — who has never had this row — finally gets one. No MMKV
+  // username read here any more, and with it goes that read's SSR caveat.
+  const watchlistConnected = watchlistReadProviders(connected).length > 0;
   const animeSeason = animeSeasonAt(new Date());
   // Up Next is computed from Trakt shows and AniList anime only — with neither
   // connected there is nothing to compute, so the sections never mount.
@@ -189,7 +189,7 @@ function FeedScreen() {
             Watchlist leads the personal block, seasonal leads the public one
             (owner ordering, 2026-07-23). Every row is its own suspense + error
             boundary: one provider failing hides just that row, never the feed. */}
-        {letterboxdUsername != null && (
+        {watchlistConnected && (
           <SuspenseSection
             fallback={<FeedRowSkeleton />}
             resetKey={refreshCount}
@@ -197,7 +197,6 @@ function FeedScreen() {
             <YourWatchlistRow
               onItemActions={openActions}
               onItemPress={openDetails}
-              username={letterboxdUsername}
             />
           </SuspenseSection>
         )}

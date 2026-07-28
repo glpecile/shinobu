@@ -26,6 +26,7 @@ const { letterboxdQueryKeys } = await import('./letterboxd');
 const { deserialize, isPersistedQueryKey, serialize } = await import('./persist');
 const { traktQueryKeys } = await import('./trakt');
 const { upNextQueryKeys } = await import('./up-next');
+const { watchlistQueryKeys } = await import('./watchlist');
 
 function clientWith(queryKey: readonly unknown[], data: unknown): PersistedClient {
   return {
@@ -94,6 +95,9 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(['mapping', 'anizip', { anilistId: 1 }])).toBe(true);
     expect(isPersistedQueryKey(['mapping', 'anizip-episodes', 1])).toBe(true);
     expect(isPersistedQueryKey(letterboxdQueryKeys.watchlist('gian'))).toBe(true);
+    // The cross-provider watchlist gather (plan 0031): without it this is the
+    // one home row that pops in as a skeleton after every cold start.
+    expect(isPersistedQueryKey(watchlistQueryKeys.inputs())).toBe(true);
   });
 
   // The allowlist exists to keep the unbounded caches off disk — web's
@@ -113,5 +117,6 @@ describe('isPersistedQueryKey', () => {
   test('matches on whole segments, not string prefixes', () => {
     expect(isPersistedQueryKey(['trakt', 'watched-shows-elsewhere'])).toBe(false);
     expect(isPersistedQueryKey(['up-next'])).toBe(false);
+    expect(isPersistedQueryKey(['watchlist-elsewhere', 'inputs'])).toBe(false);
   });
 });

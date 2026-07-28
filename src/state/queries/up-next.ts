@@ -35,6 +35,7 @@ import { useConnectedProviders } from '@/state/session';
 import { fetchCurrentAnimeEntries } from './anilist';
 import { fetchLetterboxdReleaseInputs } from './letterboxd';
 import { cachedAniZipIds } from './mapping';
+import { none, settle } from './settle';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { UP_NEXT_QUERY_ROOT } from './up-next-cache';
 
@@ -79,10 +80,6 @@ const PROGRESS_CONCURRENCY = 4;
 
 /** ani.zip lookups are cached forever, so this only bounds the cold burst. */
 const MAPPING_CONCURRENCY = 4;
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Continue Watching's Trakt source: pool first (KTD-2), then one
@@ -326,28 +323,6 @@ export async function fetchUpNextInputs(
       ...anilist.errors,
     ],
   };
-}
-
-interface ProviderContribution<Input> {
-  inputs: Input[];
-  errors: UpNextInputs['errors'];
-}
-
-/** A disconnected provider contributes nothing — and that is not an error. */
-function none<Input>(): ProviderContribution<Input> {
-  return { inputs: [], errors: [] };
-}
-
-/** One provider's contribution, with its failure captured instead of thrown. */
-async function settle<Input>(
-  provider: ProviderId,
-  run: () => Promise<Input[]>,
-): Promise<ProviderContribution<Input>> {
-  try {
-    return { inputs: await run(), errors: [] };
-  } catch (error: unknown) {
-    return { inputs: [], errors: [{ provider, message: errorMessage(error) }] };
-  }
 }
 
 function upNextOptions(

@@ -47,6 +47,12 @@ export interface AniListNextAiringEpisode {
 
 /** One MediaListCollection entry (the viewer's list row for a media). */
 export interface AniListListEntry {
+  /**
+   * The MediaList row's own id — *not* the media id. Optional here because a
+   * read that has no use for it simply doesn't select it (and persisted caches
+   * written before plan 0031 U12 have no such field).
+   */
+  id?: number | null;
   status?: string | null;
   progress?: number | null;
   /** Completed rewatch count. */
@@ -148,6 +154,23 @@ export interface AniListCurrentEntry {
    */
   status: 'CURRENT' | 'PLANNING';
   /**
+   * The MediaList row's own id (`MediaList.id`, not the media id) — what
+   * `DeleteMediaListEntry` deletes by.
+   *
+   * **A hint only, never evidence (plan 0031 R36).** A removal is destructive
+   * beyond the watchlist — deleting the entry drops progress, score and notes
+   * with it — so the removal path must guard on a **fresh in-effect read** of
+   * the entry and delete by *that* read's id. Do not "optimize" the guard by
+   * reading this field instead: it comes off a cached (and persisted) list
+   * snapshot that can be minutes stale, and a stale guard here destroys the
+   * whole entry. It exists so a surface can tell, cheaply and without a
+   * request, that an entry plausibly exists at all.
+   *
+   * Optional because the field is only selected by the list read that needs it
+   * and because persisted caches predating plan 0031 U12 don't carry it.
+   */
+  entryId?: number;
+  /**
    * The next episode AniList has scheduled, as an ISO instant (KTD-4: every
    * air time reaches `hasAired` as an instant, never a raw epoch or date).
    * Null for finished series and for hiatus/unconfirmed schedules alike —
@@ -171,6 +194,7 @@ export function normalizeCurrentAnimeEntry(
     // guessing it for a missing/unknown value would silently drop entries the
     // user really is watching.
     status: entry.status === 'PLANNING' ? 'PLANNING' : 'CURRENT',
+    ...(entry.id != null ? { entryId: entry.id } : {}),
     nextAiring:
       airing == null
         ? null

@@ -1,6 +1,6 @@
 import {
   useHiddenItems,
-  visibleItems,
+  visibleByIds,
   type HiddenItem,
 } from '@/state/prefs/hidden-items';
 import { useSuspenseUpNextQuery, type UpNextResult } from '@/state/queries/up-next';
@@ -30,20 +30,16 @@ export function useUpNextSections(): UpNextResult {
  * film, not one of its dates (plan 0030 R8).
  *
  * Returns `entries` itself when nothing was hidden, keeping the identity
- * contract `visibleItems` documents. Pure and exported for the same reason that
- * one is: the contract is testable without touching the store.
+ * contract `visibleByIds` documents — this is now a one-liner over that shared
+ * filter (plan 0031 KTD-13) rather than a third hand-written copy. Up Next is
+ * behaviourally unaffected: an entry contributes exactly one id here, where a
+ * merged watchlist entry contributes several.
  */
 export function visibleEntries(
   entries: UpNextEntry[],
   hidden: readonly HiddenItem[],
 ): UpNextEntry[] {
-  const visible = visibleItems(
-    entries.map((entry) => entry.item),
-    hidden,
-  );
-  if (visible.length === entries.length) return entries;
-  const visibleIds = new Set(visible.map((item) => item.id));
-  return entries.filter((entry) => visibleIds.has(entry.item.id));
+  return visibleByIds(entries, hidden, (entry) => [entry.item.id]);
 }
 
 function useVisibleEntries(entries: UpNextEntry[]): UpNextEntry[] {

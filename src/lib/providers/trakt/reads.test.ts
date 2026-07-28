@@ -9,6 +9,7 @@ import {
   getMyShowsCalendar,
   getMyStreamingCalendar,
   getWatchedShows,
+  getWatchlist,
   traktCalendarRange,
 } from './reads';
 import type { TokenStore, TraktDeps } from './deps';
@@ -286,5 +287,114 @@ describe('the movie calendars', () => {
       ),
     );
     expect(releases).toEqual([]);
+  });
+});
+
+/** One `/sync/watchlist` movie row, added on the given day. */
+function watchlistMovie(traktId: number, listedAt: string) {
+  return {
+    rank: traktId,
+    id: traktId * 10,
+    listed_at: listedAt,
+    type: 'movie',
+    movie: { title: `Movie ${traktId}`, ids: { trakt: traktId } },
+  };
+}
+
+describe('getWatchlist (plan 0031 U11, discussion #681)', () => {
+  test('always sends page and limit, and stops on the short page', async () => {
+    const requested: string[] = [];
+    // A full page (the 250 max, cut from 1,000 on 2026-06-15) then a short one.
+    const pages = [
+      Array.from({ length: 250 }, (_, i) =>
+        watchlistMovie(i + 1, '2026-07-01T00:00:00.000Z'),
+      ),
+      Array.from({ length: 40 }, (_, i) =>
+        watchlistMovie(i + 251, '2026-07-01T00:00:00.000Z'),
+      ),
+    ];
+
+    const items = await Effect.runPromise(getWatchlist(pagedDeps(pages, requested)));
+
+    expect(requested).toEqual([
+      '/sync/watchlist/all/added/desc?extended=full,images&page=1&limit=250',
+      '/sync/watchlist/all/added/desc?extended=full,images&page=2&limit=250',
+    ]);
+    expect(items).toHaveLength(290);
+  });
+
+  test('a full page followed by an empty one terminates', async () => {
+    const requested: string[] = [];
+    const pages = [
+      Array.from({ length: 250 }, (_, i) =>
+        watchlistMovie(i + 1, '2026-07-01T00:00:00.000Z'),
+      ),
+      [],
+    ];
+
+    const items = await Effect.runPromise(getWatchlist(pagedDeps(pages, requested)));
+
+    expect(requested).toHaveLength(2);
+    expect(items).toHaveLength(250);
+  });
+
+  test('type/sort segments come from the caller', async () => {
+    const requested: string[] = [];
+    await Effect.runPromise(
+      getWatchlist(pagedDeps([[]], requested), {
+        type: 'shows',
+        sortBy: 'rank',
+        sortHow: 'asc',
+      }),
+    );
+    expect(requested[0]).toBe(
+      '/sync/watchlist/shows/rank/asc?extended=full,images&page=1&limit=250',
+    );
+  });
+
+  test('season and episode rows drop instead of throwing', async () => {
+    const requested: string[] = [];
+    const rows = [
+      watchlistMovie(1, '2026-07-01T00:00:00.000Z'),
+      { type: 'season', listed_at: '2026-07-02T00:00:00.000Z', season: { number: 2 } },
+      { type: 'episode', listed_at: '2026-07-03T00:00:00.000Z', episode: { number: 4 } },
+      {
+        type: 'show',
+        listed_at: '2026-07-04T00:00:00.000Z',
+        show: { title: 'Show', ids: { trakt: 900 } },
+      },
+    ];
+
+    const items = await Effect.runPromise(getWatchlist(pagedDeps([rows], requested)));
+
+    expect(items.map((item) => item.id)).toEqual(['trakt-1', 'trakt-900']);
+  });
+
+  test('lastUpdated is listed_at, so add-time ordering survives', async () => {
+    const requested: string[] = [];
+    const rows = [
+      watchlistMovie(1, '2026-07-20T12:00:00.000Z'),
+      watchlistMovie(2, '2026-06-01T09:00:00.000Z'),
+    ];
+
+    const items = await Effect.runPromise(getWatchlist(pagedDeps([rows], requested)));
+
+    // Not the read's own clock: identical timestamps would destroy any ordering
+    // by add-time (KTD-11).
+    expect(items.map((item) => item.lastUpdated)).toEqual([
+      '2026-07-20T12:00:00.000Z',
+      '2026-06-01T09:00:00.000Z',
+    ]);
+    const sorted = [...items].sort((a, b) => a.lastUpdated.localeCompare(b.lastUpdated));
+    expect(sorted.map((item) => item.id)).toEqual(['trakt-2', 'trakt-1']);
+  });
+
+  test('rank and the list-item id stay off the normalized item', async () => {
+    const requested: string[] = [];
+    const items = await Effect.runPromise(
+      getWatchlist(pagedDeps([[watchlistMovie(7, '2026-07-01T00:00:00.000Z')]], requested)),
+    );
+    expect(items[0]?.id).toBe('trakt-7');
+    expect(items[0]).not.toHaveProperty('rank');
   });
 });

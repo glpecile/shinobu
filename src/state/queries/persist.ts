@@ -7,6 +7,7 @@ import { anilistQueryKeys } from './anilist';
 import { letterboxdQueryKeys } from './letterboxd';
 import { traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
+import { watchlistQueryKeys } from './watchlist';
 
 /**
  * Disk-backed query cache (MMKV, synchronous, universal). The point is
@@ -36,7 +37,13 @@ const PERSIST_KEY = 'shinobu.query-cache';
 // without this bump a snapshot written by the previous build restores in the
 // old shape and `computeUpNext` throws on `inputs.traktCalendar.map` during the
 // first render after upgrade — taking the whole Up Next section down with it.
-const BUSTER = 'v2';
+// v3 (plan 0031): `watchlistQueryKeys.inputs()` joins the allowlist below with a
+// shape that has never been on disk. The bump is the established procedure for
+// a new persisted shape, and here it also guarantees the first restore after
+// upgrade can't hand `computeWatchlist` a snapshot written before the key
+// existed. `WatchlistInputs` is arrays only — no `Set`-shaped value
+// (docs/solutions/persisted-query-cache-set-corruption.md).
+const BUSTER = 'v3';
 
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;
@@ -107,6 +114,12 @@ export function deserialize(cached: string): PersistedClient {
 const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   // The Up Next slot itself — the one that makes the home screen instant.
   upNextQueryKeys.inputs(),
+  // The cross-provider watchlist gather (plan 0031 KTD-11). Without it this is
+  // the one home row that pops in as a skeleton after every cold start while
+  // the rest of the feed restores together — and `useIsWatchlisted` would be
+  // `undefined` on the first details screen after a restart, which is exactly
+  // the "correct after an app restart" claim the settled label rests on.
+  watchlistQueryKeys.inputs(),
   // Its Trakt half: the pool source, then the per-show fan it drives.
   traktQueryKeys.watchedShows(),
   traktQueryKeys.showProgress(0).slice(0, -1),

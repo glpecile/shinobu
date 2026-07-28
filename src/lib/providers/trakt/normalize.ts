@@ -206,6 +206,53 @@ export function normalizeTrendingShow(
 }
 
 /**
+ * One `/sync/watchlist` row. `rank` and the row's own `id` are Trakt list-item
+ * fields — deliberately read here and *not* carried onto `NormalizedMediaItem`
+ * (plan 0031 KTD-11): they are provider-shaped, and a surface that needs them
+ * wraps the item instead (`AniListCurrentEntry` is the precedent).
+ */
+export interface TraktWatchlistRow {
+  rank?: number;
+  id?: number;
+  /** ISO instant the item was added to the watchlist. */
+  listed_at?: string;
+  notes?: string | null;
+  /** `movie` | `show` | `season` | `episode`; widened for the same reason as search. */
+  type: string;
+  movie?: TraktMovie;
+  show?: TraktShow;
+}
+
+/**
+ * A watchlist row → `NormalizedMediaItem`, delegating to the shared
+ * movie/show normalizers exactly as `normalizeTrendingMovie` does, with two
+ * deltas (plan 0031 KTD-11):
+ *
+ * - **`lastUpdated` is `listed_at`, not `nowIso`.** `normalizeMovie`/
+ *   `normalizeShow` write their `nowIso` argument straight into `lastUpdated`,
+ *   so passing the read's clock would stamp every row with the same instant and
+ *   destroy any ordering by add-time — which is precisely what the merged
+ *   watchlist sorts on. `nowIso` survives only as the fallback for a row Trakt
+ *   sent without a `listed_at`.
+ * - **`season`/`episode` rows return `null` and drop**, the same tolerance
+ *   `normalizeSearchResult` has — a user can watchlist a single season, and
+ *   that must not throw the whole page away.
+ */
+export function normalizeWatchlistRow(
+  raw: TraktWatchlistRow,
+  nowIso: string,
+): NormalizedMediaItem | null {
+  const addedAt = raw.listed_at != null && raw.listed_at !== '' ? raw.listed_at : nowIso;
+  if (raw.type === 'movie' && raw.movie != null) {
+    return normalizeMovie(raw.movie, addedAt);
+  }
+  if (raw.type === 'show' && raw.show != null) {
+    return normalizeShow(raw.show, addedAt);
+  }
+  return null;
+}
+
+/**
  * From `/search/movie,show`. `type` is widened to `string` because Trakt's
  * search can index other row kinds (episode, person, list) — anything we don't
  * handle normalizes to `null` and drops out, never throws.
