@@ -194,11 +194,24 @@ export function useSuspenseYourAnimeQuery() {
   return useSuspenseQuery(feedOptions.yourAnime(queryClient));
 }
 
-// No `useSuspenseYourWatchlistQuery`: the home row is no longer one provider's
-// watchlist — it reads the merged gather (plan 0031 R25,
-// `features/watchlist/use-watchlist-entries.ts`). The `yourWatchlist` slot
-// stays because the details screen still resolves Letterboxd films by id out
-// of that cache entry, which Up Next's release resolve keeps warm anyway.
+/**
+ * Letterboxd's **own** watchlist row, kept alongside the merged one (owner,
+ * 2026-07-28: "I want to have back the letterboxd movie watchlist row, we
+ * should not erase it altogether in favor of the unified row").
+ *
+ * Plan 0031 R25 replaced this row with the cross-provider gather; the merge is
+ * still right for "everything I mean to watch", but it is not a substitute for
+ * a films-only view of a list the user curates on Letterboxd itself — merged
+ * with Trakt shows and AniList plans, that list stops being browsable as
+ * itself. So both rows ship: the merged one answers "what am I meaning to
+ * watch", this one answers "what's on my Letterboxd".
+ *
+ * The `yourWatchlist` slot was already staying for the details screen's by-id
+ * resolution of Letterboxd films, so this row costs no extra request.
+ */
+export function useSuspenseYourWatchlistQuery(username: string) {
+  return useSuspenseQuery(feedOptions.yourWatchlist(username));
+}
 
 /**
  * Home sections that are query-backed but not `NormalizedMediaItem[]` rows, so

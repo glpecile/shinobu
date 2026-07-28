@@ -31,6 +31,7 @@ import {
   YourAnimeRow,
   YourShowsRow,
   YourWatchlistRow,
+  LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
 import { UpNextSection } from '@/features/up-next/up-next-section';
 import { cn } from '@/lib/cn';
@@ -41,6 +42,7 @@ import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useConnectedProviders } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -137,11 +139,16 @@ function FeedScreen() {
   useEffect(() => {
     warmProviderConnections(connected);
   }, [connected]);
-  // The watchlist row is no longer Letterboxd's (plan 0031 R25): it mounts for
-  // *any* provider that contributes a watchlist read, so a Trakt-only or
-  // AniList-only user — who has never had this row — finally gets one. No MMKV
-  // username read here any more, and with it goes that read's SSR caveat.
+  // The merged watchlist row mounts for *any* provider that contributes a
+  // watchlist read (plan 0031 R25), so a Trakt-only or AniList-only user — who
+  // never had this row — gets one.
   const watchlistConnected = watchlistReadProviders(connected).length > 0;
+  // Letterboxd keeps its own films-only row beside it (owner, 2026-07-28). The
+  // `feedProviders` gate also keeps this MMKV read out of web SSR renders
+  // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
+  const letterboxdUsername = feedProviders.includes('letterboxd')
+    ? getLetterboxdUsername()
+    : null;
   const animeSeason = animeSeasonAt(new Date());
   // Up Next is computed from Trakt shows and AniList anime only — with neither
   // connected there is nothing to compute, so the sections never mount.
@@ -197,6 +204,21 @@ function FeedScreen() {
             <YourWatchlistRow
               onItemActions={openActions}
               onItemPress={openDetails}
+            />
+          </SuspenseSection>
+        )}
+        {/* Letterboxd's own row, restored beside the merged one (owner,
+            2026-07-28). Its own suspense boundary: a Letterboxd scrape failing
+            must not take the merged row down with it, and vice versa. */}
+        {letterboxdUsername != null && (
+          <SuspenseSection
+            fallback={<FeedRowSkeleton />}
+            resetKey={refreshCount}
+          >
+            <LetterboxdWatchlistRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+              username={letterboxdUsername}
             />
           </SuspenseSection>
         )}

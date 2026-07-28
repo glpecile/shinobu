@@ -9,12 +9,18 @@ export const routes = {
   diary: '/diary',
   details: (id: string) => `/details/${id}` as const,
   /**
-   * The cross-provider watchlist grid — the feed row's "View all" target. No
+   * The cross-provider watchlist grid — the merged row's "View all" target. No
    * provider suffix: it merges every connected provider's watchlist (plan 0031
-   * R24), so `/watchlist/letterboxd` survives only as a redirect for the URL
-   * that already shipped.
+   * R24).
    */
   watchlist: '/watchlist',
+  /**
+   * Letterboxd's own films-only grid, and the target of its own feed row. Kept
+   * alongside `/watchlist` rather than redirected into it (owner, 2026-07-28):
+   * the merged grid answers a different question, and this URL had already
+   * shipped on web.
+   */
+  letterboxdWatchlist: '/watchlist/letterboxd',
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,
   /** For credits without a TMDB person id (AniList people): resolve by name. */
