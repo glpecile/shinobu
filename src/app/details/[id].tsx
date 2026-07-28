@@ -85,8 +85,14 @@ function findInTmdbCache(
     .getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
       queryKey: tmdbQueryKeys.all,
     })
-    .flatMap(([, data]) => data?.rows?.flatMap((row) => row.items) ?? [])
-    .find((item) => item.id === id);
+    // `row?.items ?? []` and `item?.id`: `tmdbQueryKeys.all` is a prefix, so a
+    // sibling TMDB query whose rows are shaped differently gets scanned here
+    // too — and `rows.flatMap((row) => row.items)` on a row without `items`
+    // yields `undefined` entries that crash the whole details screen. Same
+    // failure `diary-cache.ts` documents; a resolution helper degrades to
+    // "Not found", never throws.
+    .flatMap(([, data]) => data?.rows?.flatMap((row) => row?.items ?? []) ?? [])
+    .find((item) => item?.id === id);
 }
 
 /** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */

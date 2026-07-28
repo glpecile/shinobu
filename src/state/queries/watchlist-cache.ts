@@ -42,5 +42,11 @@ export function findInWatchlistCache(
       queryKey: WATCHLIST_QUERY_ROOT,
     })
     .flatMap(([, data]) => data?.inputs ?? [])
-    .find((input) => input.item.id === id)?.item;
+    // `input?.item?.id`, not `input.item.id`: `WATCHLIST_QUERY_ROOT` is a
+    // prefix, so any future sibling key under `['watchlist', …]` gets scanned
+    // here too. That exact shape — a prefix root matching a sibling query whose
+    // rows have a different shape — is what crashed the details screen through
+    // `findInDiaryCache`. A resolution helper must degrade to "Not found",
+    // never throw and take the route's ErrorBoundary with it.
+    .find((input) => input?.item?.id === id)?.item;
 }

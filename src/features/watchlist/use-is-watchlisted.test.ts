@@ -1,4 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -85,5 +87,35 @@ describe('isWatchlistedIn (plan 0031 R31)', () => {
 
   test('an empty gather is a confident false — "cold cache" is undefined, and the hook, not this', () => {
     expect(isWatchlistedIn([], film('trakt-1'))).toBe(false);
+  });
+});
+
+describe('the hook registers no query observer', () => {
+  // Regression, and the reason this reads source rather than rendering (the
+  // repo has no render-test setup): `useIsWatchlisted` was written as
+  // `useQuery({ queryFn: skipToken })` on the reasoning that a skipToken
+  // observer cannot fetch. It cannot — but it is still an *active* observer, so
+  // `invalidateAfterWatchlist` invalidating `watchlistQueryKeys.inputs()` asked
+  // it to refetch and TanStack threw "Attempted to invoke queryFn when set to
+  // skipToken" on every watchlist add from a details screen — the one surface
+  // where the watchlist screen's own real observer is not mounted.
+  //
+  // The rule that broke: ONE KEY, ONE queryFn. `useWatchlistInputsQuery` owns
+  // `inputs()` and holds the real gatherer; a passive consumer must read the
+  // cache, never register a second differently-fetching observer on the key.
+  // Comments stripped first: the docblock deliberately *names* the mistake, so
+  // asserting over raw source would match its own explanation.
+  const code = readFileSync(join(import.meta.dir, 'use-is-watchlisted.ts'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+
+  test('does not reach for useQuery or skipToken on the shared key', () => {
+    expect(code).not.toContain('skipToken');
+    expect(code).not.toMatch(/\buseQuery\b/);
+  });
+
+  test('subscribes to the cache instead', () => {
+    expect(code).toContain('useSyncExternalStore');
+    expect(code).toContain('getQueryData');
   });
 });
