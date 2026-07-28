@@ -285,6 +285,32 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     expect(normalized.nextAiring?.episode).toBe(5);
   });
 
+  // Plan 0031 U12: the MediaList row's own id, threaded through for the removal
+  // path. A hint only (R36) — the removal guard re-reads the entry in-effect.
+  test('the MediaList entry id is threaded through as entryId', () => {
+    const entry: AniListListEntry = {
+      id: 9001,
+      status: 'PLANNING',
+      progress: 0,
+      media: { ...SERIES, episodes: 12 },
+    };
+    const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
+    expect(normalized.entryId).toBe(9001);
+    // Not the media id — deleting by that would target the wrong thing.
+    expect(normalized.item.externalIds.anilist).toBe(21);
+  });
+
+  test('an entry read without the id field simply has no hint', () => {
+    // Persisted caches written before U12 carry no entryId, and a read that has
+    // no use for it doesn't select it — absent, never a guessed 0.
+    const entry: AniListListEntry = {
+      status: 'PLANNING',
+      progress: 0,
+      media: { ...SERIES, episodes: 12 },
+    };
+    expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).entryId).toBeUndefined();
+  });
+
   test('a missing status falls back to CURRENT, never to planned', () => {
     // PLANNING is the restricted status (Calendar only), so guessing it for an
     // absent value would silently hide a series the user is watching.

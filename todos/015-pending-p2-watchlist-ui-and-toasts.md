@@ -19,12 +19,23 @@ block; this todo replaces that surface afterwards rather than racing it.
 
 1. **A target picker modal for watchlisting.** Choose which trackers receive it,
    instead of one silent tap that goes everywhere.
-2. **Icons on both CTAs** — the log/watch button and the watchlist button.
-3. **The watchlist button must look different from the watch button.** They read as
-   the same control today, which is the core complaint: two different verbs wearing
-   one skin.
-4. **Write results move to toasts**, via [`sonner-native`](https://github.com/gunnartorfis/sonner-native-toasts)
-   — "where it got watchlisted" is toast content, not an inline block under a button.
+2. ~~**Icons on both CTAs**~~ — **done** (2026-07-28): `Button.Icon`, a
+   context-driven compound subcomponent that inherits its button's colour and size.
+   `eye`/`eye-outline` on the log CTA, `bookmark`/`bookmark-outline` on the watchlist
+   one, filled meaning "already done" on both.
+3. ~~**The watchlist button must look different**~~ — **done** (2026-07-28): it is
+   `outline` (accent on transparent) against the log CTA's filled `primary`, and
+   `quiet` once settled. The manual "Add on …" row is centred under the pair, and the
+   log CTA drops to `mb-3` so the two read as two options rather than two blocks.
+4. **Write results move to toasts.** "Where it got watchlisted" is toast content, not
+   an inline block under a button. Library: **[`burnt`](https://github.com/nandorojo/burnt)**
+   (owner, 2026-07-28, replacing the earlier `sonner-native` idea — see the analysis
+   below; burnt wins on every axis that matters here).
+5. **Stop showing "Add on Serializd" / "Add on Letterboxd" rows** (owner, 2026-07-28):
+   *"I still don't like having the add on serializd/letterboxd thing. We could remove
+   it maybe… If we are going to try the spike I'd much prefer complete support."*
+   See "The manual rows" below — most of this resolves itself, and the residue has a
+   better home than deletion.
 
 ## What this reverses, deliberately
 
@@ -49,43 +60,114 @@ block; this todo replaces that surface afterwards rather than racing it.
   app had no toast component. A toast retires that argument and the row can close on
   tap like the hide row does. Check this when it lands.
 
+## `burnt` vs `sonner-native` — decided, with one hard constraint
+
+Owner picked `burnt`. Verified 2026-07-28; it is the better fit here, and the
+comparison is worth keeping because the deciding factor also constrains the design.
+
+| | **burnt** | `sonner-native` |
+|---|---|---|
+| Web | **Supported, same API** — wraps Emil Kowalski's `sonner` under the hood | Works but its README says *"not recommended… use the original Sonner"*, via a hand-written `.web.ts` split |
+| Implementations to maintain | **One** | **Two**, kept in agreement by hand |
+| New native deps | **None** beyond itself | `react-native-svg` **and** `react-native-screens`, neither installed |
+| Rebuild | Yes (`expo prebuild`; no Expo Go) | Yes |
+| Precedent in this repo | **`@nandorojo/galeria` is already a dependency** — same author, already trusted by AGENTS.md | none |
+
+The rebuild is a non-issue: Shinobu already cannot run in Expo Go (nitro modules), so
+a dev client is the standing workflow. It still needs stating in the PR per AGENTS.md's
+hot-reload-vs-clean-prebuild rule.
+
+**The hard constraint — and it decides the whole result-surface design.** `burnt`'s
+options are `title`, `message`, `preset`, `icon`, `haptic`, `duration`,
+`shouldDismissByDrag`, `from`, `layout`. **There is no `onPress`, no action, no
+button, no tappable handler**, and custom React content is web-only (`icon.web`).
+
+So: **a burnt toast can announce an outcome, but it can never *be* the recourse.**
+Anything carrying a `providerItemUrl` link — a failed provider, a reasoned skip —
+needs a surface the user can actually tap. That is not a reason to reject burnt; it is
+the boundary the design has to respect:
+
+- **Toast** = "Added to Trakt and AniList." The happy path, which is the common case
+  and the one that deserves to be ephemeral and out of the way.
+- **A real surface** = anything with a link or a decision. That is the picker modal
+  (item 1), which is open at the moment of the write anyway.
+
+This retires the "is a toast the right carrier for partial failure?" question with a
+concrete answer: **no, and it does not have to be**, because the picker is already on
+screen and can hold the report.
+
+## The manual rows — mostly self-solving, and the residue belongs in the picker
+
+Owner dislikes the persistent "Add on Serializd" / "Add on Letterboxd" rows and would
+rather have complete support. Both halves are right, but they are two different things
+wearing one costume:
+
+**(a) Pre-spike placeholders — these disappear on their own.** Serializd declares
+`'manual'` only because its endpoints are not wired yet (plan 0031 U9/PR B), and
+Letterboxd only because its endpoint is uncaptured (U6). **If the spikes land, both
+become `'write'`, `manual` is empty, and the rows vanish with no code change.** The
+owner's "I'd much prefer complete support" *is* the fix for this half — it is
+already the plan, and nothing here should pre-empt it by deleting the affordance that
+covers the interim.
+
+**(b) Letterboxd on web — structurally permanent.** Three spike rounds, four
+transports, all fingerprint-walled (`docs/solutions/letterboxd-web-proxy.md`). No
+spike will fix this one. So *something* has to happen when a web user watchlists a
+film with Letterboxd connected.
+
+**Recommendation: move it, don't delete it.** Deleting outright reverses AGENTS.md's
+standing policy ("an unsupported-or-failed provider write surfaces a manual deep link
+… never a dead-end error") and plan 0022 R3/R4/R7 — that is the owner's call to make,
+but it should be made knowingly, and it would mean a web user's Letterboxd watchlist
+silently never receives anything.
+
+The picker modal makes a better answer available: show Letterboxd there as a
+**disabled row with its reason** ("can't be added from the web"), with the link on
+that row. The user learns it at the moment they are choosing targets, the details
+screen stays clean, and the no-dead-end contract survives in a place that is *more*
+discoverable than a permanent link nobody reads. If the owner still wants it gone
+entirely after that, the change is one line in the picker — but the AGENTS.md policy
+sentence has to be amended in the same PR rather than quietly contradicted.
+
 ## Open questions the plan must answer
 
-- **Does `sonner-native` work on web?** Shinobu targets web + iOS + iPadOS + Android
-  from one codebase. If it is native-only, the result surface forks by platform and
-  half the value evaporates. **Verify before designing anything on top of it.**
-- **Does it need a native rebuild?** It builds on reanimated (4.5.0) and
-  gesture-handler (~2.32.0), both already linked, so it is plausibly pure JS — but
-  confirm against its install docs rather than assuming, and state the answer, per
-  AGENTS.md's hot-reload-vs-clean-prebuild rule.
-- **Is a toast the right carrier for a partial failure?** "Logged to Trakt, failed on
-  AniList, Letterboxd needs a manual add" is three outcomes with a tappable link on
-  two of them. That may want a persistent surface, or a toast that expands, or one
-  toast per provider. Decide deliberately.
 - **Does the log path adopt toasts too?** Two result idioms for two near-identical
   verbs would be worse than the current inconsistency. Probably yes, which makes this
   a change to `LogMediaButton` and `LogConfirmSheet` as well — price that in.
-- **Icons:** does `ProviderIcon` cover it, or is this a verb icon (eye vs bookmark)
-  on the CTA itself? The owner's phrasing ("icons next to the log/watch and
-  watchlist") reads as the latter.
+- **What does the picker do on a *failure* after it has closed?** If the picker closes
+  on confirm and the toast cannot be tapped, a Trakt 420 or an expired session has
+  nowhere to land. Either the picker stays open until the report settles (plan 0031 U8
+  already argues this for the card sheet) or failures reopen it. Decide before
+  building.
+- ~~**Icons:**~~ resolved 2026-07-28 — verb icons (eye vs bookmark) on the CTA
+  itself, via `Button.Icon`. `ProviderIcon` stays for provider rows.
+- ~~**Which toast library, and does it work on web?**~~ resolved 2026-07-28 — `burnt`,
+  yes, one API across all four targets.
 
 ## Acceptance criteria
 
-- [ ] The watchlist CTA is visually distinct from the log CTA at a glance — different
-      variant/affordance, not just different label text.
-- [ ] Both CTAs carry an icon, from the existing icon set, sized and aligned per the
-      `components/button` contract rather than hand-placed.
+- [x] The watchlist CTA is visually distinct from the log CTA at a glance — different
+      variant/affordance, not just different label text. *(2026-07-28)*
+- [x] Both CTAs carry an icon, from the existing icon set, sized and aligned per the
+      `components/button` contract rather than hand-placed. *(2026-07-28 — `Button.Icon`)*
 - [ ] Watchlisting opens a picker; every applicable connected provider starts
       selected; deselecting narrows the write; the confirm label names what will
       happen without naming providers in a tagline.
-- [ ] Results surface as toasts, on **every** platform the app ships to, or the
-      platform fork is explicit and argued.
-- [ ] Plan 0022's contract survives: a manual target and a reasoned skip still reach
-      the user with a working `providerItemUrl` link, and neither is lost to an
-      auto-dismiss.
+- [ ] Success surfaces as a `burnt` toast on all four targets, one implementation.
+- [ ] **Nothing that needs a tap lives in a toast** — burnt has no press handler, so
+      every `providerItemUrl` link lives on a real surface (the picker), not a toast.
+- [ ] Plan 0022's contract survives the move: a manual target and a reasoned skip
+      still reach the user with a working link. If the owner chooses to drop the
+      Letterboxd-on-web affordance entirely, AGENTS.md's never-a-dead-end sentence is
+      amended in the **same** PR, not silently contradicted.
+- [ ] The persistent "Add on …" rows are gone from the details screen — by the spikes
+      landing (Serializd, Letterboxd native) and by moving the web-Letterboxd case
+      into the picker, not by deleting the contract.
+- [ ] `expo prebuild` + a dev-client rebuild is stated in the PR (AGENTS.md).
 - [ ] The log path and the watchlist path use one result idiom, not two.
-- [ ] `components/button`'s API absorbs the icon rather than call sites hand-rolling
+- [x] `components/button`'s API absorbs the icon rather than call sites hand-rolling
       it (AGENTS.md: buttons are `components/button`, `className` is layout only).
+      *(2026-07-28 — `icon` prop + `Button.Icon`)*
 
 ## Not in scope
 

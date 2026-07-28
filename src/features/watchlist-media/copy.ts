@@ -80,17 +80,17 @@ export interface WatchlistResultView {
    * *nothing* (its skip copy is a suffix to a success line that isn't there).
    */
   allSkip: boolean;
-  /**
-   * R14's settled condition, **PR A's truth source**: the mutation report.
-   * U15 (PR C) replaces the whole expression with `useIsWatchlisted(item)` —
-   * it is one expression behind one local precisely so that swap stays small.
-   *
-   * A mixed report (one `ok`, one `error`) deliberately does *not* settle: the
-   * settled label asserts a completeness that would be false, and it doubles
-   * as a retry lock on a write that still needs retrying.
-   */
-  settled: boolean;
 }
+
+/**
+ * There is deliberately **no `settled` field here** (plan 0031 U15, KTD-14).
+ * PR A derived the CTA's settled label from this report — session-scoped
+ * evidence that evaporated on restart, was blind to an add made on another
+ * device, and blind to one made on the provider's own site. The truth source is
+ * now `useIsWatchlisted(item)`, a cache-only read over the gathered watchlists.
+ * The report keeps carrying what a membership fact cannot: which provider
+ * failed, which one skipped and why. Don't reintroduce a settled boolean here.
+ */
 
 export function watchlistResultView(
   result: WatchlistReportLike,
@@ -106,10 +106,26 @@ export function watchlistResultView(
       result.failed.length === 0 &&
       result.succeeded.length === 0 &&
       reasonedSkips.length > 0,
-    settled:
-      result.failed.length === 0 &&
-      (result.succeeded.length > 0 || reasonedSkips.length > 0),
   };
+}
+
+/**
+ * The CTA's settled state (plan 0031 U15, R14, KTD-14). `onList` is
+ * `useIsWatchlisted(item)`: `true` → on a watchlist, `false` → not on one,
+ * `undefined` → the surface has never been opened, which renders as today's
+ * unsettled label and never as a claim of absence.
+ *
+ * The one thing the *report* still overrides is a **mixed** one: a write where
+ * a provider failed keeps the CTA actionable even once the cache knows another
+ * provider took it, because settling doubles as a retry lock and the failure
+ * line below needs a button to retry from. Pure, so the rule is checkable
+ * without a renderer — this app renders nothing in tests.
+ */
+export function isWatchlistCtaSettled(
+  onList: boolean | undefined,
+  view: Pick<WatchlistResultView, 'failed'> | null,
+): boolean {
+  return onList === true && (view?.failed.length ?? 0) === 0;
 }
 
 /**

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { haptics } from '@/lib/haptics';
@@ -58,8 +57,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const [tags, setTags] = useState(DEFAULT_TAGS);
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
@@ -192,12 +189,21 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
             : 'Mark as watched';
 
   return (
-    <View className="mb-6">
+    // `mb-3`, not `mb-6`: the want-to-watch CTA renders directly beneath this
+    // at both call sites (details screen, card sheet) and the two belong to one
+    // item. At 24px they read as unrelated blocks; at 12px they read as two
+    // options, and the watchlist button's own `mb-6` still separates the pair
+    // from whatever follows.
+    <View className="mb-3">
       {/* morphLabel: this label changes in place as the user logs — "Mark as
           watched" → "Log episode 4" → "Log rewatch" — which is exactly what
           MorphText is for. */}
       <Button
         disabled={!canLog}
+        // `eye` once it's in your history, `eye-outline` before — the same
+        // filled/outline pairing the watchlist CTA uses for its own settled
+        // state, so "already done" reads identically on both buttons.
+        icon={<Button.Icon name={isRewatch ? 'eye' : 'eye-outline'} />}
         label={buttonLabel}
         // The episode number arrives with Trakt's progress read — a spinner
         // says "resolving which episode", not "your tap did nothing".
@@ -234,7 +240,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           </Text>
           {errorOutcomeLinks(result.outcomes, item).map(({ provider, url }) => (
             <OutcomeLink
-              accentColor={accentColor}
               key={provider}
               provider={provider}
               url={url}

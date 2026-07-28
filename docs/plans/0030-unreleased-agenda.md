@@ -103,9 +103,18 @@ with `isDateOnly` suppressing a bogus `00:00` time badge.
   this accepts). Films come from `/calendars/my/movies` and the
   digital/streaming calendar.
 - R12. AniList: the existing list request widens to `status_in: [CURRENT,
-  PLANNING]`. PLANNING entries reach Calendar only, never Continue Watching and
-  never the "Your Anime" row (KTD-3 — this is the regression this feature is
-  most likely to cause).
+  PLANNING]`. PLANNING entries reach Calendar **and the cross-provider watchlist
+  surface**; never Continue Watching and never the "Your Anime" row (KTD-3 —
+  this is the regression this feature is most likely to cause).
+
+  > **Amendment (2026-07-28, plan 0031 U12).** This requirement originally read
+  > *"PLANNING entries reach Calendar **only**"*. Plan 0031 adds a second
+  > consumer of the same cached entries — `fetchPlannedAnime`, the AniList leg
+  > of the cross-provider watchlist — as a **third derived selector, not a
+  > second request**, so the cost stays at the one call R12 paid for. Nothing
+  > else in this plan changes: the "Your Anime" CURRENT filter and
+  > `compute.ts`'s PLANNING gate are untouched, and plan 0031 R28 adds a
+  > three-way regression test that says so.
 - R13. Letterboxd: the existing watchlist scrape, filtered to plausibly
   unreleased films before any resolve happens (KTD-5).
 

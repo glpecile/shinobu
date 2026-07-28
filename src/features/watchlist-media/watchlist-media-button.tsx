@@ -1,5 +1,4 @@
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import {
@@ -7,6 +6,7 @@ import {
   manualRowsFor,
 } from '@/features/log-media/manual-write-links';
 import { OutcomeLink } from '@/features/log-media/outcome-link';
+import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { haptics } from '@/lib/haptics';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -16,6 +16,7 @@ import {
   alreadyOnSentence,
   failedOnSentence,
   isCleanWatchlistReport,
+  isWatchlistCtaSettled,
   watchlistCtaCopy,
   watchlistResultView,
 } from './copy';
@@ -46,6 +47,21 @@ import {
  * 3. reasoned skips as individual lines, each with its own link — plus the
  *    all-skip headline, the most common repeat interaction and the one the log
  *    button's rendering (a suffix to a success line) would show as nothing.
+ *
+ * **The settled label is derived from data, not from the mutation** (U15,
+ * KTD-14). `useIsWatchlisted(item)` reads the gathered watchlists out of the
+ * cache, so "On your watchlist" is right after an app restart, right for an
+ * item added on another device, and right for one added on the provider's own
+ * site — none of which the PR A report-derived version could ever be. That
+ * read **never fetches**: `undefined` (surface never opened) is a first-class
+ * answer meaning "we haven't read the watchlist" and renders as today's
+ * "Add to watchlist", never as a claim of absence. Making it fetch would turn
+ * it into the per-item membership read KTD-3 rejected.
+ *
+ * R18's shared pending guard is untouched by that swap and must stay: it is
+ * about concurrency, not evidence — pressto's debounce is per-instance, a card
+ * and the sheet over it are two instances, and no read surface makes two
+ * simultaneous taps safe.
  */
 export function WatchlistMediaButton({
   item,
@@ -65,14 +81,15 @@ export function WatchlistMediaButton({
   const pending = useIsWatchlistWritePending(item.id);
   const result = useLatestWatchlistResult(item.id);
   const { writable, manual } = useWatchlistTargetsSplit(item);
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
+
+  const onList = useIsWatchlisted(item);
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
-  // R14's single expression behind one local: U15 swaps this line for
-  // `useIsWatchlisted(item)` and deletes nothing else.
-  const settled = view?.settled === true;
+  // R14/U15's single expression behind one local — membership first, with the
+  // mixed-report exception. The rule itself lives in `copy.ts` so it is
+  // testable without a renderer.
+  const settled = isWatchlistCtaSettled(onList, view);
 
   // Nothing connected can take this item — the same silence `LogMediaButton`
   // keeps rather than offering an action that can only fail.
@@ -102,24 +119,38 @@ export function WatchlistMediaButton({
           changes in place from user state, which is exactly what MorphText is
           for. The settled state also locks the retry — but only when the report
           is complete, never on a mixed one. */}
+      {/* `quiet` — neutral border, foreground label — the same treatment
+          Manage Trackers' Disconnect uses (`provider-card.tsx`), chosen by the
+          owner. Never `primary`: this sits directly under the log CTA, and two
+          accent-filled blocks of identical weight made "watch it" and "watch it
+          later" read as the same decision. Not `outline` either — accent on
+          transparent still reads as a second *accent* action competing with the
+          first. Neutral says "the other thing you can do here".
+
+          One variant for both states: `settled` sets `disabled`, and `quiet`'s
+          own off-treatment (dimmed border, muted label) is exactly the recede
+          this wants — so the settled look needs no second variant to drift. */}
       <Button
         disabled={settled}
+        icon={<Button.Icon name={settled ? 'bookmark' : 'bookmark-outline'} />}
         label={settled ? copy.settled : copy.idle}
         loading={pending}
         loadingLabel={copy.pending}
         morphLabel
         onPress={add}
-        variant={settled ? 'quiet' : 'primary'}
+        variant="quiet"
       />
 
-      {/* Family 1 — rendered before any tap. */}
+      {/* Family 1 — rendered before any tap. Centred under the buttons it
+          belongs to: left-aligned, it read as a stray orphan rather than the
+          third option in a stack of three. */}
       {upfrontManual.length > 0 && (
-        <View className="mt-2 gap-1">
+        <View className="mt-3 gap-1 items-center">
           {upfrontManual.map(({ provider, url }) => (
             <OutcomeLink
-              accentColor={accentColor}
               key={provider}
               provider={provider}
+              tone="neutral"
               url={url}
               verb="Add on"
             />
@@ -147,7 +178,6 @@ export function WatchlistMediaButton({
           </Text>
           {view.errorLinks.map(({ provider, url }) => (
             <OutcomeLink
-              accentColor={accentColor}
               key={provider}
               provider={provider}
               url={url}
@@ -171,7 +201,7 @@ export function WatchlistMediaButton({
                 </Text>
                 {url != null && (
                   <OutcomeLink
-                    accentColor={accentColor}
+                    tone="neutral"
                     provider={outcome.provider}
                     url={url}
                     verb="Add on"

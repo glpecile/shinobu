@@ -18,7 +18,7 @@ import {
   splitSkippedOutcomes,
 } from './manual-write-links';
 import type { ProviderWriteOutcome } from './fan-out';
-import { OutcomeLink } from './outcome-link';
+import { OutcomeLink, type OutcomeLinkTone } from './outcome-link';
 import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
 import { WatchedAtField } from './watched-at-field';
@@ -222,19 +222,19 @@ function OutcomeMessage({
   outcome,
   message,
   item,
-  accentColor,
+  tone = 'accent',
 }: {
   outcome: ProviderWriteOutcome;
   message: string;
   item: NormalizedMediaItem;
-  accentColor?: string;
+  tone?: OutcomeLinkTone;
 }) {
   const link = manualLinkForOutcome(outcome, item);
   return (
     <View>
       <Text className="text-muted font-sans text-xs">{message}</Text>
       {link != null && (
-        <OutcomeLink accentColor={accentColor} provider={outcome.provider} url={link} />
+        <OutcomeLink provider={outcome.provider} tone={tone} url={link} />
       )}
     </View>
   );
@@ -302,8 +302,6 @@ export function LogConfirmSheet({
 }: LogConfirmSheetProps) {
   const result = logMedia.data;
   const muted = useCSSVariable('--color-muted');
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
   // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
   // tags, so narrowing this would silently drop working Serializd functionality.
   const tagProviders = TAG_PROVIDERS.filter((id) =>
@@ -395,7 +393,6 @@ export function LogConfirmSheet({
             .filter((outcome) => outcome.status === 'error')
             .map((outcome) => (
               <OutcomeMessage
-                accentColor={accentColor}
                 item={item}
                 key={outcome.provider}
                 message={outcome.message}
@@ -414,10 +411,10 @@ export function LogConfirmSheet({
         <View className="mt-3 gap-1">
           {reasonedSkips.map((outcome) => (
             <OutcomeMessage
-              accentColor={accentColor}
               item={item}
               key={outcome.provider}
               message={`${PROVIDERS[outcome.provider].label}: ${outcome.reason}`}
+              tone="neutral"
               outcome={outcome}
             />
           ))}

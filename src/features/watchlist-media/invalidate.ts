@@ -7,6 +7,7 @@ import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdQueryKeys } from '@/state/queries/serializd';
 import { traktQueryKeys } from '@/state/queries/trakt';
 import { upNextQueryKeys } from '@/state/queries/up-next';
+import { watchlistQueryKeys } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -30,8 +31,10 @@ export function invalidateAfterWatchlist(
     // know the window the read keyed itself by, so this is the prefix builder
     // (KTD-5), never `myCalendar(type, startDate, days)`.
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.myCalendarRoot() });
-    // TODO (plan 0031 U11/PR C): also `traktQueryKeys.watchlistRoot()`, added
-    // in the unit that creates that key — a prefix for the same reason.
+    // The watchlist read itself, as a prefix: the gather asks for
+    // `watchlist('all', 'added', 'desc')` today, and an add must not have to
+    // know that key's sort arguments to refresh it.
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
   }
   if (succeeded.includes('anilist')) {
     // `currentAnime` derives from `currentAnimeEntries` — invalidating only the
@@ -39,9 +42,10 @@ export function invalidateAfterWatchlist(
     // trap `invalidateAfterLog` documents). Both, always.
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnimeEntries() });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnime() });
-    // TODO (plan 0031 U12/PR C): `plannedAnime()` is a third derived key over
-    // the same entries read and inherits the same trap — on this path *and* on
-    // the log path.
+    // The third derived key over that same entries read — the PLANNING slice
+    // the watchlist surface renders. It inherits the identical trap, which is
+    // why the entries key above is invalidated first.
+    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.plannedAnime() });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
       // KTD-2's exclusive-status guard reads this before the next write; a
@@ -80,10 +84,17 @@ export function invalidateAfterWatchlist(
   // provider keys alone would leave the agenda computed from a stale gather.
   if (succeeded.length > 0) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
+    // And the surface the add was built to land on (plan 0031 U14). Registered
+    // by the unit that creates the key, like every other entry here — without
+    // it a successful add sits invisible behind the gather's 15-minute stale
+    // window on the one screen that exists to show it.
+    queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
   }
-  // Nothing on this path is persisted, so there is no cache-version BUSTER to
-  // bump and no `Set`-shaped value to corrupt
-  // (docs/solutions/persisted-query-cache-set-corruption.md).
+  // The gather key *is* persisted (plan 0031 U13 added it to
+  // `PERSISTED_PREFIXES`), but invalidating it changes no *shape*: its value is
+  // arrays all the way down, with no `Set` to corrupt on rehydration
+  // (docs/solutions/persisted-query-cache-set-and-map-corruption.md), so there is still
+  // no cache-version BUSTER to bump here.
 }
 
 /** Matches Up Next's Calendar window and `compute-schedule`'s (plan 0030 R1). */

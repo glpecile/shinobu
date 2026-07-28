@@ -1,3 +1,5 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { createContext, type ReactNode, useContext } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -28,10 +30,50 @@ const SPINNER_TOKEN: Record<ButtonVariant, string> = {
   quiet: '--color-foreground',
 };
 
-const SIZE: Record<ButtonSize, { container: string; label: string }> = {
-  sm: { container: 'px-3 py-2 gap-1.5', label: 'text-sm' },
-  md: { container: 'px-5 py-3 gap-2', label: 'text-base' },
+const SIZE: Record<ButtonSize, { container: string; label: string; icon: number }> = {
+  sm: { container: 'px-3 py-2 gap-1.5', label: 'text-sm', icon: 14 },
+  md: { container: 'px-5 py-3 gap-2', label: 'text-base', icon: 18 },
 };
+
+/**
+ * What `Button.Icon` needs to draw itself, supplied by the `Button` around it.
+ *
+ * Compound-component style on purpose (AGENTS.md: promote to this pattern when
+ * a parent/children structure has implicit shared state; `components/steps.tsx`
+ * is the reference). The shared state here is *appearance*: an icon has to take
+ * its colour from the button's variant and its size from the button's size, and
+ * dim in lockstep when the button is disabled or loading. Passing those as props
+ * would mean every call site restating `color={accent} size={18}` — three
+ * chances to drift from the label beside it, which is exactly how `rounded`
+ * ended up next to `rounded-md` before `components/button` existed.
+ */
+const ButtonIconContext = createContext<{ token: string; size: number } | null>(
+  null,
+);
+
+/**
+ * An icon inside a `Button`, coloured and sized by that button.
+ *
+ * ```tsx
+ * <Button icon={<Button.Icon name="bookmark-outline" />} label="Add to watchlist" />
+ * ```
+ *
+ * Outside a `Button` it renders nothing rather than guessing a colour — a
+ * mis-coloured icon on an accent fill is invisible, and silence is the more
+ * debuggable failure.
+ */
+function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
+  const context = useContext(ButtonIconContext);
+  const color = useCSSVariable(context?.token ?? '--color-foreground');
+  if (context == null) return null;
+  return (
+    <Ionicons
+      color={typeof color === 'string' ? color : undefined}
+      name={name}
+      size={context.size}
+    />
+  );
+}
 
 /** The corner treatment, applied to the pressable and its drawn box alike. */
 const SHAPE: Record<ButtonShape, string> = {
@@ -44,6 +86,16 @@ export type ButtonShape = 'rounded' | 'pill';
 export interface ButtonProps {
   label: string;
   onPress: () => void;
+  /**
+   * A `<Button.Icon name="…" />`, drawn before the label and inheriting this
+   * button's colour and size. A node rather than an icon name so the button
+   * never grows a second icon-set dependency in its own signature, and so a
+   * call site can pass nothing at all without a sentinel.
+   *
+   * Hidden while `loading`: the spinner already occupies that slot, and showing
+   * both makes the row jump as the spinner mounts.
+   */
+  icon?: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** `rounded` (default, 8px) or `pill` — a fully-round hero/onboarding CTA. */
@@ -101,6 +153,7 @@ export interface ButtonProps {
 export function Button({
   label,
   onPress,
+  icon,
   variant = 'primary',
   size = 'md',
   shape = 'rounded',
@@ -158,6 +211,22 @@ export function Button({
             <ActivityIndicator color={spinnerColor} size="small" />
           </View>
         )}
+        {icon != null && !loading && (
+          // Same own-box wrapper as the spinner, for the same native reason.
+          // The dimming rides here rather than on the icon so `Button.Icon`
+          // stays a pure "draw this glyph" leaf: the icon inherits one colour
+          // and the *button* decides how faded that colour reads, exactly as
+          // the container and label treatments already do.
+          <View
+            className={cn('items-center justify-center', unavailable && 'opacity-60')}
+          >
+            <ButtonIconContext.Provider
+              value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+            >
+              {icon}
+            </ButtonIconContext.Provider>
+          </View>
+        )}
         <LabelText
           className={cn(
             'font-sans-semibold',
@@ -172,3 +241,5 @@ export function Button({
     </PresstableOpacity>
   );
 }
+
+Button.Icon = ButtonIcon;

@@ -32,6 +32,7 @@ import {
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
+import { watchlistQueryKeys } from './watchlist';
 
 /** One named row of the home feed — never index into the query array. */
 type FeedSlot =
@@ -193,6 +194,21 @@ export function useSuspenseYourAnimeQuery() {
   return useSuspenseQuery(feedOptions.yourAnime(queryClient));
 }
 
+/**
+ * Letterboxd's **own** watchlist row, kept alongside the merged one (owner,
+ * 2026-07-28: "I want to have back the letterboxd movie watchlist row, we
+ * should not erase it altogether in favor of the unified row").
+ *
+ * Plan 0031 R25 replaced this row with the cross-provider gather; the merge is
+ * still right for "everything I mean to watch", but it is not a substitute for
+ * a films-only view of a list the user curates on Letterboxd itself — merged
+ * with Trakt shows and AniList plans, that list stops being browsable as
+ * itself. So both rows ship: the merged one answers "what am I meaning to
+ * watch", this one answers "what's on my Letterboxd".
+ *
+ * The `yourWatchlist` slot was already staying for the details screen's by-id
+ * resolution of Letterboxd films, so this row costs no extra request.
+ */
 export function useSuspenseYourWatchlistQuery(username: string) {
   return useSuspenseQuery(feedOptions.yourWatchlist(username));
 }
@@ -207,12 +223,19 @@ function activeSectionKeys(
   connected: readonly ProviderId[],
 ): Array<{ slot: string; queryKey: readonly unknown[] }> {
   const feedProviders = providersForFeed(connected);
-  if (!feedProviders.includes('trakt') && !feedProviders.includes('anilist')) {
-    return [];
+  if (feedProviders.length === 0) return [];
+  const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [];
+  if (feedProviders.includes('trakt') || feedProviders.includes('anilist')) {
+    keys.push({ slot: 'upNext', queryKey: upNextQueryKeys.inputs() });
   }
-  const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [
-    { slot: 'upNext', queryKey: upNextQueryKeys.inputs() },
-  ];
+  // The merged watchlist (plan 0031 KTD-11) — registered here for
+  // pull-to-refresh, **never** as a `feedOptions` slot: the slot contract is
+  // `NormalizedMediaItem[]` and `useUnifiedFeed` is also mounted by the details
+  // screen, so a slot would break the type *and* run the whole gather on every
+  // details open. The old `trakt`/`anilist` early return moved into the branch
+  // above for the same unit: a Letterboxd-only user — the one user who has this
+  // row today — must still reach their own watchlist through refresh.
+  keys.push({ slot: 'watchlist', queryKey: watchlistQueryKeys.inputs() });
   if (feedProviders.includes('anilist')) {
     // The network read behind the "Your Anime" row: refetching only the
     // derived items key would re-derive from this cached entry (plan 0019 U2).

@@ -33,6 +33,7 @@ import {
   normalizeWatchedMovie,
   normalizeWatchedProgress,
   normalizeWatchedShow,
+  normalizeWatchlistRow,
   orderSeasons,
   type NormalizedMediaImages,
   type TraktCalendarEpisode,
@@ -51,6 +52,7 @@ import {
   type TraktTrendingShow,
   type TraktWatchedMovie,
   type TraktWatchedShow,
+  type TraktWatchlistRow,
 } from './normalize';
 
 /**
@@ -194,21 +196,27 @@ export function getMediaStudios(
 }
 
 /**
- * Trakt enforces pagination on `/sync/watched/*` since 2026-06-30 — a single
- * request no longer returns the full history (docs/solutions/
- * trakt-watched-endpoints-2026-api-changes.md). Loop pages until a short page,
- * capped so a huge library can't turn one query into dozens of round-trips.
+ * Trakt enforces pagination across `/sync/*` — on `/sync/watched/*` since
+ * 2026-06-30 (docs/solutions/trakt-watched-endpoints-2026-api-changes.md) and
+ * on `/sync/watchlist` per discussion #681
+ * (docs/solutions/trakt-watchlist-pagination-2026.md). Loop pages until a short
+ * page, capped so a huge library can't turn one query into dozens of
+ * round-trips.
+ *
+ * Deliberately one loop for every paginated sync read: a second hand-rolled one
+ * is how the short-page stop condition and the page cap diverge (plan 0031
+ * KTD-16).
  */
-const WATCHED_MAX_PAGES = 10;
+const SYNC_MAX_PAGES = 10;
 
-function getWatchedPages<Raw>(
+function getPagedSync<Raw>(
   deps: TraktDeps,
   path: string,
   params: { extended?: string; limit: number },
 ): Effect.Effect<Raw[], ProviderError> {
   return Effect.gen(function* () {
     const all: Raw[] = [];
-    for (let page = 1; page <= WATCHED_MAX_PAGES; page++) {
+    for (let page = 1; page <= SYNC_MAX_PAGES; page++) {
       const batch = yield* traktAuthedRequest<Raw[]>(
         deps,
         `${path}?${params.extended != null ? `extended=${params.extended}&` : ''}page=${page}&limit=${params.limit}`,
@@ -248,10 +256,60 @@ export function getWatchedShows(
   // `extended=progress` restores the per-season episode breakdown the 2026 API
   // change dropped from the default response — `normalizeWatchedShow` derives
   // `currentProgress` from it. It caps pages at 100 items (vs 250 default).
-  return getWatchedPages<TraktWatchedShow>(deps, '/sync/watched/shows', {
+  return getPagedSync<TraktWatchedShow>(deps, '/sync/watched/shows', {
     extended: 'progress',
     limit: 100,
   }).pipe(Effect.map((shows) => shows.map(normalizeWatchedShow)));
+}
+
+/**
+ * Trakt's maximum page size since 2026-06-15 (cut from 1,000) — discussion
+ * #681, `docs/solutions/trakt-watchlist-pagination-2026.md`. Sending it
+ * explicitly matters twice over: the ceiling is the fewest round-trips
+ * available, and omitting `page`/`limit` silently drops the response to 100
+ * items whatever the blueprint's `📄 Pagination Optional` badge still says.
+ */
+const WATCHLIST_PAGE_LIMIT = 250;
+
+export interface TraktWatchlistParams {
+  /** Trakt's own path segment; `all` is one request for movies + shows. */
+  type?: 'all' | 'movies' | 'shows';
+  sortBy?: 'rank' | 'added' | 'released' | 'title';
+  sortHow?: 'asc' | 'desc';
+}
+
+/**
+ * The user's Trakt watchlist (plan 0031 U11). Explicitly paginated on every
+ * request — never "one call returns everything" — and looped through
+ * `getPagedSync` so the stop condition and the page cap are the ones every
+ * other `/sync/*` read uses (KTD-16).
+ *
+ * `extended=full,images` is the blueprint's global option and #775's image
+ * removal named only `/sync/watched/*` and `/users/:id/watched/*`, so watchlist
+ * rows should still carry art; if a response ever arrives artless the
+ * per-card `useTraktMediaImages` recovery already covers it at no design cost.
+ *
+ * Season and episode rows drop in normalization rather than failing the read.
+ */
+export function getWatchlist(
+  deps: TraktDeps,
+  params: TraktWatchlistParams = {},
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const type = params.type ?? 'all';
+  const sortBy = params.sortBy ?? 'added';
+  const sortHow = params.sortHow ?? 'desc';
+  return Effect.gen(function* () {
+    const rows = yield* getPagedSync<TraktWatchlistRow>(
+      deps,
+      `/sync/watchlist/${type}/${sortBy}/${sortHow}`,
+      { extended: 'full,images', limit: WATCHLIST_PAGE_LIMIT },
+    );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return rows
+      .map((row) => normalizeWatchlistRow(row, nowIso))
+      .filter((item) => item != null);
+  });
 }
 
 /**
@@ -285,7 +343,7 @@ export function getWatchedMovies(
   // No extended param: the 2026 default already carries full movie metadata,
   // and `plays` lives on the wrapper. Images are gone either way — see
   // `getMediaImages` for how feed art is recovered.
-  return getWatchedPages<TraktWatchedMovie>(deps, '/sync/watched/movies', {
+  return getPagedSync<TraktWatchedMovie>(deps, '/sync/watched/movies', {
     limit: 250,
   }).pipe(Effect.map((movies) => movies.map(normalizeWatchedMovie)));
 }

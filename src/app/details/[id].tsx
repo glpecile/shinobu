@@ -56,6 +56,7 @@ import {
 } from '@/state/queries/trakt';
 import { findInDiaryCache } from '@/state/queries/diary-cache';
 import { findInSearchCache } from '@/state/queries/search-cache';
+import { findInWatchlistCache } from '@/state/queries/watchlist-cache';
 import { useMovieCatalogueQuery, useTraktIdentityQuery } from '@/state/queries/mapping';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
@@ -84,8 +85,14 @@ function findInTmdbCache(
     .getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
       queryKey: tmdbQueryKeys.all,
     })
-    .flatMap(([, data]) => data?.rows?.flatMap((row) => row.items) ?? [])
-    .find((item) => item.id === id);
+    // `row?.items ?? []` and `item?.id`: `tmdbQueryKeys.all` is a prefix, so a
+    // sibling TMDB query whose rows are shaped differently gets scanned here
+    // too — and `rows.flatMap((row) => row.items)` on a row without `items`
+    // yields `undefined` entries that crash the whole details screen. Same
+    // failure `diary-cache.ts` documents; a resolution helper degrades to
+    // "Not found", never throws.
+    .flatMap(([, data]) => data?.rows?.flatMap((row) => row?.items ?? []) ?? [])
+    .find((item) => item?.id === id);
 }
 
 /** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
@@ -529,6 +536,11 @@ export default function DetailsScreen() {
     // Diary rows live in no feed slot and no search — resolve them from the
     // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).
     findInDiaryCache(queryClient, id) ??
+    // The merged watchlist belongs to no feed slot (plan 0031 KTD-11 keeps it
+    // out of one deliberately), so its Trakt- and AniList-sourced cards would
+    // hit "Not found" without this step. Cache-only: opening a details screen
+    // never triggers the gather.
+    findInWatchlistCache(queryClient, id) ??
     findInTmdbCache(queryClient, id);
   // Items whose origin carries no metadata (a Letterboxd watchlist film is
   // just a slug + title + year) get a catalogue record resolved by title+year

@@ -7,6 +7,7 @@ import { anilistQueryKeys } from './anilist';
 import { letterboxdQueryKeys } from './letterboxd';
 import { traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
+import { watchlistQueryKeys } from './watchlist';
 
 /**
  * Disk-backed query cache (MMKV, synchronous, universal). The point is
@@ -36,7 +37,17 @@ const PERSIST_KEY = 'shinobu.query-cache';
 // without this bump a snapshot written by the previous build restores in the
 // old shape and `computeUpNext` throws on `inputs.traktCalendar.map` during the
 // first render after upgrade — taking the whole Up Next section down with it.
-const BUSTER = 'v2';
+// v3 (plan 0031): `watchlistQueryKeys.inputs()` joins the allowlist below with a
+// shape that has never been on disk. The bump is the established procedure for
+// a new persisted shape, and here it also guarantees the first restore after
+// upgrade can't hand `computeWatchlist` a snapshot written before the key
+// existed. `WatchlistInputs` is arrays only — no `Set`-shaped value
+// (docs/solutions/persisted-query-cache-set-and-map-corruption.md).
+// v4 (the `Map` codec below): every snapshot written before it holds ani.zip
+// episode maps as `{}`, and a codec only fixes what it *writes* — restoring an
+// older snapshot would keep crashing the anime details screen for anyone who
+// already has one on disk. Discarding them is exactly what this constant is for.
+const BUSTER = 'v4';
 
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;
@@ -70,8 +81,29 @@ function storage(): MMKV | null {
  */
 const SET_TAG = '@@set';
 
+/**
+ * `Map` is the same trap, and it bit for real: `['mapping','anizip-episodes']`
+ * has been on the allowlist since the home-feed restore landed, and
+ * `AniZipEpisodeMap` is a `ReadonlyMap` (`lib/providers/mapping/anizip.ts`).
+ * With no codec it restored as `{}`, and `canonicalSeasonTitle`'s
+ * `map.size === 0` guard **passed** — `undefined === 0` is false — so the next
+ * line called `map.values()` and threw "undefined is not a function" on every
+ * cold-started anime details screen with an ani.zip map.
+ *
+ * That is why this codec is the fix rather than a null-guard at the call site:
+ * the guard would turn a corrupted map into a silently *wrong* answer (no
+ * season title) instead of a loud one, and every future `Map` consumer would
+ * inherit the same bug. The allowlist note below says to add the tag before
+ * persisting anything exotic; this is that tag, arriving late.
+ */
+const MAP_TAG = '@@map';
+
 interface TaggedSet {
   [SET_TAG]: unknown[];
+}
+
+interface TaggedMap {
+  [MAP_TAG]: [unknown, unknown][];
 }
 
 function isTaggedSet(value: unknown): value is TaggedSet {
@@ -82,16 +114,28 @@ function isTaggedSet(value: unknown): value is TaggedSet {
   );
 }
 
-export function serialize(client: PersistedClient): string {
-  return JSON.stringify(client, (_key, value: unknown) =>
-    value instanceof Set ? { [SET_TAG]: [...value] } : value,
+function isTaggedMap(value: unknown): value is TaggedMap {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as Partial<TaggedMap>)[MAP_TAG])
   );
 }
 
+export function serialize(client: PersistedClient): string {
+  return JSON.stringify(client, (_key, value: unknown) => {
+    if (value instanceof Set) return { [SET_TAG]: [...value] };
+    if (value instanceof Map) return { [MAP_TAG]: [...value] };
+    return value;
+  });
+}
+
 export function deserialize(cached: string): PersistedClient {
-  return JSON.parse(cached, (_key, value: unknown) =>
-    isTaggedSet(value) ? new Set(value[SET_TAG]) : value,
-  ) as PersistedClient;
+  return JSON.parse(cached, (_key, value: unknown) => {
+    if (isTaggedSet(value)) return new Set(value[SET_TAG]);
+    if (isTaggedMap(value)) return new Map(value[MAP_TAG]);
+    return value;
+  }) as PersistedClient;
 }
 
 /**
@@ -107,6 +151,12 @@ export function deserialize(cached: string): PersistedClient {
 const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   // The Up Next slot itself — the one that makes the home screen instant.
   upNextQueryKeys.inputs(),
+  // The cross-provider watchlist gather (plan 0031 KTD-11). Without it this is
+  // the one home row that pops in as a skeleton after every cold start while
+  // the rest of the feed restores together — and `useIsWatchlisted` would be
+  // `undefined` on the first details screen after a restart, which is exactly
+  // the "correct after an app restart" claim the settled label rests on.
+  watchlistQueryKeys.inputs(),
   // Its Trakt half: the pool source, then the per-show fan it drives.
   traktQueryKeys.watchedShows(),
   traktQueryKeys.showProgress(0).slice(0, -1),

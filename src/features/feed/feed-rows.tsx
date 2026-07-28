@@ -16,6 +16,7 @@ import {
   useSuspenseYourShowsQuery,
   useSuspenseYourWatchlistQuery,
 } from '@/state/queries/use-unified-feed';
+import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface FeedRowCallbacks {
@@ -64,7 +65,57 @@ export function YourAnimeRow({ onItemPress, onItemActions }: FeedRowCallbacks) {
   );
 }
 
+/**
+ * The row whose source is **every** connected provider's watchlist, merged
+ * (plan 0031 R25). No `provider` mark and no `username`: it is not one
+ * provider's row, which is why a Trakt-only or AniList-only user sees it at
+ * all. Its single `SuspenseSection` is unchanged and still correct — one row is
+ * one slot; the merged *grid*'s per-leg failure handling is the divergence, and
+ * it lives on the screen (KTD-12).
+ *
+ * It does **not** replace `LetterboxdWatchlistRow` below. Plan 0031 originally
+ * had it do so; the owner reversed that on 2026-07-28, and the reason holds up:
+ * merged with Trakt shows and AniList plans, a curated Letterboxd film list
+ * stops being browsable as itself. Two rows, two questions.
+ */
 export function YourWatchlistRow({
+  onItemPress,
+  onItemActions,
+}: FeedRowCallbacks) {
+  const { entries } = useSuspenseWatchlistQuery();
+  const pushRoute = usePushRoute();
+  // Capped like the other unbounded personal row: a Trakt watchlist is
+  // routinely hundreds of items and this is browse, not the archive — the
+  // whole list is one "View all" away.
+  const items = capFeedRow(entries.map((entry) => entry.item));
+  return (
+    <MediaCarousel
+      collapseKey="your-watchlist"
+      items={items}
+      onItemActions={onItemActions}
+      onItemPress={onItemPress}
+      onViewAll={() => pushRoute(routes.watchlist)}
+      title="Up Next to Watch"
+    />
+  );
+}
+
+/**
+ * Letterboxd's own films-only watchlist row (restored 2026-07-28 by owner
+ * decision — plan 0031 R25 had folded it into the merged row above).
+ *
+ * Distinct from that row in every way that matters to a reader: it keeps the
+ * `provider` mark, it is titled as Letterboxd's, it carries its own
+ * `collapseKey` so collapsing one never collapses the other, and its "View all"
+ * goes to the films-only grid rather than the merged one. The overlap is the
+ * point, not a bug — a Letterboxd film appears in both, answering "what's on my
+ * Letterboxd" here and "what am I meaning to watch" above.
+ *
+ * Reads page 1 only (28 films); the rest lives behind the paginated grid
+ * (plan 0024 U9). No extra request — the merged gather already reads this same
+ * cache entry.
+ */
+export function LetterboxdWatchlistRow({
   username,
   onItemPress,
   onItemActions,
@@ -74,15 +125,13 @@ export function YourWatchlistRow({
   const items = useVisibleItems(data);
   return (
     <MediaCarousel
-      collapseKey="your-watchlist"
+      collapseKey="letterboxd-watchlist"
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      // The row shows page 1 (28 films); the rest of the watchlist lives
-      // behind the paginated grid (plan 0024 U9).
       onViewAll={() => pushRoute(routes.letterboxdWatchlist)}
       provider="letterboxd"
-      title="Your Watchlist"
+      title="Your Letterboxd Watchlist"
     />
   );
 }

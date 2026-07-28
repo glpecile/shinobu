@@ -112,9 +112,10 @@ export function useIsWatchlistWritePending(itemId: string): boolean {
  * the card and the sheet opened over it are two `useMutation` instances, and
  * only one of them would otherwise ever see the outcome.
  *
- * This is PR A's truth source for the settled label. U15 replaces that use with
- * `useIsWatchlisted`; the reader stays, because the *result surface* (failures,
- * reasoned skips) is a report, not a membership fact.
+ * It is **no longer** the settled label's truth source — U15 moved that to
+ * `useIsWatchlisted` (KTD-14). This reader stays because the *result surface*
+ * (failures, reasoned skips, their manual links) is a report about one write,
+ * which no membership fact can carry.
  */
 export function useLatestWatchlistResult(
   itemId: string,

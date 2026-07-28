@@ -100,13 +100,40 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     expect(keys).toContain('serializd/progress/gian/77');
   });
 
-  test('the gatherer is invalidated after the provider keys, not before', () => {
+  test('Trakt invalidates the watchlist read as a prefix (plan 0031 U14)', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterWatchlist(client, SHOW, ['trakt']);
+    // The gather reads `watchlist('all', 'added', 'desc')`; an add must not
+    // have to know those sort arguments to refresh it.
+    expect(keys).toContain('trakt/watchlist');
+    expect(keys.some((key) => key.startsWith('trakt/watchlist/'))).toBe(false);
+  });
+
+  test('AniList invalidates the PLANNING slice the watchlist renders', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterWatchlist(client, SHOW, ['anilist']);
+    // Derived from the entries read, so it inherits the same trap — both, and
+    // the entries key first.
+    expect(keys).toContain('anilist/planned-anime');
+    expect(keys.indexOf('anilist/current-anime-entries')).toBeLessThan(
+      keys.indexOf('anilist/planned-anime'),
+    );
+  });
+
+  test('the gatherers are invalidated after the provider keys, not before', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['trakt', 'anilist']);
-    // Invalidating `inputs()` alone would re-serve the provider payloads from
+    // Invalidating a gather key alone would re-serve the provider payloads from
     // cache for up to 15 minutes; ordering is the contract, so assert it.
-    expect(keys.indexOf('up-next/inputs')).toBe(keys.length - 1);
+    expect(keys.indexOf('watchlist/inputs')).toBe(keys.length - 1);
+    expect(keys.indexOf('up-next/inputs')).toBe(keys.length - 2);
     expect(keys.indexOf('trakt/my-calendar')).toBeLessThan(keys.indexOf('up-next/inputs'));
+  });
+
+  test('a successful add refreshes the surface it was built to land on', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterWatchlist(client, SHOW, ['letterboxd']);
+    expect(keys).toContain('watchlist/inputs');
   });
 
   test('a write that reached no provider invalidates nothing at all', () => {

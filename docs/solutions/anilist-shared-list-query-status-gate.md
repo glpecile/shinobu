@@ -54,6 +54,31 @@ The gate also matters for dedupe: only *surviving* AniList entries suppress
 their Trakt twin, so a gated PLANNING entry must not take an actively-watched
 Trakt card down with it.
 
+## Amendment (2026-07-28, plan 0031 U12): a third consumer, same gate
+
+The text above says PLANNING is *for* Calendar. That was true when Calendar was
+the only thing that wanted it; it is now one of two. Plan 0031 adds
+`fetchPlannedAnime` (`state/queries/anilist.ts`) — the AniList leg of the
+cross-provider watchlist — as a **third selector over the same cached
+`currentAnimeEntries()` read**, costing 0 extra requests for exactly the reason
+0030 widened with `status_in` in the first place.
+
+State the invariant consumer-agnostically, because the count will keep moving:
+
+> **The gate is about what PLANNING may *reach*, not about how many things read
+> it.** A plan-to-watch entry may reach surfaces that mean "you intend to watch
+> this" — Calendar (it airs this week) and the watchlist (it is on your list).
+> It may never reach a surface that means "you are partway through this":
+> Continue Watching or the "Your Anime" row. Adding a consumer means adding a
+> slice; it never means widening an existing one.
+
+The load-bearing lines stay exactly where they were —
+`fetchCurrentAnime`'s `status === 'CURRENT'` filter and `anilistEntry`'s
+`status === 'PLANNING' && entry.status !== 'upcoming'` gate — and the
+three-way test in `state/queries/anilist.test.ts` names this file so that a
+future "PLANNING is displayed now anyway, delete the gate" simplification fails
+a test that explains itself.
+
 ## Rule of thumb
 
 When a provider read is shared by two consumers on a budget, **widening the

@@ -398,6 +398,13 @@ export function invalidateAfterLog(
     // The fan-out landed a new log in Trakt history — the diary must show it on
     // its next visit (plan 0016 KTD9).
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.history() });
+    // Trakt removes a watched item from the watchlist server-side — "watching 1
+    // episode will remove the entire show or season" — so a log silently
+    // changes the watchlist too, and the cached read would otherwise sit stale
+    // for the full window showing something the user has already watched (plan
+    // 0031 KTD-5). The prefix, not a per-sort key: this path can't know which
+    // type/sort the surface requested.
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
     const traktId = item.externalIds.trakt;
     if (traktId != null) {
       // TV logs also change this show's seasons/progress views (plan 0010).
@@ -408,8 +415,12 @@ export function invalidateAfterLog(
   }
   if (succeeded.includes('anilist')) {
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnime() });
-    // The items key derives from this one — invalidating only the derived key
-    // would refetch it straight off a stale entries cache (plan 0019 U2).
+    // A CURRENT write moves the entry *out* of the PLANNING slice, so the
+    // watchlist's AniList leg is stale the moment this succeeds — third derived
+    // key over the same read (plan 0031 U12/KTD-5).
+    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.plannedAnime() });
+    // Both derived keys come off this one — invalidating only the derived keys
+    // would refetch them straight off a stale entries cache (plan 0019 U2).
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentAnimeEntries(),
     });
