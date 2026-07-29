@@ -105,7 +105,8 @@ export function YourWatchlistRow({
  * decision — plan 0031 R25 had folded it into the merged row above).
  *
  * Distinct from that row in every way that matters to a reader: it keeps the
- * `provider` mark, it is titled as Letterboxd's, it carries its own
+ * `provider` mark — which is also why the title does **not** name Letterboxd
+ * (the icon beside it already does; owner note 2026-07-29) — it carries its own
  * `collapseKey` so collapsing one never collapses the other, and its "View all"
  * goes to the films-only grid rather than the merged one. The overlap is the
  * point, not a bug — a Letterboxd film appears in both, answering "what's on my
@@ -131,7 +132,7 @@ export function LetterboxdWatchlistRow({
       onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.letterboxdWatchlist)}
       provider="letterboxd"
-      title="Your Letterboxd Watchlist"
+      title="Your Watchlist"
     />
   );
 }
