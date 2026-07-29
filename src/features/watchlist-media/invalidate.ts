@@ -20,6 +20,12 @@ import type { NormalizedMediaItem } from '@/types/media';
  *
  * Runs on the **enriched** item and inside `mutationFn`, never `onSuccess`
  * (see `use-watchlist-media.ts` for the second, plan-0031-specific reason).
+ *
+ * **The removal verb reuses this body with the same key list** (U16/R38): every
+ * key here answers "what does this provider say is on the watchlist", and that
+ * answer changes identically whichever direction the write went. There is no
+ * optimistic counterpart to pair it with (KTD-5) — the row leaves the grid when
+ * the refetch these invalidations schedule lands, not before.
  */
 export function invalidateAfterWatchlist(
   queryClient: QueryClient,
@@ -118,8 +124,9 @@ function itemInstants(item: NormalizedMediaItem): string[] {
 }
 
 /**
- * Whether a successful add can plausibly change the local notification
- * schedule (R19/R20) — the gate on `refreshNotifications`.
+ * Whether a successful add — or, on the same gate, a successful removal (U16) —
+ * can plausibly change the local notification schedule (R19/R20). The gate on
+ * `refreshNotifications`.
  *
  * That call is a **full `fetchUpNextInputs` regather** (`refresh.ts` calls the
  * gather function directly, not the cached `inputs()` query) against keys the

@@ -11,6 +11,7 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PosterWall } from '@/features/watchlist/poster-wall';
+import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
@@ -158,7 +159,15 @@ function WatchlistGrid() {
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
   const [refreshing, setRefreshing] = useState(false);
-  const { entries, errors } = useSuspenseWatchlistQuery();
+  // The row the sheet was opened from, held in state rather than looked up out
+  // of `entries` on every render (plan 0031 U16). That is the difference between
+  // a removal you can read the result of and one you cannot: a successful
+  // removal takes the entry *out* of `entries` when the refetch lands, so a
+  // derived lookup would unmount the button — and its failure lines, its
+  // AniList refusal, its unknown-membership rows — at exactly the moment they
+  // matter. Cleared with the sheet, never mid-write.
+  const [activeEntry, setActiveEntry] = useState<WatchlistEntry | null>(null);
+  const { entries, errors, incomplete } = useSuspenseWatchlistQuery();
   // Letterboxd is the only paginated leg, and it stays behind `onEndReached` —
   // **never** auto-paged to complete dedupe (22 sequential scrapes per gather
   // is exactly what plan 0031's scope boundary rules out). This observer is the
@@ -224,12 +233,28 @@ function WatchlistGrid() {
             ? () => void loadMore()
             : undefined
         }
-        onItemActions={openActions}
+        onItemActions={(item) => {
+          setActiveEntry(entries.find((entry) => entry.item.id === item.id) ?? null);
+          openActions(item);
+        }}
         onItemPress={(item) => pushRoute(routes.details(item.id))}
         onRefresh={() => void refresh()}
         refreshing={refreshing}
       />
-      <CardActionsSheet {...sheetProps} />
+      {/* The one surface that offers the removal (R35): only a `WatchlistEntry`
+          knows which providers actually hold the item, and only this screen has
+          one. `errors` rides along because a leg that failed this gather makes
+          its provider's membership *unknown*, not absent — and `incomplete`
+          for the same reason, one step milder: a leg that read page 1 of 22
+          never looked at the film the user is removing. */}
+      <CardActionsSheet
+        {...sheetProps}
+        watchlistRemoval={
+          activeEntry == null
+            ? null
+            : { entry: activeEntry, errors, incomplete }
+        }
+      />
     </>
   );
 }

@@ -10,7 +10,10 @@ import {
   alreadyOnSentence,
   failedOnSentence,
   isCleanWatchlistReport,
+  isUnwatchlistCtaSettled,
   isWatchlistCtaSettled,
+  removedFromSentence,
+  unwatchlistCtaCopy,
   watchlistCtaCopy,
   watchlistResultView,
   type WatchlistReportLike,
@@ -216,7 +219,10 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
     expect(rows[0]?.url).toContain('letterboxd.com');
   });
 
-  test('Serializd is a manual row on native too, until U9 flips it', () => {
+  // U9 has landed (adapter, season guard, Worker rules) and deliberately did
+  // *not* flip the declaration: U10's account-bound probe is what discharges
+  // KTD-10's named risk. Until then Serializd is a manual row on every platform.
+  test('Serializd is a manual row on native too, until U10 unblocks the flip', () => {
     const show: NormalizedMediaItem = {
       ...FILM,
       type: 'TV',
@@ -268,5 +274,56 @@ describe('isCleanWatchlistReport (the sheet close gate)', () => {
         report([{ provider: 'trakt', status: 'ok' }], ['letterboxd']),
       ),
     ).toBe(false);
+  });
+});
+
+describe('isUnwatchlistCtaSettled (plan 0031 U16, R35)', () => {
+  const clean = watchlistResultView(report([{ provider: 'trakt', status: 'ok' }]), FILM);
+
+  test('a cold cache never renders "Removed" for something nobody removed', () => {
+    // No report at all: `onList: false` on its own is the state of every item
+    // the user has never watchlisted.
+    expect(isUnwatchlistCtaSettled(false, null, [])).toBe(false);
+  });
+
+  test('settles once the refetch lands and every membership was known', () => {
+    expect(isUnwatchlistCtaSettled(false, clean, [])).toBe(true);
+    // Still on a watchlist — the removal has not landed yet.
+    expect(isUnwatchlistCtaSettled(true, clean, [])).toBe(false);
+    // Surface never opened: unknown is never a claim of absence (R31).
+    expect(isUnwatchlistCtaSettled(undefined, clean, [])).toBe(false);
+  });
+
+  test('one unknown membership withholds it, however clean the report', () => {
+    expect(isUnwatchlistCtaSettled(false, clean, ['serializd'])).toBe(false);
+  });
+
+  test('a failure withholds it too — the CTA doubles as the retry', () => {
+    const mixed = watchlistResultView(
+      report([
+        { provider: 'trakt', status: 'ok' },
+        { provider: 'anilist', status: 'error', message: 'nope' },
+      ]),
+      FILM,
+    );
+    expect(isUnwatchlistCtaSettled(false, mixed, [])).toBe(false);
+  });
+});
+
+describe('unwatchlistCtaCopy and its result headline (R38)', () => {
+  test('"Remove from watchlist" morphs to "Removed", with no provider named', () => {
+    expect(unwatchlistCtaCopy(FILM)).toEqual({
+      idle: 'Remove from watchlist',
+      settled: 'Removed',
+      pending: 'Removing…',
+    });
+  });
+
+  test('read-intent items say reading list instead', () => {
+    expect(unwatchlistCtaCopy(MANGA).idle).toBe('Remove from reading list');
+  });
+
+  test('the success headline is the one place providers are named', () => {
+    expect(removedFromSentence(['trakt', 'anilist'])).toBe('Removed from Trakt, AniList.');
   });
 });

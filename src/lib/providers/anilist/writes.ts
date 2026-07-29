@@ -5,7 +5,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
 import { anilistAuthedRequest } from './http';
-import { getEntryState } from './reads';
+import { getEntryState, type AniListEntryState } from './reads';
 
 export interface AniListLogOptions {
   /**
@@ -32,11 +32,16 @@ interface SaveMediaListEntryResponse {
   SaveMediaListEntry: { id: number } | null;
 }
 
+interface DeleteMediaListEntryResponse {
+  DeleteMediaListEntry: { deleted: boolean } | null;
+}
+
 /**
- * The one mutation document both write verbs send. Every argument is
- * nullable-and-omittable, so the log verb passes `progress`/`repeat` and the
- * watchlist verb (plan 0031 KTD-2) passes neither — it only ever runs where no
- * entry exists, so there is nothing stored for an omitted field to null.
+ * The one mutation document the log and watchlist-add verbs send. Every
+ * argument is nullable-and-omittable, so the log verb passes `progress`/`repeat`
+ * and the watchlist verb (plan 0031 KTD-2) passes neither — it only ever runs
+ * where no entry exists, so there is nothing stored for an omitted field to
+ * null.
  */
 const SAVE_MEDIA_LIST_ENTRY = `mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int, $repeat: Int) {
         SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress, repeat: $repeat) {
@@ -206,6 +211,140 @@ export function planOnAniList(
       return yield* new ProviderDecodeError({
         provider: 'anilist',
         detail: `AniList did not save a list entry for "${item.title}"`,
+      });
+    }
+    return { status: 'ok' } satisfies ProviderWriteResult;
+  });
+}
+
+/**
+ * `DeleteMediaListEntry` takes the **MediaList entry** id, not the media id
+ * (plan 0031 R34, live introspection 2026-07-28). It is the only AniList verb
+ * that destroys rather than overwrites, which is why every branch above it
+ * exists.
+ */
+const DELETE_MEDIA_LIST_ENTRY = `mutation ($id: Int) {
+        DeleteMediaListEntry(id: $id) {
+          deleted
+        }
+      }`;
+
+/**
+ * Why this entry may not be deleted, as the trailing clause of the skip reason —
+ * or `null` when it is a **bare** `PLANNING` entry and deletion is safe.
+ *
+ * The refusal set is deliberately wider than status + progress (plan 0031
+ * R36.2). A `PLANNING` entry with `progress: 0` can still carry a score, notes,
+ * a rewatch count, a start date or custom-list membership, and that is exactly
+ * the entry content KTD-2 refuses to *write over* on the add side — deleting it
+ * outright would be the same loss by another route. AniList has no "un-status"
+ * that preserves an entry, so an entry carrying user content is a legitimately
+ * manual case, not a delete.
+ */
+function refusalClause(entry: NonNullable<AniListEntryState['entry']>): string | null {
+  if (entry.status !== 'PLANNING') {
+    return entry.status == null ? 'which is not a planning entry' : `which is ${entry.status}`;
+  }
+  if (entry.progress > 0) return 'which has recorded progress';
+  if (entry.repeat > 0) return 'which records a rewatch';
+  if (entry.score !== 0) return 'which carries a score';
+  if (entry.notes != null && entry.notes.trim() !== '') return 'which carries notes';
+  if (
+    entry.startedAt != null &&
+    (entry.startedAt.year != null ||
+      entry.startedAt.month != null ||
+      entry.startedAt.day != null)
+  ) {
+    // AniList start dates are fuzzy — a year-only date is still a date the user
+    // put there, so any non-null component counts.
+    return 'which has a start date';
+  }
+  if (entry.customLists.length > 0) return 'which is on a custom list';
+  return null;
+}
+
+/**
+ * The AniList un-watchlist adapter (plan 0031 R34/R36): delete the viewer's
+ * MediaList entry for `mediaId` — but only ever a **bare `PLANNING`** one.
+ *
+ * This is the mirror of `planOnAniList`'s guard, and "the mirror of KTD-2" has
+ * to mean the whole of KTD-2, so the branches run in order inside this effect:
+ *
+ * 0. the guard read itself fails → the effect fails, so the fan-out reports an
+ *    `error` outcome and the mutation is **never issued**. Fail-closed, the same
+ *    deliberate divergence from the log path's "a failed state read counts as
+ *    'doesn't have it'" rule (`use-log-media.ts`) that the add makes: there the
+ *    worst case is a duplicate history row, here it is a destroyed entry.
+ * 1. no entry → reasoned skip; there is nothing to remove.
+ * 2. anything that is not a bare `PLANNING` entry → reasoned skip naming why,
+ *    plus R17's manual `Remove on AniList` link from the outcome. See
+ *    `refusalClause` for why the set is wider than status + progress.
+ * 3. an entry that decodes without an `id` → reasoned skip: it is not a deletion
+ *    target and the alternative is deleting an arbitrary id
+ *    (`AniListEntryState.entry.id`).
+ * 4. otherwise → `DeleteMediaListEntry(id)`.
+ *
+ * **Prohibition, load-bearing here in a way it is not anywhere else:** the guard
+ * is a fresh in-effect `getEntryState`, every time, and the delete uses **the id
+ * that read returned** — never the cached `entryId` carried on
+ * `AniListCurrentEntry`, which is a convenience hint for the surface and can
+ * point at an entry since re-created, and never the cached watchlist aggregate,
+ * which carries `WATCHLIST_STALE_MS` (15 min). A user who starts a show on
+ * anilist.co at 10:05 and taps Remove at 10:07 would otherwise have the 10:00
+ * `PLANNING`/0 snapshot evaluated and the whole entry destroyed, progress, score
+ * and all. An AniList remove is 1 read + 1 mutation, the same honest cost as the
+ * add.
+ */
+export function deleteAniListEntry(
+  deps: AniListDeps,
+  params: { mediaId: number },
+): Effect.Effect<ProviderWriteResult, ProviderError> {
+  return Effect.gen(function* () {
+    // Branch 0. Fail-closed: the mutation is unreachable from here.
+    const state = yield* getEntryState(deps, { mediaId: params.mediaId }).pipe(
+      Effect.mapError(
+        (error) =>
+          new ProviderDecodeError({
+            provider: 'anilist',
+            detail: `could not check your AniList entry — ${error.message}`,
+          }),
+      ),
+    );
+
+    const entry = state.entry;
+    // Branch 1.
+    if (entry == null) {
+      return {
+        status: 'skipped',
+        reason: "wasn't on your AniList list",
+      } satisfies ProviderWriteResult;
+    }
+    // Branch 2.
+    const refusal = refusalClause(entry);
+    if (refusal != null) {
+      return {
+        status: 'skipped',
+        reason: `removing would delete your whole AniList entry, ${refusal}`,
+      } satisfies ProviderWriteResult;
+    }
+    // Branch 3.
+    if (entry.id == null) {
+      return {
+        status: 'skipped',
+        reason: 'your AniList entry has no id to remove by',
+      } satisfies ProviderWriteResult;
+    }
+
+    // Branch 4. Bare PLANNING, and the id is the fresh read's, not a cached one.
+    const result = yield* anilistAuthedRequest<DeleteMediaListEntryResponse>(
+      deps,
+      DELETE_MEDIA_LIST_ENTRY,
+      { variables: { id: entry.id } },
+    );
+    if (result.DeleteMediaListEntry?.deleted !== true) {
+      return yield* new ProviderDecodeError({
+        provider: 'anilist',
+        detail: 'AniList did not delete the list entry',
       });
     }
     return { status: 'ok' } satisfies ProviderWriteResult;
