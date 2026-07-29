@@ -63,16 +63,33 @@ export function redactHeaders(headers: Record<string, string>): Record<string, s
 }
 
 /**
- * Whether a request is worth relaying. Letterboxd's pages are chatty (analytics,
- * image beacons, ad calls), and a flooded log is one you stop reading — which is
- * how the one request you were waiting for gets missed.
+ * Whether a request is worth relaying. Letterboxd's pages are chatty, and a
+ * flooded log is one you stop reading — which is how the one request you were
+ * waiting for gets missed.
  *
- * Every non-GET is relayed, because a watchlist change is a state change and one
- * of them *is* the answer. GETs are relayed only when the URL mentions the
- * watchlist, which catches the "it's a GET to /s/watch-list/…" shape the legacy
- * site used, without the rest of the page's traffic.
+ * **First-party only.** The first live run of this harness filled the log with
+ * four `POST https://cd836371f1d.cdn.intergient.com/…` ad-analytics beacons
+ * before the film page had even finished rendering — the page's third-party
+ * tags are *all* non-GET, so "every state change" on its own is not a filter at
+ * all. A watchlist write is necessarily same-origin (it needs the session
+ * cookie and the CSRF token), so anything off letterboxd.com cannot be the
+ * answer and is dropped.
+ *
+ * Within first-party traffic: every non-GET is relayed, because a watchlist
+ * change is a state change and one of them *is* the answer. GETs are relayed
+ * only when the URL mentions the watchlist, which still catches the
+ * "GET /s/watch-list/…" shape the legacy site used.
  */
+export function isFirstParty(url: string): boolean {
+  // Relative URLs are same-origin by construction — and are the likelier shape,
+  // since the site's own JS composes paths, not absolute URLs.
+  if (!/^https?:\/\//i.test(url)) return true;
+  const host = url.replace(/^https?:\/\//i, '').split(/[/?#]/)[0] ?? '';
+  return host === 'letterboxd.com' || host.endsWith('.letterboxd.com');
+}
+
 export function shouldCapture(method: string, url: string): boolean {
+  if (!isFirstParty(url)) return false;
   if (method.toUpperCase() !== 'GET') return true;
   return /watch-?list/i.test(url);
 }
@@ -131,8 +148,15 @@ export function buildCaptureScript(): string {
       try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch (e) {}
     }
     function wanted(method, url){
+      var u = String(url || '');
+      // First-party only — the page's ad/analytics tags are all POSTs, and
+      // would otherwise bury the one request being hunted (observed live).
+      if (/^https?:\\/\\//i.test(u)) {
+        var host = u.replace(/^https?:\\/\\//i, '').split(/[/?#]/)[0] || '';
+        if (host !== 'letterboxd.com' && host.slice(-15) !== '.letterboxd.com') return false;
+      }
       if (String(method || 'GET').toUpperCase() !== 'GET') return true;
-      return /watch-?list/i.test(String(url || ''));
+      return /watch-?list/i.test(u);
     }
     // --- fetch ---
     var nativeFetch = window.fetch;

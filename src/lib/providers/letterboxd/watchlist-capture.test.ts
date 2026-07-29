@@ -38,13 +38,29 @@ describe('redactHeaders', () => {
 });
 
 describe('shouldCapture', () => {
-  test('every state change is relayed', () => {
+  test('every first-party state change is relayed', () => {
     expect(shouldCapture('POST', 'https://letterboxd.com/anything')).toBe(true);
     expect(shouldCapture('delete', 'https://letterboxd.com/anything')).toBe(true);
+    // Relative is the likelier shape — the site composes paths, not full URLs.
+    expect(shouldCapture('POST', '/s/watch-list/add')).toBe(true);
+  });
+
+  test('third-party POSTs are dropped — regression from the first live run', () => {
+    // Four ad-analytics beacons filled the log before the page finished
+    // rendering. The page's third-party tags are all non-GET, so "every state
+    // change" is not a filter on its own. A watchlist write needs the session
+    // cookie and CSRF token, so it cannot be cross-origin.
+    expect(shouldCapture('POST', 'https://cd836371f1d.cdn.intergient.com/fb87a4ea41')).toBe(
+      false,
+    );
+    expect(shouldCapture('POST', 'https://api.segment.io/v1/t')).toBe(false);
+    // Subdomains of letterboxd.com stay in.
+    expect(shouldCapture('POST', 'https://a.letterboxd.com/x')).toBe(true);
+    // ...and a lookalike host does not sneak past the suffix check.
+    expect(shouldCapture('POST', 'https://notletterboxd.com/x')).toBe(false);
   });
 
   test('GETs are relayed only when they mention the watchlist', () => {
-    // The page's own traffic would otherwise bury the one request being hunted.
     expect(shouldCapture('GET', 'https://letterboxd.com/ajax/poster/x')).toBe(false);
     expect(shouldCapture('GET', 'https://letterboxd.com/s/watch-list/add')).toBe(true);
     expect(shouldCapture('GET', 'https://letterboxd.com/gian/watchlist/')).toBe(true);
