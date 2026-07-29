@@ -3,7 +3,11 @@ import { Effect } from 'effect';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps, SerializdSession } from './deps';
-import { logToSerializd } from './writes';
+import {
+  addToSerializdWatchlist,
+  logToSerializd,
+  removeFromSerializdWatchlist,
+} from './writes';
 
 interface Recorded {
   url: string;
@@ -216,5 +220,315 @@ describe('logToSerializd', () => {
       '/show/reviews/add',
     ]);
     expect(requests[2].body).toMatchObject({ episode_number: 5 });
+  });
+});
+
+type ShowSeason = { id?: number; seasonNumber?: number; episodeCount?: number };
+type WatchedSeason = { seasonNumber?: number; watchedEpisodes?: number[] };
+
+/**
+ * A show + progress pair for the KTD-10 guard, with either read switchable to a
+ * failure so branch 0 (fail-closed, no POST) can be asserted on both legs.
+ */
+function watchlistDeps(opts: {
+  seasons?: ShowSeason[];
+  watchedSeasons?: WatchedSeason[];
+  showStatus?: number;
+  progressStatus?: number;
+  writeStatus?: number;
+  onRequest?: (r: Recorded) => void;
+}): SerializdDeps {
+  return {
+    baseUrl: 'https://api.test',
+    session: SESSION,
+    fetch: async (input, init) => {
+      const url = String(input);
+      const path = new URL(url).pathname;
+      const method = init?.method ?? 'GET';
+      const body =
+        init?.body != null
+          ? (JSON.parse(String(init.body)) as Record<string, unknown>)
+          : undefined;
+      opts.onRequest?.({ url, method, body });
+
+      if (path.endsWith('/progress')) {
+        return opts.progressStatus != null && opts.progressStatus !== 200
+          ? new Response('{}', { status: opts.progressStatus })
+          : Response.json({ watchedSeasons: opts.watchedSeasons ?? [] });
+      }
+      if (method === 'GET') {
+        return opts.showStatus != null && opts.showStatus !== 200
+          ? new Response('{}', { status: opts.showStatus })
+          : Response.json({ seasons: opts.seasons ?? [] });
+      }
+      return new Response('{}', { status: opts.writeStatus ?? 200 });
+    },
+  };
+}
+
+const THREE_SEASONS: ShowSeason[] = [
+  { id: 11, seasonNumber: 1, episodeCount: 7 },
+  { id: 12, seasonNumber: 2, episodeCount: 13 },
+  { id: 13, seasonNumber: 3, episodeCount: 13 },
+];
+
+function requestLines(requests: Recorded[]): string[] {
+  return requests.map((r) => `${r.method} ${new URL(r.url).pathname}`);
+}
+
+describe('addToSerializdWatchlist', () => {
+  test('a partly-watched show sends only the unwatched season ids, and the ok carries the partial reason', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      watchedSeasons: [{ seasonNumber: 1, watchedEpisodes: [1, 2, 3] }],
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+
+    // Enumerate, guard, write — three requests (KTD-7/KTD-10 cost model).
+    expect(requestLines(requests)).toEqual([
+      'GET /show/1396',
+      'GET /user/gian/show/1396/progress',
+      'POST /watchlist_v2',
+    ]);
+    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [12, 13] });
+    // Never a bare ok when the guard filtered something out (R16).
+    expect(result).toEqual({
+      status: 'ok',
+      reason: 'S1 is already watched on Serializd',
+    });
+  });
+
+  test('a season in watchedSeasons with an EMPTY watchedEpisodes array is watched and is never sent', async () => {
+    // The season-level-watched case `getWatchedEpisodeKeys` cannot see: a season
+    // marked watched wholesale (POST /watched_v2) writes no episode rows, so the
+    // flattened key set drops it and the guard would fail OPEN (R21/KTD-10).
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      watchedSeasons: [
+        { seasonNumber: 1, watchedEpisodes: [] },
+        { seasonNumber: 2 },
+      ],
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+
+    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [13] });
+    expect(result).toEqual({
+      status: 'ok',
+      reason: 'S1 and S2 are already watched on Serializd',
+    });
+  });
+
+  test('a season whose watched-episode count reaches episodeCount counts as watched', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: [
+        { id: 11, seasonNumber: 1, episodeCount: 2 },
+        { id: 12, seasonNumber: 2, episodeCount: 10 },
+      ],
+      watchedSeasons: [{ seasonNumber: 1, watchedEpisodes: [1, 2] }],
+      onRequest: (r) => requests.push(r),
+    });
+
+    await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
+    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [12] });
+  });
+
+  test('specials (season 0) are never sent — Serializd itself says "Specials not affected"', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: [{ id: 10, seasonNumber: 0, episodeCount: 4 }, ...THREE_SEASONS],
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [11, 12, 13] });
+    // Nothing was *watched*, so the ok stays bare.
+    expect(result).toEqual({ status: 'ok' });
+  });
+
+  test('a year-based season is never sent', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: [
+        { id: 11, seasonNumber: 1, episodeCount: 7 },
+        { id: 90, seasonNumber: 2019, episodeCount: 20 },
+      ],
+      onRequest: (r) => requests.push(r),
+    });
+
+    await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
+    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [11] });
+  });
+
+  test('a season with no usable id or number is dropped rather than guessed at', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: [
+        { seasonNumber: 1, episodeCount: 7 },
+        { id: 12, episodeCount: 13 },
+        { id: 13, seasonNumber: 3, episodeCount: 13 },
+      ],
+      onRequest: (r) => requests.push(r),
+    });
+
+    await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
+    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [13] });
+  });
+
+  test('a fully-watched show is a reasoned skip with NO POST issued', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      watchedSeasons: [
+        { seasonNumber: 1, watchedEpisodes: [1] },
+        { seasonNumber: 2, watchedEpisodes: [] },
+        { seasonNumber: 3, watchedEpisodes: [1, 2] },
+      ],
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+    expect(result).toEqual({ status: 'skipped', reason: 'already watched on Serializd' });
+    expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
+  });
+
+  test('a catalogue with nothing watchlistable skips with its own reason, not "already watched"', async () => {
+    const deps = watchlistDeps({ seasons: [{ id: 10, seasonNumber: 0, episodeCount: 4 }] });
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'Serializd lists no watchlistable season for this show yet',
+    });
+  });
+
+  test('a failed progress read is an error outcome with NO POST — the guard is fail-closed', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      progressStatus: 500,
+      onRequest: (r) => requests.push(r),
+    });
+
+    const error = await Effect.runPromise(
+      Effect.flip(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 }))),
+    );
+    expect(error._tag).toBe('ProviderNetworkError');
+    expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
+  });
+
+  test('a failed show enumeration is an error outcome with NO POST and no progress read', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({ showStatus: 500, onRequest: (r) => requests.push(r) });
+
+    const error = await Effect.runPromise(
+      Effect.flip(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 }))),
+    );
+    expect(error._tag).toBe('ProviderNetworkError');
+    expect(requestLines(requests)).toEqual(['GET /show/1396']);
+  });
+
+  test('a 401 on the guard read is a reconnect auth error, not a generic guard failure', async () => {
+    const deps = watchlistDeps({ seasons: THREE_SEASONS, progressStatus: 401 });
+    const error = await Effect.runPromise(
+      Effect.flip(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 }))),
+    );
+    expect(error._tag).toBe('ProviderAuthError');
+    expect(error.message).toContain('serializd');
+  });
+
+  test('an item without a tmdb id is skipped with a no-tmdb reason and no network at all', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({ seasons: THREE_SEASONS, onRequest: (r) => requests.push(r) });
+
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ trakt: 1 })),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: expect.stringContaining('TMDB id'),
+    });
+    expect(requests).toHaveLength(0);
+  });
+});
+
+describe('removeFromSerializdWatchlist', () => {
+  test('posts watchlist/remove_v2 with async:true and the SAME filtered season set as the add', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      watchedSeasons: [{ seasonNumber: 1, watchedEpisodes: [] }],
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      removeFromSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+
+    expect(requestLines(requests)).toEqual([
+      'GET /show/1396',
+      'GET /user/gian/show/1396/progress',
+      'POST /watchlist/remove_v2',
+    ]);
+    // Watched S1 is left alone on the way out too — removal is not assumed
+    // hazard-free (R34's named risk; U10 step 5 probes it).
+    expect(requests[2].body).toEqual({
+      show_id: 1396,
+      season_ids: [12, 13],
+      async: true,
+    });
+    expect(result).toEqual({
+      status: 'ok',
+      reason: 'S1 is already watched on Serializd',
+    });
+  });
+
+  test('a failed guard read is an error with NO POST, exactly like the add', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      progressStatus: 500,
+      onRequest: (r) => requests.push(r),
+    });
+
+    const error = await Effect.runPromise(
+      Effect.flip(removeFromSerializdWatchlist(deps, tvShow({ tmdb: 1396 }))),
+    );
+    expect(error._tag).toBe('ProviderNetworkError');
+    expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
+  });
+
+  test('nothing eligible is a reasoned skip, never a blind removal', async () => {
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      watchedSeasons: [
+        { seasonNumber: 1 },
+        { seasonNumber: 2 },
+        { seasonNumber: 3 },
+      ],
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      removeFromSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+    expect(result).toEqual({ status: 'skipped', reason: 'already watched on Serializd' });
+    expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
   });
 });
