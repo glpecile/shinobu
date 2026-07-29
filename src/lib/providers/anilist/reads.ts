@@ -332,6 +332,26 @@ export interface AniListEntryState {
     status: string | null;
     progress: number;
     repeat: number;
+    /**
+     * The four fields below exist for one caller: `deleteAniListEntry`
+     * (plan 0031 R36.2). `DeleteMediaListEntry` destroys the *whole* entry, so
+     * "bare PLANNING" has to mean bare in every sense — a `PLANNING` entry with
+     * `progress: 0` can still carry a score, notes, a start date or custom-list
+     * membership, which is exactly the entry content KTD-2 refuses to *write
+     * over* on the add side. Deleting it would be the same loss by another
+     * route, so the removal guard needs to see them.
+     */
+    /** 0 when unscored — AniList reports the viewer's own score format. */
+    score: number;
+    notes: string | null;
+    /** Null when AniList has no start date; components are individually fuzzy. */
+    startedAt: {
+      year: number | null;
+      month: number | null;
+      day: number | null;
+    } | null;
+    /** Names of the custom lists this entry sits on; empty when it sits on none. */
+    customLists: string[];
   } | null;
   /** Total episodes when AniList knows it (null for ongoing shows). */
   episodes: number | null;
@@ -345,15 +365,49 @@ interface MediaEntryResponse {
       status: string | null;
       progress: number | null;
       repeat: number | null;
+      score: number | null;
+      notes: string | null;
+      startedAt: {
+        year: number | null;
+        month: number | null;
+        day: number | null;
+      } | null;
+      /**
+       * `customLists` is a `Json` field: an object keyed by list name whose
+       * values say whether the entry is on that list (`{"Rewatching": false}`),
+       * or an array of names when asked for `asArray`. Both shapes are handled
+       * because the field's contract is JSON, not a typed list.
+       */
+      customLists: unknown;
     } | null;
   } | null;
 }
 
 /**
+ * The custom lists an entry actually sits on, from AniList's untyped `Json`
+ * payload. Membership is the boolean value, not key presence — AniList returns
+ * *every* list the viewer defined, most of them `false`, so keying on presence
+ * would refuse every removal for any viewer who has ever made a custom list
+ * (plan 0031 R36.2).
+ */
+function readCustomLists(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((name): name is string => typeof name === 'string');
+  }
+  if (raw != null && typeof raw === 'object') {
+    return Object.entries(raw as Record<string, unknown>)
+      .filter(([, member]) => member === true)
+      .map(([name]) => name);
+  }
+  return [];
+}
+
+/**
  * The viewer's current recorded state for one media — what the log
  * reconciliation (plan 0011 decision 7) compares against, what the write
- * adapter reads to compute rewatch counters, and what the watchlist add
- * (`planOnAniList`) refuses to overwrite on (plan 0031 KTD-2).
+ * adapter reads to compute rewatch counters, what the watchlist add
+ * (`planOnAniList`) refuses to overwrite on (plan 0031 KTD-2), and what the
+ * removal (`deleteAniListEntry`) refuses to destroy on (R36).
  */
 export function getEntryState(
   deps: AniListDeps,
@@ -364,7 +418,7 @@ export function getEntryState(
     `query ($mediaId: Int) {
       Media(id: $mediaId) {
         episodes
-        mediaListEntry { id status progress repeat }
+        mediaListEntry { id status progress repeat score notes startedAt { year month day } customLists }
       }
     }`,
     { variables: { mediaId: params.mediaId } },
@@ -381,6 +435,10 @@ export function getEntryState(
                 status: raw.status,
                 progress: raw.progress ?? 0,
                 repeat: raw.repeat ?? 0,
+                score: raw.score ?? 0,
+                notes: raw.notes ?? null,
+                startedAt: raw.startedAt ?? null,
+                customLists: readCustomLists(raw.customLists),
               },
       };
     }),

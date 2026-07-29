@@ -235,8 +235,45 @@ describe('fetchWatchlistInputs', () => {
 
     const inputs = await fetchWatchlistInputs(client, ['trakt']);
 
-    expect(Object.keys(inputs).sort()).toEqual(['errors', 'inputs']);
+    expect(Object.keys(inputs).sort()).toEqual([
+      'errors',
+      'incomplete',
+      'inputs',
+    ]);
     expect(inputs.inputs[0]).not.toHaveProperty('kind');
+  });
+
+  test('a full last Letterboxd page marks the leg incomplete (R35)', async () => {
+    // 28 films is exactly `WATCHLIST_PAGE_SIZE`, so `getNextPageParam` handed
+    // out another cursor: there are films this gather has not seen, and a film
+    // missing from `sources` is not evidence it is off the Letterboxd list.
+    const fullPage = Array.from({ length: 28 }, (_, index) =>
+      film(`lb-${index}`, `Film ${index}`, 2020),
+    );
+    const { client } = fakeClient({ letterboxdPages: [fullPage] });
+
+    const inputs = await fetchWatchlistInputs(client, ['letterboxd']);
+
+    expect(inputs.incomplete).toEqual(['letterboxd']);
+  });
+
+  test('a short last page means the whole list was read', async () => {
+    const { client } = fakeClient({
+      letterboxdPages: [[film('lb-1', 'Heat', 1995)]],
+    });
+
+    const inputs = await fetchWatchlistInputs(client, ['letterboxd']);
+
+    expect(inputs.incomplete).toEqual([]);
+  });
+
+  test('a failed leg is `errors` only, never also `incomplete`', async () => {
+    const { client } = fakeClient({ failing: ['letterboxd'] });
+
+    const inputs = await fetchWatchlistInputs(client, ['letterboxd']);
+
+    expect(inputs.errors.map((failure) => failure.provider)).toEqual(['letterboxd']);
+    expect(inputs.incomplete).toEqual([]);
   });
 });
 

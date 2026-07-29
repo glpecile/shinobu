@@ -49,6 +49,24 @@ export interface WatchlistInputs {
    * tell "known absent" from "unknown" membership (R35).
    */
   errors: ProviderFailure[];
+  /**
+   * Legs that **succeeded but did not read the whole watchlist** — today only
+   * Letterboxd, whose scrape is paginated behind the grid's `onEndReached` and
+   * is deliberately never auto-paged (22 sequential fetches per gather is the
+   * cost R27's scope boundary rules out).
+   *
+   * Separate from `errors` because it is not a failure: nothing is missing that
+   * the user asked for, the grid renders normally and **no inline notice
+   * fires**. It exists for R35 alone. "A healthy leg that did not return this
+   * item" is only evidence of non-membership when the leg actually *looked* at
+   * the whole list, and a leg stopped at page 1 never looked — so a film on an
+   * unfetched page would otherwise be reported as known-absent, silently
+   * dropping its provider from a removal and letting the settled `Removed`
+   * label assert a completeness that is false. That is the exact claim R35
+   * forbids, and it gets worse rather than better when Letterboxd's removal
+   * flips from `'manual'` to `'write'` after U6's spike.
+   */
+  incomplete: ProviderId[];
 }
 
 /**

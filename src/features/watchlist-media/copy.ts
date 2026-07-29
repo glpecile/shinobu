@@ -51,6 +51,29 @@ export function watchlistCtaCopy(
       };
 }
 
+/**
+ * The removal CTA's copy (plan 0031 U16, R38). Same three-slot shape as the add
+ * so one component pattern renders both, and — R38, verbatim — **no provider
+ * name in any label**: "Remove from watchlist" is one decision the user makes
+ * about their watchlist, not four decisions about four trackers. Provider names
+ * appear only in the *result* sentences below and in `OutcomeLink`'s rows.
+ */
+export function unwatchlistCtaCopy(
+  item: Pick<NormalizedMediaItem, 'type'>,
+): WatchlistCtaCopy {
+  return isReadIntent(item)
+    ? {
+        idle: 'Remove from reading list',
+        settled: 'Removed',
+        pending: 'Removing…',
+      }
+    : {
+        idle: 'Remove from watchlist',
+        settled: 'Removed',
+        pending: 'Removing…',
+      };
+}
+
 /** Mirrors `log-confirm-sheet`'s `labels`, without dragging a JSX module in. */
 export function providerLabelList(ids: readonly ProviderId[]): string {
   return ids.map((id) => PROVIDERS[id].label).join(', ');
@@ -154,6 +177,44 @@ export function alreadyOnSentence(
 /** "Added to Trakt, AniList." — the success headline. */
 export function addedToSentence(succeeded: readonly ProviderId[]): string {
   return `Added to ${providerLabelList(succeeded)}.`;
+}
+
+/** "Removed from Trakt, AniList." — the removal's success headline. */
+export function removedFromSentence(succeeded: readonly ProviderId[]): string {
+  return `Removed from ${providerLabelList(succeeded)}.`;
+}
+
+/**
+ * The removal CTA's settled state (plan 0031 U16, R35). Deliberately **not**
+ * `isWatchlistCtaSettled` with the boolean flipped, because the removal has a
+ * third input the add does not: whether every applicable provider's membership
+ * was actually *known*.
+ *
+ * `onList` is `useIsWatchlisted(entry.item)` read the same cache-only way the
+ * add reads it, so "Removed" appears when the refetch lands and the row leaves
+ * the grid — never from an optimistic patch (KTD-5). `view` must exist at all,
+ * so a cold cache can never render "Removed" for something nobody removed.
+ *
+ * `membershipUnknown` is R35's honesty clause and the reason this function
+ * exists: `sources` records "providers whose read leg returned this item", so a
+ * connected provider with no read leg (Serializd in v1, AniList for MANGA) or
+ * one whose leg errored on this gather is **unknown**, not absent. Claiming
+ * "Removed" while the film is still on the user's Trakt watchlist — because the
+ * Trakt leg failed and the row was never seen — is exactly the false
+ * completeness claim R14 forbids. Those providers get an upfront manual row
+ * instead, and the label stays actionable.
+ */
+export function isUnwatchlistCtaSettled(
+  onList: boolean | undefined,
+  view: Pick<WatchlistResultView, 'failed'> | null,
+  membershipUnknown: readonly ProviderId[],
+): boolean {
+  return (
+    view != null &&
+    view.failed.length === 0 &&
+    membershipUnknown.length === 0 &&
+    onList === false
+  );
 }
 
 /** "Failed on Letterboxd." — the failure headline. */
