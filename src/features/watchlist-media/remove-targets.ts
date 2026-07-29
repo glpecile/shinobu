@@ -180,11 +180,24 @@ export async function planWatchlistRemove(
  * Manual add targets count as offerable: Letterboxd's add is a manual row rather
  * than a write, and a row that deep-links the user to the one tracker still
  * missing the film is the affordance, not a dead end.
+ *
+ * **R35 applies to the add side too**, which is what the first live run of this
+ * sheet made obvious. A Trakt-sourced series rendered four stacked rows — a
+ * disabled "On your watchlist", "Add on Serializd", "Remove from watchlist" and
+ * "Remove on Serializd" — two of them pointing the same provider in opposite
+ * directions. The bug is not the clutter, it is the claim: "Add on Serializd"
+ * asserts Serializd does not have the show, and Serializd has no watchlist read
+ * leg in v1, so the app has no evidence for that. A provider whose membership is
+ * unknown is therefore **not** counted as missing the item — the removal side
+ * already offers it an honest `Remove on …` link, and one link to the provider's
+ * page is the whole affordance either way.
  */
 export function shouldOfferWatchlistAdd(
   entry: WatchlistEntry,
   connected: readonly ProviderId[],
   platform: string,
+  errors: readonly ProviderFailure[] = [],
+  incomplete: readonly ProviderId[] = [],
 ): boolean {
   const { writable, manual } = splitWriteTargets(
     entry.item,
@@ -193,6 +206,8 @@ export function shouldOfferWatchlistAdd(
     'watchlist',
   );
   return [...writable, ...manual].some(
-    (provider) => !entry.sources.includes(provider),
+    (provider) =>
+      !entry.sources.includes(provider) &&
+      hasWatchlistReadLeg(provider, entry.item, connected, errors, incomplete),
   );
 }

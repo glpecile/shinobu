@@ -149,7 +149,13 @@ export function CardActionsSheet({
   const showWatchlistAdd =
     canWatchlist &&
     (watchlistRemoval == null ||
-      shouldOfferWatchlistAdd(watchlistRemoval.entry, connected, currentPlatform()));
+      shouldOfferWatchlistAdd(
+        watchlistRemoval.entry,
+        connected,
+        currentPlatform(),
+        watchlistRemoval.errors,
+        watchlistRemoval.incomplete,
+      ));
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>

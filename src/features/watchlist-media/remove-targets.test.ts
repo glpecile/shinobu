@@ -202,4 +202,30 @@ describe('shouldOfferWatchlistAdd — R12 as amended for /watchlist', () => {
     const entry = entryFor(film(), ['trakt']);
     expect(shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios')).toBe(true);
   });
+
+  test('a provider with unknown membership is not "missing the item" (R35)', () => {
+    // Regression from the first live run of the sheet: a Trakt-sourced series
+    // rendered a disabled "On your watchlist", an "Add on Serializd" row, a
+    // "Remove from watchlist" button and a "Remove on Serializd" row — the same
+    // provider pointed both ways. "Add on Serializd" asserts Serializd does not
+    // have the show, and Serializd has no read leg to have established that.
+    const entry = entryFor(series(), ['trakt']);
+    expect(shouldOfferWatchlistAdd(entry, CONNECTED, 'ios')).toBe(false);
+  });
+
+  test('an errored or partially-read leg suppresses the add row the same way', () => {
+    const entry = entryFor(film(), ['trakt']);
+    // Healthy Letterboxd leg that did not return the film: genuinely missing.
+    expect(shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios')).toBe(true);
+    // Same entry, leg down — now it is unknown, not missing.
+    expect(
+      shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios', [
+        { provider: 'letterboxd', message: '502' },
+      ]),
+    ).toBe(false);
+    // Same entry, leg read only page 1.
+    expect(
+      shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios', [], ['letterboxd']),
+    ).toBe(false);
+  });
 });
