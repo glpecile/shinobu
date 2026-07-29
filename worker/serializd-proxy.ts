@@ -37,6 +37,11 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method }> = [
   { match: (p) => p === 'watched/remove_v2', method: 'POST' },
   { match: (p) => p === 'show/reviews/add', method: 'POST' },
   { match: (p) => p === 'episode_log/add' || p === 'episode_log/remove', method: 'POST' },
+  // Watchlist (plan 0031 / plan 0017 amendment). Exact matches, POST-only:
+  // Serializd itself answers 405 to GET/PUT/DELETE on watchlist_v2, so the
+  // single-method rule mirrors upstream rather than narrowing it.
+  { match: (p) => p === 'watchlist_v2', method: 'POST' },
+  { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
   { match: (p) => p.startsWith('show/'), method: 'GET' },
   { match: (p) => p.startsWith('user/'), method: 'GET' },
 ];

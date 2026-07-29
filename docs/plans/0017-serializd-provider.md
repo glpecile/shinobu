@@ -304,3 +304,67 @@ Compiled from `Velocidensity/serializd-py` (client.py, consts.py, models/), `sky
 Auth transport: `Authorization: Bearer {token}` header (serializd-py) or cookie `tvproject_credentials={token}` on `.serializd.com` (trakt-serializd-sync; also what the website sets — the mobile capture source). Tokens are long-lived; no refresh endpoint is known — invalid token = reconnect. Diary ordering is not guaranteed sorted (trakt-serializd-sync paginates fully and sorts client-side). Season quirk: year-based season numbers (≥ 2000) generally have no TMDB equivalent and should be skipped. CORS: dynamic allowlist echoing only serializd.com origins; foreign origins (including localhost) receive no ACAO headers — the browser is the wall, the server itself processes foreign-origin requests.
 
 Base-URL fallback: `serializd.onrender.com` is Serializd's hosting-provider domain, chosen because the vanity `www.serializd.com/api` alias returned 404 on POST in the 2026-07-21 probe. It is a hosting implementation detail — if Serializd migrates off Render or changes the subdomain, re-probe `www.serializd.com/api` as the first fallback. Keep the base in one `serializd/config.ts` constant (KTD4) so the swap is one line.
+
+---
+
+## Amendment — the watchlist grant (2026-07-28, plan 0031 U9)
+
+### (a) What changed, and who authorised it
+
+Owner decision 2026-07-28, answering plan 0031's OQ-2 (*"I would like the serializd watchlist work. If that means updating the proxy then do it."*). `worker/serializd-proxy.ts`'s path+method allowlist — the reviewed security artifact this plan's U4 established — gains **two exact-match POST rules** so Serializd becomes a real watchlist write target on web as well as native. Plan 0031's original R6 (Serializd declares `watchlistWrite: 'manual'`, on the grounds that no consumer project corroborated an endpoint and the only route in was an allowlist widening) is **reversed**; both of its premises were overturned by the research recorded in (c).
+
+This is the **second** widening of the plan-0017 proxy contract (the first being its creation) and it is still **not a general licence**. The contract's shape is unchanged: an allowlist of literal Serializd path+method pairs, no `Access-Control-Allow-Origin`, no cookies either direction, `Authorization` only, 64 KB / ~30 s caps, stateless with no logging, forced JSON + `nosniff`. Every one of those invariants is preserved *by construction* — the edit touches one array and adds no code path — and each is re-asserted against the new paths in the eight named tests of `worker/serializd-proxy.test.ts` (plan 0031 R23.2).
+
+### (b) The precise grant
+
+```diff
+   { match: (p) => p === 'episode_log/add' || p === 'episode_log/remove', method: 'POST' },
++  // Watchlist (plan 0031 / plan 0017 amendment). Exact matches, POST-only:
++  // Serializd itself answers 405 to GET/PUT/DELETE on watchlist_v2, so the
++  // single-method rule mirrors upstream rather than narrowing it.
++  { match: (p) => p === 'watchlist_v2', method: 'POST' },
++  { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
+   { match: (p) => p.startsWith('show/'), method: 'GET' },
+```
+
+Two literals, in the POST block so the "explicit POSTs precede the prefix GETs" convention holds. **Exact `===`, never `startsWith('watchlist')`** — a prefix rule would also open `watchlist/random` (a real upstream route), `compare_watchlist/*`, and every future `watchlist/*` endpoint sight-unseen. That is the minimum grant that satisfies the ask, and AGENTS.md § Web & CORS now carries the never-a-prefix sentence so the *next* widening isn't a `startsWith` either.
+
+**The read path required no grant at all.** `GET user/{username}/watchlistpage_v2/{page}` was already inside the pre-existing `user/` GET prefix rule, and `url.search` (which carries the mandatory `sort_by`) is already appended when the upstream URL is built. A redundant rule for it would be dead code that reads like a wider grant than it is. `user_information` is *not* covered by that prefix and is **not** granted.
+
+**What blocks traversal, said precisely:** `handleSerializdProxy` slices its sub-path out of `new URL(request.url).pathname`, and the URL parser has already resolved dot segments by then — `/api/serializd/watchlist_v2/../login` arrives as sub-path `login`, matches the pre-existing `login` POST rule, and **forwards with a 200** (verified). `isUnsafePath`'s `..` check is effectively unreachable through a normal pathname. What keeps the grant narrow is **URL normalization plus exact-match rules**, so the only traversal shape worth asserting is the percent-encoded one (`watchlist_v2%2F..%2Flogin`, which keeps `%2F` in `pathname` and matches no rule → 404). The test file says so in a comment, so nobody "fixes" a 404 assertion that would be false.
+
+### (c) Why these paths are trusted
+
+Plan 0017's Appendix was compiled from three consumer projects. **This grant is not**, and the difference has to be stated rather than papered over: **`Velocidensity/serializd-py` — the spec the owner pointed at — does not cover the watchlist at all.** At `HEAD` (latest commit 2026-07-18) it implements exactly the nine calls the pre-existing allowlist already covers; `grep -rin "watchlist\|bookmark"` returns nothing, and there is no open issue or PR adding one. It remains a valid corroborator for the *transport* (base URL, app headers, bearer scheme, `{"message": …}` error convention) and for nothing else.
+
+The endpoints come instead from three independent, corroborating sources:
+
+- **(A) Serializd's own Next.js bundle**, verbatim:
+  `a5=(e,a)=>l.post("/api/watchlist_v2",{season_ids:a,show_id:e})` and
+  `a8=function(e,a){let t=…;return l.post("/api/watchlist/remove_v2",{show_id:e,season_ids:a,async:t})}`.
+- **(B) A Django `DEBUG=True` URLconf leak** — `GET /api/__nope__` returns the debug 404 listing all 251 URL patterns, including `api/watchlist_v2`, `api/watchlist/remove_v2` and `api/user/<username>/watchlistpage_v2/<page>`. Server-side ground truth for path existence.
+- **(C) Live unauthenticated probes with controls** — a real route answers `401 {"message":"You must be logged in"}`, a non-route answers the Django HTML 404. `POST watchlist_v2` → 401; `GET`/`PUT`/`DELETE watchlist_v2` → 405; `watchlist/remove` (no `_v2`) → 404.
+
+Full transcript, method and controls: `docs/solutions/serializd-watchlist-endpoints.md`. Recording the bundle lines verbatim is deliberate — it makes this decision re-openable against evidence rather than memory.
+
+### (d) Season-level correction to this plan's write model
+
+Plan 0017's Appendix models Serializd writes as show- or season-scoped log calls. The watchlist is **strictly season-scoped**: `season_ids` is required on both the add and the remove, and the site's own show-level control (`addAllToWatchlist`) simply sends every season id. So "add show X to the watchlist" has no upstream expression — Shinobu must enumerate seasons (`GET /show/{tmdbId}` → `seasons[{id, seasonNumber, episodeCount}]`) and choose ids. Season 0 / specials are excluded (Serializd's own copy says "Specials not affected") as are year-based seasons (≥ 2000), for the same reason the log path treats them as a permanent skip.
+
+### (e) Named risk — watched and watchlisted are mutually exclusive
+
+Serializd's own copy, from the bundle: *"You can't mark a show / season as 'Watched' and 'Watchlisted' at the same time."* So writing every season id of a **partly-watched** show plausibly **clears those seasons' watched flags** — a write that silently destroys user-created state, the same shape as the AniList status clobber (plan 0031 KTD-2).
+
+Plan 0031's KTD-10 guard is therefore read-then-decide and **fail-closed**: enumerate seasons, read the **raw** `GET /user/{u}/show/{tmdbId}/progress` body (never `getWatchedEpisodeKeys`, which flattens `watchedSeasons` into `${season}-${episode}` keys and so *drops* a season marked watched wholesale, failing open in exactly the scenario the guard exists for), send **only** seasons absent from `watchedSeasons` with zero watched episodes, treat an empty set as a reasoned skip ("already watched on Serializd") rather than a write, and treat a failed progress read as an `error` outcome with **no write issued**. Removal applies the **same filter** — remove is *not* assumed hazard-free; "removal only clears watchlist flags" is an unevidenced assertion about the same API whose add-side semantics are the thing being probed.
+
+**The destructive behaviour is UNVERIFIED and account-bound.** It is inferred from product copy, not observed. Plan 0031's U10 is the verification step (mark S1 watched via the site's season-level control, watchlist S2 via the API, re-read progress; then repeat with S1 *included* in `season_ids` to observe the destructive case directly), and it lands in `docs/solutions/serializd-watchlist-clears-watched.md`.
+
+**U10 has not been run.** Consequently the registry's Serializd declaration stays `watchlistWrite: 'manual'` (and `watchlistRemove: 'manual'`, for the separate reason that plan 0031 R32 defers the Serializd read leg), and **the two Worker rules above ship INERT — nothing in the app calls them.** They are documentation plus capacity, not a live path. Flipping `watchlistWrite` to `'write'` is gated on U10 reporting that the season filter prevents the clobber.
+
+### (f) Re-probe instruction and the standing rollback
+
+Both discovery routes are fragile: the Next.js bundle hash rotates on every Serializd frontend release, and the `DEBUG=True` leak closes on any deploy. The `_v2` suffixes across `watched_v2`, `watchlist_v2`, `watchlist/remove_v2`, `watchlistpage_v2`, `notifications_v2`, `activity_v3` are direct evidence that Serializd versions by renaming and retiring; a `_v3` is the most likely future breakage. The re-probe procedure — how to find the current bundle, how to run the 401-vs-404 control, what a live 404 looks like — is in `docs/solutions/serializd-watchlist-endpoints.md`, captured now while both routes are open.
+
+**Standing rollback:** flip the registry's Serializd `watchlistWrite`/`watchlistRemove` from `'write'` to `'manual'` — **a one-token change** that moves Serializd to the upfront manual-link row on every platform, with no silent absence (the declaration is three-state, so `'manual'` is a real outcome, not a drop). The Worker rules may stay in place through such a rollback (inert without a caller, as they already are today) or be reverted with the same two-line diff. A `_v3` migration is therefore a one-line change, not an incident.
+
+**If a granted path 404s in production:** `serializdHttp` maps it to `ProviderNetworkError` → the fan-out reports Serializd as `error`, other providers still land, and an "Add on Serializd" manual link is attached (plan 0022's no-dead-end rule). On web it is identical, with the proxy's force-JSON rule ensuring the Django HTML 404 never reaches the app origin. If a rule itself is typo'd, the Worker 404s before any upstream call. No dead end in any case.

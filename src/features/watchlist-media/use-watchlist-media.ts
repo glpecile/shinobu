@@ -37,11 +37,19 @@ import {
  * the same containment boundary `state/queries/*` uses — no Effect type
  * escapes into this hook's signature or any component's.
  *
- * A provider declaring the verb `'manual'` (Letterboxd, and Serializd until
- * U9 lands its adapter) has **no key here at all**, and routing never hands it
- * to `runProviderWrites`: the missing-adapter path is a *loud error outcome* by
- * design, so a manual target reaching it would read as a bug rather than the
- * deep-link affordance it actually is.
+ * A provider declaring the verb `'manual'` has **no key here at all**, and
+ * routing never hands it to `runProviderWrites`: the missing-adapter path is a
+ * *loud error outcome* by design, so a manual target reaching it would read as
+ * a bug rather than the deep-link affordance it actually is.
+ *
+ * Today that is Letterboxd (U6's spike unrun) and **Serializd** — U9 has landed
+ * `addToSerializdWatchlist`, the season guard and the Worker rules, but the
+ * registry declaration stays `'manual'` until U10's account-bound probe
+ * discharges KTD-10's named risk (see `registry.ts`, and
+ * `docs/solutions/serializd-watchlist-endpoints.md` § standing rollback). Adding
+ * the key here before that flip would not make the write live — routing would
+ * still never reach it — so the adapter is deliberately imported by nothing, and
+ * the registry token remains the single switch.
  */
 export const WATCHLIST_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistWritePayload>>
