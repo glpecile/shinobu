@@ -21,6 +21,14 @@ Plan: `docs/plans/0031-watchlist-read-and-write.md`.
 > "no Serializd write" decision and the "removal out of scope" boundary below are marked
 > as reversed rather than deleted, so the history stays legible.
 
+> **Progress 2026-07-29.** PR A (write verb) and PR C1 (read surface) are merged.
+> PR B (Serializd) and PR C2 (removal) are now built and green locally, with **two
+> declarations deliberately left at `'manual'`**: Serializd's `watchlistWrite` waits
+> on U10's account-bound mutual-exclusivity probe, and both Letterboxd verbs wait on
+> U6's endpoint-capture spike. Everything else in those two PRs — Worker rules,
+> adapters, the season guard, the AniList delete guard, the removal CTA and its
+> unknown-membership rows — is in place. The registry flip is one token per provider.
+
 ## Why it can't happen today
 
 `useLogMedia` is the only cross-provider write, and every part of it presumes a watch
@@ -113,7 +121,7 @@ gates it on `letterboxdUsername != null`).
       `watchedSeasons` counts as watched even with an empty `watchedEpisodes` array, which
       `getWatchedEpisodeKeys` cannot express. **Remove applies the same filter**, and the
       account-bound probe covers both directions before the Serializd PR merges.
-- [ ] An AniList **removal** deletes only a **bare** `PLANNING` entry — refused for any
+- [x] An AniList **removal** deletes only a **bare** `PLANNING` entry — refused for any
       other status, `progress > 0`, `repeat > 0`, a score, notes, a `startedAt` or a custom
       list, because `DeleteMediaListEntry` destroys all of it. The guard is a **fresh
       in-effect read** immediately before the delete (never the cached watchlist surface,
@@ -127,7 +135,7 @@ gates it on `letterboxdUsername != null`).
       per-item membership read issued; a 420 surfaces as a specific limit-exceeded
       message and is not retried. Its remove mirrors it (`deleted: 0` + empty
       `not_found` → reasoned skip) and has no 420.
-- [ ] Letterboxd is a manual `Add on Letterboxd` / `Remove on Letterboxd` target on web,
+- [x] Letterboxd is a manual `Add on Letterboxd` / `Remove on Letterboxd` target on web,
       always — no Worker POST rule, no request to `/api/letterboxd/*`.
 
 **Reporting**
@@ -144,7 +152,7 @@ gates it on `letterboxdUsername != null`).
 
 **Serializd Worker contract**
 
-- [ ] The allowlist gains exactly **two exact-match POST rules** and nothing else; the
+- [x] The allowlist gains exactly **two exact-match POST rules** and nothing else; the
       eight **named** existing tests in `worker/serializd-proxy.test.ts` are extended to
       cover them, including the assertion that `watchlist/random`, `watchlist`,
       `watchlist/add`, `watchlist_v2/extra` and the percent-encoded
@@ -152,7 +160,7 @@ gates it on `letterboxdUsername != null`).
       **Not** `watchlist_v2/../login` — URL normalization turns that into `login`, an
       allowlisted POST that forwards; traversal is blocked by normalization plus
       exact-match rules, not by `isUnsafePath`.
-- [ ] The plan-0017 amendment, the AGENTS.md § Web & CORS parenthetical (plus the
+- [x] The plan-0017 amendment, the AGENTS.md § Web & CORS parenthetical (plus the
       "exact-match, never a prefix" sentence), and
       `docs/solutions/serializd-watchlist-endpoints.md` land in the **same PR** as the
       adapter, and the amendment states plainly that serializd-py does not cover the

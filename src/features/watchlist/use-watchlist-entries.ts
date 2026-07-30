@@ -27,6 +27,12 @@ export interface WatchlistResult {
    * one provider's outage. Do not "fix" this back to the default.
    */
   errors: WatchlistInputs['errors'];
+  /**
+   * Legs that read only part of the list (Letterboxd behind `onEndReached`).
+   * Deliberately **not** rendered — it drives R35's unknown-membership rows on
+   * the removal path and nothing else. See `WatchlistInputs['incomplete']`.
+   */
+  incomplete: WatchlistInputs['incomplete'];
 }
 
 export function useSuspenseWatchlistQuery(): WatchlistResult {
@@ -34,6 +40,7 @@ export function useSuspenseWatchlistQuery(): WatchlistResult {
   return {
     entries: useVisibleWatchlistEntries(computeWatchlist(data.inputs)),
     errors: data.errors,
+    incomplete: data.incomplete,
   };
 }
 

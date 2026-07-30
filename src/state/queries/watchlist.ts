@@ -136,6 +136,25 @@ interface WatchlistPages {
  * fetches on mobile data per gather is exactly what plan 0031's scope boundary
  * rules out. `fetchLetterboxdReleaseInputs` keeps its separate page-1 entry.
  */
+/**
+ * Whether Letterboxd's leg has read the user's whole watchlist, judged from the
+ * same cached infinite entry the leg itself resolves to.
+ *
+ * A full last page means `getNextPageParam` handed out another cursor, so there
+ * are films this gather has not seen. That is not a failure and never renders a
+ * notice — but it is the difference between "Letterboxd does not have this film"
+ * and "we have not looked", which R35 requires the removal path to tell apart.
+ */
+function letterboxdLegIsComplete(queryClient: QueryClient): boolean {
+  const username = getLetterboxdUsername() ?? '';
+  if (username === '') return true;
+  const cached = queryClient.getQueryData<WatchlistPages>(
+    letterboxdQueryKeys.watchlistPages(username),
+  );
+  const lastPage = cached?.pages.at(-1);
+  return lastPage == null || lastPage.length < WATCHLIST_PAGE_SIZE;
+}
+
 async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const username = getLetterboxdUsername() ?? '';
   if (username === '') return [];
@@ -184,9 +203,20 @@ export async function fetchWatchlistInputs(
       : none<WatchlistInput>(),
   ]);
 
+  // Only a leg that actually ran and succeeded can be *incomplete* — a failed
+  // one is already `errors`, and R35 treats both as unknown membership, so
+  // reporting it twice would only make the two lists overlap.
+  const incomplete: ProviderId[] =
+    feedProviders.includes('letterboxd') &&
+    letterboxd.errors.length === 0 &&
+    !letterboxdLegIsComplete(queryClient)
+      ? ['letterboxd']
+      : [];
+
   return {
     inputs: [...trakt.inputs, ...anilist.inputs, ...letterboxd.inputs],
     errors: [...trakt.errors, ...anilist.errors, ...letterboxd.errors],
+    incomplete,
   };
 }
 

@@ -9,11 +9,16 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
+import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
+import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
+import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import type { WatchlistEntry } from '@/features/watchlist/types';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
+import type { ProviderId } from '@/lib/providers/types';
 import {
   providerLinksFor,
   sourceLinkFor,
@@ -21,6 +26,7 @@ import {
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { hideItem } from '@/state/prefs/hidden-items';
+import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -60,6 +66,29 @@ interface CardActionsSheetProps {
    * already watched.
    */
   canWatchlist?: boolean;
+  /**
+   * The watchlist row this sheet was opened from, plus the gather's failed legs
+   * (plan 0031 U16/R35). Present on **`/watchlist` only** — the removal verb
+   * needs a `WatchlistEntry` to route off its `sources`, and R35 places the
+   * affordance on that surface and nowhere else: never details, never a search,
+   * feed, person or studio card, where the app has no evidence of which
+   * providers hold the item.
+   *
+   * Supplying it also switches the add row to R12's amended rule for this
+   * surface (offered only while some applicable connected provider is still
+   * missing the item), because "already on all of them" is a state only a
+   * watchlist row can be in.
+   */
+  watchlistRemoval?: {
+    entry: WatchlistEntry;
+    errors: readonly ProviderFailure[];
+    /**
+     * Legs that read only part of the list (Letterboxd behind `onEndReached`).
+     * Carried for the same R35 reason as `errors`: a film on an unfetched page
+     * is absent from `sources` without that being evidence of non-membership.
+     */
+    incomplete: readonly ProviderId[];
+  } | null;
 }
 
 /** The item's artwork, recovered lazily when the log it came from is artless. */
@@ -96,6 +125,7 @@ export function CardActionsSheet({
   providerLinks = 'source',
   canHide = true,
   canWatchlist = true,
+  watchlistRemoval = null,
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
@@ -111,6 +141,21 @@ export function CardActionsSheet({
       : providerLinks === 'connected'
         ? providerLinksFor(item, connected)
         : [sourceLinkFor(item)].filter((link) => link != null);
+  // R12 as amended (U16): on `/watchlist` the add row is offered only while some
+  // applicable connected provider is still missing the item — a film on the
+  // Letterboxd watchlist and not on Trakt's is exactly where an add is most
+  // useful, and one already on every tracker it can reach has nothing to offer.
+  // Everywhere else the row keeps its default-on behaviour.
+  const showWatchlistAdd =
+    canWatchlist &&
+    (watchlistRemoval == null ||
+      shouldOfferWatchlistAdd(
+        watchlistRemoval.entry,
+        connected,
+        currentPlatform(),
+        watchlistRemoval.errors,
+        watchlistRemoval.incomplete,
+      ));
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
@@ -152,13 +197,29 @@ export function CardActionsSheet({
                 behind this sheet, so closing on tap would surface a Trakt 420,
                 an expired session or a manual row to nobody. Only a report with
                 nothing left to read closes it. */}
-            {canWatchlist && (
+            {showWatchlistAdd && (
               <WatchlistMediaButton
                 item={item}
                 key={`watchlist-${item.id}`}
                 onCleanReport={onClose}
               />
             )}
+            {/* The removal, on `/watchlist` only (R35). It stays mounted through
+                the write for the same reason the add does — and one more: the
+                row it removes leaves the grid when the invalidation lands, so
+                this sheet is the only place its partial-failure report, its
+                AniList refusal or its unknown-membership rows can still be
+                read. */}
+            {watchlistRemoval != null &&
+              watchlistRemoval.entry.item.id === item.id && (
+                <UnwatchlistMediaButton
+                  entry={watchlistRemoval.entry}
+                  errors={watchlistRemoval.errors}
+                  incomplete={watchlistRemoval.incomplete}
+                  key={`unwatchlist-${item.id}`}
+                  onCleanReport={onClose}
+                />
+              )}
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.

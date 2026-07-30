@@ -42,6 +42,43 @@ describe('the want-to-watch row is on by default (plan 0031 R12)', () => {
   });
 });
 
+/**
+ * The removal's placement (plan 0031 R35/U16), read the same way. It is the
+ * inverse default of the add: **off everywhere**, and reachable only by handing
+ * the sheet a `WatchlistEntry` — which only `/watchlist` has. A surface that
+ * forgets to opt in loses the row; a surface that cannot supply an entry cannot
+ * opt in at all, which is the property this reads for.
+ */
+describe('the remove row is /watchlist only (plan 0031 R35)', () => {
+  test('the sheet takes the entry, and renders the removal only against it', async () => {
+    const sheet = await source(SHEET);
+    expect(sheet).toContain('watchlistRemoval');
+    expect(sheet).toContain('UnwatchlistMediaButton');
+    // Never derived from the item alone: without a `WatchlistEntry`'s `sources`
+    // the app has no evidence of which providers hold it (R35).
+    expect(sheet).toContain('watchlistRemoval = null');
+  });
+
+  test('the watchlist grid is the one call site that supplies it', async () => {
+    expect(await source('src/app/watchlist/index.tsx')).toContain('watchlistRemoval={');
+  });
+
+  test('details, search, feed, person and studio offer no removal', async () => {
+    for (const path of [
+      'src/app/details/[id].tsx',
+      'src/app/(tabs)/search.tsx',
+      'src/app/(tabs)/index.tsx',
+      'src/app/(tabs)/diary.tsx',
+      'src/app/person/[id].tsx',
+      'src/app/studio/[id].tsx',
+    ]) {
+      const text = await source(path);
+      expect(text).not.toContain('watchlistRemoval');
+      expect(text).not.toContain('UnwatchlistMediaButton');
+    }
+  });
+});
+
 describe('Up Next / Calendar cards get no add affordance (plan 0031 R13)', () => {
   test('the episode card offers no action prop at all', async () => {
     const card = await source('src/features/up-next/ui/episode-card.tsx');

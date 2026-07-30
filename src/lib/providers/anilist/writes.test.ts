@@ -5,7 +5,7 @@ import type { TokenStore } from '@/lib/providers/token-store';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { AniListDeps } from './deps';
 import { getEntryState } from './reads';
-import { logToAniList, planOnAniList } from './writes';
+import { deleteAniListEntry, logToAniList, planOnAniList } from './writes';
 
 const TOKENS: TokenStore = {
   get: () => ({ accessToken: 'tok' }),
@@ -19,6 +19,15 @@ interface EntryFixture {
   status: string | null;
   progress: number;
   repeat: number;
+  /**
+   * The four fields the removal guard also has to see (R36.2) — omitted by every
+   * add/log fixture, since AniList reports them as null and `getEntryState`
+   * normalizes that to "bare".
+   */
+  score?: number | null;
+  notes?: string | null;
+  startedAt?: { year: number | null; month: number | null; day: number | null } | null;
+  customLists?: unknown;
 }
 
 /**
@@ -196,7 +205,17 @@ interface WatchlistCalls {
 
 function watchlistDeps(
   record: WatchlistCalls,
-  state: { entry: EntryFixture | null; episodes?: number | null },
+  state: {
+    /**
+     * A function rather than a value where a test needs the *second* read to
+     * answer differently from the first — the only way to prove the guard is a
+     * fresh request and not a remembered snapshot (R36.1).
+     */
+    entry: EntryFixture | null | (() => EntryFixture | null);
+    episodes?: number | null;
+    /** AniList answering `deleted: false` — a failed delete, not a skip. */
+    deleted?: boolean;
+  },
   failure?: GuardFailure,
 ): AniListDeps {
   return {
@@ -210,6 +229,12 @@ function watchlistDeps(
         record.mutations.push(body.variables);
         return Response.json({ data: { SaveMediaListEntry: { id: 1 } } });
       }
+      if (body.query.includes('DeleteMediaListEntry')) {
+        record.mutations.push(body.variables);
+        return Response.json({
+          data: { DeleteMediaListEntry: { deleted: state.deleted ?? true } },
+        });
+      }
       record.entryReads += 1;
       if (failure === 'network') throw new Error('socket hang up');
       if (failure === 'server') {
@@ -222,7 +247,10 @@ function watchlistDeps(
       }
       return Response.json({
         data: {
-          Media: { episodes: state.episodes ?? null, mediaListEntry: state.entry },
+          Media: {
+            episodes: state.episodes ?? null,
+            mediaListEntry: typeof state.entry === 'function' ? state.entry() : state.entry,
+          },
         },
       });
     },
@@ -420,6 +448,44 @@ describe('getEntryState carries the MediaList entry id', () => {
       status: 'CURRENT',
       progress: 5,
       repeat: 0,
+      score: 0,
+      notes: null,
+      startedAt: null,
+      customLists: [],
+    });
+  });
+
+  test('the removal guard fields decode alongside it (R36.2)', async () => {
+    // Widening the selection is only useful if the values survive decoding —
+    // `customLists` in particular, whose `Json` payload is an object keyed by
+    // list name, with membership in the value rather than the key.
+    const seen = calls();
+    const state = await Effect.runPromise(
+      getEntryState(
+        watchlistDeps(seen, {
+          entry: {
+            id: 88_215,
+            status: 'PLANNING',
+            progress: 0,
+            repeat: 0,
+            score: 8.5,
+            notes: 'recommended by a friend',
+            startedAt: { year: 2026, month: null, day: null },
+            customLists: { Rewatching: false, 'Winter 2026': true },
+          },
+        }),
+        { mediaId: 104578 },
+      ),
+    );
+    expect(state.entry).toEqual({
+      id: 88_215,
+      status: 'PLANNING',
+      progress: 0,
+      repeat: 0,
+      score: 8.5,
+      notes: 'recommended by a friend',
+      startedAt: { year: 2026, month: null, day: null },
+      customLists: ['Winter 2026'],
     });
   });
 
@@ -432,5 +498,268 @@ describe('getEntryState carries the MediaList entry id', () => {
       ),
     );
     expect(state.entry?.id).toBeNull();
+  });
+});
+
+/**
+ * Plan 0031 R36, the mirror of KTD-2's guard — and the only data-destroying code
+ * in the plan. `DeleteMediaListEntry` destroys the *whole* entry, so the subject
+ * of every case here is again `mutations`: a refusal that still issued the
+ * mutation would be a score, notes and progress gone, reported as a success.
+ */
+describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)', () => {
+  test('a bare PLANNING entry is deleted by the id the guard read returned', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 },
+        }),
+        { mediaId: 104578 },
+      ),
+    );
+    expect(result).toEqual({ status: 'ok' });
+    // The MediaList entry id, never the media id — they are different numbers
+    // and AniList would happily delete some other viewer's entry.
+    expect(seen.mutations).toEqual([{ id: 88_214 }]);
+    expect(seen.entryReads).toBe(1);
+  });
+
+  test('no entry at all is a reasoned skip, not an error', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(watchlistDeps(seen, { entry: null }), { mediaId: 104578 }),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: "wasn't on your AniList list",
+    });
+    expect(seen.mutations).toEqual([]);
+  });
+
+  /**
+   * The refusal set is wider than status + progress on purpose (R36.2): each of
+   * these entries is `PLANNING`/`progress: 0` apart from one field, and that one
+   * field is the entry's entire reason for existing.
+   */
+  const refusals: { name: string; entry: EntryFixture; reason: string }[] = [
+    {
+      name: 'a CURRENT entry',
+      entry: { id: 1, status: 'CURRENT', progress: 5, repeat: 0 },
+      reason: 'removing would delete your whole AniList entry, which is CURRENT',
+    },
+    {
+      name: 'a COMPLETED entry',
+      entry: { id: 1, status: 'COMPLETED', progress: 24, repeat: 0 },
+      reason: 'removing would delete your whole AniList entry, which is COMPLETED',
+    },
+    {
+      name: 'an entry with no status (a score-only or custom-list-only entry)',
+      entry: { id: 1, status: null, progress: 0, repeat: 0 },
+      reason: 'removing would delete your whole AniList entry, which is not a planning entry',
+    },
+    {
+      name: 'PLANNING with progress',
+      entry: { id: 1, status: 'PLANNING', progress: 2, repeat: 0 },
+      reason: 'removing would delete your whole AniList entry, which has recorded progress',
+    },
+    {
+      name: 'PLANNING with a rewatch count',
+      entry: { id: 1, status: 'PLANNING', progress: 0, repeat: 1 },
+      reason: 'removing would delete your whole AniList entry, which records a rewatch',
+    },
+    {
+      name: 'PLANNING carrying a score',
+      entry: { id: 1, status: 'PLANNING', progress: 0, repeat: 0, score: 8.5 },
+      reason: 'removing would delete your whole AniList entry, which carries a score',
+    },
+    {
+      name: 'PLANNING carrying notes',
+      entry: { id: 1, status: 'PLANNING', progress: 0, repeat: 0, notes: 'lent by a friend' },
+      reason: 'removing would delete your whole AniList entry, which carries notes',
+    },
+    {
+      name: 'PLANNING with a fuzzy year-only start date',
+      entry: {
+        id: 1,
+        status: 'PLANNING',
+        progress: 0,
+        repeat: 0,
+        startedAt: { year: 2026, month: null, day: null },
+      },
+      reason: 'removing would delete your whole AniList entry, which has a start date',
+    },
+    {
+      name: 'PLANNING on a custom list',
+      entry: {
+        id: 1,
+        status: 'PLANNING',
+        progress: 0,
+        repeat: 0,
+        customLists: { 'Winter 2026': true },
+      },
+      reason: 'removing would delete your whole AniList entry, which is on a custom list',
+    },
+  ];
+
+  for (const refusal of refusals) {
+    test(`${refusal.name} is refused with a reason and no mutation`, async () => {
+      const seen = calls();
+      const result = await Effect.runPromise(
+        deleteAniListEntry(watchlistDeps(seen, { entry: refusal.entry }), {
+          mediaId: 104578,
+        }),
+      );
+      expect(result).toEqual({ status: 'skipped', reason: refusal.reason });
+      expect(seen.mutations).toEqual([]);
+    });
+  }
+
+  test('an empty-string note and an all-null startedAt are still bare', async () => {
+    // The inverse guard: refusing on a field AniList merely *returned* would
+    // make every removal manual, which is its own dead end (R17).
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: {
+            id: 88_216,
+            status: 'PLANNING',
+            progress: 0,
+            repeat: 0,
+            score: 0,
+            notes: '   ',
+            startedAt: { year: null, month: null, day: null },
+            customLists: { Rewatching: false },
+          },
+        }),
+        { mediaId: 104578 },
+      ),
+    );
+    expect(result).toEqual({ status: 'ok' });
+    expect(seen.mutations).toEqual([{ id: 88_216 }]);
+  });
+
+  test('an entry that decodes without an id is not a deletion target', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, { entry: { status: 'PLANNING', progress: 0, repeat: 0 } }),
+        { mediaId: 104578 },
+      ),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'your AniList entry has no id to remove by',
+    });
+    expect(seen.mutations).toEqual([]);
+  });
+
+  test('AniList answering deleted: false is an error, not a silent success', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      Effect.either(
+        deleteAniListEntry(
+          watchlistDeps(seen, {
+            entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 },
+            deleted: false,
+          }),
+          { mediaId: 104578 },
+        ),
+      ),
+    );
+    expect(result._tag).toBe('Left');
+  });
+});
+
+/**
+ * Branch 0 and R36.1's freshness rule. A stale guard here does not merely write
+ * over an entry — it destroys one, so "the mirror of KTD-2" has to include the
+ * fresh-read prohibition, not just the branch table.
+ */
+describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
+  for (const failure of ['network', 'server', 'rate-limit'] as const) {
+    test(`a ${failure} failure errors with no mutation issued`, async () => {
+      const seen = calls();
+      const result = await Effect.runPromise(
+        Effect.either(
+          deleteAniListEntry(
+            watchlistDeps(
+              seen,
+              { entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 } },
+              failure,
+            ),
+            { mediaId: 104578 },
+          ),
+        ),
+      );
+      expect(result._tag).toBe('Left');
+      expect(seen.mutations).toEqual([]);
+      expect(seen.entryReads).toBeGreaterThan(0);
+    });
+  }
+
+  test('the failure message says the check failed, not that the removal did', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      Effect.either(
+        deleteAniListEntry(
+          watchlistDeps(
+            seen,
+            { entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 } },
+            'network',
+          ),
+          { mediaId: 104578 },
+        ),
+      ),
+    );
+    if (result._tag !== 'Left') throw new Error('expected a failure');
+    expect(result.left.message).toContain('could not check your AniList entry');
+  });
+
+  test('a stale PLANNING snapshot never authorizes a delete — every call re-reads', async () => {
+    // The 10:05 scenario from R36.1: the surface's cached snapshot says
+    // PLANNING/0 with entry id 700, but the user started the show on anilist.co
+    // since. The guard must issue its own request each time and honour *that*
+    // answer, so the second removal refuses rather than destroying the progress.
+    const seen = calls();
+    const entries: (EntryFixture | null)[] = [
+      { id: 700, status: 'PLANNING', progress: 0, repeat: 0 },
+      { id: 700, status: 'CURRENT', progress: 3, repeat: 0 },
+    ];
+    let read = 0;
+    const deps = watchlistDeps(seen, {
+      entry: () => entries[Math.min(read++, entries.length - 1)] ?? null,
+    });
+
+    const first = await Effect.runPromise(deleteAniListEntry(deps, { mediaId: 104578 }));
+    const second = await Effect.runPromise(deleteAniListEntry(deps, { mediaId: 104578 }));
+
+    expect(first).toEqual({ status: 'ok' });
+    expect(second).toEqual({
+      status: 'skipped',
+      reason: 'removing would delete your whole AniList entry, which is CURRENT',
+    });
+    // Two calls, two reads: nothing is remembered between them.
+    expect(seen.entryReads).toBe(2);
+    expect(seen.mutations).toEqual([{ id: 700 }]);
+  });
+
+  test('the delete uses the fresh read id, not the id a cached entry carried', async () => {
+    // `AniListCurrentEntry.entryId` is a hint for the surface and can point at
+    // an entry since re-created (R36.1); only the guard read's id is evidence.
+    const seen = calls();
+    const staleEntryId = 700;
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: { id: 901, status: 'PLANNING', progress: 0, repeat: 0 },
+        }),
+        { mediaId: 104578 },
+      ),
+    );
+    expect(result).toEqual({ status: 'ok' });
+    expect(seen.mutations).toEqual([{ id: 901 }]);
+    expect(seen.mutations).not.toContainEqual({ id: staleEntryId });
   });
 });

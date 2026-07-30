@@ -316,9 +316,11 @@ is reviewed against them:
 
 - **Serializd-only, path+method allowlist.** Forwards only the documented Serializd
   path+method pairs (`GET show/*`, `GET user/*`; `POST login`, `validateauthtoken`,
-  `episode_log/*`, `watched_v2`, `watched/remove_v2`, `show/reviews/add`). Wrong
-  method on an allowlisted path → 405; anything else (incl. `../`/absolute-URL
-  traversal) → 404. Never grows into a backend.
+  `episode_log/*`, `watched_v2`, `watched/remove_v2`, `show/reviews/add`,
+  `watchlist_v2`, `watchlist/remove_v2`). Wrong method on an allowlisted path →
+  405; anything else (incl. `../`/absolute-URL traversal) → 404. Never grows into
+  a backend. Each addition is exact-match, never a prefix — `watchlist/random`
+  and `compare_watchlist/*` exist upstream and are deliberately not granted.
 - **No `Access-Control-Allow-Origin` emitted** — same-origin needs none, and its
   absence stops foreign browsers using the relay as a CORS bypass.
 - **No cookies either direction, `Authorization` only.** Forwards just the
