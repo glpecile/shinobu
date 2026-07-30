@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 priority: P2
 ---
 
@@ -14,6 +14,14 @@ delegating to a toast library."*
 Sequencing is decided: **finish plan 0031 first** (PRs B, C1, C2), then plan this.
 The write verb, the read surface and removal all land against today's inline result
 block; this todo replaces that surface afterwards rather than racing it.
+
+> **Built 2026-07-29** — plan 0032's four units all landed (the `burnt` wrapper,
+> the shared `features/write-sheet` picker, the watchlist add/remove picker sheet,
+> and the retirement of every inline result surface). One gap is deliberately left
+> open: `burnt`'s **Android** rendering is still unobserved — the emulator on the
+> build host never rendered a screen — so KTD-2's named risk and its
+> `lib/toast/index.android.ts` fallback stay live in
+> `docs/solutions/burnt-toast-platform-behaviour.md`.
 
 > **Planned 2026-07-29** — `docs/plans/0032-write-picker-and-toasts.md`. Both open
 > questions below are answered by owner decision (2026-07-29) and recorded there:

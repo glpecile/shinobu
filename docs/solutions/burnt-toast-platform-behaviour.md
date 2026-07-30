@@ -28,11 +28,33 @@ recorded fact rather than a README.
 - Verified in the real flow (watchlist picker, clean report): one toast, one
   haptic, sheet closed — no inline success line anywhere.
 
-### Android (Pixel 9 Pro XL emulator) — observed 2026-07-29
+### Android (Pixel 9 Pro XL emulator, API 36) — **NOT YET OBSERVED**
 
-- PENDING FIRST DEV-BUILD OBSERVATION (KTD-2's named risk: if unacceptable,
-  the fallback is a single `lib/toast/index.android.ts` sibling — one
-  hand-written split, still strictly better than `sonner-native`'s two).
+**KTD-2's named risk stays open.** `bun android.clean` builds and installs
+fine (BUILD SUCCESSFUL, 5m18s) and Metro bundles for Android
+(3318 modules), but the app could not be driven to a rendered screen on this
+host:
+
+- The dev client loads the bundle and Hermes runs it — logcat shows
+  `Running "main" with {"fabric":true}` and `✅ JSI interop was installed` —
+  yet the RN root renders **nothing** (only the dev-launcher Tools button in
+  the view tree). `app/_layout.tsx` returns `null` until `useFonts` resolves,
+  which is the gate it is sitting behind.
+- No JS error, no red box, and **no `burnt` log line anywhere** in logcat, so
+  nothing here implicates the toast wrapper — the identical bundle renders and
+  toasts correctly on iOS.
+- The emulator was also ANR-ing system apps of its own
+  (`ANR in com.google.android.googlequicksearchbox`, repeated
+  "failed to complete startup"), i.e. host memory starvation while an iOS
+  simulator, a native build and Metro shared the machine. Re-booting the AVD
+  with `-memory 6144` fixed the ANRs but not the blank root.
+
+So: **the Android toast is still unverified, and this is the fallback trigger
+to watch.** If it turns out unacceptable, the fix is one
+`lib/toast/index.android.ts` sibling — a single hand-written split, still
+strictly better than `sonner-native`'s two, and the wrapper is what makes it a
+one-file change. Re-check on a real device or a less contended host, and
+replace this section with what you see.
 
 ### Web
 
