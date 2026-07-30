@@ -72,6 +72,26 @@ describe('isCleanWriteReport (plan 0032 KTD-3)', () => {
     expect(isCleanWriteReport(report({}))).toBe(false);
   });
 
+  test('a partial success (ok with a reason) is news the toast cannot carry (plan 0031 R16)', () => {
+    // Serializd's season-filtered add: written, except the watched seasons.
+    // Closing on the toast would drop the one line correcting "watchlisted".
+    expect(
+      isCleanWriteReport(
+        report({
+          succeeded: ['trakt', 'serializd'],
+          outcomes: [
+            { provider: 'trakt', status: 'ok' },
+            {
+              provider: 'serializd',
+              status: 'ok',
+              reason: 'S1 and S2 are already watched on Serializd',
+            },
+          ],
+        }),
+      ),
+    ).toBe(false);
+  });
+
   test('upfront manual/unknown rows are not news — still clean (plan 0033 R1)', () => {
     // The caller may have manual rows on the sheet (e.g. Letterboxd on web);
     // they were visible before confirm, so they never block the toast+close.

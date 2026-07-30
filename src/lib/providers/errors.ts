@@ -41,6 +41,13 @@ export class ProviderNetworkError extends Data.TaggedError(
 )<{
   readonly provider: ErrorSourceId;
   readonly cause: unknown;
+  /**
+   * The HTTP status, when the failure *is* an HTTP response (absent for
+   * DNS/timeout/abort). Lets a caller distinguish a semantic negative — e.g.
+   * Serializd's progress endpoint answering 404 for "no progress recorded"
+   * (plan 0031 KTD-10) — from an outage, without parsing the message string.
+   */
+  readonly status?: number;
 }> {
   get message() {
     const detail =

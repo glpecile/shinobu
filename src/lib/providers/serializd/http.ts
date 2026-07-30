@@ -66,6 +66,7 @@ export function serializdHttp<A>(
       return yield* new ProviderNetworkError({
         provider,
         cause: new Error(`Serializd responded ${response.status} for ${path}`),
+        status: response.status,
       });
     }
 

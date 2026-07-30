@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 
-import type { ProviderError } from '@/lib/providers/errors';
+import { ProviderNetworkError, type ProviderError } from '@/lib/providers/errors';
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
@@ -222,13 +222,17 @@ function noEligibleSeasonSkip(watchedNumbers: readonly number[]): ProviderWriteR
  * KTD-10's guard, steps 0–1: enumerate the show's seasons, read progress, and
  * return only the season ids Shinobu is entitled to watchlist.
  *
- * **Why a read at all.** Serializd's own copy is explicit — *"You can't mark a
- * show / season as 'Watched' and 'Watchlisted' at the same time"* — so posting
- * every season id of a partly-watched show plausibly clears those seasons'
- * watched flags (R21; NAMED RISK, inferred from product copy and probed in
- * U10). The site's show-level button is entitled to clear its own state because
- * the user pressed its own control; Shinobu is not, because the user pressed a
- * cross-provider "Add to watchlist" with no idea Serializd models it per-season.
+ * **Why a read at all — and what U10 actually found.** Serializd's own copy is
+ * explicit — *"You can't mark a show / season as 'Watched' and 'Watchlisted' at
+ * the same time"* — so posting every season id of a partly-watched show
+ * plausibly cleared those seasons' watched flags (R21, KTD-10's named risk).
+ * U10 probed it and **the hazard is not real**: on a live account 13 shows hold
+ * the *same season id* in both the watched and watchlisted lists at once, which
+ * cannot happen if the API enforces exclusivity
+ * (`docs/solutions/serializd-watchlist-clears-watched.md`). The copy is a UI
+ * convention. So this filter is kept for the reason U10's third outcome names —
+ * it produces the honest "already watched on Serializd" skip instead of a silent
+ * `ok` — not as a data-loss guard.
  *
  * **Why the raw progress body and not `getWatchedEpisodeKeys`.** That helper
  * flattens `watchedSeasons` into `${season}-${episode}` keys and therefore drops
@@ -252,6 +256,20 @@ function noEligibleSeasonSkip(watchedNumbers: readonly number[]): ProviderWriteR
  * Both reads propagate their errors unchanged (branch 0): the caller never
  * writes on a failed read, and the tagged error keeps its own semantics — a 401
  * must still read as "reconnect Serializd", not as a generic guard failure.
+ *
+ * **One deliberate exception to fail-closed: a 404 means "no watched seasons
+ * known", not an outage.** `/user/{username}/show/{tmdbId}/progress` was
+ * **removed from Serializd's API** — it 404s for every show, watched or not, and
+ * is absent from the (DEBUG-exposed) URL map, with no per-show replacement;
+ * watched state is now only readable account-wide from `watchedpage_v2`, which
+ * is 13 pages on a 300-show account and exactly the per-item membership cost
+ * KTD-3 rejected (all three verifications in
+ * `docs/solutions/serializd-watchlist-clears-watched.md`). Treating that as
+ * branch-0 poison would refuse **every** add. It is safe to proceed *only*
+ * because the same probe showed watched and watchlisted coexist per-season — a
+ * guard with no input costs the "already watched" copy, not data. Every other
+ * failure (401, 429, 5xx, transport) stays fail-closed, and the filter comes
+ * back to life on its own if the endpoint ever returns.
  */
 function watchlistSeasons(
   deps: SerializdDeps,
@@ -259,7 +277,13 @@ function watchlistSeasons(
 ): Effect.Effect<WatchlistSeasons, ProviderError> {
   return Effect.gen(function* () {
     const show = yield* getSerializdShow(deps, { tmdbId });
-    const progress = yield* getRawShowProgress(deps, { tmdbId });
+    const progress = yield* getRawShowProgress(deps, { tmdbId }).pipe(
+      Effect.catchIf(
+        (error): error is ProviderNetworkError =>
+          error._tag === 'ProviderNetworkError' && error.status === 404,
+        () => Effect.succeed({ watchedSeasons: [] }),
+      ),
+    );
 
     // seasonNumber → how many episodes progress reports watched. Presence in
     // this map is itself the "watched" signal (see the docblock).

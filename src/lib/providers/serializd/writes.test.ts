@@ -432,6 +432,26 @@ describe('addToSerializdWatchlist', () => {
     expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
   });
 
+  test('a 404 progress read means "never touched" — all seasons eligible, write proceeds', async () => {
+    // Observed live (2026-07-30): /user/{u}/show/{tmdbId}/progress answers 404
+    // for a show with no progress recorded, while GET show/{tmdbId} is 200.
+    // That is the API's definitive negative, not an outage — treating it as
+    // branch-0 poison would refuse the most common add (a never-watched show).
+    const requests: Recorded[] = [];
+    const deps = watchlistDeps({
+      seasons: THREE_SEASONS,
+      progressStatus: 404,
+      onRequest: (r) => requests.push(r),
+    });
+
+    const result = await Effect.runPromise(
+      addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
+    );
+    expect(result).toEqual({ status: 'ok' });
+    const post = requests.find((r) => r.method === 'POST');
+    expect(post?.body).toEqual({ show_id: 1396, season_ids: [11, 12, 13] });
+  });
+
   test('a failed show enumeration is an error outcome with NO POST and no progress read', async () => {
     const requests: Recorded[] = [];
     const deps = watchlistDeps({ showStatus: 500, onRequest: (r) => requests.push(r) });

@@ -11,6 +11,32 @@
  * It is account-bound and cannot run in CI: it needs a real token and a real
  * show whose watched state you are willing to lose.
  *
+ * ## Run `--exclusivity` first — it usually answers the question for free
+ *
+ * ```
+ * bun scripts/serializd-watchlist-spike.ts --exclusivity --user <username>
+ * ```
+ *
+ * That mode needs **no credentials and writes nothing**: it intersects the two
+ * public account-wide lists (`watchedpage_v2` / `watchlistpage_v2`, both of which
+ * return `items[].seasonIds`) and reports any season id present in both. One
+ * such season disproves API-level exclusivity outright, because it could not
+ * exist if a watchlist write cleared watched state — which is exactly what the
+ * destructive steps below were written to find out. On 2026-07-30 this found 13
+ * of them and settled U10 without a single write
+ * (`docs/solutions/serializd-watchlist-clears-watched.md`).
+ *
+ * Reach for the authenticated steps only if that mode finds **no** overlap, i.e.
+ * the question is genuinely still open.
+ *
+ * ## Known drift: steps 1/3/4b/5b cannot run as written
+ *
+ * They all read `GET /user/{username}/show/{tmdbId}/progress`, which has been
+ * **removed from Serializd's API** — 404 for every show, absent from the
+ * DEBUG-exposed URL map, no per-show replacement. The steps are left intact
+ * (they come back to life if it returns) and the harness now says so rather than
+ * silently reporting an empty `watchedSeasons` as "S1 didn't survive".
+ *
  * ## Running it
  *
  * ```
@@ -67,9 +93,13 @@ interface Args {
   destructive: boolean;
 }
 
+function flagValue(argv: string[], flag: string): string | undefined {
+  const index = argv.indexOf(flag);
+  return index === -1 ? undefined : argv[index + 1];
+}
+
 function parseArgs(argv: string[]): Args {
-  const tmdbIndex = argv.indexOf('--tmdb');
-  const tmdb = tmdbIndex === -1 ? Number.NaN : Number(argv[tmdbIndex + 1]);
+  const tmdb = Number(flagValue(argv, '--tmdb') ?? Number.NaN);
   if (!Number.isInteger(tmdb)) {
     throw new Error('Pass the throwaway show as `--tmdb <tmdbId>`.');
   }
@@ -78,6 +108,82 @@ function parseArgs(argv: string[]): Args {
     write: argv.includes('--write'),
     destructive: argv.includes('--destructive'),
   };
+}
+
+interface ListItem {
+  showId: number;
+  showName: string;
+  seasonIds: number[];
+}
+
+/** One account-wide list, every page. `sort_by` is mandatory — omitting it 500s. */
+async function allPages(username: string, list: string): Promise<ListItem[]> {
+  const items: ListItem[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const { body } = await call(
+      `user/${encodeURIComponent(username)}/${list}/${page}?sort_by=date_added_desc`,
+      null,
+    );
+    const payload = body as { items?: ListItem[]; totalPages?: number };
+    items.push(...(payload.items ?? []));
+    totalPages = payload.totalPages ?? 1;
+    page += 1;
+  } while (page <= totalPages);
+  return items;
+}
+
+/**
+ * The credential-free, write-free decisive test (see the header): a season id
+ * present in BOTH the watched and the watchlisted list cannot exist if a
+ * watchlist write clears watched state.
+ */
+async function exclusivityCheck(username: string) {
+  const [watched, watchlisted] = await Promise.all([
+    allPages(username, 'watchedpage_v2'),
+    allPages(username, 'watchlistpage_v2'),
+  ]);
+  const watchedById = new Map(watched.map((item) => [item.showId, item]));
+
+  const overlaps: string[] = [];
+  for (const listed of watchlisted) {
+    const seen = watchedById.get(listed.showId);
+    if (seen == null) continue;
+    const shared = listed.seasonIds.filter((id) => seen.seasonIds.includes(id));
+    if (shared.length === 0) continue;
+    overlaps.push(
+      `| ${listed.showId} | ${listed.showName} | ${shared.join(', ')} |`,
+    );
+  }
+
+  console.log(
+    [
+      '# Serializd: does a watchlist write clear watched state?',
+      '',
+      `Read-only exclusivity check for \`${username}\` — no credentials, no writes.`,
+      `Watched shows: **${watched.length}** · watchlisted shows: **${watchlisted.length}**.`,
+      '',
+      overlaps.length > 0
+        ? [
+            `**${overlaps.length} show(s) hold the same season id in BOTH lists at once.**`,
+            'Exclusivity is therefore a UI convention, not an API invariant, and a',
+            'watchlist write naming a watched season destroys nothing — KTD-10 is not a',
+            'hazard. Stop-condition (c) does not fire.',
+            '',
+            '| showId | show | season ids in both |',
+            '| --- | --- | --- |',
+            ...overlaps,
+          ].join('\n')
+        : [
+            '**No overlapping season found.** That is not proof of exclusivity — it may',
+            'just mean this account never watchlisted something it had watched. The',
+            'question is still open: run the authenticated steps (`--tmdb … --write`,',
+            'then `--destructive`) on a throwaway show.',
+          ].join('\n'),
+      '',
+    ].join('\n'),
+  );
 }
 
 /** Every request the probe makes, logged verbatim — the report *is* the evidence. */
@@ -128,7 +234,19 @@ function watchedShape(progress: unknown): Record<string, number> {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+
+  // The cheap decisive mode first — no auth, no writes (see the header).
+  if (argv.includes('--exclusivity')) {
+    const username = flagValue(argv, '--user') ?? process.env.SERIALIZD_USERNAME;
+    if (username == null) {
+      throw new Error('Pass `--user <username>` (or set SERIALIZD_USERNAME).');
+    }
+    await exclusivityCheck(username);
+    return;
+  }
+
+  const args = parseArgs(argv);
 
   // --- auth -----------------------------------------------------------------
   let token = process.env.SERIALIZD_TOKEN ?? null;
@@ -190,11 +308,20 @@ async function main() {
 
   const beforeShape = watchedShape(before.body);
   const s1Visible = Object.hasOwn(beforeShape, '1');
+  if (before.status === 404) {
+    // Known drift as of 2026-07-30 — see the header. Say so rather than letting
+    // an empty shape read as "the season wasn't there".
+    log.push(
+      '**`/progress` responded 404 — the endpoint has been removed from the API.**\n',
+      'Every step below that reads it is inert. Run `--exclusivity` instead; it\n',
+      'answers the same question from the account-wide lists.\n',
+    );
+  }
   log.push(
     `**Precondition — a wholesale-marked season is visible in \`/progress\`:** ${
       s1Visible
         ? `yes (\`watchedSeasons[1]\` has ${beforeShape['1']} episode entries)`
-        : '**NO — the guard has no input that can see it and fails OPEN. Stop-condition (c) fires on this alone.**'
+        : '**NO — the guard has no input that can see it and fails OPEN.**'
     }\n`,
   );
 

@@ -218,10 +218,11 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
     expect(rows[0]?.url).toContain('letterboxd.com');
   });
 
-  // U9 has landed (adapter, season guard, Worker rules) and deliberately did
-  // *not* flip the declaration: U10's account-bound probe is what discharges
-  // KTD-10's named risk. Until then Serializd is a manual row on every platform.
-  test('Serializd is a manual row on native too, until U10 unblocks the flip', () => {
+  // U10's probe discharged KTD-10's named risk
+  // (docs/solutions/serializd-watchlist-clears-watched.md), so the add is a
+  // real toggle on every platform — the *remove* is the verb that stays a
+  // manual row (R32/R35), covered by use-unwatchlist-media.test.ts.
+  test('Serializd is a writable add target on native since the U10 flip', () => {
     const show: NormalizedMediaItem = {
       ...FILM,
       type: 'TV',
@@ -233,8 +234,8 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
       'ios',
       'watchlist',
     );
-    expect(writable).toEqual(['trakt']);
-    expect(manual).toEqual(['serializd']);
+    expect(writable).toEqual(['trakt', 'serializd']);
+    expect(manual).toEqual([]);
   });
 });
 

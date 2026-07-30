@@ -78,27 +78,27 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     canRead: true,
     canWrite: true,
     // `watchlist_v2` / `watchlist/remove_v2` exist and are authorised (plan
-    // 0031 R6). U9 has landed: the Worker's two exact-match POST rules, the
-    // season-id guard (`serializd/writes.ts`) and both adapters are in the
-    // tree. **Both verbs nonetheless stay `'manual'`, for two different
-    // reasons, and flipping either is a one-token change:**
+    // 0031 R6): the Worker's two exact-match POST rules, the season-id guard
+    // (`serializd/writes.ts`) and both adapters landed in U9.
     //
-    // - `watchlistWrite` is gated on **U10**, the account-bound probe that
-    //   turns KTD-10's named risk into a recorded fact — does a
-    //   `watchlist_v2` POST clear watched state, and does the season filter
-    //   actually prevent it? Until `docs/solutions/
-    //   serializd-watchlist-clears-watched.md` exists, stop-condition (c) is
-    //   unresolved and the Worker rules are deliberately inert. U9 step 3's
-    //   flip to `'write'` belongs to whoever records that finding.
-    // - `watchlistRemove` is gated on the **Serializd read leg** (R32/R35):
+    // - `watchlistWrite` is `'write'`: U10 probed KTD-10's named risk and found
+    //   **no hazard** — watched and watchlisted coexist per-season on the live
+    //   API (13 shows on a real account hold one season id in both lists at
+    //   once), so the exclusivity Serializd's copy claims is a UI convention.
+    //   Stop-condition (c) does not fire. The same probe found `/progress` has
+    //   been removed upstream, so the season filter now runs without input and
+    //   is kept for its copy, not as a data-loss guard. Both findings, with
+    //   their verification, are in `docs/solutions/
+    //   serializd-watchlist-clears-watched.md`.
+    // - `watchlistRemove` stays gated on the **Serializd read leg** (R32/R35):
     //   with no read, Serializd can never appear in a `WatchlistEntry`'s
     //   `sources`, so a `'write'` declaration would be an unreachable adapter
     //   behind a silent drop. The upfront `Remove on Serializd` link is the
     //   honest surface until that leg lands.
     //
-    // Reverting either token back to `'manual'` is also the standing rollback
-    // (KTD-9) if the probe or the read ever regresses.
-    watchlistWrite: 'manual',
+    // Reverting either token back to `'manual'` is the standing rollback
+    // (KTD-9) if the probe's finding or the read ever regresses.
+    watchlistWrite: 'write',
     watchlistRemove: 'manual',
   },
 };
