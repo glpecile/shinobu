@@ -60,10 +60,12 @@ export default function LetterboxdWatchlistSpikeScreen() {
         <Text className="text-2xl font-display text-foreground">
           Watchlist capture (U6)
         </Text>
+        {/* One line, deliberately: Letterboxd's actions panel is a fixed
+            overlay sized to the WebView viewport, and on a phone the panel
+            clips its watched/liked/watchlist icon row unless the WebView gets
+            most of the screen (observed 2026-07-29 on an iPhone 17 Pro sim). */}
         <Text className="text-muted font-sans text-sm">
-          Load a film, then tap Letterboxd&rsquo;s own watchlist control —
-          add, then remove. Every state-changing request the page makes is logged
-          below, credential headers redacted.
+          Tap the site&rsquo;s own watchlist control — add, then remove.
         </Text>
         <View className="flex-row gap-2 items-center">
           <TextInput
@@ -121,7 +123,7 @@ export default function LetterboxdWatchlistSpikeScreen() {
         />
       </View>
 
-      <ScrollView className="max-h-64 px-4" contentContainerClassName="pb-8 gap-3">
+      <ScrollView className="max-h-28 px-4" contentContainerClassName="pb-8 gap-3">
         {captures.map((capture, index) => (
           <View className="border border-border rounded p-3" key={index}>
             <Text className="text-foreground font-sans-semibold text-sm">
