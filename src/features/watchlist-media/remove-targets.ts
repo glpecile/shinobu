@@ -44,8 +44,8 @@ export interface WatchlistRemovePlan {
   targets: ProviderId[];
   /**
    * Providers *holding* the item that the fan-out cannot remove from: declared
-   * `'manual'` for this verb (Letterboxd until U6's spike, Serializd until its
-   * read leg lands) or platform-banned. R17's deep-link rows.
+   * `'manual'` for this verb (Serializd until its read leg lands) or
+   * platform-banned (Letterboxd on web). R17's deep-link rows.
    */
   manual: ProviderId[];
   /**

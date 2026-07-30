@@ -91,6 +91,10 @@ function fakeDeps(): WatchlistRemoveDeps {
         adapterCalls.push('anilist');
         return Promise.resolve({ status: 'ok' as const });
       },
+      letterboxd: () => {
+        adapterCalls.push('letterboxd');
+        return Promise.resolve({ status: 'ok' as const });
+      },
     },
     refresh: (_client, options) => {
       refreshCalls.push(options);
@@ -203,10 +207,10 @@ describe('runWatchlistRemove — the write follows `sources` (R35)', () => {
     );
 
     // No write is fired at a provider whose membership is unknown...
-    expect(adapterCalls).toEqual([]);
+    expect(adapterCalls).toEqual(['letterboxd']);
     expect(result.unknown).toEqual(['trakt']);
-    // ...Letterboxd holds it but declares the verb manual until U6's spike...
-    expect(result.manual).toEqual(['letterboxd']);
+    // ...Letterboxd holds it and (plan 0033) removes via the fan-out...
+    expect(result.succeeded).toEqual(['letterboxd']);
     // ...and the label stays actionable rather than claiming a removal that
     // may not have happened on Trakt.
     expect(isUnwatchlistCtaSettled(false, watchlistResultView(result, film()), result.unknown)).toBe(
@@ -215,6 +219,9 @@ describe('runWatchlistRemove — the write follows `sources` (R35)', () => {
   });
 
   test('a manual-or-unknown-only plan is the deep-link affordance, never a throw', async () => {
+    // Letterboxd on web is the standing manual case (plan 0033 R7): the
+    // declaration is 'write' but the platform bans it.
+    process.env.EXPO_OS = 'web';
     const { client } = recordingClient();
     const result = await runWatchlistRemove(
       client,
@@ -297,14 +304,18 @@ describe('runWatchlistRemove — the three result families (R38)', () => {
 });
 
 describe('the adapter map (R32/R37)', () => {
-  test('only Trakt and AniList have adapters — the manual pair is absent by design', () => {
-    expect(Object.keys(WATCHLIST_REMOVE_ADAPTERS).sort()).toEqual(['anilist', 'trakt']);
+  test('Trakt, AniList and Letterboxd have adapters — Serializd is absent by design', () => {
+    expect(Object.keys(WATCHLIST_REMOVE_ADAPTERS).sort()).toEqual([
+      'anilist',
+      'letterboxd',
+      'trakt',
+    ]);
     // Serializd's `removeFromSerializdWatchlist` exists (U9) and is deliberately
     // not on a live path in v1: no read leg means it can never appear in a
     // `sources`, so an adapter here would be unreachable code behind a manual
-    // declaration.
+    // declaration. Letterboxd's flipped in plan 0033 (verified state-set endpoint).
     expect(PROVIDERS.serializd.watchlistRemove).toBe('manual');
-    expect(PROVIDERS.letterboxd.watchlistRemove).toBe('manual');
+    expect(PROVIDERS.letterboxd.watchlistRemove).toBe('write');
   });
 
   test('an item with no AniList id is a reasoned skip, never a request', async () => {

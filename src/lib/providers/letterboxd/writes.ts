@@ -54,7 +54,7 @@ function parseFilmLid(html: string): string | null {
  * both to resolve the numeric id (nitro-fetch) and to navigate the write
  * WebView to render the diary webpart.
  */
-function filmPathFor(item: NormalizedMediaItem): string | null {
+export function filmPathFor(item: NormalizedMediaItem): string | null {
   const slug = item.externalIds.letterboxd;
   const tmdb = item.externalIds.tmdb;
   return slug != null && slug !== ''
@@ -70,7 +70,7 @@ function filmPathFor(item: NormalizedMediaItem): string | null {
  * This is only a fallback — the write's injected script reads the LID off the
  * page's own meta inside the WebView — so an unresolvable LID is not fatal.
  */
-function resolveFilmLid(
+export function resolveFilmLid(
   deps: LetterboxdDeps,
   item: NormalizedMediaItem,
 ): Effect.Effect<string, ProviderError> {

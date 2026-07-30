@@ -147,7 +147,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
           // plan 0032 R9/R10). The card's own close/settle rules are its own:
           // a partial success still advances, with the failure named by the
           // notice below the card rather than a toast.
-          if (isCleanWriteReport(outcome, manualTargets)) {
+          if (isCleanWriteReport(outcome)) {
             const copy = logToastCopy(outcome);
             toast.success(copy.title, copy.message);
           } else {

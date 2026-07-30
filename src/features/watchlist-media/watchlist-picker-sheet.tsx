@@ -107,7 +107,9 @@ export function WatchlistAddPicker({
       { providers: selected },
       {
         onSuccess: (report) => {
-          if (isCleanWriteReport(report, report.manual)) {
+          // Upfront manual rows don't block the close (plan 0033 R1) — they
+          // were on the sheet before confirm, so they aren't news.
+          if (isCleanWriteReport(report)) {
             toast.success(
               addedToastTitle(item),
               providerLabelList(report.succeeded),
@@ -229,9 +231,11 @@ export function WatchlistRemovePicker({
       { providers: selected },
       {
         onSuccess: (report) => {
-          // Clean additionally means nothing left *unknown* (R35) — an unknown
-          // provider's manual row is the only evidence the removal was partial.
-          if (isCleanWriteReport(report, [...report.manual, ...report.unknown])) {
+          // Neither `manual` nor `unknown` blocks the close (plan 0033 KTD-1):
+          // both render in the same pre-confirm row slot, so they aren't news.
+          // R35's "withhold Removed" concern lives on the settled label, which
+          // reads membership, not this report.
+          if (isCleanWriteReport(report)) {
             toast.success(
               removedToastTitle(entry.item),
               providerLabelList(report.succeeded),
@@ -345,6 +349,38 @@ export function WatchlistAddPickerSheet({
   return (
     <Sheet onClose={onClose} open={open}>
       <WatchlistAddPicker item={item} onCancel={onClose} onCleanClose={onClose} />
+    </Sheet>
+  );
+}
+
+/**
+ * The removal's self-hosted form — what the details screen's settled CTA opens
+ * (plan 0033 follow-up, owner request 2026-07-30): "On your watchlist" is an
+ * entry point to removing, not a dead end. The card-actions sheet keeps
+ * composing `WatchlistRemovePicker` directly, exactly like the add.
+ */
+export function WatchlistRemovePickerSheet({
+  entry,
+  errors,
+  incomplete,
+  open,
+  onClose,
+}: {
+  entry: WatchlistEntry;
+  errors: readonly ProviderFailure[];
+  incomplete: readonly ProviderId[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet onClose={onClose} open={open}>
+      <WatchlistRemovePicker
+        entry={entry}
+        errors={errors}
+        incomplete={incomplete}
+        onCancel={onClose}
+        onCleanClose={onClose}
+      />
     </Sheet>
   );
 }

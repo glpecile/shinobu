@@ -35,6 +35,7 @@ import { upNextQueryKeys } from '@/state/queries/up-next';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
+import { removeWatchedFromWatchlist } from './remove-watched-from-watchlist';
 import { currentPlatform } from './use-log-targets';
 import {
   anilistHasEpisodes,
@@ -58,6 +59,8 @@ import {
  * containment boundary `state/queries/*` uses — no Effect type escapes.
  */
 const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> = {
+  // Resolves a ProviderWriteResult itself: a rewatch play Trakt's own
+  // "Disable Multiple Plays" setting declines comes back as a reasoned skip.
   trakt: ({ item, episode, episodes, watchedAt }) =>
     Effect.runPromise(
       logToTrakt(traktDeps(), item, {
@@ -65,7 +68,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
         ...(episodes != null ? { episodes } : {}),
         ...(watchedAt != null ? { watchedAt } : {}),
       }),
-    ).then(okResult),
+    ),
   // AniList is the entry-relative half of the fan-out (plan 0027 KTD5): it
   // reads `entryEpisodes` — the entry's own 1..n numbering — and never the
   // canonical `episodes` the ani.zip translation produced for Trakt/Serializd.
@@ -627,6 +630,14 @@ export function useLogMedia() {
       );
 
       invalidateAfterLog(queryClient, item, result.succeeded);
+
+      // A watched film leaves the watchlist (plan 0033 U7) — fired, not
+      // awaited: the Letterboxd leg is a second WebView round-trip, and a
+      // derived write the user didn't aim must not delay the toast or hold
+      // the sheet. `removeWatchedFromWatchlist` never rejects.
+      if (result.succeeded.length > 0) {
+        void removeWatchedFromWatchlist(queryClient, item, connected);
+      }
 
       // Tags that actually landed become local suggestions on the next sheet
       // (state/prefs/recent-tags.ts) — the offline half of the tag picker's

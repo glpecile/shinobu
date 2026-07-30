@@ -37,7 +37,7 @@ the target state (`inWatchlist: true|false`), so:
 - the 204-empty response is unambiguous: the state after the call is the state
   you sent, not "whatever the opposite of before was".
 
-## What an adapter needs (the follow-up, not done here)
+## What an adapter needs (done in plan 0033 — `letterboxd/watchlist-writes.ts`)
 
 1. **Native-only, via the captured session** — the same WebView-session
    plumbing as the diary write (`LetterboxdWriteBridge`); nothing here changes

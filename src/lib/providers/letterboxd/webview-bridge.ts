@@ -1,4 +1,8 @@
-import type { LetterboxdWebRequest, LetterboxdWebResponse } from './deps';
+import type {
+  LetterboxdWatchlistWebRequest,
+  LetterboxdWebRequest,
+  LetterboxdWebResponse,
+} from './deps';
 
 /**
  * Bridges Letterboxd writes into the hidden authenticated login WebView
@@ -145,14 +149,60 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
 }
 
 /**
- * Run a diary write inside the authenticated WebView: navigate to the film page
- * (so the live CSRF token and the film-LID meta are in the session), wait for it
- * to load, then POST the diary entry to the JSON API. Rejects if no WebView is
- * mounted (web / not connected) so the write adapter surfaces a dead-session
- * error rather than hanging.
+ * The watchlist script — runs on the freshly-rendered film page and replays the
+ * captured flow verbatim (plan 0033 R3/KTD-3,
+ * docs/solutions/letterboxd-watchlist-write.md): a fresh CSRF token from
+ * `POST /ajax/letterboxd-metadata/` (what the site's own control does — not the
+ * diary write's `window.supermodelCSRF` page-global), sent as `x-csrf-token` on
+ * `PATCH /api/v0/me/watchlist/{lid}` with the target state in the body. The
+ * film's LID is read off the page's `production:identifier` meta, falling back
+ * to the LID resolved by the adapter. Outcome relayed over postMessage.
  */
-export function letterboxdWebFetch(
-  request: LetterboxdWebRequest,
+function buildWatchlistScript(
+  id: string,
+  request: LetterboxdWatchlistWebRequest,
+): string {
+  return `(function(){
+    var id = ${JSON.stringify(id)};
+    function post(o){ o.id = id; try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch(e){} }
+    try {
+      var lid = '';
+      var meta = document.querySelector('meta[name="production:identifier"]');
+      if (meta) { try { lid = (JSON.parse(meta.getAttribute('content') || '{}') || {}).lid || ''; } catch (e) {} }
+      if (!lid) lid = ${JSON.stringify(request.filmLid)};
+      if (!lid) { post({ status: 0, body: 'no-production-lid' }); return; }
+      fetch((window.baseURL || '') + '/ajax/letterboxd-metadata/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: ''
+      }).then(function(r){ return r.json(); }).then(function(metadata){
+        var csrf = (metadata && metadata.csrf) || '';
+        if (!csrf) { post({ status: 0, body: 'no-csrf' }); return; }
+        return fetch((window.baseURL || '') + '/api/v0/me/watchlist/' + lid, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json; charset=UTF-8', 'x-csrf-token': csrf },
+          body: JSON.stringify({ inWatchlist: ${JSON.stringify(request.inWatchlist)} })
+        }).then(function(r){
+          return r.text().then(function(t){ post({ status: r.status, body: t }); });
+        });
+      }).catch(function(e){ post({ status: 0, body: 'fetch-error: ' + String(e) }); });
+    } catch (e) { post({ status: 0, body: 'script-error: ' + String(e) }); }
+  })();`;
+}
+
+/**
+ * The navigate→wait→inject runner both write transports share (plan 0033
+ * KTD-4): render `filmPath` so the page-derived values (LID meta, live session)
+ * are in place, then inject the verb's own script, whose outcome arrives via
+ * postMessage → `handleLetterboxdMessage`. Rejects if no WebView is mounted
+ * (web / not connected) so the adapter surfaces a dead-session error rather
+ * than hanging.
+ */
+function runInFilmPage(
+  filmPath: string,
+  buildScript: (id: string) => string,
 ): Promise<LetterboxdWebResponse> {
   const ref = webView;
   if (ref == null) {
@@ -177,23 +227,51 @@ export function letterboxdWebFetch(
     };
 
     void (async () => {
-      // Render the film page so the live CSRF token + LID meta are in-session.
+      // Render the film page so the page-derived values are in-session.
       loaded = false;
-      await ref.evaluateJavaScript(buildNavigateScript(request.filmPath));
+      await ref.evaluateJavaScript(buildNavigateScript(filmPath));
       await waitForLoaded(signal);
       if (signal.cancelled) return;
       const current = webView;
       if (current == null) return; // registerLetterboxdWebView already rejected it
-      await current.evaluateJavaScript(buildSubmitScript(id, request));
+      await current.evaluateJavaScript(buildScript(id));
       // Result arrives via postMessage → handleLetterboxdMessage.
     })().catch(fail);
   });
+}
+
+/**
+ * Run a diary write inside the authenticated WebView: navigate to the film page
+ * (so the live CSRF token and the film-LID meta are in the session), wait for it
+ * to load, then POST the diary entry to the JSON API.
+ */
+export function letterboxdWebFetch(
+  request: LetterboxdWebRequest,
+): Promise<LetterboxdWebResponse> {
+  return runInFilmPage(request.filmPath, (id) => buildSubmitScript(id, request));
+}
+
+/**
+ * Run a watchlist state set inside the authenticated WebView (plan 0033 R3):
+ * same runner as the diary write, this verb's script.
+ */
+export function letterboxdWatchlistWebFetch(
+  request: LetterboxdWatchlistWebRequest,
+): Promise<LetterboxdWebResponse> {
+  return runInFilmPage(request.filmPath, (id) => buildWatchlistScript(id, request));
 }
 
 /** The transport for `letterboxdDeps`, or `undefined` when no WebView is
  * mounted (web / disconnected) so writes fail cleanly as read-only. */
 export function getLetterboxdWebFetch(): typeof letterboxdWebFetch | undefined {
   return webView != null ? letterboxdWebFetch : undefined;
+}
+
+/** The watchlist transport, under the same availability rule as `getLetterboxdWebFetch`. */
+export function getLetterboxdWatchlistWebFetch():
+  | typeof letterboxdWatchlistWebFetch
+  | undefined {
+  return webView != null ? letterboxdWatchlistWebFetch : undefined;
 }
 
 /** Test seam: reset the module singleton between cases. */

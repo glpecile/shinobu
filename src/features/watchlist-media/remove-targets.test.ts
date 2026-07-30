@@ -153,18 +153,18 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
     expect(split.unknown).toEqual(['letterboxd']);
   });
 
-  test('a Trakt leg failure renders as a manual row rather than a claim of absence', () => {
+  test('a Trakt leg failure renders as an unknown row rather than a claim of absence', () => {
     const split = splitWatchlistRemoveTargets(film(), ['letterboxd'], CONNECTED, 'ios', [
       { provider: 'trakt', message: '502' },
     ]);
-    expect(split.targets).toEqual([]);
-    // Letterboxd holds it and declares the verb manual until U6's spike (R37).
-    expect(split.manual).toEqual(['letterboxd']);
+    // Letterboxd holds it and (plan 0033) removes via the fan-out on native.
+    expect(split.targets).toEqual(['letterboxd']);
+    expect(split.manual).toEqual([]);
     expect(split.unknown).toEqual(['trakt']);
   });
 
-  test('Letterboxd is a manual row on every platform while its declaration is manual', () => {
-    for (const platform of ['ios', 'android', 'web']) {
+  test('Letterboxd removes via the fan-out on native, manual only on web (plan 0033 R7)', () => {
+    for (const platform of ['ios', 'android']) {
       const split = splitWatchlistRemoveTargets(
         film(),
         ['trakt', 'letterboxd'],
@@ -172,9 +172,18 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
         platform,
         [],
       );
-      expect(split.manual).toEqual(['letterboxd']);
-      expect(split.targets).toEqual(['trakt']);
+      expect(split.targets).toEqual(['trakt', 'letterboxd']);
+      expect(split.manual).toEqual([]);
     }
+    const web = splitWatchlistRemoveTargets(
+      film(),
+      ['trakt', 'letterboxd'],
+      CONNECTED,
+      'web',
+      [],
+    );
+    expect(web.targets).toEqual(['trakt']);
+    expect(web.manual).toEqual(['letterboxd']);
   });
 
   test('a manga entry leaves AniList unknown — OQ-4a defers that read', () => {

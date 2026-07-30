@@ -227,17 +227,22 @@ describe("splitWriteTargets('log')", () => {
 });
 
 // Plan 0031 R5/R6/R7/KTD-1: watchlist targets come from `watchlistWrite`, never
-// from `canWrite`. In this PR Trakt and AniList declare 'write'; Letterboxd
-// (endpoint unverified, U6's spike) and Serializd (Worker allowlist + season
-// guard, U9) declare 'manual' — so they are manual rows, never absent.
+// from `canWrite`. Trakt, AniList and (plan 0033) Letterboxd declare 'write';
+// Serializd (Worker allowlist + season guard, U9, gated on U10's probe)
+// declares 'manual' — so it is a manual row, never absent. Letterboxd's web
+// ban is platform-level (`unsupportedWritePlatforms`), not a declaration.
 describe("splitWriteTargets('watchlist')", () => {
-  for (const platform of ['web', 'ios']) {
-    it(`a movie with all four connected: Trakt writable, Letterboxd manual (${platform})`, () => {
-      expect(
-        splitWriteTargets({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL4, platform, 'watchlist'),
-      ).toEqual({ writable: ['trakt'], manual: ['letterboxd'] });
-    });
-  }
+  it('a movie with all four connected: Trakt + Letterboxd writable (ios)', () => {
+    expect(
+      splitWriteTargets({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'watchlist'),
+    ).toEqual({ writable: ['trakt', 'letterboxd'], manual: [] });
+  });
+
+  it('the same movie on web: Letterboxd manual per the platform ban', () => {
+    expect(
+      splitWriteTargets({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL4, 'web', 'watchlist'),
+    ).toEqual({ writable: ['trakt'], manual: ['letterboxd'] });
+  });
 
   it('a TV show: Trakt writable, Serializd manual per its declaration — never dropped', () => {
     expect(
@@ -245,7 +250,7 @@ describe("splitWriteTargets('watchlist')", () => {
     ).toEqual({ writable: ['trakt'], manual: ['serializd'] });
   });
 
-  it('a mapped anime film: Trakt + AniList writable, Letterboxd manual, Serializd absent (TV-only)', () => {
+  it('a mapped anime film: all three movie targets writable, Serializd absent (TV-only)', () => {
     expect(
       splitWriteTargets(
         { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
@@ -253,7 +258,7 @@ describe("splitWriteTargets('watchlist')", () => {
         'ios',
         'watchlist',
       ),
-    ).toEqual({ writable: ['trakt', 'anilist'], manual: ['letterboxd'] });
+    ).toEqual({ writable: ['trakt', 'anilist', 'letterboxd'], manual: [] });
   });
 
   it('mirrors the log routing for that same anime film (one shared effectiveTypes)', () => {
@@ -270,24 +275,17 @@ describe("splitWriteTargets('watchlist')", () => {
   });
 
   it('a declared-write provider still goes manual where the platform bans the write', () => {
-    // Simulates U6's spike succeeding: the endpoint exists, but Letterboxd's
+    // Live since plan 0033: the endpoint is verified, but Letterboxd's
     // fingerprint wall still bans every write on web, so web stays manual.
-    const letterboxd = PROVIDERS.letterboxd;
-    const original = letterboxd.watchlistWrite;
-    letterboxd.watchlistWrite = 'write';
-    try {
-      const item = { type: 'MOVIE' as const, ...ids({ trakt: 1 }) };
-      expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
-        writable: ['trakt', 'letterboxd'],
-        manual: [],
-      });
-      expect(splitWriteTargets(item, ALL4, 'web', 'watchlist')).toEqual({
-        writable: ['trakt'],
-        manual: ['letterboxd'],
-      });
-    } finally {
-      letterboxd.watchlistWrite = original;
-    }
+    const item = { type: 'MOVIE' as const, ...ids({ trakt: 1 }) };
+    expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
+      writable: ['trakt', 'letterboxd'],
+      manual: [],
+    });
+    expect(splitWriteTargets(item, ALL4, 'web', 'watchlist')).toEqual({
+      writable: ['trakt'],
+      manual: ['letterboxd'],
+    });
   });
 
   it("'none' is the only way out of both buckets", () => {
@@ -315,18 +313,18 @@ describe("splitWriteTargets('watchlist-remove')", () => {
   it('resolves from watchlistRemove independently of watchlistWrite', () => {
     const letterboxd = PROVIDERS.letterboxd;
     const original = letterboxd.watchlistRemove;
-    // R37's live counterexample: the remove is safe from the watchlist surface
-    // while the add stays unverified.
-    letterboxd.watchlistRemove = 'write';
+    // Degrade one verb only: the remove going manual must not drag the add
+    // with it — symmetry is the assumption the registry's docblock forbids.
+    letterboxd.watchlistRemove = 'manual';
     try {
       const item = { type: 'MOVIE' as const, ...ids({ trakt: 1 }) };
       expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist-remove')).toEqual({
-        writable: ['trakt', 'letterboxd'],
-        manual: [],
-      });
-      expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
         writable: ['trakt'],
         manual: ['letterboxd'],
+      });
+      expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
+        writable: ['trakt', 'letterboxd'],
+        manual: [],
       });
     } finally {
       letterboxd.watchlistRemove = original;

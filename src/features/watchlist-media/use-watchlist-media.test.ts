@@ -54,6 +54,7 @@ const { planWatchlistWrite } = await import('./targets');
 /** Per-provider adapter behaviour, swapped per test. */
 let traktFails: string | null = null;
 let anilistFails: string | null = null;
+let letterboxdFails: string | null = null;
 const adapterCalls: ProviderId[] = [];
 /** Every notification-refresh call and the options it carried. */
 const refreshCalls: unknown[] = [];
@@ -78,6 +79,12 @@ function fakeDeps(): WatchlistWriteDeps {
           ? Promise.resolve({ status: 'ok' as const })
           : Promise.reject(new Error(anilistFails));
       },
+      letterboxd: () => {
+        adapterCalls.push('letterboxd');
+        return letterboxdFails == null
+          ? Promise.resolve({ status: 'ok' as const })
+          : Promise.reject(new Error(letterboxdFails));
+      },
     },
     refresh: (_client, options) => {
       refreshCalls.push(options);
@@ -93,8 +100,8 @@ const NOOP = () => {};
 
 /**
  * An anime *film* — the item that reaches every movie-shaped target at once
- * (Trakt + AniList writable, Letterboxd manual), so one fixture covers the
- * routing-order and partial-failure contracts.
+ * (Trakt + AniList + Letterboxd writable on native, plan 0033), so one fixture
+ * covers the routing-order and partial-failure contracts.
  */
 function animeFilm(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
@@ -135,6 +142,7 @@ function recordingClient(): { client: QueryClient; keys: string[] } {
 beforeEach(() => {
   traktFails = null;
   anilistFails = null;
+  letterboxdFails = null;
   adapterCalls.length = 0;
   refreshCalls.length = 0;
   process.env.EXPO_OS = 'ios';
@@ -148,9 +156,10 @@ describe('runWatchlistWrite — the fan-out contract', () => {
     expect(result.outcomes.map((outcome) => outcome.provider)).toEqual([
       'trakt',
       'anilist',
+      'letterboxd',
     ]);
     expect(result.outcomes.every((outcome) => outcome.status === 'ok')).toBe(true);
-    expect(result.succeeded).toEqual(['trakt', 'anilist']);
+    expect(result.succeeded).toEqual(['trakt', 'anilist', 'letterboxd']);
     expect(result.failed).toEqual([]);
   });
 
@@ -159,7 +168,7 @@ describe('runWatchlistWrite — the fan-out contract', () => {
     const { client } = recordingClient();
     const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
 
-    expect(result.succeeded).toEqual(['trakt']);
+    expect(result.succeeded).toEqual(['trakt', 'letterboxd']);
     expect(result.failed).toEqual(['anilist']);
     const failure = result.outcomes.find((outcome) => outcome.provider === 'anilist');
     expect(failure?.status).toBe('error');
@@ -169,21 +178,28 @@ describe('runWatchlistWrite — the fan-out contract', () => {
   });
 
   test('a manual target never enters the adapter map', async () => {
+    // Letterboxd on *web* is the standing manual case (plan 0033 R7): the
+    // declaration is 'write' but `unsupportedWritePlatforms` bans the platform,
+    // so it is reported as a manual row — never handed to `runProviderWrites`,
+    // whose missing-adapter path is a loud error by design.
+    process.env.EXPO_OS = 'web';
     const { client } = recordingClient();
     const plan = await planWatchlistWrite(client, animeFilm(), CONNECTED);
 
-    // Letterboxd is applicable (a movie-shaped item) but declares the verb
-    // manual, so it is reported as a manual row — never handed to
-    // `runProviderWrites`, whose missing-adapter path is a loud error by design.
     expect(plan.manual).toEqual(['letterboxd']);
     expect(plan.targets).toEqual(['trakt', 'anilist']);
-    expect(Object.keys(WATCHLIST_ADAPTERS).sort()).toEqual(['anilist', 'trakt']);
+    expect(Object.keys(WATCHLIST_ADAPTERS).sort()).toEqual([
+      'anilist',
+      'letterboxd',
+      'trakt',
+    ]);
 
     await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
     expect(adapterCalls).toEqual(['trakt', 'anilist']);
   });
 
   test('the manual rows ride back on the result for R17 to render', async () => {
+    process.env.EXPO_OS = 'web';
     const { client } = recordingClient();
     const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
     expect(result.manual).toEqual(['letterboxd']);
@@ -217,7 +233,7 @@ describe('runWatchlistWrite — agenda coherence (R19/R20)', () => {
       fakeDeps(),
     );
 
-    expect(result.succeeded).toEqual(['trakt', 'anilist']);
+    expect(result.succeeded).toEqual(['trakt', 'anilist', 'letterboxd']);
     expect(keys).toContain('trakt/my-calendar');
     expect(keys).toContain('anilist/current-anime-entries');
     expect(keys).toContain('up-next/inputs');
@@ -261,6 +277,7 @@ describe('runWatchlistWrite — agenda coherence (R19/R20)', () => {
   test('a write that reached no provider invalidates nothing and regathers nothing', async () => {
     traktFails = 'nope';
     anilistFails = 'nope';
+    letterboxdFails = 'nope';
     const { client, keys } = recordingClient();
     const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
 
