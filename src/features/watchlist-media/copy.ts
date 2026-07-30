@@ -4,6 +4,7 @@ import {
   type ErrorOutcomeLink,
   type SkippedOutcomesSplit,
 } from '@/features/log-media/manual-write-links';
+import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import type { UrlItem } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
@@ -152,19 +153,15 @@ export function isWatchlistCtaSettled(
 }
 
 /**
- * Whether the sheet entry point may close itself on this report. Only a report
- * with nothing left to read: a failure, a reasoned skip and a manual row all
- * have to survive on screen, because the app has no toast and the user is
- * typically on search or the feed with no details screen mounted.
+ * Whether the watchlist surface may settle this report into a toast and close
+ * (plan 0032 KTD-3). Only a report with nothing left to read: a failure, a
+ * reasoned skip and a manual row all have to survive on the sheet, because a
+ * toast can't carry a link (R7). The rule itself is the shared
+ * `isCleanWriteReport`; this wrapper just feeds it the add verb's leftover
+ * bucket.
  */
 export function isCleanWatchlistReport(result: WatchlistReportLike): boolean {
-  const { reasonedSkips } = splitSkippedOutcomes(result.outcomes);
-  return (
-    result.succeeded.length > 0 &&
-    result.failed.length === 0 &&
-    reasonedSkips.length === 0 &&
-    result.manual.length === 0
-  );
+  return isCleanWriteReport(result, result.manual);
 }
 
 /** "Already on Trakt, AniList." — the all-skip report's own headline. */
