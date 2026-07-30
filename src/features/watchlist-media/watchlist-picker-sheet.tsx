@@ -352,3 +352,35 @@ export function WatchlistAddPickerSheet({
     </Sheet>
   );
 }
+
+/**
+ * The removal's self-hosted form — what the details screen's settled CTA opens
+ * (plan 0033 follow-up, owner request 2026-07-30): "On your watchlist" is an
+ * entry point to removing, not a dead end. The card-actions sheet keeps
+ * composing `WatchlistRemovePicker` directly, exactly like the add.
+ */
+export function WatchlistRemovePickerSheet({
+  entry,
+  errors,
+  incomplete,
+  open,
+  onClose,
+}: {
+  entry: WatchlistEntry;
+  errors: readonly ProviderFailure[];
+  incomplete: readonly ProviderId[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Sheet onClose={onClose} open={open}>
+      <WatchlistRemovePicker
+        entry={entry}
+        errors={errors}
+        incomplete={incomplete}
+        onCancel={onClose}
+        onCleanClose={onClose}
+      />
+    </Sheet>
+  );
+}

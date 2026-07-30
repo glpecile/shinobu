@@ -194,6 +194,24 @@ remove, 401 → auth, 429 → rate limit, no-session, wrong-type, no-ids.
   unrun" in `use-watchlist-media.ts`, `use-unwatchlist-media.ts`,
   `remove-targets.ts`, `targets.ts` are updated in the same change.
 
+### U4b — the settled CTA becomes the remove entry point (owner request, 2026-07-30)
+
+Mid-verification the owner asked that the details screen's settled
+"On your watchlist" button open the remove flow instead of being disabled.
+Shipped in this plan:
+
+- `features/watchlist/find-watchlist-removal.ts` — pure finder from the
+  gathered `WatchlistInputs` cache to the merged `WatchlistEntry` (+ the
+  gather's `errors`/`incomplete`), using `isWatchlistedIn`'s recognition
+  input-by-input and mapping to the merged row via `sourceIds`.
+- `WatchlistRemovePickerSheet` — the removal's self-hosted sheet form,
+  sibling of `WatchlistAddPickerSheet`.
+- `WatchlistMediaButton`: a settled press (self-hosted form only) reads the
+  cache at press time and opens the remove picker; cache-only, never a fetch.
+  In host mode (the card-actions sheet) the press stays inert — the host has
+  its own removal row, and a second sheet stacked over the first is what plan
+  0032 U3 bans.
+
 ### U5 — verification
 
 - Full gate: `bun lint`, typecheck, `bun test`, `bun check:classnames`,
