@@ -51,13 +51,19 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // still lists Letterboxd as an applicable target on web; it's just routed
     // to the manual-log fallback instead of the fan-out (plan 0022).
     unsupportedWritePlatforms: ['web'],
-    // No verified watchlist endpoint yet: plan 0031 U6's account-bound spike
-    // gates both verbs, and until it runs Letterboxd is a manual watchlist
-    // target on *every* platform (R7/R37) — never absent, never an error. If
-    // the spike succeeds these become 'write' and the web ban is still applied
-    // by `unsupportedWritePlatforms` above, so web stays manual regardless.
-    watchlistWrite: 'manual',
-    watchlistRemove: 'manual',
+    // Both verbs verified by plan 0031 U6's account-bound capture
+    // (docs/solutions/letterboxd-watchlist-write.md): `PATCH
+    // /api/v0/me/watchlist/{lid}` is a **declarative state set**
+    // (`inWatchlist: true|false`), not a toggle, so KTD-6's data-loss hazard
+    // (a wrong idempotency guess *removing* a film while reporting success)
+    // does not exist on this endpoint and a repeat add is idempotent. The
+    // adapter (plan 0033, `letterboxd/watchlist-writes.ts`) rides the same
+    // captured-WebView-session plumbing as the diary write, so
+    // `unsupportedWritePlatforms` above keeps web manual regardless — correct
+    // and permanent (docs/solutions/letterboxd-web-proxy.md). Standing
+    // rollback: revert both tokens to 'manual' if the endpoint regresses.
+    watchlistWrite: 'write',
+    watchlistRemove: 'write',
   },
   // Unofficial JSON API (plan 0017), TMDB-keyed TV tracking. Symmetric
   // read+write like Trakt: a TV (or TMDB-enriched anime series) log fans out

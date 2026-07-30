@@ -18,9 +18,11 @@ import {
   type RefreshOptions,
 } from '@/features/notifications/refresh';
 import { planOnAniList } from '@/lib/providers/anilist/writes';
+import { addToLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
 import { addToTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
+import { letterboxdDeps } from '@/state/queries/letterboxd';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -42,9 +44,11 @@ import {
  * *loud error outcome* by design, so a manual target reaching it would read as
  * a bug rather than the deep-link affordance it actually is.
  *
- * Today that is Letterboxd (U6's spike unrun) and **Serializd** — U9 has landed
- * `addToSerializdWatchlist`, the season guard and the Worker rules, but the
- * registry declaration stays `'manual'` until U10's account-bound probe
+ * Letterboxd joined in plan 0033: U6's capture classified the endpoint as a
+ * declarative state set, discharging KTD-6, and `unsupportedWritePlatforms`
+ * keeps it manual on web (no transport there). **Serializd** stays out — U9 has
+ * landed `addToSerializdWatchlist`, the season guard and the Worker rules, but
+ * the registry declaration stays `'manual'` until U10's account-bound probe
  * discharges KTD-10's named risk (see `registry.ts`, and
  * `docs/solutions/serializd-watchlist-endpoints.md` § standing rollback). Adding
  * the key here before that flip would not make the write live — routing would
@@ -56,6 +60,8 @@ export const WATCHLIST_ADAPTERS: Partial<
 > = {
   trakt: ({ item }) => Effect.runPromise(addToTraktWatchlist(traktDeps(), item)),
   anilist: ({ item }) => Effect.runPromise(planOnAniList(anilistDeps(), item)),
+  letterboxd: ({ item }) =>
+    Effect.runPromise(addToLetterboxdWatchlist(letterboxdDeps(), item)),
 };
 
 /** The watchlist add's report — the shared core's, plus this verb's own fields. */

@@ -13,26 +13,23 @@ export interface WriteReportLike {
  * Whether a write sheet may close itself on this report — and, equivalently,
  * whether the outcome fits in a toast (plan 0032 KTD-3). One predicate feeds
  * both decisions so the sheet can never close on a report the toast then
- * fails to carry: `burnt` has no press handler (R7), so anything left to read
- * — a failure, a reasoned skip, a manual or unknown-membership row, each with
- * its `providerItemUrl` link — must survive on the sheet instead.
+ * fails to carry: `burnt` has no press handler (R7), so **post-write news** —
+ * a failed provider or a reasoned skip, each with its `providerItemUrl` link —
+ * must survive on the sheet instead.
  *
- * `leftover` is whatever the verb still has to show after the fan-out:
- * the add passes its `manual` bucket, the removal passes `manual` and
- * `unknown` (R35 — an unknown provider's row is the only evidence the user
- * gets that the removal was partial). Reconcile skips (no reason — already in
- * sync) don't block: with at least one real success they are a footnote, not
- * a recourse.
+ * Upfront rows — the add's `manual` bucket, the remove's `manual` and
+ * `unknown` — deliberately do *not* block the close (plan 0033 R1/KTD-1):
+ * those rows were already on the sheet before the user confirmed, so they are
+ * pre-confirm information, not a report. Holding the sheet open to re-show
+ * them turned every Trakt+Letterboxd add into a no-toast dead end. Reconcile
+ * skips (no reason — already in sync) don't block either: with at least one
+ * real success they are a footnote, not a recourse.
  */
-export function isCleanWriteReport(
-  report: WriteReportLike,
-  leftover: readonly ProviderId[] = [],
-): boolean {
+export function isCleanWriteReport(report: WriteReportLike): boolean {
   const { reasonedSkips } = splitSkippedOutcomes(report.outcomes);
   return (
     report.succeeded.length > 0 &&
     report.failed.length === 0 &&
-    reasonedSkips.length === 0 &&
-    leftover.length === 0
+    reasonedSkips.length === 0
   );
 }

@@ -10,7 +10,6 @@ import {
   addedToSentence,
   alreadyOnSentence,
   failedOnSentence,
-  isCleanWatchlistReport,
   isUnwatchlistCtaSettled,
   isWatchlistCtaSettled,
   removedFromSentence,
@@ -44,15 +43,11 @@ const MANGA: NormalizedMediaItem = {
   externalIds: { anilist: 5 },
 };
 
-function report(
-  outcomes: readonly ProviderWriteOutcome[],
-  manual: WatchlistReportLike['manual'] = [],
-): WatchlistReportLike {
+function report(outcomes: readonly ProviderWriteOutcome[]): WatchlistReportLike {
   return {
     succeeded: outcomes.filter((o) => o.status === 'ok').map((o) => o.provider),
     failed: outcomes.filter((o) => o.status === 'error').map((o) => o.provider),
     outcomes,
-    manual,
   };
 }
 
@@ -240,44 +235,6 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
     );
     expect(writable).toEqual(['trakt']);
     expect(manual).toEqual(['serializd']);
-  });
-});
-
-describe('isCleanWatchlistReport (the sheet close gate)', () => {
-  test('all ok with no manual rows closes the sheet', () => {
-    expect(isCleanWatchlistReport(report([{ provider: 'trakt', status: 'ok' }]))).toBe(
-      true,
-    );
-  });
-
-  test('a failure keeps it open', () => {
-    expect(
-      isCleanWatchlistReport(
-        report([
-          { provider: 'trakt', status: 'ok' },
-          { provider: 'anilist', status: 'error', message: 'nope' },
-        ]),
-      ),
-    ).toBe(false);
-  });
-
-  test('a reasoned skip keeps it open', () => {
-    expect(
-      isCleanWatchlistReport(
-        report([
-          { provider: 'trakt', status: 'ok' },
-          { provider: 'anilist', status: 'skipped', reason: 'already watching' },
-        ]),
-      ),
-    ).toBe(false);
-  });
-
-  test('an outstanding manual row keeps it open', () => {
-    expect(
-      isCleanWatchlistReport(
-        report([{ provider: 'trakt', status: 'ok' }], ['letterboxd']),
-      ),
-    ).toBe(false);
   });
 });
 

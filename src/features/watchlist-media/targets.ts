@@ -44,9 +44,9 @@ export interface WatchlistWritePlan {
   targets: ProviderId[];
   /**
    * Applicable providers the fan-out cannot write — declared `'manual'`
-   * (Letterboxd's and, in PR A, Serializd's watchlist) or platform-banned.
-   * Kept beside the targets rather than dropped so R17's deep link can be
-   * rendered instead: never a silent absence, never a dead-end error.
+   * (Serializd's watchlist until U10's probe) or platform-banned (Letterboxd
+   * on web). Kept beside the targets rather than dropped so R17's deep link
+   * can be rendered instead: never a silent absence, never a dead-end error.
    */
   manual: ProviderId[];
 }

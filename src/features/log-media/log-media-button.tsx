@@ -159,10 +159,11 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       },
       {
         onSuccess: (outcome) => {
-          // Clean → toast + close; anything left to read (a failure, a
-          // reasoned skip, a manual row) keeps the sheet open rendering it
-          // (plan 0032 R4/KTD-3). The toast wrapper owns the success haptic.
-          if (isCleanWriteReport(outcome, manualTargets)) {
+          // Clean → toast + close; post-write news (a failure, a reasoned
+          // skip) keeps the sheet open rendering it (plan 0032 R4/KTD-3).
+          // Upfront manual rows don't block — they were on the sheet before
+          // confirm (plan 0033 R1). The toast wrapper owns the success haptic.
+          if (isCleanWriteReport(outcome)) {
             const copy = logToastCopy(outcome);
             toast.success(copy.title, copy.message);
             setOpen(false);

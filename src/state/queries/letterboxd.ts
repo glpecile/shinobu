@@ -20,7 +20,10 @@ import {
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
-import { getLetterboxdWebFetch } from '@/lib/providers/letterboxd/webview-bridge';
+import {
+  getLetterboxdWatchlistWebFetch,
+  getLetterboxdWebFetch,
+} from '@/lib/providers/letterboxd/webview-bridge';
 import {
   checkUsernameExists,
   getWatchlist,
@@ -74,6 +77,7 @@ export function letterboxdDeps(): LetterboxdDeps {
     username: getLetterboxdUsername(),
     session: getLetterboxdSession(),
     webFetch: getLetterboxdWebFetch(),
+    watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
   };
 }
 

@@ -119,9 +119,9 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       },
       {
         onSuccess: (outcome) => {
-          // Clean → toast + close; anything left to read keeps the sheet open
-          // (plan 0032 R4/KTD-3). The toast wrapper owns the success haptic.
-          if (isCleanWriteReport(outcome, manualTargets)) {
+          // Clean → toast + close; post-write news keeps the sheet open (plan
+          // 0032 R4/KTD-3, plan 0033 R1). The toast wrapper owns the haptic.
+          if (isCleanWriteReport(outcome)) {
             const copy = logToastCopy(outcome);
             toast.success(copy.title, copy.message);
             setPending(null);

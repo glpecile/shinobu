@@ -42,6 +42,13 @@ export interface LetterboxdDeps {
    * web (read-only) and in tests that don't exercise the write path.
    */
   webFetch?: LetterboxdWebFetch;
+  /**
+   * Same-origin *watchlist* transport, running in the same authenticated
+   * WebView as `webFetch` (plan 0033 KTD-4). A separate field rather than a
+   * generalized one because each transport's injected script implements one
+   * documented endpoint — never a generic "run any script" surface.
+   */
+  watchlistWebFetch?: LetterboxdWatchlistWebFetch;
 }
 
 /**
@@ -78,4 +85,29 @@ export interface LetterboxdWebResponse {
 
 export type LetterboxdWebFetch = (
   request: LetterboxdWebRequest,
+) => Promise<LetterboxdWebResponse>;
+
+/**
+ * A watchlist state set executed inside the authenticated Letterboxd WebView
+ * (plan 0033 R3, endpoint capture: docs/solutions/letterboxd-watchlist-write.md).
+ * The bridge navigates to `filmPath` (the LID meta lives there), fetches a
+ * fresh CSRF token from `POST /ajax/letterboxd-metadata/`, then PATCHes
+ * `/api/v0/me/watchlist/{lid}` with `{"inWatchlist": true|false}` — a
+ * declarative state set, not a toggle, so a repeat add is idempotent (KTD-5).
+ */
+export interface LetterboxdWatchlistWebRequest {
+  /** Film page to render so the LID meta is in the session, e.g. `/film/tuner/`. */
+  filmPath: string;
+  /**
+   * The film's Letterboxd **LID** (e.g. `294O`) — a fallback if the page's
+   * `production:identifier` meta can't be read inside the WebView; `''` when
+   * it couldn't be resolved.
+   */
+  filmLid: string;
+  /** The target membership state — the body of the PATCH, verbatim. */
+  inWatchlist: boolean;
+}
+
+export type LetterboxdWatchlistWebFetch = (
+  request: LetterboxdWatchlistWebRequest,
 ) => Promise<LetterboxdWebResponse>;

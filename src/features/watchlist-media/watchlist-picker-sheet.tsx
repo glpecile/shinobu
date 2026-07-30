@@ -107,7 +107,9 @@ export function WatchlistAddPicker({
       { providers: selected },
       {
         onSuccess: (report) => {
-          if (isCleanWriteReport(report, report.manual)) {
+          // Upfront manual rows don't block the close (plan 0033 R1) — they
+          // were on the sheet before confirm, so they aren't news.
+          if (isCleanWriteReport(report)) {
             toast.success(
               addedToastTitle(item),
               providerLabelList(report.succeeded),
@@ -229,9 +231,11 @@ export function WatchlistRemovePicker({
       { providers: selected },
       {
         onSuccess: (report) => {
-          // Clean additionally means nothing left *unknown* (R35) — an unknown
-          // provider's manual row is the only evidence the removal was partial.
-          if (isCleanWriteReport(report, [...report.manual, ...report.unknown])) {
+          // Neither `manual` nor `unknown` blocks the close (plan 0033 KTD-1):
+          // both render in the same pre-confirm row slot, so they aren't news.
+          // R35's "withhold Removed" concern lives on the settled label, which
+          // reads membership, not this report.
+          if (isCleanWriteReport(report)) {
             toast.success(
               removedToastTitle(entry.item),
               providerLabelList(report.succeeded),

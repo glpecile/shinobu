@@ -19,9 +19,11 @@ import {
 } from '@/features/notifications/refresh';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { deleteAniListEntry } from '@/lib/providers/anilist/writes';
+import { removeFromLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
 import { removeFromTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
+import { letterboxdDeps } from '@/state/queries/letterboxd';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
@@ -46,22 +48,26 @@ import {
  */
 
 /**
- * One entry per removal-capable provider — Trakt and AniList only.
+ * One entry per removal-capable provider — Trakt, AniList and (plan 0033)
+ * Letterboxd, whose captured endpoint is a declarative state set: removing an
+ * already-absent film is a 204 no-op, so the remove is safe even when the
+ * paginated scrape read only part of the list.
  *
- * Letterboxd and Serializd both declare `watchlistRemove: 'manual'` and so have
- * **no key here at all**: Letterboxd because U6's spike has not run (its control
- * is a toggle, and R37 bans guessing), Serializd because it has no watchlist
- * read leg in v1 (R32), which means it can never appear in a `WatchlistEntry`'s
- * `sources` and an adapter behind that would be unreachable code.
- * `removeFromSerializdWatchlist` exists (U9 shipped it, U10 probes it) and is
- * deliberately **not on a live path** — routing never hands a manual provider to
- * `runProviderWrites`, whose missing-adapter path is a loud error by design.
+ * Serializd declares `watchlistRemove: 'manual'` and so has **no key here at
+ * all**: it has no watchlist read leg in v1 (R32), which means it can never
+ * appear in a `WatchlistEntry`'s `sources` and an adapter behind that would be
+ * unreachable code. `removeFromSerializdWatchlist` exists (U9 shipped it, U10
+ * probes it) and is deliberately **not on a live path** — routing never hands a
+ * manual provider to `runProviderWrites`, whose missing-adapter path is a loud
+ * error by design.
  */
 export const WATCHLIST_REMOVE_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistRemovePayload>>
 > = {
   trakt: ({ item }) =>
     Effect.runPromise(removeFromTraktWatchlist(traktDeps(), item)),
+  letterboxd: ({ item }) =>
+    Effect.runPromise(removeFromLetterboxdWatchlist(letterboxdDeps(), item)),
   anilist: ({ item }) => {
     const mediaId = item.externalIds.anilist;
     // Reachable only for an entry AniList's own leg produced, so this is

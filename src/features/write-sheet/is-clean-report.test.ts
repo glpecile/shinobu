@@ -72,15 +72,16 @@ describe('isCleanWriteReport (plan 0032 KTD-3)', () => {
     expect(isCleanWriteReport(report({}))).toBe(false);
   });
 
-  test('leftover manual/unknown rows keep the sheet open', () => {
+  test('upfront manual/unknown rows are not news — still clean (plan 0033 R1)', () => {
+    // The caller may have manual rows on the sheet (e.g. Letterboxd on web);
+    // they were visible before confirm, so they never block the toast+close.
     expect(
       isCleanWriteReport(
         report({
           succeeded: ['trakt'],
           outcomes: [{ provider: 'trakt', status: 'ok' }],
         }),
-        ['serializd'],
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
