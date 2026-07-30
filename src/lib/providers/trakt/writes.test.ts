@@ -120,6 +120,80 @@ describe('logToTrakt TV batch', () => {
   });
 });
 
+/** A /sync/history stub replying with one fixed response. */
+function historyDeps(response: unknown): TraktDeps {
+  return {
+    tokens: TOKENS,
+    clientId: 'id',
+    clientSecret: 'secret',
+    fetch: async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (path !== '/sync/history' || init?.method !== 'POST') {
+        throw new Error(`unexpected ${init?.method} ${path}`);
+      }
+      return new Response(JSON.stringify(response), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+  };
+}
+
+describe('logToTrakt outcome read (the watchlist add\'s three-way, on history)', () => {
+  const movie = {
+    id: 'trakt-42',
+    title: 'Sinners',
+    coverImage: '',
+    type: 'MOVIE' as const,
+    currentProgress: 0,
+    progressUnit: 'episode' as const,
+    lastUpdated: '2026-07-10T00:00:00Z',
+    externalIds: { trakt: 42, tmdb: 43 },
+  };
+
+  test('an added play is ok', async () => {
+    const result = await Effect.runPromise(
+      logToTrakt(
+        historyDeps({
+          added: { movies: 1, episodes: 0 },
+          not_found: { movies: [], shows: [], episodes: [] },
+        }),
+        movie,
+      ),
+    );
+    expect(result).toEqual({ status: 'ok' });
+  });
+
+  test('a rewatch play Trakt declines (Disable Multiple Plays) is a reasoned skip, not not_found', async () => {
+    const result = await Effect.runPromise(
+      logToTrakt(
+        historyDeps({
+          added: { movies: 0, episodes: 0 },
+          not_found: { movies: [], shows: [], episodes: [] },
+        }),
+        movie,
+      ),
+    );
+    expect(result).toMatchObject({ status: 'skipped' });
+  });
+
+  test('a non-empty not_found still fails naming the item', async () => {
+    const result = await Effect.runPromise(
+      Effect.flip(
+        logToTrakt(
+          historyDeps({
+            added: { movies: 0, episodes: 0 },
+            not_found: { movies: [{ ids: { tmdb: 43 } }], shows: [], episodes: [] },
+          }),
+          movie,
+        ),
+      ),
+    );
+    expect(result._tag).toBe('ProviderDecodeError');
+    expect((result as { detail: string }).detail).toContain('not_found');
+  });
+});
+
 const MOVIE_ITEM = {
   id: 'trakt-42',
   title: 'Sinners',

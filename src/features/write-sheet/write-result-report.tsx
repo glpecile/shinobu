@@ -7,6 +7,7 @@ import {
 } from '@/features/log-media/manual-write-links';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { OutcomeLink, type OutcomeLinkTone } from '@/features/log-media/outcome-link';
+import { cn } from '@/lib/cn';
 import type { UrlItem } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -14,6 +15,9 @@ import type { ProviderId } from '@/lib/providers/types';
 /**
  * One failure/skip message line, with a "{verb} {Provider}" external link
  * beneath it when the provider's item URL is buildable (plan 0022 R5/R6).
+ * The message shares the link's tone (owner request 2026-07-30): an error's
+ * reason renders accent like its headline, while a reasoned skip ("was not on
+ * your watchlist") stays muted — it is a fact, not something that went wrong.
  */
 function OutcomeMessage({
   outcome,
@@ -31,7 +35,14 @@ function OutcomeMessage({
   const link = manualLinkForOutcome(outcome, item);
   return (
     <View>
-      <Text className="text-muted font-sans text-xs">{message}</Text>
+      <Text
+        className={cn(
+          'font-sans text-xs',
+          tone === 'accent' ? 'text-accent' : 'text-muted',
+        )}
+      >
+        {message}
+      </Text>
       {link != null && (
         <OutcomeLink
           provider={outcome.provider}

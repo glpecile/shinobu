@@ -70,14 +70,21 @@ function idsFor(item: NormalizedMediaItem): TraktIds | null {
 /**
  * The Trakt write adapter `useLogMedia` (todos/005) fans out to. Movies (and
  * anime films — MOVIE to Trakt, per routing.ts) post as movie history;
- * TV posts one watched episode. Zero-added responses fail loudly instead of
- * pretending the log landed.
+ * TV posts one watched episode.
+ *
+ * The outcome is read three ways, exactly like the watchlist add (R16): a
+ * non-empty `not_found` fails naming the item (nothing matched); `added > 0`
+ * is the log landing; and **matched-but-added-0 is a reasoned skip, not a
+ * failure** — Trakt's "Disable Multiple Plays" account setting makes a rewatch
+ * play come back `added: 0` with an empty `not_found`, and the old any-zero →
+ * "matched no items" read misreported that account policy as a bad id
+ * (observed live, 2026-07-30).
  */
 export function logToTrakt(
   deps: TraktDeps,
   item: NormalizedMediaItem,
   options: TraktLogOptions = {},
-): Effect.Effect<void, ProviderError> {
+): Effect.Effect<ProviderWriteResult, ProviderError> {
   const ids = idsFor(item);
   if (ids == null) {
     return Effect.fail(
@@ -143,15 +150,30 @@ export function logToTrakt(
     method: 'POST',
     body,
   }).pipe(
-    Effect.filterOrFail(
-      (result) => result.added.movies + result.added.episodes > 0,
-      () =>
-        new ProviderDecodeError({
-          provider: 'trakt',
-          detail: `Trakt matched no items for "${item.title}" (not_found)`,
-        }),
-    ),
-    Effect.asVoid,
+    Effect.flatMap((result): Effect.Effect<ProviderWriteResult, ProviderError> => {
+      const notFound =
+        result.not_found.movies.length +
+          result.not_found.shows.length +
+          result.not_found.episodes.length >
+        0;
+      if (notFound) {
+        return Effect.fail(
+          new ProviderDecodeError({
+            provider: 'trakt',
+            detail: `Trakt matched no items for "${item.title}" (not_found)`,
+          }),
+        );
+      }
+      if (result.added.movies + result.added.episodes > 0) {
+        return Effect.succeed({ status: 'ok' } satisfies ProviderWriteResult);
+      }
+      // Matched, nothing unmatched, nothing added: Trakt's own policy declined
+      // the play (Disable Multiple Plays) — the watch is already recorded.
+      return Effect.succeed({
+        status: 'skipped',
+        reason: 'already in your Trakt history (multiple plays are disabled)',
+      } satisfies ProviderWriteResult);
+    }),
   );
 }
 

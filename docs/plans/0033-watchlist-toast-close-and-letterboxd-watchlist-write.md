@@ -212,6 +212,30 @@ Shipped in this plan:
   its own removal row, and a second sheet stacked over the first is what plan
   0032 U3 bans.
 
+### U7 — a watched film leaves the watchlist (owner decision, 2026-07-30)
+
+Logging a **film-like** item (MOVIE, or ANIME with `isFilm`) that lands on at
+least one provider also removes it from every watchlist that holds it —
+`features/log-media/remove-watched-from-watchlist.ts`, fired (not awaited)
+from `useLogMedia` after the fan-out:
+
+- **Movies only.** A TV log deliberately does not trigger this: one episode
+  watched doesn't mean the show stops being "to watch" — shows are removed
+  manually (owner decision).
+- **Same removal verb, discarded report.** Routes through
+  `runWatchlistRemove` — same `sources` intersection, same per-provider
+  guards (AniList's R36 fresh-read guard protects the just-logged COMPLETED
+  entry; Trakt's server-side auto-remove degrades to a `deleted: 0` skip;
+  Letterboxd's state set is idempotent). Best-effort: a derived write the
+  user didn't aim never fails the log, holds the sheet, or delays the toast.
+- **Cache-only discovery** via `findWatchlistRemoval`; a cold gather cache is
+  a no-op, never a fetch.
+
+Also in this pass (owner request, same day): `WriteResultReport`'s
+per-provider **error** message lines render `text-accent` like their headline;
+reasoned skips stay muted — a "was not on your watchlist" is a fact, not a
+failure.
+
 ### U5 — verification
 
 - Full gate: `bun lint`, typecheck, `bun test`, `bun check:classnames`,
