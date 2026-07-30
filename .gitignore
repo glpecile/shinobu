@@ -48,3 +48,21 @@ yarn-error.*
 
 # wrangler local state/cache (see wrangler.jsonc — Cloudflare Workers web deploy)
 .wrangler/
+
+# Argent (@swmansion/argent) — installed in `--global` mode, but its `init`
+# still writes project-local MCP config for every editor it detects. Only the
+# vendored skills are committed (they follow AGENTS.md § Compound Knowledge:
+# `.agents/skills/` + `skills-lock.json`); the per-editor server config and the
+# tool auto-approve allowlist are per-machine setup, like settings.local.json.
+.mcp.json
+.claude/settings.json
+.claude/rules/
+.claude/agents/
+.cursor/
+.vscode/
+.zed/
+.gemini/
+.codex/
+.kiro/
+.opencode/
+opencode.json
