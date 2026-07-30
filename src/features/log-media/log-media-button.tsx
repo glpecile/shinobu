@@ -11,15 +11,16 @@ import {
 import { useTraktWatchedInfo } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
-import { errorOutcomeLinks } from './manual-write-links';
+import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
+import { toast } from '@/lib/toast';
 import { filmReleaseStatus } from './release-gate';
 import { parseTags } from './parse-tags';
-import { OutcomeLink } from './outcome-link';
+import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit } from './use-log-targets';
 import { seriesEpisodeLabel } from './series-next-episode';
 import { useSeriesNextEpisode } from './use-series-next-episode';
-import { confirmLabelFor, labels, LogConfirmSheet } from './log-confirm-sheet';
+import { confirmLabelFor, LogConfirmSheet } from './log-confirm-sheet';
 
 /**
  * The movie/anime log trigger (plans 0008 + 0011). A write to external
@@ -158,10 +159,14 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       },
       {
         onSuccess: (outcome) => {
-          if (outcome.failed.length === 0) {
-            haptics.success();
+          // Clean → toast + close; anything left to read (a failure, a
+          // reasoned skip, a manual row) keeps the sheet open rendering it
+          // (plan 0032 R4/KTD-3). The toast wrapper owns the success haptic.
+          if (isCleanWriteReport(outcome, manualTargets)) {
+            const copy = logToastCopy(outcome);
+            toast.success(copy.title, copy.message);
             setOpen(false);
-          } else {
+          } else if (outcome.failed.length > 0) {
             haptics.error();
           }
         },
@@ -225,28 +230,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           🎉 You’ve watched every aired episode.
         </Text>
       )}
-      {result != null && result.succeeded.length > 0 && (
-        <Text className="text-muted font-sans text-sm mt-2">
-          {result.rewatch ? 'Logged rewatch to' : 'Logged to'}{' '}
-          {labels(result.succeeded)}.
-          {result.skipped.length > 0 &&
-            ` ${labels(result.skipped)} already had it.`}
-        </Text>
-      )}
-      {result != null && result.failed.length > 0 && (
-        <View className="mt-2 gap-1">
-          <Text className="text-accent font-sans text-sm">
-            Failed on {labels(result.failed)}.
-          </Text>
-          {errorOutcomeLinks(result.outcomes, item).map(({ provider, url }) => (
-            <OutcomeLink
-              key={provider}
-              provider={provider}
-              url={url}
-            />
-          ))}
-        </View>
-      )}
+      {/* The inline result blocks are gone (plan 0032 R9/U4): a clean report
+          is a toast, and anything left to read renders inside the sheet, which
+          stays open until the report settles. */}
 
       <LogConfirmSheet
         onClose={() => setOpen(false)}

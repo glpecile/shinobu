@@ -16,8 +16,11 @@ import {
   useLogMedia,
 } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
+import { logToastCopy } from '@/features/log-media/toast-copy';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
+import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
 import { useConnectedProviders } from '@/state/session';
 import { useUpNextSettling } from '@/state/queries/up-next';
 
@@ -140,7 +143,16 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
             haptics.error();
             return;
           }
-          haptics.success();
+          // Clean → the toast carries the outcome (and the success haptic,
+          // plan 0032 R9/R10). The card's own close/settle rules are its own:
+          // a partial success still advances, with the failure named by the
+          // notice below the card rather than a toast.
+          if (isCleanWriteReport(outcome, manualTargets)) {
+            const copy = logToastCopy(outcome);
+            toast.success(copy.title, copy.message);
+          } else {
+            haptics.success();
+          }
           setOpen(false);
           setPhase('settling');
         },

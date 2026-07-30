@@ -171,6 +171,14 @@ export function LogConfirmSheet({
           <TagPicker onChange={onTagsChange} value={tags ?? ''} />
         </View>
       )}
+      {/* Visible only on a report that kept the sheet open (a clean one closed
+          it and became the toast): the success half of a partial outcome. */}
+      {result != null && result.succeeded.length > 0 && (
+        <Text className="text-muted font-sans text-sm mt-3">
+          {result.rewatch ? 'Logged rewatch to' : 'Logged to'}{' '}
+          {labels(result.succeeded)}.
+        </Text>
+      )}
       {result != null && (
         <WriteResultReport
           failedHeadline={(failed, succeeded) =>

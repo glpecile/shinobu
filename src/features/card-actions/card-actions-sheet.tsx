@@ -1,4 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
@@ -14,6 +15,10 @@ import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episo
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import {
+  WatchlistAddPicker,
+  WatchlistRemovePicker,
+} from '@/features/watchlist-media/watchlist-picker-sheet';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
@@ -129,6 +134,19 @@ export function CardActionsSheet({
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
+  /**
+   * Which content the one sheet shows (plan 0032 U3): the action rows, or a
+   * watchlist picker rendered **in place of** them — never a second sheet
+   * stacked over this one. Cancel returns to the rows; a clean report closes
+   * the whole sheet (the picker fires the toast first).
+   */
+  const [mode, setMode] = useState<'actions' | 'watchlist-add' | 'watchlist-remove'>(
+    'actions',
+  );
+  const itemId = item?.id;
+  useEffect(() => {
+    setMode('actions');
+  }, [open, itemId]);
   // Same read `LogMediaButton` uses (one cache entry, one request): a series
   // whose next episode Trakt can name gets the button, so the pointer to the
   // season picker below is only for the shows that don't.
@@ -159,7 +177,28 @@ export function CardActionsSheet({
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
-      {item != null && (
+      {item != null && mode === 'watchlist-add' && (
+        <WatchlistAddPicker
+          item={item}
+          key={`watchlist-add-${item.id}`}
+          onCancel={() => setMode('actions')}
+          onCleanClose={onClose}
+        />
+      )}
+      {item != null &&
+        mode === 'watchlist-remove' &&
+        watchlistRemoval != null &&
+        watchlistRemoval.entry.item.id === item.id && (
+          <WatchlistRemovePicker
+            entry={watchlistRemoval.entry}
+            errors={watchlistRemoval.errors}
+            incomplete={watchlistRemoval.incomplete}
+            key={`watchlist-remove-${item.id}`}
+            onCancel={() => setMode('actions')}
+            onCleanClose={onClose}
+          />
+        )}
+      {item != null && mode === 'actions' && (
         <>
           {/* Poster beside the title: the dialog is opened from a long-press
               with no page transition, so the artwork is what confirms *which*
@@ -190,26 +229,23 @@ export function CardActionsSheet({
             {!watchlistCtaIsPrimary(item) && (
               <LogMediaButton item={item} key={item.id} />
             )}
-            {/* Stays mounted through the write, unlike the hide row below: that
-                is a synchronous local MMKV toggle with no per-provider outcome,
-                this is a multi-provider network write. The app has no toast and
-                the user is usually on search or the feed with no details screen
-                behind this sheet, so closing on tap would surface a Trakt 420,
-                an expired session or a manual row to nobody. Only a report with
-                nothing left to read closes it. */}
+            {/* Opens the target picker in place of this sheet's rows (plan
+                0032 U3). The picker stays mounted through the write — a toast
+                can't carry a link, so a Trakt 420, an expired session or a
+                manual row lands there; only a clean report closes the sheet. */}
             {showWatchlistAdd && (
               <WatchlistMediaButton
                 item={item}
                 key={`watchlist-${item.id}`}
-                onCleanReport={onClose}
+                onOpenPicker={() => setMode('watchlist-add')}
               />
             )}
-            {/* The removal, on `/watchlist` only (R35). It stays mounted through
-                the write for the same reason the add does — and one more: the
-                row it removes leaves the grid when the invalidation lands, so
-                this sheet is the only place its partial-failure report, its
-                AniList refusal or its unknown-membership rows can still be
-                read. */}
+            {/* The removal, on `/watchlist` only (R35). Its picker stays
+                mounted through the write for the same reason the add's does —
+                and one more: the row it removes leaves the grid when the
+                invalidation lands, so the picker is the only place its
+                partial-failure report, its AniList refusal or its
+                unknown-membership rows can still be read. */}
             {watchlistRemoval != null &&
               watchlistRemoval.entry.item.id === item.id && (
                 <UnwatchlistMediaButton
@@ -217,7 +253,7 @@ export function CardActionsSheet({
                   errors={watchlistRemoval.errors}
                   incomplete={watchlistRemoval.incomplete}
                   key={`unwatchlist-${item.id}`}
-                  onCleanReport={onClose}
+                  onOpenPicker={() => setMode('watchlist-remove')}
                 />
               )}
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (

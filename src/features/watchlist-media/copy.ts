@@ -75,6 +75,41 @@ export function unwatchlistCtaCopy(
       };
 }
 
+/**
+ * The picker sheet's confirm label (plan 0032 R3): names what will happen
+ * without naming a provider — "Add to watchlist" / "Add to 2 watchlists" /
+ * "Remove from watchlist". Provider names appear only in the picker's own
+ * rows and in results.
+ */
+export function watchlistConfirmLabel(
+  item: Pick<NormalizedMediaItem, 'type'>,
+  count: number,
+): string {
+  const noun = isReadIntent(item) ? 'reading list' : 'watchlist';
+  return count > 1 ? `Add to ${count} ${noun}s` : `Add to ${noun}`;
+}
+
+/** The removal's confirm label — same R3 rule as the add's. */
+export function unwatchlistConfirmLabel(
+  item: Pick<NormalizedMediaItem, 'type'>,
+  count: number,
+): string {
+  const noun = isReadIntent(item) ? 'reading list' : 'watchlist';
+  return count > 1 ? `Remove from ${count} ${noun}s` : `Remove from ${noun}`;
+}
+
+/** The clean-report toast's headline (plan 0032 R6) — the message names the providers. */
+export function addedToastTitle(item: Pick<NormalizedMediaItem, 'type'>): string {
+  return isReadIntent(item) ? 'Added to reading list' : 'Added to watchlist';
+}
+
+/** The removal's clean-report toast headline. */
+export function removedToastTitle(item: Pick<NormalizedMediaItem, 'type'>): string {
+  return isReadIntent(item)
+    ? 'Removed from reading list'
+    : 'Removed from watchlist';
+}
+
 /** Mirrors `log-confirm-sheet`'s `labels`, without dragging a JSX module in. */
 export function providerLabelList(ids: readonly ProviderId[]): string {
   return ids.map((id) => PROVIDERS[id].label).join(', ');
