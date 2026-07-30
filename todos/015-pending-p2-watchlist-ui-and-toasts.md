@@ -15,6 +15,13 @@ Sequencing is decided: **finish plan 0031 first** (PRs B, C1, C2), then plan thi
 The write verb, the read surface and removal all land against today's inline result
 block; this todo replaces that surface afterwards rather than racing it.
 
+> **Planned 2026-07-29** — `docs/plans/0032-write-picker-and-toasts.md`. Both open
+> questions below are answered by owner decision (2026-07-29) and recorded there:
+> the **log path adopts toasts too** (one result idiom, so `LogMediaButton` and
+> `LogConfirmSheet` change in the same PR), and the **picker stays open until the
+> report settles** rather than closing on confirm — `burnt` has no press handler,
+> so a 420 or an expired session would otherwise have nowhere to land.
+
 ## What the owner asked for
 
 1. **A target picker modal for watchlisting.** Choose which trackers receive it,
@@ -131,14 +138,15 @@ sentence has to be amended in the same PR rather than quietly contradicted.
 
 ## Open questions the plan must answer
 
-- **Does the log path adopt toasts too?** Two result idioms for two near-identical
-  verbs would be worse than the current inconsistency. Probably yes, which makes this
-  a change to `LogMediaButton` and `LogConfirmSheet` as well — price that in.
-- **What does the picker do on a *failure* after it has closed?** If the picker closes
-  on confirm and the toast cannot be tapped, a Trakt 420 or an expired session has
-  nowhere to land. Either the picker stays open until the report settles (plan 0031 U8
-  already argues this for the card sheet) or failures reopen it. Decide before
-  building.
+- ~~**Does the log path adopt toasts too?**~~ resolved 2026-07-29 — **yes**, one
+  result idiom. `LogMediaButton` and `LogConfirmSheet` change in the same PR
+  (plan 0032 R9/U4).
+- ~~**What does the picker do on a *failure* after it has closed?**~~ resolved
+  2026-07-29 — **it does not close**. The picker stays mounted until the report
+  settles and closes only on a clean report, which is the same argument plan 0031 U8
+  made for the card sheet. Rejected: close-on-confirm with failures reopening it — a
+  modal that reappears reads as a bug and loses the deselection context
+  (plan 0032 R4).
 - ~~**Icons:**~~ resolved 2026-07-28 — verb icons (eye vs bookmark) on the CTA
   itself, via `Button.Icon`. `ProviderIcon` stays for provider rows.
 - ~~**Which toast library, and does it work on web?**~~ resolved 2026-07-28 — `burnt`,
