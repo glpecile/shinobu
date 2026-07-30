@@ -132,13 +132,15 @@ export function WatchlistAddPicker({
       <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
         Write to
       </Text>
-      <ProviderToggleList
-        onSelectAll={selectAll}
-        onSelectNone={selectNone}
-        onToggle={toggle}
-        selectedProviders={selected}
-        targets={writable}
-      />
+      {writable.length > 0 && (
+        <ProviderToggleList
+          onSelectAll={selectAll}
+          onSelectNone={selectNone}
+          onToggle={toggle}
+          selectedProviders={selected}
+          targets={writable}
+        />
+      )}
       <ManualWriteRows
         item={item}
         manual={manual}
@@ -254,13 +256,15 @@ export function WatchlistRemovePicker({
       <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
         Remove from
       </Text>
-      <ProviderToggleList
-        onSelectAll={selectAll}
-        onSelectNone={selectNone}
-        onToggle={toggle}
-        selectedProviders={selected}
-        targets={split.targets}
-      />
+      {split.targets.length > 0 && (
+        <ProviderToggleList
+          onSelectAll={selectAll}
+          onSelectNone={selectNone}
+          onToggle={toggle}
+          selectedProviders={selected}
+          targets={split.targets}
+        />
+      )}
       {/* Manual-declared holders and unknown-membership providers share the
           row slot (plan 0032 U3): identical on screen, different reasons. */}
       <ManualWriteRows
