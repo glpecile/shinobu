@@ -30,6 +30,7 @@ import { useColorScheme } from "react-native";
 // time so a headless background launch can find the task (plan 0020 KTD-4).
 import "@/features/notifications/background-task";
 import { NotificationsRuntime } from "@/features/notifications/notifications-runtime";
+import { ToastHost } from "@/components/toast-host";
 import { useNotificationTapNavigation } from "@/features/notifications/use-notification-tap-navigation";
 
 SplashScreen.preventAutoHideAsync();
@@ -125,6 +126,9 @@ export default function Layout() {
                 {/* Fullscreen image viewer overlay (web); null on native,
                     where galeria renders the zoom inline. */}
                 <Lightbox />
+                {/* sonner's Toaster for burnt's web path; null on native,
+                    where burnt renders from native code (plan 0032 U1). */}
+                <ToastHost />
               </AppShell>
             </ThemeProvider>
            </LightboxProvider>

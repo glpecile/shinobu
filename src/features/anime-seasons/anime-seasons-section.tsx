@@ -3,7 +3,9 @@ import { useState } from 'react';
 
 import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
+import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
 import type { ProviderId } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
 import {
@@ -13,6 +15,7 @@ import {
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { parseTags } from '@/features/log-media/parse-tags';
+import { logToastCopy } from '@/features/log-media/toast-copy';
 import {
   SeasonAccordion,
   type PendingLog,
@@ -116,10 +119,13 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       },
       {
         onSuccess: (outcome) => {
-          if (outcome.failed.length === 0) {
-            haptics.success();
+          // Clean → toast + close; anything left to read keeps the sheet open
+          // (plan 0032 R4/KTD-3). The toast wrapper owns the success haptic.
+          if (isCleanWriteReport(outcome, manualTargets)) {
+            const copy = logToastCopy(outcome);
+            toast.success(copy.title, copy.message);
             setPending(null);
-          } else {
+          } else if (outcome.failed.length > 0) {
             haptics.error();
           }
         },

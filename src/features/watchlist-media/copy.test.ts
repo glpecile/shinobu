@@ -6,6 +6,7 @@ import { splitWriteTargets } from '@/lib/providers/routing';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
+  addedToastTitle,
   addedToSentence,
   alreadyOnSentence,
   failedOnSentence,
@@ -13,7 +14,10 @@ import {
   isUnwatchlistCtaSettled,
   isWatchlistCtaSettled,
   removedFromSentence,
+  removedToastTitle,
+  unwatchlistConfirmLabel,
   unwatchlistCtaCopy,
+  watchlistConfirmLabel,
   watchlistCtaCopy,
   watchlistResultView,
   type WatchlistReportLike,
@@ -325,5 +329,26 @@ describe('unwatchlistCtaCopy and its result headline (R38)', () => {
 
   test('the success headline is the one place providers are named', () => {
     expect(removedFromSentence(['trakt', 'anilist'])).toBe('Removed from Trakt, AniList.');
+  });
+});
+
+describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
+  const film = { type: 'MOVIE' } as const;
+  const manga = { type: 'MANGA' } as const;
+
+  test('the confirm label counts lists, never names a provider', () => {
+    expect(watchlistConfirmLabel(film, 1)).toBe('Add to watchlist');
+    expect(watchlistConfirmLabel(film, 2)).toBe('Add to 2 watchlists');
+    expect(watchlistConfirmLabel(manga, 1)).toBe('Add to reading list');
+    expect(unwatchlistConfirmLabel(film, 1)).toBe('Remove from watchlist');
+    expect(unwatchlistConfirmLabel(film, 3)).toBe('Remove from 3 watchlists');
+    expect(unwatchlistConfirmLabel(manga, 2)).toBe('Remove from 2 reading lists');
+  });
+
+  test('the toast headline states the verb; providers go in the message', () => {
+    expect(addedToastTitle(film)).toBe('Added to watchlist');
+    expect(addedToastTitle(manga)).toBe('Added to reading list');
+    expect(removedToastTitle(film)).toBe('Removed from watchlist');
+    expect(removedToastTitle(manga)).toBe('Removed from reading list');
   });
 });

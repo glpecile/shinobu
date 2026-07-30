@@ -16,6 +16,7 @@
     "@tanstack/react-query-persist-client": "^5.101.4",
     "babel-plugin-react-compiler": "^1.0.0",
     "better-all": "^0.0.7",
+    "burnt": "^0.13.0",
     "cnfast": "^0.0.8",
     "effect": "^3.21.4",
     "expo": "~57.0.8",
