@@ -1,4 +1,5 @@
 import { anilistClientId } from '@/lib/providers/anilist/config';
+import { simklClientId } from '@/lib/providers/simkl/config';
 import { traktClientId, traktClientSecret } from '@/lib/providers/trakt/config';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -25,9 +26,9 @@ export const providerClientIds: Record<ProviderId, () => string> = {
   // captured from the sign-in WebView (native) or exchanged from the
   // email/password `/login` form (web) — no client id.
   serializd: () => '',
-  // U2: the app-owned Simkl client id arrives with `simkl/config.ts` (PKCE,
-  // no secret) — no auth flow exists to consume it before then.
-  simkl: () => '',
+  // App-owned public PKCE client id (plan 0034 KTD-1 — no secret exists).
+  // Trakt-style precedence: an in-app override wins, else the bundled env id.
+  simkl: () => getProviderClientId('simkl') ?? simklClientId(),
 };
 
 export function getClientIdForProvider(id: ProviderId): string {
