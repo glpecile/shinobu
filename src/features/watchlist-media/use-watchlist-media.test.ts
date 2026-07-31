@@ -191,6 +191,7 @@ describe('runWatchlistWrite — the fan-out contract', () => {
     expect(Object.keys(WATCHLIST_ADAPTERS).sort()).toEqual([
       'anilist',
       'letterboxd',
+      'serializd',
       'trakt',
     ]);
 

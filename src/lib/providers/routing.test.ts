@@ -227,10 +227,13 @@ describe("splitWriteTargets('log')", () => {
 });
 
 // Plan 0031 R5/R6/R7/KTD-1: watchlist targets come from `watchlistWrite`, never
-// from `canWrite`. Trakt, AniList and (plan 0033) Letterboxd declare 'write';
-// Serializd (Worker allowlist + season guard, U9, gated on U10's probe)
-// declares 'manual' — so it is a manual row, never absent. Letterboxd's web
-// ban is platform-level (`unsupportedWritePlatforms`), not a declaration.
+// from `canWrite`. All four providers declare 'write' for the add — Trakt and
+// AniList from the start, Letterboxd since plan 0033 (U6's capture), Serializd
+// since U10's probe discharged KTD-10
+// (docs/solutions/serializd-watchlist-clears-watched.md). Serializd's *remove*
+// stays 'manual' (gated on its read leg, R32/R35) — so it is a manual row
+// there, never absent. Letterboxd's web ban is platform-level
+// (`unsupportedWritePlatforms`), not a declaration.
 describe("splitWriteTargets('watchlist')", () => {
   it('a movie with all four connected: Trakt + Letterboxd writable (ios)', () => {
     expect(
@@ -244,10 +247,10 @@ describe("splitWriteTargets('watchlist')", () => {
     ).toEqual({ writable: ['trakt'], manual: ['letterboxd'] });
   });
 
-  it('a TV show: Trakt writable, Serializd manual per its declaration — never dropped', () => {
+  it('a TV show: Trakt and Serializd writable since the U10 flip', () => {
     expect(
       splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'watchlist'),
-    ).toEqual({ writable: ['trakt'], manual: ['serializd'] });
+    ).toEqual({ writable: ['trakt', 'serializd'], manual: [] });
   });
 
   it('a mapped anime film: all three movie targets writable, Serializd absent (TV-only)', () => {
@@ -331,11 +334,18 @@ describe("splitWriteTargets('watchlist-remove')", () => {
     }
   });
 
-  it('matches the add verb while both declarations agree (this PR)', () => {
+  it("diverges from the add verb per Serializd's split declarations", () => {
+    // The add flipped to 'write' with U10's probe; the remove stays 'manual'
+    // until the Serializd read leg lands (R32/R35) — the two verbs answering
+    // differently for one provider is exactly what KTD-15's split axis buys.
     const item = { type: 'TV' as const, ...ids({ trakt: 1 }) };
     expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist-remove')).toEqual({
       writable: ['trakt'],
       manual: ['serializd'],
+    });
+    expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
+      writable: ['trakt', 'serializd'],
+      manual: [],
     });
   });
 });
@@ -452,17 +462,18 @@ describe('resolveWriteTargets', () => {
 
   // A declared-manual provider has no adapter behind it, so it must never
   // reach the fan-out on any platform — including native, where the platform
-  // filter alone would let it through.
-  it('excludes a declared-manual watchlist target on native, forced or not', () => {
+  // filter alone would let it through. Serializd's *remove* is the standing
+  // manual declaration since the add flipped to 'write' with U10's probe.
+  it('excludes a declared-manual watchlist-remove target on native, forced or not', () => {
     expect(
       resolveWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, {
-        capability: 'watchlist',
+        capability: 'watchlist-remove',
         platform: 'ios',
       }),
     ).toEqual(['trakt']);
     expect(
       resolveWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, {
-        capability: 'watchlist',
+        capability: 'watchlist-remove',
         onlyProviders: ['serializd'],
         platform: 'ios',
       }),

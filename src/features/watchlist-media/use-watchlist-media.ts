@@ -19,10 +19,12 @@ import {
 } from '@/features/notifications/refresh';
 import { planOnAniList } from '@/lib/providers/anilist/writes';
 import { addToLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
+import { addToSerializdWatchlist } from '@/lib/providers/serializd/writes';
 import { addToTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { letterboxdDeps } from '@/state/queries/letterboxd';
+import { serializdDeps } from '@/state/queries/serializd';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -46,14 +48,14 @@ import {
  *
  * Letterboxd joined in plan 0033: U6's capture classified the endpoint as a
  * declarative state set, discharging KTD-6, and `unsupportedWritePlatforms`
- * keeps it manual on web (no transport there). **Serializd** stays out — U9 has
- * landed `addToSerializdWatchlist`, the season guard and the Worker rules, but
- * the registry declaration stays `'manual'` until U10's account-bound probe
- * discharges KTD-10's named risk (see `registry.ts`, and
- * `docs/solutions/serializd-watchlist-endpoints.md` § standing rollback). Adding
- * the key here before that flip would not make the write live — routing would
- * still never reach it — so the adapter is deliberately imported by nothing, and
- * the registry token remains the single switch.
+ * keeps it manual on web (no transport there). **Serializd** joined once U10's
+ * account-bound probe discharged KTD-10's named risk
+ * (`docs/solutions/serializd-watchlist-clears-watched.md`): its adapter runs
+ * the season guard first (watched seasons are never sent) and its `ok` can
+ * carry the partial-add reason R16 demands, which `runProviderWrites` now
+ * passes through. The registry token (`registry.ts`) remains the single
+ * switch — reverting it to `'manual'` is the standing rollback (KTD-9) and
+ * makes this key unreachable without deleting it.
  */
 export const WATCHLIST_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistWritePayload>>
@@ -62,6 +64,8 @@ export const WATCHLIST_ADAPTERS: Partial<
   anilist: ({ item }) => Effect.runPromise(planOnAniList(anilistDeps(), item)),
   letterboxd: ({ item }) =>
     Effect.runPromise(addToLetterboxdWatchlist(letterboxdDeps(), item)),
+  serializd: ({ item }) =>
+    Effect.runPromise(addToSerializdWatchlist(serializdDeps(), item)),
 };
 
 /** The watchlist add's report — the shared core's, plus this verb's own fields. */

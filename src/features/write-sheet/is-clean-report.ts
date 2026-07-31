@@ -1,4 +1,7 @@
-import { splitSkippedOutcomes } from '@/features/log-media/manual-write-links';
+import {
+  okReasonOutcomes,
+  splitSkippedOutcomes,
+} from '@/features/log-media/manual-write-links';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -24,12 +27,18 @@ export interface WriteReportLike {
  * them turned every Trakt+Letterboxd add into a no-toast dead end. Reconcile
  * skips (no reason — already in sync) don't block either: with at least one
  * real success they are a footnote, not a recourse.
+ *
+ * A *partial* success — an `ok` carrying a reason (plan 0031 R16, Serializd's
+ * season-filtered watchlist add) — blocks the close for the same reason a
+ * reasoned skip does: "added, except the seasons you've watched" is post-write
+ * news the toast cannot carry.
  */
 export function isCleanWriteReport(report: WriteReportLike): boolean {
   const { reasonedSkips } = splitSkippedOutcomes(report.outcomes);
   return (
     report.succeeded.length > 0 &&
     report.failed.length === 0 &&
-    reasonedSkips.length === 0
+    reasonedSkips.length === 0 &&
+    okReasonOutcomes(report.outcomes).length === 0
   );
 }

@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import {
   manualLinkForOutcome,
+  okReasonOutcomes,
   splitSkippedOutcomes,
   type SkippedOutcomesSplit,
 } from '@/features/log-media/manual-write-links';
@@ -101,6 +102,7 @@ export function WriteResultReport({
     .filter((outcome) => outcome.status === 'ok')
     .map((outcome) => outcome.provider);
   const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(outcomes);
+  const okReasons = okReasonOutcomes(outcomes);
   const allSkip =
     failed.length === 0 && succeeded.length === 0 && reasonedSkips.length > 0;
 
@@ -137,8 +139,23 @@ export function WriteResultReport({
           {reconcileLine(reconcileSkipped)}
         </Text>
       )}
-      {reasonedSkips.length > 0 && (
+      {(okReasons.length > 0 || reasonedSkips.length > 0) && (
         <View className="mt-3 gap-1">
+          {/* Partial successes (an `ok` carrying a reason — plan 0031 R16,
+              Serializd's season-filtered add) share the reasoned-skip family:
+              same neutral tone, because "S1 is already watched" is a fact,
+              not something that went wrong. `manualLinkForOutcome` builds no
+              link for an ok, so the line stands alone. */}
+          {okReasons.map((outcome) => (
+            <OutcomeMessage
+              item={item}
+              key={`ok-${outcome.provider}`}
+              message={`${PROVIDERS[outcome.provider].label}: ${outcome.reason}`}
+              tone="neutral"
+              outcome={outcome}
+              {...(verb != null ? { verb } : {})}
+            />
+          ))}
           {reasonedSkips.map((outcome) => (
             <OutcomeMessage
               item={item}

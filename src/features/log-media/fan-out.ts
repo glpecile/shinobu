@@ -57,9 +57,16 @@ export interface LogMediaVariables {
  * key. A skip is a *success value*, not a thrown error, so it reports through
  * the contract instead of failing the fan-out. Adapters with nothing to report
  * resolve `{ status: 'ok' }`.
+ *
+ * An `ok` may carry a `reason` naming what the write deliberately left alone
+ * (plan 0031 R16): Serializd's watchlist add is season-keyed and its KTD-10
+ * guard filters watched seasons out, so "added, except S1–S2 which are already
+ * watched" is a success *with news* — a bare `ok` would tell the user
+ * "watchlisted" after writing two of five seasons, and with no Serializd read
+ * leg (R32) nothing downstream ever corrects the impression.
  */
 export type ProviderWriteResult =
-  | { status: 'ok' }
+  | { status: 'ok'; reason?: string }
   | { status: 'skipped'; reason: string };
 
 /**
@@ -71,7 +78,8 @@ export type ProviderWriteResult =
 export type WriteAdapter<V> = (variables: V) => Promise<ProviderWriteResult>;
 
 export type ProviderWriteOutcome =
-  | { provider: ProviderId; status: 'ok' }
+  /** Written — with an optional partial-write reason passed through (R16). */
+  | { provider: ProviderId; status: 'ok'; reason?: string }
   | { provider: ProviderId; status: 'error'; message: string }
   /**
    * Left untouched: either already in sync ahead of the others (reconcile,
@@ -140,6 +148,11 @@ export async function runProviderWrites<V>(
               // through as a non-failing outcome; anything else is a success.
               if (result != null && result.status === 'skipped') {
                 return { provider, status: 'skipped', reason: result.reason };
+              }
+              // A partial-write reason rides along on the success (R16) — the
+              // one field `SerializdWatchlistResult` exists to add.
+              if (result != null && result.reason != null) {
+                return { provider, status: 'ok', reason: result.reason };
               }
               return { provider, status: 'ok' };
             } catch (error) {

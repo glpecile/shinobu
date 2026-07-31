@@ -66,6 +66,24 @@ export function errorOutcomeLinks(
 
 type ReasonedSkip = Extract<ProviderWriteOutcome, { status: 'skipped' }> & { reason: string };
 
+type ReasonedOk = Extract<ProviderWriteOutcome, { status: 'ok' }> & { reason: string };
+
+/**
+ * Successes that carry a partial-write reason (plan 0031 R16) — today only
+ * Serializd's season-keyed watchlist add produces one ("S1 and S2 are already
+ * watched on Serializd"). They render through the same per-line family as
+ * reasoned skips, and — like them — they are news the close-and-toast path
+ * cannot carry, so `isCleanWriteReport` reads this split too.
+ */
+export function okReasonOutcomes(
+  outcomes: readonly ProviderWriteOutcome[],
+): ReasonedOk[] {
+  return outcomes.filter(
+    (outcome): outcome is ReasonedOk =>
+      outcome.status === 'ok' && outcome.reason != null,
+  );
+}
+
 export interface SkippedOutcomesSplit {
   /** No reason — already in sync (reconcile). Keeps the existing combined "already had this logged" copy. */
   reconcileSkipped: ProviderId[];

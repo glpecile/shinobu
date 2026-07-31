@@ -119,6 +119,33 @@ describe('fanOutLog', () => {
     });
   });
 
+  test('an ok carrying a partial-write reason passes it through (plan 0031 R16)', async () => {
+    const result = await fanOutLog(
+      {
+        trakt: () => Promise.resolve({ status: 'ok' as const }),
+        serializd: () =>
+          Promise.resolve({
+            status: 'ok' as const,
+            reason: 'S1 is already watched on Serializd',
+          }),
+      },
+      ['trakt', 'serializd'],
+      variables,
+    );
+
+    // A partial success is still a success — it joins `succeeded`, never
+    // `skipped` — but the reason survives onto the outcome so the season-
+    // filtered Serializd add is never reported as a bare "watchlisted".
+    expect(result.succeeded).toEqual(['trakt', 'serializd']);
+    expect(result.skipped).toEqual([]);
+    expect(result.outcomes[0]).toEqual({ provider: 'trakt', status: 'ok' });
+    expect(result.outcomes[1]).toEqual({
+      provider: 'serializd',
+      status: 'ok',
+      reason: 'S1 is already watched on Serializd',
+    });
+  });
+
   test('Covers AE2 — a Serializd auth failure is per-provider; Trakt still succeeds, nothing retried', async () => {
     let serializdCalls = 0;
     const result = await fanOutLog(
