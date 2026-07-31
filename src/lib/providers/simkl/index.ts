@@ -8,6 +8,38 @@ export {
 export type { SimklDeps } from './deps';
 export { simklHttp, type SimklHttpOptions } from './http';
 export {
+  getAllItems,
+  getCalendar,
+  getLastActivities,
+  getMonthlyCalendar,
+  getTrending,
+  getUserSettings,
+  lookupByExternalId,
+  type SimklAllItemsParams,
+  type SimklCalendarKind,
+  type SimklLookupParams,
+  type SimklTrendingParams,
+} from './reads';
+export {
+  normalizeActivities,
+  normalizeAllItems,
+  normalizeCalendarFile,
+  normalizeLibraryEntry,
+  normalizeSearchIdMatch,
+  normalizeTrendingItem,
+  normalizeUserSettings,
+  simklFanartUrl,
+  simklPosterUrl,
+  type SimklActivities,
+  type SimklCalendarEntry,
+  type SimklLibrary,
+  type SimklLibraryEntry,
+  type SimklTrendingKind,
+  type SimklUserSettings,
+  type SimklWatchStatus,
+} from './normalize';
+export * from './writes';
+export {
   beginSimklAuthFlow,
   buildSimklAuthorizeUrl,
   clearSimklAuthFlow,

@@ -113,7 +113,9 @@ export function normalizeAniListMedia(
     progressUnit: type === 'MANGA' ? 'chapter' : 'episode',
     ...(total != null ? { totalEpisodes: total } : {}),
     lastUpdated: nowIso,
-    externalIds: { anilist: media.id },
+    // idMal rides along so Simkl anime writes can key by MAL id (plan 0034
+    // KTD-6) instead of falling to the best-effort external-id tier.
+    externalIds: { anilist: media.id, ...(media.idMal != null ? { mal: media.idMal } : {}) },
   };
 }
 
