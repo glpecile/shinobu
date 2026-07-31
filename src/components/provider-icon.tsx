@@ -3,6 +3,10 @@ import letterboxdIcon from '@/assets/providers/letterboxd.svg';
 // Serializd ships no simple-icons SVG mark — this is their own favicon
 // (converted from serializd.com/favicon.ico), the actual brand logo.
 import serializdIcon from '@/assets/providers/serializd.png';
+// Placeholder mark (plan 0034 U1): a monochrome play-screen tile in Simkl's
+// brand green — no official simple-icons SVG existed when this landed. Swap
+// for the real logo (simkl.com brand assets) without touching call sites.
+import simklIcon from '@/assets/providers/simkl.svg';
 import traktIcon from '@/assets/providers/trakt.svg';
 
 import { Image } from '@/components/image';
@@ -21,6 +25,7 @@ const ICONS: Record<ProviderId, number> = {
   // Serializd's own favicon (teal badge + white mark) — its own background
   // keeps it visible on both themes, per the note above.
   serializd: serializdIcon,
+  simkl: simklIcon,
 };
 
 export function ProviderIcon({ id, size = 20 }: { id: ProviderId; size?: number }) {

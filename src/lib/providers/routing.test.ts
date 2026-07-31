@@ -13,6 +13,7 @@ import {
 
 const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd'];
 const ALL4: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
+const ALL5: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd', 'simkl'];
 
 /** Routing inputs are enriched items — externalIds drive cross-provider matches. */
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
@@ -400,6 +401,71 @@ describe('every applicable provider lands in exactly one bucket', () => {
       }
     }
   }
+});
+
+// Plan 0034 U1: Simkl lands capability-gated — the registry knows it
+// (mediaTypes TV/MOVIE/ANIME) but `canRead`/`canWrite` stay false until the
+// U7/U6 flips, so no fan-out or feed aggregation may include it yet. The
+// watchlist verbs are declared 'manual' (never-a-dead-end), so a connected
+// Simkl surfaces as a manual deep-link row, never a writable target.
+describe('Simkl is capability-gated (plan 0034 U1)', () => {
+  it('joins no log fan-out while canWrite is false', () => {
+    expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([
+      'trakt',
+      'serializd',
+    ]);
+    expect(providersForWrite({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([
+      'trakt',
+      'letterboxd',
+    ]);
+    expect(
+      providersForWrite(
+        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+        ALL5,
+        'log',
+      ),
+    ).toEqual(['trakt', 'anilist', 'letterboxd']);
+  });
+
+  it('joins no feed aggregation while canRead is false', () => {
+    expect(providersForFeed(ALL5)).toEqual(['trakt', 'anilist', 'letterboxd', 'serializd']);
+  });
+
+  it('surfaces as a manual watchlist row, never a writable target (declared manual)', () => {
+    expect(
+      splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'ios', 'watchlist'),
+    ).toEqual({ writable: ['trakt', 'serializd'], manual: ['simkl'] });
+    expect(
+      splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'ios', 'watchlist-remove'),
+    ).toEqual({ writable: ['trakt'], manual: ['serializd', 'simkl'] });
+  });
+
+  it('MANGA never routes to Simkl, even with the write flag flipped (mediaTypes axis)', () => {
+    const simkl = PROVIDERS.simkl;
+    const original = simkl.canWrite;
+    simkl.canWrite = true;
+    try {
+      expect(providersForWrite({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL5, 'log')).toEqual([
+        'anilist',
+      ]);
+      // …and the flip previews the U6 state, pinning the two rules that need no
+      // routing change: `effectiveTypes` matches an unmapped anime series's
+      // 'ANIME' directly, and an anime *film* reaches Simkl too (TV+movie+anime
+      // capable, unlike TV-only Serializd).
+      expect(
+        providersForWrite({ type: 'ANIME', ...ids({ anilist: 1 }) }, ALL5, 'log'),
+      ).toEqual(['anilist', 'simkl']);
+      expect(
+        providersForWrite(
+          { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+          ALL5,
+          'log',
+        ),
+      ).toEqual(['trakt', 'anilist', 'letterboxd', 'simkl']);
+    } finally {
+      simkl.canWrite = original;
+    }
+  });
 });
 
 // Plan 0022 U3 scenario 5: useLogMedia's own defensive re-check must exclude a

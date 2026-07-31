@@ -34,6 +34,9 @@ const HOST_ROOTS: Record<ProviderId, string | null> = {
   // stays scoped to the hosts the home waterfall actually races against.
   letterboxd: null,
   serializd: null,
+  // U7: Simkl has no read leg yet (canRead is false, so providersForFeed never
+  // yields it) — add api.simkl.com here when its Up Next reads land.
+  simkl: null,
 };
 
 // TMDB backs every detail screen the user taps into from the feed, so warming

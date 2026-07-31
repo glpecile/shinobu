@@ -101,4 +101,28 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     watchlistWrite: 'write',
     watchlistRemove: 'manual',
   },
+  // Official OAuth API (plan 0034), TMDB/IMDB/MAL-keyed TV + movie + anime
+  // tracking — the Trakt-detachment provider. Landed **capability-gated**
+  // (Letterboxd plan-0033 verify-then-flip precedent): the type system and
+  // routing know Simkl, but nothing fans out to it until each leg is verified
+  // live. A mid-sequence build can at worst connect Simkl; routing never hands
+  // a write to a stub adapter.
+  simkl: {
+    id: 'simkl',
+    label: 'Simkl',
+    // TV + MOVIE like Trakt, plus ANIME natively — Simkl is the only provider
+    // that matches an *unmapped* anime series/film directly (routing.ts's
+    // `effectiveTypes` needs no special case for it).
+    mediaTypes: ['TV', 'MOVIE', 'ANIME'],
+    // U7 flips this once the read leg (all-items sync + normalize) is live.
+    canRead: false,
+    // U6 flips this once the U4 write adapters are wired into the fan-out maps.
+    canWrite: false,
+    // U6 flips this to 'write' together with canWrite ('manual' until then so a
+    // connected Simkl degrades to a deep link, never a dead end — plan 0022).
+    watchlistWrite: 'manual',
+    // Gated on U4's live probe of the remove endpoint (the same
+    // verify-then-flip bar Serializd's remove is still held to, R32-style).
+    watchlistRemove: 'manual',
+  },
 };

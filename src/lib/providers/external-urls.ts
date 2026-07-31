@@ -85,6 +85,33 @@ function serializdUrl(item: UrlItem): string | null {
 }
 
 /**
+ * Simkl pages are shape-keyed by the simkl id (plan 0034 U1): anime — series
+ * and films alike — lives under its own /anime section, so the shape follows
+ * the item's *native* type first and the movie/TV split only for the rest.
+ * With no simkl id, the documented id-redirect resolves a tmdb id server-side
+ * — the same missing-id degradation shape as Trakt's search redirect. MANGA
+ * has no Simkl surface at all.
+ */
+function simklUrl(item: UrlItem): string | null {
+  const shape =
+    item.type === 'ANIME'
+      ? 'anime'
+      : isMovieShaped(item)
+        ? 'movies'
+        : isShowShaped(item)
+          ? 'tv'
+          : null;
+  if (shape == null) return null;
+  const { simkl, tmdb } = item.externalIds;
+  if (simkl != null) return `https://simkl.com/${shape}/${simkl}`;
+  if (tmdb != null) {
+    const redirectType = shape === 'movies' ? 'movie' : shape === 'tv' ? 'show' : 'anime';
+    return `https://api.simkl.com/redirect?tmdb=${tmdb}&type=${redirectType}`;
+  }
+  return null;
+}
+
+/**
  * The provider's public page for `item`, or null when no id path exists
  * (plan 0022 R8, shared with plan 0023's link selector). Pure and
  * platform-free — callers open the result via `@/lib/open-external-url`.
@@ -99,6 +126,8 @@ export function providerItemUrl(providerId: ProviderId, item: UrlItem): string |
       return letterboxdUrl(item);
     case 'serializd':
       return serializdUrl(item);
+    case 'simkl':
+      return simklUrl(item);
   }
 }
 
@@ -177,7 +206,9 @@ function anilistPersonUrl(person: UrlPerson): string | null {
  * The provider's public page for a person, or null when that provider has no
  * person surface we can address. Trakt and Serializd return null deliberately
  * (owner decision, plan 0025): Trakt people pages need a Trakt person slug we
- * never resolve, and Serializd has no person surface at all.
+ * never resolve, and Serializd has no person surface at all. Simkl joins them
+ * (plan 0034 U1): its people pages are simkl-person-id keyed and TMDB people
+ * carry no such id.
  *
  * Same purity contract as `providerItemUrl` — pure string building, no
  * react-native import, so `scripts/check-external-urls.ts` keeps loading this
@@ -194,6 +225,7 @@ export function providerPersonUrl(
       return anilistPersonUrl(person);
     case 'trakt':
     case 'serializd':
+    case 'simkl':
       return null;
   }
 }
@@ -203,6 +235,7 @@ const PROVIDER_HOME_URLS: Record<ProviderId, string> = {
   anilist: 'https://anilist.co',
   letterboxd: 'https://letterboxd.com',
   serializd: 'https://serializd.com',
+  simkl: 'https://simkl.com',
 };
 
 /**

@@ -15,6 +15,7 @@ export const PROVIDER_DOT: Record<ProviderId, string> = {
   anilist: 'bg-provider-anilist',
   letterboxd: 'bg-provider-letterboxd',
   serializd: 'bg-provider-serializd',
+  simkl: 'bg-provider-simkl',
 };
 
 const MEDIA_TYPE_LABEL: Record<MediaType, string> = {

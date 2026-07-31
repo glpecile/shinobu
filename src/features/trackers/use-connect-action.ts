@@ -50,6 +50,9 @@ export function useConnectAction(id: ProviderId): ConnectAction {
     // Sheet-only, so the row never spins for these — their own buttons do.
     letterboxd: { needsSheet: true, connect: () => undefined, connecting: false },
     serializd: { needsSheet: true, connect: () => undefined, connecting: false },
+    // U5: no connect flow exists yet — sheet-only keeps the row inert until
+    // the real PKCE connect button lands.
+    simkl: { needsSheet: true, connect: () => undefined, connecting: false },
   };
   return actions[id];
 }

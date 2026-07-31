@@ -39,6 +39,9 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   serializd: 1,
   anilist: 2,
   letterboxd: 3,
+  // U7: unreachable until the Simkl read leg lands (canRead is false, so no
+  // Simkl diary entries exist to merge) — re-rank against Trakt then.
+  simkl: 4,
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */

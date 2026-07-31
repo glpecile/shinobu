@@ -38,6 +38,9 @@ export function useProviderUsername(
     trakt: trakt.data ?? undefined,
     anilist: anilist.data?.name,
     letterboxd: undefined,
+    // U5: Simkl's `/users/settings` read resolves the handle once the session
+    // and query layer land — no session exists before then.
+    simkl: undefined,
     serializd: undefined,
   };
   return remote[id];

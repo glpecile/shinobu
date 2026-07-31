@@ -88,6 +88,13 @@ export interface NormalizedMediaItem {
     /** TVDB/IMDB bridge ids — how anime maps across providers (plan 0011). */
     tvdb?: number;
     imdb?: string;
+    /**
+     * MyAnimeList id — Simkl keys anime by `mal` (plan 0034 KTD-6), so it is a
+     * bridge id like tvdb/imdb, not a fifth tracker.
+     */
+    mal?: number;
+    /** Simkl's own numeric id (plan 0034). */
+    simkl?: number;
   };
 }
 

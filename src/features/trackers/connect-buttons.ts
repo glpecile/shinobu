@@ -19,9 +19,15 @@ import type { ProviderId } from '@/lib/providers/types';
  * They range from one button to a multi-step form, which is exactly why they
  * live in the sheet rather than inline on a row (`provider-sheet.tsx`).
  */
+// U5: replaced by the real ConnectSimklButton (PKCE flow) — until then the
+// sheet shows nothing for Simkl, and no session can be created, so the card
+// stays permanently "Not connected" rather than half-wired.
+const ConnectSimklPlaceholder: ComponentType = () => null;
+
 export const CONNECT_BUTTONS: Record<ProviderId, ComponentType> = {
   trakt: ConnectTraktButton,
   anilist: ConnectAniListButton,
   letterboxd: ConnectLetterboxdButton,
   serializd: ConnectSerializdButton,
+  simkl: ConnectSimklPlaceholder,
 };

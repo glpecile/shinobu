@@ -33,6 +33,10 @@ const ITEM_PRECEDENCE: Record<ProviderId, number> = {
   trakt: 1,
   serializd: 2,
   letterboxd: 3,
+  // U7: unreachable until the Simkl read leg lands (no Simkl watchlist read
+  // exists to contribute entries) — re-rank when it does (KTD-10 puts Simkl
+  // above Trakt for the yourShows merge; revisit here with real data).
+  simkl: 4,
 };
 
 /**

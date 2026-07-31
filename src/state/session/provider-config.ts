@@ -25,6 +25,9 @@ export const providerClientIds: Record<ProviderId, () => string> = {
   // captured from the sign-in WebView (native) or exchanged from the
   // email/password `/login` form (web) — no client id.
   serializd: () => '',
+  // U2: the app-owned Simkl client id arrives with `simkl/config.ts` (PKCE,
+  // no secret) — no auth flow exists to consume it before then.
+  simkl: () => '',
 };
 
 export function getClientIdForProvider(id: ProviderId): string {
@@ -45,6 +48,9 @@ export const providerClientSecrets: Record<ProviderId, () => string> = {
   anilist: () => '',
   letterboxd: () => '',
   serializd: () => '',
+  // Permanently '' by design: Simkl uses PKCE (plan 0034 KTD-1), which has no
+  // client secret — like AniList's implicit grant above.
+  simkl: () => '',
 };
 
 export function getClientSecretForProvider(id: ProviderId): string {
