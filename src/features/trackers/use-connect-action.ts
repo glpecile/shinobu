@@ -1,4 +1,5 @@
 import { useAniListConnect } from '@/components/connect-anilist-button';
+import { useSimklConnect } from '@/components/connect-simkl-button';
 import { useTraktConnect } from '@/components/connect-trakt-button';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -23,6 +24,8 @@ export interface ConnectAction {
  *
  * - **Trakt / AniList** — only when this build ships no credentials and the
  *   user has stored none, i.e. the one-time client-id form.
+ * - **Simkl** — one-tap PKCE with the bundled client id, so almost never; the
+ *   sheet only opens when a build ships no id, to say so (plan 0034 U5).
  * - **Letterboxd / Serializd** — always. Their sheets are not just a button:
  *   they carry the "your session stays on this device, no password is ever
  *   sent to Shinobu" copy, which is the wrong thing to skip on the way into a
@@ -34,6 +37,7 @@ export interface ConnectAction {
 export function useConnectAction(id: ProviderId): ConnectAction {
   const trakt = useTraktConnect();
   const anilist = useAniListConnect();
+  const simkl = useSimklConnect();
 
   // Exhaustive by ProviderId, so a new provider has to declare which it is.
   const actions: Record<ProviderId, ConnectAction> = {
@@ -50,9 +54,11 @@ export function useConnectAction(id: ProviderId): ConnectAction {
     // Sheet-only, so the row never spins for these — their own buttons do.
     letterboxd: { needsSheet: true, connect: () => undefined, connecting: false },
     serializd: { needsSheet: true, connect: () => undefined, connecting: false },
-    // U5: no connect flow exists yet — sheet-only keeps the row inert until
-    // the real PKCE connect button lands.
-    simkl: { needsSheet: true, connect: () => undefined, connecting: false },
+    simkl: {
+      needsSheet: simkl.needsSetup,
+      connect: () => void simkl.connect(),
+      connecting: simkl.status === 'connecting',
+    },
   };
   return actions[id];
 }

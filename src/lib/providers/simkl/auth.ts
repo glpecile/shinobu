@@ -5,13 +5,24 @@ import {
   digestStringAsync,
   getRandomBytes,
 } from 'expo-crypto';
-import { createMMKV } from 'react-native-mmkv';
 
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
 import type { ProviderSession } from '@/types/session';
+import {
+  clearSimklAuthFlow,
+  getSimklAuthFlow,
+  saveSimklAuthFlow,
+} from './auth-flow';
 import { SIMKL_AUTHORIZE_URL, simklStandardParams } from './config';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
+
+export {
+  clearSimklAuthFlow,
+  getSimklAuthFlow,
+  saveSimklAuthFlow,
+  type SimklAuthFlow,
+} from './auth-flow';
 
 const provider = 'simkl' as const;
 
@@ -56,41 +67,6 @@ export async function deriveSimklCodeChallenge(verifier: string): Promise<string
 export async function createSimklPkcePair(): Promise<SimklPkcePair> {
   const verifier = randomUnreserved(VERIFIER_LENGTH);
   return { verifier, challenge: await deriveSimklCodeChallenge(verifier) };
-}
-
-// --- Per-flow storage -------------------------------------------------------
-
-/**
- * The in-flight PKCE material: transient, one flow at a time, deleted the
- * moment the exchange settles. MMKV-backed like `state/session/tokens.ts`
- * (localStorage fallback on web) but under its own instance id so writing it
- * never fires `onSessionChange` listeners mid-OAuth.
- */
-const flowStorage = createMMKV({ id: 'simkl-auth-flow' });
-const FLOW_KEY = 'simklAuthFlow';
-
-export interface SimklAuthFlow {
-  verifier: string;
-  state: string;
-}
-
-export function saveSimklAuthFlow(flow: SimklAuthFlow): void {
-  flowStorage.set(FLOW_KEY, JSON.stringify(flow));
-}
-
-export function getSimklAuthFlow(): SimklAuthFlow | null {
-  const raw = flowStorage.getString(FLOW_KEY);
-  if (raw == null) return null;
-  try {
-    return JSON.parse(raw) as SimklAuthFlow;
-  } catch {
-    flowStorage.remove(FLOW_KEY);
-    return null;
-  }
-}
-
-export function clearSimklAuthFlow(): void {
-  flowStorage.remove(FLOW_KEY);
 }
 
 // --- Authorize URL ----------------------------------------------------------
