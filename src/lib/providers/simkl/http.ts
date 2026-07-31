@@ -19,6 +19,13 @@ export interface SimklHttpOptions {
   accessToken?: string;
   /** Defaults to the API host; calendar reads pass `SIMKL_CDN_BASE_URL`. */
   baseUrl?: string;
+  /**
+   * Ran on a 2xx before the body decodes; returning an error fails the effect
+   * with it. How `reads.ts` asserts `/sync/all-items` never silently went
+   * paginated (plan 0034 U3): headers are transport-level, so the check must
+   * live here — the decoded body can't witness them.
+   */
+  inspectResponse?: (headers: Headers) => ProviderError | undefined;
 }
 
 /**
@@ -115,6 +122,13 @@ export function simklHttp<A>(
         cause: new Error(`Simkl responded ${response.status} for ${path}`),
         status: response.status,
       });
+    }
+
+    if (options.inspectResponse != null) {
+      const rejection = options.inspectResponse(response.headers);
+      if (rejection != null) {
+        return yield* rejection;
+      }
     }
 
     return yield* Effect.tryPromise({
