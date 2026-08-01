@@ -1,48 +1,88 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Linking, Platform, Text, TextInput, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
+import { Collapsible } from '@/components/collapsible';
+import { PresstableOpacity } from '@/components/presstable';
+import { Steps } from '@/components/steps';
+import { SIMKL_CREATE_APP_URL } from '@/lib/providers/external-urls';
 import {
   beginSimklAuthFlow,
   clearSimklAuthFlow,
 } from '@/lib/providers/simkl/auth';
-import { getSimklRedirectUri } from '@/lib/providers/simkl/redirect-uri';
+import { simklClientId } from '@/lib/providers/simkl/config';
+import {
+  getSimklRedirectUri,
+  SIMKL_REDIRECT_URIS,
+} from '@/lib/providers/simkl/redirect-uri';
 import { exchangeSimklCode } from '@/state/queries/simkl';
-import { getClientIdForProvider } from '@/state/session/provider-config';
+import {
+  clearProviderClientId,
+  getProviderClientId,
+  setProviderClientId,
+} from '@/state/session/tokens';
 
 type ConnectionStatus = 'idle' | 'connecting' | 'error';
+
+// Simkl client ids are long hex strings — catch pasted URLs/names/secrets
+// with spaces, not a specific length.
+const clientIdSchema = z.object({
+  clientId: z
+    .string()
+    .trim()
+    .min(1, 'Paste your Client ID first.')
+    .regex(
+      /^[a-f0-9]{16,}$/i,
+      "That doesn't look like a Client ID — it's the long hex string on your Simkl app's page.",
+    ),
+});
+
+type ClientIdForm = z.infer<typeof clientIdSchema>;
 
 /**
  * Simkl's OAuth trigger, without any of its UI.
  *
- * One-tap by design (plan 0034 U5): the app ships a public PKCE client id
- * (`EXPO_PUBLIC_SIMKL_CLIENT_ID` — no secret exists, KTD-1), so there is no
- * BYO wizard and no Steps. `beginSimklAuthFlow` persists the PKCE
+ * Hybrid client-id model (owner decision 2026-08-01, superseding plan 0034
+ * U5's "no BYO wizard"): builds that bundle a PKCE client id
+ * (`EXPO_PUBLIC_SIMKL_CLIENT_ID` — no secret exists, KTD-1) connect in one
+ * tap; a build without one falls back to an AniList-style one-time form that
+ * takes the user's own Simkl app client id (a single field — PKCE has no
+ * secret to pair it with). `beginSimklAuthFlow` persists the PKCE
  * verifier/state pair for the return leg. On native, auth opens in an embedded
  * browser session and this hook finishes the code exchange from the returned
  * URL — the same in-button return handling as Trakt's code flow; the exchange
  * validates `state` against the persisted flow internally. On web, the current
  * window navigates to Simkl and comes back to the home route as
- * `?oauth=simkl&code=…`, where `useOAuthCallback` exchanges it.
+ * `?oauth=simkl&code=…`, where `useOAuthCallback` exchanges it (both legs read
+ * the stored override via `getClientIdForProvider`).
  *
  * Extracted so the Manage Trackers row can connect in one tap without opening
  * a sheet whose only content would be this button; the button below consumes
  * the same hook, so there is exactly one copy of the flow.
  */
 export function useSimklConnect() {
+  const [storedClientId, setStoredClientId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : getProviderClientId('simkl'),
+  );
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
-  const clientId = getClientIdForProvider('simkl');
+  const embeddedClientId = simklClientId();
+  // Override-first, matching provider-config's simkl resolver.
+  const clientId = storedClientId ?? embeddedClientId;
   const redirectUri = getSimklRedirectUri();
 
-  async function connect() {
-    if (clientId === '') return;
+  async function connect(id: string = clientId) {
+    if (id === '') return;
 
     setStatus('connecting');
     let url: string;
     try {
-      url = await beginSimklAuthFlow({ clientId, redirectUri });
+      url = await beginSimklAuthFlow({ clientId: id, redirectUri });
     } catch (error) {
       setStatus('error');
       console.error('Simkl auth flow could not be started', error);
@@ -90,23 +130,125 @@ export function useSimklConnect() {
     connect,
     status,
     clientId,
-    /** True only when this build ships no client id — nothing to tap through. */
+    embeddedClientId,
+    storedClientId,
+    setStoredClientId,
+    /** True when connecting first requires the one-time client-id form. */
     needsSetup: clientId === '',
   };
 }
 
 export function ConnectSimklButton() {
-  const { connect, status, clientId } = useSimklConnect();
+  const {
+    connect,
+    status,
+    clientId,
+    embeddedClientId,
+    storedClientId,
+    setStoredClientId,
+  } = useSimklConnect();
+  const muted = useCSSVariable('--color-muted');
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ClientIdForm>({
+    defaultValues: { clientId: '' },
+    resolver: zodResolver(clientIdSchema),
+  });
+  // Saving the id means the user wants to connect — go straight into OAuth.
+  const submitClientId = handleSubmit(async (values) => {
+    setProviderClientId('simkl', values.clientId);
+    setStoredClientId(values.clientId);
+    await connect(values.clientId);
+  });
 
   if (clientId === '') {
-    // No BYO path exists for Simkl (plan 0034 U5) — a build without the
-    // bundled id has nothing to connect with, so say so instead of rendering
-    // a button that can only dead-tap.
     return (
-      <Text className="text-muted font-sans text-sm text-center">
-        This build ships no Simkl client id — set EXPO_PUBLIC_SIMKL_CLIENT_ID
-        and rebuild to connect.
-      </Text>
+      <View className="w-full gap-4">
+        <Text className="text-muted font-sans text-sm">
+          This build ships no Simkl client id — connect through your own (free)
+          Simkl app instead. One-time setup, under a minute, no secret needed.
+        </Text>
+
+        <Collapsible label="How to create the Simkl app">
+          <Steps>
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Create an app at{' '}
+                <Text
+                  className="text-accent font-sans-semibold underline"
+                  onPress={() => Linking.openURL(SIMKL_CREATE_APP_URL)}
+                >
+                  {SIMKL_CREATE_APP_URL.replace('https://', '')}
+                </Text>
+                . Name can be anything (e.g. "Shinobu").
+              </Text>
+            </Steps.Item>
+
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Add every{' '}
+                <Text className="text-foreground font-sans-semibold">
+                  Redirect URI
+                </Text>{' '}
+                below to the app, each exactly as written:
+              </Text>
+              {SIMKL_REDIRECT_URIS.map((uri) => (
+                <View
+                  className="border border-border bg-surface px-2 py-1 rounded-md self-start"
+                  key={uri}
+                >
+                  <Text className="text-foreground font-sans text-xs" selectable>
+                    {uri}
+                  </Text>
+                </View>
+              ))}
+            </Steps.Item>
+
+            <Steps.Item>
+              <Text className="text-muted font-sans text-sm">
+                Save, then copy the app's{' '}
+                <Text className="text-foreground font-sans-semibold">
+                  Client ID
+                </Text>{' '}
+                (a long hex string) and paste it below.
+              </Text>
+            </Steps.Item>
+          </Steps>
+        </Collapsible>
+
+        <Controller
+          control={control}
+          name="clientId"
+          render={({ field }) => (
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
+              onBlur={field.onBlur}
+              onChangeText={field.onChange}
+              onSubmitEditing={() => submitClientId()}
+              placeholder="Simkl Client ID"
+              placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+              returnKeyType="done"
+              value={field.value}
+            />
+          )}
+        />
+        {errors.clientId != null && (
+          <Text className="text-accent font-sans text-xs">
+            {errors.clientId.message}
+          </Text>
+        )}
+        <Button
+          label="Save & Connect"
+          loading={isSubmitting || status === 'connecting'}
+          loadingLabel="Connecting…"
+          onPress={() => void submitClientId()}
+        />
+      </View>
     );
   }
 
@@ -123,6 +265,16 @@ export function ConnectSimklButton() {
         loadingLabel="Connecting…"
         onPress={() => void connect()}
       />
+      {embeddedClientId === '' && storedClientId != null && (
+        <PresstableOpacity
+          onPress={() => {
+            clearProviderClientId('simkl');
+            setStoredClientId(null);
+          }}
+        >
+          <Text className="text-muted font-sans text-xs">Edit client ID</Text>
+        </PresstableOpacity>
+      )}
     </View>
   );
 }

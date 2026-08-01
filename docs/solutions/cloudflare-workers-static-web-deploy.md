@@ -139,9 +139,13 @@ in one place rather than duplicated in the dashboard.
 
 ### Env vars must be added in the dashboard, not just `.env.local`
 
-The four `EXPO_PUBLIC_*` vars the web build inlines at export time
+The `EXPO_PUBLIC_*` vars the web build inlines at export time
 (`EXPO_PUBLIC_TMDB_TOKEN`, `EXPO_PUBLIC_TRAKT_CLIENT_ID`,
-`EXPO_PUBLIC_TRAKT_CLIENT_SECRET`, `EXPO_PUBLIC_ANILIST_CLIENT_ID`) live in
+`EXPO_PUBLIC_TRAKT_CLIENT_SECRET`, `EXPO_PUBLIC_ANILIST_CLIENT_ID`,
+`EXPO_PUBLIC_SIMKL_CLIENT_ID` — v0.2.0 shipped without the Simkl id on both
+web and the release APKs because it was missing here *and* from release.yml's
+`.env.local` heredoc; every new bundled credential must be added in both
+places) live in
 `.env.local`, which is **gitignored** — so Cloudflare's build container never
 sees them. They must be re-entered under Workers Builds → **Variables and
 secrets**. Miss this and the build still *succeeds* (nothing errors on a

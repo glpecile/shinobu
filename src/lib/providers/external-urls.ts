@@ -20,6 +20,9 @@ export const TRAKT_CREATE_APP_URL = 'https://app.trakt.tv/settings/apps/api/new'
 /** Where a user creates their own AniList API client (BYO client id). */
 export const ANILIST_CREATE_CLIENT_URL = 'https://anilist.co/settings/developer';
 
+/** Where a user creates their own Simkl app (BYO client id — PKCE, no secret). */
+export const SIMKL_CREATE_APP_URL = 'https://simkl.com/settings/developer/';
+
 /** AniList implicit-grant authorize endpoint (re-exported by anilist/config). */
 export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize';
 

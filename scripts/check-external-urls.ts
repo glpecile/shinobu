@@ -18,6 +18,7 @@ import {
   anilistStaffUrl,
   anilistStudioUrl,
   letterboxdStudioUrl,
+  SIMKL_CREATE_APP_URL,
   TMDB_API_SETTINGS_URL,
   TRAKT_CREATE_APP_URL,
 } from '@/lib/providers/external-urls';
@@ -58,6 +59,13 @@ export const URL_CHECKS: UrlCheck[] = [
   {
     name: 'AniList create-client page',
     url: ANILIST_CREATE_CLIENT_URL,
+    expect: [200],
+  },
+  {
+    // Signed-out, Simkl serves the settings shell (200) rather than a
+    // redirect-to-login; a moved or dead page would 404.
+    name: 'Simkl create-app page',
+    url: SIMKL_CREATE_APP_URL,
     expect: [200],
   },
   {
