@@ -8,8 +8,10 @@ import { Effect } from 'effect';
 
 import {
   getMediaDetails,
+  type MediaDetailsDeps,
   type MediaDetails,
 } from '@/lib/providers/media-details';
+import { getClientIdForProvider } from '@/state/session/provider-config';
 import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -93,6 +95,22 @@ async function resolveTmdbId(
   return (await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb)) ?? undefined;
 }
 
+/**
+ * Which provider legs `getMediaDetails` gets, resolved once per call so the
+ * gate is one function rather than inlined at the call site (plan 0034
+ * KTD-8). `tmdb`/`trakt` are each null exactly when their credential is
+ * absent — `getMediaDetails`'s failover already tolerates either leg missing,
+ * so a Trakt-less build (no BYO creds post-detachment) simply has one fewer
+ * failover source instead of a doomed unauthenticated request.
+ */
+export function buildMediaDetailsDeps(): MediaDetailsDeps {
+  return {
+    tmdb: tmdbToken() !== '' ? tmdbDeps() : null,
+    trakt: getClientIdForProvider('trakt') !== '' ? traktDeps() : null,
+    anilist: anilistDeps(),
+  };
+}
+
 function mediaDetailsQuery(
   queryClient: QueryClient,
   item: NormalizedMediaItem | undefined,
@@ -104,11 +122,7 @@ function mediaDetailsQuery(
       const tmdbId = await resolveTmdbId(queryClient, item);
       return Effect.runPromise(
         getMediaDetails(
-          {
-            tmdb: tmdbToken() !== '' ? tmdbDeps() : null,
-            trakt: traktDeps(),
-            anilist: anilistDeps(),
-          },
+          buildMediaDetailsDeps(),
           {
             type: item.type,
             ...(item.isFilm != null ? { isFilm: item.isFilm } : {}),

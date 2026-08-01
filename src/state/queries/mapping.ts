@@ -14,6 +14,7 @@ import {
   pickMovieMatch,
 } from '@/lib/providers/pick-movie-match';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
+import { lookupByExternalId as lookupSimklByExternalId } from '@/lib/providers/simkl/reads';
 import {
   findByTvdbId,
   getTvSeasonLayout,
@@ -24,11 +25,26 @@ import {
   lookupByExternalId,
   searchMedia,
 } from '@/lib/providers/trakt/reads';
+import { getClientIdForProvider } from '@/state/session/provider-config';
+import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistDeps } from './anilist';
+import { simklDeps } from './simkl';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
+
+/**
+ * Whether Trakt has a usable client id right now — BYO credentials (already
+ * true today) or, pre-detachment, the bundled env id. The gate every
+ * Trakt-riding lookup below checks before spending a request on it (plan 0034
+ * KTD-8): once U9 removes the bundled credentials, this is `false` for every
+ * non-BYO user, and these lookups fall back to Simkl/TMDB instead of quietly
+ * degrading to `null` forever.
+ */
+function traktHasCredentials(): boolean {
+  return getClientIdForProvider('trakt') !== '';
+}
 
 /**
  * Cross-provider identity lookups (plan 0011 decisions 5–6): ani.zip bridges
@@ -157,7 +173,15 @@ export function cachedSeasonLayout(
         // through to Trakt rather than treating "no data" as an answer.
         if (layout != null && layout.length > 0) return layout;
       }
-      if (traktId != null) {
+      // Trakt's season structure is public catalogue data, but the client id
+      // that authorizes it (plan 0034 KTD-8) is exactly the credential
+      // detachment removes for a non-BYO build — gated rather than left to
+      // fail into the same `.catch(() => null)` an empty client id would give
+      // it anyway, so a Trakt-less build doesn't spend a doomed round trip.
+      // No Simkl equivalent exists (`/sync/all-items` only reports a user's
+      // own watched seasons, not a show's canonical structure) — TMDB above
+      // stays the substitute KTD-8 allows for.
+      if (traktId != null && traktHasCredentials()) {
         const layout = await Effect.runPromise(
           getShowSeasonLayout(traktDeps(), { traktId }),
         ).catch(() => null);
@@ -170,6 +194,40 @@ export function cachedSeasonLayout(
   });
 }
 
+/**
+ * A foreign id (TVDB/TMDB/IMDB) → a full catalogue record, Trakt-shaped when
+ * Trakt has credentials, else Simkl's `/search/id` (plan 0034 KTD-8). Shared
+ * by `cachedTraktLookup` (below) and `useTraktIdentityQuery` — one gate, not
+ * two copies that could disagree about when Trakt is usable.
+ *
+ * `enrich.ts`'s anime→Trakt-id bridge only ever calls `cachedTraktLookup`
+ * while `connected.includes('trakt')` is true, which (session model) only
+ * holds when credentials exist, so that call site keeps getting a genuine
+ * Trakt id; `useTraktIdentityQuery` is unconditional and is exactly what this
+ * gate protects — without it, a non-BYO build post-detachment would silently
+ * resolve to `null` forever instead of Simkl's still-useful
+ * tmdb/imdb/mal/simkl id bag.
+ */
+function traktOrSimklLookup(params: {
+  source: 'tvdb' | 'tmdb' | 'imdb';
+  id: number | string;
+  kind: 'movie' | 'show';
+}): Promise<NormalizedMediaItem | null> {
+  if (traktHasCredentials()) {
+    return Effect.runPromise(lookupByExternalId(traktDeps(), params)).catch(() => null);
+  }
+  return Effect.runPromise(
+    lookupSimklByExternalId(simklDeps(), {
+      type: params.kind,
+      ...(params.source === 'tvdb' ? { tvdb: Number(params.id) } : {}),
+      ...(params.source === 'tmdb' ? { tmdb: Number(params.id) } : {}),
+      ...(params.source === 'imdb' ? { imdb: String(params.id) } : {}),
+    }),
+  )
+    .then((results) => results[0] ?? null)
+    .catch(() => null);
+}
+
 export function cachedTraktLookup(
   queryClient: QueryClient,
   params: {
@@ -180,30 +238,39 @@ export function cachedTraktLookup(
 ) {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.traktLookup(params.source, params.id, params.kind),
-    queryFn: () =>
-      Effect.runPromise(lookupByExternalId(traktDeps(), params)).catch(() => null),
+    queryFn: () => traktOrSimklLookup(params),
     ...FOREVER,
   });
 }
 
 /**
- * Resolve a movie's full Trakt catalogue record (metadata + Trakt/TMDB/IMDB
- * ids) from its title+year via Trakt text search — the bridge for items whose
- * origin provider carries no cross-id at all (a Letterboxd watchlist film is
- * just a slug + title + year). Which result counts as *the* film is
- * `pickMovieMatch`'s year-gated call — never the raw top hit
- * (docs/solutions/trakt-text-search-wrong-movie-match.md). A miss resolves
- * to `null`.
+ * Resolve a movie's full catalogue record (metadata + cross-ids) from its
+ * title+year — the bridge for items whose origin provider carries no cross-id
+ * at all (a Letterboxd watchlist film is just a slug + title + year). Trakt
+ * text search when Trakt has credentials (unchanged); TMDB `/search/movie`
+ * otherwise (plan 0034 KTD-8 — Simkl's reads surface has no title search, so
+ * TMDB is the actual substitute here, not a fallback of convenience). Which
+ * result counts as *the* film is always `pickMovieMatch`'s year-gated call —
+ * never the raw top hit
+ * (docs/solutions/trakt-text-search-wrong-movie-match.md). A miss, or no
+ * usable source at all, resolves to `null`.
  */
 function movieSearchQuery(title: string, year: number | undefined) {
   return {
     queryKey: mappingQueryKeys.traktSearch(title, year),
-    queryFn: (): Promise<NormalizedMediaItem | null> =>
-      // limit 10, not 5: an upcoming film can rank below a popular classic
-      // sharing its title, and the year gate needs it in the result set.
-      Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }))
+    queryFn: (): Promise<NormalizedMediaItem | null> => {
+      if (traktHasCredentials()) {
+        // limit 10, not 5: an upcoming film can rank below a popular classic
+        // sharing its title, and the year gate needs it in the result set.
+        return Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }))
+          .then((results) => pickMovieMatch(results, year, title))
+          .catch(() => null);
+      }
+      if (tmdbToken() === '') return Promise.resolve(null);
+      return Effect.runPromise(searchMovie(tmdbDeps(), { query: title, year }))
         .then((results) => pickMovieMatch(results, year, title))
-        .catch(() => null),
+        .catch(() => null);
+    },
     ...FOREVER,
   };
 }
@@ -334,22 +401,23 @@ export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
 }
 
 /**
- * Trakt catalogue record for an item that knows its TMDB id but not its
- * Trakt one — today that's a filmography credit opened from the person
- * screen (TMDB-normalized, so MOVIE/TV only). The discovered record merges
- * in via `mergeCatalogueMetadata`, lighting up the trakt-id-keyed detail
- * sections (seasons, cast, studios). Shares its cache entry with the
- * fan-out's `cachedTraktLookup`.
+ * Catalogue record for an item that knows its TMDB id but not its Trakt one —
+ * today that's a filmography credit opened from the person screen
+ * (TMDB-normalized, so MOVIE/TV only). Trakt-shaped when Trakt has
+ * credentials, else Simkl's (plan 0034 KTD-8 — this call is unconditional,
+ * unlike `enrich.ts`'s gated one, so it's exactly the caller a non-BYO build
+ * would otherwise silently starve). The discovered record merges in via
+ * `mergeCatalogueMetadata`, lighting up the trakt-id-keyed detail sections
+ * (seasons, cast, studios) when Trakt answered, or the tmdb/imdb/mal ids
+ * Simkl's answer carries otherwise. Shares its cache entry with the fan-out's
+ * `cachedTraktLookup`.
  */
 export function useTraktIdentityQuery(item: NormalizedMediaItem | undefined) {
   const tmdbId = item?.externalIds.tmdb;
   const kind = item?.type === 'TV' ? 'show' : 'movie';
   return useQuery({
     queryKey: mappingQueryKeys.traktLookup('tmdb', tmdbId ?? 0, kind),
-    queryFn: (): Promise<NormalizedMediaItem | null> =>
-      Effect.runPromise(
-        lookupByExternalId(traktDeps(), { source: 'tmdb', id: tmdbId ?? 0, kind }),
-      ).catch(() => null),
+    queryFn: () => traktOrSimklLookup({ source: 'tmdb', id: tmdbId ?? 0, kind }),
     ...FOREVER,
     enabled:
       item != null &&

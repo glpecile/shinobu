@@ -53,6 +53,17 @@ describe('computeWatchlist', () => {
     expect(entries[0].item.externalIds.tmdb).toBe(949);
   });
 
+  test('Simkl’s copy wins over Trakt’s (plan 0034 KTD-10/R10)', () => {
+    const entries = computeWatchlist([
+      traktRow({ id: 'trakt-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949 } }),
+      { item: item({ id: 'simkl-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949, simkl: 1 } }), source: 'simkl' },
+    ]);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].sources).toEqual(['trakt', 'simkl']);
+    expect(entries[0].id).toBe('simkl-1');
+  });
+
   test('a TMDB movie id and a TMDB series id with the same number do not merge', () => {
     const entries = computeWatchlist([
       traktRow({ id: 'trakt-1', title: 'Film', externalIds: { tmdb: 1399 } }),

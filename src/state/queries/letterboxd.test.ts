@@ -22,6 +22,16 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
+// `./letterboxd` imports `./mapping`, which imports `./simkl` (plan 0034 U7),
+// whose auth re-export reaches expo-crypto — mirror the surface it consumes
+// instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 
 // The TMDB token read is gated on `isServer()` (`typeof window === 'undefined'`,
 // docs/solutions/expo-web-ssr-mmkv-storage-on-server.md) and bun has no

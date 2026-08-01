@@ -20,6 +20,16 @@ mock.module('react-native', () => ({
 mock.module('@/lib/http/client', () => ({
   httpFetch: async () => new Response('{}'),
 }));
+// `./up-next` and `./watchlist` (imported below) reach `./mapping` /
+// `./simkl` (plan 0034 U7), whose auth re-export reaches expo-crypto —
+// mirror the surface it consumes instead of loading the whole expo package
+// under bun (the `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 
 const { anilistQueryKeys } = await import('./anilist');
 const { letterboxdQueryKeys } = await import('./letterboxd');

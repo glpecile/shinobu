@@ -113,8 +113,10 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // that matches an *unmapped* anime series/film directly (routing.ts's
     // `effectiveTypes` needs no special case for it).
     mediaTypes: ['TV', 'MOVIE', 'ANIME'],
-    // U7 flips this once the read leg (all-items sync + normalize) is live.
-    canRead: false,
+    // Flipped by U7: the read leg (all-items sync + normalize, U3) now feeds
+    // the unified feed's `yourShows` merge, the watchlist gather, and the
+    // trending rows — `providersForFeed` includes Simkl from here on.
+    canRead: true,
     // Flipped by U6: the U4 adapters (`simkl/writes.ts`) are wired into the
     // log fan-out (`simklLogAdapter` in use-log-media.ts) — a TV/movie/anime
     // log now routes to Simkl exactly as it does to Trakt.

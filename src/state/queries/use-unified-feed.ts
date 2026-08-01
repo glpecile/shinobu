@@ -1,6 +1,7 @@
 import {
   useQueries,
   useQueryClient,
+  useSuspenseQueries,
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
@@ -8,12 +9,9 @@ import { allSettled } from 'better-all';
 import { Effect } from 'effect';
 
 import { providersForFeed } from '@/lib/providers/routing';
+import { getAllItems, getTrending } from '@/lib/providers/simkl/reads';
 import type { ProviderId } from '@/lib/providers/types';
-import {
-  getTrendingMovies,
-  getTrendingShows,
-  getWatchedShows,
-} from '@/lib/providers/trakt/reads';
+import { getWatchedShows } from '@/lib/providers/trakt/reads';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -30,16 +28,24 @@ import {
   fetchSeasonalAnime,
 } from './anilist';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
+import { simklDeps, simklQueryKeys } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
 import { watchlistQueryKeys } from './watchlist';
 
-/** One named row of the home feed — never index into the query array. */
+/**
+ * One named row of the home feed — never index into the query array.
+ * `yourShowsSimkl` is internal-only: it never reaches `UnifiedFeedResult`, it
+ * exists so Simkl's leg of the `yourShows` merge can be its own cache entry
+ * (provider-scoped invalidation, KTD-5) while the exposed `yourShows` field is
+ * the merged row.
+ */
 type FeedSlot =
   | 'trendingMovies'
   | 'trendingShows'
   | 'seasonalAnime'
   | 'yourShows'
+  | 'yourShowsSimkl'
   | 'yourAnime'
   | 'yourWatchlist';
 
@@ -85,16 +91,25 @@ const CATALOGUE_STALE_MS = 15 * 60_000;
  * `useUnifiedFeed` (details by-id resolution), and `useRefetchUnifiedFeed`,
  * so all three always hit the same cache entries.
  */
-const feedOptions = {
-  // Public catalogues — no session required.
+/**
+ * Exported for `use-unified-feed.test.ts` — the individual slot builders are
+ * pure enough (given mocked provider deps) to call their `queryFn`s directly
+ * without a React render, the same way `watchlist.ts` exposes
+ * `fetchWatchlistInputs` for its own gatherer tests.
+ */
+export const feedOptions = {
+  // Public catalogues — no session required. Simkl's CDN trending replaces
+  // Trakt's (plan 0034 R11/KTD-8): the client id is bundled in every build,
+  // unlike Trakt's post-detachment BYO-only credential, so these two rows
+  // resolve with zero providers connected and no Trakt env creds at all.
   trendingMovies: () => ({
-    queryKey: traktQueryKeys.trendingMovies(),
-    queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps())),
+    queryKey: simklQueryKeys.trending('movies'),
+    queryFn: () => Effect.runPromise(getTrending(simklDeps(), 'movies')),
     staleTime: CATALOGUE_STALE_MS,
   }),
   trendingShows: () => ({
-    queryKey: traktQueryKeys.trendingShows(),
-    queryFn: () => Effect.runPromise(getTrendingShows(traktDeps())),
+    queryKey: simklQueryKeys.trending('tv'),
+    queryFn: () => Effect.runPromise(getTrending(simklDeps(), 'tv')),
     staleTime: CATALOGUE_STALE_MS,
   }),
   seasonalAnime: (season: AnimeSeasonWindow) => ({
@@ -107,6 +122,24 @@ const feedOptions = {
     queryKey: traktQueryKeys.watchedShows(),
     queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
   }),
+  /**
+   * Simkl's leg of the `yourShows` merge (plan 0034 KTD-10/R10): the whole
+   * library in one call (shows + anime buckets; movies dropped — this is a TV
+   * row), `plantowatch` excluded — that status is the watchlist, not "shows
+   * I'm engaged with", the same distinction Trakt's `/sync/watched/shows`
+   * draws by construction. One unfiltered `getAllItems` call rather than two
+   * type-filtered ones, matching Trakt's own `type=all` one-call watchlist
+   * read (R26) instead of widening the mount-time request burst.
+   */
+  yourShowsSimkl: () => ({
+    queryKey: simklQueryKeys.allItems(),
+    queryFn: async (): Promise<NormalizedMediaItem[]> => {
+      const library = await Effect.runPromise(getAllItems(simklDeps(), {}));
+      return [...library.shows, ...library.anime]
+        .filter((entry) => entry.status !== 'plantowatch')
+        .map((entry) => entry.item);
+    },
+  }),
   yourAnime: (queryClient: QueryClient) => ({
     queryKey: anilistQueryKeys.currentAnime(),
     queryFn: () => fetchCurrentAnime(queryClient),
@@ -116,6 +149,37 @@ const feedOptions = {
     queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
   }),
 };
+
+/**
+ * The merge key for one `yourShows` row: its TMDB id, or its own id when none
+ * exists (an anime Simkl carries no TMDB bridge for) — the `id:`/`tmdb:`
+ * prefixes keep those two key spaces from ever colliding.
+ */
+function yourShowsMergeKey(item: NormalizedMediaItem): string {
+  return item.externalIds.tmdb != null ? `tmdb:${item.externalIds.tmdb}` : `id:${item.id}`;
+}
+
+/**
+ * Merge Trakt's and Simkl's `yourShows` rows by TMDB id, Simkl winning a
+ * metadata conflict (plan 0034 KTD-10/R10) — the same "later write wins" Map
+ * idiom `features/watchlist/compute.ts`'s merge uses, simplified to one key
+ * since both legs are TMDB-keyed TV/anime catalogues.
+ */
+export function mergeYourShows(
+  trakt: readonly NormalizedMediaItem[],
+  simkl: readonly NormalizedMediaItem[],
+): NormalizedMediaItem[] {
+  const order: string[] = [];
+  const byKey = new Map<string, NormalizedMediaItem>();
+  for (const item of [...trakt, ...simkl]) {
+    const key = yourShowsMergeKey(item);
+    if (!byKey.has(key)) order.push(key);
+    // Trakt inserts first, Simkl second — a later `set` on the same key
+    // overwrites, which is exactly what hands Simkl the win.
+    byKey.set(key, item);
+  }
+  return order.map((key) => byKey.get(key) as NormalizedMediaItem);
+}
 
 /**
  * The slot configs that apply right now: public catalogues always, personal
@@ -129,8 +193,8 @@ function activeFeedConfigs(
 ): FeedQueryConfig[] {
   const feedProviders = providersForFeed(connected);
   const configs: FeedQueryConfig[] = [
-    { slot: 'trendingMovies', provider: 'trakt', ...feedOptions.trendingMovies() },
-    { slot: 'trendingShows', provider: 'trakt', ...feedOptions.trendingShows() },
+    { slot: 'trendingMovies', provider: 'simkl', ...feedOptions.trendingMovies() },
+    { slot: 'trendingShows', provider: 'simkl', ...feedOptions.trendingShows() },
     {
       slot: 'seasonalAnime',
       provider: 'anilist',
@@ -143,6 +207,13 @@ function activeFeedConfigs(
       slot: 'yourShows',
       provider: 'trakt',
       ...feedOptions.yourShows(),
+    });
+  }
+  if (feedProviders.includes('simkl')) {
+    configs.push({
+      slot: 'yourShowsSimkl',
+      provider: 'simkl',
+      ...feedOptions.yourShowsSimkl(),
     });
   }
   if (feedProviders.includes('anilist')) {
@@ -185,8 +256,27 @@ export function useSuspenseSeasonalAnimeQuery(season: AnimeSeasonWindow) {
   return useSuspenseQuery(feedOptions.seasonalAnime(season));
 }
 
+/**
+ * The "Your Shows" row: Trakt's watched shows merged with Simkl's, Simkl
+ * winning metadata conflicts (plan 0034 KTD-10/R10). Two independent cache
+ * entries — `useSuspenseQueries`, not one combined queryFn — so a Simkl-only
+ * log invalidation (`simklQueryKeys.allItemsRoot()`) never refetches Trakt's
+ * leg and vice versa, matching the up-next/watchlist gatherers' "raw
+ * per-provider inputs, merged at render time" idiom.
+ */
 export function useSuspenseYourShowsQuery() {
-  return useSuspenseQuery(feedOptions.yourShows());
+  const connected = useConnectedProviders();
+  const feedProviders = providersForFeed(connected);
+  const includeTrakt = feedProviders.includes('trakt');
+  const includeSimkl = feedProviders.includes('simkl');
+  const queries = [
+    ...(includeTrakt ? [feedOptions.yourShows()] : []),
+    ...(includeSimkl ? [feedOptions.yourShowsSimkl()] : []),
+  ];
+  const results = useSuspenseQueries({ queries });
+  const trakt = includeTrakt ? results[0].data : [];
+  const simkl = includeSimkl ? results[includeTrakt ? 1 : 0].data : [];
+  return { data: mergeYourShows(trakt, simkl) };
 }
 
 export function useSuspenseYourAnimeQuery() {
@@ -308,13 +398,13 @@ export function useUnifiedFeed(
       : hiddenItems.map((hidden) => hidden.id),
   );
 
-  const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => {
+  const rawSlot = (slot: FeedSlot): NormalizedMediaItem[] => {
     const index = queries.findIndex((query) => query.slot === slot);
-    const data = (index >= 0 ? results[index]?.data : undefined) ?? [];
-    return hiddenIds.size === 0
-      ? data
-      : data.filter((item) => !hiddenIds.has(item.id));
+    return (index >= 0 ? results[index]?.data : undefined) ?? [];
   };
+  const filterHidden = (data: NormalizedMediaItem[]): NormalizedMediaItem[] =>
+    hiddenIds.size === 0 ? data : data.filter((item) => !hiddenIds.has(item.id));
+  const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => filterHidden(rawSlot(slot));
 
   const isLoading = results.some((result) => result.isLoading);
   const isError = results.some((result) => result.isError);
@@ -347,7 +437,10 @@ export function useUnifiedFeed(
     trendingShows: bySlot('trendingShows'),
     seasonalAnime: bySlot('seasonalAnime'),
     animeSeason,
-    yourShows: bySlot('yourShows'),
+    // Merged first (raw legs), hidden filter applied to the merge result —
+    // the same order the Trakt-only slot used, just with a Simkl leg joined
+    // in first (KTD-10).
+    yourShows: filterHidden(mergeYourShows(rawSlot('yourShows'), rawSlot('yourShowsSimkl'))),
     yourAnime: bySlot('yourAnime'),
     yourWatchlist: bySlot('yourWatchlist'),
     isLoading,

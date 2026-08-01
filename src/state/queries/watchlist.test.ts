@@ -23,6 +23,16 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
+// The Simkl leg (plan 0034 U7) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 const {
   fetchWatchlistInputs,
   refreshWatchlistInputs,
@@ -60,6 +70,21 @@ function traktFilm(traktId: number, title: string, listedAt: string): Normalized
   };
 }
 
+/** One `/sync/all-items` entry shape `simklInputs` reads (plan 0034 U7). */
+function simklEntry(
+  simklId: number,
+  title: string,
+  addedToWatchlistAt: string,
+): { item: NormalizedMediaItem; addedToWatchlistAt?: string } {
+  return {
+    item: {
+      ...film(`simkl-${simklId}`, title, 1995),
+      externalIds: { simkl: simklId, tmdb: 900 + simklId },
+    },
+    addedToWatchlistAt,
+  };
+}
+
 function plannedAnime(anilistId: number): AniListCurrentEntry {
   return {
     item: {
@@ -85,7 +110,9 @@ interface Scenario {
   anime?: AniListCurrentEntry[];
   /** Every page the infinite Letterboxd entry already holds. */
   letterboxdPages?: NormalizedMediaItem[][];
-  failing?: Array<'trakt' | 'anilist' | 'letterboxd'>;
+  /** `/sync/all-items?status=plantowatch` — bucket doesn't matter to the leg. */
+  simkl?: Array<{ item: NormalizedMediaItem; addedToWatchlistAt?: string }>;
+  failing?: Array<'trakt' | 'anilist' | 'letterboxd' | 'simkl'>;
 }
 
 function fakeClient(scenario: Scenario) {
@@ -100,6 +127,10 @@ function fakeClient(scenario: Scenario) {
     if (root === 'anilist' && kind === 'current-anime-entries') {
       if (scenario.failing?.includes('anilist') === true) throw new Error('anilist down');
       return scenario.anime ?? [];
+    }
+    if (root === 'simkl' && kind === 'all-items') {
+      if (scenario.failing?.includes('simkl') === true) throw new Error('simkl down');
+      return { shows: scenario.simkl ?? [], movies: [], anime: [] };
     }
     throw new Error(`unexpected query: ${queryKey.join('/')}`);
   };
@@ -208,6 +239,54 @@ describe('fetchWatchlistInputs', () => {
     ]);
   });
 
+  test('the Simkl leg stamps its source and addedAt, one call across every bucket', async () => {
+    const { client, requested } = fakeClient({
+      simkl: [simklEntry(1, 'Cowboy Bebop', '2026-07-05T00:00:00.000Z')],
+    });
+
+    const inputs = await fetchWatchlistInputs(client, ['simkl']);
+
+    expect(inputs.inputs).toEqual([
+      {
+        item: expect.objectContaining({ id: 'simkl-1' }),
+        source: 'simkl',
+        addedAt: '2026-07-05T00:00:00.000Z',
+      },
+    ]);
+    expect(inputs.errors).toEqual([]);
+    // One `status=plantowatch` snapshot, not a per-type loop (plan 0034 U7).
+    expect(requested).toEqual(['simkl/all-items/all/plantowatch']);
+  });
+
+  test('a Simkl plantowatch item merges with its Trakt twin by TMDB id', async () => {
+    const heat = traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z');
+    const { client } = fakeClient({
+      trakt: [heat],
+      // Same tmdb id as `traktFilm(1, ...)` — `900 + 1`.
+      simkl: [simklEntry(1, 'Heat', '2026-07-06T00:00:00.000Z')],
+    });
+
+    const inputs = await fetchWatchlistInputs(client, ['trakt', 'simkl']);
+    const entries = computeWatchlist(inputs.inputs);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].sources).toEqual(['trakt', 'simkl']);
+    // The most recent statement wins the sort key (KTD-11) — Simkl's is later.
+    expect(entries[0].addedAt).toBe('2026-07-06T00:00:00.000Z');
+  });
+
+  test('a failing Simkl leg keeps the other legs’ rows and names the provider', async () => {
+    const { client } = fakeClient({
+      trakt: [traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z')],
+      failing: ['simkl'],
+    });
+
+    const inputs = await fetchWatchlistInputs(client, ['trakt', 'simkl']);
+
+    expect(inputs.inputs.map((input) => input.source)).toEqual(['trakt']);
+    expect(inputs.errors).toEqual([{ provider: 'simkl', message: 'simkl down' }]);
+  });
+
   test('a page-2 Letterboxd film merges with its Trakt twin end to end', async () => {
     const heat = { ...traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z'), year: 1995 };
     const { client } = fakeClient({
@@ -313,6 +392,10 @@ describe('watchlistReadProviders (plan 0031 R25/R32)', () => {
     expect(watchlistReadProviders(['serializd'])).toEqual([]);
   });
 
+  test('Simkl contributes a watchlist read — U3’s live-verified shape (plan 0034 U7)', () => {
+    expect(watchlistReadProviders(['simkl'])).toEqual(['simkl']);
+  });
+
   test('no connected provider means no row', () => {
     expect(watchlistReadProviders([])).toEqual([]);
   });
@@ -340,6 +423,7 @@ describe('refreshWatchlistInputs', () => {
     expect(calls).toEqual([
       'invalidate:trakt/watchlist',
       'invalidate:anilist/current-anime-entries',
+      'invalidate:simkl/all-items',
       'invalidate:letterboxd/watchlist-pages/gian',
       'refetch:watchlist/inputs',
     ]);

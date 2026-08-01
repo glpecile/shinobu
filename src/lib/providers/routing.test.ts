@@ -403,12 +403,12 @@ describe('every applicable provider lands in exactly one bucket', () => {
   }
 });
 
-// Plan 0034 U6: the write leg is live — `canWrite: true`, `watchlistWrite:
-// 'write'` — while the read leg stays gated (`canRead` false until U7) and the
-// watchlist *remove* stays 'manual' (U4's live-probe gate on
-// `/sync/history/remove`'s whole-library semantics). The full fan-out
-// expectations now hold for writes; feed aggregation still excludes Simkl.
-describe('Simkl write fan-out (plan 0034 U6) — reads still gated', () => {
+// Plan 0034 U6/U7: the write leg landed in U6 (`canWrite: true`,
+// `watchlistWrite: 'write'`) and the read leg in U7 (`canRead: true`) — the
+// only capability still gated is the watchlist *remove* (U4's live-probe gate
+// on `/sync/history/remove`'s whole-library semantics). The full fan-out
+// expectations now hold for both writes and feed aggregation.
+describe('Simkl write + read fan-out (plan 0034 U6/U7)', () => {
   it('TV logs fan out to Trakt + Serializd + Simkl', () => {
     expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([
       'trakt',
@@ -454,8 +454,14 @@ describe('Simkl write fan-out (plan 0034 U6) — reads still gated', () => {
     ]);
   });
 
-  it('joins no feed aggregation while canRead is false (U7 flips it)', () => {
-    expect(providersForFeed(ALL5)).toEqual(['trakt', 'anilist', 'letterboxd', 'serializd']);
+  it('joins feed aggregation now that U7 flips canRead', () => {
+    expect(providersForFeed(ALL5)).toEqual([
+      'trakt',
+      'anilist',
+      'letterboxd',
+      'serializd',
+      'simkl',
+    ]);
   });
 
   it('watchlist add is a real write target; watchlist remove renders as a manual row', () => {
