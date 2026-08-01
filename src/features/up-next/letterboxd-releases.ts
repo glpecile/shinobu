@@ -20,7 +20,7 @@ import type { ReleaseUpNextInput, UpNextRelease } from './types';
 /**
  * Ceiling on resolves per gather. Measured against real public watchlists
  * (2026-07-27): the post-filter candidate count on the watchlist's **first
- * page** — the 28 films the "Your Watchlist" feed row already loads, so the
+ * page** — the 28 films the Letterboxd watchlist feed row already loads, so the
  * scrape itself costs nothing extra — ran 0–22 across seven accounts, so this
  * cap is slack in practice. It is here as the standing guard: it is what stops
  * a later, wider watchlist source from silently becoming an 800-call fan.

@@ -42,6 +42,14 @@ interface FeedRowCallbacks {
  * had it do so; the owner reversed that on 2026-07-28, and the reason holds up:
  * merged with Trakt shows and AniList plans, a curated Letterboxd film list
  * stops being browsable as itself. Two rows, two questions.
+ *
+ * It was titled "Up Next to Watch" until 2026-08-01 (owner). Two problems with
+ * that: it named an *agenda*, which is `UpNextRow`'s job and a different
+ * question (`features/watchlist/types.ts` is emphatic that a watchlist is not
+ * the agenda), and it shared no vocabulary with the `/watchlist` screen behind
+ * its own "View all". "Your Watchlist" is the possessive of the two watchlist
+ * rows because this is the canonical one — the Letterboxd row below is a slice
+ * of it and reads as "[mark] Watchlist".
  */
 export function YourWatchlistRow({
   onItemPress,
@@ -60,7 +68,7 @@ export function YourWatchlistRow({
       onItemActions={onItemActions}
       onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.watchlist())}
-      title="Up Next to Watch"
+      title="Your Watchlist"
     />
   );
 }
@@ -75,6 +83,10 @@ export function YourWatchlistRow({
  * own `collapseKey` so collapsing one never collapses the other. The overlap is
  * the point, not a bug — a Letterboxd film appears in both, answering "what's on
  * my Letterboxd" here and "what am I meaning to watch" above.
+ *
+ * It gave up "Your Watchlist" to the merged row on 2026-08-01 and reads as
+ * "[mark] Watchlist" now. The possessive belongs to the row that holds every
+ * tracker; this one is one tracker's slice of it, and the mark says which.
  *
  * Its "View all" used to open a whole second screen (`/watchlist/letterboxd`);
  * since 2026-08-01 it opens the merged grid pre-filtered to Letterboxd, which
@@ -101,7 +113,7 @@ export function LetterboxdWatchlistRow({
       onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.watchlist('letterboxd'))}
       provider="letterboxd"
-      title="Your Watchlist"
+      title="Watchlist"
     />
   );
 }
