@@ -217,6 +217,16 @@ export function watchlistResultView(
  * `undefined` → the surface has never been opened, which renders as today's
  * unsettled label and never as a claim of absence.
  *
+ * `stillOffered` is `useWatchlistAddStillOffered(item)`, and it is here because
+ * `onList` alone was answering the wrong question (owner report 2026-08-01).
+ * "On a watchlist" is a whole-item fact; the CTA's job is per-provider. A film
+ * on the Letterboxd watchlist and *not* on Simkl's settled to "On your
+ * watchlist" — inert on `/watchlist`, and offering the remove picker
+ * everywhere else — with no way left to put it back on Simkl, which is the one
+ * state `shouldOfferWatchlistAdd`'s own docblock calls "where an add is most
+ * useful". A provider whose membership is *unknown* does not reopen the CTA
+ * (R35): `stillOffered` is false on doubt.
+ *
  * The one thing the *report* still overrides is a **mixed** one: a write where
  * a provider failed keeps the CTA actionable even once the cache knows another
  * provider took it, because settling doubles as a retry lock and the failure
@@ -226,8 +236,11 @@ export function watchlistResultView(
 export function isWatchlistCtaSettled(
   onList: boolean | undefined,
   view: Pick<WatchlistResultView, 'failed'> | null,
+  stillOffered = false,
 ): boolean {
-  return onList === true && (view?.failed.length ?? 0) === 0;
+  return (
+    onList === true && !stillOffered && (view?.failed.length ?? 0) === 0
+  );
 }
 
 /** "Already on Trakt, AniList." — the all-skip report's own headline. */

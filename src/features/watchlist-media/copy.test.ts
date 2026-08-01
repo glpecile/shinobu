@@ -165,6 +165,18 @@ describe('isWatchlistCtaSettled (plan 0031 U15, R14, KTD-14)', () => {
     expect(isWatchlistCtaSettled(undefined, view)).toBe(false);
     expect(isWatchlistCtaSettled(true, view)).toBe(true);
   });
+
+  test('on one watchlist but missing from another is not settled', () => {
+    // Owner report 2026-08-01: a film left on the Letterboxd watchlist after a
+    // Simkl-only removal is "on a watchlist" and still has an add to offer.
+    expect(isWatchlistCtaSettled(true, null, true)).toBe(false);
+  });
+
+  test('unknown membership does not reopen the CTA (R35)', () => {
+    // `stillOffered` is false on doubt, so a failed leg leaves the settled
+    // label rather than asserting a non-membership nothing evidenced.
+    expect(isWatchlistCtaSettled(true, null, false)).toBe(true);
+  });
 });
 
 describe('the three result families (plan 0031 KTD-8/R17)', () => {

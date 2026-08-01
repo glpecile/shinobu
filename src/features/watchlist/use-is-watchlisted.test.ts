@@ -32,7 +32,7 @@ mock.module('expo-crypto', () => ({
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-const { isWatchlistedIn } = await import('./use-is-watchlisted');
+const { isWatchlistedIn, watchlistSourcesFor } = await import('./use-is-watchlisted');
 
 import type { WatchlistInput } from './types';
 
@@ -97,6 +97,33 @@ describe('isWatchlistedIn (plan 0031 R31)', () => {
 
   test('an empty gather is a confident false — "cold cache" is undefined, and the hook, not this', () => {
     expect(isWatchlistedIn([], film('trakt-1'))).toBe(false);
+  });
+});
+
+describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
+  test('names every provider whose row matches, across id spaces', () => {
+    // The state the whole-item boolean could not express: on Letterboxd's
+    // watchlist, removed from Simkl's, recognised as one film regardless.
+    const inputs = [
+      input(film('letterboxd-heat-1995', { externalIds: { tmdb: 949 } }), 'letterboxd'),
+      input(film('trakt-1', { externalIds: { tmdb: 949 } }), 'trakt'),
+    ];
+    const sources = watchlistSourcesFor(inputs, film('tmdb-949', { externalIds: { tmdb: 949 } }));
+    expect([...sources].sort()).toEqual(['letterboxd', 'trakt']);
+  });
+
+  test('a provider contributing two matching rows is named once', () => {
+    const rows = [
+      input(film('trakt-1', { externalIds: { tmdb: 949 } }), 'trakt'),
+      input(film('trakt-2', { externalIds: { tmdb: 949 } }), 'trakt'),
+    ];
+    expect(watchlistSourcesFor(rows, film('trakt-1', { externalIds: { tmdb: 949 } }))).toEqual([
+      'trakt',
+    ]);
+  });
+
+  test('no match is an empty set, which is what `isWatchlistedIn` reads', () => {
+    expect(watchlistSourcesFor([], film('trakt-1'))).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import type { ProviderId } from '@/lib/providers/types';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -8,26 +9,45 @@ import { watchlistMergeKeys } from './compute';
 import type { WatchlistInput } from './types';
 
 /**
- * Whether `item` is on any gathered watchlist row — **the same key derivation
- * the merge itself uses** (`watchlistMergeKeys`), so "is this the same film" is
+ * Which providers' gathered rows name `item` — **the same key derivation the
+ * merge itself uses** (`watchlistMergeKeys`), so "is this the same film" is
  * answered by one function and not by two that can drift. That matters
  * concretely: the details screen opens a TMDB-sourced item whose id will never
  * equal the `letterboxd-<slug>` on the watchlist row, and only the shared key
  * derivation recognises them as the same film.
  *
+ * This is `WatchlistEntry.sources` for an item the caller holds without a
+ * merged row — the per-provider fact behind the whole-item boolean below, and
+ * what lets a surface answer "on Letterboxd's, missing from Simkl's" rather
+ * than just "on a watchlist". Deliberately **not** ordered like
+ * `computeWatchlist`'s `sources`: every consumer asks `.includes`, and running
+ * the whole merge to sort a membership set would be a per-render price for
+ * nothing.
+ *
  * Pure, so the recognition rules are unit-testable without a query client.
  */
+export function watchlistSourcesFor(
+  inputs: readonly WatchlistInput[],
+  item: NormalizedMediaItem,
+): ProviderId[] {
+  const keys = new Set(watchlistMergeKeys(item));
+  const sources = new Set<ProviderId>();
+  for (const input of inputs) {
+    const matches =
+      input.item.id === item.id ||
+      (keys.size > 0 &&
+        watchlistMergeKeys(input.item).some((key) => keys.has(key)));
+    if (matches) sources.add(input.source);
+  }
+  return [...sources];
+}
+
+/** Whether `item` is on *any* gathered watchlist row. */
 export function isWatchlistedIn(
   inputs: readonly WatchlistInput[],
   item: NormalizedMediaItem,
 ): boolean {
-  const keys = new Set(watchlistMergeKeys(item));
-  if (keys.size === 0) return inputs.some((input) => input.item.id === item.id);
-  return inputs.some(
-    (input) =>
-      input.item.id === item.id ||
-      watchlistMergeKeys(input.item).some((key) => keys.has(key)),
-  );
+  return watchlistSourcesFor(inputs, item).length > 0;
 }
 
 /**

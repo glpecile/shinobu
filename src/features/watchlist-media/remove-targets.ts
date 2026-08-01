@@ -174,8 +174,21 @@ export async function planWatchlistRemove(
 }
 
 /**
- * R12 as amended on 2026-07-28: on `/watchlist` the sheet offers the **add** row
- * only when some applicable connected provider is not already holding the item.
+ * R12 as amended on 2026-07-28: the sheet offers the **add** row only when some
+ * applicable connected provider is not already holding the item.
+ *
+ * **This is also the CTA's settled rule** (owner report 2026-08-01). It used to
+ * gate only whether the row rendered on `/watchlist`, while the button's own
+ * "On your watchlist" label came from `useIsWatchlisted` — a *whole-item*
+ * boolean. So a film on Letterboxd's watchlist and not Simkl's rendered a
+ * settled, inert row on every surface, which is the exact state the paragraph
+ * below calls "where an add is most useful". `useWatchlistAddStillOffered`
+ * feeds this same predicate the item's per-provider sources from the gathered
+ * cache, so one rule answers both questions.
+ *
+ * Takes `Pick<WatchlistEntry, 'item' | 'sources'>` rather than a whole entry
+ * for that second caller: it has an item and a membership set, and no merged
+ * row to hand over.
  *
  * The original excluded `/watchlist/letterboxd` entirely, on the grounds that
  * every row there is already watchlisted. A cross-provider surface inverts that
@@ -201,7 +214,7 @@ export async function planWatchlistRemove(
  * page is the whole affordance either way.
  */
 export function shouldOfferWatchlistAdd(
-  entry: WatchlistEntry,
+  entry: Pick<WatchlistEntry, 'item' | 'sources'>,
   connected: readonly ProviderId[],
   platform: string,
   errors: readonly ProviderFailure[] = [],

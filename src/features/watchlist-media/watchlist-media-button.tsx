@@ -22,6 +22,7 @@ import {
   WatchlistAddPickerSheet,
   WatchlistRemovePickerSheet,
 } from './watchlist-picker-sheet';
+import { useWatchlistAddStillOffered } from './use-watchlist-add-offered';
 import {
   useIsWatchlistWritePending,
   useLatestWatchlistResult,
@@ -46,6 +47,16 @@ import {
  * own site. That read **never fetches**: `undefined` (surface never opened) is
  * a first-class answer meaning "we haven't read the watchlist" and renders as
  * the unsettled label, never as a claim of absence.
+ *
+ * **Settled means "on every watchlist it can reach", not "on one"** (owner
+ * report 2026-08-01). `useIsWatchlisted` answers a whole-item question and the
+ * CTA asks a per-provider one, so `useWatchlistAddStillOffered` decides it
+ * alongside — see `isWatchlistCtaSettled`. Consequence worth naming: a
+ * partially-listed item shows the **add**, so the self-hosted remove entry
+ * point below only appears once every applicable provider actually holds it.
+ * That is the right trade for one button — `/watchlist` keeps its own removal
+ * row either way, and an item on one tracker of three has an add to offer and
+ * a removal that would only be partial.
  *
  * **The settled state is an entry point, not a lock** (plan 0033 follow-up,
  * owner request 2026-07-30): pressing "On your watchlist" opens the *remove*
@@ -88,6 +99,10 @@ export function WatchlistMediaButton({
   const [removeOpen, setRemoveOpen] = useState(false);
 
   const onList = useIsWatchlisted(item);
+  // Per-provider membership, not the whole-item boolean: a film still on one
+  // watchlist but missing from another has an add left to offer (owner report
+  // 2026-08-01). False whenever the answer is unknown, so R35 holds.
+  const stillOffered = useWatchlistAddStillOffered(item);
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
@@ -95,7 +110,7 @@ export function WatchlistMediaButton({
   // mixed-report exception (a failed provider keeps the CTA actionable as a
   // retry entry). The rule lives in `copy.ts` so it is testable without a
   // renderer.
-  const settled = isWatchlistCtaSettled(onList, view);
+  const settled = isWatchlistCtaSettled(onList, view, stillOffered);
 
   // Nothing connected can take this item — the same silence `LogMediaButton`
   // keeps rather than offering an action that can only fail.
