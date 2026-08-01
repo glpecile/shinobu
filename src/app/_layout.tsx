@@ -110,9 +110,6 @@ export default function Layout() {
                   <Stack.Screen name="studio/[id]" />
                   <Stack.Screen name="studio/lookup" />
                   <Stack.Screen name="watchlist/index" />
-                  {/* Kept alongside the merged grid: the shipped URL redirects
-                      to it (plan 0031 R24). */}
-                  <Stack.Screen name="watchlist/letterboxd" />
                 </Stack>
                 {/* Hidden authenticated WebView that runs Letterboxd writes
                     (native only; renders null on web). */}

@@ -1,3 +1,5 @@
+import type { ProviderId } from '@/lib/providers/types';
+
 /**
  * Centralized route definitions. Use this instead of hardcoding path strings so
  * Expo Router route changes only require updates in one place.
@@ -9,18 +11,16 @@ export const routes = {
   diary: '/diary',
   details: (id: string) => `/details/${id}` as const,
   /**
-   * The cross-provider watchlist grid — the merged row's "View all" target. No
-   * provider suffix: it merges every connected provider's watchlist (plan 0031
-   * R24).
+   * The cross-provider watchlist — the only watchlist surface. No provider
+   * suffix: it merges every connected provider's watchlist (plan 0031 R24).
+   * `/watchlist/letterboxd` was deleted 2026-08-01 (owner): a second,
+   * single-provider screen was a whole duplicate surface where the merged one
+   * plus a `?provider=` filter answers the same question.
+   *
+   * `provider` narrows the grid to one source; omitted means "all".
    */
-  watchlist: '/watchlist',
-  /**
-   * Letterboxd's own films-only grid, and the target of its own feed row. Kept
-   * alongside `/watchlist` rather than redirected into it (owner, 2026-07-28):
-   * the merged grid answers a different question, and this URL had already
-   * shipped on web.
-   */
-  letterboxdWatchlist: '/watchlist/letterboxd',
+  watchlist: (provider?: ProviderId) =>
+    provider == null ? '/watchlist' : (`/watchlist?provider=${provider}` as const),
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,
   /** For credits without a TMDB person id (AniList people): resolve by name. */

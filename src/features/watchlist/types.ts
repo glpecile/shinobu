@@ -1,3 +1,5 @@
+import type { ReactElement } from 'react';
+
 import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -121,4 +123,25 @@ export interface WatchlistEntry {
    * 0036). Non-zero is what makes *that* provider's removal destructive.
    */
   simklWatchedCount?: number;
+}
+
+/**
+ * What both `/watchlist` layouts take (owner, 2026-08-01). The screen owns
+ * data, paging, filtering and failure states; a layout owns only how the rows
+ * it is handed are arranged — so the poster wall and the list are swappable
+ * behind one prop, and adding a third layout costs nothing at the call site.
+ *
+ * Entries, not items: a row has to render which providers hold it, and only a
+ * merged `WatchlistEntry` knows.
+ */
+export interface WatchlistLayoutProps {
+  entries: readonly WatchlistEntry[];
+  onItemPress: (item: NormalizedMediaItem) => void;
+  onItemActions: (item: NormalizedMediaItem) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+  /** Undefined when there is no further page to request. */
+  onEndReached?: (() => void) | undefined;
+  /** The screen's loading/retry footer — rendered at the end of the list. */
+  footer: ReactElement;
 }

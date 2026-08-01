@@ -59,7 +59,7 @@ export function YourWatchlistRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      onViewAll={() => pushRoute(routes.watchlist)}
+      onViewAll={() => pushRoute(routes.watchlist())}
       title="Up Next to Watch"
     />
   );
@@ -71,11 +71,15 @@ export function YourWatchlistRow({
  *
  * Distinct from that row in every way that matters to a reader: it keeps the
  * `provider` mark — which is also why the title does **not** name Letterboxd
- * (the icon beside it already does; owner note 2026-07-29) — it carries its own
- * `collapseKey` so collapsing one never collapses the other, and its "View all"
- * goes to the films-only grid rather than the merged one. The overlap is the
- * point, not a bug — a Letterboxd film appears in both, answering "what's on my
- * Letterboxd" here and "what am I meaning to watch" above.
+ * (the icon beside it already does; owner note 2026-07-29) — and it carries its
+ * own `collapseKey` so collapsing one never collapses the other. The overlap is
+ * the point, not a bug — a Letterboxd film appears in both, answering "what's on
+ * my Letterboxd" here and "what am I meaning to watch" above.
+ *
+ * Its "View all" used to open a whole second screen (`/watchlist/letterboxd`);
+ * since 2026-08-01 it opens the merged grid pre-filtered to Letterboxd, which
+ * is the same view without the duplicate surface — and the user can widen it
+ * from there.
  *
  * Reads page 1 only (28 films); the rest lives behind the paginated grid
  * (plan 0024 U9). No extra request — the merged gather already reads this same
@@ -95,7 +99,7 @@ export function LetterboxdWatchlistRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      onViewAll={() => pushRoute(routes.letterboxdWatchlist)}
+      onViewAll={() => pushRoute(routes.watchlist('letterboxd'))}
       provider="letterboxd"
       title="Your Watchlist"
     />
