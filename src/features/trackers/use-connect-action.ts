@@ -22,8 +22,10 @@ export interface ConnectAction {
  * so a provider that needs nothing from the user connects straight from the
  * row. The sheet is reserved for flows that genuinely have something to show:
  *
- * - **Trakt / AniList** — only when this build ships no credentials and the
- *   user has stored none, i.e. the one-time client-id form.
+ * - **Trakt** — whenever no BYO credentials are stored yet (builds never ship
+ *   Trakt creds — plan 0034 R12 — so the first connect is always the wizard).
+ * - **AniList** — only when this build ships no client id and the user has
+ *   stored none, i.e. the one-time client-id form.
  * - **Simkl** — one-tap PKCE with the bundled client id, so almost never; the
  *   sheet only opens when a build ships no id, to say so (plan 0034 U5).
  * - **Letterboxd / Serializd** — always. Their sheets are not just a button:

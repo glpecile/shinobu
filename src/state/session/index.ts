@@ -5,11 +5,14 @@ import { clearSimklAuthFlow } from '@/lib/providers/simkl/auth-flow';
 import type { ProviderId } from '@/lib/providers/types';
 import { UP_NEXT_QUERY_ROOT } from '@/state/queries/up-next-cache';
 import { WATCHLIST_QUERY_ROOT } from '@/state/queries/watchlist-cache';
-import {
-  clearProviderSession,
-  connectedProviderIds,
-  onSessionChange,
-} from './tokens';
+import { clearProviderSession, onSessionChange } from './tokens';
+import { traktNeedsCredentials, usableProviderIds } from './trakt-migration';
+
+export {
+  providerIsUsable,
+  traktNeedsCredentials,
+  usableProviderIds,
+} from './trakt-migration';
 
 let cachedConnected: ProviderId[] | null = null;
 
@@ -23,7 +26,7 @@ function readConnected(): ProviderId[] {
   // Lazy-initialize so importing this module on the server (SSR) does not
   // touch MMKV/localStorage before React has a chance to use the server snapshot.
   if (cachedConnected == null && !isServer()) {
-    cachedConnected = connectedProviderIds();
+    cachedConnected = usableProviderIds();
   }
   return cachedConnected ?? [];
 }
@@ -36,18 +39,40 @@ function getServerSnapshot(): ProviderId[] {
 
 function subscribe(onStoreChange: () => void): () => void {
   return onSessionChange(() => {
-    cachedConnected = connectedProviderIds();
+    // Credentials (`clientId.*`) live in the same MMKV store as sessions, so
+    // saving BYO Trakt creds re-derives usability here without extra wiring.
+    cachedConnected = usableProviderIds();
     onStoreChange();
   });
 }
 
 /**
  * Which providers are currently connected (their token *is* the session —
- * AGENTS.md "Providers, Sessions & Log Fan-Out"). Reactive to MMKV changes,
- * so OAuth completion anywhere in the app updates every subscriber.
+ * AGENTS.md "Providers, Sessions & Log Fan-Out") AND usable. Reactive to MMKV
+ * changes, so OAuth completion anywhere in the app updates every subscriber.
+ *
+ * "Usable" is the plan 0034 U9 gate: a Trakt token whose client id no longer
+ * resolves (MigrationNeeded — see `trakt-migration.ts`) is excluded here,
+ * which is the single choke point keeping it out of every read leg (feed,
+ * up-next, watchlist, diary) and the write fan-out at once. The trackers
+ * screen shows the migration banner for that state instead of a dead card.
  */
 export function useConnectedProviders(): readonly ProviderId[] {
   return useSyncExternalStore(subscribe, readConnected, getServerSnapshot);
+}
+
+/**
+ * Reactive MigrationNeeded flag (plan 0034 R13): a stored Trakt token with no
+ * resolvable client id. Drives the trackers-screen migration banner; flips
+ * off the moment credentials are saved or a fresh OAuth completes (both write
+ * the same MMKV store the subscription watches).
+ */
+export function useTraktNeedsCredentials(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => !isServer() && traktNeedsCredentials(),
+    () => false,
+  );
 }
 
 /**

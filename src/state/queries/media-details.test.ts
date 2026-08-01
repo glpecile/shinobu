@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 /**
  * `state/queries/media-details.ts` passes its Trakt leg only when Trakt has a
@@ -44,27 +44,27 @@ const ORIGINAL_TRAKT_ENV = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID;
 
 beforeEach(() => {
   store.clear();
-  process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = ORIGINAL_TRAKT_ENV;
   clearProviderClientId('trakt');
 });
 
+afterAll(() => {
+  process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = ORIGINAL_TRAKT_ENV;
+});
+
 describe('buildMediaDetailsDeps Trakt leg (plan 0034 KTD-8)', () => {
-  test('is a real TraktDeps when Trakt has a client id', () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'trakt-cid';
-
-    expect(buildMediaDetailsDeps().trakt).not.toBeNull();
-  });
-
-  test('is null when Trakt has no client id at all (no env, no BYO override)', () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
-
-    expect(buildMediaDetailsDeps().trakt).toBeNull();
-  });
-
-  test('an in-app Trakt client id override counts as credentials, same as env', () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
+  test('is a real TraktDeps when a BYO Trakt client id is stored', () => {
     setProviderClientId('trakt', 'byo-cid');
 
     expect(buildMediaDetailsDeps().trakt).not.toBeNull();
+  });
+
+  test('is null when no BYO client id is stored', () => {
+    expect(buildMediaDetailsDeps().trakt).toBeNull();
+  });
+
+  test('EXPO_PUBLIC_TRAKT_CLIENT_ID no longer counts as credentials (plan 0034 R12)', () => {
+    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'env-cid';
+
+    expect(buildMediaDetailsDeps().trakt).toBeNull();
   });
 });

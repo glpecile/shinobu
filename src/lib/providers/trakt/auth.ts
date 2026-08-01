@@ -61,6 +61,15 @@ export function refreshSession(
     return Effect.fail(dead);
   }
 
+  // Detachment guard (plan 0034 U9): with no resolvable client credentials
+  // the grant cannot succeed — fail fast, with NO network round-trip and,
+  // critically, WITHOUT the clear-on-rejection below. The stored token is the
+  // evidence behind the MigrationNeeded banner (R13); clearing it here would
+  // be the silent logout the plan forbids.
+  if (deps.clientId === '' || deps.clientSecret === '') {
+    return Effect.fail(dead);
+  }
+
   return traktHttp<TraktTokenResponse>(deps, '/oauth/token', {
     method: 'POST',
     body: {

@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -65,8 +65,6 @@ mock.module('expo-crypto', () => ({
 
 const { feedOptions, mergeYourShows } = await import('./use-unified-feed');
 
-const ORIGINAL_TRAKT_ENV = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID;
-
 function item(
   id: string,
   title: string,
@@ -89,14 +87,10 @@ beforeEach(() => {
   store.clear();
   routes = [];
   requestedUrls.length = 0;
-  // The exact no-BYO, no-bundled-Trakt-creds state R11 requires trending to
-  // survive: Simkl's client id stays bundled (owner-registered app), only
-  // Trakt's is cleared.
-  process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
-});
-
-afterAll(() => {
-  process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = ORIGINAL_TRAKT_ENV;
+  // The exact no-BYO-Trakt-creds state R11 requires trending to survive:
+  // Simkl's client id stays bundled (owner-registered app), while Trakt has
+  // none at all — env credentials were removed outright in U9 (R12), so a
+  // cleared MMKV store above *is* the credential-less state.
 });
 
 describe('trending (plan 0034 R11/KTD-8)', () => {

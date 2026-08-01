@@ -6,7 +6,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import { getNotificationsEnabled } from '@/state/prefs/notifications';
 import { prefsStorage } from '@/state/prefs/storage';
 import { fetchUpNextInputs } from '@/state/queries/up-next';
-import { connectedProviderIds } from '@/state/session/tokens';
+import { usableProviderIds } from '@/state/session/trakt-migration';
 
 import { computeNotificationSchedule } from './compute-schedule';
 import { replaceScheduledNotifications } from './scheduler';
@@ -74,7 +74,9 @@ export function createRefreshDeps(queryClient: QueryClient): RefreshNotification
   return {
     isEnabled: getNotificationsEnabled,
     isWeb: () => Platform.OS === 'web',
-    connectedProviders: connectedProviderIds,
+    // Usable, not merely connected (plan 0034 U9): a MigrationNeeded Trakt
+    // session must not schedule notification fetches that can only 401.
+    connectedProviders: usableProviderIds,
     gatherInputs: (connected) => fetchUpNextInputs(queryClient, connected),
     schedule: replaceScheduledNotifications,
     now: () => new Date(),

@@ -87,13 +87,13 @@ const { setProviderClientId, clearProviderClientId } = await import(
 );
 const { clearTmdbToken } = await import('@/state/session/tmdb-token');
 
-const ORIGINAL_TRAKT_ENV = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID;
-
 beforeEach(() => {
   store.clear();
   routes = [];
   requestedUrls.length = 0;
-  process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = ORIGINAL_TRAKT_ENV;
+  // Trakt credentials are BYO-only after detachment (plan 0034 R12) — the
+  // stored client id is the whole gate; `store.clear()` above already wiped
+  // it, this is belt-and-braces for readers.
   clearProviderClientId('trakt');
   // `tmdbToken()` caches its resolved value at module scope — reset both the
   // stored value and the cache so each test's env var actually takes effect
@@ -112,7 +112,7 @@ function calledHost(host: string): boolean {
 
 describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
   test('with Trakt credentials, resolves via Trakt and never touches Simkl', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'trakt-cid';
+    setProviderClientId('trakt', 'trakt-cid');
     routes = [
       ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
     ];
@@ -129,7 +129,6 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
   });
 
   test('with no Trakt credentials, falls back to Simkl `/search/id`', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
     routes = [
       ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
     ];
@@ -149,7 +148,6 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
   });
 
   test('a Simkl miss (empty array) resolves to null, not an error', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
     routes = [['api.simkl.com/search/id', []]];
 
     const result = await cachedTraktLookup(freshClient(), {
@@ -161,8 +159,7 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     expect(result).toBeNull();
   });
 
-  test('an in-app Trakt client id override counts as credentials, same as env', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
+  test('the stored BYO client id is the only thing that counts as credentials', async () => {
     setProviderClientId('trakt', 'byo-cid');
     routes = [
       ['api.trakt.tv/search/tmdb/1', [{ type: 'movie', movie: { title: 'Drive', ids: { trakt: 2 } } }]],
@@ -181,7 +178,7 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
 
 describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
   test('with Trakt credentials, searches Trakt and never touches TMDB', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'trakt-cid';
+    setProviderClientId('trakt', 'trakt-cid');
     routes = [
       [
         'api.trakt.tv/search/movie,show',
@@ -197,7 +194,6 @@ describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
   });
 
   test('with no Trakt credentials but a TMDB token, falls back to TMDB search', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
     process.env.EXPO_PUBLIC_TMDB_TOKEN = 'tmdb-token';
     routes = [
       [
@@ -214,7 +210,6 @@ describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
   });
 
   test('with neither Trakt nor TMDB available, resolves to null without a network call', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
     process.env.EXPO_PUBLIC_TMDB_TOKEN = '';
 
     const result = await cachedTraktTextSearch(freshClient(), 'Heat', 1995);
@@ -226,7 +221,7 @@ describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
 
 describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
   test('TMDB answers first regardless of Trakt credentials', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'trakt-cid';
+    setProviderClientId('trakt', 'trakt-cid');
     routes = [
       [
         'api.themoviedb.org/3/tv/100',
@@ -242,7 +237,7 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
   });
 
   test('falls through to Trakt when TMDB has no data and Trakt has credentials', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'trakt-cid';
+    setProviderClientId('trakt', 'trakt-cid');
     routes = [
       ['api.themoviedb.org/3/tv/100', { seasons: [] }],
       ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]],
@@ -254,7 +249,6 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
   });
 
   test('skips Trakt entirely (no call at all) when it has no credentials', async () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = '';
     routes = [
       ['api.themoviedb.org/3/tv/100', { seasons: [] }],
       ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]],
