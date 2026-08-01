@@ -47,7 +47,7 @@ Median candidates: 1. Only the most new-release-focused account exceeded the
 **Page 1 only** (`fetchLetterboxdReleaseInputs` calls `getWatchlist`, not the
 paged query), for three reasons:
 
-- It shares its cache entry with the "Your Watchlist" feed row, so on the home
+- It shares its cache entry with the Letterboxd watchlist feed row, so on the home
   screen — where Up Next lives — the scrape has usually already happened and the
   source costs **zero** extra page fetches.
 - Letterboxd orders a watchlist most-recently-added first (verified: watchlist A

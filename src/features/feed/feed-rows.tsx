@@ -42,6 +42,14 @@ interface FeedRowCallbacks {
  * had it do so; the owner reversed that on 2026-07-28, and the reason holds up:
  * merged with Trakt shows and AniList plans, a curated Letterboxd film list
  * stops being browsable as itself. Two rows, two questions.
+ *
+ * It was titled "Up Next to Watch" until 2026-08-01 (owner). Two problems with
+ * that: it named an *agenda*, which is `UpNextRow`'s job and a different
+ * question (`features/watchlist/types.ts` is emphatic that a watchlist is not
+ * the agenda), and it shared no vocabulary with the `/watchlist` screen behind
+ * its own "View all". "Your Watchlist" is the possessive of the two watchlist
+ * rows because this is the canonical one — the Letterboxd row below is a slice
+ * of it and reads as "[mark] Watchlist".
  */
 export function YourWatchlistRow({
   onItemPress,
@@ -59,8 +67,8 @@ export function YourWatchlistRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      onViewAll={() => pushRoute(routes.watchlist)}
-      title="Up Next to Watch"
+      onViewAll={() => pushRoute(routes.watchlist())}
+      title="Your Watchlist"
     />
   );
 }
@@ -71,11 +79,19 @@ export function YourWatchlistRow({
  *
  * Distinct from that row in every way that matters to a reader: it keeps the
  * `provider` mark — which is also why the title does **not** name Letterboxd
- * (the icon beside it already does; owner note 2026-07-29) — it carries its own
- * `collapseKey` so collapsing one never collapses the other, and its "View all"
- * goes to the films-only grid rather than the merged one. The overlap is the
- * point, not a bug — a Letterboxd film appears in both, answering "what's on my
- * Letterboxd" here and "what am I meaning to watch" above.
+ * (the icon beside it already does; owner note 2026-07-29) — and it carries its
+ * own `collapseKey` so collapsing one never collapses the other. The overlap is
+ * the point, not a bug — a Letterboxd film appears in both, answering "what's on
+ * my Letterboxd" here and "what am I meaning to watch" above.
+ *
+ * It gave up "Your Watchlist" to the merged row on 2026-08-01 and reads as
+ * "[mark] Watchlist" now. The possessive belongs to the row that holds every
+ * tracker; this one is one tracker's slice of it, and the mark says which.
+ *
+ * Its "View all" used to open a whole second screen (`/watchlist/letterboxd`);
+ * since 2026-08-01 it opens the merged grid pre-filtered to Letterboxd, which
+ * is the same view without the duplicate surface — and the user can widen it
+ * from there.
  *
  * Reads page 1 only (28 films); the rest lives behind the paginated grid
  * (plan 0024 U9). No extra request — the merged gather already reads this same
@@ -95,9 +111,9 @@ export function LetterboxdWatchlistRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      onViewAll={() => pushRoute(routes.letterboxdWatchlist)}
+      onViewAll={() => pushRoute(routes.watchlist('letterboxd'))}
       provider="letterboxd"
-      title="Your Watchlist"
+      title="Watchlist"
     />
   );
 }

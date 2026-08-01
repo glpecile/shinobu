@@ -127,7 +127,7 @@ const TAGS_GC_MS = 24 * 60 * 60_000;
 
 /**
  * The user's public watchlist (first page, 28 films) for the home feed's
- * "Your Watchlist" row. Disabled until Letterboxd is connected; on web the
+ * Letterboxd watchlist feed row. Disabled until Letterboxd is connected; on web the
  * read runs through the Worker proxy (plan 0018).
  */
 export function useLetterboxdWatchlistQuery(options: { enabled?: boolean } = {}) {
@@ -205,9 +205,9 @@ export function useLetterboxdWatchlistPagesQuery() {
 /**
  * A watchlist changes when the user adds a film, which they do from Letterboxd
  * itself — the same slow-moving-personal-row window the home feed uses for its
- * catalogue slots. This read shares its cache entry with the "Your Watchlist"
- * row, so on the home screen the scrape behind Up Next's Letterboxd releases
- * has usually already happened.
+ * catalogue slots. This read shares its cache entry with the Letterboxd
+ * watchlist feed row, so on the home screen the scrape behind Up Next's
+ * Letterboxd releases has usually already happened.
  */
 const WATCHLIST_STALE_MS = 15 * 60_000;
 

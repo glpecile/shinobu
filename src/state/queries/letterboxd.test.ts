@@ -183,7 +183,7 @@ describe('fetchLetterboxdReleaseInputs', () => {
     expect(keys.filter((key) => key[1] === 'catalogue')).toEqual([
       ['tmdb', 'catalogue', 'movie', 1234],
     ]);
-    // The watchlist read shares the "Your Watchlist" feed row's cache entry, so
+    // The watchlist read shares the Letterboxd watchlist feed row's cache entry, so
     // on the home screen the scrape has usually already happened.
     expect(keys[0]).toEqual([...letterboxdQueryKeys.watchlist('cinephile')]);
   });

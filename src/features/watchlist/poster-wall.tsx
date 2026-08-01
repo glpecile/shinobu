@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
@@ -9,25 +8,19 @@ import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { PROVIDER_DOT } from '@/features/trackers/provider-style';
+import { cn } from '@/lib/cn';
+import { PROVIDERS } from '@/lib/providers/registry';
+import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
+
+import type { WatchlistEntry, WatchlistLayoutProps } from './types';
 
 /**
  * The screen owns data, paging and failure states; this owns only how the
  * loaded films are laid out — chosen from four prototyped treatments on
  * 2026-07-25.
  */
-export interface PosterWallProps {
-  /** Readonly — `useVisibleItems` hands back its input array's identity. */
-  items: readonly NormalizedMediaItem[];
-  onItemPress: (item: NormalizedMediaItem) => void;
-  onItemActions: (item: NormalizedMediaItem) => void;
-  refreshing: boolean;
-  onRefresh: () => void;
-  /** Undefined when there is no further page to request. */
-  onEndReached?: (() => void) | undefined;
-  /** The screen's loading/retry footer — rendered at the end of the list. */
-  footer: ReactElement;
-}
 
 /** Poster proportions (width ÷ height) — the universal 2:3 one-sheet. */
 const POSTER_ASPECT = 2 / 3;
@@ -43,6 +36,9 @@ const TARGET_COLUMN_PITCH = 132;
 const MIN_COLUMNS = 3;
 /** Tall enough that the caption's fade starts well above its first line. */
 const CAPTION_SCRIM_HEIGHT = 96;
+/** Short fade behind the always-on provider dots — enough to read them on
+ *  bright artwork, shallow enough not to read as a caption bar. */
+const MARK_SCRIM_HEIGHT = 34;
 /** Past this the artwork is too small to recognize, however wide the display. */
 const MAX_COLUMNS = 8;
 
@@ -61,26 +57,59 @@ function useWallMetrics(): { columns: number; rowHeight: number } {
 }
 
 /**
- * One poster. No scrim and no type label at rest: on a movies-only watchlist
- * "MOVIE" on every card is noise, and the artwork already carries its own
- * title, so burning ours over it buys nothing. The title stays reachable
- * through `accessibilityLabel` everywhere and a hover caption on web.
+ * The brand dots for the providers holding this film, bottom-right over a
+ * short fade (owner, 2026-08-01). Always on, unlike the hover caption: the
+ * wall used to be bare artwork because a Letterboxd-only grid had nothing to
+ * say about provenance, and a merged one does — "on both my trackers" versus
+ * "only on Letterboxd" is the question this surface exists to answer, and it
+ * survives the provider filter (a filtered row keeps all its marks).
+ *
+ * Dots rather than the brand icons the diary rows use: at this size a logo is
+ * mush, and a dot with a dark ring reads on any artwork.
+ */
+function PosterMarks({ sources }: { sources: readonly ProviderId[] }) {
+  return (
+    <View
+      accessibilityLabel={`On ${sources.map((id) => PROVIDERS[id].label).join(', ')}`}
+      className="absolute bottom-1.5 right-1.5 flex-row gap-1"
+    >
+      {sources.map((id) => (
+        <View
+          className={cn(
+            'w-[7px] h-[7px] rounded-full border border-black/40',
+            PROVIDER_DOT[id],
+          )}
+          key={id}
+        />
+      ))}
+    </View>
+  );
+}
+
+/**
+ * One poster. No type label at rest: on a watchlist "MOVIE" on every card is
+ * noise, and the artwork already carries its own title, so burning ours over
+ * it buys nothing. The title stays reachable through `accessibilityLabel`
+ * everywhere and a hover caption on web. The provider dots are the one piece
+ * of chrome that *is* always on — see `PosterMarks`.
  */
 function PosterCell({
-  item,
+  entry,
   onPress,
   onActions,
 }: {
-  item: NormalizedMediaItem;
+  entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
+  const item = entry.item;
   const foreground = useCSSVariable('--color-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
+  const providers = entry.sources.map((id) => PROVIDERS[id].label).join(', ');
 
   return (
     <View style={{ padding: GAP / 2 }}>
@@ -91,7 +120,10 @@ function PosterCell({
         style={{ aspectRatio: POSTER_ASPECT }}
       >
         <PresstableScale
-          accessibilityLabel={label}
+          // The providers ride the poster's own label: the dots below are
+          // decoration to a screen reader, and a wall of unlabelled artwork
+          // must not become a wall of unlabelled artwork plus mystery dots.
+          accessibilityLabel={`${label}. On ${providers}`}
           className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
           onLongPress={() => onActions(item)}
           onPress={() => onPress(item)}
@@ -105,6 +137,20 @@ function PosterCell({
             />
           ) : (
             <PosterPlaceholder className="w-full h-full border-0" />
+          )}
+          {/* The dots' own fade — skipped while the caption is up, whose
+              taller scrim already covers this band. */}
+          {!showChrome && (
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.72)']}
+              style={{
+                bottom: 0,
+                height: MARK_SCRIM_HEIGHT,
+                left: 0,
+                position: 'absolute',
+                right: 0,
+              }}
+            />
           )}
           {showChrome && (
             // A gradient, not a solid bar: the caption only exists while the
@@ -123,7 +169,9 @@ function PosterCell({
                   right: 0,
                 }}
               />
-              <View className="px-2 pb-1.5 pt-6">
+              {/* `pr-8` keeps the caption clear of the provider dots, which
+                  stay put whether or not the pointer is on the poster. */}
+              <View className="pl-2 pr-8 pb-1.5 pt-6">
                 <Text
                   className="text-accent-foreground font-sans-semibold text-xs leading-tight"
                   numberOfLines={2}
@@ -138,6 +186,7 @@ function PosterCell({
               </View>
             </View>
           )}
+          <PosterMarks sources={entry.sources} />
         </PresstableScale>
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
@@ -167,14 +216,14 @@ function PosterCell({
  * window.
  */
 export function PosterWall({
-  items,
+  entries,
   onItemPress,
   onItemActions,
   refreshing,
   onRefresh,
   onEndReached,
   footer,
-}: PosterWallProps) {
+}: WatchlistLayoutProps) {
   const { columns, rowHeight } = useWallMetrics();
 
   return (
@@ -187,18 +236,18 @@ export function PosterWall({
         paddingHorizontal: EDGE_PAD - GAP / 2,
         paddingTop: GAP / 2,
       }}
-      data={items}
+      data={entries}
       estimatedItemSize={rowHeight}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(entry) => entry.id}
       numColumns={columns}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       refreshControl={
         <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
       }
-      renderItem={({ item }) => (
+      renderItem={({ item: entry }) => (
         <PosterCell
-          item={item}
+          entry={entry}
           onActions={onItemActions}
           onPress={onItemPress}
         />

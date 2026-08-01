@@ -1,6 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter, type ErrorBoundaryProps } from 'expo-router';
+import {
+  useLocalSearchParams,
+  useRouter,
+  type ErrorBoundaryProps,
+} from 'expo-router';
 import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
@@ -10,13 +14,21 @@ import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import {
+  filterWatchlistEntries,
+  parseWatchlistProvider,
+} from '@/features/watchlist/filter';
 import { PosterWall } from '@/features/watchlist/poster-wall';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
+import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
+import { WatchlistToolbar } from '@/features/watchlist/watchlist-toolbar';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
 import type { ProviderFailure } from '@/state/queries/settle';
 import {
@@ -25,10 +37,19 @@ import {
 } from '@/state/queries/watchlist';
 
 /**
- * The cross-provider watchlist grid (plan 0031 R24). One surface for every
+ * The cross-provider watchlist (plan 0031 R24). One surface for every
  * connected provider's watchlist, merged by `computeWatchlist` — which is why
  * the header carries **no** provider mark: a merged surface must not wear one
- * provider's brand. `/watchlist/letterboxd` survives beside it as a redirect.
+ * provider's brand.
+ *
+ * **It is now the only watchlist surface** (owner, 2026-08-01):
+ * `/watchlist/letterboxd` is deleted. A second, single-provider screen was a
+ * whole duplicate surface — its own header, empty states, error boundary and
+ * pager — answering a question this one answers with `?provider=letterboxd`,
+ * and the Letterboxd feed row's "View all" deep-links exactly that. The filter
+ * lives in the URL so it stays shareable and resets on a fresh visit; the
+ * grid/list choice is a standing preference and lives on the device
+ * (`state/prefs/watchlist-view`). One is state, the other is taste.
  *
  * **Partial failure here is one list plus an inline notice, not a
  * `SuspenseSection` per source — a deliberate, argued divergence from
@@ -154,7 +175,13 @@ function GridFooter({
   );
 }
 
-function WatchlistGrid() {
+function WatchlistGrid({
+  provider,
+  onProviderChange,
+}: {
+  provider: ProviderId | null;
+  onProviderChange: (provider: ProviderId | null) => void;
+}) {
   const pushRoute = usePushRoute();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
@@ -175,7 +202,16 @@ function WatchlistGrid() {
   // `pages.flat()`, so an appended page merges against the Trakt leg instead of
   // rendering as a duplicate of a row already on screen.
   const pages = useLetterboxdWatchlistPagesQuery();
-  const items = entries.map((entry) => entry.item);
+  const view = useWatchlistView();
+  // Both layouts take `WatchlistLayoutProps`, so the swap is one binding and
+  // nothing below branches on the view. Swapping the component *does* remount
+  // the list — correct here: they are different geometries, and a preserved
+  // scroll offset from a poster wall means nothing in a row list.
+  const Layout = view === 'grid' ? PosterWall : WatchlistRows;
+  // The toolbar's counts describe the **whole** list, so it takes `entries`
+  // while the layout takes the narrowed set — a filter that renumbered its own
+  // options as you used it could never be widened back on evidence.
+  const shown = filterWatchlistEntries(entries, provider);
 
   async function refresh() {
     setRefreshing(true);
@@ -196,7 +232,10 @@ function WatchlistGrid() {
 
   // Only a total failure takes over the page: `settle` means one leg failing
   // still yields rows, and those rows plus the notice beat a blank screen.
-  if (items.length === 0 && errors.length > 0) {
+  // Keyed off the **unfiltered** entries, always — a narrowed-to-nothing
+  // watchlist is a filter result, not an outage, and offering "Try again" for
+  // it would send the user chasing a network problem that isn't there.
+  if (entries.length === 0 && errors.length > 0) {
     return (
       <CenteredNotice
         actionLabel="Try again"
@@ -207,7 +246,7 @@ function WatchlistGrid() {
     );
   }
 
-  if (items.length === 0) {
+  if (entries.length === 0) {
     return (
       <CenteredNotice
         body="Anything you add to a connected tracker’s watchlist shows up here."
@@ -216,10 +255,20 @@ function WatchlistGrid() {
     );
   }
 
-  return (
-    <>
-      <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
-      <PosterWall
+  // The toolbar stays mounted below, so the only way out of an empty filter is
+  // always on screen — including the deep-linked case where the named
+  // provider's leg failed this gather and legitimately holds nothing.
+  const layout =
+    shown.length === 0 ? (
+      <CenteredNotice
+        actionLabel="Show all trackers"
+        body={`Nothing on your ${provider == null ? '' : PROVIDERS[provider].label} watchlist right now.`}
+        onAction={() => onProviderChange(null)}
+        title="Nothing here"
+      />
+    ) : (
+      <Layout
+        entries={shown}
         footer={
           <GridFooter
             failed={pages.isError}
@@ -227,7 +276,6 @@ function WatchlistGrid() {
             onRetry={() => void loadMore()}
           />
         }
-        items={items}
         onEndReached={
           pages.hasNextPage && !pages.isFetchingNextPage
             ? () => void loadMore()
@@ -241,6 +289,22 @@ function WatchlistGrid() {
         onRefresh={() => void refresh()}
         refreshing={refreshing}
       />
+    );
+
+  return (
+    <>
+      <WatchlistToolbar
+        entries={entries}
+        // Same `incomplete` the removal path reads (R35), one surface over: a
+        // leg with unread pages can only state a floor, so its count renders
+        // `46+` until the scrape is exhausted.
+        incomplete={incomplete}
+        onProviderChange={onProviderChange}
+        provider={provider}
+        view={view}
+      />
+      <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
+      {layout}
       {/* The one surface that offers the removal (R35): only a `WatchlistEntry`
           knows which providers actually hold the item, and only this screen has
           one. `errors` rides along because a leg that failed this gather makes
@@ -262,6 +326,19 @@ function WatchlistGrid() {
 export default function WatchlistScreen() {
   const router = useRouter();
   const foreground = useCSSVariable('--color-foreground');
+  // The filter lives in the URL, not in state: it is what makes
+  // `routes.watchlist('letterboxd')` a real destination for the Letterboxd feed
+  // row (the reason `/watchlist/letterboxd` could be deleted rather than
+  // redirected) and what makes a narrowed watchlist shareable on web.
+  const params = useLocalSearchParams<{ provider?: string }>();
+  const provider = parseWatchlistProvider(params.provider);
+
+  function setProvider(next: ProviderId | null) {
+    // `setParams`, not a push: changing the filter is not a new destination,
+    // and pushing would make Back walk through every filter the user tried
+    // instead of leaving the screen.
+    router.setParams({ provider: next ?? '' });
+  }
 
   function goBack() {
     if (router.canGoBack()) router.back();
@@ -299,7 +376,7 @@ export default function WatchlistScreen() {
           <CenteredNotice body="Loading your watchlist…" title="Watchlist" />
         }
       >
-        <WatchlistGrid />
+        <WatchlistGrid onProviderChange={setProvider} provider={provider} />
       </Suspense>
     </View>
   );
