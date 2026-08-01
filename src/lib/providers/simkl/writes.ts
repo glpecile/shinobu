@@ -191,15 +191,27 @@ interface SimklNotFound {
   movies?: unknown[];
   shows?: unknown[];
   anime?: unknown[];
+  seasons?: unknown[];
   episodes?: unknown[];
 }
 
+/**
+ * Every unmatched entry the summary reports, whatever its level: the whole-item
+ * buckets (movies/shows/anime) AND the sub-item ones (seasons/episodes) an
+ * episode-scoped write can miss on. A `shows[]` entry whose episodes come back
+ * under `not_found.episodes` is a failed log exactly like an unmatched movie —
+ * it must not read as a bare ok, or the fan-out's manual-link affordance never
+ * fires. Mirrors the remove adapter, whose `deleted` sum already counts
+ * episodes, and the Trakt history adapter's not_found sum.
+ */
 function notFoundCount(notFound: SimklNotFound | null | undefined): number {
   if (notFound == null) return 0;
   return (
     (notFound.movies?.length ?? 0) +
     (notFound.shows?.length ?? 0) +
-    (notFound.anime?.length ?? 0)
+    (notFound.anime?.length ?? 0) +
+    (notFound.seasons?.length ?? 0) +
+    (notFound.episodes?.length ?? 0)
   );
 }
 
@@ -327,11 +339,14 @@ export function logToSimkl(
       accessToken: token,
     });
     const outcome = outcomeFromNotFound(submitted, response.not_found);
-    if (outcome.status === 'ok' && dropped.length > 0) {
-      // Entries the builder had to leave out are news too (R16).
-      return { status: 'ok', reason: dropped[0] } satisfies ProviderWriteResult;
-    }
-    return outcome;
+    if (outcome.status !== 'ok' || dropped.length === 0) return outcome;
+    // Entries the builder had to leave out are news too (R16) — appended, so
+    // a partial-not_found reason and a dropped-entry reason both survive
+    // (consumers render `reason` as one line; "; " keeps them readable).
+    const reason = [outcome.reason, dropped[0]]
+      .filter((part): part is string => part != null)
+      .join('; ');
+    return { status: 'ok', reason } satisfies ProviderWriteResult;
   });
 }
 

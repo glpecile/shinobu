@@ -322,6 +322,54 @@ describe('logToSimkl', () => {
     }
   });
 
+  test('an episode-level not_found (unmatched episodes, nothing else) is the not-found skip, not a bare ok', async () => {
+    // Simkl files an episode-scoped miss under not_found.episodes, not
+    // not_found.shows — it must still count as a miss, or the fan-out's
+    // manual-link affordance never fires (mirrors the remove adapter's
+    // episode counting).
+    const { deps } = makeDeps(() =>
+      Response.json({
+        added: { movies: 0, shows: 0, episodes: 0 },
+        not_found: {
+          movies: [],
+          shows: [],
+          episodes: [{ ids: { tmdb: 1396 }, season: 99, number: 1 }],
+        },
+      }),
+    );
+    const result = await Effect.runPromise(
+      logToSimkl(deps, [{ item: show, episodes: [{ season: 99, number: 1 }] }]),
+    );
+    expect(result.status).toBe('skipped');
+    if (result.status === 'skipped') {
+      expect(result.reason).toContain('match');
+    }
+  });
+
+  test('a partial not_found reason and a dropped-entry reason BOTH survive on the ok', async () => {
+    const { deps } = makeDeps(() =>
+      Response.json({
+        added: { movies: 1, shows: 0, episodes: 0 },
+        not_found: { movies: [], shows: [{ ids: { tmdb: 1396 } }], episodes: [] },
+      }),
+    );
+    const bare = item({ title: 'Unidentified', externalIds: {} });
+    const result = await Effect.runPromise(
+      logToSimkl(deps, [
+        { item: movie },
+        { item: show, episodes: [{ season: 1, number: 2 }] },
+        { item: bare },
+      ]),
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      // Neither piece of news displaces the other (the pre-fix bug: dropped[0]
+      // overwrote the partial-match reason).
+      expect(result.reason).toContain('could not match 1 of 2');
+      expect(result.reason).toContain('no Simkl-resolvable id');
+    }
+  });
+
   test('a partial not_found is still ok — carrying the reason', async () => {
     const { deps } = makeDeps(() =>
       Response.json({
@@ -432,6 +480,17 @@ describe('removeFromSimklWatchlist', () => {
       }),
     );
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
+    expect(result.status).toBe('skipped');
+  });
+
+  test('an episode-level not_found on remove is a reasoned skip too', async () => {
+    const { deps } = makeDeps(() =>
+      Response.json({
+        deleted: { movies: 0, shows: 0, episodes: 0 },
+        not_found: { movies: [], shows: [], episodes: [{ ids: { tmdb: 1396 } }] },
+      }),
+    );
+    const result = await Effect.runPromise(removeFromSimklWatchlist(deps, show));
     expect(result.status).toBe('skipped');
   });
 });

@@ -106,7 +106,7 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).not.toContain('up-next/inputs');
   });
 
-  test('a successful Simkl log refreshes the whole simkl library scope (plan 0034 U6)', () => {
+  test('a successful Simkl log refreshes the simkl library scope and recomputes Up Next (plan 0034 U6/U8)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['simkl']);
     // The all-items *prefix* (every type/status filter) plus the activities
@@ -114,7 +114,10 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // so disconnect's purge still reaches them.
     expect(keys).toContain('simkl/all-items');
     expect(keys).toContain('simkl/activities');
-    // Simkl is not an Up Next input until U8 — the gate stays closed.
-    expect(keys).not.toContain('up-next/inputs');
+    // Simkl became an Up Next input in U8, so a Simkl-only log must recompute
+    // the sections — this invalidation is also the quick-log settle signal;
+    // without it a Simkl-only user's card sits stale and the quick-log button
+    // spins the full settle window into settle-failed.
+    expect(keys).toContain('up-next/inputs');
   });
 });

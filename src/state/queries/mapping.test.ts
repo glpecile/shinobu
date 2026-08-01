@@ -72,12 +72,20 @@ mock.module('expo-crypto', () => ({
 // afterwards — bun shares one process across files.
 const globals = globalThis as { window?: unknown };
 globals.window = {};
+const realTmdbTokenEnv = process.env.EXPO_PUBLIC_TMDB_TOKEN;
 afterAll(() => {
   delete globals.window;
+  // Restore everything the per-test setup mutates in shared process state —
+  // in a non-isolated run, leaked Trakt credentials flip
+  // `trakt-migration.test.ts`'s usable-provider assertions.
+  clearProviderClientId('trakt');
+  process.env.EXPO_PUBLIC_TMDB_TOKEN = realTmdbTokenEnv;
+  clearTmdbToken();
 });
 
 const {
   cachedSeasonLayout,
+  cachedTmdbMovieIdByTitle,
   cachedTraktLookup,
   cachedTraktTextSearch,
   mappingQueryKeys,
@@ -267,14 +275,115 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
   });
 });
 
-describe('mappingQueryKeys.traktLookup (unchanged shape — KTD-8 keeps consumers stable)', () => {
-  test('the cache key stays keyed by source/id/kind, whichever provider answers it', () => {
-    expect(mappingQueryKeys.traktLookup('tmdb', 949, 'movie')).toEqual([
+describe('mappingQueryKeys carry the answering source (`via`)', () => {
+  test('traktLookup keys by source/id/kind plus who answers it', () => {
+    expect(mappingQueryKeys.traktLookup('tmdb', 949, 'movie', 'trakt')).toEqual([
       'mapping',
       'trakt-lookup',
       'tmdb',
       949,
       'movie',
+      'trakt',
     ]);
+    // Same lookup, different answering provider → a different cache entry.
+    expect(mappingQueryKeys.traktLookup('tmdb', 949, 'movie', 'simkl')).not.toEqual(
+      mappingQueryKeys.traktLookup('tmdb', 949, 'movie', 'trakt'),
+    );
+  });
+});
+
+/**
+ * The via segment's whole point (code-review fix): these lookups are
+ * forever-cached, so without the answering source in the key a Simkl-only
+ * session's records — no trakt id — would keep being served after the user
+ * completes Trakt's BYO setup, silently starving the Trakt fan-out legs.
+ * One shared QueryClient across the connect boundary is the scenario.
+ */
+describe('connecting a provider mid-session is a cache miss, not a stale record', () => {
+  test('a Simkl-shaped identity re-resolves through Trakt once credentials are saved', async () => {
+    const client = freshClient();
+    routes = [
+      ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
+      ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
+    ];
+    const params = { source: 'tmdb', id: 949, kind: 'movie' } as const;
+
+    const before = await cachedTraktLookup(client, params);
+    expect(before?.id).toBe('simkl-5');
+
+    setProviderClientId('trakt', 'byo-cid');
+
+    const after = await cachedTraktLookup(client, params);
+    expect(after?.id).toBe('trakt-1');
+    expect(after?.externalIds.trakt).toBe(1);
+  });
+
+  test('while the source set is unchanged, the forever-cache still serves repeats without a request', async () => {
+    const client = freshClient();
+    routes = [
+      ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
+    ];
+    const params = { source: 'tmdb', id: 949, kind: 'movie' } as const;
+
+    await cachedTraktLookup(client, params);
+    await cachedTraktLookup(client, params);
+
+    expect(requestedUrls.filter((url) => url.includes('api.simkl.com'))).toHaveLength(1);
+  });
+
+  test('a null season layout re-resolves through Trakt once credentials are saved', async () => {
+    const client = freshClient();
+    routes = [
+      ['api.themoviedb.org/3/tv/100', { seasons: [] }],
+      ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]],
+    ];
+
+    expect(await cachedSeasonLayout(client, { tmdb: 100, trakt: 200 })).toBeNull();
+
+    setProviderClientId('trakt', 'byo-cid');
+
+    expect(await cachedSeasonLayout(client, { tmdb: 100, trakt: 200 })).toEqual([
+      { season: 1, episodeCount: 10 },
+    ]);
+  });
+
+  test('a token-less movie-search null re-resolves through TMDB once a token is saved', async () => {
+    const client = freshClient();
+    routes = [
+      [
+        'api.themoviedb.org/3/search/movie',
+        { results: [{ id: 949, title: 'Heat', release_date: '1995-12-15' }] },
+      ],
+    ];
+
+    expect(await cachedTraktTextSearch(client, 'Heat', 1995)).toBeNull();
+    expect(requestedUrls).toHaveLength(0);
+
+    process.env.EXPO_PUBLIC_TMDB_TOKEN = 'tmdb-token';
+    clearTmdbToken(); // Bust the module-scope token cache, as saveTmdbToken would.
+
+    const after = await cachedTraktTextSearch(client, 'Heat', 1995);
+    expect(after?.externalIds.tmdb).toBe(949);
+  });
+
+  test('a token-less TMDB movie-id miss re-resolves once a token is saved', async () => {
+    const client = freshClient();
+    // No route for /search/movie yet: the token-less attempt 404s → null.
+    expect(
+      await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 }),
+    ).toBeNull();
+
+    process.env.EXPO_PUBLIC_TMDB_TOKEN = 'tmdb-token';
+    clearTmdbToken();
+    routes = [
+      [
+        'api.themoviedb.org/3/search/movie',
+        { results: [{ id: 949, title: 'Heat', release_date: '1995-12-15' }] },
+      ],
+    ];
+
+    expect(
+      await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 }),
+    ).toBe(949);
   });
 });

@@ -90,9 +90,9 @@ export function invalidateAfterWatchlist(
     // `add-to-list` moved the item into the plantowatch bucket — the cached
     // all-items filters (the prefix, since a write can't know which
     // type/status a surface requested) and the activities delta gating their
-    // refetch are both stale (plan 0034 KTD-5). No Simkl read consumes them
-    // until U7 flips `canRead`; registering the keys with the write that
-    // changes them is what makes that flip read-correct on day one.
+    // refetch are both stale (plan 0034 KTD-5). Since U7 flipped `canRead`,
+    // the unified feed, the watchlist gather and Up Next's Simkl legs all read
+    // off these keys — a stale copy would surface the add late on every one.
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }

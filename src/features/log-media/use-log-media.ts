@@ -445,12 +445,22 @@ async function providerHasWatch(
   } catch {
     return false;
   }
-  // Write-only providers fall through to the conservative default: Letterboxd
-  // has no readable watch state (RSS diary only), and Simkl's read leg is
-  // still registry-gated (canRead false until plan 0034 U7) — with nothing to
-  // reconcile against, both count as "doesn't have it", so the write (the
-  // user's actual intent) always fires. When U7 lands, Simkl earns a real
-  // branch here reading its all-items snapshot, like Trakt/Serializd above.
+  // Providers without a branch fall through to the conservative default:
+  // Letterboxd has no readable watch state (RSS diary only), and Simkl —
+  // readable since plan 0034 U7 — deliberately has no branch yet, because it
+  // is not the mechanical parallel of the ones above. A real Simkl reconcile
+  // needs the *unfiltered* /sync/all-items snapshot (the item may sit in any
+  // status bucket; the cached up-next legs hold only watching/plantowatch)
+  // fetched fresh per log — the heaviest Simkl read, against the
+  // activities-gated refetch discipline of
+  // docs/solutions/simkl-rate-limits-and-write-lock.md — and anime compares
+  // in Simkl's AniDB-convention numbering (plan 0034 KTD-6), so a
+  // canonical-origin batch needs the same ani.zip reverse map
+  // `simklLogAdapter` uses before its watchedKeys can be trusted. A
+  // wrong-domain compare recreates the false in-sync skip plan 0027 removed.
+  // Deferred to follow-up (plan 0034 Scope Boundaries); until then both count
+  // as "doesn't have it", so the write (the user's actual intent) always
+  // fires.
   return false;
 }
 
@@ -534,21 +544,26 @@ export function invalidateAfterLog(
       });
     }
   }
-  // Up Next is computed from Trakt/AniList watch state, so a successful log to
-  // either must recompute the sections — not just the per-show progress the
-  // branches above refresh. This invalidation is also the settle signal the
-  // quick-log card waits on before advancing (plan 0019 KTD-6).
-  if (succeeded.includes('trakt') || succeeded.includes('anilist')) {
+  // Up Next is computed from Trakt/AniList/Simkl watch state (Simkl joined the
+  // provider-keyed inputs in plan 0034 U8), so a successful log to any of them
+  // must recompute the sections — not just the per-provider caches the other
+  // branches refresh. This invalidation is also the settle signal the
+  // quick-log card waits on before advancing (plan 0019 KTD-6): a provider
+  // missing from this gate strands its users' quick-log in the settle window.
+  if (
+    succeeded.includes('trakt') ||
+    succeeded.includes('anilist') ||
+    succeeded.includes('simkl')
+  ) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
   }
   if (succeeded.includes('simkl')) {
     // The history POST moved items between Simkl's library buckets — every
     // cached all-items filter is stale (the prefix, not a per-filter key: this
     // path can't know which type/status a surface requested), and so is the
-    // activities delta that gates their refetch (plan 0034 KTD-5). Reads are
-    // still registry-gated (canRead false until U7); registering the keys with
-    // the write that changes them is what makes the U7 flip read-correct on
-    // day one.
+    // activities delta that gates their refetch (plan 0034 KTD-5). Registered
+    // here before U7 flipped canRead — which is what made the flip
+    // read-correct on day one.
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }

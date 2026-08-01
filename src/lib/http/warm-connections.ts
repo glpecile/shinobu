@@ -2,15 +2,16 @@ import { prefetch, prefetchOnAppStart } from 'react-native-nitro-fetch';
 
 import { ANILIST_GRAPHQL_URL } from '@/lib/providers/anilist/http';
 import { providersForFeed } from '@/lib/providers/routing';
+import { SIMKL_API_BASE_URL } from '@/lib/providers/simkl/config';
 import { TMDB_API_BASE_URL } from '@/lib/providers/tmdb/config';
 import { TRAKT_API_BASE_URL } from '@/lib/providers/trakt/config';
 import type { ProviderId } from '@/lib/providers/types';
 
 /**
  * Warm the TLS/HTTP2 connection to each provider host *before* the Up Next
- * request waterfall fires. That waterfall (`fetchUpNextInputs`) starts with a
- * Trakt list read, then fans out up to 20 per-show progress reads plus an
- * AniList list read — every one of them to a host that, cold, first pays a full
+ * request waterfall fires. That waterfall (`fetchUpNextInputs`) opens with
+ * per-provider list reads (Trakt, Simkl's all-items pair, AniList), then fans
+ * out up to 20 per-show progress reads — every one to a host that, cold, pays a full
  * TCP + TLS handshake. nitro-fetch (Cronet on Android, URLSession on iOS) pools
  * connections per host, so a single throwaway request opens the pipe the real
  * reads then reuse.
@@ -34,9 +35,12 @@ const HOST_ROOTS: Record<ProviderId, string | null> = {
   // stays scoped to the hosts the home waterfall actually races against.
   letterboxd: null,
   serializd: null,
-  // U7: Simkl has no read leg yet (canRead is false, so providersForFeed never
-  // yields it) — add api.simkl.com here when its Up Next reads land.
-  simkl: null,
+  // Simkl's Up Next legs landed with plan 0034 U7/U8: the all-items reads
+  // (watching + plantowatch) hit the API host inside the same waterfall as the
+  // Trakt/AniList reads. The calendar leg rides the CDN (data.simkl.in)
+  // instead and stays unwarmed — one throwaway request per provider, aimed at
+  // the host the waterfall races against first.
+  simkl: `${SIMKL_API_BASE_URL}/`,
 };
 
 // TMDB backs every detail screen the user taps into from the feed, so warming

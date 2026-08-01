@@ -78,6 +78,12 @@ Trakt is Shinobu's only TV+movie symmetric provider and the sole source for Up N
 - Rewatch sessions (`?allow_rewatch=yes`) — revisit when a re-log UX exists.
 - Simkl watchlist statuses beyond `plantowatch` (`watching`/`hold`/`dropped`) — Shinobu's watchlist verb maps to one status today.
 - Local-notification scheduling off Simkl calendar data (todos/006 territory).
+- The Simkl branch in `providerHasWatch` (`use-log-media.ts` reconcile): needs
+  the unfiltered `/sync/all-items` read squared with the KTD-5 activities-gated
+  refetch discipline, plus the AniDB-domain compare for anime (KTD-6 — the same
+  ani.zip reverse map the write adapter uses). Until then Simkl always counts
+  as "doesn't have it" in reconcile, so the write fires — never a false
+  in-sync skip.
 
 **Outside this product's identity**
 

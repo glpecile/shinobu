@@ -61,13 +61,15 @@ import {
  * manual provider to `runProviderWrites`, whose missing-adapter path is a loud
  * error by design.
  *
- * Simkl is absent for the same structural reasons, doubled (plan 0034 U6): its
+ * Simkl is absent for the write gate alone (plan 0034 U6): its
  * `watchlistRemove` stays `'manual'` behind U4's live-probe gate — the
  * documented `/sync/history/remove` whole-item body removes watch *history*
- * along with the list entry — and with no read leg (`canRead` false until U7)
- * it can't appear in a `sources` either. `removeFromSimklWatchlist` ships
- * dormant in `simkl/writes.ts` so the eventual flip is a one-token registry
- * change, exactly like Serializd's.
+ * along with the list entry. Unlike Serializd it *does* appear in a
+ * `WatchlistEntry`'s `sources` now that U7's read leg feeds the gather, so a
+ * removal reaches `planWatchlistRemove` and lands in the `manual` bucket — a
+ * deep-link row (plan 0022), never a `runProviderWrites` target.
+ * `removeFromSimklWatchlist` ships dormant in `simkl/writes.ts` so the
+ * eventual flip is a one-token registry change, exactly like Serializd's.
  */
 export const WATCHLIST_REMOVE_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistRemovePayload>>

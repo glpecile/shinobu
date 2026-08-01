@@ -1,5 +1,6 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { Effect } from 'effect';
+import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
 import {
@@ -26,7 +27,8 @@ import {
   searchMedia,
 } from '@/lib/providers/trakt/reads';
 import { getClientIdForProvider } from '@/state/session/provider-config';
-import { tmdbToken } from '@/state/session/tmdb-token';
+import { hasBuilderTmdbToken, tmdbToken } from '@/state/session/tmdb-token';
+import { onSessionChange } from '@/state/session/tokens';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistDeps } from './anilist';
@@ -47,10 +49,80 @@ function traktHasCredentials(): boolean {
 }
 
 /**
+ * The `via` key segment: every mapping whose *answer shape* depends on which
+ * sources are usable bakes the answering source into its query key. The
+ * forever-caching below is deliberate (a given source's mappings don't churn),
+ * but without this segment it over-caches across a session-state change: a
+ * Simkl-only user browses, forever-caches Simkl-shaped identity records (no
+ * trakt id), then completes Trakt's BYO guided setup — and every fan-out leg
+ * that needs a trakt id keeps being served the lesser-shaped record. Keying by
+ * source makes the newly connected provider a natural cache miss, with no
+ * connect/save call site having to remember to invalidate; records the current
+ * source set already answered stay cached forever, untouched.
+ *
+ * Each lookup family names only the sources it actually consults, computed
+ * once when the query is built so key and queryFn can never disagree about
+ * who answers. ani.zip and the AniList film search stay via-less: public,
+ * session-independent sources whose answers no provider connect can improve.
+ */
+type IdentityLookupVia = 'trakt' | 'simkl';
+
+function identityLookupVia(): IdentityLookupVia {
+  return traktHasCredentials() ? 'trakt' : 'simkl';
+}
+
+type MovieSearchVia = 'trakt' | 'tmdb' | 'none';
+
+function movieSearchVia(): MovieSearchVia {
+  if (traktHasCredentials()) return 'trakt';
+  return tmdbToken() === '' ? 'none' : 'tmdb';
+}
+
+/** TMDB-only lookups still vary: the BYO token can be saved mid-session. */
+type TmdbVia = 'tmdb' | 'none';
+
+function tmdbVia(): TmdbVia {
+  return tmdbToken() === '' ? 'none' : 'tmdb';
+}
+
+type SeasonLayoutVia = 'tmdb+trakt' | 'tmdb' | 'trakt' | 'none';
+
+function seasonLayoutVia(): SeasonLayoutVia {
+  const tmdb = tmdbToken() !== '';
+  const trakt = traktHasCredentials();
+  if (tmdb && trakt) return 'tmdb+trakt';
+  if (tmdb) return 'tmdb';
+  if (trakt) return 'trakt';
+  return 'none';
+}
+
+/**
+ * Render-path `via` reads subscribe to the session store: credentials and the
+ * TMDB token live in the same MMKV file (`state/session/tokens.ts`), so saving
+ * either re-renders the hooks below with the new key — an already-mounted
+ * details screen refetches instead of waiting for a remount. Server snapshots
+ * never touch MMKV (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md):
+ * post-detachment there are no builder Trakt credentials (plan 0034 R12), so
+ * only the builder TMDB token can be known during SSR.
+ */
+function useIdentityLookupVia(): IdentityLookupVia {
+  return useSyncExternalStore(onSessionChange, identityLookupVia, () => 'simkl');
+}
+
+function useMovieSearchVia(): MovieSearchVia {
+  return useSyncExternalStore(onSessionChange, movieSearchVia, () =>
+    hasBuilderTmdbToken() ? 'tmdb' : 'none',
+  );
+}
+
+/**
  * Cross-provider identity lookups (plan 0011 decisions 5–6): ani.zip bridges
  * AniList ↔ TVDB/TMDB/IMDB, and Trakt `/search` turns foreign ids or a
  * title+year into a full catalogue record. Every lookup is cached forever
- * (mappings don't churn) and degrades to `null` on a miss. Shared by the log
+ * (mappings don't churn) — per answering source: session-dependent lookups
+ * carry a `via` key segment (below) so connecting a provider mid-session is a
+ * cache miss, not a stale lesser-shaped record — and degrades to `null` on a
+ * miss. Shared by the log
  * fan-out (features/log-media/enrich.ts) and the details screen's metadata
  * enrichment — both hit the same cache entries.
  */
@@ -61,17 +133,25 @@ export const mappingQueryKeys = {
   anizipEpisodes: (anilistId: number) =>
     ['mapping', 'anizip-episodes', anilistId] as const,
   /** A show's own season/episode-count skeleton (plan 0027 season placement). */
-  seasonLayout: (tmdbId: number | null, traktId: number | null) =>
-    ['mapping', 'season-layout', tmdbId, traktId] as const,
-  traktLookup: (source: string, id: number | string, kind: string) =>
-    ['mapping', 'trakt-lookup', source, id, kind] as const,
-  traktSearch: (title: string, year: number | undefined) =>
-    ['mapping', 'trakt-search', title, year ?? 'any'] as const,
+  seasonLayout: (
+    tmdbId: number | null,
+    traktId: number | null,
+    via: SeasonLayoutVia,
+  ) => ['mapping', 'season-layout', tmdbId, traktId, via] as const,
+  traktLookup: (
+    source: string,
+    id: number | string,
+    kind: string,
+    via: IdentityLookupVia,
+  ) => ['mapping', 'trakt-lookup', source, id, kind, via] as const,
+  traktSearch: (title: string, year: number | undefined, via: MovieSearchVia) =>
+    ['mapping', 'trakt-search', title, year ?? 'any', via] as const,
   /** TVDB → TMDB tv-id bridge (`/find`), the anime-TV leg of plan 0014. */
-  tmdbFind: (tvdbId: number) => ['mapping', 'tmdb-find', tvdbId] as const,
+  tmdbFind: (tvdbId: number, via: TmdbVia) =>
+    ['mapping', 'tmdb-find', tvdbId, via] as const,
   /** Title+year → TMDB movie id, for id-less films (Letterboxd). */
-  tmdbMovieSearch: (title: string, year: number | undefined) =>
-    ['mapping', 'tmdb-movie-search', title, year ?? 'any'] as const,
+  tmdbMovieSearch: (title: string, year: number | undefined, via: TmdbVia) =>
+    ['mapping', 'tmdb-movie-search', title, year ?? 'any', via] as const,
   /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
@@ -162,8 +242,9 @@ export function cachedSeasonLayout(
   const tmdbId = ids.tmdb;
   const traktId = ids.trakt;
   if (tmdbId == null && traktId == null) return Promise.resolve(null);
+  const via = seasonLayoutVia();
   return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.seasonLayout(tmdbId ?? null, traktId ?? null),
+    queryKey: mappingQueryKeys.seasonLayout(tmdbId ?? null, traktId ?? null, via),
     queryFn: async (): Promise<SeasonLayout | null> => {
       if (tmdbId != null) {
         const layout = await Effect.runPromise(
@@ -181,7 +262,7 @@ export function cachedSeasonLayout(
       // No Simkl equivalent exists (`/sync/all-items` only reports a user's
       // own watched seasons, not a show's canonical structure) — TMDB above
       // stays the substitute KTD-8 allows for.
-      if (traktId != null && traktHasCredentials()) {
+      if (traktId != null && (via === 'tmdb+trakt' || via === 'trakt')) {
         const layout = await Effect.runPromise(
           getShowSeasonLayout(traktDeps(), { traktId }),
         ).catch(() => null);
@@ -208,12 +289,15 @@ export function cachedSeasonLayout(
  * resolve to `null` forever instead of Simkl's still-useful
  * tmdb/imdb/mal/simkl id bag.
  */
-function traktOrSimklLookup(params: {
-  source: 'tvdb' | 'tmdb' | 'imdb';
-  id: number | string;
-  kind: 'movie' | 'show';
-}): Promise<NormalizedMediaItem | null> {
-  if (traktHasCredentials()) {
+function traktOrSimklLookup(
+  via: IdentityLookupVia,
+  params: {
+    source: 'tvdb' | 'tmdb' | 'imdb';
+    id: number | string;
+    kind: 'movie' | 'show';
+  },
+): Promise<NormalizedMediaItem | null> {
+  if (via === 'trakt') {
     return Effect.runPromise(lookupByExternalId(traktDeps(), params)).catch(() => null);
   }
   return Effect.runPromise(
@@ -236,9 +320,15 @@ export function cachedTraktLookup(
     kind: 'movie' | 'show';
   },
 ) {
+  const via = identityLookupVia();
   return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.traktLookup(params.source, params.id, params.kind),
-    queryFn: () => traktOrSimklLookup(params),
+    queryKey: mappingQueryKeys.traktLookup(
+      params.source,
+      params.id,
+      params.kind,
+      via,
+    ),
+    queryFn: () => traktOrSimklLookup(via, params),
     ...FOREVER,
   });
 }
@@ -255,18 +345,22 @@ export function cachedTraktLookup(
  * (docs/solutions/trakt-text-search-wrong-movie-match.md). A miss, or no
  * usable source at all, resolves to `null`.
  */
-function movieSearchQuery(title: string, year: number | undefined) {
+function movieSearchQuery(
+  title: string,
+  year: number | undefined,
+  via: MovieSearchVia,
+) {
   return {
-    queryKey: mappingQueryKeys.traktSearch(title, year),
+    queryKey: mappingQueryKeys.traktSearch(title, year, via),
     queryFn: (): Promise<NormalizedMediaItem | null> => {
-      if (traktHasCredentials()) {
+      if (via === 'trakt') {
         // limit 10, not 5: an upcoming film can rank below a popular classic
         // sharing its title, and the year gate needs it in the result set.
         return Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }))
           .then((results) => pickMovieMatch(results, year, title))
           .catch(() => null);
       }
-      if (tmdbToken() === '') return Promise.resolve(null);
+      if (via === 'none') return Promise.resolve(null);
       return Effect.runPromise(searchMovie(tmdbDeps(), { query: title, year }))
         .then((results) => pickMovieMatch(results, year, title))
         .catch(() => null);
@@ -285,7 +379,7 @@ export function cachedTmdbTvIdByTvdb(
   tvdbId: number,
 ): Promise<number | null> {
   return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.tmdbFind(tvdbId),
+    queryKey: mappingQueryKeys.tmdbFind(tvdbId, tmdbVia()),
     queryFn: (): Promise<number | null> =>
       Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId })).catch(() => null),
     ...FOREVER,
@@ -297,7 +391,7 @@ export function cachedTraktTextSearch(
   title: string,
   year: number | undefined,
 ) {
-  return queryClient.fetchQuery(movieSearchQuery(title, year));
+  return queryClient.fetchQuery(movieSearchQuery(title, year, movieSearchVia()));
 }
 
 /**
@@ -312,7 +406,7 @@ export function cachedTmdbMovieIdByTitle(
   params: { title: string; year: number | undefined },
 ): Promise<number | null> {
   return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year),
+    queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year, tmdbVia()),
     queryFn: (): Promise<number | null> =>
       searchTmdbMovieId(params).catch(() => null),
     ...FOREVER,
@@ -389,8 +483,9 @@ export function cachedAniListFilmId(
  */
 export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
   const title = item?.title ?? '';
+  const via = useMovieSearchVia();
   return useQuery({
-    ...movieSearchQuery(title, item?.year),
+    ...movieSearchQuery(title, item?.year, via),
     enabled:
       item != null &&
       item.type === 'MOVIE' &&
@@ -415,9 +510,10 @@ export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
 export function useTraktIdentityQuery(item: NormalizedMediaItem | undefined) {
   const tmdbId = item?.externalIds.tmdb;
   const kind = item?.type === 'TV' ? 'show' : 'movie';
+  const via = useIdentityLookupVia();
   return useQuery({
-    queryKey: mappingQueryKeys.traktLookup('tmdb', tmdbId ?? 0, kind),
-    queryFn: () => traktOrSimklLookup({ source: 'tmdb', id: tmdbId ?? 0, kind }),
+    queryKey: mappingQueryKeys.traktLookup('tmdb', tmdbId ?? 0, kind, via),
+    queryFn: () => traktOrSimklLookup(via, { source: 'tmdb', id: tmdbId ?? 0, kind }),
     ...FOREVER,
     enabled:
       item != null &&
