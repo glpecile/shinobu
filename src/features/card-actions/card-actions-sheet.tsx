@@ -24,6 +24,7 @@ import {
   WatchlistRemovePicker,
 } from '@/features/watchlist-media/watchlist-picker-sheet';
 import type { WatchlistEntry } from '@/features/watchlist/types';
+import { useCachedWatchlistRemoval } from '@/features/watchlist/use-cached-watchlist-removal';
 import { ProviderLinkRow } from '@/features/provider-links/provider-link-row';
 import { haptics } from '@/lib/haptics';
 import type { ProviderId } from '@/lib/providers/types';
@@ -76,16 +77,19 @@ interface CardActionsSheetProps {
   canWatchlist?: boolean;
   /**
    * The watchlist row this sheet was opened from, plus the gather's failed legs
-   * (plan 0031 U16/R35). Present on **`/watchlist` only** — the removal verb
-   * needs a `WatchlistEntry` to route off its `sources`, and R35 places the
-   * affordance on that surface and nowhere else: never details, never a search,
-   * feed, person or studio card, where the app has no evidence of which
-   * providers hold the item.
+   * (plan 0031 U16/R35). Supplied by `/watchlist`, which already holds the
+   * merged entry the grid rendered.
    *
-   * Supplying it also switches the add row to R12's amended rule for this
-   * surface (offered only while some applicable connected provider is still
-   * missing the item), because "already on all of them" is a state only a
-   * watchlist row can be in.
+   * **Optional since 2026-08-01**, and no longer the only way to reach the
+   * removal: when a surface doesn't supply one, the sheet derives the same
+   * target from the gathered cache (`useCachedWatchlistRemoval`). R35 is
+   * satisfied by where the `sources` come from — the gather — not by which
+   * screen the long-press happened on, and a fully-watchlisted feed card was
+   * otherwise rendering a disabled "On your watchlist" row with nothing behind
+   * it. An item the gather doesn't hold still yields nothing.
+   *
+   * Passing it explicitly stays worthwhile for `/watchlist`: the grid's own
+   * entry is the row the user is looking at, no merge re-run required.
    */
   /**
    * Why this item is on the page it was long-pressed from: the person whose
@@ -170,20 +174,38 @@ export function CardActionsSheet({
       : providerLinks === 'connected'
         ? providerLinksFor(item, connected)
         : [sourceLinkFor(item)].filter((link) => link != null);
-  // R12 as amended (U16): on `/watchlist` the add row is offered only while some
-  // applicable connected provider is still missing the item — a film on the
-  // Letterboxd watchlist and not on Trakt's is exactly where an add is most
-  // useful, and one already on every tracker it can reach has nothing to offer.
-  // Everywhere else the row keeps its default-on behaviour.
+  // The host's entry when it has one for *this* item, otherwise the gather's —
+  // so the removal is offered wherever the app actually has evidence of who
+  // holds the item, rather than only on `/watchlist` (see the prop's docblock).
+  // Null for an item no gathered watchlist names, which is every ordinary feed
+  // card. The host's entry is passed independently of `item` and can lag it
+  // while the sheet closes, hence the id check; the derived one is a function
+  // of `item`, so it never can (and matches across id spaces the host's copy
+  // could not — a TMDB-sourced item against a `letterboxd-<slug>` row).
+  const hostRemoval =
+    watchlistRemoval != null && watchlistRemoval.entry.item.id === itemId
+      ? watchlistRemoval
+      : null;
+  const cachedRemoval = useCachedWatchlistRemoval(
+    item,
+    open && canWatchlist && hostRemoval == null,
+  );
+  const removal = hostRemoval ?? cachedRemoval;
+  // R12 as amended (U16): once the item is known to be on a watchlist, the add
+  // row is offered only while some applicable connected provider is still
+  // missing it — a film on the Letterboxd watchlist and not on Simkl's is
+  // exactly where an add is most useful, and one already on every tracker it
+  // can reach has nothing left to offer (so no disabled row stands in for the
+  // removal below). An item the gather doesn't name keeps the default-on row.
   const showWatchlistAdd =
     canWatchlist &&
-    (watchlistRemoval == null ||
+    (removal == null ||
       shouldOfferWatchlistAdd(
-        watchlistRemoval.entry,
+        removal.entry,
         connected,
         currentPlatform(),
-        watchlistRemoval.errors,
-        watchlistRemoval.incomplete,
+        removal.errors,
+        removal.incomplete,
       ));
 
   return (
@@ -196,14 +218,11 @@ export function CardActionsSheet({
           onCleanClose={onClose}
         />
       )}
-      {item != null &&
-        mode === 'watchlist-remove' &&
-        watchlistRemoval != null &&
-        watchlistRemoval.entry.item.id === item.id && (
+      {item != null && mode === 'watchlist-remove' && removal != null && (
           <WatchlistRemovePicker
-            entry={watchlistRemoval.entry}
-            errors={watchlistRemoval.errors}
-            incomplete={watchlistRemoval.incomplete}
+            entry={removal.entry}
+            errors={removal.errors}
+            incomplete={removal.incomplete}
             key={`watchlist-remove-${item.id}`}
             onCancel={() => setMode('actions')}
             onCleanClose={onClose}
@@ -274,22 +293,22 @@ export function CardActionsSheet({
                 onOpenPicker={() => setMode('watchlist-add')}
               />
             )}
-            {/* The removal, on `/watchlist` only (R35). Its picker stays
-                mounted through the write for the same reason the add's does —
-                and one more: the row it removes leaves the grid when the
-                invalidation lands, so the picker is the only place its
-                partial-failure report, its AniList refusal or its
-                unknown-membership rows can still be read. */}
-            {watchlistRemoval != null &&
-              watchlistRemoval.entry.item.id === item.id && (
-                <UnwatchlistMediaButton
-                  entry={watchlistRemoval.entry}
-                  errors={watchlistRemoval.errors}
-                  incomplete={watchlistRemoval.incomplete}
-                  key={`unwatchlist-${item.id}`}
-                  onOpenPicker={() => setMode('watchlist-remove')}
-                />
-              )}
+            {/* The removal, wherever the gather can evidence who holds the item
+                (R35 — see the prop's docblock). Its picker stays mounted
+                through the write for the same reason the add's does — and one
+                more: the row it removes leaves the grid when the invalidation
+                lands, so the picker is the only place its partial-failure
+                report, its AniList refusal or its unknown-membership rows can
+                still be read. */}
+            {canWatchlist && removal != null && (
+              <UnwatchlistMediaButton
+                entry={removal.entry}
+                errors={removal.errors}
+                incomplete={removal.incomplete}
+                key={`unwatchlist-${item.id}`}
+                onOpenPicker={() => setMode('watchlist-remove')}
+              />
+            )}
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.

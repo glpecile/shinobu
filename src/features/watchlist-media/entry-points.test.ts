@@ -43,27 +43,44 @@ describe('the want-to-watch row is on by default (plan 0031 R12)', () => {
 });
 
 /**
- * The removal's placement (plan 0031 R35/U16), read the same way. It is the
- * inverse default of the add: **off everywhere**, and reachable only by handing
- * the sheet a `WatchlistEntry` — which only `/watchlist` has. A surface that
- * forgets to opt in loses the row; a surface that cannot supply an entry cannot
- * opt in at all, which is the property this reads for.
+ * The removal's placement (plan 0031 R35/U16), read the same way. R35's rule is
+ * about **evidence**, not about which screen you are on: a removal must route
+ * off a `WatchlistEntry`'s `sources`, never off the item alone. Originally that
+ * was enforced by making `/watchlist` the only surface that could hand one over
+ * — until a fully-watchlisted feed card rendered a disabled "On your watchlist"
+ * with nothing behind it (owner report 2026-08-01).
+ *
+ * The sheet now derives the entry from the gathered cache when the host has
+ * none, which satisfies the actual rule: the `sources`, `errors` and
+ * `incomplete` are the gather's, and an item the gather doesn't hold yields
+ * `null`. What this reads for is that the derivation is the *only* new source —
+ * no call site synthesizes an entry, and none renders the button itself.
  */
-describe('the remove row is /watchlist only (plan 0031 R35)', () => {
-  test('the sheet takes the entry, and renders the removal only against it', async () => {
+describe('the remove row routes off gathered evidence (plan 0031 R35)', () => {
+  test('the sheet takes the entry, or derives it from the gather — never from the item alone', async () => {
     const sheet = await source(SHEET);
     expect(sheet).toContain('watchlistRemoval');
     expect(sheet).toContain('UnwatchlistMediaButton');
-    // Never derived from the item alone: without a `WatchlistEntry`'s `sources`
-    // the app has no evidence of which providers hold it (R35).
     expect(sheet).toContain('watchlistRemoval = null');
+    // The one sanctioned second source, and it reads `watchlistQueryKeys.inputs()`.
+    expect(sheet).toContain('useCachedWatchlistRemoval');
+    const hook = await source(
+      'src/features/watchlist/use-cached-watchlist-removal.ts',
+    );
+    expect(hook).toContain('findWatchlistRemoval');
+    expect(hook).toContain('watchlistQueryKeys.inputs()');
+    // Cache-only, per `useIsWatchlisted`'s one-key-one-queryFn discipline: a
+    // plain subscription, never a second observer on the surface's own key.
+    expect(hook).not.toContain('useQuery(');
+    expect(hook).not.toContain('fetchQuery');
+    expect(hook).toContain('useSyncExternalStore');
   });
 
-  test('the watchlist grid is the one call site that supplies it', async () => {
+  test('the watchlist grid is still the one call site that supplies an entry', async () => {
     expect(await source('src/app/watchlist/index.tsx')).toContain('watchlistRemoval={');
   });
 
-  test('details, search, feed, person and studio offer no removal', async () => {
+  test('no other surface hand-rolls the removal', async () => {
     for (const path of [
       'src/app/details/[id].tsx',
       'src/app/(tabs)/search.tsx',

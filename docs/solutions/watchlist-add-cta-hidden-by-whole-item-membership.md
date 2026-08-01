@@ -76,8 +76,37 @@ The consequence worth naming: a **partially-listed item now shows the add**, so
 the self-hosted remove entry point (plan 0033 follow-up — a settled press opens
 the remove picker) appears only once every applicable provider actually holds
 the item. That is the right trade for a single button: an item on one tracker of
-three has a whole add to offer and only a partial removal, and `/watchlist`
-carries its own dedicated removal row regardless.
+three has a whole add to offer and only a partial removal.
+
+## The dead row this exposed
+
+Making the CTA honest immediately surfaced the other half (owner report, same
+session): a film on **every** applicable watchlist now settles correctly to a
+greyed "On your watchlist" — and on the home feed's sheet that row is
+`disabled` with **nothing else to press**. The removal existed only when a
+caller handed `CardActionsSheet` a `watchlistRemoval` prop, and only
+`/watchlist` did.
+
+The settled press *is* the remove entry point, but it is inert in host mode by
+design: a host that is already a sheet must not stack a second one (plan 0032
+U3), so the card-actions sheet composes its own removal row instead — which it
+only ever built from the caller's prop.
+
+`useCachedWatchlistRemoval` closes it. When the host supplies no entry, the
+sheet derives the same target from the gathered cache via the existing pure
+`findWatchlistRemoval`. **R35 is about evidence, not about which screen you are
+standing on** — the `sources`, `errors` and `incomplete` are the gather's
+either way, and an item the gather doesn't hold still yields `null`, so an
+ordinary feed card offers nothing. The original "only `/watchlist` can supply
+an entry" framing was a proxy for that rule, and plan 0033's details-screen
+removal had already stopped honouring it.
+
+Net behaviour on every surface that shows the CTA: fully-listed → one
+actionable "Remove from watchlist", no add; partially-listed → both;
+unheld → the add alone. The subscription is `useIsWatchlisted`'s plain-cache
+shape, and the merge is gated on the sheet being open, because
+`computeWatchlist` is a full pass over every gathered row and the sheet stays
+mounted while closed.
 
 ## The rule this generalizes to
 
