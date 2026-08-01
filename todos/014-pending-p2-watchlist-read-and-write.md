@@ -29,6 +29,22 @@ Plan: `docs/plans/0031-watchlist-read-and-write.md`.
 > adapters, the season guard, the AniList delete guard, the removal CTA and its
 > unknown-membership rows — is in place. The registry flip is one token per provider.
 
+> **Amended 2026-08-01 (plan 0035 U1/U2).** AniList's contribution to the read is now
+> **CURRENT ∪ PLANNING**, not PLANNING alone: an anime you are actively watching is on
+> your watchlist, and it was absent from `/watchlist` entirely. This is a **fourth
+> selector** (`fetchWatchlistAnime`) — `fetchCurrentAnime`, `fetchPlannedAnime` and Up
+> Next's PLANNING gate are unchanged, so the hard constraint below still holds and the
+> gate doc's amendment says why (the gate restricts what PLANNING may *reach*; CURRENT
+> was never the restricted status).
+>
+> Removal follows: a CURRENT entry has to be removable, and AniList still has no
+> un-status, so `deleteAniListEntry` gained an `allowDestructive` opt-in that lifts the
+> refusal clause **and only** the refusal clause. R36's other two invariants — the fresh
+> in-effect read and the fresh id — are untouched. The picker earns the flag with a
+> visible warning naming what is destroyed plus a second explicit press; a bare-PLANNING
+> removal keeps its silent path byte-for-byte. **This reverses R36's status clause only**
+> (owner decision 2026-08-01), not the guard.
+
 ## Why it can't happen today
 
 `useLogMedia` is the only cross-provider write, and every part of it presumes a watch
@@ -72,7 +88,8 @@ gates it on `letterboxdUsername != null`).
 ## Owner decisions (2026-07-28)
 
 - **Read + write.** The cross-provider watchlist read surface ships alongside the verb.
-  AniList's contribution is the **PLANNING** list. **Hard constraint:** this must not
+  AniList's contribution is the **PLANNING** list *(widened to CURRENT ∪ PLANNING on
+  2026-08-01 — see the amendment above)*. **Hard constraint:** this must not
   re-open plan 0030's hole — Continue Watching, the "Your Anime" row and Calendar are
   behaviourally untouched, and the PLANNING gate (`features/up-next/compute.ts:229-235`)
   and the `CURRENT` selector filter (`state/queries/anilist.ts:153-160`) stay exactly as
@@ -127,9 +144,12 @@ gates it on `letterboxdUsername != null`).
       in-effect read** immediately before the delete (never the cached watchlist surface,
       whose 15-minute snapshot would authorize destroying an entry the user has since
       started elsewhere), and the delete uses the id that fresh read returned.
+      *(Amended 2026-08-01, plan 0035 R3: the refusal — and nothing else — is lifted by
+      an explicit `allowDestructive` opt-in, which the picker earns with a destructive
+      warning and a second press. The fresh read and the fresh id are unconditional.)*
 - [ ] A mid-run AniList PLANNING entry created by this feature appears **nowhere** in Up
       Next — in particular never in Continue Watching — and **does** appear in the new
-      watchlist surface. One three-way test asserts all of it and names
+      watchlist surface. One **four-way** test (plan 0035 U1) asserts all of it and names
       `anilist-shared-list-query-status-gate.md`.
 - [ ] Trakt reports already-there from its own write response (`existing: 1`), with no
       per-item membership read issued; a 420 surfaces as a specific limit-exceeded
@@ -208,7 +228,7 @@ gates it on `letterboxdUsername != null`).
       `/watchlist/letterboxd` becomes a redirect, not a deletion. `YourWatchlistRow`
       loses its provider identity and its `letterboxdUsername` mount gate, so a
       Trakt-only or AniList-only user gets a watchlist row for the first time.
-- [ ] The AniList leg costs **zero extra requests warm** — a third selector over the
+- [ ] The AniList leg costs **zero extra requests warm** — a selector over the
       already cached `currentAnimeEntries()` entry, not a new query — and 2 cold
       (`viewer()` then the list). Total surface cost is **0 warm from home**, up to 4 on a
       fully cold open. Never quoted as an unqualified "zero" or "3".
