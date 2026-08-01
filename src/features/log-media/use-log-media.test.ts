@@ -35,6 +35,16 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
+// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 
 let episodeMap: AniZipEpisodeMap | null = null;
 let seasonLayout: SeasonLayout | null = null;
@@ -59,7 +69,9 @@ mock.module('@/state/queries/mapping', () => ({
   },
 }));
 
-const { planLogWrite, withMappingSkips } = await import('./use-log-media');
+const { planLogWrite, simklLogAdapter, withMappingSkips } = await import(
+  './use-log-media'
+);
 const { fanOutLog } = await import('./fan-out');
 const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
   './manual-write-links'
@@ -152,6 +164,7 @@ function recordingAdapters(seen: Map<ProviderId, LogMediaVariables>) {
     anilist: make('anilist'),
     serializd: make('serializd'),
     letterboxd: make('letterboxd'),
+    simkl: make('simkl'),
   };
 }
 
@@ -370,6 +383,209 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     expect(plan.targets).toEqual(['trakt']);
     expect(mappingCalls).toEqual([]);
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+  });
+});
+
+function tvShow(): NormalizedMediaItem {
+  return {
+    id: 'trakt-42',
+    title: 'A Live-Action Show',
+    coverImage: '',
+    type: 'TV',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: '2026-07-26T00:00:00.000Z',
+    externalIds: { trakt: 42, tmdb: 4242 },
+  };
+}
+
+describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
+  test('a TV log with Trakt + Serializd + Simkl connected fires all three adapters', async () => {
+    const queryClient = client();
+    const item = tvShow();
+    seedTrakt(queryClient, 42, []);
+
+    const plan = await planLogWrite(
+      queryClient,
+      { item, episodes: [{ season: 1, number: 2 }] },
+      ['trakt', 'serializd', 'simkl'],
+    );
+
+    expect(plan.targets).toEqual(['trakt', 'serializd', 'simkl']);
+    expect(plan.writeTargets).toEqual(['trakt', 'serializd', 'simkl']);
+
+    const seen = new Map<ProviderId, LogMediaVariables>();
+    const result = await fanOutLog(recordingAdapters(seen), plan.writeTargets, plan.variables);
+
+    expect(result.succeeded).toEqual(['trakt', 'serializd', 'simkl']);
+    expect(seen.get('simkl')?.episodes).toEqual([{ season: 1, number: 2 }]);
+  });
+
+  test('a Simkl failure is named with its manual link, never masking the others', async () => {
+    const queryClient = client();
+    const item = tvShow();
+    seedTrakt(queryClient, 42, []);
+
+    const plan = await planLogWrite(
+      queryClient,
+      { item, episodes: [{ season: 1, number: 2 }] },
+      ['trakt', 'serializd', 'simkl'],
+    );
+
+    const seen = new Map<ProviderId, LogMediaVariables>();
+    const result = await fanOutLog(
+      { ...recordingAdapters(seen), simkl: () => Promise.reject(new Error('Simkl said no')) },
+      plan.writeTargets,
+      plan.variables,
+    );
+
+    // Partial-failure contract (AGENTS.md): Simkl is named, the others land.
+    expect(result.succeeded).toEqual(['trakt', 'serializd']);
+    expect(result.failed).toEqual(['simkl']);
+    const failure = result.outcomes.find((outcome) => outcome.provider === 'simkl');
+    expect(failure).toMatchObject({ status: 'error', message: 'Simkl said no' });
+    // …and plan 0022's fallback affordance can build a Simkl link for it.
+    expect(manualLinkForOutcome(failure!, item)).toBeTruthy();
+  });
+
+  test('an entry-domain anime log hands Simkl the entry numbers with no map fetch', async () => {
+    const queryClient = client();
+    const item = animeSeries();
+    seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
+
+    // AniList + Simkl only: no canonical-numbering target, so the R7
+    // short-circuit still skips the ~1 MB ani.zip document — Simkl's anime
+    // write speaks the entry/AniDB domain natively (KTD-6) and is deliberately
+    // NOT in CANONICAL_EPISODE_PROVIDERS.
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
+      'anilist',
+      'simkl',
+    ]);
+
+    expect(mappingCalls).toEqual([]);
+    expect(plan.targets).toEqual(['anilist', 'simkl']);
+    expect(plan.variables.entryEpisodes).toEqual([3]);
+
+    const seen = new Map<ProviderId, LogMediaVariables>();
+    await fanOutLog(recordingAdapters(seen), plan.writeTargets, plan.variables);
+    expect(seen.get('simkl')?.entryEpisodes).toEqual([3]);
+    // The adapter itself resolves no map either: entry-domain input already is
+    // the domain Simkl counts by, so `cachedAniZipEpisodeMap` is never asked.
+    const entries: unknown[] = [];
+    const adapter = simklLogAdapter(queryClient, (entry) => {
+      entries.push(entry);
+      return Promise.resolve({ status: 'ok' as const });
+    });
+    await adapter(plan.variables);
+    expect(mappingCalls).toEqual([]);
+    expect(entries[0]).toMatchObject({ entryEpisodes: [3], episodeMap: null });
+  });
+
+  test('a translation miss skips Trakt with a reason while Simkl still writes the entry batch', async () => {
+    episodeMap = null; // ani.zip down, or no table for this entry yet.
+    const queryClient = client();
+    const item = animeSeries();
+    seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
+
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [3] }, [
+      'trakt',
+      'anilist',
+      'simkl',
+    ]);
+
+    // Only the canonical-domain providers are mapping-blocked (R3); Simkl's
+    // entry-domain write is unaffected by the miss.
+    expect([...plan.mappingSkips.keys()]).toEqual(['trakt']);
+
+    const seen = new Map<ProviderId, LogMediaVariables>();
+    const result = await fanOutLog(
+      withMappingSkips(recordingAdapters(seen), plan.mappingSkips),
+      plan.writeTargets,
+      plan.variables,
+    );
+    expect(seen.has('trakt')).toBe(false);
+    expect(seen.get('simkl')?.entryEpisodes).toEqual([3]);
+    expect(result.succeeded).toEqual(['anilist', 'simkl']);
+  });
+
+  test('a canonically-numbered anime batch reaches the adapter with the ani.zip table', async () => {
+    const queryClient = client();
+    const item = animeSeries();
+
+    // Canonical origin (a TMDB-shaped surface): S02E03, not entry episode 3.
+    const plan = await planLogWrite(
+      queryClient,
+      { item, episodes: [{ season: 2, number: 3 }] },
+      ['simkl'],
+    );
+
+    // A season-2+ canonical batch has no entry-domain reading — deriving one
+    // would hand Simkl "entry episode 3" for an episode that is not (the
+    // wrong-identity write plan 0027 bans).
+    expect(plan.variables.entryEpisodes).toBeUndefined();
+    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+
+    const entries: Array<{ episodeMap?: unknown }> = [];
+    const adapter = simklLogAdapter(queryClient, (entry) => {
+      entries.push(entry);
+      return Promise.resolve({ status: 'ok' as const });
+    });
+    await adapter(plan.variables);
+
+    // The adapter fetched the same cached table the forward translation uses
+    // and handed it to writes.ts for the reverse map (KTD-6).
+    expect(mappingCalls).toEqual(['episode-map:185660']);
+    expect(entries[0]).toMatchObject({ episodes: [{ season: 2, number: 3 }] });
+    expect(entries[0].episodeMap).toBe(episodeMap);
+  });
+
+  test('a canonical batch with no ani.zip table passes null so writes.ts skips, not guesses', async () => {
+    episodeMap = null;
+    const queryClient = client();
+    const item = animeSeries();
+
+    const plan = await planLogWrite(
+      queryClient,
+      { item, episodes: [{ season: 2, number: 3 }] },
+      ['simkl'],
+    );
+
+    const entries: Array<{ episodeMap?: unknown }> = [];
+    const adapter = simklLogAdapter(queryClient, (entry) => {
+      entries.push(entry);
+      return Promise.resolve({ status: 'ok' as const });
+    });
+    await adapter(plan.variables);
+
+    // `logToSimkl` answers a null table with its reasoned skip (plan 0027:
+    // wrong write is worse than none) — the adapter's job is only to not hide
+    // the miss.
+    expect(entries[0].episodeMap).toBeNull();
+  });
+
+  test('a season-1 canonical anime batch keeps its entry reading and needs no table', async () => {
+    const queryClient = client();
+    const item = animeSeries();
+    seedAniList(queryClient, 185660, { status: 'CURRENT', progress: 2 });
+
+    const plan = await planLogWrite(
+      queryClient,
+      { item, episodes: [{ season: 1, number: 3 }] },
+      ['anilist', 'simkl'],
+    );
+
+    // Plan 0011's standing rule: a canonical season-1 batch IS the entry's own
+    // numbering, so both entry-domain consumers read it directly.
+    expect(plan.variables.entryEpisodes).toEqual([3]);
+
+    const entries: Array<{ episodeMap?: unknown }> = [];
+    const adapter = simklLogAdapter(queryClient, (entry) => {
+      entries.push(entry);
+      return Promise.resolve({ status: 'ok' as const });
+    });
+    await adapter(plan.variables);
+    expect(mappingCalls).toEqual([]);
+    expect(entries[0]).toMatchObject({ entryEpisodes: [3], episodeMap: null });
   });
 });
 

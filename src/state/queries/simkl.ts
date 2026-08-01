@@ -71,7 +71,14 @@ export const simklQueryKeys = {
    * collide under one cache entry.
    */
   allItems: (type?: SimklLibraryBucket, status?: SimklWatchStatus) =>
-    [...simklQueryKeys.all, 'all-items', type ?? 'all', status ?? 'all'] as const,
+    [...simklQueryKeys.allItemsRoot(), type ?? 'all', status ?? 'all'] as const,
+  /**
+   * Prefix over every `allItems` filter — the write-side invalidation target
+   * (plan 0031 KTD-5 precedent, like `traktQueryKeys.watchlistRoot`): a write
+   * can't know which type/status filters a surface has cached, so it names
+   * the prefix instead of guessing arguments.
+   */
+  allItemsRoot: () => [...simklQueryKeys.all, 'all-items'] as const,
   /** `/sync/activities` — the cheap delta signal that gates `allItems`
    *  refetches (plan 0034 KTD-5). */
   activities: () => [...simklQueryKeys.all, 'activities'] as const,

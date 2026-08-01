@@ -47,6 +47,7 @@ describe('simklQueryKeys (plan 0034 U5)', () => {
     for (const key of [
       simklQueryKeys.allItems(),
       simklQueryKeys.allItems('shows', 'watching'),
+      simklQueryKeys.allItemsRoot(),
       simklQueryKeys.activities(),
       simklQueryKeys.calendar('tv'),
       simklQueryKeys.trending('movies'),
@@ -66,6 +67,17 @@ describe('simklQueryKeys (plan 0034 U5)', () => {
     expect(simklQueryKeys.allItems('shows', 'watching')).not.toEqual(
       simklQueryKeys.allItems('shows', 'completed') as never,
     );
+  });
+
+  test('allItemsRoot prefixes every all-items filter (the write-side invalidation target)', () => {
+    const root = simklQueryKeys.allItemsRoot();
+    for (const key of [
+      simklQueryKeys.allItems(),
+      simklQueryKeys.allItems('shows'),
+      simklQueryKeys.allItems('anime', 'plantowatch'),
+    ]) {
+      expect(key.slice(0, root.length)).toEqual([...root]);
+    }
   });
 
   test('trending defaults to the week interval and keys intervals apart', () => {

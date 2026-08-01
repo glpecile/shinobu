@@ -20,11 +20,13 @@ import {
 import { planOnAniList } from '@/lib/providers/anilist/writes';
 import { addToLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
 import { addToSerializdWatchlist } from '@/lib/providers/serializd/writes';
+import { addToSimklWatchlist } from '@/lib/providers/simkl/writes';
 import { addToTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { letterboxdDeps } from '@/state/queries/letterboxd';
 import { serializdDeps } from '@/state/queries/serializd';
+import { simklDeps } from '@/state/queries/simkl';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -53,9 +55,12 @@ import {
  * (`docs/solutions/serializd-watchlist-clears-watched.md`): its adapter runs
  * the season guard first (watched seasons are never sent) and its `ok` can
  * carry the partial-add reason R16 demands, which `runProviderWrites` now
- * passes through. The registry token (`registry.ts`) remains the single
- * switch — reverting it to `'manual'` is the standing rollback (KTD-9) and
- * makes this key unreachable without deleting it.
+ * passes through. **Simkl** joined with plan 0034 U6's capability flip:
+ * `/sync/add-to-list` with per-item `to: 'plantowatch'` is upsert-shaped (no
+ * `existing` signal to read), so a re-add reports as a plain `ok`. The
+ * registry token (`registry.ts`) remains the single switch — reverting it to
+ * `'manual'` is the standing rollback (KTD-9) and makes this key unreachable
+ * without deleting it.
  */
 export const WATCHLIST_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistWritePayload>>
@@ -66,6 +71,7 @@ export const WATCHLIST_ADAPTERS: Partial<
     Effect.runPromise(addToLetterboxdWatchlist(letterboxdDeps(), item)),
   serializd: ({ item }) =>
     Effect.runPromise(addToSerializdWatchlist(serializdDeps(), item)),
+  simkl: ({ item }) => Effect.runPromise(addToSimklWatchlist(simklDeps(), item)),
 };
 
 /** The watchlist add's report — the shared core's, plus this verb's own fields. */

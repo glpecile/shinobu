@@ -60,6 +60,14 @@ import {
  * probes it) and is deliberately **not on a live path** — routing never hands a
  * manual provider to `runProviderWrites`, whose missing-adapter path is a loud
  * error by design.
+ *
+ * Simkl is absent for the same structural reasons, doubled (plan 0034 U6): its
+ * `watchlistRemove` stays `'manual'` behind U4's live-probe gate — the
+ * documented `/sync/history/remove` whole-item body removes watch *history*
+ * along with the list entry — and with no read leg (`canRead` false until U7)
+ * it can't appear in a `sources` either. `removeFromSimklWatchlist` ships
+ * dormant in `simkl/writes.ts` so the eventual flip is a one-token registry
+ * change, exactly like Serializd's.
  */
 export const WATCHLIST_REMOVE_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistRemovePayload>>

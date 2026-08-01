@@ -26,6 +26,16 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
+// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 
 const { invalidateAfterLog } = await import('./use-log-media');
 
@@ -93,6 +103,18 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
   test('a log that reached neither provider leaves the slot alone', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['letterboxd']);
+    expect(keys).not.toContain('up-next/inputs');
+  });
+
+  test('a successful Simkl log refreshes the whole simkl library scope (plan 0034 U6)', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterLog(client, ITEM, ['simkl']);
+    // The all-items *prefix* (every type/status filter) plus the activities
+    // delta that gates their refetch (KTD-5) — both under the ['simkl'] root
+    // so disconnect's purge still reaches them.
+    expect(keys).toContain('simkl/all-items');
+    expect(keys).toContain('simkl/activities');
+    // Simkl is not an Up Next input until U8 — the gate stays closed.
     expect(keys).not.toContain('up-next/inputs');
   });
 });

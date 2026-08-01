@@ -32,6 +32,16 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
+// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 // Enrichment has every id it needs on these fixtures — no mapping lookups.
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: () => Promise.resolve(null),
@@ -55,6 +65,7 @@ const { planWatchlistWrite } = await import('./targets');
 let traktFails: string | null = null;
 let anilistFails: string | null = null;
 let letterboxdFails: string | null = null;
+let simklFails: string | null = null;
 const adapterCalls: ProviderId[] = [];
 /** Every notification-refresh call and the options it carried. */
 const refreshCalls: unknown[] = [];
@@ -84,6 +95,16 @@ function fakeDeps(): WatchlistWriteDeps {
         return letterboxdFails == null
           ? Promise.resolve({ status: 'ok' as const })
           : Promise.reject(new Error(letterboxdFails));
+      },
+      serializd: () => {
+        adapterCalls.push('serializd');
+        return Promise.resolve({ status: 'ok' as const });
+      },
+      simkl: () => {
+        adapterCalls.push('simkl');
+        return simklFails == null
+          ? Promise.resolve({ status: 'ok' as const })
+          : Promise.reject(new Error(simklFails));
       },
     },
     refresh: (_client, options) => {
@@ -143,6 +164,7 @@ beforeEach(() => {
   traktFails = null;
   anilistFails = null;
   letterboxdFails = null;
+  simklFails = null;
   adapterCalls.length = 0;
   refreshCalls.length = 0;
   process.env.EXPO_OS = 'ios';
@@ -161,6 +183,53 @@ describe('runWatchlistWrite — the fan-out contract', () => {
     expect(result.outcomes.every((outcome) => outcome.status === 'ok')).toBe(true);
     expect(result.succeeded).toEqual(['trakt', 'anilist', 'letterboxd']);
     expect(result.failed).toEqual([]);
+  });
+
+  test('a TV show with Simkl connected adds there too, in routing order (plan 0034 U6)', async () => {
+    const { client } = recordingClient();
+    const show = animeFilm({
+      id: 'trakt-9',
+      type: 'TV',
+      isFilm: false,
+      externalIds: { trakt: 9, tmdb: 99 },
+    });
+    const result = await runWatchlistWrite(
+      client,
+      show,
+      [...CONNECTED, 'simkl'],
+      {},
+      fakeDeps(),
+    );
+    expect(result.outcomes.map((outcome) => outcome.provider)).toEqual([
+      'trakt',
+      'serializd',
+      'simkl',
+    ]);
+    expect(result.succeeded).toEqual(['trakt', 'serializd', 'simkl']);
+    expect(result.manual).toEqual([]);
+  });
+
+  test('a Simkl failure is named without masking the other adds (plan 0034 U6)', async () => {
+    simklFails = 'Simkl said no';
+    const { client } = recordingClient();
+    const show = animeFilm({
+      id: 'trakt-9',
+      type: 'TV',
+      isFilm: false,
+      externalIds: { trakt: 9, tmdb: 99 },
+    });
+    const result = await runWatchlistWrite(
+      client,
+      show,
+      [...CONNECTED, 'simkl'],
+      {},
+      fakeDeps(),
+    );
+    expect(result.succeeded).toEqual(['trakt', 'serializd']);
+    expect(result.failed).toEqual(['simkl']);
+    expect(
+      result.outcomes.find((outcome) => outcome.provider === 'simkl'),
+    ).toMatchObject({ status: 'error', message: 'Simkl said no' });
   });
 
   test('one provider failing leaves the others ok and is named in the report', async () => {
@@ -188,10 +257,13 @@ describe('runWatchlistWrite — the fan-out contract', () => {
 
     expect(plan.manual).toEqual(['letterboxd']);
     expect(plan.targets).toEqual(['trakt', 'anilist']);
+    // Exact keys: one per provider declaring `watchlistWrite: 'write'` —
+    // Simkl joined with plan 0034 U6's capability flip.
     expect(Object.keys(WATCHLIST_ADAPTERS).sort()).toEqual([
       'anilist',
       'letterboxd',
       'serializd',
+      'simkl',
       'trakt',
     ]);
 
