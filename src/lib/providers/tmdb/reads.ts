@@ -11,6 +11,7 @@ import type { TmdbDeps } from './deps';
 import {
   normalizeCompanySearch,
   normalizeMovieCatalogue,
+  normalizeMultiSearch,
   normalizePersonDetails,
   normalizePersonSearch,
   normalizeStudioDetails,
@@ -195,6 +196,26 @@ export function searchMovie(
     );
     const now = yield* Clock.currentTimeMillis;
     return normalizeTitleSearch(raw, 'movie', new Date(now).toISOString());
+  });
+}
+
+/**
+ * Free-text movie+TV search for the search tab — one `/search/multi` call,
+ * people dropped in normalization. This is the section's primary source
+ * post-detachment (plan 0034): it needs only the builder token, so search
+ * works with zero trackers connected and no Trakt client key in the build.
+ */
+export function searchTitles(
+  deps: TmdbDeps,
+  params: { query: string },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  return Effect.gen(function* () {
+    const raw = yield* tmdbRequest<TmdbSearchResponse>(
+      deps,
+      `/search/multi?query=${encodeURIComponent(params.query)}&include_adult=false`,
+    );
+    const now = yield* Clock.currentTimeMillis;
+    return normalizeMultiSearch(raw, new Date(now).toISOString());
   });
 }
 

@@ -11,6 +11,10 @@ import type { NormalizedMediaItem } from '@/types/media';
 export const SEARCH_QUERY_ROOTS = {
   trakt: ['trakt', 'search'] as const,
   anilist: ['anilist', 'search'] as const,
+  // TMDB is a metadata source, not a provider, but its title search *is* the
+  // Movies & TV search section post-detachment — tapped results must resolve
+  // on the details screen exactly like tracker-sourced ones.
+  tmdb: ['tmdb', 'search'] as const,
 };
 
 /**

@@ -313,13 +313,15 @@ export const SEARCH_MIN_QUERY_LENGTH = 2;
 export function useTraktSearchQuery(params: {
   query: string;
   limit?: number;
+  enabled?: boolean;
 }) {
   const query = params.query.trim();
   const limit = params.limit ?? 20;
   return useQuery({
     queryKey: traktQueryKeys.search(query, limit),
     queryFn: () => Effect.runPromise(searchMedia(traktDeps(), { query, limit })),
-    enabled: query.length >= SEARCH_MIN_QUERY_LENGTH,
+    enabled:
+      params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
