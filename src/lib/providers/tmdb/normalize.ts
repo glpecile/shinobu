@@ -188,6 +188,26 @@ function accumulate(
 }
 
 /**
+ * A filmography row's subtitle: the release year, then the character or job
+ * (plan 0035 R14). The year is a prefix rather than a replacement — the role is
+ * why the credit is in this row, so it is never displaced — joined with the same
+ * `·` the meta line and the card-actions sheet use.
+ *
+ * An undated credit (unreleased, unscheduled) contributes no year and **no
+ * stray separator**; a credit with neither year nor role contributes nothing at
+ * all, which is what keeps its subtitle key out of the map entirely.
+ */
+function creditSubtitle(entry: {
+  item: NormalizedMediaItem;
+  details: string[];
+}): string {
+  const role = entry.details.join(', ');
+  const year = entry.item.year;
+  if (year == null) return role;
+  return role === '' ? String(year) : `${year} · ${role}`;
+}
+
+/**
  * Credits → one row per role: the `cast` side becomes "Acting", crew entries
  * group by their TMDB `department`. Within a row: newest first, with undated
  * (unreleased/unscheduled) work leading. Row order: the person's
@@ -220,8 +240,8 @@ export function normalizeCreditRows(
         items: sorted.map((entry) => entry.item),
         details: Object.fromEntries(
           sorted
-            .filter((entry) => entry.details.length > 0)
-            .map((entry) => [entry.item.id, entry.details.join(', ')]),
+            .map((entry) => [entry.item.id, creditSubtitle(entry)] as const)
+            .filter(([, subtitle]) => subtitle !== ''),
         ),
       };
     })

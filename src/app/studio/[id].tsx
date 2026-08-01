@@ -19,6 +19,23 @@ import { PersonNotFound, PersonSkeleton } from '@/features/person';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbStudioQuery } from '@/state/queries/tmdb';
+import type { NormalizedMediaItem } from '@/types/media';
+
+/**
+ * The release year per card (plan 0035 R15). A studio row has no role text, so
+ * unlike the person page's filmography the year *is* the whole subtitle — a
+ * slot that was simply empty until now. Undated titles get no key at all, which
+ * leaves them subtitle-less and keeps their sorts-first position (R16).
+ */
+function releaseYears(
+  items: readonly NormalizedMediaItem[],
+): Record<string, string> {
+  return Object.fromEntries(
+    items
+      .filter((item) => item.year != null)
+      .map((item) => [item.id, String(item.year)]),
+  );
+}
 
 function StudioContent({ tmdbId }: { tmdbId: number }) {
   const { data } = useSuspenseTmdbStudioQuery({ tmdbId });
@@ -68,6 +85,7 @@ function StudioContent({ tmdbId }: { tmdbId: number }) {
             key={row.title}
             onItemActions={openActions}
             onItemPress={(item) => pushRoute(routes.details(item.id))}
+            subtitles={releaseYears(row.items)}
             title={row.title}
           />
         ))}
