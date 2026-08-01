@@ -39,6 +39,24 @@ export function filterWatchlistEntries(
   return entries.filter((entry) => entry.sources.includes(provider));
 }
 
+export interface WatchlistFilterOption {
+  provider: ProviderId;
+  count: number;
+  /**
+   * The count is a **floor, not a total**: that leg succeeded but has pages it
+   * hasn't read (`WatchlistInputs['incomplete']` — today only Letterboxd,
+   * whose scrape sits behind the grid's `onEndReached` and is deliberately
+   * never auto-paged). Rendered as `46+`.
+   *
+   * This is the same honesty rule R35 applies to the removal path, one surface
+   * over: a leg that stopped at page 1 of 22 never looked at the rest, so a
+   * bare "46" would assert a completeness the app has no evidence for — and
+   * the number visibly grows as you scroll, which reads as a bug rather than
+   * as paging.
+   */
+  partial: boolean;
+}
+
 /**
  * How many entries each provider holds, in registry order, providers with
  * nothing omitted. Drives which options the picker offers — a user with three
@@ -47,7 +65,8 @@ export function filterWatchlistEntries(
  */
 export function watchlistProviderCounts(
   entries: readonly WatchlistEntry[],
-): { provider: ProviderId; count: number }[] {
+  incomplete: readonly ProviderId[] = [],
+): WatchlistFilterOption[] {
   const counts = new Map<ProviderId, number>();
   for (const entry of entries) {
     for (const source of entry.sources) {
@@ -57,7 +76,25 @@ export function watchlistProviderCounts(
   return PROVIDER_ORDER.filter((id) => (counts.get(id) ?? 0) > 0).map((id) => ({
     provider: id,
     count: counts.get(id) ?? 0,
+    partial: incomplete.includes(id),
   }));
+}
+
+/**
+ * The row total, which is partial if **any** leg is: a merged list can't be
+ * complete while one of its sources is still paging, and an unread Letterboxd
+ * page can hold a film no other tracker has.
+ */
+export function watchlistTotal(
+  entries: readonly WatchlistEntry[],
+  incomplete: readonly ProviderId[] = [],
+): { count: number; partial: boolean } {
+  return { count: entries.length, partial: incomplete.length > 0 };
+}
+
+/** `46+` while pages are outstanding, `46` once the leg is exhausted. */
+export function formatWatchlistCount(count: number, partial: boolean): string {
+  return partial ? `${count}+` : String(count);
 }
 
 /**
@@ -69,15 +106,20 @@ export function watchlistProviderCounts(
 export function watchlistFilterOptions(
   entries: readonly WatchlistEntry[],
   active: ProviderId | null,
-): { provider: ProviderId; count: number }[] {
-  const counts = watchlistProviderCounts(entries);
+  incomplete: readonly ProviderId[] = [],
+): WatchlistFilterOption[] {
+  const counts = watchlistProviderCounts(entries, incomplete);
   if (active == null || counts.some((option) => option.provider === active)) {
     return counts;
   }
   return PROVIDER_ORDER.filter(
     (id) => id === active || counts.some((option) => option.provider === id),
-  ).map((id) => ({
-    provider: id,
-    count: counts.find((option) => option.provider === id)?.count ?? 0,
-  }));
+  ).map(
+    (id) =>
+      counts.find((option) => option.provider === id) ?? {
+        provider: id,
+        count: 0,
+        partial: incomplete.includes(id),
+      },
+  );
 }

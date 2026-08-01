@@ -11,7 +11,11 @@ import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
-import { watchlistFilterOptions } from './filter';
+import {
+  formatWatchlistCount,
+  watchlistFilterOptions,
+  watchlistTotal,
+} from './filter';
 import type { WatchlistEntry } from './types';
 import { setWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
 
@@ -136,17 +140,25 @@ function ViewToggle({
 function FilterOption({
   provider,
   count,
+  partial,
   selected,
   onSelect,
 }: {
   provider: ProviderId | null;
   count: number;
+  /** Renders `46+` — the leg has pages it hasn't read. */
+  partial: boolean;
   selected: boolean;
   onSelect: () => void;
 }) {
   const accent = useCSSVariable('--color-accent');
+  const label = provider == null ? 'All trackers' : PROVIDERS[provider].label;
   return (
     <PresstableOpacity
+      // The `+` is punctuation a screen reader drops or reads as "plus", so
+      // the row spells the claim out — the whole point of the glyph is that
+      // the number is a floor.
+      accessibilityLabel={`${label}, ${count}${partial ? ' or more' : ''}`}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       className="flex-row items-center gap-3 py-3"
@@ -162,10 +174,10 @@ function FilterOption({
         )}
       </View>
       {provider != null && <ProviderIcon id={provider} size={18} />}
-      <Text className="text-foreground font-sans text-base flex-1">
-        {provider == null ? 'All trackers' : PROVIDERS[provider].label}
+      <Text className="text-foreground font-sans text-base flex-1">{label}</Text>
+      <Text className="text-muted font-sans text-sm">
+        {formatWatchlistCount(count, partial)}
       </Text>
-      <Text className="text-muted font-sans text-sm">{count}</Text>
     </PresstableOpacity>
   );
 }
@@ -173,6 +185,11 @@ function FilterOption({
 export interface WatchlistToolbarProps {
   /** The **unfiltered** entries — the option counts describe the whole list. */
   entries: readonly WatchlistEntry[];
+  /**
+   * Legs that succeeded but haven't read every page. Their counts render as a
+   * floor (`46+`) rather than a total the app can't stand behind.
+   */
+  incomplete: readonly ProviderId[];
   provider: ProviderId | null;
   onProviderChange: (provider: ProviderId | null) => void;
   view: WatchlistView;
@@ -180,12 +197,14 @@ export interface WatchlistToolbarProps {
 
 export function WatchlistToolbar({
   entries,
+  incomplete,
   provider,
   onProviderChange,
   view,
 }: WatchlistToolbarProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const options = watchlistFilterOptions(entries, provider);
+  const options = watchlistFilterOptions(entries, provider, incomplete);
+  const total = watchlistTotal(entries, incomplete);
 
   function select(next: ProviderId | null) {
     setPickerOpen(false);
@@ -206,8 +225,9 @@ export function WatchlistToolbar({
           Show titles from
         </Text>
         <FilterOption
-          count={entries.length}
+          count={total.count}
           onSelect={() => select(null)}
+          partial={total.partial}
           provider={null}
           selected={provider == null}
         />
@@ -216,6 +236,7 @@ export function WatchlistToolbar({
             count={option.count}
             key={option.provider}
             onSelect={() => select(option.provider)}
+            partial={option.partial}
             provider={option.provider}
             selected={provider === option.provider}
           />

@@ -295,6 +295,10 @@ function WatchlistGrid({
     <>
       <WatchlistToolbar
         entries={entries}
+        // Same `incomplete` the removal path reads (R35), one surface over: a
+        // leg with unread pages can only state a floor, so its count renders
+        // `46+` until the scrape is exhausted.
+        incomplete={incomplete}
         onProviderChange={onProviderChange}
         provider={provider}
         view={view}
