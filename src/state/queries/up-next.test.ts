@@ -635,8 +635,11 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     ]);
   });
 
-  test('a plantowatch show is tracked for the calendar but never the progress pool', async () => {
-    const planned = simklEntry(11, { status: 'plantowatch' });
+  test('an un-started plantowatch show is tracked for the calendar but never the progress pool', async () => {
+    const planned = simklEntry(11, {
+      status: 'plantowatch',
+      item: { currentProgress: 0 },
+    });
     const { client } = fakeClient({
       simklLibraries: {
         plantowatch: simklLibrary({ shows: [planned] }),
@@ -650,9 +653,51 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     // watching + plantowatch)…
     expect(inputs.calendar).toHaveLength(1);
     expect(inputs.calendar[0].item.id).toBe('simkl-11');
-    // …but contributes no progress pointer — mirroring Trakt, where the
-    // watchlist reaches Up Next only through the calendar leg.
+    // …but contributes no progress pointer: nothing has been started, so it is
+    // a watchlist item, not something waiting one tap away.
     expect(inputs.progress).toEqual([]);
+  });
+
+  test('a part-watched plantowatch show reaches Continue Watching (owner report 2026-08-01)', async () => {
+    // The Batman: Caped Crusader state — 10 of 20 watched, parked back on the
+    // watchlist. Simkl holds one status per item, so this row lives in
+    // `plantowatch` and nowhere else.
+    const parked = simklEntry(12, {
+      status: 'plantowatch',
+      nextToWatch: { season: 2, episode: 1, date: '2026-07-20T00:00:00Z' },
+      item: { currentProgress: 10, totalEpisodes: 20 },
+    });
+    const { client } = fakeClient({
+      simklLibraries: { plantowatch: simklLibrary({ shows: [parked] }) },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.progress).toHaveLength(1);
+    expect(inputs.progress[0].item.id).toBe('simkl-12');
+    expect(inputs.progress[0].nextEpisode?.number).toBe(1);
+  });
+
+  test('a plantowatch outage leaves the watching rows standing', async () => {
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({
+          shows: [
+            simklEntry(13, {
+              nextToWatch: { season: 1, episode: 5, date: '2026-07-20T00:00:00Z' },
+            }),
+          ],
+        }),
+      },
+      failingSimkl: ['plantowatch'],
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.progress.map((input) => input.item.id)).toEqual(['simkl-13']);
+    // The failure still reaches the user — the calendar/releases legs read the
+    // same snapshot and settle it.
+    expect(inputs.errors.some((failure) => failure.provider === 'simkl')).toBe(true);
   });
 
   test('movie_release rows intersect with tracked movies and land as day-dated releases', async () => {

@@ -49,9 +49,12 @@ export interface SimklAllItemsSeason {
 }
 
 /**
- * From `next_watch_info=yes` on `watching` items: the next episode *with its
- * air instant* — the field U8's Up Next leg needs (`next_to_watch` alone is a
- * bare "S##E##" pointer). `season` is omitted for anime (absolute numbering).
+ * From `next_watch_info=yes`: the next episode *with its air instant* — the
+ * field U8's Up Next leg needs (`next_to_watch` alone is a bare "S##E##"
+ * pointer). `season` is omitted for anime (absolute numbering). Populated for
+ * `plantowatch` rows too, not just `watching` ones (verified on device, plan
+ * 0036 U8) — which is what lets a parked part-watched show reach Continue
+ * Watching and keep its details-screen log button.
  */
 export interface SimklNextToWatchInfoRaw {
   title?: string | null;
@@ -382,8 +385,8 @@ function nextToWatchFrom(raw: SimklAllItemsEntry): SimklNextToWatch | undefined 
       date: info.date != null && info.date !== '' ? info.date : null,
     };
   }
-  // Without `next_watch_info` (or off-`watching` statuses) only the bare
-  // pointer exists — carried with a null air date, never a guessed one.
+  // Where Simkl states no `next_to_watch_info` block only the bare pointer
+  // exists — carried with a null air date, never a guessed one.
   const parsed = parseEpisodePointer(raw.next_to_watch);
   if (parsed == null) return undefined;
   return { season: parsed.season, episode: parsed.episode, date: null };

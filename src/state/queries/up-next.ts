@@ -301,14 +301,43 @@ function simklProgressInput(entry: SimklLibraryEntry): ProgressUpNextInput {
 }
 
 /**
- * Continue Watching's Simkl source (plan 0034 U8/R9): the `watching` snapshot's
- * server-computed `next_to_watch` pointers, air instants included
- * (`next_watch_info=yes`) — one call, no per-show fan, which is why there is no
- * Simkl analog of the pool cap. Shows + anime only: a movie has no next
- * episode. `plantowatch` deliberately stays out — mirroring Trakt, where the
- * watchlist reaches Calendar through the calendar leg and never the progress
- * pool — and Simkl only populates `next_watch_info` for `watching` items
- * anyway.
+ * Whether a `plantowatch` row has actually been **started** — the gate on the
+ * parked half below. Simkl's plan-to-watch bucket is the watchlist, so an
+ * un-started row there is something the user has decided to watch, not
+ * something waiting one tap away; admitting the whole bucket would pour the
+ * backlog into Continue Watching, which is exactly what `anilistEntry`'s
+ * PLANNING gate exists to prevent on the other provider. A non-zero progress is
+ * the one thing that distinguishes the two, and it is the same fact the details
+ * screen renders as "10 / 20 episodes".
+ */
+function startedInSimkl(entry: SimklLibraryEntry): boolean {
+  return entry.item.currentProgress > 0;
+}
+
+/**
+ * Continue Watching's Simkl source (plan 0034 U8/R9): the server-computed
+ * `next_to_watch` pointers, air instants included (`next_watch_info=yes`) — one
+ * call per snapshot, no per-show fan, which is why there is no Simkl analog of
+ * the pool cap. Shows + anime only: a movie has no next episode.
+ *
+ * **The parked half (owner report 2026-08-01, overturning plan 0034 U8/R9).**
+ * This leg used to read `watching` only, on the rationale that it mirrored
+ * Trakt — whose watchlist reaches Up Next through the calendar leg and never the
+ * progress pool — and that Simkl populates `next_watch_info` for `watching`
+ * items alone. Both halves of that turned out to be wrong for Simkl. It holds
+ * **one status per item**, so a show the user is part-way through but has parked
+ * back on the watchlist lives in `plantowatch` and *nowhere else* — unlike
+ * Trakt, where watchlisting a show never displaces its watch history. And Simkl
+ * does populate `next_to_watch_info` for those rows (verified on device, plan
+ * 0036 U8). A 10-of-20 show was therefore missing from Continue Watching while
+ * its own details screen offered "Log S2E1", which is the same contradiction
+ * `docs/solutions/simkl-parked-shows-have-no-next-to-watch.md` names from the
+ * details side.
+ *
+ * Only *started* rows join (`startedInSimkl`); the `plantowatch` read is
+ * best-effort so a snapshot outage can't blank the `watching` rows this leg has
+ * always carried, and it is the watchlist gather's own cache entry, so in the
+ * common session it costs no request.
  *
  * Pre-window episodes (plan 0034 U8's open choice, resolved here): a pointer
  * whose episode aired before the rolling CDN window still classifies as aired
@@ -317,14 +346,25 @@ function simklProgressInput(entry: SimklLibraryEntry): ProgressUpNextInput {
  * not wired**: it would only serve pointers with a *null* date, and dating
  * those means guessing which month's ~MB file to fetch (the air date is
  * exactly the unknown). Those degrade to progress-only instead — the
- * `simklAiredByCount` arithmetic classifies them, and a show the calendar file
- * doesn't cover therefore still renders, never hidden.
+ * `simklAiredByCount` arithmetic classifies them (it reads `totalEpisodes`,
+ * `notAiredEpisodes` and `currentProgress`, which every status carries), and a
+ * show the calendar file doesn't cover therefore still renders, never hidden.
  */
 async function simklInputs(
   queryClient: QueryClient,
 ): Promise<ProgressUpNextInput[]> {
-  const library = await simklWatchingLibrary(queryClient);
-  return [...library.shows, ...library.anime].map(simklProgressInput);
+  const [watching, parked] = await Promise.all([
+    simklWatchingLibrary(queryClient),
+    // Swallowed, not hidden: the calendar and releases legs read this same
+    // snapshot and settle their own failure into `errors`, so the outage still
+    // reaches the user — it just doesn't take `watching`'s rows down with it.
+    simklPlannedLibrary(queryClient).catch(() => null),
+  ]);
+  const parkedEntries =
+    parked == null ? [] : [...parked.shows, ...parked.anime].filter(startedInSimkl);
+  return [...watching.shows, ...watching.anime, ...parkedEntries].map(
+    simklProgressInput,
+  );
 }
 
 /** One parsed rolling CDN calendar file, held for `SIMKL_CALENDAR_STALE_MS`. */
