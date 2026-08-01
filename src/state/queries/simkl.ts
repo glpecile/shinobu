@@ -25,6 +25,7 @@ import {
   setProviderSession,
 } from '@/state/session/tokens';
 import { getClientIdForProvider } from '@/state/session/provider-config';
+import { useConnectedProviders } from '@/state/session';
 
 // Module-level singleton for the same reason as trakt.ts/anilist.ts: effects
 // compare the store by identity, and MMKV's change listener contract expects
@@ -132,13 +133,26 @@ export function simklWatchingLibraryQuery() {
   };
 }
 
-function findShowEntry(
+/**
+ * Locate one item in a library snapshot. The buckets searched are chosen by
+ * the item's own type rather than scanning all three: TMDB numbers movies and
+ * TV in **separate id spaces**, so a movie and a show can legitimately share
+ * an id, and a flat scan would cross-match them.
+ */
+export function findLibraryEntry(
   library: SimklLibrary,
   item: NormalizedMediaItem,
 ): SimklLibraryEntry | null {
+  const filmLike =
+    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const simklId = item.externalIds.simkl;
   const tmdbId = item.externalIds.tmdb;
-  for (const entry of [...library.shows, ...library.anime]) {
+  // Anime is in both lists: Simkl files anime films under its anime catalog,
+  // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
+  const buckets = filmLike
+    ? [...library.movies, ...library.anime]
+    : [...library.shows, ...library.anime];
+  for (const entry of buckets) {
     if (simklId != null && entry.item.externalIds.simkl === simklId) return entry;
     if (tmdbId != null && entry.item.externalIds.tmdb === tmdbId) return entry;
   }
@@ -187,7 +201,7 @@ export function useSimklWatchingEntryQuery(params: {
     ...simklWatchingLibraryQuery(),
     enabled: enabled && item != null,
     select: (library: SimklLibrary) =>
-      item == null ? null : findShowEntry(library, item),
+      item == null ? null : findLibraryEntry(library, item),
   });
   // `data === null` is specifically "the snapshot loaded and this show is not
   // in it" — `undefined` is still loading, and must not trigger the fallback.
@@ -196,11 +210,63 @@ export function useSimklWatchingEntryQuery(params: {
     ...simklPlanToWatchLibraryQuery(),
     enabled: plannedEnabled,
     select: (library: SimklLibrary) =>
-      item == null ? null : findShowEntry(library, item),
+      item == null ? null : findLibraryEntry(library, item),
   });
   // Only the miss defers: an entry in `watching` is the fresher statement, and
   // is returned without the second query ever being enabled.
   return plannedEnabled ? planned : watching;
+}
+
+/**
+ * The `completed` snapshot's options — where a **finished** item lives, which
+ * for a movie is the only place it ever lives (Simkl holds one status per
+ * item, and a watched movie is `completed`, never `watching`). Same 15-minute
+ * window and same `allItemsRoot` invalidation prefix as its siblings, so a log
+ * fan-out refreshes it without a poll.
+ */
+export function simklCompletedLibraryQuery() {
+  return {
+    queryKey: simklQueryKeys.allItems(undefined, 'completed'),
+    queryFn: (): Promise<SimklLibrary> =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'completed' })),
+    staleTime: SIMKL_WATCHING_STALE_MS,
+  };
+}
+
+/**
+ * Whether Simkl already records this **film-like** item as watched — the Simkl
+ * half of `useWatchedInfo` (`state/queries/watched-info.ts`).
+ *
+ * Films only, deliberately. Shinobu writes movie logs to Simkl but read them
+ * back nowhere, so a movie logged to Simkl and not Trakt kept offering "Mark
+ * as watched" forever (owner report 2026-08-01, Hokum). TV already has its own
+ * Simkl leg in `useSimklWatchingEntryQuery`, whose progress line is richer
+ * than the play count this returns; a *completed* show is still the documented
+ * degrade in `docs/solutions/simkl-only-tv-details-trakt-gated.md`.
+ *
+ * `plays` is always ≥ 1: Simkl records only the latest play of a movie, with
+ * no rewatch counter, so this proves "watched" without ever claiming a count
+ * it doesn't have.
+ */
+export function useSimklWatchedInfo(
+  item: NormalizedMediaItem,
+): { plays: number; lastWatchedAt: string } | null {
+  const filmLike =
+    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const completed = useQuery({
+    ...simklCompletedLibraryQuery(),
+    enabled: useConnectedProviders().includes('simkl') && filmLike,
+    select: (library: SimklLibrary) => findLibraryEntry(library, item),
+  });
+  const entry = completed.data;
+  // No instant means Simkl knows the film is finished but not when — it can
+  // still say "watched", so the entry's own `lastUpdated` stands in rather
+  // than dropping a true watch on the floor.
+  if (entry == null || entry.status !== 'completed') return null;
+  return {
+    plays: Math.max(1, entry.item.currentProgress),
+    lastWatchedAt: entry.lastWatchedAt ?? entry.item.lastUpdated,
+  };
 }
 
 /**

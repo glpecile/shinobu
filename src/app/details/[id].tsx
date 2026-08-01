@@ -57,11 +57,8 @@ import {
   simklQueryKeys,
   useSimklWatchingEntryQuery,
 } from '@/state/queries/simkl';
-import {
-  traktQueryKeys,
-  useTraktMediaImages,
-  useTraktWatchedInfo,
-} from '@/state/queries/trakt';
+import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
+import { useWatchedInfo } from '@/state/queries/watched-info';
 import { findInDiaryCache } from '@/state/queries/diary-cache';
 import { findInSearchCache } from '@/state/queries/search-cache';
 import { findInWatchlistCache } from '@/state/queries/watchlist-cache';
@@ -174,10 +171,13 @@ function ProgressOfTotal({
  * shows count logged episodes), then the AniList list entry for anime, so
  * Trakt-sourced and AniList-sourced pages carry the same line. Lives as its
  * own element so the hooks only run once the screen has a resolved item.
+ *
+ * The first leg is `useWatchedInfo`, not Trakt alone: a film logged to Simkl
+ * and not Trakt is watched too, and used to render no line at all.
  */
 function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
-  const watched = useTraktWatchedInfo(item);
+  const watched = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     enabled: item.type === 'ANIME' && connected.includes('anilist'),

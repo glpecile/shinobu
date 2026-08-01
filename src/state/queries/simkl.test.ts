@@ -29,7 +29,7 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { simklDeps, simklQueryKeys } = await import('./simkl');
+const { findLibraryEntry, simklDeps, simklQueryKeys } = await import('./simkl');
 const { clearProviderClientId, setProviderClientId, setProviderSession } =
   await import('@/state/session/tokens');
 
@@ -111,5 +111,78 @@ describe('simklDeps (plan 0034 U5)', () => {
     expect(deps.tokens.get()).toMatchObject({ accessToken: 'tok-1' });
     deps.tokens.clear();
     expect(deps.tokens.get()).toBeNull();
+  });
+});
+
+// The lookup behind `useSimklWatchedInfo` (owner report 2026-08-01: a movie
+// logged to Simkl still offered "Mark as watched"). The `completed` snapshot
+// is where a watched film lives, and it must be searched by the item's own
+// type — TMDB numbers movies and TV separately, so a flat scan cross-matches.
+const item = (
+  id: string,
+  type: 'MOVIE' | 'TV' | 'ANIME',
+  ids: { simkl?: number; tmdb?: number },
+  extra: Record<string, unknown> = {},
+) =>
+  ({
+    id,
+    title: id,
+    type,
+    currentProgress: 1,
+    progressUnit: 'episode',
+    lastUpdated: '2026-05-22T21:00:00Z',
+    externalIds: ids,
+    ...extra,
+  }) as never;
+
+const entry = (
+  id: string,
+  type: 'MOVIE' | 'TV' | 'ANIME',
+  ids: { simkl?: number; tmdb?: number },
+  extra: Record<string, unknown> = {},
+) =>
+  ({
+    item: item(id, type, ids, extra),
+    status: 'completed',
+    lastWatchedAt: '2026-05-22T21:00:00Z',
+    watchedKeys: new Set<string>(),
+    watchedEpisodes: [],
+  }) as never;
+
+const library = (over: Record<string, unknown>) =>
+  ({ shows: [], movies: [], anime: [], ...over }) as never;
+
+describe('findLibraryEntry', () => {
+  test('a movie is found in the movies bucket', () => {
+    const found = findLibraryEntry(
+      library({ movies: [entry('simkl-1', 'MOVIE', { simkl: 1, tmdb: 42 })] }),
+      item('subject', 'MOVIE', { tmdb: 42 }),
+    );
+    expect(found?.item.id).toBe('simkl-1');
+  });
+
+  test('a TV item never cross-matches a movie sharing its TMDB id', () => {
+    expect(
+      findLibraryEntry(
+        library({ movies: [entry('simkl-1', 'MOVIE', { tmdb: 42 })] }),
+        item('subject', 'TV', { tmdb: 42 }),
+      ),
+    ).toBeNull();
+  });
+
+  test('an anime film is found in the anime bucket, not movies', () => {
+    const found = findLibraryEntry(
+      library({ anime: [entry('simkl-9', 'ANIME', { simkl: 9 }, { isFilm: true })] }),
+      item('subject', 'ANIME', { simkl: 9 }, { isFilm: true }),
+    );
+    expect(found?.item.id).toBe('simkl-9');
+  });
+
+  test('a show still resolves out of the shows bucket', () => {
+    const found = findLibraryEntry(
+      library({ shows: [entry('simkl-7', 'TV', { simkl: 7 })] }),
+      item('subject', 'TV', { simkl: 7 }),
+    );
+    expect(found?.item.id).toBe('simkl-7');
   });
 });
