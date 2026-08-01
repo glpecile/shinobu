@@ -140,6 +140,13 @@ export interface SimklLibraryEntry {
   watchedKeys: ReadonlySet<string>;
   watchedEpisodes: SimklWatchedEpisode[];
   nextToWatch?: SimklNextToWatch;
+  /**
+   * `not_aired_episodes_count` — how many of `totalEpisodes` are still unaired.
+   * Carried so Up Next (plan 0034 U8) can prove a null-date `nextToWatch`
+   * pointer aired by arithmetic (`watched < total - notAired`) instead of
+   * guessing from the pointer alone.
+   */
+  notAiredEpisodes?: number;
 }
 
 export interface SimklLibrary {
@@ -451,6 +458,9 @@ export function normalizeLibraryEntry(
     status,
     ...(addedToWatchlistAt != null ? { addedToWatchlistAt } : {}),
     ...(lastWatchedAt != null ? { lastWatchedAt } : {}),
+    ...(raw.not_aired_episodes_count != null
+      ? { notAiredEpisodes: raw.not_aired_episodes_count }
+      : {}),
     watchedKeys: new Set(
       watchedEpisodes.map((episode) => `${episode.season}-${episode.number}`),
     ),

@@ -315,7 +315,11 @@ function activeSectionKeys(
   const feedProviders = providersForFeed(connected);
   if (feedProviders.length === 0) return [];
   const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [];
-  if (feedProviders.includes('trakt') || feedProviders.includes('anilist')) {
+  if (
+    feedProviders.includes('trakt') ||
+    feedProviders.includes('simkl') ||
+    feedProviders.includes('anilist')
+  ) {
     keys.push({ slot: 'upNext', queryKey: upNextQueryKeys.inputs() });
   }
   // The merged watchlist (plan 0031 KTD-11) — registered here for

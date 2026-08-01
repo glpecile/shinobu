@@ -36,8 +36,8 @@ const { refreshNotifications } = await import('./refresh');
 type RefreshNotificationsDeps = Parameters<typeof refreshNotifications>[0];
 
 const EMPTY_INPUTS: UpNextInputs = {
-  trakt: [],
-  traktCalendar: [],
+  progress: [],
+  calendar: [],
   releases: [],
   anilist: [],
   errors: [],

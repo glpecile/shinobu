@@ -185,8 +185,8 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     //    Calendar (episode 6 already aired, so there is no event this week).
     const upNext = computeUpNext(
       {
-        trakt: [],
-        traktCalendar: [],
+        progress: [],
+        calendar: [],
         releases: [],
         anilist: [planning],
         errors: [],
@@ -217,8 +217,8 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     ]);
     const upNext = computeUpNext(
       {
-        trakt: [],
-        traktCalendar: [],
+        progress: [],
+        calendar: [],
         releases: [],
         anilist: [current],
         errors: [],

@@ -1,11 +1,12 @@
 import type {
   AniListUpNextInput,
+  CalendarUpNextInput,
+  ProgressUpNextInput,
   ReleaseUpNextInput,
-  TraktCalendarUpNextInput,
-  TraktUpNextInput,
   UpNextInputs,
   UpNextRelease,
 } from '@/features/up-next/types';
+import type { ProviderId } from '@/lib/providers/types';
 import { hasAired, isDateOnly, parseLocalInstant } from '@/lib/time/has-aired';
 import { localDayOffset } from '@/lib/time/relative-day';
 
@@ -71,7 +72,11 @@ const MAX_SCHEDULED = 50;
 /** Release day alerts land at 09:00 in the user's own timezone (R10). */
 const RELEASE_HOUR_LOCAL = 9;
 
-type RawCandidate = NotificationCandidate & { tmdbId?: number };
+type RawCandidate = NotificationCandidate & {
+  tmdbId?: number;
+  /** The tracker that stated an episode candidate — the KTD-10 dedupe key. */
+  source?: ProviderId;
+};
 
 /**
  * When a release should actually alert (R10). A release date is a bare calendar
@@ -100,17 +105,21 @@ export function releaseFireInstant(date: string, now: Date): string | null {
   return hasAired(instant, now) ? null : instant;
 }
 
-function traktCandidate(input: TraktUpNextInput): RawCandidate | null {
+function progressCandidate(input: ProgressUpNextInput): RawCandidate | null {
   const next = input.nextEpisode;
   if (next == null || next.firstAired == null) return null;
   return {
     kind: 'episode',
     itemId: input.item.id,
     title: input.item.title,
-    season: next.season,
+    // Simkl anime pointers carry no canonical season (absolute numbering) —
+    // `1` is the same display/hash placeholder `anilistCandidate` uses, never
+    // a write path.
+    season: next.season ?? 1,
     episode: next.number,
     fireInstant: next.firstAired,
     tmdbId: input.item.externalIds.tmdb,
+    source: input.source,
   };
 }
 
@@ -138,34 +147,34 @@ function anilistCandidate(input: AniListUpNextInput): RawCandidate | null {
 }
 
 /**
- * The watchlist half of the agenda's episodes (plan 0030 R9). `inputs.trakt` is
- * the *watched* pool — it structurally cannot contain a show the user has never
- * started, nor one past `UP_NEXT_POOL_SIZE`, which is exactly what U4 added
- * `/calendars/my/shows` to reach. Without this the headline case of the feature
- * (watchlist a premiere, get told when it airs) renders a Calendar card and
- * then never notifies.
+ * The watchlist half of the agenda's episodes (plan 0030 R9). `inputs.progress`
+ * is the *watched* pool — it structurally cannot contain a show the user has
+ * never started, nor one past `UP_NEXT_POOL_SIZE`, which is exactly what U4
+ * added `/calendars/my/shows` to reach. Without this the headline case of the
+ * feature (watchlist a premiere, get told when it airs) renders a Calendar card
+ * and then never notifies.
  */
-function traktCalendarCandidate(
-  input: TraktCalendarUpNextInput,
-): RawCandidate | null {
+function calendarCandidate(input: CalendarUpNextInput): RawCandidate | null {
   if (input.episode.firstAired == null) return null;
   return {
     kind: 'episode',
     itemId: input.item.id,
     title: input.item.title,
-    season: input.episode.season,
+    season: input.episode.season ?? 1,
     episode: input.episode.number,
     fireInstant: input.episode.firstAired,
     tmdbId: input.item.externalIds.tmdb,
+    source: input.source,
   };
 }
 
 /**
  * A caught-up show's `next_episode` and its calendar row are the same airing
- * reached two ways, so the two Trakt sources overlap and would otherwise fire
+ * reached two ways, so a tracker's two sources overlap and would otherwise fire
  * twice. Keyed on the airing itself (item + season + episode) rather than TMDB
  * id, because the duplicate here is one show's one episode — not two providers
- * describing the same series.
+ * describing the same series (item ids are provider-prefixed, so cross-tracker
+ * rows never collide here; `dedupeTrackers` below owns that case).
  */
 function airingKey(candidate: RawCandidate): string {
   return candidate.kind === 'episode'
@@ -173,7 +182,7 @@ function airingKey(candidate: RawCandidate): string {
     : candidate.itemId;
 }
 
-function dedupeTraktEpisodes(
+function dedupeEpisodeSources(
   pool: readonly RawCandidate[],
   calendar: readonly RawCandidate[],
 ): RawCandidate[] {
@@ -182,6 +191,28 @@ function dedupeTraktEpisodes(
     ...pool,
     ...calendar.filter((candidate) => !seen.has(airingKey(candidate))),
   ];
+}
+
+/**
+ * Same show tracked on Trakt and Simkl → one notification, Simkl's (plan 0034
+ * KTD-10/R10 — the same precedence Up Next's `computeUpNext` applies). Keyed
+ * on TMDB id like `dedupeByTmdb` below, and like it best-effort: no id leaves
+ * both candidates standing.
+ */
+function dedupeTrackers(candidates: readonly RawCandidate[]): RawCandidate[] {
+  const simklTmdbIds = new Set(
+    candidates
+      .filter((candidate) => candidate.source === 'simkl')
+      .map((candidate) => candidate.tmdbId)
+      .filter((id): id is number => id != null),
+  );
+  if (simklTmdbIds.size === 0) return [...candidates];
+  return candidates.filter(
+    (candidate) =>
+      candidate.source === 'simkl' ||
+      candidate.tmdbId == null ||
+      !simklTmdbIds.has(candidate.tmdbId),
+  );
 }
 
 function releaseCandidate(input: ReleaseUpNextInput, now: Date): RawCandidate | null {
@@ -198,23 +229,23 @@ function releaseCandidate(input: ReleaseUpNextInput, now: Date): RawCandidate | 
 }
 
 /**
- * Same show tracked on both providers → one notification. AniList wins for
- * anime, matching the Up Next dedupe precedence (plan 0019 R5).
+ * Same show tracked on AniList and a tracker → one notification. AniList wins
+ * for anime, matching the Up Next dedupe precedence (plan 0019 R5).
  */
 function dedupeByTmdb(
   anilist: readonly RawCandidate[],
-  trakt: readonly RawCandidate[],
+  trackers: readonly RawCandidate[],
 ): RawCandidate[] {
   const anilistTmdbIds = new Set(
     anilist
       .map((candidate) => candidate.tmdbId)
       .filter((id): id is number => id != null),
   );
-  const traktKept = trakt.filter(
+  const trackersKept = trackers.filter(
     (candidate) =>
       candidate.tmdbId == null || !anilistTmdbIds.has(candidate.tmdbId),
   );
-  return [...anilist, ...traktKept];
+  return [...anilist, ...trackersKept];
 }
 
 /**
@@ -304,8 +335,8 @@ function fireOrder(candidate: RawCandidate): number {
   return parseLocalInstant(candidate.fireInstant)?.getTime() ?? Number.POSITIVE_INFINITY;
 }
 
-function stripTmdbId(raw: RawCandidate): NotificationCandidate {
-  const { tmdbId: _tmdbId, ...candidate } = raw;
+function stripInternalFields(raw: RawCandidate): NotificationCandidate {
+  const { tmdbId: _tmdbId, source: _source, ...candidate } = raw;
   return candidate;
 }
 
@@ -322,13 +353,15 @@ export function computeNotificationSchedule(
   const anilistCandidates = inputs.anilist
     .map(anilistCandidate)
     .filter((candidate): candidate is RawCandidate => candidate != null);
-  const traktCandidates = dedupeTraktEpisodes(
-    inputs.trakt
-      .map(traktCandidate)
-      .filter((candidate): candidate is RawCandidate => candidate != null),
-    inputs.traktCalendar
-      .map(traktCalendarCandidate)
-      .filter((candidate): candidate is RawCandidate => candidate != null),
+  const trackerCandidates = dedupeTrackers(
+    dedupeEpisodeSources(
+      inputs.progress
+        .map(progressCandidate)
+        .filter((candidate): candidate is RawCandidate => candidate != null),
+      inputs.calendar
+        .map(calendarCandidate)
+        .filter((candidate): candidate is RawCandidate => candidate != null),
+    ),
   );
   const releaseCandidates = dedupeReleases(
     inputs.releases
@@ -337,7 +370,7 @@ export function computeNotificationSchedule(
   );
 
   const deduped = [
-    ...dedupeByTmdb(anilistCandidates, traktCandidates),
+    ...dedupeByTmdb(anilistCandidates, trackerCandidates),
     ...releaseCandidates,
   ];
 
@@ -350,7 +383,7 @@ export function computeNotificationSchedule(
   )
     .sort((a, b) => fireOrder(a) - fireOrder(b))
     .slice(0, MAX_SCHEDULED)
-    .map(stripTmdbId);
+    .map(stripInternalFields);
 }
 
 /**

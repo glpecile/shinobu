@@ -1,8 +1,4 @@
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
-import type {
-  TraktCalendarEpisode,
-  TraktNextEpisode,
-} from '@/lib/providers/trakt/normalize';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -11,7 +7,19 @@ import type { NormalizedMediaItem } from '@/types/media';
  * Watching and Calendar — are the same entry shape split by whether the
  * episode has aired in the user's local timezone; nothing downstream
  * re-derives that.
+ *
+ * Since plan 0034 U8 the input bundle is provider-keyed rather than
+ * Trakt-named: the progress and calendar legs each carry a `source`, so Trakt
+ * is one optional input among peers (Simkl, AniList, Letterboxd) instead of
+ * the spine the other providers hang off.
  */
+
+/**
+ * A finale marker, as Simkl's calendar states it (plan 0034 KTD-4). Defined
+ * here rather than imported from the Simkl normalizer so the contract stays
+ * provider-neutral — any future source stating one maps onto the same union.
+ */
+export type UpNextFinale = 'midseason' | 'season' | 'series';
 
 /** The single next unwatched episode of one tracked show. */
 export interface UpNextEpisode {
@@ -21,7 +29,8 @@ export interface UpNextEpisode {
    * episodes 1..n and carries no canonical season, so `number` is
    * entry-relative and the log fan-out translates it via ani.zip. The old
    * `season: 1` literal here was the fabrication that wrote phantom season-1
-   * history for every sequel-season anime.
+   * history for every sequel-season anime. Also absent for Simkl anime, which
+   * Simkl numbers absolutely (the AniDB convention).
    */
   season?: number;
   number: number;
@@ -30,6 +39,8 @@ export interface UpNextEpisode {
   firstAired?: string;
   /** Minutes, when the provider carried one. */
   runtime?: number;
+  /** Present when the source's calendar marked this airing a finale (Simkl). */
+  finale?: UpNextFinale;
 }
 
 /** One dated release of a film, as the provider's calendars state it. */
@@ -87,29 +98,70 @@ export interface UpNextData {
 }
 
 /**
- * One pooled Trakt show plus its `next_episode` pointer (undefined = ended).
- * Continue Watching's only Trakt source since KTD-2 — it is the sole read that
- * can answer "your next *unwatched* episode", which the calendars cannot.
+ * A next-episode pointer, provider-neutral: structurally what Trakt's
+ * `progress/watched` pointer states, what its `/calendars/my/shows` rows carry
+ * (deliberately the same shape at the source), and what Simkl's
+ * `next_watch_info` and CDN calendar entries normalize to.
  */
-export interface TraktUpNextInput {
-  item: NormalizedMediaItem;
-  nextEpisode?: TraktNextEpisode;
+export interface UpNextPointer {
+  /** Canonical season when the source states one — absent for Simkl anime. */
+  season?: number;
+  number: number;
+  title?: string;
+  /**
+   * ISO instant, or `null` when the provider knows the episode but not when
+   * it airs. Carried rather than dropped so the split can exclude it knowingly
+   * (an unknown air date is not the same as "not aired yet").
+   */
+  firstAired: string | null;
+  /** Minutes, when the provider carried one. */
+  runtime?: number;
 }
 
 /**
- * One upcoming airing from `/calendars/my/shows` — Calendar's Trakt source
- * since KTD-2. A different question from `TraktUpNextInput`: "what airs this
- * week for a show you watch *or* watchlist", not "what you haven't seen yet".
- * That is why it feeds only the upcoming split and never Continue Watching
- * (R4) — a watchlisted show's airing is not something you can quick-log.
+ * One tracked show plus its next-unwatched pointer, from a tracker's progress
+ * read (Trakt's pooled `progress/watched` fan, Simkl's `/sync/all-items`
+ * `next_watch_info`). Continue Watching's source — the sole read shape that can
+ * answer "your next *unwatched* episode", which the calendars cannot.
  */
-export type TraktCalendarUpNextInput = TraktCalendarEpisode;
+export interface ProgressUpNextInput {
+  item: NormalizedMediaItem;
+  /** Which tracker's progress produced this — the entry's quick-log route (R8). */
+  source: ProviderId;
+  /** Undefined = ended/caught up: nothing left to point at. */
+  nextEpisode?: UpNextPointer;
+  /**
+   * Set when the provider's own episode counts prove the pointer's episode has
+   * aired even though it carries no instant — Simkl's watched-vs-aired
+   * arithmetic for a null-date pointer (plan 0034 U8), the same "aired by
+   * construction" reasoning as AniList's below-the-pointer branch. Never set
+   * on Trakt inputs: their null-instant exclusion is unchanged.
+   */
+  nextEpisodeAiredByCount?: boolean;
+}
+
+/**
+ * One upcoming airing from a tracker's calendar (Trakt `/calendars/my/shows`,
+ * Simkl's CDN files intersected with the tracked library — plan 0034 KTD-4).
+ * A different question from `ProgressUpNextInput`: "what airs this week for a
+ * show you watch *or* watchlist", not "what you haven't seen yet". That is why
+ * it feeds only the upcoming split and never Continue Watching (R4) — a
+ * watchlisted show's airing is not something you can quick-log.
+ */
+export interface CalendarUpNextInput {
+  item: NormalizedMediaItem;
+  /** Which tracker's calendar stated this airing. */
+  source: ProviderId;
+  episode: UpNextPointer;
+  /** Simkl's calendar flags finales (KTD-4); carried through to the entry. */
+  finale?: UpNextFinale;
+}
 
 /**
  * One dated film release, as a provider's calendar stated it. Carries its own
- * `source` because more than one provider feeds this array (Trakt's movie
- * calendars now, Letterboxd's resolved watchlist next) and nothing downstream
- * can re-derive which one a row came from.
+ * `source` because more than one provider feeds this array (Simkl's
+ * movie_release calendar, Trakt's movie calendars, Letterboxd's resolved
+ * watchlist) and nothing downstream can re-derive which one a row came from.
  */
 export interface ReleaseUpNextInput {
   item: NormalizedMediaItem;
@@ -122,7 +174,7 @@ export interface ReleaseUpNextInput {
 
 /**
  * One currently-watching AniList entry, optionally carrying the TMDB id the
- * query layer resolved via ani.zip — the dedupe key against Trakt (R5).
+ * query layer resolved via ani.zip — the dedupe key against the trackers (R5).
  * Best-effort: absent means the entry simply can't be deduped.
  */
 export interface AniListUpNextInput extends AniListCurrentEntry {
@@ -130,10 +182,13 @@ export interface AniListUpNextInput extends AniListCurrentEntry {
 }
 
 export interface UpNextInputs {
-  /** Pooled `next_episode` pointers — Continue Watching's source (KTD-2). */
-  trakt: TraktUpNextInput[];
-  /** This week's Trakt airings — Calendar's source (KTD-2). */
-  traktCalendar: TraktCalendarUpNextInput[];
+  /**
+   * Pooled next-episode pointers from every connected tracker — Continue
+   * Watching's source (KTD-2). Provider-tagged per row, like `releases`.
+   */
+  progress: ProgressUpNextInput[];
+  /** This week's tracker airings — Calendar's source (KTD-2). */
+  calendar: CalendarUpNextInput[];
   /** Dated film releases from every watchlist source, one per kind (R3). */
   releases: ReleaseUpNextInput[];
   anilist: AniListUpNextInput[];

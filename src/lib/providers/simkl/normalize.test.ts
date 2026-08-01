@@ -123,6 +123,23 @@ describe('normalizeLibraryEntry', () => {
     });
   });
 
+  test('not_aired_episodes_count survives as notAiredEpisodes (plan 0034 U8)', () => {
+    // Up Next's null-date arithmetic (`watched < total - notAired`) is the
+    // only consumer — dropping the count here would silently hide every
+    // undated catch-up pointer.
+    const entry = normalizeLibraryEntry(
+      { ...showEntry, not_aired_episodes_count: 3 },
+      'shows',
+      NOW,
+    )!;
+    expect(entry.notAiredEpisodes).toBe(3);
+    // Absent upstream stays absent — never a fabricated zero (unknown is not
+    // "everything aired").
+    expect(
+      normalizeLibraryEntry(showEntry, 'shows', NOW)!.notAiredEpisodes,
+    ).toBeUndefined();
+  });
+
   test('falls back to parsing the S##E## pointer when info is absent', () => {
     const entry = normalizeLibraryEntry(
       { ...showEntry, next_to_watch_info: undefined },

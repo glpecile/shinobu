@@ -3,6 +3,11 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
 import type {
+  SimklCalendarEntry,
+  SimklLibrary,
+  SimklLibraryEntry,
+} from '@/lib/providers/simkl/normalize';
+import type {
   TraktCalendarEpisode,
   TraktCalendarRelease,
   TraktShowProgressResult,
@@ -97,6 +102,57 @@ const PROGRESS: TraktShowProgressResult = {
 /** Trakt's calendar segment — the key's third element (`myCalendar`). */
 type CalendarType = 'shows' | 'movies' | 'streaming' | 'dvd';
 
+/** The Simkl legs' cacheable reads, as the fake client keys them. */
+type SimklLibraryStatus = 'watching' | 'plantowatch';
+type SimklCalendarFileKind = 'tv' | 'anime' | 'movie_release';
+
+/** One Simkl library entry with only the fields the Up Next legs consume. */
+function simklEntry(
+  simklId: number,
+  overrides: Omit<Partial<SimklLibraryEntry>, 'item'> & {
+    item?: Partial<NormalizedMediaItem>;
+  } = {},
+): SimklLibraryEntry {
+  const { item: itemOverrides, ...entryOverrides } = overrides;
+  return {
+    item: {
+      id: `simkl-${simklId}`,
+      title: `Simkl ${simklId}`,
+      coverImage: '',
+      type: 'TV',
+      currentProgress: 4,
+      progressUnit: 'episode',
+      lastUpdated: '2026-07-21T00:00:00.000Z',
+      externalIds: { simkl: simklId },
+      ...itemOverrides,
+    },
+    status: 'watching',
+    watchedKeys: new Set<string>(),
+    watchedEpisodes: [],
+    ...entryOverrides,
+  };
+}
+
+function simklLibrary(partial: Partial<SimklLibrary> = {}): SimklLibrary {
+  return { shows: [], movies: [], anime: [], ...partial };
+}
+
+/** One rolling-file airing, in the shape `normalizeCalendarFile` emits. */
+function simklCalendarEntry(
+  simklId: number,
+  overrides: Partial<SimklCalendarEntry> = {},
+): SimklCalendarEntry {
+  return {
+    simklId,
+    date: '2026-08-03T20:00:00Z',
+    title: `Simkl ${simklId}`,
+    poster: '',
+    externalIds: { simkl: simklId },
+    episode: { season: 1, number: 4 },
+    ...overrides,
+  };
+}
+
 interface Scenario {
   shows?: NormalizedMediaItem[];
   anime?: AniListCurrentEntry[];
@@ -104,12 +160,18 @@ interface Scenario {
   calendarShows?: TraktCalendarEpisode[];
   /** Per-calendar movie rows, keyed by Trakt's segment name. */
   calendarMovies?: Partial<Record<CalendarType, TraktCalendarRelease[]>>;
+  /** The two `/sync/all-items` snapshots the Simkl legs read (plan 0034 U8). */
+  simklLibraries?: Partial<Record<SimklLibraryStatus, SimklLibrary>>;
+  /** The rolling CDN calendar files, keyed by kind (KTD-4). */
+  simklCalendars?: Partial<Record<SimklCalendarFileKind, SimklCalendarEntry[]>>;
   /** Providers whose top-level read rejects. */
   failing?: Array<'trakt' | 'anilist'>;
   /** Trakt ids whose per-show progress read rejects. */
   failingProgress?: number[];
   /** Calendars whose read rejects — each settles on its own (R7). */
   failingCalendars?: CalendarType[];
+  /** Simkl reads that reject, by snapshot status or calendar kind. */
+  failingSimkl?: Array<SimklLibraryStatus | SimklCalendarFileKind>;
 }
 
 /**
@@ -120,8 +182,25 @@ interface Scenario {
 function fakeClient(scenario: Scenario) {
   const progressRequests: number[] = [];
   const calendarKeys: unknown[][] = [];
+  const simklRequests: string[] = [];
   const fetchQuery = async ({ queryKey }: { queryKey: readonly unknown[] }) => {
     const [root, kind, id] = queryKey as [string, string, number];
+    if (root === 'simkl' && kind === 'all-items') {
+      const status = queryKey[3] as SimklLibraryStatus;
+      simklRequests.push(status);
+      if (scenario.failingSimkl?.includes(status) === true) {
+        throw new Error(`${status} snapshot down`);
+      }
+      return simklLibrary(scenario.simklLibraries?.[status]);
+    }
+    if (root === 'simkl' && kind === 'calendar') {
+      const fileKind = queryKey[2] as SimklCalendarFileKind;
+      simklRequests.push(fileKind);
+      if (scenario.failingSimkl?.includes(fileKind) === true) {
+        throw new Error(`${fileKind} calendar down`);
+      }
+      return scenario.simklCalendars?.[fileKind] ?? [];
+    }
     if (root === 'trakt' && kind === 'my-calendar') {
       const type = queryKey[2] as CalendarType;
       calendarKeys.push([...queryKey]);
@@ -162,6 +241,7 @@ function fakeClient(scenario: Scenario) {
     client: { fetchQuery } as unknown as QueryClient,
     progressRequests,
     calendarKeys,
+    simklRequests,
   };
 }
 
@@ -171,8 +251,8 @@ describe('fetchUpNextInputs', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.trakt).toHaveLength(1);
-    expect(inputs.trakt[0].nextEpisode?.number).toBe(2);
+    expect(inputs.progress).toHaveLength(1);
+    expect(inputs.progress[0].nextEpisode?.number).toBe(2);
     expect(inputs.anilist).toEqual([]);
     expect(inputs.errors).toEqual([]);
   });
@@ -189,7 +269,7 @@ describe('fetchUpNextInputs', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.trakt.map((input) => input.item.externalIds.trakt)).toEqual([
+    expect(inputs.progress.map((input) => input.item.externalIds.trakt)).toEqual([
       1, 3,
     ]);
     // A single failed show is not a slot-level failure.
@@ -223,7 +303,7 @@ describe('fetchUpNextInputs', () => {
     const inputs = await fetchUpNextInputs(client, ['trakt', 'anilist']);
 
     expect(inputs.anilist).toHaveLength(1);
-    expect(inputs.trakt).toEqual([]);
+    expect(inputs.progress).toEqual([]);
     expect(inputs.errors).toEqual([
       { provider: 'trakt', message: 'watched shows down' },
     ]);
@@ -238,7 +318,7 @@ describe('fetchUpNextInputs', () => {
       'trakt',
       'anilist',
     ]);
-    expect(inputs.trakt).toEqual([]);
+    expect(inputs.progress).toEqual([]);
     expect(inputs.anilist).toEqual([]);
   });
 
@@ -257,8 +337,8 @@ describe('fetchUpNextInputs', () => {
     const inputs = await fetchUpNextInputs(client, []);
 
     expect(inputs).toEqual({
-      trakt: [],
-      traktCalendar: [],
+      progress: [],
+      calendar: [],
       releases: [],
       anilist: [],
       errors: [],
@@ -283,8 +363,8 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
     // Continue Watching's fan is untouched by the new source (R4).
-    expect(inputs.trakt).toHaveLength(1);
-    expect(inputs.traktCalendar).toEqual([airing]);
+    expect(inputs.progress).toHaveLength(1);
+    expect(inputs.calendar).toEqual([{ ...airing, source: 'trakt' }]);
   });
 
   test('theatrical and digital come from two calendars, tagged by source', async () => {
@@ -335,8 +415,8 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.trakt).toHaveLength(1);
-    expect(inputs.traktCalendar).toEqual([]);
+    expect(inputs.progress).toHaveLength(1);
+    expect(inputs.calendar).toEqual([]);
     expect(inputs.releases).toHaveLength(1);
     expect(inputs.errors).toEqual([
       { provider: 'trakt', message: 'shows calendar down' },
@@ -375,7 +455,7 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.traktCalendar).toEqual([airing]);
+    expect(inputs.calendar).toEqual([{ ...airing, source: 'trakt' }]);
     expect(inputs.releases).toEqual([
       { item: movie(14), kind: 'theatrical', date: '2026-07-30', source: 'trakt' },
     ]);
@@ -412,8 +492,8 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.trakt).toEqual([]);
-    expect(inputs.traktCalendar).toEqual([]);
+    expect(inputs.progress).toEqual([]);
+    expect(inputs.calendar).toEqual([]);
     expect(inputs.releases).toEqual([]);
     expect(inputs.errors.map((error) => error.message)).toEqual([
       'watched shows down',
@@ -429,6 +509,270 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
 // client read for the whole process — so the suite that fakes a `window` in has
 // to be the one that already owns that state, or it silently hands a token to
 // every later file that expects none.
+
+describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
+  test('a Simkl-only user gets progress pointers with their air instants verbatim', async () => {
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({
+          shows: [
+            simklEntry(1, {
+              nextToWatch: {
+                season: 1,
+                episode: 5,
+                title: 'Fifth',
+                date: '2026-07-30T01:00:00+09:00',
+              },
+            }),
+          ],
+        }),
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.progress).toEqual([
+      {
+        item: simklEntry(1).item,
+        source: 'simkl',
+        nextEpisode: {
+          season: 1,
+          number: 5,
+          title: 'Fifth',
+          // Byte-for-byte what Simkl stated — never reformatted (has-aired.ts
+          // parses offsets itself; a re-spelling here is where timezone bugs
+          // are born).
+          firstAired: '2026-07-30T01:00:00+09:00',
+        },
+      },
+    ]);
+    expect(inputs.errors).toEqual([]);
+  });
+
+  test('a null-date pointer is marked aired-by-count only when the counts prove it', async () => {
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({
+          shows: [
+            // 4 watched, 10 total, 2 unaired → 8 aired: behind, proven aired.
+            simklEntry(2, {
+              item: { totalEpisodes: 10 },
+              notAiredEpisodes: 2,
+              nextToWatch: { season: 1, episode: 5, date: null },
+            }),
+            // 8 watched of 8 aired → caught up; the undated pointer is a
+            // future episode and must not be offered as a quick-log.
+            simklEntry(3, {
+              item: { currentProgress: 8, totalEpisodes: 10 },
+              notAiredEpisodes: 2,
+              nextToWatch: { season: 1, episode: 9, date: null },
+            }),
+            // No counts at all → unknown is not "aired" (the Trakt rule).
+            simklEntry(4, {
+              nextToWatch: { season: 1, episode: 5, date: null },
+            }),
+          ],
+        }),
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    const byId = new Map(inputs.progress.map((input) => [input.item.id, input]));
+    expect(byId.get('simkl-2')?.nextEpisodeAiredByCount).toBe(true);
+    expect(byId.get('simkl-3')?.nextEpisodeAiredByCount).toBeUndefined();
+    expect(byId.get('simkl-4')?.nextEpisodeAiredByCount).toBeUndefined();
+  });
+
+  test('anime pointers keep absolute numbering — no season fabricated', async () => {
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({
+          anime: [
+            simklEntry(5, {
+              item: { type: 'ANIME' },
+              nextToWatch: { episode: 13, date: '2026-07-25T15:30:00Z' },
+            }),
+          ],
+        }),
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.progress[0].nextEpisode).toEqual({
+      number: 13,
+      firstAired: '2026-07-25T15:30:00Z',
+    });
+  });
+
+  test('the calendar files are intersected: an untracked airing never appears (KTD-4)', async () => {
+    const tracked = simklEntry(10);
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({ shows: [tracked] }),
+      },
+      simklCalendars: {
+        tv: [
+          simklCalendarEntry(10, { finaleType: 'season' }),
+          // Airs this week, tracked by nobody — the CDN file speaks for every
+          // show on Simkl, so the intersection is the entire privacy of "my"
+          // calendar.
+          simklCalendarEntry(9999),
+        ],
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.calendar).toEqual([
+      {
+        item: tracked.item,
+        source: 'simkl',
+        episode: { season: 1, number: 4, firstAired: '2026-08-03T20:00:00Z' },
+        finale: 'season',
+      },
+    ]);
+  });
+
+  test('a plantowatch show is tracked for the calendar but never the progress pool', async () => {
+    const planned = simklEntry(11, { status: 'plantowatch' });
+    const { client } = fakeClient({
+      simklLibraries: {
+        plantowatch: simklLibrary({ shows: [planned] }),
+      },
+      simklCalendars: { tv: [simklCalendarEntry(11)] },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    // The watchlisted premiere reaches Calendar (the KTD-4 tracked set is
+    // watching + plantowatch)…
+    expect(inputs.calendar).toHaveLength(1);
+    expect(inputs.calendar[0].item.id).toBe('simkl-11');
+    // …but contributes no progress pointer — mirroring Trakt, where the
+    // watchlist reaches Up Next only through the calendar leg.
+    expect(inputs.progress).toEqual([]);
+  });
+
+  test('movie_release rows intersect with tracked movies and land as day-dated releases', async () => {
+    const wantedMovie = simklEntry(20, {
+      status: 'plantowatch',
+      item: { type: 'MOVIE' },
+    });
+    const { client } = fakeClient({
+      simklLibraries: {
+        plantowatch: simklLibrary({ movies: [wantedMovie] }),
+      },
+      simklCalendars: {
+        movie_release: [
+          simklCalendarEntry(20, {
+            date: '2026-08-05T04:00:00Z',
+            episode: undefined,
+          }),
+          simklCalendarEntry(8888, { episode: undefined }), // untracked → dropped
+        ],
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.releases).toEqual([
+      {
+        item: wantedMovie.item,
+        kind: 'theatrical',
+        // The instant's UTC day: a release is a calendar day (`UpNextRelease`),
+        // not an instant.
+        date: '2026-08-05',
+        source: 'simkl',
+      },
+    ]);
+    // A tracked movie is not an episode source.
+    expect(inputs.calendar).toEqual([]);
+  });
+
+  test('nothing tracked skips the megabyte calendar downloads entirely', async () => {
+    const { client, simklRequests } = fakeClient({});
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.calendar).toEqual([]);
+    expect(inputs.releases).toEqual([]);
+    expect(simklRequests).not.toContain('tv');
+    expect(simklRequests).not.toContain('anime');
+    expect(simklRequests).not.toContain('movie_release');
+  });
+
+  test('one calendar file failing degrades only its own leg (R7)', async () => {
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({
+          shows: [
+            simklEntry(30, {
+              nextToWatch: {
+                season: 1,
+                episode: 2,
+                date: '2026-07-20T20:00:00Z',
+              },
+            }),
+          ],
+        }),
+      },
+      failingSimkl: ['tv'],
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    // Continue Watching's pointers survive the calendar outage…
+    expect(inputs.progress).toHaveLength(1);
+    // …and the failure is named, not swallowed.
+    expect(inputs.errors).toEqual([
+      { provider: 'simkl', message: 'tv calendar down' },
+    ]);
+  });
+
+  test('Trakt and Simkl contribute to the same provider-tagged legs side by side', async () => {
+    const { client } = fakeClient({
+      shows: [show(1, '2026-07-20T00:00:00.000Z')],
+      simklLibraries: {
+        watching: simklLibrary({
+          shows: [
+            simklEntry(40, {
+              nextToWatch: {
+                season: 2,
+                episode: 6,
+                date: '2026-07-21T20:00:00Z',
+              },
+            }),
+          ],
+        }),
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['trakt', 'simkl']);
+
+    expect(inputs.progress.map((input) => input.source)).toEqual([
+      'trakt',
+      'simkl',
+    ]);
+    expect(inputs.errors).toEqual([]);
+  });
+
+  test('with neither tracker connected, the AniList and Letterboxd legs still run', async () => {
+    const { client, simklRequests, progressRequests } = fakeClient({
+      anime: [animeEntry(1)],
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['anilist', 'letterboxd']);
+
+    expect(inputs.anilist).toHaveLength(1);
+    expect(inputs.progress).toEqual([]);
+    expect(inputs.calendar).toEqual([]);
+    expect(inputs.errors).toEqual([]);
+    expect(simklRequests).toEqual([]);
+    expect(progressRequests).toEqual([]);
+  });
+});
 
 describe('upNextQueryKeys', () => {
   test('every key is rooted at "up-next"', () => {
