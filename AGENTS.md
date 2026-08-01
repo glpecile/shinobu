@@ -1,11 +1,17 @@
 # Shinobu Agent Conventions
 
-Shinobu (忍): DB-less, cross-platform media tracker. Trakt.tv, AniList,
-Letterboxd, and Serializd are four **symmetric, opt-in providers** — not a primary
+Shinobu (忍): DB-less, cross-platform media tracker. Simkl, Trakt.tv, AniList,
+Letterboxd, and Serializd are five **symmetric, opt-in providers** — not a primary
 store with satellite imports. Core purpose: log media once, Shinobu fans that write
 out to every connected provider it applies to. Reads aggregate whichever providers
-are connected into one unified feed. Full product vision + architecture rationale:
-`plan.md` (1.2, 1.3, 2.1); Serializd's addition: `docs/plans/0017-serializd-provider.md`.
+are connected into one unified feed. Simkl is the tracker that "just works"
+(bundled client id, one-tap PKCE connect); Trakt is **bring-your-own-everything** —
+the app ships no Trakt credentials whatsoever, and Trakt activates only when the
+user registers their own API app and enters both client id and secret in the guided
+setup (owner decision 2026-07-31, after Trakt capped free accounts at one connected
+Community App; see `docs/plans/0034-simkl-provider-and-trakt-detachment.md`). Full
+product vision + architecture rationale: `plan.md` (1.2, 1.3, 2.1); Serializd's
+addition: `docs/plans/0017-serializd-provider.md`.
 
 ## Tech Stack
 
@@ -152,21 +158,31 @@ After a change, state whether it's picked up live or requires native regeneratio
 ## Providers, Sessions & Log Fan-Out
 
 - **Opt-in, per-provider sessions.** No Shinobu account. A user connects any subset
-  of {Trakt, AniList, Letterboxd, Serializd} via that provider's own flow — OAuth,
-  or (Serializd) a WebView token capture on mobile / an email-password exchange on
-  web; the resulting token (stored via `react-native-mmkv`) *is* the session for
-  that provider. `state/session/` tracks which providers are connected, mirroring
-  bluesky-social's `state/session` pattern.
+  of {Simkl, Trakt, AniList, Letterboxd, Serializd} via that provider's own flow —
+  OAuth (Simkl: PKCE with the bundled client id, no secret, tokens live ~5 years
+  with no refresh grant so a 401 is terminal → reconnect; Trakt: auth-code with
+  user-supplied BYO credentials only), or (Serializd) a WebView token capture on
+  mobile / an email-password exchange on web; the resulting token (stored via
+  `react-native-mmkv`) *is* the session for that provider. `state/session/` tracks
+  which providers are connected, mirroring bluesky-social's `state/session`
+  pattern — and `providerIsUsable` (`state/session/trakt-migration.ts`) is the
+  single predicate gating every read/write leg: a Trakt session whose credentials
+  are gone (the pre-detachment migration case) is connected-but-unusable, drives
+  the reconnect banner, and is never silently cleared.
 - **Logging fans out.** The core write path is `useLogMedia`: given a
   `NormalizedMediaItem` and a log intent (watched/read), it routes to every
   *connected* provider *applicable to that item's type* and fires the writes in
   parallel — never a single-provider write.
-- **Routing isn't a 1:1 type map.** Movies → Trakt + Letterboxd. TV → Trakt +
-  Serializd (a TMDB-enriched anime *series* fans out to Serializd too, exactly as it
-  does to Trakt). Manga → AniList. Anime *films* are the edge case: they're `ANIME`
-  in AniList but also a `MOVIE` for Trakt/Letterboxd (signaled by `isFilm` on
-  `NormalizedMediaItem`, not a fifth `MediaType`), so they fan out to all three
-  movie targets (Serializd is TV-only, so it's excluded from films). Lives in
+- **Routing isn't a 1:1 type map.** Movies → Trakt + Letterboxd + Simkl. TV →
+  Trakt + Serializd + Simkl (a TMDB-enriched anime *series* fans out to Serializd
+  and Simkl too, exactly as it does to Trakt). Anime → AniList + Simkl (Simkl
+  tracks anime natively as its own type, AniDB-convention episode numbering — its
+  writes ride the ani.zip remap from plan 0027). Manga → AniList. Anime *films*
+  are the edge case: they're `ANIME` in AniList but also a `MOVIE` for
+  Trakt/Letterboxd (signaled by `isFilm` on `NormalizedMediaItem`, not a fifth
+  `MediaType`), so they fan out to the movie targets plus Simkl — which files
+  them under its anime catalog with MAL ids, not `movies[]` (Serializd is
+  TV-only, so it stays excluded from films). Lives in
   `src/lib/providers/routing.ts` (pure functions, unit-tested) — never inline
   `if (type === ...)` or `if (provider === ...)` checks at call sites.
 - **Providers declare capabilities.** `src/lib/providers/registry.ts` is the single
@@ -303,7 +319,12 @@ origins is **native-only on web** ("connect on mobile"), never proxied — with 
 bounded exceptions (Serializd, plan 0017 U4/R14, owner decision 2026-07-21;
 Letterboxd reads, plan 0018, owner decision 2026-07-22).** Verify
 each provider with a browser-origin spike before building its web read path
-(`todos/008`); record findings in `docs/solutions/web-cors-*.md`.
+(`todos/008`); record findings in `docs/solutions/web-cors-*.md`. Simkl is the
+easy case: wildcard CORS on the API, the CDN, and even the OAuth token endpoint —
+reads, writes, and the PKCE exchange all run in the browser with no proxy and no
+degradation (`docs/solutions/web-cors-simkl.md`). Its rate-limit/write-lock
+discipline (batch writes, activities-before-all-items, CDN for always-fetched
+surfaces) is load-bearing: `docs/solutions/simkl-rate-limits-and-write-lock.md`.
 
 **Serializd proxy exception — a contract, not a general license.** Serializd's
 unofficial API blocks browser origins (its `Access-Control-Allow-Origin` echoes only
