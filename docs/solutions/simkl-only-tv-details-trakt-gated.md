@@ -47,3 +47,10 @@ completed/hold/dropped get no checkmarks and no rewatch label from Simkl —
 degrade, don't widen to the full `episode_watched_at` library snapshot
 without checking its size against
 `docs/solutions/simkl-rate-limits-and-write-lock.md`.
+
+> **Closed 2026-08-01.** The trap fired exactly as written (Doctor Who,
+> 153/153, every episode unticked). The details reads now use one *unfiltered*
+> snapshot, which turned out to be **fewer** requests than the filtered chain,
+> not more — and it exposed a second problem the widening alone didn't fix:
+> Simkl sends no `seasons[]` at all for a `completed` entry. Full finding:
+> `docs/solutions/simkl-completed-shows-have-no-episode-detail.md`.

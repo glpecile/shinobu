@@ -11,7 +11,7 @@ import {
   useSuspenseShowSeasonsQuery,
   type ShowSeasonsSource,
 } from '@/state/queries/show-seasons';
-import { useSimklWatchingEntryQuery } from '@/state/queries/simkl';
+import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
@@ -64,12 +64,32 @@ function SeasonAccordionList({
     traktId: traktId ?? undefined,
     enabled: connected.includes('trakt') && traktId != null,
   });
-  const { data: simklEntry } = useSimklWatchingEntryQuery({
+  const { data: simklEntry } = useSimklLibraryEntryQuery({
     item,
     enabled: connected.includes('simkl'),
   });
+  // A `completed` Simkl entry carries **no** `seasons[]` array at all — the
+  // API omits per-episode detail once a show is finished (verified on Doctor
+  // Who: `status: 'completed'`, `watched_episodes_count: 153`,
+  // `watchedEpisodes: []`). Reading its empty key set literally left every
+  // episode of a fully-watched series showing an unticked "Mark as watched"
+  // (owner report 2026-08-01). "Completed" *means* every aired episode, so the
+  // layout on screen is the key set — aired only, because ticking an episode
+  // that hasn't come out yet would be a worse lie than the missing tick.
+  const simklWatchedAll =
+    simklEntry?.status === 'completed' && simklEntry.watchedKeys.size === 0;
   const watchedKeys =
-    traktWatched?.watchedKeys ?? simklEntry?.watchedKeys ?? null;
+    traktWatched?.watchedKeys ??
+    (simklWatchedAll
+      ? new Set(
+          seasons.flatMap((season) =>
+            season.episodes
+              .filter((episode) => hasAired(episode.firstAired))
+              .map((episode) => `${season.number}-${episode.number}`),
+          ),
+        )
+      : simklEntry?.watchedKeys) ??
+    null;
 
   const logMedia = useLogMedia();
   const [pending, setPending] = useState<PendingLog | null>(null);

@@ -143,3 +143,47 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     expect(calls.some((call) => call.startsWith('anilist-film:'))).toBe(false);
   });
 });
+
+// A Letterboxd watchlist film: slug + title + year, no cross-provider id.
+const idlessFilm = (): NormalizedMediaItem => ({
+  id: 'letterboxd-hokum',
+  title: 'Hokum',
+  coverImage: '',
+  type: 'MOVIE',
+  year: 2026,
+  currentProgress: 0,
+  progressUnit: 'episode',
+  lastUpdated: '2026-07-25T00:00:00.000Z',
+  externalIds: {},
+});
+
+/**
+ * The gates that decide whether a lookup runs at all. Both were written when
+ * Trakt was the only movie/TV tracker, and starved Simkl's fan-out leg after
+ * the detachment: Simkl resolves a write by `tmdb`/`imdb` (movies & TV) and
+ * would otherwise fail with "no Simkl-resolvable id".
+ */
+describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => {
+  beforeEach(() => {
+    calls.length = 0;
+  });
+
+  test('a Simkl-only user resolves an id-less film by text search', async () => {
+    await enrichExternalIds(client, idlessFilm(), ['simkl', 'letterboxd']);
+    expect(calls).toContain('trakt-search');
+  });
+
+  test('no movie tracker connected still skips the search', async () => {
+    await enrichExternalIds(client, idlessFilm(), ['letterboxd']);
+    expect(calls).not.toContain('trakt-search');
+  });
+
+  test('a Simkl-only user bridges an AniList anime to tmdb/tvdb/imdb', async () => {
+    await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-9', type: 'ANIME', externalIds: { anilist: 9 } }),
+      ['simkl', 'anilist'],
+    );
+    expect(calls.some((call) => call.startsWith('anizip:'))).toBe(true);
+  });
+});

@@ -25,6 +25,7 @@ import {
   setProviderSession,
 } from '@/state/session/tokens';
 import { getClientIdForProvider } from '@/state/session/provider-config';
+import { useConnectedProviders } from '@/state/session';
 
 // Module-level singleton for the same reason as trakt.ts/anilist.ts: effects
 // compare the store by identity, and MMKV's change listener contract expects
@@ -132,13 +133,26 @@ export function simklWatchingLibraryQuery() {
   };
 }
 
-function findShowEntry(
+/**
+ * Locate one item in a library snapshot. The buckets searched are chosen by
+ * the item's own type rather than scanning all three: TMDB numbers movies and
+ * TV in **separate id spaces**, so a movie and a show can legitimately share
+ * an id, and a flat scan would cross-match them.
+ */
+export function findLibraryEntry(
   library: SimklLibrary,
   item: NormalizedMediaItem,
 ): SimklLibraryEntry | null {
+  const filmLike =
+    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const simklId = item.externalIds.simkl;
   const tmdbId = item.externalIds.tmdb;
-  for (const entry of [...library.shows, ...library.anime]) {
+  // Anime is in both lists: Simkl files anime films under its anime catalog,
+  // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
+  const buckets = filmLike
+    ? [...library.movies, ...library.anime]
+    : [...library.shows, ...library.anime];
+  for (const entry of buckets) {
     if (simklId != null && entry.item.externalIds.simkl === simklId) return entry;
     if (tmdbId != null && entry.item.externalIds.tmdb === tmdbId) return entry;
   }
@@ -146,61 +160,97 @@ function findShowEntry(
 }
 
 /**
- * The `plantowatch` snapshot's options — the **same cache entry** the watchlist
- * gather (`state/queries/watchlist.ts`) and Up Next's calendar intersection
- * already read, so consulting it costs nothing warm.
+ * The **whole** library snapshot — every status in one request. The single
+ * source behind every per-item Simkl read on a details screen: the season
+ * accordion's checkmarks, the watched line, the one-tap log button, and
+ * `useSimklWatchedInfo` below.
+ *
+ * This replaces a status-filtered chain (`watching`, then `plantowatch` on a
+ * miss, plus a `completed` read for films) whose real flaw was that a
+ * **finished** show was in none of them. Doctor Who — 153/153 watched —
+ * rendered every episode with an unticked "Mark as watched", and opened fresh
+ * showed `0 / 153` and "Log S1E1" (owner report 2026-08-01). Simkl holds
+ * exactly one status per item, so any filtered read is a guess about which
+ * bucket the user parked a show in; `hold` and `dropped` were invisible for
+ * the same reason, and `completed` shows were the documented degrade in
+ * docs/solutions/simkl-only-tv-details-trakt-gated.md.
+ *
+ * One unfiltered read is also **fewer requests** than the chain it replaces —
+ * one, not up to three sequential round trips, each waiting on the previous
+ * one's miss — and one cache entry for every details surface. It rides the
+ * same `allItemsRoot` invalidation prefix, so a log fan-out refreshes it and
+ * nothing polls it (docs/solutions/simkl-rate-limits-and-write-lock.md).
+ *
+ * Up Next deliberately keeps the narrow `watching` snapshot above: Continue
+ * Watching treats every entry it reads as a candidate, so widening *that* read
+ * would put finished and dropped shows on the home feed. Two entries, each
+ * shaped for its surface.
  */
-export function simklPlanToWatchLibraryQuery() {
+export function simklLibraryQuery() {
   return {
-    queryKey: simklQueryKeys.allItems(undefined, 'plantowatch'),
+    queryKey: simklQueryKeys.allItems(),
     queryFn: (): Promise<SimklLibrary> =>
-      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' })),
+      Effect.runPromise(getAllItems(simklDeps(), {})),
     staleTime: SIMKL_WATCHING_STALE_MS,
   };
 }
 
 /**
- * One show's Simkl library entry (watched keys, next-to-watch pointer) — the
- * Trakt-less source behind the TV details screen's checkmarks and one-tap log
- * button (plan 0034 R9's detail-screen counterpart).
- *
- * Reads the `watching` snapshot first and **falls back to `plantowatch`**
- * (plan 0036 follow-up, owner report 2026-08-01). Simkl holds one status per
- * item, so a show the user is part-way through but has parked back on the
- * watchlist lives only in the second snapshot — and reading just the first
- * left it with no checkmarks and no "Log S2E1" button on a screen that was
- * simultaneously displaying "10 / 20 episodes". Both snapshots are entries
- * other surfaces already cache (Continue Watching; the watchlist gather), so
- * the common case still costs no request, and the fallback query only runs
- * when the first answered "not here".
- *
- * `null` data means "answered, in neither snapshot" — a show parked in
- * `hold`/`dropped` still degrades to no checkmarks, exactly like a
- * disconnected Trakt.
+ * One item's Simkl library entry — watched keys, status, next-to-watch
+ * pointer. `null` data means "the snapshot loaded and this item is not in the
+ * user's library at all", which is now the only reason to degrade: every
+ * status resolves.
  */
-export function useSimklWatchingEntryQuery(params: {
+export function useSimklLibraryEntryQuery(params: {
   item: NormalizedMediaItem | null;
   enabled?: boolean;
 }) {
   const { item, enabled = true } = params;
-  const watching = useQuery({
-    ...simklWatchingLibraryQuery(),
+  return useQuery({
+    ...simklLibraryQuery(),
     enabled: enabled && item != null,
     select: (library: SimklLibrary) =>
-      item == null ? null : findShowEntry(library, item),
+      item == null ? null : findLibraryEntry(library, item),
   });
-  // `data === null` is specifically "the snapshot loaded and this show is not
-  // in it" — `undefined` is still loading, and must not trigger the fallback.
-  const plannedEnabled = enabled && item != null && watching.data === null;
-  const planned = useQuery({
-    ...simklPlanToWatchLibraryQuery(),
-    enabled: plannedEnabled,
-    select: (library: SimklLibrary) =>
-      item == null ? null : findShowEntry(library, item),
-  });
-  // Only the miss defers: an entry in `watching` is the fresher statement, and
-  // is returned without the second query ever being enabled.
-  return plannedEnabled ? planned : watching;
+}
+
+/**
+ * Whether Simkl already records this **film-like** item as watched — the Simkl
+ * half of `useWatchedInfo` (`state/queries/watched-info.ts`).
+ *
+ * Films only, deliberately. Shinobu writes movie logs to Simkl but read them
+ * back nowhere, so a movie logged to Simkl and not Trakt kept offering "Mark
+ * as watched" forever (owner report 2026-08-01, Hokum). TV goes through
+ * `useSimklLibraryEntryQuery` directly, whose per-episode progress line is
+ * richer than the play count this returns.
+ *
+ * `plays` is always ≥ 1: Simkl records only the latest play of a movie, with
+ * no rewatch counter, so this proves "watched" without ever claiming a count
+ * it doesn't have.
+ */
+export function useSimklWatchedInfo(
+  item: NormalizedMediaItem,
+): { plays: number; lastWatchedAt: string } | null {
+  const filmLike =
+    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+  const entry = useSimklLibraryEntryQuery({
+    item,
+    enabled: useConnectedProviders().includes('simkl') && filmLike,
+  }).data;
+  // `enabled: false` stops the *fetch*, not the read: the snapshot is one
+  // shared cache entry, so a TV screen — where another hook already populated
+  // it — still selects a real entry here. Gate the answer, not just the
+  // request, or a fully-watched series reports as a watched *film* and the
+  // details line reads "Watching · 153 episodes logged" from the movie path.
+  if (!filmLike) return null;
+  // No instant means Simkl knows the film is finished but not when — it can
+  // still say "watched", so the entry's own `lastUpdated` stands in rather
+  // than dropping a true watch on the floor.
+  if (entry == null || entry.status !== 'completed') return null;
+  return {
+    plays: Math.max(1, entry.item.currentProgress),
+    lastWatchedAt: entry.lastWatchedAt ?? entry.item.lastUpdated,
+  };
 }
 
 /**

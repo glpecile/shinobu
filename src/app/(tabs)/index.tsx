@@ -28,8 +28,6 @@ import {
   SeasonalAnimeRow,
   TrendingMoviesRow,
   TrendingShowsRow,
-  YourAnimeRow,
-  YourShowsRow,
   YourWatchlistRow,
   LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
@@ -40,7 +38,10 @@ import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
-import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
+import {
+  hasUpNextSources,
+  useRefetchUnifiedFeed,
+} from '@/state/queries/use-unified-feed';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useConnectedProviders } from '@/state/session';
@@ -150,10 +151,11 @@ function FeedScreen() {
     ? getLetterboxdUsername()
     : null;
   const animeSeason = animeSeasonAt(new Date());
-  // Up Next is computed from Trakt shows and AniList anime only — with neither
-  // connected there is nothing to compute, so the sections never mount.
-  const upNextConnected =
-    feedProviders.includes('trakt') || feedProviders.includes('anilist');
+  // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
+  // with none connected there is nothing to compute, so the sections never
+  // mount. The predicate lives with the gather it gates (`use-unified-feed.ts`)
+  // rather than being re-derived here, which is how Simkl went missing from it.
+  const upNextConnected = hasUpNextSources(connected);
   const refetchFeed = useRefetchUnifiedFeed();
   // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
@@ -222,28 +224,15 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {feedProviders.includes('trakt') && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton />}
-            resetKey={refreshCount}
-          >
-            <YourShowsRow
-              onItemActions={openActions}
-              onItemPress={openDetails}
-            />
-          </SuspenseSection>
-        )}
-        {feedProviders.includes('anilist') && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton />}
-            resetKey={refreshCount}
-          >
-            <YourAnimeRow
-              onItemActions={openActions}
-              onItemPress={openDetails}
-            />
-          </SuspenseSection>
-        )}
+        {/* "Your Shows" and "Your Anime" used to sit here — flat dumps of
+            every show/anime the trackers had ever seen you watch. Removed
+            (owner, 2026-08-01: "these will be replaced with the watchlist
+            anyway"): Continue Watching answers "what am I mid-way through",
+            Up Next answers "what's ready", and the merged watchlist answers
+            "what do I mean to watch" — the rows added a third, unordered
+            answer nobody was asking. Their feed slots went with them; Up Next
+            cards now resolve through `findInUpNextCache`, not through the
+            `yourShows` copy they used to ride. */}
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
           <SeasonalAnimeRow
             onItemActions={openActions}

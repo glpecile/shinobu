@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { NormalizedMediaItem } from '@/types/media';
 
 /**
  * Two things plan 0034 U7 changes about the home feed: trending moves off
@@ -63,25 +62,8 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { feedOptions, mergeYourShows } = await import('./use-unified-feed');
+const { feedOptions, hasUpNextSources } = await import('./use-unified-feed');
 
-function item(
-  id: string,
-  title: string,
-  overrides: Partial<NormalizedMediaItem> = {},
-): NormalizedMediaItem {
-  return {
-    id,
-    title,
-    coverImage: '',
-    type: 'TV',
-    currentProgress: 0,
-    progressUnit: 'episode',
-    lastUpdated: '2026-07-31T00:00:00.000Z',
-    externalIds: {},
-    ...overrides,
-  };
-}
 
 beforeEach(() => {
   store.clear();
@@ -121,72 +103,16 @@ describe('trending (plan 0034 R11/KTD-8)', () => {
   });
 });
 
-describe('yourShowsSimkl slot (plan 0034 U7)', () => {
-  test('merges shows + anime buckets, dropping movies and plantowatch', async () => {
-    routes = [
-      [
-        'api.simkl.com/sync/all-items',
-        {
-          shows: [
-            { status: 'watching', show: { title: 'Severance', ids: { simkl: 1 } } },
-            { status: 'plantowatch', show: { title: 'Plan To Watch Show', ids: { simkl: 2 } } },
-          ],
-          movies: [
-            { status: 'completed', movie: { title: 'Some Movie', ids: { simkl: 3 } } },
-          ],
-          anime: [
-            { status: 'completed', show: { title: 'Frieren', ids: { simkl: 4 } } },
-          ],
-        },
-      ],
-    ];
-
-    const items = await feedOptions.yourShowsSimkl().queryFn();
-
-    expect(items.map((entry) => entry.id)).toEqual(['simkl-1', 'simkl-4']);
-    // One unfiltered snapshot, not a per-bucket loop (R26 precedent).
-    expect(requestedUrls).toHaveLength(1);
-    expect(requestedUrls[0]).toContain('/sync/all-items?');
-  });
-});
-
-describe('mergeYourShows (plan 0034 KTD-10/R10)', () => {
-  test('Simkl wins metadata for the same TMDB id', () => {
-    const trakt = [item('trakt-1', 'Severance (Trakt)', { externalIds: { tmdb: 100, trakt: 1 } })];
-    const simkl = [item('simkl-1', 'Severance (Simkl)', { externalIds: { tmdb: 100, simkl: 1 } })];
-
-    const merged = mergeYourShows(trakt, simkl);
-
-    expect(merged).toHaveLength(1);
-    expect(merged[0].id).toBe('simkl-1');
+describe('home section predicates', () => {
+  test('Simkl alone mounts Up Next', () => {
+    expect(hasUpNextSources(['simkl'])).toBe(true);
   });
 
-  test('a Simkl-only item with no Trakt twin still appears', () => {
-    const simkl = [item('simkl-1', 'Frieren', { type: 'ANIME', externalIds: { simkl: 1 } })];
-
-    const merged = mergeYourShows([], simkl);
-
-    expect(merged.map((entry) => entry.id)).toEqual(['simkl-1']);
+  test('a Letterboxd-only user gets none', () => {
+    expect(hasUpNextSources(['letterboxd'])).toBe(false);
   });
 
-  test('two id-less items from different providers never collide', () => {
-    const trakt = [item('trakt-1', 'No Id Trakt')];
-    const simkl = [item('simkl-1', 'No Id Simkl')];
-
-    const merged = mergeYourShows(trakt, simkl);
-
-    expect(merged).toHaveLength(2);
-  });
-
-  test('preserves first-seen order (Trakt-only items keep their place)', () => {
-    const trakt = [
-      item('trakt-1', 'A', { externalIds: { tmdb: 1 } }),
-      item('trakt-2', 'B', { externalIds: { tmdb: 2 } }),
-    ];
-    const simkl = [item('simkl-3', 'C', { externalIds: { tmdb: 3 } })];
-
-    const merged = mergeYourShows(trakt, simkl);
-
-    expect(merged.map((entry) => entry.id)).toEqual(['trakt-1', 'trakt-2', 'simkl-3']);
+  test('AniList alone still mounts it', () => {
+    expect(hasUpNextSources(['anilist'])).toBe(true);
   });
 });

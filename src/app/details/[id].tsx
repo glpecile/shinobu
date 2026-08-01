@@ -55,15 +55,13 @@ import {
 } from '@/state/queries/media-details';
 import {
   simklQueryKeys,
-  useSimklWatchingEntryQuery,
+  useSimklLibraryEntryQuery,
 } from '@/state/queries/simkl';
-import {
-  traktQueryKeys,
-  useTraktMediaImages,
-  useTraktWatchedInfo,
-} from '@/state/queries/trakt';
+import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
+import { useWatchedInfo } from '@/state/queries/watched-info';
 import { findInDiaryCache } from '@/state/queries/diary-cache';
 import { findInSearchCache } from '@/state/queries/search-cache';
+import { findInUpNextCache } from '@/state/queries/up-next-cache';
 import { findInWatchlistCache } from '@/state/queries/watchlist-cache';
 import { useMovieCatalogueQuery, useTraktIdentityQuery } from '@/state/queries/mapping';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
@@ -174,17 +172,20 @@ function ProgressOfTotal({
  * shows count logged episodes), then the AniList list entry for anime, so
  * Trakt-sourced and AniList-sourced pages carry the same line. Lives as its
  * own element so the hooks only run once the screen has a resolved item.
+ *
+ * The first leg is `useWatchedInfo`, not Trakt alone: a film logged to Simkl
+ * and not Trakt is watched too, and used to render no line at all.
  */
 function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
-  const watched = useTraktWatchedInfo(item);
+  const watched = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     enabled: item.type === 'ANIME' && connected.includes('anilist'),
   });
-  // Simkl's leg (plan 0034): the `watching` snapshot's entry gives a
-  // Simkl-sourced show the same line Trakt-sourced pages carry.
-  const simklEntry = useSimklWatchingEntryQuery({
+  // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
+  // same line Trakt-sourced pages carry.
+  const simklEntry = useSimklLibraryEntryQuery({
     item,
     enabled: item.type === 'TV' && connected.includes('simkl'),
   });
@@ -205,9 +206,27 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
           : `Watched · ${date}`;
   } else if (anilistEntry.data?.entry != null) {
     label = anilistWatchedLabel(anilistEntry.data.entry);
-  } else if (simklEntry.data != null && simklEntry.data.watchedKeys.size > 0) {
-    const count = simklEntry.data.watchedKeys.size;
-    label = `Watching · ${count} ${count === 1 ? 'episode' : 'episodes'} logged`;
+  } else if (
+    simklEntry.data != null &&
+    simklEntry.data.item.currentProgress > 0
+  ) {
+    // The verb is the entry's own status, not an assumption: the snapshot used
+    // to be `watching`-filtered, so "Watching" was true by construction, and a
+    // finished show saying "Watching · 153 episodes logged" is its own small
+    // lie. The count is `watched_episodes_count`, **not** `watchedKeys.size` —
+    // Simkl omits the per-episode `seasons[]` array entirely for a `completed`
+    // show (verified on Doctor Who, 2026-08-01), so the key set is empty there
+    // while the count is right.
+    const count = simklEntry.data.item.currentProgress;
+    const episodes = `${count} ${count === 1 ? 'episode' : 'episodes'} logged`;
+    label =
+      simklEntry.data.status === 'completed'
+        ? `Watched · ${episodes}`
+        : simklEntry.data.status === 'dropped'
+          ? `Dropped · ${episodes}`
+          : simklEntry.data.status === 'hold'
+            ? `Paused · ${episodes}`
+            : `Watching · ${episodes}`;
   }
   if (label == null) return null;
 
@@ -553,15 +572,18 @@ export default function DetailsScreen() {
 
   const resolvedItem =
     findItemById(id, [
-      // Personal feeds first: an item can appear in both "Your Anime" and
-      // the seasonal anime row, and the personal copy carries real progress.
-      feed.yourShows,
-      feed.yourAnime,
+      // Personal feed first: an item can appear in both a personal row and a
+      // public catalogue row, and the personal copy carries real progress.
       feed.yourWatchlist,
       feed.trendingMovies,
       feed.trendingShows,
       feed.seasonalAnime,
     ]) ??
+    // Up Next / Continue Watching cards. They used to resolve incidentally out
+    // of the `yourShows`/`yourAnime` slots (the same show sat in both
+    // surfaces); those rows are gone, so the gather that produced the card is
+    // now what answers for it. Cache-only, like every step here.
+    findInUpNextCache(queryClient, id) ??
     // Search results belong to no feed slot (plan 0009) — and manga belongs to
     // no feed row at all, so this is the only way it resolves (plan 0024 U8).
     findInSearchCache(queryClient, id) ??
@@ -601,6 +623,13 @@ export default function DetailsScreen() {
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
     enabled: item?.type === 'ANIME' && connected.includes('anilist'),
+  });
+  // The same correction for TV, from Simkl's library entry — a show opened
+  // from search showed "0 / 153" for a series watched end to end. Shares
+  // `WatchedLine`'s cache entry, so it costs no extra request.
+  const simklEntry = useSimklLibraryEntryQuery({
+    item: item?.type === 'TV' ? item : null,
+    enabled: item?.type === 'TV' && connected.includes('simkl'),
   });
   // Items resolved from the watched feed arrive artless (Trakt dropped images
   // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
@@ -654,7 +683,7 @@ export default function DetailsScreen() {
   const displayedProgress =
     shown.type === 'ANIME'
       ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
-      : shown.currentProgress;
+      : (simklEntry.data?.item.currentProgress ?? shown.currentProgress);
 
   function refresh() {
     // Sections that failed are unmounted, leaving their queries inactive and

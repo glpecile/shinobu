@@ -8,7 +8,7 @@ import {
   useAniListEntryStateQuery,
   useAniListEpisodesQuery,
 } from '@/state/queries/anilist';
-import { useTraktWatchedInfo } from '@/state/queries/trakt';
+import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
@@ -43,7 +43,7 @@ const DEFAULT_TAGS = 'shinobu, ';
 export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
   const logMedia = useLogMedia();
-  const traktWatched = useTraktWatchedInfo(item);
+  const watchedInfo = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     enabled: connected.includes('anilist'),
@@ -100,7 +100,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const anilistStatus = anilistEntry.data?.entry?.status;
   const anilistProgress = anilistEntry.data?.entry?.progress;
   const isRewatch =
-    traktWatched != null ||
+    watchedInfo != null ||
     anilistStatus === 'COMPLETED' ||
     anilistStatus === 'REPEATING';
 
