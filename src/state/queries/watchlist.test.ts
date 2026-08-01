@@ -264,6 +264,9 @@ describe('fetchWatchlistInputs', () => {
         item: expect.objectContaining({ id: 'simkl-1' }),
         source: 'simkl',
         addedAt: '2026-07-05T00:00:00.000Z',
+        // The removal's destructive-warning hint (plan 0036) — stamped on every
+        // row, zero included, so "nothing to lose" is stated not inferred.
+        simklWatchedCount: 0,
       },
     ]);
     expect(inputs.errors).toEqual([]);

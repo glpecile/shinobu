@@ -464,13 +464,15 @@ describe('Simkl write + read fan-out (plan 0034 U6/U7)', () => {
     ]);
   });
 
-  it('watchlist add is a real write target; watchlist remove renders as a manual row', () => {
+  it('both watchlist verbs are real write targets (remove flipped in plan 0036)', () => {
     expect(
       splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'ios', 'watchlist'),
     ).toEqual({ writable: ['trakt', 'serializd', 'simkl'], manual: [] });
+    // Serializd stays manual on the remove — no watchlist read leg (R32) — so
+    // the two verbs still split differently.
     expect(
       splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'ios', 'watchlist-remove'),
-    ).toEqual({ writable: ['trakt'], manual: ['serializd', 'simkl'] });
+    ).toEqual({ writable: ['trakt', 'simkl'], manual: ['serializd'] });
   });
 
   it("reverting canWrite is the standing rollback — the gated state comes straight back", () => {

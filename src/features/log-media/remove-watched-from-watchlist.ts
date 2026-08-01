@@ -51,13 +51,24 @@ export async function removeWatchedFromWatchlist(
   const removal = findWatchlistRemoval(data, item);
   if (removal == null) return;
 
+  // **Simkl is excluded by construction** (plan 0036). Its one status per item
+  // means the log that just landed already moved the film out of
+  // `plantowatch`, so this derived removal has nothing left to do — and firing
+  // it anyway is actively unsafe: `/sync/history/remove` deletes watch history,
+  // and it would arrive inside Simkl's ~20s per-user write lock, against a
+  // snapshot that may not have caught up with the log yet
+  // (docs/solutions/simkl-rate-limits-and-write-lock.md). The user's own
+  // removal, aimed from the picker, keeps its Simkl leg.
+  const providers = removal.entry.sources.filter((id) => id !== 'simkl');
+  if (providers.length === 0) return;
+
   try {
     await runWatchlistRemove(
       queryClient,
       removal.entry,
       connected,
       removal.errors,
-      {},
+      { providers },
       deps,
       removal.incomplete,
     );

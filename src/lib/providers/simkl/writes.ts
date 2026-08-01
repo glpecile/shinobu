@@ -6,6 +6,8 @@ import { ProviderAuthError, ProviderDecodeError, type ProviderError } from '@/li
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
+import type { SimklLibrary, SimklLibraryEntry } from './normalize';
+import { getAllItems } from './reads';
 
 const provider = 'simkl' as const;
 
@@ -426,31 +428,92 @@ interface SimklHistoryRemoveResponse {
 }
 
 /**
+ * Whether `entry` is the library row for `item`. Simkl-id equality first (the
+ * only id both sides are guaranteed to agree on), then the bridge ids —
+ * gated on film-vs-series shape, because TMDB numbers movies and series
+ * independently and `movies[]`/`shows[]`/`anime[]` are searched together here
+ * (an anime series Simkl files under `anime[]` can arrive typed `TV`).
+ */
+function isFilmLike(candidate: NormalizedMediaItem): boolean {
+  return (
+    candidate.type === 'MOVIE' || (candidate.type === 'ANIME' && candidate.isFilm === true)
+  );
+}
+
+function isSameSimklItem(item: NormalizedMediaItem, entry: SimklLibraryEntry): boolean {
+  const mine = item.externalIds;
+  const theirs = entry.item.externalIds;
+  if (mine.simkl != null && theirs.simkl != null) return mine.simkl === theirs.simkl;
+  if (isFilmLike(item) !== isFilmLike(entry.item)) return false;
+  return (
+    (mine.mal != null && mine.mal === theirs.mal) ||
+    (mine.anilist != null && mine.anilist === theirs.anilist) ||
+    (mine.tmdb != null && mine.tmdb === theirs.tmdb) ||
+    (mine.imdb != null && mine.imdb !== '' && mine.imdb === theirs.imdb)
+  );
+}
+
+/** The `plantowatch` row for `item`, across all three buckets. */
+function findPlanToWatchEntry(
+  library: SimklLibrary,
+  item: NormalizedMediaItem,
+): SimklLibraryEntry | null {
+  return (
+    [...library.shows, ...library.movies, ...library.anime].find((entry) =>
+      isSameSimklItem(item, entry),
+    ) ?? null
+  );
+}
+
+/**
+ * What `/sync/history/remove` would destroy alongside the list entry. The
+ * per-episode array and the server's own counter disagree on catch-up-logged
+ * shows (the array is only populated with `episode_watched_at=yes`), so the
+ * guard takes whichever is larger — under-counting here is what silently
+ * deletes history.
+ */
+function watchHistorySize(entry: SimklLibraryEntry): number {
+  return Math.max(entry.item.currentProgress, entry.watchedEpisodes.length);
+}
+
+/** The message behind a refused destructive removal — the picker's warning, restated. */
+function destructiveSkipReason(item: NormalizedMediaItem): string {
+  return `removing “${item.title}” on Simkl would delete its watch history too — confirm the warning to remove it anyway`;
+}
+
+/**
  * The Simkl watchlist-**remove** adapter (plan 0034 R5, Open Question 1 —
- * resolved against the live docs, 2026-07-31): there is **no**
- * `/sync/remove-from-list` sibling. api.simkl.org documents
- * `POST /sync/history/remove` as "the canonical un-track / delete-from-list
- * path": a *whole-item* body (ids, no `seasons`/`episodes`) removes the item
- * from the user's library entirely — the watchlist entry AND any watch
- * history — while a seasons-scoped body would only unmark episodes watched.
- * (A legacy `to: "remove"` on add-to-list exists but is documented as
- * deprecated.)
+ * resolved against the live docs, 2026-07-31; flipped live by plan 0036).
+ * There is **no** `/sync/remove-from-list` sibling and no status-only removal:
+ * api.simkl.org documents `POST /sync/history/remove` as the canonical
+ * un-track path, and a *whole-item* body (ids, no `seasons`/`episodes`)
+ * removes the item from the user's library **entirely** — the plan-to-watch
+ * entry, any watch history, and the rating. (A legacy `to: "remove"` on
+ * add-to-list exists but is undocumented and deprecated.)
  *
- * That dual semantic is exactly why this ships **dormant**: the registry keeps
- * `watchlistRemove: 'manual'` until the live single-status probe (plan 0034
- * U4 execution note, the Serializd lesson —
- * docs/solutions/serializd-watchlist-clears-watched.md) confirms that removing
- * a `plantowatch` item doesn't destroy watched state a user meant to keep.
- * This function exists so that flip is a one-token registry change, not a new
- * implementation — the Serializd `removeFromSerializdWatchlist` precedent.
+ * That is why this is the one removal adapter with a **fresh in-effect read**
+ * before the write — plan 0031 R36's invariant, which until now only AniList
+ * needed:
  *
- * `deleted: 0` with an empty `not_found` is a reasoned skip (the item wasn't
- * in the library — the user's intent already holds), mirroring the Trakt
- * remove adapter.
+ * - It is what makes the destructive case *knowable*. Simkl holds one status
+ *   per item, so a `plantowatch` row normally has no history at all; the
+ *   dangerous row is the one a user manually moved back to plan-to-watch after
+ *   watching part of it, and only a live read can tell the two apart.
+ * - Absent from the fresh `plantowatch` snapshot means the item is not on the
+ *   watchlist any more (a log moved it to `watching`/`completed`, or another
+ *   device removed it). That is a reasoned skip with **no POST**, which is
+ *   also what keeps a derived post-log removal out of Simkl's ~20s per-user
+ *   write lock (docs/solutions/simkl-rate-limits-and-write-lock.md).
+ *
+ * With membership proven, `deleted: 0` is **not** a skip: a plan-to-watch row
+ * with no history has no history rows to delete, and reporting that as "wasn't
+ * in your library" would call every clean removal a no-op. `not_found` stays
+ * the failure signal.
  */
 export function removeFromSimklWatchlist(
   deps: SimklDeps,
   item: NormalizedMediaItem,
+  options: { allowDestructive?: boolean } = {},
 ): Effect.Effect<ProviderWriteResult, ProviderError> {
   const ids = idsFor(item);
   const body = ids == null ? null : listBody(item, { ids });
@@ -462,6 +525,13 @@ export function removeFromSimklWatchlist(
 
   return Effect.gen(function* () {
     const token = yield* accessToken(deps);
+    const library = yield* getAllItems(deps, { status: 'plantowatch' });
+    const entry = findPlanToWatchEntry(library, item);
+    if (entry == null) return skip('was not on your Simkl watchlist');
+    if (watchHistorySize(entry) > 0 && options.allowDestructive !== true) {
+      return skip(destructiveSkipReason(item));
+    }
+
     const response = yield* simklHttp<SimklHistoryRemoveResponse>(
       deps,
       '/sync/history/remove',
@@ -470,11 +540,6 @@ export function removeFromSimklWatchlist(
     if (notFoundCount(response.not_found) > 0) {
       return skip('Simkl could not match any submitted item (not_found)');
     }
-    const deleted =
-      (response.deleted?.movies ?? 0) +
-      (response.deleted?.shows ?? 0) +
-      (response.deleted?.episodes ?? 0);
-    if (deleted > 0) return { status: 'ok' } satisfies ProviderWriteResult;
-    return skip('was not in your Simkl library');
+    return { status: 'ok' } satisfies ProviderWriteResult;
   });
 }

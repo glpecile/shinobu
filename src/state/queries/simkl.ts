@@ -146,26 +146,61 @@ function findShowEntry(
 }
 
 /**
- * One show's Simkl library entry (watched keys, next-to-watch pointer) from
- * the `watching` snapshot — the Trakt-less source behind the TV details
- * screen's checkmarks and one-tap log button (plan 0034 R9's detail-screen
- * counterpart). Deliberately the *watching* filter, not the full library: it's
- * the snapshot Continue Watching already caches, so the common case costs no
- * request — a show parked outside `watching` just degrades to no checkmarks,
- * exactly like a disconnected Trakt. `null` data means "answered, not in the
- * watching list".
+ * The `plantowatch` snapshot's options — the **same cache entry** the watchlist
+ * gather (`state/queries/watchlist.ts`) and Up Next's calendar intersection
+ * already read, so consulting it costs nothing warm.
+ */
+export function simklPlanToWatchLibraryQuery() {
+  return {
+    queryKey: simklQueryKeys.allItems(undefined, 'plantowatch'),
+    queryFn: (): Promise<SimklLibrary> =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' })),
+    staleTime: SIMKL_WATCHING_STALE_MS,
+  };
+}
+
+/**
+ * One show's Simkl library entry (watched keys, next-to-watch pointer) — the
+ * Trakt-less source behind the TV details screen's checkmarks and one-tap log
+ * button (plan 0034 R9's detail-screen counterpart).
+ *
+ * Reads the `watching` snapshot first and **falls back to `plantowatch`**
+ * (plan 0036 follow-up, owner report 2026-08-01). Simkl holds one status per
+ * item, so a show the user is part-way through but has parked back on the
+ * watchlist lives only in the second snapshot — and reading just the first
+ * left it with no checkmarks and no "Log S2E1" button on a screen that was
+ * simultaneously displaying "10 / 20 episodes". Both snapshots are entries
+ * other surfaces already cache (Continue Watching; the watchlist gather), so
+ * the common case still costs no request, and the fallback query only runs
+ * when the first answered "not here".
+ *
+ * `null` data means "answered, in neither snapshot" — a show parked in
+ * `hold`/`dropped` still degrades to no checkmarks, exactly like a
+ * disconnected Trakt.
  */
 export function useSimklWatchingEntryQuery(params: {
   item: NormalizedMediaItem | null;
   enabled?: boolean;
 }) {
   const { item, enabled = true } = params;
-  return useQuery({
+  const watching = useQuery({
     ...simklWatchingLibraryQuery(),
     enabled: enabled && item != null,
     select: (library: SimklLibrary) =>
       item == null ? null : findShowEntry(library, item),
   });
+  // `data === null` is specifically "the snapshot loaded and this show is not
+  // in it" — `undefined` is still loading, and must not trigger the fallback.
+  const plannedEnabled = enabled && item != null && watching.data === null;
+  const planned = useQuery({
+    ...simklPlanToWatchLibraryQuery(),
+    enabled: plannedEnabled,
+    select: (library: SimklLibrary) =>
+      item == null ? null : findShowEntry(library, item),
+  });
+  // Only the miss defers: an entry in `watching` is the fresher statement, and
+  // is returned without the second query ever being enabled.
+  return plannedEnabled ? planned : watching;
 }
 
 /**

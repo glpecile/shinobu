@@ -67,8 +67,8 @@ function fakeDeps(): WatchlistRemoveDeps {
           ? Promise.resolve({ status: 'ok' as const })
           : Promise.reject(new Error(letterboxdFails));
       },
-      // Bait, not a live adapter (plan 0034 U6): Simkl's remove is 'manual',
-      // so routing must never reach this key — the test below pins it.
+      // Bait, not dead code (plan 0036): Simkl's remove *is* live now, and the
+      // derived path is the one caller that must still never reach this key.
       simkl: () => {
         adapterCalls.push('simkl');
         return Promise.resolve({ status: 'ok' as const });
@@ -193,12 +193,62 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
       fakeDeps(),
     );
     // A film log with Simkl connected just fired one Simkl history POST inside
-    // its ~20s per-user write lock (KTD-3). Simkl's `watchlistRemove` is
-    // 'manual' (U4's live-probe gate), so this derived write routes it to the
-    // manual/unknown buckets — never to an adapter — and the lock stays
-    // uncontended. If the remove flip ever lands, this pin forces the flip to
-    // deal with the lock collision explicitly rather than inherit it.
+    // its ~20s per-user write lock (KTD-3). Plan 0036 flipped
+    // `watchlistRemove` to 'write', so the lock collision this pin was written
+    // to force is now dealt with explicitly: the derived path drops Simkl from
+    // its targets outright (the log already evicted the film from
+    // `plantowatch` — one status per item).
     expect(adapterCalls).toEqual(['trakt']);
+  });
+
+  test('…including when Simkl is the watchlist holding the film (plan 0036)', async () => {
+    const queryClient = client({
+      inputs: [
+        { item: film(), source: 'trakt' },
+        {
+          item: film({ id: 'simkl-1', externalIds: { simkl: 1, tmdb: 42 } }),
+          source: 'simkl',
+        },
+      ],
+      errors: [],
+      incomplete: [],
+    });
+
+    await removeWatchedFromWatchlist(
+      queryClient,
+      film(),
+      [...CONNECTED, 'simkl'],
+      fakeDeps(),
+    );
+    // Simkl is a real removal target now, and this is the one caller that must
+    // still not use it: `/sync/history/remove` deletes watch history, and here
+    // it would land inside the write lock against a snapshot that may not have
+    // caught up with the log that just fired.
+    expect(adapterCalls).toEqual(['trakt']);
+  });
+
+  test('a film held only by Simkl derives no removal at all', async () => {
+    const queryClient = client({
+      inputs: [
+        {
+          item: film({ id: 'simkl-1', externalIds: { simkl: 1, tmdb: 42 } }),
+          source: 'simkl',
+        },
+      ],
+      errors: [],
+      incomplete: [],
+    });
+
+    await removeWatchedFromWatchlist(
+      queryClient,
+      film({ externalIds: { tmdb: 42 } }),
+      [...CONNECTED, 'simkl'],
+      fakeDeps(),
+    );
+    // Dropping Simkl must leave *nothing*, not fall through to "no opt-out
+    // given, so target everything" — the empty-`providers` trap in
+    // `resolveWriteTargets`.
+    expect(adapterCalls).toEqual([]);
   });
 
   test('a failed removal resolves silently — best-effort by contract', async () => {

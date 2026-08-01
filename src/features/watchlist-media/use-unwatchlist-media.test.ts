@@ -314,10 +314,11 @@ describe('runWatchlistRemove — the three result families (R38)', () => {
 });
 
 describe('the adapter map (R32/R37)', () => {
-  test('Trakt, AniList and Letterboxd have adapters — Serializd is absent by design', () => {
+  test('Trakt, AniList, Letterboxd and Simkl have adapters — Serializd is absent by design', () => {
     expect(Object.keys(WATCHLIST_REMOVE_ADAPTERS).sort()).toEqual([
       'anilist',
       'letterboxd',
+      'simkl',
       'trakt',
     ]);
     // Serializd's `removeFromSerializdWatchlist` exists (U9) and is deliberately
@@ -326,12 +327,12 @@ describe('the adapter map (R32/R37)', () => {
     // declaration. Letterboxd's flipped in plan 0033 (verified state-set endpoint).
     expect(PROVIDERS.serializd.watchlistRemove).toBe('manual');
     expect(PROVIDERS.letterboxd.watchlistRemove).toBe('write');
-    // Simkl (plan 0034 U6): the add went 'write' but the remove stays 'manual'
-    // behind U4's live-probe gate — `/sync/history/remove`'s whole-item body
-    // removes watch history along with the list entry, so until the probe
-    // clears it Simkl renders as a manual deep-link row here, never an adapter.
+    // Simkl's remove flipped in plan 0036. The hazard the gate named didn't go
+    // away — `/sync/history/remove` still deletes watch history with the list
+    // entry — it moved into the adapter, which reads the live `plantowatch`
+    // list first and refuses a row holding history without an explicit confirm.
     expect(PROVIDERS.simkl.watchlistWrite).toBe('write');
-    expect(PROVIDERS.simkl.watchlistRemove).toBe('manual');
+    expect(PROVIDERS.simkl.watchlistRemove).toBe('write');
   });
 
   test('an item with no AniList id is a reasoned skip, never a request', async () => {

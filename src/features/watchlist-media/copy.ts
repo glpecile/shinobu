@@ -116,11 +116,28 @@ export function unwatchlistConfirmLabel(
  */
 export function destructiveRemoveWarning(params: {
   anilistStatus?: 'CURRENT' | 'PLANNING';
+  simklWatchedCount?: number;
   targets: readonly ProviderId[];
 }): string | null {
-  if (params.anilistStatus !== 'CURRENT') return null;
-  if (!params.targets.includes('anilist')) return null;
-  return 'AniList can’t un-plan something you’re watching, so this deletes your whole AniList entry — progress, score, notes and dates included.';
+  const warnings: string[] = [];
+  if (params.anilistStatus === 'CURRENT' && params.targets.includes('anilist')) {
+    warnings.push(
+      'AniList can’t un-plan something you’re watching, so this deletes your whole AniList entry — progress, score, notes and dates included.',
+    );
+  }
+  // Simkl has one status per item and no status-only removal, so the only
+  // un-track it offers takes the watch history and rating with it (plan 0036).
+  // Normally there is none to take — a watched item isn't plan-to-watch — so
+  // this fires only on a row the user put back on the list by hand.
+  if (
+    (params.simklWatchedCount ?? 0) > 0 &&
+    params.targets.includes('simkl')
+  ) {
+    warnings.push(
+      'Simkl can’t drop just the plan-to-watch status, so this deletes the whole Simkl entry — your watch history and rating for it included, and the show leaves Continue Watching and This week with it.',
+    );
+  }
+  return warnings.length > 0 ? warnings.join(' ') : null;
 }
 
 /** The second, explicit press behind that warning. Provider-free, per R38. */

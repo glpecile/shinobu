@@ -124,11 +124,18 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // Flipped by U6 with canWrite: `addToSimklWatchlist` joined
     // WATCHLIST_ADAPTERS, so the add is a real fan-out target.
     watchlistWrite: 'write',
-    // STAYS gated on U4's live probe of `/sync/history/remove` (the same
-    // verify-then-flip bar Serializd's remove is still held to, R32-style):
-    // the documented whole-item body removes watch *history* along with the
-    // list entry, so until the single-status probe clears it, removal renders
-    // as a manual deep-link row — never a dead end (plan 0022), never a write.
-    watchlistRemove: 'manual',
+    // Flipped by plan 0036 after the live probe U4 asked for. The hazard the
+    // gate named is **real and permanent** — `/sync/history/remove` is the only
+    // removal Simkl documents, there is no status-only variant, and a
+    // whole-item body deletes the plan-to-watch entry, the watch history and
+    // the rating together. What changed is that the hazard is now *guarded
+    // rather than avoided*: `removeFromSimklWatchlist` does a fresh
+    // `plantowatch` read immediately before the write (plan 0031 R36's
+    // invariant, until now AniList-only) and refuses any row that still holds
+    // watch history unless the picker took an explicit second confirm. A
+    // plan-to-watch row with no history — which, under Simkl's one-status-per-
+    // item model, is very nearly all of them — removes cleanly with nothing to
+    // lose. Standing rollback stays a one-token revert to 'manual'.
+    watchlistRemove: 'write',
   },
 };
