@@ -12,8 +12,6 @@ import {
   useSuspenseSeasonalAnimeQuery,
   useSuspenseTrendingMoviesQuery,
   useSuspenseTrendingShowsQuery,
-  useSuspenseYourAnimeQuery,
-  useSuspenseYourShowsQuery,
   useSuspenseYourWatchlistQuery,
 } from '@/state/queries/use-unified-feed';
 import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
@@ -31,41 +29,6 @@ interface FeedRowCallbacks {
  * `SuspenseSection` — one provider failing or loading slowly never blocks or
  * blanks the rows around it.
  */
-
-export function YourShowsRow({ onItemPress, onItemActions }: FeedRowCallbacks) {
-  const { data } = useSuspenseYourShowsQuery();
-  // The one row whose source is unbounded (`/sync/watched/shows` pages to the
-  // whole library) — capped here rather than in the query, because the details
-  // screen resolves items by id out of that same cache entry.
-  const items = capFeedRow(useVisibleItems(data));
-  return (
-    <MediaCarousel
-      collapseKey="your-shows"
-      items={items}
-      onItemActions={onItemActions}
-      onItemPress={onItemPress}
-      // No fixed `provider` mark: Trakt and Simkl merge into this row (plan
-      // 0034 KTD-10), so no single badge is accurate any more — the same
-      // reasoning `YourWatchlistRow` below already follows.
-      title="Your Shows"
-    />
-  );
-}
-
-export function YourAnimeRow({ onItemPress, onItemActions }: FeedRowCallbacks) {
-  const { data } = useSuspenseYourAnimeQuery();
-  const items = useVisibleItems(data);
-  return (
-    <MediaCarousel
-      collapseKey="your-anime"
-      items={items}
-      onItemActions={onItemActions}
-      onItemPress={onItemPress}
-      provider="anilist"
-      title="Your Anime"
-    />
-  );
-}
 
 /**
  * The row whose source is **every** connected provider's watchlist, merged

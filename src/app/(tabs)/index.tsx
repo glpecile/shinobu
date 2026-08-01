@@ -28,8 +28,6 @@ import {
   SeasonalAnimeRow,
   TrendingMoviesRow,
   TrendingShowsRow,
-  YourAnimeRow,
-  YourShowsRow,
   YourWatchlistRow,
   LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
@@ -42,7 +40,6 @@ import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import {
   hasUpNextSources,
-  hasYourShowsSources,
   useRefetchUnifiedFeed,
 } from '@/state/queries/use-unified-feed';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
@@ -227,31 +224,15 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {/* Trakt's watched shows merged with Simkl's — either leg alone is a
-            full row (`useSuspenseYourShowsQuery`), so this must not gate on
-            Trakt. */}
-        {hasYourShowsSources(connected) && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton />}
-            resetKey={refreshCount}
-          >
-            <YourShowsRow
-              onItemActions={openActions}
-              onItemPress={openDetails}
-            />
-          </SuspenseSection>
-        )}
-        {feedProviders.includes('anilist') && (
-          <SuspenseSection
-            fallback={<FeedRowSkeleton />}
-            resetKey={refreshCount}
-          >
-            <YourAnimeRow
-              onItemActions={openActions}
-              onItemPress={openDetails}
-            />
-          </SuspenseSection>
-        )}
+        {/* "Your Shows" and "Your Anime" used to sit here — flat dumps of
+            every show/anime the trackers had ever seen you watch. Removed
+            (owner, 2026-08-01: "these will be replaced with the watchlist
+            anyway"): Continue Watching answers "what am I mid-way through",
+            Up Next answers "what's ready", and the merged watchlist answers
+            "what do I mean to watch" — the rows added a third, unordered
+            answer nobody was asking. Their feed slots went with them; Up Next
+            cards now resolve through `findInUpNextCache`, not through the
+            `yourShows` copy they used to ride. */}
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
           <SeasonalAnimeRow
             onItemActions={openActions}

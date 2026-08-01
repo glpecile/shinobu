@@ -1,4 +1,4 @@
-import { useSimklWatchingEntryQuery } from '@/state/queries/simkl';
+import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -41,7 +41,7 @@ export function useSeriesNextEpisode(
     traktId,
     enabled: traktConnected,
   });
-  const simklEntry = useSimklWatchingEntryQuery({
+  const simklEntry = useSimklLibraryEntryQuery({
     item: isSeries ? item : null,
     enabled: simklConnected && !traktUsable,
   });
@@ -59,8 +59,20 @@ export function useSeriesNextEpisode(
   // `undefined` is "snapshot not loaded yet"; a loaded snapshot without this
   // show selects to `null`, which the pure derivation handles below.
   if (simklEntry.data === undefined) return { status: 'loading' };
+  // Progress comes from the **entry**, not the item on screen. The item is
+  // whatever surface the user navigated from: a Simkl-sourced card carries
+  // real progress, but a TMDB search result carries `currentProgress: 0` for a
+  // show the user has fully watched — and the caught-up check below then read
+  // `0 < 153` and reported "can't name the next episode", hiding the log
+  // button entirely on Doctor Who (owner report 2026-08-01). The entry is the
+  // provider's own statement of user state; the item's copy is a snapshot of
+  // wherever the tap came from.
+  const entryItem = simklEntry.data?.item;
   const episode = nextEpisodeFromSimklEntry(
-    { currentProgress: item.currentProgress, totalEpisodes: item.totalEpisodes ?? null },
+    {
+      currentProgress: entryItem?.currentProgress ?? item.currentProgress,
+      totalEpisodes: entryItem?.totalEpisodes ?? item.totalEpisodes ?? null,
+    },
     simklEntry.data,
   );
   if (episode == null) return { status: 'unavailable' };
