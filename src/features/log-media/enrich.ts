@@ -31,16 +31,23 @@ export async function enrichExternalIds(
 
   // A movie carrying no movie-side id at all (a Letterboxd watchlist film is
   // just a slug + title + year) → resolve Trakt/TMDB/IMDB by text search, so a
-  // "mark as watched" fans out to Trakt instead of dead-ending on Letterboxd.
-  // Runs before the reverse-map below, so the ids it discovers can then bridge
-  // an anime film on to AniList too.
+  // "mark as watched" fans out to a real tracker instead of dead-ending on
+  // Letterboxd. Runs before the reverse-map below, so the ids it discovers can
+  // then bridge an anime film on to AniList too.
+  //
+  // Gated on Trakt **or Simkl**, not Trakt alone: the lookup itself stopped
+  // being Trakt-only (plan 0034 KTD-8 — `movieSearchQuery` falls back to TMDB
+  // `/search/movie`, which needs no tracker credential at all), and Simkl
+  // resolves a movie write by `tmdb`/`imdb` — without them its leg fails with
+  // "no Simkl-resolvable id" (`simkl/writes.ts`'s `idsFor`). Keeping the old
+  // Trakt gate meant a Simkl user's Letterboxd film could not be logged.
   if (
     item.type === 'MOVIE' &&
     externalIds.trakt == null &&
     externalIds.tmdb == null &&
     externalIds.imdb == null &&
     item.title !== '' &&
-    connected.includes('trakt')
+    (connected.includes('trakt') || connected.includes('simkl'))
   ) {
     const found = await cachedTraktTextSearch(queryClient, item.title, item.year);
     if (found != null) {
@@ -55,14 +62,20 @@ export async function enrichExternalIds(
 
   // AniList-origin anime → movie/TV-side ids (only useful when a movie/TV
   // provider is connected). Serializd needs the tmdb id this yields (KTD2), so
-  // an AniList+Serializd-only user must run this too, not just Trakt users.
+  // an AniList+Serializd-only user must run this too, not just Trakt users —
+  // and so must a Simkl one: ani.zip carries no `mal`, so without these bridge
+  // ids Simkl's anime write falls all the way to its best-effort `anilist`-only
+  // tier (`simkl/writes.ts`'s `idsFor`, Open Question 2), or to nothing at all
+  // for an anime *film* routed to the movie targets.
   if (
     isAnime &&
     externalIds.anilist != null &&
     externalIds.trakt == null &&
     externalIds.tmdb == null &&
     externalIds.tvdb == null &&
-    (connected.includes('trakt') || connected.includes('serializd'))
+    (connected.includes('trakt') ||
+      connected.includes('serializd') ||
+      connected.includes('simkl'))
   ) {
     const mapped = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,

@@ -151,6 +151,31 @@ export const feedOptions = {
 };
 
 /**
+ * Which providers actually feed a home section — exported so the screen asks
+ * the data layer instead of re-deriving the answer beside it. Both of these
+ * had drifted: the screen still gated Up Next and "Your Shows" on Trakt alone
+ * (`trakt || anilist` / `trakt`), long after `fetchUpNextInputs` grew its
+ * `wantsSimkl` leg and `activeFeedConfigs` grew the `yourShowsSimkl` slot — so
+ * a **Simkl-only** user had both sections built for them and neither rendered.
+ * One exported predicate per section is what stops that happening again.
+ */
+export function hasUpNextSources(connected: readonly ProviderId[]): boolean {
+  const feedProviders = providersForFeed(connected);
+  return (
+    feedProviders.includes('trakt') ||
+    feedProviders.includes('simkl') ||
+    feedProviders.includes('anilist')
+  );
+}
+
+/** `useSuspenseYourShowsQuery` merges Trakt's and Simkl's legs; either alone
+ *  is a full row. */
+export function hasYourShowsSources(connected: readonly ProviderId[]): boolean {
+  const feedProviders = providersForFeed(connected);
+  return feedProviders.includes('trakt') || feedProviders.includes('simkl');
+}
+
+/**
  * The merge key for one `yourShows` row: its TMDB id, or its own id when none
  * exists (an anime Simkl carries no TMDB bridge for) — the `id:`/`tmdb:`
  * prefixes keep those two key spaces from ever colliding.
@@ -315,11 +340,7 @@ function activeSectionKeys(
   const feedProviders = providersForFeed(connected);
   if (feedProviders.length === 0) return [];
   const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [];
-  if (
-    feedProviders.includes('trakt') ||
-    feedProviders.includes('simkl') ||
-    feedProviders.includes('anilist')
-  ) {
+  if (hasUpNextSources(connected)) {
     keys.push({ slot: 'upNext', queryKey: upNextQueryKeys.inputs() });
   }
   // The merged watchlist (plan 0031 KTD-11) — registered here for

@@ -63,7 +63,8 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { feedOptions, mergeYourShows } = await import('./use-unified-feed');
+const { feedOptions, hasUpNextSources, hasYourShowsSources, mergeYourShows } =
+  await import('./use-unified-feed');
 
 function item(
   id: string,
@@ -188,5 +189,31 @@ describe('mergeYourShows (plan 0034 KTD-10/R10)', () => {
     const merged = mergeYourShows(trakt, simkl);
 
     expect(merged.map((entry) => entry.id)).toEqual(['trakt-1', 'trakt-2', 'simkl-3']);
+  });
+});
+
+/**
+ * The home screen used to re-derive these beside the sections it renders, and
+ * both copies had gone stale: Up Next was `trakt || anilist` and "Your Shows"
+ * was `trakt` alone, long after the gather grew its Simkl legs. A Simkl-only
+ * user had both sections built and neither rendered.
+ */
+describe('home section predicates', () => {
+  test('Simkl alone mounts Up Next', () => {
+    expect(hasUpNextSources(['simkl'])).toBe(true);
+  });
+
+  test('Simkl alone mounts Your Shows', () => {
+    expect(hasYourShowsSources(['simkl'])).toBe(true);
+  });
+
+  test('a Letterboxd-only user gets neither', () => {
+    expect(hasUpNextSources(['letterboxd'])).toBe(false);
+    expect(hasYourShowsSources(['letterboxd'])).toBe(false);
+  });
+
+  test('Your Shows stays TV-tracker-only — AniList has its own row', () => {
+    expect(hasYourShowsSources(['anilist'])).toBe(false);
+    expect(hasUpNextSources(['anilist'])).toBe(true);
   });
 });

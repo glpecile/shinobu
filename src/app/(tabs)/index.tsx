@@ -40,7 +40,11 @@ import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
-import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
+import {
+  hasUpNextSources,
+  hasYourShowsSources,
+  useRefetchUnifiedFeed,
+} from '@/state/queries/use-unified-feed';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { useConnectedProviders } from '@/state/session';
@@ -150,10 +154,11 @@ function FeedScreen() {
     ? getLetterboxdUsername()
     : null;
   const animeSeason = animeSeasonAt(new Date());
-  // Up Next is computed from Trakt shows and AniList anime only — with neither
-  // connected there is nothing to compute, so the sections never mount.
-  const upNextConnected =
-    feedProviders.includes('trakt') || feedProviders.includes('anilist');
+  // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
+  // with none connected there is nothing to compute, so the sections never
+  // mount. The predicate lives with the gather it gates (`use-unified-feed.ts`)
+  // rather than being re-derived here, which is how Simkl went missing from it.
+  const upNextConnected = hasUpNextSources(connected);
   const refetchFeed = useRefetchUnifiedFeed();
   // Bumped on pull-to-refresh so failed (boundary-hidden) rows re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
@@ -222,7 +227,10 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {feedProviders.includes('trakt') && (
+        {/* Trakt's watched shows merged with Simkl's — either leg alone is a
+            full row (`useSuspenseYourShowsQuery`), so this must not gate on
+            Trakt. */}
+        {hasYourShowsSources(connected) && (
           <SuspenseSection
             fallback={<FeedRowSkeleton />}
             resetKey={refreshCount}
