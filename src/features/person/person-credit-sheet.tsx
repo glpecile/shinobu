@@ -2,12 +2,10 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { Image } from '@/components/image';
 import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { Skeleton } from '@/components/skeleton';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
-import { initials } from '@/lib/initials';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useTmdbPersonQuery } from '@/state/queries/tmdb';
@@ -15,6 +13,16 @@ import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedPerson } from '@/types/media';
 
 import { personMetaLine } from './meta-line';
+import { PersonAvatar } from './person-avatar';
+
+/** "as Peter Parker / Spider-Man" for cast, the job list for crew. */
+export function creditRoleLine(credit: {
+  role: string;
+  kind: 'cast' | 'crew';
+}): string {
+  if (credit.role === '') return credit.kind === 'cast' ? 'Cast' : 'Crew';
+  return credit.kind === 'cast' ? `as ${credit.role}` : credit.role;
+}
 
 /**
  * A credit exactly as the detail screen's Cast/Crew rails hold it — the sheet
@@ -31,25 +39,6 @@ export interface PersonCredit {
   headshot: string;
   /** TMDB person id; absent for AniList people (name lookup instead). */
   tmdbId?: number;
-}
-
-function CreditAvatar({ credit }: { credit: PersonCredit }) {
-  if (credit.headshot === '') {
-    return (
-      <View className="w-20 h-20 rounded-full bg-background border border-border items-center justify-center">
-        <Text className="text-muted font-sans-semibold text-xl">
-          {initials(credit.name)}
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <Image
-      source={{ uri: credit.headshot }}
-      className="w-20 h-20 rounded-full bg-background"
-      contentFit="cover"
-    />
-  );
 }
 
 /**
@@ -133,25 +122,28 @@ export function PersonCreditSheet({
     <Sheet onClose={onClose} open={open && credit != null}>
       {credit != null && (
         <>
+          {/* Same header shape as the card-actions sheet — image, title, one
+              muted line under it — so the two long-press dialogs read as one
+              control. The role sits in that line rather than a paragraph below
+              a red CAST chip: it is the answer the long-press asked for, and
+              it wraps here instead of clamping (the card's ellipsis is the
+              whole reason this sheet exists). */}
           <View className="flex-row items-center gap-4">
-            <CreditAvatar credit={credit} />
+            <PersonAvatar
+              className="w-20 h-20"
+              headshot={credit.headshot}
+              name={credit.name}
+              textClassName="text-xl"
+            />
             <View className="flex-1">
               <Text className="text-2xl font-display text-foreground">
                 {credit.name}
               </Text>
-              <Text className="text-accent font-sans-semibold text-xs uppercase tracking-wider mt-1">
-                {credit.kind === 'cast' ? 'Cast' : 'Crew'}
+              <Text className="text-muted font-sans text-sm mt-1">
+                {creditRoleLine(credit)}
               </Text>
             </View>
           </View>
-
-          {credit.role !== '' && (
-            // The whole reason the sheet exists — never clamped here.
-            <Text className="text-foreground font-sans text-base mt-4">
-              {credit.kind === 'cast' ? 'as ' : ''}
-              {credit.role}
-            </Text>
-          )}
 
           <CreditMeta
             loading={credit.tmdbId != null && hasTmdb && personQuery.isPending}
@@ -161,7 +153,7 @@ export function PersonCreditSheet({
           {hasTmdb && (
             <PresstableOpacity
               accessibilityRole="button"
-              className="flex-row items-center gap-3 rounded px-5 py-3 mt-6 border border-border"
+              className="flex-row items-center gap-3 rounded px-5 py-3 mt-5 border border-border"
               onPress={() => {
                 onClose();
                 pushRoute(
@@ -178,13 +170,14 @@ export function PersonCreditSheet({
             </PresstableOpacity>
           )}
 
-          {/* The person-page "View on" pills, unchanged — a person has no source
-              provider, so these gate purely on what's connected. Letterboxd
-              files people by craft, so the department matters: TMDB's is used
-              once it arrives, and until then a cast credit is Acting by
+          {/* The person-page "View on" links as sheet rows — a person has no
+              source provider, so these gate purely on what's connected.
+              Letterboxd files people by craft, so the department matters: TMDB's
+              is used once it arrives, and until then a cast credit is Acting by
               definition (a crew one just takes the builder's own default). */}
           <PersonLinksSection
             enabled={open}
+            onOpened={onClose}
             person={{
               name: credit.name,
               ...(person?.knownForDepartment != null
@@ -193,6 +186,7 @@ export function PersonCreditSheet({
                   ? { knownForDepartment: 'Acting' }
                   : {}),
             }}
+            variant="rows"
           />
         </>
       )}

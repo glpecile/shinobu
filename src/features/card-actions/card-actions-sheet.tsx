@@ -6,12 +6,16 @@ import { useCSSVariable } from 'uniwind';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
-import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
+import {
+  creditRoleLine,
+  PersonAvatar,
+  type PersonCredit,
+} from '@/features/person';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -20,9 +24,8 @@ import {
   WatchlistRemovePicker,
 } from '@/features/watchlist-media/watchlist-picker-sheet';
 import type { WatchlistEntry } from '@/features/watchlist/types';
+import { ProviderLinkRow } from '@/features/provider-links/provider-link-row';
 import { haptics } from '@/lib/haptics';
-import { openExternalUrl } from '@/lib/open-external-url';
-import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import {
   providerLinksFor,
@@ -84,6 +87,13 @@ interface CardActionsSheetProps {
    * missing the item), because "already on all of them" is a state only a
    * watchlist row can be in.
    */
+  /**
+   * Why this item is on the page it was long-pressed from: the person whose
+   * filmography row it sits in, and their character or job on it (plan 0035
+   * R14 put that on the card, clamped to a line — this is where the rest of it
+   * lives). Null everywhere else; a feed card has no such context.
+   */
+  credit?: Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'> | null;
   watchlistRemoval?: {
     entry: WatchlistEntry;
     errors: readonly ProviderFailure[];
@@ -130,6 +140,7 @@ export function CardActionsSheet({
   providerLinks = 'source',
   canHide = true,
   canWatchlist = true,
+  credit = null,
   watchlistRemoval = null,
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
@@ -220,6 +231,29 @@ export function CardActionsSheet({
             </View>
           </View>
 
+          {/* The credit that put this card in front of you (person/studio
+              pages). The card clamps "2026 · Frank Castle" to one line, so the
+              full character or job goes here — unclamped, with the face beside
+              it, the same header shape the credit sheet uses. */}
+          {credit != null && (
+            <View className="flex-row items-center gap-3 mt-4">
+              <PersonAvatar
+                className="w-10 h-10 bg-surface"
+                headshot={credit.headshot}
+                name={credit.name}
+                textClassName="text-xs"
+              />
+              <View className="flex-1">
+                <Text className="text-foreground font-sans-semibold text-sm">
+                  {credit.name}
+                </Text>
+                <Text className="text-muted font-sans text-sm">
+                  {creditRoleLine(credit)}
+                </Text>
+              </View>
+            </View>
+          )}
+
           <View className="mt-5">
             {/* key: the button's sheet/result state must not leak between items. */}
             {/* Same placement predicate the details screen uses (plan 0031
@@ -276,26 +310,12 @@ export function CardActionsSheet({
             </Text>
           </PresstableOpacity>
           {links.map((link) => (
-            <PresstableOpacity
-              className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
+            <ProviderLinkRow
+              className="mt-2"
               key={link.provider}
-              onPress={() => {
-                haptics.selection();
-                void openExternalUrl(link.url);
-                // A new tab steals focus on web — closing the sheet here would
-                // animate it shut in a now-backgrounded tab, which reads as
-                // broken when the user switches back. Native's in-app browser
-                // has no such background reflow, so it closes right after
-                // opening, like every other action row.
-                if (process.env.EXPO_OS !== 'web') onClose();
-              }}
-            >
-              <ProviderIcon id={link.provider} size={18} />
-              <Text className="text-foreground font-sans-semibold text-base flex-1">
-                View on {PROVIDERS[link.provider].label}
-              </Text>
-              <Ionicons color={mutedColor} name="open-outline" size={16} />
-            </PresstableOpacity>
+              link={link}
+              onOpened={onClose}
+            />
           ))}
           {canHide && (
             <PresstableOpacity

@@ -22,7 +22,11 @@ import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
-import { PersonCreditSheet, type PersonCredit } from '@/features/person';
+import {
+  PersonAvatar,
+  PersonCreditSheet,
+  type PersonCredit,
+} from '@/features/person';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
 import { ReleaseTimeline } from '@/features/release-timeline';
 import { StudioSheet } from '@/features/studio';
@@ -33,7 +37,6 @@ import {
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
-import { initials } from '@/lib/initials';
 import {
   applyPrimaryMetadata,
   mergeCatalogueMetadata,
@@ -238,19 +241,12 @@ function PersonCard({
 
   const content = (
     <>
-      {credit.headshot !== '' ? (
-        <Image
-          source={{ uri: credit.headshot }}
-          className="w-20 h-20 rounded-full bg-surface"
-          contentFit="cover"
-        />
-      ) : (
-        <View className="w-20 h-20 rounded-full bg-surface border border-border items-center justify-center">
-          <Text className="text-muted font-sans-semibold text-lg">
-            {initials(credit.name)}
-          </Text>
-        </View>
-      )}
+      <PersonAvatar
+        className="w-20 h-20 bg-surface"
+        headshot={credit.headshot}
+        name={credit.name}
+        textClassName="text-lg"
+      />
       <Text
         className="text-foreground font-sans-semibold text-xs text-center mt-2"
         numberOfLines={1}

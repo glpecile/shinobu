@@ -177,6 +177,13 @@ export interface PersonCreditRow {
    * person's credit, not about the media.
    */
   details: Record<string, string>;
+  /**
+   * The same credit without the year prefix `details` carries — the role on its
+   * own, for surfaces that already state the year (the card-actions sheet's
+   * header line is "MOVIE · 2026", so its credit line says "as Frank Castle"
+   * and not "2026 · Frank Castle" a second time).
+   */
+  roles: Record<string, string>;
 }
 
 export interface NormalizedStudio {

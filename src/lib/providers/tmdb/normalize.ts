@@ -64,7 +64,8 @@ export interface PersonMatch {
   name: string;
 }
 
-const ACTING_ROLE = 'Acting';
+/** The cast row's department name — every other row is a crew department. */
+export const ACTING_ROLE = 'Acting';
 
 function normalizePerson(raw: TmdbPersonResponse): NormalizedPerson {
   return {
@@ -242,6 +243,11 @@ export function normalizeCreditRows(
           sorted
             .map((entry) => [entry.item.id, creditSubtitle(entry)] as const)
             .filter(([, subtitle]) => subtitle !== ''),
+        ),
+        roles: Object.fromEntries(
+          sorted
+            .map((entry) => [entry.item.id, entry.details.join(', ')] as const)
+            .filter(([, role]) => role !== ''),
         ),
       };
     })

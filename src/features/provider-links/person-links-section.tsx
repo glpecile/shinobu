@@ -11,6 +11,8 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import { useAniListStaffIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
+import { ProviderLinkRows } from './provider-link-row';
+
 /**
  * The `ProviderLinksSection` sibling for `/person/[id]` — same pill treatment,
  * same `openExternalUrl` hand-off, different subject. A person has no *source*
@@ -29,14 +31,21 @@ import { useConnectedProviders } from '@/state/session';
  *
  * `enabled` defaults on for the person route (mounted = wanted). A sheet passes
  * its own open flag so a rail of 20 cards costs 0 requests until one is
- * long-pressed.
+ * long-pressed — and `variant="rows"`, so the links land as full-width action
+ * rows continuing the stack above them instead of a pill cluster.
  */
 export function PersonLinksSection({
   person,
   enabled = true,
+  variant = 'pills',
+  onOpened,
 }: {
   person: UrlPerson;
   enabled?: boolean;
+  /** `'pills'` on a page, `'rows'` inside a sheet — see `ProviderLinkRow`. */
+  variant?: 'pills' | 'rows';
+  /** Forwarded to the rows variant (native-only sheet dismissal). */
+  onOpened?: () => void;
 }) {
   const connected = useConnectedProviders();
   const muted = useCSSVariable('--color-muted');
@@ -59,6 +68,9 @@ export function PersonLinksSection({
   }
 
   if (links.length === 0) return null;
+
+  if (variant === 'rows')
+    return <ProviderLinkRows className="mt-2" links={links} onOpened={onOpened} />;
 
   return (
     <View className="mt-8">

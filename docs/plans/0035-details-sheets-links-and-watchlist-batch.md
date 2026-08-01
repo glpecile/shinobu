@@ -222,6 +222,21 @@ flowchart TB
   - Simkl: missing `notAiredEpisodes` → rewatch path unchanged.
 - **Verification:** `bun test`; manual: an announced-but-unaired show's details page shows a disabled "Hasn't aired yet" CTA and no celebration line; a genuinely finished show still offers "Log rewatch".
 
+### U8. One sheet language for people (owner follow-up, 2026-08-01)
+
+- **Goal:** the two long-press dialogs a person surface can raise read as one control — and the filmography card's clamped credit finishes its sentence in the sheet.
+- **Requirements:** R20, R21 (added below).
+- **Dependencies:** U3, U6.
+- **Files:** `src/lib/providers/tmdb/normalize.ts` (+ test), `src/types/media.ts`, `src/features/person/person-avatar.tsx` (new), `src/features/person/person-credit-sheet.tsx`, `src/features/provider-links/provider-link-row.tsx` (new), `src/features/provider-links/person-links-section.tsx`, `src/features/card-actions/{card-actions-sheet,use-card-actions}.ts(x)`, `src/app/person/[id].tsx`, `src/app/details/[id].tsx`.
+- **Approach:** `PersonCreditRow` gains `roles` — the credit R14 already computes, without the year prefix, since the card sheet's header line already says "MOVIE · 2026". `/person` passes `{name, headshot, role, kind}` alongside the item into `useCardActions`, which forwards it to a credit line under the sheet's header (avatar + name + `creditRoleLine`). The credit sheet adopts the card sheet's header shape: the role moves into the muted line under the name (replacing the accent CAST/CREW chip and the paragraph below it) and its provider links render as full-width rows (`ProviderLinkRow`, extracted from the card sheet's own row) instead of the page's pill cluster. Avatar-with-initials-fallback is extracted once (`PersonAvatar`) and reused by the Cast/Crew cards.
+- **Test scenarios:** `roles` drops the year prefix; a yearless-but-dated credit ("2001", no job) has a subtitle key and no `roles` key.
+- **Verification:** `bun test`, `bun lint`, `bun check:classnames`; manual: long-press a filmography card → the character/job that the card clamps is spelled out under the poster with the person's face; long-press a Cast card → header, meta line, filmography row and link rows, all in the card sheet's rhythm.
+
+**Requirements added by U8**
+
+- R20. The card-actions sheet opened from `/person` states the credit that put the item there: the person's name, their headshot, and the unclamped character or job. Every other surface passes no credit and is unchanged.
+- R21. The credit sheet and the card-actions sheet share one header shape (image, title, one muted line) and one action-row treatment; provider links inside a sheet are rows, not pills (pills stay the page treatment).
+
 ---
 
 ## Verification Contract

@@ -214,6 +214,36 @@ describe('normalizeCreditRows', () => {
     });
   });
 
+  /**
+   * `roles` is the same credit without the year the card's subtitle carries —
+   * it feeds the card-actions sheet, whose header already reads "MOVIE · 2026".
+   */
+  test('roles carry the bare credit, no year prefix and no yearless key', () => {
+    const rows = normalizeCreditRows(
+      personResponse({
+        combined_credits: {
+          cast: [movie(1, 'Top Gun', '1986-05-16', { character: 'Maverick' })],
+          crew: [
+            movie(2, 'Mission', '1996-05-22', {
+              department: 'Directing',
+              job: 'Director',
+            }),
+            // Year but no job: a subtitle ("2001"), never a role.
+            movie(3, 'Untold', '2001-01-01', { department: 'Directing' }),
+          ],
+        },
+      }),
+      NOW,
+    );
+
+    expect(rows.find((row) => row.role === 'Acting')?.roles).toEqual({
+      'tmdb-movie-1': 'Maverick',
+    });
+    expect(rows.find((row) => row.role === 'Directing')?.roles).toEqual({
+      'tmdb-movie-2': 'Director',
+    });
+  });
+
   test('carries character/job details keyed by item id', () => {
     const rows = normalizeCreditRows(
       personResponse({
