@@ -97,6 +97,35 @@ export function unwatchlistConfirmLabel(
   return count > 1 ? `Remove from ${count} ${noun}s` : `Remove from ${noun}`;
 }
 
+/**
+ * The destructive-removal warning (plan 0035 R3/R4, KTD2), or `null` when the
+ * removal is the ordinary one.
+ *
+ * AniList has no "un-status" that keeps an entry, so removing something the
+ * user is *watching* means deleting the whole `MediaList` entry — progress,
+ * score, notes, dates, custom lists. The picker shows this and takes a second,
+ * explicit press before it passes `allowDestructive` down. A bare `PLANNING`
+ * entry keeps its silent path (R4): nothing is lost there, and the adapter's own
+ * refusal guard still stands behind it.
+ *
+ * Names AniList deliberately — the no-provider-names rule is about *CTA labels*
+ * (R38); a warning that won't say which tracker it's about is not a warning.
+ * Generic about *what* is lost rather than reading the entry's exact contents:
+ * that would cost one extra request per picker open against the 30 req/min
+ * budget, and the delete's own fresh read is the authority regardless (KTD2).
+ */
+export function destructiveRemoveWarning(params: {
+  anilistStatus?: 'CURRENT' | 'PLANNING';
+  targets: readonly ProviderId[];
+}): string | null {
+  if (params.anilistStatus !== 'CURRENT') return null;
+  if (!params.targets.includes('anilist')) return null;
+  return 'AniList can’t un-plan something you’re watching, so this deletes your whole AniList entry — progress, score, notes and dates included.';
+}
+
+/** The second, explicit press behind that warning. Provider-free, per R38. */
+export const DESTRUCTIVE_REMOVE_CONFIRM_LABEL = 'Remove anyway';
+
 /** The clean-report toast's headline (plan 0032 R6) — the message names the providers. */
 export function addedToastTitle(item: Pick<NormalizedMediaItem, 'type'>): string {
   return isReadIntent(item) ? 'Added to reading list' : 'Added to watchlist';

@@ -97,6 +97,7 @@ interface MergedEntry {
   sources: Set<ProviderId>;
   sourceIds: string[];
   addedAt?: string;
+  anilistStatus?: 'CURRENT' | 'PLANNING';
 }
 
 function absorb(entry: MergedEntry, input: WatchlistInput): void {
@@ -113,6 +114,9 @@ function absorb(entry: MergedEntry, input: WatchlistInput): void {
   if (input.addedAt != null && (entry.addedAt == null || input.addedAt > entry.addedAt)) {
     entry.addedAt = input.addedAt;
   }
+  // Only AniList rows carry one, so a merged row can never hold two — no
+  // precedence rule needed here, unlike `item`.
+  if (input.anilistStatus != null) entry.anilistStatus = input.anilistStatus;
 }
 
 /** `addedAt` descending, undated last — stable, so ties keep gather order. */
@@ -143,6 +147,9 @@ export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEn
         sources: new Set([input.source]),
         sourceIds: [input.item.id],
         ...(input.addedAt != null ? { addedAt: input.addedAt } : {}),
+        ...(input.anilistStatus != null
+          ? { anilistStatus: input.anilistStatus }
+          : {}),
       };
       merged.push(entry);
     } else {
@@ -163,6 +170,9 @@ export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEn
       sources: PROVIDER_ORDER.filter((id) => entry.sources.has(id)),
       sourceIds: entry.sourceIds,
       ...(entry.addedAt != null ? { addedAt: entry.addedAt } : {}),
+      ...(entry.anilistStatus != null
+        ? { anilistStatus: entry.anilistStatus }
+        : {}),
     }))
     .sort(byAddedAtDesc);
 }

@@ -9,6 +9,7 @@ import {
   addedToastTitle,
   addedToSentence,
   alreadyOnSentence,
+  destructiveRemoveWarning,
   failedOnSentence,
   isUnwatchlistCtaSettled,
   isWatchlistCtaSettled,
@@ -308,5 +309,42 @@ describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
     expect(addedToastTitle(manga)).toBe('Added to reading list');
     expect(removedToastTitle(film)).toBe('Removed from watchlist');
     expect(removedToastTitle(manga)).toBe('Removed from reading list');
+  });
+});
+
+/**
+ * Plan 0035 R3/R4. The warning is the price of letting a CURRENT entry be
+ * removed at all: the delete destroys progress, score and notes, so a removal
+ * that fires without this text on screen is data loss the user never agreed to.
+ * R4's other half matters just as much — a bare PLANNING removal keeps its
+ * silent path and gains no new friction.
+ */
+describe('destructiveRemoveWarning (plan 0035 R3/R4)', () => {
+  test('a CURRENT AniList row warns, and names what is lost', () => {
+    const warning = destructiveRemoveWarning({
+      anilistStatus: 'CURRENT',
+      targets: ['trakt', 'anilist'],
+    });
+    expect(warning).toContain('deletes your whole AniList entry');
+    expect(warning).toContain('progress');
+  });
+
+  test('a PLANNING row is the silent path — no warning at all (R4)', () => {
+    expect(
+      destructiveRemoveWarning({ anilistStatus: 'PLANNING', targets: ['anilist'] }),
+    ).toBeNull();
+  });
+
+  test('a row with no AniList status (no AniList leg) never warns', () => {
+    expect(destructiveRemoveWarning({ targets: ['trakt', 'anilist'] })).toBeNull();
+  });
+
+  test('deselecting AniList clears the warning — nothing destructive is left to run', () => {
+    expect(
+      destructiveRemoveWarning({
+        anilistStatus: 'CURRENT',
+        targets: ['trakt', 'letterboxd'],
+      }),
+    ).toBeNull();
   });
 });

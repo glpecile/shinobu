@@ -78,7 +78,7 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
     Effect.runPromise(removeFromTraktWatchlist(traktDeps(), item)),
   letterboxd: ({ item }) =>
     Effect.runPromise(removeFromLetterboxdWatchlist(letterboxdDeps(), item)),
-  anilist: ({ item }) => {
+  anilist: ({ item, allowDestructive }) => {
     const mediaId = item.externalIds.anilist;
     // Reachable only for an entry AniList's own leg produced, so this is
     // defensive rather than expected — and a reasoned skip rather than an error
@@ -91,8 +91,15 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
     }
     // The delete's guard (a fresh read of status/progress/score/notes/custom
     // lists, R36) lives inside the effect, never here: reading the cached entry
-    // to decide would be the stale guard KTD-2 prohibits.
-    return Effect.runPromise(deleteAniListEntry(anilistDeps(), { mediaId }));
+    // to decide would be the stale guard KTD-2 prohibits. `allowDestructive`
+    // lifts that guard's *refusal* only (plan 0035 R3) — the fresh read and the
+    // fresh id still run — and only when the picker took an explicit confirm.
+    return Effect.runPromise(
+      deleteAniListEntry(anilistDeps(), {
+        mediaId,
+        ...(allowDestructive === true ? { allowDestructive: true } : {}),
+      }),
+    );
   },
 };
 
@@ -208,6 +215,7 @@ export async function runWatchlistRemove(
 
   const report = await runProviderWrites(deps.adapters, plan.targets, {
     item: plan.item,
+    ...(variables.allowDestructive === true ? { allowDestructive: true } : {}),
   });
 
   // Inside the mutation, never in `onSuccess` — the sheet this is invoked from

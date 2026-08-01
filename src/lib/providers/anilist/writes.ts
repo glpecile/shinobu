@@ -284,6 +284,13 @@ function refusalClause(entry: NonNullable<AniListEntryState['entry']>): string |
  *    (`AniListEntryState.entry.id`).
  * 4. otherwise → `DeleteMediaListEntry(id)`.
  *
+ * **`allowDestructive` (plan 0035 R3/KTD2)** opts out of branch 2 and **only**
+ * branch 2. A watching (`CURRENT`) anime is watchlisted now, so it has to be
+ * removable — and AniList still has no un-status, so removal is a delete of the
+ * whole entry. The caller earns the flag by putting an explicit destructive
+ * confirm in front of it that says what is lost; this effect keeps every other
+ * branch, including both prohibitions below. Never default it to `true`.
+ *
  * **Prohibition, load-bearing here in a way it is not anywhere else:** the guard
  * is a fresh in-effect `getEntryState`, every time, and the delete uses **the id
  * that read returned** — never the cached `entryId` carried on
@@ -297,7 +304,7 @@ function refusalClause(entry: NonNullable<AniListEntryState['entry']>): string |
  */
 export function deleteAniListEntry(
   deps: AniListDeps,
-  params: { mediaId: number },
+  params: { mediaId: number; allowDestructive?: boolean },
 ): Effect.Effect<ProviderWriteResult, ProviderError> {
   return Effect.gen(function* () {
     // Branch 0. Fail-closed: the mutation is unreachable from here.
@@ -319,8 +326,10 @@ export function deleteAniListEntry(
         reason: "wasn't on your AniList list",
       } satisfies ProviderWriteResult;
     }
-    // Branch 2.
-    const refusal = refusalClause(entry);
+    // Branch 2 — skipped wholesale under `allowDestructive`, where the user has
+    // already been told this deletes the entry and said yes anyway. If the
+    // fresh read turned out bare after all, the delete was safe regardless.
+    const refusal = params.allowDestructive === true ? null : refusalClause(entry);
     if (refusal != null) {
       return {
         status: 'skipped',
@@ -335,7 +344,8 @@ export function deleteAniListEntry(
       } satisfies ProviderWriteResult;
     }
 
-    // Branch 4. Bare PLANNING, and the id is the fresh read's, not a cached one.
+    // Branch 4. Bare PLANNING (or a confirmed destructive removal), and the id
+    // is the fresh read's, not a cached one.
     const result = yield* anilistAuthedRequest<DeleteMediaListEntryResponse>(
       deps,
       DELETE_MEDIA_LIST_ENTRY,

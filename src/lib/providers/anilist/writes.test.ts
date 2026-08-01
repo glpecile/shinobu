@@ -763,3 +763,134 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
     expect(seen.mutations).not.toContainEqual({ id: staleEntryId });
   });
 });
+
+/**
+ * Plan 0035 R3/R5. A watching anime is watchlisted now, so it has to be
+ * removable — and AniList still has no un-status, so the removal deletes the
+ * whole entry. `allowDestructive` lifts the refusal clause and **only** the
+ * refusal clause: the fresh read, the fresh id, the no-entry skip and the
+ * fail-closed path are the same code they were before the flag existed. The
+ * cases below are the ones that would let a caller destroy an entry it never
+ * warned about.
+ */
+describe('deleteAniListEntry — allowDestructive lifts the refusal and nothing else', () => {
+  test('a CURRENT entry with progress and a score is deleted by the fresh read id', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: {
+            id: 88_214,
+            status: 'CURRENT',
+            progress: 7,
+            repeat: 1,
+            score: 82,
+            notes: 'best girl',
+          },
+        }),
+        { mediaId: 104578, allowDestructive: true },
+      ),
+    );
+    expect(result).toEqual({ status: 'ok' });
+    expect(seen.mutations).toEqual([{ id: 88_214 }]);
+    expect(seen.entryReads).toBe(1);
+  });
+
+  test('the guard read still fails closed — no mutation on a destructive removal either', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      Effect.either(
+        deleteAniListEntry(
+          watchlistDeps(
+            seen,
+            { entry: { id: 88_214, status: 'CURRENT', progress: 7, repeat: 0 } },
+            'network',
+          ),
+          { mediaId: 104578, allowDestructive: true },
+        ),
+      ),
+    );
+    expect(result._tag).toBe('Left');
+    expect(seen.mutations).toEqual([]);
+  });
+
+  test('no entry still skips — the flag authorizes a delete, it does not invent one', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(watchlistDeps(seen, { entry: null }), {
+        mediaId: 104578,
+        allowDestructive: true,
+      }),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: "wasn't on your AniList list",
+    });
+    expect(seen.mutations).toEqual([]);
+  });
+
+  test('an entry that decodes without an id is still not a deletion target', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, { entry: { status: 'CURRENT', progress: 7, repeat: 0 } }),
+        { mediaId: 104578, allowDestructive: true },
+      ),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'your AniList entry has no id to remove by',
+    });
+    expect(seen.mutations).toEqual([]);
+  });
+
+  test('the fresh read id wins over the cached hint here too (R5)', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: { id: 901, status: 'CURRENT', progress: 3, repeat: 0 },
+        }),
+        { mediaId: 104578, allowDestructive: true },
+      ),
+    );
+    expect(result).toEqual({ status: 'ok' });
+    expect(seen.mutations).toEqual([{ id: 901 }]);
+    expect(seen.mutations).not.toContainEqual({ id: 700 });
+  });
+
+  test('without the flag a CURRENT entry still refuses, with the exact same message', async () => {
+    // The regression that matters: adding an opt-in must not soften the default.
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: { id: 88_214, status: 'CURRENT', progress: 7, repeat: 0 },
+        }),
+        { mediaId: 104578 },
+      ),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'removing would delete your whole AniList entry, which is CURRENT',
+    });
+    expect(seen.mutations).toEqual([]);
+  });
+
+  test('allowDestructive: false is the default path, not a second opt-in spelling', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      deleteAniListEntry(
+        watchlistDeps(seen, {
+          entry: { id: 88_214, status: 'COMPLETED', progress: 24, repeat: 0 },
+        }),
+        { mediaId: 104578, allowDestructive: false },
+      ),
+    );
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'removing would delete your whole AniList entry, which is COMPLETED',
+    });
+    expect(seen.mutations).toEqual([]);
+  });
+});

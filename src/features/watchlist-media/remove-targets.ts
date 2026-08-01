@@ -30,11 +30,19 @@ export interface UnwatchlistMediaVariables {
    * `mutationKey` can carry its id (R18's shared pending guard, R38).
    */
   providers?: ProviderId[];
+  /**
+   * The user saw the destructive warning and pressed again (plan 0035 R3).
+   * Passed straight to `deleteAniListEntry`, where it lifts the refusal guard
+   * and nothing else — the fresh-read/fresh-id invariants (R5) are untouched.
+   * Never defaulted on: without an explicit confirm this stays absent.
+   */
+  allowDestructive?: boolean;
 }
 
-/** What every removal adapter sees — the payload is the item and nothing else (KTD-7). */
+/** What every removal adapter sees — the item, plus the destructive opt-in (KTD-7). */
 export interface WatchlistRemovePayload {
   item: NormalizedMediaItem;
+  allowDestructive?: boolean;
 }
 
 export interface WatchlistRemovePlan {

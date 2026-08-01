@@ -199,6 +199,32 @@ export async function fetchPlannedAnime(
   return entries.filter((entry) => entry.status === 'PLANNING');
 }
 
+/**
+ * The **watchlist** slice: CURRENT ∪ PLANNING off the same cached read (plan
+ * 0035 R1/KTD1). An anime you are actively watching is on your watchlist —
+ * that is what the owner means by watchlisted — so the surface reads both
+ * statuses while every other consumer keeps its own narrower slice.
+ *
+ * A **fourth selector, never a widened third one**. `fetchPlannedAnime` stays
+ * PLANNING-only, `fetchCurrentAnime` stays CURRENT-only, and Up Next's gate
+ * (`features/up-next/compute.ts`) still confines PLANNING to Calendar. That
+ * separation is the whole point of
+ * `docs/solutions/anilist-shared-list-query-status-gate.md`: the gate restricts
+ * what PLANNING may reach, so letting CURRENT reach one more read-only surface
+ * does not touch it. Editing any existing selector instead of adding this one
+ * is what re-opens the regression.
+ *
+ * Still 0 extra requests — same cached `currentAnimeEntries()` payload.
+ */
+export async function fetchWatchlistAnime(
+  queryClient: QueryClient,
+): Promise<AniListCurrentEntry[]> {
+  const entries = await fetchCurrentAnimeEntries(queryClient);
+  return entries.filter(
+    (entry) => entry.status === 'PLANNING' || entry.status === 'CURRENT',
+  );
+}
+
 export function fetchTrendingAnime(options: { limit?: number } = {}): Promise<NormalizedMediaItem[]> {
   return Effect.runPromise(getTrendingAnime(anilistDeps(), options));
 }
