@@ -5,15 +5,19 @@ import { httpFetch } from '@/lib/http/client';
 import { exchangeSimklCode as exchangeSimklCodeForSession } from '@/lib/providers/simkl/auth';
 import type { SimklDeps } from '@/lib/providers/simkl/deps';
 import type {
+  SimklLibrary,
   SimklLibraryBucket,
+  SimklLibraryEntry,
   SimklTrendingKind,
   SimklWatchStatus,
 } from '@/lib/providers/simkl/normalize';
 import {
+  getAllItems,
   getUserSettings,
   type SimklCalendarKind,
 } from '@/lib/providers/simkl/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
+import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
 import {
   clearProviderSession,
@@ -104,6 +108,65 @@ export const simklQueryKeys = {
    *  whole `['simkl']` root, so a reconnect as another user can't reuse it. */
   userSettings: () => [...simklQueryKeys.all, 'user-settings'] as const,
 };
+
+/**
+ * How long the `watching` snapshot rides the cache — progress moves only when
+ * the user logs, and a log already invalidates `simklQueryKeys.allItemsRoot()`
+ * explicitly, so between logs it stays warm (the Trakt show-progress window).
+ */
+export const SIMKL_WATCHING_STALE_MS = 15 * 60_000;
+
+/**
+ * The `watching` snapshot's query options — one definition shared by Up
+ * Next's Continue Watching gather (`up-next.ts`) and the details screen's
+ * per-show entry hook below, so both ride a single cache entry: per-item
+ * `status`, per-episode watched instants, and the server-computed
+ * `next_to_watch` pointer with its air instant.
+ */
+export function simklWatchingLibraryQuery() {
+  return {
+    queryKey: simklQueryKeys.allItems(undefined, 'watching'),
+    queryFn: (): Promise<SimklLibrary> =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'watching' })),
+    staleTime: SIMKL_WATCHING_STALE_MS,
+  };
+}
+
+function findShowEntry(
+  library: SimklLibrary,
+  item: NormalizedMediaItem,
+): SimklLibraryEntry | null {
+  const simklId = item.externalIds.simkl;
+  const tmdbId = item.externalIds.tmdb;
+  for (const entry of [...library.shows, ...library.anime]) {
+    if (simklId != null && entry.item.externalIds.simkl === simklId) return entry;
+    if (tmdbId != null && entry.item.externalIds.tmdb === tmdbId) return entry;
+  }
+  return null;
+}
+
+/**
+ * One show's Simkl library entry (watched keys, next-to-watch pointer) from
+ * the `watching` snapshot — the Trakt-less source behind the TV details
+ * screen's checkmarks and one-tap log button (plan 0034 R9's detail-screen
+ * counterpart). Deliberately the *watching* filter, not the full library: it's
+ * the snapshot Continue Watching already caches, so the common case costs no
+ * request — a show parked outside `watching` just degrades to no checkmarks,
+ * exactly like a disconnected Trakt. `null` data means "answered, not in the
+ * watching list".
+ */
+export function useSimklWatchingEntryQuery(params: {
+  item: NormalizedMediaItem | null;
+  enabled?: boolean;
+}) {
+  const { item, enabled = true } = params;
+  return useQuery({
+    ...simklWatchingLibraryQuery(),
+    enabled: enabled && item != null,
+    select: (library: SimklLibrary) =>
+      item == null ? null : findShowEntry(library, item),
+  });
+}
 
 /**
  * The connected Simkl account's username, for "connected as who" on Manage

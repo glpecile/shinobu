@@ -45,6 +45,10 @@ export const tmdbQueryKeys = {
    */
   catalogue: (kind: 'movie' | 'tv', tmdbId: number) =>
     [...tmdbQueryKeys.all, 'catalogue', kind, tmdbId] as const,
+  /** Full seasons + episodes for one show (`getTvSeasons`) — the Trakt-less
+   *  leg of `state/queries/show-seasons.ts`. */
+  seasons: (tmdbId: number) =>
+    [...tmdbQueryKeys.all, 'seasons', tmdbId] as const,
   /** Derived from SEARCH_QUERY_ROOTS so the details cache scan finds results. */
   search: (query: string) => [...SEARCH_QUERY_ROOTS.tmdb, query] as const,
 };

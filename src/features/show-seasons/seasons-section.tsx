@@ -7,9 +7,12 @@ import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { hasAired } from '@/lib/time/has-aired';
 import {
-  useSuspenseTraktShowSeasonsQuery,
-  useTraktShowProgressQuery,
-} from '@/state/queries/trakt';
+  useShowSeasonsSource,
+  useSuspenseShowSeasonsQuery,
+  type ShowSeasonsSource,
+} from '@/state/queries/show-seasons';
+import { useSimklWatchingEntryQuery } from '@/state/queries/simkl';
+import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
 import type { ProviderId } from '@/lib/providers/types';
@@ -39,20 +42,34 @@ function SeasonsSkeleton() {
  * detail screen renders `<SeasonsSection item={item} />` which carries the
  * boundary + skeleton.
  */
-function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
-  const traktId = item.externalIds.trakt!;
+function SeasonAccordionList({
+  item,
+  source,
+}: {
+  item: NormalizedMediaItem;
+  source: ShowSeasonsSource;
+}) {
+  const traktId = item.externalIds.trakt;
   const connected = useConnectedProviders();
-  const { data: seasons } = useSuspenseTraktShowSeasonsQuery({ traktId });
+  const { data: seasons } = useSuspenseShowSeasonsQuery(source);
   // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   // A manual-only target still needs the sheet openable (plan 0022 R3) —
   // matches LogMediaButton's gate.
   const canLog = targets.length > 0 || manualTargets.length > 0;
-  // No progress read when Trakt isn't connected — checkmarks just don't render.
-  const { data: watched } = useTraktShowProgressQuery({
-    traktId,
-    enabled: connected.includes('trakt'),
+  // Watched checkmarks from whichever tracker knows: Trakt's progress read
+  // first, else the Simkl `watching` snapshot's per-episode keys (the same
+  // `"${season}-${number}"` format). Neither connected → no checkmarks.
+  const { data: traktWatched } = useTraktShowProgressQuery({
+    traktId: traktId ?? undefined,
+    enabled: connected.includes('trakt') && traktId != null,
   });
+  const { data: simklEntry } = useSimklWatchingEntryQuery({
+    item,
+    enabled: connected.includes('simkl'),
+  });
+  const watchedKeys =
+    traktWatched?.watchedKeys ?? simklEntry?.watchedKeys ?? null;
 
   const logMedia = useLogMedia();
   const [pending, setPending] = useState<PendingLog | null>(null);
@@ -138,7 +155,7 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
             });
           }}
           season={season}
-          watched={watched?.watchedKeys ?? null}
+          watched={watchedKeys}
         />
       ))}
 
@@ -169,13 +186,16 @@ function SeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
  * TV-only section for the detail screen (plan 0010). Wraps the season list in
  * a `SuspenseSection` so the seasons fetch never blocks the hero/poster/
  * overview above it; the rest of the screen lands first, the accordions drop
- * in once Trakt responds.
+ * in once the catalogue answers. Source-routed (plan 0034): Trakt when its
+ * BYO credentials exist, TMDB otherwise — so a Simkl-sourced show still gets
+ * its episode list; hidden only when no catalogue can answer.
  */
 export function SeasonsSection({ item }: { item: NormalizedMediaItem }) {
-  if (item.externalIds.trakt == null) return null;
+  const source = useShowSeasonsSource(item);
+  if (source == null) return null;
   return (
     <SuspenseSection fallback={<SeasonsSkeleton />}>
-      <SeasonAccordionList item={item} />
+      <SeasonAccordionList item={item} source={source} />
     </SuspenseSection>
   );
 }

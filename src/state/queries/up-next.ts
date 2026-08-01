@@ -47,7 +47,7 @@ import { fetchCurrentAnimeEntries } from './anilist';
 import { fetchLetterboxdReleaseInputs } from './letterboxd';
 import { cachedAniZipIds } from './mapping';
 import { none, settle } from './settle';
-import { simklDeps, simklQueryKeys } from './simkl';
+import { simklDeps, simklQueryKeys, simklWatchingLibraryQuery } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { UP_NEXT_QUERY_ROOT } from './up-next-cache';
 import { WATCHLIST_STALE_MS } from './watchlist';
@@ -243,18 +243,12 @@ function releaseInput(release: TraktCalendarRelease): ReleaseUpNextInput {
 const SIMKL_CALENDAR_STALE_MS = 60 * 60_000;
 
 /**
- * The `watching` snapshot: Continue Watching's Simkl source. Same freshness
- * reasoning as `SHOW_PROGRESS_STALE_MS` — progress moves only when the user
- * logs, and a log already invalidates `simklQueryKeys.allItemsRoot()`
- * explicitly, so between logs this rides the cache.
+ * The `watching` snapshot: Continue Watching's Simkl source. The query
+ * definition lives in `simkl.ts` (`simklWatchingLibraryQuery`) so the details
+ * screen's per-show entry hook shares this exact cache entry.
  */
 function simklWatchingLibrary(queryClient: QueryClient): Promise<SimklLibrary> {
-  return queryClient.fetchQuery({
-    queryKey: simklQueryKeys.allItems(undefined, 'watching'),
-    queryFn: () =>
-      Effect.runPromise(getAllItems(simklDeps(), { status: 'watching' })),
-    staleTime: SHOW_PROGRESS_STALE_MS,
-  });
+  return queryClient.fetchQuery(simklWatchingLibraryQuery());
 }
 
 /**

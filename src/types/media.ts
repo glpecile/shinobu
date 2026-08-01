@@ -199,7 +199,11 @@ export interface NormalizedEpisode {
   number: number;
   title: string;
   overview?: string;
-  /** ISO instant with offset/Z, or absent when Trakt has no air date. */
+  /**
+   * ISO instant with offset/Z (Trakt) or a bare `YYYY-MM-DD` date (TMDB, which
+   * carries no air time); absent when the source has no air date. Consumers
+   * compare it through `lib/time/has-aired.ts`, which handles both forms.
+   */
   firstAired?: string;
   /** Minutes. */
   runtime?: number;

@@ -1,4 +1,5 @@
 import { hasAired } from '@/lib/time/has-aired';
+import type { SimklLibraryEntry } from '@/lib/providers/simkl/normalize';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 
 export interface SeriesNextEpisode {
@@ -45,6 +46,52 @@ export function nextEpisodeFromProgress(
     aired: next.firstAired == null ? true : hasAired(next.firstAired),
     rewatch: false,
   };
+}
+
+/**
+ * Simkl's counterpart of `nextEpisodeFromProgress` (plan 0034): the `watching`
+ * snapshot's server-computed `next_to_watch` pointer → the episode a one-tap
+ * log would write. `null` means "can't name it" — the season picker takes
+ * over, never a guessed episode.
+ *
+ * - Entry with a pointer: that episode, air-gated by its instant when Simkl
+ *   carries one; a null date counts as aired (the same permissive
+ *   catalogue-gap rule the Trakt path applies — Up Next's stricter
+ *   aired-by-count arithmetic is for auto-surfacing, not for blocking a
+ *   deliberate log).
+ * - Entry without a pointer: everything's watched → the S1E1 rewatch wrap.
+ * - No entry (show isn't in `watching`): a fresh show starts at S1E1, a
+ *   finished one (progress ≥ total) wraps to a rewatch, and a mid-show one is
+ *   unnameable — the snapshot that knows its next episode doesn't list it.
+ * - A TV pointer without a season number (Simkl's absolute anime numbering
+ *   leaking onto a show) is unnameable rather than mislabeled as season 1.
+ */
+export function nextEpisodeFromSimklEntry(
+  item: { currentProgress: number; totalEpisodes: number | null | undefined },
+  entry: Pick<SimklLibraryEntry, 'nextToWatch'> | null,
+): SeriesNextEpisode | null {
+  if (entry != null) {
+    const next = entry.nextToWatch;
+    if (next == null) return { ...FIRST_EPISODE, aired: true, rewatch: true };
+    if (next.season == null) return null;
+    return {
+      season: next.season,
+      number: next.episode,
+      ...(next.title != null ? { title: next.title } : {}),
+      aired: next.date == null ? true : hasAired(next.date),
+      rewatch: false,
+    };
+  }
+  if (item.currentProgress === 0) {
+    return { ...FIRST_EPISODE, aired: true, rewatch: false };
+  }
+  if (
+    item.totalEpisodes != null &&
+    item.currentProgress >= item.totalEpisodes
+  ) {
+    return { ...FIRST_EPISODE, aired: true, rewatch: true };
+  }
+  return null;
 }
 
 /** Display form of an episode reference — "S2E5". */

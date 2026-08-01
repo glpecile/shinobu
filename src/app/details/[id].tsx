@@ -50,6 +50,10 @@ import {
   useSuspenseMediaDetailsQuery,
 } from '@/state/queries/media-details';
 import {
+  simklQueryKeys,
+  useSimklWatchingEntryQuery,
+} from '@/state/queries/simkl';
+import {
   traktQueryKeys,
   useTraktMediaImages,
   useTraktWatchedInfo,
@@ -174,6 +178,12 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     mediaId: item.externalIds.anilist,
     enabled: item.type === 'ANIME' && connected.includes('anilist'),
   });
+  // Simkl's leg (plan 0034): the `watching` snapshot's entry gives a
+  // Simkl-sourced show the same line Trakt-sourced pages carry.
+  const simklEntry = useSimklWatchingEntryQuery({
+    item,
+    enabled: item.type === 'TV' && connected.includes('simkl'),
+  });
   const accent = useCSSVariable('--color-accent');
 
   let label: string | null = null;
@@ -191,6 +201,9 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
           : `Watched · ${date}`;
   } else if (anilistEntry.data?.entry != null) {
     label = anilistWatchedLabel(anilistEntry.data.entry);
+  } else if (simklEntry.data != null && simklEntry.data.watchedKeys.size > 0) {
+    const count = simklEntry.data.watchedKeys.size;
+    label = `Watching · ${count} ${count === 1 ? 'episode' : 'episodes'} logged`;
   }
   if (label == null) return null;
 
@@ -641,6 +654,13 @@ export default function DetailsScreen() {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
     }
+    // The TMDB seasons leg (plan 0034) fails the same way a Trakt one can.
+    if (item?.externalIds.tmdb != null && item?.type === 'TV') {
+      queryClient.removeQueries({
+        queryKey: tmdbQueryKeys.seasons(item.externalIds.tmdb),
+        type: 'inactive',
+      });
+    }
     if (anilistId != null && item?.type === 'ANIME') {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
@@ -661,6 +681,10 @@ export default function DetailsScreen() {
         queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
       anilist: () =>
         queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
+      simkl: () =>
+        queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
+      tmdb: () =>
+        queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
     });
   }
 

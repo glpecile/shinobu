@@ -1,6 +1,9 @@
 import { Skeleton } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
-import { useTraktShowSeasonsQuery } from '@/state/queries/trakt';
+import {
+  useShowSeasonsQuery,
+  useShowSeasonsSource,
+} from '@/state/queries/show-seasons';
 import type { NormalizedMediaItem } from '@/types/media';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 
@@ -8,20 +11,17 @@ import { formatRuntime, seriesRuntimeMinutes } from './runtime';
  * TV-only stat tile shown next to Progress/Total (plan 0010): the complete
  * series runtime, summed from the seasons structure. Shares the seasons query
  * cache with the suspense `SeasonsSection` — no second fetch — so it renders a
- * skeleton until that data lands, then fills in the accurate total. Absent the
- * trakt id (e.g. an AniList-only anime series) it renders nothing.
+ * skeleton until that data lands, then fills in the accurate total. Absent any
+ * seasons source (no Trakt credentials and no TMDB token) it renders nothing.
  */
 export function SeriesRuntimeTile({ item }: { item: NormalizedMediaItem }) {
-  const traktId = item.externalIds.trakt;
-  // Hooks must run unconditionally (React's rules-of-hooks): keep the query
-  // mounted with a sentinel id when there's no trakt id, then render nothing
-  // for that case after the hooks return. Disabled so it never fetches.
-  const { data: seasons, isLoading } = useTraktShowSeasonsQuery({
-    traktId: traktId ?? -1,
-    enabled: traktId != null,
-  });
+  // Hooks must run unconditionally (React's rules-of-hooks): the query hook
+  // accepts a null source (disabled, never fetches) and the no-source case
+  // renders nothing after the hooks return.
+  const source = useShowSeasonsSource(item);
+  const { data: seasons, isLoading } = useShowSeasonsQuery(source);
 
-  if (traktId == null) return null;
+  if (source == null) return null;
   if (seasons == null) {
     return (
       <StatTile
