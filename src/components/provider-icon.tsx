@@ -5,8 +5,10 @@ import letterboxdIcon from '@/assets/providers/letterboxd.svg';
 import serializdIcon from '@/assets/providers/serializd.png';
 // Simkl's own favicon (simkl.com/apple-touch-icon.png, the black tile with
 // the white S) — the Serializd precedent: no simple-icons mark exists, so the
-// brand's real favicon is the logo. Its own background keeps it visible on
-// both themes.
+// brand's real favicon is the logo. Upstream ships the S knocked out as
+// transparency (iOS composites touch icons itself), which turned the mark
+// into a black blob on dark theme; the bundled copy has the glyph filled
+// with opaque white so the tile is self-contained and legible on both themes.
 import simklIcon from '@/assets/providers/simkl.png';
 import traktIcon from '@/assets/providers/trakt.svg';
 
