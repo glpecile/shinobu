@@ -311,29 +311,48 @@ function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
 function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
   const simklKeys = new Set(
     entries
-      .filter(
-        (entry) => entry.kind === 'episode' && entry.source === 'simkl',
-      )
-      .map((entry) =>
-        entry.item.externalIds.tmdb == null
-          ? null
-          : `${entry.item.externalIds.tmdb}:${entry.status}`,
-      )
-      .filter((key): key is string => key != null),
+      .filter((entry) => entry.kind === 'episode' && entry.source === 'simkl')
+      .flatMap((entry) =>
+        identityKeys(entry.item.externalIds).map(
+          (key) => `${key}:${entry.status}`,
+        ),
+      ),
   );
   if (simklKeys.size === 0) return [...entries];
   return entries.filter((entry) => {
     if (entry.kind !== 'episode' || entry.source === 'simkl') return true;
-    const tmdbId = entry.item.externalIds.tmdb;
-    return tmdbId == null || !simklKeys.has(`${tmdbId}:${entry.status}`);
+    return !identityKeys(entry.item.externalIds).some((key) =>
+      simklKeys.has(`${key}:${entry.status}`),
+    );
   });
+}
+
+/**
+ * Namespaced identity keys for cross-provider matching. TMDB alone is not
+ * enough: Simkl's anime calendar frequently states tvdb/imdb/mal but no tmdb,
+ * while an AniList entry's ani.zip mapping states tvdb/imdb — so the same show
+ * only collapses when the join considers every id both sides can carry (plan
+ * 0034 U9.5, the "Youjo Senki II" / "Saga of Tanya the Evil" duplicate).
+ * Namespacing keeps a tvdb number from ever colliding with a tmdb one.
+ */
+function identityKeys(
+  ids: UpNextEntry['item']['externalIds'],
+): string[] {
+  const keys: string[] = [];
+  if (ids.tmdb != null) keys.push(`tmdb:${ids.tmdb}`);
+  if (ids.tvdb != null) keys.push(`tvdb:${ids.tvdb}`);
+  if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
+  if (ids.mal != null) keys.push(`mal:${ids.mal}`);
+  if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
+  return keys;
 }
 
 /**
  * Same show tracked on both providers → one card. AniList wins for anime: it
  * carries the user's anime progress and the airing schedule, and its entry is
- * what the AniList write path advances. Unresolvable TMDB ids leave the
- * duplicate standing — R5 is explicitly best-effort.
+ * what the AniList write path advances. The join runs over every shared
+ * identity key (tmdb/tvdb/imdb/mal/anilist — see `identityKeys`); entries with
+ * no resolvable id at all leave the duplicate standing — R5 stays best-effort.
  *
  * Films dedupe on the *pair* `(tmdbId, release.kind)` instead (KTD-6): one film
  * on two watchlists is one TMDB id, but its theatrical and digital rows are
@@ -343,15 +362,16 @@ function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
 function dedupeByTmdb(
   anilist: readonly UpNextEntry[],
   others: readonly UpNextEntry[],
-  anilistTmdbIds: ReadonlySet<number>,
+  anilistIdKeys: ReadonlySet<string>,
 ): UpNextEntry[] {
   const kept = others.filter((entry) => {
     // Only an episode can be an AniList entry's twin: anime *films* never
     // produce an AniList entry, so a numeric collision between a TMDB movie id
     // and a TMDB series id must not eat a release row.
     if (entry.kind !== 'episode') return true;
-    const tmdbId = entry.item.externalIds.tmdb;
-    return tmdbId == null || !anilistTmdbIds.has(tmdbId);
+    return !identityKeys(entry.item.externalIds).some((key) =>
+      anilistIdKeys.has(key),
+    );
   });
   return dedupeReleases([...anilist, ...kept]);
 }
@@ -423,16 +443,19 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   // Only *surviving* AniList entries suppress their Trakt twin — an AniList
   // entry that classified to nothing (hiatus, caught up) must not silently
   // take the Trakt card down with it.
-  const anilistTmdbIds = new Set(
-    anilistPairs
-      .map((pair) => pair.input.tmdbId ?? pair.input.item.externalIds.tmdb)
-      .filter((id): id is number => id != null),
+  const anilistIdKeys = new Set(
+    anilistPairs.flatMap((pair) =>
+      identityKeys({
+        ...pair.input.item.externalIds,
+        ...(pair.input.tmdbId != null ? { tmdb: pair.input.tmdbId } : {}),
+      }),
+    ),
   );
 
   const entries = dedupeByTmdb(
     anilistEntries,
     [...episodeEntries, ...releaseEntries],
-    anilistTmdbIds,
+    anilistIdKeys,
   );
 
   return {

@@ -494,7 +494,23 @@ async function anilistInputs(
           const anilistId = entry.item.externalIds.anilist;
           if (anilistId == null) return entry;
           const mapped = await cachedAniZipIds(queryClient, { anilistId });
-          return mapped?.tmdb != null ? { ...entry, tmdbId: mapped.tmdb } : entry;
+          if (mapped == null) return entry;
+          // Every mapped id rides along, not just TMDB: Simkl's anime calendar
+          // often states tvdb/imdb/mal but no tmdb, and the cross-provider
+          // dedupe (plan 0034 U9.5) joins on any shared identity key.
+          return {
+            ...entry,
+            ...(mapped.tmdb != null ? { tmdbId: mapped.tmdb } : {}),
+            item: {
+              ...entry.item,
+              externalIds: {
+                ...entry.item.externalIds,
+                ...(mapped.tmdb != null ? { tmdb: mapped.tmdb } : {}),
+                ...(mapped.tvdb != null ? { tvdb: mapped.tvdb } : {}),
+                ...(mapped.imdb != null ? { imdb: mapped.imdb } : {}),
+              },
+            },
+          };
         }),
       { concurrency: MAPPING_CONCURRENCY },
     ),

@@ -1423,6 +1423,80 @@ describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => 
   });
 });
 
+describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () => {
+  test('an AniList entry and a Simkl calendar row sharing only a MAL id collapse to the AniList card', () => {
+    // The live duplicate: "Youjo Senki II" (AniList, romaji) next to "Saga of
+    // Tanya the Evil Season 2" (Simkl calendar, English) — same show, same
+    // airing, no TMDB id on either side, MAL id on both.
+    const data = computeUpNext(
+      inputs({
+        anilist: [
+          anilistInput(anime(901, { externalIds: { anilist: 901, mal: 55555 } }), {
+            nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 25, 9, 30) },
+            totalEpisodes: 12,
+          }),
+        ],
+        calendar: [
+          calendarInput(
+            simklShow(9901, {
+              title: 'Saga of Tanya the Evil Season 2',
+              externalIds: { simkl: 9901, mal: 55555 },
+            }),
+            { number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
+            { source: 'simkl' },
+          ),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.calendar).toHaveLength(1);
+    expect(data.calendar[0].source).toBe('anilist');
+  });
+
+  test('Trakt and Simkl rows sharing only a TVDB id collapse to the Simkl row', () => {
+    const data = computeUpNext(
+      inputs({
+        calendar: [
+          calendarInput(
+            show(902, { externalIds: { trakt: 902, tvdb: 77777 } }),
+            { season: 2, number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
+          ),
+          calendarInput(
+            simklShow(9902, { externalIds: { simkl: 9902, tvdb: 77777 } }),
+            { number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
+            { source: 'simkl' },
+          ),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.calendar).toHaveLength(1);
+    expect(data.calendar[0].source).toBe('simkl');
+  });
+
+  test('distinct shows with disjoint ids both stand', () => {
+    const data = computeUpNext(
+      inputs({
+        anilist: [
+          anilistInput(anime(903, { externalIds: { anilist: 903, mal: 111 } }), {
+            nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 25, 9, 30) },
+            totalEpisodes: 12,
+          }),
+        ],
+        calendar: [
+          calendarInput(
+            simklShow(9903, { externalIds: { simkl: 9903, mal: 222 } }),
+            { number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
+            { source: 'simkl' },
+          ),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.calendar).toHaveLength(2);
+  });
+});
+
 describe('computeUpNext — empty and degraded inputs (R12/R4)', () => {
   test('no inputs yields two empty sections, not an error', () => {
     expect(computeUpNext(inputs(), NOW)).toEqual({

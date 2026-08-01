@@ -3,10 +3,11 @@ import letterboxdIcon from '@/assets/providers/letterboxd.svg';
 // Serializd ships no simple-icons SVG mark — this is their own favicon
 // (converted from serializd.com/favicon.ico), the actual brand logo.
 import serializdIcon from '@/assets/providers/serializd.png';
-// Placeholder mark (plan 0034 U1): a monochrome play-screen tile in Simkl's
-// brand green — no official simple-icons SVG existed when this landed. Swap
-// for the real logo (simkl.com brand assets) without touching call sites.
-import simklIcon from '@/assets/providers/simkl.svg';
+// Simkl's own favicon (simkl.com/apple-touch-icon.png, the black tile with
+// the white S) — the Serializd precedent: no simple-icons mark exists, so the
+// brand's real favicon is the logo. Its own background keeps it visible on
+// both themes.
+import simklIcon from '@/assets/providers/simkl.png';
 import traktIcon from '@/assets/providers/trakt.svg';
 
 import { Image } from '@/components/image';
