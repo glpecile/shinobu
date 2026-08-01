@@ -9,9 +9,9 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { entryInstant } from './entry';
 import type {
   AniListUpNextInput,
+  CalendarUpNextInput,
+  ProgressUpNextInput,
   ReleaseUpNextInput,
-  TraktCalendarUpNextInput,
-  TraktUpNextInput,
   UpNextData,
   UpNextEntry,
   UpNextInputs,
@@ -66,24 +66,44 @@ function entryId(
 }
 
 /**
- * Trakt's pointer is authoritative about *which* episode is next, and this
- * source now answers for Continue Watching **only** (KTD-2): an unaired pointer
- * yields nothing here, because `/calendars/my/shows` states the same airing for
- * a strictly larger set of shows. Emitting it from both would put the same
+ * A tracker's pointer is authoritative about *which* episode is next, and this
+ * source answers for Continue Watching **only** (KTD-2): an unaired pointer
+ * yields nothing here, because the tracker's calendar states the same airing
+ * for a strictly larger set of shows. Emitting it from both would put the same
  * episode in the section twice for pooled shows and once for everything else —
  * a double source is worse than either one alone.
  *
- * A pointer with no air date at all is still excluded: unknown is not "aired",
- * and pretending otherwise would offer a quick-log for something that may not
- * exist yet.
+ * A pointer with no air date is excluded *unless the provider's counts prove
+ * it aired* (`nextEpisodeAiredByCount` — Simkl's watched-vs-aired arithmetic,
+ * plan 0034 U8): unknown is not "aired", and pretending otherwise would offer
+ * a quick-log for something that may not exist yet. The proven case emits an
+ * instant-less aired entry — the same shape as an AniList back-episode, which
+ * every consumer already renders (no time badge, no week cell). This is also
+ * how a tracked Simkl show whose episode aired *before* the rolling CDN
+ * calendar window still classifies as aired rather than being hidden.
  */
-function traktEntry(
-  input: TraktUpNextInput,
+function progressEntry(
+  input: ProgressUpNextInput,
   now: Date,
 ): UpNextEntry | null {
   const next = input.nextEpisode;
   if (next == null) return null;
-  if (next.firstAired == null) return null;
+  if (next.firstAired == null) {
+    if (input.nextEpisodeAiredByCount !== true) return null;
+    return {
+      kind: 'episode',
+      id: entryId(input.item, next.season, next.number),
+      item: input.item,
+      episode: {
+        ...(next.season != null ? { season: next.season } : {}),
+        number: next.number,
+        ...(next.title != null ? { title: next.title } : {}),
+        ...(next.runtime != null ? { runtime: next.runtime } : {}),
+      },
+      status: 'aired',
+      source: input.source,
+    };
+  }
   if (!hasAired(next.firstAired, now)) return null;
 
   return {
@@ -91,27 +111,27 @@ function traktEntry(
     id: entryId(input.item, next.season, next.number),
     item: input.item,
     episode: {
-      season: next.season,
+      ...(next.season != null ? { season: next.season } : {}),
       number: next.number,
       ...(next.title != null ? { title: next.title } : {}),
       firstAired: next.firstAired,
       ...(next.runtime != null ? { runtime: next.runtime } : {}),
     },
     status: 'aired',
-    source: 'trakt',
+    source: input.source,
   };
 }
 
 /**
- * The mirror of `traktEntry`: Calendar's Trakt half, and never Continue
+ * The mirror of `progressEntry`: Calendar's tracker half, and never Continue
  * Watching. An airing the calendar reports for *earlier today* is dropped
  * rather than promoted to `aired` — the calendar speaks for watchlisted and
  * un-started shows too, and "episode 1 of a show you have never opened aired
  * this morning" is not something waiting to be quick-logged (R4). When the user
- * *is* watching that show, the pool fan already produced the same episode.
+ * *is* watching that show, the progress leg already produced the same episode.
  */
-function traktCalendarEntry(
-  input: TraktCalendarUpNextInput,
+function calendarEntry(
+  input: CalendarUpNextInput,
   now: Date,
 ): UpNextEntry | null {
   const { episode } = input;
@@ -122,14 +142,15 @@ function traktCalendarEntry(
     id: entryId(input.item, episode.season, episode.number),
     item: input.item,
     episode: {
-      season: episode.season,
+      ...(episode.season != null ? { season: episode.season } : {}),
       number: episode.number,
       ...(episode.title != null ? { title: episode.title } : {}),
       ...(episode.firstAired != null ? { firstAired: episode.firstAired } : {}),
       ...(episode.runtime != null ? { runtime: episode.runtime } : {}),
+      ...(input.finale != null ? { finale: input.finale } : {}),
     },
     status: 'upcoming',
-    source: 'trakt',
+    source: input.source,
   };
 }
 
@@ -277,10 +298,61 @@ function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
 }
 
 /**
+ * Same show tracked on both trackers → one row per section, Simkl's row (plan
+ * 0034 KTD-10/R10): Simkl is the primary calendar source, so its metadata and
+ * air instant win a conflict with Trakt's. Keyed on `(tmdbId, status)` rather
+ * than the id alone so the sections stay complementary — Trakt's aired pointer
+ * survives when Simkl only has an upcoming airing to state (and vice versa),
+ * exactly like one show legitimately holding a row in each section. Only
+ * cross-tracker rows collapse; two Simkl airings of one show (this week's E5
+ * and E6) are two genuine calendar rows and both stand. No TMDB id leaves the
+ * duplicate standing — best-effort, the same R5 rule as the AniList dedupe.
+ */
+function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
+  const simklKeys = new Set(
+    entries
+      .filter((entry) => entry.kind === 'episode' && entry.source === 'simkl')
+      .flatMap((entry) =>
+        identityKeys(entry.item.externalIds).map(
+          (key) => `${key}:${entry.status}`,
+        ),
+      ),
+  );
+  if (simklKeys.size === 0) return [...entries];
+  return entries.filter((entry) => {
+    if (entry.kind !== 'episode' || entry.source === 'simkl') return true;
+    return !identityKeys(entry.item.externalIds).some((key) =>
+      simklKeys.has(`${key}:${entry.status}`),
+    );
+  });
+}
+
+/**
+ * Namespaced identity keys for cross-provider matching. TMDB alone is not
+ * enough: Simkl's anime calendar frequently states tvdb/imdb/mal but no tmdb,
+ * while an AniList entry's ani.zip mapping states tvdb/imdb — so the same show
+ * only collapses when the join considers every id both sides can carry (plan
+ * 0034 U9.5, the "Youjo Senki II" / "Saga of Tanya the Evil" duplicate).
+ * Namespacing keeps a tvdb number from ever colliding with a tmdb one.
+ */
+function identityKeys(
+  ids: UpNextEntry['item']['externalIds'],
+): string[] {
+  const keys: string[] = [];
+  if (ids.tmdb != null) keys.push(`tmdb:${ids.tmdb}`);
+  if (ids.tvdb != null) keys.push(`tvdb:${ids.tvdb}`);
+  if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
+  if (ids.mal != null) keys.push(`mal:${ids.mal}`);
+  if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
+  return keys;
+}
+
+/**
  * Same show tracked on both providers → one card. AniList wins for anime: it
  * carries the user's anime progress and the airing schedule, and its entry is
- * what the AniList write path advances. Unresolvable TMDB ids leave the
- * duplicate standing — R5 is explicitly best-effort.
+ * what the AniList write path advances. The join runs over every shared
+ * identity key (tmdb/tvdb/imdb/mal/anilist — see `identityKeys`); entries with
+ * no resolvable id at all leave the duplicate standing — R5 stays best-effort.
  *
  * Films dedupe on the *pair* `(tmdbId, release.kind)` instead (KTD-6): one film
  * on two watchlists is one TMDB id, but its theatrical and digital rows are
@@ -290,15 +362,16 @@ function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
 function dedupeByTmdb(
   anilist: readonly UpNextEntry[],
   others: readonly UpNextEntry[],
-  anilistTmdbIds: ReadonlySet<number>,
+  anilistIdKeys: ReadonlySet<string>,
 ): UpNextEntry[] {
   const kept = others.filter((entry) => {
     // Only an episode can be an AniList entry's twin: anime *films* never
     // produce an AniList entry, so a numeric collision between a TMDB movie id
     // and a TMDB series id must not eat a release row.
     if (entry.kind !== 'episode') return true;
-    const tmdbId = entry.item.externalIds.tmdb;
-    return tmdbId == null || !anilistTmdbIds.has(tmdbId);
+    return !identityKeys(entry.item.externalIds).some((key) =>
+      anilistIdKeys.has(key),
+    );
   });
   return dedupeReleases([...anilist, ...kept]);
 }
@@ -354,27 +427,35 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
         pair.entry != null,
     );
   const anilistEntries = anilistPairs.map((pair) => pair.entry);
-  const traktEntries = inputs.trakt
-    .map((input) => traktEntry(input, now))
-    .filter((entry): entry is UpNextEntry => entry != null);
-  const calendarEntries = inputs.traktCalendar
-    .map((input) => traktCalendarEntry(input, now))
-    .filter((entry): entry is UpNextEntry => entry != null);
+  // Both tracker legs, then the cross-tracker collapse (KTD-10): Simkl's row
+  // wins over Trakt's for the same show and section, before AniList's own
+  // dedupe gets its turn below.
+  const episodeEntries = dedupeTrackerEpisodes([
+    ...inputs.progress
+      .map((input) => progressEntry(input, now))
+      .filter((entry): entry is UpNextEntry => entry != null),
+    ...inputs.calendar
+      .map((input) => calendarEntry(input, now))
+      .filter((entry): entry is UpNextEntry => entry != null),
+  ]);
   const releaseEntries = inputs.releases.map(releaseEntry);
 
   // Only *surviving* AniList entries suppress their Trakt twin — an AniList
   // entry that classified to nothing (hiatus, caught up) must not silently
   // take the Trakt card down with it.
-  const anilistTmdbIds = new Set(
-    anilistPairs
-      .map((pair) => pair.input.tmdbId ?? pair.input.item.externalIds.tmdb)
-      .filter((id): id is number => id != null),
+  const anilistIdKeys = new Set(
+    anilistPairs.flatMap((pair) =>
+      identityKeys({
+        ...pair.input.item.externalIds,
+        ...(pair.input.tmdbId != null ? { tmdb: pair.input.tmdbId } : {}),
+      }),
+    ),
   );
 
   const entries = dedupeByTmdb(
     anilistEntries,
-    [...traktEntries, ...calendarEntries, ...releaseEntries],
-    anilistTmdbIds,
+    [...episodeEntries, ...releaseEntries],
+    anilistIdKeys,
   );
 
   return {

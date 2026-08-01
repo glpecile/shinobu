@@ -10,7 +10,7 @@ import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
-import { ProviderIcon } from '@/components/provider-icon';
+import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -18,14 +18,16 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { cn } from '@/lib/cn';
 import { hasCoarsePointer } from '@/lib/pointer';
-import type { ProviderId } from '@/lib/providers/types';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useAniListSearchQuery } from '@/state/queries/anilist';
+import { useTmdbSearchQuery } from '@/state/queries/tmdb';
 import {
   SEARCH_MIN_QUERY_LENGTH,
   useTraktSearchQuery,
 } from '@/state/queries/trakt';
+import { getClientIdForProvider } from '@/state/session/provider-config';
+import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -118,7 +120,7 @@ function SectionHeader({
   provider,
   label,
 }: {
-  provider: ProviderId;
+  provider: IconSourceId;
   label: string;
 }) {
   return (
@@ -131,9 +133,22 @@ function SectionHeader({
   );
 }
 
-function CenteredHint({ title, body }: { title: string; body: string }) {
+function CenteredHint({
+  kanji,
+  title,
+  body,
+}: {
+  kanji?: string;
+  title: string;
+  body: string;
+}) {
   return (
     <View className="flex-1 items-center justify-center px-8 -mt-16">
+      {kanji != null && (
+        // Renders in the OS fallback font on purpose — neither app family
+        // ships kanji (see AGENTS.md, Theming).
+        <Text className="text-5xl text-muted mb-4">{kanji}</Text>
+      )}
       <Text className="text-2xl font-display text-foreground text-center">
         {title}
       </Text>
@@ -150,7 +165,7 @@ function CenteredHint({ title, body }: { title: string; body: string }) {
  * instead of nesting per-section lists.
  */
 type SearchRow =
-  | { kind: 'header'; key: string; provider: ProviderId; label: string }
+  | { kind: 'header'; key: string; provider: IconSourceId; label: string }
   | { kind: 'result'; key: string; item: NormalizedMediaItem }
   | { kind: 'loading'; key: string }
   | { kind: 'error'; key: string };
@@ -162,7 +177,7 @@ interface SectionQueryState {
 }
 
 function sectionRows(
-  provider: ProviderId,
+  provider: IconSourceId,
   label: string,
   search: SectionQueryState,
 ): SearchRow[] {
@@ -244,12 +259,34 @@ export default function SearchScreen() {
     return () => clearTimeout(handle);
   }, [input, query, router]);
 
-  const traktSearch = useTraktSearchQuery({ query });
+  // Movies & TV comes from TMDB (builder token, no tracker needed) whenever
+  // the token exists; Trakt text search fires only as the fallback when the
+  // build has no TMDB token but *does* have an active Trakt client key (env
+  // or BYO). Post-detachment most builds ship no Trakt key at all, and an
+  // unauthenticated Trakt search is a guaranteed 4xx — the failure the old
+  // always-Trakt section surfaced as a permanent error row.
+  const tmdbAvailable = useTmdbToken() !== '';
+  const moviesTvSource: IconSourceId | null = tmdbAvailable
+    ? 'tmdb'
+    : getClientIdForProvider('trakt') !== ''
+      ? 'trakt'
+      : null;
+  const tmdbSearch = useTmdbSearchQuery({
+    query,
+    enabled: moviesTvSource === 'tmdb',
+  });
+  const traktSearch = useTraktSearchQuery({
+    query,
+    enabled: moviesTvSource === 'trakt',
+  });
+  const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({ query });
 
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
   const rows = [
-    ...sectionRows('trakt', 'Movies & TV', traktSearch),
+    ...(moviesTvSource == null
+      ? []
+      : sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch)),
     ...sectionRows('anilist', 'Anime & Manga', anilistSearch),
   ];
 
@@ -346,11 +383,12 @@ export default function SearchScreen() {
       {!searchable ? (
         <CenteredHint
           body="Find any movie, show, anime, or manga — open its details or log it to your trackers."
+          kanji="忍"
           title="Search"
         />
-      ) : traktSearch.isLoading && anilistSearch.isLoading ? (
+      ) : moviesTvSearch.isLoading && anilistSearch.isLoading ? (
         <ResultsSkeleton />
-      ) : traktSearch.isError && anilistSearch.isError ? (
+      ) : moviesTvSearch.isError && anilistSearch.isError ? (
         <CenteredHint
           body="Search failed. Check your connection and try again."
           title="Something went wrong"
@@ -365,7 +403,7 @@ export default function SearchScreen() {
         // (keepPreviousData), dimmed so the staleness is legible.
         <View
           className={
-            traktSearch.isPlaceholderData || anilistSearch.isPlaceholderData
+            moviesTvSearch.isPlaceholderData || anilistSearch.isPlaceholderData
               ? 'flex-1 opacity-60'
               : 'flex-1'
           }

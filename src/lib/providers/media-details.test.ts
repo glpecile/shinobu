@@ -27,12 +27,15 @@ function fakeFetch(routes: Array<[match: string, body: unknown, status?: number]
 
 function deps(
   routes: Array<[string, unknown, number?]>,
-  options: { tmdb?: boolean } = {},
+  options: { tmdb?: boolean; trakt?: boolean } = {},
 ): MediaDetailsDeps {
   const fetch = fakeFetch(routes);
   return {
     tmdb: options.tmdb === false ? null : { fetch, token: 'test-token' },
-    trakt: { fetch, tokens, clientId: 'cid', clientSecret: 'secret' },
+    trakt:
+      options.trakt === false
+        ? null
+        : { fetch, tokens, clientId: 'cid', clientSecret: 'secret' },
     anilist: { fetch, tokens },
   };
 }
@@ -128,6 +131,40 @@ describe('getMediaDetails', () => {
     );
 
     expect(result.source).toBe('trakt');
+  });
+
+  // Plan 0034 KTD-8: `state/queries/media-details.ts` now passes `trakt: null`
+  // when Trakt has no usable client id (BYO-only, post-detachment) — the
+  // composer must tolerate that leg being absent exactly like it already
+  // tolerates `tmdb: null`, rather than throwing on `deps.trakt.fetch`.
+  test('degrades to the empty result when neither TMDB nor Trakt is available', async () => {
+    const result = await Effect.runPromise(
+      getMediaDetails(deps([], { tmdb: false, trakt: false }), {
+        type: 'MOVIE',
+        tmdbId: 603,
+        traktId: 1,
+      }),
+    );
+
+    expect(result).toEqual({
+      catalogue: null,
+      cast: [],
+      crew: [],
+      studios: [],
+      source: 'none',
+    });
+  });
+
+  test('anime still uses AniList credits when Trakt has no client id at all', async () => {
+    const result = await Effect.runPromise(
+      getMediaDetails(deps([ANILIST_CREDITS], { tmdb: false, trakt: false }), {
+        type: 'ANIME',
+        anilistId: 42,
+      }),
+    );
+
+    expect(result.source).toBe('anilist');
+    expect(result.cast[0].name).toBe('Aoi Yuki');
   });
 
   test('anime without a TMDB id uses AniList credits', async () => {

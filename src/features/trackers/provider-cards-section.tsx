@@ -7,6 +7,7 @@ import {
   splitProviders,
 } from '@/features/trackers/provider-connections';
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
+import { TraktMigrationBanner } from '@/features/trackers/trakt-migration-banner';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 
@@ -60,6 +61,12 @@ export function ProviderCardsSection() {
 
   return (
     <>
+      {/* MigrationNeeded (plan 0034 U9): a Trakt token with no credentials is
+          gated out of `connectedIds`, so the card below reads disconnected —
+          this banner is what explains that, and its action opens the same
+          sheet (the guided BYO wizard) the card would. */}
+      <TraktMigrationBanner onReconnect={() => openSheet('trakt')} />
+
       {connected.length > 0 && (
         <View>
           <SectionLabel>Connected</SectionLabel>

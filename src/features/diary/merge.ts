@@ -33,12 +33,16 @@ export interface DiaryProviderState {
 // (plan 0016 KTD4). Trakt/AniList carry full catalogue metadata; Letterboxd RSS
 // carries only slug/title/year, so it sinks last. Serializd diary rows carry
 // show/season/episode detail (richer than Letterboxd RSS), so they rank
-// directly after Trakt (plan 0017 U1).
+// directly after Trakt (plan 0017 U1). Simkl all-items rows sit between them:
+// full catalogue metadata plus the widest external-id bridge
+// (simkl/tmdb/tvdb/imdb/mal/anilist — plan 0034 KTD-6), so a collapsed row's
+// display item keeps every join key the contributors offered.
 const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   trakt: 0,
-  serializd: 1,
-  anilist: 2,
-  letterboxd: 3,
+  simkl: 1,
+  serializd: 2,
+  anilist: 3,
+  letterboxd: 4,
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */
@@ -110,12 +114,43 @@ export function watermarkProviders(
 
 // ---- Grouping (day buckets + cross-provider collapse) ----
 
-/** Item identity for collapse: shared tmdb, else imdb, else title+year. */
+/** The title+year identity of last resort, normalized for casing/whitespace. */
+function titleYearKey(item: NormalizedDiaryEntry['item']): string {
+  const title = item.title.trim().toLowerCase().replace(/\s+/g, ' ');
+  return `ty:${title}:${item.year ?? '?'}`;
+}
+
+/**
+ * Item identity for within-day *clustering*: shared tmdb, else imdb, else
+ * title+year. Clustering runs over already-collapsed entries whose external
+ * ids were unioned by `toMerged`, so the single-key chain suffices there.
+ */
 function identityKey(item: NormalizedDiaryEntry['item']): string {
   if (item.externalIds.tmdb != null) return `tmdb:${item.externalIds.tmdb}`;
   if (item.externalIds.imdb != null) return `imdb:${item.externalIds.imdb}`;
-  const title = item.title.trim().toLowerCase().replace(/\s+/g, ' ');
-  return `ty:${title}:${item.year ?? '?'}`;
+  return titleYearKey(item);
+}
+
+/**
+ * Namespaced identity keys for the cross-provider *collapse* join. TMDB alone
+ * is not enough (the up-next lesson, plan 0034 U9.5): an AniList log states
+ * anilist/mal but rarely tmdb, Serializd states only tmdb — and a Simkl
+ * all-items row states most of them at once, bridging the two. The join
+ * therefore matches on *any* shared namespaced id; the title+year fallback
+ * applies only when an item carries no usable id at all, so an id-bearing
+ * item never collapses with a same-titled different id (the pre-existing
+ * fallback contract, unchanged).
+ */
+function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
+  const ids = item.externalIds;
+  const keys: string[] = [];
+  if (ids.tmdb != null) keys.push(`tmdb:${ids.tmdb}`);
+  if (ids.tvdb != null) keys.push(`tvdb:${ids.tvdb}`);
+  if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
+  if (ids.mal != null) keys.push(`mal:${ids.mal}`);
+  if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
+  if (keys.length === 0) keys.push(titleYearKey(item));
+  return keys;
 }
 
 /** The episode/chapter set signature; movies collapse on "no episodes". */
@@ -145,7 +180,9 @@ function dayKeyForInstant(instant: Date, timeZone: string): string {
 }
 
 interface CollapseBucket {
-  identity: string;
+  /** Union of every contributor's identity keys — later entries join on any
+   *  overlap, so an id-rich contributor (Simkl) bridges id-poor ones. */
+  identities: Set<string>;
   episodesKey: string;
   providers: Set<ProviderId>;
   entries: NormalizedDiaryEntry[];
@@ -193,23 +230,27 @@ function compareMergedDesc(a: MergedDiaryEntry, b: MergedDiaryEntry): number {
 function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
   const buckets: CollapseBucket[] = [];
   for (const entry of entries) {
-    const identity = identityKey(entry.item);
+    const identities = identityKeys(entry.item);
     const key = episodesKey(entry.episodes);
     // Merge only with a *different* provider's entry of the same item + episode
     // set — two same-provider logs (binge day / rewatch) never collapse (R2/AE6),
-    // and mismatched episode sets stay separate rows (KTD4).
+    // and mismatched episode sets stay separate rows (KTD4). Identity matches
+    // on any shared namespaced id (U9.5); joining unions the keys, so entries
+    // are processed newest-first deterministically and a bridge contributor
+    // extends the bucket's reach.
     const bucket = buckets.find(
       (candidate) =>
-        candidate.identity === identity &&
         candidate.episodesKey === key &&
-        !candidate.providers.has(entry.provider),
+        !candidate.providers.has(entry.provider) &&
+        identities.some((identity) => candidate.identities.has(identity)),
     );
     if (bucket != null) {
       bucket.entries.push(entry);
       bucket.providers.add(entry.provider);
+      for (const identity of identities) bucket.identities.add(identity);
     } else {
       buckets.push({
-        identity,
+        identities: new Set(identities),
         episodesKey: key,
         providers: new Set([entry.provider]),
         entries: [entry],

@@ -24,4 +24,4 @@ jobs:
       - run: bun check:classnames
       - run: bun check:router-push
       - run: bun typecheck
-      - run: bun test
+      - run: bun run test

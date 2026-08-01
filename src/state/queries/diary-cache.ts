@@ -3,12 +3,13 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { NormalizedDiaryEntry } from '@/types/media';
 
 /**
- * The four diary infinite-query key roots, in one RN-free place so both the
+ * The five diary infinite-query key roots, in one RN-free place so both the
  * provider query-key builders and the details-screen cache scan derive from the
  * same source (and the scan stays unit-testable without pulling the http
  * client). `trakt`/`anilist` are the exact history keys; `letterboxd`/`serializd`
  * name the diary segment too, and every diary query is username-suffixed under
- * that.
+ * that. `simkl` nests under the all-items prefix so the write-side snapshot
+ * invalidation covers it (`simklQueryKeys.diary`).
  *
  * **These must stay as specific as the diary query itself.** They were once the
  * bare provider roots (`['letterboxd']`, `['serializd']`), which made
@@ -26,6 +27,7 @@ export const DIARY_QUERY_ROOTS = {
   anilist: ['anilist', 'list-activity'] as const,
   letterboxd: ['letterboxd', 'diary'] as const,
   serializd: ['serializd', 'diary'] as const,
+  simkl: ['simkl', 'all-items', 'diary'] as const,
 };
 
 /** A diary infinite-query page: a flat entry array (Trakt/AniList/Letterboxd)
@@ -40,7 +42,7 @@ function entriesFromPage(page: DiaryPage): NormalizedDiaryEntry[] {
  * Resolves a diary row's item from the cached diary infinite queries — the
  * details resolution chain (plan 0016 KTD7) extends here after the search-cache
  * step, since diary items sit in no feed slot, no search, no TMDB cache. Scans
- * every loaded page of all four diary queries for the log whose item id matches;
+ * every loaded page of all five diary queries for the log whose item id matches;
  * returns the embedded item, or undefined on a cold deep link. Non-diary queries
  * carrying no `pages` are skipped.
  *

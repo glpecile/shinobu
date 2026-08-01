@@ -22,6 +22,16 @@ mock.module('@/lib/http/client', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
+// `./use-is-watchlisted` imports `@/state/queries/watchlist`, which imports
+// `./simkl` (plan 0034 U7), whose auth re-export reaches expo-crypto —
+// mirror the surface it consumes instead of loading the whole expo package
+// under bun (the `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 const { isWatchlistedIn } = await import('./use-is-watchlisted');
 
 import type { WatchlistInput } from './types';

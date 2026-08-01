@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 
 import type {
   AniListUpNextInput,
+  CalendarUpNextInput,
+  ProgressUpNextInput,
   ReleaseUpNextInput,
-  TraktCalendarUpNextInput,
-  TraktUpNextInput,
   UpNextInputs,
 } from '@/features/up-next/types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -54,11 +54,12 @@ function item(id: string, overrides: Partial<NormalizedMediaItem> = {}): Normali
 function traktInput(
   id: string,
   firstAired: string | null,
-  overrides: Partial<TraktUpNextInput['nextEpisode']> = {},
+  overrides: Partial<ProgressUpNextInput['nextEpisode']> = {},
   itemOverrides: Partial<NormalizedMediaItem> = {},
-): TraktUpNextInput {
+): ProgressUpNextInput {
   return {
     item: item(id, itemOverrides),
+    source: 'trakt',
     nextEpisode: {
       season: 1,
       number: 2,
@@ -103,20 +104,21 @@ function calendarInput(
   firstAired: string,
   overrides: { season?: number; number?: number } = {},
   itemOverrides: Partial<NormalizedMediaItem> = {},
-): TraktCalendarUpNextInput {
+): CalendarUpNextInput {
   return {
     item: item(id, itemOverrides),
+    source: 'trakt',
     episode: { season: 1, number: 2, firstAired, ...overrides },
   };
 }
 
 function inputs(
-  trakt: TraktUpNextInput[],
+  progress: ProgressUpNextInput[],
   anilist: AniListUpNextInput[],
   releases: ReleaseUpNextInput[] = [],
-  traktCalendar: TraktCalendarUpNextInput[] = [],
+  calendar: CalendarUpNextInput[] = [],
 ): UpNextInputs {
-  return { trakt, traktCalendar, releases, anilist, errors: [] };
+  return { progress, calendar, releases, anilist, errors: [] };
 }
 
 describe('computeNotificationSchedule', () => {
@@ -376,8 +378,9 @@ describe('computeNotificationSchedule — watchlisted episodes (R9)', () => {
   });
 
   test('a calendar row with no air instant contributes nothing', () => {
-    const bare = {
+    const bare: CalendarUpNextInput = {
       item: item('x'),
+      source: 'trakt',
       episode: { season: 1, number: 1, firstAired: null },
     };
     expect(
@@ -405,7 +408,7 @@ describe('computeNotificationSchedule — season drops', () => {
     id: string,
     count: number,
     season = 2,
-  ): TraktCalendarUpNextInput[] {
+  ): CalendarUpNextInput[] {
     return Array.from({ length: count }, (_, index) =>
       calendarInput(id, localTime(dropDay, 4, index).toISOString(), {
         season,

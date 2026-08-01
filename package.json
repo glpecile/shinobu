@@ -79,7 +79,7 @@
     "ios.clean": "expo prebuild --platform ios --clean && bun ios",
     "web": "expo start --web",
     "dev:worker": "wrangler dev",
-    "test": "bun test",
+    "test": "bun test --isolate",
     "check:classnames": "bun scripts/check-classnames.ts",
     "check:router-push": "bun scripts/check-router-push.ts",
     "check:links": "bun scripts/check-external-urls.ts",

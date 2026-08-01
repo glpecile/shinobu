@@ -41,6 +41,16 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
+// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 // Enrichment has every id it needs on these fixtures — no mapping lookups.
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: () => Promise.resolve(null),
@@ -316,6 +326,12 @@ describe('the adapter map (R32/R37)', () => {
     // declaration. Letterboxd's flipped in plan 0033 (verified state-set endpoint).
     expect(PROVIDERS.serializd.watchlistRemove).toBe('manual');
     expect(PROVIDERS.letterboxd.watchlistRemove).toBe('write');
+    // Simkl (plan 0034 U6): the add went 'write' but the remove stays 'manual'
+    // behind U4's live-probe gate — `/sync/history/remove`'s whole-item body
+    // removes watch history along with the list entry, so until the probe
+    // clears it Simkl renders as a manual deep-link row here, never an adapter.
+    expect(PROVIDERS.simkl.watchlistWrite).toBe('write');
+    expect(PROVIDERS.simkl.watchlistRemove).toBe('manual');
   });
 
   test('an item with no AniList id is a reasoned skip, never a request', async () => {

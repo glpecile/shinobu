@@ -5,6 +5,7 @@ import { Effect } from 'effect';
 import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
 import { logToSerializd } from '@/lib/providers/serializd/writes';
+import { logToSimkl, type SimklLogEntry } from '@/lib/providers/simkl/writes';
 import {
   diaryHasEpisode,
   getSerializdDiary,
@@ -17,6 +18,7 @@ import {
 import { recordRecentTags } from '@/state/prefs/recent-tags';
 import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
+import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import { translateEntryEpisodes } from '@/lib/providers/mapping/episode-translation';
@@ -57,6 +59,11 @@ import {
 /**
  * One entry per write-capable provider. `Effect.runPromise` here is the same
  * containment boundary `state/queries/*` uses — no Effect type escapes.
+ *
+ * Simkl is the one write-capable provider **not** in this map: its adapter
+ * needs the shared query cache (the ani.zip table for a canonically-numbered
+ * anime batch), so it is built per-mutation by `simklLogAdapter` and merged in
+ * `logAdapters(queryClient)` below.
  */
 const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> = {
   // Resolves a ProviderWriteResult itself: a rewatch play Trakt's own
@@ -126,6 +133,62 @@ function okResult(): ProviderWriteResult {
 }
 
 /**
+ * Simkl's log adapter (plan 0034 U6). Built per-mutation rather than living in
+ * `LOG_ADAPTERS` because one of its inputs comes from the shared query cache:
+ * an ANIME batch that arrives *canonically* numbered (a TMDB-shaped details
+ * screen, the seasons UI) must carry the ani.zip table so `logToSimkl` can
+ * reverse-map `{season, number}` into the AniDB-domain entry number Simkl's
+ * anime catalog counts by (KTD-6). The lookup is the same cached one the
+ * forward translation uses (plan 0027, `cachedAniZipEpisodeMap`), so an
+ * AniList-origin log that already fetched the table pays nothing here — and it
+ * is gated to the one shape that needs it: entry-domain input (`entryEpisodes`)
+ * already *is* the AniDB-derived domain and passes through verbatim, and films
+ * and non-anime TV/movies never consult the table at all.
+ *
+ * A missing/unresolvable table is passed as `null` on purpose: writes.ts
+ * answers with its reasoned skip (plan 0027 — wrong write is worse than none),
+ * which flows through the fan-out contract and plan 0022's manual-link
+ * affordance like any other adapter-reported skip.
+ *
+ * `log` is injectable for tests only; the default is the real one-element
+ * batch per fan-out (KTD-3: every Simkl write for one item is ONE POST behind
+ * Simkl's ~20s per-user write lock).
+ */
+export function simklLogAdapter(
+  queryClient: QueryClient,
+  log: (entry: SimklLogEntry) => Promise<ProviderWriteResult> = (entry) =>
+    Effect.runPromise(logToSimkl(simklDeps(), [entry])),
+): WriteAdapter<LogMediaVariables> {
+  return async ({ item, episode, episodes, entryEpisodes, watchedAt }) => {
+    const needsMap =
+      item.type === 'ANIME' &&
+      item.isFilm !== true &&
+      (entryEpisodes == null || entryEpisodes.length === 0) &&
+      (episodes != null || episode != null);
+    const anilistId = item.externalIds.anilist;
+    const episodeMap =
+      needsMap && anilistId != null
+        ? await cachedAniZipEpisodeMap(queryClient, anilistId).catch(() => null)
+        : null;
+    return log({
+      item,
+      ...(episode != null ? { episode } : {}),
+      ...(episodes != null ? { episodes } : {}),
+      ...(entryEpisodes != null ? { entryEpisodes } : {}),
+      ...(watchedAt != null ? { watchedAt } : {}),
+      episodeMap,
+    });
+  };
+}
+
+/** The full adapter map for one mutation: the static entries plus Simkl's. */
+export function logAdapters(
+  queryClient: QueryClient,
+): Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> {
+  return { ...LOG_ADAPTERS, simkl: simklLogAdapter(queryClient) };
+}
+
+/**
  * Turn each mapping-blocked provider's adapter into a no-op that resolves its
  * reason (plan 0027 R3/KTD3). Deliberately *not* a new `ProviderWriteOutcome`
  * status or a pre-fan-out filter: routing it through the ordinary adapter path
@@ -149,7 +212,20 @@ export function withMappingSkips(
 /** Serializd reconcile/progress reads share this staleness (KTD7/R17). */
 const SERIALIZD_STALE_MS = 5 * 60_000;
 
-/** Providers that write canonically-numbered episodes (plan 0027 KTD5). */
+/**
+ * Providers that write canonically-numbered episodes (plan 0027 KTD5).
+ *
+ * Simkl is deliberately **absent** (plan 0034 U6 decision): its anime writes
+ * speak the AniDB/entry domain natively — `entryEpisodes` passes through
+ * verbatim (KTD-6) — and `entryEpisodes` is populated for every entry-domain
+ * log regardless of this list, so membership isn't needed for that. Listing it
+ * would actively hurt: an anilist+simkl-only user would pay the ~1 MB ani.zip
+ * fetch the R7 short-circuit exists to avoid, and a translation failure would
+ * wrongly mapping-skip Simkl even though its entry-domain write is still safe.
+ * (Simkl's non-anime TV writes do read the translated canonical `episodes`,
+ * but only ever alongside Trakt/Serializd-triggered translation or a
+ * canonical-origin log that needed no translation at all.)
+ */
 const CANONICAL_EPISODE_PROVIDERS: readonly ProviderId[] = ['trakt', 'serializd'];
 
 function intendedEpisodes(
@@ -223,8 +299,17 @@ async function resolveLogPlan(
       domains: {
         canonical: canonicalInput,
         // A canonical season-1 batch *is* the entry's own numbering (plan
-        // 0011); a season-2+ one never reaches AniList at all.
-        entry: canonicalInput?.map((episode) => episode.number) ?? null,
+        // 0011). A season-2+ batch has **no** entry-domain reading: AniList
+        // never receives it (the nonSeasonOneEpisodes guard above), and Simkl
+        // (plan 0034 U6) must reverse-map it through the ani.zip table in its
+        // adapter rather than trust a raw episode number as an AniDB one —
+        // deriving `entry` here would hand it S02E03 as "entry episode 3",
+        // the wrong-identity write plan 0027 exists to prevent.
+        entry:
+          canonicalInput != null &&
+          canonicalInput.every((episode) => episode.season === 1)
+            ? canonicalInput.map((episode) => episode.number)
+            : null,
       },
       mappingSkips,
     };
@@ -360,7 +445,22 @@ async function providerHasWatch(
   } catch {
     return false;
   }
-  // Letterboxd has no readable watch state (RSS diary only) — treat as absent.
+  // Providers without a branch fall through to the conservative default:
+  // Letterboxd has no readable watch state (RSS diary only), and Simkl —
+  // readable since plan 0034 U7 — deliberately has no branch yet, because it
+  // is not the mechanical parallel of the ones above. A real Simkl reconcile
+  // needs the *unfiltered* /sync/all-items snapshot (the item may sit in any
+  // status bucket; the cached up-next legs hold only watching/plantowatch)
+  // fetched fresh per log — the heaviest Simkl read, against the
+  // activities-gated refetch discipline of
+  // docs/solutions/simkl-rate-limits-and-write-lock.md — and anime compares
+  // in Simkl's AniDB-convention numbering (plan 0034 KTD-6), so a
+  // canonical-origin batch needs the same ani.zip reverse map
+  // `simklLogAdapter` uses before its watchedKeys can be trusted. A
+  // wrong-domain compare recreates the false in-sync skip plan 0027 removed.
+  // Deferred to follow-up (plan 0034 Scope Boundaries); until then both count
+  // as "doesn't have it", so the write (the user's actual intent) always
+  // fires.
   return false;
 }
 
@@ -444,12 +544,28 @@ export function invalidateAfterLog(
       });
     }
   }
-  // Up Next is computed from Trakt/AniList watch state, so a successful log to
-  // either must recompute the sections — not just the per-show progress the
-  // branches above refresh. This invalidation is also the settle signal the
-  // quick-log card waits on before advancing (plan 0019 KTD-6).
-  if (succeeded.includes('trakt') || succeeded.includes('anilist')) {
+  // Up Next is computed from Trakt/AniList/Simkl watch state (Simkl joined the
+  // provider-keyed inputs in plan 0034 U8), so a successful log to any of them
+  // must recompute the sections — not just the per-provider caches the other
+  // branches refresh. This invalidation is also the settle signal the
+  // quick-log card waits on before advancing (plan 0019 KTD-6): a provider
+  // missing from this gate strands its users' quick-log in the settle window.
+  if (
+    succeeded.includes('trakt') ||
+    succeeded.includes('anilist') ||
+    succeeded.includes('simkl')
+  ) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
+  }
+  if (succeeded.includes('simkl')) {
+    // The history POST moved items between Simkl's library buckets — every
+    // cached all-items filter is stale (the prefix, not a per-filter key: this
+    // path can't know which type/status a surface requested), and so is the
+    // activities delta that gates their refetch (plan 0034 KTD-5). Registered
+    // here before U7 flipped canRead — which is what made the flip
+    // read-correct on day one.
+    queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
+    queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }
   if (succeeded.includes('serializd')) {
     // The write landed a new diary entry (and moved progress) — refresh both so
@@ -624,7 +740,7 @@ export function useLogMedia() {
       const { item, targets, skipped } = plan;
 
       const result = await fanOutLog(
-        withMappingSkips(LOG_ADAPTERS, plan.mappingSkips),
+        withMappingSkips(logAdapters(queryClient), plan.mappingSkips),
         plan.writeTargets,
         plan.variables,
       );
@@ -635,6 +751,14 @@ export function useLogMedia() {
       // awaited: the Letterboxd leg is a second WebView round-trip, and a
       // derived write the user didn't aim must not delay the toast or hold
       // the sheet. `removeWatchedFromWatchlist` never rejects.
+      //
+      // Simkl (plan 0034 U6): its watchlist remove is still 'manual' (U4's
+      // live-probe gate), so this derived path routes **no** second Simkl POST
+      // today — which also keeps the film log's history POST alone inside
+      // Simkl's ~20s per-user write lock (KTD-3). When the remove flip lands,
+      // firing it back-to-back with the log's POST from here would collide
+      // with that lock (`400 rate_limit`) — the flip must solve that, not
+      // inherit it silently.
       if (result.succeeded.length > 0) {
         void removeWatchedFromWatchlist(queryClient, item, connected);
       }

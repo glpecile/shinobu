@@ -5,12 +5,14 @@ import type {
   SeasonLayout,
   SeasonSlot,
 } from '@/lib/providers/mapping/season-layout';
-import type { NormalizedMediaItem } from '@/types/media';
+import { orderSeasons } from '@/lib/providers/trakt/normalize';
+import type { NormalizedMediaItem, NormalizedSeason } from '@/types/media';
 import { tmdbRequest } from './api';
 import type { TmdbDeps } from './deps';
 import {
   normalizeCompanySearch,
   normalizeMovieCatalogue,
+  normalizeMultiSearch,
   normalizePersonDetails,
   normalizePersonSearch,
   normalizeStudioDetails,
@@ -140,6 +142,86 @@ export function getTvSeasonLayout(
   );
 }
 
+interface TmdbSeasonEpisodeRaw {
+  episode_number?: number | null;
+  name?: string | null;
+  overview?: string | null;
+  /** Bare calendar date (`YYYY-MM-DD`) — TMDB carries no air *time*. */
+  air_date?: string | null;
+  runtime?: number | null;
+}
+
+interface TmdbAppendedSeasonRaw {
+  episodes?: Array<TmdbSeasonEpisodeRaw | null> | null;
+}
+
+/** TMDB rejects more than 20 `append_to_response` values per request. */
+const SEASON_APPEND_LIMIT = 20;
+
+function normalizeTmdbSeason(
+  number: number,
+  episodes: readonly (TmdbSeasonEpisodeRaw | null)[],
+): NormalizedSeason {
+  return {
+    number,
+    title: number === 0 ? 'Specials' : `Season ${number}`,
+    episodes: episodes
+      .flatMap((episode) => {
+        const episodeNumber = episode?.episode_number;
+        if (episode == null || episodeNumber == null) return [];
+        return [
+          {
+            number: episodeNumber,
+            title: episode.name || `Episode ${episodeNumber}`,
+            ...(episode.overview != null && episode.overview !== ''
+              ? { overview: episode.overview }
+              : {}),
+            // Date-only, not an instant — `lib/time/has-aired.ts` parses it as
+            // local midnight, the documented rule for date-only air fields.
+            ...(episode.air_date != null && episode.air_date !== ''
+              ? { firstAired: episode.air_date }
+              : {}),
+            ...(episode.runtime != null ? { runtime: episode.runtime } : {}),
+          },
+        ];
+      })
+      .sort((a, b) => a.number - b.number),
+  };
+}
+
+/**
+ * Full seasons + episodes for one show — the Trakt-less counterpart of
+ * `getShowSeasons` (plan 0034 KTD-8: post-detachment, TMDB is the catalogue
+ * substitute for every non-BYO build). One `/tv/{id}` call for the season
+ * numbers, then `append_to_response=season/N` batches (20 per request, TMDB's
+ * append cap) fold every season's episode list into as few round-trips as
+ * possible. Specials sort last via the shared `orderSeasons`, so both sources
+ * hand the accordion an identically shaped list.
+ */
+export function getTvSeasons(
+  deps: TmdbDeps,
+  params: { tmdbId: number },
+): Effect.Effect<NormalizedSeason[], ProviderError> {
+  return Effect.gen(function* () {
+    const layout = yield* getTvSeasonLayout(deps, { tmdbId: params.tmdbId });
+    const numbers = layout.map((slot) => slot.season);
+    const seasons: NormalizedSeason[] = [];
+    for (let i = 0; i < numbers.length; i += SEASON_APPEND_LIMIT) {
+      const chunk = numbers.slice(i, i + SEASON_APPEND_LIMIT);
+      const append = chunk.map((number) => `season/${number}`).join(',');
+      const raw = yield* tmdbRequest<
+        Record<string, TmdbAppendedSeasonRaw | undefined>
+      >(deps, `/tv/${params.tmdbId}?append_to_response=${append}`);
+      for (const number of chunk) {
+        seasons.push(
+          normalizeTmdbSeason(number, raw[`season/${number}`]?.episodes ?? []),
+        );
+      }
+    }
+    return orderSeasons(seasons);
+  });
+}
+
 /**
  * Company profile + its works for the `/studio/[id]` route: one `/company`
  * call and one page of `/discover` per medium, newest first.
@@ -195,6 +277,26 @@ export function searchMovie(
     );
     const now = yield* Clock.currentTimeMillis;
     return normalizeTitleSearch(raw, 'movie', new Date(now).toISOString());
+  });
+}
+
+/**
+ * Free-text movie+TV search for the search tab — one `/search/multi` call,
+ * people dropped in normalization. This is the section's primary source
+ * post-detachment (plan 0034): it needs only the builder token, so search
+ * works with zero trackers connected and no Trakt client key in the build.
+ */
+export function searchTitles(
+  deps: TmdbDeps,
+  params: { query: string },
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  return Effect.gen(function* () {
+    const raw = yield* tmdbRequest<TmdbSearchResponse>(
+      deps,
+      `/search/multi?query=${encodeURIComponent(params.query)}&include_adult=false`,
+    );
+    const now = yield* Clock.currentTimeMillis;
+    return normalizeMultiSearch(raw, new Date(now).toISOString());
   });
 }
 

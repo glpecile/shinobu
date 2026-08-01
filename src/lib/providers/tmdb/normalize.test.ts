@@ -275,6 +275,7 @@ describe('normalizePersonSearch', () => {
 
 import {
   normalizeMovieCatalogue,
+  normalizeMultiSearch,
   normalizeStudioDetails,
   normalizeTitleSearch,
   normalizeTvCatalogue,
@@ -443,6 +444,25 @@ describe('normalizeTitleSearch', () => {
 
   test('empty results yield an empty list', () => {
     expect(normalizeTitleSearch({}, 'movie', NOW)).toEqual([]);
+  });
+});
+
+describe('normalizeMultiSearch', () => {
+  test('keeps movie and tv rows by media_type, drops people', () => {
+    const result = normalizeMultiSearch(
+      {
+        results: [
+          { id: 1, media_type: 'movie', title: 'Heat', release_date: '1995-12-15' },
+          { id: 2, media_type: 'tv', name: 'Severance', first_air_date: '2022-02-18' },
+          { id: 3, media_type: 'person', name: 'Al Pacino' },
+        ],
+      },
+      NOW,
+    );
+    expect(result.map((item) => [item.id, item.type])).toEqual([
+      ['tmdb-movie-1', 'MOVIE'],
+      ['tmdb-tv-2', 'TV'],
+    ]);
   });
 });
 

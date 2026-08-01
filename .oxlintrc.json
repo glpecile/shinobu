@@ -14,7 +14,7 @@
     "suspicious": "warn"
   },
   "rules": {
-    "no-underscore-dangle": ["warn", { "allow": ["_tag"] }],
+    "no-underscore-dangle": ["warn", { "allow": ["_tag", "__DEV__"] }],
     "unicorn/no-array-sort": "off",
     "no-restricted-imports": [
       "error",

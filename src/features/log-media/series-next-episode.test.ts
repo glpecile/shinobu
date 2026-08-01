@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   nextEpisodeFromProgress,
+  nextEpisodeFromSimklEntry,
   seriesEpisodeLabel,
 } from './series-next-episode';
 
@@ -59,6 +60,90 @@ describe('nextEpisodeFromProgress', () => {
       aired: true,
       rewatch: true,
     });
+  });
+});
+
+describe('nextEpisodeFromSimklEntry', () => {
+  const freshItem = { currentProgress: 0, totalEpisodes: 20 };
+  const midItem = { currentProgress: 10, totalEpisodes: 20 };
+  const doneItem = { currentProgress: 20, totalEpisodes: 20 };
+
+  test('carries the watching snapshot’s pointer through, aired', () => {
+    expect(
+      nextEpisodeFromSimklEntry(midItem, {
+        nextToWatch: {
+          season: 1,
+          episode: 11,
+          title: 'The Night of the Hunters',
+          date: '2020-01-01T00:00:00Z',
+        },
+      }),
+    ).toEqual({
+      season: 1,
+      number: 11,
+      title: 'The Night of the Hunters',
+      aired: true,
+      rewatch: false,
+    });
+  });
+
+  test('a future air instant is named but not loggable', () => {
+    expect(
+      nextEpisodeFromSimklEntry(midItem, {
+        nextToWatch: { season: 1, episode: 11, date: '2099-01-01T00:00:00Z' },
+      })?.aired,
+    ).toBe(false);
+  });
+
+  test('a null air date stays permissive, like the Trakt path', () => {
+    expect(
+      nextEpisodeFromSimklEntry(midItem, {
+        nextToWatch: { season: 2, episode: 1, date: null },
+      })?.aired,
+    ).toBe(true);
+  });
+
+  test('a TV pointer without a season number is unnameable, not season 1', () => {
+    // Simkl numbers anime absolutely; that shape leaking onto a show must
+    // fall back to the season picker rather than mislabel the episode.
+    expect(
+      nextEpisodeFromSimklEntry(midItem, {
+        nextToWatch: { episode: 11, date: null },
+      }),
+    ).toBeNull();
+  });
+
+  test('an entry with nothing left wraps to S1E1 as a rewatch', () => {
+    expect(nextEpisodeFromSimklEntry(doneItem, {})).toEqual({
+      season: 1,
+      number: 1,
+      aired: true,
+      rewatch: true,
+    });
+  });
+
+  test('a show outside the watching list starts fresh at S1E1', () => {
+    expect(nextEpisodeFromSimklEntry(freshItem, null)).toEqual({
+      season: 1,
+      number: 1,
+      aired: true,
+      rewatch: false,
+    });
+  });
+
+  test('a finished show outside the watching list offers a rewatch', () => {
+    expect(nextEpisodeFromSimklEntry(doneItem, null)).toEqual({
+      season: 1,
+      number: 1,
+      aired: true,
+      rewatch: true,
+    });
+  });
+
+  test('a mid-show item without an entry is unnameable', () => {
+    // The snapshot that knows its next episode doesn't list it — guessing a
+    // season from a flat count would misfile the log.
+    expect(nextEpisodeFromSimklEntry(midItem, null)).toBeNull();
   });
 });
 

@@ -7,6 +7,7 @@ import {
   WATCHLIST_PAGE_SIZE,
 } from '@/lib/providers/letterboxd/watchlist';
 import { providersForFeed } from '@/lib/providers/routing';
+import { getAllItems } from '@/lib/providers/simkl/reads';
 import { getWatchlist } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
@@ -16,6 +17,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { anilistQueryKeys, fetchPlannedAnime } from './anilist';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { none, settle } from './settle';
+import { simklDeps, simklQueryKeys } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { WATCHLIST_QUERY_ROOT } from './watchlist-cache';
 
@@ -56,11 +58,17 @@ export type { WatchlistInput, WatchlistInputs };
  * cheap, but its `items[]` element shape is unverified). Named once so the
  * gather's legs below and the home row's mount gate
  * (`app/(tabs)/index.tsx`, R25) can never disagree about who has a watchlist.
+ *
+ * Simkl joined in U7: its `/sync/all-items` shape was already live-verified
+ * against a real account in U3 (the normalized `SimklLibraryEntry`/
+ * `normalizeAllItems` fixtures) — the same live-verification bar Serializd is
+ * still held to above before it can join this list.
  */
 const WATCHLIST_READ_PROVIDERS: readonly ProviderId[] = [
   'trakt',
   'anilist',
   'letterboxd',
+  'simkl',
 ];
 
 /**
@@ -174,6 +182,31 @@ async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInpu
 }
 
 /**
+ * Simkl's leg (plan 0034 U7): one `status=plantowatch` snapshot across every
+ * bucket, the same one-call-not-a-loop shape as Trakt's `type=all` above —
+ * Simkl's path grammar puts a bare status filter under the `all` type segment
+ * (`getAllItems`), so shows/movies/anime all come back in one request.
+ * `addedToWatchlistAt` is Simkl's `added_to_watchlist_at`, the merge's sort
+ * key exactly like Trakt's `listed_at`; absent when Simkl didn't record one.
+ */
+async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
+  const library = await queryClient.fetchQuery({
+    queryKey: simklQueryKeys.allItems(undefined, 'plantowatch'),
+    queryFn: () =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' })),
+    staleTime: WATCHLIST_STALE_MS,
+  });
+  const entries = [...library.shows, ...library.movies, ...library.anime];
+  return entries.map((entry) => ({
+    item: entry.item,
+    source: 'simkl',
+    ...(entry.addedToWatchlistAt != null
+      ? { addedAt: entry.addedToWatchlistAt }
+      : {}),
+  }));
+}
+
+/**
  * Every connected provider's watchlist, gathered in parallel and settled
  * per-leg. **No Serializd leg** (R32): its endpoint is known and cheap, but its
  * `items[]` element shape is unverified against a real account and writing a
@@ -191,7 +224,7 @@ export async function fetchWatchlistInputs(
   connected: readonly ProviderId[],
 ): Promise<WatchlistInputs> {
   const feedProviders = watchlistReadProviders(connected);
-  const [trakt, anilist, letterboxd] = await Promise.all([
+  const [trakt, anilist, letterboxd, simkl] = await Promise.all([
     feedProviders.includes('trakt')
       ? settle('trakt', () => traktInputs(queryClient))
       : none<WatchlistInput>(),
@@ -200,6 +233,9 @@ export async function fetchWatchlistInputs(
       : none<WatchlistInput>(),
     feedProviders.includes('letterboxd')
       ? settle('letterboxd', () => letterboxdInputs(queryClient))
+      : none<WatchlistInput>(),
+    feedProviders.includes('simkl')
+      ? settle('simkl', () => simklInputs(queryClient))
       : none<WatchlistInput>(),
   ]);
 
@@ -214,8 +250,8 @@ export async function fetchWatchlistInputs(
       : [];
 
   return {
-    inputs: [...trakt.inputs, ...anilist.inputs, ...letterboxd.inputs],
-    errors: [...trakt.errors, ...anilist.errors, ...letterboxd.errors],
+    inputs: [...trakt.inputs, ...anilist.inputs, ...letterboxd.inputs, ...simkl.inputs],
+    errors: [...trakt.errors, ...anilist.errors, ...letterboxd.errors, ...simkl.errors],
     incomplete,
   };
 }
@@ -253,6 +289,11 @@ export async function refreshWatchlistInputs(
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentAnimeEntries(),
     }),
+    // The prefix, not the exact `status=plantowatch` key: a stale write
+    // elsewhere (a log moving an item out of `plantowatch`) can't be known
+    // here, so every cached all-items filter is marked stale together, same
+    // as `invalidateAfterLog`'s Simkl branch.
+    queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() }),
     ...(username == null
       ? []
       : [

@@ -13,6 +13,7 @@ import {
 
 const ALL: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd'];
 const ALL4: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
+const ALL5: readonly ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd', 'simkl'];
 
 /** Routing inputs are enriched items — externalIds drive cross-provider matches. */
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
@@ -387,8 +388,8 @@ describe('every applicable provider lands in exactly one bucket', () => {
     for (const capability of capabilities) {
       for (const platform of ['web', 'ios', 'android']) {
         it(`${name} / ${capability} / ${platform}`, () => {
-          const { writable, manual } = splitWriteTargets(item, ALL4, platform, capability);
-          const applicable = ALL4.filter((id) =>
+          const { writable, manual } = splitWriteTargets(item, ALL5, platform, capability);
+          const applicable = ALL5.filter((id) =>
             types.some((type) => PROVIDERS[id].mediaTypes.includes(type)),
           );
 
@@ -400,6 +401,91 @@ describe('every applicable provider lands in exactly one bucket', () => {
       }
     }
   }
+});
+
+// Plan 0034 U6/U7: the write leg landed in U6 (`canWrite: true`,
+// `watchlistWrite: 'write'`) and the read leg in U7 (`canRead: true`) — the
+// only capability still gated is the watchlist *remove* (U4's live-probe gate
+// on `/sync/history/remove`'s whole-library semantics). The full fan-out
+// expectations now hold for both writes and feed aggregation.
+describe('Simkl write + read fan-out (plan 0034 U6/U7)', () => {
+  it('TV logs fan out to Trakt + Serializd + Simkl', () => {
+    expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([
+      'trakt',
+      'serializd',
+      'simkl',
+    ]);
+  });
+
+  it('movie logs fan out to Trakt + Letterboxd + Simkl', () => {
+    expect(providersForWrite({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([
+      'trakt',
+      'letterboxd',
+      'simkl',
+    ]);
+  });
+
+  it('an unmapped anime series reaches AniList + Simkl (direct ANIME match, no TV-side ids)', () => {
+    expect(providersForWrite({ type: 'ANIME', ...ids({ anilist: 1 }) }, ALL5, 'log')).toEqual([
+      'anilist',
+      'simkl',
+    ]);
+  });
+
+  it('a mapped anime series adds the TV-side targets, exactly as the existing anime tests do', () => {
+    expect(
+      providersForWrite({ type: 'ANIME', ...ids({ anilist: 1, tmdb: 2 }) }, ALL5, 'log'),
+    ).toEqual(['trakt', 'anilist', 'serializd', 'simkl']);
+  });
+
+  it('an anime film fans out to every movie target + Simkl, never Serializd', () => {
+    expect(
+      providersForWrite(
+        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
+        ALL5,
+        'log',
+      ),
+    ).toEqual(['trakt', 'anilist', 'letterboxd', 'simkl']);
+  });
+
+  it('MANGA never routes to Simkl (mediaTypes axis, independent of the flip)', () => {
+    expect(providersForWrite({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL5, 'log')).toEqual([
+      'anilist',
+    ]);
+  });
+
+  it('joins feed aggregation now that U7 flips canRead', () => {
+    expect(providersForFeed(ALL5)).toEqual([
+      'trakt',
+      'anilist',
+      'letterboxd',
+      'serializd',
+      'simkl',
+    ]);
+  });
+
+  it('watchlist add is a real write target; watchlist remove renders as a manual row', () => {
+    expect(
+      splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'ios', 'watchlist'),
+    ).toEqual({ writable: ['trakt', 'serializd', 'simkl'], manual: [] });
+    expect(
+      splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'ios', 'watchlist-remove'),
+    ).toEqual({ writable: ['trakt'], manual: ['serializd', 'simkl'] });
+  });
+
+  it("reverting canWrite is the standing rollback — the gated state comes straight back", () => {
+    const simkl = PROVIDERS.simkl;
+    const original = simkl.canWrite;
+    simkl.canWrite = false;
+    try {
+      expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ALL5, 'log')).toEqual([
+        'trakt',
+        'serializd',
+      ]);
+    } finally {
+      simkl.canWrite = original;
+    }
+  });
 });
 
 // Plan 0022 U3 scenario 5: useLogMedia's own defensive re-check must exclude a

@@ -28,6 +28,16 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
+// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: () => Promise.resolve(null),
   cachedAniListFilmId: () => Promise.resolve(null),
@@ -56,6 +66,12 @@ function fakeDeps(): WatchlistRemoveDeps {
         return letterboxdFails == null
           ? Promise.resolve({ status: 'ok' as const })
           : Promise.reject(new Error(letterboxdFails));
+      },
+      // Bait, not a live adapter (plan 0034 U6): Simkl's remove is 'manual',
+      // so routing must never reach this key — the test below pins it.
+      simkl: () => {
+        adapterCalls.push('simkl');
+        return Promise.resolve({ status: 'ok' as const });
       },
     },
     refresh: () => Promise.resolve(),
@@ -161,6 +177,28 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
 
     await removeWatchedFromWatchlist(queryClient, film(), CONNECTED, fakeDeps());
     expect(adapterCalls).toEqual([]);
+  });
+
+  test('the derived removal never routes a second Simkl POST (plan 0034 U6)', async () => {
+    const queryClient = client({
+      inputs: [{ item: film(), source: 'trakt' }],
+      errors: [],
+      incomplete: [],
+    });
+
+    await removeWatchedFromWatchlist(
+      queryClient,
+      film(),
+      [...CONNECTED, 'simkl'],
+      fakeDeps(),
+    );
+    // A film log with Simkl connected just fired one Simkl history POST inside
+    // its ~20s per-user write lock (KTD-3). Simkl's `watchlistRemove` is
+    // 'manual' (U4's live-probe gate), so this derived write routes it to the
+    // manual/unknown buckets — never to an adapter — and the lock stays
+    // uncontended. If the remove flip ever lands, this pin forces the flip to
+    // deal with the lock collision explicitly rather than inherit it.
+    expect(adapterCalls).toEqual(['trakt']);
   });
 
   test('a failed removal resolves silently — best-effort by contract', async () => {

@@ -44,7 +44,9 @@ export function YourShowsRow({ onItemPress, onItemActions }: FeedRowCallbacks) {
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      provider="trakt"
+      // No fixed `provider` mark: Trakt and Simkl merge into this row (plan
+      // 0034 KTD-10), so no single badge is accurate any more — the same
+      // reasoning `YourWatchlistRow` below already follows.
       title="Your Shows"
     />
   );
@@ -149,7 +151,7 @@ export function TrendingMoviesRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      provider="trakt"
+      provider="simkl"
       title="Trending Movies"
     />
   );
@@ -167,7 +169,7 @@ export function TrendingShowsRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      provider="trakt"
+      provider="simkl"
       title="Trending TV Shows"
     />
   );

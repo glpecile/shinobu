@@ -30,7 +30,13 @@ import type {
 export interface MediaDetailsDeps {
   /** Null when no TMDB token is configured — straight to the provider path. */
   tmdb: TmdbDeps | null;
-  trakt: TraktDeps;
+  /**
+   * Null when Trakt has no usable client id (plan 0034 KTD-8 — BYO-only post-
+   * detachment). `providerFallback` below already tolerates an absent leg the
+   * same way it tolerates a null `tmdb`, so a non-BYO build simply has one
+   * fewer failover source instead of a doomed unauthenticated request.
+   */
+  trakt: TraktDeps | null;
   anilist: AniListDeps;
 }
 
@@ -85,14 +91,15 @@ function providerFallback(
       })),
     );
   }
-  if (params.traktId != null) {
+  if (params.traktId != null && deps.trakt != null) {
+    const trakt = deps.trakt;
     return Effect.all(
       {
-        people: getMediaPeople(deps.trakt, {
+        people: getMediaPeople(trakt, {
           type: params.type,
           traktId: params.traktId,
         }),
-        studios: getMediaStudios(deps.trakt, {
+        studios: getMediaStudios(trakt, {
           type: params.type,
           traktId: params.traktId,
         }),

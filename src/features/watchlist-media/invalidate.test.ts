@@ -26,6 +26,16 @@ mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
   serializdBaseUrl: 'https://api.test',
 }));
+// The Simkl leg (plan 0034 U6) drags `state/queries/simkl` into this module
+// graph, whose auth import reaches expo-crypto — mirror the surface it
+// consumes instead of loading the whole expo package under bun (the
+// `state/queries/simkl.test.ts` pattern).
+mock.module('expo-crypto', () => ({
+  getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
+  digestStringAsync: async () => 'unused',
+}));
 const { invalidateAfterWatchlist, shouldRefreshNotifications } = await import(
   './invalidate'
 );
@@ -98,6 +108,13 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['serializd']);
     expect(keys).toContain('serializd/progress/gian/77');
+  });
+
+  test('Simkl invalidates the all-items prefix and the activities delta (plan 0034 U6)', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterWatchlist(client, SHOW, ['simkl']);
+    expect(keys).toContain('simkl/all-items');
+    expect(keys).toContain('simkl/activities');
   });
 
   test('Trakt invalidates the watchlist read as a prefix (plan 0031 U14)', () => {

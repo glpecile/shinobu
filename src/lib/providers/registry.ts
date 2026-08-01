@@ -101,4 +101,34 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     watchlistWrite: 'write',
     watchlistRemove: 'manual',
   },
+  // Official OAuth API (plan 0034), TMDB/IMDB/MAL-keyed TV + movie + anime
+  // tracking — the Trakt-detachment provider. Landed **capability-gated**
+  // (Letterboxd plan-0033 verify-then-flip precedent) in U1; each token flips
+  // only when its leg is verified live. Reverting a token is the standing
+  // rollback, exactly like Serializd's (KTD-9 precedent).
+  simkl: {
+    id: 'simkl',
+    label: 'Simkl',
+    // TV + MOVIE like Trakt, plus ANIME natively — Simkl is the only provider
+    // that matches an *unmapped* anime series/film directly (routing.ts's
+    // `effectiveTypes` needs no special case for it).
+    mediaTypes: ['TV', 'MOVIE', 'ANIME'],
+    // Flipped by U7: the read leg (all-items sync + normalize, U3) now feeds
+    // the unified feed's `yourShows` merge, the watchlist gather, and the
+    // trending rows — `providersForFeed` includes Simkl from here on.
+    canRead: true,
+    // Flipped by U6: the U4 adapters (`simkl/writes.ts`) are wired into the
+    // log fan-out (`simklLogAdapter` in use-log-media.ts) — a TV/movie/anime
+    // log now routes to Simkl exactly as it does to Trakt.
+    canWrite: true,
+    // Flipped by U6 with canWrite: `addToSimklWatchlist` joined
+    // WATCHLIST_ADAPTERS, so the add is a real fan-out target.
+    watchlistWrite: 'write',
+    // STAYS gated on U4's live probe of `/sync/history/remove` (the same
+    // verify-then-flip bar Serializd's remove is still held to, R32-style):
+    // the documented whole-item body removes watch *history* along with the
+    // list entry, so until the single-status probe clears it, removal renders
+    // as a manual deep-link row — never a dead end (plan 0022), never a write.
+    watchlistRemove: 'manual',
+  },
 };

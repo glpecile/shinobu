@@ -90,6 +90,50 @@ describe('providerItemUrl', () => {
       providerItemUrl('anilist', { type: 'ANIME', ...ids({ anilist: 555 }) }),
     ).toBe('https://anilist.co/anime/555');
   });
+
+  // Plan 0034 U1: Simkl pages are shape-keyed by the simkl id — /tv, /movies,
+  // and /anime sections — with the documented id-redirect as the tmdb fallback
+  // (the same missing-id degradation shape as Trakt's search redirect).
+  it('builds a Simkl TV URL from a simkl id', () => {
+    expect(providerItemUrl('simkl', { type: 'TV', ...ids({ simkl: 111 }) })).toBe(
+      'https://simkl.com/tv/111',
+    );
+  });
+
+  it('builds a Simkl movie URL from a simkl id', () => {
+    expect(providerItemUrl('simkl', { type: 'MOVIE', ...ids({ simkl: 222 }) })).toBe(
+      'https://simkl.com/movies/222',
+    );
+  });
+
+  it('routes anime — series and films alike — to the Simkl anime section', () => {
+    expect(providerItemUrl('simkl', { type: 'ANIME', ...ids({ simkl: 333 }) })).toBe(
+      'https://simkl.com/anime/333',
+    );
+    expect(
+      providerItemUrl('simkl', { type: 'ANIME', isFilm: true, ...ids({ simkl: 333 }) }),
+    ).toBe('https://simkl.com/anime/333');
+  });
+
+  it('falls back to the tmdb redirect for Simkl when no simkl id exists', () => {
+    expect(providerItemUrl('simkl', { type: 'TV', ...ids({ tmdb: 456 }) })).toBe(
+      'https://api.simkl.com/redirect?tmdb=456&type=show',
+    );
+    expect(providerItemUrl('simkl', { type: 'MOVIE', ...ids({ tmdb: 456 }) })).toBe(
+      'https://api.simkl.com/redirect?tmdb=456&type=movie',
+    );
+    expect(providerItemUrl('simkl', { type: 'ANIME', ...ids({ tmdb: 456 }) })).toBe(
+      'https://api.simkl.com/redirect?tmdb=456&type=anime',
+    );
+  });
+
+  it('returns null for Simkl on MANGA or with no usable id', () => {
+    expect(
+      providerItemUrl('simkl', { type: 'MANGA', ...ids({ simkl: 1, tmdb: 2 }) }),
+    ).toBeNull();
+    expect(providerItemUrl('simkl', { type: 'TV', ...ids({ trakt: 1 }) })).toBeNull();
+    expect(providerItemUrl('simkl', { type: 'TV', ...ids() })).toBeNull();
+  });
 });
 
 describe('letterboxdPersonSlug', () => {
@@ -197,9 +241,10 @@ describe('providerPersonUrl', () => {
     expect(providerPersonUrl('anilist', { name: '   ' })).toBeNull();
   });
 
-  it('returns null for Trakt and Serializd (no addressable person surface)', () => {
+  it('returns null for Trakt, Serializd and Simkl (no addressable person surface)', () => {
     expect(providerPersonUrl('trakt', { name: 'Ada Lovelace' })).toBeNull();
     expect(providerPersonUrl('serializd', { name: 'Ada Lovelace' })).toBeNull();
+    expect(providerPersonUrl('simkl', { name: 'Ada Lovelace' })).toBeNull();
   });
 });
 
@@ -209,5 +254,6 @@ describe('providerHomeUrl', () => {
     expect(providerHomeUrl('anilist')).toBe('https://anilist.co');
     expect(providerHomeUrl('letterboxd')).toBe('https://letterboxd.com');
     expect(providerHomeUrl('serializd')).toBe('https://serializd.com');
+    expect(providerHomeUrl('simkl')).toBe('https://simkl.com');
   });
 });

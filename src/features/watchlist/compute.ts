@@ -24,15 +24,18 @@ const PROVIDER_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 /**
  * Which provider's copy of a merged item wins. AniList first because it holds
  * the user's anime state and airing schedule (the same rationale
- * `dedupeByTmdb` uses), then Trakt for its richer metadata and external ids,
- * with Letterboxd contributing only when nothing else matched — its scrape
- * carries a slug, a title and a year and nothing more.
+ * `dedupeByTmdb` uses), then Simkl (plan 0034 KTD-10/R10 — the calendar/
+ * yourShows precedence carries over here rather than inventing a second
+ * ranking for the same two providers), then Trakt, with Letterboxd
+ * contributing only when nothing else matched — its scrape carries a slug, a
+ * title and a year and nothing more.
  */
 const ITEM_PRECEDENCE: Record<ProviderId, number> = {
   anilist: 0,
-  trakt: 1,
-  serializd: 2,
-  letterboxd: 3,
+  simkl: 1,
+  trakt: 2,
+  serializd: 3,
+  letterboxd: 4,
 };
 
 /**

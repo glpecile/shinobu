@@ -5,6 +5,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import { anilistQueryKeys } from '@/state/queries/anilist';
 import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdQueryKeys } from '@/state/queries/serializd';
+import { simklQueryKeys } from '@/state/queries/simkl';
 import { traktQueryKeys } from '@/state/queries/trakt';
 import { upNextQueryKeys } from '@/state/queries/up-next';
 import { watchlistQueryKeys } from '@/state/queries/watchlist';
@@ -84,6 +85,16 @@ export function invalidateAfterWatchlist(
         queryKey: serializdQueryKeys.progress(username, tmdbId),
       });
     }
+  }
+  if (succeeded.includes('simkl')) {
+    // `add-to-list` moved the item into the plantowatch bucket — the cached
+    // all-items filters (the prefix, since a write can't know which
+    // type/status a surface requested) and the activities delta gating their
+    // refetch are both stale (plan 0034 KTD-5). Since U7 flipped `canRead`,
+    // the unified feed, the watchlist gather and Up Next's Simkl legs all read
+    // off these keys — a stale copy would surface the add late on every one.
+    queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
+    queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }
   // Then, and only then, the gatherer. Invalidating it alone would re-serve the
   // provider payloads above from cache for up to 15 minutes; invalidating the

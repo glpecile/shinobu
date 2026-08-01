@@ -47,7 +47,11 @@ const PERSIST_KEY = 'shinobu.query-cache';
 // episode maps as `{}`, and a codec only fixes what it *writes* — restoring an
 // older snapshot would keep crashing the anime details screen for anyone who
 // already has one on disk. Discarding them is exactly what this constant is for.
-const BUSTER = 'v4';
+// v5 (plan 0034 U8): `UpNextInputs` went provider-keyed — `trakt`/
+// `traktCalendar` became `progress`/`calendar`. Same failure mode as the v2
+// bump: a pre-U8 snapshot restores without those arrays and `computeUpNext`
+// throws on `inputs.progress.map` during the first render after upgrade.
+const BUSTER = 'v5';
 
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;

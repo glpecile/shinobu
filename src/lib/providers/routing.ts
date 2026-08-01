@@ -27,6 +27,11 @@ export function animeEffectiveMovieTvType(item: Pick<NormalizedMediaItem, 'isFil
  * counts when the item actually carries ids for the other side — `useLogMedia`
  * enriches `externalIds` through the ani.zip mapping before routing, so an
  * unmappable item simply logs to its origin provider.
+ *
+ * Simkl (plan 0034) needs no case here at all: its mediaTypes include 'ANIME',
+ * so it matches an anime item directly — mapped or not. That also means anime
+ * *films* fan out to Simkl once its write flag flips (U6), unlike TV-only
+ * Serializd, which the movie-side type keeps out of films.
  */
 function effectiveTypes(item: RoutableItem): readonly MediaType[] {
   if (item.type === 'ANIME') {

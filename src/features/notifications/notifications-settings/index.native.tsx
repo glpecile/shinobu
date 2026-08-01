@@ -21,7 +21,7 @@ import { upNextQueryKeys } from '@/state/queries/up-next';
 /** Best-effort: whatever Up Next already has cached, no extra fetch (R11's "real tracked item"). */
 function sampleTrackedItemId(queryClient: QueryClient): string | undefined {
   const cached = queryClient.getQueryData<UpNextInputs>(upNextQueryKeys.inputs());
-  return cached?.trakt[0]?.item.id ?? cached?.anilist[0]?.item.id;
+  return cached?.progress[0]?.item.id ?? cached?.anilist[0]?.item.id;
 }
 
 export function NotificationsSettingsSection() {

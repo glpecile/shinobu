@@ -18,11 +18,7 @@ import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
 import { TRAKT_CREATE_APP_URL } from '@/lib/providers/external-urls';
-import {
-  TRAKT_AUTHORIZE_URL,
-  traktClientId,
-  traktClientSecret,
-} from '@/lib/providers/trakt/config';
+import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
 import {
   getTraktRedirectUri,
   TRAKT_CORS_ORIGINS,
@@ -109,36 +105,30 @@ function CredentialInput({
 }
 
 /**
- * Trakt OAuth trigger. Hybrid credential model, mirroring the AniList button:
- * builds that ship credentials (EXPO_PUBLIC_TRAKT_CLIENT_ID +
- * EXPO_PUBLIC_TRAKT_CLIENT_SECRET) connect in one tap; otherwise a one-time
- * form takes the user's own client id + secret. On native, auth opens in an
+ * Trakt OAuth trigger. BYO-only credential model (plan 0034 R12): builds ship
+ * no Trakt credentials, so the guided setup form (the user's own client id +
+ * secret) is the one and only activation path. On native, auth opens in an
  * embedded browser session via expo-web-browser and returns to the app, and
  * this component finishes the code exchange. On web, the current window
  * navigates to Trakt and is redirected back to the home route with ?code=...,
  * where `useOAuthCallback` exchanges it.
- */
-/**
- * Trakt's OAuth trigger, without any of its UI.
  *
- * Extracted so a caller that already knows no setup is needed — the Manage
- * Trackers row, when this build ships credentials — can connect in one tap
- * instead of opening a sheet whose only content is this button. The button
- * below consumes the same hook, so there is exactly one copy of the flow.
+ * Completing the exchange *overwrites* the stored session
+ * (`exchangeCodeForSession` → `tokens.set`), so a MigrationNeeded token — one
+ * bound to the removed client id (R13) — is discarded by the fresh connect
+ * with no extra clearing step.
+ *
+ * `useTraktConnect` is the trigger without UI, extracted so the Manage
+ * Trackers row can connect directly once credentials are stored instead of
+ * opening a sheet whose only content is a button. The button below consumes
+ * the same hook, so there is exactly one copy of the flow.
  */
 export function useTraktConnect() {
   const [credentials, saveCredentials, clearCredentials] =
     useProviderCredentials('trakt');
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
-  // Unlike AniList's implicit grant (id only), Trakt's token exchange needs
-  // both the client id and secret — so env creds only count as "embedded"
-  // when both are present; otherwise fall back to the manual form.
-  const envId = traktClientId();
-  const envSecret = traktClientSecret();
-  const hasEnvCredentials = envId !== '' && envSecret !== '';
-
-  const clientId = hasEnvCredentials ? envId : (credentials?.clientId ?? '');
+  const clientId = credentials?.clientId ?? '';
   const redirectUri = getTraktRedirectUri();
 
   async function connect(id: string = clientId) {
@@ -208,11 +198,10 @@ export function useTraktConnect() {
     credentials,
     saveCredentials,
     clearCredentials,
-    hasEnvCredentials,
     clientId,
     redirectUri,
     /** True when connecting first requires the client id + secret form. */
-    needsSetup: !hasEnvCredentials && credentials == null,
+    needsSetup: credentials == null,
   };
 }
 
@@ -223,7 +212,6 @@ export function ConnectTraktButton() {
     credentials,
     saveCredentials,
     clearCredentials,
-    hasEnvCredentials,
     redirectUri,
   } = useTraktConnect();
 
@@ -245,7 +233,9 @@ export function ConnectTraktButton() {
     await connect(values.clientId);
   });
 
-  if (!hasEnvCredentials && credentials == null) {
+  // The guided BYO wizard is Trakt's only connect path (plan 0034 R12) — it
+  // renders whenever no credentials are stored yet.
+  if (credentials == null) {
     // If web dev runs on a non-default port the device URI won't be in the
     // canonical list — surface it so the user registers the one that matters.
     const redirectUris = TRAKT_REDIRECT_URIS.includes(redirectUri)
@@ -375,13 +365,11 @@ export function ConnectTraktButton() {
         loadingLabel="Connecting…"
         onPress={() => void connect()}
       />
-      {!hasEnvCredentials && credentials != null && (
-        <PresstableOpacity onPress={() => clearCredentials()}>
-          <Text className="text-muted font-sans text-xs">
-            Edit API credentials
-          </Text>
-        </PresstableOpacity>
-      )}
+      <PresstableOpacity onPress={() => clearCredentials()}>
+        <Text className="text-muted font-sans text-xs">
+          Edit API credentials
+        </Text>
+      </PresstableOpacity>
     </View>
   );
 }

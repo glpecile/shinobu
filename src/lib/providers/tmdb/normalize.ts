@@ -710,6 +710,20 @@ export function normalizeTitleSearch(
     .filter((item) => item != null);
 }
 
+/**
+ * `/search/multi` rows → normalized items for the search tab. Each row carries
+ * its kind in `media_type`, so movies and shows arrive in one call; people
+ * (and any future kinds) drop out via the same credit mapping.
+ */
+export function normalizeMultiSearch(
+  raw: TmdbSearchResponse,
+  nowIso: string,
+): NormalizedMediaItem[] {
+  return (raw.results ?? [])
+    .map((entry) => normalizeCredit(entry, nowIso))
+    .filter((item) => item != null);
+}
+
 // ---- /find external-id bridge ----
 
 export interface TmdbFindResponse {

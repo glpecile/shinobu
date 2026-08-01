@@ -88,6 +88,13 @@ export interface NormalizedMediaItem {
     /** TVDB/IMDB bridge ids — how anime maps across providers (plan 0011). */
     tvdb?: number;
     imdb?: string;
+    /**
+     * MyAnimeList id — Simkl keys anime by `mal` (plan 0034 KTD-6), so it is a
+     * bridge id like tvdb/imdb, not a fifth tracker.
+     */
+    mal?: number;
+    /** Simkl's own numeric id (plan 0034). */
+    simkl?: number;
   };
 }
 
@@ -192,7 +199,11 @@ export interface NormalizedEpisode {
   number: number;
   title: string;
   overview?: string;
-  /** ISO instant with offset/Z, or absent when Trakt has no air date. */
+  /**
+   * ISO instant with offset/Z (Trakt) or a bare `YYYY-MM-DD` date (TMDB, which
+   * carries no air time); absent when the source has no air date. Consumers
+   * compare it through `lib/time/has-aired.ts`, which handles both forms.
+   */
   firstAired?: string;
   /** Minutes. */
   runtime?: number;

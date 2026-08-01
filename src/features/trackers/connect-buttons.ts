@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import { ConnectAniListButton } from '@/components/connect-anilist-button';
 import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
 import { ConnectSerializdButton } from '@/components/connect-serializd-button';
+import { ConnectSimklButton } from '@/components/connect-simkl-button';
 import { ConnectTraktButton } from '@/components/connect-trakt-button';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -15,6 +16,7 @@ import type { ProviderId } from '@/lib/providers/types';
  * - AniList renders one-tap when this build embeds a client id, or the
  *   one-time client-id form when it doesn't.
  * - Serializd is a WebView token capture on native, email/password on web.
+ * - Simkl is one-tap PKCE with the bundled client id — no wizard (plan 0034).
  *
  * They range from one button to a multi-step form, which is exactly why they
  * live in the sheet rather than inline on a row (`provider-sheet.tsx`).
@@ -24,4 +26,5 @@ export const CONNECT_BUTTONS: Record<ProviderId, ComponentType> = {
   anilist: ConnectAniListButton,
   letterboxd: ConnectLetterboxdButton,
   serializd: ConnectSerializdButton,
+  simkl: ConnectSimklButton,
 };
