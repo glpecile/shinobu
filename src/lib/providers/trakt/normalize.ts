@@ -523,6 +523,18 @@ export interface TraktShowProgressResult {
   watchedKeys: ReadonlySet<string>;
   /** Absent when the user has nothing left to watch (Trakt sends null). */
   nextEpisode?: TraktNextEpisode;
+  /**
+   * Trakt's count of episodes that have actually aired (plan 0035 KTD4).
+   * Carried rather than discarded because it is the only thing that tells the
+   * two `next_episode: null` cases apart: **0 aired** is an announced show
+   * nobody can have watched, **>0 aired** is a show you finished. Without it
+   * both read as "🎉 you've watched every aired episode".
+   *
+   * Absent for progress cached before this field was carried — consumers must
+   * treat that as "not zero-aired" so an old cache keeps today's behaviour
+   * rather than claiming an unaired show.
+   */
+  aired?: number;
 }
 
 export function normalizeWatchedProgress(
@@ -540,11 +552,13 @@ export function normalizeWatchedProgress(
     }
   }
 
+  const airedCount = raw.aired != null ? { aired: raw.aired } : {};
   const next = raw.next_episode;
-  if (next == null) return { watchedKeys };
+  if (next == null) return { watchedKeys, ...airedCount };
 
   return {
     watchedKeys,
+    ...airedCount,
     nextEpisode: {
       season: next.season,
       number: next.number,

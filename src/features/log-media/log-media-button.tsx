@@ -89,6 +89,13 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       : seriesNext.rewatch
         ? 'Log rewatch'
         : `Log ${seriesLabel}`;
+  // The series analogue of `filmReleaseStatus` (plan 0035 R18). A show with
+  // zero aired episodes shares Trakt's `next_episode: null` with a *finished*
+  // show, and used to be rendered as one: "🎉 You've watched every aired
+  // episode" over a "Log rewatch" button, for something nobody has seen. The
+  // 🎉 line and the rewatch copy below both gate on `rewatch`, which stays
+  // false here, so they disappear on their own.
+  const seriesUnaired = seriesNext?.unaired === true;
 
   const anilistStatus = anilistEntry.data?.entry?.status;
   const anilistProgress = anilistEntry.data?.entry?.progress;
@@ -177,11 +184,15 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   }
 
   const buttonLabel = isSeries
-    ? seriesNext == null || seriesNext.rewatch
-      ? seriesAction
-      : seriesNext.aired
-        ? `Log ${seriesLabel}`
-        : `${seriesLabel} not yet aired`
+    ? seriesUnaired
+      ? // Not "S1E1 not yet aired": nothing at all has aired, so naming an
+        // episode implies a schedule the show doesn't have yet.
+        'Hasn’t aired yet'
+      : seriesNext == null || seriesNext.rewatch
+        ? seriesAction
+        : seriesNext.aired
+          ? `Log ${seriesLabel}`
+          : `${seriesLabel} not yet aired`
     : isAnimeSeries
       ? nextEpisodeAired
         ? `Log episode ${nextEpisode}`

@@ -327,6 +327,34 @@ describe('normalizeWatchedProgress', () => {
     expect(normalizeWatchedProgress({}).watchedKeys).toEqual(new Set());
   });
 
+  /**
+   * Plan 0035 KTD4. `aired` used to be read off the payload and dropped, which
+   * left the two `next_episode: null` cases — "nothing has aired" and "you
+   * finished it" — indistinguishable downstream.
+   */
+  test('carries Trakt’s aired count through, including 0', () => {
+    expect(normalizeWatchedProgress({ ...PROGRESS_PAYLOAD, aired: 12 }).aired).toBe(12);
+    // 0 is the whole point and must survive the "is it falsy" trap.
+    expect(normalizeWatchedProgress({ ...PROGRESS_PAYLOAD, aired: 0 }).aired).toBe(0);
+  });
+
+  test('an absent aired count stays absent — never coerced to 0', () => {
+    // A persisted pre-0035 payload has no `aired`; reporting it as 0 would
+    // claim an unaired show for something the user finished long ago.
+    const { aired: _dropped, ...noAired } = PROGRESS_PAYLOAD;
+    expect(normalizeWatchedProgress(noAired).aired).toBeUndefined();
+  });
+
+  test('the aired count rides along with a next episode too', () => {
+    const result = normalizeWatchedProgress({
+      ...PROGRESS_PAYLOAD,
+      aired: 7,
+      next_episode: { season: 1, number: 7, first_aired: null },
+    });
+    expect(result.aired).toBe(7);
+    expect(result.nextEpisode?.number).toBe(7);
+  });
+
   test('specials (season 0) are excluded by the request, not the normalizer', () => {
     // Trakt omits season 0 unless `specials=true` is sent, which the app never
     // does — so a progress payload simply never carries specials, and the
