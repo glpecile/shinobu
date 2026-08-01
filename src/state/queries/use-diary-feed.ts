@@ -15,6 +15,7 @@ import {
   serializdNextPage,
 } from '@/lib/providers/serializd/diary';
 import { providersForFeed } from '@/lib/providers/routing';
+import { getSimklDiary } from '@/lib/providers/simkl/diary';
 import { getHistory } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
 import type { DiaryDay, NormalizedDiaryEntry } from '@/types/media';
@@ -30,6 +31,7 @@ import { getSerializdUsername } from '@/state/session/serializd';
 import { anilistDeps, anilistQueryKeys } from './anilist';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { serializdDeps, serializdQueryKeys } from './serializd';
+import { simklDeps, simklQueryKeys } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 
 // Trakt/AniList paginate at 50; history is append-mostly so a generous
@@ -75,7 +77,7 @@ async function fetchAniListActivityPage(
 /**
  * The unified diary feed (plan 0016 U4): one infinite cursor per connected,
  * platform-capable provider, merged behind a watermark into one gapless,
- * grouped, reverse-chronological stream. The three provider hooks are called
+ * grouped, reverse-chronological stream. The per-provider hooks are called
  * unconditionally (fixed hook count) and gated via `enabled`; the merge is
  * provider-count-agnostic, so a subset degrades cleanly. No Effect type escapes
  * — the effects run inside each `queryFn` (containment rule).
@@ -104,6 +106,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     ? (getSerializdUsername() ?? '')
     : '';
   const serializdEnabled = serializdUsername !== '';
+  const simklEnabled = readable.includes('simkl');
 
   const trakt = useInfiniteQuery({
     queryKey: traktQueryKeys.history(),
@@ -163,6 +166,22 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     enabled: serializdEnabled,
   });
 
+  // Simkl has no history endpoint — the diary is a projection of the one
+  // `/sync/all-items` snapshot (per-episode watched instants), so like
+  // Letterboxd it is a single window: it exhausts after page 1 and drops out
+  // of the watermark early. The key sits under `allItemsRoot`, so the log
+  // fan-out's snapshot invalidation refetches this leg with no extra wiring
+  // (and no new polled read — the rate-limit discipline in
+  // docs/solutions/simkl-rate-limits-and-write-lock.md).
+  const simkl = useInfiniteQuery({
+    queryKey: simklQueryKeys.diary(),
+    queryFn: () => Effect.runPromise(getSimklDiary(simklDeps())),
+    initialPageParam: 1,
+    getNextPageParam: () => undefined,
+    staleTime: DIARY_STALE_MS,
+    enabled: simklEnabled,
+  });
+
   // `entries` is precomputed per provider (Serializd's page shape differs), so
   // the merge/watermark plumbing below stays provider-shape-agnostic.
   const wired: Array<{
@@ -180,6 +199,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
       enabled: serializdEnabled,
       entries: (serializd.data?.pages ?? []).flatMap((page) => page.entries),
     },
+    { provider: 'simkl', query: simkl, enabled: simklEnabled, entries: (simkl.data?.pages ?? []).flat() },
   ];
   const active = wired.filter((w) => w.enabled);
 

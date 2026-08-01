@@ -6,6 +6,7 @@ export {
   simklStandardParams,
 } from './config';
 export type { SimklDeps } from './deps';
+export { getSimklDiary, simklDiaryEntries } from './diary';
 export { simklHttp, type SimklHttpOptions } from './http';
 export {
   getAllItems,

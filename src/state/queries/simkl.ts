@@ -82,6 +82,18 @@ export const simklQueryKeys = {
   /** `/sync/activities` — the cheap delta signal that gates `allItems`
    *  refetches (plan 0034 KTD-5). */
   activities: () => [...simklQueryKeys.all, 'activities'] as const,
+  /**
+   * The diary projection of the all-items snapshot (`getSimklDiary` — Simkl
+   * has no history endpoint; watch instants live inside `/sync/all-items`).
+   * Deliberately under the `allItemsRoot` prefix: every write-side
+   * invalidation of the snapshot (log fan-out, watchlist mutations) is
+   * exactly the signal on which the diary must refetch, so it rides the
+   * existing `allItemsRoot()` invalidations for free. `'diary'` occupies the
+   * type segment, which only ever holds `shows`/`movies`/`anime`/`all` — no
+   * collision with any `allItems` filter key. Mirrored in
+   * `diary-cache.ts`'s `DIARY_QUERY_ROOTS`.
+   */
+  diary: () => [...simklQueryKeys.allItemsRoot(), 'diary'] as const,
   /** One rolling CDN calendar file per kind (KTD-4). */
   calendar: (kind: SimklCalendarKind) =>
     [...simklQueryKeys.all, 'calendar', kind] as const,

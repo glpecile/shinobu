@@ -553,3 +553,129 @@ describe('Serializd diary in the unified merge', () => {
     expect(days[0].entries).toHaveLength(2);
   });
 });
+
+describe('Simkl diary in the unified merge', () => {
+  test('a Simkl anime entry collapses with a same-day AniList entry sharing only a mal/anilist id', () => {
+    const day = '2026-07-31T18:00:00.000Z';
+    const simkl = entry('simkl', '200-s1e5', day, {
+      episodes: [5],
+      item: item({
+        id: 'simkl-200',
+        title: 'KAMUI',
+        type: 'ANIME',
+        externalIds: { simkl: 200, mal: 999, anilist: 555 },
+      }),
+    });
+    const anilist = entry('anilist', 'a1', day, {
+      episodes: [5],
+      item: item({
+        id: 'anilist-555',
+        title: 'KAMUI ---He is behind you',
+        type: 'ANIME',
+        // No tmdb — the pre-U9.5 tmdb/imdb/title join would miss this.
+        externalIds: { anilist: 555 },
+      }),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('simkl', [simkl]), state('anilist', [anilist])]),
+      TZ_MINUS_5,
+    );
+
+    expect(days).toHaveLength(1);
+    const rows = days[0].entries;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].providers).toEqual(['simkl', 'anilist']);
+    // Simkl outranks AniList, so the display item is Simkl's.
+    expect(rows[0].item.id).toBe('simkl-200');
+    expect(rows[0].episodes).toEqual([5]);
+  });
+
+  test('a Simkl entry bridges a tmdb-only Serializd row and an anilist-only AniList row into one', () => {
+    // Newest-first processing seats the id-rich Simkl entry as the bucket,
+    // whose unioned keys then catch both id-poor contributors.
+    const simkl = entry('simkl', '300-s1e4', '2026-07-31T18:00:02.000Z', {
+      episodes: [4],
+      item: item({
+        id: 'simkl-300',
+        title: 'Smoking Behind the Supermarket with You',
+        type: 'TV',
+        externalIds: { simkl: 300, tmdb: 777, anilist: 888 },
+      }),
+    });
+    const serializd = entry('serializd', 's1', '2026-07-31T18:00:01.000Z', {
+      episodes: [4],
+      item: item({
+        id: 'serializd-777',
+        title: 'Smoking Behind the Supermarket with You',
+        type: 'TV',
+        externalIds: { tmdb: 777 },
+      }),
+    });
+    const anilist = entry('anilist', 'a1', '2026-07-31T18:00:00.000Z', {
+      episodes: [4],
+      item: item({
+        id: 'anilist-888',
+        title: 'Kimi to Boku no Saigo no Senjou',
+        type: 'TV',
+        externalIds: { anilist: 888 },
+      }),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([
+        state('simkl', [simkl]),
+        state('serializd', [serializd]),
+        state('anilist', [anilist]),
+      ]),
+      TZ_MINUS_5,
+    );
+
+    expect(days).toHaveLength(1);
+    const rows = days[0].entries;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
+  });
+
+  test('two Simkl logs of one show never collapse with each other (same-provider rule)', () => {
+    const day = '2026-07-31T18:00:00.000Z';
+    const shared = () =>
+      item({ id: 'simkl-200', type: 'ANIME', externalIds: { mal: 999 } });
+    const e4 = entry('simkl', '200-s1e4', day, { episodes: [4], item: shared() });
+    const e5 = entry('simkl', '200-s1e5', day, { episodes: [5], item: shared() });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('simkl', [e4, e5])]),
+      TZ_MINUS_5,
+    );
+    expect(days[0].entries).toHaveLength(2);
+  });
+
+  test('id-bearing items never fall back to a title+year join', () => {
+    const day = '2026-07-31T18:00:00.000Z';
+    const simkl = entry('simkl', 'm1', day, {
+      item: item({
+        id: 'simkl-1',
+        title: 'Solaris',
+        year: 1972,
+        externalIds: { simkl: 1, tmdb: 593 },
+      }),
+    });
+    // Same title+year, different film (the 2002 remake mis-dated) — a shared
+    // title must not merge items whose ids disagree.
+    const letterboxd = entry('letterboxd', 'l1', day, {
+      item: item({
+        id: 'letterboxd-solaris-2002',
+        title: 'Solaris',
+        year: 1972,
+        externalIds: { tmdb: 2721 },
+      }),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('simkl', [simkl]), state('letterboxd', [letterboxd])]),
+      TZ_MINUS_5,
+    );
+    expect(days[0].entries).toHaveLength(2);
+  });
+});
