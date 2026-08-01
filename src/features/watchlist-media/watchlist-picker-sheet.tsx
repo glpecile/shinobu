@@ -227,14 +227,19 @@ export function WatchlistRemovePicker({
   const unknown = result?.unknown ?? split.unknown;
 
   // R3's explicit confirm, in place rather than as a second stacked sheet: the
-  // warning is on screen from the moment AniList is a selected target, and the
-  // first press only arms the button. Two deliberate presses with the loss
-  // spelled out between them is what earns `allowDestructive`. Deselecting
-  // AniList clears the warning, and with it the arming.
+  // warning is on screen from the moment a provider whose removal destroys
+  // something is a selected target — AniList on a CURRENT entry, Simkl on a
+  // row that still holds watch history (plan 0036) — and the first press only
+  // arms the button. Two deliberate presses with the loss spelled out between
+  // them is what earns `allowDestructive`. Deselecting that provider clears
+  // the warning, and with it the arming.
   const [armed, setArmed] = useState(false);
   const warning = destructiveRemoveWarning({
     ...(entry.anilistStatus != null
       ? { anilistStatus: entry.anilistStatus }
+      : {}),
+    ...(entry.simklWatchedCount != null
+      ? { simklWatchedCount: entry.simklWatchedCount }
       : {}),
     targets: selected,
   });

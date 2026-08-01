@@ -185,6 +185,29 @@ describe('nextEpisodeFromSimklEntry', () => {
     });
   });
 
+  test('a part-way entry with no pointer is unnameable, never a rewatch', () => {
+    // The `plantowatch` case (owner report 2026-08-01): Simkl omits
+    // `next_to_watch` for anything parked outside `watching`, so a 10-of-20
+    // show read out of that snapshot used to satisfy "aired > 0" and offer a
+    // rewatch of S1E1 on a screen reading "10 / 20 episodes". Unnameable hands
+    // it to the season picker instead of asserting something false.
+    expect(
+      nextEpisodeFromSimklEntry(midItem, { notAiredEpisodes: 0 }),
+    ).toBeNull();
+  });
+
+  test('an unknown aired count keeps the rewatch path it always had', () => {
+    // `notAiredEpisodes` absent is "we don't know" — the pre-existing
+    // behaviour, deliberately not tightened by the rule above.
+    expect(nextEpisodeFromSimklEntry(midItem, {})).toEqual({
+      season: 1,
+      number: 1,
+      aired: true,
+      rewatch: true,
+      unaired: false,
+    });
+  });
+
   test('a show outside the watching list starts fresh at S1E1', () => {
     expect(nextEpisodeFromSimklEntry(freshItem, null)).toEqual({
       season: 1,

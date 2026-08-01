@@ -26,10 +26,14 @@
   fan-out regardless of how many items/episodes it carries.
 - **No derived second write inside the lock window:** the log flow's
   `removeWatchedFromWatchlist` follow-up is a second POST within a second of
-  the first. Simkl has no remove adapter today (`watchlistRemove: 'manual'`),
-  so the derived path skips it; if the flip ever lands, the removal must be
-  deferred past the lock window or skipped when the single-status model
-  already evicted the item (see below).
+  the first. The remove adapter went live in plan 0036, and this is the branch
+  that flip had to deal with explicitly: **the derived path filters Simkl out
+  of its targets outright.** The single-status model already evicted the film
+  from `plantowatch` when the log landed, so there is nothing to remove — and
+  `/sync/history/remove` deletes watch history, which is not a thing to fire
+  speculatively inside the lock window
+  (`docs/solutions/simkl-watchlist-remove-deletes-history.md`). The user's own
+  removal, aimed from the picker, keeps its Simkl leg.
 - **`/sync/activities` before `/sync/all-items`:** poll the cheap timestamp
   endpoint and refetch the heavy snapshot only on delta — the docs name
   timer-polling all-items as a suspension-worthy anti-pattern.
@@ -43,13 +47,14 @@
   bundled client id, or per user token, is not stated precisely. If aggregate,
   adoption has a ceiling; the CDN bias above is the mitigation either way.
   Record the empirical answer here when the U2 manual leg runs.
-- **Single-status semantics:** Simkl holds ONE status per item
-  (watching/plantowatch/completed/…). Marking watched likely evicts
-  `plantowatch` server-side. The documented remove path
-  (`POST /sync/history/remove`, whole-item body) **also deletes watch
-  history** — which is why `watchlistRemove` stays `'manual'` in the registry
-  until a live probe confirms what the un-track actually destroys
-  (`src/lib/providers/simkl/writes.ts` ships the function dormant).
+- ~~**Single-status semantics**~~ — **resolved 2026-08-01, plan 0036.** Simkl
+  holds ONE status per item and there is **no status-only removal**:
+  `POST /sync/history/remove` with a whole-item body deletes the list entry,
+  the watch history and the rating together. `watchlistRemove` is `'write'`
+  now, with the hazard guarded rather than avoided — a fresh `plantowatch`
+  read before the write, and a refusal on any row still holding history unless
+  the picker took an explicit second confirm. Full finding and rollback:
+  `docs/solutions/simkl-watchlist-remove-deletes-history.md`.
 
 ## Auth-adjacent facts that shape retries
 

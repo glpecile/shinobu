@@ -46,6 +46,18 @@ export interface WatchlistInput {
    * the authority on what actually gets destroyed.
    */
   anilistStatus?: 'CURRENT' | 'PLANNING';
+  /**
+   * How much watch history the Simkl row carries (plan 0036). Same purpose and
+   * same status as `anilistStatus` above: Simkl has no way to drop just the
+   * plan-to-watch status, so removing a row that holds history deletes that
+   * history too, and the picker has to warn before it fires. A **hint** — the
+   * adapter's own fresh `plantowatch` read is the authority at delete time.
+   *
+   * Normally `0`: Simkl holds one status per item, so watching something
+   * evicts it from plan-to-watch server-side. A non-zero value means the user
+   * put a partly-watched item back on the watchlist by hand.
+   */
+  simklWatchedCount?: number;
 }
 
 /** Every connected provider's rows plus whichever legs failed (R29). */
@@ -104,4 +116,9 @@ export interface WatchlistEntry {
    * `CURRENT` is what makes the removal destructive; the picker warns on it.
    */
   anilistStatus?: 'CURRENT' | 'PLANNING';
+  /**
+   * The Simkl row's watch-history size, when a Simkl row contributed (plan
+   * 0036). Non-zero is what makes *that* provider's removal destructive.
+   */
+  simklWatchedCount?: number;
 }

@@ -20,11 +20,13 @@ import {
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { deleteAniListEntry } from '@/lib/providers/anilist/writes';
 import { removeFromLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
+import { removeFromSimklWatchlist } from '@/lib/providers/simkl/writes';
 import { removeFromTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { letterboxdDeps } from '@/state/queries/letterboxd';
 import type { ProviderFailure } from '@/state/queries/settle';
+import { simklDeps } from '@/state/queries/simkl';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -61,15 +63,12 @@ import {
  * manual provider to `runProviderWrites`, whose missing-adapter path is a loud
  * error by design.
  *
- * Simkl is absent for the write gate alone (plan 0034 U6): its
- * `watchlistRemove` stays `'manual'` behind U4's live-probe gate — the
- * documented `/sync/history/remove` whole-item body removes watch *history*
- * along with the list entry. Unlike Serializd it *does* appear in a
- * `WatchlistEntry`'s `sources` now that U7's read leg feeds the gather, so a
- * removal reaches `planWatchlistRemove` and lands in the `manual` bucket — a
- * deep-link row (plan 0022), never a `runProviderWrites` target.
- * `removeFromSimklWatchlist` ships dormant in `simkl/writes.ts` so the
- * eventual flip is a one-token registry change, exactly like Serializd's.
+ * Simkl joined in plan 0036, and is the second entry here (after AniList) whose
+ * removal can destroy something: `/sync/history/remove` is the only un-track
+ * Simkl documents and it deletes the plan-to-watch entry, the watch history and
+ * the rating together. `allowDestructive` therefore threads to it exactly as it
+ * does to AniList — and, exactly as with AniList, the guard that decides is a
+ * fresh in-effect read inside the adapter, never a cached row read here.
  */
 export const WATCHLIST_REMOVE_ADAPTERS: Partial<
   Record<ProviderId, WriteAdapter<WatchlistRemovePayload>>
@@ -78,6 +77,14 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
     Effect.runPromise(removeFromTraktWatchlist(traktDeps(), item)),
   letterboxd: ({ item }) =>
     Effect.runPromise(removeFromLetterboxdWatchlist(letterboxdDeps(), item)),
+  simkl: ({ item, allowDestructive }) =>
+    Effect.runPromise(
+      removeFromSimklWatchlist(
+        simklDeps(),
+        item,
+        allowDestructive === true ? { allowDestructive: true } : {},
+      ),
+    ),
   anilist: ({ item, allowDestructive }) => {
     const mediaId = item.externalIds.anilist;
     // Reachable only for an entry AniList's own leg produced, so this is

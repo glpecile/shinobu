@@ -98,6 +98,7 @@ interface MergedEntry {
   sourceIds: string[];
   addedAt?: string;
   anilistStatus?: 'CURRENT' | 'PLANNING';
+  simklWatchedCount?: number;
 }
 
 function absorb(entry: MergedEntry, input: WatchlistInput): void {
@@ -117,6 +118,10 @@ function absorb(entry: MergedEntry, input: WatchlistInput): void {
   // Only AniList rows carry one, so a merged row can never hold two — no
   // precedence rule needed here, unlike `item`.
   if (input.anilistStatus != null) entry.anilistStatus = input.anilistStatus;
+  // Same one-provider-carries-it rule as `anilistStatus`.
+  if (input.simklWatchedCount != null) {
+    entry.simklWatchedCount = input.simklWatchedCount;
+  }
 }
 
 /** `addedAt` descending, undated last — stable, so ties keep gather order. */
@@ -150,6 +155,9 @@ export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEn
         ...(input.anilistStatus != null
           ? { anilistStatus: input.anilistStatus }
           : {}),
+        ...(input.simklWatchedCount != null
+          ? { simklWatchedCount: input.simklWatchedCount }
+          : {}),
       };
       merged.push(entry);
     } else {
@@ -172,6 +180,9 @@ export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEn
       ...(entry.addedAt != null ? { addedAt: entry.addedAt } : {}),
       ...(entry.anilistStatus != null
         ? { anilistStatus: entry.anilistStatus }
+        : {}),
+      ...(entry.simklWatchedCount != null
+        ? { simklWatchedCount: entry.simklWatchedCount }
         : {}),
     }))
     .sort(byAddedAtDesc);

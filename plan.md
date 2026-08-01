@@ -15,16 +15,24 @@ By treating your system as an **API Aggregator and Fan-Out Hub** (rather than ma
 ### 1.1 Product Specification Archetype
 
 * **Target Platforms:** Cross-platform layout deployment using **Expo** targeting Web (Desktop browser responsive canvas), iPadOS (Grid-optimized master hub), and Android/iOS mobile environments.
-* **Core Concept:** Trakt, AniList, and Letterboxd are equal, opt-in tracking providers — not a primary store with satellite imports. Logging a movie, episode, or manga chapter once fans that action out to every connected provider it applies to; the unified feed reads the same providers back in. There is no Shinobu-owned account — each provider's OAuth session *is* the user's session for that provider, and a user can connect any subset of the three.
+* **Core Concept:** Simkl, Trakt, AniList, Letterboxd and Serializd are equal, opt-in tracking providers — not a primary store with satellite imports. Logging a movie, episode, or manga chapter once fans that action out to every connected provider it applies to; the unified feed reads the same providers back in. There is no Shinobu-owned account — each provider's OAuth session *is* the user's session for that provider, and a user can connect any subset of them.
 * **Visual Persona:** Minimalist, geometric layout inspired by *Studio Shaft's Monogatari* styling. High-contrast typography, dark mode-first implementation with **Vampiric Crimson (`#DC2626`)** accents, and the icon **"忍"** representing the silent core underlying the infrastructure.
 
 ### 1.2 Provider Boundaries
 
-Three symmetric, opt-in providers. A user connects zero or more of them; connecting one makes it a target for both the unified read feed (2.1) and the write fan-out (1.3).
+Symmetric, opt-in providers. A user connects zero or more of them; connecting one makes it a target for both the unified read feed (2.1) and the write fan-out (1.3). Written when there were three; **five today, and no longer of equal standing** — see the amendment below.
 
 * **Trakt.tv (REST v2)** — TV + movies. Read: `/sync/watched`. Write: `/sync/history` (log a watch).
 * **AniList (GraphQL)** — anime + manga, including anime films (AniList's `ANIME` media type covers movie-format entries too, e.g. a Ghibli film). Read: `MediaListCollection` query. Write: `SaveMediaListEntry` mutation.
 * **Letterboxd (REST)** — movies, including anime films. Read: diary/log entries. Write: create a log entry (a diary entry, a review, or both). **Caveat:** API access is by request only — you email `api@letterboxd.com` describing intended use, and Letterboxd's stated policy explicitly excludes "personal projects," so approval isn't guaranteed. Treat this as a live risk to track (`todos/004`), not a solved integration. If access isn't granted, the CSV diary export/import path is the fallback degraded mode — not the primary design.
+
+**Amendment (2026-07-31, `docs/plans/0034-simkl-provider-and-trakt-detachment.md`).** Two providers joined and the standing of one changed:
+
+* **Simkl (REST, OAuth PKCE)** — TV + movies + anime natively, the only provider that matches an *unmapped* anime series or film directly. Read: `/sync/all-items`. Write: `/sync/history`, `/sync/add-to-list`, `/sync/history/remove`. **This is now the tracker that "just works":** a bundled client id, one-tap connect, wildcard CORS so web needs no proxy, and a rolling CDN calendar. New users are expected to land here.
+* **Serializd (unofficial JSON API)** — TV only, TMDB-keyed; see `docs/plans/0017-serializd-provider.md`.
+* **Trakt is demoted to bring-your-own-everything.** The app ships **no Trakt credentials whatsoever**; Trakt activates only once a user registers their own API app and enters both client id and secret in the guided setup. This is not an API paywall — it follows Trakt capping free accounts at one connected Community App (owner decision 2026-07-31). Trakt remains fully symmetric for anyone who does that; it is simply no longer the default path, and nothing in the app may assume it is connected.
+
+The five are still *routed* symmetrically — capabilities are declared in `src/lib/providers/registry.ts` and nowhere else (1.4 / `docs/plans/0005-provider-capability-model.md`), and no provider is a primary store. "First-class" and "demoted" describe onboarding and defaults, not the data model.
 
 ### 1.3 The Unified Log Action
 

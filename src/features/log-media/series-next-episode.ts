@@ -102,11 +102,15 @@ export function nextEpisodeFromProgress(
  *   catalogue-gap rule the Trakt path applies — Up Next's stricter
  *   aired-by-count arithmetic is for auto-surfacing, not for blocking a
  *   deliberate log).
- * - Entry without a pointer: nothing aired → `unaired`; otherwise everything's
- *   watched → the S1E1 rewatch wrap (plan 0035 KTD4, the Simkl half).
- * - No entry (show isn't in `watching`): a fresh show starts at S1E1, a
- *   finished one (progress ≥ total) wraps to a rewatch, and a mid-show one is
- *   unnameable — the snapshot that knows its next episode doesn't list it.
+ * - Entry without a pointer: nothing aired → `unaired`; everything aired
+ *   watched → the S1E1 rewatch wrap (plan 0035 KTD4, the Simkl half); **still
+ *   part-way through → unnameable.** That last case is why the wrap can't just
+ *   be "aired > 0": Simkl omits the pointer for any entry parked outside
+ *   `watching`, so a 10-of-20 show read out of the `plantowatch` snapshot used
+ *   to report as finished and offer a rewatch of S1E1.
+ * - No entry (the snapshots don't list this show): a fresh show starts at S1E1,
+ *   a finished one (progress ≥ total) wraps to a rewatch, and a mid-show one is
+ *   unnameable — nothing here knows which season its next episode falls in.
  * - A TV pointer without a season number (Simkl's absolute anime numbering
  *   leaking onto a show) is unnameable rather than mislabeled as season 1.
  */
@@ -117,7 +121,12 @@ export function nextEpisodeFromSimklEntry(
   if (entry != null) {
     const next = entry.nextToWatch;
     if (next == null) {
-      return simklAiredCount(item, entry) === 0 ? UNAIRED : REWATCH_WRAP;
+      const aired = simklAiredCount(item, entry);
+      if (aired === 0) return UNAIRED;
+      // Unknown aired count keeps the rewatch path it always had; a *known*
+      // one only earns the wrap when the user has actually caught up.
+      if (aired != null && item.currentProgress < aired) return null;
+      return REWATCH_WRAP;
     }
     if (next.season == null) return null;
     return {

@@ -209,6 +209,12 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
     ...(entry.addedToWatchlistAt != null
       ? { addedAt: entry.addedToWatchlistAt }
       : {}),
+    // The picker's destructive warning (plan 0036) — carried on every row, not
+    // only the non-zero ones, so "we looked and it holds nothing" is a fact the
+    // merge states rather than an absence it has to guess at. A hint: the
+    // adapter's own fresh read is the authority, and takes the stricter of this
+    // count and the per-episode array.
+    simklWatchedCount: entry.item.currentProgress,
   }));
 }
 

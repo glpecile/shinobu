@@ -347,4 +347,38 @@ describe('destructiveRemoveWarning (plan 0035 R3/R4)', () => {
       }),
     ).toBeNull();
   });
+
+  test('a Simkl row holding watch history warns, and names both losses (plan 0036)', () => {
+    const warning = destructiveRemoveWarning({
+      simklWatchedCount: 12,
+      targets: ['trakt', 'simkl'],
+    });
+    expect(warning).toContain('deletes the whole Simkl entry');
+    // The consequence the owner asked to be spelled out: the show leaves the
+    // surfaces it was visible on, not just the watchlist.
+    expect(warning).toContain('Continue Watching');
+  });
+
+  test('the ordinary Simkl case — a plan-to-watch row with no history — never warns', () => {
+    expect(
+      destructiveRemoveWarning({ simklWatchedCount: 0, targets: ['simkl'] }),
+    ).toBeNull();
+    expect(destructiveRemoveWarning({ targets: ['simkl'] })).toBeNull();
+  });
+
+  test('deselecting Simkl clears its warning', () => {
+    expect(
+      destructiveRemoveWarning({ simklWatchedCount: 12, targets: ['trakt'] }),
+    ).toBeNull();
+  });
+
+  test('both destructive providers selected states both losses, not just the first', () => {
+    const warning = destructiveRemoveWarning({
+      anilistStatus: 'CURRENT',
+      simklWatchedCount: 4,
+      targets: ['anilist', 'simkl'],
+    });
+    expect(warning).toContain('AniList entry');
+    expect(warning).toContain('Simkl entry');
+  });
 });

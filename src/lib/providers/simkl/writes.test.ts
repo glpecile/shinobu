@@ -435,62 +435,144 @@ describe('addToSimklWatchlist', () => {
   });
 });
 
+/**
+ * One `/sync/all-items` bucket row, as the plan-0036 fresh-read guard sees it.
+ * `watched` is what makes a removal destructive.
+ */
+function planToWatchRow(
+  media: { ids: Record<string, number | string>; title: string },
+  watched = 0,
+) {
+  return {
+    status: 'plantowatch',
+    watched_episodes_count: watched,
+    // A `simkl` id is what makes the row normalizable at all — without one
+    // `normalizeLibraryEntry` drops it, so every fixture row carries one.
+    show: { ids: { simkl: 900_000, ...media.ids }, title: media.title },
+  };
+}
+
+/**
+ * The two-request shape every removal now has: a `GET /sync/all-items/all/
+ * plantowatch` guard read, then (only if it clears) the `POST
+ * /sync/history/remove`.
+ */
+function makeRemoveDeps(
+  library: Record<string, unknown>,
+  removeResponse: () => Response = okRemoveResponse,
+) {
+  return makeDeps((url) =>
+    new URL(url).pathname.startsWith('/sync/all-items')
+      ? Response.json(library)
+      : removeResponse(),
+  );
+}
+
 describe('removeFromSimklWatchlist', () => {
-  test('hits the documented POST /sync/history/remove with a whole-item body', async () => {
-    const { deps, calls } = makeDeps(() => okRemoveResponse());
+  test('reads the live plantowatch list first, then hits POST /sync/history/remove', async () => {
+    const { deps, calls } = makeRemoveDeps({
+      movies: [planToWatchRow({ ids: { tmdb: 603 }, title: 'The Matrix' })],
+    });
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('ok');
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url.pathname).toBe('/sync/history/remove');
-    expect(calls[0]!.init?.method).toBe('POST');
-    const body = requestBody(calls[0]!);
+    expect(calls).toHaveLength(2);
+    // The fresh in-effect read (plan 0031 R36) — never a cached watchlist row.
+    expect(calls[0]!.url.pathname).toBe('/sync/all-items/all/plantowatch');
+    expect(calls[1]!.url.pathname).toBe('/sync/history/remove');
+    expect(calls[1]!.init?.method).toBe('POST');
+    const body = requestBody(calls[1]!);
     // Whole-item (no seasons/episodes): the documented un-track form that
     // clears the list entry — a seasons-scoped body would only unmark watched.
     expect(body.movies).toEqual([{ ids: { tmdb: 603, imdb: 'tt0133093' } }]);
   });
 
   test('an anime removes under anime[] with its mal id', async () => {
-    const { deps, calls } = makeDeps(() =>
-      Response.json({
-        deleted: { movies: 0, shows: 1, episodes: 0 },
-        not_found: { movies: [], shows: [] },
-      }),
-    );
+    const { deps, calls } = makeRemoveDeps({
+      anime: [planToWatchRow({ ids: { mal: 38000 }, title: 'Demon Slayer' })],
+    });
     await Effect.runPromise(removeFromSimklWatchlist(deps, anime));
-    const body = requestBody(calls[0]!);
-    expect(body.anime).toEqual([{ ids: { mal: 38000 } }]);
+    expect(requestBody(calls[1]!).anime).toEqual([{ ids: { mal: 38000 } }]);
   });
 
-  test('nothing deleted with nothing unmatched is a reasoned skip (was not in the library)', async () => {
-    const { deps } = makeDeps(() =>
-      Response.json({
-        deleted: { movies: 0, shows: 0, episodes: 0 },
-        not_found: { movies: [], shows: [] },
-      }),
-    );
+  test('absent from the fresh plantowatch list is a reasoned skip with no POST', async () => {
+    // The post-log case: the item moved to `watching`/`completed` server-side,
+    // so there is nothing to remove — and nothing hits Simkl's write lock.
+    const { deps, calls } = makeRemoveDeps({ movies: [] });
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('skipped');
+    expect(calls).toHaveLength(1);
+  });
+
+  test('a plan-to-watch row that still holds watch history refuses without an explicit confirm', async () => {
+    const { deps, calls } = makeRemoveDeps({
+      shows: [planToWatchRow({ ids: { tmdb: 1396 }, title: 'Breaking Bad' }, 12)],
+    });
+    const result = await Effect.runPromise(removeFromSimklWatchlist(deps, show));
+    expect(result.status).toBe('skipped');
+    // The whole point: no POST fired, so the 12 watched episodes still exist.
+    expect(calls).toHaveLength(1);
+  });
+
+  test('…and removes it once allowDestructive is passed', async () => {
+    const { deps, calls } = makeRemoveDeps({
+      shows: [planToWatchRow({ ids: { tmdb: 1396 }, title: 'Breaking Bad' }, 12)],
+    });
+    const result = await Effect.runPromise(
+      removeFromSimklWatchlist(deps, show, { allowDestructive: true }),
+    );
+    expect(result.status).toBe('ok');
+    expect(calls).toHaveLength(2);
+  });
+
+  test('a clean removal reporting deleted: 0 is still ok, not a skip', async () => {
+    // A plan-to-watch row has no history rows to delete, so `deleted: 0` is the
+    // normal answer — membership was already proven by the guard read.
+    const { deps } = makeRemoveDeps(
+      { movies: [planToWatchRow({ ids: { tmdb: 603 }, title: 'The Matrix' })] },
+      () =>
+        Response.json({
+          deleted: { movies: 0, shows: 0, episodes: 0 },
+          not_found: { movies: [], shows: [] },
+        }),
+    );
+    const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
+    expect(result.status).toBe('ok');
   });
 
   test('an all-not_found remove is a reasoned skip', async () => {
-    const { deps } = makeDeps(() =>
-      Response.json({
-        deleted: { movies: 0, shows: 0, episodes: 0 },
-        not_found: { movies: [{ ids: { tmdb: 603 } }], shows: [] },
-      }),
+    const { deps } = makeRemoveDeps(
+      { movies: [planToWatchRow({ ids: { tmdb: 603 }, title: 'The Matrix' })] },
+      () =>
+        Response.json({
+          deleted: { movies: 0, shows: 0, episodes: 0 },
+          not_found: { movies: [{ ids: { tmdb: 603 } }], shows: [] },
+        }),
     );
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('skipped');
   });
 
   test('an episode-level not_found on remove is a reasoned skip too', async () => {
-    const { deps } = makeDeps(() =>
-      Response.json({
-        deleted: { movies: 0, shows: 0, episodes: 0 },
-        not_found: { movies: [], shows: [], episodes: [{ ids: { tmdb: 1396 } }] },
-      }),
+    const { deps } = makeRemoveDeps(
+      { shows: [planToWatchRow({ ids: { tmdb: 1396 }, title: 'Breaking Bad' })] },
+      () =>
+        Response.json({
+          deleted: { movies: 0, shows: 0, episodes: 0 },
+          not_found: { movies: [], shows: [], episodes: [{ ids: { tmdb: 1396 } }] },
+        }),
     );
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, show));
     expect(result.status).toBe('skipped');
+  });
+
+  test('a film-shaped row never matches a series-shaped one on a shared TMDB number', async () => {
+    // TMDB numbers movies and series independently; the guard searches all
+    // three buckets at once, so shape has to gate the bridge-id match.
+    const { deps, calls } = makeRemoveDeps({
+      shows: [planToWatchRow({ ids: { tmdb: 603 }, title: 'Some Series' })],
+    });
+    const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
+    expect(result.status).toBe('skipped');
+    expect(calls).toHaveLength(1);
   });
 });

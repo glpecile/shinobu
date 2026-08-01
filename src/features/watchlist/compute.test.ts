@@ -218,6 +218,27 @@ describe('computeWatchlist', () => {
     ]);
   });
 
+  test('a merged row carries the Simkl leg’s watch-history hint (plan 0036)', () => {
+    // The picker's destructive warning reads this off the *merged* entry, and
+    // the Simkl row loses precedence to any AniList twin. Losing the hint here
+    // would silently disarm the confirm and let a removal delete watch history
+    // unannounced.
+    const [entry] = computeWatchlist([
+      {
+        item: item({ id: 'anilist-1', type: 'ANIME', externalIds: { tmdb: 949 } }),
+        source: 'anilist',
+      },
+      {
+        item: item({ id: 'simkl-1', type: 'ANIME', externalIds: { simkl: 1, tmdb: 949 } }),
+        source: 'simkl',
+        simklWatchedCount: 7,
+      },
+    ]);
+    expect(entry.item.id).toBe('anilist-1');
+    expect(entry.sources).toEqual(['anilist', 'simkl']);
+    expect(entry.simklWatchedCount).toBe(7);
+  });
+
   test('it never returns an UpNextEntry shape (R22) — no kind, no status', () => {
     const [entry] = computeWatchlist([traktRow({ id: 'trakt-1' })]);
     expect(Object.keys(entry).sort()).toEqual([
