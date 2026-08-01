@@ -99,8 +99,10 @@ describe('getAnimeCredits', () => {
         headshot: 'https://img/director.jpg',
       },
     ]);
+    // The numeric id is carried, not discarded (plan 0035 R12): it deep-links
+    // the studio sheet straight to anilist.co/studio/3 with no name search.
     expect(credits.studios).toEqual([
-      { id: 'anilist-studio-3', name: 'Science SARU' },
+      { id: 'anilist-studio-3', name: 'Science SARU', anilistId: 3 },
     ]);
   });
 

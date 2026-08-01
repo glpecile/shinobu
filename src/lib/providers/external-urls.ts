@@ -131,8 +131,15 @@ export function providerItemUrl(providerId: ProviderId, item: UrlItem): string |
   }
 }
 
-/** What the person builders need — TMDB is the only source of people. */
-export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment'>;
+/**
+ * What the person builders need. TMDB is the only source of people, so `name`
+ * and the department are all a Letterboxd link takes — `anilistId` is the
+ * resolved staff id (plan 0035 R12), supplied by the caller because resolving
+ * it is a network read and this module is pure.
+ */
+export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment'> & {
+  anilistId?: number;
+};
 
 /**
  * TMDB's `known_for_department` (lowercased) → the role segment Letterboxd
@@ -192,14 +199,36 @@ function letterboxdPersonUrl(person: UrlPerson): string | null {
 }
 
 /**
- * A staff *search*, not a staff page: AniList staff pages are numeric-id
- * keyed and TMDB people carry no AniList id, so a search is the only shape
- * that always resolves to something useful.
+ * An AniList staff page, by id (plan 0035 R11). The previous shape was a
+ * name *search* — which sounds like a graceful fallback and is not: most TMDB
+ * people have no AniList entry at all, so the overwhelmingly common outcome was
+ * a link that opened an empty search results page. Id or nothing, same
+ * never-relax-to-a-near-miss rule as the match pickers.
+ *
+ * The id comes from the caller (`state/queries/anilist.ts` resolves it, or an
+ * AniList-sourced payload carried it) precisely because this module has to stay
+ * pure — no async resolution can live here.
  */
-function anilistPersonUrl(person: UrlPerson): string | null {
-  const name = person.name.trim();
-  if (name === '') return null;
-  return `https://anilist.co/search/staff?search=${encodeURIComponent(name)}`;
+export function anilistStaffUrl(id: number): string {
+  return `https://anilist.co/staff/${id}`;
+}
+
+/** An AniList studio page, by id — the studio half of `anilistStaffUrl`. */
+export function anilistStudioUrl(id: number): string {
+  return `https://anilist.co/studio/${id}`;
+}
+
+/**
+ * A Letterboxd studio page. Slug-keyed like its person pages and built with the
+ * same rules (`letterboxdPersonSlug`), so "A24" → `/studio/a24/`. Best-effort by
+ * construction — we hold no Letterboxd studio id — and null for a name with no
+ * ASCII-alphanumeric content, which the caller turns into "no link" rather than
+ * a URL with an empty segment.
+ */
+export function letterboxdStudioUrl(name: string): string | null {
+  const slug = letterboxdPersonSlug(name);
+  if (slug === '') return null;
+  return `https://letterboxd.com/studio/${slug}/`;
 }
 
 /**
@@ -209,6 +238,10 @@ function anilistPersonUrl(person: UrlPerson): string | null {
  * never resolve, and Serializd has no person surface at all. Simkl joins them
  * (plan 0034 U1): its people pages are simkl-person-id keyed and TMDB people
  * carry no such id.
+ *
+ * AniList needs `anilistId` on the person (plan 0035 R13) and returns null
+ * without it — the resolution is a query, upstream of here, and a person nobody
+ * could resolve gets **no pill**, never a search link.
  *
  * Same purity contract as `providerItemUrl` — pure string building, no
  * react-native import, so `scripts/check-external-urls.ts` keeps loading this
@@ -222,7 +255,36 @@ export function providerPersonUrl(
     case 'letterboxd':
       return letterboxdPersonUrl(person);
     case 'anilist':
-      return anilistPersonUrl(person);
+      return person.anilistId == null ? null : anilistStaffUrl(person.anilistId);
+    case 'trakt':
+    case 'serializd':
+    case 'simkl':
+      return null;
+  }
+}
+
+/** What the studio builders need — the name, plus an AniList id when resolved. */
+export interface UrlStudio {
+  name: string;
+  /** AniList studio id — carried by AniList credits, resolved by search otherwise. */
+  anilistId?: number;
+}
+
+/**
+ * The provider's public page for a studio (plan 0035 R9/R10), or null.
+ * Letterboxd files studios by slug and always builds one; AniList needs a
+ * resolved id and hides without it, exactly like `providerPersonUrl`. Trakt,
+ * Serializd and Simkl have no addressable studio surface at all.
+ */
+export function providerStudioUrl(
+  providerId: ProviderId,
+  studio: UrlStudio,
+): string | null {
+  switch (providerId) {
+    case 'letterboxd':
+      return letterboxdStudioUrl(studio.name);
+    case 'anilist':
+      return studio.anilistId == null ? null : anilistStudioUrl(studio.anilistId);
     case 'trakt':
     case 'serializd':
     case 'simkl':

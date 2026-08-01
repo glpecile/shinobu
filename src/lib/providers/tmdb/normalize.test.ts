@@ -151,7 +151,97 @@ describe('normalizeCreditRows', () => {
     expect(row.items).toHaveLength(1);
     expect(row.items[0].id).toBe('tmdb-tv-9');
     expect(row.items[0].type).toBe('TV');
-    expect(row.details['tmdb-tv-9']).toBe('Rick, Morty');
+    // Both characters still read, after the year (plan 0035 R14) — the merge
+    // is what the row is for, and the year never displaces it.
+    expect(row.details['tmdb-tv-9']).toBe('2013 · Rick, Morty');
+  });
+
+  /**
+   * Plan 0035 R14/R16. The year is a prefix on the subtitle that already
+   * existed, joined with the same `·` the meta line uses. An undated credit
+   * contributes no year and no stray separator, and keeps its sorts-first
+   * position among the unreleased work.
+   */
+  describe('release years in the subtitle', () => {
+    test('a dated credit leads with the year and keeps the full role', () => {
+      const [row] = normalizeCreditRows(
+        personResponse({
+          combined_credits: {
+            cast: [movie(1, 'Top Gun', '1986-05-16', { character: 'Maverick' })],
+          },
+        }),
+        NOW,
+      );
+      expect(row.details['tmdb-movie-1']).toBe('1986 · Maverick');
+    });
+
+    test('an undated credit shows the role alone — no year, no separator', () => {
+      const [row] = normalizeCreditRows(
+        personResponse({
+          combined_credits: {
+            cast: [movie(2, 'Unscheduled', null, { character: 'Someone' })],
+          },
+        }),
+        NOW,
+      );
+      expect(row.details['tmdb-movie-2']).toBe('Someone');
+      // Still first in the row: R16 leaves the sort exactly where it was.
+      expect(row.items[0].id).toBe('tmdb-movie-2');
+    });
+
+    test('a dated credit with no role at all is just the year', () => {
+      const [row] = normalizeCreditRows(
+        personResponse({
+          combined_credits: {
+            crew: [movie(3, 'Untold', '2001-01-01', { department: 'Directing' })],
+          },
+        }),
+        NOW,
+      );
+      expect(row.details['tmdb-movie-3']).toBe('2001');
+    });
+
+    test('a credit with neither year nor role has no subtitle key', () => {
+      const [row] = normalizeCreditRows(
+        personResponse({
+          combined_credits: {
+            crew: [movie(4, 'Untold', null, { department: 'Directing' })],
+          },
+        }),
+        NOW,
+      );
+      expect(row.details).toEqual({});
+    });
+  });
+
+  /**
+   * `roles` is the same credit without the year the card's subtitle carries —
+   * it feeds the card-actions sheet, whose header already reads "MOVIE · 2026".
+   */
+  test('roles carry the bare credit, no year prefix and no yearless key', () => {
+    const rows = normalizeCreditRows(
+      personResponse({
+        combined_credits: {
+          cast: [movie(1, 'Top Gun', '1986-05-16', { character: 'Maverick' })],
+          crew: [
+            movie(2, 'Mission', '1996-05-22', {
+              department: 'Directing',
+              job: 'Director',
+            }),
+            // Year but no job: a subtitle ("2001"), never a role.
+            movie(3, 'Untold', '2001-01-01', { department: 'Directing' }),
+          ],
+        },
+      }),
+      NOW,
+    );
+
+    expect(rows.find((row) => row.role === 'Acting')?.roles).toEqual({
+      'tmdb-movie-1': 'Maverick',
+    });
+    expect(rows.find((row) => row.role === 'Directing')?.roles).toEqual({
+      'tmdb-movie-2': 'Director',
+    });
   });
 
   test('carries character/job details keyed by item id', () => {
@@ -170,9 +260,13 @@ describe('normalizeCreditRows', () => {
 
     const acting = rows.find((row) => row.role === 'Acting');
     const directing = rows.find((row) => row.role === 'Directing');
-    expect(acting?.details).toEqual({ 'tmdb-movie-1': 'Maverick' });
-    // A credit without a job stays absent rather than mapping to ''.
-    expect(directing?.details).toEqual({ 'tmdb-movie-2': 'Director' });
+    expect(acting?.details).toEqual({ 'tmdb-movie-1': '1986 · Maverick' });
+    // A credit without a job carries only its year (plan 0035 R14) — before
+    // the years landed it had no subtitle at all.
+    expect(directing?.details).toEqual({
+      'tmdb-movie-2': '1996 · Director',
+      'tmdb-movie-3': '2001',
+    });
   });
 
   test('drops unknown media types, untitled credits, and department-less crew', () => {

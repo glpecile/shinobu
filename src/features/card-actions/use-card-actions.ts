@@ -1,7 +1,11 @@
 import { useState } from 'react';
 
+import type { PersonCredit } from '@/features/person';
 import { haptics } from '@/lib/haptics';
 import type { NormalizedMediaItem } from '@/types/media';
+
+/** What `CardActionsSheet`'s credit line needs — see its `credit` prop. */
+type CardCredit = Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'>;
 
 /**
  * Shared wiring for the per-card actions dialog (quick log / view details /
@@ -19,16 +23,22 @@ import type { NormalizedMediaItem } from '@/types/media';
  */
 export function useCardActions() {
   const [item, setItem] = useState<NormalizedMediaItem | null>(null);
+  const [credit, setCredit] = useState<CardCredit | null>(null);
   const [open, setOpen] = useState(false);
 
-  function openActions(next: NormalizedMediaItem) {
+  /**
+   * `credit` is the filmography context (whose page this is, and their role on
+   * the item) — passed by `/person`, omitted everywhere else.
+   */
+  function openActions(next: NormalizedMediaItem, nextCredit?: CardCredit) {
     haptics.selection();
     setItem(next);
+    setCredit(nextCredit ?? null);
     setOpen(true);
   }
 
   return {
     openActions,
-    sheetProps: { item, open, onClose: () => setOpen(false) },
+    sheetProps: { item, credit, open, onClose: () => setOpen(false) },
   };
 }

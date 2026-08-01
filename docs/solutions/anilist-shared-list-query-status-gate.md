@@ -79,6 +79,37 @@ three-way test in `state/queries/anilist.test.ts` names this file so that a
 future "PLANNING is displayed now anyway, delete the gate" simplification fails
 a test that explains itself.
 
+## Amendment (2026-08-01, plan 0035 U1): CURRENT widens *outward*, and that is fine
+
+The watchlist now reads **CURRENT ∪ PLANNING** (`fetchWatchlistAnime`, plan 0035
+R1) — an anime you are actively watching is on your watchlist, which is what the
+owner means by watchlisted and what `/watchlist` was missing.
+
+Read against the invariant above, this changes nothing: the gate restricts what
+**PLANNING** may reach, and CURRENT was never the restricted status. Nothing that
+means "you are partway through this" gained a plan-to-watch row; one surface that
+means "this is on your list" gained the entries the user is partway through.
+
+Mechanically it is the same move as the amendment above — a **fourth selector**,
+not a widened third one:
+
+- `fetchCurrentAnime` — CURRENT only. Untouched.
+- `fetchPlannedAnime` — PLANNING only. Untouched.
+- `anilistEntry`'s Up Next gate — untouched.
+- `fetchWatchlistAnime` — CURRENT ∪ PLANNING. New.
+
+The regression test in `state/queries/anilist.test.ts` is four-way now and runs
+all four over the same fixture. The prohibition that matters is unchanged and
+worth restating in this direction: **never satisfy a new consumer by editing an
+existing selector**. Widening `fetchPlannedAnime` to CURRENT would have shipped
+the same watchlist and quietly handed every future `fetchPlannedAnime` caller a
+status it does not expect.
+
+One field rides along: `WatchlistInput.anilistStatus`, carried because removing a
+CURRENT entry deletes the whole AniList entry and the picker has to warn first
+(plan 0035 R3) — the same "carry the discriminating field through normalization,
+filter per consumer" move as the rule below.
+
 ## Rule of thumb
 
 When a provider read is shared by two consumers on a budget, **widening the

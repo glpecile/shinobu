@@ -131,7 +131,15 @@ function normalizeStudios(
   for (const studio of nodes ?? []) {
     if (studio == null || studio.name == null || studio.name === '') continue;
     const id = `anilist-studio-${studio.id}`;
-    if (!studios.has(id)) studios.set(id, { id, name: studio.name });
+    // The numeric id rides along (plan 0035 R12): it is what deep-links the
+    // studio sheet straight to anilist.co/studio/{id}, no name search needed.
+    if (!studios.has(id)) {
+      studios.set(id, {
+        id,
+        name: studio.name,
+        ...(studio.id != null ? { anilistId: studio.id } : {}),
+      });
+    }
   }
   return [...studios.values()];
 }

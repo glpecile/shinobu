@@ -21,6 +21,8 @@ import {
   addedToastTitle,
   addedToSentence,
   alreadyOnSentence,
+  DESTRUCTIVE_REMOVE_CONFIRM_LABEL,
+  destructiveRemoveWarning,
   failedOnSentence,
   providerLabelList,
   removedFromSentence,
@@ -224,11 +226,41 @@ export function WatchlistRemovePicker({
   const manual = result?.manual ?? split.manual;
   const unknown = result?.unknown ?? split.unknown;
 
+  // R3's explicit confirm, in place rather than as a second stacked sheet: the
+  // warning is on screen from the moment AniList is a selected target, and the
+  // first press only arms the button. Two deliberate presses with the loss
+  // spelled out between them is what earns `allowDestructive`. Deselecting
+  // AniList clears the warning, and with it the arming.
+  const [armed, setArmed] = useState(false);
+  const warning = destructiveRemoveWarning({
+    ...(entry.anilistStatus != null
+      ? { anilistStatus: entry.anilistStatus }
+      : {}),
+    targets: selected,
+  });
+
+  // Any change to the selection disarms: otherwise dropping AniList from the
+  // targets and adding it back would leave a still-armed button that deletes
+  // the entry on a single press.
+  function disarmThen<A extends unknown[]>(action: (...args: A) => void) {
+    return (...args: A) => {
+      setArmed(false);
+      action(...args);
+    };
+  }
+
   function confirm() {
     if (pending || selected.length === 0) return;
+    if (warning != null && !armed) {
+      setArmed(true);
+      return;
+    }
     haptics.confirm();
     remove.mutate(
-      { providers: selected },
+      {
+        providers: selected,
+        ...(warning != null ? { allowDestructive: true } : {}),
+      },
       {
         onSuccess: (report) => {
           // Neither `manual` nor `unknown` blocks the close (plan 0033 KTD-1):
@@ -262,9 +294,9 @@ export function WatchlistRemovePicker({
       </Text>
       {split.targets.length > 0 && (
         <ProviderToggleList
-          onSelectAll={selectAll}
-          onSelectNone={selectNone}
-          onToggle={toggle}
+          onSelectAll={disarmThen(selectAll)}
+          onSelectNone={disarmThen(selectNone)}
+          onToggle={disarmThen(toggle)}
           selectedProviders={selected}
           targets={split.targets}
         />
@@ -288,6 +320,11 @@ export function WatchlistRemovePicker({
       {split.targets.length > 0 && selected.length === 0 && (
         <Text className="text-accent font-sans text-sm mt-2">
           Select at least one provider.
+        </Text>
+      )}
+      {warning != null && (
+        <Text className="text-accent font-sans text-sm mt-3 leading-relaxed">
+          {warning}
         </Text>
       )}
 
@@ -316,9 +353,14 @@ export function WatchlistRemovePicker({
       <Button
         className="mt-6"
         disabled={selected.length === 0}
-        label={unwatchlistConfirmLabel(entry.item, selected.length)}
+        label={
+          warning != null && armed
+            ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL
+            : unwatchlistConfirmLabel(entry.item, selected.length)
+        }
         loading={pending}
         loadingLabel={copy.pending}
+        morphLabel
         onPress={confirm}
       />
       <Button

@@ -22,9 +22,14 @@ import { AnimeSeasonsSection } from '@/features/anime-seasons';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
-import { PersonCreditSheet, type PersonCredit } from '@/features/person';
+import {
+  PersonAvatar,
+  PersonCreditSheet,
+  type PersonCredit,
+} from '@/features/person';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
 import { ReleaseTimeline } from '@/features/release-timeline';
+import { StudioSheet } from '@/features/studio';
 import {
   formatRuntime,
   SeasonsSection,
@@ -32,7 +37,6 @@ import {
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
-import { initials } from '@/lib/initials';
 import {
   applyPrimaryMetadata,
   mergeCatalogueMetadata,
@@ -237,19 +241,12 @@ function PersonCard({
 
   const content = (
     <>
-      {credit.headshot !== '' ? (
-        <Image
-          source={{ uri: credit.headshot }}
-          className="w-20 h-20 rounded-full bg-surface"
-          contentFit="cover"
-        />
-      ) : (
-        <View className="w-20 h-20 rounded-full bg-surface border border-border items-center justify-center">
-          <Text className="text-muted font-sans-semibold text-lg">
-            {initials(credit.name)}
-          </Text>
-        </View>
-      )}
+      <PersonAvatar
+        className="w-20 h-20 bg-surface"
+        headshot={credit.headshot}
+        name={credit.name}
+        textClassName="text-lg"
+      />
       <Text
         className="text-foreground font-sans-semibold text-xs text-center mt-2"
         numberOfLines={1}
@@ -355,10 +352,29 @@ function PeopleSection({
 }
 
 /** One "Studios" pill list — every metadata source renders through this. */
+/**
+ * Studio pills. Plain press navigates, as it always has; **long-press opens the
+ * studio sheet** (plan 0035 R8) — the affordance credit cards have had since
+ * plan 0028, which reversed that plan's "studio pills: nothing to expand"
+ * boundary once the provider links turned out to be the thing to expand.
+ *
+ * One pressable per pill, with both handlers on it: nesting a second
+ * gesture-handler button inside would let its press bubble into the pill's
+ * (0028 KTD1). Without a TMDB token there is no route to navigate to, so the
+ * pill's only job is the sheet and a plain press opens it.
+ */
 function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   const pushRoute = usePushRoute();
-  // No TMDB token, no studio pages — pills stay informational.
+  // No TMDB token, no studio pages — a pill then opens the sheet on press.
   const canOpenStudios = useTmdbToken() !== '';
+  const [studio, setStudio] = useState<NormalizedStudio | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  function openStudio(next: NormalizedStudio) {
+    haptics.selection();
+    setStudio(next);
+    setSheetOpen(true);
+  }
 
   if (studios.length === 0) return null;
 
@@ -368,36 +384,39 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
         Studios
       </Text>
       <View className="flex-row flex-wrap gap-2">
-        {studios.map((studio) => {
-          const pill = (
+        {studios.map((entry) => (
+          <PresstableOpacity
+            // The border lives on the pressable's own className rather than an
+            // inner View because uniwind maps it through the wrapper here — the
+            // Android border gotcha applies to hand-rolled inner boxes, which
+            // this is not (docs/solutions/pressto-border-not-drawn-on-android.md).
+            className="bg-surface border border-border rounded-full px-4 py-2"
+            key={entry.id}
+            onLongPress={canOpenStudios ? () => openStudio(entry) : undefined}
+            onPress={
+              canOpenStudios
+                ? () =>
+                    pushRoute(
+                      entry.tmdbId != null
+                        ? routes.studio(entry.tmdbId)
+                        : routes.studioLookup(entry.name),
+                    )
+                : () => openStudio(entry)
+            }
+          >
             <Text className="text-foreground font-sans text-sm">
-              {studio.name}
+              {entry.name}
             </Text>
-          );
-          return canOpenStudios ? (
-            <PresstableOpacity
-              className="bg-surface border border-border rounded-full px-4 py-2"
-              key={studio.id}
-              onPress={() =>
-                pushRoute(
-                  studio.tmdbId != null
-                    ? routes.studio(studio.tmdbId)
-                    : routes.studioLookup(studio.name),
-                )
-              }
-            >
-              {pill}
-            </PresstableOpacity>
-          ) : (
-            <View
-              className="bg-surface border border-border rounded-full px-4 py-2"
-              key={studio.id}
-            >
-              {pill}
-            </View>
-          );
-        })}
+          </PresstableOpacity>
+        ))}
       </View>
+      {/* Kept (not nulled) while closing so the sheet's content doesn't vanish
+          mid-animation — same contract as the credit sheet above. */}
+      <StudioSheet
+        onClose={() => setSheetOpen(false)}
+        open={sheetOpen}
+        studio={studio}
+      />
     </View>
   );
 }

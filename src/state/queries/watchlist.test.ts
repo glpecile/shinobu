@@ -180,7 +180,7 @@ describe('fetchWatchlistInputs', () => {
     expect(requested.some((key) => key.startsWith('letterboxd'))).toBe(false);
   });
 
-  test('the AniList leg is the PLANNING slice of the already-cached read', async () => {
+  test('the AniList leg is the CURRENT ∪ PLANNING slice of the already-cached read', async () => {
     const { client, requested } = fakeClient({
       anime: [
         plannedAnime(1),
@@ -190,10 +190,23 @@ describe('fetchWatchlistInputs', () => {
 
     const inputs = await fetchWatchlistInputs(client, ['anilist']);
 
+    // Plan 0035 R1: an anime you are watching is watchlisted. Both rows come
+    // through, each stamped with the status the picker warns off (R3).
     expect(inputs.inputs).toEqual([
-      { item: expect.objectContaining({ id: 'anilist-1' }), source: 'anilist', entryId: 5001 },
+      {
+        item: expect.objectContaining({ id: 'anilist-1' }),
+        source: 'anilist',
+        anilistStatus: 'PLANNING',
+        entryId: 5001,
+      },
+      {
+        item: expect.objectContaining({ id: 'anilist-2' }),
+        source: 'anilist',
+        anilistStatus: 'CURRENT',
+        entryId: 5002,
+      },
     ]);
-    // Zero extra requests: one cached list read, no PLANNING query of its own.
+    // Zero extra requests: one cached list read, no per-status query of its own.
     expect(requested).toEqual(['anilist/current-anime-entries']);
   });
 

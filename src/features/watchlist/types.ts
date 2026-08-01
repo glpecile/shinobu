@@ -38,6 +38,14 @@ export interface WatchlistInput {
    * *that* read's id, never this cached one.
    */
   entryId?: number;
+  /**
+   * The AniList list status this row came from (plan 0035 R3). Carried for one
+   * reason: removing a `CURRENT` entry deletes the whole AniList entry —
+   * progress, score, notes and all — so the picker has to warn before it fires.
+   * Like `entryId` it is a **hint**; the delete's own fresh in-effect read stays
+   * the authority on what actually gets destroyed.
+   */
+  anilistStatus?: 'CURRENT' | 'PLANNING';
 }
 
 /** Every connected provider's rows plus whichever legs failed (R29). */
@@ -91,4 +99,9 @@ export interface WatchlistEntry {
   sourceIds: string[];
   /** The most recent add-time any contributing provider stated; absent sorts last. */
   addedAt?: string;
+  /**
+   * The AniList row's status, when an AniList row contributed (plan 0035 R3).
+   * `CURRENT` is what makes the removal destructive; the picker warns on it.
+   */
+  anilistStatus?: 'CURRENT' | 'PLANNING';
 }

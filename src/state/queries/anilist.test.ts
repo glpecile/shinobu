@@ -25,9 +25,12 @@ mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const { anilistQueryKeys, fetchCurrentAnime, fetchPlannedAnime } = await import(
-  './anilist'
-);
+const {
+  anilistQueryKeys,
+  fetchCurrentAnime,
+  fetchPlannedAnime,
+  fetchWatchlistAnime,
+} = await import('./anilist');
 
 function entry(
   anilistId: number,
@@ -149,13 +152,56 @@ describe('fetchPlannedAnime — the watchlist selector', () => {
 });
 
 /**
- * The three-way regression gate (plan 0031 R28), naming
+ * Plan 0035 U1/KTD1. The watchlist's slice widens to CURRENT ∪ PLANNING —
+ * as a *fourth selector*, which is the whole point: the three that existed keep
+ * their own slices, so the status gate below still has three narrow readers to
+ * be a gate over.
+ */
+describe('fetchWatchlistAnime — CURRENT ∪ PLANNING (plan 0035 R1)', () => {
+  test('returns both statuses off the same cached read, in list order', async () => {
+    const client = new QueryClient();
+    client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [
+      entry(1, 'CURRENT'),
+      entry(2, 'PLANNING'),
+      entry(3, 'CURRENT'),
+    ]);
+
+    const watchlist = await fetchWatchlistAnime(client);
+    expect(watchlist.map((e) => e.item.id)).toEqual([
+      'anilist-1',
+      'anilist-2',
+      'anilist-3',
+    ]);
+    // Still zero extra requests: nothing was cached under a derived key.
+    expect(client.getQueryData(anilistQueryKeys.plannedAnime())).toBeUndefined();
+  });
+
+  test('a CURRENT entry keeps its entry-id hint for the removal path', async () => {
+    const client = new QueryClient();
+    client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [
+      entry(9, 'CURRENT'),
+    ]);
+
+    const watchlist = await fetchWatchlistAnime(client);
+    expect(watchlist[0]?.entryId).toBe(900);
+    // The status rides along too — it is what tells the picker the removal is
+    // destructive (plan 0035 R3).
+    expect(watchlist[0]?.status).toBe('CURRENT');
+  });
+});
+
+/**
+ * The four-way regression gate (plan 0031 R28, widened by plan 0035 R2), naming
  * `docs/solutions/anilist-shared-list-query-status-gate.md` on purpose: one
  * request carries both statuses, and every consumer takes a *slice*. A future
  * "simplification" that deletes `compute.ts`'s PLANNING gate on the grounds
  * that plan-to-watch is displayed now anyway — or that drops
  * `fetchCurrentAnime`'s CURRENT filter for the same reason — floods Continue
  * Watching with the user's whole backlog. This test is what fails first.
+ *
+ * Plan 0035 added `fetchWatchlistAnime` over the top of exactly this fixture:
+ * CURRENT reaching one more read-only surface is not what the gate restricts,
+ * and these assertions are the proof that widening it changed nothing else.
  */
 describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
   test('a mid-run PLANNING entry reaches the watchlist and nowhere in Up Next or the row', async () => {
@@ -173,9 +219,12 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     const client = new QueryClient();
     client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [planning]);
 
-    // 1. The watchlist surface sees it.
+    // 1. The watchlist surface sees it — through both selectors.
     const planned = await fetchPlannedAnime(client);
     expect(planned.map((e) => e.item.id)).toEqual(['anilist-42']);
+    expect((await fetchWatchlistAnime(client)).map((e) => e.item.id)).toEqual([
+      'anilist-42',
+    ]);
 
     // 2. The "Your Anime" row does not.
     expect(await fetchCurrentAnime(client)).toEqual([]);
@@ -213,6 +262,11 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
 
     expect(await fetchPlannedAnime(client)).toEqual([]);
     expect((await fetchCurrentAnime(client)).map((item) => item.id)).toEqual([
+      'anilist-42',
+    ]);
+    // …and the watchlist now sees it as well (plan 0035 R1) — the one thing
+    // that changed, stated here rather than left implicit.
+    expect((await fetchWatchlistAnime(client)).map((e) => e.item.id)).toEqual([
       'anilist-42',
     ]);
     const upNext = computeUpNext(

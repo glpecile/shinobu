@@ -14,7 +14,7 @@ import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistQueryKeys, fetchPlannedAnime } from './anilist';
+import { anilistQueryKeys, fetchWatchlistAnime } from './anilist';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { none, settle } from './settle';
 import { simklDeps, simklQueryKeys } from './simkl';
@@ -109,19 +109,25 @@ async function traktInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
 /**
  * AniList's leg: a **selector over an already-cached read**, costing zero extra
  * requests warm. Plan 0030 widened the one list request to
- * `status_in: [CURRENT, PLANNING]`, so the plan-to-watch slice is already in
- * the cache — never "fix" this by adding a PLANNING query (30 req/min budget,
+ * `status_in: [CURRENT, PLANNING]`, so both slices are already in the cache —
+ * never "fix" this by adding a status query (30 req/min budget,
  * docs/solutions/anilist-rate-limit-retry-storm.md).
+ *
+ * Reads **CURRENT ∪ PLANNING** (plan 0035 R1): an anime you are watching is
+ * watchlisted. That is `fetchWatchlistAnime`, a fourth selector — the other
+ * three keep their narrower slices, which is what leaves the status gate
+ * (`docs/solutions/anilist-shared-list-query-status-gate.md`) intact.
  *
  * No `addedAt`: `MediaList.createdAt` is not part of that shared selection, and
  * widening it to sort one surface is not worth changing the read every other
  * consumer depends on. These rows sort into the undated block.
  */
 async function anilistInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
-  const entries = await fetchPlannedAnime(queryClient);
+  const entries = await fetchWatchlistAnime(queryClient);
   return entries.map((entry) => ({
     item: entry.item,
     source: 'anilist',
+    anilistStatus: entry.status,
     ...(entry.entryId != null ? { entryId: entry.entryId } : {}),
   }));
 }

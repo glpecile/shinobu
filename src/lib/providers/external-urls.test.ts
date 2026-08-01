@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'bun:test';
 
 import {
+  anilistStaffUrl,
+  anilistStudioUrl,
   letterboxdPersonSlug,
+  letterboxdStudioUrl,
   providerHomeUrl,
   providerItemUrl,
   providerPersonUrl,
+  providerStudioUrl,
 } from './external-urls';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
@@ -222,22 +226,21 @@ describe('providerPersonUrl', () => {
     ).toBeNull();
   });
 
-  it('builds an AniList staff search URL', () => {
-    expect(providerPersonUrl('anilist', { name: 'Hayao Miyazaki' })).toBe(
-      'https://anilist.co/search/staff?search=Hayao%20Miyazaki',
-    );
+  it('deep-links AniList by staff id (plan 0035 R11)', () => {
+    expect(
+      providerPersonUrl('anilist', { name: 'Hayao Miyazaki', anilistId: 96_879 }),
+    ).toBe('https://anilist.co/staff/96879');
   });
 
-  it('percent-encodes and preserves non-latin names for the AniList search', () => {
-    expect(providerPersonUrl('anilist', { name: '宮崎 駿' })).toBe(
-      'https://anilist.co/search/staff?search=%E5%AE%AE%E5%B4%8E%20%E9%A7%BF',
-    );
-    expect(providerPersonUrl('anilist', { name: "Conan O'Brien" })).toBe(
-      "https://anilist.co/search/staff?search=Conan%20O'Brien",
-    );
-  });
-
-  it('returns null for AniList on a blank name', () => {
+  /**
+   * What this replaced was a name-search URL. It reads like a graceful fallback
+   * and is not: most TMDB people have no AniList entry, so it overwhelmingly
+   * opened an empty results page. R13 — hide, never near-link — is why an
+   * unresolved id is `null` rather than a search.
+   */
+  it('returns null for AniList without a resolved id — never a name search', () => {
+    expect(providerPersonUrl('anilist', { name: 'Hayao Miyazaki' })).toBeNull();
+    expect(providerPersonUrl('anilist', { name: '宮崎 駿' })).toBeNull();
     expect(providerPersonUrl('anilist', { name: '   ' })).toBeNull();
   });
 
@@ -245,6 +248,60 @@ describe('providerPersonUrl', () => {
     expect(providerPersonUrl('trakt', { name: 'Ada Lovelace' })).toBeNull();
     expect(providerPersonUrl('serializd', { name: 'Ada Lovelace' })).toBeNull();
     expect(providerPersonUrl('simkl', { name: 'Ada Lovelace' })).toBeNull();
+  });
+});
+
+describe('the id-keyed AniList builders (plan 0035 R11)', () => {
+  it('builds staff and studio pages from a numeric id', () => {
+    expect(anilistStaffUrl(96_879)).toBe('https://anilist.co/staff/96879');
+    expect(anilistStudioUrl(21)).toBe('https://anilist.co/studio/21');
+  });
+});
+
+describe('letterboxdStudioUrl (plan 0035 R9)', () => {
+  it('slugs a studio name the same way person names are slugged', () => {
+    expect(letterboxdStudioUrl('A24')).toBe('https://letterboxd.com/studio/a24/');
+    expect(letterboxdStudioUrl('Studio Ghibli')).toBe(
+      'https://letterboxd.com/studio/studio-ghibli/',
+    );
+  });
+
+  it('folds diacritics and collapses punctuation runs, as the slug rules say', () => {
+    expect(letterboxdStudioUrl('Gaumont Français')).toBe(
+      'https://letterboxd.com/studio/gaumont-francais/',
+    );
+    expect(letterboxdStudioUrl('Metro·Goldwyn·Mayer')).toBe(
+      'https://letterboxd.com/studio/metro-goldwyn-mayer/',
+    );
+    expect(letterboxdStudioUrl('  Toho   Co., Ltd.  ')).toBe(
+      'https://letterboxd.com/studio/toho-co-ltd/',
+    );
+  });
+
+  it('returns null rather than a URL with an empty segment', () => {
+    expect(letterboxdStudioUrl('東宝')).toBeNull();
+    expect(letterboxdStudioUrl('   ')).toBeNull();
+  });
+});
+
+describe('providerStudioUrl (plan 0035 R9/R10)', () => {
+  it('links Letterboxd from the name alone', () => {
+    expect(providerStudioUrl('letterboxd', { name: 'A24' })).toBe(
+      'https://letterboxd.com/studio/a24/',
+    );
+  });
+
+  it('links AniList only with a resolved id — never a name search', () => {
+    expect(providerStudioUrl('anilist', { name: 'Studio Ghibli' })).toBeNull();
+    expect(
+      providerStudioUrl('anilist', { name: 'Studio Ghibli', anilistId: 21 }),
+    ).toBe('https://anilist.co/studio/21');
+  });
+
+  it('returns null for Trakt, Serializd and Simkl (no studio surface at all)', () => {
+    expect(providerStudioUrl('trakt', { name: 'A24' })).toBeNull();
+    expect(providerStudioUrl('serializd', { name: 'A24' })).toBeNull();
+    expect(providerStudioUrl('simkl', { name: 'A24' })).toBeNull();
   });
 });
 

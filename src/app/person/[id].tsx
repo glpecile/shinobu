@@ -16,6 +16,7 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PersonNotFound, PersonSkeleton, personMetaLine } from '@/features/person';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { initials } from '@/lib/initials';
+import { ACTING_ROLE } from '@/lib/providers/tmdb/normalize';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
@@ -74,7 +75,18 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
             collapseKey={`person-${row.role.toLowerCase()}`}
             items={row.items}
             key={row.role}
-            onItemActions={openActions}
+            // The card clamps the credit to one line ("2026 · Frank Castle /
+            // …"), so the long-press carries the whole of it into the sheet,
+            // with the face: the answer to "who is this person here?" without
+            // leaving the page.
+            onItemActions={(item) =>
+              openActions(item, {
+                name: person.name,
+                headshot: person.headshot,
+                role: row.roles[item.id] ?? '',
+                kind: row.role === ACTING_ROLE ? 'cast' : 'crew',
+              })
+            }
             onItemPress={(item) => pushRoute(routes.details(item.id))}
             subtitles={row.details}
             title={row.role}

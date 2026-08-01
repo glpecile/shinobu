@@ -19,9 +19,12 @@ import {
   getSeasonalAnime,
   getTrendingAnime,
   getViewer,
+  searchAniListStaff,
+  searchAniListStudio,
   searchMedia,
   type AniListEntryState,
 } from '@/lib/providers/anilist/reads';
+import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
 import type { AnimeSeasonWindow } from '@/lib/providers/anilist/season';
 import type { NormalizedSeason } from '@/types/media';
@@ -115,7 +118,20 @@ export const anilistQueryKeys = {
   /** The viewer's media-list activity — the AniList diary source (plan 0016).
    *  Derived from the shared root so the diary cache scan stays in sync. */
   listActivity: () => [...DIARY_QUERY_ROOTS.anilist],
+  /** A person's AniList staff id, resolved by name (plan 0035 R12). */
+  staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
+  /** A studio's AniList id, resolved by name — the studio sheet's link. */
+  studioId: (name: string) =>
+    [...anilistQueryKeys.all, 'studio-id', name] as const,
 };
+
+/**
+ * A name→id mapping does not change: AniList staff and studio ids are stable
+ * for the life of the entry. Same tier as `tmdbQueryKeys.person`, and it is what
+ * keeps a sheet that is opened, closed and re-opened off the 30 req/min budget
+ * (docs/solutions/anilist-rate-limit-retry-storm.md).
+ */
+const NAME_RESOLUTION_STALE_MS = 24 * 60 * 60_000;
 
 /**
  * Two consumers want the currently-watching list at different fidelities (the
@@ -197,6 +213,32 @@ export async function fetchPlannedAnime(
 ): Promise<AniListCurrentEntry[]> {
   const entries = await fetchCurrentAnimeEntries(queryClient);
   return entries.filter((entry) => entry.status === 'PLANNING');
+}
+
+/**
+ * The **watchlist** slice: CURRENT ∪ PLANNING off the same cached read (plan
+ * 0035 R1/KTD1). An anime you are actively watching is on your watchlist —
+ * that is what the owner means by watchlisted — so the surface reads both
+ * statuses while every other consumer keeps its own narrower slice.
+ *
+ * A **fourth selector, never a widened third one**. `fetchPlannedAnime` stays
+ * PLANNING-only, `fetchCurrentAnime` stays CURRENT-only, and Up Next's gate
+ * (`features/up-next/compute.ts`) still confines PLANNING to Calendar. That
+ * separation is the whole point of
+ * `docs/solutions/anilist-shared-list-query-status-gate.md`: the gate restricts
+ * what PLANNING may reach, so letting CURRENT reach one more read-only surface
+ * does not touch it. Editing any existing selector instead of adding this one
+ * is what re-opens the regression.
+ *
+ * Still 0 extra requests — same cached `currentAnimeEntries()` payload.
+ */
+export async function fetchWatchlistAnime(
+  queryClient: QueryClient,
+): Promise<AniListCurrentEntry[]> {
+  const entries = await fetchCurrentAnimeEntries(queryClient);
+  return entries.filter(
+    (entry) => entry.status === 'PLANNING' || entry.status === 'CURRENT',
+  );
 }
 
 export function fetchTrendingAnime(options: { limit?: number } = {}): Promise<NormalizedMediaItem[]> {
@@ -308,6 +350,78 @@ export function useAniListEpisodesQuery(params: {
     enabled: enabled && mediaId != null,
     staleTime: EPISODES_STALE_MS,
   });
+}
+
+/**
+ * The AniList staff id for a person's name, or `null` when nothing matches
+ * confidently (plan 0035 R12/R13) — what turns "Open in AniList" from a link
+ * into no link at all.
+ *
+ * Three properties are load-bearing:
+ *
+ * - **Lazy.** `enabled` is the sheet's own open flag, so a Cast rail of 20 cards
+ *   costs 0 requests; only the one a user long-pressed resolves. Firing per-pill
+ *   on render is what the 30 req/min budget forbids.
+ * - **Public.** No token, so this works before AniList is connected — though the
+ *   pill itself only renders while it is.
+ * - **Validated.** `pickPersonMatch` is the house matcher (exact folded name,
+ *   then a word-order swap for family-name-first romanizations), and its fuzzy
+ *   top-hit fallback is deliberately **discarded** here: an actor AniList has
+ *   never heard of would otherwise deep-link to whoever came back first. A
+ *   near-name is a wrong page, and R13 says hide instead.
+ */
+export function useAniListStaffIdQuery(params: {
+  name: string;
+  enabled?: boolean;
+}) {
+  const name = params.name.trim();
+  return useQuery({
+    queryKey: anilistQueryKeys.staffId(name),
+    queryFn: async (): Promise<number | null> => {
+      const hits = await Effect.runPromise(
+        searchAniListStaff(anilistDeps(), { name }),
+      );
+      return exactNameMatchId(hits, name);
+    },
+    enabled: (params.enabled ?? true) && name !== '',
+    staleTime: NAME_RESOLUTION_STALE_MS,
+  });
+}
+
+/** The studio half of `useAniListStaffIdQuery`, rule for rule. */
+export function useAniListStudioIdQuery(params: {
+  name: string;
+  enabled?: boolean;
+}) {
+  const name = params.name.trim();
+  return useQuery({
+    queryKey: anilistQueryKeys.studioId(name),
+    queryFn: async (): Promise<number | null> => {
+      const hits = await Effect.runPromise(
+        searchAniListStudio(anilistDeps(), { name }),
+      );
+      return exactNameMatchId(hits, name);
+    },
+    enabled: (params.enabled ?? true) && name !== '',
+    staleTime: NAME_RESOLUTION_STALE_MS,
+  });
+}
+
+/**
+ * `pickPersonMatch` with its top-hit fallback stripped (R13). The matcher's
+ * last resort — "the caller opted into name search knowing it's fuzzy" — is
+ * right for a lookup route that shows the user what it found and wrong for a
+ * link that silently opens a page: most TMDB people simply are not on AniList,
+ * so the fallback would deep-link an unrelated staff member far more often than
+ * it would be right. Confident match or nothing.
+ */
+function exactNameMatchId(
+  hits: readonly { id: number; name: string }[],
+  name: string,
+): number | null {
+  const match = pickPersonMatch([...hits], name);
+  if (match == null || !namesMatch(match.name, name)) return null;
+  return match.id;
 }
 
 /**

@@ -15,6 +15,9 @@
 import {
   ANILIST_AUTHORIZE_URL,
   ANILIST_CREATE_CLIENT_URL,
+  anilistStaffUrl,
+  anilistStudioUrl,
+  letterboxdStudioUrl,
   TMDB_API_SETTINGS_URL,
   TRAKT_CREATE_APP_URL,
 } from '@/lib/providers/external-urls';
@@ -77,6 +80,29 @@ export const URL_CHECKS: UrlCheck[] = [
     name: 'TMDB API settings page',
     url: TMDB_API_SETTINGS_URL,
     expect: [200, 401],
+  },
+  {
+    // Plan 0035 R11 replaced a name-search URL with these id-keyed page shapes,
+    // so the *shape* is now the thing that can rot. Probed with famously stable
+    // ids — Hayao Miyazaki (96879) and Studio Ghibli (21) — because a fixture id
+    // that gets deleted would fail this check for a reason that is not the one
+    // it exists to catch.
+    name: 'AniList staff page',
+    url: anilistStaffUrl(96_879),
+    expect: [200],
+  },
+  {
+    name: 'AniList studio page',
+    url: anilistStudioUrl(21),
+    expect: [200],
+  },
+  {
+    // Best-effort by construction (we hold no Letterboxd studio id), so this
+    // probes that the `/studio/{slug}/` shape still exists at all — A24 is as
+    // permanent a studio page as Letterboxd has.
+    name: 'Letterboxd studio page',
+    url: letterboxdStudioUrl('A24') ?? 'https://letterboxd.com/studio/a24/',
+    expect: [200],
   },
 ];
 
