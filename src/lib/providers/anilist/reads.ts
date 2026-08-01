@@ -255,6 +255,88 @@ export function getSeasonalAnime(
   });
 }
 
+/** A staff or studio search hit, reduced to what a deep link needs. */
+export interface AniListNamedEntity {
+  id: number;
+  name: string;
+}
+
+interface StaffSearchResponse {
+  Page: {
+    staff: Array<{
+      id: number | null;
+      name: { full?: string | null; native?: string | null } | null;
+    } | null> | null;
+  } | null;
+}
+
+interface StudioSearchResponse {
+  Page: {
+    studios: Array<{ id: number | null; name?: string | null } | null> | null;
+  } | null;
+}
+
+/** Five hits: enough for `pickPersonMatch` to find an exact name, no more. */
+const NAME_SEARCH_PER_PAGE = 5;
+
+/**
+ * Public staff search by name (plan 0035 R12) — the resolution step behind
+ * "Open in AniList" for a person. Unauthenticated, like trending: AniList's
+ * public schema answers staff queries with no token, and a person's staff id
+ * has nothing to do with who is signed in.
+ *
+ * Returns hits, never a choice: the caller runs `pickPersonMatch` over them and
+ * shows no link at all when nothing matches confidently (R13). `name.full` is
+ * the romanized name TMDB's spelling can meet; `name.native` backs it up for a
+ * staff member AniList only romanizes one way.
+ */
+export function searchAniListStaff(
+  deps: AniListDeps,
+  params: { name: string },
+): Effect.Effect<AniListNamedEntity[], ProviderError> {
+  return anilistRequest<StaffSearchResponse>(
+    deps,
+    `query ($search: String, $perPage: Int) {
+      Page(page: 1, perPage: $perPage) {
+        staff(search: $search) { id name { full native } }
+      }
+    }`,
+    { variables: { search: params.name, perPage: NAME_SEARCH_PER_PAGE } },
+  ).pipe(
+    Effect.map((data) =>
+      (data.Page?.staff ?? []).flatMap((staff) => {
+        const id = staff?.id;
+        const name = staff?.name?.full ?? staff?.name?.native ?? '';
+        return id == null || name === '' ? [] : [{ id, name }];
+      }),
+    ),
+  );
+}
+
+/** The studio half of `searchAniListStaff` — same contract, flatter payload. */
+export function searchAniListStudio(
+  deps: AniListDeps,
+  params: { name: string },
+): Effect.Effect<AniListNamedEntity[], ProviderError> {
+  return anilistRequest<StudioSearchResponse>(
+    deps,
+    `query ($search: String, $perPage: Int) {
+      Page(page: 1, perPage: $perPage) {
+        studios(search: $search) { id name }
+      }
+    }`,
+    { variables: { search: params.name, perPage: NAME_SEARCH_PER_PAGE } },
+  ).pipe(
+    Effect.map((data) =>
+      (data.Page?.studios ?? []).flatMap((studio) => {
+        const id = studio?.id;
+        const name = studio?.name ?? '';
+        return id == null || name === '' ? [] : [{ id, name }];
+      }),
+    ),
+  );
+}
+
 /**
  * Public text search across anime + manga — no type filter, so one request
  * covers everything AniList can log (registry: ANIME + MANGA). Same

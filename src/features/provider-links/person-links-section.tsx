@@ -8,6 +8,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { providerPersonUrl, type UrlPerson } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { useAniListStaffIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
 /**
@@ -18,18 +19,42 @@ import { useConnectedProviders } from '@/state/session';
  * purely on connected providers: only Letterboxd and AniList have an
  * addressable person surface, and each is linked only while connected.
  *
- * Links derive synchronously from the already-resolved person — no query, no
- * boundary, no skeleton — so this renders as a plain conditional after the
- * credit carousels. Hidden entirely when neither provider is connected.
+ * Letterboxd's link derives synchronously from the name. AniList's does not:
+ * its staff pages are numeric-id keyed (plan 0035 R11), so the id is resolved by
+ * a name search behind `enabled` — and while it is unresolved, or when nothing
+ * matched, **the AniList pill simply is not there**. No spinner, no placeholder,
+ * and above all no fallback to a name-search URL, which is what this replaces:
+ * most TMDB people have no AniList entry, so that link overwhelmingly opened an
+ * empty search page (R13).
+ *
+ * `enabled` defaults on for the person route (mounted = wanted). A sheet passes
+ * its own open flag so a rail of 20 cards costs 0 requests until one is
+ * long-pressed.
  */
-export function PersonLinksSection({ person }: { person: UrlPerson }) {
+export function PersonLinksSection({
+  person,
+  enabled = true,
+}: {
+  person: UrlPerson;
+  enabled?: boolean;
+}) {
   const connected = useConnectedProviders();
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
+  // Only while AniList is connected *and* the section wants links: an
+  // unconnected AniList renders no pill, so resolving its id would buy nothing.
+  const staffId = useAniListStaffIdQuery({
+    name: person.name,
+    enabled: enabled && connected.includes('anilist') && person.anilistId == null,
+  });
+  const anilistId = person.anilistId ?? staffId.data ?? undefined;
 
   const links: ProviderLink[] = [];
   for (const provider of connected) {
-    const url = providerPersonUrl(provider, person);
+    const url = providerPersonUrl(provider, {
+      ...person,
+      ...(anilistId != null ? { anilistId } : {}),
+    });
     if (url != null) links.push({ provider, url });
   }
 

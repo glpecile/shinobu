@@ -184,6 +184,7 @@ export function PersonCreditSheet({
               once it arrives, and until then a cast credit is Acting by
               definition (a crew one just takes the builder's own default). */}
           <PersonLinksSection
+            enabled={open}
             person={{
               name: credit.name,
               ...(person?.knownForDepartment != null

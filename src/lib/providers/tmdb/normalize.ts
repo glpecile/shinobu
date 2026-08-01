@@ -280,6 +280,20 @@ function foldNameSorted(name: string): string {
 }
 
 /**
+ * Whether two names refer to the same person or studio under the folding rules
+ * above — folded-equal, or equal after a word-order swap.
+ *
+ * Exported because `pickPersonMatch`'s fuzzy last resort is right for a lookup
+ * route (which shows the user what it found) and wrong for a deep link (which
+ * silently opens a page): plan 0035 R13's AniList resolution keeps the matcher's
+ * two confident passes and rejects the fallback, and re-implementing the folding
+ * to do that is how the two would drift.
+ */
+export function namesMatch(a: string, b: string): boolean {
+  return foldName(a) === foldName(b) || foldNameSorted(a) === foldNameSorted(b);
+}
+
+/**
  * Which search hit counts as *the* person — never blindly the top hit
  * (docs/solutions/trakt-text-search-wrong-movie-match.md, same class of
  * problem for people). Exact folded-name matches win first, then word-order

@@ -188,6 +188,13 @@ export interface NormalizedStudio {
    * by TMDB only. Absent (AniList studios) means name lookup instead.
    */
   tmdbId?: number;
+  /**
+   * AniList studio id, when the payload carried one (plan 0035 R12). AniList
+   * anime credits ship it and it used to be discarded; carrying it means an
+   * anime studio's "Open in AniList" link resolves for free, with no name
+   * search against the 30 req/min budget.
+   */
+  anilistId?: number;
 }
 
 /**
