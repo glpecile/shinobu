@@ -1,11 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableScale } from '@/components/presstable';
-import { cn } from '@/lib/cn';
 import {
   confirmLabelFor,
   LogConfirmSheet,
@@ -22,12 +21,11 @@ import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
 import { useConnectedProviders } from '@/state/session';
-import { useUpNextSettling } from '@/state/queries/up-next';
+import { upNextQueryKeys } from '@/state/queries/up-next';
 
 import {
   isQuickLogPending,
   resolveQuickLog,
-  settleTransition,
   type QuickLogPhase,
 } from './quick-log-state';
 
@@ -40,11 +38,21 @@ import {
  * prefetches the reconcile reads so the confirmed write returns quickly.
  *
  * Nothing advances optimistically (KTD-6). Once a write succeeds, the modal
- * closes and the button holds a pending state until the invalidated Up Next
- * slot settles; the card then advances, moves, or disappears purely from
- * recomputed data — which is why an advancing card simply unmounts (its entry
- * id carries the episode number) rather than animating a local counter. The
- * card advances only when the entry's own *source* provider succeeded (R8/R9).
+ * closes and the button holds a pending state until the Up Next slot refetches;
+ * the card then advances, moves, or disappears purely from recomputed data —
+ * which is why an advancing card simply unmounts (its entry id carries the
+ * episode number) rather than animating a local counter. The card advances
+ * only when the entry's own *source* provider succeeded (R8/R9).
+ *
+ * The settle signal is the button's own awaited `invalidateQueries` on the
+ * inputs key — never a passive watch of the fetching flag. The mutation's
+ * `invalidateAfterLog` already invalidated the slot; `cancelRefetch: false`
+ * joins that in-flight refetch instead of restarting it, and the promise
+ * resolving *is* "the recomputed data is in". The old watcher timed out after
+ * 10s into a "Logged — refresh to update" notice, which a slow post-write
+ * refetch (Simkl's ~20s write lock) or a skip-only outcome hit routinely
+ * (owner report 2026-08-02); now the timeout only stops the spinner, and the
+ * promise still advances the card whenever the refetch lands.
  *
  * Typed to the `episode` arm of the union, not `UpNextEntry`: a release entry
  * has no episode to log and no quick-log to offer (plan 0030 R5), so callers
@@ -58,7 +66,6 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
   const connected = useConnectedProviders();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(entry.item);
-  const fetching = useUpNextSettling();
 
   const [open, setOpen] = useState(false);
   const [selectedProviders, setSelectedProviders] = useState(targets);
@@ -66,8 +73,6 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
 
   const [phase, setPhase] = useState<QuickLogPhase>('idle');
-  const sawFetch = useRef(false);
-  const [timedOut, setTimedOut] = useState(false);
   const accentForeground = useCSSVariable('--color-accent-foreground');
   const iconColor =
     typeof accentForeground === 'string' ? accentForeground : undefined;
@@ -81,24 +86,11 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
       ? { episodes: [{ season: entry.episode.season, number: entry.episode.number }] }
       : { entryEpisodes: [entry.episode.number] };
 
-  // The settle watcher: `invalidateAfterLog` is fire-and-forget, so this is how
-  // the button notices the refetch it caused — and how it stops waiting for one
-  // that never lands.
+  // Backstop only: a refetch hung past the settle window stops the spinner —
+  // the settle promise still advances the card whenever it finally lands.
   useEffect(() => {
     if (phase !== 'settling') return;
-    if (fetching) sawFetch.current = true;
-    const next = settleTransition({
-      phase,
-      fetching,
-      sawFetch: sawFetch.current,
-      timedOut,
-    });
-    if (next != null) setPhase(next);
-  }, [phase, fetching, timedOut]);
-
-  useEffect(() => {
-    if (phase !== 'settling') return;
-    const timer = setTimeout(() => setTimedOut(true), SETTLE_TIMEOUT_MS);
+    const timer = setTimeout(() => setPhase('idle'), SETTLE_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [phase]);
 
@@ -123,8 +115,6 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
   function confirmLog() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
     haptics.confirm();
-    setTimedOut(false);
-    sawFetch.current = false;
     const parsedTags = parseTags(tags);
     logMedia.mutate(
       {
@@ -155,6 +145,17 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
           }
           setOpen(false);
           setPhase('settling');
+          // The settle signal (see the header comment): resolves when the
+          // recomputed inputs are in. An advanced card unmounted by then makes
+          // the setter a no-op; a card the data left standing stops pending.
+          void queryClient
+            .invalidateQueries(
+              { queryKey: upNextQueryKeys.inputs() },
+              { cancelRefetch: false },
+            )
+            .then(() =>
+              setPhase((current) => (current === 'settling' ? 'idle' : current)),
+            );
         },
         onError: () => haptics.error(),
       },
@@ -167,29 +168,15 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
         accessibilityLabel={`Log episode ${entry.episode.number} of ${entry.item.title}`}
         accessibilityRole="button"
         accessibilityState={{ busy: pending, disabled: pending }}
-        className={cn(
-          'w-9 h-9 items-center justify-center rounded-full',
-          phase === 'settle-failed'
-            ? 'bg-surface border border-accent'
-            : 'bg-accent',
-        )}
+        className="w-9 h-9 items-center justify-center rounded-full bg-accent"
         onPress={openConfirm}
       >
         {pending ? (
           <ActivityIndicator color={iconColor} size="small" />
         ) : (
-          <Ionicons
-            color={iconColor}
-            name={phase === 'settle-failed' ? 'refresh' : 'checkmark'}
-            size={18}
-          />
+          <Ionicons color={iconColor} name="checkmark" size={18} />
         )}
       </PresstableScale>
-      {phase === 'settle-failed' && (
-        <Text className="text-muted font-sans text-xs mt-1 text-right">
-          Logged — refresh to update.
-        </Text>
-      )}
 
       <LogConfirmSheet
         confirmLabel={confirmLabelFor(

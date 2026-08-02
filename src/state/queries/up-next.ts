@@ -1,5 +1,4 @@
 import {
-  useIsFetching,
   useQueryClient,
   useSuspenseQuery,
   type QueryClient,
@@ -730,11 +729,3 @@ export function useSuspenseUpNextQuery(): UpNextResult {
   return { ...computeUpNext(data, now), errors: data.errors, now };
 }
 
-/**
- * Whether the slot is currently refetching — the settle signal a quick-log
- * card waits on before advancing (KTD-6). `invalidateAfterLog` stays
- * fire-and-forget; this is how the card notices the refetch it triggered.
- */
-export function useUpNextSettling(): boolean {
-  return useIsFetching({ queryKey: upNextQueryKeys.inputs() }) > 0;
-}
