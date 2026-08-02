@@ -858,7 +858,9 @@ export default function DetailsScreen() {
             </View>
           )}
 
-          {shown.type === 'TV' && <SeasonsSection item={shown} />}
+          {shown.type === 'TV' && (
+            <SeasonsSection item={shown} resetKey={refreshCount} />
+          )}
           {shown.type === 'ANIME' && shown.isFilm !== true && (
             <AnimeSeasonsSection item={shown} resetKey={refreshCount} />
           )}

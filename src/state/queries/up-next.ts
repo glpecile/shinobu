@@ -40,6 +40,7 @@ import {
   getWatchedShows,
   traktCalendarRange,
 } from '@/lib/providers/trakt/reads';
+import { parseLocalInstant } from '@/lib/time/has-aired';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -315,6 +316,33 @@ function startedInSimkl(entry: SimklLibraryEntry): boolean {
 }
 
 /**
+ * The premiere exception to `startedInSimkl` (owner report 2026-08-02): a show
+ * watchlisted *before release* whose first episode just aired is precisely what
+ * the user was waiting for — not backlog. Recency is the fact separating the
+ * two: every backlog row's pointer aired long ago, while "it released" means
+ * within days. The window matches the calendar's, so a premiere waits in
+ * Continue Watching exactly as long as an upcoming episode would sit in
+ * Calendar, then falls back out if the user never starts it.
+ *
+ * A *future*-dated pointer passes too, deliberately: admission is fetch-time
+ * but classification is render-time (`computeUpNext` gets a live `now`, KTD-5),
+ * so a premiere airing while the app is open surfaces on the next render
+ * instead of waiting out the snapshot's staleTime. Unaired pointers produce no
+ * entry, so admitting them early shows nothing early. Date-less pointers stay
+ * out: with no instant, "recent" is unknowable, and `simklAiredByCount` would
+ * otherwise classify the user's whole fully-aired backlog as aired.
+ */
+const PREMIERE_ADMIT_WINDOW_MS = UP_NEXT_WINDOW_DAYS * 24 * 60 * 60_000;
+
+function recentlyReleased(entry: SimklLibraryEntry, now: Date): boolean {
+  const date = entry.nextToWatch?.date;
+  if (date == null) return false;
+  const instant = parseLocalInstant(date);
+  if (instant == null) return false;
+  return now.getTime() - instant.getTime() <= PREMIERE_ADMIT_WINDOW_MS;
+}
+
+/**
  * Continue Watching's Simkl source (plan 0034 U8/R9): the server-computed
  * `next_to_watch` pointers, air instants included (`next_watch_info=yes`) — one
  * call per snapshot, no per-show fan, which is why there is no Simkl analog of
@@ -334,7 +362,8 @@ function startedInSimkl(entry: SimklLibraryEntry): boolean {
  * `docs/solutions/simkl-parked-shows-have-no-next-to-watch.md` names from the
  * details side.
  *
- * Only *started* rows join (`startedInSimkl`); the `plantowatch` read is
+ * Only *started* rows join (`startedInSimkl`) — plus just-premiered ones
+ * (`recentlyReleased`, the 2026-08-02 report); the `plantowatch` read is
  * best-effort so a snapshot outage can't blank the `watching` rows this leg has
  * always carried, and it is the watchlist gather's own cache entry, so in the
  * common session it costs no request.
@@ -360,8 +389,13 @@ async function simklInputs(
     // reaches the user — it just doesn't take `watching`'s rows down with it.
     simklPlannedLibrary(queryClient).catch(() => null),
   ]);
+  const now = new Date();
   const parkedEntries =
-    parked == null ? [] : [...parked.shows, ...parked.anime].filter(startedInSimkl);
+    parked == null
+      ? []
+      : [...parked.shows, ...parked.anime].filter(
+          (entry) => startedInSimkl(entry) || recentlyReleased(entry, now),
+        );
   return [...watching.shows, ...watching.anime, ...parkedEntries].map(
     simklProgressInput,
   );

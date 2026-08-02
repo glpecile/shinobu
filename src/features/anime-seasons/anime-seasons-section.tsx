@@ -214,7 +214,16 @@ export function AnimeSeasonsSection({
   if (item.externalIds.anilist == null) return null;
 
   return (
-    <SuspenseSection fallback={<SeasonsSkeleton />} resetKey={resetKey}>
+    <SuspenseSection
+      // AniList has stability wobbles; a silently missing episode list reads
+      // as "this anime has no episodes", so the outage gets named.
+      errorToast={{
+        title: 'Episodes unavailable',
+        message: 'AniList didn’t respond — pull to refresh to try again.',
+      }}
+      fallback={<SeasonsSkeleton />}
+      resetKey={resetKey}
+    >
       <AnimeSeasonAccordionList item={item} />
     </SuspenseSection>
   );

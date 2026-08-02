@@ -653,8 +653,48 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     // watching + plantowatch)…
     expect(inputs.calendar).toHaveLength(1);
     expect(inputs.calendar[0].item.id).toBe('simkl-11');
-    // …but contributes no progress pointer: nothing has been started, so it is
-    // a watchlist item, not something waiting one tap away.
+    // …but contributes no progress pointer: nothing has been started and its
+    // pointer carries no date, so "recently released" is unknowable — it is a
+    // watchlist item, not something waiting one tap away.
+    expect(inputs.progress).toEqual([]);
+  });
+
+  test('a watchlisted show that just premiered reaches Continue Watching (owner report 2026-08-02)', async () => {
+    // The False Memory state: watchlisted while unaired, first episode came
+    // out two days ago, never started. Recency of the pointer's air date is
+    // what admits it past the backlog gate.
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    const premiered = simklEntry(14, {
+      status: 'plantowatch',
+      nextToWatch: { season: 1, episode: 1, date: twoDaysAgo },
+      item: { currentProgress: 0, totalEpisodes: 16 },
+    });
+    const { client } = fakeClient({
+      simklLibraries: { plantowatch: simklLibrary({ shows: [premiered] }) },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.progress).toHaveLength(1);
+    expect(inputs.progress[0].item.id).toBe('simkl-14');
+    expect(inputs.progress[0].nextEpisode?.number).toBe(1);
+  });
+
+  test('an un-started backlog show with an old premiere date stays out of the progress pool', async () => {
+    // Same shape as the premiere case, but E1 aired a month ago — the
+    // fully-aired backlog the startedInSimkl gate exists to keep out.
+    const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const backlog = simklEntry(15, {
+      status: 'plantowatch',
+      nextToWatch: { season: 1, episode: 1, date: monthAgo },
+      item: { currentProgress: 0, totalEpisodes: 16 },
+    });
+    const { client } = fakeClient({
+      simklLibraries: { plantowatch: simklLibrary({ shows: [backlog] }) },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
     expect(inputs.progress).toEqual([]);
   });
 
