@@ -16,7 +16,7 @@ export interface WriteReportLike {
  * Whether a write sheet may close itself on this report — and, equivalently,
  * whether the outcome fits in a toast (plan 0032 KTD-3). One predicate feeds
  * both decisions so the sheet can never close on a report the toast then
- * fails to carry: `burnt` has no press handler (R7), so **post-write news** —
+ * fails to carry: toasts are announcement-only, no press handlers (R7), so **post-write news** —
  * a failed provider or a reasoned skip, each with its `providerItemUrl` link —
  * must survive on the sheet instead.
  *

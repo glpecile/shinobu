@@ -63,8 +63,8 @@
             "message": "Import MorphText from @/components/morph-text — torph is DOM-only; the wrapper falls back to a plain Text on native via index.tsx."
           },
           {
-            "group": ["burnt", "burnt/*"],
-            "message": "Import { toast } from @/lib/toast — one wrapper owns preset/duration/haptic so copy and feedback stay consistent (plan 0032 R8); the web Toaster host lives in @/components/toast-host."
+            "group": ["sonner", "sonner/*", "sonner-native", "sonner-native/*"],
+            "message": "Import { toast } from @/lib/toast — one wrapper owns copy/duration/haptics so feedback stays consistent (plan 0032 R8); the Toaster host lives in @/components/toast-host."
           },
           {
             "group": ["cnfast", "cnfast/*"],

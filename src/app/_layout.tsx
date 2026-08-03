@@ -123,8 +123,8 @@ export default function Layout() {
                 {/* Fullscreen image viewer overlay (web); null on native,
                     where galeria renders the zoom inline. */}
                 <Lightbox />
-                {/* sonner's Toaster for burnt's web path; null on native,
-                    where burnt renders from native code (plan 0032 U1). */}
+                {/* The toast Toaster host — sonner-native on native, sonner
+                    on web (plan 0032 U1). */}
                 <ToastHost />
               </AppShell>
             </ThemeProvider>

@@ -49,7 +49,7 @@ import {
  * pieces (R2/KTD-1), never a second implementation of the toggle rules.
  *
  * The sheet **stays mounted until the report settles** (R4, owner decision
- * 2026-07-29): `burnt` has no press handler, so a Trakt 420, an expired
+ * 2026-07-29): toasts carry no press handlers (R7), so a Trakt 420, an expired
  * Letterboxd session or a reasoned skip with a `providerItemUrl` link would
  * have nowhere to land if the picker were already gone. Only a report with
  * nothing left to read (`isCleanWriteReport`) closes it — and fires the one
