@@ -116,8 +116,21 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).toContain('simkl/activities');
     // Simkl became an Up Next input in U8, so a Simkl-only log must recompute
     // the sections — this invalidation is also the quick-log settle signal;
-    // without it a Simkl-only user's card sits stale and the quick-log button
-    // spins the full settle window into settle-failed.
+    // without it a Simkl-only user's card sits stale for the full settle
+    // window.
     expect(keys).toContain('up-next/inputs');
+  });
+
+  test('an all-skip log still recomputes Up Next — the provider is ahead of the sections', () => {
+    const { client, keys } = recordingClient();
+    // A reconcile-skip means the provider already records the watch, so the
+    // computed sections are stale even though nothing was written. The
+    // quick-log card advances on skipped-or-succeeded (`resolveQuickLog`);
+    // gating on `succeeded` alone stranded it with no refetch to settle
+    // against (owner report 2026-08-02).
+    invalidateAfterLog(client, ITEM, [], ['trakt']);
+    expect(keys).toContain('up-next/inputs');
+    // Per-provider caches stay untouched: reconcile just read them fresh.
+    expect(keys).not.toContain('trakt/show-progress/1');
   });
 });

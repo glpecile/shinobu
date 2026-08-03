@@ -210,11 +210,26 @@ function SeasonAccordionList({
  * BYO credentials exist, TMDB otherwise — so a Simkl-sourced show still gets
  * its episode list; hidden only when no catalogue can answer.
  */
-export function SeasonsSection({ item }: { item: NormalizedMediaItem }) {
+export function SeasonsSection({
+  item,
+  resetKey,
+}: {
+  item: NormalizedMediaItem;
+  resetKey?: unknown;
+}) {
   const source = useShowSeasonsSource(item);
   if (source == null) return null;
   return (
-    <SuspenseSection fallback={<SeasonsSkeleton />}>
+    <SuspenseSection
+      // Same rationale as AnimeSeasonsSection: a vanished season list reads
+      // as "no episodes", so the failure gets named with its recourse.
+      errorToast={{
+        title: 'Episodes unavailable',
+        message: 'The season list didn’t load — pull to refresh to try again.',
+      }}
+      fallback={<SeasonsSkeleton />}
+      resetKey={resetKey}
+    >
       <SeasonAccordionList item={item} source={source} />
     </SuspenseSection>
   );

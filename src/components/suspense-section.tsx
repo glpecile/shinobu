@@ -1,9 +1,20 @@
 import { Component, Suspense, type ReactNode } from 'react';
 
+import { toast } from '@/lib/toast';
+
 interface BoundaryProps {
   children: ReactNode;
   /** Change to re-attempt rendering after a caught error (e.g. on refresh). */
   resetKey?: unknown;
+  /**
+   * Opt-in failure toast: a section that disappears on error is silent by
+   * design on dense surfaces (the home feed degrades row by row), but on a
+   * detail screen the vanished section *is* the news — a provider outage
+   * looks identical to "this show has no episodes". Pass copy naming what
+   * failed and the recourse (pull to refresh). Fires once per caught error;
+   * a `resetKey` retry that fails again is a new error and toasts again.
+   */
+  errorToast?: { title: string; message?: string };
 }
 
 /**
@@ -16,6 +27,11 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  override componentDidCatch() {
+    const { errorToast } = this.props;
+    if (errorToast != null) toast.error(errorToast.title, errorToast.message);
   }
 
   override componentDidUpdate(previous: BoundaryProps) {
@@ -38,9 +54,10 @@ export function SuspenseSection({
   fallback,
   children,
   resetKey,
+  errorToast,
 }: BoundaryProps & { fallback: ReactNode }) {
   return (
-    <SectionErrorBoundary resetKey={resetKey}>
+    <SectionErrorBoundary resetKey={resetKey} errorToast={errorToast}>
       <Suspense fallback={fallback}>{children}</Suspense>
     </SectionErrorBoundary>
   );

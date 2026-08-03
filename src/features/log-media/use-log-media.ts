@@ -491,6 +491,7 @@ export function invalidateAfterLog(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
   succeeded: readonly ProviderId[],
+  skipped: readonly ProviderId[] = [],
 ) {
   // The write changed watch history — refresh the reads that show it. Runs on
   // the *enriched* item (the mutation may have discovered ids the caller's
@@ -545,16 +546,20 @@ export function invalidateAfterLog(
     }
   }
   // Up Next is computed from Trakt/AniList/Simkl watch state (Simkl joined the
-  // provider-keyed inputs in plan 0034 U8), so a successful log to any of them
-  // must recompute the sections — not just the per-provider caches the other
+  // provider-keyed inputs in plan 0034 U8), so a log to any of them must
+  // recompute the sections — not just the per-provider caches the other
   // branches refresh. This invalidation is also the settle signal the
   // quick-log card waits on before advancing (plan 0019 KTD-6): a provider
   // missing from this gate strands its users' quick-log in the settle window.
-  if (
-    succeeded.includes('trakt') ||
-    succeeded.includes('anilist') ||
-    succeeded.includes('simkl')
-  ) {
+  // **Skips count**: a reconcile-skip means the provider already records the
+  // watch — its state is *ahead* of the computed sections, exactly the case a
+  // recompute exists for — and the quick-log card advances on
+  // skipped-or-succeeded (`resolveQuickLog`), so gating on `succeeded` alone
+  // left an all-skip log with no refetch to settle against (owner report
+  // 2026-08-02, "Logged — refresh to update").
+  const touched = (provider: ProviderId) =>
+    succeeded.includes(provider) || skipped.includes(provider);
+  if (touched('trakt') || touched('anilist') || touched('simkl')) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
   }
   if (succeeded.includes('simkl')) {
@@ -745,7 +750,13 @@ export function useLogMedia() {
         plan.variables,
       );
 
-      invalidateAfterLog(queryClient, item, result.succeeded);
+      // Both skip flavors ride along: reconcile skips (`skipped`) prove the
+      // provider is ahead of the cached sections, and adapter skips
+      // (`result.skipped`) cost only a recompute from warm caches.
+      invalidateAfterLog(queryClient, item, result.succeeded, [
+        ...skipped,
+        ...result.skipped,
+      ]);
 
       // A watched film leaves the watchlist (plan 0033 U7) — fired, not
       // awaited: the Letterboxd leg is a second WebView round-trip, and a
