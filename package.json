@@ -79,6 +79,7 @@
     "android.clean": "expo prebuild --platform android --clean && bun android",
     "ios": "expo run:ios",
     "ios.clean": "expo prebuild --platform ios --clean && bun ios",
+    "clean": "expo prebuild --clean && expo run:android --no-bundler && expo run:ios",
     "web": "expo start --web",
     "dev:worker": "wrangler dev",
     "test": "bun test --isolate",
