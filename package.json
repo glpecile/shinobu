@@ -86,7 +86,7 @@
     "release:bump": "bun scripts/bump-version.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "build:web": "expo export --platform web && cp 'dist/+not-found.html' dist/404.html",
+    "build:web": "expo export --platform web --clear && cp 'dist/+not-found.html' dist/404.html",
     "deploy:web": "bun run build:web && wrangler deploy"
   },
   "expo": {
