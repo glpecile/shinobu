@@ -7,7 +7,7 @@ import type { LogMediaResult } from './fan-out';
  * `isCleanWriteReport` lets the sheet close, so a reconcile skip is the one
  * extra fact it can carry ("AniList already had it") — a failure or a
  * reasoned skip never reaches a toast, because a toast can't carry the link
- * that is the recourse (R7). Pure, so the copy is testable without burnt.
+ * that is the recourse (R7). Pure, so the copy is testable without the toast library.
  */
 const list = (ids: readonly ProviderId[]) =>
   ids.map((id) => PROVIDERS[id].label).join(', ');
