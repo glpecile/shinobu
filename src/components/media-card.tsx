@@ -83,9 +83,13 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
           colors={['transparent', 'rgba(0,0,0,0.85)']}
           style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 112 }}
         />
+        {/* Everything here sits on the dark scrim over artwork, so text takes
+            the on-accent (always light) foreground — `text-foreground` and
+            `text-muted` are near-black in the light theme and would vanish
+            into the poster. */}
         <View className="absolute bottom-0 left-0 right-0 p-3">
           <Text
-            className="text-foreground font-sans-semibold text-sm leading-tight"
+            className="text-accent-foreground font-sans-semibold text-sm leading-tight"
             numberOfLines={2}
           >
             {item.title}
@@ -95,11 +99,16 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
               {item.type}
             </Text>
             {progress != null && (
-              <Text className="text-muted text-xs font-sans">{progress}</Text>
+              <Text className="text-accent-foreground/70 text-xs font-sans">
+                {progress}
+              </Text>
             )}
           </View>
           {subtitle != null && subtitle !== '' && (
-            <Text className="text-muted text-xs font-sans mt-0.5" numberOfLines={1}>
+            <Text
+              className="text-accent-foreground/70 text-xs font-sans mt-0.5"
+              numberOfLines={1}
+            >
               {subtitle}
             </Text>
           )}

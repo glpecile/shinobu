@@ -50,3 +50,19 @@ and web keeps the exact sonner it always rendered through.
 - Historical (burnt 0.13.0, observed 2026-07-29): iOS SPIndicator capsule
   rendered great and above native sheets; that bar is the reference for what
   sonner-native must match on iOS.
+
+## Post-swap verification (2026-08-03, dev clients rebuilt on both platforms)
+
+- **iOS** (iPhone 17 Pro sim): success and error toasts render the themed
+  capsule (icon + title + description) over the dark UI; the real wrapper
+  path (`toast.error(title, message)`) verified in the running app.
+- **Android** (Pixel 9 Pro XL emulator, API 36): same surface, same styling —
+  including the description line burnt's `ToastAndroid` shim silently
+  dropped. The app also renders fine on this emulator now, closing the
+  original "never observed on Android" gap entirely.
+- Metro resolves the platform binding correctly on device:
+  `lib/toast/sonner.ts` (sonner-native) loads on both native platforms.
+- Gotcha hit during the swap: a Metro started before `bun remove burnt` can
+  serve a stale graph that still imports `burnt` and red-screens with
+  "burnt could not be found". Restart Metro with `--clear` after removing a
+  dependency.
