@@ -567,6 +567,13 @@ export default function DetailsScreen() {
   const feed = useUnifiedFeed({ includeHidden: true });
   const queryClient = useQueryClient();
   const accent = useCSSVariable('--color-accent');
+  // The hero scrim fades to the *page background*, not black: the title
+  // straddles the image/page boundary and `text-foreground` is near-black in
+  // the light theme, so a black scrim swallowed it there. Dark theme looks
+  // the same as before (its background token is near-black).
+  const backgroundVariable = useCSSVariable('--color-background');
+  const background =
+    typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
@@ -763,8 +770,10 @@ export default function DetailsScreen() {
             className="w-full h-full"
             contentFit="cover"
           />
+          {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
+              fading from transparent-black to white passes through gray. */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.95)']}
+            colors={[`${background}00`, background]}
             style={{
               position: 'absolute',
               bottom: 0,
