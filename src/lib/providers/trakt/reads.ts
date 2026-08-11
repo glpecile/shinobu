@@ -28,8 +28,6 @@ import {
   normalizeSearchResult,
   normalizeSeason,
   normalizeStudio,
-  normalizeTrendingMovie,
-  normalizeTrendingShow,
   normalizeWatchedMovie,
   normalizeWatchedProgress,
   normalizeWatchedShow,
@@ -48,8 +46,6 @@ import {
   type TraktShowProgressResult,
   type TraktShowSeason,
   type TraktStudio,
-  type TraktTrendingMovie,
-  type TraktTrendingShow,
   type TraktWatchedMovie,
   type TraktWatchedShow,
   type TraktWatchlistRow,
@@ -62,42 +58,6 @@ import {
  */
 function traktSegment(type: MediaType): 'movies' | 'shows' {
   return type === 'TV' ? 'shows' : 'movies';
-}
-
-/**
- * Public catalogue read — needs only the client id, no OAuth, so the app has
- * something real to show before any provider is connected (plan 0006 §8).
- */
-export function getTrendingMovies(
-  deps: TraktDeps,
-  options: { limit?: number } = {},
-): Effect.Effect<NormalizedMediaItem[], ProviderError> {
-  const limit = options.limit ?? 30;
-  return Effect.gen(function* () {
-    const raw = yield* traktRequest<TraktTrendingMovie[]>(
-      deps,
-      `/movies/trending?extended=full,images&limit=${limit}`,
-    );
-    const now = yield* Clock.currentTimeMillis;
-    const nowIso = new Date(now).toISOString();
-    return raw.map((entry) => normalizeTrendingMovie(entry, nowIso));
-  });
-}
-
-export function getTrendingShows(
-  deps: TraktDeps,
-  options: { limit?: number } = {},
-): Effect.Effect<NormalizedMediaItem[], ProviderError> {
-  const limit = options.limit ?? 30;
-  return Effect.gen(function* () {
-    const raw = yield* traktRequest<TraktTrendingShow[]>(
-      deps,
-      `/shows/trending?extended=full,images&limit=${limit}`,
-    );
-    const now = yield* Clock.currentTimeMillis;
-    const nowIso = new Date(now).toISOString();
-    return raw.map((entry) => normalizeTrendingShow(entry, nowIso));
-  });
 }
 
 /**

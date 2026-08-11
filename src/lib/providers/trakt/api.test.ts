@@ -3,7 +3,8 @@ import { Effect, Either } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
 import { traktAuthedRequest } from './api';
-import type { TokenStore, TraktDeps } from './deps';
+import type { TokenStore } from '@/lib/providers/token-store';
+import type { TraktDeps } from './deps';
 
 const STALE: ProviderSession = {
   accessToken: 'stale',

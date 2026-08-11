@@ -92,7 +92,7 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['anilist']);
     expect(keys).toContain('anilist/current-anime-entries');
-    expect(keys).toContain('anilist/current-anime');
+    expect(keys).toContain('anilist/planned-anime');
     // KTD-2's guard reads this before the next write.
     expect(keys).toContain('anilist/entry-state/9');
   });

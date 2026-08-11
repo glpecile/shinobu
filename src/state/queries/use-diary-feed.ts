@@ -5,7 +5,6 @@ import {
   type QueryClient,
   type UseInfiniteQueryResult,
 } from '@tanstack/react-query';
-import { allSettled } from 'better-all';
 import { Effect } from 'effect';
 
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
@@ -55,7 +54,7 @@ function pageBefore(_first: NormalizedDiaryEntry[], firstPageParam: number) {
 
 /**
  * The AniList list-activity page fetcher resolves (and caches forever) the
- * viewer id first, exactly like `fetchCurrentAnime` — steady-state paging spends
+ * viewer id first, exactly like `fetchCurrentAnimeEntries` — steady-state paging spends
  * one request, not two, of the 30 req/min budget.
  */
 async function fetchAniListActivityPage(
@@ -235,14 +234,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   function refetch() {
     // allSettled, not all: one provider failing to refresh must not hide the
     // others' outcome (partial-failure contract, AGENTS.md).
-    return allSettled(
-      Object.fromEntries(
-        active.map(({ provider, query }): [string, () => Promise<unknown>] => [
-          provider,
-          () => query.refetch(),
-        ]),
-      ),
-    );
+    return Promise.allSettled(active.map(({ query }) => query.refetch()));
   }
 
   return {

@@ -84,10 +84,9 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['anilist']);
     expect(keys).toContain('up-next/inputs');
-    // The items key derives from the entries key — invalidating only the
-    // former would re-derive from a stale cache (U2).
+    // The derived slices re-derive from the entries key — invalidating only
+    // them would read a stale cache (U2).
     expect(keys).toContain('anilist/current-anime-entries');
-    expect(keys).toContain('anilist/current-anime');
   });
 
   test('a successful AniList log drops the entry out of the watchlist slice', () => {

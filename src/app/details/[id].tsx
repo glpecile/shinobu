@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { allSettled } from 'better-all';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -18,7 +17,7 @@ import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
-import { AnimeSeasonsSection } from '@/features/anime-seasons';
+import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -28,8 +27,8 @@ import {
   type PersonCredit,
 } from '@/features/person';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
-import { ReleaseTimeline } from '@/features/release-timeline';
-import { StudioSheet } from '@/features/studio';
+import { ReleaseTimeline } from '@/features/release-timeline/release-timeline';
+import { StudioSheet } from '@/features/studio/studio-sheet';
 import {
   formatRuntime,
   SeasonsSection,
@@ -725,22 +724,17 @@ export default function DetailsScreen() {
       }
     }
     setRefreshCount((count) => count + 1);
-    return allSettled({
-      feed: () => feed.refetch(),
-      details: () =>
-        queryClient.refetchQueries({
-          queryKey: mediaDetailsQueryKeys.all,
-          type: 'active',
-        }),
-      trakt: () =>
-        queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
-      anilist: () =>
-        queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
-      simkl: () =>
-        queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
-      tmdb: () =>
-        queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
-    });
+    return Promise.allSettled([
+      feed.refetch(),
+      queryClient.refetchQueries({
+        queryKey: mediaDetailsQueryKeys.all,
+        type: 'active',
+      }),
+      queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
+    ]);
   }
 
   return (

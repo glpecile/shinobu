@@ -57,16 +57,6 @@ export interface TraktShow extends TraktExtendedFields {
   images?: TraktImages;
 }
 
-export interface TraktTrendingMovie {
-  watchers: number;
-  movie: TraktMovie;
-}
-
-export interface TraktTrendingShow {
-  watchers: number;
-  show: TraktShow;
-}
-
 export interface TraktWatchedMovie {
   plays: number;
   last_watched_at: string;
@@ -191,20 +181,6 @@ export function normalizeShow(
   };
 }
 
-export function normalizeTrendingMovie(
-  raw: TraktTrendingMovie,
-  nowIso: string,
-): NormalizedMediaItem {
-  return normalizeMovie(raw.movie, nowIso);
-}
-
-export function normalizeTrendingShow(
-  raw: TraktTrendingShow,
-  nowIso: string,
-): NormalizedMediaItem {
-  return normalizeShow(raw.show, nowIso);
-}
-
 /**
  * One `/sync/watchlist` row. `rank` and the row's own `id` are Trakt list-item
  * fields — deliberately read here and *not* carried onto `NormalizedMediaItem`
@@ -225,7 +201,7 @@ export interface TraktWatchlistRow {
 
 /**
  * A watchlist row → `NormalizedMediaItem`, delegating to the shared
- * movie/show normalizers exactly as `normalizeTrendingMovie` does, with two
+ * movie/show normalizers, with two
  * deltas (plan 0031 KTD-11):
  *
  * - **`lastUpdated` is `listed_at`, not `nowIso`.** `normalizeMovie`/

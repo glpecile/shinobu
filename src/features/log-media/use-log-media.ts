@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { all } from 'better-all';
 import { Effect } from 'effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
@@ -518,7 +517,6 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('anilist')) {
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnime() });
     // A CURRENT write moves the entry *out* of the PLANNING slice, so the
     // watchlist's AniList leg is stale the moment this succeeds — third derived
     // key over the same read (plan 0031 U12/KTD-5).
@@ -606,15 +604,12 @@ export async function prefetchLogReconcile(
     // episode-map lookup, so a sequel-season log doesn't wait on the ~1 MB
     // document at confirm time.
     const plan = await resolveLogPlan(queryClient, variables, connected);
-    await all(
-      Object.fromEntries(
-        plan.targets
-          .filter((provider) => !plan.mappingSkips.has(provider))
-          .map((provider): [ProviderId, () => Promise<boolean>] => [
-            provider,
-            () => providerHasWatch(queryClient, provider, plan.item, plan.domains),
-          ]),
-      ),
+    await Promise.all(
+      plan.targets
+        .filter((provider) => !plan.mappingSkips.has(provider))
+        .map((provider) =>
+          providerHasWatch(queryClient, provider, plan.item, plan.domains),
+        ),
     );
   } catch {
     // Prefetch is an optimization — a miss just means the write pays the read.
@@ -666,22 +661,11 @@ export async function planLogWrite(
   // season-1 keys for a season-2 intent and turn a genuine parity rewatch into
   // a catch-up (plan 0027 R4).
   const reconcileTargets = targets.filter((provider) => !mappingSkips.has(provider));
-  const recordsByProvider = await all(
-    Object.fromEntries(
-      reconcileTargets.map(
-        (provider): [ProviderId, () => Promise<ProviderWatchRecord>] => [
-          provider,
-          async () => ({
-            provider,
-            hasIt: await providerHasWatch(queryClient, provider, item, domains),
-          }),
-        ],
-      ),
-    ),
-  );
-  // better-all keys its result in completion order — rebuild routing order.
-  const records: ProviderWatchRecord[] = reconcileTargets.map(
-    (provider) => recordsByProvider[provider],
+  const records: ProviderWatchRecord[] = await Promise.all(
+    reconcileTargets.map(async (provider) => ({
+      provider,
+      hasIt: await providerHasWatch(queryClient, provider, item, domains),
+    })),
   );
   const decisions = reconcileLogTargets(records);
   const skipped = decisions

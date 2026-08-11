@@ -2,7 +2,8 @@ import { Effect, type Either } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
-import type { TokenStore, TraktDeps } from './deps';
+import type { TokenStore } from '@/lib/providers/token-store';
+import type { TraktDeps } from './deps';
 import { traktHttp } from './http';
 
 interface TraktTokenResponse {

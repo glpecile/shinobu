@@ -195,33 +195,6 @@ interface TrendingResponse {
 }
 
 /**
- * Public trending anime — no session required, so the feed shows anime even
- * before AniList is connected (plan.md 2.1, same contract as Trakt trending).
- */
-export function getTrendingAnime(
-  deps: AniListDeps,
-  options: { limit?: number } = {},
-): Effect.Effect<NormalizedMediaItem[], ProviderError> {
-  const limit = options.limit ?? 30;
-  return Effect.gen(function* () {
-    const data = yield* anilistRequest<TrendingResponse>(
-      deps,
-      `query ($perPage: Int) {
-        Page(page: 1, perPage: $perPage) {
-          media(type: ANIME, sort: TRENDING_DESC) { ${MEDIA_FIELDS} }
-        }
-      }`,
-      { variables: { perPage: limit } },
-    );
-    const now = yield* Clock.currentTimeMillis;
-    const nowIso = new Date(now).toISOString();
-    return (data.Page?.media ?? [])
-      .filter((media): media is AniListMedia => media != null)
-      .map((media) => normalizeAniListMedia(media, nowIso));
-  });
-}
-
-/**
  * Public most-popular anime of one cour ("Summer 2026") — the home feed's
  * anime row. Same no-session contract as trending; POPULARITY_DESC because
  * TRENDING_DESC within a season over-weights week-to-week noise.

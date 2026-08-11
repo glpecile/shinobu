@@ -4,7 +4,6 @@ import {
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
-import { allSettled } from 'better-all';
 import { Effect } from 'effect';
 
 import { providersForFeed } from '@/lib/providers/routing';
@@ -245,12 +244,9 @@ export function useRefetchUnifiedFeed() {
     ];
     // allSettled, not all: one provider failing to refresh must not hide the
     // outcome of the others (partial-failure contract, AGENTS.md).
-    return allSettled(
-      Object.fromEntries(
-        targets.map((target): [string, () => Promise<void>] => [
-          target.slot,
-          () => queryClient.refetchQueries({ queryKey: target.queryKey }),
-        ]),
+    return Promise.allSettled(
+      targets.map((target) =>
+        queryClient.refetchQueries({ queryKey: target.queryKey }),
       ),
     );
   }
@@ -314,14 +310,7 @@ export function useUnifiedFeed(
   function refetch() {
     // allSettled, not all: one provider failing to refresh must not hide the
     // outcome of the others (partial-failure contract, AGENTS.md).
-    return allSettled(
-      Object.fromEntries(
-        results.map((result, index): [string, () => Promise<unknown>] => [
-          queries[index].slot,
-          () => result.refetch(),
-        ]),
-      ),
-    );
+    return Promise.allSettled(results.map((result) => result.refetch()));
   }
 
   return {

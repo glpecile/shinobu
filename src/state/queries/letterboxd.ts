@@ -126,28 +126,6 @@ const TAGS_STALE_MS = 6 * 60 * 60_000;
 const TAGS_GC_MS = 24 * 60 * 60_000;
 
 /**
- * The user's public watchlist (first page, 28 films) for the home feed's
- * Letterboxd watchlist feed row. Disabled until Letterboxd is connected; on web the
- * read runs through the Worker proxy (plan 0018).
- */
-export function useLetterboxdWatchlistQuery(options: { enabled?: boolean } = {}) {
-  const connected = useConnectedProviders();
-  // Gate the MMKV read behind the connection check: `connected` is empty in
-  // the SSR snapshot (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md),
-  // so the username read below only ever runs on the client — the same pattern
-  // the Serializd feed row uses (R16).
-  const username = connected.includes('letterboxd')
-    ? (getLetterboxdUsername() ?? '')
-    : '';
-
-  return useQuery({
-    queryKey: letterboxdQueryKeys.watchlist(username),
-    queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
-    enabled: (options.enabled ?? true) && username !== '',
-  });
-}
-
-/**
  * The tags this member already uses, most-used first — the suggestion source
  * behind the log sheet's tag picker. Disabled until Letterboxd is connected;
  * on web the read runs through the Worker proxy's third allowlist rule

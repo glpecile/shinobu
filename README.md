@@ -36,7 +36,6 @@
 | 🎨 [Uniwind](https://docs.uniwind.dev) | Tailwind CSS for React Native, from the Unistyles team — theme tokens, light/dark variants |
 | 🔄 [TanStack Query](https://tanstack.com/query) | Every read and write — caching, invalidation, and the cross-tracker write path |
 | 🧬 [Effect](https://effect.website) | Typed errors, retries, and rate-limit backoff — contained to the provider service layer, never leaks into components |
-| 🧵 [better-all](https://github.com/shuding/better-all) | `Promise.all` with automatic dependency optimization — how the write fan-out and the feed aggregation stay maximally parallel |
 | ⚡ [Nitro Modules](https://nitro.margelo.com) | [`react-native-mmkv`](https://github.com/mrousavy/react-native-mmkv) (encrypted token storage), [`react-native-nitro-fetch`](https://github.com/margelo/react-native-nitro-fetch) (Cronet/URLSession networking on native), [`nitro-webview`](https://github.com/l2hyunwoo/nitro-webview) (the tracker sign-in and write-bridge WebViews) |
 | 📜 [Legend List](https://github.com/LegendApp/legend-list) | Virtualized lists everywhere — pure TS, works on web, behind a single `components/List` wrapper |
 | 🖼️ [expo-image](https://docs.expo.dev/versions/latest/sdk/image/) + [galeria](https://github.com/nandorojo/galeria) | Memory/disk-cached posters so long grids don't thrash memory; tap-to-zoom on posters and headshots |
