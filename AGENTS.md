@@ -1,521 +1,358 @@
 # Shinobu Agent Conventions
 
-Shinobu (忍): DB-less, cross-platform media tracker. Simkl, Trakt.tv, AniList,
-Letterboxd, and Serializd are five **symmetric, opt-in providers** — not a primary
-store with satellite imports. Core purpose: log media once, Shinobu fans that write
-out to every connected provider it applies to. Reads aggregate whichever providers
-are connected into one unified feed. Simkl is the tracker that "just works"
-(bundled client id, one-tap PKCE connect); Trakt is **bring-your-own-everything** —
-the app ships no Trakt credentials whatsoever, and Trakt activates only when the
-user registers their own API app and enters both client id and secret in the guided
-setup (owner decision 2026-07-31, after Trakt capped free accounts at one connected
-Community App; see `docs/plans/0034-simkl-provider-and-trakt-detachment.md`). Full
-product vision + architecture rationale: `plan.md` (1.2, 1.3, 2.1); Serializd's
-addition: `docs/plans/0017-serializd-provider.md`.
+Shinobu (忍): DB-less, cross-platform media tracker. Simkl, Trakt, AniList,
+Letterboxd, and Serializd are **symmetric, opt-in providers** — not a primary store
+with satellite imports. Log media once; Shinobu writes it out to every connected
+provider it applies to. Reads aggregate the connected providers into one feed.
+No Shinobu account, no backend, no DB — a provider's token *is* its session.
+
+Simkl "just works" (bundled client id, one-tap PKCE). **Trakt is
+bring-your-own-everything** — the app ships no Trakt credentials; it activates only
+once the user registers their own API app and enters client id *and* secret
+(`docs/plans/0034-simkl-provider-and-trakt-detachment.md`). Don't re-propose a
+bundled Trakt key.
+
+Product vision + architecture: `plan.md` (1.2, 1.3, 2.1).
+
+## Scope
+
+**YAGNI.** Build what the task asks for, nothing for "later": no interface with one
+implementation, no factory for one product, no config for a value that never
+changes, no scaffolding a future PR can write for itself. Reuse what's already in
+the repo before adding anything; reach for the platform or an installed dependency
+before a new one. Deletion beats addition, and the shortest diff that fixes the
+*actual* problem wins — a bug fix is one guard where all callers route through, not
+a guard per call site. Speculative generality gets removed in review.
 
 ## Tech Stack
 
-- **Expo** (Router) — one codebase targets Web, iPadOS, iOS, Android.
-- **Uniwind** — Tailwind CSS for React Native (drop-in NativeWind replacement,
-  faster, by the Unistyles team). https://docs.uniwind.dev
-- **TanStack Query** — all data fetching/mutations across Trakt REST, AniList
-  GraphQL, Letterboxd REST, Serializd REST. Engine behind the `useUnifiedFeed` read
-  hook and the `useLogMedia` write fan-out (`plan.md`).
-- **Letterboxd** *does* have an official write API (OAuth Authorization Code flow,
-  creates log entries — diary and/or review). **Not** self-serve: access by request
-  only (email `api@letterboxd.com`), and Letterboxd policy explicitly excludes
-  "personal projects," so approval isn't guaranteed. Build Letterboxd as a
-  first-class provider alongside Trakt/AniList (`todos/004`), but treat API access
-  as an open risk — the CSV diary export/import path is the documented fallback if
-  access isn't granted, not the primary design.
-- **Effect** (`effect`) — typed errors, retries, structured concurrency for the
-  provider service layer **only** (`lib/providers/`, `lib/http/`). Tagged errors:
-  `lib/providers/errors.ts`. The fan-out's per-provider partial-failure contract,
-  the 401→refresh wrapper, and rate-limit backoff are Effects. **Containment rule:**
-  Effect never leaks upward — `state/queries/*` runs effects at the boundary via
-  `Effect.runPromise` inside `queryFn`/`mutationFn`; no `Effect<...>` type in any
-  component, screen, or hook signature. TanStack Query keeps
-  caching/invalidation/React state. Don't adopt effect-rx (oxlint-banned) or run
-  Effect inside components. Rationale/risks/exit criteria:
-  `docs/brainstorms/2026-07-07-effect-for-provider-layer.md`.
-- **`react-native-mmkv`** — persisted OAuth tokens (and any local key/value state).
-  No backend/DB: state tied to external auth tokens only. Web uses MMKV's built-in
-  `localStorage` fallback, so it stays universal across platforms. On native, prefer
-  MMKV's built-in `encryptionKey` for token storage over plaintext.
-- **`react-native-nitro-fetch`** — network client for Trakt/AniList calls **on
-  native only** (iOS/Android; built on Cronet/URLSession, no web build). Web has no
-  equivalent, so use the platform-file convention below: shared
-  `lib/http/client.ts` (nitro-fetch) + `lib/http/client.web.ts` (plain `fetch`)
-  exposing one interface, so `state/queries/*` never imports either directly.
-- **`@legendapp/list`** — virtualized lists everywhere (see "Long Lists" below).
-  Pure JS/TS, works on web via react-native-web, no native rebuild to adopt.
-- **bun** — package manager and script runner. Tests use the built-in `bun:test`
-  runner (`bun test`) — no Jest.
-- **oxlint** — linting (`bun lint`, config `.oxlintrc.json`) — chosen over
-  Biome/ESLint for speed. Conventions that can be lint rules *are* lint rules, not
-  prose: the `@/` alias rule (no `../` imports), the `components/List` wrapper rule
-  (no direct `@legendapp/list` or raw `FlatList`), kebab-case filenames across
-  `src/`, and the effect-rx ban are enforced via `no-restricted-imports` /
-  `unicorn/filename-case`. When a new convention lands here, check whether oxlint can
-  enforce it and add the rule in the same PR.
-- **pressto** — every tappable surface. Never use react-native's `Pressable`
-  or the `Touchable*` family (oxlint-enforced); import `PresstableScale` /
-  `PresstableOpacity` from `components/presstable`. The wrapper adds a
-  leading-edge press debounce (one button's action must not fire twice) and the
-  withUniwind className mapping. Built on gesture-handler + reanimated —
-  `GestureHandlerRootView` wraps the app in `app/_layout.tsx`.
-  **That debounce is per-component-instance and does not protect navigation** —
-  the stack is global, and two instances of one item (a show is both a Continue
-  Watching card and a Calendar cell), a sheet action over the card that opened
-  it, or a Suspense remount all push twice without any pressable being pressed
-  twice. So **navigate with `usePushRoute()` (`@/lib/navigation`), never
-  `useRouter().push`** — it drops a repeat of the same href inside 700ms.
-  `useRouter` stays the way to `back()`/`replace()`. Enforced by
-  `bun check:router-push` (`scripts/check-router-push.ts`, in CI — oxlint has no
-  `no-restricted-syntax`); non-press navigation opts out with a
-  `// push-guard-exempt: <reason>` comment. Why:
-  `docs/solutions/double-tap-pushes-two-detail-screens.md`.
-- **`react-native-keyboard-controller`** — all keyboard avoidance/animation.
-  Never use react-native's core `KeyboardAvoidingView` (inconsistent per platform);
-  import the `components/keyboard-avoiding-view` wrapper (withUniwind-wrapped,
-  oxlint-enforced). `KeyboardProvider` is mounted in `app/_layout.tsx`. Native
-  module — adding/upgrading it needs a clean rebuild.
-- **TMDB** is a **metadata source, not a tracker**: no session, no registry entry,
-  never a log fan-out target. It is the **primary metadata source for every detail
-  screen** (`docs/plans/0014-tmdb-first-details.md`): the composed
-  `getMediaDetails` read (`lib/providers/media-details.ts`) serves catalogue
-  metadata + cast/crew/studios TMDB-first and **fails over to Trakt/AniList inside
-  the effect** (no token, no TMDB id, or request failure) — never in a component.
-  Display fields merge TMDB-over-provider via `applyPrimaryMetadata`
-  (`lib/providers/merge-metadata.ts`); user state (progress, watched, seasons,
-  logging) stays provider-sourced. TMDB is also the single source of truth for the
-  `/person/[id]` and `/studio/[id]` routes (both keyed by TMDB id; provider-sourced
-  people/studios without one resolve by name via the `/lookup` sibling routes). Auth
-  is the builder-supplied `EXPO_PUBLIC_TMDB_TOKEN` (v4 read token); unset → detail
-  screens use provider paths and person/studio pages stay dark. Browser-callable
-  (`docs/solutions/web-cors-tmdb.md`).
-- **`@nandorojo/galeria`** — tap-to-zoom image viewer (details poster, person
-  headshot). Never import it directly (oxlint-enforced); use
-  `components/zoomable-image`, which pairs it with the withUniwind `Image` and
-  handles the empty-uri fallback. Native module — needs a clean rebuild — and it
-  pins iOS ≥ 16.4 (`expo-build-properties` in `app.json`).
-- **torph** — dependency-free animated text morphing (https://torph.lochie.me),
-  **web only** (renders DOM, no native build). Never import `torph/react` directly
-  (oxlint-enforced); use `MorphText` from `components/morph-text` — its
-  `index.web.tsx` morphs in-place text changes (shared characters slide, the rest
-  crossfades) while `index.tsx` falls back to a plain `Text` on native, so the
-  animation is an enhancement, never part of the contract. Reserve it for text
-  that *changes in place* as a result of user state (progress counts, watched
-  lines, the log button's episode number) — not for static or mount-time text
-  (first render never animates) and not for high-frequency churn. Pure JS: hot
-  reload, no rebuild.
-- **React Compiler** — enabled via `experiments.reactCompiler` in `app.json` and
-  `babel-plugin-react-compiler`. Auto-memoizes components and hooks, so don't use
-  `useMemo` or `useCallback` manually — forbidden by the `no-restricted-imports`
-  rule in `.oxlintrc.json`. Rare opt-out: the `'use no memo'` directive on that
-  component, documented in the PR.
+- **Expo** (Router) — one codebase for Web, iPadOS, iOS, Android.
+- **Uniwind** — Tailwind for React Native (drop-in NativeWind replacement, by the
+  Unistyles team). https://docs.uniwind.dev
+- **TanStack Query** — all fetching/mutations, across every provider.
+- **Effect** — typed errors, retries, structured concurrency for the provider
+  service layer **only** (`lib/providers/`, `lib/http/`; tagged errors in
+  `lib/providers/errors.ts`). **Containment rule:** Effect never leaks upward.
+  `state/queries/*` runs it at the boundary via `Effect.runPromise` inside
+  `queryFn`/`mutationFn` — no `Effect<...>` in any component, screen, or hook
+  signature, and never run Effect inside a component. TanStack Query keeps
+  caching/invalidation/React state.
+  Rationale: `docs/brainstorms/2026-07-07-effect-for-provider-layer.md`.
+- **`react-native-mmkv`** — persisted tokens and all local key/value state. Web
+  falls back to `localStorage`, so it stays universal. Use MMKV's `encryptionKey`
+  for tokens on native, never plaintext.
+- **`react-native-nitro-fetch`** — network client on native only (no web build).
+  Web gets plain `fetch`; both sit behind `lib/http/client.ts` +
+  `lib/http/client.web.ts`, so `state/queries/*` imports neither directly.
+- **TMDB** — metadata source, **not** a tracker: no session, no registry entry,
+  never a fan-out target. See "TMDB" below.
+- **bun** — package manager and script runner. Tests are `bun:test` — no Jest.
+- **oxlint** — `bun lint`, config `.oxlintrc.json`. See "Enforcement" below.
+- **React Compiler** — auto-memoizes, so `useMemo`/`useCallback` are lint-banned.
+  Rare opt-out: `'use no memo'` on that component, documented in the PR.
 
-## Nitro Modules
+Prefer a [Nitro Modules](https://nitro.margelo.com) library over a bridge-based one
+whenever one exists and covers the need (check
+[awesome-nitro-modules](https://nitro.margelo.com/docs/resources/awesome-nitro-modules)).
+Tradeoff: native code means no plain Expo Go — already true here, the app needs a
+custom dev client.
 
-Prefer a [Nitro Modules](https://nitro.margelo.com)-based library over a bridge-based
-one whenever a Nitro alternative exists and covers the need — faster (no async
-bridge) and type-safe by construction. `react-native-mmkv` and
-`react-native-nitro-fetch` are the current examples; check
-[awesome-nitro-modules](https://nitro.margelo.com/docs/resources/awesome-nitro-modules)
-before reaching for a bridge-based package.
+## Enforcement
 
-**Tradeoff:** Nitro modules ship native code, so once any are linked the app can't
-run inside plain Expo Go — it needs a custom dev client (`expo prebuild` +
-`expo run:ios` / `expo run:android`, or an EAS dev-client build). Already true here
-(`react-native-mmkv`, `react-native-nitro-fetch`, `react-native-nitro-modules`
-are linked).
+Conventions that can be lint rules *are* lint rules, not prose. When a new
+convention lands in this file, add the rule in the same PR.
 
-## Continuous Native Generation (CNG)
+- **`.oxlintrc.json`** owns the wrapper-import bans (pressto, `@legendapp/list`,
+  expo-image, galeria, torph, sonner, cnfast, reanimated, keyboard-controller,
+  sheet, haptics, vector-icons, …), the `useMemo`/`useCallback` ban, the effect-rx
+  ban, and kebab-case filenames. Each message names the wrapper to use and why —
+  **never import a wrapped library directly; go through `@/components/*` or
+  `@/lib/*`.** Read the config rather than trusting a list here to stay current.
+- **Import alias:** cross-directory imports use `@/`, never `../` (lint-enforced).
+- **CI scripts** cover what oxlint can't (it has no `no-restricted-syntax`):
+  `bun check:classnames`, `bun check:router-push`, `bun check:links`.
+- **Reviewer-enforced** (not mechanizable): the Suspense/error-boundary rule, the
+  no-dead-end-error rule, and the proxy invariants.
 
-Shinobu uses [Continuous Native Generation](https://docs.expo.dev/workflow/continuous-native-generation/)
-— `android/` and `ios/` are **generated, not committed** (gitignored). Produced on
-demand by `npx expo prebuild` (or automatically by `expo run:ios` /
-`expo run:android`) from `app.json` + config plugins + autolinking. Never hand-edit
-files inside `android/`/`ios/` — those edits are lost on the next
-`expo prebuild --clean`. Any native-level change belongs in `app.json`, a config
-plugin, or a dependency choice, not the generated output.
+## Navigation
 
-**Clean prebuild vs. hot reload — always tell the user which one a change needs.**
-After a change, state whether it's picked up live or requires native regeneration:
+**Navigate with `usePushRoute()` (`@/lib/navigation`), never `useRouter().push`.**
+pressto's debounce is per-component-instance and does not protect the global
+navigation stack: two instances of one item (a show is both a Continue Watching
+card and a Calendar cell), a sheet action over the card that opened it, or a
+Suspense remount each push twice without any pressable being pressed twice.
+`usePushRoute` drops a repeat of the same href inside 700ms. `useRouter` stays the
+way to `back()`/`replace()`. Non-press navigation opts out with a
+`// push-guard-exempt: <reason>` comment. Enforced by `bun check:router-push`.
+Why: `docs/solutions/double-tap-pushes-two-detail-screens.md`.
 
-- **Hot reload (no action):** JS/TS-only edits — anything under `src/`, styles,
-  assets consumed by the JS bundle. Metro reloads them into the running dev client.
-- **Rebuild required (`bun ios.clean` / `bun android.clean` — regenerates the
-  native project, then builds and runs):** edits to `app.json` (icons, splash,
-  plugins, schemes), adding/removing/upgrading any dependency that ships native
-  code, or config-plugin changes. The running app won't reflect these until the
-  native project is regenerated and reinstalled.
-- **`pod install` version-mismatch errors** (e.g. "differs from the version stored
-  in `Pods/Local Podspecs`") mean the generated `ios/` is stale — clean-prebuild it;
-  never `pod update` individual pods
+## Native Builds (CNG)
+
+`android/` and `ios/` are **generated, not committed** — produced by
+`npx expo prebuild` from `app.json` + config plugins + autolinking. Never hand-edit
+them; the next `--clean` wipes it. Native changes belong in `app.json`, a config
+plugin, or a dependency choice.
+
+**Always tell the user which one a change needs:**
+
+- **Hot reload:** anything under `src/`, styles, JS-bundle assets.
+- **Rebuild (`bun ios.clean` / `bun android.clean`):** `app.json` edits, config
+  plugins, and adding/removing/upgrading any dependency that ships native code.
+- **`pod install` version-mismatch errors** mean `ios/` is stale — clean-prebuild.
+  Never `pod update` individual pods
   (`docs/solutions/pod-install-stale-podfile-lock.md`).
 
 ## Providers, Sessions & Log Fan-Out
 
-- **Opt-in, per-provider sessions.** No Shinobu account. A user connects any subset
-  of {Simkl, Trakt, AniList, Letterboxd, Serializd} via that provider's own flow —
-  OAuth (Simkl: PKCE with the bundled client id, no secret, tokens live ~5 years
-  with no refresh grant so a 401 is terminal → reconnect; Trakt: auth-code with
-  user-supplied BYO credentials only), or (Serializd) a WebView token capture on
-  mobile / an email-password exchange on web; the resulting token (stored via
-  `react-native-mmkv`) *is* the session for that provider. `state/session/` tracks
-  which providers are connected, mirroring bluesky-social's `state/session`
-  pattern — and `providerIsUsable` (`state/session/trakt-migration.ts`) is the
-  single predicate gating every read/write leg: a Trakt session whose credentials
-  are gone (the pre-detachment migration case) is connected-but-unusable, drives
-  the reconnect banner, and is never silently cleared.
-- **Logging fans out.** The core write path is `useLogMedia`: given a
-  `NormalizedMediaItem` and a log intent (watched/read), it routes to every
-  *connected* provider *applicable to that item's type* and fires the writes in
-  parallel — never a single-provider write.
+- **Opt-in, per-provider sessions.** A user connects any subset of {Simkl, Trakt,
+  AniList, Letterboxd, Serializd} through that provider's own flow — OAuth (Simkl
+  PKCE, bundled client id, ~5-year tokens with no refresh grant so a 401 is
+  terminal → reconnect; Trakt auth-code on BYO credentials), or Serializd's WebView
+  token capture (mobile) / email-password exchange (web). `state/session/` tracks
+  who's connected, mirroring bluesky-social's `state/session`.
+  **`providerIsUsable` (`state/session/trakt-migration.ts`) is the single predicate
+  gating every read/write leg** — a Trakt session whose credentials are gone is
+  connected-but-unusable, drives the reconnect banner, and is never silently
+  cleared.
+- **Logging fans out.** `useLogMedia` takes a `NormalizedMediaItem` + intent and
+  writes in parallel to every *connected* provider *applicable to that type* —
+  never a single-provider write.
 - **Routing isn't a 1:1 type map.** Movies → Trakt + Letterboxd + Simkl. TV →
-  Trakt + Serializd + Simkl (a TMDB-enriched anime *series* fans out to Serializd
-  and Simkl too, exactly as it does to Trakt). Anime → AniList + Simkl (Simkl
-  tracks anime natively as its own type, AniDB-convention episode numbering — its
-  writes ride the ani.zip remap from plan 0027). Manga → AniList. Anime *films*
-  are the edge case: they're `ANIME` in AniList but also a `MOVIE` for
-  Trakt/Letterboxd (signaled by `isFilm` on `NormalizedMediaItem`, not a fifth
-  `MediaType`), so they fan out to the movie targets plus Simkl — which files
-  them under its anime catalog with MAL ids, not `movies[]` (Serializd is
-  TV-only, so it stays excluded from films). Lives in
-  `src/lib/providers/routing.ts` (pure functions, unit-tested) — never inline
-  `if (type === ...)` or `if (provider === ...)` checks at call sites.
+  Trakt + Serializd + Simkl (a TMDB-enriched anime *series* included). Anime →
+  AniList + Simkl (Simkl tracks anime natively, AniDB episode numbering — writes
+  ride the ani.zip remap from plan 0027). Manga → AniList. Anime *films* are the
+  edge case: `ANIME` in AniList but a `MOVIE` for Trakt/Letterboxd — flagged by
+  `isFilm` on `NormalizedMediaItem`, not a fifth `MediaType` — so they hit the movie
+  targets plus Simkl (which files them under anime with MAL ids), excluding
+  TV-only Serializd. All of it lives in `src/lib/providers/routing.ts` (pure,
+  unit-tested) — never inline `if (type === …)` / `if (provider === …)` at a call
+  site.
 - **Providers declare capabilities.** `src/lib/providers/registry.ts` is the single
-  provider registry: each provider declares which `MediaType`s it handles, `canRead`
-  (aggregated by `useUnifiedFeed`), and `canWrite` (a `useLogMedia` fan-out target).
-  Never assume a provider is symmetric read+write — future domains (games, books,
-  music) are routinely read-only or CSV-only (Goodreads' API is dead, RYM has none,
-  Steam is read-only), and even Letterboxd may end up degraded (`todos/004`). Adding
-  or degrading a provider — or a whole new domain — means widening the
-  `MediaType`/`ProviderId` unions and the registry, nothing else. See
-  `docs/plans/0005-provider-capability-model.md`.
-- **Surface partial failure.** If one connected provider's write fails while others
-  succeed, the caller must know which one failed — don't swallow it into a single
-  boolean/throw.
-- **Never a dead-end error.** An unsupported-or-failed provider write (a
-  platform where the write is structurally impossible, e.g. Letterboxd on
-  web — `registry.ts`'s `unsupportedWritePlatforms` — or any runtime write
-  failure/reasoned skip) surfaces a manual deep link to that provider's page
-  for the item instead, built by `lib/providers/external-urls.ts`'s
-  `providerItemUrl` (plan 0022). Not oxlint-enforceable — reviewer-enforced,
-  like the Suspense rule above.
+  registry: which `MediaType`s a provider handles, `canRead`, `canWrite`. Never
+  assume symmetry — future domains (games, books, music) are routinely read-only.
+  Adding or degrading a provider means widening the `MediaType`/`ProviderId` unions
+  and the registry, nothing else
+  (`docs/plans/0005-provider-capability-model.md`).
+- **Surface partial failure.** One provider's write failing while others succeed
+  must reach the caller *as that provider* — never collapsed into a boolean/throw.
+- **Never a dead-end error.** A structurally impossible write (`registry.ts`'s
+  `unsupportedWritePlatforms`, e.g. Letterboxd on web) or any runtime failure/skip
+  surfaces a manual deep link to that provider's page for the item, built by
+  `providerItemUrl` (`lib/providers/external-urls.ts`, plan 0022).
 
-## Theming
+**Letterboxd writes go through the authenticated native WebView session**
+(`lib/providers/letterboxd/`), not an API key and not CSV — the CSV write path was
+evaluated and rejected 2026-07-15 (`docs/plans/0012-letterboxd-fallback-integration.md`).
+Its official write API exists but is request-only and excludes personal projects.
 
-Colors are theme tokens defined once in `src/global.css` (Uniwind's `@theme`/
-`@variant light|dark` pattern), not hardcoded hex in components. Both `light` and
-`dark` variants must define the same variable set (Uniwind requirement). Current
-tokens: `background`, `surface`, `foreground`, `muted`, `border`, `accent`,
-`accent-foreground` — consume them as `bg-background`, `text-foreground`, etc.
-`accent` is pinned to Vampiric Crimson (`#DC2626`, `plan.md` 1.1) in both themes —
-a brand color, not theme-adaptive. The app follows the OS theme by default (Uniwind
-`system` mode) — dark is the primary/designed-for mode (`plan.md` 1.1), but light
-must render correctly too, not just "not crash." Never ship a new hardcoded hex color
-in a component; add a token to `global.css` instead.
+## TMDB
 
-Typography works the same way: **Space Grotesk** (display — titles, headings,
-flash-frames) and **Inter** (UI text) load via expo-font in `app/_layout.tsx` and
-are exposed as font tokens in `global.css` (`font-display`, `font-sans`,
-`font-sans-semibold`). React Native treats each weight as its own font family and
-won't synthesize weights for custom fonts — never combine `font-bold`/`font-semibold`
-with a custom font class; add a new weight token (and load its font in
-`_layout.tsx`) instead. The 忍 kanji intentionally renders in the OS fallback font
-(neither family ships kanji).
+Primary metadata source for every detail screen
+(`docs/plans/0014-tmdb-first-details.md`):
 
-## Class Names & Buttons
-
-**Every composed `className` goes through `cn()`** (`@/lib/cn`, backed by
-[cnfast](https://github.com/aidenybai/cnfast) — clsx + tailwind-merge semantics,
-~3x faster, no runtime deps). Never build one with a template literal:
-
-```tsx
-// no
-className={`border border-border px-4 py-2 ${CONTROL_RADIUS}`}
-className={`px-4 ${active ? 'bg-accent' : ''}`}
-// yes
-className={cn('border border-border px-4 py-2', CONTROL_RADIUS)}
-className={cn('px-4', active && 'bg-accent')}
-```
-
-Readability is the small reason; **conflict resolution is the real one**. A
-template literal happily emits `border-border border-accent` and leaves the
-winner to whichever layer parses the string last — `cn` emits only
-`border-accent`, so a caller's `className` override actually overrides. That is
-what lets `components/button` accept layout classes without a variant explosion.
-Enforced by `bun check:classnames` (`scripts/check-classnames.ts`, in CI):
-oxlint has no `no-restricted-syntax`, so this one check is a script, not a lint
-rule. The raw `cnfast` import is oxlint-banned — go through the wrapper. cnfast's
-tagged-template form is deliberately unused: one form app-wide keeps "no
-backticks in a className" mechanical.
-
-**Buttons are `components/button`, not hand-rolled `PresstableOpacity` + `Text`.**
-That is how `rounded` (4px) ended up next to `rounded-md`, and how "Connecting…"
-shipped as a text swap with no spinner. `variant` (`primary` | `outline` |
-`quiet`) and `size` (`sm` | `md`) cover the app's needs; `className` is for
-layout only (`self-start`, `mt-2`, a wider `px-*`). Any button that awaits
-something — an OAuth round-trip, a token validation, a log fan-out — passes
-`loading` (spinner + optional `loadingLabel` + press blocked), never just a
-label swap. A label that *changes in place* from user state takes `morphLabel`.
-
-## Long Lists
-
-Every core surface (unified feed, library grids, Up Next) is a long virtualized
-list of media cards — hundreds to thousands of items. Use
-[`@legendapp/list`](https://github.com/LegendApp/legend-list) (Legend List), never
-raw `FlatList`/`ScrollView`-with-`map`, for any data-driven list. 100% JS/TS: no
-native code (no prebuild/rebuild to adopt, hot-reload only) and it runs on web via
-`react-native-web` — one implementation for all four targets, no separate web
-retrofit by default.
-
-- **Wrap it once.** Screens never import `@legendapp/list` directly; they use a
-  shared `components/List` wrapper (bluesky-social does exactly this with its own
-  `List` component). If Legend List's web behavior ever disappoints, swap in a
-  web-specific implementation via `components/List/index.web.tsx` (e.g. TanStack
-  Virtual) without touching any call site.
-- **Recycling gotcha:** with `recycleItems` enabled, item components are reused
-  across rows — item state must derive from props; local `useState`/`useRef` inside
-  an item leaks into the row it gets recycled to. Leave recycling off unless a list
-  measurably needs it.
-- **Poster images in rows go through `expo-image`** (built-in memory/disk cache,
-  `recyclingKey` support) — long grids of remote covers through RN's core `Image`
-  thrash memory on mobile. Import it via the `components/image` wrapper
-  (`withUniwind(ExpoImage)`), never directly: uniwind silently drops `className`
-  on third-party components on native (oxlint-enforced; see
-  `docs/solutions/uniwind-classname-third-party-components.md`).
-
-## Up Next & Timezones
-
-A show counts as "up next" (next unwatched episode available to watch) only once its
-episode has **actually aired in the user's local timezone** — not the show's origin
-timezone, not a naive date-only comparison. Provider air-date/time fields (Trakt,
-AniList `airingSchedule`) must be treated as instants (parse with timezone/offset
-info, not bare date strings), converted to the user's local time, and compared
-against "now" before an episode counts as released. Getting this wrong spoils an
-unaired episode (shown as available) or hides an aired one (naive calendar-date
-compare across a timezone boundary). Centralize this comparison in one utility (e.g.
-`lib/time/hasAired.ts`), not per provider or per screen.
-
-## Notifications
-
-Release notifications are **local-only, scheduled ahead of time**: air dates are
-known in advance, so on app foreground schedule local notifications
-(expo-notifications) for the next ~7–14 days of upcoming episodes/releases — no push
-server, ever. Scheduling goes through the same timezone-correct
-`lib/time/hasAired.ts` logic as Up Next (`todos/006` is a prerequisite). Web gets the
-in-app Up Next feed only — serverless web push doesn't exist. The only permissible
-future server exception is a tiny *stateless* push relay, and only if local-schedule
-staleness proves painful in practice (`docs/plans/0005`).
+- `getMediaDetails` (`lib/providers/media-details.ts`) serves catalogue metadata +
+  cast/crew/studios TMDB-first and **fails over to Trakt/AniList inside the
+  effect** (no token, no TMDB id, request failure) — never in a component.
+- Display fields merge TMDB-over-provider via `applyPrimaryMetadata`
+  (`lib/providers/merge-metadata.ts`). User state — progress, watched, seasons,
+  logging — stays provider-sourced.
+- Sole source for `/person/[id]` and `/studio/[id]` (keyed by TMDB id;
+  provider-sourced entities without one resolve by name via `/lookup` siblings).
+- Auth is the builder-supplied `EXPO_PUBLIC_TMDB_TOKEN` (v4 read token). Unset →
+  detail screens fall back to provider paths and person/studio pages stay dark.
+  Browser-callable (`docs/solutions/web-cors-tmdb.md`).
 
 ## Web & CORS
 
-No backend, so on web the app calls provider APIs directly from the browser — works
-only if the provider sends CORS headers. Policy: a provider that blocks browser
-origins is **native-only on web** ("connect on mobile"), never proxied — with **two
-bounded exceptions (Serializd, plan 0017 U4/R14, owner decision 2026-07-21;
-Letterboxd reads, plan 0018, owner decision 2026-07-22).** Verify
-each provider with a browser-origin spike before building its web read path
-(`todos/008`); record findings in `docs/solutions/web-cors-*.md`. Simkl is the
-easy case: wildcard CORS on the API, the CDN, and even the OAuth token endpoint —
-reads, writes, and the PKCE exchange all run in the browser with no proxy and no
-degradation (`docs/solutions/web-cors-simkl.md`). Its rate-limit/write-lock
-discipline (batch writes, activities-before-all-items, CDN for always-fetched
-surfaces) is load-bearing: `docs/solutions/simkl-rate-limits-and-write-lock.md`.
+No backend, so on web the app calls provider APIs straight from the browser — which
+works only where the provider sends CORS headers. **A provider that blocks browser
+origins is native-only on web ("connect on mobile"), never proxied.** Verify with a
+browser-origin spike before building a web read path; record findings in
+`docs/solutions/web-cors-*.md`. Simkl is the easy case — wildcard CORS on API, CDN,
+and token endpoint (`docs/solutions/web-cors-simkl.md`); its rate-limit/write-lock
+discipline is load-bearing
+(`docs/solutions/simkl-rate-limits-and-write-lock.md`).
 
-**Serializd proxy exception — a contract, not a general license.** Serializd's
-unofficial API blocks browser origins (its `Access-Control-Allow-Origin` echoes only
-serializd.com), but unlike Letterboxd it has *no* fingerprint wall — server-side
-forwarding just works. So Shinobu web reaches it through a same-origin Cloudflare
-Worker `main` handler (`worker/serializd-proxy.ts`) added to the existing
-static-assets Worker. This is the first "never proxied" exception; it does **not**
-license a general proxy. Its invariants are load-bearing and any edit to the handler
-is reviewed against them:
+**Two bounded exceptions exist. Don't add a third.** Each is a same-origin
+Cloudflare Worker handler whose **full invariant contract lives in the handler's
+own header docblock — read it before editing**:
 
-- **Serializd-only, path+method allowlist.** Forwards only the documented Serializd
-  path+method pairs (`GET show/*`, `GET user/*`; `POST login`, `validateauthtoken`,
-  `episode_log/*`, `watched_v2`, `watched/remove_v2`, `show/reviews/add`,
-  `watchlist_v2`, `watchlist/remove_v2`). Wrong method on an allowlisted path →
-  405; anything else (incl. `../`/absolute-URL traversal) → 404. Never grows into
-  a backend. Each addition is exact-match, never a prefix — `watchlist/random`
-  and `compare_watchlist/*` exist upstream and are deliberately not granted.
-- **No `Access-Control-Allow-Origin` emitted** — same-origin needs none, and its
-  absence stops foreign browsers using the relay as a CORS bypass.
-- **No cookies either direction, `Authorization` only.** Forwards just the
-  `Authorization` header upstream (never the incoming `Cookie` or any other client
-  header); attaches the `Origin`/`Referer`/`X-Requested-With` app headers server-side;
-  strips upstream cookies.
-- **Size + timeout caps.** Rejects bodies over 64 KB (413) and aborts upstream after
-  ~30 s (504).
-- **Stateless, no secret logging.** Holds no credentials, stores nothing, and logs no
-  request body or `Authorization` on any path (incl. error/catch).
-- **Forces JSON + `nosniff`** on every relayed response — never relays an upstream
-  HTML error body (Render cold-start 502) verbatim under the app origin.
+- `worker/serializd-proxy.ts` — path+method allowlist, `Authorization` only, no
+  cookies, size/timeout caps, JSON forced. Allowlist additions are exact-match,
+  never prefixes.
+- `worker/letterboxd-proxy.ts` — GET-only, unauthenticated, username-locked, HTML
+  relayed under a script-killing CSP. **Never add a POST rule** without a fresh
+  spike proving the Cloudflare fingerprint wall changed
+  (`worker/letterboxd-write-spike.ts`, `docs/solutions/letterboxd-web-proxy.md`).
 
-The upstream base + app headers live in one place (`lib/providers/serializd/config.ts`)
-shared by the native transport and the Worker (KTD4); the probe evidence and rationale
-are in `docs/solutions/web-cors-serializd.md`.
-
-**Letterboxd reads-proxy exception — second contract, same license limits.**
-Letterboxd blocks browser origins *and* fingerprint-walls every state-changing POST
-(three spike rounds: undici, EAS Hosting, Workers egress — all 403-challenged), so
-`worker/letterboxd-proxy.ts` is **GET-only, reads-only, unauthenticated**: the two
-public path shapes (`/{user}/watchlist/`, `/{user}/rss/`), username-locked. Its
-invariants differ from Serializd's where the payload demands it, and edits are
-reviewed against them the same way:
-
-- **No credentials exist to forward.** No `Authorization`, no cookies either
-  direction, no client headers at all — one fixed server-side `User-Agent` is
-  attached so requests aren't UA-less. Never add a POST rule without a spike proving
-  the fingerprint wall changed (`worker/letterboxd-write-spike.ts` is the standing
-  harness; `docs/solutions/letterboxd-web-proxy.md` is the evidence log).
-- **Relayed HTML/XML is the payload** (the client scrapes it), so instead of forcing
-  JSON it allowlists content types (html/rss/atom/xml) and serves every relayed body
-  under a script-killing CSP (`default-src 'none'; frame-ancestors 'none';
-  base-uri 'none'; form-action 'none'`) + `nosniff` — direct navigation to a proxy
-  URL must never execute Letterboxd markup under the app origin (which holds OAuth
-  tokens in localStorage). The Cloudflare challenge page (403 + `Just a moment`)
-  maps to a clean 502 JSON, never relayed.
-- Same shared constants as Serializd: no `Access-Control-Allow-Origin`, ~30 s
-  upstream timeout (504), traversal rejection, stateless/no logging.
-  `LETTERBOXD_WEB_PROXY_BASE_URL` lives in `lib/providers/letterboxd/config.ts`.
-
-The web transports hide behind each provider's injected fetch
-(`state/queries/letterboxd.ts` for Letterboxd) — provider lib code never knows
+Both: no `Access-Control-Allow-Origin`, stateless, nothing logged. Web transports
+hide behind each provider's injected fetch, so provider lib code never knows
 whether it's talking to the origin or the relay.
 
-**Local web dev needs the Worker too.** `/api/*` doesn't exist on Metro, so
-run `bun run dev:worker` (wrangler dev on :8787) alongside `bun web`;
-`metro.config.js`'s `enhanceMiddleware` forwards the proxy prefixes to it and
-answers a JSON 502 when it's down. Restart `bun web` after metro.config.js
-edits (`docs/solutions/local-web-dev-proxy-middleware.md`).
+**Local web dev needs the Worker too** — `/api/*` doesn't exist on Metro. Run
+`bun run dev:worker` (wrangler on :8787) alongside `bun web`; restart `bun web`
+after `metro.config.js` edits
+(`docs/solutions/local-web-dev-proxy-middleware.md`).
 
-## Golden Reference
+## Theming & Typography
 
-When unsure how to structure something cross-platform (web + iOS + Android), default
-to how [bluesky-social/social-app](https://github.com/bluesky-social/social-app)
-solves it — the most mature open-source universal Expo app; its
-[CLAUDE.md](https://github.com/bluesky-social/social-app/blob/main/CLAUDE.md)
-documents exactly this kind of convention (query hook naming, platform-specific file
-grouping, import aliases). Adapt, don't copy verbatim: Shinobu has no backend/atproto
-and a much smaller design system.
+Colors are theme tokens in `src/global.css` (Uniwind `@theme` / `@variant
+light|dark`), never hardcoded hex in a component — add a token instead. Both
+variants must define the same set. Tokens: `background`, `surface`, `foreground`,
+`muted`, `border`, `accent`, `accent-foreground`. `accent` is pinned to Vampiric
+Crimson (`#DC2626`) in both themes — brand, not theme-adaptive. Dark is the
+designed-for mode, but light must render *correctly*, not just "not crash."
 
-For AniList specifics, the reference is
-[lotusprey/otraku](https://github.com/lotusprey/otraku) — a mature open-source
-AniList client (Flutter, so adapt patterns, not code). Its auth flow is the model
-for Shinobu's seamless AniList connect: an app-owned embedded client id with the
-OAuth **implicit grant** (`response_type=token`, no secret, no user-supplied
-credentials), the token parsed from the redirect URL fragment by a dedicated auth
-route, and the client's single registered redirect URL pointing at the app's own
-deep link (`docs/plans/0011-anilist-integration.md`).
+Fonts are tokens too: **Space Grotesk** (`font-display` — titles, headings) and
+**Inter** (`font-sans`, `font-sans-semibold`), loaded in `app/_layout.tsx`. React
+Native won't synthesize weights for custom fonts — **never combine `font-bold`/
+`font-semibold` with a custom font class**; add a weight token and load its font.
+The 忍 kanji intentionally falls back to the OS font.
 
-## Compound Components
+## Class Names & Buttons
 
-When a shared UI component is a parent/children structure with implicit shared
-state (numbering, selection, grouping), build it compound-component style: a
-parent that provides context, with subcomponents attached as properties —
-instead of prop-drilling indices or passing config arrays. Reference:
-`src/components/steps.tsx` — `<Steps>` auto-numbers its `<Steps.Item>` children
-via context, so steps can be added or reordered without touching a `number`
-prop at any call site. Promote an inline sub-layout to this pattern once a second
-screen needs it.
+**Every composed `className` goes through `cn()`** (`@/lib/cn`) — never a template
+literal:
 
-## File Naming
-
-Component and hook files use **kebab-case** (oxlint-enforced across `src/` via
-`unicorn/filename-case`):
-
-- `src/components/media-card.tsx`
-- `src/components/connect-trakt-button.tsx`
-- `src/state/session/use-provider-client-id.ts`
-
-Directory names stay lowercase. Exported React component names stay PascalCase and
-hook names camelCase (JSX/JS requires it) — the kebab-case rule is on the filename,
-not the export.
-
-## Platform-Specific Files
-
-Group into a directory rather than suffixing a lone file:
-
-```
-components/Foo/index.tsx        # shared/default
-components/Foo/index.web.tsx    # web-only
-components/Foo/index.native.tsx # iOS + Android
+```tsx
+// no
+className={`px-4 py-2 border border-border ${active ? 'bg-accent' : ''}`}
+// yes
+className={cn('px-4 py-2 border border-border', active && 'bg-accent')}
 ```
 
-Never manually branch on `require()` or conditional imports — the bundler resolves
-platform variants automatically from the filename.
+Conflict resolution is the reason, not readability: a template literal emits
+`border-border border-accent` and lets the last parser win, while `cn` emits only
+`border-accent` — which is what lets `components/button` accept caller layout
+classes without a variant explosion. Enforced by `bun check:classnames`.
 
-## Data Contract
+**Buttons are `components/button`**, never hand-rolled `PresstableOpacity` + `Text`
+— that's how `rounded` ended up next to `rounded-md` and how "Connecting…" shipped
+without a spinner. `variant` (`primary` | `outline` | `quiet`) and `size`
+(`sm` | `md`) cover the app; `className` is layout-only. Anything that awaits
+(OAuth, validation, a fan-out) passes `loading`, never a label swap. A label that
+changes in place from user state takes `morphLabel`.
 
-All network responses (Trakt, AniList, Letterboxd, Serializd) must be normalized
-into `NormalizedMediaItem` (`types/media.ts`, see `plan.md` 2.2) before reaching
-components. Components never see raw provider payload shapes.
+`MorphText` (`components/morph-text`) is web-only enhancement — it morphs on
+native-safe fallback. Reserve it for text that *changes in place* from user state
+(progress counts, the log button's episode number); not static/mount-time text
+(first render never animates), not high-frequency churn.
 
-## Query Hook Conventions
+## Long Lists
 
-- Name read hooks `useXQuery` (e.g. `useWatchedShowsQuery`), one per provider domain
-  under `state/queries/`.
-- Name the write fan-out mutation `useLogMedia` (singular, cross-provider) — no
-  separate per-provider "log" hooks that components call individually; the fan-out
-  and per-provider routing lives inside that one hook.
-- One query-key builder per domain, e.g. `createTraktQueryKey({...})`.
-- Wrap OAuth-token-bearing calls so a 401 triggers the refresh flow before failing.
-- Suspense variants are named `useSuspenseXQuery`, next to their plain `useXQuery`
-  sibling in the same file (e.g. `state/queries/trakt.ts`) — added for consumers
-  mounted under a boundary, never a replacement.
+Every core surface (feed, library grids, Up Next) is hundreds-to-thousands of media
+cards. Use the `components/List` wrapper (Legend List) for any data-driven list,
+never raw `FlatList`/`ScrollView`-with-`map`. Wrapping it once means a web-specific
+swap (`components/List/index.web.tsx`) needs no call-site changes.
+
+- **Recycling gotcha:** with `recycleItems`, item components are reused across rows
+  — item state must derive from props; local `useState`/`useRef` leaks into the row
+  it recycles into. Leave recycling off unless a list measurably needs it.
+- **Poster images go through `components/image`** (expo-image: memory/disk cache,
+  `recyclingKey`). Long grids through RN's core `Image` thrash memory on mobile.
+
+## Up Next & Timezones
+
+A show is "up next" only once the episode has **actually aired in the user's local
+timezone** — not the origin timezone, not a date-only compare. Provider air fields
+(Trakt, AniList `airingSchedule`) are instants: parse with offset info, convert to
+local, compare to now. Getting it wrong spoils an unaired episode or hides an aired
+one. The comparison lives in `lib/time/has-aired.ts` — one utility, never per
+provider or per screen.
+
+## Notifications
+
+Release notifications are **local-only, scheduled ahead** — air dates are known in
+advance, so on foreground schedule the next ~7–14 days via expo-notifications.
+No push server, ever; scheduling goes through `lib/time/has-aired.ts`. Web gets the
+in-app Up Next feed only. The one permissible future server exception is a
+*stateless* push relay, and only if local-schedule staleness proves painful.
 
 ## Loading & Error States
 
-Prefer Suspense and error boundaries over if-guard branching
-(`if (isLoading) return <Skeleton />`, `if (isError) return <Error />`) in
-screen components. Boundaries keep the happy path unindented and co-locate
-each failure with the section it affects, instead of one top-level guard that
-blanks the whole screen.
+Prefer Suspense + error boundaries over if-guard branching (`if (isLoading) return
+<Skeleton/>`) in screens — the happy path stays unindented and each failure sits
+with the section it affects.
 
-- **Section level:** mount self-contained, query-backed sections under
-  `components/SuspenseSection` — a `<Suspense>` (skeleton `fallback`) wrapped
-  in an error boundary that hides just that section on failure and retries
-  when `resetKey` changes. Reference: `src/app/details/[id].tsx`,
-  `features/show-seasons/seasons-section.tsx`.
-- **Granularity preserves partial failure.** Give each independently-fetched
-  section its own boundary rather than one screen-wide guard: one provider
-  failing degrades to a missing/skeleton row, not a blank feed — the same
-  per-provider partial-failure contract as the log fan-out. The home feed
-  (`src/app/index.tsx`) follows this: every carousel row is a `SuspenseSection`
-  wrapping a per-slot `useSuspense*Query` hook (`features/feed/feed-rows.tsx`
-  + `state/queries/use-unified-feed.ts`).
-- **App level:** `react-error-boundary` + `components/error-fallback` wraps the
-  root in `app/_layout.tsx` as the last-resort catch. A screen that needs its
-  own full-screen fallback exports Expo Router's `ErrorBoundary` from the
-  route file.
-- Legitimate remaining derived-flag uses: cross-provider aggregate status
-  (e.g. a "some content could not be loaded" notice computed from several
-  queries) and mutations. Branching on a single query's `isLoading`/`isError`
-  is the smell this rule bans.
+- **Section level:** `components/SuspenseSection` — a `<Suspense>` (skeleton
+  fallback) inside an error boundary that hides just that section and retries on
+  `resetKey`. See `src/app/details/[id].tsx`.
+- **Granularity preserves partial failure.** One boundary per independently-fetched
+  section, so a failing provider degrades to one skeleton row, not a blank feed —
+  the same contract as the write fan-out. The home feed does this per carousel row
+  (`features/feed/feed-rows.tsx`).
+- **App level:** `react-error-boundary` + `components/error-fallback` at the root;
+  a screen needing its own full-screen fallback exports Expo Router's
+  `ErrorBoundary`.
+- Still legitimate: cross-provider aggregate status ("some content could not be
+  loaded") and mutations. Branching on *one* query's `isLoading`/`isError` is the
+  smell this bans.
 
-Not oxlint-enforceable (banning `isLoading`/`isError` reads would also hit the
-legitimate aggregate cases) — enforced in review.
+## Query Hook Conventions
+
+- Read hooks are `useXQuery` (`useWatchedShowsQuery`), one per provider domain
+  under `state/queries/`. Suspense variants are `useSuspenseXQuery`, in the same
+  file next to their sibling — an addition, never a replacement.
+- The write fan-out is the single `useLogMedia` — no per-provider log hooks called
+  from components.
+- One query-key builder per domain (`createTraktQueryKey({…})`).
+- Wrap token-bearing calls so a 401 triggers refresh before failing.
+
+## Data Contract
+
+All network responses normalize into `NormalizedMediaItem` (`types/media.ts`,
+`plan.md` 2.2) before reaching components. Components never see raw provider
+payloads.
+
+## File Conventions
+
+Filenames are **kebab-case** across `src/` (lint-enforced); directories lowercase.
+Exported components stay PascalCase, hooks camelCase — the rule is on the filename.
+
+Platform variants group into a directory, never a lone suffixed file — the bundler
+resolves them, so never branch on `require()` or a conditional import:
+
+```
+components/foo/index.tsx        # shared/default
+components/foo/index.web.tsx    # web-only
+components/foo/index.native.tsx # iOS + Android
+```
+
+## Compound Components
+
+A shared component with parent/children implicit state (numbering, selection,
+grouping) is built compound-style: a context-providing parent with subcomponents
+attached as properties, not prop-drilled indices or config arrays. Reference:
+`src/components/steps.tsx` — `<Steps>` auto-numbers its `<Steps.Item>` children, so
+reordering touches no call site. Promote an inline sub-layout once a second screen
+needs it.
+
+## Golden Reference
+
+For cross-platform structure, default to
+[bluesky-social/social-app](https://github.com/bluesky-social/social-app) — the most
+mature open-source universal Expo app. Adapt, don't copy: Shinobu has no
+backend/atproto and a much smaller design system.
+
+For AniList, the reference is
+[lotusprey/otraku](https://github.com/lotusprey/otraku) (Flutter — patterns, not
+code). Its auth flow is the model for Shinobu's AniList connect: app-owned embedded
+client id, OAuth **implicit grant** (`response_type=token`, no secret), token parsed
+from the redirect fragment by a dedicated auth route
+(`docs/plans/0011-anilist-integration.md`).
 
 ## Compound Knowledge
 
-- `docs/plans/` — implementation blueprints, written before building a feature.
-- `docs/brainstorms/` — raw exploration/ideation notes.
-- `docs/solutions/` — one file per solved bug or non-obvious pattern, searchable.
-- `todos/` — work items, named `NNN-status-priority-title.md`.
-- `.agents/skills/` — third-party agent skills vendored via the
-  [`skills` CLI](https://github.com/vercel-labs/skills) and pinned in
-  `skills-lock.json`. Canonical, agent-agnostic location; `.claude/skills` is a
-  symlink to it (other agents can symlink the same dir). Add with
-  `bunx skills add <repo> --skill <name> -y -a claude-code`, update with
-  `bunx skills update`. Don't hand-edit vendored skills; if one contradicts
-  AGENTS.md (e.g. recommending NativeWind over Uniwind), AGENTS.md wins — remove
-  the skill.
+- `docs/plans/` — implementation blueprints, written before building.
+- `docs/brainstorms/` — raw exploration notes.
+- `docs/solutions/` — one file per solved bug or non-obvious pattern.
+- `todos/` — work items, `NNN-status-priority-title.md`.
+- `.agents/skills/` — vendored agent skills ([`skills` CLI](https://github.com/vercel-labs/skills),
+  pinned in `skills-lock.json`); `.claude/skills` symlinks to it. Add with
+  `bunx skills add <repo> --skill <name> -y -a claude-code`. Don't hand-edit them;
+  if one contradicts AGENTS.md, AGENTS.md wins — remove the skill.
 
-**Every time a network anomaly or non-obvious fix happens** (rate limits, pagination
-mismatches, OAuth refresh edge cases, GraphQL boundary quirks), write it to
-`docs/solutions/` immediately — don't just fix the code. Any planning pass must scan
-`docs/solutions/` first, before proposing a refactor or new integration.
+**Every network anomaly or non-obvious fix gets written to `docs/solutions/`
+immediately** — rate limits, pagination mismatches, OAuth refresh edges, GraphQL
+quirks. Don't just fix the code. Any planning pass scans `docs/solutions/` first,
+before proposing a refactor or integration.
