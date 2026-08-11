@@ -5,6 +5,7 @@ import { createMMKV, type MMKV } from 'react-native-mmkv';
 
 import { anilistQueryKeys } from './anilist';
 import { letterboxdQueryKeys } from './letterboxd';
+import { simklQueryKeys } from './simkl';
 import { traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
 import { watchlistQueryKeys } from './watchlist';
@@ -168,7 +169,6 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   // one request that gates the currently-watching read.
   anilistQueryKeys.viewer(),
   anilistQueryKeys.currentAnimeEntries(),
-  anilistQueryKeys.currentAnime(),
   // Identity mappings never churn (they're already `Infinity`-cached in
   // memory), and Up Next fans one per anime for cross-provider dedupe.
   // Literals, not `mappingQueryKeys`: importing `./mapping` here would drag
@@ -180,8 +180,8 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   // The remaining home rows, so the whole feed restores together rather than
   // Up Next popping in ahead of a screen of skeletons.
   traktQueryKeys.watchedMovies(),
-  traktQueryKeys.trendingShows().slice(0, -1),
-  traktQueryKeys.trendingMovies().slice(0, -1),
+  simklQueryKeys.trending('movies').slice(0, -1),
+  simklQueryKeys.trending('tv').slice(0, -1),
   anilistQueryKeys.seasonalAnime({ season: 'WINTER', year: 0 }).slice(0, -2),
   letterboxdQueryKeys.watchlist('').slice(0, -1),
 ];

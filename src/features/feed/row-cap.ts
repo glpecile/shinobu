@@ -1,6 +1,6 @@
 /**
  * How many cards a home-feed carousel renders. The public trending rows have
- * always been bounded here by the provider itself (`getTrendingShows` asks for
+ * always been bounded by the provider itself (the trending reads ask for
  * 30); the personal rows were not — `getWatchedShows` pages up to 10 × 100, so
  * a heavy Trakt library mounted up to a thousand cards in one row, each firing
  * its own `useTraktMediaImages` request. Virtualization alone doesn't fix that

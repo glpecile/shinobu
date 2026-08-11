@@ -15,7 +15,6 @@
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-query-persist-client": "^5.101.4",
     "babel-plugin-react-compiler": "^1.0.0",
-    "better-all": "^0.0.7",
     "cnfast": "^0.0.8",
     "effect": "^3.21.4",
     "expo": "~57.0.12",
@@ -46,9 +45,7 @@
     "react-native-keyboard-controller": "1.21.9",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-fetch": "^1.4.2",
-    "react-native-nitro-image": "^0.15.1",
     "react-native-nitro-modules": "0.35.2",
-    "react-native-nitro-web-image": "^0.15.1",
     "react-native-pulsar": "^1.6.1",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
@@ -97,9 +94,7 @@
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
-          "react-native-nitro-fetch",
-          "react-native-nitro-image",
-          "react-native-nitro-web-image"
+          "react-native-nitro-fetch"
         ],
         "listUnknownPackages": false
       }

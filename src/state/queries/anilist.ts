@@ -1,7 +1,6 @@
 import {
   keepPreviousData,
   useQuery,
-  useQueryClient,
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
@@ -17,7 +16,6 @@ import {
   getCurrentAnime,
   getEntryState,
   getSeasonalAnime,
-  getTrendingAnime,
   getViewer,
   searchAniListStaff,
   searchAniListStudio,
@@ -75,7 +73,6 @@ const EPISODES_STALE_MS = 5 * 60_000;
 export const anilistQueryKeys = {
   all: ['anilist'] as const,
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
-  currentAnime: () => [...anilistQueryKeys.all, 'current-anime'] as const,
   /**
    * The PLANNING slice of the same cached entries read — the AniList leg of the
    * cross-provider watchlist (plan 0031 U12). A *third derived key*, not a
@@ -97,8 +94,6 @@ export const anilistQueryKeys = {
    */
   currentAnimeEntries: () =>
     [...anilistQueryKeys.all, 'current-anime-entries'] as const,
-  trendingAnime: (limit?: number) =>
-    [...anilistQueryKeys.all, 'trending-anime', limit ?? 'default'] as const,
   /** Popular anime of one cour — keyed by season so a boundary crossing refetches. */
   seasonalAnime: (window: AnimeSeasonWindow) =>
     [...anilistQueryKeys.all, 'seasonal-anime', window.season, window.year] as const,
@@ -168,26 +163,6 @@ export function fetchCurrentAnimeEntries(
 }
 
 /**
- * The same list as flat feed items — the "Your Anime" row's contract. Exposed
- * as a plain promise so `useUnifiedFeed` can consume it as a queryFn.
- *
- * Filtered to CURRENT *here* rather than at the read (plan 0030 KTD-3): the
- * request also carries PLANNING entries, which exist for Up Next's Calendar
- * half alone. "Your Anime" means what you are watching — listing plan-to-watch
- * titles in it is the first regression widening the query invites, and doing
- * the filtering in the selector is what lets one cached request keep serving
- * both consumers on the 30 req/min budget.
- */
-export async function fetchCurrentAnime(
-  queryClient: QueryClient,
-): Promise<NormalizedMediaItem[]> {
-  const entries = await fetchCurrentAnimeEntries(queryClient);
-  return entries
-    .filter((entry) => entry.status === 'CURRENT')
-    .map((entry) => entry.item);
-}
-
-/**
  * The plan-to-watch slice of the same cached list — the AniList leg of the
  * cross-provider watchlist (plan 0031 U12/R26). A **selector, not a query**:
  * plan 0030 R12 already widened the one list read to
@@ -199,14 +174,13 @@ export async function fetchCurrentAnime(
  * adding a PLANNING query.
  *
  * The sibling slices are deliberately disjoint and stay that way: this one is
- * PLANNING only, `fetchCurrentAnime` is CURRENT only, and Up Next's gate
- * (`features/up-next/compute.ts`) still lets a PLANNING entry reach Calendar
- * alone. Widening any of them re-opens the regression in
- * `docs/solutions/anilist-shared-list-query-status-gate.md`.
+ * PLANNING only, and Up Next's gate (`features/up-next/compute.ts`) still lets
+ * a PLANNING entry reach Calendar alone. Widening any of them re-opens the
+ * regression in `docs/solutions/anilist-shared-list-query-status-gate.md`.
  *
- * Returns the rich entries rather than plain items (the one place this differs
- * from `fetchCurrentAnime`): the watchlist surface needs `entryId` for the
- * removal path, and callers that only want cards take `.item`.
+ * Returns the rich entries rather than plain items: the watchlist surface
+ * needs `entryId` for the removal path, and callers that only want cards take
+ * `.item`.
  */
 export async function fetchPlannedAnime(
   queryClient: QueryClient,
@@ -221,8 +195,8 @@ export async function fetchPlannedAnime(
  * that is what the owner means by watchlisted — so the surface reads both
  * statuses while every other consumer keeps its own narrower slice.
  *
- * A **fourth selector, never a widened third one**. `fetchPlannedAnime` stays
- * PLANNING-only, `fetchCurrentAnime` stays CURRENT-only, and Up Next's gate
+ * A **separate selector, never a widened `fetchPlannedAnime`** — that one stays
+ * PLANNING-only, and Up Next's gate
  * (`features/up-next/compute.ts`) still confines PLANNING to Calendar. That
  * separation is the whole point of
  * `docs/solutions/anilist-shared-list-query-status-gate.md`: the gate restricts
@@ -239,10 +213,6 @@ export async function fetchWatchlistAnime(
   return entries.filter(
     (entry) => entry.status === 'PLANNING' || entry.status === 'CURRENT',
   );
-}
-
-export function fetchTrendingAnime(options: { limit?: number } = {}): Promise<NormalizedMediaItem[]> {
-  return Effect.runPromise(getTrendingAnime(anilistDeps(), options));
 }
 
 /** Popular anime of the given cour ("Summer 2026") — the feed's anime row. */
@@ -270,19 +240,6 @@ export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
 }
 
 /**
- * Authenticated read of the viewer's watching list — enable-on-connect
- * contract matches `useWatchedShowsQuery`.
- */
-export function useCurrentAnimeQuery(options: { enabled?: boolean } = {}) {
-  const queryClient = useQueryClient();
-  return useQuery({
-    queryKey: anilistQueryKeys.currentAnime(),
-    queryFn: () => fetchCurrentAnime(queryClient),
-    enabled: options.enabled,
-  });
-}
-
-/**
  * Public anime/manga text search — the AniList half of the sectioned search
  * screen. Same enable/keepPreviousData/staleTime contract as
  * `useTraktSearchQuery` (the shared minimum-length constant lives there);
@@ -302,15 +259,6 @@ export function useAniListSearchQuery(params: {
     enabled: query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
-  });
-}
-
-/** Public trending anime — no session required (plan.md 2.1). */
-export function useTrendingAnimeQuery(options: { limit?: number } = {}) {
-  const limit = options.limit ?? 30;
-  return useQuery({
-    queryKey: anilistQueryKeys.trendingAnime(limit),
-    queryFn: () => fetchTrendingAnime({ limit }),
   });
 }
 

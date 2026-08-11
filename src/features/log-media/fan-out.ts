@@ -1,5 +1,3 @@
-import { all } from 'better-all';
-
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -119,54 +117,43 @@ function errorMessage(error: unknown): string {
  *
  * Verb-neutral and payload-generic (plan 0031 KTD-4): the log verb, the
  * watchlist add and the watchlist remove are all callers of *this* function,
- * never of a copy — the two non-obvious rules below (completion-order →
- * routing-order rebuild, and the loud missing-adapter error) are exactly what
- * a second file would silently diverge on.
+ * never of a copy — the non-obvious rule below (the loud missing-adapter
+ * error) is exactly what a second file would silently diverge on.
  */
 export async function runProviderWrites<V>(
   adapters: Partial<Record<ProviderId, WriteAdapter<V>>>,
   targets: readonly ProviderId[],
   variables: V,
 ): Promise<ProviderWriteReport> {
-  const outcomesByProvider = await all(
-    Object.fromEntries(
-      targets.map(
-        (provider): [ProviderId, () => Promise<ProviderWriteOutcome>] => [
+  // Promise.all preserves input order, so `outcomes` lands in routing order
+  // (ProviderWriteReport.outcomes contract); each thunk catches its own error.
+  const outcomes: ProviderWriteOutcome[] = await Promise.all(
+    targets.map(async (provider): Promise<ProviderWriteOutcome> => {
+      const adapter = adapters[provider];
+      if (adapter == null) {
+        return {
           provider,
-          async () => {
-            const adapter = adapters[provider];
-            if (adapter == null) {
-              return {
-                provider,
-                status: 'error',
-                message: `${provider} write adapter is not implemented yet`,
-              };
-            }
-            try {
-              const result = await adapter(variables);
-              // An adapter-reported skip (plan 0017 R9) carries its reason
-              // through as a non-failing outcome; anything else is a success.
-              if (result != null && result.status === 'skipped') {
-                return { provider, status: 'skipped', reason: result.reason };
-              }
-              // A partial-write reason rides along on the success (R16) — the
-              // one field `SerializdWatchlistResult` exists to add.
-              if (result != null && result.reason != null) {
-                return { provider, status: 'ok', reason: result.reason };
-              }
-              return { provider, status: 'ok' };
-            } catch (error) {
-              return { provider, status: 'error', message: errorMessage(error) };
-            }
-          },
-        ],
-      ),
-    ),
-  );
-  // better-all keys its result in completion order, not input order — rebuild
-  // routing order from `targets` (ProviderWriteReport.outcomes contract).
-  const outcomes: ProviderWriteOutcome[] = targets.map(
-    (provider) => outcomesByProvider[provider],
+          status: 'error',
+          message: `${provider} write adapter is not implemented yet`,
+        };
+      }
+      try {
+        const result = await adapter(variables);
+        // An adapter-reported skip (plan 0017 R9) carries its reason
+        // through as a non-failing outcome; anything else is a success.
+        if (result != null && result.status === 'skipped') {
+          return { provider, status: 'skipped', reason: result.reason };
+        }
+        // A partial-write reason rides along on the success (R16) — the
+        // one field `SerializdWatchlistResult` exists to add.
+        if (result != null && result.reason != null) {
+          return { provider, status: 'ok', reason: result.reason };
+        }
+        return { provider, status: 'ok' };
+      } catch (error) {
+        return { provider, status: 'error', message: errorMessage(error) };
+      }
+    }),
   );
 
   return {

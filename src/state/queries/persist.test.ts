@@ -35,6 +35,7 @@ const { anilistQueryKeys } = await import('./anilist');
 const { letterboxdQueryKeys } = await import('./letterboxd');
 const { deserialize, isPersistedQueryKey, serialize } = await import('./persist');
 const { traktQueryKeys } = await import('./trakt');
+const { simklQueryKeys } = await import('./simkl');
 const { upNextQueryKeys } = await import('./up-next');
 const { watchlistQueryKeys } = await import('./watchlist');
 
@@ -147,6 +148,10 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(['mapping', 'anizip', { anilistId: 1 }])).toBe(true);
     expect(isPersistedQueryKey(['mapping', 'anizip-episodes', 1])).toBe(true);
     expect(isPersistedQueryKey(letterboxdQueryKeys.watchlist('gian'))).toBe(true);
+    // The trending rows are Simkl's since plan 0034 — these, not Trakt's old
+    // trending keys, are what must restore with the rest of the feed.
+    expect(isPersistedQueryKey(simklQueryKeys.trending('movies'))).toBe(true);
+    expect(isPersistedQueryKey(simklQueryKeys.trending('tv'))).toBe(true);
     // The cross-provider watchlist gather (plan 0031): without it this is the
     // one home row that pops in as a skeleton after every cold start.
     expect(isPersistedQueryKey(watchlistQueryKeys.inputs())).toBe(true);

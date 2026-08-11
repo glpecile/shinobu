@@ -1,21 +1,15 @@
-import {
-  keepPreviousData,
-  useQuery,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { DIARY_QUERY_ROOTS } from '@/state/queries/diary-cache';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
-import type { TokenStore, TraktDeps } from '@/lib/providers/trakt/deps';
+import type { TraktDeps } from '@/lib/providers/trakt/deps';
+import type { TokenStore } from '@/lib/providers/token-store';
 import {
   getMediaImages,
-  getShowSeasons,
   getShowWatchedProgress,
-  getTrendingMovies,
-  getTrendingShows,
   getViewerUsername,
   getWatchedMovies,
   getWatchedShows,
@@ -81,10 +75,6 @@ export const traktQueryKeys = {
   /** Per-log watch history — the Trakt diary source (plan 0016). Derived from
    *  the shared root so the details-screen diary cache scan stays in sync. */
   history: () => [...DIARY_QUERY_ROOTS.trakt],
-  trendingMovies: (limit?: number) =>
-    [...traktQueryKeys.all, 'trending-movies', limit ?? 'default'] as const,
-  trendingShows: (limit?: number) =>
-    [...traktQueryKeys.all, 'trending-shows', limit ?? 'default'] as const,
   /** Prefix for every search entry — details/[id] scans this for cache hits.
    *  Shared root so `search-cache.ts`'s scan can't drift from this key. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.trakt],
@@ -166,37 +156,6 @@ export function useTraktMediaImages(
     };
   }
   return data ?? { coverImage: '' };
-}
-
-/**
- * Full seasons + episodes for one show (plan 0010). Public catalogue call, so
- * it suspends regardless of whether Trakt is connected — seasons render even
- * for a not-yet-connected user (without watch checkmarks). Mount under a
- * `SuspenseSection`, only once the trakt id is known.
- */
-export function useSuspenseTraktShowSeasonsQuery(params: { traktId: number }) {
-  const { traktId } = params;
-  return useSuspenseQuery({
-    queryKey: traktQueryKeys.seasons(traktId),
-    queryFn: () => Effect.runPromise(getShowSeasons(traktDeps(), { traktId })),
-  });
-}
-
-/**
- * Non-suspense variant sharing the same cache key as the suspense hook above —
- * the series-runtime stat tile reads the resolved structure without forcing the
- * whole detail screen to wait on it; the suspense section drives the fetch.
- */
-export function useTraktShowSeasonsQuery(params: {
-  traktId: number;
-  enabled?: boolean;
-}) {
-  const { traktId, enabled = true } = params;
-  return useQuery({
-    queryKey: traktQueryKeys.seasons(traktId),
-    queryFn: () => Effect.runPromise(getShowSeasons(traktDeps(), { traktId })),
-    enabled,
-  });
 }
 
 /**
@@ -324,28 +283,5 @@ export function useTraktSearchQuery(params: {
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
-  });
-}
-
-/**
- * Public catalogue read — works without a session so the feed isn't empty
- * before the user connects any provider (plan.md 2.1, AGENTS.md read path).
- */
-export function useTrendingMoviesQuery(options: { limit?: number } = {}) {
-  const limit = options.limit ?? 30;
-  return useQuery({
-    queryKey: traktQueryKeys.trendingMovies(limit),
-    queryFn: () => Effect.runPromise(getTrendingMovies(traktDeps(), { limit })),
-  });
-}
-
-/**
- * Public catalogue read for trending TV shows — no session required.
- */
-export function useTrendingShowsQuery(options: { limit?: number } = {}) {
-  const limit = options.limit ?? 30;
-  return useQuery({
-    queryKey: traktQueryKeys.trendingShows(limit),
-    queryFn: () => Effect.runPromise(getTrendingShows(traktDeps(), { limit })),
   });
 }

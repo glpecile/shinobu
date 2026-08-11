@@ -12,7 +12,8 @@ import {
   getWatchlist,
   traktCalendarRange,
 } from './reads';
-import type { TokenStore, TraktDeps } from './deps';
+import type { TokenStore } from '@/lib/providers/token-store';
+import type { TraktDeps } from './deps';
 
 const SESSION: ProviderSession = {
   accessToken: 'tok',

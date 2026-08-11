@@ -8,7 +8,8 @@ import {
   removeFromTraktWatchlist,
   type TraktLogOptions,
 } from './writes';
-import type { TokenStore, TraktDeps } from './deps';
+import type { TokenStore } from '@/lib/providers/token-store';
+import type { TraktDeps } from './deps';
 
 const SESSION: ProviderSession = {
   accessToken: 'tok',

@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
-import type { TokenStore, TraktDeps } from './deps';
+import type { TokenStore } from '@/lib/providers/token-store';
+import type { TraktDeps } from './deps';
 import { refreshSession } from './auth';
 
 /**

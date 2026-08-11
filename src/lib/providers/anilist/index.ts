@@ -3,6 +3,6 @@ export { getAnimeCredits } from './credits';
 export type { AnimeCredits } from './credits';
 export type { AniListDeps } from './deps';
 export { getAnimeEpisodes } from './episodes';
-export { getCurrentAnime, getEntryState, getTrendingAnime, getViewer } from './reads';
+export { getCurrentAnime, getEntryState, getViewer } from './reads';
 export type { AniListEntryState } from './reads';
 export { logToAniList, type AniListLogOptions } from './writes';
