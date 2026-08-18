@@ -48,9 +48,11 @@ export interface UpNextSectionProps {
 const STACK_HEADROOM = STACK_OFFSET * 2;
 
 // A landscape card row's height (art h-36 = 144, + mt-2 gap and two text
-// lines), plus the stack headroom above it. The day's content area reserves
-// this whether it holds cards or the empty-state line, so tapping between days
-// never shifts the feed below.
+// lines), plus the stack headroom above it. Only the pre-measurement floor:
+// Android's real text line boxes come out a few px taller than this estimate,
+// so the reserved height tracks the tallest day content actually laid out (see
+// `onLayout` below) — reserving the estimate alone let a day with cards run
+// taller than an empty day and shift the feed beneath on every switch.
 const DAY_CONTENT_MIN_HEIGHT = 188 + STACK_HEADROOM;
 
 // Beyond this the dots would overflow the ~56px cell; several shows sharing a
@@ -109,6 +111,12 @@ export function UpNextSection({
   const { continueWatching, calendar, now } = useUpNextSections();
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [switchedDay, setSwitchedDay] = useState(false);
+  // Tallest day content laid out so far — what empty days must reserve so the
+  // feed below never moves when tapping between days. Monotonic max, so the
+  // measurement can never feed back into itself.
+  const [dayContentHeight, setDayContentHeight] = useState(
+    DAY_CONTENT_MIN_HEIGHT,
+  );
   const reduceMotion = useReducedMotion();
 
   if (continueWatching.length === 0 && calendar.length === 0) return null;
@@ -258,10 +266,18 @@ export function UpNextSection({
           })}
         </ScrollView>
 
-        {/* Fixed height so switching to an empty day never collapses the row
+        {/* Reserved height so switching to an empty day never collapses the row
             and shifts the feed beneath it — the empty line sits in the space a
-            card row would occupy. */}
-        <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }}>
+            card row would occupy, measured from the real card row rather than
+            estimated (font metrics differ per platform). */}
+        <View
+          className="mt-3"
+          onLayout={(event) => {
+            const measured = Math.ceil(event.nativeEvent.layout.height);
+            setDayContentHeight((current) => Math.max(current, measured));
+          }}
+          style={{ minHeight: dayContentHeight }}
+        >
           {/* Keyed on the day so picking a new one remounts and replays the
               enter. Enter-only, no exit: an exiting copy would sit in flow
               beside the incoming one and shove the feed around — the reserved
