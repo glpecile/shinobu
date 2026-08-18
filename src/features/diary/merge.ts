@@ -169,14 +169,27 @@ export function localDayKey(
   return dayKeyForInstant(instant, timeZone);
 }
 
-/** en-CA renders an instant in `timeZone` as `YYYY-MM-DD`. */
+/**
+ * en-CA renders an instant in `timeZone` as `YYYY-MM-DD`. The formatter is
+ * cached per zone because this runs once per diary entry *and* once per day
+ * header on every regroup — constructing `Intl.DateTimeFormat` is one of the
+ * most expensive calls in the engine, and the zone only ever takes one value
+ * per session. The map is bounded by the number of distinct zones asked for.
+ */
+const dayFormatters = new Map<string, Intl.DateTimeFormat>();
+
 function dayKeyForInstant(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(instant);
+  let formatter = dayFormatters.get(timeZone);
+  if (formatter == null) {
+    formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    dayFormatters.set(timeZone, formatter);
+  }
+  return formatter.format(instant);
 }
 
 interface CollapseBucket {
@@ -406,6 +419,20 @@ export function formatEpisodeDetail(params: {
   return `Ep ${range}`;
 }
 
+/**
+ * The same count abbreviated for the rail's run pill, where "10 episodes" does
+ * not fit: "10 eps" / "12 ch". Still singularizes — a two-log run whose
+ * providers recorded the *same* episode number unions down to one, so "1 eps"
+ * is reachable and reads as a bug.
+ */
+export function shortClusterCount(params: {
+  item: Pick<NormalizedMediaItem, 'type'>;
+  count: number;
+}): string {
+  if (params.item.type === 'MANGA') return `${params.count} ch`;
+  return `${params.count} ${params.count === 1 ? 'ep' : 'eps'}`;
+}
+
 /** "10 episodes" / "12 chapters" — the count line under a collapsed cluster. */
 export function formatClusterCount(type: MediaType, count: number): string {
   const noun = type === 'MANGA' ? 'chapter' : 'episode';
@@ -426,6 +453,74 @@ const MONTHS = [
   'November',
   'December',
 ];
+
+
+const MONTHS_SHORT = MONTHS.map((month) => month.slice(0, 3));
+
+/** The day header split for the rail gutter: a numeral over a short label. */
+export interface DiaryDayParts {
+  /** The calendar day number, e.g. "20" — the gutter's headline. */
+  day: string;
+  /** "Today", "Jul", or "Jul 25" when the day falls in another year. */
+  label: string;
+  /** The day is the user's local today (the gutter tints it accent). */
+  isToday: boolean;
+}
+
+/**
+ * `formatDayHeader` restructured for the rail layout, which stacks the date
+ * rather than setting it on one line: the numeral carries the day and the
+ * label below it carries the month — or "Today", or a `Jul 25` month+year when
+ * scroll-back crosses into another year (the same R8 rule, same threshold).
+ */
+export function formatDayParts(
+  dayKey: string,
+  now: Date,
+  timeZone: string,
+): DiaryDayParts {
+  const todayKey = dayKeyForInstant(now, timeZone);
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const dayLabel = `${day ?? ''}`;
+  if (dayKey === todayKey) {
+    return { day: dayLabel, label: 'Today', isToday: true };
+  }
+  const monthName = MONTHS_SHORT[(month ?? 1) - 1] ?? '';
+  const currentYear = Number(todayKey.slice(0, 4));
+  return {
+    day: dayLabel,
+    label: year === currentYear ? monthName : `${monthName} ${`${year}`.slice(2)}`,
+    isToday: false,
+  };
+}
+
+/** Cached like `dayFormatters`, and for the same reason — one per zone. */
+const timeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * The local clock time a log was made, `HH:MM`, or `''` for a date-only entry.
+ * Letterboxd RSS and the Simkl projection carry no time of day, so the rail's
+ * time column stays empty for them rather than inventing a midnight (AE4 is
+ * the same hazard: a date-only log is not an instant).
+ */
+export function formatLogTime(
+  entry: Pick<MergedDiaryEntry, 'watchedAt' | 'dateOnly'>,
+  timeZone: string,
+): string {
+  if (entry.dateOnly) return '';
+  const instant = parseLocalInstant(entry.watchedAt);
+  if (instant == null) return '';
+  let formatter = timeFormatters.get(timeZone);
+  if (formatter == null) {
+    formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    timeFormatters.set(timeZone, formatter);
+  }
+  return formatter.format(instant);
+}
 
 /**
  * The day header: "Today", "July 20", or "July 20, 2025" — the year appends only

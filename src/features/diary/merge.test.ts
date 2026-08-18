@@ -11,10 +11,13 @@ import {
   clusterDayEntries,
   formatClusterCount,
   formatDayHeader,
+  formatDayParts,
   formatEpisodeDetail,
+  formatLogTime,
   formatEpisodeRange,
   groupDiaryEntries,
   mergeDiaryEntries,
+  shortClusterCount,
   summarizeCluster,
   watermarkProviders,
   type DiaryProviderState,
@@ -352,6 +355,61 @@ describe('formatDayHeader', () => {
   });
   test('a prior-year day appends the year', () => {
     expect(formatDayHeader('2025-07-20', now, TZ_MINUS_5)).toBe('July 20, 2025');
+  });
+});
+
+describe('formatDayParts', () => {
+  const now = new Date('2026-07-21T12:00:00.000Z');
+  test('the current local day labels itself "Today" and flags it', () => {
+    expect(formatDayParts('2026-07-21', now, TZ_MINUS_5)).toEqual({
+      day: '21',
+      label: 'Today',
+      isToday: true,
+    });
+  });
+  test('a same-year day is a numeral over the short month', () => {
+    expect(formatDayParts('2026-07-20', now, TZ_MINUS_5)).toEqual({
+      day: '20',
+      label: 'Jul',
+      isToday: false,
+    });
+  });
+  test('a prior-year day appends the two-digit year to the month', () => {
+    expect(formatDayParts('2025-07-20', now, TZ_MINUS_5)).toEqual({
+      day: '20',
+      label: 'Jul 25',
+      isToday: false,
+    });
+  });
+});
+
+describe('formatLogTime', () => {
+  test('an instant renders as 24h local time in the given zone', () => {
+    // 23:30Z is 18:30 at UTC-5 — the same conversion `has-aired` makes, so a
+    // log never displays the origin zone's clock.
+    expect(
+      formatLogTime({ watchedAt: '2026-07-20T23:30:00.000Z', dateOnly: false }, TZ_MINUS_5),
+    ).toBe('18:30');
+  });
+  test('a date-only entry has no time rather than a midnight', () => {
+    expect(formatLogTime({ watchedAt: '2026-07-20', dateOnly: true }, TZ_MINUS_5)).toBe('');
+  });
+  test('an unparseable instant degrades to empty, never to NaN', () => {
+    expect(formatLogTime({ watchedAt: 'not-a-date', dateOnly: false }, TZ_MINUS_5)).toBe('');
+  });
+});
+
+describe('shortClusterCount', () => {
+  test('a multi-episode run abbreviates to "eps"', () => {
+    expect(shortClusterCount({ item: { type: 'TV' }, count: 10 })).toBe('10 eps');
+  });
+  test('a run that unions down to one episode says "ep", not "eps"', () => {
+    // Two same-provider logs of the same episode (a rewatch) cluster together
+    // but union to a single episode number.
+    expect(shortClusterCount({ item: { type: 'ANIME' }, count: 1 })).toBe('1 ep');
+  });
+  test('manga counts chapters', () => {
+    expect(shortClusterCount({ item: { type: 'MANGA' }, count: 4 })).toBe('4 ch');
   });
 });
 
