@@ -120,6 +120,19 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).toContain('up-next/inputs');
   });
 
+  test('recomputes Up Next last, after every provider cache it reads', () => {
+    const { client, keys } = recordingClient();
+    // Order is load-bearing, not cosmetic. `invalidateQueries` starts the
+    // active Up Next refetch synchronously, and `fetchUpNextInputs` reaches
+    // its per-provider `fetchQuery` calls before the *next* statement here
+    // runs — so a provider invalidated after this line is still fresh when the
+    // gather reads it, and Continue Watching recomputes on pre-write data.
+    // That is what stranded Simkl-sourced cards until a manual pull-to-refresh
+    // (owner report 2026-08-18) while Trakt/AniList cards advanced fine.
+    invalidateAfterLog(client, ITEM, ['trakt', 'anilist', 'simkl', 'serializd']);
+    expect(keys.indexOf('up-next/inputs')).toBe(keys.length - 1);
+  });
+
   test('an all-skip log still recomputes Up Next — the provider is ahead of the sections', () => {
     const { client, keys } = recordingClient();
     // A reconcile-skip means the provider already records the watch, so the
