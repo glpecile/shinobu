@@ -119,6 +119,7 @@ export default function ConnectScreen() {
           // This screen has no server data of its own — the useful refresh is
           // marking every cached query stale so the feed refetches on return.
           onRefresh={() => queryClient.invalidateQueries()}
+          tab="connect"
         >
           {/* One `gap-6` owns the rhythm between sections instead of each
               section carrying its own `mt-6`/`mb-6` — sections that render

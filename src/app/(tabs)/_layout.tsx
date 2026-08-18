@@ -2,6 +2,7 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
+import { emitTabPress } from '@/lib/navigation/tab-double-tap';
 
 /**
  * Native bottom tab bar for iOS/Android — liquid glass on iOS 26, Material 3
@@ -35,21 +36,33 @@ export default function TabsLayout() {
       rippleColor="rgba(220, 38, 38, 0.24)"
       tintColor="#DC2626"
     >
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger
+        listeners={{ tabPress: () => emitTabPress('index') }}
+        name="index"
+      >
         <NativeTabs.Trigger.Icon md="home" sf="house.fill" />
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="diary">
+      <NativeTabs.Trigger
+        listeners={{ tabPress: () => emitTabPress('diary') }}
+        name="diary"
+      >
         <NativeTabs.Trigger.Icon md="book" sf="book.fill" />
         <NativeTabs.Trigger.Label>Diary</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="connect">
+      <NativeTabs.Trigger
+        listeners={{ tabPress: () => emitTabPress('connect') }}
+        name="connect"
+      >
         <NativeTabs.Trigger.Icon md="settings" sf="gearshape.fill" />
         <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       {/* Search last so it can combine with the platform search affordance.
           `listeners` fires on every tap (active tab or not) — see
-          `features/search/focus-signal` for why the search screen needs it. */}
+          `features/search/focus-signal` for why the search screen needs it.
+          Deliberately *not* an `emitTabPress` tab: search has no scroll surface
+          to refresh, and re-tapping it already has a meaning (focus the
+          field), so a second tap must not be reinterpreted as a double tap. */}
       <NativeTabs.Trigger
         listeners={{ tabPress: () => emitSearchFocusRequest() }}
         name="search"

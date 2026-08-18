@@ -181,6 +181,7 @@ function FeedScreen() {
           process.env.EXPO_OS === 'web' ? 'pt-6 pb-8' : 'pt-2 pb-24'
         }
         onRefresh={refresh}
+        tab="index"
       >
         {/* What to watch next, above everything the user merely tracks. */}
         {upNextConnected && (
