@@ -75,7 +75,15 @@ plan 0024 U11/R8 stands, only with scrollers:
 - **Android** uses `components/keyboard-aware-scroll-view` (the withUniwind'd
   `KeyboardAwareScrollView`) on the overflow branch: once a tall sheet is pinned
   at the cap, its bottom padding is what gives the focused field somewhere to
-  scroll to. **Known gap:** a *short* sheet now has no scroller at all, so it no
+  scroll to. **`scrollEnabled` must also flip on while the keyboard is visible**
+  (2026-08-17): edge-to-edge Android never resizes the window for the soft
+  keyboard, so `maxHeight` — derived from `useWindowDimensions` — still
+  describes the full screen while the keyboard covers the sheet's lower half. A
+  sheet whose content "fits" therefore kept `scrollEnabled: false`, and the
+  KeyboardAwareScrollView had no way to bring the focused tags field or the
+  confirm buttons out from behind the keyboard. The sheet now ORs
+  `useKeyboardState((s) => s.isVisible)` into the Android branch's
+  `scrollEnabled`. **Known gap:** a *short* sheet now has no scroller at all, so it no
   longer grows to lift itself clear of the Android keyboard. Nothing ships in
   that shape today (every sheet with a text field — the log sheet's tags, the
   Trakt/AniList credential forms — is tall enough to take the scroll branch), but
