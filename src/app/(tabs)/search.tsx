@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
 import Head from '@/components/head';
-import { Text, TextInput, View } from 'react-native';
+import { Keyboard, Text, TextInput, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ActionableRow } from '@/components/actionable-row';
@@ -234,7 +234,18 @@ export default function SearchScreen() {
       // input is a no-op and the keyboard never returns — blur first to force
       // a real focus transition. iOS's search-tab role handles its own
       // re-focus, so it's left alone.
-      if (process.env.EXPO_OS === 'android' && field.isFocused()) field.blur();
+      //
+      // `Keyboard.isVisible()` is what keeps that blur scoped to the case it
+      // exists for. Focused *with* the keyboard already up is the steady state
+      // after any tap, so re-tapping the search tab used to blur (keyboard
+      // slides out) and re-focus (slides back in) — the keyboard visibly
+      // coming up twice on a double tap, with nothing gained (owner report
+      // 2026-08-18). Nothing to do there: the field already has the focus this
+      // request asks for.
+      if (process.env.EXPO_OS === 'android' && field.isFocused()) {
+        if (Keyboard.isVisible()) return;
+        field.blur();
+      }
       // Deferred past the tab-press frame: focusing synchronously inside the
       // native tab transition gets swallowed (and the blur above needs a tick
       // to land before the re-focus counts as a transition).

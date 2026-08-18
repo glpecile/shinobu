@@ -10,6 +10,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
+import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -445,6 +446,12 @@ export function DiaryList({
       setRefreshing(false);
     }
   }
+
+  // Double-tapping the Diary tab runs the same refresh the pull gesture does,
+  // spinner included (`app/(tabs)/_layout.tsx` emits the press). The tab name
+  // is fixed here rather than passed in because this list *is* that tab's
+  // surface — it renders nowhere else.
+  useTabDoubleTap('diary', () => void refresh());
 
   return (
     <List

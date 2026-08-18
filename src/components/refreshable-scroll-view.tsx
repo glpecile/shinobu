@@ -7,6 +7,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCSSVariable } from 'uniwind';
 
+import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
+
 interface RefreshableScrollViewProps extends ScrollViewProps {
   /**
    * Kicks off the refresh; the spinner stays visible until the promise
@@ -24,6 +26,14 @@ interface RefreshableScrollViewProps extends ScrollViewProps {
    * in effect; header-padded screens don't need it.
    */
   spinnerBelowStatusBar?: boolean;
+  /**
+   * The route name of the tab this scroll surface belongs to (`index`,
+   * `diary`, `connect`). Double-tapping that tab then runs the same
+   * `onRefresh` the pull gesture does, spinner and all — the bottom-bar idiom
+   * every native app has. Omitted on screens that aren't a tab root (details,
+   * watchlist): they have no trigger to double-tap.
+   */
+  tab?: string;
 }
 
 /**
@@ -35,6 +45,7 @@ interface RefreshableScrollViewProps extends ScrollViewProps {
 export function RefreshableScrollView({
   onRefresh,
   spinnerBelowStatusBar,
+  tab,
   children,
   ...rest
 }: RefreshableScrollViewProps) {
@@ -51,6 +62,10 @@ export function RefreshableScrollView({
       .catch(() => undefined)
       .finally(() => setRefreshing(false));
   }
+
+  // Same entry point as the pull gesture, so the spinner and the swallowed
+  // rejection behave identically however the refresh was asked for.
+  useTabDoubleTap(tab, refresh);
 
   return (
     <ScrollView

@@ -543,23 +543,6 @@ export function invalidateAfterLog(
       });
     }
   }
-  // Up Next is computed from Trakt/AniList/Simkl watch state (Simkl joined the
-  // provider-keyed inputs in plan 0034 U8), so a log to any of them must
-  // recompute the sections — not just the per-provider caches the other
-  // branches refresh. This invalidation is also the settle signal the
-  // quick-log card waits on before advancing (plan 0019 KTD-6): a provider
-  // missing from this gate strands its users' quick-log in the settle window.
-  // **Skips count**: a reconcile-skip means the provider already records the
-  // watch — its state is *ahead* of the computed sections, exactly the case a
-  // recompute exists for — and the quick-log card advances on
-  // skipped-or-succeeded (`resolveQuickLog`), so gating on `succeeded` alone
-  // left an all-skip log with no refetch to settle against (owner report
-  // 2026-08-02, "Logged — refresh to update").
-  const touched = (provider: ProviderId) =>
-    succeeded.includes(provider) || skipped.includes(provider);
-  if (touched('trakt') || touched('anilist') || touched('simkl')) {
-    queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
-  }
   if (succeeded.includes('simkl')) {
     // The history POST moved items between Simkl's library buckets — every
     // cached all-items filter is stale (the prefix, not a per-filter key: this
@@ -583,6 +566,34 @@ export function invalidateAfterLog(
         });
       }
     }
+  }
+  // **Last on purpose.** `invalidateQueries` starts the refetch of the active
+  // Up Next query *synchronously*, and `fetchUpNextInputs` reaches its
+  // per-provider `fetchQuery` calls before this function's next statement
+  // runs — so any provider cache invalidated *below* this line is still
+  // fresh when the gather reads it, and the recompute lands on pre-write
+  // data. That is exactly what stranded Simkl-sourced Continue Watching
+  // cards (owner report 2026-08-18: a logged episode only advanced after a
+  // manual pull-to-refresh) while Trakt and AniList cards — whose branches
+  // happen to sit above — advanced correctly. Keep this the final statement:
+  // `docs/solutions/invalidate-order-strands-continue-watching.md`.
+  //
+  // Up Next is computed from Trakt/AniList/Simkl watch state (Simkl joined the
+  // provider-keyed inputs in plan 0034 U8), so a log to any of them must
+  // recompute the sections — not just the per-provider caches the other
+  // branches refresh. This invalidation is also the settle signal the
+  // quick-log card waits on before advancing (plan 0019 KTD-6): a provider
+  // missing from this gate strands its users' quick-log in the settle window.
+  // **Skips count**: a reconcile-skip means the provider already records the
+  // watch — its state is *ahead* of the computed sections, exactly the case a
+  // recompute exists for — and the quick-log card advances on
+  // skipped-or-succeeded (`resolveQuickLog`), so gating on `succeeded` alone
+  // left an all-skip log with no refetch to settle against (owner report
+  // 2026-08-02, "Logged — refresh to update").
+  const touched = (provider: ProviderId) =>
+    succeeded.includes(provider) || skipped.includes(provider);
+  if (touched('trakt') || touched('anilist') || touched('simkl')) {
+    queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
   }
 }
 
