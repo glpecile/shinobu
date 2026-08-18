@@ -10,6 +10,8 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 
+import { useKeyboardState } from 'react-native-keyboard-controller';
+
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { sheetScrollMetrics } from './metrics';
@@ -112,6 +114,13 @@ function SheetContent({ children }: { children: ReactNode }) {
   }
 
   const { height, scrollEnabled } = sheetScrollMetrics(contentHeight, maxHeight);
+  // Android edge-to-edge never resizes the window for the soft keyboard, so
+  // `maxHeight` still describes the full screen while the keyboard covers the
+  // sheet's lower half. A sheet that "fits" therefore kept scrollEnabled=false,
+  // which left the KeyboardAwareScrollView unable to bring the focused field —
+  // or the confirm buttons — out from behind the keyboard. Scroll must be
+  // allowed whenever the keyboard is up, not only past the height cap.
+  const keyboardVisible = useKeyboardState((state) => state.isVisible);
   const body = (
     <View className={CONTENT_PADDING} onLayout={measure}>
       {children}
@@ -129,7 +138,7 @@ function SheetContent({ children }: { children: ReactNode }) {
       <KeyboardAwareScrollView
         bottomOffset={24}
         keyboardShouldPersistTaps="handled"
-        scrollEnabled={scrollEnabled}
+        scrollEnabled={scrollEnabled || keyboardVisible}
       >
         {body}
       </KeyboardAwareScrollView>
