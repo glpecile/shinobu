@@ -8,10 +8,9 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
-import { Skeleton } from '@/components/skeleton';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import { DiaryList } from '@/features/diary/diary-list';
+import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -44,25 +43,6 @@ function StateIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name
       name={name}
       size={44}
     />
-  );
-}
-
-function DiarySkeleton() {
-  return (
-    <View className="pt-4">
-      <View className="px-6 pb-2">
-        <Skeleton className="h-3 w-20 rounded" />
-      </View>
-      {Array.from({ length: 7 }).map((_, index) => (
-        <View className="flex-row items-center px-6 py-2.5" key={index}>
-          <Skeleton className="w-12 h-[72px] rounded" />
-          <View className="flex-1 ml-4">
-            <Skeleton className="h-4 w-2/3 rounded" />
-            <Skeleton className="h-3 w-20 rounded mt-2" />
-          </View>
-        </View>
-      ))}
-    </View>
   );
 }
 
@@ -110,7 +90,7 @@ export default function DiaryScreen() {
       </View>
     );
   } else if (diary.isLoading && diary.entryCount === 0) {
-    content = <DiarySkeleton />;
+    content = <DiaryListSkeleton />;
   } else if (diary.allFailed && diary.entryCount === 0) {
     // R9 (3): every capable provider failed on load — never "no logs yet" (AE5).
     content = (
