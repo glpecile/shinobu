@@ -68,6 +68,23 @@ const MAX_SHEET_FRACTION = 0.85;
 const HEIGHT_EPSILON = 1;
 
 /**
+ * How far above the keyboard the auto-scroll parks a focused input. Sized for
+ * what renders directly *under* an input — the log sheet's collapsed
+ * tag-suggestion row plus its "Show more" toggle (~90dp) — because parking the
+ * input flush against the keyboard (the old 24) is exactly how the tags field
+ * kept its suggestions buried behind the keyboard.
+ *
+ * Deliberately *not* the whole-sheet lift you might reach for instead: growing
+ * the sheet's height while the keyboard event is in flight makes the native
+ * `'content'` detent re-measure mid-transaction and segfaults Fabric in
+ * `findShadowNodeByTag_DEPRECATED` (reproduced 2026-08-28, see
+ * docs/solutions/bottom-sheet-content-detent-clips-tall-content.md). The sheet
+ * must keep its height while the keyboard moves; only the scroll offset may
+ * compensate.
+ */
+const BOTTOM_OFFSET = 120;
+
+/**
  * Sheet content scrolls **only once it has to**.
  *
  * The `'content'` detent is measured natively from this subtree, and a
@@ -136,7 +153,7 @@ function SheetContent({ children }: { children: ReactNode }) {
   const scroller =
     process.env.EXPO_OS === 'android' ? (
       <KeyboardAwareScrollView
-        bottomOffset={24}
+        bottomOffset={BOTTOM_OFFSET}
         keyboardShouldPersistTaps="handled"
         scrollEnabled={scrollEnabled || keyboardVisible}
       >
