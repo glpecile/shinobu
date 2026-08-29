@@ -89,6 +89,33 @@ plan 0024 U11/R8 stands, only with scrollers:
   Trakt/AniList credential forms — is tall enough to take the scroll branch), but
   a short sheet with an input would need a `KeyboardAvoidingView` on the hugging
   branch.
+
+  **`bottomOffset` must clear what renders *under* the input, not just the
+  input** (2026-08-28). With `bottomOffset={24}` the auto-scroll parked the
+  focused tags field flush against the keyboard, which is exactly where its
+  suggestion chips and "Show more" toggle live — so the keyboard buried them
+  every time, and the user had to scroll by hand to see the tags they were
+  picking from. The offset is now 120: one collapsed chip row plus the toggle
+  (~90dp) plus margin. The extra offset is harmless for inputs with nothing
+  below them — the scroll clamps to the KeyboardAwareScrollView's own keyboard
+  padding.
+
+  **Do NOT "fix" this by growing the sheet instead** (2026-08-28). The obvious
+  better UX — add the keyboard height to the scroller's explicit `height` so
+  the bottom-anchored sheet lifts its whole form clear of the keyboard — was
+  built and reproducibly **segfaulted Fabric** on Android
+  (`SIGSEGV in facebook::react::ShadowNode::getTag`, reached from
+  `UIManager::findShadowNodeByTag_DEPRECATED` — keyboard-controller's
+  focused-input measurement racing the shadow tree). Resizing the subtree the
+  native `'content'` detent measures *while the keyboard event is in flight*
+  makes the sheet re-measure and re-snap mid-transaction; combined with
+  react-native-keyboard-controller's concurrent shadow-node lookups this
+  crashed the app within seconds of focusing the tags field, on two separate
+  attempts. The same crash signature also fired once with a main-equivalent
+  build while the IME process was force-restarted under a focused input, so
+  the underlying race is not ours — but resizing the sheet on keyboard
+  show/hide is a reliable trigger for it. The sheet's height must depend only
+  on its content; the keyboard may only ever move the *scroll offset*.
 - **iOS** keeps the plain `ScrollView`: its sheet host already moves with the
   keyboard, and a second compensation over-shoots.
 
