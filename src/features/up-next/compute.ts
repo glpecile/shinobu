@@ -88,6 +88,10 @@ function progressEntry(
 ): UpNextEntry | null {
   const next = input.nextEpisode;
   if (next == null) return null;
+  const behind =
+    input.episodesBehind != null && input.episodesBehind > 0
+      ? { episodesBehind: input.episodesBehind }
+      : {};
   if (next.firstAired == null) {
     if (input.nextEpisodeAiredByCount !== true) return null;
     return {
@@ -102,6 +106,7 @@ function progressEntry(
       },
       status: 'aired',
       source: input.source,
+      ...behind,
     };
   }
   if (!hasAired(next.firstAired, now)) return null;
@@ -119,6 +124,7 @@ function progressEntry(
     },
     status: 'aired',
     source: input.source,
+    ...behind,
   };
 }
 
@@ -219,15 +225,30 @@ function classifyAnilistEntry(
 
   if (airing == null) {
     if (total == null) return null;
-    return { ...base, status: 'aired' };
+    // Fully-aired run: everything past the user's progress is out.
+    return {
+      ...base,
+      status: 'aired',
+      episodesBehind: total - input.item.currentProgress,
+    };
   }
-  if (next < airing.episode) return { ...base, status: 'aired' };
+  if (next < airing.episode) {
+    // Aired-by-construction count: every episode below the pointer is out.
+    return {
+      ...base,
+      status: 'aired',
+      episodesBehind: airing.episode - 1 - input.item.currentProgress,
+    };
+  }
   if (next > airing.episode) return null;
 
+  const aired = hasAired(airing.airingAt, now);
   return {
     ...base,
     episode: { ...base.episode, firstAired: airing.airingAt },
-    status: hasAired(airing.airingAt, now) ? 'aired' : 'upcoming',
+    status: aired ? 'aired' : 'upcoming',
+    // At the pointer, the pointer's episode is the only aired-unwatched one.
+    ...(aired ? { episodesBehind: 1 } : {}),
   };
 }
 

@@ -73,6 +73,15 @@ interface UpNextEntryBase {
 export interface UpNextEpisodeEntry extends UpNextEntryBase {
   kind: 'episode';
   episode: UpNextEpisode;
+  /**
+   * Aired-but-unwatched episode count, when the source's own counts state it —
+   * derived from data every progress read already carries (Trakt's
+   * `aired`/completed keys, Simkl's `total - notAired - watched`, AniList's
+   * airing pointer), never a extra request. Absent when the source can't
+   * prove a count; ≥ 1 whenever present on an aired entry (the entry's own
+   * episode is one of them).
+   */
+  episodesBehind?: number;
 }
 
 /** A film release date: no episode to log, and none to fabricate. */
@@ -138,6 +147,8 @@ export interface ProgressUpNextInput {
    * on Trakt inputs: their null-instant exclusion is unchanged.
    */
   nextEpisodeAiredByCount?: boolean;
+  /** See `UpNextEpisodeEntry.episodesBehind` — carried onto the entry verbatim. */
+  episodesBehind?: number;
 }
 
 /**

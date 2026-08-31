@@ -1,12 +1,23 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
-import { List } from '@/components/List';
+import { List, type LegendListRef } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
+import {
+  SCROLL_TO_TOP_THRESHOLD,
+  ScrollToTopFab,
+} from '@/components/scroll-to-top-fab';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { Skeleton } from '@/components/skeleton';
 import { PROVIDER_DOT } from '@/features/trackers/provider-style';
@@ -660,6 +671,10 @@ export function DiaryList({
   onItemActions,
 }: DiaryListProps) {
   const [refreshing, setRefreshing] = useState(false);
+  const listRef = useRef<LegendListRef>(null);
+  // Whether the list is far enough down that "back to top" earns its pixels.
+  // Flipped only on threshold crossings, so scrolling doesn't re-render.
+  const [showScrollTop, setShowScrollTop] = useState(false);
   // Which episode clusters are open. Expansion is ephemeral view state that
   // lives here in the list (not in a recycled row), keyed by the cluster's
   // stable anchor id — unlike day-minimize, which persists across restarts.
@@ -709,87 +724,100 @@ export function DiaryList({
     return next == null || next.kind === 'header';
   }
 
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const past = event.nativeEvent.contentOffset.y > SCROLL_TO_TOP_THRESHOLD;
+    if (past !== showScrollTop) setShowScrollTop(past);
+  }
+
   return (
-    <List
-      data={items}
-      keyExtractor={(item) => item.key}
-      renderItem={({ item, index }) => {
-        switch (item.kind) {
-          case 'header':
-            return (
-              <DiaryDayHead
-                collapsed={item.collapsed}
-                count={item.count}
-                onToggle={() => toggleDay(item.dayKey)}
-                parts={item.parts}
-              />
-            );
-          case 'cluster':
-            return (
-              <DiaryClusterRow
-                clusterKey={item.cluster.key}
-                expanded={item.expanded}
-                last={isLastOfDay(index)}
-                onActions={onItemActions}
-                onToggle={toggleCluster}
-                view={item.view}
-              />
-            );
-          case 'child':
-            return (
-              <DiaryChildRow
-                entry={item.entry}
-                last={isLastOfDay(index)}
-                onActions={onItemActions}
-                onOpen={onOpen}
-                timeZone={timeZone}
-              />
-            );
-          default:
-            return (
-              <DiaryRow
-                entry={item.entry}
-                last={isLastOfDay(index)}
-                onActions={onItemActions}
-                onOpen={onOpen}
-                timeZone={timeZone}
-              />
-            );
+    <View className="flex-1">
+      <List
+        ref={listRef}
+        onScroll={handleScroll}
+        data={items}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item, index }) => {
+          switch (item.kind) {
+            case 'header':
+              return (
+                <DiaryDayHead
+                  collapsed={item.collapsed}
+                  count={item.count}
+                  onToggle={() => toggleDay(item.dayKey)}
+                  parts={item.parts}
+                />
+              );
+            case 'cluster':
+              return (
+                <DiaryClusterRow
+                  clusterKey={item.cluster.key}
+                  expanded={item.expanded}
+                  last={isLastOfDay(index)}
+                  onActions={onItemActions}
+                  onToggle={toggleCluster}
+                  view={item.view}
+                />
+              );
+            case 'child':
+              return (
+                <DiaryChildRow
+                  entry={item.entry}
+                  last={isLastOfDay(index)}
+                  onActions={onItemActions}
+                  onOpen={onOpen}
+                  timeZone={timeZone}
+                />
+              );
+            default:
+              return (
+                <DiaryRow
+                  entry={item.entry}
+                  last={isLastOfDay(index)}
+                  onActions={onItemActions}
+                  onOpen={onOpen}
+                  timeZone={timeZone}
+                />
+              );
+          }
+        }}
+        ListHeaderComponent={
+          failedProviders.length > 0 ? (
+            <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
+          ) : undefined
         }
-      }}
-      ListHeaderComponent={
-        failedProviders.length > 0 ? (
-          <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
-        ) : undefined
-      }
-      ListFooterComponent={
-        <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
-      }
-      // Rows come in three very different heights (~72 head, 66 entry, 36
-      // child). `getItemType` lets the virtualizer keep a running average per
-      // kind instead of one blended number, so a screenful of day heads
-      // doesn't mis-estimate the scroll extent of the entries below them.
-      // Deliberately hints, not `getFixedItemSize`: the geometry lives in the
-      // rows' class names and must not be duplicated here.
-      estimatedItemSize={66}
-      getItemType={(item) => item.kind}
-      onEndReached={hasNextPage ? onEndReached : undefined}
-      onEndReachedThreshold={0.6}
-      // The one list in the app that opts into recycling, and it is measured,
-      // not assumed: profiling a scroll over ~1,300 logs put a 332ms commit on
-      // the mount of a single screenful of rows — 45% of it in the
-      // gesture-handler pressable stack that every row re-creates from
-      // scratch. Recycling reuses those fibers instead. Safe here because
-      // every diary row derives from props: the poster resolves off the item
-      // id, day-collapse lives in MMKV and run-expansion in this component,
-      // never in a row. The one piece of row-local state is `ActionableRow`'s
-      // web hover flag, which can briefly show a stale ⋯ on a recycled row
-      // until the next pointer move.
-      // ponytail: revisit if hover ever drives anything but that button.
-      recycleItems
-      refreshControl={
-        <RefreshControl onRefresh={refresh} refreshing={refreshing} />
-      }
-    />
+        ListFooterComponent={
+          <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
+        }
+        // Rows come in three very different heights (~72 head, 66 entry, 36
+        // child). `getItemType` lets the virtualizer keep a running average per
+        // kind instead of one blended number, so a screenful of day heads
+        // doesn't mis-estimate the scroll extent of the entries below them.
+        // Deliberately hints, not `getFixedItemSize`: the geometry lives in the
+        // rows' class names and must not be duplicated here.
+        estimatedItemSize={66}
+        getItemType={(item) => item.kind}
+        onEndReached={hasNextPage ? onEndReached : undefined}
+        onEndReachedThreshold={0.6}
+        // The one list in the app that opts into recycling, and it is measured,
+        // not assumed: profiling a scroll over ~1,300 logs put a 332ms commit on
+        // the mount of a single screenful of rows — 45% of it in the
+        // gesture-handler pressable stack that every row re-creates from
+        // scratch. Recycling reuses those fibers instead. Safe here because
+        // every diary row derives from props: the poster resolves off the item
+        // id, day-collapse lives in MMKV and run-expansion in this component,
+        // never in a row. The one piece of row-local state is `ActionableRow`'s
+        // web hover flag, which can briefly show a stale ⋯ on a recycled row
+        // until the next pointer move.
+        // ponytail: revisit if hover ever drives anything but that button.
+        recycleItems
+        refreshControl={
+          <RefreshControl onRefresh={refresh} refreshing={refreshing} />
+        }
+      />
+      <ScrollToTopFab
+        onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
+        visible={showScrollTop}
+      />
+    </View>
   );
 }

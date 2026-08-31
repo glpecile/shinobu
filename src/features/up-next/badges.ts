@@ -27,7 +27,7 @@ export function isNewEpisode(entry: UpNextEntry, now: Date): boolean {
   return offset != null && offset <= 0 && offset > -NEW_EPISODE_WINDOW_DAYS;
 }
 
-/** Runtime, then New — the badge order the reference treatment uses. */
+/** Runtime, then behind-count, then New — the badge order the reference treatment uses. */
 export function continueWatchingBadges(
   entry: UpNextEntry,
   now: Date,
@@ -38,6 +38,10 @@ export function continueWatchingBadges(
   const episodeRuntime = entry.kind === 'episode' ? entry.episode.runtime : null;
   const runtime = episodeRuntime ?? entry.item.runtime;
   if (runtime != null && runtime > 0) badges.push({ label: `${runtime}m` });
+  // "Behind 1" is what the card already says by existing, so only a backlog of
+  // two or more is worth a pill.
+  const behind = entry.kind === 'episode' ? entry.episodesBehind : null;
+  if (behind != null && behind > 1) badges.push({ label: `${behind} behind` });
   if (isNewEpisode(entry, now)) badges.push({ label: 'New', tone: 'accent' });
   return badges;
 }
