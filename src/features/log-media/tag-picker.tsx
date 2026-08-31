@@ -230,15 +230,6 @@ function TagChip({
         // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
         accessibilityRole="button"
         accessibilityState={{ selected }}
-        // `rounded-full` on the *pressable*, not only on the chip box below
-        // it. pressto renders RNGH's `BaseButton`, and on Android that button
-        // masks its press ripple with its own border radius — zero by
-        // default, which drew a rectangle of highlight behind a pill
-        // (docs/solutions/android-ripple-ignores-child-radius.md). Masked to
-        // the pill the ripple lands under the chip's own opaque `bg-surface`
-        // layer, so the press reads as pressto's opacity dim: the chip's shape
-        // by construction, and the same feedback every other pressable gives.
-        className="rounded-full"
         onPress={onToggle}
       >
         {/* onLayout sits on the chip's own box, not the pressable: pressto's
