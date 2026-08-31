@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { calendarBadges, continueWatchingBadges, isNewEpisode } from './badges';
-import type { UpNextEntry, UpNextEpisode } from './types';
+import type { UpNextEntry, UpNextEpisode, UpNextEpisodeEntry } from './types';
 
 const NOW = new Date(2026, 6, 23, 20, 0);
 
@@ -25,7 +25,7 @@ const ITEM: NormalizedMediaItem = {
 function entry(
   episode: Partial<UpNextEpisode> = {},
   item: NormalizedMediaItem = ITEM,
-): UpNextEntry {
+): UpNextEpisodeEntry {
   return {
     kind: 'episode',
     id: 'trakt-1-s1e4',
@@ -124,5 +124,20 @@ describe('calendarBadges', () => {
     expect(calendarBadges(release, NOW)).toEqual([
       { label: 'Tomorrow', tone: 'accent' },
     ]);
+  });
+});
+
+describe('continueWatchingBadges — behind count', () => {
+  test('two or more aired-unwatched episodes get a behind pill', () => {
+    expect(
+      continueWatchingBadges({ ...entry(), episodesBehind: 3 }, NOW),
+    ).toContainEqual({ label: '3 behind' });
+  });
+
+  test('one behind is what the card already says by existing — no pill', () => {
+    expect(continueWatchingBadges({ ...entry(), episodesBehind: 1 }, NOW)).toEqual(
+      [],
+    );
+    expect(continueWatchingBadges(entry(), NOW)).toEqual([]);
   });
 });

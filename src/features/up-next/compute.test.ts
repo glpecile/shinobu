@@ -1625,3 +1625,82 @@ describe('calendarWeek — the week strip buckets (U8)', () => {
     expect(week[0].entries).toEqual([]);
   });
 });
+
+describe('episodesBehind', () => {
+  test('a progress input count rides onto its aired entry verbatim', () => {
+    const data = computeUpNext(
+      inputs({
+        progress: [
+          progressInput(
+            show(70),
+            { season: 1, number: 5, firstAired: localInstant(2026, 7, 20) },
+            { episodesBehind: 3 },
+          ),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 3 });
+  });
+
+  test('a non-positive count is dropped rather than rendered as zero', () => {
+    const data = computeUpNext(
+      inputs({
+        progress: [
+          progressInput(
+            show(71),
+            { season: 1, number: 5, firstAired: localInstant(2026, 7, 20) },
+            { episodesBehind: 0 },
+          ),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.continueWatching[0].kind).toBe('episode');
+    expect(
+      data.continueWatching[0].kind === 'episode'
+        ? data.continueWatching[0].episodesBehind
+        : null,
+    ).toBeUndefined();
+  });
+
+  test('AniList below the pointer: everything up to it has aired', () => {
+    // progress 5, next airing E10 → episodes 6..9 are out: 4 behind.
+    const data = computeUpNext(
+      inputs({
+        anilist: [
+          anilistInput(anime(72), {
+            nextAiring: { episode: 10, airingAt: localInstant(2026, 7, 30, 20) },
+            totalEpisodes: 12,
+          }),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 4 });
+  });
+
+  test('AniList with no pointer: the whole remaining run has aired', () => {
+    // progress 5 of 12, schedule exhausted → 7 behind.
+    const data = computeUpNext(
+      inputs({ anilist: [anilistInput(anime(73), { totalEpisodes: 12 })] }),
+      NOW,
+    );
+    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 7 });
+  });
+
+  test('AniList at an aired pointer: exactly the one episode behind', () => {
+    const data = computeUpNext(
+      inputs({
+        anilist: [
+          anilistInput(anime(74), {
+            nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 22, 20) },
+            totalEpisodes: 12,
+          }),
+        ],
+      }),
+      NOW,
+    );
+    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 1 });
+  });
+});

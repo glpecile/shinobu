@@ -126,11 +126,21 @@ async function traktInputs(
                 ),
               staleTime: SHOW_PROGRESS_STALE_MS,
             });
+            // Behind-count from the same response: `aired` minus completed
+            // keys — no extra request. Absent `aired` (pre-KTD4 cache) means
+            // no count, not zero.
+            const behind =
+              progress.aired != null
+                ? progress.aired - progress.watchedKeys.size
+                : null;
             return {
               item,
               source: 'trakt',
               ...(progress.nextEpisode != null
                 ? { nextEpisode: progress.nextEpisode }
+                : {}),
+              ...(behind != null && behind > 0
+                ? { episodesBehind: behind }
                 : {}),
             };
           } catch {
@@ -266,23 +276,33 @@ function simklPlannedLibrary(queryClient: QueryClient): Promise<SimklLibrary> {
 }
 
 /**
- * Whether the entry's own counts prove its `nextToWatch` pointer aired: the
- * user has watched fewer episodes than have aired (`total - notAired`), so the
- * next unwatched one is out by arithmetic — no instant needed. This is the
- * null-date pointer's only path to "aired": a caught-up show whose undated
- * next episode is genuinely in the future computes `watched === aired` here
- * and stays excluded, exactly like Trakt's null-instant rule.
+ * Aired-but-unwatched count from the snapshot's own fields (`total - notAired
+ * - watched`), or null when the counts are absent — the arithmetic both the
+ * aired-by-count gate and the behind badge read.
  */
-function simklAiredByCount(entry: SimklLibraryEntry): boolean {
+function simklEpisodesBehind(entry: SimklLibraryEntry): number | null {
   const total = entry.item.totalEpisodes;
   const notAired = entry.notAiredEpisodes;
-  if (total == null || notAired == null) return false;
-  return entry.item.currentProgress < total - notAired;
+  if (total == null || notAired == null) return null;
+  return total - notAired - entry.item.currentProgress;
+}
+
+/**
+ * Whether the entry's own counts prove its `nextToWatch` pointer aired: the
+ * user has watched fewer episodes than have aired, so the next unwatched one
+ * is out by arithmetic — no instant needed. This is the null-date pointer's
+ * only path to "aired": a caught-up show whose undated next episode is
+ * genuinely in the future computes behind 0 here and stays excluded, exactly
+ * like Trakt's null-instant rule.
+ */
+function simklAiredByCount(entry: SimklLibraryEntry): boolean {
+  return (simklEpisodesBehind(entry) ?? 0) > 0;
 }
 
 function simklProgressInput(entry: SimklLibraryEntry): ProgressUpNextInput {
   const next = entry.nextToWatch;
   if (next == null) return { item: entry.item, source: 'simkl' };
+  const behind = simklEpisodesBehind(entry);
   return {
     item: entry.item,
     source: 'simkl',
@@ -297,6 +317,7 @@ function simklProgressInput(entry: SimklLibraryEntry): ProgressUpNextInput {
     ...(next.date == null && simklAiredByCount(entry)
       ? { nextEpisodeAiredByCount: true }
       : {}),
+    ...(behind != null && behind > 0 ? { episodesBehind: behind } : {}),
   };
 }
 
