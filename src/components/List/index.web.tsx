@@ -1,7 +1,12 @@
-import { LegendList, type LegendListProps } from '@legendapp/list/react-native';
-import type { ReactElement } from 'react';
+import {
+  LegendList,
+  type LegendListProps,
+  type LegendListRef,
+} from '@legendapp/list/react-native';
+import type { ReactElement, Ref } from 'react';
 
-export type ListProps<T> = LegendListProps<T>;
+export type ListProps<T> = LegendListProps<T> & { ref?: Ref<LegendListRef> };
+export type { LegendListRef } from '@legendapp/list/react-native';
 
 /**
  * Web variant: Legend List forwards unrecognized ScrollView props onto a DOM

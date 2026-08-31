@@ -1,12 +1,20 @@
-import { LegendList, type LegendListProps } from '@legendapp/list/react-native';
-import type { ReactElement } from 'react';
+import {
+  LegendList,
+  type LegendListProps,
+  type LegendListRef,
+} from '@legendapp/list/react-native';
+import type { ReactElement, Ref } from 'react';
 
 /**
  * The one allowed Legend List import in the app (AGENTS.md, .oxlintrc.json).
  * Screens never touch `@legendapp/list` directly; if web ever needs a different
  * virtualizer, swap in `components/List/index.web.tsx` without touching callers.
+ * `ref` is declared explicitly (React 19 delivers it in props, so the spread
+ * already forwards it) — it reaches Legend List's imperative handle
+ * (`scrollToOffset` and friends).
  */
-export type ListProps<T> = LegendListProps<T>;
+export type ListProps<T> = LegendListProps<T> & { ref?: Ref<LegendListRef> };
+export type { LegendListRef } from '@legendapp/list/react-native';
 
 /**
  * `recycleItems` is defaulted here rather than left unset: Legend List warns on
