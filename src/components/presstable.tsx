@@ -14,6 +14,27 @@ import { withUniwind } from 'uniwind';
  */
 const PRESS_DEBOUNCE_MS = 500;
 
+/**
+ * Android only, and the reason it's here rather than at a call site: pressto
+ * renders RNGH's `BaseButton`, which on Android carries the platform's
+ * `selectableItemBackground` ripple. That ripple is masked by the *button's*
+ * own border radius — zero unless someone repeats the child's radius on the
+ * pressable — so it paints a rectangle of highlight behind whatever rounded
+ * thing the pressable actually wraps
+ * (docs/solutions/android-ripple-ignores-child-radius.md).
+ *
+ * Nobody asked for it. The app's press feedback is pressto's own opacity dim
+ * and scale, which are the shape of the content by construction and identical
+ * on iOS and web. Turning the ripple off is one line here instead of a
+ * `rounded-*` duplicated onto every pressable in the app and kept in sync with
+ * its child's radius forever — drift lint can't catch.
+ *
+ * `transparent` and not `undefined`: RNGH skips building the drawable entirely
+ * for a transparent ripple (`createSelectableDrawable`), where `undefined`
+ * means "use the theme's". Still overridable per pressable.
+ */
+const RIPPLE_COLOR = 'transparent';
+
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
@@ -36,7 +57,13 @@ export function PresstableScale({
   ...rest
 }: ComponentProps<typeof UniwindPressableScale>) {
   const debouncedPress = useDebouncedPress(onPress);
-  return <UniwindPressableScale {...rest} onPress={debouncedPress} />;
+  return (
+    <UniwindPressableScale
+      rippleColor={RIPPLE_COLOR}
+      {...rest}
+      onPress={debouncedPress}
+    />
+  );
 }
 
 /** Dims while pressed — buttons, icon taps, inline text actions. */
@@ -45,5 +72,11 @@ export function PresstableOpacity({
   ...rest
 }: ComponentProps<typeof UniwindPressableOpacity>) {
   const debouncedPress = useDebouncedPress(onPress);
-  return <UniwindPressableOpacity {...rest} onPress={debouncedPress} />;
+  return (
+    <UniwindPressableOpacity
+      rippleColor={RIPPLE_COLOR}
+      {...rest}
+      onPress={debouncedPress}
+    />
+  );
 }
