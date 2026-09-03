@@ -49,3 +49,29 @@ Applies to plan 0020 (release notifications) — `features/notifications/schedul
 were fixed after initially landing as bare, non-split files that pulled
 `expo-notifications`/`expo-task-manager`/`expo-background-task` into the web
 bundle — see `docs/solutions/expo-notifications-foreground-handler.md`).
+
+## Addendum (2026-09-03): the bare file and the native file must share an extension
+
+`notifications-runtime/` shipped as `index.ts` (no-op) + `index.native.tsx`
+(real runtime) and Metro **served the no-op on Android and iOS** from
+2026-07-24 until this fix. `metro-resolver` walks `sourceExts` in order and,
+for *each* extension, tries `index.<platform>.<ext>`, `index.native.<ext>`,
+then `index.<ext>` (`resolveSourceFileForAllExts` in `resolve.js`). With
+`.ts` ahead of `.tsx`, `index.ts` matches before `index.native.tsx` is ever
+considered. Nothing warns: the bundle loads, the component renders `null`.
+
+Effect here: no foreground refresh, no background-task registration, no
+foreground notification handler. The only refresh that ever ran was the one
+`handleToggle` fires when the toggle is enabled, so the batch covered seven
+days and then went silent — "notifications stopped lately".
+
+Rule: `index.<ext>` and `index.native.<ext>` use the **same** extension. Check
+with
+
+```
+for d in $(find src -name 'index.native.*' -exec dirname {} \; | sort -u); do ls "$d"; done
+```
+
+Verified on the runtime by listing Metro's module table (`__r.getModules()`
+verbose names): before, `notifications-runtime/index.ts` was initialised;
+after the rename to `index.tsx`, `index.native.tsx` is.
