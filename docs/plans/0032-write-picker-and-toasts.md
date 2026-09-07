@@ -141,7 +141,7 @@ work there.
   boundary the design respects, not a defect to work around.
 - R8. `burnt` is never imported directly (oxlint-enforced, the same wrapper rule
   the repo applies to `@legendapp/list`, `torph/react`, `@nandorojo/galeria`,
-  `cnfast` and `expo-image`). One `lib/toast.ts` exposes the app's vocabulary —
+  `cn` and `expo-image`). One `lib/toast.ts` exposes the app's vocabulary —
   `toast.success(title, message?)`, `toast.error(...)` — so the library is one
   file's problem and copy stays consistent.
 - R9. Both write paths use the toast. `LogMediaButton`'s and `LogConfirmSheet`'s
