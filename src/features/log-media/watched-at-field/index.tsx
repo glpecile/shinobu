@@ -5,6 +5,8 @@ import { Platform, Text, View } from 'react-native';
 import { PresstableOpacity } from '@/components/presstable';
 import { haptics } from '@/lib/haptics';
 
+import { fromPickerValue, toPickerValue } from './android-utc-day';
+
 export interface WatchedAtFieldProps {
   /** null = "just now" — the mutation omits watchedAt and Trakt records now. */
   value: Date | null;
@@ -67,10 +69,19 @@ export function WatchedAtField({ value, onChange }: WatchedAtFieldProps) {
           onValueChange={(_event, date) => {
             // Android's dialog is one-shot (confirm/cancel unmounts it); the
             // iOS spinner stays inline until the row is tapped again.
-            if (Platform.OS === 'android') setOpen(false);
-            onChange(date);
+            if (Platform.OS !== 'android') {
+              onChange(date);
+              return;
+            }
+            setOpen(false);
+            // Compose reports the day as UTC midnight; see android-utc-day.ts.
+            onChange(fromPickerValue(date));
           }}
-          value={value ?? new Date()}
+          value={
+            Platform.OS === 'android'
+              ? toPickerValue(value ?? new Date())
+              : (value ?? new Date())
+          }
         />
       )}
     </View>
