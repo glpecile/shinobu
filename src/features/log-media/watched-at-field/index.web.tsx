@@ -25,10 +25,10 @@ function toInputValue(date: Date): string {
 export function WatchedAtField({ value, onChange }: WatchedAtFieldProps) {
   const today = toInputValue(new Date());
   return (
-    <View className="mt-4 flex-row items-center justify-between border border-border rounded px-4 py-3">
+    <View className="mt-4 flex-row items-center justify-between border border-border rounded-full px-4 py-3">
       <Text className="text-muted font-sans text-sm">Watched on</Text>
       <input
-        className="bg-surface text-foreground font-sans text-sm border border-border rounded px-2 py-1"
+        className="bg-surface text-foreground font-sans text-sm border border-border rounded-full px-2 py-1"
         max={today}
         onChange={(event) => {
           const raw = event.target.value;

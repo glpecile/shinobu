@@ -226,7 +226,7 @@ export function ConnectSimklButton() {
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded-md font-sans"
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
               onSubmitEditing={() => submitClientId()}

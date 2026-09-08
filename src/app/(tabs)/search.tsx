@@ -336,8 +336,8 @@ export default function SearchScreen() {
         <View
           className={
             focused
-              ? 'flex-1 flex-row items-center border bg-surface rounded-md border-accent'
-              : 'flex-1 flex-row items-center border bg-surface rounded-md border-border'
+              ? 'flex-1 flex-row items-center border bg-surface rounded-full border-accent'
+              : 'flex-1 flex-row items-center border bg-surface rounded-full border-border'
           }
         >
           <TextInput

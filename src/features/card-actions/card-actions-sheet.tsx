@@ -317,7 +317,7 @@ export function CardActionsSheet({
           </View>
 
           <PresstableOpacity
-            className="flex-row items-center gap-3 rounded px-5 py-3 border border-border"
+            className="flex-row items-center gap-3 rounded-full px-5 py-3 border border-border"
             onPress={() => {
               onClose();
               pushRoute(routes.details(item.id));
@@ -338,7 +338,7 @@ export function CardActionsSheet({
           ))}
           {canHide && (
             <PresstableOpacity
-              className="flex-row items-center gap-3 rounded px-5 py-3 mt-2 border border-border"
+              className="flex-row items-center gap-3 rounded-full px-5 py-3 mt-2 border border-border"
               onPress={() => {
                 haptics.confirm();
                 hideItem({ id: item.id, title: item.title });

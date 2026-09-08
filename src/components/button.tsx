@@ -98,7 +98,7 @@ export interface ButtonProps {
   icon?: ReactNode;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** `rounded` (default, 8px) or `pill` — a fully-round hero/onboarding CTA. */
+  /** `pill` (default, fully round — owner decision 2026-09-08) or `rounded` (8px). */
   shape?: ButtonShape;
   /**
    * Shows a spinner, swaps in `loadingLabel`, and blocks the press. Every
@@ -156,7 +156,7 @@ export function Button({
   icon,
   variant = 'primary',
   size = 'md',
-  shape = 'rounded',
+  shape = 'pill',
   loading = false,
   loadingLabel,
   disabled = false,

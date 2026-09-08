@@ -75,20 +75,19 @@ plan 0024 U11/R8 stands, only with scrollers:
 - **Android** uses `components/keyboard-aware-scroll-view` (the withUniwind'd
   `KeyboardAwareScrollView`) on the overflow branch: once a tall sheet is pinned
   at the cap, its bottom padding is what gives the focused field somewhere to
-  scroll to. **`scrollEnabled` must also flip on while the keyboard is visible**
-  (2026-08-17): edge-to-edge Android never resizes the window for the soft
-  keyboard, so `maxHeight` — derived from `useWindowDimensions` — still
-  describes the full screen while the keyboard covers the sheet's lower half. A
-  sheet whose content "fits" therefore kept `scrollEnabled: false`, and the
-  KeyboardAwareScrollView had no way to bring the focused tags field or the
-  confirm buttons out from behind the keyboard. The sheet now ORs
-  `useKeyboardState((s) => s.isVisible)` into the Android branch's
-  `scrollEnabled`. **Known gap:** a *short* sheet now has no scroller at all, so it no
-  longer grows to lift itself clear of the Android keyboard. Nothing ships in
-  that shape today (every sheet with a text field — the log sheet's tags, the
-  Trakt/AniList credential forms — is tall enough to take the scroll branch), but
-  a short sheet with an input would need a `KeyboardAvoidingView` on the hugging
-  branch.
+  scroll to. **The Android scroller is always `scrollEnabled`** (2026-09-08),
+  regardless of whether the content overflows the cap. keyboard-controller
+  resolves the focused input's parent scroll view *natively, at focus time*
+  (`EditText.parentScrollViewTarget`) and only accepts a `ReactScrollView`
+  whose `scrollEnabled` is already true; with any JS-side gate the lookup runs
+  before React can flip the prop, returns -1, and `maybeScroll` bails on the
+  target mismatch. The previous fix (ORing `useKeyboardState().isVisible` into
+  `scrollEnabled`, 2026-08-17) lost that exact race: the field only came into
+  view once typing re-emitted the input's layout event. An always-enabled
+  scroller costs nothing on Android — `android.widget.ScrollView` never
+  intercepts a drag while it can't scroll, so a short sheet stays
+  draggable-to-dismiss (verified on the Pixel AVD). iOS keeps the metrics gate:
+  its plain `ScrollView` has no such native lookup and does swallow the drag.
 
   **`bottomOffset` must clear what renders *under* the input, not just the
   input** (2026-08-28). With `bottomOffset={24}` the auto-scroll parked the

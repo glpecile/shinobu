@@ -132,7 +132,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         className={cn(
-          'flex-row items-center justify-between rounded-lg border px-4 py-3',
+          'flex-row items-center justify-between rounded-full border px-4 py-3',
           expanded ? 'border-accent bg-accent/5' : 'border-border bg-surface',
         )}
         onPress={() => setExpanded(!expanded)}

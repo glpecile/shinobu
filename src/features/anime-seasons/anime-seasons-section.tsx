@@ -9,7 +9,6 @@ import { toast } from '@/lib/toast';
 import type { ProviderId } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
 import {
-  confirmLabelFor,
   LogConfirmSheet,
 } from '@/features/log-media/log-confirm-sheet';
 import { useLogMedia } from '@/features/log-media/use-log-media';
@@ -252,7 +251,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       />
 
       <LogConfirmSheet
-        confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}
+        confirmLabel="Mark as watched"
         description={pending?.description ?? ''}
         item={item}
         logMedia={logMedia}

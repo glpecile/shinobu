@@ -70,16 +70,10 @@ export function EmptyStateTile({
         // it stole that width from the label, which is why the Home CTA wrapped
         // "Connect your trackers" onto three lines on a phone. Size owns the
         // padding.
-        //
-        // The hero CTA is a pill (owner decision, 2026-07-27): at hero scale a
-        // rounded rectangle reads as a crimson banner under the display
-        // headline, where round ends read as a control. In-list tiles keep the
-        // app's normal button radius.
         <Button
           className={hero ? 'mt-8' : 'mt-5'}
           label={cta.label}
           onPress={cta.onPress}
-          shape={hero ? 'pill' : 'rounded'}
           size={hero ? 'md' : 'sm'}
         />
       )}

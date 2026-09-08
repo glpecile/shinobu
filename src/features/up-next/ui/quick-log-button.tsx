@@ -6,7 +6,6 @@ import { useCSSVariable } from 'uniwind';
 
 import { PresstableScale } from '@/components/presstable';
 import {
-  confirmLabelFor,
   LogConfirmSheet,
 } from '@/features/log-media/log-confirm-sheet';
 import { parseTags } from '@/features/log-media/parse-tags';
@@ -179,10 +178,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
       </PresstableScale>
 
       <LogConfirmSheet
-        confirmLabel={confirmLabelFor(
-          `Log episode ${entry.episode.number}`,
-          selectedProviders,
-        )}
+        confirmLabel={`Log episode ${entry.episode.number}`}
         description={`Log episode ${entry.episode.number} of “${entry.item.title}”.`}
         item={entry.item}
         logMedia={logMedia}

@@ -10,8 +10,6 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 
-import { useKeyboardState } from 'react-native-keyboard-controller';
-
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 
 import { sheetScrollMetrics } from './metrics';
@@ -131,13 +129,6 @@ function SheetContent({ children }: { children: ReactNode }) {
   }
 
   const { height, scrollEnabled } = sheetScrollMetrics(contentHeight, maxHeight);
-  // Android edge-to-edge never resizes the window for the soft keyboard, so
-  // `maxHeight` still describes the full screen while the keyboard covers the
-  // sheet's lower half. A sheet that "fits" therefore kept scrollEnabled=false,
-  // which left the KeyboardAwareScrollView unable to bring the focused field —
-  // or the confirm buttons — out from behind the keyboard. Scroll must be
-  // allowed whenever the keyboard is up, not only past the height cap.
-  const keyboardVisible = useKeyboardState((state) => state.isVisible);
   const body = (
     <View className={CONTENT_PADDING} onLayout={measure}>
       {children}
@@ -150,12 +141,20 @@ function SheetContent({ children }: { children: ReactNode }) {
   // the plain scroller, deliberately — its sheet host already moves with the
   // keyboard, and a second compensation would over-shoot. `EXPO_OS` is inlined
   // at build time, so this branch is constant per platform and never remounts.
+  //
+  // The Android scroller is *always* enabled, not gated on `scrollEnabled`:
+  // keyboard-controller resolves the focused input's parent scroll view
+  // natively at focus time and only accepts a ReactScrollView whose
+  // `scrollEnabled` is already true. Gating on the keyboard being visible
+  // (the previous fix) always lost that race — the first scroll into view
+  // only happened once typing re-measured the input. A short sheet stays
+  // draggable-to-dismiss regardless: Android's ScrollView never intercepts a
+  // drag while it can't scroll (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md).
   const scroller =
     process.env.EXPO_OS === 'android' ? (
       <KeyboardAwareScrollView
         bottomOffset={BOTTOM_OFFSET}
         keyboardShouldPersistTaps="handled"
-        scrollEnabled={scrollEnabled || keyboardVisible}
       >
         {body}
       </KeyboardAwareScrollView>
