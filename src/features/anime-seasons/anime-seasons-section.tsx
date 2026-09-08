@@ -28,10 +28,20 @@ import {
   useAniListEntryStateQuery,
   useSuspenseAniListEpisodesQuery,
 } from '@/state/queries/anilist';
-import { useAniZipEpisodeMapQuery } from '@/state/queries/mapping';
+import {
+  EpisodeActionsSheet,
+  type EpisodePointer,
+} from '@/features/episode-details';
+import { usePushRoute } from '@/lib/navigation';
+import { placeInLayout } from '@/lib/providers/mapping/season-layout';
+import { routes } from '@/lib/routes';
+import {
+  useAniZipEpisodeMapQuery,
+  useSeasonLayoutQuery,
+} from '@/state/queries/mapping';
 import { useConnectedProviders } from '@/state/session';
 import { canonicalSeasonTitle } from './season-label';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 function SeasonsSkeleton() {
   return (
@@ -92,6 +102,34 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const labelled =
     canonicalTitle == null ? season : { ...season, title: canonicalTitle };
 
+  // Episode screen + sheet for an anime row: the row is entry-relative, the
+  // episode surfaces are TMDB-numbered, so each tap places the row's ani.zip
+  // mapping on TMDB's season layout — the same arbiter the log fan-out uses
+  // (plan 0027, `placeInLayout`). Needs the TMDB id the details screen's
+  // catalogue merge put on `item`; without it (or an unmapped row) the tap
+  // says why instead of opening a screen that can't load.
+  const pushRoute = usePushRoute();
+  const tmdbId = item.externalIds.tmdb;
+  const { data: layout } = useSeasonLayoutQuery({ tmdb: tmdbId });
+  const [pressed, setPressed] = useState<{
+    entryNumber: number;
+    pointer: EpisodePointer;
+  } | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
+
+  function placeRow(episode: NormalizedEpisode): EpisodePointer | null {
+    const row = episodeMap?.get(episode.number);
+    const placed = row == null ? null : placeInLayout(layout, row);
+    if (tmdbId == null || placed == null) {
+      toast.error(
+        'Episode details unavailable',
+        "This episode isn't mapped to TMDB's numbering yet.",
+      );
+      return null;
+    }
+    return { ...placed, episode };
+  }
+
   function openLog(next: PendingLog) {
     if (!canLog) return;
     haptics.selection();
@@ -147,6 +185,27 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       <SeasonAccordion
         season={labelled}
         watched={watched}
+        onEpisodeActions={
+          tmdbId == null
+            ? undefined
+            : (_s, episode) => {
+                const pointer = placeRow(episode);
+                if (pointer == null) return;
+                haptics.selection();
+                setPressed({ entryNumber: episode.number, pointer });
+                setActionsOpen(true);
+              }
+        }
+        onOpenEpisode={
+          tmdbId == null
+            ? undefined
+            : (_s, episode) => {
+                const pointer = placeRow(episode);
+                if (pointer != null) {
+                  pushRoute(routes.episode(item.id, pointer.season, pointer.number));
+                }
+              }
+        }
         onMarkEpisode={(_s, episode) =>
           openLog({
             title: 'Mark episode as watched',
@@ -172,6 +231,24 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
             entryEpisodes: aired.map((episode) => episode.number),
           });
         }}
+      />
+
+      <EpisodeActionsSheet
+        item={item}
+        onClose={() => setActionsOpen(false)}
+        onMark={() => {
+          if (pressed == null) return;
+          setActionsOpen(false);
+          const { episode } = pressed.pointer;
+          openLog({
+            title: 'Mark episode as watched',
+            description: `“${item.title}” — E${episode.number}: ${episode.title}`,
+            entryEpisodes: [pressed.entryNumber],
+          });
+        }}
+        open={actionsOpen}
+        pointer={pressed?.pointer ?? null}
+        watched={pressed != null && watched.has(`1-${pressed.entryNumber}`)}
       />
 
       <LogConfirmSheet

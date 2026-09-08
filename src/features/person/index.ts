@@ -1,4 +1,9 @@
 export { personMetaLine, yearsBetween } from './meta-line';
+export {
+  PeopleRailSkeleton,
+  PeopleSection,
+  PeopleSectionsSkeleton,
+} from './people-section';
 export { PersonAvatar } from './person-avatar';
 export {
   creditRoleLine,

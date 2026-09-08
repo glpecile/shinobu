@@ -2,6 +2,7 @@ import type {
   NormalizedCastMember,
   NormalizedCompany,
   NormalizedCrewMember,
+  NormalizedEpisode,
   NormalizedMediaItem,
   NormalizedPerson,
   NormalizedStudio,
@@ -501,11 +502,12 @@ function tmdbPersonId(id: number): string {
 
 function normalizeCastEntries(
   entries: Array<TmdbPersonRef & { characters: string[] }>,
+  limit: number = CAST_LIMIT,
 ): NormalizedCastMember[] {
   return entries
     .filter((entry) => entry.name != null && entry.name !== '')
     .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
-    .slice(0, CAST_LIMIT)
+    .slice(0, limit)
     .map((entry) => ({
       id: tmdbPersonId(entry.id),
       name: entry.name ?? '',
@@ -650,6 +652,95 @@ export function normalizeTvCatalogue(
       })),
     ),
     studios: normalizeCompanies(raw.production_companies),
+  };
+}
+
+// ---- Episode pages ----
+
+/** `/tv/{id}/season/{s}/episode/{e}?append_to_response=credits`. */
+export interface TmdbEpisodeResponse {
+  episode_number?: number | null;
+  name?: string | null;
+  overview?: string | null;
+  /** Bare calendar date — TMDB carries no air *time*. */
+  air_date?: string | null;
+  runtime?: number | null;
+  still_path?: string | null;
+  vote_average?: number | null;
+  /** Top-level guest list, present even without the credits append. */
+  guest_stars?: TmdbMovieCastEntry[] | null;
+  crew?: TmdbMovieCrewEntry[] | null;
+  credits?: {
+    /** The series regulars credited on this episode. */
+    cast?: TmdbMovieCastEntry[] | null;
+    guest_stars?: TmdbMovieCastEntry[] | null;
+    crew?: TmdbMovieCrewEntry[] | null;
+  } | null;
+}
+
+/** What one episode call yields for the episode screen and its sheet. */
+export interface TmdbEpisodeDetails {
+  episode: NormalizedEpisode;
+  /** Wide still (`w780`); '' when TMDB has none. */
+  still: string;
+  /** Community rating on a 0–10 scale; absent when unrated. */
+  rating?: number;
+  /** Regulars first, then guest stars — the people actually in this episode. */
+  cast: NormalizedCastMember[];
+  crew: NormalizedCrewMember[];
+}
+
+/**
+ * An episode credits both regulars and guests, and the guests are the part
+ * worth reading on an episode page, so the cast cap is wider than a title's
+ * `CAST_LIMIT` and guest stars sort after the regulars (their own `order`
+ * restarts at 0, so it is offset rather than interleaved).
+ */
+const EPISODE_CAST_LIMIT = 30;
+const GUEST_ORDER_OFFSET = 1_000;
+
+export function normalizeTvEpisode(
+  raw: TmdbEpisodeResponse,
+  fallbackNumber: number,
+): TmdbEpisodeDetails {
+  const number = raw.episode_number ?? fallbackNumber;
+  const regulars = raw.credits?.cast ?? [];
+  const guests = raw.credits?.guest_stars ?? raw.guest_stars ?? [];
+  const seen = new Set(regulars.map((entry) => entry.id));
+  const cast = normalizeCastEntries(
+    [
+      ...regulars.map((entry) => ({ ...entry, characters: [entry.character ?? ''] })),
+      ...guests
+        .filter((entry) => !seen.has(entry.id))
+        .map((entry) => ({
+          ...entry,
+          order: (entry.order ?? 0) + GUEST_ORDER_OFFSET,
+          characters: [entry.character ?? ''],
+        })),
+    ],
+    EPISODE_CAST_LIMIT,
+  );
+  const crew = normalizeCrewEntries(
+    (raw.credits?.crew ?? raw.crew ?? []).map((entry) => ({
+      ...entry,
+      department: entry.department ?? '',
+      jobs: [entry.job ?? ''],
+    })),
+  );
+  return {
+    episode: {
+      number,
+      title: raw.name || `Episode ${number}`,
+      ...(raw.overview != null && raw.overview !== '' ? { overview: raw.overview } : {}),
+      ...(raw.air_date != null && raw.air_date !== '' ? { firstAired: raw.air_date } : {}),
+      ...(raw.runtime != null ? { runtime: raw.runtime } : {}),
+    },
+    still: tmdbImageUrl(raw.still_path, 'w780'),
+    ...(raw.vote_average != null && raw.vote_average > 0
+      ? { rating: raw.vote_average }
+      : {}),
+    cast,
+    crew,
   };
 }
 

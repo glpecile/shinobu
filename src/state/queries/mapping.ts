@@ -235,15 +235,9 @@ export function useAniZipEpisodeMapQuery(anilistId: number | undefined) {
  * gains episodes, and a show TMDB hasn't split yet may get split later.
  * `null` when neither source can answer → the log skips with a reason.
  */
-export function cachedSeasonLayout(
-  queryClient: QueryClient,
-  ids: { tmdb?: number; trakt?: number },
-): Promise<SeasonLayout | null> {
-  const tmdbId = ids.tmdb;
-  const traktId = ids.trakt;
-  if (tmdbId == null && traktId == null) return Promise.resolve(null);
+function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | undefined) {
   const via = seasonLayoutVia();
-  return queryClient.fetchQuery({
+  return {
     queryKey: mappingQueryKeys.seasonLayout(tmdbId ?? null, traktId ?? null, via),
     queryFn: async (): Promise<SeasonLayout | null> => {
       if (tmdbId != null) {
@@ -272,6 +266,29 @@ export function cachedSeasonLayout(
     },
     staleTime: EPISODE_MAP_STALE_MS,
     gcTime: EPISODE_MAP_STALE_MS,
+  };
+}
+
+export function cachedSeasonLayout(
+  queryClient: QueryClient,
+  ids: { tmdb?: number; trakt?: number },
+): Promise<SeasonLayout | null> {
+  const tmdbId = ids.tmdb;
+  const traktId = ids.trakt;
+  if (tmdbId == null && traktId == null) return Promise.resolve(null);
+  return queryClient.fetchQuery(seasonLayoutQueryOptions(tmdbId, traktId));
+}
+
+/**
+ * The same layout as a hook, for the anime accordion: it places each row's
+ * ani.zip mapping on the tracker's numbering *before* a tap, so the episode
+ * screen and sheet open on the season/episode TMDB actually has. Shares the
+ * cache entry with the fan-out's `cachedSeasonLayout`.
+ */
+export function useSeasonLayoutQuery(ids: { tmdb?: number | undefined; trakt?: number | undefined }) {
+  return useQuery({
+    ...seasonLayoutQueryOptions(ids.tmdb, ids.trakt),
+    enabled: ids.tmdb != null || ids.trakt != null,
   });
 }
 

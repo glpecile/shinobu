@@ -11,6 +11,7 @@ import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import {
   getPerson,
   getStudio,
+  getTvEpisode,
   searchCompany,
   searchPerson,
   searchTitles,
@@ -49,6 +50,9 @@ export const tmdbQueryKeys = {
    *  leg of `state/queries/show-seasons.ts`. */
   seasons: (tmdbId: number) =>
     [...tmdbQueryKeys.all, 'seasons', tmdbId] as const,
+  /** One episode's still, rating and credits (`getTvEpisode`). */
+  episode: (tmdbId: number, season: number, number: number) =>
+    [...tmdbQueryKeys.all, 'episode', tmdbId, season, number] as const,
   /** Derived from SEARCH_QUERY_ROOTS so the details cache scan finds results. */
   search: (query: string) => [...SEARCH_QUERY_ROOTS.tmdb, query] as const,
 };
@@ -84,6 +88,51 @@ export function useTmdbPersonQuery(params: {
       Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: tmdbId as number })),
     enabled: tmdbId != null && params.enabled !== false,
     staleTime: PERSON_STALE_TIME_MS,
+  });
+}
+
+function episodeQueryOptions(params: {
+  tmdbId: number;
+  season: number;
+  number: number;
+}) {
+  return {
+    queryKey: tmdbQueryKeys.episode(params.tmdbId, params.season, params.number),
+    queryFn: () => Effect.runPromise(getTvEpisode(tmdbDeps(), params)),
+    // Credits and stills for an aired episode don't move — same budget as a
+    // person page, so sheet → screen → back costs one request, not three.
+    staleTime: PERSON_STALE_TIME_MS,
+  };
+}
+
+/** Still + rating + credits for the episode screen's credit sections. */
+export function useSuspenseTmdbEpisodeQuery(params: {
+  tmdbId: number;
+  season: number;
+  number: number;
+}) {
+  return useSuspenseQuery(episodeQueryOptions(params));
+}
+
+/**
+ * The non-suspending sibling: the episode sheet and the screen header render
+ * instantly from the seasons list they were opened from and sharpen (still,
+ * TMDB overview) when this answers. Same key as the suspense read.
+ */
+export function useTmdbEpisodeQuery(params: {
+  tmdbId: number | undefined;
+  season: number;
+  number: number;
+  enabled?: boolean;
+}) {
+  const { tmdbId } = params;
+  return useQuery({
+    ...episodeQueryOptions({
+      tmdbId: tmdbId ?? 0,
+      season: params.season,
+      number: params.number,
+    }),
+    enabled: tmdbId != null && params.enabled !== false,
   });
 }
 

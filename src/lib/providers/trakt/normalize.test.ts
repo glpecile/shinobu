@@ -308,9 +308,9 @@ describe('normalizeWatchedProgress', () => {
     const progress: TraktShowProgress = {
       seasons: [
         { number: 1, episodes: [
-          { number: 1, completed: true },
+          { number: 1, completed: true, last_watched_at: '2026-09-01T20:00:00.000Z' },
           { number: 2, completed: 1 },
-          { number: 3, completed: false },
+          { number: 3, completed: false, last_watched_at: '2026-09-02T20:00:00.000Z' },
         ] },
         { number: 2, episodes: [
           { number: 1, completed: 0 },
@@ -318,9 +318,10 @@ describe('normalizeWatchedProgress', () => {
         ] },
       ],
     };
-    expect(normalizeWatchedProgress(progress).watchedKeys).toEqual(
-      new Set(['1-1', '1-2', '2-2']),
-    );
+    const result = normalizeWatchedProgress(progress);
+    expect(result.watchedKeys).toEqual(new Set(['1-1', '1-2', '2-2']));
+    // The instant rides along only for completed episodes with one.
+    expect(result.lastWatchedAt).toEqual({ '1-1': '2026-09-01T20:00:00.000Z' });
   });
 
   test('empty / missing seasons yield an empty set', () => {
