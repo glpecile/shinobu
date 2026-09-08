@@ -16,12 +16,22 @@ import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
 import type { ProviderId } from '@/lib/providers/types';
-import type { NormalizedMediaItem } from '@/types/media';
+import type {
+  NormalizedEpisode,
+  NormalizedMediaItem,
+  NormalizedSeason,
+} from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { confirmLabelFor, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
+import {
+  EpisodeActionsSheet,
+  type EpisodePointer,
+} from '@/features/episode-details';
+import { usePushRoute } from '@/lib/navigation';
+import { routes } from '@/lib/routes';
 import { SeasonAccordion, type PendingLog } from './season-accordion';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 
@@ -92,6 +102,17 @@ function SeasonAccordionList({
     null;
 
   const logMedia = useLogMedia();
+  const pushRoute = usePushRoute();
+  // The long-pressed row — kept (not nulled) while its sheet closes.
+  const [pressed, setPressed] = useState<{
+    season: NormalizedSeason;
+    episode: NormalizedEpisode;
+  } | null>(null);
+  const pointer: EpisodePointer | null =
+    pressed == null
+      ? null
+      : { season: pressed.season.number, number: pressed.episode.number, episode: pressed.episode };
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [pending, setPending] = useState<PendingLog | null>(null);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   // Diary tags — accepted by Serializd's TV diary payload (plan 0017 R10). The
@@ -141,6 +162,14 @@ function SeasonAccordionList({
 
   const total = seriesRuntimeMinutes(seasons);
 
+  function markEpisode(s: NormalizedSeason, episode: NormalizedEpisode) {
+    openLog({
+      title: 'Mark episode as watched',
+      description: `“${item.title}” — ${s.title}, E${episode.number}: ${episode.title}`,
+      episodes: [{ season: s.number, number: episode.number }],
+    });
+  }
+
   return (
     <View className="mt-8">
       <Text className="text-xl font-display text-foreground mb-1">Seasons</Text>
@@ -152,12 +181,14 @@ function SeasonAccordionList({
       {seasons.map((season) => (
         <SeasonAccordion
           key={season.number}
-          onMarkEpisode={(s, episode) =>
-            openLog({
-              title: 'Mark episode as watched',
-              description: `“${item.title}” — ${s.title}, E${episode.number}: ${episode.title}`,
-              episodes: [{ season: s.number, number: episode.number }],
-            })
+          onEpisodeActions={(s, episode) => {
+            haptics.selection();
+            setPressed({ season: s, episode });
+            setActionsOpen(true);
+          }}
+          onMarkEpisode={markEpisode}
+          onOpenEpisode={(s, episode) =>
+            pushRoute(routes.episode(item.id, s.number, episode.number))
           }
           onMarkSeason={(s) => {
             // Never include unaired episodes in a season-wide mark — the
@@ -178,6 +209,22 @@ function SeasonAccordionList({
           watched={watchedKeys}
         />
       ))}
+
+      <EpisodeActionsSheet
+        item={item}
+        onClose={() => setActionsOpen(false)}
+        onMark={() => {
+          if (pressed == null) return;
+          // The confirm sheet replaces this one rather than stacking on it.
+          setActionsOpen(false);
+          markEpisode(pressed.season, pressed.episode);
+        }}
+        open={actionsOpen}
+        pointer={pointer}
+        watched={
+          pointer != null && watchedKeys?.has(`${pointer.season}-${pointer.number}`) === true
+        }
+      />
 
       <LogConfirmSheet
         confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}

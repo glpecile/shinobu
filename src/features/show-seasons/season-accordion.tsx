@@ -5,7 +5,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { hasAired } from '@/lib/time/has-aired';
-import type { NormalizedSeason } from '@/types/media';
+import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
 import { formatRuntime, seasonRuntimeMinutes } from './runtime';
 
 /** Pointer into a season/episode that the confirm sheet will mark watched. */
@@ -32,16 +32,127 @@ export interface SeasonAccordionProps {
   /** `"${season}-${number}"` watched keys, or null when Trakt isn't connected. */
   watched: ReadonlySet<string> | null;
   onMarkSeason: (season: NormalizedSeason) => void;
-  onMarkEpisode: (
-    season: NormalizedSeason,
-    episode: NormalizedSeason['episodes'][number],
-  ) => void;
+  onMarkEpisode: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
+  /**
+   * Row tap: the episode screen. Optional because the anime accordion's rows
+   * are AniList-entry-relative with no canonical season to route to — its
+   * rows stay plain.
+   */
+  onOpenEpisode?: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
+  /** Row long-press (web: the hover ⋯): the episode actions sheet. */
+  onEpisodeActions?: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
+}
+
+function EpisodeRow({
+  season,
+  episode,
+  isWatched,
+  onMark,
+  onOpen,
+  onActions,
+}: {
+  season: NormalizedSeason;
+  episode: NormalizedEpisode;
+  isWatched: boolean;
+  onMark: () => void;
+  onOpen?: (() => void) | undefined;
+  onActions?: (() => void) | undefined;
+}) {
+  const accent = useCSSVariable('--color-accent');
+  const muted = useCSSVariable('--color-muted');
+  const foreground = useCSSVariable('--color-foreground');
+  const accentColor = typeof accent === 'string' ? accent : undefined;
+  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const foregroundColor = typeof foreground === 'string' ? foreground : undefined;
+  // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
+  // ⋯ reveal rides on RN-web's pointer events (the PersonCard pattern) —
+  // long-press is not a discoverable web gesture.
+  const [hovered, setHovered] = useState(false);
+  const showActionsButton =
+    process.env.EXPO_OS === 'web' && hovered && onActions != null;
+  const aired = hasAired(episode.firstAired);
+  const label = (
+    <>
+      {isWatched ? (
+        <Ionicons color={accentColor} name="checkmark-circle" size={16} />
+      ) : (
+        <View className="w-4" />
+      )}
+      <View className="ml-3 flex-1 pr-3">
+        <Text
+          className="font-sans text-sm"
+          numberOfLines={2}
+          style={{
+            color: aired ? foregroundColor : mutedColor,
+            opacity: aired ? 1 : 0.6,
+          }}
+        >
+          E{episode.number} · {episode.title}
+        </Text>
+        <Text className="text-muted font-sans text-xs mt-0.5">
+          {episode.runtime != null ? `${episode.runtime} min` : ''}
+          {episode.runtime != null && !aired ? ' · ' : ''}
+          {!aired ? 'Unaired' : ''}
+        </Text>
+      </View>
+    </>
+  );
+
+  return (
+    // The mark button and the ⋯ are *siblings* of the row pressable, not
+    // children — nesting gesture-handler buttons lets a press bubble through.
+    <View
+      className="flex-row items-center pr-4 border-b border-border"
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
+      {onOpen == null ? (
+        <View className="flex-1 flex-row items-center pl-4 py-3">{label}</View>
+      ) : (
+        <PresstableOpacity
+          accessibilityLabel={`${season.title}, episode ${episode.number}: ${episode.title}`}
+          className="flex-1 flex-row items-center pl-4 py-3"
+          onLongPress={onActions}
+          onPress={onOpen}
+        >
+          {label}
+        </PresstableOpacity>
+      )}
+      {showActionsButton && (
+        <PresstableOpacity
+          accessibilityLabel={`More about episode ${episode.number}`}
+          accessibilityRole="button"
+          className="w-8 h-8 mr-2 items-center justify-center rounded-full"
+          onPress={onActions}
+        >
+          <Ionicons color={mutedColor} name="ellipsis-horizontal" size={16} />
+        </PresstableOpacity>
+      )}
+      {aired ? (
+        <PresstableOpacity
+          className="px-3 py-1.5 rounded border border-border"
+          onPress={onMark}
+        >
+          <Text
+            className="font-sans-semibold text-xs"
+            style={{ color: foregroundColor }}
+          >
+            {isWatched ? 'Rewatch' : 'Mark as watched'}
+          </Text>
+        </PresstableOpacity>
+      ) : (
+        <Text className="text-muted font-sans text-xs px-3">Unaired</Text>
+      )}
+    </View>
+  );
 }
 
 /**
  * One expandable season on the TV detail screen (plan 0010). Tapping the
  * header toggles open; "Mark season as watched" and the per-episode buttons
- * route through the shared confirm sheet (the parent owns the mutation).
+ * route through the shared confirm sheet (the parent owns the mutation). A
+ * row tap opens the episode screen and a long-press its actions sheet — the
+ * row clamps the title to two lines, the sheet and screen never do.
  * Watched episodes render a checkmark — the parent can pass `null` for the set
  * when Trakt is disconnected, in which case no checkmarks show. Episodes whose
  * `firstAired` is still in the future (parsed as an instant, compared in the
@@ -53,15 +164,15 @@ export function SeasonAccordion({
   watched,
   onMarkSeason,
   onMarkEpisode,
+  onOpenEpisode,
+  onEpisodeActions,
 }: SeasonAccordionProps) {
   const [open, setOpen] = useState(false);
   const accent = useCSSVariable('--color-accent');
   const muted = useCSSVariable('--color-muted');
-  const foreground = useCSSVariable('--color-foreground');
   const runtime = seasonRuntimeMinutes(season);
   const accentColor = typeof accent === 'string' ? accent : undefined;
   const mutedColor = typeof muted === 'string' ? muted : undefined;
-  const foregroundColor = typeof foreground === 'string' ? foreground : undefined;
 
   const airedCount = season.episodes.filter((e) => hasAired(e.firstAired)).length;
   const seasonMarkable = airedCount > 0;
@@ -104,55 +215,23 @@ export function SeasonAccordion({
               </Text>
             </PresstableOpacity>
           )}
-          {season.episodes.map((episode) => {
-            const isWatched =
-              watched?.has(`${season.number}-${episode.number}`) === true;
-            const aired = hasAired(episode.firstAired);
-            return (
-              <View
-                className="flex-row items-center px-4 py-3 border-b border-border"
-                key={episode.number}
-              >
-                {isWatched ? (
-                  <Ionicons color={accentColor} name="checkmark-circle" size={16} />
-                ) : (
-                  <View className="w-4" />
-                )}
-                <View className="ml-3 flex-1">
-                  <Text
-                    className="font-sans text-sm"
-                    numberOfLines={1}
-                    style={{
-                      color: aired ? foregroundColor : mutedColor,
-                      opacity: aired ? 1 : 0.6,
-                    }}
-                  >
-                    E{episode.number} · {episode.title}
-                  </Text>
-                  <Text className="text-muted font-sans text-xs mt-0.5">
-                    {episode.runtime != null ? `${episode.runtime} min` : ''}
-                    {episode.runtime != null && !aired ? ' · ' : ''}
-                    {!aired ? 'Unaired' : ''}
-                  </Text>
-                </View>
-                {aired ? (
-                  <PresstableOpacity
-                    className="px-3 py-1.5 rounded border border-border"
-                    onPress={() => onMarkEpisode(season, episode)}
-                  >
-                    <Text
-                      className="font-sans-semibold text-xs"
-                      style={{ color: foregroundColor }}
-                    >
-                      {isWatched ? 'Rewatch' : 'Mark as watched'}
-                    </Text>
-                  </PresstableOpacity>
-                ) : (
-                  <Text className="text-muted font-sans text-xs px-3">Unaired</Text>
-                )}
-              </View>
-            );
-          })}
+          {season.episodes.map((episode) => (
+            <EpisodeRow
+              episode={episode}
+              isWatched={watched?.has(`${season.number}-${episode.number}`) === true}
+              key={episode.number}
+              onActions={
+                onEpisodeActions == null
+                  ? undefined
+                  : () => onEpisodeActions(season, episode)
+              }
+              onMark={() => onMarkEpisode(season, episode)}
+              onOpen={
+                onOpenEpisode == null ? undefined : () => onOpenEpisode(season, episode)
+              }
+              season={season}
+            />
+          ))}
         </View>
       )}
     </View>

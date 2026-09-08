@@ -105,6 +105,21 @@ export default function Layout() {
                       sit at the root so they push over the tab bar. */}
                   <Stack.Screen name="(tabs)" options={{ title: "Shinobu" }} />
                   <Stack.Screen name="details/[id]" />
+                  {/* iOS presents the episode as a native page-sheet modal
+                      over the show (swipe down to dismiss); Android and web
+                      push a full screen with their own layouts
+                      (features/episode-details/screen). Not `formSheet`: with
+                      numeric detents react-native-screens 4.26 lays the
+                      sheet's content out with no height on first mount, so
+                      the sheet opened blank until the next re-render. */}
+                  <Stack.Screen
+                    name="episode/[id]"
+                    options={
+                      process.env.EXPO_OS === "ios"
+                        ? { presentation: "modal" }
+                        : {}
+                    }
+                  />
                   <Stack.Screen name="person/[id]" />
                   <Stack.Screen name="person/lookup" />
                   <Stack.Screen name="studio/[id]" />
