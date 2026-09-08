@@ -1,18 +1,18 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import Head from '@/components/head';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
 import { MorphText } from '@/components/morph-text';
-import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { Skeleton } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
@@ -22,7 +22,8 @@ import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import {
-  PersonAvatar,
+  PeopleSection,
+  PeopleSectionsSkeleton,
   PersonCreditSheet,
   type PersonCredit,
 } from '@/features/person';
@@ -36,10 +37,7 @@ import {
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
-import {
-  applyPrimaryMetadata,
-  mergeCatalogueMetadata,
-} from '@/lib/providers/merge-metadata';
+import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -58,47 +56,10 @@ import {
 } from '@/state/queries/simkl';
 import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
 import { useWatchedInfo } from '@/state/queries/watched-info';
-import { findInDiaryCache } from '@/state/queries/diary-cache';
-import { findInSearchCache } from '@/state/queries/search-cache';
-import { findInUpNextCache } from '@/state/queries/up-next-cache';
-import { findInWatchlistCache } from '@/state/queries/watchlist-cache';
-import { useMovieCatalogueQuery, useTraktIdentityQuery } from '@/state/queries/mapping';
+import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
-import { useUnifiedFeed } from '@/state/queries/use-unified-feed';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem, NormalizedStudio } from '@/types/media';
-
-function findItemById(
-  id: string,
-  groups: NormalizedMediaItem[][],
-): NormalizedMediaItem | undefined {
-  return groups.flat().find((item) => item.id === id);
-}
-
-/**
- * A card tapped on a person or studio page targets an item that exists in no
- * feed and no search — but it *is* sitting in the cached TMDB page query the
- * viewer just came from, so resolve against those rows (same trick as the
- * search cache above; both page shapes expose `rows[].items`). Trakt
- * identity is backfilled separately (`useTraktIdentityQuery`).
- */
-function findInTmdbCache(
-  queryClient: QueryClient,
-  id: string,
-): NormalizedMediaItem | undefined {
-  return queryClient
-    .getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
-      queryKey: tmdbQueryKeys.all,
-    })
-    // `row?.items ?? []` and `item?.id`: `tmdbQueryKeys.all` is a prefix, so a
-    // sibling TMDB query whose rows are shaped differently gets scanned here
-    // too — and `rows.flatMap((row) => row.items)` on a row without `items`
-    // yields `undefined` entries that crash the whole details screen. Same
-    // failure `diary-cache.ts` documents; a resolution helper degrades to
-    // "Not found", never throws.
-    .flatMap(([, data]) => data?.rows?.flatMap((row) => row?.items ?? []) ?? [])
-    .find((item) => item?.id === id);
-}
 
 /** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
 function metaLine(item: NormalizedMediaItem): string {
@@ -241,134 +202,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-function PersonCard({
-  credit,
-  onPress,
-  onActions,
-}: {
-  credit: PersonCredit;
-  onPress?: () => void;
-  onActions: (credit: PersonCredit) => void;
-}) {
-  const accentForeground = useCSSVariable('--color-accent-foreground');
-  // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
-  // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
-  // the media card's).
-  const [hovered, setHovered] = useState(false);
-  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
-
-  const content = (
-    <>
-      <PersonAvatar
-        className="w-20 h-20 bg-surface"
-        headshot={credit.headshot}
-        name={credit.name}
-        textClassName="text-lg"
-      />
-      <Text
-        className="text-foreground font-sans-semibold text-xs text-center mt-2"
-        numberOfLines={1}
-      >
-        {credit.name}
-      </Text>
-      {credit.role !== '' && (
-        <Text
-          className="text-muted font-sans text-xs text-center mt-0.5"
-          numberOfLines={2}
-        >
-          {credit.role}
-        </Text>
-      )}
-    </>
-  );
-
-  return (
-    // The ⋯ is a *sibling* of the pressable, not a child — nesting two
-    // gesture-handler buttons would let a ⋯ press bubble into the card press.
-    <View
-      className="w-24 mr-4 relative"
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
-    >
-      {onPress == null ? (
-        // No TMDB token means no person page to open, but the credit sheet
-        // still has the full role to show, so the card stays pressable.
-        <PresstableScale
-          className="items-center"
-          onPress={() => onActions(credit)}
-        >
-          {content}
-        </PresstableScale>
-      ) : (
-        <PresstableScale
-          className="items-center"
-          onLongPress={() => onActions(credit)}
-          onPress={onPress}
-        >
-          {content}
-        </PresstableScale>
-      )}
-      {showActionsButton && (
-        <PresstableOpacity
-          accessibilityLabel={`More about ${credit.name}`}
-          accessibilityRole="button"
-          className="absolute top-0 right-0 w-7 h-7 items-center justify-center rounded-full bg-black/70"
-          onPress={() => onActions(credit)}
-        >
-          <Ionicons
-            color={
-              typeof accentForeground === 'string' ? accentForeground : undefined
-            }
-            name="ellipsis-horizontal"
-            size={14}
-          />
-        </PresstableOpacity>
-      )}
-    </View>
-  );
-}
-
-function PeopleSection({
-  title,
-  people,
-  onCreditActions,
-}: {
-  title: string;
-  people: PersonCredit[];
-  onCreditActions: (credit: PersonCredit) => void;
-}) {
-  const pushRoute = usePushRoute();
-  // No TMDB token, no person pages — press falls back to the credit sheet.
-  const canOpenPeople = useTmdbToken() !== '';
-
-  if (people.length === 0) return null;
-
-  return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-4">{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {people.map((credit) => (
-          <PersonCard
-            credit={credit}
-            key={credit.id}
-            onActions={onCreditActions}
-            {...(canOpenPeople
-              ? {
-                  onPress: () =>
-                    pushRoute(
-                      credit.tmdbId != null
-                        ? routes.person(credit.tmdbId)
-                        : routes.personLookup(credit.name),
-                    ),
-                }
-              : {})}
-          />
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
 /** One "Studios" pill list — every metadata source renders through this. */
 /**
  * Studio pills. Plain press navigates, as it always has; **long-press opens the
@@ -495,35 +328,6 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-function PeopleRailSkeleton() {
-  return (
-    <View className="mt-8">
-      <Skeleton className="h-6 w-24 rounded mb-4" />
-      {/* Enough cards to overflow any viewport up to the max-w-4xl container;
-          overflow-hidden clips the excess, reading as an off-screen carousel. */}
-      <View className="flex-row overflow-hidden">
-        {Array.from({ length: 10 }).map((_, index) => (
-          <View className="w-24 items-center mr-4" key={index}>
-            <Skeleton className="w-20 h-20 rounded-full" />
-            <Skeleton className="h-3 w-16 rounded mt-2" />
-            <Skeleton className="h-2.5 w-12 rounded mt-1.5" />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/** One rail per section behind the boundary (Cast + Crew). */
-function PeopleSectionsSkeleton() {
-  return (
-    <>
-      <PeopleRailSkeleton />
-      <PeopleRailSkeleton />
-    </>
-  );
-}
-
 function StudiosSkeleton() {
   return (
     <View className="mt-8">
@@ -561,9 +365,6 @@ function DetailsSkeleton() {
 export default function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  // includeHidden: hidden items must still resolve here — the Manage
-  // Trackers hidden list links straight to this screen.
-  const feed = useUnifiedFeed({ includeHidden: true });
   const queryClient = useQueryClient();
   const accent = useCSSVariable('--color-accent');
   // The hero scrim fades to the *page background*, not black: the title
@@ -576,45 +377,7 @@ export default function DetailsScreen() {
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const resolvedItem =
-    findItemById(id, [
-      // Personal feed first: an item can appear in both a personal row and a
-      // public catalogue row, and the personal copy carries real progress.
-      feed.yourWatchlist,
-      feed.trendingMovies,
-      feed.trendingShows,
-      feed.seasonalAnime,
-    ]) ??
-    // Up Next / Continue Watching cards. They used to resolve incidentally out
-    // of the `yourShows`/`yourAnime` slots (the same show sat in both
-    // surfaces); those rows are gone, so the gather that produced the card is
-    // now what answers for it. Cache-only, like every step here.
-    findInUpNextCache(queryClient, id) ??
-    // Search results belong to no feed slot (plan 0009) — and manga belongs to
-    // no feed row at all, so this is the only way it resolves (plan 0024 U8).
-    findInSearchCache(queryClient, id) ??
-    // Diary rows live in no feed slot and no search — resolve them from the
-    // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).
-    findInDiaryCache(queryClient, id) ??
-    // The merged watchlist belongs to no feed slot (plan 0031 KTD-11 keeps it
-    // out of one deliberately), so its Trakt- and AniList-sourced cards would
-    // hit "Not found" without this step. Cache-only: opening a details screen
-    // never triggers the gather.
-    findInWatchlistCache(queryClient, id) ??
-    findInTmdbCache(queryClient, id);
-  // Items whose origin carries no metadata (a Letterboxd watchlist film is
-  // just a slug + title + year) get a catalogue record resolved by title+year
-  // and merged in — the meta line, overview, rating, and (via the discovered
-  // trakt id) cast/studios then render like any other provider's page.
-  const catalogue = useMovieCatalogueQuery(resolvedItem);
-  // Filmography credits arrive TMDB-keyed with no Trakt identity — the
-  // lookup discovers it so the trakt-id-keyed sections light up.
-  const traktIdentity = useTraktIdentityQuery(resolvedItem);
-  const enriched = catalogue.data ?? traktIdentity.data;
-  const item =
-    resolvedItem != null && enriched != null
-      ? mergeCatalogueMetadata(resolvedItem, enriched)
-      : resolvedItem;
+  const { item, isLoading, refetchFeed } = useResolvedMediaItem(id);
   // TMDB is the metadata source of truth (plan 0014): the same composed
   // query that feeds the credit sections hands the header a catalogue
   // record, and its display fields override whatever the origin provider
@@ -653,7 +416,7 @@ export default function DetailsScreen() {
     }
   }
 
-  if (feed.isLoading && item == null) {
+  if (isLoading && item == null) {
     return <DetailsSkeleton />;
   }
 
@@ -725,7 +488,7 @@ export default function DetailsScreen() {
     }
     setRefreshCount((count) => count + 1);
     return Promise.allSettled([
-      feed.refetch(),
+      refetchFeed(),
       queryClient.refetchQueries({
         queryKey: mediaDetailsQueryKeys.all,
         type: 'active',

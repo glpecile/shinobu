@@ -20,3 +20,9 @@ describe('the watchlist route (plan 0031 R24)', () => {
     expect(existsSync('src/app/watchlist/letterboxd.tsx')).toBe(false);
   });
 });
+
+describe('the episode route', () => {
+  test('is keyed by the show id with the episode pointer as query params', () => {
+    expect(routes.episode('simkl-42', 2, 10)).toBe('/episode/simkl-42?season=2&number=10');
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { getMediaCatalogue, getTvSeasons, searchMovie } from './reads';
+import { getMediaCatalogue, getTvEpisode, getTvSeasons, searchMovie } from './reads';
 
 /** Records every requested URL and answers with an empty result set. */
 function recordingFetch(urls: string[]) {
@@ -199,5 +199,44 @@ describe('getTvSeasons', () => {
     // A season the append response omitted still renders, just empty.
     expect(seasons).toHaveLength(25);
     expect(seasons[0]?.episodes).toEqual([]);
+  });
+});
+
+describe('getTvEpisode', () => {
+  test('one call with the credits append, normalized with regulars before guests', async () => {
+    const urls: string[] = [];
+    const fetch = (input: RequestInfo | URL): Promise<Response> => {
+      urls.push(String(input));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            episode_number: 10,
+            name: 'The Laughing Dead',
+            still_path: '/still.jpg',
+            vote_average: 7.4,
+            guest_stars: [{ id: 2, name: 'Guest', character: 'Clown', order: 0 }],
+            credits: {
+              cast: [{ id: 1, name: 'Regular', character: 'Frank', order: 3 }],
+              guest_stars: [{ id: 2, name: 'Guest', character: 'Clown', order: 0 }],
+              crew: [{ id: 3, name: 'Dir', job: 'Director', department: 'Directing' }],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+    };
+
+    const details = await Effect.runPromise(
+      getTvEpisode({ fetch, token: 'test-token' }, { tmdbId: 7, season: 2, number: 10 }),
+    );
+
+    expect(urls).toEqual([
+      'https://api.themoviedb.org/3/tv/7/season/2/episode/10?append_to_response=credits',
+    ]);
+    expect(details.episode.title).toBe('The Laughing Dead');
+    expect(details.still).toBe('https://image.tmdb.org/t/p/w780/still.jpg');
+    expect(details.rating).toBe(7.4);
+    expect(details.cast.map((member) => member.name)).toEqual(['Regular', 'Guest']);
+    expect(details.crew[0]?.job).toBe('Director');
   });
 });

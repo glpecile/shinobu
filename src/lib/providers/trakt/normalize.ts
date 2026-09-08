@@ -447,6 +447,8 @@ export function normalizeSeason(raw: TraktShowSeason): NormalizedSeason {
 export interface TraktProgressEpisode {
   number: number;
   completed: number | boolean;
+  /** ISO instant of the latest play; absent/null when never watched. */
+  last_watched_at?: string | null;
 }
 
 export interface TraktProgressSeason {
@@ -497,6 +499,13 @@ export interface TraktNextEpisode {
 export interface TraktShowProgressResult {
   /** `"${season}-${number}"` for every completed episode. */
   watchedKeys: ReadonlySet<string>;
+  /**
+   * `"${season}-${number}"` → ISO instant of that episode's latest play, for
+   * the episode screen's "logged on Trakt · date" line. A plain record, not a
+   * `Map`, because `show-progress` is persisted. Absent for progress cached
+   * before this field was carried.
+   */
+  lastWatchedAt?: Readonly<Record<string, string>>;
   /** Absent when the user has nothing left to watch (Trakt sends null). */
   nextEpisode?: TraktNextEpisode;
   /**
@@ -517,23 +526,29 @@ export function normalizeWatchedProgress(
   raw: TraktShowProgress,
 ): TraktShowProgressResult {
   const watchedKeys = new Set<string>();
+  const lastWatchedAt: Record<string, string> = {};
   for (const season of raw.seasons ?? []) {
     for (const episode of season.episodes ?? []) {
       // Trakt sends `completed` as both `0/1` (older) and `true/false` (newer).
       // Progress episodes carry no `season` field of their own — the season
       // number lives only on the enclosing season object.
       if (episode.completed === true || episode.completed === 1) {
-        watchedKeys.add(`${season.number}-${episode.number}`);
+        const key = `${season.number}-${episode.number}`;
+        watchedKeys.add(key);
+        if (episode.last_watched_at != null && episode.last_watched_at !== '') {
+          lastWatchedAt[key] = episode.last_watched_at;
+        }
       }
     }
   }
 
   const airedCount = raw.aired != null ? { aired: raw.aired } : {};
   const next = raw.next_episode;
-  if (next == null) return { watchedKeys, ...airedCount };
+  if (next == null) return { watchedKeys, lastWatchedAt, ...airedCount };
 
   return {
     watchedKeys,
+    lastWatchedAt,
     ...airedCount,
     nextEpisode: {
       season: next.season,

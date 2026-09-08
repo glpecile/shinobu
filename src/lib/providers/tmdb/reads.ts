@@ -18,12 +18,15 @@ import {
   normalizeStudioDetails,
   normalizeTitleSearch,
   normalizeTvCatalogue,
+  normalizeTvEpisode,
   type NormalizedPersonDetails,
   type NormalizedStudioDetails,
   type PersonMatch,
   type TmdbCompanyResponse,
   type TmdbCompanySearchResponse,
   type TmdbDiscoverResponse,
+  type TmdbEpisodeDetails,
+  type TmdbEpisodeResponse,
   type TmdbFindResponse,
   type TmdbKind,
   type TmdbMediaCatalogue,
@@ -220,6 +223,22 @@ export function getTvSeasons(
     }
     return orderSeasons(seasons);
   });
+}
+
+/**
+ * One episode with its still, rating and the people credited on it — the
+ * episode screen's TMDB-first read. `append_to_response=credits` folds the
+ * series regulars in beside the top-level guest list, one round-trip. Public
+ * catalogue call, builder token only.
+ */
+export function getTvEpisode(
+  deps: TmdbDeps,
+  params: { tmdbId: number; season: number; number: number },
+): Effect.Effect<TmdbEpisodeDetails, ProviderError> {
+  return tmdbRequest<TmdbEpisodeResponse>(
+    deps,
+    `/tv/${params.tmdbId}/season/${params.season}/episode/${params.number}?append_to_response=credits`,
+  ).pipe(Effect.map((raw) => normalizeTvEpisode(raw, params.number)));
 }
 
 /**

@@ -11,6 +11,13 @@ export const routes = {
   diary: '/diary',
   details: (id: string) => `/details/${id}` as const,
   /**
+   * One episode of the show `id` (the show's own item id, resolved the same
+   * way `/details` resolves it). Season and number ride as query params so
+   * the route stays one segment beside `/details`.
+   */
+  episode: (id: string, season: number, number: number) =>
+    `/episode/${id}?season=${season}&number=${number}` as const,
+  /**
    * The cross-provider watchlist — the only watchlist surface. No provider
    * suffix: it merges every connected provider's watchlist (plan 0031 R24).
    * `/watchlist/letterboxd` was deleted 2026-08-01 (owner): a second,
