@@ -37,7 +37,7 @@ export function ProviderLinkRow({
     <PresstableOpacity
       accessibilityRole="button"
       className={cn(
-        'flex-row items-center gap-3 rounded px-5 py-3 border border-border',
+        'flex-row items-center gap-3 rounded-full px-5 py-3 border border-border',
         className,
       )}
       onPress={() => {

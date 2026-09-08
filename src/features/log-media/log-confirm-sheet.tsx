@@ -163,7 +163,7 @@ export function LogConfirmSheet({
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
               editable={!pending}
               onChangeText={onTagsChange}
               placeholder="tags, comma separated"
