@@ -20,7 +20,7 @@ import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit } from './use-log-targets';
 import { seriesEpisodeLabel } from './series-next-episode';
 import { useSeriesNextEpisode } from './use-series-next-episode';
-import { confirmLabelFor, LogConfirmSheet } from './log-confirm-sheet';
+import { LogConfirmSheet } from './log-confirm-sheet';
 
 /**
  * The movie/anime log trigger (plans 0008 + 0011). A write to external
@@ -248,16 +248,15 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
 
       <LogConfirmSheet
         onClose={() => setOpen(false)}
-        confirmLabel={confirmLabelFor(
+        confirmLabel={
           isSeries
             ? seriesAction
             : isAnimeSeries
               ? `Log episode ${nextEpisode}`
               : isRewatch
                 ? 'Log rewatch'
-                : 'Log watch',
-          selectedProviders,
-        )}
+                : 'Log watch'
+        }
         description={
           isSeries
             ? seriesNext?.rewatch === true

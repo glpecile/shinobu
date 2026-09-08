@@ -3,6 +3,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
+import { cn } from '@/lib/cn';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
@@ -27,14 +28,6 @@ const TAG_PROVIDERS = [
 /** Joins provider labels for "Writes to ..." and outcome copy in both sheets. */
 export function labels(ids: readonly ProviderId[]): string {
   return ids.map((id) => PROVIDERS[id].label).join(', ');
-}
-
-/** "Log watch on Trakt, AniList" — no dangling "on" while nothing is selected. */
-export function confirmLabelFor(
-  action: string,
-  ids: readonly ProviderId[],
-): string {
-  return ids.length === 0 ? action : `${action} on ${labels(ids)}`;
 }
 
 /**
@@ -102,6 +95,7 @@ export function LogConfirmSheet({
   onConfirm,
 }: LogConfirmSheetProps) {
   const result = logMedia.data;
+  const pending = logMedia.isPending;
   const muted = useCSSVariable('--color-muted');
   // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
   // tags, so narrowing this would silently drop working Serializd functionality.
@@ -133,44 +127,55 @@ export function LogConfirmSheet({
         {description}
       </Text>
 
-      <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
-        Write to
-      </Text>
-      <ProviderPicker
-        onSelectAll={selectAllProviders}
-        onSelectNone={selectNoProviders}
-        onToggle={toggleProvider}
-        selectedProviders={selectedProviders}
-        targets={targets}
-      />
-      <ManualWriteRows item={item} manual={manualTargets} />
-      {selectedProviders.length === 0 && (
-        <Text className="text-accent font-sans text-sm mt-2">
-          Select at least one provider to log.
+      {/* Frozen while the fan-out runs: a tag or target toggled mid-write would
+          land on some providers and not others, and the picker's taps stayed
+          live even though the confirm button was already spinning. */}
+      <View
+        className={cn(pending && 'opacity-50')}
+        pointerEvents={pending ? 'none' : 'auto'}
+      >
+        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
+          Write to
         </Text>
-      )}
-
-      <WatchedAtField onChange={onWatchedAtChange} value={watchedAt} />
-      {showTagsField && (
-        <View className="mt-4">
-          <Text className="text-foreground font-sans-semibold text-sm mb-2">
-            Tags{' '}
-            <Text className="text-muted font-sans text-xs">
-              ({labels(tagProviders)})
-            </Text>
+        <ProviderPicker
+          onSelectAll={selectAllProviders}
+          onSelectNone={selectNoProviders}
+          onToggle={toggleProvider}
+          selectedProviders={selectedProviders}
+          targets={targets}
+        />
+        <ManualWriteRows item={item} manual={manualTargets} />
+        {selectedProviders.length === 0 && (
+          <Text className="text-accent font-sans text-sm mt-2">
+            Select at least one provider to log.
           </Text>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
-            onChangeText={onTagsChange}
-            placeholder="tags, comma separated"
-            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
-            value={tags ?? ''}
-          />
-          <TagPicker onChange={onTagsChange} value={tags ?? ''} />
-        </View>
-      )}
+        )}
+
+        <WatchedAtField onChange={onWatchedAtChange} value={watchedAt} />
+        {showTagsField && (
+          <View className="mt-4">
+            <Text className="text-foreground font-sans-semibold text-sm mb-2">
+              Tags{' '}
+              <Text className="text-muted font-sans text-xs">
+                ({labels(tagProviders)})
+              </Text>
+            </Text>
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              className="border border-border bg-surface text-foreground px-4 py-3 rounded font-sans"
+              editable={!pending}
+              onChangeText={onTagsChange}
+              placeholder="tags, comma separated"
+              placeholderTextColor={
+                typeof muted === 'string' ? muted : undefined
+              }
+              value={tags ?? ''}
+            />
+            <TagPicker onChange={onTagsChange} value={tags ?? ''} />
+          </View>
+        )}
+      </View>
       {/* Visible only on a report that kept the sheet open (a clean one closed
           it and became the toast): the success half of a partial outcome. */}
       {result != null && result.succeeded.length > 0 && (
@@ -204,7 +209,7 @@ export function LogConfirmSheet({
         className="mt-6"
         disabled={selectedProviders.length === 0}
         label={confirmLabel}
-        loading={logMedia.isPending}
+        loading={pending}
         loadingLabel={pendingLabel}
         onPress={onConfirm}
       />

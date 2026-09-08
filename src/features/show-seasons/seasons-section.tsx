@@ -23,7 +23,7 @@ import type {
 } from '@/types/media';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import { confirmLabelFor, LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
+import { LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
 import {
@@ -227,7 +227,7 @@ function SeasonAccordionList({
       />
 
       <LogConfirmSheet
-        confirmLabel={confirmLabelFor('Mark as watched', selectedProviders)}
+        confirmLabel="Mark as watched"
         description={pending?.description ?? ''}
         item={item}
         logMedia={logMedia}
