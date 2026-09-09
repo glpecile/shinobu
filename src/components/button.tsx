@@ -1,11 +1,19 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Text } from 'react-native';
+import {
+  type CSSTransitionProperties,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
+import { AnimatedView } from '@/components/animated-view';
 import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 
 export type ButtonVariant = 'primary' | 'outline' | 'quiet';
 export type ButtonSize = 'sm' | 'md';
@@ -28,6 +36,16 @@ const SPINNER_TOKEN: Record<ButtonVariant, string> = {
   primary: '--color-accent-foreground',
   outline: '--color-accent',
   quiet: '--color-foreground',
+};
+
+const BOX_LAYOUT =
+  Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
+const SLOT_ENTER = FadeIn.duration(DURATION.swap);
+const SLOT_EXIT = FadeOut.duration(DURATION.exit);
+const COLOR_TRANSITION: CSSTransitionProperties = {
+  transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
+  transitionDuration: DURATION.color,
+  transitionTimingFunction: EASE_OUT,
 };
 
 const SIZE: Record<ButtonSize, { container: string; label: string; icon: number }> = {
@@ -172,6 +190,8 @@ export function Button({
   // span shrink-wraps on web, so it has to center as a flex item instead of
   // aligning text inside a full-width box.
   const LabelText = morphLabel ? MorphText : Text;
+  const shownLabel = loading ? (loadingLabel ?? label) : label;
+  const overlay = loading && loadingLabel == null;
 
   return (
     <PresstableOpacity
@@ -196,20 +216,30 @@ export function Button({
       disabled={unavailable}
       onPress={onPress}
     >
-      <View
+      <AnimatedView
         className={cn(
           'flex-row items-center justify-center',
           SHAPE[shape],
           SIZE[size].container,
           unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
         )}
+        layout={BOX_LAYOUT}
+        style={COLOR_TRANSITION}
       >
         {loading && (
           // Wrapped so the spinner keeps its own box on native, where an
           // ActivityIndicator dropped straight into a flex row can stretch.
-          <View className="items-center justify-center">
+          <AnimatedView
+            className={cn(
+              'items-center justify-center',
+              overlay && 'absolute inset-0',
+            )}
+            entering={SLOT_ENTER}
+            exiting={SLOT_EXIT}
+            layout={BOX_LAYOUT}
+          >
             <ActivityIndicator color={spinnerColor} size="small" />
-          </View>
+          </AnimatedView>
         )}
         {icon != null && !loading && (
           // Same own-box wrapper as the spinner, for the same native reason.
@@ -217,27 +247,37 @@ export function Button({
           // stays a pure "draw this glyph" leaf: the icon inherits one colour
           // and the *button* decides how faded that colour reads, exactly as
           // the container and label treatments already do.
-          <View
+          <AnimatedView
             className={cn('items-center justify-center', unavailable && 'opacity-60')}
+            entering={SLOT_ENTER}
+            exiting={SLOT_EXIT}
+            layout={BOX_LAYOUT}
+            style={COLOR_TRANSITION}
           >
             <ButtonIconContext.Provider
               value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
             >
               {icon}
             </ButtonIconContext.Provider>
-          </View>
+          </AnimatedView>
         )}
-        <LabelText
-          className={cn(
-            'font-sans-semibold',
-            morphLabel ? 'self-center' : 'text-center',
-            SIZE[size].label,
-            unavailable ? LABEL[variant].off : LABEL[variant].on,
-          )}
+        <AnimatedView
+          className={cn(overlay && 'opacity-0')}
+          layout={BOX_LAYOUT}
+          style={COLOR_TRANSITION}
         >
-          {loading ? (loadingLabel ?? label) : label}
-        </LabelText>
-      </View>
+          <LabelText
+            className={cn(
+              'font-sans-semibold',
+              morphLabel ? 'self-center' : 'text-center',
+              SIZE[size].label,
+              unavailable ? LABEL[variant].off : LABEL[variant].on,
+            )}
+          >
+            {shownLabel}
+          </LabelText>
+        </AnimatedView>
+      </AnimatedView>
     </PresstableOpacity>
   );
 }
