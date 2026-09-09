@@ -69,12 +69,13 @@ export function EmptyStateTile({
         // pressable *around* the drawn box, so it never widened the button —
         // it stole that width from the label, which is why the Home CTA wrapped
         // "Connect your trackers" onto three lines on a phone. Size owns the
-        // padding.
+        // padding. Always `md`: every caller today centres the tile in a full
+        // screen, and the `sm` pill read as an afterthought under a headline.
         <Button
-          className={hero ? 'mt-8' : 'mt-5'}
+          className={hero ? 'mt-8' : 'mt-6'}
           label={cta.label}
           onPress={cta.onPress}
-          size={hero ? 'md' : 'sm'}
+          size="md"
         />
       )}
     </View>
