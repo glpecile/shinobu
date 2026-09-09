@@ -158,6 +158,18 @@ function episodesKey(episodes: number[] | undefined): string {
   return [...(episodes ?? [])].sort((a, b) => a - b).join(',');
 }
 
+/**
+ * Every join key a merged row answers to, each scoped to its episode set: the
+ * same keys `collapseDay` joins contributors on, so anything that matched into
+ * this row would match one of these. `diary-list`'s `stableRowId` uses them to
+ * recognise a row across merges, since `toMerged`'s `id` follows the primary
+ * contributor and flips as higher-priority providers' pages land.
+ */
+export function mergedEntryIdentities(entry: MergedDiaryEntry): string[] {
+  const episodes = episodesKey(entry.episodes);
+  return identityKeys(entry.item).map((key) => `${key}|${episodes}`);
+}
+
 /** Local `YYYY-MM-DD` day for an entry (date-only entries pass through). */
 export function localDayKey(
   entry: NormalizedDiaryEntry,
