@@ -55,7 +55,7 @@ import type { NormalizedMediaItem } from '@/types/media';
  * tiles out in a row above the copy instead — see `EmptyFeed`.
  */
 const EMPTY_HERO_TILES = [
-  { delay: 0, id: 'trakt', position: { left: '20%', top: '22%' }, rotate: '-8deg' },
+  { delay: 0, id: 'simkl', position: { left: '20%', top: '22%' }, rotate: '-8deg' },
   { delay: 650, id: 'anilist', position: { right: '20%', top: '26%' }, rotate: '7deg' },
   // Nudged further left than the shared 20% inset.
   { delay: 1300, id: 'letterboxd', position: { bottom: '24%', left: '14%' }, rotate: '6deg' },
