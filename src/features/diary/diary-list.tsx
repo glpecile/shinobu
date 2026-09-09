@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/skeleton';
 import { PROVIDER_DOT } from '@/features/trackers/provider-style';
 import { cn } from '@/lib/cn';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
+import { usePageEnterStyle } from '@/lib/page-transition';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -670,6 +671,8 @@ export function DiaryList({
   onOpen,
   onItemActions,
 }: DiaryListProps) {
+  // Mounts once, over the skeleton, with every provider merged: one fade.
+  const enter = usePageEnterStyle();
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
@@ -730,7 +733,7 @@ export function DiaryList({
   }
 
   return (
-    <View className="flex-1">
+    <View className="flex-1" style={enter}>
       <List
         ref={listRef}
         onScroll={handleScroll}

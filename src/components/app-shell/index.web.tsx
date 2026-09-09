@@ -264,15 +264,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           </RevealLabel>
         </PresstableOpacity>
         <View className="gap-1">
-          {NAV_ITEMS.map((item) => (
-            <SidebarItem
-              active={isActive(pathname, item.href)}
-              collapsed={collapsed}
-              item={item}
-              key={item.href}
-              onPress={() => pushRoute(item.href)}
-            />
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <SidebarItem
+                active={active}
+                collapsed={collapsed}
+                item={item}
+                key={item.href}
+                // Pressing the tab you're on is a no-op: the tabs Navigator is
+                // a stack, so pushing the same href again would stack a second
+                // copy of the page and replay its enter fade over itself.
+                onPress={() => {
+                  if (!active) pushRoute(item.href);
+                }}
+              />
+            );
+          })}
         </View>
       </View>
       <View className="flex-1">{children}</View>
