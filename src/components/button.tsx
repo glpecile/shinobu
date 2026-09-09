@@ -38,30 +38,10 @@ const SPINNER_TOKEN: Record<ButtonVariant, string> = {
   quiet: '--color-foreground',
 };
 
-/**
- * How the box moves between its states.
- *
- * Without a `loadingLabel` the spinner *replaces* the label in place: the
- * label fades to transparent but keeps its width, the spinner fades in over
- * its centre, and the pill never changes size. Pure opacity, so it is the same
- * on every platform — this is the treatment for a hugging button in a row,
- * where a width change is the "jagged" that every Connect row used to show.
- *
- * With a `loadingLabel` the spinner sits beside the new label (the app's sheet
- * CTAs, all full-width, so their box doesn't move either). Where such a button
- * hugs, native glides the box and its children to the new frame; web gets no
- * layout transition on purpose — Reanimated implements it there with scale
- * transforms, which squash and stretch the label text.
- *
- * Presets only, never a custom `Keyframe`
- * (docs/solutions/reanimated-web-keyframe-pins-position.md). Reanimated honours
- * the OS reduce-motion setting for these on its own.
- */
 const BOX_LAYOUT =
   Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
 const SLOT_ENTER = FadeIn.duration(DURATION.swap);
 const SLOT_EXIT = FadeOut.duration(DURATION.exit);
-/** Container/label colour crossfade for on ↔ off, same curve as the box. */
 const COLOR_TRANSITION: CSSTransitionProperties = {
   transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
   transitionDuration: DURATION.color,
@@ -211,7 +191,6 @@ export function Button({
   // aligning text inside a full-width box.
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
-  /** Spinner over the label at a stable width, vs. beside a swapped label. */
   const overlay = loading && loadingLabel == null;
 
   return (
@@ -282,10 +261,6 @@ export function Button({
             </ButtonIconContext.Provider>
           </AnimatedView>
         )}
-        {/* Its own `layout` so the label glides to its new centre while the
-            box resizes; a freshly mounted child would lay out at its final
-            position and sit off-centre until the box caught up. Stays in the
-            layout while overlaid so the pill keeps its width. */}
         <AnimatedView
           className={cn(overlay && 'opacity-0')}
           layout={BOX_LAYOUT}
