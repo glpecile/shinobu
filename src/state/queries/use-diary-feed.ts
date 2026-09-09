@@ -242,7 +242,12 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     timeZone,
     activeProviders: active.map((w) => w.provider),
     entryCount: merged.length,
-    isLoading: active.some(({ query }) => query.isLoading),
+    // A merged feed can't be shown before its inputs: a provider still on its
+    // first attempt holds the skeleton. One that's already retrying doesn't
+    // (retries back off for seconds; it merges in later if it recovers).
+    isLoading: active.some(
+      ({ query }) => query.isLoading && query.failureCount === 0,
+    ),
     allFailed: active.length > 0 && states.every((s) => s.failed),
     errors,
     hasNextPage: states.some((s) => s.hasMore),
@@ -266,7 +271,7 @@ export interface DiaryFeedResult {
   activeProviders: ProviderId[];
   /** Total merged rows currently exposed (0 → "no logs yet" vs a load state). */
   entryCount: number;
-  /** Any active provider still on its initial load. */
+  /** Any active provider still on its initial load's first attempt. */
   isLoading: boolean;
   /** Every active provider errored (R9 load-failure state / AE5). */
   allFailed: boolean;

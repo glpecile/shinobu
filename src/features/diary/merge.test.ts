@@ -17,7 +17,6 @@ import {
   formatEpisodeRange,
   groupDiaryEntries,
   mergeDiaryEntries,
-  pinRowIds,
   shortClusterCount,
   summarizeCluster,
   watermarkProviders,
@@ -313,44 +312,6 @@ describe('groupDiaryEntries — timezone & ordering', () => {
       state('trakt', [entry('trakt', '1', '2026-07-20T20:00:00.000Z')], { hasMore: false }),
     ]);
     expect(merged.some((e) => e.id === 'trakt-1')).toBe(true);
-  });
-});
-
-describe('pinRowIds', () => {
-  const tmdb = { externalIds: { tmdb: 7 } };
-  const simkl = entry('simkl', 'a', '2026-07-20T10:00:00.000Z', {
-    item: item({ id: 'simkl-a-item', ...tmdb }),
-    episodes: [9],
-  });
-  const trakt = entry('trakt', 'b', '2026-07-20T10:00:00.000Z', {
-    item: item({ id: 'trakt-b-item', ...tmdb }),
-    episodes: [9],
-  });
-
-  test('a row keeps its first id when a higher-priority provider merges in', () => {
-    const registry = new Map<string, string>();
-    const before = pinRowIds(registry, groupDiaryEntries([simkl], TZ_MINUS_5));
-    const after = pinRowIds(registry, groupDiaryEntries([trakt, simkl], TZ_MINUS_5));
-    expect(after[0].entries[0].providers).toEqual(['trakt', 'simkl']);
-    expect(after[0].entries[0].id).toBe(before[0].entries[0].id);
-  });
-
-  test('uncollapsed rows sharing every alias never share an id', () => {
-    const registry = new Map<string, string>();
-    pinRowIds(registry, groupDiaryEntries([simkl], TZ_MINUS_5));
-    // A same-day Trakt rewatch: two logs of one episode stay two rows (AE6),
-    // both matching the Simkl alias registered above.
-    const rewatch = entry('trakt', 'c', '2026-07-20T22:00:00.000Z', {
-      item: item({ id: 'trakt-c-item', ...tmdb }),
-      episodes: [9],
-    });
-    const days = pinRowIds(registry, groupDiaryEntries([trakt, rewatch, simkl], TZ_MINUS_5));
-    const ids = days.flatMap((day) => day.entries.map((e) => e.id));
-    expect(ids).toHaveLength(2);
-    expect(new Set(ids).size).toBe(2);
-    // Stable on the next pass, too.
-    const again = pinRowIds(registry, groupDiaryEntries([trakt, rewatch, simkl], TZ_MINUS_5));
-    expect(again.flatMap((day) => day.entries.map((e) => e.id))).toEqual(ids);
   });
 });
 

@@ -89,7 +89,12 @@ export default function DiaryScreen() {
         />
       </View>
     );
-  } else if (diary.isLoading && diary.entryCount === 0) {
+  } else if (diary.isLoading) {
+    // Skeleton until every provider has answered, not until the first has:
+    // providers land ~100ms apart and each merge re-sorts the day, inserts
+    // rows between the ones on screen and re-keys collapsed rows to the
+    // higher-priority contributor. Rendering that stream reads as flicker.
+    // (docs/solutions/diary-reshuffles-while-providers-land.md)
     content = <DiaryListSkeleton />;
   } else if (diary.allFailed && diary.entryCount === 0) {
     // R9 (3): every capable provider failed on load — never "no logs yet" (AE5).

@@ -1,8 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   RefreshControl,
   Text,
   View,
@@ -14,7 +13,6 @@ import { useCSSVariable } from 'uniwind';
 import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
-import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import {
   SCROLL_TO_TOP_THRESHOLD,
@@ -24,7 +22,6 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { Skeleton } from '@/components/skeleton';
 import { PROVIDER_DOT } from '@/features/trackers/provider-style';
 import { cn } from '@/lib/cn';
-import { DURATION } from '@/lib/motion';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { usePageEnterStyle } from '@/lib/page-transition';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -44,7 +41,6 @@ import {
   formatDayParts,
   formatEpisodeDetail,
   formatLogTime,
-  pinRowIds,
   shortClusterCount,
   summarizeCluster,
   type DiaryCluster,
@@ -136,50 +132,6 @@ function clusterView(cluster: DiaryCluster): ClusterView {
   };
 }
 
-/**
- * Session-long alias → pinned row id registry for `pinRowIds` (see its doc):
- * rows keep their key while later provider pages merge into them.
- * ponytail: unbounded — one string per join key seen this session. Bound it
- * if a session ever pages deep enough to notice.
- */
-const rowIdRegistry = new Map<string, string>();
-
-/**
- * Which rows are *new to the diary* this pass — absent from every earlier
- * pass this session — as opposed to merely scrolling into view. Only those
- * play the enter fade: with `recycleItems` off on web a row mounts every time
- * it scrolls in, and fading each of those reads as the list re-rendering
- * under the cursor. Keys are never forgotten, so a row scrolled back in or a
- * day re-expanded stays still; `RowEnter` retires a key once its row has
- * mounted, so a row that arrived below the fold and is scrolled to seconds
- * later doesn't fade either.
- */
-const knownRowKeys = new Set<string>();
-let enteringRowKeys = new Set<string>();
-let lastRowKeys = '';
-
-function markEnteringRows(items: DiaryListItem[]): void {
-  const keys = items.map((item) => item.key).join('\n');
-  if (keys === lastRowKeys) return;
-  lastRowKeys = keys;
-  enteringRowKeys = new Set(
-    items.filter((item) => !knownRowKeys.has(item.key)).map((item) => item.key),
-  );
-  for (const item of items) knownRowKeys.add(item.key);
-}
-
-/** The per-row mount wrapper: the page blur-fade for a row that just arrived. */
-function RowEnter({ rowKey, children }: { rowKey: string; children: React.ReactNode }) {
-  const enter = usePageEnterStyle();
-  // Decided once, at mount, and kept for the row's life so the animation is
-  // never yanked mid-play by a later data pass.
-  const [fresh] = useState(() => enteringRowKeys.has(rowKey));
-  useEffect(() => {
-    enteringRowKeys.delete(rowKey);
-  }, [rowKey]);
-  return <View style={fresh ? enter : undefined}>{children}</View>;
-}
-
 function flattenDays(
   days: DiaryDay[],
   now: Date,
@@ -189,7 +141,7 @@ function flattenDays(
   hiddenIds: ReadonlySet<string>,
 ): DiaryListItem[] {
   const items: DiaryListItem[] = [];
-  for (const day of pinRowIds(rowIdRegistry, days)) {
+  for (const day of days) {
     // Hiding is one global set (feed, watchlist, Up Next, diary), so a hidden
     // item's logs drop out here too — and a day left with nothing loses its
     // header rather than standing empty.
@@ -305,9 +257,9 @@ function DiaryDayHead({
       <View className="flex-1 flex-row items-center pr-6 pb-3">
         {/* The count lives out here, not stacked under the date: in the gutter
             a bare numeral under "18 AUG" reads as part of the date. */}
-        <MorphText className="text-muted/70 font-sans text-[11px] mr-3">
-          {`${count} ${count === 1 ? 'entry' : 'entries'}`}
-        </MorphText>
+        <Text className="text-muted/70 font-sans text-[11px] mr-3">
+          {count} {count === 1 ? 'entry' : 'entries'}
+        </Text>
         <View className="flex-1 h-px bg-border" />
         <Ionicons
           color={typeof muted === 'string' ? muted : undefined}
@@ -329,19 +281,13 @@ function DiaryDayHead({
  */
 function ProviderDots({ providers }: { providers: ProviderId[] }) {
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
-  // A provider merging into a row later adds its dot; fade it in (web).
-  const enter = usePageEnterStyle();
   return (
     <View
       accessibilityLabel={`Logged via ${names}`}
       className="flex-row items-center gap-1 flex-none"
     >
       {providers.map((id) => (
-        <View
-          className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])}
-          key={id}
-          style={enter}
-        />
+        <View className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])} key={id} />
       ))}
     </View>
   );
@@ -359,9 +305,6 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
       className={cn(POSTER, 'bg-surface border border-border/50')}
       contentFit="cover"
       recyclingKey={item.id}
-      // Trakt posters resolve a beat after the row; fade them in rather than
-      // snapping over the placeholder.
-      transition={DURATION.swap}
     />
   );
 }
@@ -403,9 +346,9 @@ function RowTrailing({
   return (
     <View className="flex-row items-center gap-2.5 pl-3">
       {runCount != null ? (
-        <MorphText className="text-foreground font-sans-semibold text-[10px] rounded-full border border-accent/40 bg-accent/15 px-1.5 py-px">
+        <Text className="text-foreground font-sans-semibold text-[10px] rounded-full border border-accent/40 bg-accent/15 px-1.5 py-px">
           {runCount}
-        </MorphText>
+        </Text>
       ) : (
         time != null &&
         time !== '' && (
@@ -454,9 +397,7 @@ function DiaryRow({
                 {entry.item.title}
               </Text>
               {detail !== '' && (
-                <MorphText className="text-muted font-sans text-xs mt-0.5 self-start">
-                  {detail}
-                </MorphText>
+                <Text className="text-muted font-sans text-xs mt-0.5">{detail}</Text>
               )}
             </View>
           </>
@@ -519,9 +460,9 @@ function DiaryClusterRow({
               >
                 {view.item.title}
               </Text>
-              <MorphText className="text-muted font-sans text-xs mt-0.5 self-start">
+              <Text className="text-muted font-sans text-xs mt-0.5">
                 {view.detail}
-              </MorphText>
+              </Text>
             </View>
           </>
         }
@@ -730,6 +671,8 @@ export function DiaryList({
   onOpen,
   onItemActions,
 }: DiaryListProps) {
+  // Mounts once, over the skeleton, with every provider merged: one fade.
+  const enter = usePageEnterStyle();
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
@@ -749,7 +692,6 @@ export function DiaryList({
     collapsedDays,
     hiddenIds,
   );
-  markEnteringRows(items);
 
   function toggleCluster(key: string) {
     setExpanded((prev) => {
@@ -790,12 +732,15 @@ export function DiaryList({
     if (past !== showScrollTop) setShowScrollTop(past);
   }
 
-  // Rows that arrive — the list over the skeleton, a later provider's page
-  // adding rows between the ones on screen — fade in (`RowEnter`). A row that
-  // merely changes keeps its id (`pinRowIds`) and its DOM, so its text morphs
-  // and its new dot fades in; a row scrolling into view just appears.
-  function renderRow(item: DiaryListItem, index: number) {
-    switch (item.kind) {
+  return (
+    <View className="flex-1" style={enter}>
+      <List
+        ref={listRef}
+        onScroll={handleScroll}
+        data={items}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item, index }) => {
+          switch (item.kind) {
             case 'header':
               return (
                 <DiaryDayHead
@@ -836,19 +781,8 @@ export function DiaryList({
                   timeZone={timeZone}
                 />
               );
-    }
-  }
-
-  return (
-    <View className="flex-1">
-      <List
-        ref={listRef}
-        onScroll={handleScroll}
-        data={items}
-        keyExtractor={(item) => item.key}
-        renderItem={({ item, index }) => (
-          <RowEnter rowKey={item.key}>{renderRow(item, index)}</RowEnter>
-        )}
+          }
+        }}
         ListHeaderComponent={
           failedProviders.length > 0 ? (
             <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
@@ -878,12 +812,7 @@ export function DiaryList({
         // web hover flag, which can briefly show a stale ⋯ on a recycled row
         // until the next pointer move.
         // ponytail: revisit if hover ever drives anything but that button.
-        // Native only: that profile was the gesture-handler stack, and web's
-        // row enter fade and text morph both need a row to keep its DOM — a
-        // recycled container swapping items would morph one show's title
-        // into another's on every scroll and never mount (so never fade in)
-        // a row that actually arrived.
-        recycleItems={Platform.OS !== 'web'}
+        recycleItems
         refreshControl={
           <RefreshControl onRefresh={refresh} refreshing={refreshing} />
         }

@@ -158,52 +158,6 @@ function episodesKey(episodes: number[] | undefined): string {
   return [...(episodes ?? [])].sort((a, b) => a - b).join(',');
 }
 
-/**
- * Pins each merged row to the first id it rendered under. `toMerged`'s id
- * follows the primary contributor, so it flips when a higher-priority
- * provider's page lands after a lower one's (Trakt over Simkl over AniList);
- * to the list that is a different row — it remounts, replays its enter fade
- * over pixels the user was already looking at, and drops the run's expanded
- * state keyed on the same id. `registry` maps `day|identity|episodes` aliases
- * (the same keys `collapseDay` joins on, so anything that merged into a row
- * matches one of them) to the pinned id and lives for the session; an alias
- * is claimed once and never re-pointed, so two rows can't trade ids.
- *
- * Ids stay unique per pass: rows that share every alias but were kept apart
- * (a same-day rewatch of one episode — same-provider logs never collapse) take
- * the pinned id first-come, the rest keep their own; and a pinned id never
- * shadows another row's actual log id.
- */
-export function pinRowIds(
-  registry: Map<string, string>,
-  days: DiaryDay[],
-): DiaryDay[] {
-  const ownIds = new Set(days.flatMap((day) => day.entries.map((e) => e.id)));
-  const taken = new Set<string>();
-  return days.map((day) => ({
-    ...day,
-    entries: day.entries.map((entry) => {
-      const episodes = episodesKey(entry.episodes);
-      const aliases = identityKeys(entry.item).map(
-        (key) => `${day.key}|${key}|${episodes}`,
-      );
-      const known = aliases.find((alias) => registry.has(alias));
-      const pinned = known == null ? undefined : registry.get(known);
-      const id =
-        pinned != null &&
-        !taken.has(pinned) &&
-        (pinned === entry.id || !ownIds.has(pinned))
-          ? pinned
-          : entry.id;
-      taken.add(id);
-      for (const alias of aliases) {
-        if (!registry.has(alias)) registry.set(alias, id);
-      }
-      return id === entry.id ? entry : { ...entry, id };
-    }),
-  }));
-}
-
 /** Local `YYYY-MM-DD` day for an entry (date-only entries pass through). */
 export function localDayKey(
   entry: NormalizedDiaryEntry,
