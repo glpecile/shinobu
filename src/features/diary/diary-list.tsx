@@ -1,5 +1,5 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useRef, useState } from 'react';
+import Ionicons from "@react-native-vector-icons/ionicons/static";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -7,32 +7,38 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-} from 'react-native';
-import { useCSSVariable } from 'uniwind';
+} from "react-native";
+import { useCSSVariable } from "uniwind";
 
-import { ActionableRow } from '@/components/actionable-row';
-import { Image } from '@/components/image';
-import { List, type LegendListRef } from '@/components/List';
-import { PresstableOpacity } from '@/components/presstable';
+import { ActionableRow } from "@/components/actionable-row";
+import { Image } from "@/components/image";
+import { List, type LegendListRef } from "@/components/List";
+import { PresstableOpacity } from "@/components/presstable";
 import {
   SCROLL_TO_TOP_THRESHOLD,
   ScrollToTopFab,
-} from '@/components/scroll-to-top-fab';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { Skeleton } from '@/components/skeleton';
-import { PROVIDER_DOT } from '@/features/trackers/provider-style';
-import { cn } from '@/lib/cn';
-import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
-import { PROVIDERS } from '@/lib/providers/registry';
-import type { ProviderId } from '@/lib/providers/types';
-import { routes } from '@/lib/routes';
+} from "@/components/scroll-to-top-fab";
+import { PosterPlaceholder } from "@/components/poster-placeholder";
+import { Skeleton } from "@/components/skeleton";
+import { PROVIDER_DOT } from "@/features/trackers/provider-style";
+import { cn } from "@/lib/cn";
+import { DURATION } from "@/lib/motion";
+import { useTabDoubleTap } from "@/lib/navigation/tab-double-tap";
+import { usePageEnterStyle } from "@/lib/page-transition";
+import { PROVIDERS } from "@/lib/providers/registry";
+import type { ProviderId } from "@/lib/providers/types";
+import { routes } from "@/lib/routes";
 import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
-} from '@/state/prefs/collapsed-diary-days';
-import { useHiddenItems } from '@/state/prefs/hidden-items';
-import { useTraktMediaImages } from '@/state/queries/trakt';
-import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
+} from "@/state/prefs/collapsed-diary-days";
+import { useHiddenItems } from "@/state/prefs/hidden-items";
+import { useTraktMediaImages } from "@/state/queries/trakt";
+import type {
+  DiaryDay,
+  MergedDiaryEntry,
+  NormalizedMediaItem,
+} from "@/types/media";
 
 import {
   clusterDayEntries,
@@ -44,7 +50,7 @@ import {
   summarizeCluster,
   type DiaryCluster,
   type DiaryDayParts,
-} from './merge';
+} from "./merge";
 
 /**
  * The rail: a fixed-width left gutter every row shares, carrying one continuous
@@ -58,9 +64,9 @@ import {
  * Kept flat, not nested in per-day containers: the list virtualizes one stream
  * of rows, so a day cannot own a wrapping View without defeating it.
  */
-const RAIL_W = 'w-14';
+const RAIL_W = "w-14";
 /** Centre of `RAIL_W` (56px), where the hairline sits. */
-const RAIL_LINE = 'left-7';
+const RAIL_LINE = "left-7";
 /**
  * The two class strings that set a row's height, named once because
  * `DiaryListSkeleton` has to reproduce it exactly — a skeleton whose rows are a
@@ -68,29 +74,29 @@ const RAIL_LINE = 'left-7';
  * tallest thing in a row (54 > title + detail), so it and the vertical padding
  * are the whole geometry: 54 + 6 + 6 = 66px.
  */
-const ROW_BODY = 'flex-1 py-1.5 pr-6';
-const POSTER = 'w-9 h-[54px] rounded';
+const ROW_BODY = "flex-1 py-1.5 pr-6";
+const POSTER = "w-9 h-[54px] rounded";
 
 /** Flattened list rows: a day's gutter head, then that day's entries. */
 type DiaryListItem =
   | {
-      kind: 'header';
+      kind: "header";
       key: string;
       dayKey: string;
       parts: DiaryDayParts;
       count: number;
       collapsed: boolean;
     }
-  | { kind: 'entry'; key: string; entry: MergedDiaryEntry }
+  | { kind: "entry"; key: string; entry: MergedDiaryEntry }
   | {
-      kind: 'cluster';
+      kind: "cluster";
       key: string;
       cluster: DiaryCluster;
       /** Precomputed at flatten time — see `clusterView`. */
       view: ClusterView;
       expanded: boolean;
     }
-  | { kind: 'child'; key: string; entry: MergedDiaryEntry; last: boolean };
+  | { kind: "child"; key: string; entry: MergedDiaryEntry; last: boolean };
 
 /**
  * Everything a collapsed run's row displays, derived once per cluster instead
@@ -125,7 +131,7 @@ function clusterView(cluster: DiaryCluster): ClusterView {
   return {
     item: summary.item,
     providers: summary.providers,
-    detail: range !== '' ? range : spelled,
+    detail: range !== "" ? range : spelled,
     runCount: shortClusterCount(summary),
     label: `${summary.item.title}, ${spelled}`,
   };
@@ -151,7 +157,7 @@ function flattenDays(
     if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
     items.push({
-      kind: 'header',
+      kind: "header",
       key: `h-${day.key}`,
       dayKey: day.key,
       parts: formatDayParts(day.key, now, timeZone),
@@ -164,12 +170,12 @@ function flattenDays(
       // A lone log is an ordinary row; a run of same-show episodes collapses.
       if (cluster.entries.length === 1) {
         const entry = cluster.entries[0];
-        items.push({ kind: 'entry', key: entry.id, entry });
+        items.push({ kind: "entry", key: entry.id, entry });
         continue;
       }
       const isOpen = expanded.has(cluster.key);
       items.push({
-        kind: 'cluster',
+        kind: "cluster",
         key: `c-${cluster.key}`,
         cluster,
         view: clusterView(cluster),
@@ -178,7 +184,7 @@ function flattenDays(
       if (isOpen) {
         cluster.entries.forEach((entry, index) =>
           items.push({
-            kind: 'child',
+            kind: "child",
             key: entry.id,
             entry,
             last: index === cluster.entries.length - 1,
@@ -191,18 +197,37 @@ function flattenDays(
 }
 
 /**
+ * What a row *shows*, as one string. The web enter fade replays only when this
+ * changes: a second provider's page merging in rewrites rows in place (new
+ * dots, a wider episode range, a re-keyed cluster), and with `recycleItems`
+ * those rows never remount, so a mount-time animation alone would miss every
+ * one of them. Keying the row on its signature forces the remount exactly
+ * when its content changed and nowhere else.
+ */
+function rowSignature(item: DiaryListItem): string {
+  switch (item.kind) {
+    case "header":
+      return `${item.key}|${item.count}|${item.collapsed}`;
+    case "cluster":
+      return `${item.key}|${item.view.providers.join()}|${item.view.detail}`;
+    default:
+      return `${item.key}|${item.entry.providers.join()}|${item.entry.season ?? ""}|${item.entry.episodes.join()}`;
+  }
+}
+
+/**
  * The hairline segment a non-header row contributes to the rail. `stop` ends it
  * halfway down — the last row of a day, so the rail terminates with the day
  * rather than running into the next one's date.
  */
 function RailLine({ stop = false }: { stop?: boolean }) {
   return (
-    <View className={cn(RAIL_W, 'relative')}>
+    <View className={cn(RAIL_W, "relative")}>
       <View
         className={cn(
-          'absolute w-px bg-border top-0',
+          "absolute w-px bg-border top-0",
           RAIL_LINE,
-          stop ? 'h-1/2' : 'bottom-0',
+          stop ? "h-1/2" : "bottom-0",
         )}
       />
     </View>
@@ -227,21 +252,21 @@ function DiaryDayHead({
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useCSSVariable("--color-muted");
   return (
     <PresstableOpacity
-      accessibilityHint={collapsed ? 'Expands this day' : 'Minimizes this day'}
-      accessibilityLabel={`${parts.label} ${parts.day}, ${count} ${count === 1 ? 'entry' : 'entries'}`}
+      accessibilityHint={collapsed ? "Expands this day" : "Minimizes this day"}
+      accessibilityLabel={`${parts.label} ${parts.day}, ${count} ${count === 1 ? "entry" : "entries"}`}
       accessibilityRole="button"
       accessibilityState={{ expanded: !collapsed }}
       className="flex-row pt-5"
       onPress={onToggle}
     >
-      <View className={cn(RAIL_W, 'items-center relative')}>
+      <View className={cn(RAIL_W, "items-center relative")}>
         <Text
           className={cn(
-            'font-display text-2xl leading-none',
-            parts.isToday ? 'text-accent' : 'text-foreground',
+            "font-display text-2xl leading-none",
+            parts.isToday ? "text-accent" : "text-foreground",
           )}
         >
           {parts.day}
@@ -251,18 +276,20 @@ function DiaryDayHead({
         </Text>
         {/* The rail picks up below the date block, so the hairline runs
             unbroken from one day into the next rather than restarting. */}
-        <View className={cn('absolute w-px bg-border top-11 bottom-0', RAIL_LINE)} />
+        <View
+          className={cn("absolute w-px bg-border top-11 bottom-0", RAIL_LINE)}
+        />
       </View>
       <View className="flex-1 flex-row items-center pr-6 pb-3">
         {/* The count lives out here, not stacked under the date: in the gutter
             a bare numeral under "18 AUG" reads as part of the date. */}
         <Text className="text-muted/70 font-sans text-[11px] mr-3">
-          {count} {count === 1 ? 'entry' : 'entries'}
+          {count} {count === 1 ? "entry" : "entries"}
         </Text>
         <View className="flex-1 h-px bg-border" />
         <Ionicons
-          color={typeof muted === 'string' ? muted : undefined}
-          name={collapsed ? 'chevron-down' : 'chevron-up'}
+          color={typeof muted === "string" ? muted : undefined}
+          name={collapsed ? "chevron-down" : "chevron-up"}
           size={14}
           style={{ marginLeft: 10 }}
         />
@@ -279,14 +306,17 @@ function DiaryDayHead({
  * still names every provider, since nothing adjacent does.
  */
 function ProviderDots({ providers }: { providers: ProviderId[] }) {
-  const names = providers.map((id) => PROVIDERS[id].label).join(', ');
+  const names = providers.map((id) => PROVIDERS[id].label).join(", ");
   return (
     <View
       accessibilityLabel={`Logged via ${names}`}
       className="flex-row items-center gap-1 flex-none"
     >
       {providers.map((id) => (
-        <View className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])} key={id} />
+        <View
+          className={cn("w-1.5 h-1.5 rounded-full", PROVIDER_DOT[id])}
+          key={id}
+        />
       ))}
     </View>
   );
@@ -297,13 +327,16 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
   // Trakt history rows arrive artless (2026 API dropped images from sync
   // endpoints) — recover the poster lazily per rendered row, like the cards.
   const { coverImage } = useTraktMediaImages(item);
-  if (coverImage === '') return <PosterPlaceholder className={POSTER} />;
+  if (coverImage === "") return <PosterPlaceholder className={POSTER} />;
   return (
     <Image
       source={{ uri: coverImage }}
-      className={cn(POSTER, 'bg-surface border border-border/50')}
+      className={cn(POSTER, "bg-surface border border-border/50")}
       contentFit="cover"
       recyclingKey={item.id}
+      // Trakt posters resolve a beat after the row does; fade them in rather
+      // than snapping over the placeholder.
+      transition={DURATION.swap}
     />
   );
 }
@@ -350,7 +383,7 @@ function RowTrailing({
         </Text>
       ) : (
         time != null &&
-        time !== '' && (
+        time !== "" && (
           <Text className="text-muted/70 font-sans text-[11px]">{time}</Text>
         )
       )}
@@ -395,8 +428,10 @@ function DiaryRow({
               >
                 {entry.item.title}
               </Text>
-              {detail !== '' && (
-                <Text className="text-muted font-sans text-xs mt-0.5">{detail}</Text>
+              {detail !== "" && (
+                <Text className="text-muted font-sans text-xs mt-0.5">
+                  {detail}
+                </Text>
               )}
             </View>
           </>
@@ -439,9 +474,11 @@ function DiaryClusterRow({
       <RailLine stop={last && !expanded} />
       <ActionableRow
         accessibility={{
-          accessibilityHint: expanded ? 'Collapses this run' : 'Expands this run',
+          accessibilityHint: expanded
+            ? "Collapses this run"
+            : "Expands this run",
           accessibilityLabel: view.label,
-          accessibilityRole: 'button',
+          accessibilityRole: "button",
           accessibilityState: { expanded },
         }}
         className={ROW_BODY}
@@ -503,8 +540,11 @@ function DiaryChildRow({
         href={routes.details(entry.item.id)}
         item={entry.item}
         leading={
-          <Text className="shrink text-muted font-sans text-[13px]" numberOfLines={1}>
-            {detail !== '' ? detail : entry.item.title}
+          <Text
+            className="shrink text-muted font-sans text-[13px]"
+            numberOfLines={1}
+          >
+            {detail !== "" ? detail : entry.item.title}
           </Text>
         }
         onActions={onActions}
@@ -532,8 +572,8 @@ function DiaryFailureBanner({
   providers: ProviderId[];
   onRetry: () => void;
 }) {
-  const accent = useCSSVariable('--color-accent');
-  const names = providers.map((id) => PROVIDERS[id].label).join(', ');
+  const accent = useCSSVariable("--color-accent");
+  const names = providers.map((id) => PROVIDERS[id].label).join(", ");
   return (
     <PresstableOpacity
       accessibilityLabel={`Retry loading ${names}`}
@@ -541,7 +581,7 @@ function DiaryFailureBanner({
       onPress={onRetry}
     >
       <Ionicons
-        color={typeof accent === 'string' ? accent : undefined}
+        color={typeof accent === "string" ? accent : undefined}
         name="warning-outline"
         size={16}
       />
@@ -582,11 +622,13 @@ function DiaryFooter({ loading }: { loading: boolean }) {
 function SkeletonDayHead() {
   return (
     <View className="flex-row pt-5">
-      <View className={cn(RAIL_W, 'items-center relative')}>
+      <View className={cn(RAIL_W, "items-center relative")}>
         {/* 24px tall: `font-display text-2xl leading-none`. */}
         <Skeleton className="w-7 h-6 rounded" />
         <Skeleton className="w-6 h-3 rounded mt-1" />
-        <View className={cn('absolute w-px bg-border top-11 bottom-0', RAIL_LINE)} />
+        <View
+          className={cn("absolute w-px bg-border top-11 bottom-0", RAIL_LINE)}
+        />
       </View>
       <View className="flex-1 flex-row items-center pr-6 pb-3">
         <Skeleton className="h-2.5 w-16 rounded mr-3" />
@@ -597,18 +639,18 @@ function SkeletonDayHead() {
 }
 
 /** Cycled rather than random so the placeholder is stable across renders. */
-const SKELETON_TITLE_WIDTHS = ['w-2/3', 'w-1/2', 'w-3/5', 'w-5/12'];
+const SKELETON_TITLE_WIDTHS = ["w-2/3", "w-1/2", "w-3/5", "w-5/12"];
 
 function SkeletonRow({ index, last }: { index: number; last: boolean }) {
   return (
     <View className="flex-row">
       <RailLine stop={last} />
-      <View className={cn(ROW_BODY, 'flex-row items-center')}>
+      <View className={cn(ROW_BODY, "flex-row items-center")}>
         <Skeleton className={POSTER} />
         <View className="flex-1 ml-3">
           <Skeleton
             className={cn(
-              'h-3.5 rounded',
+              "h-3.5 rounded",
               SKELETON_TITLE_WIDTHS[index % SKELETON_TITLE_WIDTHS.length],
             )}
           />
@@ -716,17 +758,69 @@ export function DiaryList({
   // spinner included (`app/(tabs)/_layout.tsx` emits the press). The tab name
   // is fixed here rather than passed in because this list *is* that tab's
   // surface — it renders nowhere else.
-  useTabDoubleTap('diary', () => void refresh());
+  useTabDoubleTap("diary", () => void refresh());
 
   /** A row is a day's last when the next item starts a new day (or ends it). */
   function isLastOfDay(index: number) {
     const next = items[index + 1];
-    return next == null || next.kind === 'header';
+    return next == null || next.kind === "header";
   }
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const past = event.nativeEvent.contentOffset.y > SCROLL_TO_TOP_THRESHOLD;
     if (past !== showScrollTop) setShowScrollTop(past);
+  }
+
+  // The same blur-fade a fresh page plays (no-op on native), on every row
+  // that arrives or changes: the list mounting over the skeleton, a later
+  // provider's page merging into rows already on screen, a run re-clustering.
+  // Rows are keyed on `rowSignature` only where the animation exists — on
+  // native the key stays fixed so recycling keeps its fibers.
+  const enter = usePageEnterStyle();
+
+  function renderRow(item: DiaryListItem, index: number) {
+    switch (item.kind) {
+      case "header":
+        return (
+          <DiaryDayHead
+            collapsed={item.collapsed}
+            count={item.count}
+            onToggle={() => toggleDay(item.dayKey)}
+            parts={item.parts}
+          />
+        );
+      case "cluster":
+        return (
+          <DiaryClusterRow
+            clusterKey={item.cluster.key}
+            expanded={item.expanded}
+            last={isLastOfDay(index)}
+            onActions={onItemActions}
+            onToggle={toggleCluster}
+            view={item.view}
+          />
+        );
+      case "child":
+        return (
+          <DiaryChildRow
+            entry={item.entry}
+            last={isLastOfDay(index)}
+            onActions={onItemActions}
+            onOpen={onOpen}
+            timeZone={timeZone}
+          />
+        );
+      default:
+        return (
+          <DiaryRow
+            entry={item.entry}
+            last={isLastOfDay(index)}
+            onActions={onItemActions}
+            onOpen={onOpen}
+            timeZone={timeZone}
+          />
+        );
+    }
   }
 
   return (
@@ -736,50 +830,11 @@ export function DiaryList({
         onScroll={handleScroll}
         data={items}
         keyExtractor={(item) => item.key}
-        renderItem={({ item, index }) => {
-          switch (item.kind) {
-            case 'header':
-              return (
-                <DiaryDayHead
-                  collapsed={item.collapsed}
-                  count={item.count}
-                  onToggle={() => toggleDay(item.dayKey)}
-                  parts={item.parts}
-                />
-              );
-            case 'cluster':
-              return (
-                <DiaryClusterRow
-                  clusterKey={item.cluster.key}
-                  expanded={item.expanded}
-                  last={isLastOfDay(index)}
-                  onActions={onItemActions}
-                  onToggle={toggleCluster}
-                  view={item.view}
-                />
-              );
-            case 'child':
-              return (
-                <DiaryChildRow
-                  entry={item.entry}
-                  last={isLastOfDay(index)}
-                  onActions={onItemActions}
-                  onOpen={onOpen}
-                  timeZone={timeZone}
-                />
-              );
-            default:
-              return (
-                <DiaryRow
-                  entry={item.entry}
-                  last={isLastOfDay(index)}
-                  onActions={onItemActions}
-                  onOpen={onOpen}
-                  timeZone={timeZone}
-                />
-              );
-          }
-        }}
+        renderItem={({ item, index }) => (
+          <View key={enter ? rowSignature(item) : undefined} style={enter}>
+            {renderRow(item, index)}
+          </View>
+        )}
         ListHeaderComponent={
           failedProviders.length > 0 ? (
             <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
