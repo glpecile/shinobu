@@ -28,6 +28,13 @@ import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
  */
 const CONTENT_COLUMN = 'w-full max-w-2xl self-center';
 const CONTENT_GUTTER = process.env.EXPO_OS === 'web' ? 'px-4' : 'px-6';
+/**
+ * Web route headers (Diary, Search, Watchlist) are one full-width `px-6` row
+ * under the sidebar, so the title lands in the same spot on every tab; native
+ * keeps the title on the cards' left edge via the content column.
+ */
+const HEADER_COLUMN =
+  process.env.EXPO_OS === 'web' ? 'px-6' : cn(CONTENT_COLUMN, CONTENT_GUTTER);
 
 /**
  * Feed items hidden from a card's actions dialog. Listed here (the only
@@ -91,14 +98,11 @@ export default function ConnectScreen() {
       <Head>
         <title>Manage Trackers — Shinobu</title>
       </Head>
-      {/* A top-level tab now (native tab bar / web sidebar) — no back button.
-          Same column + gutter as the content so the title sits on the cards'
-          left edge at every width. */}
+      {/* A top-level tab now (native tab bar / web sidebar) — no back button. */}
       <View
         className={cn(
           'flex-row items-center',
-          CONTENT_COLUMN,
-          CONTENT_GUTTER,
+          HEADER_COLUMN,
           screenHeaderTopPadding,
           'pb-4',
         )}
