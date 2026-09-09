@@ -47,8 +47,9 @@ bun web              # Metro, hot reload (restart it to pick up metro.config.js 
 bun run dev:worker   # wrangler dev on :8787 — runs worker/index.ts like production
 ```
 
-`wrangler dev` needs `dist/` to exist (assets binding) — run
-`bun run build:web` once if it's missing. Metro config changes require a
+`wrangler dev` refuses to start unless `dist/` exists (assets binding), so
+`dev:worker` runs `mkdir -p dist` first — an empty directory is enough in dev,
+Metro serves the app and the Worker only answers `/api/*`. Metro config changes require a
 dev-server restart (an already-running `bun web` keeps the old config).
 
 ## Verified live (2026-07-22)
