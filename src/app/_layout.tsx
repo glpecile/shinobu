@@ -24,6 +24,7 @@ import { LightboxProvider } from "@/components/lightbox/state";
 import { createQueryPersister, persistOptions } from "@/state/queries/persist";
 import { createQueryClient } from "@/state/queries/query-client";
 import { UpNextPrefetch } from "@/features/up-next/up-next-prefetch";
+import { usePageEnterStyle } from "@/lib/page-transition";
 import { SheetProvider } from "@/components/sheet";
 import { useColorScheme } from "react-native";
 // Side-effect import: TaskManager.defineTask must run at module-evaluation
@@ -59,6 +60,9 @@ export default function Layout() {
   // light/dark background — see docs/solutions/web-fouc-on-boot.md.
   const colorScheme = useColorScheme();
   const backgroundColor = colorScheme === "dark" ? "#0a0a0a" : "#ffffff";
+  // Web-only blur-fade on every pushed screen (no-op on native, which has its
+  // own stack transition). Tab switches get the same enter in (tabs)/_layout.web.
+  const pageEnter = usePageEnterStyle();
 
   // Notification tap → details route, in all three app states (R10).
   useNotificationTapNavigation();
@@ -98,7 +102,7 @@ export default function Layout() {
                 <Stack
                   screenOptions={{
                     headerShown: false,
-                    contentStyle: { backgroundColor },
+                    contentStyle: [{ backgroundColor }, pageEnter],
                   }}
                 >
                   {/* Bottom tabs (native) / sidebar-hosted (web). Detail routes

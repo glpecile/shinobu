@@ -33,6 +33,8 @@ import { cubicBezier, Easing } from 'react-native-reanimated';
 export const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);
 /** `EASE_OUT` for `Keyframe` builders. */
 export const KEYFRAME_EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+/** `EASE_OUT` as a CSS string, for react-native-web `animation*`/`transition*` style keys. */
+export const CSS_EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
 /**
  * Strong ease-in-out (easeInOutQuart). For something already on screen that
