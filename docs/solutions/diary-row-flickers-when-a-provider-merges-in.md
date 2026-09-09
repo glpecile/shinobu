@@ -47,6 +47,13 @@ log id), never re-points a registered alias, and never lets a pinned id shadow
 another row's actual log id. `merge.test.ts` covers both the keep-id and the
 never-duplicate cases.
 
+**Only rows new to the diary fade.** With recycling off, a row mounts every
+time it scrolls into view, and fading each of those reads as the whole list
+re-rendering under the cursor (the "re-render galore" recording). `RowEnter`
+plays the fade only for keys absent from every earlier data pass this
+session (`markEnteringRows`), decided once at mount and retired after it, so
+scrolling, re-expanding a day, or returning to the tab moves nothing.
+
 Two things had to change with it:
 
 - **`recycleItems` is native-only.** A recycled container swaps items on

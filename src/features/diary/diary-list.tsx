@@ -1,5 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -143,6 +143,42 @@ function clusterView(cluster: DiaryCluster): ClusterView {
  * if a session ever pages deep enough to notice.
  */
 const rowIdRegistry = new Map<string, string>();
+
+/**
+ * Which rows are *new to the diary* this pass — absent from every earlier
+ * pass this session — as opposed to merely scrolling into view. Only those
+ * play the enter fade: with `recycleItems` off on web a row mounts every time
+ * it scrolls in, and fading each of those reads as the list re-rendering
+ * under the cursor. Keys are never forgotten, so a row scrolled back in or a
+ * day re-expanded stays still; `RowEnter` retires a key once its row has
+ * mounted, so a row that arrived below the fold and is scrolled to seconds
+ * later doesn't fade either.
+ */
+const knownRowKeys = new Set<string>();
+let enteringRowKeys = new Set<string>();
+let lastRowKeys = '';
+
+function markEnteringRows(items: DiaryListItem[]): void {
+  const keys = items.map((item) => item.key).join('\n');
+  if (keys === lastRowKeys) return;
+  lastRowKeys = keys;
+  enteringRowKeys = new Set(
+    items.filter((item) => !knownRowKeys.has(item.key)).map((item) => item.key),
+  );
+  for (const item of items) knownRowKeys.add(item.key);
+}
+
+/** The per-row mount wrapper: the page blur-fade for a row that just arrived. */
+function RowEnter({ rowKey, children }: { rowKey: string; children: React.ReactNode }) {
+  const enter = usePageEnterStyle();
+  // Decided once, at mount, and kept for the row's life so the animation is
+  // never yanked mid-play by a later data pass.
+  const [fresh] = useState(() => enteringRowKeys.has(rowKey));
+  useEffect(() => {
+    enteringRowKeys.delete(rowKey);
+  }, [rowKey]);
+  return <View style={fresh ? enter : undefined}>{children}</View>;
+}
 
 function flattenDays(
   days: DiaryDay[],
@@ -713,6 +749,7 @@ export function DiaryList({
     collapsedDays,
     hiddenIds,
   );
+  markEnteringRows(items);
 
   function toggleCluster(key: string) {
     setExpanded((prev) => {
@@ -753,13 +790,10 @@ export function DiaryList({
     if (past !== showScrollTop) setShowScrollTop(past);
   }
 
-  // The same blur-fade a fresh page plays (no-op on native), on every row
-  // that *mounts*: the list arriving over the skeleton, a later provider's
-  // page adding rows between the ones on screen. A row that merely changes
-  // keeps its id (`pinRowIds`) and its DOM, so its text morphs and its new
-  // dot fades in — nothing already visible ever restarts from transparent.
-  const enter = usePageEnterStyle();
-
+  // Rows that arrive — the list over the skeleton, a later provider's page
+  // adding rows between the ones on screen — fade in (`RowEnter`). A row that
+  // merely changes keeps its id (`pinRowIds`) and its DOM, so its text morphs
+  // and its new dot fades in; a row scrolling into view just appears.
   function renderRow(item: DiaryListItem, index: number) {
     switch (item.kind) {
             case 'header':
@@ -813,7 +847,7 @@ export function DiaryList({
         data={items}
         keyExtractor={(item) => item.key}
         renderItem={({ item, index }) => (
-          <View style={enter}>{renderRow(item, index)}</View>
+          <RowEnter rowKey={item.key}>{renderRow(item, index)}</RowEnter>
         )}
         ListHeaderComponent={
           failedProviders.length > 0 ? (
