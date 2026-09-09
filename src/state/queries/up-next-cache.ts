@@ -4,7 +4,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 /**
  * The Up Next query root, in its own module for the same reason
- * `diary-cache.ts` and `search-cache.ts` exist: two modules need it and they
+ * `diary-pages.ts` and `search-cache.ts` exist: two modules need it and they
  * can't import each other. `state/queries/up-next.ts` builds its keys from it,
  * and `state/session` purges it on disconnect — importing the key builder
  * there directly would close a cycle, since `up-next.ts` reads the session.

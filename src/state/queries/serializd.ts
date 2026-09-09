@@ -19,7 +19,7 @@ export function serializdDeps(): SerializdDeps {
 
 /**
  * Query keys rooted at `['serializd', …]` (matches disconnect's
- * `removeQueries({ queryKey: ['serializd'] })`, R6). The diary/progress keys
+ * `removeQueries({ queryKey: ['serializd'] })`, R6). The progress keys
  * include the username so reconnecting as a different account never serves the
  * prior account's entries (Letterboxd's pattern).
  *
@@ -31,7 +31,6 @@ export function serializdDeps(): SerializdDeps {
  */
 export const serializdQueryKeys = {
   all: ['serializd'] as const,
-  diary: (username: string) => [...serializdQueryKeys.all, 'diary', username] as const,
   progress: (username: string, tmdbId: number) =>
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
 };

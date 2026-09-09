@@ -19,7 +19,7 @@ export interface EpisodeLog {
  * from, so this costs no extra request.
  *
  * ponytail: Serializd and AniList only expose episode logs through the
- * paginated diary — add a diary-cache scan here if their rows are wanted.
+ * paginated diary — add a `findInDiaryCache` step here if their rows are wanted.
  */
 export function useEpisodeLogs(
   item: NormalizedMediaItem,
