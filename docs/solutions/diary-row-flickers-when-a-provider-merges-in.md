@@ -25,17 +25,27 @@ transition.
 ## Fix
 
 Row identity must not depend on which providers have answered yet.
-`diary-list.tsx`'s `stableRowId` pins a row to the first id it rendered under,
-aliased by every join key the merge would have matched it on
-(`mergedEntryIdentities`: each namespaced external id, scoped to the episode
-set, plus the day). A later merge sharing any alias keeps the id, so the row
-keeps its DOM and its content updates in place:
+`merge.ts`'s `pinRowIds` pins a row to the first id it rendered under, aliased
+by every join key the merge would have matched it on (each namespaced external
+id, scoped to the episode set, plus the day). A later merge sharing any alias
+keeps the id, so the row keeps its DOM and its content updates in place:
 
 - the detail line, day count and run pill go through `MorphText` (torph);
 - a newly merged provider's dot mounts with the enter fade;
 - the poster fades over the placeholder via expo-image `transition`.
 
 Only rows that genuinely arrive mount, and only they fade in.
+
+**The alias lookup must stay one-to-one.** A first cut handed the pinned id to
+*every* row matching an alias, and Legend List threw `Detected overlapping key
+(simkl-…-s1e9)`: the merge deliberately keeps same-provider logs of one
+episode apart (a same-day rewatch is two rows, AE6), so two Trakt rows shared
+every alias with one Simkl row and got the same key — and duplicate keys make
+Legend List drop and re-create containers, which *is* a flicker. `pinRowIds`
+therefore claims an alias once per pass (first-come; the rest keep their own
+log id), never re-points a registered alias, and never lets a pinned id shadow
+another row's actual log id. `merge.test.ts` covers both the keep-id and the
+never-duplicate cases.
 
 Two things had to change with it:
 

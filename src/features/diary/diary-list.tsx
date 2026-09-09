@@ -44,7 +44,7 @@ import {
   formatDayParts,
   formatEpisodeDetail,
   formatLogTime,
-  mergedEntryIdentities,
+  pinRowIds,
   shortClusterCount,
   summarizeCluster,
   type DiaryCluster,
@@ -137,28 +137,12 @@ function clusterView(cluster: DiaryCluster): ClusterView {
 }
 
 /**
- * A merged row's id is its primary contributor's log id (`merge.ts`
- * `toMerged`), so it flips when a higher-priority provider's page lands after
- * a lower one's — Trakt over Simkl over AniList. To the list that is a
- * different row: the old one unmounts and the new one mounts, playing its
- * enter fade over a row the user was already looking at, which reads as a
- * flicker (and drops a run's expanded state, keyed on the same id). This pins
- * a row to the first id it rendered under: a later merge sharing any of its
- * identity keys on the same day keeps that id, so its title, detail and dots
- * update in place instead.
- *
- * ponytail: module-level and unbounded — one string per row seen this session.
- * Bound it if a session ever pages deep enough to notice.
+ * Session-long alias → pinned row id registry for `pinRowIds` (see its doc):
+ * rows keep their key while later provider pages merge into them.
+ * ponytail: unbounded — one string per join key seen this session. Bound it
+ * if a session ever pages deep enough to notice.
  */
-const stableRowIds = new Map<string, string>();
-
-function stableRowId(dayKey: string, entry: MergedDiaryEntry): string {
-  const aliases = mergedEntryIdentities(entry).map((key) => `${dayKey}|${key}`);
-  const known = aliases.find((alias) => stableRowIds.has(alias));
-  const id = known == null ? entry.id : (stableRowIds.get(known) ?? entry.id);
-  for (const alias of aliases) stableRowIds.set(alias, id);
-  return id;
-}
+const rowIdRegistry = new Map<string, string>();
 
 function flattenDays(
   days: DiaryDay[],
@@ -169,13 +153,14 @@ function flattenDays(
   hiddenIds: ReadonlySet<string>,
 ): DiaryListItem[] {
   const items: DiaryListItem[] = [];
-  for (const day of days) {
+  for (const day of pinRowIds(rowIdRegistry, days)) {
     // Hiding is one global set (feed, watchlist, Up Next, diary), so a hidden
     // item's logs drop out here too — and a day left with nothing loses its
     // header rather than standing empty.
-    const entries = day.entries
-      .filter((entry) => !hiddenIds.has(entry.item.id))
-      .map((entry) => ({ ...entry, id: stableRowId(day.key, entry) }));
+    const entries =
+      hiddenIds.size === 0
+        ? day.entries
+        : day.entries.filter((entry) => !hiddenIds.has(entry.item.id));
     if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
     items.push({
@@ -771,7 +756,7 @@ export function DiaryList({
   // The same blur-fade a fresh page plays (no-op on native), on every row
   // that *mounts*: the list arriving over the skeleton, a later provider's
   // page adding rows between the ones on screen. A row that merely changes
-  // keeps its id (`stableRowId`) and its DOM, so its text morphs and its new
+  // keeps its id (`pinRowIds`) and its DOM, so its text morphs and its new
   // dot fades in — nothing already visible ever restarts from transparent.
   const enter = usePageEnterStyle();
 
