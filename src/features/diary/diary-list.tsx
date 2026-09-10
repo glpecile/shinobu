@@ -360,6 +360,20 @@ function RowTrailing({
   );
 }
 
+/**
+ * Where a log opens: its episode when the log is one episode the episode route
+ * can address — a TV season pointer, or an anime entry number the route places
+ * itself — else the show (movies, chapter logs, ranges).
+ */
+function entryHref(entry: MergedDiaryEntry): string {
+  const { item, season, episodes } = entry;
+  const number = episodes[0];
+  if (number == null || episodes.length !== 1) return routes.details(item.id);
+  if (season != null) return routes.episode(item.id, season, number);
+  if (item.type === 'ANIME' && !item.isFilm) return routes.animeEpisode(item.id, number);
+  return routes.details(item.id);
+}
+
 function DiaryRow({
   entry,
   timeZone,
@@ -370,7 +384,7 @@ function DiaryRow({
   entry: MergedDiaryEntry;
   timeZone: string;
   last: boolean;
-  onOpen: (id: string) => void;
+  onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
   const detail = formatEpisodeDetail({
@@ -378,13 +392,14 @@ function DiaryRow({
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
   });
+  const href = entryHref(entry);
 
   return (
     <View className="flex-row">
       <RailLine stop={last} />
       <ActionableRow
         className={ROW_BODY}
-        href={routes.details(entry.item.id)}
+        href={href}
         item={entry.item}
         leading={
           <>
@@ -403,7 +418,7 @@ function DiaryRow({
           </>
         }
         onActions={onActions}
-        onPress={() => onOpen(entry.item.id)}
+        onPress={() => onOpen(href)}
         trailing={
           <RowTrailing
             providers={entry.providers}
@@ -487,7 +502,7 @@ function DiaryChildRow({
   entry: MergedDiaryEntry;
   timeZone: string;
   last: boolean;
-  onOpen: (id: string) => void;
+  onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
   const detail = formatEpisodeDetail({
@@ -495,13 +510,14 @@ function DiaryChildRow({
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
   });
+  const href = entryHref(entry);
 
   return (
     <View className="flex-row">
       <RailLine stop={last} />
       <ActionableRow
         className="flex-1 h-9 pr-6 pl-3"
-        href={routes.details(entry.item.id)}
+        href={href}
         item={entry.item}
         leading={
           <Text className="shrink text-muted font-sans text-[13px]" numberOfLines={1}>
@@ -509,7 +525,7 @@ function DiaryChildRow({
           </Text>
         }
         onActions={onActions}
-        onPress={() => onOpen(entry.item.id)}
+        onPress={() => onOpen(href)}
         trailing={
           <RowTrailing
             providers={entry.providers}
@@ -648,7 +664,7 @@ export interface DiaryListProps {
   onEndReached: () => void;
   onRetry: () => void;
   onRefresh: () => Promise<unknown>;
-  onOpen: (id: string) => void;
+  onOpen: (href: string) => void;
   /** Opens the card actions dialog — long-press, or the web hover ⋯. */
   onItemActions: (item: NormalizedMediaItem) => void;
 }

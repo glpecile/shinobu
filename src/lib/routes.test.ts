@@ -24,5 +24,6 @@ describe('the watchlist route (plan 0031 R24)', () => {
 describe('the episode route', () => {
   test('is keyed by the show id with the episode pointer as query params', () => {
     expect(routes.episode('simkl-42', 2, 10)).toBe('/episode/simkl-42?season=2&number=10');
+    expect(routes.animeEpisode('anilist-7', 10)).toBe('/episode/anilist-7?number=10');
   });
 });
