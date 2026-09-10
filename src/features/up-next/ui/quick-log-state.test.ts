@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { LogMediaResult } from '@/features/log-media/fan-out';
 import type { ProviderId } from '@/lib/providers/types';
 
-import { isQuickLogPending, resolveQuickLog } from './quick-log-state';
+import { resolveQuickLog } from './quick-log-state';
 
 function result(overrides: Partial<LogMediaResult> = {}): LogMediaResult {
   return {
@@ -62,14 +62,5 @@ describe('resolveQuickLog', () => {
       phase: 'failed',
       notice: 'Failed on Trakt.',
     });
-  });
-});
-
-describe('isQuickLogPending', () => {
-  test('pending spans the write and the settle, nothing else', () => {
-    expect(isQuickLogPending('logging')).toBe(true);
-    expect(isQuickLogPending('settling')).toBe(true);
-    expect(isQuickLogPending('idle')).toBe(false);
-    expect(isQuickLogPending('failed')).toBe(false);
   });
 });

@@ -113,6 +113,35 @@ function accessToken(deps: SimklDeps): Effect.Effect<string, ProviderAuthError> 
 }
 
 /**
+ * Fold entries for the **same item** (same ids, same `watched_at`) into one
+ * `seasons[].episodes[]` list. The write-lock queue (plan 0037,
+ * `features/log-media/simkl-write-lock.ts`) hands this adapter one entry per
+ * coalesced log — five confirms of one show arrive as five entries — and
+ * Simkl should see one show with five episodes, not the same show five times.
+ * Different `watched_at`s stay apart: Simkl dates a whole item, not an episode.
+ */
+function mergeSameItem(
+  entries: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const merged = new Map<string, Record<string, unknown>>();
+  for (const entry of entries) {
+    const key = JSON.stringify({ ids: entry.ids, watched_at: entry.watched_at });
+    const existing = merged.get(key);
+    if (existing == null || !Array.isArray(existing.seasons) || !Array.isArray(entry.seasons)) {
+      merged.set(existing == null ? key : `${key}#${merged.size}`, entry);
+      continue;
+    }
+    const seasons = existing.seasons as Array<{ number: number; episodes: Array<{ number: number }> }>;
+    for (const season of entry.seasons as typeof seasons) {
+      const target = seasons.find((candidate) => candidate.number === season.number);
+      if (target == null) seasons.push(season);
+      else target.episodes.push(...season.episodes);
+    }
+  }
+  return [...merged.values()];
+}
+
+/**
  * Group a canonical batch into Simkl's `seasons[].episodes[]` shape — the same
  * one-request-per-show grouping the Trakt adapter does.
  */
@@ -322,15 +351,17 @@ export function logToSimkl(
     shows.push({ ids, seasons: seasonsFor(batch), ...watched });
   }
 
-  const submitted = movies.length + shows.length + anime.length;
+  const mergedShows = mergeSameItem(shows);
+  const mergedAnime = mergeSameItem(anime);
+  const submitted = movies.length + mergedShows.length + mergedAnime.length;
   if (submitted === 0) {
     return Effect.succeed(skip(dropped[0] ?? 'nothing to log to Simkl'));
   }
 
   const body = {
     ...(movies.length > 0 ? { movies } : {}),
-    ...(shows.length > 0 ? { shows } : {}),
-    ...(anime.length > 0 ? { anime } : {}),
+    ...(mergedShows.length > 0 ? { shows: mergedShows } : {}),
+    ...(mergedAnime.length > 0 ? { anime: mergedAnime } : {}),
   };
 
   return Effect.gen(function* () {

@@ -4,11 +4,13 @@ import { useCSSVariable } from 'uniwind';
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
+import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { routes } from '@/lib/routes';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
@@ -75,28 +77,42 @@ export interface LogConfirmSheetProps {
   onConfirm: () => void;
 }
 
-export function LogConfirmSheet({
-  open,
-  onClose,
-  title,
-  description,
+/**
+ * The log verb's fields — write targets, manual rows, the backdate field and
+ * the tags input — without the sheet, header, result or buttons around them.
+ * `LogConfirmSheet` composes it for every single log; the quick-log catch-up
+ * chain (plan 0037, `features/up-next/catch-up`) composes it under its own
+ * header and above its own ledger, keeping one form for both.
+ */
+export type LogFormFieldsProps = Pick<
+  LogConfirmSheetProps,
+  | 'item'
+  | 'onClose'
+  | 'targets'
+  | 'manualTargets'
+  | 'selectedProviders'
+  | 'onSelectedProvidersChange'
+  | 'watchedAt'
+  | 'onWatchedAtChange'
+  | 'tags'
+  | 'onTagsChange'
+> & { pending: boolean };
+
+export function LogFormFields({
   item,
+  onClose,
   targets,
   manualTargets = [],
   selectedProviders,
   onSelectedProvidersChange,
-  logMedia,
   watchedAt,
   onWatchedAtChange,
   tags,
   onTagsChange,
-  confirmLabel,
-  pendingLabel,
-  onConfirm,
-}: LogConfirmSheetProps) {
-  const result = logMedia.data;
-  const pending = logMedia.isPending;
+  pending,
+}: LogFormFieldsProps) {
   const muted = useCSSVariable('--color-muted');
+  const pushRoute = usePushRoute();
   // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
   // tags, so narrowing this would silently drop working Serializd functionality.
   const tagProviders = TAG_PROVIDERS.filter((id) =>
@@ -121,12 +137,7 @@ export function LogConfirmSheet({
   }
 
   return (
-    <Sheet onClose={onClose} open={open}>
-      <Text className="text-2xl font-display text-foreground">{title}</Text>
-      <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-        {description}
-      </Text>
-
+    <>
       {/* Frozen while the fan-out runs: a tag or target toggled mid-write would
           land on some providers and not others, and the picker's taps stayed
           live even though the confirm button was already spinning. */}
@@ -138,6 +149,10 @@ export function LogConfirmSheet({
           Write to
         </Text>
         <ProviderPicker
+          onConnect={() => {
+            onClose();
+            pushRoute(routes.connect);
+          }}
           onSelectAll={selectAllProviders}
           onSelectNone={selectNoProviders}
           onToggle={toggleProvider}
@@ -145,7 +160,7 @@ export function LogConfirmSheet({
           targets={targets}
         />
         <ManualWriteRows item={item} manual={manualTargets} />
-        {selectedProviders.length === 0 && (
+        {targets.length > 0 && selectedProviders.length === 0 && (
           <Text className="text-accent font-sans text-sm mt-2">
             Select at least one provider to log.
           </Text>
@@ -176,6 +191,52 @@ export function LogConfirmSheet({
           </View>
         )}
       </View>
+    </>
+  );
+}
+
+export function LogConfirmSheet({
+  open,
+  onClose,
+  title,
+  description,
+  item,
+  targets,
+  manualTargets = [],
+  selectedProviders,
+  onSelectedProvidersChange,
+  logMedia,
+  watchedAt,
+  onWatchedAtChange,
+  tags,
+  onTagsChange,
+  confirmLabel,
+  pendingLabel,
+  onConfirm,
+}: LogConfirmSheetProps) {
+  const result = logMedia.data;
+  const pending = logMedia.isPending;
+
+  return (
+    <Sheet onClose={onClose} open={open}>
+      <Text className="text-2xl font-display text-foreground">{title}</Text>
+      <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
+        {description}
+      </Text>
+
+      <LogFormFields
+        item={item}
+        manualTargets={manualTargets}
+        onClose={onClose}
+        onSelectedProvidersChange={onSelectedProvidersChange}
+        onWatchedAtChange={onWatchedAtChange}
+        pending={pending}
+        selectedProviders={selectedProviders}
+        targets={targets}
+        watchedAt={watchedAt}
+        {...(tags != null ? { tags } : {})}
+        {...(onTagsChange != null ? { onTagsChange } : {})}
+      />
       {/* Visible only on a report that kept the sheet open (a clean one closed
           it and became the toast): the success half of a partial outcome. */}
       {result != null && result.succeeded.length > 0 && (

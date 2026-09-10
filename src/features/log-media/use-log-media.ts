@@ -37,6 +37,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
 import { removeWatchedFromWatchlist } from './remove-watched-from-watchlist';
 import { currentPlatform } from './use-log-targets';
+import { createSimklLogQueue } from './simkl-write-lock';
 import {
   anilistHasEpisodes,
   anilistHasFilm,
@@ -53,6 +54,24 @@ import {
   type ProviderWriteResult,
   type ProviderWriteOutcome,
 } from './fan-out';
+
+/**
+ * AniList tracks progress as one counter, so two logs of the same entry in
+ * flight at once can land out of order and *regress* it (episode 4's write
+ * answering after episode 5's). The catch-up chain (plan 0037) fires its
+ * fan-outs concurrently — each Simkl leg may wait out the write lock — so
+ * AniList writes are serialized here, app-wide: one at a time, in the order
+ * they were asked for. Every other provider records episodes individually and
+ * needs no ordering.
+ */
+let anilistTail: Promise<unknown> = Promise.resolve();
+function serialized<V>(adapter: WriteAdapter<V>): WriteAdapter<V> {
+  return (variables) => {
+    const run = anilistTail.then(() => adapter(variables));
+    anilistTail = run.catch(() => undefined);
+    return run;
+  };
+}
 
 /**
  * One entry per write-capable provider. `Effect.runPromise` here is the same
@@ -78,7 +97,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
   // reads `entryEpisodes` — the entry's own 1..n numbering — and never the
   // canonical `episodes` the ani.zip translation produced for Trakt/Serializd.
   // A sequel entry's episode 3 is `progress: 3` here while Trakt gets S02E03.
-  anilist: ({ item, episode, episodes, entryEpisodes, rewatch }) =>
+  anilist: serialized(({ item, episode, episodes, entryEpisodes, rewatch }) =>
     Effect.runPromise(
       logToAniList(anilistDeps(), item, {
         // AniList tracks a single progress counter — a whole-season batch
@@ -92,7 +111,7 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
               : {}),
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
-    ).then(okResult),
+    ).then(okResult)),
   // Diary write as the signed-in web user (plan 0012): run the write inside the
   // authenticated WebView, POSTing the modern /api/v0/production-log-entries JSON
   // API (the legacy /s/save-diary-entry form is dead). Tags are the app's
@@ -148,14 +167,14 @@ function okResult(): ProviderWriteResult {
  * which flows through the fan-out contract and plan 0022's manual-link
  * affordance like any other adapter-reported skip.
  *
- * `log` is injectable for tests only; the default is the real one-element
- * batch per fan-out (KTD-3: every Simkl write for one item is ONE POST behind
- * Simkl's ~20s per-user write lock).
+ * `log` is injectable for tests only; the default is the app-wide
+ * `simklLogQueue` below (KTD-3: every Simkl write for one item is ONE POST
+ * behind Simkl's ~20s per-user write lock — and, since plan 0037, writes that
+ * arrive inside that lock coalesce into the next POST instead of bouncing).
  */
 export function simklLogAdapter(
   queryClient: QueryClient,
-  log: (entry: SimklLogEntry) => Promise<ProviderWriteResult> = (entry) =>
-    Effect.runPromise(logToSimkl(simklDeps(), [entry])),
+  log: (entry: SimklLogEntry) => Promise<ProviderWriteResult> = simklLogQueue.log,
 ): WriteAdapter<LogMediaVariables> {
   return async ({ item, episode, episodes, entryEpisodes, watchedAt }) => {
     const needsMap =
@@ -178,6 +197,15 @@ export function simklLogAdapter(
     });
   };
 }
+
+/**
+ * The one gate every Simkl history write passes through (see
+ * `simkl-write-lock.ts`). Module-level on purpose: the lock is per user
+ * account, not per sheet or per mutation.
+ */
+const simklLogQueue = createSimklLogQueue((entries) =>
+  Effect.runPromise(logToSimkl(simklDeps(), entries)),
+);
 
 /** The full adapter map for one mutation: the static entries plus Simkl's. */
 export function logAdapters(

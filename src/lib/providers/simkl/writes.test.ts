@@ -166,6 +166,34 @@ describe('logToSimkl', () => {
     expect(body.anime).toBeUndefined();
   });
 
+  test('entries for the same show fold into one item (plan 0037 coalesced chain)', async () => {
+    const { deps, calls } = makeDeps(() => okHistoryResponse());
+    await Effect.runPromise(
+      logToSimkl(deps, [
+        { item: show, episode: { season: 1, number: 3 } },
+        { item: show, episode: { season: 2, number: 1 } },
+        { item: show, episode: { season: 1, number: 4 } },
+        // A different watched_at is a different item as Simkl dates it.
+        { item: show, episode: { season: 2, number: 2 }, watchedAt: '2026-09-01T00:00:00.000Z' },
+      ]),
+    );
+    const body = requestBody(calls[0]!);
+    expect(body.shows).toEqual([
+      {
+        ids: { tmdb: 1396 },
+        seasons: [
+          { number: 1, episodes: [{ number: 3 }, { number: 4 }] },
+          { number: 2, episodes: [{ number: 1 }] },
+        ],
+      },
+      {
+        ids: { tmdb: 1396 },
+        seasons: [{ number: 2, episodes: [{ number: 2 }] }],
+        watched_at: '2026-09-01T00:00:00.000Z',
+      },
+    ]);
+  });
+
   test('watched_at is the ISO instant, threaded per entry', async () => {
     const { deps, calls } = makeDeps(() => okHistoryResponse());
     await Effect.runPromise(

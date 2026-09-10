@@ -1,164 +1,44 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableScale } from '@/components/presstable';
 import {
-  LogConfirmSheet,
-} from '@/features/log-media/log-confirm-sheet';
-import { parseTags } from '@/features/log-media/parse-tags';
-import {
-  prefetchLogReconcile,
-  useLogMedia,
-} from '@/features/log-media/use-log-media';
-import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import { logToastCopy } from '@/features/log-media/toast-copy';
+  useCatchUpControls,
+  useQuickLogBusy,
+} from '@/features/up-next/catch-up/state';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
-import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
-import { toast } from '@/lib/toast';
-import { useConnectedProviders } from '@/state/session';
-import { upNextQueryKeys } from '@/state/queries/up-next';
-
-import {
-  isQuickLogPending,
-  resolveQuickLog,
-  type QuickLogPhase,
-} from './quick-log-state';
 
 /**
- * The Continue Watching checkmark: tapping it opens a confirmation modal (the
- * same `LogConfirmSheet` every other log entry point uses), and confirming
- * logs *this* episode through the shared `useLogMedia` fan-out — never a
- * single-provider write (R7). The modal is deliberate: an external write
- * shouldn't ride on one stray tap, matching the rest of the app. Opening it
- * prefetches the reconcile reads so the confirmed write returns quickly.
+ * The Continue Watching checkmark. Tapping it opens the app-level catch-up
+ * sheet (`features/up-next/catch-up`, plan 0037) on this entry: the same
+ * confirm modal every log entry point uses, which then walks the show's
+ * aired-but-unwatched backlog one confirm at a time. The write itself is the
+ * shared `useLogMedia` fan-out — never a single-provider write (plan 0019 R7).
  *
- * Nothing advances optimistically (KTD-6). Once a write succeeds, the modal
- * closes and the button holds a pending state until the Up Next slot refetches;
- * the card then advances, moves, or disappears purely from recomputed data —
- * which is why an advancing card simply unmounts (its entry id carries the
- * episode number) rather than animating a local counter. The card advances
- * only when the entry's own *source* provider succeeded (R8/R9).
- *
- * The settle signal is the button's own awaited `invalidateQueries` on the
- * inputs key — never a passive watch of the fetching flag. The mutation's
- * `invalidateAfterLog` already invalidated the slot; `cancelRefetch: false`
- * joins that in-flight refetch instead of restarting it, and the promise
- * resolving *is* "the recomputed data is in". The old watcher timed out after
- * 10s into a "Logged — refresh to update" notice, which a slow post-write
- * refetch (Simkl's ~20s write lock) or a skip-only outcome hit routinely
- * (owner report 2026-08-02); now the timeout only stops the spinner, and the
- * promise still advances the card whenever the refetch lands.
+ * The button owns nothing but the tap. Nothing advances optimistically
+ * (KTD-6): once a write lands, the button spins until the Up Next slot's
+ * awaited invalidation resolves, and the card then advances, moves, or
+ * disappears purely from recomputed data — which is why it simply unmounts
+ * (its entry id carries the episode number) rather than animating a counter.
+ * The sheet lives above the card for exactly that reason.
  *
  * Typed to the `episode` arm of the union, not `UpNextEntry`: a release entry
- * has no episode to log and no quick-log to offer (plan 0030 R5), so callers
- * narrow rather than this component null-checking a field it always needs.
+ * has no episode to log (plan 0030 R5), so callers narrow rather than this
+ * component null-checking a field it always needs.
  */
-const SETTLE_TIMEOUT_MS = 10_000;
-const DEFAULT_TAGS = 'shinobu, ';
-
 export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
-  const queryClient = useQueryClient();
-  const connected = useConnectedProviders();
-  const logMedia = useLogMedia();
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(entry.item);
-
-  const [open, setOpen] = useState(false);
-  const [selectedProviders, setSelectedProviders] = useState(targets);
-  const [tags, setTags] = useState(DEFAULT_TAGS);
-  const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-
-  const [phase, setPhase] = useState<QuickLogPhase>('idle');
+  const { openCatchUp } = useCatchUpControls();
+  const pending = useQuickLogBusy(entry.item.id);
   const accentForeground = useCSSVariable('--color-accent-foreground');
   const iconColor =
     typeof accentForeground === 'string' ? accentForeground : undefined;
 
-  // Which numbering domain this card's episode lives in (plan 0027 KTD2). A
-  // Trakt-sourced pointer carries its canonical season; an AniList entry has
-  // none to carry — its episode number is entry-relative, and the fan-out
-  // resolves the canonical season from ani.zip. Never fabricate a `season: 1`.
-  const episodeVariables =
-    entry.episode.season != null
-      ? { episodes: [{ season: entry.episode.season, number: entry.episode.number }] }
-      : { entryEpisodes: [entry.episode.number] };
-
-  // Backstop only: a refetch hung past the settle window stops the spinner —
-  // the settle promise still advances the card whenever it finally lands.
-  useEffect(() => {
-    if (phase !== 'settling') return;
-    const timer = setTimeout(() => setPhase('idle'), SETTLE_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [phase]);
-
-  const pending = isQuickLogPending(phase);
-
   function openConfirm() {
     if (pending) return;
     haptics.selection();
-    logMedia.reset();
-    setSelectedProviders(targets);
-    setTags(DEFAULT_TAGS);
-    setWatchedAt(null);
-    setOpen(true);
-    // Warm the reconcile reads while the user reads the modal, so confirming
-    // doesn't wait on cold fetches.
-    void prefetchLogReconcile(queryClient, connected, {
-      item: entry.item,
-      ...episodeVariables,
-    });
-  }
-
-  function confirmLog() {
-    if (logMedia.isPending || selectedProviders.length === 0) return;
-    haptics.confirm();
-    const parsedTags = parseTags(tags);
-    logMedia.mutate(
-      {
-        item: entry.item,
-        ...episodeVariables,
-        providers: selectedProviders,
-        ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
-        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
-      },
-      {
-        onSuccess: (outcome) => {
-          const resolved = resolveQuickLog(outcome, entry.source);
-          if (resolved.phase === 'failed') {
-            // The card's source write failed — keep the modal open showing the
-            // failure (the sheet renders `logMedia.data`), don't advance.
-            haptics.error();
-            return;
-          }
-          // Clean → the toast carries the outcome (and the success haptic,
-          // plan 0032 R9/R10). The card's own close/settle rules are its own:
-          // a partial success still advances, with the failure named by the
-          // notice below the card rather than a toast.
-          if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome);
-            toast.success(copy.title, copy.message);
-          } else {
-            haptics.success();
-          }
-          setOpen(false);
-          setPhase('settling');
-          // The settle signal (see the header comment): resolves when the
-          // recomputed inputs are in. An advanced card unmounted by then makes
-          // the setter a no-op; a card the data left standing stops pending.
-          void queryClient
-            .invalidateQueries(
-              { queryKey: upNextQueryKeys.inputs() },
-              { cancelRefetch: false },
-            )
-            .then(() =>
-              setPhase((current) => (current === 'settling' ? 'idle' : current)),
-            );
-        },
-        onError: () => haptics.error(),
-      },
-    );
+    openCatchUp(entry);
   }
 
   return (
@@ -176,26 +56,6 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
           <Ionicons color={iconColor} name="checkmark" size={18} />
         )}
       </PresstableScale>
-
-      <LogConfirmSheet
-        confirmLabel={`Log episode ${entry.episode.number}`}
-        description={`Log episode ${entry.episode.number} of “${entry.item.title}”.`}
-        item={entry.item}
-        logMedia={logMedia}
-        manualTargets={manualTargets}
-        onClose={() => setOpen(false)}
-        onConfirm={confirmLog}
-        onSelectedProvidersChange={setSelectedProviders}
-        onTagsChange={setTags}
-        onWatchedAtChange={setWatchedAt}
-        open={open}
-        pendingLabel="Logging…"
-        selectedProviders={selectedProviders}
-        tags={tags}
-        targets={targets}
-        title={`Log episode ${entry.episode.number}`}
-        watchedAt={watchedAt}
-      />
     </View>
   );
 }

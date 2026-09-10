@@ -27,7 +27,8 @@ instead of the card advancing on its own.
   the Up Next gate. A reconcile-skip means the provider's state is *ahead* of
   the computed sections — exactly what a recompute exists for. Per-provider
   caches stay untouched on skips (reconcile just read them fresh).
-- The quick-log button owns its settle signal: after a successful write it
+- The quick-log sheet (since plan 0037, `features/up-next/catch-up`; the
+  button before that) owns its settle signal: after a successful write it
   awaits `queryClient.invalidateQueries({queryKey: upNextQueryKeys.inputs()},
   {cancelRefetch: false})` — joining the mutation's in-flight refetch rather
   than restarting it — and returns to `idle` when the promise resolves (or is

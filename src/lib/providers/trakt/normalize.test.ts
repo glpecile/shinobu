@@ -322,6 +322,15 @@ describe('normalizeWatchedProgress', () => {
     expect(result.watchedKeys).toEqual(new Set(['1-1', '1-2', '2-2']));
     // The instant rides along only for completed episodes with one.
     expect(result.lastWatchedAt).toEqual({ '1-1': '2026-09-01T20:00:00.000Z' });
+    // Every listed (= aired) episode, in Trakt's order, watched or not — the
+    // catch-up chain subtracts `watchedKeys` from this (plan 0037).
+    expect(result.airedEpisodes).toEqual([
+      { season: 1, number: 1 },
+      { season: 1, number: 2 },
+      { season: 1, number: 3 },
+      { season: 2, number: 1 },
+      { season: 2, number: 2 },
+    ]);
   });
 
   test('empty / missing seasons yield an empty set', () => {
