@@ -20,12 +20,22 @@ describe('external URL manifest', () => {
     expect(check.expect.length).toBeGreaterThan(0);
     for (const status of check.expect) {
       // "Alive" can be an error status (dummy credentials), but never a
-      // not-found or server error — those are what the probe must catch.
+      // server error, and not-found only when an `alive` body pattern
+      // carries the proof instead — a bare 404 is what the probe must catch.
       expect(status).toBeGreaterThanOrEqual(200);
       expect(status).toBeLessThan(500);
-      expect(status).not.toBe(404);
+      if (check.alive == null) expect(status).not.toBe(404);
       expect(status).not.toBe(410);
     }
+  });
+
+  test('the AniList GraphQL probe never depends on the API being enabled', () => {
+    // A POST answers by API state (403 through the 2026-09-10 outage); the
+    // GET 404 carries the router's "Use POST" hint regardless, so that is the
+    // liveness proof (docs/solutions/anilist-api-outage-403.md).
+    const graphql = URL_CHECKS.find((c) => c.name === 'AniList GraphQL endpoint');
+    expect(graphql?.method ?? 'GET').toBe('GET');
+    expect(graphql?.alive).toBeDefined();
   });
 
   test('setup pages are checked against the post-migration Trakt domain', () => {
