@@ -176,16 +176,10 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         {open && (
           <>
             <AnimatedView
-              className="absolute inset-0"
+              className="absolute inset-0 bg-black/60"
               entering={backdropEntering}
               exiting={backdropExiting}
-            >
-              <PresstableOpacity
-                accessibilityLabel="Close"
-                className="flex-1 bg-black/60"
-                onPress={onClose}
-              />
-            </AnimatedView>
+            />
             {/* The rise/fade rides on a full-height wrapper, not the panel.
                 Reanimated's web cleanup pins a custom-Keyframe element to
                 its snapshot rect as `position: absolute; top: …`
@@ -194,16 +188,22 @@ export function Sheet({ open, onClose, children }: SheetProps) {
                 later — the catch-up ledger, a result line — grew downward
                 off-screen. Pinning this wrapper changes nothing: it already
                 fills the overlay, and `justify-end` keeps the panel bottom-
-                anchored however tall it gets. `box-none` so taps in the empty
-                area above the panel still reach the scrim beneath. */}
+                anchored however tall it gets. The wrapper covers the scrim,
+                and a `box-none` style doesn't survive the animated view on
+                web, so the close target is the spacer above the panel, not
+                the scrim itself. */}
             <AnimatedView
               className="flex-1 justify-end"
               entering={
                 reduceMotion ? FadeIn.duration(DURATION.enter) : panelEntering
               }
               exiting={reduceMotion ? FadeOut.duration(EXIT_MS) : panelExiting}
-              style={{ pointerEvents: 'box-none' }}
             >
+              <PresstableOpacity
+                accessibilityLabel="Close"
+                className="flex-1"
+                onPress={onClose}
+              />
               <SheetPanel reduceMotion={reduceMotion}>{children}</SheetPanel>
             </AnimatedView>
           </>
