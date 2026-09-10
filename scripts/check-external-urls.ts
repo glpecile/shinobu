@@ -74,11 +74,17 @@ export const URL_CHECKS: UrlCheck[] = [
     expect: [200, 400],
   },
   {
+    // 403 is AniList's outage answer — a GraphQL error body reading "The
+    // AniList API has been temporarily disabled due to severe stability
+    // issues" (2026-09-10, docs/solutions/anilist-api-outage-403.md). The
+    // endpoint exists and parsed the request; this check is for rot, and an
+    // outage is not something a URL constant can fix. A moved endpoint still
+    // fails: it would 404 or redirect, never answer in GraphQL's own shape.
     name: 'AniList GraphQL endpoint',
     url: ANILIST_GRAPHQL_URL,
     method: 'POST',
     body: '{}',
-    expect: [400],
+    expect: [400, 403],
   },
   {
     // An account-settings page: signed-out (which this probe always is)
