@@ -1,9 +1,11 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
+import { parseTmdbItemId } from '@/lib/providers/tmdb/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { findInDiaryCache } from './diary-pages';
+import { useMediaDetailsQuery } from './media-details';
 import { useMovieCatalogueQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
@@ -52,8 +54,11 @@ function findInTmdbCache(
  * get a catalogue record resolved by title+year merged in; TMDB-keyed
  * filmography credits get their Trakt identity discovered the same way.
  *
- * `undefined` while the feed is still loading *or* on a cold deep link — the
- * caller tells the two apart with `isLoading`.
+ * A cold deep link to a TMDB-minted id (`/details/tmdb-tv-32905` refreshed in
+ * a browser tab) is the one non-cache step: it fetches the catalogue record.
+ *
+ * `undefined` while the feed or that fetch is still loading — the caller
+ * tells "loading" and "not found" apart with `isLoading`.
  */
 export function useResolvedMediaItem(id: string): {
   item: NormalizedMediaItem | undefined;
@@ -90,15 +95,42 @@ export function useResolvedMediaItem(id: string): {
     // never triggers the gather.
     findInWatchlistCache(queryClient, id) ??
     findInTmdbCache(queryClient, id);
-  const catalogue = useMovieCatalogueQuery(resolvedItem);
-  const traktIdentity = useTraktIdentityQuery(resolvedItem);
+  // Cold deep link (a refreshed browser tab, a shared URL): nothing above
+  // holds the item, but a TMDB-minted id says exactly what to fetch, so a
+  // stub carrying just that id rides the same catalogue query the details
+  // screen runs for the resolved item — same key, one request. Only for
+  // TMDB ids, the only kind a signed-out viewer can reach: tracker-keyed ids
+  // still need a session to fetch by.
+  const deepLink = resolvedItem == null && !feed.isLoading ? parseTmdbItemId(id) : null;
+  const deepLinkDetails = useMediaDetailsQuery(
+    deepLink != null ? tmdbStub(id, deepLink) : undefined,
+  );
+  const cachedOrFetched = resolvedItem ?? deepLinkDetails.data?.catalogue ?? undefined;
+  const catalogue = useMovieCatalogueQuery(cachedOrFetched);
+  const traktIdentity = useTraktIdentityQuery(cachedOrFetched);
   const enriched = catalogue.data ?? traktIdentity.data;
   return {
     item:
-      resolvedItem != null && enriched != null
-        ? mergeCatalogueMetadata(resolvedItem, enriched)
-        : resolvedItem,
-    isLoading: feed.isLoading,
+      cachedOrFetched != null && enriched != null
+        ? mergeCatalogueMetadata(cachedOrFetched, enriched)
+        : cachedOrFetched,
+    isLoading: feed.isLoading || (deepLink != null && deepLinkDetails.isPending),
     refetchFeed: feed.refetch,
+  };
+}
+
+function tmdbStub(
+  id: string,
+  parsed: { kind: 'movie' | 'tv'; tmdbId: number },
+): NormalizedMediaItem {
+  return {
+    id,
+    title: '',
+    coverImage: '',
+    type: parsed.kind === 'movie' ? 'MOVIE' : 'TV',
+    currentProgress: 0,
+    progressUnit: 'episode',
+    lastUpdated: new Date(0).toISOString(),
+    externalIds: { tmdb: parsed.tmdbId },
   };
 }

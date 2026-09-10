@@ -5,6 +5,7 @@ import {
   normalizeCreditRows,
   normalizePersonDetails,
   normalizePersonSearch,
+  parseTmdbItemId,
   pickPersonMatch,
   type TmdbCastCredit,
   type TmdbCrewCredit,
@@ -704,5 +705,18 @@ describe('normalizeMovieCatalogue release dates', () => {
     const result = normalizeMovieCatalogue({ id: 7, title: 'Undated' }, NOW);
     expect(result?.catalogue.releaseDate).toBeUndefined();
     expect(result?.catalogue.releaseCalendar).toBeUndefined();
+  });
+});
+
+describe('parseTmdbItemId', () => {
+  test('inverts the minted id', () => {
+    expect(parseTmdbItemId('tmdb-tv-32905')).toEqual({ kind: 'tv', tmdbId: 32905 });
+    expect(parseTmdbItemId('tmdb-movie-603')).toEqual({ kind: 'movie', tmdbId: 603 });
+  });
+
+  test('rejects every other id shape', () => {
+    for (const id of ['trakt-1', 'tmdb-studio-1', 'tmdb-tv-', 'tmdb-tv-x', 'anilist-1']) {
+      expect(parseTmdbItemId(id)).toBeNull();
+    }
   });
 });

@@ -23,8 +23,8 @@ export const SEARCH_QUERY_ROOTS = {
  * the details resolution chain (plan 0009) that covers items belonging to no
  * feed row. Both providers are scanned: **manga appears in no feed row at
  * all**, so before plan 0024 U8 (AniList root missing here) every manga result
- * opened straight into "Not found". Cold deep links still miss — the
- * provider-fetch fallback stays with plan 0007.
+ * opened straight into "Not found". Cold deep links to TMDB ids fetch instead
+ * (`resolve-item.ts`); tracker-keyed ones still miss.
  */
 export function findInSearchCache(
   queryClient: QueryClient,

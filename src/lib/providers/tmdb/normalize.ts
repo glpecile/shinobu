@@ -100,6 +100,19 @@ export type TmdbKind = 'movie' | 'tv';
  * the details screen needs to backfill a Trakt identity from
  * `externalIds.tmdb`. Untitled entries drop out.
  */
+/**
+ * Inverse of the `tmdb-${kind}-${id}` id `normalizeKindedItem` mints, for a
+ * cold deep link (`/details/tmdb-tv-32905` refreshed in a browser tab): no
+ * cache holds the item, but the id alone says what to fetch.
+ */
+export function parseTmdbItemId(
+  id: string,
+): { kind: TmdbKind; tmdbId: number } | null {
+  const match = /^tmdb-(movie|tv)-(\d+)$/.exec(id);
+  if (match == null) return null;
+  return { kind: match[1] as TmdbKind, tmdbId: Number(match[2]) };
+}
+
 function normalizeKindedItem(
   raw: TmdbCreditBase,
   kind: TmdbKind,

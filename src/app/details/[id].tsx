@@ -8,6 +8,7 @@ import Head from '@/components/head';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
@@ -432,14 +433,7 @@ export default function DetailsScreen() {
         <Text className="text-muted font-sans text-center mb-6">
           This item is not in your current feed.
         </Text>
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
-          onPress={goBack}
-        >
-          <Text className="text-accent-foreground font-sans-semibold">
-            Go back
-          </Text>
-        </PresstableOpacity>
+        <Button label="Go back" onPress={goBack} />
       </View>
     );
   }
