@@ -24,6 +24,9 @@
 - **Batch, never loop** (KTD-3): all four write endpoints take
   `movies[]`/`shows[]`/`anime[]` arrays. `logToSimkl` sends one POST per
   fan-out regardless of how many items/episodes it carries.
+- **Coalesce across fan-outs** (plan 0037): history writes that arrive inside
+  the lock wait and join the next POST as one batch —
+  `features/log-media/simkl-write-lock.ts`, `simkl-write-lock-coalescing.md`.
 - **No derived second write inside the lock window:** the log flow's
   `removeWatchedFromWatchlist` follow-up is a second POST within a second of
   the first. The remove adapter went live in plan 0036, and this is the branch

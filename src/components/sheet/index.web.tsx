@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { Modal, ScrollView, useWindowDimensions, View } from 'react-native';
 import {
   FadeIn,
   FadeOut,
@@ -9,7 +9,14 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
-import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
+import {
+  DURATION,
+  EASE_OUT,
+  KEYFRAME_EASE_EXIT,
+  KEYFRAME_EASE_OUT,
+} from '@/lib/motion';
+
+import { sheetScrollMetrics } from './metrics';
 
 /** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface SheetProps {
@@ -73,6 +80,69 @@ const backdropExiting = new Keyframe({
 }).duration(EXIT_MS);
 
 /**
+ * Mirrors the native sheet's detent cap: the panel grows with its content up
+ * to this share of the viewport, then the scroller inside it takes over.
+ */
+const MAX_SHEET_FRACTION = 0.9;
+
+/** The panel's 1px top + bottom border, which `height` (border-box) includes. */
+const PANEL_BORDER = 2;
+
+/**
+ * The panel, sized from its content and **animating between sizes**. The
+ * native sheet animates its `'content'` detent whenever the content's height
+ * changes (`animateContentHeight`); a bottom-anchored Modal just snaps. So the
+ * panel gets an explicit height driven by the scroller's content size, with a
+ * CSS transition on it — the tag picker's "Show more", a result line
+ * appearing, and the catch-up chain's ledger (plan 0037) all resize the sheet
+ * smoothly instead of jumping. The first measurement goes from `auto` to a
+ * pixel value, which CSS doesn't transition, so opening never animates a
+ * resize; only later changes do.
+ *
+ * Same sizing rule as native (`sheetScrollMetrics`): hug the content up to the
+ * cap, scroll past it. `max-h` stays as the guard for the one unmeasured frame.
+ */
+function SheetPanel({
+  children,
+  reduceMotion,
+}: {
+  children: ReactNode;
+  reduceMotion: boolean;
+}) {
+  const maxHeight = Math.round(
+    useWindowDimensions().height * MAX_SHEET_FRACTION,
+  );
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const { height } = sheetScrollMetrics(
+    contentHeight == null ? null : contentHeight + PANEL_BORDER,
+    maxHeight,
+  );
+
+  return (
+    <AnimatedView
+      className="w-full max-w-xl self-center max-h-[90%] bg-surface border border-border rounded-t-3xl overflow-hidden"
+      style={{
+        height,
+        transitionProperty: 'height',
+        transitionDuration: reduceMotion ? 0 : DURATION.swap,
+        transitionTimingFunction: EASE_OUT,
+      }}
+    >
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="p-6 pb-12"
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={(_width, contentSize) =>
+          setContentHeight(Math.ceil(contentSize))
+        }
+      >
+        {children}
+      </ScrollView>
+    </AnimatedView>
+  );
+}
+
+/**
  * Web fallback: the native sheet lib has no web build, so a bottom-anchored
  * RN Modal stands in — same controlled `open`/`onClose` contract, capped at a
  * readable width on desktop viewports.
@@ -116,26 +186,25 @@ export function Sheet({ open, onClose, children }: SheetProps) {
                 onPress={onClose}
               />
             </AnimatedView>
+            {/* The rise/fade rides on a full-height wrapper, not the panel.
+                Reanimated's web cleanup pins a custom-Keyframe element to
+                its snapshot rect as `position: absolute; top: …`
+                (docs/solutions/reanimated-web-keyframe-pins-position.md);
+                pinning the *panel* froze its top edge, so a panel that grew
+                later — the catch-up ledger, a result line — grew downward
+                off-screen. Pinning this wrapper changes nothing: it already
+                fills the overlay, and `justify-end` keeps the panel bottom-
+                anchored however tall it gets. `box-none` so taps in the empty
+                area above the panel still reach the scrim beneath. */}
             <AnimatedView
-              // Mirrors the native sheet's detent cap: the panel grows with its
-              // content up to 90% of the viewport, then the scroller inside it
-              // takes over. Without the cap a tall sheet (the log sheet's tag
-              // picker) ran off the top of the window with nothing to scroll.
-              className="w-full max-w-xl self-center max-h-[90%] bg-surface border border-border rounded-t-3xl"
-              // Reduced motion keeps the fade (it explains that a layer
-              // arrived) and drops the travel, matching the lightbox.
+              className="flex-1 justify-end"
               entering={
                 reduceMotion ? FadeIn.duration(DURATION.enter) : panelEntering
               }
               exiting={reduceMotion ? FadeOut.duration(EXIT_MS) : panelExiting}
+              style={{ pointerEvents: 'box-none' }}
             >
-              <ScrollView
-                className="shrink"
-                contentContainerClassName="p-6 pb-12"
-                keyboardShouldPersistTaps="handled"
-              >
-                {children}
-              </ScrollView>
+              <SheetPanel reduceMotion={reduceMotion}>{children}</SheetPanel>
             </AnimatedView>
           </>
         )}

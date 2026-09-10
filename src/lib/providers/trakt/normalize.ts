@@ -506,6 +506,16 @@ export interface TraktShowProgressResult {
    * before this field was carried.
    */
   lastWatchedAt?: Readonly<Record<string, string>>;
+  /**
+   * Every episode Trakt lists in `seasons[]`, in Trakt's own order (season-
+   * major, specials included as season 0). `progress/watched` lists **aired**
+   * episodes only, so this — minus `watchedKeys` — is the exact aired-but-
+   * unwatched backlog, gaps and season boundaries included: what the quick-log
+   * catch-up chain walks (plan 0037). A plain array (persisted). Absent for
+   * progress cached before it was carried; consumers fall back to stepping
+   * from the pointer.
+   */
+  airedEpisodes?: ReadonlyArray<{ season: number; number: number }>;
   /** Absent when the user has nothing left to watch (Trakt sends null). */
   nextEpisode?: TraktNextEpisode;
   /**
@@ -527,8 +537,10 @@ export function normalizeWatchedProgress(
 ): TraktShowProgressResult {
   const watchedKeys = new Set<string>();
   const lastWatchedAt: Record<string, string> = {};
+  const airedEpisodes: Array<{ season: number; number: number }> = [];
   for (const season of raw.seasons ?? []) {
     for (const episode of season.episodes ?? []) {
+      airedEpisodes.push({ season: season.number, number: episode.number });
       // Trakt sends `completed` as both `0/1` (older) and `true/false` (newer).
       // Progress episodes carry no `season` field of their own — the season
       // number lives only on the enclosing season object.
@@ -544,11 +556,14 @@ export function normalizeWatchedProgress(
 
   const airedCount = raw.aired != null ? { aired: raw.aired } : {};
   const next = raw.next_episode;
-  if (next == null) return { watchedKeys, lastWatchedAt, ...airedCount };
+  if (next == null) {
+    return { watchedKeys, lastWatchedAt, airedEpisodes, ...airedCount };
+  }
 
   return {
     watchedKeys,
     lastWatchedAt,
+    airedEpisodes,
     ...airedCount,
     nextEpisode: {
       season: next.season,

@@ -24,6 +24,8 @@ import { LightboxProvider } from "@/components/lightbox/state";
 import { createQueryPersister, persistOptions } from "@/state/queries/persist";
 import { createQueryClient } from "@/state/queries/query-client";
 import { UpNextPrefetch } from "@/features/up-next/up-next-prefetch";
+import { CatchUpLogSheet } from "@/features/up-next/catch-up/catch-up-log-sheet";
+import { CatchUpLogProvider } from "@/features/up-next/catch-up/state";
 import { usePageEnterStyle } from "@/lib/page-transition";
 import { SheetProvider } from "@/components/sheet";
 import { useColorScheme } from "react-native";
@@ -93,6 +95,7 @@ export default function Layout() {
         >
           <SheetProvider>
            <LightboxProvider>
+           <CatchUpLogProvider>
             {/* ThemeProvider keeps the native tab bar / navigator chrome themed
                 and prevents header-button flicker when switching tabs. */}
             <ThemeProvider
@@ -142,11 +145,16 @@ export default function Layout() {
                 {/* Fullscreen image viewer overlay (web); null on native,
                     where galeria renders the zoom inline. */}
                 <Lightbox />
+                {/* The quick-log catch-up sheet (plan 0037): opened by a
+                    Continue Watching checkmark, hosted here so a card that
+                    re-keys after its episode logs can't unmount it. */}
+                <CatchUpLogSheet />
                 {/* The toast Toaster host — sonner-native on native, sonner
                     on web (plan 0032 U1). */}
                 <ToastHost />
               </AppShell>
             </ThemeProvider>
+           </CatchUpLogProvider>
            </LightboxProvider>
           </SheetProvider>
         </PersistQueryClientProvider>
