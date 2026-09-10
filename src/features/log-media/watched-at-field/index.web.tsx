@@ -30,6 +30,11 @@ export function WatchedAtField({ value, onChange }: WatchedAtFieldProps) {
       <input
         className="bg-surface text-foreground font-sans text-sm border border-border rounded-full px-2 py-1"
         max={today}
+        // The browser paints the calendar-picker glyph from `color-scheme`, not
+        // from `color`: without this it stays the light-scheme black on the
+        // dark surface. `light dark` follows the OS preference, the same
+        // signal the app's theme follows (`app/+html.tsx`).
+        style={{ colorScheme: 'light dark' }}
         onChange={(event) => {
           const raw = event.target.value;
           if (raw === '' || raw === today) {
