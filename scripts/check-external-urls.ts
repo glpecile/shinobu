@@ -40,6 +40,12 @@ export interface UrlCheck {
    * unexpected status (404 after a redirect chain, 5xx, a moved page) fails.
    */
   expect: number[];
+  /**
+   * A body pattern that identifies the provider's own *outage* answer. Still a
+   * failure — an outage is something to know about — but reported as one,
+   * not as a moved URL with instructions to edit the constants.
+   */
+  outage?: RegExp;
 }
 
 export const URL_CHECKS: UrlCheck[] = [
@@ -74,17 +80,17 @@ export const URL_CHECKS: UrlCheck[] = [
     expect: [200, 400],
   },
   {
-    // 403 is AniList's outage answer — a GraphQL error body reading "The
+    // During an outage AniList answers 403 with a GraphQL error body — "The
     // AniList API has been temporarily disabled due to severe stability
     // issues" (2026-09-10, docs/solutions/anilist-api-outage-403.md). The
-    // endpoint exists and parsed the request; this check is for rot, and an
-    // outage is not something a URL constant can fix. A moved endpoint still
-    // fails: it would 404 or redirect, never answer in GraphQL's own shape.
+    // check still fails, so the daily run says AniList is down, but as an
+    // outage: nothing in the constants needs editing.
     name: 'AniList GraphQL endpoint',
     url: ANILIST_GRAPHQL_URL,
     method: 'POST',
     body: '{}',
-    expect: [400, 403],
+    expect: [400],
+    outage: /temporarily disabled/i,
   },
   {
     // An account-settings page: signed-out (which this probe always is)
@@ -124,7 +130,7 @@ const ATTEMPTS = 3;
 const RETRY_DELAY_MS = 5_000;
 const TIMEOUT_MS = 15_000;
 
-async function probe(check: UrlCheck): Promise<number> {
+async function probe(check: UrlCheck): Promise<{ status: number; body: string }> {
   const response = await fetch(check.url, {
     method: check.method ?? 'GET',
     redirect: 'follow',
@@ -135,23 +141,35 @@ async function probe(check: UrlCheck): Promise<number> {
     },
     ...(check.body != null ? { body: check.body } : {}),
   });
-  return response.status;
+  // Only the outage match reads the body; a page never needs more than this.
+  const body = check.outage == null ? '' : (await response.text()).slice(0, 2_000);
+  return { status: response.status, body };
 }
 
-/** Returns an error description, or null when the check passes. */
-export async function runCheck(check: UrlCheck): Promise<string | null> {
-  let lastFailure = '';
+export interface CheckFailure {
+  /** `rot`: moved/dead URL. `outage`: the provider itself says it is down. */
+  kind: 'rot' | 'outage';
+  detail: string;
+}
+
+/** Returns the failure, or null when the check passes. */
+export async function runCheck(check: UrlCheck): Promise<CheckFailure | null> {
+  let last: CheckFailure = { kind: 'rot', detail: '' };
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
-      const status = await probe(check);
+      const { status, body } = await probe(check);
       if (check.expect.includes(status)) return null;
-      lastFailure = `got ${status}, expected ${check.expect.join('/')}`;
+      const detail = `got ${status}, expected ${check.expect.join('/')}`;
+      last =
+        check.outage != null && check.outage.test(body)
+          ? { kind: 'outage', detail: `${detail} — provider reports an outage: ${body.replace(/\s+/g, " ").trim().slice(0, 160)}` }
+          : { kind: 'rot', detail };
     } catch (error) {
-      lastFailure = error instanceof Error ? error.message : String(error);
+      last = { kind: 'rot', detail: error instanceof Error ? error.message : String(error) };
     }
     if (attempt < ATTEMPTS) await Bun.sleep(RETRY_DELAY_MS);
   }
-  return lastFailure;
+  return last;
 }
 
 if (import.meta.main) {
@@ -162,22 +180,32 @@ if (import.meta.main) {
     })),
   );
 
-  let failed = 0;
+  let rotted = 0;
+  let down = 0;
   for (const { check, failure } of results) {
     if (failure == null) {
       console.log(`ok      ${check.name} — ${check.url}`);
+    } else if (failure.kind === 'outage') {
+      down += 1;
+      console.error(`OUTAGE  ${check.name} — ${check.url}\n        ${failure.detail}`);
     } else {
-      failed += 1;
-      console.error(`FAILED  ${check.name} — ${check.url}\n        ${failure}`);
+      rotted += 1;
+      console.error(`FAILED  ${check.name} — ${check.url}\n        ${failure.detail}`);
     }
   }
 
-  if (failed > 0) {
+  if (rotted > 0) {
     console.error(
-      `\n${failed} external URL(s) look dead or moved. Update the constants ` +
+      `\n${rotted} external URL(s) look dead or moved. Update the constants ` +
         'in src/lib/providers and record the migration in docs/solutions/.',
     );
-    process.exit(1);
   }
+  if (down > 0) {
+    console.error(
+      `\n${down} provider(s) report an outage. Nothing to update — the URL is ` +
+        'right and the provider is down; re-run once it recovers.',
+    );
+  }
+  if (rotted > 0 || down > 0) process.exit(1);
   console.log(`\nAll ${results.length} external URLs healthy.`);
 }
