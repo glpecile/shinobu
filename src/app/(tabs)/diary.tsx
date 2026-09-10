@@ -61,10 +61,6 @@ export default function DiaryScreen() {
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
 
-  function openDetails(id: string) {
-    pushRoute(routes.details(id));
-  }
-
   let content: React.ReactNode;
   if (connected.length === 0) {
     // R9 (1): no providers connected.
@@ -128,7 +124,7 @@ export default function DiaryScreen() {
         isFetchingNextPage={diary.isFetchingNextPage}
         onEndReached={diary.fetchNextPage}
         onItemActions={openActions}
-        onOpen={openDetails}
+        onOpen={pushRoute}
         onRefresh={diary.refetch}
         onRetry={() => {
           // Re-attempt the failed provider reads (initial or pagination).

@@ -18,6 +18,13 @@ export const routes = {
   episode: (id: string, season: number, number: number) =>
     `/episode/${id}?season=${season}&number=${number}` as const,
   /**
+   * An anime episode by its *entry-relative* number, no season: anime logs
+   * carry no tracker season, so the route places the number on the trackers'
+   * layout itself (ani.zip + TMDB) instead of every list row doing it.
+   */
+  animeEpisode: (id: string, number: number) =>
+    `/episode/${id}?number=${number}` as const,
+  /**
    * The cross-provider watchlist — the only watchlist surface. No provider
    * suffix: it merges every connected provider's watchlist (plan 0031 R24).
    * `/watchlist/letterboxd` was deleted 2026-08-01 (owner): a second,

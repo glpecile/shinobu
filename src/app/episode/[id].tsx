@@ -7,15 +7,20 @@ import { View } from 'react-native';
 
 import { EpisodeScreen } from '@/features/episode-details';
 import { PersonNotFound } from '@/features/person';
+import { placeInLayout } from '@/lib/providers/mapping/season-layout';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { routes } from '@/lib/routes';
+import { useAniZipEpisodeMapQuery, useSeasonLayoutQuery } from '@/state/queries/mapping';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 
 /**
  * `/episode/[id]?season=&number=` — one episode of the show `id`, which
  * resolves exactly like `/details/[id]` (cache-only, every surface a card can
- * be tapped on). The screen itself is platform-split
+ * be tapped on). Without `season` (`routes.animeEpisode`) `number` is an anime
+ * entry's own numbering and this route places it on the trackers' layout the
+ * way the seasons accordion does — the ani.zip read belongs to a details
+ * screen, not to every diary row (plan 0027 R7). The screen itself is platform-split
  * (`features/episode-details/screen`): iOS presents it as a form sheet,
  * Android and web as full pages with their own layouts.
  */
@@ -34,13 +39,29 @@ export default function EpisodeRoute() {
   const mediaDetails = useMediaDetailsQuery(resolved);
   const item =
     resolved == null ? undefined : applyPrimaryMetadata(resolved, mediaDetails.data?.catalogue);
-  const seasonNumber = Number(season);
   const episodeNumber = Number(number);
+  const placing = season == null && item?.type === 'ANIME';
+  const anilistId = placing ? (item?.externalIds.anilist ?? undefined) : undefined;
+  const tmdbId = placing ? (item?.externalIds.tmdb ?? undefined) : undefined;
+  const episodeMap = useAniZipEpisodeMapQuery(anilistId);
+  const layout = useSeasonLayoutQuery({ tmdb: tmdbId });
+  const row = episodeMap.data?.get(episodeNumber);
+  const pointer = placing
+    ? row == null
+      ? null
+      : placeInLayout(layout.data, row)
+    : { season: Number(season), number: episodeNumber };
+  const placingPending =
+    placing &&
+    (mediaDetails.isPending ||
+      (anilistId != null && episodeMap.isPending) ||
+      (tmdbId != null && layout.isPending));
   const pointerValid =
-    Number.isInteger(seasonNumber) &&
-    seasonNumber >= 0 &&
-    Number.isInteger(episodeNumber) &&
-    episodeNumber > 0;
+    pointer != null &&
+    Number.isInteger(pointer.season) &&
+    pointer.season >= 0 &&
+    Number.isInteger(pointer.number) &&
+    pointer.number > 0;
 
   function goBack() {
     if (router.canGoBack()) {
@@ -50,14 +71,18 @@ export default function EpisodeRoute() {
     }
   }
 
-  if (isLoading && item == null) {
+  if ((isLoading && item == null) || placingPending) {
     return <View className="flex-1 bg-background" />;
   }
 
   if (item == null || !pointerValid) {
     return (
       <PersonNotFound
-        detail="This episode isn’t in your current feed."
+        detail={
+          placing
+            ? "This episode isn’t mapped to TMDB’s numbering yet."
+            : 'This episode isn’t in your current feed.'
+        }
         onGoBack={goBack}
       />
     );
@@ -66,9 +91,9 @@ export default function EpisodeRoute() {
   return (
     <EpisodeScreen
       item={item}
-      number={episodeNumber}
+      number={pointer.number}
       onBack={goBack}
-      season={seasonNumber}
+      season={pointer.season}
     />
   );
 }
