@@ -41,7 +41,13 @@ const SPINNER_TOKEN: Record<ButtonVariant, string> = {
 const BOX_LAYOUT =
   Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
 const SLOT_ENTER = FadeIn.duration(DURATION.swap);
-const SLOT_EXIT = FadeOut.duration(DURATION.exit);
+// No exit fade on web: Reanimated implements an exiting element there by
+// re-parenting it into an absolutely positioned clone, which takes the icon
+// out of the flex flow and recenters the label flush against it for the frames
+// the sheet around it is closing. The slot simply drops out on web instead.
+// docs/solutions/reanimated-web-exiting-pulls-child-out-of-flow.md
+const SLOT_EXIT =
+  Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
 const COLOR_TRANSITION: CSSTransitionProperties = {
   transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
   transitionDuration: DURATION.color,
