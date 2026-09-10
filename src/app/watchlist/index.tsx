@@ -9,6 +9,7 @@ import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import Head from '@/components/head';
 import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
@@ -91,14 +92,7 @@ function CenteredNotice({
         {body}
       </Text>
       {actionLabel != null && onAction != null && (
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded mt-6"
-          onPress={onAction}
-        >
-          <Text className="text-accent-foreground font-sans-semibold">
-            {actionLabel}
-          </Text>
-        </PresstableOpacity>
+        <Button className="mt-6" label={actionLabel} onPress={onAction} />
       )}
     </View>
   );
@@ -155,15 +149,14 @@ function GridFooter({
         <Text className="text-muted font-sans text-sm text-center">
           Couldn’t load more films.
         </Text>
-        <PresstableOpacity
+        <Button
           accessibilityLabel="Retry loading more films"
-          className="border border-border bg-surface px-4 py-2 rounded mt-3"
+          className="mt-3"
+          label="Try again"
           onPress={onRetry}
-        >
-          <Text className="text-foreground font-sans-semibold text-sm">
-            Try again
-          </Text>
-        </PresstableOpacity>
+          size="sm"
+          variant="quiet"
+        />
       </View>
     );
   }

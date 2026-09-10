@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { PresstableOpacity } from '@/components/presstable';
 import { hasAired } from '@/lib/time/has-aired';
 import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
@@ -129,17 +130,12 @@ function EpisodeRow({
         </PresstableOpacity>
       )}
       {aired ? (
-        <PresstableOpacity
-          className="px-3 py-1.5 rounded border border-border"
+        <Button
+          label={isWatched ? 'Rewatch' : 'Mark as watched'}
           onPress={onMark}
-        >
-          <Text
-            className="font-sans-semibold text-xs"
-            style={{ color: foregroundColor }}
-          >
-            {isWatched ? 'Rewatch' : 'Mark as watched'}
-          </Text>
-        </PresstableOpacity>
+          size="sm"
+          variant="quiet"
+        />
       ) : (
         <Text className="text-muted font-sans text-xs px-3">Unaired</Text>
       )}

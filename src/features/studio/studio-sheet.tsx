@@ -1,8 +1,6 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { StudioLinksSection } from '@/features/provider-links/studio-links-section';
 import { usePushRoute } from '@/lib/navigation';
@@ -30,8 +28,6 @@ interface StudioSheetProps {
  */
 export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
   const pushRoute = usePushRoute();
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
   // Same gate as the pills themselves: no TMDB token, no studio route.
   const canOpenStudio = useTmdbToken() !== '';
 
@@ -47,9 +43,10 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
           </Text>
 
           {canOpenStudio && (
-            <PresstableOpacity
-              accessibilityRole="button"
-              className="flex-row items-center gap-3 rounded px-5 py-3 mt-6 border border-border"
+            <Button
+              className="mt-6"
+              icon={<Button.Icon name="business-outline" />}
+              label="View studio"
               onPress={() => {
                 onClose();
                 pushRoute(
@@ -58,12 +55,8 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
                     : routes.studioLookup(studio.name),
                 );
               }}
-            >
-              <Ionicons color={mutedColor} name="business-outline" size={18} />
-              <Text className="text-foreground font-sans-semibold text-base">
-                View studio
-              </Text>
-            </PresstableOpacity>
+              variant="quiet"
+            />
           )}
 
           <StudioLinksSection

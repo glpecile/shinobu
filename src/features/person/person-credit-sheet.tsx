@@ -1,8 +1,6 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { Skeleton } from '@/components/skeleton';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
@@ -106,8 +104,6 @@ export function PersonCreditSheet({
   onClose,
 }: PersonCreditSheetProps) {
   const pushRoute = usePushRoute();
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
   // No TMDB token, no person pages and no bio — same gate the cards use.
   const hasTmdb = useTmdbToken() !== '';
   // Fetched only while the sheet is open, and keyed the same as the person
@@ -151,9 +147,10 @@ export function PersonCreditSheet({
           />
 
           {hasTmdb && (
-            <PresstableOpacity
-              accessibilityRole="button"
-              className="flex-row items-center gap-3 rounded px-5 py-3 mt-5 border border-border"
+            <Button
+              className="mt-5"
+              icon={<Button.Icon name="person-outline" />}
+              label="View filmography"
               onPress={() => {
                 onClose();
                 pushRoute(
@@ -162,12 +159,8 @@ export function PersonCreditSheet({
                     : routes.personLookup(credit.name),
                 );
               }}
-            >
-              <Ionicons color={mutedColor} name="person-outline" size={18} />
-              <Text className="text-foreground font-sans-semibold text-base">
-                View filmography
-              </Text>
-            </PresstableOpacity>
+              variant="quiet"
+            />
           )}
 
           {/* The person-page "View on" links as sheet rows — a person has no
