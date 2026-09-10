@@ -4,11 +4,13 @@ import { useCSSVariable } from 'uniwind';
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
+import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { routes } from '@/lib/routes';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
@@ -85,6 +87,7 @@ export interface LogConfirmSheetProps {
 export type LogFormFieldsProps = Pick<
   LogConfirmSheetProps,
   | 'item'
+  | 'onClose'
   | 'targets'
   | 'manualTargets'
   | 'selectedProviders'
@@ -97,6 +100,7 @@ export type LogFormFieldsProps = Pick<
 
 export function LogFormFields({
   item,
+  onClose,
   targets,
   manualTargets = [],
   selectedProviders,
@@ -108,6 +112,7 @@ export function LogFormFields({
   pending,
 }: LogFormFieldsProps) {
   const muted = useCSSVariable('--color-muted');
+  const pushRoute = usePushRoute();
   // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
   // tags, so narrowing this would silently drop working Serializd functionality.
   const tagProviders = TAG_PROVIDERS.filter((id) =>
@@ -144,6 +149,10 @@ export function LogFormFields({
           Write to
         </Text>
         <ProviderPicker
+          onConnect={() => {
+            onClose();
+            pushRoute(routes.connect);
+          }}
           onSelectAll={selectAllProviders}
           onSelectNone={selectNoProviders}
           onToggle={toggleProvider}
@@ -151,7 +160,7 @@ export function LogFormFields({
           targets={targets}
         />
         <ManualWriteRows item={item} manual={manualTargets} />
-        {selectedProviders.length === 0 && (
+        {targets.length > 0 && selectedProviders.length === 0 && (
           <Text className="text-accent font-sans text-sm mt-2">
             Select at least one provider to log.
           </Text>
@@ -218,6 +227,7 @@ export function LogConfirmSheet({
       <LogFormFields
         item={item}
         manualTargets={manualTargets}
+        onClose={onClose}
         onSelectedProvidersChange={onSelectedProvidersChange}
         onWatchedAtChange={onWatchedAtChange}
         pending={pending}

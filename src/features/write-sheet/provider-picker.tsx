@@ -8,6 +8,7 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useConnectedProviders } from '@/state/session';
 
 /**
  * The one provider picker every write verb confirms through (plan 0032 R2,
@@ -68,6 +69,37 @@ export interface ProviderPickerProps {
 }
 
 /**
+ * What the collapsible picker shows instead of an empty dropdown when no
+ * connected provider can write the item: the reason, and the way out. The
+ * caller owns `onConnect` because reaching the Connect tab means closing the
+ * sheet the picker sits in first.
+ */
+function NoTargets({ onConnect }: { onConnect?: () => void }) {
+  const connected = useConnectedProviders();
+  const accent = useCSSVariable('--color-accent');
+  const accentColor = typeof accent === 'string' ? accent : undefined;
+  return (
+    <View className="rounded-full border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
+      <Text className="text-muted font-sans text-sm flex-1" numberOfLines={2}>
+        {connected.length === 0
+          ? 'No trackers connected yet.'
+          : 'None of your connected trackers can log this.'}
+      </Text>
+      {onConnect != null && (
+        <PresstableOpacity
+          accessibilityRole="button"
+          className="flex-row items-center gap-1"
+          onPress={onConnect}
+        >
+          <Text className="text-accent font-sans-semibold text-sm">Connect one</Text>
+          <Ionicons color={accentColor} name="arrow-forward" size={14} />
+        </PresstableOpacity>
+      )}
+    </View>
+  );
+}
+
+/**
  * The expanded toggle list — All/None header plus one toggle per writable
  * target. `ProviderPicker` below wraps it in the log sheet's collapsible
  * summary chrome; the watchlist picker sheet renders it directly, because
@@ -115,11 +147,15 @@ export function ProviderToggleList({
  * log sheet's shape, unchanged: that sheet also carries a backdate field and
  * tags, so the picker earns its keep collapsed.
  */
-export function ProviderPicker(props: ProviderPickerProps) {
+export function ProviderPicker({
+  onConnect,
+  ...props
+}: ProviderPickerProps & { onConnect?: () => void }) {
   const { targets, selectedProviders } = props;
   const [expanded, setExpanded] = useState(false);
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
+  if (targets.length === 0) return <NoTargets onConnect={onConnect} />;
   const selected = targets.filter((id) => selectedProviders.includes(id));
   const selectionLabel =
     selected.length === 0

@@ -393,6 +393,7 @@ function CatchUpSession({
       <LogFormFields
         item={entry.item}
         manualTargets={manualTargets}
+        onClose={closeCatchUp}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}
         onWatchedAtChange={setWatchedAt}
