@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import Head from '@/components/head';
-import { PresstableOpacity } from '@/components/presstable';
 
 /** Full-screen miss state shared by /person/[id] and /person/lookup. */
 export function PersonNotFound({
@@ -25,23 +25,9 @@ export function PersonNotFound({
       <Text className="text-muted font-sans text-center mb-6">{detail}</Text>
       <View className="flex-row gap-3">
         {onRetry != null && (
-          <PresstableOpacity
-            className="border border-border px-5 py-3 rounded"
-            onPress={onRetry}
-          >
-            <Text className="text-foreground font-sans-semibold">
-              Try again
-            </Text>
-          </PresstableOpacity>
+          <Button label="Try again" onPress={onRetry} variant="quiet" />
         )}
-        <PresstableOpacity
-          className="bg-accent px-5 py-3 rounded"
-          onPress={onGoBack}
-        >
-          <Text className="text-accent-foreground font-sans-semibold">
-            Go back
-          </Text>
-        </PresstableOpacity>
+        <Button label="Go back" onPress={onGoBack} />
       </View>
     </View>
   );

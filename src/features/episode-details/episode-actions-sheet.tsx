@@ -1,9 +1,6 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
-import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -45,8 +42,6 @@ function SheetBody({
   onMark,
 }: Omit<EpisodeActionsSheetProps, 'open' | 'pointer'> & { pointer: EpisodePointer }) {
   const pushRoute = usePushRoute();
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
   const { season, number } = pointer;
   // The row already holds title/overview; this only adds the still and TMDB's
   // fuller text, and warms the episode screen's cache for the "View" row.
@@ -102,19 +97,16 @@ function SheetBody({
         )}
       </View>
 
-      <PresstableOpacity
-        accessibilityRole="button"
-        className="flex-row items-center gap-3 rounded px-5 py-3 mt-4 border border-border"
+      <Button
+        className="mt-4"
+        icon={<Button.Icon name="open-outline" />}
+        label="View episode"
         onPress={() => {
           onClose();
           pushRoute(routes.episode(item.id, season, number));
         }}
-      >
-        <Ionicons color={mutedColor} name="open-outline" size={18} />
-        <Text className="text-foreground font-sans-semibold text-base">
-          View episode
-        </Text>
-      </PresstableOpacity>
+        variant="quiet"
+      />
     </>
   );
 }
