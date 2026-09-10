@@ -59,6 +59,11 @@ whole intent from the first tap.
 - R9. Every outcome is visible somewhere: in the ledger while the sheet is
   open (failures with their manual links), as a toast if it lands after the
   sheet was dismissed.
+- R9a. (2026-09-10) Ledger rows are one line each; the *reasons* render once
+  for the whole ledger, deduplicated, with their manual links, and a "Retry N
+  episodes" button re-fires every failed row at once — only the legs that
+  failed, so a landed provider is never logged twice. The Simkl legs coalesce
+  into one POST, same as the chain itself.
 - R10. Transition: title, count and button label morph in place on web; the
   header slides in and the sheet animates its height on native; the web sheet
   animates its height too instead of snapping.
@@ -66,9 +71,9 @@ whole intent from the first tap.
 ### Scope Boundaries
 
 - Deferred: the details screen's "Log episode N" button (`log-media-button`)
-  and the season pickers keep their one-write sheets; a "retry" affordance on
-  an earlier failed ledger row (the manual link covers it); routing Simkl
-  *watchlist* writes through the same lock gate.
+  and the season pickers keep their one-write sheets; routing Simkl
+  *watchlist* writes through the same lock gate; a "Reconnect" shortcut on an
+  auth failure (the outcome carries the message, not the error tag).
 - Out of scope: batching a chain into one Serializd write (would drop its
   per-episode diary entries and tags), a bundled retry inside the lock window.
 

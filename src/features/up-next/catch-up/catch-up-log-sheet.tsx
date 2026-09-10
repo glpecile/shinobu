@@ -10,7 +10,9 @@ import { Button } from '@/components/button';
 import { MorphText } from '@/components/morph-text';
 import { Sheet } from '@/components/sheet';
 import type { LogMediaResult, LogMediaVariables } from '@/features/log-media/fan-out';
+import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
+import { splitSkippedOutcomes } from '@/features/log-media/manual-write-links';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
 import {
@@ -22,8 +24,10 @@ import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
+import type { ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { upNextQueryKeys } from '@/state/queries/up-next';
 import { useConnectedProviders } from '@/state/session';
@@ -66,6 +70,41 @@ const sameEpisode = (a: CatchUpEpisode, b: CatchUpEpisode) =>
   a.season === b.season && a.number === b.number;
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * Which legs a retry re-fires: every selected provider when the write itself
+ * threw, only the failed ones when the report names them (a Trakt leg that
+ * landed is not logged twice). Null when the row has nothing to retry.
+ */
+function retryProviders(
+  row: LedgerRow,
+  selected: readonly ProviderId[],
+): readonly ProviderId[] | null {
+  if (row.status === 'error') return selected;
+  if (row.status === 'done' && row.result != null && row.result.failed.length > 0) {
+    return row.result.failed;
+  }
+  return null;
+}
+
+/**
+ * The reasons across every landed row, one line per distinct
+ * provider/status/text — a chain that fails N times on one dead Simkl session
+ * has one thing to say, not N copies of it. Plain successes and reconcile
+ * skips have no reason to show; the row line already carries them.
+ */
+function distinctReasons(rows: readonly LedgerRow[]): ProviderWriteOutcome[] {
+  const seen = new Map<string, ProviderWriteOutcome>();
+  for (const row of rows) {
+    for (const outcome of row.result?.outcomes ?? []) {
+      const text = outcome.status === 'error' ? outcome.message : outcome.reason;
+      if (text == null) continue;
+      const key = `${outcome.provider}:${outcome.status}:${text}`;
+      if (!seen.has(key)) seen.set(key, outcome);
+    }
+  }
+  return [...seen.values()];
+}
 
 /**
  * Which numbering domain the episode lives in (plan 0027 KTD2): a seasoned
@@ -150,7 +189,6 @@ function CatchUpSession({
   const [frozen, setFrozen] = useState<CatchUpEpisode[] | null>(null);
   const [index, setIndex] = useState(0);
   const [ledger, setLedger] = useState<LedgerRow[]>([]);
-  const [finished, setFinished] = useState(false);
 
   // The write handlers below outlive renders; they read the sheet's current
   // visibility to decide between the ledger (open) and a toast (dismissed).
@@ -196,9 +234,9 @@ function CatchUpSession({
   // The chain's end: every queued episode confirmed and every write settled.
   // Clean all round → close and announce; otherwise the sheet stays, the
   // ledger naming what needs a hand (plan 0032 R7: a failure keeps its links).
+  // No latch: a retry un-settles the ledger and this fires again when it lands.
   useEffect(() => {
-    if (!allSettled || finished) return;
-    setFinished(true);
+    if (!allSettled) return;
     if (!openRef.current) return; // dismissed early — the rows already toasted
     if (!allClean) return;
     if (ledger.length > 1) {
@@ -215,7 +253,7 @@ function CatchUpSession({
       }
     }
     closeCatchUp();
-  }, [allSettled, allClean, finished, ledger, closeCatchUp]);
+  }, [allSettled, allClean, ledger, closeCatchUp]);
 
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {
     const parsedTags = parseTags(tags);
@@ -234,18 +272,12 @@ function CatchUpSession({
     ]);
   }
 
-  function confirm() {
-    if (awaiting || selectedProviders.length === 0) return;
-    haptics.confirm();
-    const plan = queue ?? [current];
-    if (frozen == null) setFrozen(plan);
-    const episode = plan[index] ?? current;
-    const last = index >= plan.length - 1;
+  /** One episode's write: a pending row, the fan-out, the card's settle signal, the landing. */
+  function fire(episode: CatchUpEpisode, variables: LogMediaVariables) {
     const episodeCode = capitalize(catchUpEpisodeCode(episode));
-
-    // A re-press on the last episode is its retry: the old row is replaced.
+    // A re-fire (the last episode's re-press, a retry) replaces the old row.
     record(episode, { status: 'pending' });
-    const write = logMedia.mutateAsync(variablesFor(episode));
+    const write = logMedia.mutateAsync(variables);
 
     // The card's settle signal (docs/solutions/quick-log-settle-refresh-to-update.md):
     // once the source provider landed (or already had it), await the slot's
@@ -288,12 +320,32 @@ function CatchUpSession({
         else toast.error(`${episodeCode} was not logged`, message);
       },
     );
+  }
 
-    if (last) return;
+  function confirm() {
+    if (awaiting || selectedProviders.length === 0) return;
+    haptics.confirm();
+    const plan = queue ?? [current];
+    if (frozen == null) setFrozen(plan);
+    const episode = plan[index] ?? current;
+    fire(episode, variablesFor(episode));
+
+    if (index >= plan.length - 1) return;
     setIndex(index + 1);
     const next = plan[index + 1];
     if (next != null) {
       void prefetchLogReconcile(queryClient, connected, variablesFor(next));
+    }
+  }
+
+  // Every failed row re-fires at once: the Simkl legs coalesce into one POST
+  // (simkl-write-lock.ts), so N retries cost the same lock wait as one.
+  function retry() {
+    haptics.confirm();
+    for (const row of ledger) {
+      const providers = retryProviders(row, selectedProviders);
+      if (providers == null) continue;
+      fire(row.episode, { ...variablesFor(row.episode), providers: [...providers] });
     }
   }
 
@@ -307,6 +359,13 @@ function CatchUpSession({
     selectedProviders.includes('simkl') &&
     ledger.length > 1 &&
     ledger.some((row) => row.status === 'pending');
+  const retryable = ledger.filter((row) => retryProviders(row, selectedProviders) != null);
+  const unclean = ledger.filter(
+    (row) => row.status === 'done' && row.result != null && !isCleanWriteReport(row.result),
+  );
+  const thrown = [...new Set(
+    ledger.flatMap((row) => (row.status === 'error' ? [row.message ?? 'Could not log.'] : [])),
+  )];
 
   return (
     <Sheet onClose={closeCatchUp} open={open}>
@@ -347,17 +406,43 @@ function CatchUpSession({
       {ledger.length > 0 && (
         <View className="mt-5 gap-2">
           {ledger.map((row) => (
-            <LedgerLine
-              item={entry.item}
-              key={catchUpEpisodeCode(row.episode)}
-              row={row}
-            />
+            <LedgerLine key={catchUpEpisodeCode(row.episode)} row={row} />
           ))}
           {simklQueued && (
             <Text className="text-muted font-sans text-xs">
               Simkl takes one write every 20 seconds, so the rest wait their
               turn — keep going.
             </Text>
+          )}
+          {(unclean.length > 0 || thrown.length > 0) && (
+            <AnimatedView className="gap-1" entering={rowEntering}>
+              {thrown.map((message) => (
+                <Text className="text-accent font-sans text-xs mt-3" key={message}>
+                  {message}
+                </Text>
+              ))}
+              <WriteResultReport
+                item={entry.item}
+                outcomes={distinctReasons(unclean)}
+                reconcileLine={(skipped) =>
+                  `${labels(skipped)} already had this logged — skipped to keep both in sync.`
+                }
+              />
+              {retryable.length > 0 && (
+                <Button
+                  className="self-start mt-3"
+                  icon={<Button.Icon name="refresh" />}
+                  label={
+                    retryable.length === 1
+                      ? `Retry ${catchUpEpisodeCode(retryable[0]!.episode)}`
+                      : `Retry ${retryable.length} episodes`
+                  }
+                  onPress={retry}
+                  size="sm"
+                  variant="outline"
+                />
+              )}
+            </AnimatedView>
           )}
         </View>
       )}
@@ -385,14 +470,17 @@ function CatchUpSession({
 }
 
 /**
- * One fired write's line: a spinner while it runs, a quiet checkmark and the
- * providers it reached when clean, and the shared `WriteResultReport` — with
- * its manual links, never a dead end (plan 0022) — for anything else.
+ * One fired write's line, one line tall: a spinner while it runs, a checkmark
+ * and the providers reached when clean, an alert and the failed providers
+ * otherwise. The *reasons* (and the manual links — never a dead end, plan
+ * 0022) render once for the whole ledger, below the rows.
  */
-function LedgerLine({ row, item }: { row: LedgerRow; item: NormalizedMediaItem }) {
+function LedgerLine({ row }: { row: LedgerRow }) {
   const muted = useCSSVariable('--color-muted');
   const mutedColor = typeof muted === 'string' ? muted : undefined;
   const episodeCode = capitalize(catchUpEpisodeCode(row.episode));
+  const failed = row.status === 'error' || (row.result?.failed.length ?? 0) > 0;
+  const clean = row.status === 'done' && row.result != null && isCleanWriteReport(row.result);
 
   return (
     <AnimatedView className="flex-row gap-2" entering={rowEntering}>
@@ -402,50 +490,34 @@ function LedgerLine({ row, item }: { row: LedgerRow; item: NormalizedMediaItem }
         ) : (
           <Ionicons
             color={mutedColor}
-            name={row.status === 'done' && row.result != null && isCleanWriteReport(row.result)
-              ? 'checkmark'
-              : 'alert-circle-outline'}
+            name={clean ? 'checkmark' : 'alert-circle-outline'}
             size={14}
           />
         )}
       </View>
-      <View className="flex-1">
-        {row.status === 'pending' && (
-          <Text className="text-muted font-sans text-sm">{episodeCode} · logging…</Text>
-        )}
-        {row.status === 'error' && (
-          <Text className="text-accent font-sans text-sm">
-            {episodeCode} · {row.message ?? 'could not log.'}
-          </Text>
-        )}
-        {row.status === 'done' && row.result != null && (
-          isCleanWriteReport(row.result) ? (
-            <Text className="text-muted font-sans text-sm">
-              {episodeCode} · {row.result.rewatch ? 'rewatch logged to' : 'logged to'}{' '}
-              {labels(row.result.succeeded)}
-              {row.result.skipped.length > 0
-                ? ` — ${labels(row.result.skipped)} already had it`
-                : ''}
-            </Text>
-          ) : (
-            <View>
-              <Text className="text-foreground font-sans-semibold text-sm">{episodeCode}</Text>
-              <WriteResultReport
-                failedHeadline={(failed, succeeded) =>
-                  `Failed on ${labels(failed)}${
-                    succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
-                  }`
-                }
-                item={item}
-                outcomes={row.result.outcomes}
-                reconcileLine={(skipped) =>
-                  `${labels(skipped)} already had this logged — skipped to keep both in sync.`
-                }
-              />
-            </View>
-          )
-        )}
-      </View>
+      <Text
+        className={cn('flex-1 font-sans text-sm', failed ? 'text-accent' : 'text-muted')}
+      >
+        {episodeCode} · {rowSummary(row)}
+      </Text>
     </AnimatedView>
   );
+}
+
+/** "logged to Simkl", "failed on Simkl, logged to Trakt", "Trakt already had it". */
+function rowSummary(row: LedgerRow): string {
+  if (row.status === 'pending') return 'logging…';
+  if (row.status === 'error' || row.result == null) return 'could not log';
+  const { succeeded, failed, rewatch, outcomes } = row.result;
+  const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(outcomes);
+  const parts: string[] = [];
+  if (failed.length > 0) parts.push(`failed on ${labels(failed)}`);
+  if (succeeded.length > 0) {
+    parts.push(`${rewatch ? 'rewatch logged to' : 'logged to'} ${labels(succeeded)}`);
+  }
+  if (reasonedSkips.length > 0) {
+    parts.push(`skipped on ${labels(reasonedSkips.map((skip) => skip.provider))}`);
+  }
+  if (reconcileSkipped.length > 0) parts.push(`${labels(reconcileSkipped)} already had it`);
+  return parts.join(', ');
 }

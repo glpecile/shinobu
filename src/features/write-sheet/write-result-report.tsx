@@ -62,8 +62,8 @@ export interface WriteResultReportProps {
   item: UrlItem;
   /** `OutcomeLink` wording — 'Log on' (default) / 'Add on' / 'Remove on'. */
   verb?: string;
-  /** "Failed on Letterboxd — Trakt was logged." — the caller owns the copy. */
-  failedHeadline: (
+  /** "Failed on Letterboxd — Trakt was logged." — the caller owns the copy; omitted → the reasons stand alone. */
+  failedHeadline?: (
     failed: readonly ProviderId[],
     succeeded: readonly ProviderId[],
   ) => string;
@@ -110,12 +110,14 @@ export function WriteResultReport({
     <>
       {failed.length > 0 && (
         <View className="mt-3 gap-1">
-          <Text className="text-accent font-sans text-sm">
-            {failedHeadline(
-              failed.map((outcome) => outcome.provider),
-              succeeded,
-            )}
-          </Text>
+          {failedHeadline != null && (
+            <Text className="text-accent font-sans text-sm">
+              {failedHeadline(
+                failed.map((outcome) => outcome.provider),
+                succeeded,
+              )}
+            </Text>
+          )}
           {/* The per-provider reason (e.g. Letterboxd film not found, session
               expired) — without it every failure looks identical (plan 0012). */}
           {failed.map((outcome) => (
