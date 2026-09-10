@@ -28,10 +28,17 @@ export function List<T>({
   keyboardShouldPersistTaps,
   keyboardDismissMode,
   recycleItems = false,
+  onStartReachedThreshold = 0,
   ...props
 }: ListProps<T>): ReactElement {
   void keyboardShouldPersistTaps;
   void keyboardDismissMode;
-  // Defaulted, not omitted — see index.tsx for why `false` is the app-wide answer.
-  return <LegendList {...props} recycleItems={recycleItems} />;
+  // Both defaulted, not omitted — see index.tsx for why.
+  return (
+    <LegendList
+      {...props}
+      onStartReachedThreshold={onStartReachedThreshold}
+      recycleItems={recycleItems}
+    />
+  );
 }

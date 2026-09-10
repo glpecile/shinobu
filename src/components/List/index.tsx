@@ -22,10 +22,28 @@ export type { LegendListRef } from '@legendapp/list/react-native';
  * rows like `MediaCard` keep local state (hover, quick-log) that would leak
  * into whichever row the cell got recycled to (AGENTS.md "Long Lists"). A list
  * whose rows are provably prop-derived can still opt in per call site.
+ *
+ * `onStartReachedThreshold` is defaulted to 0 because Legend List ≥ 3.3.3 puts
+ * `onStartReached` and `onEndReached` behind one shared "edge reached" gate
+ * that closes as soon as *either* edge is hit — even with no `onStartReached`
+ * handler. Every list mounts at the top, so the gate closed on mount and only
+ * reopened while scrolled clear of both edges; a fast fling or scrollbar drag
+ * straight to the bottom skipped that band and `onEndReached` never fired
+ * (docs/solutions/legend-list-end-reached-never-fires-after-a-fast-scroll.md).
+ * A zero threshold means the top edge is never "reached", so it never closes
+ * the gate. Nothing in the app uses `onStartReached`; if one does, it must
+ * pass its own threshold and re-verify the jump case.
  */
 export function List<T>({
   recycleItems = false,
+  onStartReachedThreshold = 0,
   ...props
 }: ListProps<T>): ReactElement {
-  return <LegendList {...props} recycleItems={recycleItems} />;
+  return (
+    <LegendList
+      {...props}
+      onStartReachedThreshold={onStartReachedThreshold}
+      recycleItems={recycleItems}
+    />
+  );
 }
