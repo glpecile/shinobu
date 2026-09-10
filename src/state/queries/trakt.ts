@@ -2,7 +2,6 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
-import { DIARY_QUERY_ROOTS } from '@/state/queries/diary-cache';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import type { TraktDeps } from '@/lib/providers/trakt/deps';
@@ -72,9 +71,6 @@ export const traktQueryKeys = {
   viewer: () => [...traktQueryKeys.all, 'viewer'] as const,
   watchedShows: () => [...traktQueryKeys.all, 'watched-shows'] as const,
   watchedMovies: () => [...traktQueryKeys.all, 'watched-movies'] as const,
-  /** Per-log watch history — the Trakt diary source (plan 0016). Derived from
-   *  the shared root so the details-screen diary cache scan stays in sync. */
-  history: () => [...DIARY_QUERY_ROOTS.trakt],
   /** Prefix for every search entry — details/[id] scans this for cache hits.
    *  Shared root so `search-cache.ts`'s scan can't drift from this key. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.trakt],

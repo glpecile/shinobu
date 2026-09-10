@@ -34,9 +34,24 @@ late arrival.
 After that first render nothing restructures on screen: pagination only
 lowers the watermark, so new rows append below the fold, and rows above the
 watermark already have every contributor loaded, so their ids and titles are
-final. This is the Bluesky shape (one loading state per feed, merging done
-before the UI sees it), kept on top of the per-provider queries the watermark
-and partial-failure contract need.
+final.
+
+The follow-up made that structural. `useDiaryFeedQuery` is now **one**
+infinite query, the shape Up Next and the watchlist gatherers already use
+(`settle.ts`): its `queryFn` fans out to the cursor's providers in parallel
+and each page carries one slice per provider, a failure settled as data in
+its slice. The page param is the set of watermark providers and their next
+page (`diary-pages.ts`). Consequences:
+
+- One key (`DIARY_QUERY_ROOT`) for the log fan-out to invalidate and the
+  details-screen cache scan to read; the five per-provider diary keys are gone.
+- No `maxPages`: page 1 holds Simkl's and Letterboxd's whole windows, so
+  windowing would drop them wholesale after a deep scroll (the per-provider
+  version already lost Trakt's newest page that way).
+- No automatic retry of a single failed provider: the failure is data, the
+  banner names it, Retry and pull-to-refresh replay the query. Add a
+  per-slice retry loop on `retryCountFor`/`retryDelay` from `query-client.ts`
+  if transient blips show the banner too often.
 
 ## Not the fix
 

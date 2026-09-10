@@ -25,12 +25,10 @@ const { serializdQueryKeys } = await import('./serializd');
 describe('serializdQueryKeys', () => {
   test('every key is rooted at "serializd"', () => {
     expect(serializdQueryKeys.all[0]).toBe('serializd');
-    expect(serializdQueryKeys.diary('gian')[0]).toBe('serializd');
     expect(serializdQueryKeys.progress('gian', 1396)[0]).toBe('serializd');
   });
 
-  test('diary + progress keys include the username (no cross-account leakage)', () => {
-    expect(serializdQueryKeys.diary('gian')).toEqual(['serializd', 'diary', 'gian']);
+  test('progress keys include the username (no cross-account leakage)', () => {
     expect(serializdQueryKeys.progress('nina', 1396)).toEqual([
       'serializd',
       'progress',
@@ -38,6 +36,8 @@ describe('serializdQueryKeys', () => {
       1396,
     ]);
     // Reconnecting as a different account yields a different key.
-    expect(serializdQueryKeys.diary('gian')).not.toEqual(serializdQueryKeys.diary('nina'));
+    expect(serializdQueryKeys.progress('gian', 1396)).not.toEqual(
+      serializdQueryKeys.progress('nina', 1396),
+    );
   });
 });

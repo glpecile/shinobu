@@ -4,9 +4,10 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 /**
  * The search-query key roots, in one RN-free place — same arrangement as
- * `diary-cache.ts`: the provider query-key builders derive their `searchRoot()`
- * from these, and the details-screen cache scan reads them, so the two can't
- * drift and the scan stays unit-testable without pulling the http client.
+ * `diary-pages.ts`'s `DIARY_QUERY_ROOT`: the provider query-key builders
+ * derive their `searchRoot()` from these, and the details-screen cache scan
+ * reads them, so the two can't drift and the scan stays unit-testable
+ * without pulling the http client.
  */
 export const SEARCH_QUERY_ROOTS = {
   trakt: ['trakt', 'search'] as const,
@@ -33,7 +34,7 @@ export function findInSearchCache(
     const found = queryClient
       .getQueriesData<NormalizedMediaItem[]>({ queryKey: root })
       .flatMap(([, data]) => data ?? [])
-      // `item?.id`, for the reason spelled out in `diary-cache.ts`: these roots
+      // `item?.id`, for the reason spelled out in `diary-pages.ts`: these roots
       // are prefixes, so a sibling query landing under one gets scanned here
       // too, and a resolution helper must degrade to "Not found" rather than
       // throw and take the route's ErrorBoundary with it.

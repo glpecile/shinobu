@@ -8,17 +8,16 @@ import { logToSimkl, type SimklLogEntry } from '@/lib/providers/simkl/writes';
 import {
   diaryHasEpisode,
   getSerializdDiary,
-  type SerializdDiaryPage,
 } from '@/lib/providers/serializd/diary';
 import {
   getWatchedEpisodeKeys,
   serializdHasEpisodes,
 } from '@/lib/providers/serializd/progress';
 import { recordRecentTags } from '@/state/prefs/recent-tags';
-import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import { DIARY_QUERY_ROOT, cachedDiaryEntries } from '@/state/queries/diary-pages';
+import { letterboxdDeps } from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
-import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import { translateEntryEpisodes } from '@/lib/providers/mapping/episode-translation';
 import {
@@ -437,7 +436,7 @@ async function providerHasWatch(
       // partial write would skip and silently drop the diary write. A whole-
       // season batch (/watched_v2) creates no diary entry, so progress suffices.
       if (episodes.length === 1) {
-        return await serializdDiaryHasEpisode(queryClient, username, tmdbId, episodes[0]);
+        return await serializdDiaryHasEpisode(queryClient, tmdbId, episodes[0]);
       }
       return true;
     }
@@ -471,15 +470,13 @@ async function providerHasWatch(
  */
 async function serializdDiaryHasEpisode(
   queryClient: QueryClient,
-  username: string,
   tmdbId: number,
   episode: { season: number; number: number },
 ): Promise<boolean> {
   const params = { tmdbId, episodeNumber: episode.number, season: episode.season };
-  const cached = queryClient.getQueryData<{ pages?: SerializdDiaryPage[] }>(
-    serializdQueryKeys.diary(username),
+  const cachedEntries = cachedDiaryEntries(queryClient).filter(
+    (entry) => entry.provider === 'serializd',
   );
-  const cachedEntries = (cached?.pages ?? []).flatMap((page) => page.entries);
   if (diaryHasEpisode(cachedEntries, params)) return true;
 
   const page = await Effect.runPromise(getSerializdDiary(serializdDeps(), { page: 1 }));
@@ -498,9 +495,6 @@ export function invalidateAfterLog(
   if (succeeded.includes('trakt')) {
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() });
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedMovies() });
-    // The fan-out landed a new log in Trakt history — the diary must show it on
-    // its next visit (plan 0016 KTD9).
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.history() });
     // Trakt removes a watched item from the watchlist server-side — "watching 1
     // episode will remove the entire show or season" — so a log silently
     // changes the watchlist too, and the cached read would otherwise sit stale
@@ -526,20 +520,10 @@ export function invalidateAfterLog(
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentAnimeEntries(),
     });
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.listActivity() });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
       queryClient.invalidateQueries({
         queryKey: anilistQueryKeys.entryState(mediaId),
-      });
-    }
-  }
-  if (succeeded.includes('letterboxd')) {
-    // A fanned-out Letterboxd diary write appears in the RSS window next visit.
-    const username = getLetterboxdUsername();
-    if (username != null) {
-      queryClient.invalidateQueries({
-        queryKey: letterboxdQueryKeys.diary(username),
       });
     }
   }
@@ -554,11 +538,9 @@ export function invalidateAfterLog(
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }
   if (succeeded.includes('serializd')) {
-    // The write landed a new diary entry (and moved progress) — refresh both so
-    // the unified diary and the next reconcile see it.
+    // The write moved progress — refresh it so the next reconcile sees it.
     const username = getSerializdUsername();
     if (username != null) {
-      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.diary(username) });
       const tmdbId = item.externalIds.tmdb;
       if (tmdbId != null) {
         queryClient.invalidateQueries({
@@ -566,6 +548,11 @@ export function invalidateAfterLog(
         });
       }
     }
+  }
+  // Every diary provider's write lands a new log — the unified diary must
+  // show it on its next visit (plan 0016 KTD9). One query, one invalidation.
+  if (succeeded.length > 0) {
+    queryClient.invalidateQueries({ queryKey: DIARY_QUERY_ROOT });
   }
   // **Last on purpose.** `invalidateQueries` starts the refetch of the active
   // Up Next query *synchronously*, and `fetchUpNextInputs` reaches its

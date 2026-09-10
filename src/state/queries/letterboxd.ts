@@ -101,14 +101,6 @@ export const letterboxdQueryKeys = {
   watchlistPages: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist-pages', username] as const,
   /**
-   * The user's public diary (RSS window) — the Letterboxd diary source
-   * (plan 0016). Keyed by username so reconnecting as a different account
-   * never serves the prior account's entries. On web it reads through the
-   * Worker proxy (plan 0018); native reads letterboxd.com directly.
-   */
-  diary: (username: string) =>
-    [...letterboxdQueryKeys.all, 'diary', username] as const,
-  /**
    * The member's public tag vocabulary (`/{user}/tags/`) — the log sheet's tag
    * suggestions. Keyed by username so reconnecting as a different account never
    * suggests the prior account's tags.
@@ -156,8 +148,8 @@ export function useLetterboxdTagsQuery() {
 
 /**
  * The whole watchlist, one page (28 films) per cursor — behind the row's
- * "View all" grid (plan 0024 U9). Same shape as `use-diary-feed.ts`'s cursors:
- * a short page ends the list, and the page number *is* the cursor. Pages
+ * "View all" grid (plan 0024 U9). A short page ends the
+ * list, and the page number *is* the cursor. Pages
  * already loaded stay loaded when a later one fails, so the grid degrades to a
  * footer retry rather than a blank screen.
  */

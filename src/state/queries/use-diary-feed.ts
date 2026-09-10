@@ -1,9 +1,7 @@
 import {
   useInfiniteQuery,
   useQueryClient,
-  type InfiniteData,
   type QueryClient,
-  type UseInfiniteQueryResult,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
@@ -18,38 +16,36 @@ import { getSimklDiary } from '@/lib/providers/simkl/diary';
 import { getHistory } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
 import type { DiaryDay, NormalizedDiaryEntry } from '@/types/media';
-import {
-  groupDiaryEntries,
-  mergeDiaryEntries,
-  watermarkProviders,
-  type DiaryProviderState,
-} from '@/features/diary/merge';
+import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import { anilistDeps, anilistQueryKeys } from './anilist';
-import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
-import { serializdDeps, serializdQueryKeys } from './serializd';
-import { simklDeps, simklQueryKeys } from './simkl';
-import { traktDeps, traktQueryKeys } from './trakt';
+import {
+  diaryQueryKeys,
+  diaryStates,
+  nextDiaryCursor,
+  type DiaryCursor,
+  type DiaryPage,
+  type DiarySlice,
+} from './diary-pages';
+import { letterboxdDeps } from './letterboxd';
+import { serializdDeps } from './serializd';
+import type { ProviderFailure } from './settle';
+import { simklDeps } from './simkl';
+import { traktDeps } from './trakt';
 
 // Trakt/AniList paginate at 50; history is append-mostly so a generous
-// staleTime keeps diary ↔ details navigation off the rate budget, and maxPages
-// caps how many pages a remount/invalidation replays — a deep-scrolled AniList
-// history would otherwise burn the 30 req/min budget in one refetch
+// staleTime keeps diary ↔ details navigation off the rate budget
 // (plan 0016 KTD9, docs/solutions/anilist-rate-limit-retry-storm.md).
+// No `maxPages`: page 1 holds Simkl's and Letterboxd's *entire* windows, so
+// windowing would drop them wholesale after a deep scroll.
 const PAGE_SIZE = 50;
-const MAX_PAGES = 5;
 const DIARY_STALE_MS = 5 * 60_000;
 
 /** A short final page signals end-of-history; a full page has a successor. */
-function pageAfter(lastPage: NormalizedDiaryEntry[], lastPageParam: number) {
-  return lastPage.length < PAGE_SIZE ? undefined : lastPageParam + 1;
-}
-
-/** `getPreviousPageParam` so `maxPages` windowing can still scroll back up. */
-function pageBefore(_first: NormalizedDiaryEntry[], firstPageParam: number) {
-  return firstPageParam > 1 ? firstPageParam - 1 : undefined;
+function pageAfter(entries: NormalizedDiaryEntry[], page: number) {
+  return entries.length < PAGE_SIZE ? undefined : page + 1;
 }
 
 /**
@@ -73,13 +69,80 @@ async function fetchAniListActivityPage(
   );
 }
 
+type FetchSlice = (
+  queryClient: QueryClient,
+  page: number,
+) => Promise<Pick<DiarySlice, 'entries' | 'next'>>;
+
+/** One page of each provider's diary; the effects run here (containment rule). */
+const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
+  trakt: async (_queryClient, page) => {
+    const entries = await Effect.runPromise(getHistory(traktDeps(), { page }));
+    return { entries, next: pageAfter(entries, page) };
+  },
+  anilist: async (queryClient, page) => {
+    const entries = await fetchAniListActivityPage(queryClient, page);
+    return { entries, next: pageAfter(entries, page) };
+  },
+  // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
+  // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
+  // exhausts after page 1 and drops out of the watermark early. On web it
+  // reads through the Worker proxy (plan 0018); native reads letterboxd.com.
+  letterboxd: async () => ({
+    entries: await Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 })),
+    next: undefined,
+  }),
+  // A real paginated read: the page carries `{ entries, totalPages }`.
+  // Watermark ordering keys on `dateAdded` (KTD8), already `watchedAt`.
+  serializd: async (_queryClient, page) => {
+    const result = await Effect.runPromise(
+      getSerializdDiary(serializdDeps(), { page }),
+    );
+    return { entries: result.entries, next: serializdNextPage(result, page) };
+  },
+  // Simkl has no history endpoint — the diary is a projection of the one
+  // `/sync/all-items` snapshot (per-episode watched instants), so like
+  // Letterboxd it is a single window (rate-limit discipline:
+  // docs/solutions/simkl-rate-limits-and-write-lock.md).
+  simkl: async () => ({
+    entries: await Effect.runPromise(getSimklDiary(simklDeps())),
+    next: undefined,
+  }),
+};
+
 /**
- * The unified diary feed (plan 0016 U4): one infinite cursor per connected,
- * platform-capable provider, merged behind a watermark into one gapless,
- * grouped, reverse-chronological stream. The per-provider hooks are called
- * unconditionally (fixed hook count) and gated via `enabled`; the merge is
- * provider-count-agnostic, so a subset degrades cleanly. No Effect type escapes
- * — the effects run inside each `queryFn` (containment rule).
+ * One diary page: the cursor's providers fetched in parallel, each failure
+ * settled into its slice rather than thrown (partial-failure contract — one
+ * provider down never blanks the others, and the banner names it). A failed
+ * slice keeps its page so the next advance retries it. No automatic retry
+ * here: the banner's Retry and pull-to-refresh replay the query.
+ */
+async function fetchDiaryPage(
+  queryClient: QueryClient,
+  cursor: DiaryCursor,
+): Promise<DiaryPage> {
+  const slices = await Promise.all(
+    (Object.entries(cursor) as Array<[ProviderId, number]>).map(
+      async ([provider, page]): Promise<[ProviderId, DiarySlice]> => {
+        try {
+          return [provider, await FETCH_SLICE[provider](queryClient, page)];
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          return [provider, { entries: [], next: page, error: message }];
+        }
+      },
+    ),
+  );
+  return { slices: Object.fromEntries(slices) };
+}
+
+/**
+ * The unified diary feed (plan 0016 U4): one infinite query over every
+ * connected, platform-capable provider, merged behind a watermark into one
+ * gapless, grouped, reverse-chronological stream. Each page advances only the
+ * watermark provider(s) (`nextDiaryCursor`); the merge is provider-count-
+ * agnostic, so a subset degrades cleanly. No Effect type escapes — the effects
+ * run inside the `queryFn` (containment rule).
  */
 export function useDiaryFeedQuery(): DiaryFeedResult {
   const connected = useConnectedProviders();
@@ -88,180 +151,54 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const readable = providersForFeed(connected);
-  const traktEnabled = readable.includes('trakt');
-  const anilistEnabled = readable.includes('anilist');
-  // Letterboxd reads need a stored username; on web they run through the
-  // Worker proxy (plan 0018), native reads letterboxd.com directly. The
-  // `readable` gate also keeps this MMKV read out of web SSR renders (it is
-  // empty in the server snapshot — the Serializd R16 pattern below).
+  // Letterboxd and Serializd reads need a stored username. The `readable`
+  // gate keeps these MMKV reads out of web SSR renders (`readable` is empty
+  // in the server snapshot — plan 0016 R16).
   const letterboxdUsername = readable.includes('letterboxd')
     ? (getLetterboxdUsername() ?? '')
     : '';
-  const letterboxdEnabled = letterboxdUsername !== '';
-  // Serializd reads work on every platform via the proxy (R13) — no platform
-  // gate. `readable` is empty on the server (useConnectedProviders' SSR
-  // snapshot), so this MMKV read only runs on the client (R16).
   const serializdUsername = readable.includes('serializd')
     ? (getSerializdUsername() ?? '')
     : '';
-  const serializdEnabled = serializdUsername !== '';
-  const simklEnabled = readable.includes('simkl');
+  const usernames: Partial<Record<ProviderId, string>> = {
+    letterboxd: letterboxdUsername,
+    serializd: serializdUsername,
+  };
+  const active = readable.filter((provider) => usernames[provider] !== '');
 
-  const trakt = useInfiniteQuery({
-    queryKey: traktQueryKeys.history(),
-    queryFn: ({ pageParam }) =>
-      Effect.runPromise(getHistory(traktDeps(), { page: pageParam })),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, _all, lastPageParam) =>
-      pageAfter(lastPage, lastPageParam),
-    getPreviousPageParam: (firstPage, _all, firstPageParam) =>
-      pageBefore(firstPage, firstPageParam),
-    maxPages: MAX_PAGES,
+  const query = useInfiniteQuery({
+    queryKey: diaryQueryKeys.feed(active, letterboxdUsername, serializdUsername),
+    queryFn: ({ pageParam }) => fetchDiaryPage(queryClient, pageParam),
+    initialPageParam: Object.fromEntries(
+      active.map((provider) => [provider, 1]),
+    ) as DiaryCursor,
+    getNextPageParam: (_last, pages) => nextDiaryCursor(pages),
     staleTime: DIARY_STALE_MS,
-    enabled: traktEnabled,
+    enabled: active.length > 0,
   });
 
-  const anilist = useInfiniteQuery({
-    queryKey: anilistQueryKeys.listActivity(),
-    queryFn: ({ pageParam }) => fetchAniListActivityPage(queryClient, pageParam),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, _all, lastPageParam) =>
-      pageAfter(lastPage, lastPageParam),
-    getPreviousPageParam: (firstPage, _all, firstPageParam) =>
-      pageBefore(firstPage, firstPageParam),
-    maxPages: MAX_PAGES,
-    staleTime: DIARY_STALE_MS,
-    enabled: anilistEnabled,
-  });
-
-  const letterboxd = useInfiniteQuery({
-    queryKey: letterboxdQueryKeys.diary(letterboxdUsername),
-    queryFn: ({ pageParam }) =>
-      Effect.runPromise(getDiary(letterboxdDeps(), { page: pageParam })),
-    initialPageParam: 1,
-    // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
-    // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
-    // exhausts after page 1 and drops out of the watermark early.
-    getNextPageParam: () => undefined,
-    staleTime: DIARY_STALE_MS,
-    enabled: letterboxdEnabled,
-  });
-
-  // Serializd is a real paginated infinite query (unlike Letterboxd's single RSS
-  // window): its page carries `{ entries, totalPages }`, so the next-page param
-  // comes from totalPages. Watermark ordering keys on `dateAdded` (KTD8), which
-  // normalize.ts already sets as `watchedAt`.
-  const serializd = useInfiniteQuery({
-    queryKey: serializdQueryKeys.diary(serializdUsername),
-    queryFn: ({ pageParam }) =>
-      Effect.runPromise(getSerializdDiary(serializdDeps(), { page: pageParam })),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, _all, lastPageParam) =>
-      serializdNextPage(lastPage, lastPageParam),
-    getPreviousPageParam: (_first, _all, firstPageParam) =>
-      firstPageParam > 1 ? firstPageParam - 1 : undefined,
-    maxPages: MAX_PAGES,
-    staleTime: DIARY_STALE_MS,
-    enabled: serializdEnabled,
-  });
-
-  // Simkl has no history endpoint — the diary is a projection of the one
-  // `/sync/all-items` snapshot (per-episode watched instants), so like
-  // Letterboxd it is a single window: it exhausts after page 1 and drops out
-  // of the watermark early. The key sits under `allItemsRoot`, so the log
-  // fan-out's snapshot invalidation refetches this leg with no extra wiring
-  // (and no new polled read — the rate-limit discipline in
-  // docs/solutions/simkl-rate-limits-and-write-lock.md).
-  const simkl = useInfiniteQuery({
-    queryKey: simklQueryKeys.diary(),
-    queryFn: () => Effect.runPromise(getSimklDiary(simklDeps())),
-    initialPageParam: 1,
-    getNextPageParam: () => undefined,
-    staleTime: DIARY_STALE_MS,
-    enabled: simklEnabled,
-  });
-
-  // `entries` is precomputed per provider (Serializd's page shape differs), so
-  // the merge/watermark plumbing below stays provider-shape-agnostic.
-  const wired: Array<{
-    provider: ProviderId;
-    query: AnyInfiniteDiaryQuery;
-    enabled: boolean;
-    entries: NormalizedDiaryEntry[];
-  }> = [
-    { provider: 'trakt', query: trakt, enabled: traktEnabled, entries: (trakt.data?.pages ?? []).flat() },
-    { provider: 'anilist', query: anilist, enabled: anilistEnabled, entries: (anilist.data?.pages ?? []).flat() },
-    { provider: 'letterboxd', query: letterboxd, enabled: letterboxdEnabled, entries: (letterboxd.data?.pages ?? []).flat() },
-    {
-      provider: 'serializd',
-      query: serializd,
-      enabled: serializdEnabled,
-      entries: (serializd.data?.pages ?? []).flatMap((page) => page.entries),
-    },
-    { provider: 'simkl', query: simkl, enabled: simklEnabled, entries: (simkl.data?.pages ?? []).flat() },
-  ];
-  const active = wired.filter((w) => w.enabled);
-
-  const states: DiaryProviderState[] = active.map(({ provider, query, entries }) => ({
-    provider,
-    entries,
-    // A provider whose read errored drops out of the watermark so it never
-    // holds back the providers that did load (partial-failure contract).
-    hasMore: query.status === 'error' ? false : (query.hasNextPage ?? false),
-    failed: query.status === 'error',
-  }));
-
+  const states = diaryStates(query.data?.pages ?? []);
   const merged = mergeDiaryEntries(states);
-  const days = groupDiaryEntries(merged, timeZone);
-
-  // The R10 banner re-evaluates on every initial OR pagination failure — a
-  // populated `error` covers both (unlike `status`, which stays 'success' once
-  // any page has loaded).
-  const errors = active
-    .map(({ provider, query }) => ({ provider, error: query.error }))
-    .filter(
-      (entry): entry is { provider: ProviderId; error: Error } =>
-        entry.error != null,
-    );
-
-  const advance = watermarkProviders(states);
-  function fetchNextPage() {
-    for (const { provider, query } of active) {
-      if (advance.includes(provider)) query.fetchNextPage();
-    }
-  }
-
-  function refetch() {
-    // allSettled, not all: one provider failing to refresh must not hide the
-    // others' outcome (partial-failure contract, AGENTS.md).
-    return Promise.allSettled(active.map(({ query }) => query.refetch()));
-  }
 
   return {
-    days,
+    days: groupDiaryEntries(merged, timeZone),
     timeZone,
-    activeProviders: active.map((w) => w.provider),
+    activeProviders: active,
     entryCount: merged.length,
-    // A merged feed can't be shown before its inputs: a provider still on its
-    // first attempt holds the skeleton. One that's already retrying doesn't
-    // (retries back off for seconds; it merges in later if it recovers).
-    isLoading: active.some(
-      ({ query }) => query.isLoading && query.failureCount === 0,
+    isLoading: query.isLoading,
+    allFailed: active.length > 0 && states.every((state) => state.failed),
+    // A provider's initial *or* pagination failure — its latest slice's error.
+    errors: states.flatMap((state) =>
+      state.error == null ? [] : [{ provider: state.provider, message: state.error }],
     ),
-    allFailed: active.length > 0 && states.every((s) => s.failed),
-    errors,
-    hasNextPage: states.some((s) => s.hasMore),
-    isFetchingNextPage: active.some(({ query }) => query.isFetchingNextPage),
-    fetchNextPage,
-    refetch,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    fetchNextPage: () => {
+      void query.fetchNextPage();
+    },
+    refetch: () => query.refetch(),
   };
 }
-
-// Page-type-agnostic: the merge plumbing reads only status/hasNextPage/error/
-// fetchNextPage/refetch, which every UseInfiniteQueryResult exposes regardless
-// of its page shape (Serializd's `{ entries, totalPages }` vs the others' flat
-// arrays). `entries` is extracted per provider where the concrete type is known.
-type AnyInfiniteDiaryQuery = UseInfiniteQueryResult<InfiniteData<unknown>, Error>;
 
 export interface DiaryFeedResult {
   days: DiaryDay[];
@@ -271,12 +208,12 @@ export interface DiaryFeedResult {
   activeProviders: ProviderId[];
   /** Total merged rows currently exposed (0 → "no logs yet" vs a load state). */
   entryCount: number;
-  /** Any active provider still on its initial load's first attempt. */
+  /** The first page — every provider — is still in flight. */
   isLoading: boolean;
   /** Every active provider errored (R9 load-failure state / AE5). */
   allFailed: boolean;
   /** Providers whose initial or pagination read failed (R10 banner). */
-  errors: Array<{ provider: ProviderId; error: Error }>;
+  errors: ProviderFailure[];
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   /** Advances only the watermark provider(s), never every cursor at once. */
