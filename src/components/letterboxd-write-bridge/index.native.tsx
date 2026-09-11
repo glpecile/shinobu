@@ -30,8 +30,14 @@ export function LetterboxdWriteBridge() {
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      pointerEvents="none"
-      style={{ position: 'absolute', width: 1, height: 1, opacity: 0, left: -9999 }}
+      style={{
+        pointerEvents: 'none',
+        position: 'absolute',
+        width: 1,
+        height: 1,
+        opacity: 0,
+        left: -9999,
+      }}
     >
       <NitroWebView
         onLoadEnd={callback(() => setLetterboxdWebViewLoaded(true))}

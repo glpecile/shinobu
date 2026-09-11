@@ -1,9 +1,11 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
+import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { parseTmdbItemId } from '@/lib/providers/tmdb/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
 import { useMovieCatalogueQuery, useTraktIdentityQuery } from './mapping';
@@ -46,6 +48,22 @@ function findInTmdbCache(
 }
 
 /**
+ * A card tapped on the seasons explorer past the home row's page — any other
+ * cour, format or page lives only in the explorer's infinite query.
+ */
+function findInSeasonalPagesCache(
+  queryClient: QueryClient,
+  id: string,
+): NormalizedMediaItem | undefined {
+  return queryClient
+    .getQueriesData<{ pages?: NormalizedMediaItem[][] }>({
+      queryKey: anilistQueryKeys.seasonalAnimePagesRoot(),
+    })
+    .flatMap(([, data]) => data?.pages?.flat() ?? [])
+    .find((item) => item?.id === id);
+}
+
+/**
  * The item behind a `/details/[id]` or `/episode/[id]` route, resolved
  * **cache-only** from every surface a card can be tapped on: the personal
  * feed first (its copy carries real progress), then Up Next, search, diary,
@@ -77,6 +95,7 @@ export function useResolvedMediaItem(id: string): {
       feed.trendingMovies,
       feed.trendingShows,
       feed.seasonalAnime,
+      feed.animeMovies,
     ]) ??
     // Up Next / Continue Watching cards. They used to resolve incidentally out
     // of the `yourShows`/`yourAnime` slots (the same show sat in both
@@ -94,7 +113,8 @@ export function useResolvedMediaItem(id: string): {
     // hit "Not found" without this step. Cache-only: opening a details screen
     // never triggers the gather.
     findInWatchlistCache(queryClient, id) ??
-    findInTmdbCache(queryClient, id);
+    findInTmdbCache(queryClient, id) ??
+    findInSeasonalPagesCache(queryClient, id);
   // Cold deep link (a refreshed browser tab, a shared URL): nothing above
   // holds the item, but a TMDB-minted id says exactly what to fetch, so a
   // stub carrying just that id rides the same catalogue query the details
@@ -105,7 +125,16 @@ export function useResolvedMediaItem(id: string): {
   const deepLinkDetails = useMediaDetailsQuery(
     deepLink != null ? tmdbStub(id, deepLink) : undefined,
   );
-  const cachedOrFetched = resolvedItem ?? deepLinkDetails.data?.catalogue ?? undefined;
+  // The AniList twin: an AniList-minted id is public data too, and the seasons
+  // explorer is reachable signed out, so its links must survive a refresh.
+  const anilistDeepLink =
+    resolvedItem == null && !feed.isLoading ? parseAniListItemId(id) : null;
+  const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink);
+  const cachedOrFetched =
+    resolvedItem ??
+    deepLinkDetails.data?.catalogue ??
+    anilistDeepLinkItem.data ??
+    undefined;
   const catalogue = useMovieCatalogueQuery(cachedOrFetched);
   const traktIdentity = useTraktIdentityQuery(cachedOrFetched);
   const enriched = catalogue.data ?? traktIdentity.data;
@@ -114,7 +143,10 @@ export function useResolvedMediaItem(id: string): {
       cachedOrFetched != null && enriched != null
         ? mergeCatalogueMetadata(cachedOrFetched, enriched)
         : cachedOrFetched,
-    isLoading: feed.isLoading || (deepLink != null && deepLinkDetails.isPending),
+    isLoading:
+      feed.isLoading ||
+      (deepLink != null && deepLinkDetails.isPending) ||
+      (anilistDeepLink != null && anilistDeepLinkItem.isPending),
     refetchFeed: feed.refetch,
   };
 }

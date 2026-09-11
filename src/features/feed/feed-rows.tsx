@@ -9,6 +9,7 @@ import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { capFeedRow } from './row-cap';
 import {
+  useSuspenseAnimeMoviesQuery,
   useSuspenseSeasonalAnimeQuery,
   useSuspenseTrendingMoviesQuery,
   useSuspenseTrendingShowsQuery,
@@ -160,15 +161,48 @@ export function SeasonalAnimeRow({
   onItemActions,
 }: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
   const { data } = useSuspenseSeasonalAnimeQuery(season);
-  const items = useVisibleItems(data);
+  const pushRoute = usePushRoute();
+  // The query reads AniList's full page (50) for the seasons explorer; the
+  // row stays the browse size of the trending rows.
+  const items = capFeedRow(useVisibleItems(data));
   return (
     <MediaCarousel
       collapseKey="seasonal-anime"
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
+      onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
       provider="anilist"
-      title={`${animeSeasonLabel(season)} Anime`}
+      title={`Anime of ${animeSeasonLabel(season)}`}
+    />
+  );
+}
+
+/**
+ * The cour's anime films (owner, 2026-09-10) — "Films of Summer 2026" under
+ * the AniList mark, where "Anime Movies of …" said the same thing twice and
+ * truncated for it. The same cour as the series row above it, so the two read
+ * as one season rather than a season next to a year; "View all" opens the
+ * explorer on that cour with the film filter on — the same list, one cache
+ * entry.
+ */
+export function AnimeMoviesRow({
+  season,
+  onItemPress,
+  onItemActions,
+}: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
+  const { data } = useSuspenseAnimeMoviesQuery(season);
+  const pushRoute = usePushRoute();
+  const items = capFeedRow(useVisibleItems(data));
+  return (
+    <MediaCarousel
+      collapseKey="anime-movies"
+      items={items}
+      onItemActions={onItemActions}
+      onItemPress={onItemPress}
+      onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
+      provider="anilist"
+      title={`Films of ${animeSeasonLabel(season)}`}
     />
   );
 }

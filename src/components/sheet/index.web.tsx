@@ -159,11 +159,15 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const reduceMotion = useReducedMotion();
 
+  // Opening is adjusted *during* the render that opens it, not from an effect:
+  // an effect runs after the commit, so the sheet returned `null` for one
+  // painted frame and only appeared on the following one — a frame of latency
+  // on the app's most-used surface, for nothing (react.dev, "You Might Not
+  // Need an Effect"). Closing is the half that genuinely needs the clock, so
+  // it stays where a side effect belongs.
+  if (open && !mounted) setMounted(true);
   useEffect(() => {
-    if (open) {
-      setMounted(true);
-      return;
-    }
+    if (open) return;
     const timer = setTimeout(() => setMounted(false), EXIT_MS);
     return () => clearTimeout(timer);
   }, [open]);
@@ -176,7 +180,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         {open && (
           <>
             <AnimatedView
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               entering={backdropEntering}
               exiting={backdropExiting}
             />
@@ -190,8 +194,9 @@ export function Sheet({ open, onClose, children }: SheetProps) {
                 fills the overlay, and `justify-end` keeps the panel bottom-
                 anchored however tall it gets. The wrapper covers the scrim,
                 and a `box-none` style doesn't survive the animated view on
-                web, so the close target is the spacer above the panel, not
-                the scrim itself. */}
+                web, so the close target is a layer filling the wrapper,
+                painted under the panel: above it *and* beside it on wide
+                viewports, where the panel is narrower than the window. */}
             <AnimatedView
               className="flex-1 justify-end"
               entering={
@@ -201,7 +206,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
             >
               <PresstableOpacity
                 accessibilityLabel="Close"
-                className="flex-1"
+                className="absolute inset-0"
                 onPress={onClose}
               />
               <SheetPanel reduceMotion={reduceMotion}>{children}</SheetPanel>

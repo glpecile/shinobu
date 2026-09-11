@@ -42,7 +42,8 @@ const MARK_SCRIM_HEIGHT = 34;
 /** Past this the artwork is too small to recognize, however wide the display. */
 const MAX_COLUMNS = 8;
 
-function useWallMetrics(): { columns: number; rowHeight: number } {
+/** Exported for the explorer's skeleton, so it lays out the same columns the wall will. */
+export function useWallMetrics(): { columns: number; rowHeight: number } {
   const { width } = useWindowDimensions();
   const usable = width - 2 * EDGE_PAD;
   const columns = Math.min(
@@ -68,6 +69,8 @@ function useWallMetrics(): { columns: number; rowHeight: number } {
  * mush, and a dot with a dark ring reads on any artwork.
  */
 function PosterMarks({ sources }: { sources: readonly ProviderId[] }) {
+  // A catalogue wall (the seasons explorer) has no provenance to show.
+  if (sources.length === 0) return null;
   return (
     <View
       accessibilityLabel={`On ${sources.map((id) => PROVIDERS[id].label).join(', ')}`}
@@ -107,9 +110,18 @@ function PosterCell({
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
+  // The list recycles cells, so a hovered cell scrolled off and reused for
+  // another poster would carry its caption along; drop it when the item
+  // changes (React's "reset state on prop change" pattern).
+  const [hoveredId, setHoveredId] = useState(item.id);
+  if (hoveredId !== item.id) {
+    setHoveredId(item.id);
+    setHovered(false);
+  }
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
   const providers = entry.sources.map((id) => PROVIDERS[id].label).join(', ');
+  const accessibilityLabel = providers === '' ? label : `${label}. On ${providers}`;
 
   return (
     <View style={{ padding: GAP / 2 }}>
@@ -123,7 +135,7 @@ function PosterCell({
           // The providers ride the poster's own label: the dots below are
           // decoration to a screen reader, and a wall of unlabelled artwork
           // must not become a wall of unlabelled artwork plus mystery dots.
-          accessibilityLabel={`${label}. On ${providers}`}
+          accessibilityLabel={accessibilityLabel}
           className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
           onLongPress={() => onActions(item)}
           onPress={() => onPress(item)}
@@ -237,14 +249,27 @@ export function PosterWall({
         paddingTop: GAP / 2,
       }}
       data={entries}
+      // Two rows ahead rather than the 250px default, which is barely one
+      // poster row: a fast fling outran it and revealed rows filling in
+      // late. Cheap now that the cells recycle.
+      drawDistance={rowHeight * 2}
       estimatedItemSize={rowHeight}
       keyExtractor={(entry) => entry.id}
       numColumns={columns}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
+      // Recycled for the diary's reason (docs/solutions/diary-scroll-jank-is-row-mount-cost.md):
+      // a cell is a gesture-handler pressable plus an image plus a gradient,
+      // and mounting a screenful of them from scratch is what tears on a
+      // fast scroll. Everything in a cell derives from the entry except the
+      // web hover flag, which `PosterCell` resets when its item changes.
+      recycleItems
       refreshControl={
         <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
       }
+      // No `entering` on cells: a virtualized list mounts them again every
+      // time they scroll back into view, so a mount animation replays on every
+      // fast scroll (docs/solutions/entering-animation-on-virtualized-cells-replays.md).
       renderItem={({ item: entry }) => (
         <PosterCell
           entry={entry}

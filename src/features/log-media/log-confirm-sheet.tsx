@@ -143,7 +143,7 @@ export function LogFormFields({
           live even though the confirm button was already spinning. */}
       <View
         className={cn(pending && 'opacity-50')}
-        pointerEvents={pending ? 'none' : 'auto'}
+        style={{ pointerEvents: pending ? 'none' : 'auto' }}
       >
         <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
           Write to

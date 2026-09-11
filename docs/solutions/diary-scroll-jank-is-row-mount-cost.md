@@ -83,6 +83,17 @@ At 47.5ms the worst commit is Legend List's own container machinery
 Dev renders run ~3× production, so treat the ratio as the finding and re-measure
 on a release build before quoting absolute numbers.
 
+## Also: the poster wall and the watchlist rows (2026-09-10)
+
+The seasons explorer's walls tore on a fast scroll — rows filling in late
+behind the fling. Same cause: `PosterCell` is a gesture-handler pressable, an
+expo-image and a gradient, mounted from scratch per cell, and Legend List's
+default `drawDistance` of 250px is barely one poster row ahead. Both
+`PosterWall` and `WatchlistRows` now recycle (the rows are the diary's row;
+the wall's one piece of cell state, the web hover flag, resets when the item
+changes) and draw two poster rows / four list rows ahead. This also covers
+`/watchlist`, which shares both layouts.
+
 ## Still open
 
 `useDiaryFeedQuery` re-runs `mergeDiaryEntries` + `groupDiaryEntries` on every

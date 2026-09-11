@@ -98,7 +98,8 @@ function FilterPill({
   );
 }
 
-function ViewToggle({
+/** Grid ⇄ list, shared with the anime seasons explorer. */
+export function ViewToggle({
   view,
   onChange,
 }: {
