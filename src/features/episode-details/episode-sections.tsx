@@ -1,8 +1,8 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
+import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
@@ -17,7 +17,10 @@ import {
 } from '@/features/person';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
+import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { useSuspenseTmdbEpisodeQuery } from '@/state/queries/tmdb';
 import type { NormalizedEpisode } from '@/types/media';
 
@@ -74,7 +77,7 @@ export function EpisodeHeading({
   rating?: number | undefined;
   align?: 'left' | 'center';
 }) {
-  const accent = useCSSVariable('--color-accent');
+  const accent = useThemeColor('--color-accent');
   const meta = episodeMetaLine(episode);
   const centered = align === 'center';
   return (
@@ -100,7 +103,7 @@ export function EpisodeHeading({
         {rating != null && (
           <View className="flex-row items-center gap-1">
             <Ionicons
-              color={typeof accent === 'string' ? accent : undefined}
+              color={accent}
               name="star"
               size={12}
             />
@@ -126,14 +129,14 @@ export function EpisodeLogs({
   logs: EpisodeLog[];
   className?: string;
 }) {
-  const accent = useCSSVariable('--color-accent');
+  const accent = useThemeColor('--color-accent');
   if (logs.length === 0) return null;
   return (
     <View className={cn('gap-2', className)}>
       {logs.map((log) => (
         <View className="flex-row items-center gap-2" key={log.provider}>
           <Ionicons
-            color={typeof accent === 'string' ? accent : undefined}
+            color={accent}
             name="checkmark-circle"
             size={14}
           />
@@ -227,6 +230,31 @@ export function EpisodeCreditsSection({
     <SuspenseSection fallback={<PeopleSectionsSkeleton />}>
       <EpisodeCredits number={number} season={season} tmdbId={tmdbId} />
     </SuspenseSection>
+  );
+}
+
+/**
+ * The way back up to the show. An episode is reachable from surfaces that
+ * never pass through the show — a diary row, a notification tap — so the
+ * eyebrow's "S1 E10 · Show" is the only mention of the series and it isn't a
+ * link. Same shape as the credit and studio sheets' route buttons.
+ */
+export function EpisodeSeriesLink({
+  id,
+  className,
+}: {
+  id: string;
+  className?: string;
+}) {
+  const pushRoute = usePushRoute();
+  return (
+    <Button
+      className={cn('mt-8', className)}
+      icon={<Button.Icon name="tv-outline" />}
+      label="View series"
+      onPress={() => pushRoute(routes.details(id))}
+      variant="quiet"
+    />
   );
 }
 

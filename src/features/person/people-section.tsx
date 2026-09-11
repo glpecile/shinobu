@@ -1,12 +1,12 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 
 import { PersonAvatar } from './person-avatar';
@@ -21,7 +21,7 @@ function PersonCard({
   onPress?: () => void;
   onActions: (credit: PersonCredit) => void;
 }) {
-  const accentForeground = useCSSVariable('--color-accent-foreground');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
   // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
   // the media card's).
@@ -88,7 +88,7 @@ function PersonCard({
         >
           <Ionicons
             color={
-              typeof accentForeground === 'string' ? accentForeground : undefined
+              accentForeground
             }
             name="ellipsis-horizontal"
             size={14}

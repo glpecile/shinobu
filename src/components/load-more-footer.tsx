@@ -1,7 +1,7 @@
 import { ActivityIndicator, Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * End-of-list footer for a paginated grid. A page failing mid-scroll keeps
@@ -20,7 +20,7 @@ export function LoadMoreFooter({
   /** What a page holds — "films", "titles" — for the retry copy. */
   noun: string;
 }) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   if (failed) {
     return (
       <View className="items-center py-8 px-8">
@@ -41,7 +41,7 @@ export function LoadMoreFooter({
   if (!loading) return <View className="h-12" />;
   return (
     <View accessibilityLabel={`Loading more ${noun}`} className="items-center py-8">
-      <ActivityIndicator color={typeof muted === 'string' ? muted : undefined} size="small" />
+      <ActivityIndicator color={muted} size="small" />
     </View>
   );
 }

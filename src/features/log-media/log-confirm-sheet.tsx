@@ -1,5 +1,4 @@
 import { Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
@@ -11,6 +10,7 @@ import { WriteResultReport } from '@/features/write-sheet/write-result-report';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
@@ -111,7 +111,7 @@ export function LogFormFields({
   onTagsChange,
   pending,
 }: LogFormFieldsProps) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   const pushRoute = usePushRoute();
   // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
   // tags, so narrowing this would silently drop working Serializd functionality.
@@ -183,7 +183,7 @@ export function LogFormFields({
               onChangeText={onTagsChange}
               placeholder="tags, comma separated"
               placeholderTextColor={
-                typeof muted === 'string' ? muted : undefined
+                muted
               }
               value={tags ?? ''}
             />

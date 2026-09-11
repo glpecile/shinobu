@@ -8,7 +8,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
@@ -27,6 +26,7 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
@@ -228,7 +228,7 @@ function DiaryDayHead({
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   return (
     <PresstableOpacity
       accessibilityHint={collapsed ? 'Expands this day' : 'Minimizes this day'}
@@ -262,7 +262,7 @@ function DiaryDayHead({
         </Text>
         <View className="flex-1 h-px bg-border" />
         <Ionicons
-          color={typeof muted === 'string' ? muted : undefined}
+          color={muted}
           name={collapsed ? 'chevron-down' : 'chevron-up'}
           size={14}
           style={{ marginLeft: 10 }}
@@ -549,7 +549,7 @@ function DiaryFailureBanner({
   providers: ProviderId[];
   onRetry: () => void;
 }) {
-  const accent = useCSSVariable('--color-accent');
+  const accent = useThemeColor('--color-accent');
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   return (
     <PresstableOpacity
@@ -558,7 +558,7 @@ function DiaryFailureBanner({
       onPress={onRetry}
     >
       <Ionicons
-        color={typeof accent === 'string' ? accent : undefined}
+        color={accent}
         name="warning-outline"
         size={16}
       />

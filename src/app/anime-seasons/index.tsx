@@ -9,7 +9,6 @@ import { Suspense, startTransition, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
@@ -44,6 +43,7 @@ import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { anilistQueryKeys, useSuspenseSeasonalAnimePagesQuery } from '@/state/queries/anilist';
 import { useWarmPosters } from '@/features/anime-seasons/warm-posters';
+import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
@@ -235,7 +235,7 @@ function useTrailingFormat(format: AnimeFormatFilter): AnimeFormatFilter {
 
 export default function AnimeSeasonsScreen() {
   const router = useRouter();
-  const foreground = useCSSVariable('--color-foreground');
+  const foreground = useThemeColor('--color-foreground');
   const params = useLocalSearchParams<{ season?: string; year?: string; format?: string }>();
   const now = animeSeasonAt(new Date());
   const window = parseAnimeSeasonWindow(params, now);
@@ -289,7 +289,7 @@ export default function AnimeSeasonsScreen() {
           onPress={goBack}
         >
           <Ionicons
-            color={typeof foreground === 'string' ? foreground : undefined}
+            color={foreground}
             name="arrow-back"
             size={22}
           />

@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { ScrollView, Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -11,10 +10,12 @@ import {
   EpisodeHeading,
   EpisodeLogs,
   EpisodeOverview,
+  EpisodeSeriesLink,
   EpisodeStill,
 } from '@/features/episode-details/episode-sections';
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
+import { useThemeColor } from '@/lib/theme-color';
 
 /** Mirrors index.tsx — keep the three variants' props identical. */
 export interface EpisodeScreenProps {
@@ -33,7 +34,7 @@ export interface EpisodeScreenProps {
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
   const logs = useEpisodeLogs(item, season, number, view.episode?.firstAired);
-  const foreground = useCSSVariable('--color-foreground');
+  const foreground = useThemeColor('--color-foreground');
   const title = view.episode?.title ?? '';
 
   return (
@@ -69,6 +70,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             )}
           </View>
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
+          <EpisodeSeriesLink id={item.id} />
         </View>
       </ScrollView>
 
@@ -79,7 +81,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
         onPress={onBack}
       >
         <Ionicons
-          color={typeof foreground === 'string' ? foreground : undefined}
+          color={foreground}
           name="close"
           size={18}
         />

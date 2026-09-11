@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -9,6 +8,7 @@ import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * A "View on …" row, the *sheet* treatment of a provider link — full-width and
@@ -30,8 +30,7 @@ export function ProviderLinkRow({
   onOpened?: () => void;
   className?: string;
 }) {
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const muted = useThemeColor('--color-muted');
 
   return (
     <PresstableOpacity
@@ -50,7 +49,7 @@ export function ProviderLinkRow({
       <Text className="text-foreground font-sans-semibold text-base flex-1">
         View on {PROVIDERS[link.provider].label}
       </Text>
-      <Ionicons color={mutedColor} name="open-outline" size={16} />
+      <Ionicons color={muted} name="open-outline" size={16} />
     </PresstableOpacity>
   );
 }

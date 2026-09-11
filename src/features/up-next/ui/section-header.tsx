@@ -2,11 +2,11 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { DURATION, EASE_IN_OUT } from '@/lib/motion';
+import { useThemeColor } from '@/lib/theme-color';
 import {
   setSectionCollapsed,
   useSectionCollapsed,
@@ -36,7 +36,7 @@ export function UpNextSectionHeader({
   children: ReactNode;
 }) {
   const collapsed = useSectionCollapsed(collapseKey);
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   const reduceMotion = useReducedMotion();
 
   return (
@@ -60,7 +60,7 @@ export function UpNextSectionHeader({
           }}
         >
           <Ionicons
-            color={typeof muted === 'string' ? muted : undefined}
+            color={muted}
             name="chevron-down"
             size={18}
           />

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Linking, Platform, Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
@@ -16,6 +15,7 @@ import {
   clearSimklAuthFlow,
 } from '@/lib/providers/simkl/auth';
 import { simklClientId } from '@/lib/providers/simkl/config';
+import { useThemeColor } from '@/lib/theme-color';
 import {
   getSimklRedirectUri,
   SIMKL_REDIRECT_URIS,
@@ -147,7 +147,7 @@ export function ConnectSimklButton() {
     storedClientId,
     setStoredClientId,
   } = useSimklConnect();
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -231,7 +231,7 @@ export function ConnectSimklButton() {
               onChangeText={field.onChange}
               onSubmitEditing={() => submitClientId()}
               placeholder="Simkl Client ID"
-              placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+              placeholderTextColor={muted}
               returnKeyType="done"
               value={field.value}
             />

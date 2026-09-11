@@ -1,11 +1,11 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 import { View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
+import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -24,7 +24,7 @@ function RowActionsButton({
   visible: boolean;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   return (
     <View className="w-10 items-center">
       {visible && (
@@ -35,7 +35,7 @@ function RowActionsButton({
           onPress={() => onActions(item)}
         >
           <Ionicons
-            color={typeof muted === 'string' ? muted : undefined}
+            color={muted}
             name="ellipsis-horizontal"
             size={16}
           />

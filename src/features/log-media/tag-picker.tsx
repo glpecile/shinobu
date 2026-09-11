@@ -6,7 +6,6 @@ import {
   FadeIn,
   useReducedMotion,
 } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -14,6 +13,7 @@ import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import type { LetterboxdTag } from '@/lib/providers/letterboxd/tags';
+import { useThemeColor } from '@/lib/theme-color';
 import { useRecentTags } from '@/state/prefs/recent-tags';
 import { useLetterboxdTagsQuery } from '@/state/queries/letterboxd';
 import {
@@ -212,10 +212,8 @@ function TagChip({
   onMeasure?: (height: number) => void;
   entering: EntryOrExitLayoutType;
 }) {
-  const accent = useCSSVariable('--color-accent');
-  const muted = useCSSVariable('--color-muted');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
 
   return (
     // The animation goes on a wrapper, not the pressable: pressto's wrapper
@@ -264,7 +262,7 @@ function TagChip({
               under the user's finger. Matches ProviderToggle's checkmark
               idiom. */}
           <Ionicons
-            color={selected ? accentColor : mutedColor}
+            color={selected ? accent : muted}
             name={selected ? 'checkmark-circle' : 'ellipse-outline'}
             size={14}
           />
@@ -304,7 +302,7 @@ export function TagPicker({
   const letterboxdTags = useLetterboxdTagsQuery();
   const recentTags = useRecentTags();
   const reduceMotion = useReducedMotion();
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   // The field as the sheet opened, and the only thing the pinning reads.
   // Pinning off the *live* value would re-sort the row on every tap, sliding
   // the chips out from under the finger that just pressed one — the same
@@ -473,7 +471,7 @@ export function TagPicker({
             }}
           >
             <Ionicons
-              color={typeof muted === 'string' ? muted : undefined}
+              color={muted}
               name="chevron-down"
               size={12}
             />

@@ -5,9 +5,9 @@ import {
   type ScrollViewProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCSSVariable } from 'uniwind';
 
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
+import { useThemeColor } from '@/lib/theme-color';
 
 interface RefreshableScrollViewProps extends ScrollViewProps {
   /**
@@ -50,8 +50,7 @@ export function RefreshableScrollView({
   ...rest
 }: RefreshableScrollViewProps) {
   const [refreshing, setRefreshing] = useState(false);
-  const accent = useCSSVariable('--color-accent');
-  const tint = typeof accent === 'string' ? accent : undefined;
+  const accent = useThemeColor('--color-accent');
   // Context comes from the navigation stack's provider; the hook is safe on
   // web too (zero insets), so no platform fork is needed here.
   const insets = useSafeAreaInsets();
@@ -72,13 +71,13 @@ export function RefreshableScrollView({
       {...rest}
       refreshControl={
         <RefreshControl
-          colors={tint != null ? [tint] : undefined}
+          colors={accent != null ? [accent] : undefined}
           onRefresh={refresh}
           progressViewOffset={
             spinnerBelowStatusBar === true ? insets.top : undefined
           }
           refreshing={refreshing}
-          tintColor={tint}
+          tintColor={accent}
         />
       }
     >

@@ -186,6 +186,17 @@ define the same set: `background`, `surface`, `foreground`, `muted`, `border`,
 in both themes (brand, not theme-adaptive). Dark is the designed-for mode, but
 light must render *correctly*.
 
+A prop that takes a color **string** rather than a `className` — an icon glyph,
+a spinner, a drawn stroke — goes through **`useThemeColor` (`@/lib/theme-color`)**,
+never `useCSSVariable` from uniwind. Web is a static export: its prerender has
+no DOM, so a JS read resolves to nothing, the caller falls back to its library's
+default (vector-icons draws *black*), and React never repaints a hydrated
+element's inline style. The wrapper hands web `var(--token)` for the browser to
+resolve and keeps the resolved value on native. The one exception is a color
+that gets *composed* rather than painted (`${background}00` for a gradient's
+transparent stop) — say so on the line and disable the rule. Enforced by
+`.oxlintrc.json`; why: `docs/solutions/web-prerender-bakes-js-resolved-colors.md`.
+
 Fonts are tokens too: **Space Grotesk** (`font-display`, titles/headings) and
 **Inter** (`font-sans`, `font-sans-semibold`), loaded in `app/_layout.tsx`. React
 Native won't synthesize weights for custom fonts: **never combine

@@ -5,11 +5,11 @@ import {
   Keyframe,
   useReducedMotion,
 } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * How far (px) a list must be scrolled before the FAB appears. Under half a
@@ -59,7 +59,7 @@ export function ScrollToTopFab({
   visible: boolean;
   onPress: () => void;
 }) {
-  const accentForeground = useCSSVariable('--color-accent-foreground');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   const reduceMotion = useReducedMotion();
   if (!visible) return null;
   return (
@@ -75,7 +75,7 @@ export function ScrollToTopFab({
         onPress={onPress}
       >
         <Ionicons
-          color={typeof accentForeground === 'string' ? accentForeground : undefined}
+          color={accentForeground}
           name="arrow-up"
           size={20}
         />

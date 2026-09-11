@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { ActivityIndicator, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableScale } from '@/components/presstable';
 import {
@@ -9,6 +8,7 @@ import {
 } from '@/features/up-next/catch-up/state';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { haptics } from '@/lib/haptics';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * The Continue Watching checkmark. Tapping it opens the app-level catch-up
@@ -31,9 +31,9 @@ import { haptics } from '@/lib/haptics';
 export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
   const { openCatchUp } = useCatchUpControls();
   const pending = useQuickLogBusy(entry.item.id);
-  const accentForeground = useCSSVariable('--color-accent-foreground');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   const iconColor =
-    typeof accentForeground === 'string' ? accentForeground : undefined;
+    accentForeground;
 
   function openConfirm() {
     if (pending) return;

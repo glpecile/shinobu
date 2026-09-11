@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import Head from '@/components/head';
 import { Keyboard, Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { Image } from '@/components/image';
@@ -20,6 +19,7 @@ import { cn } from '@/lib/cn';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { useAniListSearchQuery } from '@/state/queries/anilist';
 import { useTmdbSearchQuery } from '@/state/queries/tmdb';
 import {
@@ -212,7 +212,7 @@ export default function SearchScreen() {
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   const inputRef = useRef<TextInput>(null);
   // The same actions dialog the feed and diary open — quick log, details, and
   // the provider links, from a result row.
@@ -359,7 +359,7 @@ export default function SearchScreen() {
             onChangeText={setInput}
             onFocus={() => setFocused(true)}
             placeholder="Search movies, shows, anime & manga"
-            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+            placeholderTextColor={muted}
             ref={inputRef}
             returnKeyType="search"
             value={input}
@@ -381,7 +381,7 @@ export default function SearchScreen() {
             >
               <View className="w-6 h-6 items-center justify-center rounded-full bg-border">
                 <Ionicons
-                  color={typeof muted === 'string' ? muted : undefined}
+                  color={muted}
                   name="close"
                   size={14}
                 />

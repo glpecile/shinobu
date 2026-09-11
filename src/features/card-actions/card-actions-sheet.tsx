@@ -1,7 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
@@ -34,6 +33,7 @@ import {
 } from '@/lib/providers/provider-links';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { hideItem } from '@/state/prefs/hidden-items';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
@@ -166,8 +166,7 @@ export function CardActionsSheet({
   // whose next episode Trakt can name gets the button, so the pointer to the
   // season picker below is only for the shows that don't.
   const seriesNext = useSeriesNextEpisode(item);
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const muted = useThemeColor('--color-muted');
   const links =
     item == null
       ? []
@@ -323,7 +322,7 @@ export function CardActionsSheet({
               pushRoute(routes.details(item.id));
             }}
           >
-            <Ionicons color={mutedColor} name="open-outline" size={18} />
+            <Ionicons color={muted} name="open-outline" size={18} />
             <Text className="text-foreground font-sans-semibold text-base">
               View details
             </Text>
@@ -345,7 +344,7 @@ export function CardActionsSheet({
                 onClose();
               }}
             >
-              <Ionicons color={mutedColor} name="eye-off-outline" size={18} />
+              <Ionicons color={muted} name="eye-off-outline" size={18} />
               <Text className="text-foreground font-sans-semibold text-base">
                 {hideLabel}
               </Text>

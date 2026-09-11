@@ -1,9 +1,9 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * Disclosure for secondary content (how-to instructions, fine print): a
@@ -17,7 +17,7 @@ export function Collapsible({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
 
   return (
     <View className="border border-border rounded-lg">
@@ -26,7 +26,7 @@ export function Collapsible({
         onPress={() => setOpen(!open)}
       >
         <Ionicons
-          color={typeof muted === 'string' ? muted : undefined}
+          color={muted}
           name={open ? 'chevron-down' : 'chevron-forward'}
           size={16}
         />

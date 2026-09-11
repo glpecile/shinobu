@@ -1,12 +1,12 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { providerLinksFor } from '@/lib/providers/provider-links';
+import { useThemeColor } from '@/lib/theme-color';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -21,8 +21,7 @@ import type { NormalizedMediaItem } from '@/types/media';
  */
 export function ProviderLinksSection({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const muted = useThemeColor('--color-muted');
   const links = providerLinksFor(item, connected);
 
   if (links.length === 0) return null;
@@ -41,7 +40,7 @@ export function ProviderLinksSection({ item }: { item: NormalizedMediaItem }) {
             <Text className="text-foreground font-sans text-sm">
               {PROVIDERS[provider].label}
             </Text>
-            <Ionicons color={mutedColor} name="open-outline" size={12} />
+            <Ionicons color={muted} name="open-outline" size={12} />
           </PresstableOpacity>
         ))}
       </View>
