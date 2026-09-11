@@ -66,6 +66,8 @@ function RowPoster({ item }: { item: NormalizedMediaItem }) {
 /** The provider marks holding this row, with a wrapping a11y label — like the
  *  diary's, no adjacent text names them. */
 function ProviderCluster({ providers }: { providers: readonly ProviderId[] }) {
+  // A catalogue list (the seasons explorer) has no provenance to show.
+  if (providers.length === 0) return null;
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   return (
     <View accessibilityLabel={`On ${names}`} className="flex-row items-center gap-1.5">
@@ -137,6 +139,7 @@ export function WatchlistRows({
       refreshControl={
         <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
       }
+      // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (
         <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} />
       )}

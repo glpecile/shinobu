@@ -1,3 +1,7 @@
+import type {
+  AnimeFormatFilter,
+  AnimeSeasonWindow,
+} from '@/lib/providers/anilist/season';
 import type { ProviderId } from '@/lib/providers/types';
 
 /**
@@ -35,6 +39,13 @@ export const routes = {
    */
   watchlist: (provider?: ProviderId) =>
     provider == null ? '/watchlist' : (`/watchlist?provider=${provider}` as const),
+  /**
+   * The AniList seasons explorer behind the home feed's seasonal row. The
+   * window lives in the URL, like `/watchlist`'s filter, so a season is
+   * shareable and the picker is `setParams`, not a push.
+   */
+  animeSeasons: ({ season, year }: AnimeSeasonWindow, format: AnimeFormatFilter = 'ALL') =>
+    `/anime-seasons?season=${season}&year=${year}&format=${format}` as const,
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,
   /** For credits without a TMDB person id (AniList people): resolve by name. */

@@ -9,6 +9,7 @@ import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { capFeedRow } from './row-cap';
 import {
+  useSuspenseAnimeMoviesQuery,
   useSuspenseSeasonalAnimeQuery,
   useSuspenseTrendingMoviesQuery,
   useSuspenseTrendingShowsQuery,
@@ -160,15 +161,45 @@ export function SeasonalAnimeRow({
   onItemActions,
 }: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
   const { data } = useSuspenseSeasonalAnimeQuery(season);
-  const items = useVisibleItems(data);
+  const pushRoute = usePushRoute();
+  // The query reads AniList's full page (50) for the seasons explorer; the
+  // row stays the browse size of the trending rows.
+  const items = capFeedRow(useVisibleItems(data));
   return (
     <MediaCarousel
       collapseKey="seasonal-anime"
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
+      onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
       provider="anilist"
-      title={`${animeSeasonLabel(season)} Anime`}
+      title={`Anime Series of ${animeSeasonLabel(season)}`}
+    />
+  );
+}
+
+/**
+ * The year's anime films (owner, 2026-09-10). Year-scoped, not cour-scoped —
+ * films don't follow the TV cours — so "View all" opens the explorer at its
+ * whole-year scope with the film filter on: the same list, one cache entry.
+ */
+export function AnimeMoviesRow({
+  year,
+  onItemPress,
+  onItemActions,
+}: FeedRowCallbacks & { year: number }) {
+  const { data } = useSuspenseAnimeMoviesQuery(year);
+  const pushRoute = usePushRoute();
+  const items = capFeedRow(useVisibleItems(data));
+  return (
+    <MediaCarousel
+      collapseKey="anime-movies"
+      items={items}
+      onItemActions={onItemActions}
+      onItemPress={onItemPress}
+      onViewAll={() => pushRoute(routes.animeSeasons({ season: 'YEAR', year }, 'MOVIE'))}
+      provider="anilist"
+      title={`Anime Movies of ${year}`}
     />
   );
 }

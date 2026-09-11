@@ -25,6 +25,7 @@ import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import {
+  AnimeMoviesRow,
   SeasonalAnimeRow,
   TrendingMoviesRow,
   TrendingShowsRow,
@@ -239,6 +240,13 @@ function FeedScreen() {
             onItemActions={openActions}
             onItemPress={openDetails}
             season={animeSeason}
+          />
+        </SuspenseSection>
+        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <AnimeMoviesRow
+            onItemActions={openActions}
+            onItemPress={openDetails}
+            year={animeSeason.year}
           />
         </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
