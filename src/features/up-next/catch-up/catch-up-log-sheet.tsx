@@ -1,9 +1,7 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { FadeIn, Keyframe } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
@@ -12,7 +10,6 @@ import { Sheet } from '@/components/sheet';
 import type { LogMediaResult, LogMediaVariables } from '@/features/log-media/fan-out';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
-import { splitSkippedOutcomes } from '@/features/log-media/manual-write-links';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
 import {
@@ -24,7 +21,6 @@ import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
-import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
@@ -33,6 +29,7 @@ import { upNextQueryKeys } from '@/state/queries/up-next';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { chainFailure, chainLabel } from './chain-copy';
 import { catchUpEpisodeCode, catchUpQueue, type CatchUpEpisode } from './queue';
 import { useCatchUpControls, useCatchUpLog } from './state';
 import { useCatchUpEvidence } from './use-catch-up-evidence';
@@ -56,8 +53,20 @@ const headerEntering = new Keyframe({
   },
 }).duration(DURATION.swap);
 
-/** Ledger rows enter with a preset: they must keep contributing height (docs/solutions/reanimated-web-keyframe-pins-position.md). */
-const rowEntering = FadeIn.duration(DURATION.swap);
+/**
+ * The drawer's view swap. The sheet shows **one view at a time** — the form,
+ * or the report — and a change crossfades the new view in while the sheet's
+ * own height animates under it (native: the `'content'` detent; web: the
+ * panel's height transition). That pairing is the whole effect: content
+ * follows the height, the height follows the content.
+ *
+ * A preset, not a custom `Keyframe`: the entering view has to contribute its
+ * height to the sheet's flow, and a `Keyframe`'s web cleanup pins the element
+ * out of it (docs/solutions/reanimated-web-keyframe-pins-position.md). No
+ * `exiting` either — an exiting view keeps its layout space on native, so the
+ * sheet would briefly measure both views stacked and lurch to the sum.
+ */
+const viewEntering = FadeIn.duration(DURATION.swap);
 
 interface LedgerRow {
   episode: CatchUpEpisode;
@@ -355,170 +364,212 @@ function CatchUpSession({
       : remaining === 0
         ? 'last one'
         : `${remaining} more after this`;
-  const simklQueued =
-    selectedProviders.includes('simkl') &&
-    ledger.length > 1 &&
-    ledger.some((row) => row.status === 'pending');
-  const retryable = ledger.filter((row) => retryProviders(row, selectedProviders) != null);
-  const unclean = ledger.filter(
-    (row) => row.status === 'done' && row.result != null && !isCleanWriteReport(row.result),
+
+  const problems = ledger.filter(
+    (row) =>
+      row.status === 'error' ||
+      (row.status === 'done' && row.result != null && !isCleanWriteReport(row.result)),
   );
-  const thrown = [...new Set(
-    ledger.flatMap((row) => (row.status === 'error' ? [row.message ?? 'Could not log.'] : [])),
-  )];
+  const landed = ledger.filter(
+    (row) =>
+      row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
+  ).length;
+  const sending = ledger.filter((row) => row.status === 'pending').length;
+  const simklQueued =
+    selectedProviders.includes('simkl') && ledger.length > 1 && sending > 0;
+
+  // The sheet is a drawer, so it shows exactly one view. The form is the view
+  // until the chain has settled with something still needing a hand — a clean
+  // chain closes itself and becomes a toast. Latched, because a retry
+  // un-settles the ledger and must not throw the user back to the form; the
+  // clean-close effect above is what ends the report.
+  const [reported, setReported] = useState(false);
+  if (allSettled && !allClean && !reported) setReported(true);
 
   return (
     <Sheet onClose={closeCatchUp} open={open}>
-      <AnimatedView
-        // Native: each episode's header slides in. Web: the same element
-        // stays mounted and the title morphs (see `headerEntering`).
-        key={Platform.OS === 'web' ? 'header' : code}
-        entering={index > 0 ? headerEntering : undefined}
-      >
-        <MorphText className="text-2xl font-display text-foreground self-start">
-          {`Log ${code}`}
-        </MorphText>
-        <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-          <Text className="text-muted font-sans text-sm leading-relaxed">
-            “{entry.item.title}”
-          </Text>
-          {remainingCopy != null && (
-            <MorphText className="text-muted font-sans text-sm leading-relaxed">
-              {`· ${remainingCopy}`}
-            </MorphText>
-          )}
-        </View>
-      </AnimatedView>
-
-      <LogFormFields
-        item={entry.item}
-        manualTargets={manualTargets}
-        onClose={closeCatchUp}
-        onSelectedProvidersChange={setSelectedProviders}
-        onTagsChange={setTags}
-        onWatchedAtChange={setWatchedAt}
-        pending={awaiting}
-        selectedProviders={selectedProviders}
-        tags={tags}
-        targets={targets}
-        watchedAt={watchedAt}
-      />
-
-      {ledger.length > 0 && (
-        <View className="mt-5 gap-2">
-          {ledger.map((row) => (
-            <LedgerLine key={catchUpEpisodeCode(row.episode)} row={row} />
-          ))}
-          {simklQueued && (
-            <Text className="text-muted font-sans text-xs">
-              Simkl takes one write every 20 seconds, so the rest wait their
-              turn — keep going.
-            </Text>
-          )}
-          {(unclean.length > 0 || thrown.length > 0) && (
-            <AnimatedView className="gap-1" entering={rowEntering}>
-              {thrown.map((message) => (
-                <Text className="text-accent font-sans text-xs mt-3" key={message}>
-                  {message}
+      <AnimatedView entering={viewEntering} key={reported ? 'report' : 'form'}>
+        {reported ? (
+          <ChainReport
+            item={entry.item}
+            landed={landed}
+            ledger={ledger}
+            onDone={closeCatchUp}
+            onRetry={retry}
+            problems={problems}
+            selectedProviders={selectedProviders}
+            sending={sending}
+          />
+        ) : (
+          <>
+            <AnimatedView
+              // Native: each episode's header slides in. Web: the same element
+              // stays mounted and the title morphs (see `headerEntering`).
+              key={Platform.OS === 'web' ? 'header' : code}
+              entering={index > 0 ? headerEntering : undefined}
+            >
+              <MorphText className="text-2xl font-display text-foreground self-start">
+                {`Log ${code}`}
+              </MorphText>
+              <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
+                <Text className="text-muted font-sans text-sm leading-relaxed">
+                  “{entry.item.title}”
                 </Text>
-              ))}
-              <WriteResultReport
-                item={entry.item}
-                outcomes={distinctReasons(unclean)}
-                reconcileLine={(skipped) =>
-                  `${labels(skipped)} already had this logged — skipped to keep both in sync.`
-                }
-              />
-              {retryable.length > 0 && (
-                <Button
-                  className="self-start mt-3"
-                  icon={<Button.Icon name="refresh" />}
-                  label={
-                    retryable.length === 1
-                      ? `Retry ${catchUpEpisodeCode(retryable[0]!.episode)}`
-                      : `Retry ${retryable.length} episodes`
-                  }
-                  onPress={retry}
-                  size="sm"
-                  variant="outline"
-                />
-              )}
+                {remainingCopy != null && (
+                  <MorphText className="text-muted font-sans text-sm leading-relaxed">
+                    {`· ${remainingCopy}`}
+                  </MorphText>
+                )}
+              </View>
             </AnimatedView>
-          )}
-        </View>
-      )}
 
-      {!currentLanded && (
-        <Button
-          className="mt-6"
-          disabled={selectedProviders.length === 0}
-          label={`Log ${code}`}
-          loading={awaiting}
-          loadingLabel="Logging…"
-          morphLabel
-          onPress={confirm}
-        />
-      )}
-      <Button
-        className={currentLanded ? 'mt-6' : 'mt-2'}
-        label={ledger.length > 0 ? 'Done' : 'Cancel'}
-        morphLabel
-        onPress={closeCatchUp}
-        variant="quiet"
-      />
+            <LogFormFields
+              item={entry.item}
+              manualTargets={manualTargets}
+              onClose={closeCatchUp}
+              onSelectedProvidersChange={setSelectedProviders}
+              onTagsChange={setTags}
+              onWatchedAtChange={setWatchedAt}
+              pending={awaiting}
+              selectedProviders={selectedProviders}
+              tags={tags}
+              targets={targets}
+              watchedAt={watchedAt}
+            />
+
+            {/* The one thing the 20s Simkl write lock needs said: the queued
+                legs look stalled otherwise (simkl-write-lock.ts). */}
+            {simklQueued && (
+              <Text className="text-muted font-sans text-xs mt-5">
+                Simkl takes one write every 20 seconds, so the rest wait their
+                turn — keep going.
+              </Text>
+            )}
+
+            {/* The chain's state rides the label and morphs press to press
+                (`chainLabel`). It used to be a row per fired write above the
+                button — a scrolling receipt — and then a status line, which is
+                still a second thing to read about what the button does. */}
+            {!currentLanded && (
+              <Button
+                className="mt-6"
+                disabled={selectedProviders.length === 0}
+                label={chainLabel(code, { landed, failed: problems.length })}
+                loading={awaiting}
+                loadingLabel="Logging…"
+                morphLabel
+                onPress={confirm}
+              />
+            )}
+            <Button
+              className={currentLanded ? 'mt-6' : 'mt-2'}
+              label={ledger.length > 0 ? 'Done' : 'Cancel'}
+              morphLabel
+              onPress={closeCatchUp}
+              variant="quiet"
+            />
+          </>
+        )}
+      </AnimatedView>
     </Sheet>
   );
 }
 
 /**
- * One fired write's line, one line tall: a spinner while it runs, a checkmark
- * and the providers reached when clean, an alert and the failed providers
- * otherwise. The *reasons* (and the manual links — never a dead end, plan
- * 0022) render once for the whole ledger, below the rows.
+ * The chain's other view: what needs a hand. One headline naming the episodes
+ * and the provider that dropped them, one muted line for what *did* land, the
+ * shared reasons-and-manual-links report (never a dead end, plan 0022), and
+ * the retry.
  */
-function LedgerLine({ row }: { row: LedgerRow }) {
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
-  const episodeCode = capitalize(catchUpEpisodeCode(row.episode));
-  const failed = row.status === 'error' || (row.result?.failed.length ?? 0) > 0;
-  const clean = row.status === 'done' && row.result != null && isCleanWriteReport(row.result);
+function ChainReport({
+  item,
+  landed,
+  ledger,
+  onDone,
+  onRetry,
+  problems,
+  selectedProviders,
+  sending,
+}: {
+  item: NormalizedMediaItem;
+  landed: number;
+  ledger: readonly LedgerRow[];
+  onDone: () => void;
+  onRetry: () => void;
+  problems: readonly LedgerRow[];
+  selectedProviders: readonly ProviderId[];
+  sending: number;
+}) {
+  const failedProviders = [
+    ...new Set(problems.flatMap((row) => row.result?.failed ?? [])),
+  ];
+  const succeededProviders = [
+    ...new Set(ledger.flatMap((row) => row.result?.succeeded ?? [])),
+  ];
+  const thrown = [
+    ...new Set(
+      ledger.flatMap((row) =>
+        row.status === 'error' ? [row.message ?? 'Could not log.'] : [],
+      ),
+    ),
+  ];
+  const retryable = ledger.filter(
+    (row) => retryProviders(row, selectedProviders) != null,
+  );
 
   return (
-    <AnimatedView className="flex-row gap-2" entering={rowEntering}>
-      <View className="w-4 h-5 items-center justify-center">
-        {row.status === 'pending' ? (
-          <ActivityIndicator color={mutedColor} size="small" />
-        ) : (
-          <Ionicons
-            color={mutedColor}
-            name={clean ? 'checkmark' : 'alert-circle-outline'}
-            size={14}
-          />
+    <>
+      <Text className="text-2xl font-display text-foreground">
+        {chainFailure(
+          problems.map((row) => catchUpEpisodeCode(row.episode)),
+          failedProviders,
         )}
-      </View>
-      <Text
-        className={cn('flex-1 font-sans text-sm', failed ? 'text-accent' : 'text-muted')}
-      >
-        {episodeCode} · {rowSummary(row)}
       </Text>
-    </AnimatedView>
-  );
-}
+      {landed > 0 && succeededProviders.length > 0 && (
+        <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
+          {`${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(
+            succeededProviders,
+          )}.`}
+        </Text>
+      )}
 
-/** "logged to Simkl", "failed on Simkl, logged to Trakt", "Trakt already had it". */
-function rowSummary(row: LedgerRow): string {
-  if (row.status === 'pending') return 'logging…';
-  if (row.status === 'error' || row.result == null) return 'could not log';
-  const { succeeded, failed, rewatch, outcomes } = row.result;
-  const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(outcomes);
-  const parts: string[] = [];
-  if (failed.length > 0) parts.push(`failed on ${labels(failed)}`);
-  if (succeeded.length > 0) {
-    parts.push(`${rewatch ? 'rewatch logged to' : 'logged to'} ${labels(succeeded)}`);
-  }
-  if (reasonedSkips.length > 0) {
-    parts.push(`skipped on ${labels(reasonedSkips.map((skip) => skip.provider))}`);
-  }
-  if (reconcileSkipped.length > 0) parts.push(`${labels(reconcileSkipped)} already had it`);
-  return parts.join(', ');
+      {/* No top margin here: `WriteResultReport` brings its own (`mt-3`), and
+          a wrapper adding a second one is how the headline ended up floating. */}
+      <View className="gap-1">
+        {thrown.map((message) => (
+          <Text className="text-accent font-sans text-xs mt-3" key={message}>
+            {message}
+          </Text>
+        ))}
+        <WriteResultReport
+          item={item}
+          outcomes={distinctReasons(problems)}
+          reconcileLine={(skipped) =>
+            `${labels(skipped)} already had this logged — skipped to keep both in sync.`
+          }
+        />
+      </View>
+
+      {retryable.length > 0 && (
+        <Button
+          className="mt-6"
+          icon={<Button.Icon name="refresh" />}
+          label={
+            retryable.length === 1
+              ? capitalize(`retry ${catchUpEpisodeCode(retryable[0]!.episode)}`)
+              : `Retry ${retryable.length} episodes`
+          }
+          loading={sending > 0}
+          loadingLabel="Retrying…"
+          onPress={onRetry}
+        />
+      )}
+      <Button
+        className={retryable.length > 0 ? 'mt-2' : 'mt-6'}
+        label="Done"
+        onPress={onDone}
+        variant="quiet"
+      />
+    </>
+  );
 }
