@@ -16,7 +16,7 @@ import { Image } from '@/components/image';
 import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
@@ -336,30 +336,34 @@ function StudiosSkeleton() {
     <View className="mt-8">
       <Skeleton className="h-6 w-24 rounded mb-4" />
       <View className="flex-row gap-2">
-        <Skeleton className="h-9 w-28 rounded-full" />
-        <Skeleton className="h-9 w-36 rounded-full" />
-        <Skeleton className="h-9 w-24 rounded-full" />
+        <Skeleton className="h-9 w-28 rounded-full" delay={staggerDelay(1)} />
+        <Skeleton className="h-9 w-36 rounded-full" delay={staggerDelay(2)} />
+        <Skeleton className="h-9 w-24 rounded-full" delay={staggerDelay(3)} />
       </View>
     </View>
   );
 }
 
-/** Mirrors the loaded layout so content lands without a shift. */
+/**
+ * Mirrors the loaded layout so content lands without a shift. The delays run
+ * top-down (backdrop → poster → title → overview), so the screen reads as
+ * filling in from the hero rather than flashing as one rectangle.
+ */
 function DetailsSkeleton() {
   return (
     <View className="flex-1 bg-background">
-      <Skeleton className="h-80 w-full" />
+      <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end -mt-24 mb-6">
-          <Skeleton className="w-28 h-40 rounded-card" />
+          <Skeleton className="w-28 h-40 rounded-card" delay={staggerDelay(1)} />
           <View className="flex-1 ml-4 pb-1">
-            <Skeleton className="h-3 w-16 rounded" />
-            <Skeleton className="h-8 w-56 rounded mt-2" />
-            <Skeleton className="h-3 w-40 rounded mt-2" />
+            <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
+            <Skeleton className="h-8 w-56 rounded mt-2" delay={staggerDelay(2)} />
+            <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(2)} />
           </View>
         </View>
-        <Skeleton className="h-4 w-full rounded" />
-        <Skeleton className="h-4 w-2/3 rounded mt-2" />
+        <Skeleton className="h-4 w-full rounded" delay={staggerDelay(3)} />
+        <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(3)} />
       </View>
     </View>
   );

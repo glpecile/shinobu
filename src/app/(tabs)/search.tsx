@@ -10,7 +10,7 @@ import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -94,13 +94,14 @@ function SearchResultRow({
   );
 }
 
-function RowSkeleton() {
+function RowSkeleton({ index = 0 }: { index?: number }) {
+  const delay = staggerDelay(index);
   return (
     <View className="flex-row items-center px-6 py-2.5">
-      <Skeleton className="w-12 h-[72px] rounded" />
+      <Skeleton className="w-12 h-[72px] rounded" delay={delay} />
       <View className="flex-1 ml-4">
-        <Skeleton className="h-4 w-2/3 rounded" />
-        <Skeleton className="h-3 w-24 rounded mt-2" />
+        <Skeleton className="h-4 w-2/3 rounded" delay={delay} />
+        <Skeleton className="h-3 w-24 rounded mt-2" delay={delay} />
       </View>
     </View>
   );
@@ -110,7 +111,7 @@ function ResultsSkeleton() {
   return (
     <View>
       {Array.from({ length: 6 }).map((_, index) => (
-        <RowSkeleton key={index} />
+        <RowSkeleton index={index} key={index} />
       ))}
     </View>
   );

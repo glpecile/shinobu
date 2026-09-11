@@ -75,4 +75,11 @@ export const DURATION = {
   enter: 160,
   /** Its exit: faster still — the user has already decided to leave. */
   exit: 120,
+  /**
+   * One breath of a skeleton's pulse. The only number here allowed past the
+   * 300ms ceiling, and for the opposite reason: this loop is ambient rather
+   * than feedback, so it has to stay slow enough to read as waiting and not as
+   * something flashing for attention.
+   */
+  pulse: 1400,
 } as const;

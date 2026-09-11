@@ -1,52 +1,39 @@
 import { ScrollView, View, useWindowDimensions } from 'react-native';
 
-import { AnimatedView } from '@/components/animated-view';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 
 // Must stay in sync with MediaCard (w-40 = 160) and the mr-3 gap (12).
 const CARD_WIDTH = 160;
 const CARD_GAP = 12;
 
-// Reanimated CSS animation: declarative, runs on the UI thread, and cleans
-// itself up on unmount — no useEffect/Animated.loop lifecycle to manage.
-const shimmer = {
-  '0%': { transform: [{ translateX: -CARD_WIDTH }] },
-  '100%': { transform: [{ translateX: CARD_WIDTH }] },
-};
-
-function ShimmerCard() {
+/**
+ * One poster-shaped block, nothing else. `MediaCard` paints its title *over*
+ * the artwork, so a card that hasn't loaded is honestly a single rectangle —
+ * the old version drew a fake scrim and two fake title bars over a sweeping
+ * highlight, which is three shapes standing in for one and read as a
+ * half-rendered card rather than a placeholder.
+ */
+function SkeletonCard({ index }: { index: number }) {
   return (
-    <View className="w-40 h-60 rounded-card overflow-hidden border border-border/50 bg-surface mr-3 relative">
-      <View className="w-full h-full bg-muted/20" />
-      <View className="absolute bottom-0 left-0 right-0 h-28 bg-black/40" />
-      <View className="absolute bottom-0 left-0 right-0 p-3">
-        <View className="h-4 bg-muted/30 rounded w-full mb-2" />
-        <View className="h-3 bg-muted/20 rounded w-2/3" />
-      </View>
-      <AnimatedView
-        className="absolute top-0 bottom-0 w-20 bg-white/5"
-        style={{
-          animationName: shimmer,
-          animationDuration: '1500ms',
-          animationIterationCount: 'infinite',
-          animationTimingFunction: 'ease-in-out',
-        }}
-      />
-    </View>
+    <Skeleton
+      className="w-40 h-60 rounded-card mr-3"
+      delay={staggerDelay(index)}
+    />
   );
 }
 
 function SkeletonRow({ cardCount }: { cardCount: number }) {
   return (
     <View className="mb-6">
-      <View className="h-7 w-40 bg-muted/20 rounded mb-3 mx-4" />
+      <SkeletonSectionHeader widthClass="w-40" />
       <ScrollView
         horizontal
         className="px-4"
         showsHorizontalScrollIndicator={false}
       >
         {Array.from({ length: cardCount }).map((_, index) => (
-          <ShimmerCard key={index} />
+          <SkeletonCard index={index} key={index} />
         ))}
       </ScrollView>
     </View>
@@ -71,23 +58,18 @@ export function FeedRowSkeleton() {
 // Must stay in sync with the Up Next card (w-64 = 256, h-36 art = 144).
 const LANDSCAPE_WIDTH = 256;
 
-function ShimmerLandscapeCard() {
+/**
+ * The Up Next card's shape: art, then a title and a detail line *below* it
+ * (unlike the poster cards, whose text sits on the artwork). All three share
+ * one delay so the card breathes as a single object.
+ */
+function SkeletonLandscapeCard({ index }: { index: number }) {
+  const delay = staggerDelay(index);
   return (
     <View className="w-64 mr-3">
-      <View className="w-full h-36 rounded-card overflow-hidden border border-border/50 bg-surface relative">
-        <View className="w-full h-full bg-muted/20" />
-        <AnimatedView
-          className="absolute top-0 bottom-0 w-24 bg-white/5"
-          style={{
-            animationName: shimmer,
-            animationDuration: '1500ms',
-            animationIterationCount: 'infinite',
-            animationTimingFunction: 'ease-in-out',
-          }}
-        />
-      </View>
-      <View className="h-4 bg-muted/30 rounded w-2/3 mt-2" />
-      <View className="h-3 bg-muted/20 rounded w-1/2 mt-1.5" />
+      <Skeleton className="w-full h-36 rounded-card" delay={delay} />
+      <Skeleton className="h-4 w-2/3 rounded mt-2" delay={delay} />
+      <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={delay} />
     </View>
   );
 }
@@ -98,13 +80,14 @@ function ShimmerLandscapeCard() {
 // reserves the same box — otherwise the row still jumps when it resolves.
 const DAY_CONTENT_MIN_HEIGHT = 188;
 
-function ShimmerDayCell() {
+function SkeletonDayCell({ index }: { index: number }) {
   // Mirrors the real cell's internal stack (weekday · date · dot row) so the
   // strip is the same height here as once it resolves.
+  const delay = staggerDelay(index);
   return (
     <View className="w-14 py-2 mr-2 items-center rounded-md border border-border/60 bg-surface">
-      <View className="h-4 w-7 bg-muted/20 rounded" />
-      <View className="h-6 w-6 bg-muted/30 rounded mt-0.5" />
+      <Skeleton className="h-4 w-7 rounded" delay={delay} />
+      <Skeleton className="h-6 w-6 rounded mt-0.5" delay={delay} />
       <View className="h-1.5 mt-1" />
     </View>
   );
@@ -112,9 +95,7 @@ function ShimmerDayCell() {
 
 function SkeletonSectionHeader({ widthClass }: { widthClass: string }) {
   // text-xl title height (no eyebrow — the real header dropped it), mb-3 gap.
-  return (
-    <View className={cn('h-7', widthClass, 'bg-muted/20 rounded mb-3 mx-4')} />
-  );
+  return <Skeleton className={cn('h-7', widthClass, 'rounded mb-3 mx-4')} />;
 }
 
 /**
@@ -145,7 +126,7 @@ export function UpNextSectionSkeleton() {
           showsHorizontalScrollIndicator={false}
         >
           {Array.from({ length: cardCount }).map((_, index) => (
-            <ShimmerLandscapeCard key={index} />
+            <SkeletonLandscapeCard index={index} key={index} />
           ))}
         </ScrollView>
       </View>
@@ -159,7 +140,7 @@ export function UpNextSectionSkeleton() {
           showsHorizontalScrollIndicator={false}
         >
           {Array.from({ length: dayCount }).map((_, index) => (
-            <ShimmerDayCell key={index} />
+            <SkeletonDayCell index={index} key={index} />
           ))}
         </ScrollView>
         {/* The content area below the strip — a landscape card row, mirroring a
@@ -173,7 +154,7 @@ export function UpNextSectionSkeleton() {
             showsHorizontalScrollIndicator={false}
           >
             {Array.from({ length: cardCount }).map((_, index) => (
-              <ShimmerLandscapeCard key={index} />
+              <SkeletonLandscapeCard index={index} key={index} />
             ))}
           </ScrollView>
         </View>
@@ -185,7 +166,7 @@ export function UpNextSectionSkeleton() {
 /**
  * Whole-feed placeholder, shown while an OAuth connect is exchanging (the
  * feed itself loads row-by-row via per-row suspense boundaries). Mirrors the
- * real feed with two rows of shimmer cards.
+ * real feed with two rows of skeleton cards.
  */
 export function FeedSkeleton() {
   return (
