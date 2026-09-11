@@ -182,7 +182,7 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   traktQueryKeys.watchedMovies(),
   simklQueryKeys.trending('movies').slice(0, -1),
   simklQueryKeys.trending('tv').slice(0, -1),
-  anilistQueryKeys.seasonalAnime({ season: 'WINTER', year: 0 }).slice(0, -2),
+  anilistQueryKeys.seasonalAnime({ season: 'WINTER', year: 0 }).slice(0, -3),
   letterboxdQueryKeys.watchlist('').slice(0, -1),
 ];
 

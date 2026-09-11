@@ -14,6 +14,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import {
   animeSeasonAt,
+  type AnimeFormatFilter,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 import { getWatchlist } from '@/lib/providers/letterboxd/watchlist';
@@ -30,16 +31,19 @@ type FeedSlot =
   | 'trendingMovies'
   | 'trendingShows'
   | 'seasonalAnime'
+  | 'animeMovies'
   | 'yourWatchlist';
 
 export interface UnifiedFeedResult {
   /** Public trending catalogues — always fetched, feed is never empty. */
   trendingMovies: NormalizedMediaItem[];
   trendingShows: NormalizedMediaItem[];
-  /** Popular anime of the current cour (e.g. Summer 2026). */
+  /** Popular anime series of the current cour (e.g. Summer 2026). */
   seasonalAnime: NormalizedMediaItem[];
   /** Which cour `seasonalAnime` covers — drives the row's title. */
   animeSeason: AnimeSeasonWindow;
+  /** The current year's anime films. */
+  animeMovies: NormalizedMediaItem[];
   /** Letterboxd watchlist (plan 0012) — empty on web, where reads are CORS-blocked. */
   yourWatchlist: NormalizedMediaItem[];
   isLoading: boolean;
@@ -92,9 +96,18 @@ export const feedOptions = {
     queryFn: () => Effect.runPromise(getTrending(simklDeps(), 'tv')),
     staleTime: CATALOGUE_STALE_MS,
   }),
-  seasonalAnime: (season: AnimeSeasonWindow) => ({
-    queryKey: anilistQueryKeys.seasonalAnime(season),
-    queryFn: () => fetchSeasonalAnime(season),
+  // `TV` (everything but films) — the row is titled "Anime series of …" and
+  // the films have their own row below it.
+  seasonalAnime: (season: AnimeSeasonWindow, format: AnimeFormatFilter = 'TV') => ({
+    queryKey: anilistQueryKeys.seasonalAnime(season, format),
+    queryFn: () => fetchSeasonalAnime(season, format),
+    staleTime: CATALOGUE_STALE_MS,
+  }),
+  // The year's films: the same read at whole-year scope, so the explorer's
+  // "Year · Movies" view is this entry and the row's "View all" costs nothing.
+  animeMovies: (year: number) => ({
+    queryKey: anilistQueryKeys.seasonalAnime({ season: 'YEAR', year }, 'MOVIE'),
+    queryFn: () => fetchSeasonalAnime({ season: 'YEAR', year }, 'MOVIE'),
     staleTime: CATALOGUE_STALE_MS,
   }),
   // Personal rows — only fetched while their provider is connected.
@@ -137,7 +150,12 @@ function activeFeedConfigs(
     {
       slot: 'seasonalAnime',
       provider: 'anilist',
-      ...feedOptions.seasonalAnime(season),
+      ...feedOptions.seasonalAnime(season, 'TV'),
+    },
+    {
+      slot: 'animeMovies',
+      provider: 'anilist',
+      ...feedOptions.animeMovies(season.year),
     },
   ];
 
@@ -170,8 +188,15 @@ export function useSuspenseTrendingShowsQuery() {
   return useSuspenseQuery(feedOptions.trendingShows());
 }
 
-export function useSuspenseSeasonalAnimeQuery(season: AnimeSeasonWindow) {
-  return useSuspenseQuery(feedOptions.seasonalAnime(season));
+export function useSuspenseSeasonalAnimeQuery(
+  season: AnimeSeasonWindow,
+  format: AnimeFormatFilter = 'TV',
+) {
+  return useSuspenseQuery(feedOptions.seasonalAnime(season, format));
+}
+
+export function useSuspenseAnimeMoviesQuery(year: number) {
+  return useSuspenseQuery(feedOptions.animeMovies(year));
 }
 
 
@@ -318,6 +343,7 @@ export function useUnifiedFeed(
     trendingShows: bySlot('trendingShows'),
     seasonalAnime: bySlot('seasonalAnime'),
     animeSeason,
+    animeMovies: bySlot('animeMovies'),
     // Merged first (raw legs), hidden filter applied to the merge result —
     // the same order the Trakt-only slot used, just with a Simkl leg joined
     // in first (KTD-10).

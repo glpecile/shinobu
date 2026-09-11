@@ -7,7 +7,7 @@ import type {
 import type { ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
 import { anilistAuthedRequest, anilistRequest } from './http';
-import type { AnimeSeasonWindow } from './season';
+import type { AnimeFormatFilter, AnimeSeason } from './season';
 import {
   normalizeAniListMedia,
   normalizeCurrentAnimeEntry,
@@ -199,24 +199,43 @@ interface TrendingResponse {
  * anime row. Same no-session contract as trending; POPULARITY_DESC because
  * TRENDING_DESC within a season over-weights week-to-week noise.
  */
+/**
+ * Popular anime of a cour, or of a whole year when `season` is omitted (the
+ * "2026 Anime Movies" row). `format` narrows to films (`format: MOVIE`) or to
+ * everything but films (`format_not: MOVIE`); `ALL`/undefined sends neither.
+ * Variables left `undefined` drop out of the JSON body, which AniList reads as
+ * "argument not given" — never send `null`, which some filters treat as a value.
+ * `isAdult: false` because a popularity sort past the first page of an
+ * upcoming cour is where AniList's adult catalogue starts showing up.
+ */
 export function getSeasonalAnime(
   deps: AniListDeps,
-  params: { season: AnimeSeasonWindow['season']; year: number; limit?: number },
+  params: {
+    season?: AnimeSeason;
+    year: number;
+    format?: AnimeFormatFilter;
+    limit?: number;
+    /** 1-based; a page shorter than `limit` is the last one. */
+    page?: number;
+  },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const limit = params.limit ?? 30;
   return Effect.gen(function* () {
     const data = yield* anilistRequest<TrendingResponse>(
       deps,
-      `query ($perPage: Int, $season: MediaSeason, $seasonYear: Int) {
-        Page(page: 1, perPage: $perPage) {
-          media(type: ANIME, season: $season, seasonYear: $seasonYear, sort: POPULARITY_DESC) { ${MEDIA_FIELDS} }
+      `query ($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $formatNot: MediaFormat) {
+        Page(page: $page, perPage: $perPage) {
+          media(type: ANIME, isAdult: false, season: $season, seasonYear: $seasonYear, format: $format, format_not: $formatNot, sort: POPULARITY_DESC) { ${MEDIA_FIELDS} }
         }
       }`,
       {
         variables: {
+          page: params.page ?? 1,
           perPage: limit,
           season: params.season,
           seasonYear: params.year,
+          format: params.format === 'MOVIE' ? 'MOVIE' : undefined,
+          formatNot: params.format === 'TV' ? 'MOVIE' : undefined,
         },
       },
     );

@@ -77,6 +77,7 @@ export function useResolvedMediaItem(id: string): {
       feed.trendingMovies,
       feed.trendingShows,
       feed.seasonalAnime,
+      feed.animeMovies,
     ]) ??
     // Up Next / Continue Watching cards. They used to resolve incidentally out
     // of the `yourShows`/`yourAnime` slots (the same show sat in both

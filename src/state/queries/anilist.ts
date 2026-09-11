@@ -1,6 +1,8 @@
 import {
   keepPreviousData,
   useQuery,
+  useQueryClient,
+  useSuspenseInfiniteQuery,
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
@@ -23,7 +25,10 @@ import {
 } from '@/lib/providers/anilist/reads';
 import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
-import type { AnimeSeasonWindow } from '@/lib/providers/anilist/season';
+import type {
+  AnimeFormatFilter,
+  AnimeSeasonWindow,
+} from '@/lib/providers/anilist/season';
 import type { NormalizedSeason } from '@/types/media';
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -93,9 +98,17 @@ export const anilistQueryKeys = {
    */
   currentAnimeEntries: () =>
     [...anilistQueryKeys.all, 'current-anime-entries'] as const,
-  /** Popular anime of one cour — keyed by season so a boundary crossing refetches. */
-  seasonalAnime: (window: AnimeSeasonWindow) =>
-    [...anilistQueryKeys.all, 'seasonal-anime', window.season, window.year] as const,
+  /**
+   * Popular anime of one cour — keyed by season so a boundary crossing
+   * refetches, and by format so the explorer's narrowing gets its own entry.
+   * The home rows are `(cour, TV)` and `(YEAR, MOVIE)`; the explorer opened
+   * from either shares its entry.
+   */
+  seasonalAnime: (window: AnimeSeasonWindow, format: AnimeFormatFilter = 'ALL') =>
+    [...anilistQueryKeys.all, 'seasonal-anime', window.season, window.year, format] as const,
+  /** The explorer's infinite pages of the same read — page 1 is seeded from the row's entry. */
+  seasonalAnimePages: (window: AnimeSeasonWindow, format: AnimeFormatFilter) =>
+    [...anilistQueryKeys.all, 'seasonal-anime-pages', window.season, window.year, format] as const,
   /** The viewer's recorded state for one media — reconcile reads this (plan 0011). */
   entryState: (mediaId: number) =>
     [...anilistQueryKeys.all, 'entry-state', mediaId] as const,
@@ -211,10 +224,64 @@ export async function fetchWatchlistAnime(
   );
 }
 
-/** Popular anime of the given cour ("Summer 2026") — the feed's anime row. */
-export function fetchSeasonalAnime(window: AnimeSeasonWindow): Promise<NormalizedMediaItem[]> {
+/**
+ * Popular anime of the given cour ("Summer 2026") — one cache entry shared by
+ * the feed's anime row (capped to `FEED_ROW_ITEM_CAP`) and the seasons
+ * explorer, which shows the whole page. 50 is AniList's `perPage` ceiling.
+ */
+export function fetchSeasonalAnime(
+  window: AnimeSeasonWindow,
+  format: AnimeFormatFilter = 'TV',
+  page = 1,
+): Promise<NormalizedMediaItem[]> {
   return Effect.runPromise(
-    getSeasonalAnime(anilistDeps(), { season: window.season, year: window.year }),
+    getSeasonalAnime(anilistDeps(), {
+      ...(window.season === 'YEAR' ? {} : { season: window.season }),
+      year: window.year,
+      format,
+      limit: SEASONAL_PAGE_SIZE,
+      page,
+    }),
+  );
+}
+
+/** AniList's `perPage` ceiling; a page shorter than this is the last one. */
+export const SEASONAL_PAGE_SIZE = 50;
+
+/**
+ * The seasons explorer's read: every page of one cour, behind `onEndReached`.
+ * Page 1 is seeded from the home row's cache entry when it is there, so the
+ * explorer opened from "View all" paints from cache and spends no request; a
+ * cour the row never fetched costs one, like any other.
+ */
+export function useSuspenseSeasonalAnimePagesQuery(
+  window: AnimeSeasonWindow,
+  format: AnimeFormatFilter,
+) {
+  const queryClient = useQueryClient();
+  const rowKey = anilistQueryKeys.seasonalAnime(window, format);
+  return useSuspenseInfiniteQuery({
+    queryKey: anilistQueryKeys.seasonalAnimePages(window, format),
+    queryFn: ({ pageParam }) => fetchSeasonalAnime(window, format, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.length < SEASONAL_PAGE_SIZE ? undefined : lastPageParam + 1,
+    initialData: () => {
+      const rowPage = queryClient.getQueryData<NormalizedMediaItem[]>(rowKey);
+      return rowPage == null ? undefined : { pages: [rowPage], pageParams: [1] };
+    },
+    initialDataUpdatedAt: () => queryClient.getQueryState(rowKey)?.dataUpdatedAt,
+    staleTime: SEASONAL_STALE_MS,
+  });
+}
+
+/** Same window as the home feed's catalogue rows (`use-unified-feed.ts`). */
+const SEASONAL_STALE_MS = 15 * 60_000;
+
+/** The year's anime films by popularity — no cour, films don't follow them. */
+export function fetchAnimeMovies(year: number): Promise<NormalizedMediaItem[]> {
+  return Effect.runPromise(
+    getSeasonalAnime(anilistDeps(), { year, format: 'MOVIE' }),
   );
 }
 
