@@ -1,21 +1,25 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { FadeIn } from 'react-native-reanimated';
 
 import Head from '@/components/head';
 import { Keyboard, Text, TextInput, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
+import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
+import { SectionEnter } from '@/components/section-enter';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { cn } from '@/lib/cn';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -214,6 +218,10 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
   const muted = useThemeColor('--color-muted');
+  // Colour as a style, not a class: a className swap between the two border
+  // tokens is a hard cut on the one moment the field is responding to a tap.
+  const accent = useThemeColor('--color-accent');
+  const border = useThemeColor('--color-border');
   const inputRef = useRef<TextInput>(null);
   // The same actions dialog the feed and diary open — quick log, details, and
   // the provider links, from a result row.
@@ -302,6 +310,18 @@ export default function SearchScreen() {
     ...sectionRows('anilist', 'Anime & Manga', anilistSearch),
   ];
 
+  // The screen below the field is one of five mutually exclusive states; the
+  // name is the key that makes a change of state remount — and so re-enter.
+  const state = !searchable
+    ? 'idle'
+    : moviesTvSearch.isLoading && anilistSearch.isLoading
+      ? 'loading'
+      : moviesTvSearch.isError && anilistSearch.isError
+        ? 'error'
+        : rows.length === 0
+          ? 'empty'
+          : 'results';
+
   function openDetails(item: NormalizedMediaItem) {
     pushRoute(routes.details(item.id));
   }
@@ -334,12 +354,14 @@ export default function SearchScreen() {
             An absolutely-positioned pressable overlapping the input looked
             identical but never fired on Android — the EditText claims the
             touch first (docs/solutions/android-pressable-over-textinput.md). */}
-        <View
-          className={
-            focused
-              ? 'flex-1 flex-row items-center border bg-surface rounded-full border-accent'
-              : 'flex-1 flex-row items-center border bg-surface rounded-full border-border'
-          }
+        <AnimatedView
+          className="flex-1 flex-row items-center border bg-surface rounded-full"
+          style={{
+            borderColor: focused ? accent : border,
+            transitionProperty: 'borderColor',
+            transitionDuration: DURATION.color,
+            transitionTimingFunction: EASE_OUT,
+          }}
         >
           {/* Field chrome, like the clear chip opposite it: muted, so it
               names the field without competing with what's typed in it. */}
@@ -371,89 +393,104 @@ export default function SearchScreen() {
             value={input}
           />
           {input !== '' && (
-            <PresstableOpacity
-              accessibilityLabel="Clear search"
-              accessibilityRole="button"
-              // The pressable is the 44pt touch target; the *drawn* chip inside
-              // is smaller. `close-circle` (one solid 20px glyph) painted a
-              // light-grey blob the size of the text next to it — heaviest
-              // thing in the header, and on Firefox Android the font's circle
-              // rasterised with a ragged edge on top of that. A hairline chip
-              // around a thin `close` stroke reads as field chrome instead, and
-              // its circle is drawn by the layout engine rather than the icon
-              // font, so no browser gets a say in how round it is.
-              className="w-11 h-11 items-center justify-center"
-              onPress={clearSearch}
-            >
-              <View className="w-6 h-6 items-center justify-center rounded-full bg-border">
-                <Ionicons
-                  color={muted}
-                  name="close"
-                  size={14}
-                />
-              </View>
-            </PresstableOpacity>
+            <AnimatedView entering={FadeIn.duration(DURATION.color)}>
+              <PresstableOpacity
+                accessibilityLabel="Clear search"
+                accessibilityRole="button"
+                // The pressable is the 44pt touch target; the *drawn* chip inside
+                // is smaller. `close-circle` (one solid 20px glyph) painted a
+                // light-grey blob the size of the text next to it — heaviest
+                // thing in the header, and on Firefox Android the font's circle
+                // rasterised with a ragged edge on top of that. A hairline chip
+                // around a thin `close` stroke reads as field chrome instead, and
+                // its circle is drawn by the layout engine rather than the icon
+                // font, so no browser gets a say in how round it is.
+                className="w-11 h-11 items-center justify-center"
+                onPress={clearSearch}
+              >
+                <View className="w-6 h-6 items-center justify-center rounded-full bg-border">
+                  <Ionicons
+                    color={muted}
+                    name="close"
+                    size={14}
+                  />
+                </View>
+              </PresstableOpacity>
+            </AnimatedView>
           )}
-        </View>
+        </AnimatedView>
       </View>
 
-      {!searchable ? (
-        <CenteredHint
-          body="Find any movie, show, anime, or manga — open its details or log it to your trackers."
-          kanji="忍"
-          title="Search"
-        />
-      ) : moviesTvSearch.isLoading && anilistSearch.isLoading ? (
-        <ResultsSkeleton />
-      ) : moviesTvSearch.isError && anilistSearch.isError ? (
-        <CenteredHint
-          body="Search failed. Check your connection and try again."
-          title="Something went wrong"
-        />
-      ) : rows.length === 0 ? (
-        <CenteredHint
-          body={`Nothing matched “${query.trim()}”.`}
-          title="No results"
-        />
-      ) : (
-        // While a newer query is in flight the previous results stay visible
-        // (keepPreviousData), dimmed so the staleness is legible.
-        <View
-          className={
-            moviesTvSearch.isPlaceholderData || anilistSearch.isPlaceholderData
-              ? 'flex-1 opacity-60'
-              : 'flex-1'
-          }
-        >
-          <List
-            // Clear the native bottom tab bar (unmeasurable height) so the last
-            // result isn't hidden behind it; web has no tab bar.
-            contentContainerStyle={
-              process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
-            }
-            data={rows}
-            keyExtractor={(row) => row.key}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item: row }) =>
-              row.kind === 'header' ? (
-                <SectionHeader label={row.label} provider={row.provider} />
-              ) : row.kind === 'result' ? (
-                <SearchResultRow
-                  item={row.item}
-                  onActions={openActions}
-                  onPress={openDetails}
-                />
-              ) : row.kind === 'loading' ? (
-                <RowSkeleton />
-              ) : (
-                <Text className="text-muted font-sans text-sm px-6 py-3">
-                  Search failed for this source — try again in a moment.
-                </Text>
-              )
-            }
+      {/* Keyed per state, so results arriving fade and settle in over the
+          skeleton they replace instead of cutting. The list itself stays
+          mounted across queries — a later search swaps its rows in under the
+          stale dim below. */}
+      <SectionEnter className="flex-1" key={state}>
+        {state === 'idle' ? (
+          <CenteredHint
+            body="Find any movie, show, anime, or manga — open its details or log it to your trackers."
+            kanji="忍"
+            title="Search"
           />
-        </View>
-      )}
+        ) : state === 'loading' ? (
+          <ResultsSkeleton />
+        ) : state === 'error' ? (
+          <CenteredHint
+            body="Search failed. Check your connection and try again."
+            title="Something went wrong"
+          />
+        ) : state === 'empty' ? (
+          <CenteredHint
+            body={`Nothing matched \u201c${query.trim()}\u201d.`}
+            title="No results"
+          />
+        ) : (
+          // While a newer query is in flight the previous results stay visible
+          // (keepPreviousData), dimmed so the staleness is legible — and the
+          // dim crossfades, since it changes twice per search.
+          <AnimatedView
+            className="flex-1"
+            style={{
+              opacity:
+                moviesTvSearch.isPlaceholderData ||
+                anilistSearch.isPlaceholderData
+                  ? 0.6
+                  : 1,
+              transitionProperty: 'opacity',
+              transitionDuration: DURATION.swap,
+              transitionTimingFunction: EASE_OUT,
+            }}
+          >
+            <List
+              // Clear the native bottom tab bar (unmeasurable height) so the last
+              // result isn't hidden behind it; web has no tab bar.
+              contentContainerStyle={
+                process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
+              }
+              data={rows}
+              keyExtractor={(row) => row.key}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item: row }) =>
+                row.kind === 'header' ? (
+                  <SectionHeader label={row.label} provider={row.provider} />
+                ) : row.kind === 'result' ? (
+                  <SearchResultRow
+                    item={row.item}
+                    onActions={openActions}
+                    onPress={openDetails}
+                  />
+                ) : row.kind === 'loading' ? (
+                  <RowSkeleton />
+                ) : (
+                  <Text className="text-muted font-sans text-sm px-6 py-3">
+                    Search failed for this source — try again in a moment.
+                  </Text>
+                )
+              }
+            />
+          </AnimatedView>
+        )}
+      </SectionEnter>
       {/* `canHide={false}`: a search result is not a feed entry, and hiding one
           would quietly suppress it everywhere. `providerLinks="connected"`
           because a result's source provider is an accident of which search
