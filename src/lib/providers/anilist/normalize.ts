@@ -81,6 +81,12 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/** Inverse of the `anilist-<id>` minting below: the AniList id behind an item id, or null. */
+export function parseAniListItemId(id: string): number | null {
+  const match = /^anilist-(\d+)$/.exec(id);
+  return match == null ? null : Number(match[1]);
+}
+
 /**
  * AniList Media → NormalizedMediaItem. `nowIso` keeps this pure — catalogue
  * entries (trending) carry no personal timestamp, so the read effect supplies

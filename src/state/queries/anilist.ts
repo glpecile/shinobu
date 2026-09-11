@@ -15,6 +15,7 @@ import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import {
   getCurrentAnime,
+  getAnimeById,
   getEntryState,
   getSeasonalAnime,
   getViewer,
@@ -106,9 +107,13 @@ export const anilistQueryKeys = {
    */
   seasonalAnime: (window: AnimeSeasonWindow, format: AnimeFormatFilter = 'ALL') =>
     [...anilistQueryKeys.all, 'seasonal-anime', window.season, window.year, format] as const,
+  /** Prefix over every explorer wall — details/[id] scans this for cache hits. */
+  seasonalAnimePagesRoot: () => [...anilistQueryKeys.all, 'seasonal-anime-pages'] as const,
   /** The explorer's infinite pages of the same read — page 1 is seeded from the row's entry. */
   seasonalAnimePages: (window: AnimeSeasonWindow, format: AnimeFormatFilter) =>
-    [...anilistQueryKeys.all, 'seasonal-anime-pages', window.season, window.year, format] as const,
+    [...anilistQueryKeys.seasonalAnimePagesRoot(), window.season, window.year, format] as const,
+  /** One anime by id — the cold deep link's fetch (`resolve-item.ts`). */
+  anime: (mediaId: number) => [...anilistQueryKeys.all, 'anime', mediaId] as const,
   /** The viewer's recorded state for one media — reconcile reads this (plan 0011). */
   entryState: (mediaId: number) =>
     [...anilistQueryKeys.all, 'entry-state', mediaId] as const,
@@ -278,11 +283,17 @@ export function useSuspenseSeasonalAnimePagesQuery(
 /** Same window as the home feed's catalogue rows (`use-unified-feed.ts`). */
 const SEASONAL_STALE_MS = 15 * 60_000;
 
-/** The year's anime films by popularity — no cour, films don't follow them. */
-export function fetchAnimeMovies(year: number): Promise<NormalizedMediaItem[]> {
-  return Effect.runPromise(
-    getSeasonalAnime(anilistDeps(), { year, format: 'MOVIE' }),
-  );
+/**
+ * One anime by AniList id, for a `/details/anilist-<id>` reached cold (nothing
+ * cached holds it). `null` id: nothing to fetch, the query stays idle.
+ */
+export function useAnimeByIdQuery(mediaId: number | null) {
+  return useQuery({
+    queryKey: anilistQueryKeys.anime(mediaId ?? 0),
+    queryFn: () => Effect.runPromise(getAnimeById(anilistDeps(), mediaId ?? 0)),
+    enabled: mediaId != null,
+    staleTime: SEASONAL_STALE_MS,
+  });
 }
 
 /**

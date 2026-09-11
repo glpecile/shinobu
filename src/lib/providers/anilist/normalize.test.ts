@@ -7,6 +7,7 @@ import {
   normalizeCurrentAnimeEntry,
   normalizeListActivity,
   parseActivityProgress,
+  parseAniListItemId,
   type AniListListActivity,
   type AniListListEntry,
   type AniListMedia,
@@ -333,5 +334,16 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     const instant = normalizeCurrentAnimeEntry(entry, NOW_ISO).nextAiring!.airingAt;
     expect(hasAired(instant, new Date(airingAt * 1000 - 1))).toBe(false);
     expect(hasAired(instant, new Date(airingAt * 1000))).toBe(true);
+  });
+});
+
+describe('parseAniListItemId', () => {
+  test('reads the id an AniList-minted item id carries', () => {
+    expect(parseAniListItemId('anilist-190143')).toBe(190143);
+  });
+
+  test('is null for every other provider prefix', () => {
+    expect(parseAniListItemId('tmdb-tv-32905')).toBeNull();
+    expect(parseAniListItemId('anilist-')).toBeNull();
   });
 });
