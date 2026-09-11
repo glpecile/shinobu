@@ -30,8 +30,13 @@ No easing or duration change fixes either.
   scroll snap on web (react-native-web maps it to `scroll-snap-type`), no pager
   library. The selected cour and its two neighbours stay mounted, so a swipe
   reveals a wall that already exists and a tab tap is a scroll, not a remount.
-  Neighbours mount after the scroll settles (`onMomentumScrollEnd`), never
-  mid-gesture. Pages get explicit sizes from the pager's measured layout
+  Neighbours of the *settled* page mount after the scroll comes to rest
+  (`onMomentumScrollEnd`), never mid-gesture; a tab tap mounts only its
+  target, and only when it is not already a neighbour. The mounted window
+  used to follow the selected index, so a tap mounted the next neighbour on
+  the same render whose effect dispatches `scrollTo`, and on iOS that Legend
+  List mount (cached data included) was JS time the scroll waited on: the tap
+  read as slow. Pages get explicit sizes from the pager's measured layout
   because a horizontal scroll view does not stretch children's height on
   every platform.
 - **The blur is web-only** (`features/anime-seasons/wall-entrance/`): the
@@ -107,21 +112,13 @@ deferred. React's documented opt-out is a `key`: the wall boundaries are keyed
 by year, so a new boundary mounts and shows its skeleton at once. Format stays
 deferred: All ⇄ TV narrows the same titles, and holding them reads as intended.
 
-## Trackpad swipes on web step one page
+## Trackpad swipes on web don't page
 
 A horizontal trackpad gesture on the pager is the same `pagingEnabled` scroll
-view as a touch swipe, so it *is* meant to page — but left to the browser it
-free-scrolls for as long as macOS keeps sending momentum wheel events, then
-snaps with the same distance-scaled smooth scroll the tab tap had to escape.
-The result drifted for close to a second before landing.
-
-`SeasonPager` now listens for `wheel` on the scroll node (web only, the
-listener never sees touch) and turns a horizontal-dominant gesture into one
-page step through `onSettle`, which changes the URL and lets the tab-tap
-effect drive the 200ms scroll. Every horizontal-dominant wheel event is
-`preventDefault`ed so the browser never scrolls on top. A gesture counts once
-20px of delta has accumulated (a brush does nothing) and is then locked until
-the events go quiet for 100ms, so the momentum tail steps nothing more. A
-probe that awaits each wheel event's round trip *will* see extra steps: the
-first step's re-render stretches the gaps past 100ms. Fire the events at
-trackpad cadence without awaiting them (`scratchpad/wheel-web.mjs`).
+view as a touch swipe, but left to the browser it free-scrolls for as long as
+macOS keeps sending momentum wheel events, then snaps with the same
+distance-scaled smooth scroll the tab tap had to escape: close to a second of
+drift. Stepping one page per gesture (accumulated delta + quiet-gap lock,
+tried 2026-09-10) landed fast but read as unpredictable. `SeasonPager` now
+`preventDefault`s horizontal-dominant `wheel` events on the scroll node, so
+web switches cours by tap; touch on web keeps the browser's snap.

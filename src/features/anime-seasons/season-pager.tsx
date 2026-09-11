@@ -26,8 +26,11 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * exists instead of unmounting one Legend List and mounting another on the
  * gesture frame (docs/solutions/season-switch-jank-remount-and-blur-on-native.md).
  * Neighbours mount once the scroll has settled — the idle moment — never
- * mid-gesture. Farther pages stay empty: they are only ever glimpsed while a
- * tab tap scrolls past them, and they fill in as soon as they are selected.
+ * mid-gesture, and a tab tap's target only when it is not one of them. A
+ * tap's scroll is dispatched from an effect, after the commit, so anything
+ * mounted on that render — a Legend List, even from cache — is JS time the
+ * scroll waits on. Farther pages stay empty: they are only ever glimpsed
+ * while a tab tap scrolls past them, and they fill in once selected.
  *
  * Controlled: `season` comes from the URL, `onSettle` reports where a swipe
  * landed, and `progress` is the offset as a continuous cour index, written on
@@ -51,23 +54,16 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * re-snaps every mid-page write straight back to the page it started on.
  * Reanimated's `scrollTo` is a no-op on web, hence the DOM write.
  *
- * A trackpad swipe on web takes the same drive. Left to the browser it free
- * scrolls for as long as the OS keeps sending momentum, then snaps with that
- * same distance-scaled smooth scroll, so a flick drifts for a second before
- * it lands. A horizontal wheel gesture is one page step instead — the mobile
- * swipe's semantics — decided once a small run of delta has accumulated and
- * locked until the events go quiet, so the momentum tail steps nothing more.
- * Touch on web stays the browser's snap; the wheel listener never sees it.
+ * A trackpad swipe on web does not page: left to the browser it free scrolls
+ * for as long as the OS keeps sending momentum and snaps late, and stepping a
+ * page per gesture read as unpredictable. Horizontal wheel is swallowed, so
+ * web switches cours by tap; touch on web stays the browser's snap.
  */
 
 /** Quiet time after the last scroll event before a position counts as settled (web). */
 const SETTLE_MS = 120;
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
 const BOUNDARY_TOLERANCE = 2;
-/** Horizontal wheel delta (px) that counts as a swipe rather than a brush. */
-const WHEEL_STEP_PX = 20;
-/** Quiet time between wheel events that separates one gesture (momentum tail included) from the next. */
-const WHEEL_GAP_MS = 100;
 const isWeb = Platform.OS === 'web';
 
 export function SeasonPager({
@@ -89,10 +85,12 @@ export function SeasonPager({
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduceMotion = useReducedMotion();
   const index = ANIME_SEASONS.indexOf(season);
+  // The page the scroll last came to rest on: what the mounted window is
+  // centred on, so a tab tap mounts nothing beyond its target.
+  const [settled, setSettled] = useState(index);
   // Web only: the offset a tab tap is animating towards, retargeted from
   // wherever the scroll is if the next tap lands mid-flight.
   const driven = useSharedValue(0);
-  const wheel = useRef({ at: 0, sum: 0, stepped: false });
 
   useEffect(() => () => clearTimeout(settleTimer.current ?? undefined), []);
 
@@ -123,7 +121,10 @@ export function SeasonPager({
     shown.current = index;
     const x = index * size.width;
     // A jump fires no scroll frames on every platform; keep the pill honest.
-    if (!animated) progress.value = index;
+    if (!animated) {
+      progress.value = index;
+      setSettled(index);
+    }
     const node = animated ? scrollNode() : null;
     if (node == null) {
       scroller.current?.scrollTo({ x, animated });
@@ -144,24 +145,11 @@ export function SeasonPager({
     const node = scrollNode();
     if (node == null) return;
     function onWheel(event: WheelEvent) {
-      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
-      event.preventDefault();
-      const gesture = wheel.current;
-      if (event.timeStamp - gesture.at > WHEEL_GAP_MS) {
-        gesture.sum = 0;
-        gesture.stepped = false;
-      }
-      gesture.at = event.timeStamp;
-      if (gesture.stepped) return;
-      gesture.sum += event.deltaX;
-      if (Math.abs(gesture.sum) < WHEEL_STEP_PX) return;
-      gesture.stepped = true;
-      const next = ANIME_SEASONS[index + Math.sign(gesture.sum)];
-      if (next != null) onSettle(next);
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) event.preventDefault();
     }
     node.addEventListener('wheel', onWheel, { passive: false });
     return () => node.removeEventListener('wheel', onWheel);
-  }, [index, onSettle]);
+  }, []);
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
@@ -172,10 +160,12 @@ export function SeasonPager({
     if (size.width === 0) return;
     const page = Math.round(x / size.width);
     if (Math.abs(x - page * size.width) > BOUNDARY_TOLERANCE) return;
-    const settled = ANIME_SEASONS[page];
-    if (settled == null || settled === season) return;
+    const landed = ANIME_SEASONS[page];
+    if (landed == null) return;
+    setSettled(page);
+    if (landed === season) return;
     haptics.selection();
-    onSettle(settled);
+    onSettle(landed);
   }
 
   function scheduleSettle(x: number) {
@@ -208,7 +198,7 @@ export function SeasonPager({
       {size.width > 0 &&
         ANIME_SEASONS.map((cour, i) => (
           <View key={cour} style={{ width: size.width, height: size.height }}>
-            {Math.abs(i - index) <= 1 ? renderSeason(cour) : null}
+            {Math.abs(i - settled) <= 1 || i === index ? renderSeason(cour) : null}
           </View>
         ))}
     </AnimatedScrollView>
