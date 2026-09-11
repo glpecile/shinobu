@@ -13,6 +13,7 @@ import {
   EpisodeHeading,
   EpisodeLogs,
   EpisodeOverview,
+  EpisodeSeriesLink,
 } from '@/features/episode-details/episode-sections';
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
@@ -76,6 +77,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             </>
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
+          <EpisodeSeriesLink id={item.id} />
         </View>
       </ScrollView>
 
