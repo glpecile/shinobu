@@ -52,6 +52,18 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style
           dangerouslySetInnerHTML={{
             __html: `
+              html {
+                /*
+                  Without this the document is \`color-scheme: normal\`, i.e.
+                  light, so the browser paints its *own* surfaces light however
+                  dark the page is: the canvas behind/around the viewport that
+                  Firefox for Android shows while a page transition runs (it
+                  read as a white → black fade), overscroll, scrollbars and
+                  form controls. Declaring both keeps it following
+                  prefers-color-scheme rather than pinning either one.
+                */
+                color-scheme: light dark;
+              }
               html, body {
                 background-color: #0a0a0a;
                 color: #0a0a0a;

@@ -3,7 +3,6 @@ import { usePathname, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
@@ -71,10 +70,25 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function useCssColor(variable: string): string | undefined {
-  const value = useCSSVariable(variable);
-  return typeof value === 'string' ? value : undefined;
-}
+/**
+ * Theme colors for the props that take a color *string* — an icon-font glyph,
+ * the toggle's drawn strokes — rather than a class.
+ *
+ * `var(…)` rather than uniwind's `useCSSVariable`: react-native-web forwards a
+ * `var()` color untouched (`modules/isWebColor`), so the browser resolves it
+ * out of `global.css` exactly like a class does. Reading it in JS cannot work
+ * on this surface — the web build is a static export, its prerender has no DOM
+ * for `useCSSVariable` to read, so every glyph fell back to
+ * `createIconSet`'s `'black'` default, that landed in the exported HTML, and
+ * React never patches a hydrated element's inline style. The rail draws once
+ * and never remounts, so it stayed black-on-black for the whole of a visitor's
+ * first page. See docs/solutions/web-prerender-bakes-js-resolved-colors.md.
+ */
+const COLOR = {
+  accent: 'var(--color-accent)',
+  foreground: 'var(--color-foreground)',
+  muted: 'var(--color-muted)',
+} as const;
 
 /**
  * A label that fades as the sidebar collapses. It never shrinks (`flexShrink 0`)
@@ -104,7 +118,7 @@ function RevealLabel({
  * The lucide/shadcn "panel-left" glyph, composed from Views (no SVG/icon-font
  * dependency): a rounded rect with a vertical divider a third of the way in.
  */
-function PanelLeftIcon({ color }: { color: string | undefined }) {
+function PanelLeftIcon({ color }: { color: string }) {
   return (
     <View
       style={{
@@ -136,7 +150,6 @@ function PanelLeftIcon({ color }: { color: string | undefined }) {
  * button. Its `left` slides in sync with the sidebar width.
  */
 function SidebarToggle({ collapsed }: { collapsed: boolean }) {
-  const foreground = useCssColor('--color-foreground');
   const edge = collapsed ? RAIL_WIDTH : SIDEBAR_WIDTH;
 
   return (
@@ -146,7 +159,7 @@ function SidebarToggle({ collapsed }: { collapsed: boolean }) {
       style={{ bottom: 18, left: edge - TOGGLE_SIZE / 2, ...leftTransition }}
       onPress={toggleSidebarCollapsed}
     >
-      <PanelLeftIcon color={foreground} />
+      <PanelLeftIcon color={COLOR.foreground} />
     </PresstableOpacity>
   );
 }
@@ -162,10 +175,7 @@ function SidebarItem({
   collapsed: boolean;
   onPress: () => void;
 }) {
-  const foreground = useCssColor('--color-foreground');
-  const accent = useCssColor('--color-accent');
-  const muted = useCssColor('--color-muted');
-  const color = active ? accent : muted ?? foreground;
+  const color = active ? COLOR.accent : COLOR.muted;
 
   return (
     <PresstableOpacity

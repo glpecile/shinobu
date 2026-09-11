@@ -28,7 +28,7 @@ import { CatchUpLogSheet } from "@/features/up-next/catch-up/catch-up-log-sheet"
 import { CatchUpLogProvider } from "@/features/up-next/catch-up/state";
 import { usePageEnterStyle } from "@/lib/page-transition";
 import { SheetProvider } from "@/components/sheet";
-import { useColorScheme } from "react-native";
+import { Platform, useColorScheme } from "react-native";
 // Side-effect import: TaskManager.defineTask must run at module-evaluation
 // time so a headless background launch can find the task (plan 0020 KTD-4).
 import "@/features/notifications/background-task";
@@ -60,8 +60,34 @@ export default function Layout() {
   // without it the screen container flashes React Navigation's own default
   // theme background (`rgb(242, 242, 242)`) instead of Shinobu's own
   // light/dark background — see docs/solutions/web-fouc-on-boot.md.
+  //
+  // Web hands the browser the custom property instead of a resolved hex:
+  // react-native-web forwards a `var()` color untouched, and the web build is
+  // a static export whose prerender has no `matchMedia`, so `useColorScheme()`
+  // is `null` there and every prerendered page baked `#ffffff` into this
+  // container. React never patches a hydrated element's inline style, so that
+  // white sat under the whole app and each page-enter fade read as white →
+  // black. See docs/solutions/web-prerender-bakes-js-resolved-colors.md.
   const colorScheme = useColorScheme();
-  const backgroundColor = colorScheme === "dark" ? "#0a0a0a" : "#ffffff";
+  const backgroundColor =
+    Platform.OS === "web"
+      ? "var(--color-background)"
+      : colorScheme === "dark"
+        ? "#0a0a0a"
+        : "#ffffff";
+  // The screen container above is what fades on a page enter, so whatever
+  // React Navigation paints *behind* it is what shows through mid-fade — and
+  // that is its own theme background, prerendered as `DefaultTheme`'s
+  // `rgb(242, 242, 242)` for the same no-DOM reason. Same custom property, so
+  // the two agree at every opacity.
+  const navigationBase = colorScheme === "dark" ? DarkTheme : DefaultTheme;
+  const navigationTheme =
+    Platform.OS === "web"
+      ? {
+          ...navigationBase,
+          colors: { ...navigationBase.colors, background: backgroundColor },
+        }
+      : navigationBase;
   // Web-only blur-fade on every pushed screen (no-op on native, which has its
   // own stack transition). Tab switches get the same enter in (tabs)/_layout.web.
   const pageEnter = usePageEnterStyle();
@@ -98,9 +124,7 @@ export default function Layout() {
            <CatchUpLogProvider>
             {/* ThemeProvider keeps the native tab bar / navigator chrome themed
                 and prevents header-button flicker when switching tabs. */}
-            <ThemeProvider
-              value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-            >
+            <ThemeProvider value={navigationTheme}>
               <AppShell>
                 <Stack
                   screenOptions={{
