@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import {
   useAnimatedStyle,
   useReducedMotion,
   type SharedValue,
 } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
-import { AnimatedText, AnimatedView } from '@/components/animated-view';
+import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
@@ -45,7 +44,12 @@ const INSET = 2;
  * Equal-width segments with one pill that *slides* to the selection instead
  * of each segment repainting — the same declarative Reanimated CSS transition
  * the disclosure chevrons use, so it runs on the UI thread natively and as a
- * CSS transition on web. The labels crossfade their colour underneath it.
+ * CSS transition on web. The pill is a clipped copy of the label row in the
+ * inverted colours, counter-translated so the copy stays put while the pill
+ * moves: the inverted text *is* the pill, so it tracks it to the pixel at
+ * every position, mid-swipe included. Fading each label's colour instead
+ * could only ever be keyed to the settled value, so it lagged the pill and
+ * jumped at the end.
  *
  * Inverted active state (foreground pill, background text), not the accent:
  * the accent means "this is the action" everywhere else, and a segmented
@@ -65,10 +69,6 @@ export function SegmentedControl<T extends string>({
   className,
   progress,
 }: SegmentedControlProps<T>) {
-  const foregroundToken = useCSSVariable('--color-foreground');
-  const backgroundToken = useCSSVariable('--color-background');
-  const foreground = typeof foregroundToken === 'string' ? foregroundToken : undefined;
-  const background = typeof backgroundToken === 'string' ? backgroundToken : undefined;
   const reduceMotion = useReducedMotion();
   // The pill's geometry derives from the measured width, so it is not
   // rendered at all until the first layout. A pill mounted at the left edge
@@ -81,9 +81,23 @@ export function SegmentedControl<T extends string>({
   const measured = width > 0;
   const segmentWidth = measured ? (width - INSET * 2) / options.length : 0;
   const index = Math.max(0, options.findIndex((option) => option.value === value));
-  const followStyle = useAnimatedStyle(() =>
+  const pillFollow = useAnimatedStyle(() =>
     progress ? { transform: [{ translateX: progress.value * segmentWidth }] } : {},
   );
+  const copyFollow = useAnimatedStyle(() =>
+    progress ? { transform: [{ translateX: -progress.value * segmentWidth }] } : {},
+  );
+  const slide = (offset: number) => ({
+    transform: [{ translateX: offset }],
+    transitionProperty: 'transform' as const,
+    transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+    transitionTimingFunction: EASE_IN_OUT,
+  });
+  const segmentClassName = cn(
+    'flex-1 items-center rounded-full',
+    size === 'sm' ? 'py-1' : 'py-1.5',
+  );
+  const labelClassName = cn('font-sans-semibold', size === 'sm' ? 'text-xs' : 'text-sm');
 
   function onLayout(event: LayoutChangeEvent) {
     const next = event.nativeEvent.layout.width;
@@ -109,51 +123,46 @@ export function SegmentedControl<T extends string>({
       onLayout={onLayout}
       style={{ padding: INSET }}
     >
+      {options.map((option) => (
+        <PresstableOpacity
+          accessibilityLabel={option.accessibilityLabel ?? option.label}
+          accessibilityRole="button"
+          accessibilityState={{ selected: option.value === value }}
+          className={segmentClassName}
+          key={option.value}
+          onPress={() => select(option.value)}
+        >
+          <Text className={cn(labelClassName, 'text-foreground')} numberOfLines={1}>
+            {option.label}
+          </Text>
+        </PresstableOpacity>
+      ))}
       {measured && (
         <AnimatedView
-          className="absolute rounded-full bg-foreground"
+          className="absolute rounded-full bg-foreground overflow-hidden"
           pointerEvents="none"
           style={[
             { top: INSET, bottom: INSET, left: INSET, width: segmentWidth },
-            progress
-              ? followStyle
-              : {
-                  transform: [{ translateX: index * segmentWidth }],
-                  transitionProperty: 'transform',
-                  transitionDuration: reduceMotion ? 0 : DURATION.toggle,
-                  transitionTimingFunction: EASE_IN_OUT,
-                },
+            progress ? pillFollow : slide(index * segmentWidth),
           ]}
-        />
-      )}
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <PresstableOpacity
-            accessibilityLabel={option.accessibilityLabel ?? option.label}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            className={cn(
-              'flex-1 items-center rounded-full',
-              size === 'sm' ? 'py-1' : 'py-1.5',
-            )}
-            key={option.value}
-            onPress={() => select(option.value)}
+        >
+          <AnimatedView
+            className="flex-1 flex-row"
+            style={[
+              { width: segmentWidth * options.length },
+              progress ? copyFollow : slide(-index * segmentWidth),
+            ]}
           >
-            <AnimatedText
-              className={cn('font-sans-semibold', size === 'sm' ? 'text-xs' : 'text-sm')}
-              numberOfLines={1}
-              style={{
-                color: selected ? background : foreground,
-                transitionProperty: 'color',
-                transitionDuration: reduceMotion ? 0 : DURATION.color,
-              }}
-            >
-              {option.label}
-            </AnimatedText>
-          </PresstableOpacity>
-        );
-      })}
+            {options.map((option) => (
+              <View className={segmentClassName} key={option.value}>
+                <Text className={cn(labelClassName, 'text-background')} numberOfLines={1}>
+                  {option.label}
+                </Text>
+              </View>
+            ))}
+          </AnimatedView>
+        </AnimatedView>
+      )}
     </View>
   );
 }

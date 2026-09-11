@@ -74,3 +74,35 @@ between them.
   opacity and why posters are warmed before the wall mounts.
 - `entering-animation-on-virtualized-cells-replays.md` — why the entrance is on
   the container, not the cells.
+
+## Web: tab taps drive `scrollLeft` themselves
+
+`scrollTo({ animated: true })` on react-native-web is the browser's smooth
+scroll, whose duration scales with distance and is not settable: measured at
+550ms for one page and ~970ms for three, past the 300ms ceiling where motion
+stops reading as feedback. Reanimated's `scrollTo` is a no-op on web. The
+pager now animates a shared value with `withTiming` (the pill's duration and
+curve, `DURATION.toggle` + `TIMING_EASE_IN_OUT`) and writes it to the DOM
+node's `scrollLeft` each frame, with `scroll-snap-type` set to `none` for the
+flight: under `mandatory` snap Chrome re-snaps every mid-page write straight
+back to the page it started on (a `scrollLeft = 500` read back as `0`). Snap
+is restored in the timing callback, once the offset sits on a page boundary.
+A tap mid-flight retargets from the current offset.
+
+## The pill's text colour: a clipped copy, not a fade
+
+Fading each label between foreground and background can only be keyed to the
+settled `value`, so it lagged the pill during a swipe and jumped at the end.
+`SegmentedControl` now renders the pill as an `overflow-hidden` copy of the
+whole label row in inverted colours, counter-translated by the same amount
+the pill moves, so the inverted text *is* the pill and tracks it to the pixel
+at every position. Both the pill and the copy read the same `progress` shared
+value (or the same CSS transition when there is no pager).
+
+## Year changes show the skeleton on purpose
+
+Router param updates are React transitions, so a year tap kept last year's
+posters up until this year's had loaded — even with the year no longer
+deferred. React's documented opt-out is a `key`: the wall boundaries are keyed
+by year, so a new boundary mounts and shows its skeleton at once. Format stays
+deferred: All ⇄ TV narrows the same titles, and holding them reads as intended.

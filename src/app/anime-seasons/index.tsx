@@ -211,11 +211,15 @@ export default function AnimeSeasonsScreen() {
   // every scroll frame and the season strip's pill reads it, so the pill rides
   // the finger instead of jumping once the swipe settles.
   const progress = useSharedValue(ANIME_SEASONS.indexOf(cour));
-  // The controls track the URL instantly; the walls follow one step behind,
-  // so changing year or format keeps the current posters on screen until the
-  // next set has loaded instead of dropping to the skeleton for every tap.
-  // Cours need no deferring: the pager keeps the neighbouring walls mounted.
-  const deferredYear = useDeferredValue(window.year);
+  // The format follows the URL one step behind, so All ⇄ TV keeps the current
+  // posters up until the narrowed set has loaded: the same titles, fewer of
+  // them. A year change is the opposite case — a different catalogue — and
+  // holding last year's posters until this year's arrive reads as the tap
+  // having been ignored, then the wall silently swapped. Router param updates
+  // are React transitions, which keep revealed content up while the new
+  // render suspends, so the boundaries below are *keyed* by year: a new
+  // boundary shows its skeleton at once (React's documented opt-out). Cours
+  // need neither: the pager keeps the neighbouring walls mounted.
   const deferredFormat = useDeferredValue(format);
 
   // `setParams`, not a push: a different season is not a new destination,
@@ -282,8 +286,9 @@ export default function AnimeSeasonsScreen() {
       {deferredFormat === 'MOVIE' ? (
         <WallBoundary
           format={deferredFormat}
+          key={window.year}
           onItemActions={openActions}
-          window={{ season: 'YEAR', year: deferredYear }}
+          window={{ season: 'YEAR', year: window.year }}
         />
       ) : (
         <SeasonPager
@@ -292,8 +297,9 @@ export default function AnimeSeasonsScreen() {
           renderSeason={(season) => (
             <WallBoundary
               format={deferredFormat}
+              key={window.year}
               onItemActions={openActions}
-              window={{ season, year: deferredYear }}
+              window={{ season, year: window.year }}
             />
           )}
           season={cour}

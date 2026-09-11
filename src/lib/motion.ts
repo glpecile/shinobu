@@ -43,6 +43,8 @@ export const CSS_EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
  * like it slammed to a stop.
  */
 export const EASE_IN_OUT = cubicBezier(0.77, 0, 0.175, 1);
+/** `EASE_IN_OUT` for `withTiming`, which takes an `Easing` rather than a CSS curve. */
+export const TIMING_EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
 
 /**
  * Exits: quick and quiet. `ease-in`-shaped rather than `ease-out` because the

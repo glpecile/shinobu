@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Platform, View, type LayoutChangeEvent, type ScrollView } from 'react-native';
 import {
+  useAnimatedReaction,
   useAnimatedScrollHandler,
   useReducedMotion,
+  useSharedValue,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedScrollView } from '@/components/animated-view';
 import { haptics } from '@/lib/haptics';
+import { DURATION, TIMING_EASE_IN_OUT } from '@/lib/motion';
 import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season';
 
 /**
@@ -36,6 +40,16 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * being left and snap the URL straight back to it. Pages get explicit sizes
  * from the measured pager because a horizontal scroll view does not stretch
  * its children's height on every platform.
+ *
+ * A tab tap's scroll is the platform's on native (`scrollTo`, animated). On
+ * web that would be the browser's smooth scroll, whose duration scales with
+ * distance and is not ours to set — 550ms for one page, close to a second
+ * for three, well past the 300ms where motion stops reading as feedback. So
+ * on web the tap drives `scrollLeft` itself from a timing animation, at the
+ * pill's own duration and curve so the two read as one move, with scroll
+ * snap suspended for its duration: under `mandatory` snap the browser
+ * re-snaps every mid-page write straight back to the page it started on.
+ * Reanimated's `scrollTo` is a no-op on web, hence the DOM write.
  */
 
 /** Quiet time after the last scroll event before a position counts as settled (web). */
@@ -63,17 +77,55 @@ export function SeasonPager({
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduceMotion = useReducedMotion();
   const index = ANIME_SEASONS.indexOf(season);
+  // Web only: the offset a tab tap is animating towards, retargeted from
+  // wherever the scroll is if the next tap lands mid-flight.
+  const driven = useSharedValue(0);
 
   useEffect(() => () => clearTimeout(settleTimer.current ?? undefined), []);
+
+  function scrollNode(): HTMLElement | null {
+    return isWeb ? (scroller.current?.getScrollableNode() ?? null) : null;
+  }
+
+  function setScrollLeft(x: number) {
+    const node = scrollNode();
+    if (node) node.scrollLeft = x;
+  }
+
+  function restoreSnap() {
+    const node = scrollNode();
+    if (node) node.style.scrollSnapType = '';
+  }
+
+  useAnimatedReaction(
+    () => driven.value,
+    (x, previous) => {
+      if (isWeb && previous != null && x !== previous) scheduleOnRN(setScrollLeft, x);
+    },
+  );
 
   useEffect(() => {
     if (size.width === 0) return;
     const animated = shown.current != null && shown.current !== index && !reduceMotion;
     shown.current = index;
+    const x = index * size.width;
     // A jump fires no scroll frames on every platform; keep the pill honest.
     if (!animated) progress.value = index;
-    scroller.current?.scrollTo({ x: index * size.width, animated });
-  }, [index, size.width, reduceMotion, progress]);
+    const node = animated ? scrollNode() : null;
+    if (node == null) {
+      scroller.current?.scrollTo({ x, animated });
+      return;
+    }
+    node.style.scrollSnapType = 'none';
+    driven.value = node.scrollLeft;
+    driven.value = withTiming(
+      x,
+      { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT },
+      (finished) => {
+        if (finished) scheduleOnRN(restoreSnap);
+      },
+    );
+  }, [index, size.width, reduceMotion, progress, driven]);
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
