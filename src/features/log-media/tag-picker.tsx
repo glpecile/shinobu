@@ -442,8 +442,8 @@ export function TagPicker({
         // invisible spacer must never take a tap or a screen-reader stop.
         aria-hidden={!showToggle}
         className="self-start"
-        pointerEvents={showToggle ? 'auto' : 'none'}
         style={{
+          pointerEvents: showToggle ? 'auto' : 'none',
           opacity: showToggle ? 1 : 0,
           transitionProperty: 'opacity',
           transitionDuration: reduceMotion ? 0 : DURATION.swap,

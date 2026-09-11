@@ -18,7 +18,7 @@ const bobKeyframes = css.keyframes({
  * infinite CSS animation on the tile; the constant tilt lives on a plain
  * wrapper View so the keyframes only ever animate translateY.
  *
- * Pure decoration: `pointerEvents="none"` so a tile overlapping a CTA can never
+ * Pure decoration: `pointerEvents: 'none'` so a tile overlapping a CTA can never
  * swallow the tap meant for it. Set `floating={false}` to lay the tile out in
  * normal flow instead of absolutely — the compact empty state does this so the
  * marks sit above the copy rather than painting over it.
@@ -39,8 +39,7 @@ export function FloatingTile({
   return (
     <View
       className={floating ? 'absolute' : 'relative'}
-      pointerEvents="none"
-      style={[style, { transform: [{ rotate }] }]}
+      style={[style, { pointerEvents: 'none', transform: [{ rotate }] }]}
     >
       <AnimatedView
         className="flex-1 bg-surface border border-border rounded-2xl items-center justify-center"

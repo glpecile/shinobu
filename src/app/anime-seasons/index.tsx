@@ -211,6 +211,14 @@ function WallBoundary({
  * on the frames of the one animation they were looking at. Staggering them
  * costs nothing visible: a swipe takes longer to start than the slide takes to
  * finish, so a neighbour is never reached before it has caught up.
+ *
+ * An effect and not the press handler, which is where react.dev would put
+ * anything caused by an interaction: the format lives in the URL, so it also
+ * changes on Back, on a shared link, and on any other `setParams` — and a
+ * stagger scheduled only from the tap would leave those walls on a format the
+ * user left behind. The delay is a timer, which is a side effect wherever it
+ * is written; syncing it to the prop is what makes it correct for every way
+ * the prop can change.
  */
 function useTrailingFormat(format: AnimeFormatFilter): AnimeFormatFilter {
   const [trailing, setTrailing] = useState(format);

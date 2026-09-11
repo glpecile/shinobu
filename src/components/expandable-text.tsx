@@ -33,7 +33,7 @@ export function ExpandableText({ text, lines = 2 }: { text: string; lines?: numb
         aria-hidden
         className="text-foreground/90 font-sans text-base leading-relaxed absolute top-0 left-0 right-0 opacity-0"
         onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
-        pointerEvents="none"
+        style={{ pointerEvents: 'none' }}
       >
         {text}
       </Text>

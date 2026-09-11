@@ -66,11 +66,13 @@ export function Lightbox() {
   // fade out after `activeLightbox` clears (same deferred-unmount trick as
   // components/sheet/index.web.tsx).
   const [shown, setShown] = useState(activeLightbox);
+  // Adjusted during the render that opens it rather than from an effect, so
+  // the image is there on the first painted frame instead of the second (see
+  // the same note in components/sheet/index.web.tsx). Only the deferred clear
+  // needs the clock.
+  if (activeLightbox != null && activeLightbox !== shown) setShown(activeLightbox);
   useEffect(() => {
-    if (activeLightbox != null) {
-      setShown(activeLightbox);
-      return;
-    }
+    if (activeLightbox != null) return;
     const timer = setTimeout(() => setShown(null), EXIT_MS);
     return () => clearTimeout(timer);
   }, [activeLightbox]);
@@ -123,11 +125,11 @@ export function Lightbox() {
               className="absolute inset-0 bg-black"
               entering={FadeIn.duration(200)}
               exiting={FadeOut.duration(EXIT_MS)}
-              pointerEvents="none"
+              style={{ pointerEvents: 'none' }}
             />
             <View
               className="absolute inset-0 items-center justify-center p-4"
-              pointerEvents="none"
+              style={{ pointerEvents: 'none' }}
             >
               <AnimatedView
                 className={image.type === 'image' ? 'w-full h-full' : ''}

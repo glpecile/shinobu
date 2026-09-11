@@ -159,11 +159,15 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const reduceMotion = useReducedMotion();
 
+  // Opening is adjusted *during* the render that opens it, not from an effect:
+  // an effect runs after the commit, so the sheet returned `null` for one
+  // painted frame and only appeared on the following one — a frame of latency
+  // on the app's most-used surface, for nothing (react.dev, "You Might Not
+  // Need an Effect"). Closing is the half that genuinely needs the clock, so
+  // it stays where a side effect belongs.
+  if (open && !mounted) setMounted(true);
   useEffect(() => {
-    if (open) {
-      setMounted(true);
-      return;
-    }
+    if (open) return;
     const timer = setTimeout(() => setMounted(false), EXIT_MS);
     return () => clearTimeout(timer);
   }, [open]);
