@@ -254,17 +254,26 @@ export function Button({
           // and the *button* decides how faded that colour reads, exactly as
           // the container and label treatments already do.
           <AnimatedView
-            className={cn('items-center justify-center', unavailable && 'opacity-60')}
+            className="items-center justify-center"
             entering={SLOT_ENTER}
             exiting={SLOT_EXIT}
             layout={BOX_LAYOUT}
-            style={COLOR_TRANSITION}
           >
-            <ButtonIconContext.Provider
-              value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+            {/* The dim sits one level in, not on the node above: `SLOT_ENTER`
+                is a FadeIn, and an entering animation owns `opacity` on its
+                own node — a disabled icon mounted at 60% was faded back to
+                full by its own enter, and Reanimated warned about exactly
+                that. docs/solutions/reanimated-fade-overwrites-static-opacity.md */}
+            <AnimatedView
+              className={cn(unavailable && 'opacity-60')}
+              style={COLOR_TRANSITION}
             >
-              {icon}
-            </ButtonIconContext.Provider>
+              <ButtonIconContext.Provider
+                value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+              >
+                {icon}
+              </ButtonIconContext.Provider>
+            </AnimatedView>
           </AnimatedView>
         )}
         <AnimatedView
