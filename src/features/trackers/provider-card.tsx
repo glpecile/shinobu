@@ -70,7 +70,7 @@ export function ProviderCard({
           <Button
             accessibilityLabel={`Disconnect ${PROVIDERS[id].label}`}
             className="shrink-0"
-            icon={<Button.Icon name="log-out-outline" />}
+            icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
             onPress={() => disconnect(id)}
             size="sm"

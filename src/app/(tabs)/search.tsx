@@ -340,6 +340,11 @@ export default function SearchScreen() {
               : 'flex-1 flex-row items-center border bg-surface rounded-full border-border'
           }
         >
+          {/* Field chrome, like the clear chip opposite it: muted, so it
+              names the field without competing with what's typed in it. */}
+          <View className="pl-4">
+            <Ionicons color={muted} name="search-outline" size={18} />
+          </View>
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
@@ -354,7 +359,7 @@ export default function SearchScreen() {
             // the inner input, inside the wrapper that carries the field's
             // border — the accent border below is the focus affordance instead,
             // and it works on native too.
-            className="flex-1 text-foreground px-4 py-3 font-sans outline-none"
+            className="flex-1 text-foreground pl-3 pr-4 py-3 font-sans outline-none"
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}

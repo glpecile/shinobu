@@ -59,6 +59,9 @@ const SIZE: Record<ButtonSize, { container: string; label: string; icon: number 
   md: { container: 'px-5 py-3 gap-2', label: 'text-base', icon: 18 },
 };
 
+/** A notch under the leading glyph: it marks, it doesn't name. */
+const TRAILING_ICON: Record<ButtonSize, number> = { sm: 12, md: 16 };
+
 /**
  * What `Button.Icon` needs to draw itself, supplied by the `Button` around it.
  *
@@ -96,8 +99,9 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `refresh` | retry |
  * | `open-outline` | leaves this screen (a route, an external page) |
  * | `close` | dismiss without writing |
+ * | `search-outline` | search |
  * | `checkmark` | done, nothing left to do |
- * | `link-outline` / `log-out-outline` | connect / disconnect a tracker |
+ * | `link-outline` / `unlink-outline` | connect / disconnect a tracker |
  *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more
@@ -137,6 +141,25 @@ export interface ButtonProps {
    * both makes the row jump as the spinner mounts.
    */
   icon?: ReactNode;
+  /**
+   * A second `<Button.Icon />` (or a provider mark), drawn at the button's far
+   * edge. An affordance marker, not an action — "this leaves the app" — so
+   * unlike `icon` it survives `loading`: the spinner takes the leading slot,
+   * and a trailing glyph vanishing mid-press would read as the row changing
+   * into a different row.
+   */
+  trailingIcon?: ReactNode;
+  /**
+   * `center` (default) is a CTA. `start` is a **row** — one of a stack of
+   * actions in a sheet, where the labels line up down a left edge and the
+   * leading glyphs form a column beside them.
+   *
+   * It exists because the long-press sheets hand-rolled that shape around the
+   * gap instead (AGENTS.md: widen the button, never re-implement it), and it
+   * drifted the moment they did — a muted glyph beside a foreground label, no
+   * press state, and `rounded-full` restated by hand at each call site.
+   */
+  align?: 'center' | 'start';
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** `pill` (default, fully round — owner decision 2026-09-08) or `rounded` (8px). */
@@ -195,6 +218,8 @@ export function Button({
   label,
   onPress,
   icon,
+  trailingIcon,
+  align = 'center',
   variant = 'primary',
   size = 'md',
   shape = 'pill',
@@ -241,7 +266,8 @@ export function Button({
     >
       <AnimatedView
         className={cn(
-          'flex-row items-center justify-center',
+          'flex-row items-center',
+          align === 'start' ? 'justify-start' : 'justify-center',
           SHAPE[shape],
           SIZE[size].container,
           unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
@@ -294,14 +320,16 @@ export function Button({
           </AnimatedView>
         )}
         <AnimatedView
-          className={cn(overlay && 'opacity-0')}
+          // A row's label takes the free space so a trailing glyph is pushed
+          // to the far edge rather than sitting against the label's last word.
+          className={cn(overlay && 'opacity-0', align === 'start' && 'flex-1')}
           layout={BOX_LAYOUT}
           style={COLOR_TRANSITION}
         >
           <LabelText
             className={cn(
               'font-sans-semibold',
-              morphLabel ? 'self-center' : 'text-center',
+              morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
               SIZE[size].label,
               unavailable ? LABEL[variant].off : LABEL[variant].on,
             )}
@@ -309,6 +337,22 @@ export function Button({
             {shownLabel}
           </LabelText>
         </AnimatedView>
+        {trailingIcon != null && (
+          // No enter/exit and no `loading` gate — see `trailingIcon`'s
+          // docblock. Muted, because it marks where the press *goes* rather
+          // than naming the action the way the leading glyph does.
+          <AnimatedView
+            className={cn('items-center justify-center opacity-60')}
+            layout={BOX_LAYOUT}
+            style={COLOR_TRANSITION}
+          >
+            <ButtonIconContext.Provider
+              value={{ token: SPINNER_TOKEN[variant], size: TRAILING_ICON[size] }}
+            >
+              {trailingIcon}
+            </ButtonIconContext.Provider>
+          </AnimatedView>
+        )}
       </AnimatedView>
     </PresstableOpacity>
   );

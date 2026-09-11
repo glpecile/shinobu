@@ -1,19 +1,16 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
-import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { openExternalUrl } from '@/lib/open-external-url';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { useThemeColor } from '@/lib/theme-color';
 
 /**
- * A "View on …" row, the *sheet* treatment of a provider link — full-width and
- * bordered, sitting flush with the other action rows above it. The pages use
- * pills instead (`ProviderLinksSection`, `PersonLinksSection`): a page has room
+ * A "View on …" row, the *sheet* treatment of a provider link — the app's
+ * `quiet` button in its row shape (`align="start"`), sitting flush with the
+ * other action rows above it. The pages use pills instead (`ProviderLinksSection`, `PersonLinksSection`): a page has room
  * to lay links out as a cluster, a sheet is a stack of one-tap actions and a
  * row of pills reads as a different kind of control in the middle of it.
  *
@@ -30,27 +27,20 @@ export function ProviderLinkRow({
   onOpened?: () => void;
   className?: string;
 }) {
-  const muted = useThemeColor('--color-muted');
-
   return (
-    <PresstableOpacity
-      accessibilityRole="button"
-      className={cn(
-        'flex-row items-center gap-3 rounded-full px-5 py-3 border border-border',
-        className,
-      )}
+    <Button
+      align="start"
+      {...(className != null ? { className } : {})}
+      icon={<ProviderIcon id={link.provider} size={18} />}
+      label={`View on ${PROVIDERS[link.provider].label}`}
       onPress={() => {
         haptics.selection();
         void openExternalUrl(link.url);
         if (process.env.EXPO_OS !== 'web') onOpened?.();
       }}
-    >
-      <ProviderIcon id={link.provider} size={18} />
-      <Text className="text-foreground font-sans-semibold text-base flex-1">
-        View on {PROVIDERS[link.provider].label}
-      </Text>
-      <Ionicons color={muted} name="open-outline" size={16} />
-    </PresstableOpacity>
+      trailingIcon={<Button.Icon name="open-outline" />}
+      variant="quiet"
+    />
   );
 }
 
