@@ -47,6 +47,7 @@ export function ConnectLetterboxdButton() {
         password is ever sent to Shinobu.
       </Text>
       <Button
+        icon={<Button.Icon name="link-outline" />}
         label="Sign in to Letterboxd"
         onPress={() => setSigningIn(true)}
       />

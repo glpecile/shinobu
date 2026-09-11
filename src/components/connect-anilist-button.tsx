@@ -208,6 +208,7 @@ export function ConnectAniListButton() {
           </Text>
         )}
         <Button
+          icon={<Button.Icon name="link-outline" />}
           label="Save & Connect"
           loading={isSubmitting || status === 'connecting'}
           loadingLabel="Connecting…"
@@ -225,6 +226,7 @@ export function ConnectAniListButton() {
         </Text>
       )}
       <Button
+        icon={<Button.Icon name="link-outline" />}
         label="Connect AniList"
         loading={status === 'connecting'}
         loadingLabel="Connecting…"

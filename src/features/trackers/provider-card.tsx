@@ -70,6 +70,7 @@ export function ProviderCard({
           <Button
             accessibilityLabel={`Disconnect ${PROVIDERS[id].label}`}
             className="shrink-0"
+            icon={<Button.Icon name="log-out-outline" />}
             label="Disconnect"
             onPress={() => disconnect(id)}
             size="sm"
@@ -79,6 +80,7 @@ export function ProviderCard({
           <Button
             accessibilityLabel={`Connect ${PROVIDERS[id].label}`}
             className="shrink-0"
+            icon={<Button.Icon name="link-outline" />}
             label="Connect"
             // The one-tap providers open a browser session, which takes long
             // enough on a cold start to look like a dead tap without this.

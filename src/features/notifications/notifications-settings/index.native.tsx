@@ -90,6 +90,7 @@ export function NotificationsSettingsSection() {
         {__DEV__ && enabled && (
           <Button
             className="self-start"
+            icon={<Button.Icon name="notifications-outline" />}
             label="Send test notification"
             onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
             size="sm"

@@ -441,7 +441,7 @@ export default function DetailsScreen() {
         <Text className="text-muted font-sans text-center mb-6">
           This item is not in your current feed.
         </Text>
-        <Button label="Go back" onPress={goBack} />
+        <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} />
       </View>
     );
   }

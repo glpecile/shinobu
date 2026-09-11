@@ -207,11 +207,11 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         }
         onMarkEpisode={(_s, episode) =>
           openLog({
-            title: 'Mark episode as watched',
+            title: `Log episode ${episode.number}`,
             // The entry title already names the season ("… Season 2"), so the
             // episode line doesn't repeat it — and can't claim one when the
             // mapping is unknown.
-            description: `“${item.title}” — E${episode.number}: ${episode.title}`,
+            description: `“${item.title}” — episode ${episode.number}: ${episode.title}`,
             // Entry-relative (plan 0027): the number the AniList entry itself
             // uses. The header may read "Season 2", but what gets logged is
             // episode N *of this entry* — the fan-out maps it to a canonical
@@ -225,8 +225,10 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
           if (aired.length === 0) return;
           const label = canonicalTitle ?? 'all episodes';
           openLog({
-            title: `Mark ${label} as watched`,
-            description: `Mark every aired episode of “${item.title}” as watched.`,
+            title: `Log ${label}`,
+            description: `“${item.title}” — ${aired.length} aired ${
+              aired.length === 1 ? 'episode' : 'episodes'
+            }.`,
             entryEpisodes: aired.map((episode) => episode.number),
           });
         }}
@@ -240,8 +242,8 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
           setActionsOpen(false);
           const { episode } = pressed.pointer;
           openLog({
-            title: 'Mark episode as watched',
-            description: `“${item.title}” — E${episode.number}: ${episode.title}`,
+            title: `Log episode ${episode.number}`,
+            description: `“${item.title}” — episode ${episode.number}: ${episode.title}`,
             entryEpisodes: [pressed.entryNumber],
           });
         }}
@@ -251,7 +253,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
       />
 
       <LogConfirmSheet
-        confirmLabel="Mark as watched"
+        confirmLabel={pending?.title ?? ''}
         description={pending?.description ?? ''}
         item={item}
         logMedia={logMedia}
@@ -262,7 +264,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         onTagsChange={setTags}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
-        pendingLabel="Marking as watched…"
+        pendingLabel="Logging…"
         selectedProviders={selectedProviders}
         tags={tags}
         targets={targets}

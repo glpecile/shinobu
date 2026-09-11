@@ -128,6 +128,7 @@ function EpisodeRow({
       )}
       {aired ? (
         <Button
+          icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
           label={isWatched ? 'Rewatch' : 'Mark as watched'}
           onPress={onMark}
           size="sm"

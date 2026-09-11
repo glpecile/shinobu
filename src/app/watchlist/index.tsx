@@ -8,6 +8,7 @@ import {
 import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
@@ -163,6 +164,7 @@ function WatchlistGrid({
   if (entries.length === 0 && errors.length > 0) {
     return (
       <CenteredNotice
+        actionIcon={<Button.Icon name="refresh" />}
         actionLabel="Try again"
         body="Your watchlist couldn’t be loaded. Check your connection and try again."
         onAction={() => void refresh()}
@@ -186,6 +188,7 @@ function WatchlistGrid({
   const layout =
     shown.length === 0 ? (
       <CenteredNotice
+        actionIcon={<Button.Icon name="albums-outline" />}
         actionLabel="Show all trackers"
         body={`Nothing on your ${provider == null ? '' : PROVIDERS[provider].label} watchlist right now.`}
         onAction={() => onProviderChange(null)}
@@ -319,6 +322,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <View className="flex-1 bg-background">
       <CenteredNotice
+        actionIcon={<Button.Icon name="refresh" />}
         actionLabel="Try again"
         body="Your watchlist couldn’t be displayed."
         onAction={retry}

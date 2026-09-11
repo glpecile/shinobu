@@ -147,6 +147,7 @@ export function ConnectTmdbTokenSection() {
             <Button
               accessibilityLabel="Remove TMDB token"
               className="self-start"
+              icon={<Button.Icon name="trash-outline" />}
               label="Remove token"
               onPress={clear}
               size="sm"
@@ -232,6 +233,7 @@ export function ConnectTmdbTokenSection() {
               </Text>
             )}
             <Button
+              icon={<Button.Icon name="checkmark" />}
               label="Save token"
               // Validated against TMDB before it is stored, so this waits on a
               // real round-trip.

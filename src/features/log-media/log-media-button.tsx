@@ -87,7 +87,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     seriesNext == null
       ? 'Log next episode'
       : seriesNext.rewatch
-        ? 'Log rewatch'
+        ? 'Rewatch'
         : `Log ${seriesLabel}`;
   // The series analogue of `filmReleaseStatus` (plan 0035 R18). A show with
   // zero aired episodes shares Trakt's `next_episode: null` with a *finished*
@@ -183,27 +183,49 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     );
   }
 
-  const buttonLabel = isSeries
+  // The one string this whole flow speaks: the CTA's label, the confirm
+  // sheet's title, and its confirm button. These were three ternary chains
+  // that had already drifted — the movie CTA read "Mark as watched" and
+  // opened a sheet titled "Log watch" over a button saying the same.
+  const action = isSeries
+    ? seriesAction
+    : isAnimeSeries
+      ? `Log episode ${nextEpisode}`
+      : isRewatch
+        ? 'Rewatch'
+        : 'Mark as watched';
+
+  // Why the action can't run yet, when it can't — the only thing that ever
+  // replaces it on the CTA (the sheet can't open in these states at all).
+  const blocked = isSeries
     ? seriesUnaired
       ? // Not "S1E1 not yet aired": nothing at all has aired, so naming an
         // episode implies a schedule the show doesn't have yet.
         'Hasn’t aired yet'
-      : seriesNext == null || seriesNext.rewatch
-        ? seriesAction
-        : seriesNext.aired
-          ? `Log ${seriesLabel}`
-          : `${seriesLabel} not yet aired`
+      : seriesNext != null && !seriesNext.rewatch && !seriesNext.aired
+        ? `${seriesLabel} not yet aired`
+        : null
     : isAnimeSeries
       ? nextEpisodeAired
-        ? `Log episode ${nextEpisode}`
+        ? null
         : `Episode ${nextEpisode} not yet aired`
       : releaseStatus === 'unknown'
         ? 'No release date yet'
         : releaseStatus === 'unreleased'
           ? 'Not yet released'
-          : isRewatch
-            ? 'Log rewatch'
-            : 'Mark as watched';
+          : null;
+
+  // The subject, never the verb a second time: the title above already says
+  // what this does, so the line under it says what it does it *to* — the
+  // shape the catch-up sheet already uses.
+  const description =
+    isSeries && seriesNext?.rewatch === true
+      ? `You’ve watched every aired episode of “${item.title}” — this starts a rewatch at ${seriesLabel}.`
+      : isSeries && seriesNext?.title != null
+        ? `“${item.title}” — ${seriesLabel}: ${seriesNext.title}`
+        : isFilmLike && isRewatch
+          ? `“${item.title}” is already in your history — this logs another watch.`
+          : `“${item.title}”`;
 
   return (
     // `mb-3`, not `mb-6`: the want-to-watch CTA renders directly beneath this
@@ -221,7 +243,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         // filled/outline pairing the watchlist CTA uses for its own settled
         // state, so "already done" reads identically on both buttons.
         icon={<Button.Icon name={isRewatch ? 'eye' : 'eye-outline'} />}
-        label={buttonLabel}
+        label={blocked ?? action}
         // The episode number arrives with Trakt's progress read — a spinner
         // says "resolving which episode", not "your tap did nothing".
         loading={seriesNextState.status === 'loading'}
@@ -248,28 +270,8 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
 
       <LogConfirmSheet
         onClose={() => setOpen(false)}
-        confirmLabel={
-          isSeries
-            ? seriesAction
-            : isAnimeSeries
-              ? `Log episode ${nextEpisode}`
-              : isRewatch
-                ? 'Log rewatch'
-                : 'Log watch'
-        }
-        description={
-          isSeries
-            ? seriesNext?.rewatch === true
-              ? `You’ve watched every aired episode of “${item.title}” — this starts a rewatch at ${seriesLabel}.`
-              : seriesNext?.title != null
-                ? `“${item.title}” — ${seriesLabel}: ${seriesNext.title}`
-                : `Log ${seriesLabel} of “${item.title}”.`
-            : isAnimeSeries
-              ? `Log episode ${nextEpisode} of “${item.title}”.`
-              : isRewatch
-                ? `“${item.title}” is already in your history — this logs another watch.`
-                : `Mark “${item.title}” as watched.`
-        }
+        confirmLabel={action}
+        description={description}
         item={item}
         logMedia={logMedia}
         manualTargets={manualTargets}
@@ -282,15 +284,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         pendingLabel="Logging…"
         selectedProviders={selectedProviders}
         targets={targets}
-        title={
-          isSeries
-            ? seriesAction
-            : isAnimeSeries
-              ? `Log episode ${nextEpisode}`
-              : isRewatch
-                ? 'Log rewatch'
-                : 'Log watch'
-        }
+        title={action}
         watchedAt={watchedAt}
       />
     </View>

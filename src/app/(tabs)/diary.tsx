@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import Head from '@/components/head';
 import { EmptyStateTile } from '@/components/empty-state-tile';
 import {
@@ -67,7 +68,11 @@ export default function DiaryScreen() {
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile
-          cta={{ label: 'Connect your trackers', onPress: () => pushRoute(routes.connect) }}
+          cta={{
+            icon: <Button.Icon name="link-outline" />,
+            label: 'Connect your trackers',
+            onPress: () => pushRoute(routes.connect),
+          }}
           description="Connect a tracker to see everything you've logged — from Shinobu and from the providers directly — in one place."
           icon={<StateIcon name="book-outline" />}
           title="Your diary lives here"
@@ -97,7 +102,11 @@ export default function DiaryScreen() {
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile
-          cta={{ label: 'Retry', onPress: () => diary.refetch() }}
+          cta={{
+            icon: <Button.Icon name="refresh" />,
+            label: 'Try again',
+            onPress: () => diary.refetch(),
+          }}
           description="Something went wrong reaching your trackers. Check your connection and try again."
           icon={<StateIcon name="cloud-offline-outline" />}
           title="Couldn't load your diary"

@@ -61,7 +61,7 @@ export function EpisodeStill({
   );
 }
 
-/** "S2 E10 · Show title" eyebrow, the episode title, air date · runtime, rating. */
+/** "S2E10 · Show title" eyebrow, the episode title, air date · runtime, rating. */
 export function EpisodeHeading({
   showTitle,
   season,
@@ -236,7 +236,7 @@ export function EpisodeCreditsSection({
 /**
  * The way back up to the show. An episode is reachable from surfaces that
  * never pass through the show — a diary row, a notification tap — so the
- * eyebrow's "S1 E10 · Show" is the only mention of the series and it isn't a
+ * eyebrow's "S1E10 · Show" is the only mention of the series and it isn't a
  * link. Same shape as the credit and studio sheets' route buttons.
  */
 export function EpisodeSeriesLink({

@@ -78,6 +78,7 @@ function HiddenItemsSection() {
             </PresstableOpacity>
             <Button
               accessibilityLabel={`Show ${item.title} again`}
+              icon={<Button.Icon name="eye-outline" />}
               label="Show"
               onPress={() => unhideItem(item.id)}
               size="sm"

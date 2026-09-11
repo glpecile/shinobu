@@ -16,7 +16,8 @@ export interface EmptyStateTileProps {
   icon?: ReactNode;
   title: string;
   description?: string;
-  cta?: { label: string; onPress: () => void };
+  /** `icon` is a `<Button.Icon />` — every button in the app carries one. */
+  cta?: { label: string; icon?: ReactNode; onPress: () => void };
   /** Extra content between the description and the CTA (e.g. an error line). */
   children?: ReactNode;
   /** 'inline' (default, in-list) or 'hero' (full-screen Home). */
@@ -73,6 +74,7 @@ export function EmptyStateTile({
         // screen, and the `sm` pill read as an afterthought under a headline.
         <Button
           className={hero ? 'mt-8' : 'mt-6'}
+          {...(cta.icon != null ? { icon: cta.icon } : {})}
           label={cta.label}
           onPress={cta.onPress}
           size="md"

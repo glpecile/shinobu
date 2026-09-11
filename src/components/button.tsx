@@ -82,6 +82,23 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * <Button icon={<Button.Icon name="bookmark-outline" />} label="Add to watchlist" />
  * ```
  *
+ * **Every button in the app takes one.** A label without a glyph beside it
+ * reads as a different design system than the row above it, which is how the
+ * log sheet ended up as the one dialog with no icons anywhere. The app's
+ * vocabulary — one verb, one glyph, everywhere:
+ *
+ * | glyph | verb |
+ * | --- | --- |
+ * | `eye-outline` / `eye` | log a watch — filled once it's already in your history |
+ * | `eye-off-outline` | hide from a feed |
+ * | `bookmark-outline` / `bookmark` | watchlist — filled once it's on the list |
+ * | `trash-outline` | deletes stored data |
+ * | `refresh` | retry |
+ * | `open-outline` | leaves this screen (a route, an external page) |
+ * | `close` | dismiss without writing |
+ * | `checkmark` | done, nothing left to do |
+ * | `link-outline` / `log-out-outline` | connect / disconnect a tracker |
+ *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more
  * debuggable failure.

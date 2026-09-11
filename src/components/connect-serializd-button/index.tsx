@@ -122,6 +122,7 @@ export function ConnectSerializdButton() {
         <Text className="text-accent font-sans text-xs">{errorMessage}</Text>
       )}
       <Button
+        icon={<Button.Icon name="link-outline" />}
         label="Connect Serializd"
         loading={status === 'submitting'}
         loadingLabel="Connecting…"
