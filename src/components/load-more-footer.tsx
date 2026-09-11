@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 
@@ -19,6 +20,7 @@ export function LoadMoreFooter({
   /** What a page holds — "films", "titles" — for the retry copy. */
   noun: string;
 }) {
+  const muted = useCSSVariable('--color-muted');
   if (failed) {
     return (
       <View className="items-center py-8 px-8">
@@ -38,8 +40,8 @@ export function LoadMoreFooter({
   }
   if (!loading) return <View className="h-12" />;
   return (
-    <View className="items-center py-8">
-      <Text className="text-muted font-sans text-sm">Loading more…</Text>
+    <View accessibilityLabel={`Loading more ${noun}`} className="items-center py-8">
+      <ActivityIndicator color={typeof muted === 'string' ? muted : undefined} size="small" />
     </View>
   );
 }

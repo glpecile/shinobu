@@ -106,3 +106,22 @@ posters up until this year's had loaded — even with the year no longer
 deferred. React's documented opt-out is a `key`: the wall boundaries are keyed
 by year, so a new boundary mounts and shows its skeleton at once. Format stays
 deferred: All ⇄ TV narrows the same titles, and holding them reads as intended.
+
+## Trackpad swipes on web step one page
+
+A horizontal trackpad gesture on the pager is the same `pagingEnabled` scroll
+view as a touch swipe, so it *is* meant to page — but left to the browser it
+free-scrolls for as long as macOS keeps sending momentum wheel events, then
+snaps with the same distance-scaled smooth scroll the tab tap had to escape.
+The result drifted for close to a second before landing.
+
+`SeasonPager` now listens for `wheel` on the scroll node (web only, the
+listener never sees touch) and turns a horizontal-dominant gesture into one
+page step through `onSettle`, which changes the URL and lets the tab-tap
+effect drive the 200ms scroll. Every horizontal-dominant wheel event is
+`preventDefault`ed so the browser never scrolls on top. A gesture counts once
+20px of delta has accumulated (a brush does nothing) and is then locked until
+the events go quiet for 100ms, so the momentum tail steps nothing more. A
+probe that awaits each wheel event's round trip *will* see extra steps: the
+first step's re-render stretches the gaps past 100ms. Fire the events at
+trackpad cadence without awaiting them (`scratchpad/wheel-web.mjs`).

@@ -110,6 +110,14 @@ function PosterCell({
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
+  // The list recycles cells, so a hovered cell scrolled off and reused for
+  // another poster would carry its caption along; drop it when the item
+  // changes (React's "reset state on prop change" pattern).
+  const [hoveredId, setHoveredId] = useState(item.id);
+  if (hoveredId !== item.id) {
+    setHoveredId(item.id);
+    setHovered(false);
+  }
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
   const providers = entry.sources.map((id) => PROVIDERS[id].label).join(', ');
@@ -241,11 +249,21 @@ export function PosterWall({
         paddingTop: GAP / 2,
       }}
       data={entries}
+      // Two rows ahead rather than the 250px default, which is barely one
+      // poster row: a fast fling outran it and revealed rows filling in
+      // late. Cheap now that the cells recycle.
+      drawDistance={rowHeight * 2}
       estimatedItemSize={rowHeight}
       keyExtractor={(entry) => entry.id}
       numColumns={columns}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
+      // Recycled for the diary's reason (docs/solutions/diary-scroll-jank-is-row-mount-cost.md):
+      // a cell is a gesture-handler pressable plus an image plus a gradient,
+      // and mounting a screenful of them from scratch is what tears on a
+      // fast scroll. Everything in a cell derives from the entry except the
+      // web hover flag, which `PosterCell` resets when its item changes.
+      recycleItems
       refreshControl={
         <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
       }

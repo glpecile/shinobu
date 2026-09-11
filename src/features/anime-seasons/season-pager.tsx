@@ -50,12 +50,24 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * snap suspended for its duration: under `mandatory` snap the browser
  * re-snaps every mid-page write straight back to the page it started on.
  * Reanimated's `scrollTo` is a no-op on web, hence the DOM write.
+ *
+ * A trackpad swipe on web takes the same drive. Left to the browser it free
+ * scrolls for as long as the OS keeps sending momentum, then snaps with that
+ * same distance-scaled smooth scroll, so a flick drifts for a second before
+ * it lands. A horizontal wheel gesture is one page step instead — the mobile
+ * swipe's semantics — decided once a small run of delta has accumulated and
+ * locked until the events go quiet, so the momentum tail steps nothing more.
+ * Touch on web stays the browser's snap; the wheel listener never sees it.
  */
 
 /** Quiet time after the last scroll event before a position counts as settled (web). */
 const SETTLE_MS = 120;
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
 const BOUNDARY_TOLERANCE = 2;
+/** Horizontal wheel delta (px) that counts as a swipe rather than a brush. */
+const WHEEL_STEP_PX = 20;
+/** Quiet time between wheel events that separates one gesture (momentum tail included) from the next. */
+const WHEEL_GAP_MS = 100;
 const isWeb = Platform.OS === 'web';
 
 export function SeasonPager({
@@ -80,6 +92,7 @@ export function SeasonPager({
   // Web only: the offset a tab tap is animating towards, retargeted from
   // wherever the scroll is if the next tap lands mid-flight.
   const driven = useSharedValue(0);
+  const wheel = useRef({ at: 0, sum: 0, stepped: false });
 
   useEffect(() => () => clearTimeout(settleTimer.current ?? undefined), []);
 
@@ -126,6 +139,29 @@ export function SeasonPager({
       },
     );
   }, [index, size.width, reduceMotion, progress, driven]);
+
+  useEffect(() => {
+    const node = scrollNode();
+    if (node == null) return;
+    function onWheel(event: WheelEvent) {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      const gesture = wheel.current;
+      if (event.timeStamp - gesture.at > WHEEL_GAP_MS) {
+        gesture.sum = 0;
+        gesture.stepped = false;
+      }
+      gesture.at = event.timeStamp;
+      if (gesture.stepped) return;
+      gesture.sum += event.deltaX;
+      if (Math.abs(gesture.sum) < WHEEL_STEP_PX) return;
+      gesture.stepped = true;
+      const next = ANIME_SEASONS[index + Math.sign(gesture.sum)];
+      if (next != null) onSettle(next);
+    }
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => node.removeEventListener('wheel', onWheel);
+  }, [index, onSettle]);
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;

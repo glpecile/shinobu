@@ -132,10 +132,17 @@ export function WatchlistRows({
       className="flex-1"
       contentContainerStyle={{ paddingTop: 4 }}
       data={entries}
+      // Four rows ahead so a fast fling doesn't outrun the mounts — see
+      // poster-wall.tsx.
+      drawDistance={ROW_HEIGHT * 4}
       estimatedItemSize={ROW_HEIGHT}
       keyExtractor={(entry) => entry.id}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
+      // The diary's row, recycled for the diary's reason
+      // (docs/solutions/diary-scroll-jank-is-row-mount-cost.md); the same
+      // stale-hover residual applies.
+      recycleItems
       refreshControl={
         <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
       }
