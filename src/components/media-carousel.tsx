@@ -78,11 +78,15 @@ export function MediaCarousel({
         <PresstableOpacity
           accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
           accessibilityState={{ expanded: !collapsed }}
-          className="flex-row items-center gap-2"
+          className="flex-row items-center gap-2 shrink"
           onPress={() => setSectionCollapsed(collapseKey, !collapsed)}
         >
           {provider != null && <ProviderIcon id={provider} size={16} />}
-          <Text className="text-xl font-display text-foreground">{title}</Text>
+          {/* `shrink` + one line: a long title ("Anime Series of Summer
+              2026") gives way before it pushes "View all" off the edge. */}
+          <Text className="text-xl font-display text-foreground shrink" numberOfLines={1}>
+            {title}
+          </Text>
           <Ionicons
             color={typeof muted === 'string' ? muted : undefined}
             name={collapsed ? 'chevron-down' : 'chevron-up'}
@@ -95,6 +99,7 @@ export function MediaCarousel({
           // Hover lives on a plain wrapper: pressto's pressables take
           // gesture-handler props, not RN-web pointer ones.
           <View
+            className="shrink-0"
             onPointerEnter={() => setViewAllHovered(true)}
             onPointerLeave={() => setViewAllHovered(false)}
           >
