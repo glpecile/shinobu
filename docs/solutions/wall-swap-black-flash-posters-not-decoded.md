@@ -41,3 +41,6 @@ A surface that replaces itself as one piece (a keyed wall, a swapped grid) must
 not start from opacity 0, and whatever suspense holds the old surface should
 also hold for the first screen of images. Per-cell fades are not the answer
 (`entering-animation-on-virtualized-cells-replays.md`).
+
+The blur half of the entrance is web-only since the pager landed: on iOS it was
+the jank, see `season-switch-jank-remount-and-blur-on-native.md`.

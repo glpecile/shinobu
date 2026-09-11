@@ -10,7 +10,6 @@ import {
   MIN_ANIME_YEAR,
   maxAnimeYear,
   type AnimeSeason,
-  type AnimeSeasonScope,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 
@@ -21,15 +20,17 @@ function seasonName(season: AnimeSeason): string {
   return season.charAt(0) + season.slice(1).toLowerCase();
 }
 
-const SEASON_OPTIONS = [
-  ...ANIME_SEASONS.map((season) => ({ value: season, label: seasonName(season) })),
-  { value: 'YEAR', label: 'Year', accessibilityLabel: 'Whole year' },
-] as const satisfies readonly { value: AnimeSeasonScope; label: string; accessibilityLabel?: string }[];
+const SEASON_OPTIONS = ANIME_SEASONS.map((season) => ({
+  value: season,
+  label: seasonName(season),
+}));
 
 /**
  * The seasons explorer's inputs: a year row (‹ › steps one year, the year
- * itself opens the jump sheet) over the four cours plus "Year" (the whole
- * year, the films row's scope) as a segmented control.
+ * itself opens the jump sheet) over the four cours as a segmented control.
+ * A whole-year window has no cour to pick, so the strip goes away with it:
+ * "Year" used to sit in the strip as a fifth segment, but it is a different
+ * scope, not a fifth season, and in a swipeable sequence it has no neighbour.
  */
 export function SeasonPicker({
   window,
@@ -83,12 +84,14 @@ export function SeasonPicker({
           <Ionicons color={tint(canGoForward)} name="chevron-forward" size={20} />
         </PresstableOpacity>
       </View>
-      <SegmentedControl
-        accessibilityLabel="Season"
-        onChange={(season) => onChange({ ...window, season })}
-        options={SEASON_OPTIONS}
-        value={window.season}
-      />
+      {window.season !== 'YEAR' && (
+        <SegmentedControl
+          accessibilityLabel="Season"
+          onChange={(season) => onChange({ ...window, season })}
+          options={SEASON_OPTIONS}
+          value={window.season}
+        />
+      )}
       <YearSheet
         max={maxYear}
         min={MIN_ANIME_YEAR}

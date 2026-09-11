@@ -7,7 +7,7 @@ import {
 } from 'expo-router';
 import { Suspense, useDeferredValue, useState } from 'react';
 import { Text, View } from 'react-native';
-import { css, useReducedMotion } from 'react-native-reanimated';
+import { useReducedMotion } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
 import { useCSSVariable } from 'uniwind';
 
@@ -20,7 +20,9 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { SegmentedControl } from '@/components/segmented-control';
+import { SeasonPager } from '@/features/anime-seasons/season-pager';
 import { SeasonPicker } from '@/features/anime-seasons/season-picker';
+import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { PosterWall } from '@/features/watchlist/poster-wall';
 import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
@@ -33,6 +35,7 @@ import {
   parseAnimeFormatFilter,
   parseAnimeSeasonWindow,
   type AnimeFormatFilter,
+  type AnimeSeason,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
@@ -41,26 +44,7 @@ import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { anilistQueryKeys, useSuspenseSeasonalAnimePagesQuery } from '@/state/queries/anilist';
 import { useWarmPosters } from '@/features/anime-seasons/warm-posters';
-
-/**
- * How a new wall arrives — the whole list resolving out of a blur and rising
- * into place once, on first load and on every season/format change (the list
- * is keyed by window). The *container*, never the cells: a virtualized list
- * re-mounts cells as they scroll back into view, and a per-cell entrance
- * replays on every fast scroll
- * (docs/solutions/entering-animation-on-virtualized-cells-replays.md). A CSS
- * keyframes rule rather than a layout `entering` because presets have no blur
- * and a custom Keyframe pins the element on web.
- *
- * No opacity: the previous wall is already gone when this one mounts, so a
- * fade from 0 paints the bare background for its first frames — a black flash
- * on every switch, visible frame by frame in a screen recording. Blurred
- * posters at full opacity keep the screen lit through the cut.
- */
-const wallEntering = css.keyframes({
-  from: { filter: [{ blur: 6 }], transform: [{ translateY: 8 }] },
-  to: { filter: [{ blur: 0 }], transform: [{ translateY: 0 }] },
-});
+import type { NormalizedMediaItem } from '@/types/media';
 
 function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
   const seen = new Set<string>();
@@ -88,12 +72,13 @@ const FORMAT_OPTIONS = [
 function SeasonWall({
   window,
   format,
+  onItemActions,
 }: {
   window: AnimeSeasonWindow;
   format: AnimeFormatFilter;
+  onItemActions: (item: NormalizedMediaItem) => void;
 }) {
   const pushRoute = usePushRoute();
-  const { openActions, sheetProps } = useCardActions();
   const pages = useSuspenseSeasonalAnimePagesQuery(window, format);
   useWarmPosters(anilistQueryKeys.seasonalAnimePages(window, format), pages.data.pages[0] ?? []);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,23 +109,27 @@ function SeasonWall({
   }
 
   return (
-    <>
-      <AnimatedView
-        className="flex-1"
-        style={
-          reduceMotion
-            ? undefined
-            : {
-                animationName: wallEntering,
-                animationDuration: DURATION.swap,
-                animationTimingFunction: EASE_OUT,
-              }
-        }
-        // Keyed by window: a new season is a new wall, and remounting is what
-        // plays the entrance instead of the posters hard-cutting under the
-        // same list.
-        key={`${window.season}-${window.year}-${format}`}
-      >
+    // The entrance (`wall-entrance`, per platform) plays once per mount, on
+    // the *container* — a virtualized list re-mounts cells as they scroll
+    // back into view, and a per-cell entrance replays on every fast scroll
+    // (docs/solutions/entering-animation-on-virtualized-cells-replays.md). A
+    // CSS keyframes rule rather than a layout `entering`: presets have no
+    // blur and a custom Keyframe pins the element on web. Keyed by window so
+    // a year or format change is a new wall that plays it, instead of the
+    // posters hard-cutting under the same list.
+    <AnimatedView
+      className="flex-1"
+      key={`${window.season}-${window.year}-${format}`}
+      style={
+        reduceMotion
+          ? undefined
+          : {
+              animationName: wallEntering,
+              animationDuration: DURATION.swap,
+              animationTimingFunction: EASE_OUT,
+            }
+      }
+    >
       <Layout
         entries={items.map((item) => ({ id: item.id, item, sources: [], sourceIds: [item.id] }))}
         footer={
@@ -156,36 +145,83 @@ function SeasonWall({
             ? () => void pages.fetchNextPage()
             : undefined
         }
-        onItemActions={openActions}
+        onItemActions={onItemActions}
         onItemPress={(item) => pushRoute(routes.details(item.id))}
         onRefresh={() => void refresh()}
         refreshing={refreshing}
       />
-      </AnimatedView>
-      <CardActionsSheet {...sheetProps} />
-    </>
+    </AnimatedView>
+  );
+}
+
+/**
+ * One boundary per wall, so a failing cour degrades to its own page's notice
+ * and the pager's other pages stay up. The boundary resets on a window
+ * change, so the next window gets a fresh attempt.
+ */
+function WallBoundary({
+  window,
+  format,
+  onItemActions,
+}: {
+  window: AnimeSeasonWindow;
+  format: AnimeFormatFilter;
+  onItemActions: (item: NormalizedMediaItem) => void;
+}) {
+  const { reset } = useQueryErrorResetBoundary();
+  return (
+    <QueryErrorBoundary
+      fallbackRender={({ resetErrorBoundary }) => (
+        <CenteredNotice
+          actionLabel="Try again"
+          body="AniList didn’t respond. Check your connection and try again."
+          onAction={resetErrorBoundary}
+          title="Something went wrong"
+        />
+      )}
+      onReset={reset}
+      resetKeys={[window.season, window.year, format]}
+    >
+      <Suspense fallback={<WallSkeleton />}>
+        <SeasonWall format={format} onItemActions={onItemActions} window={window} />
+      </Suspense>
+    </QueryErrorBoundary>
   );
 }
 
 export default function AnimeSeasonsScreen() {
   const router = useRouter();
   const foreground = useCSSVariable('--color-foreground');
-  const { reset } = useQueryErrorResetBoundary();
   const params = useLocalSearchParams<{ season?: string; year?: string; format?: string }>();
-  const window = parseAnimeSeasonWindow(params, animeSeasonAt(new Date()));
+  const now = animeSeasonAt(new Date());
+  const parsed = parseAnimeSeasonWindow(params, now);
   const format = parseAnimeFormatFilter(params.format);
+  // Films don't follow cours, so Movies means the whole year — the home films
+  // row's scope — and the cour strip goes away with it. A `YEAR` param under
+  // any other format (a hand-edited link) falls back to the current cour.
+  const cour: AnimeSeason = parsed.season === 'YEAR' ? now.season : parsed.season;
+  const window: AnimeSeasonWindow = {
+    season: format === 'MOVIE' ? 'YEAR' : cour,
+    year: parsed.year,
+  };
   const view = useWatchlistView();
-  // The controls track the URL instantly; the wall follows one step behind, so
-  // switching season keeps the current posters on screen until the next set
-  // has loaded instead of dropping to the loading notice for every tap.
-  const deferredSeason = useDeferredValue(window.season);
+  const { openActions, sheetProps } = useCardActions();
+  // The controls track the URL instantly; the walls follow one step behind,
+  // so changing year or format keeps the current posters on screen until the
+  // next set has loaded instead of dropping to the skeleton for every tap.
+  // Cours need no deferring: the pager keeps the neighbouring walls mounted.
   const deferredYear = useDeferredValue(window.year);
   const deferredFormat = useDeferredValue(format);
 
   // `setParams`, not a push: a different season is not a new destination,
-  // and Back should leave the screen, not walk every season tried.
+  // and Back should leave the screen, not walk every season tried. The cour
+  // param survives a whole-year window, so Movies → TV returns to the cour
+  // the user was on.
   function setWindow(next: AnimeSeasonWindow) {
-    router.setParams({ season: next.season, year: String(next.year) });
+    router.setParams({
+      ...(next.season === 'YEAR' ? {} : { season: next.season }),
+      year: String(next.year),
+    });
   }
   function setFormat(next: AnimeFormatFilter) {
     router.setParams({ format: next });
@@ -234,28 +270,30 @@ export default function AnimeSeasonsScreen() {
         <View className="flex-1" />
         <ViewToggle onChange={setWatchlistView} view={view} />
       </View>
-      {/* The controls stay mounted outside the boundary: an AniList outage on
-          one season must not take them with it, and the boundary resets on a
-          window change so the next season gets a fresh attempt. */}
-      <QueryErrorBoundary
-        fallbackRender={({ resetErrorBoundary }) => (
-          <CenteredNotice
-            actionLabel="Try again"
-            body="AniList didn’t respond. Check your connection and try again."
-            onAction={resetErrorBoundary}
-            title="Something went wrong"
-          />
-        )}
-        onReset={reset}
-        resetKeys={[window.season, window.year, format]}
-      >
-        <Suspense fallback={<WallSkeleton />}>
-          <SeasonWall
-            format={deferredFormat}
-            window={{ season: deferredSeason, year: deferredYear }}
-          />
-        </Suspense>
-      </QueryErrorBoundary>
+      {/* Branched on the deferred format, so leaving or entering Movies
+          keeps the old walls up until the new one has loaded. The controls
+          stay outside the boundaries: an AniList outage on one season must
+          not take them with it. */}
+      {deferredFormat === 'MOVIE' ? (
+        <WallBoundary
+          format={deferredFormat}
+          onItemActions={openActions}
+          window={{ season: 'YEAR', year: deferredYear }}
+        />
+      ) : (
+        <SeasonPager
+          onSettle={(season) => router.setParams({ season })}
+          renderSeason={(season) => (
+            <WallBoundary
+              format={deferredFormat}
+              onItemActions={openActions}
+              window={{ season, year: deferredYear }}
+            />
+          )}
+          season={cour}
+        />
+      )}
+      <CardActionsSheet {...sheetProps} />
     </View>
   );
 }

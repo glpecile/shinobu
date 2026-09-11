@@ -20,7 +20,7 @@ export interface AnimeSeasonWindow {
  * user-facing question, not an airing-instant comparison (that stays in
  * lib/time/has-aired.ts).
  */
-export function animeSeasonAt(date: Date): AnimeSeasonWindow {
+export function animeSeasonAt(date: Date): { season: AnimeSeason; year: number } {
   const month = date.getMonth();
   const season: AnimeSeason =
     month <= 2 ? 'WINTER' : month <= 5 ? 'SPRING' : month <= 8 ? 'SUMMER' : 'FALL';
