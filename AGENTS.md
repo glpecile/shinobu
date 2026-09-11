@@ -221,6 +221,13 @@ takes `morphLabel`.
 fallback. Reserve it for text that *changes in place* from user state (progress
 counts, the log button's episode number), not static text or high-frequency churn.
 
+**Sheets are `components/sheet`**, wrapping
+`@swmansion/react-native-bottom-sheet`. It works, so don't swap it: the
+`@expo/ui` `BottomSheet` its skill pushes (and `@gorhom/bottom-sheet`) is
+native-only, and this app's web export needs the Modal fallback that
+`sheet/index.web.tsx` provides. Direct imports of the native lib are
+lint-banned.
+
 ## Long Lists
 
 Core surfaces are hundreds-to-thousands of media cards. Use `components/List`
