@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { AniListDeps } from './deps';
-import { anilistAuthedRequest, anilistGraphQL } from './http';
+import { ANILIST_REFERER, anilistAuthedRequest, anilistGraphQL } from './http';
 
 function fakeTokens(overrides: Partial<TokenStore> = {}): TokenStore {
   return {
@@ -65,6 +65,47 @@ describe('anilistGraphQL error mapping', () => {
       expect(
         result.left._tag === 'ProviderRateLimitError' && result.left.retryAfterMs,
       ).toBe(30_000);
+    }
+  });
+
+  test('every request carries the app Referer (AniList 403s referer-less clients)', async () => {
+    let sent: RequestInit | undefined;
+    const deps: AniListDeps = {
+      tokens: fakeTokens(),
+      fetch: async (_url, init) => {
+        sent = init;
+        return Response.json({ data: { Media: { id: 1 } } });
+      },
+    };
+    await Effect.runPromise(anilistGraphQL(deps, '{ Media(id: 1) { id } }'));
+    expect(new Headers(sent?.headers).get('Referer')).toBe(ANILIST_REFERER);
+  });
+
+  test('a 403 with the "temporarily disabled" body is a refusal with its status, not a rate limit', async () => {
+    const body = {
+      errors: [
+        {
+          message: 'The AniList API has been temporarily disabled due to severe stability issues.',
+          status: 403,
+        },
+      ],
+      data: null,
+    };
+    const result = await Effect.runPromise(
+      Effect.either(
+        anilistGraphQL(
+          depsReplying(() => Response.json(body, { status: 403 })),
+          '{ Media(id: 1) { id } }',
+        ),
+      ),
+    );
+    expect(result._tag).toBe('Left');
+    if (result._tag === 'Left') {
+      expect(result.left._tag).toBe('ProviderNetworkError');
+      if (result.left._tag === 'ProviderNetworkError') {
+        expect(result.left.status).toBe(403);
+        expect(result.left.message).toContain('refused the request (HTTP 403)');
+      }
     }
   });
 

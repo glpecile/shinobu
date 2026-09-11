@@ -1,5 +1,7 @@
 import { Duration, Effect } from 'effect';
 
+import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
+
 import {
   ProviderAuthError,
   ProviderDecodeError,
@@ -12,6 +14,18 @@ import type { AniListDeps } from './deps';
 // Lives here (not config.ts) so the Effect layer stays free of react-native
 // imports — config.ts branches on Platform, which bun:test cannot load.
 export const ANILIST_GRAPHQL_URL = 'https://graphql.anilist.co';
+
+/**
+ * Sent on every request. AniList's edge answers any request *without* a
+ * `Referer` with a 403 whose body reads "The AniList API has been temporarily
+ * disabled due to severe stability issues" (2026-09-10) — browsers add the
+ * header automatically, so the web app was never affected while the native
+ * client (nitro-fetch sends none) lost every AniList row. Browsers ignore this
+ * value (`Referer` is a forbidden fetch header) and send the real page origin;
+ * natively it names the app by its own site, nothing else
+ * (docs/solutions/anilist-api-outage-403.md).
+ */
+export const ANILIST_REFERER = `${SHINOBU_WEB_DOMAIN}/`;
 
 export interface AniListGraphQLOptions {
   variables?: Record<string, unknown>;
@@ -44,6 +58,7 @@ export function anilistGraphQL<A>(
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
+            Referer: ANILIST_REFERER,
             ...(options.accessToken
               ? { Authorization: `Bearer ${options.accessToken}` }
               : {}),
@@ -86,9 +101,18 @@ export function anilistGraphQL<A>(
       if (body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))) {
         return yield* new ProviderAuthError({ provider: 'anilist', refreshFailed: true });
       }
+      // Name the refusal for what it is. A 2xx with `errors[]` is a query
+      // problem; a 4xx with the same shape is AniList declining to serve the
+      // request at all (the Referer gate above, an edge rule), and reads
+      // very differently in a log than "network error".
       return yield* new ProviderNetworkError({
         provider: 'anilist',
-        cause: new Error(`AniList GraphQL errors: ${messages}`),
+        status: response.status,
+        cause: new Error(
+          response.ok
+            ? `AniList GraphQL errors: ${messages}`
+            : `AniList refused the request (HTTP ${response.status}): ${messages}`,
+        ),
       });
     }
     if (!response.ok || body.data == null) {

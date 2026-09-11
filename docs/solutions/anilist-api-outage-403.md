@@ -26,6 +26,26 @@ GraphQL-shaped body during the outage:
 The GET body is the endpoint's own router speaking. A moved or dead host
 would 404 without that hint.
 
+## Not an outage for browsers: the 403 is a missing `Referer` (2026-09-10, later)
+
+The owner could use AniList from the web app while the simulator showed the
+403 all day. Bisecting a real Chrome request's headers with curl:
+
+| Request | Answer |
+| --- | --- |
+| No `Referer` (curl, nitro-fetch), any `User-Agent`, with or without `Origin` | 403, the "temporarily disabled" body, **no `X-RateLimit-*` headers** |
+| Any `Referer` value at all (`x` works) | 200, `X-RateLimit-Remaining: 20` of 30 |
+
+So it is an edge rule shedding referer-less (non-browser) clients during
+their incident, not rate limiting and not a query problem. Browsers set
+`Referer` automatically, which is why the web build never noticed. Fix:
+`lib/providers/anilist/http.ts` sends `Referer: https://shinobu.glpecile.xyz/`
+on every request — the app naming itself by its own site; browsers drop the
+header (forbidden fetch header) and keep sending the page origin. The
+GraphQL-error path now also carries `status` and says "AniList refused the
+request (HTTP 403)" instead of "network error", so the next time this fires
+the log names the refusal.
+
 ## Decision (owner, 2026-09-10)
 
 The check exists to catch URL rot, not outages; a first cut that day reported
