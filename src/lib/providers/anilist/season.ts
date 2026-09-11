@@ -1,15 +1,8 @@
 /** AniList's four cours — the `MediaSeason` enum values its API accepts. */
 export type AnimeSeason = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
 
-/**
- * A cour, or `YEAR` for the whole year — the explorer's fifth option and the
- * films row's scope (films don't follow cours). `YEAR` never reaches AniList:
- * the read sends no `season` argument for it.
- */
-export type AnimeSeasonScope = AnimeSeason | 'YEAR';
-
 export interface AnimeSeasonWindow {
-  season: AnimeSeasonScope;
+  season: AnimeSeason;
   year: number;
 }
 
@@ -27,9 +20,8 @@ export function animeSeasonAt(date: Date): { season: AnimeSeason; year: number }
   return { season, year: date.getFullYear() };
 }
 
-/** "Summer 2026" — display form of a season window; a whole year is just "2026". */
+/** "Summer 2026" — display form of a season window. */
 export function animeSeasonLabel({ season, year }: AnimeSeasonWindow): string {
-  if (season === 'YEAR') return String(year);
   const name = season.charAt(0) + season.slice(1).toLowerCase();
   return `${name} ${year}`;
 }
@@ -56,10 +48,7 @@ export function parseAnimeSeasonWindow(
   params: { season?: string; year?: string },
   fallback: AnimeSeasonWindow,
 ): AnimeSeasonWindow {
-  const season =
-    params.season === 'YEAR'
-      ? 'YEAR'
-      : ANIME_SEASONS.find((candidate) => candidate === params.season);
+  const season = ANIME_SEASONS.find((candidate) => candidate === params.season);
   const year = Number(params.year);
   return {
     season: season ?? fallback.season,

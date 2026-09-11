@@ -246,7 +246,7 @@ function FeedScreen() {
           <AnimeMoviesRow
             onItemActions={openActions}
             onItemPress={openDetails}
-            year={animeSeason.year}
+            season={animeSeason}
           />
         </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>

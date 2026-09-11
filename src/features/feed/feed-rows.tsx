@@ -179,16 +179,17 @@ export function SeasonalAnimeRow({
 }
 
 /**
- * The year's anime films (owner, 2026-09-10). Year-scoped, not cour-scoped —
- * films don't follow the TV cours — so "View all" opens the explorer at its
- * whole-year scope with the film filter on: the same list, one cache entry.
+ * The cour's anime films (owner, 2026-09-10) — the same cour as the series row
+ * above it, so the two read as one season rather than a season next to a year.
+ * "View all" opens the explorer on that cour with the film filter on: the same
+ * list, one cache entry.
  */
 export function AnimeMoviesRow({
-  year,
+  season,
   onItemPress,
   onItemActions,
-}: FeedRowCallbacks & { year: number }) {
-  const { data } = useSuspenseAnimeMoviesQuery(year);
+}: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
+  const { data } = useSuspenseAnimeMoviesQuery(season);
   const pushRoute = usePushRoute();
   const items = capFeedRow(useVisibleItems(data));
   return (
@@ -197,9 +198,9 @@ export function AnimeMoviesRow({
       items={items}
       onItemActions={onItemActions}
       onItemPress={onItemPress}
-      onViewAll={() => pushRoute(routes.animeSeasons({ season: 'YEAR', year }, 'MOVIE'))}
+      onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
       provider="anilist"
-      title={`Anime Movies of ${year}`}
+      title={`Anime Movies of ${animeSeasonLabel(season)}`}
     />
   );
 }

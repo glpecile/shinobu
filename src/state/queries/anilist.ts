@@ -102,7 +102,7 @@ export const anilistQueryKeys = {
   /**
    * Popular anime of one cour — keyed by season so a boundary crossing
    * refetches, and by format so the explorer's narrowing gets its own entry.
-   * The home rows are `(cour, TV)` and `(YEAR, MOVIE)`; the explorer opened
+   * The home rows are `(cour, TV)` and `(cour, MOVIE)`; the explorer opened
    * from either shares its entry.
    */
   seasonalAnime: (window: AnimeSeasonWindow, format: AnimeFormatFilter = 'ALL') =>
@@ -241,7 +241,7 @@ export function fetchSeasonalAnime(
 ): Promise<NormalizedMediaItem[]> {
   return Effect.runPromise(
     getSeasonalAnime(anilistDeps(), {
-      ...(window.season === 'YEAR' ? {} : { season: window.season }),
+      season: window.season,
       year: window.year,
       format,
       limit: SEASONAL_PAGE_SIZE,

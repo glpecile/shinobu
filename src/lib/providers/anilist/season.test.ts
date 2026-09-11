@@ -50,10 +50,11 @@ describe('parseAnimeSeasonWindow', () => {
     expect(parseAnimeSeasonWindow({}, fallback)).toEqual(fallback);
   });
 
-  it('accepts the whole-year scope, which labels as the bare year', () => {
-    const year = parseAnimeSeasonWindow({ season: 'YEAR', year: '2026' }, fallback);
-    expect(year).toEqual({ season: 'YEAR', year: 2026 });
-    expect(animeSeasonLabel(year)).toBe('2026');
+  it('falls back to the fallback cour for an unknown season param', () => {
+    expect(parseAnimeSeasonWindow({ season: 'YEAR', year: '2026' }, fallback)).toEqual({
+      season: fallback.season,
+      year: 2026,
+    });
   });
 });
 

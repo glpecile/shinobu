@@ -36,7 +36,6 @@ import {
   parseAnimeFormatFilter,
   parseAnimeSeasonWindow,
   type AnimeFormatFilter,
-  type AnimeSeason,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
@@ -195,22 +194,14 @@ export default function AnimeSeasonsScreen() {
   const foreground = useCSSVariable('--color-foreground');
   const params = useLocalSearchParams<{ season?: string; year?: string; format?: string }>();
   const now = animeSeasonAt(new Date());
-  const parsed = parseAnimeSeasonWindow(params, now);
+  const window = parseAnimeSeasonWindow(params, now);
   const format = parseAnimeFormatFilter(params.format);
-  // Films don't follow cours, so Movies means the whole year — the home films
-  // row's scope — and the cour strip goes away with it. A `YEAR` param under
-  // any other format (a hand-edited link) falls back to the current cour.
-  const cour: AnimeSeason = parsed.season === 'YEAR' ? now.season : parsed.season;
-  const window: AnimeSeasonWindow = {
-    season: format === 'MOVIE' ? 'YEAR' : cour,
-    year: parsed.year,
-  };
   const view = useWatchlistView();
   const { openActions, sheetProps } = useCardActions();
   // Where the pager is, as a continuous cour index: the pager writes it on
   // every scroll frame and the season strip's pill reads it, so the pill rides
   // the finger instead of jumping once the swipe settles.
-  const progress = useSharedValue(ANIME_SEASONS.indexOf(cour));
+  const progress = useSharedValue(ANIME_SEASONS.indexOf(window.season));
   // The format follows the URL one step behind, so All ⇄ TV keeps the current
   // posters up until the narrowed set has loaded: the same titles, fewer of
   // them. A year change is the opposite case — a different catalogue — and
@@ -223,14 +214,9 @@ export default function AnimeSeasonsScreen() {
   const deferredFormat = useDeferredValue(format);
 
   // `setParams`, not a push: a different season is not a new destination,
-  // and Back should leave the screen, not walk every season tried. The cour
-  // param survives a whole-year window, so Movies → TV returns to the cour
-  // the user was on.
+  // and Back should leave the screen, not walk every season tried.
   function setWindow(next: AnimeSeasonWindow) {
-    router.setParams({
-      ...(next.season === 'YEAR' ? {} : { season: next.season }),
-      year: String(next.year),
-    });
+    router.setParams({ season: next.season, year: String(next.year) });
   }
   function setFormat(next: AnimeFormatFilter) {
     router.setParams({ format: next });
@@ -279,32 +265,22 @@ export default function AnimeSeasonsScreen() {
         <View className="flex-1" />
         <ViewToggle onChange={setWatchlistView} view={view} />
       </View>
-      {/* Branched on the deferred format, so leaving or entering Movies
-          keeps the old walls up until the new one has loaded. The controls
-          stay outside the boundaries: an AniList outage on one season must
-          not take them with it. */}
-      {deferredFormat === 'MOVIE' ? (
-        <WallBoundary
-          format={deferredFormat}
-          key={window.year}
-          onItemActions={openActions}
-          window={{ season: 'YEAR', year: window.year }}
-        />
-      ) : (
-        <SeasonPager
-          onSettle={(season) => router.setParams({ season })}
-          progress={progress}
-          renderSeason={(season) => (
-            <WallBoundary
-              format={deferredFormat}
-              key={window.year}
-              onItemActions={openActions}
-              window={{ season, year: window.year }}
-            />
-          )}
-          season={cour}
-        />
-      )}
+      {/* Every format is cour-scoped, films included: the pager is the only
+          wall host. The controls stay outside the boundaries — an AniList
+          outage on one season must not take them with it. */}
+      <SeasonPager
+        onSettle={(season) => router.setParams({ season })}
+        progress={progress}
+        renderSeason={(season) => (
+          <WallBoundary
+            format={deferredFormat}
+            key={window.year}
+            onItemActions={openActions}
+            window={{ season, year: window.year }}
+          />
+        )}
+        season={window.season}
+      />
       <CardActionsSheet {...sheetProps} />
     </View>
   );

@@ -29,9 +29,7 @@ const SEASON_OPTIONS = ANIME_SEASONS.map((season) => ({
 /**
  * The seasons explorer's inputs: a year row (‹ › steps one year, the year
  * itself opens the jump sheet) over the four cours as a segmented control.
- * A whole-year window has no cour to pick, so the strip goes away with it:
- * "Year" used to sit in the strip as a fifth segment, but it is a different
- * scope, not a fifth season, and in a swipeable sequence it has no neighbour.
+ * Every format is cour-scoped, films included, so the strip is unconditional.
  */
 export function SeasonPicker({
   window,
@@ -88,15 +86,13 @@ export function SeasonPicker({
           <Ionicons color={tint(canGoForward)} name="chevron-forward" size={20} />
         </PresstableOpacity>
       </View>
-      {window.season !== 'YEAR' && (
-        <SegmentedControl
-          accessibilityLabel="Season"
-          onChange={(season) => onChange({ ...window, season })}
-          options={SEASON_OPTIONS}
-          progress={progress}
-          value={window.season}
-        />
-      )}
+      <SegmentedControl
+        accessibilityLabel="Season"
+        onChange={(season) => onChange({ ...window, season })}
+        options={SEASON_OPTIONS}
+        progress={progress}
+        value={window.season}
+      />
       <YearSheet
         max={maxYear}
         min={MIN_ANIME_YEAR}

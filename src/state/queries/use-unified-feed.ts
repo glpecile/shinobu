@@ -42,7 +42,7 @@ export interface UnifiedFeedResult {
   seasonalAnime: NormalizedMediaItem[];
   /** Which cour `seasonalAnime` covers — drives the row's title. */
   animeSeason: AnimeSeasonWindow;
-  /** The current year's anime films. */
+  /** The current cour's anime films. */
   animeMovies: NormalizedMediaItem[];
   /** Letterboxd watchlist (plan 0012) — empty on web, where reads are CORS-blocked. */
   yourWatchlist: NormalizedMediaItem[];
@@ -103,13 +103,6 @@ export const feedOptions = {
     queryFn: () => fetchSeasonalAnime(season, format),
     staleTime: CATALOGUE_STALE_MS,
   }),
-  // The year's films: the same read at whole-year scope, so the explorer's
-  // "Year · Movies" view is this entry and the row's "View all" costs nothing.
-  animeMovies: (year: number) => ({
-    queryKey: anilistQueryKeys.seasonalAnime({ season: 'YEAR', year }, 'MOVIE'),
-    queryFn: () => fetchSeasonalAnime({ season: 'YEAR', year }, 'MOVIE'),
-    staleTime: CATALOGUE_STALE_MS,
-  }),
   // Personal rows — only fetched while their provider is connected.
   yourWatchlist: (username: string) => ({
     queryKey: letterboxdQueryKeys.watchlist(username),
@@ -155,7 +148,7 @@ function activeFeedConfigs(
     {
       slot: 'animeMovies',
       provider: 'anilist',
-      ...feedOptions.animeMovies(season.year),
+      ...feedOptions.seasonalAnime(season, 'MOVIE'),
     },
   ];
 
@@ -195,8 +188,8 @@ export function useSuspenseSeasonalAnimeQuery(
   return useSuspenseQuery(feedOptions.seasonalAnime(season, format));
 }
 
-export function useSuspenseAnimeMoviesQuery(year: number) {
-  return useSuspenseQuery(feedOptions.animeMovies(year));
+export function useSuspenseAnimeMoviesQuery(season: AnimeSeasonWindow) {
+  return useSuspenseQuery(feedOptions.seasonalAnime(season, 'MOVIE'));
 }
 
 
