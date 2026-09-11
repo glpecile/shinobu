@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
@@ -149,9 +149,18 @@ export function PeopleRailSkeleton() {
       <View className="flex-row overflow-hidden">
         {Array.from({ length: 10 }).map((_, index) => (
           <View className="w-24 items-center mr-4" key={index}>
-            <Skeleton className="w-20 h-20 rounded-full" />
-            <Skeleton className="h-3 w-16 rounded mt-2" />
-            <Skeleton className="h-2.5 w-12 rounded mt-1.5" />
+            <Skeleton
+              className="w-20 h-20 rounded-full"
+              delay={staggerDelay(index)}
+            />
+            <Skeleton
+              className="h-3 w-16 rounded mt-2"
+              delay={staggerDelay(index)}
+            />
+            <Skeleton
+              className="h-2.5 w-12 rounded mt-1.5"
+              delay={staggerDelay(index)}
+            />
           </View>
         ))}
       </View>

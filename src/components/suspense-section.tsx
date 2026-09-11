@@ -1,5 +1,8 @@
 import { Component, Suspense, type ReactNode } from 'react';
+import { useReducedMotion } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { toast } from '@/lib/toast';
 
 interface BoundaryProps {
@@ -45,6 +48,43 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   }
 }
 
+/** Tiny: the skeleton it replaces occupied the same box. */
+const SECTION_RISE = 6;
+
+const sectionEntering = {
+  '0%': { opacity: 0, transform: [{ translateY: SECTION_RISE }] },
+  '100%': { opacity: 1, transform: [{ translateY: 0 }] },
+};
+
+/** Reduced motion keeps the fade and drops the travel. */
+const sectionFading = {
+  '0%': { opacity: 0 },
+  '100%': { opacity: 1 },
+};
+
+/**
+ * Plays on mount, which is when the suspended child resolves. A CSS animation
+ * rather than an `entering=` layout animation: the wrapper contributes its
+ * height to the scroll view's flow on web, which a layout animation pins.
+ */
+function SectionEnter({ children }: { children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <AnimatedView
+      style={{
+        animationName: reduceMotion ? sectionFading : sectionEntering,
+        animationDuration: `${DURATION.swap}ms`,
+        animationTimingFunction: EASE_OUT,
+        // Native honours it; Reanimated's web path drops it, harmlessly.
+        animationFillMode: 'both',
+      }}
+    >
+      {children}
+    </AnimatedView>
+  );
+}
+
 /**
  * Suspense boundary for a self-contained, suspense-query-backed screen
  * section: shows `fallback` (a skeleton) while the query loads, renders
@@ -58,7 +98,9 @@ export function SuspenseSection({
 }: BoundaryProps & { fallback: ReactNode }) {
   return (
     <SectionErrorBoundary resetKey={resetKey} errorToast={errorToast}>
-      <Suspense fallback={fallback}>{children}</Suspense>
+      <Suspense fallback={fallback}>
+        <SectionEnter>{children}</SectionEnter>
+      </Suspense>
     </SectionErrorBoundary>
   );
 }

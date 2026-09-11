@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { useWallMetrics } from '@/features/watchlist/poster-wall';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 
@@ -15,7 +15,7 @@ function GridSkeleton() {
           key={index}
           style={{ width: `${100 / columns}%`, aspectRatio: 2 / 3 }}
         >
-          <Skeleton className="w-full h-full rounded-md" />
+          <Skeleton className="w-full h-full rounded-md" delay={staggerDelay(index)} />
         </View>
       ))}
     </View>
@@ -28,10 +28,10 @@ function RowsSkeleton() {
     <View>
       {Array.from({ length: 8 }).map((_, index) => (
         <View className="flex-row items-center px-6 py-2.5" key={index}>
-          <Skeleton className="w-12 h-[72px] rounded" />
+          <Skeleton className="w-12 h-[72px] rounded" delay={staggerDelay(index)} />
           <View className="ml-4 gap-2">
-            <Skeleton className="h-4 w-44 rounded" />
-            <Skeleton className="h-3 w-24 rounded" />
+            <Skeleton className="h-4 w-44 rounded" delay={staggerDelay(index)} />
+            <Skeleton className="h-3 w-24 rounded" delay={staggerDelay(index)} />
           </View>
         </View>
       ))}

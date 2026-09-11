@@ -75,4 +75,7 @@ export const DURATION = {
   enter: 160,
   /** Its exit: faster still — the user has already decided to leave. */
   exit: 120,
+  /** One breath of a skeleton's pulse — ambient, so deliberately past the
+   * 300ms ceiling every other number here sits under. */
+  pulse: 1400,
 } as const;

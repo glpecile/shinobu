@@ -28,6 +28,25 @@ your summary, not part of the change, unless the requested behaviour can't work
 without it. Commit tests only where the repo already tests that kind of change,
 sized like the neighbouring `*.test.ts`; scratch checks stay scratch.
 
+## Comments
+
+Code is the description. A comment earns its place only by carrying what the
+code can't — a *why*, a constraint, a platform trap, where a number came from.
+Never restate the next line, never narrate what an earlier version did, never
+spend a paragraph where a clause works; a docblock names the contract, not the
+reasoning behind every choice. `docs/solutions/` is for **issues** — a solved
+bug or a non-obvious platform behaviour — not for design notes.
+
+## Effects & Timers
+
+`useEffect` and `setTimeout` are escape hatches, not tools. An effect
+subscribes to something outside React and cleans it up; a timer is for
+something that genuinely happens later in wall-clock time. Deriving state,
+sequencing UI, or waiting for an animation to finish is none of those — compute
+it during render, or let the platform own the timing. Reaching for either
+usually means the design is wrong by one state variable, and the fix is to
+delete the variable, not to schedule around it.
+
 ## Tech Stack
 
 - **Expo** (Router): one codebase for Web, iPadOS, iOS, Android.
@@ -285,6 +304,13 @@ Prefer Suspense + error boundaries over if-guard branching (`if (isLoading) retu
   a screen needing its own fallback exports Expo Router's `ErrorBoundary`.
 - Still legitimate: cross-provider aggregate status and mutations. Branching on
   *one* query's `isLoading`/`isError` is the smell this bans.
+- **One skeleton primitive.** Every placeholder composes `components/skeleton`;
+  never hand-roll a pulse beside it. Blocks in a row or grid take
+  `delay={staggerDelay(index)}`; blocks of one card share a delay.
+- **A resolved section enters, it never cuts.** `SuspenseSection` fades and
+  settles its children in, and `components/image` crossfades artwork on the
+  same beat — one more reason a section belongs behind it rather than behind an
+  `isLoading` branch.
 
 ## Query Hook Conventions
 
