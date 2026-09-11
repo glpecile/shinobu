@@ -7,7 +7,7 @@ import {
   type EntryOrExitLayoutType,
 } from 'react-native-reanimated';
 
-import { AnimatedView } from '@/components/animated-view';
+import { AnimatedText, AnimatedView } from '@/components/animated-view';
 import { PresstableScale } from '@/components/presstable';
 import {
   calendarBadges,
@@ -19,8 +19,8 @@ import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { EpisodeCard, STACK_OFFSET } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
-import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
+import { useThemeColor } from '@/lib/theme-color';
 import { shortWeekdayName } from '@/lib/time/relative-day';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -60,38 +60,53 @@ const DAY_CONTENT_MIN_HEIGHT = 188 + STACK_HEADROOM;
 const MAX_DAY_DOTS = 5;
 
 /**
- * The day's cards settle in when the user picks a different day, instead of the
- * old hard cut where one set of cards was replaced by another mid-blink. The
- * travel is deliberately tiny (6px): the tiles above already say *what*
- * changed, so this only needs to say *that* something did. Module scope, per
- * Reanimated's animation-builder performance rule.
+ * The day's cards settle in when the user picks a different day. Signed travel,
+ * because the strip is a timeline: a later day arrives from the right, an
+ * earlier one from the left. Module scope, per Reanimated's builder rule.
  */
-const DAY_CONTENT_RISE = 6;
+const DAY_CONTENT_SLIDE = 10;
 
-const dayContentEntering = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: DAY_CONTENT_RISE }] },
-  100: {
-    opacity: 1,
-    transform: [{ translateY: 0 }],
-    easing: KEYFRAME_EASE_OUT,
-  },
-}).duration(DURATION.swap);
+const slideFrom = (from: number) =>
+  new Keyframe({
+    0: { opacity: 0, transform: [{ translateX: from }] },
+    100: {
+      opacity: 1,
+      transform: [{ translateX: 0 }],
+      easing: KEYFRAME_EASE_OUT,
+    },
+  }).duration(DURATION.swap);
+
+/** Forward in the week: the new cards come in from the right. */
+const dayContentForward = slideFrom(DAY_CONTENT_SLIDE);
+const dayContentBackward = slideFrom(-DAY_CONTENT_SLIDE);
 
 /** Reduced motion keeps the fade and drops the travel (matches the lightbox). */
 const dayContentFading = FadeIn.duration(DURATION.swap);
 
-/**
- * `undefined` until the user has actually switched days: an element sitting in
- * its resting position when the feed first paints has no reason to play an
- * entrance — the motion belongs to the state change, not the page load.
- */
+/** `undefined` until a day is actually switched: the motion belongs to the
+ * state change, not the page load. */
 function dayContentAnimation(
-  switched: boolean,
+  direction: number,
   reduceMotion: boolean,
 ): EntryOrExitLayoutType | undefined {
-  if (!switched) return undefined;
-  return reduceMotion ? dayContentFading : dayContentEntering;
+  if (direction === 0) return undefined;
+  if (reduceMotion) return dayContentFading;
+  return direction > 0 ? dayContentForward : dayContentBackward;
 }
+
+/** Label, date and dots ride the same curve as the fill under them, instead
+ * of flipping instantly against a fading background. */
+const LABEL_TRANSITION = {
+  transitionProperty: 'color',
+  transitionDuration: DURATION.color,
+  transitionTimingFunction: EASE_OUT,
+} as const;
+
+const DOT_TRANSITION = {
+  transitionProperty: 'backgroundColor',
+  transitionDuration: DURATION.color,
+  transitionTimingFunction: EASE_OUT,
+} as const;
 
 /**
  * The empty-day line. "Today" is special: its episodes have already aired (and
@@ -110,7 +125,8 @@ export function UpNextSection({
 }: UpNextSectionProps) {
   const { continueWatching, calendar, now } = useUpNextSections();
   const [selectedOffset, setSelectedOffset] = useState(0);
-  const [switchedDay, setSwitchedDay] = useState(false);
+  /** 0 until the first switch, then +1 for a later day and -1 for an earlier. */
+  const [direction, setDirection] = useState(0);
   // Tallest day content laid out so far — what empty days must reserve so the
   // feed below never moves when tapping between days. Monotonic max, so the
   // measurement can never feed back into itself.
@@ -118,6 +134,10 @@ export function UpNextSection({
     DAY_CONTENT_MIN_HEIGHT,
   );
   const reduceMotion = useReducedMotion();
+  const accent = useThemeColor('--color-accent');
+  const accentForeground = useThemeColor('--color-accent-foreground');
+  const foreground = useThemeColor('--color-foreground');
+  const muted = useThemeColor('--color-muted');
 
   if (continueWatching.length === 0 && calendar.length === 0) return null;
 
@@ -195,7 +215,8 @@ export function UpNextSection({
                 accessibilityState={{ selected: isSelected }}
                 className="mr-2"
                 onPress={() => {
-                  setSwitchedDay(true);
+                  if (day.offset === selectedOffset) return;
+                  setDirection(day.offset > selectedOffset ? 1 : -1);
                   setSelectedOffset(day.offset);
                 }}
               >
@@ -224,22 +245,26 @@ export function UpNextSection({
                       transitionTimingFunction: EASE_OUT,
                     }}
                   />
-                  <Text
-                    className={cn(
-                      'font-sans text-xs',
-                      isSelected ? 'text-accent-foreground' : 'text-muted',
-                    )}
+                  {/* Colour as a style, not a class — a className swap is a
+                      hard cut. `useThemeColor` per AGENTS.md. */}
+                  <AnimatedText
+                    className="font-sans text-xs"
+                    style={{
+                      color: isSelected ? accentForeground : muted,
+                      ...LABEL_TRANSITION,
+                    }}
                   >
                     {shortWeekdayName(day.date)}
-                  </Text>
-                  <Text
-                    className={cn(
-                      'font-sans-semibold text-base',
-                      isSelected ? 'text-accent-foreground' : 'text-foreground',
-                    )}
+                  </AnimatedText>
+                  <AnimatedText
+                    className="font-sans-semibold text-base"
+                    style={{
+                      color: isSelected ? accentForeground : foreground,
+                      ...LABEL_TRANSITION,
+                    }}
                   >
                     {day.date.getDate()}
-                  </Text>
+                  </AnimatedText>
                   {/* One dot per *card* airing that day (capped), so the strip
                       conveys *how much* at a glance, not just whether. Cards,
                       not episodes: a season drop is one thing happening that
@@ -251,12 +276,13 @@ export function UpNextSection({
                     {Array.from({
                       length: Math.min(day.groups.length, MAX_DAY_DOTS),
                     }).map((_, index) => (
-                      <View
+                      <AnimatedView
                         key={index}
-                        className={cn(
-                          'w-1.5 h-1.5 rounded-full',
-                          isSelected ? 'bg-accent-foreground' : 'bg-accent',
-                        )}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          backgroundColor: isSelected ? accentForeground : accent,
+                          ...DOT_TRANSITION,
+                        }}
                       />
                     ))}
                   </View>
@@ -285,7 +311,7 @@ export function UpNextSection({
           <AnimatedView
             key={selected.offset}
             className="flex-1"
-            entering={dayContentAnimation(switchedDay, reduceMotion)}
+            entering={dayContentAnimation(direction, reduceMotion)}
           >
             {selected.groups.length === 0 ? (
               // Centered in the reserved space so the empty day reads as a

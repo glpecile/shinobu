@@ -28,6 +28,15 @@ your summary, not part of the change, unless the requested behaviour can't work
 without it. Commit tests only where the repo already tests that kind of change,
 sized like the neighbouring `*.test.ts`; scratch checks stay scratch.
 
+## Comments
+
+Code is the description. A comment earns its place only by carrying what the
+code can't — a *why*, a constraint, a platform trap, where a number came from.
+Never restate the next line, never narrate what an earlier version did, never
+spend a paragraph where a clause works; a docblock names the contract, not the
+reasoning behind every choice. `docs/solutions/` is for **issues** — a solved
+bug or a non-obvious platform behaviour — not for design notes.
+
 ## Tech Stack
 
 - **Expo** (Router): one codebase for Web, iPadOS, iOS, Android.
@@ -285,17 +294,13 @@ Prefer Suspense + error boundaries over if-guard branching (`if (isLoading) retu
   a screen needing its own fallback exports Expo Router's `ErrorBoundary`.
 - Still legitimate: cross-provider aggregate status and mutations. Branching on
   *one* query's `isLoading`/`isError` is the smell this bans.
-- **One skeleton primitive.** Every placeholder composes `components/skeleton`
-  (`Skeleton` + `staggerDelay`); never hand-roll a pulse or a sweeping
-  highlight beside it. Blocks in a row or grid take
-  `delay={staggerDelay(index)}` so the row reads as a wave rather than one
-  blinking rectangle; blocks belonging to *one* card share a delay so the card
-  breathes as a unit.
+- **One skeleton primitive.** Every placeholder composes `components/skeleton`;
+  never hand-roll a pulse beside it. Blocks in a row or grid take
+  `delay={staggerDelay(index)}`; blocks of one card share a delay.
 - **A resolved section enters, it never cuts.** `SuspenseSection` fades and
-  settles its children in (`DURATION.swap`, `EASE_OUT`), which is the other
-  reason a section belongs behind it rather than behind an `isLoading` branch.
-  Artwork does the same on its own — `components/image` crossfades every
-  poster in at the same beat.
+  settles its children in, and `components/image` crossfades artwork on the
+  same beat — one more reason a section belongs behind it rather than behind an
+  `isLoading` branch.
 
 ## Query Hook Conventions
 

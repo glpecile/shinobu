@@ -48,12 +48,7 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   }
 }
 
-/**
- * The travel a resolved section makes as it lands. Tiny on purpose: the
- * skeleton it replaces occupies the same box, so this only has to say
- * *something arrived*, not move anything anywhere. Anything larger and a feed
- * of six sections resolving one by one reads as the page shuffling itself.
- */
+/** Tiny: the skeleton it replaces occupied the same box. */
 const SECTION_RISE = 6;
 
 const sectionEntering = {
@@ -61,24 +56,16 @@ const sectionEntering = {
   '100%': { opacity: 1, transform: [{ translateY: 0 }] },
 };
 
-/** Reduced motion keeps the fade (it explains the swap) and drops the travel. */
+/** Reduced motion keeps the fade and drops the travel. */
 const sectionFading = {
   '0%': { opacity: 0 },
   '100%': { opacity: 1 },
 };
 
 /**
- * The section's arrival. A Reanimated *CSS* animation rather than an
- * `entering=` layout animation: this wrapper has to contribute its height to
- * the scroll view's flow on web, and a layout animation pins the element there
- * (same reason `features/log-media/tag-picker.tsx` and the catch-up sheet use
- * presets instead of custom `Keyframe`s).
- *
- * It plays on mount, which is exactly when the suspended child resolves —
- * content lands as a fade-and-settle instead of the hard cut a skeleton
- * swapping for real content otherwise makes. A section whose query was already
- * cached mounts immediately and plays the same 180ms, so a warm screen and a
- * cold one arrive the same way.
+ * Plays on mount, which is when the suspended child resolves. A CSS animation
+ * rather than an `entering=` layout animation: the wrapper contributes its
+ * height to the scroll view's flow on web, which a layout animation pins.
  */
 function SectionEnter({ children }: { children: ReactNode }) {
   const reduceMotion = useReducedMotion();
@@ -89,10 +76,7 @@ function SectionEnter({ children }: { children: ReactNode }) {
         animationName: reduceMotion ? sectionFading : sectionEntering,
         animationDuration: `${DURATION.swap}ms`,
         animationTimingFunction: EASE_OUT,
-        // Holds the 0% frame until the first animated frame paints. Native
-        // honours it; Reanimated's web path drops it (computed fill-mode comes
-        // back `none`), which is harmless — an animation with no delay starts
-        // on its 0% frame there anyway.
+        // Native honours it; Reanimated's web path drops it, harmlessly.
         animationFillMode: 'both',
       }}
     >

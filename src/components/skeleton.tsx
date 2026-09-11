@@ -13,16 +13,9 @@ const pulse = {
 };
 
 /**
- * Phase offset for the `index`-th block of a group, in ms. A row of blocks all
- * breathing on the same frame reads as one flashing rectangle — the eye sees
- * the whole row blink. Offsetting each block by a beat turns that into a wave
- * travelling across the row, which is what makes a loading state read as
- * *loading* rather than as broken chrome.
- *
- * Wrapped at five steps: past that the last card in a wide row would start
- * most of a cycle behind the first and the wave stops reading as one gesture.
- * 80ms a step, so a whole wave (320ms) stays inside the 30–80ms-per-item band
- * that keeps a stagger from feeling like latency.
+ * Phase offset for the `index`-th block of a group, in ms: blocks pulsing on
+ * the same frame read as one rectangle blinking. Wrapped at five steps so the
+ * last card in a wide row isn't most of a cycle behind the first.
  */
 export function staggerDelay(index: number): number {
   return (index % 5) * 80;
@@ -30,13 +23,10 @@ export function staggerDelay(index: number): number {
 
 /**
  * A pulsing placeholder block; size/shape come from the caller's className
- * (e.g. "w-20 h-20 rounded-full"). It makes no assumptions about dimensions,
- * so it composes into any layout — every skeleton in the app is built out of
- * it, which is what keeps one loading vocabulary across screens.
+ * (e.g. "w-20 h-20 rounded-full"). Every skeleton in the app composes this.
  *
- * Pass `delay` (from `staggerDelay`) for a block that sits in a row or grid of
- * siblings. Blocks belonging to *one* card (art + its two text lines) share a
- * delay so the card breathes as a unit.
+ * Pass `delay` (from `staggerDelay`) in a row or grid; blocks belonging to one
+ * card share a delay so it breathes as a unit.
  */
 export function Skeleton({
   className,
@@ -45,9 +35,7 @@ export function Skeleton({
   className?: string;
   delay?: number;
 }) {
-  // Reduced motion drops the loop entirely rather than softening it: this one
-  // repeats until the network answers, and an ambient pulse is exactly the
-  // kind of unrequested movement the setting is asking us to stop.
+  // Dropped entirely, not softened: this loop runs until the network answers.
   const reduceMotion = useReducedMotion();
 
   return (
@@ -57,9 +45,8 @@ export function Skeleton({
         reduceMotion
           ? { opacity: 0.75 }
           : {
-              // Matches the keyframe's 0%, so a delayed block waits at the dim
-              // end of the cycle instead of sitting fully opaque and snapping
-              // down when its turn arrives.
+              // The keyframe's 0%, so a delayed block waits dim rather than
+              // snapping down when its turn arrives.
               opacity: 0.5,
               animationName: pulse,
               animationDuration: `${DURATION.pulse}ms`,

@@ -15,15 +15,9 @@ import { DURATION } from '@/lib/motion';
 const StyledImage = withUniwind(ExpoImage);
 
 /**
- * Artwork crossfades in instead of snapping from an empty box to a full
- * poster, which is the same hard cut the feed's skeletons used to make. It is
- * the one *default* here rather than a per-call-site prop because every image
- * in the app arrives over the network: a poster is either cached (expo-image
- * paints it immediately and the fade never runs) or it is late, and a late one
- * should land like everything else on the screen does.
- *
- * `DURATION.swap` — the same beat a resolved `SuspenseSection` uses, so a row
- * of posters filling in reads as one event with the section that carries them.
+ * Artwork crossfades in rather than snapping, on the same beat a resolved
+ * `SuspenseSection` uses. A default, not a per-call-site prop: every image here
+ * arrives over the network, and a cached one paints before the fade can run.
  */
 const DEFAULT_TRANSITION: ImageProps['transition'] = {
   duration: DURATION.swap,

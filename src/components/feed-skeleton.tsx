@@ -7,13 +7,7 @@ import { cn } from '@/lib/cn';
 const CARD_WIDTH = 160;
 const CARD_GAP = 12;
 
-/**
- * One poster-shaped block, nothing else. `MediaCard` paints its title *over*
- * the artwork, so a card that hasn't loaded is honestly a single rectangle —
- * the old version drew a fake scrim and two fake title bars over a sweeping
- * highlight, which is three shapes standing in for one and read as a
- * half-rendered card rather than a placeholder.
- */
+/** One block: `MediaCard` paints its title over the artwork, not below it. */
 function SkeletonCard({ index }: { index: number }) {
   return (
     <Skeleton
@@ -58,11 +52,7 @@ export function FeedRowSkeleton() {
 // Must stay in sync with the Up Next card (w-64 = 256, h-36 art = 144).
 const LANDSCAPE_WIDTH = 256;
 
-/**
- * The Up Next card's shape: art, then a title and a detail line *below* it
- * (unlike the poster cards, whose text sits on the artwork). All three share
- * one delay so the card breathes as a single object.
- */
+/** Art plus two text lines below it, unlike the poster cards. */
 function SkeletonLandscapeCard({ index }: { index: number }) {
   const delay = staggerDelay(index);
   return (
