@@ -173,7 +173,7 @@ export function SeasonalAnimeRow({
       onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
       provider="anilist"
-      title={`Anime Series of ${animeSeasonLabel(season)}`}
+      title={`Anime of ${animeSeasonLabel(season)}`}
     />
   );
 }
