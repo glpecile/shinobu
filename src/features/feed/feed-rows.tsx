@@ -179,10 +179,12 @@ export function SeasonalAnimeRow({
 }
 
 /**
- * The cour's anime films (owner, 2026-09-10) — the same cour as the series row
- * above it, so the two read as one season rather than a season next to a year.
- * "View all" opens the explorer on that cour with the film filter on: the same
- * list, one cache entry.
+ * The cour's anime films (owner, 2026-09-10) — "Films of Summer 2026" under
+ * the AniList mark, where "Anime Movies of …" said the same thing twice and
+ * truncated for it. The same cour as the series row above it, so the two read
+ * as one season rather than a season next to a year; "View all" opens the
+ * explorer on that cour with the film filter on — the same list, one cache
+ * entry.
  */
 export function AnimeMoviesRow({
   season,
@@ -200,7 +202,7 @@ export function AnimeMoviesRow({
       onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
       provider="anilist"
-      title={`Anime Movies of ${animeSeasonLabel(season)}`}
+      title={`Films of ${animeSeasonLabel(season)}`}
     />
   );
 }

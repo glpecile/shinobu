@@ -5,7 +5,7 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { Suspense, useDeferredValue, useState } from 'react';
+import { Suspense, startTransition, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
@@ -189,6 +189,36 @@ function WallBoundary({
   );
 }
 
+/**
+ * The format, delivered once the segmented control's pill has finished sliding
+ * — and as a transition, so the wall it feeds keeps its posters up while the
+ * new ones load instead of dropping to a skeleton (the `useDeferredValue` this
+ * replaces did the second half alone).
+ *
+ * The wait is for iOS. The pill is a Reanimated CSS transition: on web the
+ * browser composites it off the main thread, so nothing the app does can
+ * disturb it, but on native it runs on the UI thread — the thread that also
+ * mounts native views. A format change unmounts one Legend List of poster
+ * cells and mounts another, the expensive frame this screen already went to a
+ * pager to avoid for cours
+ * (docs/solutions/season-switch-jank-remount-and-blur-on-native.md), and with
+ * the home row's entry already cached it landed a frame or two after the tap:
+ * right across the pill's 200ms. Waiting the slide out leaves it a quiet
+ * thread, and the swap then reads as the content following the control.
+ */
+function useFormatAfterThePill(format: AnimeFormatFilter): AnimeFormatFilter {
+  const [settled, setSettled] = useState(format);
+  useEffect(() => {
+    if (settled === format) return;
+    const timer = setTimeout(
+      () => startTransition(() => setSettled(format)),
+      DURATION.toggle,
+    );
+    return () => clearTimeout(timer);
+  }, [format, settled]);
+  return settled;
+}
+
 export default function AnimeSeasonsScreen() {
   const router = useRouter();
   const foreground = useCSSVariable('--color-foreground');
@@ -202,7 +232,7 @@ export default function AnimeSeasonsScreen() {
   // every scroll frame and the season strip's pill reads it, so the pill rides
   // the finger instead of jumping once the swipe settles.
   const progress = useSharedValue(ANIME_SEASONS.indexOf(window.season));
-  // The format follows the URL one step behind, so All ⇄ TV keeps the current
+  // The format follows the URL a beat behind, so All ⇄ TV keeps the current
   // posters up until the narrowed set has loaded: the same titles, fewer of
   // them. A year change is the opposite case — a different catalogue — and
   // holding last year's posters until this year's arrive reads as the tap
@@ -211,7 +241,7 @@ export default function AnimeSeasonsScreen() {
   // render suspends, so the boundaries below are *keyed* by year: a new
   // boundary shows its skeleton at once (React's documented opt-out). Cours
   // need neither: the pager keeps the neighbouring walls mounted.
-  const deferredFormat = useDeferredValue(format);
+  const deferredFormat = useFormatAfterThePill(format);
 
   // `setParams`, not a push: a different season is not a new destination,
   // and Back should leave the screen, not walk every season tried.
