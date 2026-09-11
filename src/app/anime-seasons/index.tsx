@@ -39,23 +39,28 @@ import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view';
 import { DURATION, EASE_OUT } from '@/lib/motion';
-import { useSuspenseSeasonalAnimePagesQuery } from '@/state/queries/anilist';
+import { anilistQueryKeys, useSuspenseSeasonalAnimePagesQuery } from '@/state/queries/anilist';
+import { useWarmPosters } from '@/features/anime-seasons/warm-posters';
 
 /**
- * How a new wall arrives — the whole list resolving out of a blur, rising and
- * fading in once, on first load and on every season/format change (the list is
- * keyed by window). The *container*, never the cells: a virtualized list
+ * How a new wall arrives — the whole list resolving out of a blur and rising
+ * into place once, on first load and on every season/format change (the list
+ * is keyed by window). The *container*, never the cells: a virtualized list
  * re-mounts cells as they scroll back into view, and a per-cell entrance
  * replays on every fast scroll
  * (docs/solutions/entering-animation-on-virtualized-cells-replays.md). A CSS
  * keyframes rule rather than a layout `entering` because presets have no blur
  * and a custom Keyframe pins the element on web.
+ *
+ * No opacity: the previous wall is already gone when this one mounts, so a
+ * fade from 0 paints the bare background for its first frames — a black flash
+ * on every switch, visible frame by frame in a screen recording. Blurred
+ * posters at full opacity keep the screen lit through the cut.
  */
 const wallEntering = css.keyframes({
-  from: { opacity: 0, filter: [{ blur: 6 }], transform: [{ translateY: 8 }] },
-  to: { opacity: 1, filter: [{ blur: 0 }], transform: [{ translateY: 0 }] },
+  from: { filter: [{ blur: 6 }], transform: [{ translateY: 8 }] },
+  to: { filter: [{ blur: 0 }], transform: [{ translateY: 0 }] },
 });
-const wallFading = css.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
 
 function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
   const seen = new Set<string>();
@@ -90,6 +95,7 @@ function SeasonWall({
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
   const pages = useSuspenseSeasonalAnimePagesQuery(window, format);
+  useWarmPosters(anilistQueryKeys.seasonalAnimePages(window, format), pages.data.pages[0] ?? []);
   const [refreshing, setRefreshing] = useState(false);
   // AniList's popularity sort is not stable across pages, so a title can sit
   // on the tail of one page and the head of the next; the list needs unique
@@ -121,11 +127,15 @@ function SeasonWall({
     <>
       <AnimatedView
         className="flex-1"
-        style={{
-          animationName: reduceMotion ? wallFading : wallEntering,
-          animationDuration: DURATION.swap,
-          animationTimingFunction: EASE_OUT,
-        }}
+        style={
+          reduceMotion
+            ? undefined
+            : {
+                animationName: wallEntering,
+                animationDuration: DURATION.swap,
+                animationTimingFunction: EASE_OUT,
+              }
+        }
         // Keyed by window: a new season is a new wall, and remounting is what
         // plays the entrance instead of the posters hard-cutting under the
         // same list.

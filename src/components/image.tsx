@@ -10,3 +10,10 @@ import { withUniwind } from 'uniwind';
  * no-restricted-imports in .oxlintrc.json.
  */
 export const Image = withUniwind(ExpoImage);
+
+/**
+ * Warm the image cache for a batch of URIs (expo-image's disk/memory cache on
+ * native, the browser's on web). Resolves once every image has loaded, or as
+ * soon as one fails — callers only wait on it, never read the result.
+ */
+export const prefetchImages = (uris: string[]): Promise<boolean> => ExpoImage.prefetch(uris);
