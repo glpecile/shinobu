@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { LayoutAnimation, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -7,17 +7,31 @@ import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 
+const WEB = process.env.EXPO_OS === 'web';
+
+/**
+ * Native disclosure. An animated `height` means a Reanimated layout commit per
+ * frame, and on iOS that reflows the whole screen below the paragraph — one
+ * CoreAnimation pass over the real layout diff is what the platform is for.
+ */
+const DISCLOSURE_LAYOUT = LayoutAnimation.create(
+  DURATION.toggle,
+  LayoutAnimation.Types.easeInEaseOut,
+  LayoutAnimation.Properties.opacity,
+);
+
 /**
  * Body text clamped to `lines` with a Read more toggle. Whether the text
  * overflows depends on viewport width and font metrics, so it's measured: an
  * invisible unclamped copy lays out alongside the clamped one, and the toggle
- * renders only when the full height exceeds the clamped height. Those same two
- * numbers are what the box transitions between when it opens.
+ * renders only when the full height exceeds the clamped height. Web opens by
+ * transitioning between those two heights; native hands the same change to
+ * `LayoutAnimation`.
  */
 export function ExpandableText({ text, lines = 2 }: { text: string; lines?: number }) {
   const [expanded, setExpanded] = useState(false);
-  // Lags `expanded` on the way down by the transition: re-clamping on press
-  // would snap the paragraph to two lines under a box still closing over it.
+  // Web only: lags `expanded` on the way down by the transition, so the
+  // paragraph isn't snapped to two lines under a box still closing over it.
   const [clamped, setClamped] = useState(true);
   const [clampedHeight, setClampedHeight] = useState(0);
   const [fullHeight, setFullHeight] = useState(0);
@@ -33,6 +47,12 @@ export function ExpandableText({ text, lines = 2 }: { text: string; lines?: numb
   );
 
   function toggle() {
+    if (!WEB) {
+      if (!reduceMotion) LayoutAnimation.configureNext(DISCLOSURE_LAYOUT);
+      setClamped(expanded);
+      setExpanded(!expanded);
+      return;
+    }
     if (reclampTimer.current != null) clearTimeout(reclampTimer.current);
     if (expanded) {
       setExpanded(false);
@@ -48,7 +68,7 @@ export function ExpandableText({ text, lines = 2 }: { text: string; lines?: numb
       <AnimatedView
         className="overflow-hidden"
         style={
-          clampable && clampedHeight > 0
+          WEB && clampable && clampedHeight > 0
             ? {
                 height: expanded ? fullHeight : clampedHeight,
                 transitionProperty: 'height',
