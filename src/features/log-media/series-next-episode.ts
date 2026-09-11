@@ -1,3 +1,4 @@
+import { episodeCode } from '@/features/episode-details/episode-label';
 import { hasAired } from '@/lib/time/has-aired';
 import type { SimklLibraryEntry } from '@/lib/providers/simkl/normalize';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
@@ -173,5 +174,5 @@ export function seriesEpisodeLabel(episode: {
   season: number;
   number: number;
 }): string {
-  return `S${episode.season}E${episode.number}`;
+  return episodeCode(episode.season, episode.number);
 }

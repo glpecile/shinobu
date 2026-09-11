@@ -86,6 +86,7 @@ function ProviderSheetContent({
       <View className="mt-5">
         {connected ? (
           <Button
+            icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
             onPress={() => {
               disconnect(id);

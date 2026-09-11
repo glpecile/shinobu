@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 
+import { Button } from '@/components/button';
 import Head from '@/components/head';
 import {
   Text,
@@ -111,6 +112,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
           Home-specific chrome around it. */}
       <EmptyStateTile
         cta={{
+          icon: <Button.Icon name="link-outline" />,
           label: 'Connect your trackers',
           onPress: () => pushRoute(routes.connect),
         }}

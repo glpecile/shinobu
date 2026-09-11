@@ -40,8 +40,14 @@ export function TraktMigrationBanner({ onReconnect }: { onReconnect: () => void 
         (free) Trakt API app.
       </Text>
       <View className="flex-row items-center gap-3">
-        <Button label="Reconnect Trakt" onPress={onReconnect} size="sm" />
         <Button
+          icon={<Button.Icon name="link-outline" />}
+          label="Reconnect Trakt"
+          onPress={onReconnect}
+          size="sm"
+        />
+        <Button
+          icon={<Button.Icon name="close" />}
           label="Not now"
           onPress={() => {
             dismissedThisLaunch = true;

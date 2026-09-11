@@ -56,6 +56,7 @@ export function ConnectSerializdButton() {
         </Text>
       )}
       <Button
+        icon={<Button.Icon name="link-outline" />}
         label="Sign in to Serializd"
         // The WebView closes on capture and the token is validated *after* it
         // is gone, so without a spinner here that gap looks like nothing

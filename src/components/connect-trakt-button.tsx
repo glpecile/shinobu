@@ -343,6 +343,7 @@ export function ConnectTraktButton() {
           </Text>
         )}
         <Button
+          icon={<Button.Icon name="link-outline" />}
           label="Save & Connect"
           loading={isSubmitting || status === 'connecting'}
           loadingLabel="Connecting…"
@@ -360,6 +361,7 @@ export function ConnectTraktButton() {
         </Text>
       )}
       <Button
+        icon={<Button.Icon name="link-outline" />}
         label="Connect Trakt"
         loading={status === 'connecting'}
         loadingLabel="Connecting…"

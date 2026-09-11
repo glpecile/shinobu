@@ -269,6 +269,7 @@ export function LogConfirmSheet({
       <Button
         className="mt-6"
         disabled={selectedProviders.length === 0}
+        icon={<Button.Icon name="eye" />}
         label={confirmLabel}
         loading={pending}
         loadingLabel={pendingLabel}
@@ -276,6 +277,7 @@ export function LogConfirmSheet({
       />
       <Button
         className="mt-2"
+        icon={<Button.Icon name="close" />}
         label="Cancel"
         onPress={onClose}
         variant="quiet"

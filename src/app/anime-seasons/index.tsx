@@ -10,6 +10,7 @@ import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
 
+import { Button } from '@/components/button';
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
@@ -181,6 +182,7 @@ function WallBoundary({
     <QueryErrorBoundary
       fallbackRender={({ resetErrorBoundary }) => (
         <CenteredNotice
+          actionIcon={<Button.Icon name="refresh" />}
           actionLabel="Try again"
           body="AniList didn’t respond. Check your connection and try again."
           onAction={resetErrorBoundary}
@@ -342,6 +344,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <View className="flex-1 bg-background">
       <CenteredNotice
+        actionIcon={<Button.Icon name="refresh" />}
         actionLabel="Try again"
         body="The season couldn’t be displayed."
         onAction={retry}

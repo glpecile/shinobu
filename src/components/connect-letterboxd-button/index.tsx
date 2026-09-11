@@ -104,6 +104,7 @@ export function ConnectLetterboxdButton() {
         </Text>
       )}
       <Button
+        icon={<Button.Icon name="link-outline" />}
         label="Connect Letterboxd"
         loading={status === 'checking'}
         loadingLabel="Checking…"

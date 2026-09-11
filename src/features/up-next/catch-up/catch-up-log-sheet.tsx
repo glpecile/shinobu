@@ -454,6 +454,7 @@ function CatchUpSession({
               <Button
                 className="mt-6"
                 disabled={selectedProviders.length === 0}
+                icon={<Button.Icon name="eye" />}
                 label={chainLabel(code, { landed, failed: problems.length })}
                 loading={awaiting}
                 loadingLabel="Logging…"
@@ -463,6 +464,9 @@ function CatchUpSession({
             )}
             <Button
               className={currentLanded ? 'mt-6' : 'mt-2'}
+              // Nothing written yet, so leaving is a dismissal; once a row has
+              // landed the same button is the end of the chain.
+              icon={<Button.Icon name={ledger.length > 0 ? 'checkmark' : 'close'} />}
               label={ledger.length > 0 ? 'Done' : 'Cancel'}
               morphLabel
               onPress={closeCatchUp}
@@ -566,6 +570,7 @@ function ChainReport({
       )}
       <Button
         className={retryable.length > 0 ? 'mt-2' : 'mt-6'}
+        icon={<Button.Icon name="checkmark" />}
         label="Done"
         onPress={onDone}
         variant="quiet"

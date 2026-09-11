@@ -1,10 +1,9 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
@@ -33,7 +32,6 @@ import {
 } from '@/lib/providers/provider-links';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import { hideItem } from '@/state/prefs/hidden-items';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
@@ -166,7 +164,6 @@ export function CardActionsSheet({
   // whose next episode Trakt can name gets the button, so the pointer to the
   // season picker below is only for the shows that don't.
   const seriesNext = useSeriesNextEpisode(item);
-  const muted = useThemeColor('--color-muted');
   const links =
     item == null
       ? []
@@ -315,18 +312,16 @@ export function CardActionsSheet({
             )}
           </View>
 
-          <PresstableOpacity
-            className="flex-row items-center gap-3 rounded-full px-5 py-3 border border-border"
+          <Button
+            align="start"
+            icon={<Button.Icon name="open-outline" />}
+            label="View details"
             onPress={() => {
               onClose();
               pushRoute(routes.details(item.id));
             }}
-          >
-            <Ionicons color={muted} name="open-outline" size={18} />
-            <Text className="text-foreground font-sans-semibold text-base">
-              View details
-            </Text>
-          </PresstableOpacity>
+            variant="quiet"
+          />
           {links.map((link) => (
             <ProviderLinkRow
               className="mt-2"
@@ -336,19 +331,18 @@ export function CardActionsSheet({
             />
           ))}
           {canHide && (
-            <PresstableOpacity
-              className="flex-row items-center gap-3 rounded-full px-5 py-3 mt-2 border border-border"
+            <Button
+              align="start"
+              className="mt-2"
+              icon={<Button.Icon name="eye-off-outline" />}
+              label={hideLabel}
               onPress={() => {
                 haptics.confirm();
                 hideItem({ id: item.id, title: item.title });
                 onClose();
               }}
-            >
-              <Ionicons color={muted} name="eye-off-outline" size={18} />
-              <Text className="text-foreground font-sans-semibold text-base">
-                {hideLabel}
-              </Text>
-            </PresstableOpacity>
+              variant="quiet"
+            />
           )}
         </>
       )}

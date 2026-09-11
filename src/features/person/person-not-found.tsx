@@ -25,9 +25,14 @@ export function PersonNotFound({
       <Text className="text-muted font-sans text-center mb-6">{detail}</Text>
       <View className="flex-row gap-3">
         {onRetry != null && (
-          <Button label="Try again" onPress={onRetry} variant="quiet" />
+          <Button
+            icon={<Button.Icon name="refresh" />}
+            label="Try again"
+            onPress={onRetry}
+            variant="quiet"
+          />
         )}
-        <Button label="Go back" onPress={onGoBack} />
+        <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={onGoBack} />
       </View>
     </View>
   );

@@ -180,6 +180,7 @@ export function WatchlistAddPicker({
       <Button
         className="mt-6"
         disabled={selected.length === 0}
+        icon={<Button.Icon name="bookmark" />}
         label={watchlistConfirmLabel(item, selected.length)}
         loading={pending}
         loadingLabel={copy.pending}
@@ -187,6 +188,7 @@ export function WatchlistAddPicker({
       />
       <Button
         className="mt-2"
+        icon={<Button.Icon name="close" />}
         label="Cancel"
         onPress={onCancel}
         variant="quiet"
@@ -358,6 +360,13 @@ export function WatchlistRemovePicker({
       <Button
         className="mt-6"
         disabled={selected.length === 0}
+        // `trash-outline` only once armed: the second press is the one that
+        // deletes an AniList/Simkl entry outright, and the glyph should say so.
+        icon={
+          <Button.Icon
+            name={warning != null && armed ? 'trash-outline' : 'bookmark-outline'}
+          />
+        }
         label={
           warning != null && armed
             ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL
@@ -370,6 +379,7 @@ export function WatchlistRemovePicker({
       />
       <Button
         className="mt-2"
+        icon={<Button.Icon name="close" />}
         label="Cancel"
         onPress={onCancel}
         variant="quiet"

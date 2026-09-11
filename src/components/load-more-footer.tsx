@@ -30,6 +30,7 @@ export function LoadMoreFooter({
         <Button
           accessibilityLabel={`Retry loading more ${noun}`}
           className="mt-3"
+          icon={<Button.Icon name="refresh" />}
           label="Try again"
           onPress={onRetry}
           size="sm"

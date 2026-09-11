@@ -30,6 +30,7 @@ import {
   EpisodeActionsSheet,
   type EpisodePointer,
 } from '@/features/episode-details';
+import { episodeCode } from '@/features/episode-details/episode-label';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { SeasonAccordion, type PendingLog } from './season-accordion';
@@ -164,8 +165,8 @@ function SeasonAccordionList({
 
   function markEpisode(s: NormalizedSeason, episode: NormalizedEpisode) {
     openLog({
-      title: 'Mark episode as watched',
-      description: `“${item.title}” — ${s.title}, E${episode.number}: ${episode.title}`,
+      title: `Log ${episodeCode(s.number, episode.number)}`,
+      description: `“${item.title}” — ${episodeCode(s.number, episode.number)}: ${episode.title}`,
       episodes: [{ season: s.number, number: episode.number }],
     });
   }
@@ -197,8 +198,13 @@ function SeasonAccordionList({
             const aired = s.episodes.filter((e) => hasAired(e.firstAired));
             if (aired.length === 0) return;
             openLog({
-              title: `Mark ${s.title} as watched`,
-              description: `Mark every aired episode of ${s.title} of “${item.title}” as watched.`,
+              title: `Log ${s.title}`,
+              // The subject and the size of it — the title already carried the
+              // verb, and the count is the fact the sheet couldn't otherwise
+              // give: how many writes this one press is about to make.
+              description: `“${item.title}” — ${aired.length} aired ${
+                aired.length === 1 ? 'episode' : 'episodes'
+              } in ${s.title}.`,
               episodes: aired.map((episode) => ({
                 season: s.number,
                 number: episode.number,
@@ -227,7 +233,7 @@ function SeasonAccordionList({
       />
 
       <LogConfirmSheet
-        confirmLabel="Mark as watched"
+        confirmLabel={pending?.title ?? ''}
         description={pending?.description ?? ''}
         item={item}
         logMedia={logMedia}
@@ -238,7 +244,7 @@ function SeasonAccordionList({
         onTagsChange={setTags}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
-        pendingLabel="Marking as watched…"
+        pendingLabel="Logging…"
         selectedProviders={selectedProviders}
         tags={tags}
         targets={targets}

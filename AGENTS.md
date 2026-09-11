@@ -212,10 +212,24 @@ accept caller layout classes without a variant explosion. Enforced by
 `bun check:classnames`.
 
 **Buttons are `components/button`**, never hand-rolled `PresstableOpacity` + `Text`.
-`variant` (`primary` | `outline` | `quiet`) and `size` (`sm` | `md`) cover the app;
+`variant` (`primary` | `outline` | `quiet`), `size` (`sm` | `md`) and `align`
+(`center` for a CTA, `start` for a row in a stack of actions) cover the app;
 `className` is layout-only. Anything that awaits (OAuth, validation, a fan-out)
 passes `loading`, never a label swap. A label that changes in place from user state
 takes `morphLabel`.
+
+**Every button carries an `icon`**, from the one vocabulary in `Button.Icon`'s
+docblock — one verb, one glyph, app-wide. A label alone reads as a different
+design system than the row above it.
+
+**A shape the button doesn't have is a reason to widen the button, not to
+hand-roll around it.** `align` and `trailingIcon` exist because the long-press
+sheets re-implemented the action-row shape instead, and it drifted the moment
+they did: a muted glyph beside a foreground label, `rounded-full` restated by
+hand, no press state. Widening is one prop in one file; the alternative is the
+same decision made again at every call site. What genuinely isn't a button stays
+its own pressable — a card, a list row that navigates, a row with a subtitle
+under its label (`write-sheet/manual-write-rows.tsx`).
 
 `MorphText` (`components/morph-text`) is web-only enhancement with a native
 fallback. Reserve it for text that *changes in place* from user state (progress

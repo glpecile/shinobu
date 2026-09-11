@@ -2,9 +2,14 @@ import { formatCalendarDate } from '@/lib/time/calendar-date';
 import { isDateOnly } from '@/lib/time/has-aired';
 import type { NormalizedEpisode } from '@/types/media';
 
-/** "S2 E10" — the pointer every episode surface leads with. */
+/**
+ * "S2E10" — the pointer every episode surface leads with, in the app's one
+ * episode-code format. It used to be spelled three ways ("S2 E10" here,
+ * "S2E10" on the log button, "E10" in the season sheets) for the same episode
+ * on screens one tap apart.
+ */
 export function episodeCode(season: number, number: number): string {
-  return `S${season} E${number}`;
+  return `S${season}E${number}`;
 }
 
 /**

@@ -1,3 +1,4 @@
+import { episodeCode } from '@/features/episode-details/episode-label';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import type { SimklLibraryEntry } from '@/lib/providers/simkl/normalize';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
@@ -182,5 +183,5 @@ function layoutWalk(
 export function catchUpEpisodeCode(episode: CatchUpEpisode): string {
   return episode.season == null
     ? `episode ${episode.number}`
-    : `S${episode.season}E${episode.number}`;
+    : episodeCode(episode.season, episode.number);
 }
