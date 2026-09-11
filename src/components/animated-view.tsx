@@ -7,3 +7,6 @@ import { withUniwind } from 'uniwind';
  * (docs/solutions/uniwind-classname-third-party-components.md).
  */
 export const AnimatedView = withUniwind(Animated.View);
+
+/** Same wrapper for text whose colour transitions (a selected-state crossfade). */
+export const AnimatedText = withUniwind(Animated.Text);

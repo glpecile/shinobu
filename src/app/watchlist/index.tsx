@@ -9,7 +9,8 @@ import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useCSSVariable } from 'uniwind';
 
-import { Button } from '@/components/button';
+import { CenteredNotice } from '@/components/centered-notice';
+import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
 import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
@@ -69,36 +70,6 @@ import {
  */
 
 /**
- * Centered message with an action — the total-failure and empty states. A
- * dedicated screen must never degrade to a blank page.
- */
-function CenteredNotice({
-  title,
-  body,
-  actionLabel,
-  onAction,
-}: {
-  title: string;
-  body: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <View className="flex-1 items-center justify-center px-8">
-      <Text className="text-2xl font-display text-foreground text-center">
-        {title}
-      </Text>
-      <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
-        {body}
-      </Text>
-      {actionLabel != null && onAction != null && (
-        <Button className="mt-6" label={actionLabel} onPress={onAction} />
-      )}
-    </View>
-  );
-}
-
-/**
  * R29's inline notice: one line per failed leg, above the wall, with a single
  * retry. The rows that *did* load stay on screen behind it.
  */
@@ -125,45 +96,6 @@ function LegFailureNotice({
       >
         <Text className="text-accent font-sans-semibold text-sm">Try again</Text>
       </PresstableOpacity>
-    </View>
-  );
-}
-
-/**
- * End-of-list footer. A Letterboxd page failing mid-scroll keeps every loaded
- * page on screen and offers a retry right where the scroll stopped — the same
- * partial-failure treatment as the notice above.
- */
-function GridFooter({
-  loading,
-  failed,
-  onRetry,
-}: {
-  loading: boolean;
-  failed: boolean;
-  onRetry: () => void;
-}) {
-  if (failed) {
-    return (
-      <View className="items-center py-8 px-8">
-        <Text className="text-muted font-sans text-sm text-center">
-          Couldn’t load more films.
-        </Text>
-        <Button
-          accessibilityLabel="Retry loading more films"
-          className="mt-3"
-          label="Try again"
-          onPress={onRetry}
-          size="sm"
-          variant="quiet"
-        />
-      </View>
-    );
-  }
-  if (!loading) return <View className="h-12" />;
-  return (
-    <View className="items-center py-8">
-      <Text className="text-muted font-sans text-sm">Loading more…</Text>
     </View>
   );
 }
@@ -263,9 +195,10 @@ function WatchlistGrid({
       <Layout
         entries={shown}
         footer={
-          <GridFooter
+          <LoadMoreFooter
             failed={pages.isError}
             loading={pages.isFetchingNextPage}
+            noun="films"
             onRetry={() => void loadMore()}
           />
         }
