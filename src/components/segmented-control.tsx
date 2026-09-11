@@ -140,9 +140,8 @@ export function SegmentedControl<T extends string>({
       {measured && (
         <AnimatedView
           className="absolute rounded-full bg-foreground overflow-hidden"
-          pointerEvents="none"
           style={[
-            { top: INSET, bottom: INSET, left: INSET, width: segmentWidth },
+            { top: INSET, bottom: INSET, left: INSET, width: segmentWidth, pointerEvents: 'none' },
             progress ? pillFollow : slide(index * segmentWidth),
           ]}
         >
