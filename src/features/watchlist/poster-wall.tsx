@@ -235,7 +235,6 @@ export function PosterWall({
   onRefresh,
   onEndReached,
   footer,
-  ref,
 }: WatchlistLayoutProps) {
   const { columns, rowHeight } = useWallMetrics();
 
@@ -259,7 +258,6 @@ export function PosterWall({
       numColumns={columns}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
-      ref={ref}
       // Recycled for the diary's reason (docs/solutions/diary-scroll-jank-is-row-mount-cost.md):
       // a cell is a gesture-handler pressable plus an image plus a gradient,
       // and mounting a screenful of them from scratch is what tears on a

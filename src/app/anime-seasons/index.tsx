@@ -5,7 +5,7 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { Suspense, startTransition, useEffect, useRef, useState } from 'react';
+import { Suspense, startTransition, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
@@ -13,7 +13,6 @@ import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
-import type { LegendListRef } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
 import { PresstableOpacity } from '@/components/presstable';
@@ -89,12 +88,6 @@ function SeasonWall({
     pages.data.pages[0] ?? [],
     columns * 3,
   );
-  const listRef = useRef<LegendListRef>(null);
-  // The wall is not remounted when the format changes (see below), so its
-  // scroll offset would survive into a different, usually shorter list.
-  useEffect(() => {
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [format]);
   const [refreshing, setRefreshing] = useState(false);
   // AniList's popularity sort is not stable across pages, so a title can sit
   // on the tail of one page and the head of the next; the list needs unique
@@ -130,13 +123,9 @@ function SeasonWall({
     // CSS keyframes rule rather than a layout `entering`: presets have no
     // blur and a custom Keyframe pins the element on web.
     //
-    // Once per *mount* is the whole point, and a format change is not one: it
-    // used to be keyed by format too, so narrowing to Movies unmounted a
-    // Legend List of poster cells and mounted another — the frame this screen
-    // already went to a pager to avoid for cours
-    // (docs/solutions/season-switch-jank-remount-and-blur-on-native.md), now
-    // landing across the format pill's slide. The filter swaps the wall's
-    // data under the same list; a new window is still a new wall, and plays.
+    // Once per mount, and a window or format change is a mount: the boundary
+    // above is keyed by both, so the wall plays this on the way in behind its
+    // skeleton rather than hard-cutting under the old posters.
     <AnimatedView
       className="flex-1"
       style={
@@ -167,7 +156,6 @@ function SeasonWall({
         onItemActions={onItemActions}
         onItemPress={(item) => pushRoute(routes.details(item.id))}
         onRefresh={() => void refresh()}
-        ref={listRef}
         refreshing={refreshing}
       />
     </AnimatedView>
@@ -250,14 +238,15 @@ export default function AnimeSeasonsScreen() {
   // every scroll frame and the season strip's pill reads it, so the pill rides
   // the finger instead of jumping once the swipe settles.
   const progress = useSharedValue(ANIME_SEASONS.indexOf(window.season));
-  // The wall in front of the user takes the new format immediately: a router
-  // param update is a React transition, so its posters stay up until the
-  // narrowed set has loaded — the same titles, fewer of them — and it swaps
-  // the moment they are there rather than on a timer. A year change is the
-  // opposite case — a different catalogue — and holding last year's posters
-  // until this year's arrive reads as the tap having been ignored, then the
-  // wall silently swapping, so the boundaries below are *keyed* by year: a
-  // new boundary shows its skeleton at once (React's documented opt-out).
+  // The wall in front of the user takes the new format immediately, and the
+  // boundaries below are *keyed* by it as they already were by year: a router
+  // param update is a React transition, which by default keeps the old posters
+  // revealed until the new ones load, and a fresh boundary is React's
+  // documented opt-out from that. Holding a different catalogue's posters up
+  // reads as the tap having been ignored and then the wall silently swapping —
+  // true of last year's titles, and just as true of the series you filtered
+  // out. The skeleton is the answer to the tap; it is also what web has been
+  // doing all along, because its router update is not a transition there.
   const trailingFormat = useTrailingFormat(format);
 
   // `setParams`, not a push: a different season is not a new destination,
@@ -318,14 +307,20 @@ export default function AnimeSeasonsScreen() {
       <SeasonPager
         onSettle={(season) => router.setParams({ season })}
         progress={progress}
-        renderSeason={(season) => (
-          <WallBoundary
-            format={season === window.season ? format : trailingFormat}
-            key={window.year}
-            onItemActions={openActions}
-            window={{ season, year: window.year }}
-          />
-        )}
+        renderSeason={(season) => {
+          // Keyed by the format this page is actually showing, not by the URL's:
+          // an off-screen cour trails, and a key that ran ahead of its prop
+          // would remount it onto the format it already had.
+          const pageFormat = season === window.season ? format : trailingFormat;
+          return (
+            <WallBoundary
+              format={pageFormat}
+              key={`${window.year}-${pageFormat}`}
+              onItemActions={openActions}
+              window={{ season, year: window.year }}
+            />
+          );
+        }}
         season={window.season}
       />
       <CardActionsSheet {...sheetProps} />
