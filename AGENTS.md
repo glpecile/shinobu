@@ -37,6 +37,16 @@ spend a paragraph where a clause works; a docblock names the contract, not the
 reasoning behind every choice. `docs/solutions/` is for **issues** — a solved
 bug or a non-obvious platform behaviour — not for design notes.
 
+## Effects & Timers
+
+`useEffect` and `setTimeout` are escape hatches, not tools. An effect
+subscribes to something outside React and cleans it up; a timer is for
+something that genuinely happens later in wall-clock time. Deriving state,
+sequencing UI, or waiting for an animation to finish is none of those — compute
+it during render, or let the platform own the timing. Reaching for either
+usually means the design is wrong by one state variable, and the fix is to
+delete the variable, not to schedule around it.
+
 ## Tech Stack
 
 - **Expo** (Router): one codebase for Web, iPadOS, iOS, Android.
