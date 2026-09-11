@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import Head from '@/components/head';
 import { EmptyStateTile } from '@/components/empty-state-tile';
@@ -14,6 +13,7 @@ import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
 
@@ -36,10 +36,10 @@ function DiaryHeader() {
 
 /** A glyph tile for the empty states — muted book/journal mark. */
 function StateIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   return (
     <Ionicons
-      color={typeof muted === 'string' ? muted : undefined}
+      color={muted}
       name={name}
       size={44}
     />

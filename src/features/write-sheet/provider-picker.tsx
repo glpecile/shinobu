@@ -1,13 +1,13 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 import { useState } from 'react';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 import { useConnectedProviders } from '@/state/session';
 
 /**
@@ -25,10 +25,8 @@ interface ProviderToggleProps {
 }
 
 function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
-  const accent = useCSSVariable('--color-accent');
-  const muted = useCSSVariable('--color-muted');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
   const descriptor = PROVIDERS[id];
 
   return (
@@ -52,7 +50,7 @@ function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
         </Text>
       </View>
       <Ionicons
-        color={selected ? accentColor : mutedColor}
+        color={selected ? accent : muted}
         name={selected ? 'checkmark-circle' : 'ellipse-outline'}
         size={20}
       />
@@ -76,8 +74,7 @@ export interface ProviderPickerProps {
  */
 function NoTargets({ onConnect }: { onConnect?: () => void }) {
   const connected = useConnectedProviders();
-  const accent = useCSSVariable('--color-accent');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
+  const accent = useThemeColor('--color-accent');
   return (
     <View className="rounded-full border border-border bg-surface px-4 py-3 flex-row items-center justify-between gap-3">
       <Text className="text-muted font-sans text-sm flex-1" numberOfLines={2}>
@@ -92,7 +89,7 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
           onPress={onConnect}
         >
           <Text className="text-accent font-sans-semibold text-sm">Connect one</Text>
-          <Ionicons color={accentColor} name="arrow-forward" size={14} />
+          <Ionicons color={accent} name="arrow-forward" size={14} />
         </PresstableOpacity>
       )}
     </View>
@@ -153,8 +150,7 @@ export function ProviderPicker({
 }: ProviderPickerProps & { onConnect?: () => void }) {
   const { targets, selectedProviders } = props;
   const [expanded, setExpanded] = useState(false);
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const muted = useThemeColor('--color-muted');
   if (targets.length === 0) return <NoTargets onConnect={onConnect} />;
   const selected = targets.filter((id) => selectedProviders.includes(id));
   const selectionLabel =
@@ -189,7 +185,7 @@ export function ProviderPicker({
           </Text>
         </View>
         <Ionicons
-          color={mutedColor}
+          color={muted}
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={18}
         />

@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Linking, Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';
@@ -13,6 +12,7 @@ import { CARD_SHELL } from '@/components/card-shell';
 import { cn } from '@/lib/cn';
 import { TMDB_API_SETTINGS_URL } from '@/lib/providers/external-urls';
 import { TMDB_API_BASE_URL } from '@/lib/providers/tmdb/config';
+import { useThemeColor } from '@/lib/theme-color';
 import { mediaDetailsQueryKeys } from '@/state/queries/media-details';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import {
@@ -74,7 +74,7 @@ export function ConnectTmdbTokenSection() {
   // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
   const [saved, setSaved] = useState<string | null>(() => storedTmdbToken());
   const [status, setStatus] = useState<SaveStatus>('idle');
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   const queryClient = useQueryClient();
 
   const {
@@ -211,7 +211,7 @@ export function ConnectTmdbTokenSection() {
                   onSubmitEditing={() => void submit()}
                   placeholder="API Read Access Token"
                   placeholderTextColor={
-                    typeof muted === 'string' ? muted : undefined
+                    muted
                   }
                   returnKeyType="done"
                   // Long opaque credential — never offer to save/suggest it,

@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
+// oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
@@ -34,6 +35,12 @@ export interface EpisodeScreenProps {
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
   const logs = useEpisodeLogs(item, season, number, view.episode?.firstAired);
+  // `useCSSVariable`, not `useThemeColor`: this colour is *composed* into the
+  // gradient's transparent stop (`${background}00`), and web's `var(--token)`
+  // cannot be concatenated. The prerender has no DOM to read, so the first
+  // page a visitor loads fades to this dark fallback even in the light theme
+  // — the scrim sits under a hero image, and it corrects on the next
+  // navigation. docs/solutions/web-prerender-bakes-js-resolved-colors.md
   const backgroundVariable = useCSSVariable('--color-background');
   const background =
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';

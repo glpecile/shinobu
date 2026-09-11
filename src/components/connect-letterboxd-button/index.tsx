@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
+import { useThemeColor } from '@/lib/theme-color';
 import { validateLetterboxdUsername } from '@/state/queries/letterboxd';
 import { connectLetterboxd } from '@/state/session/letterboxd';
 
@@ -36,7 +36,7 @@ type UsernameForm = z.infer<typeof usernameSchema>;
  */
 export function ConnectLetterboxdButton() {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -82,7 +82,7 @@ export function ConnectLetterboxdButton() {
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
             placeholder="Letterboxd username"
-            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+            placeholderTextColor={muted}
             returnKeyType="done"
             value={field.value}
           />

@@ -2,10 +2,10 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { SegmentedControl } from '@/components/segmented-control';
+import { useThemeColor } from '@/lib/theme-color';
 import {
   ANIME_SEASONS,
   MIN_ANIME_YEAR,
@@ -41,14 +41,11 @@ export function SeasonPicker({
   /** The pager's position, so the cour pill rides the swipe. */
   progress: SharedValue<number>;
 }) {
-  const foreground = useCSSVariable('--color-foreground');
-  const muted = useCSSVariable('--color-muted');
+  const foreground = useThemeColor('--color-foreground');
+  const muted = useThemeColor('--color-muted');
   const [sheetOpen, setSheetOpen] = useState(false);
   const maxYear = maxAnimeYear(new Date());
-  const tint = (enabled: boolean) => {
-    const color = enabled ? foreground : muted;
-    return typeof color === 'string' ? color : undefined;
-  };
+  const tint = (enabled: boolean) => (enabled ? foreground : muted);
   const canGoBack = window.year > MIN_ANIME_YEAR;
   const canGoForward = window.year < maxYear;
 

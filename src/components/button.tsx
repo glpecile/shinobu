@@ -7,13 +7,13 @@ import {
   FadeOut,
   LinearTransition,
 } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
+import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
 export type ButtonVariant = 'primary' | 'outline' | 'quiet';
 export type ButtonSize = 'sm' | 'md';
@@ -32,7 +32,7 @@ const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
 };
 
 /** The theme token the spinner borrows so it matches its own label exactly. */
-const SPINNER_TOKEN: Record<ButtonVariant, string> = {
+const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   primary: '--color-accent-foreground',
   outline: '--color-accent',
   quiet: '--color-foreground',
@@ -71,7 +71,7 @@ const SIZE: Record<ButtonSize, { container: string; label: string; icon: number 
  * chances to drift from the label beside it, which is exactly how `rounded`
  * ended up next to `rounded-md` before `components/button` existed.
  */
-const ButtonIconContext = createContext<{ token: string; size: number } | null>(
+const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number } | null>(
   null,
 );
 
@@ -88,11 +88,11 @@ const ButtonIconContext = createContext<{ token: string; size: number } | null>(
  */
 function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name'] }) {
   const context = useContext(ButtonIconContext);
-  const color = useCSSVariable(context?.token ?? '--color-foreground');
+  const color = useThemeColor(context?.token ?? '--color-foreground');
   if (context == null) return null;
   return (
     <Ionicons
-      color={typeof color === 'string' ? color : undefined}
+      color={color}
       name={name}
       size={context.size}
     />
@@ -188,9 +188,9 @@ export function Button({
   accessibilityLabel,
   className,
 }: ButtonProps) {
-  const spinnerToken = useCSSVariable(SPINNER_TOKEN[variant]);
+  const spinnerToken = useThemeColor(SPINNER_TOKEN[variant]);
   const spinnerColor =
-    typeof spinnerToken === 'string' ? spinnerToken : undefined;
+    spinnerToken;
   const unavailable = disabled || loading;
   // `self-center` rather than `text-center` for the morph variant: the morph
   // span shrink-wraps on web, so it has to center as a flex item instead of

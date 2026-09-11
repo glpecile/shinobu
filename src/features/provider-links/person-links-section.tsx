@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -8,6 +7,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { providerPersonUrl, type UrlPerson } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { useThemeColor } from '@/lib/theme-color';
 import { useAniListStaffIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
@@ -48,8 +48,7 @@ export function PersonLinksSection({
   onOpened?: () => void;
 }) {
   const connected = useConnectedProviders();
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const muted = useThemeColor('--color-muted');
   // Only while AniList is connected *and* the section wants links: an
   // unconnected AniList renders no pill, so resolving its id would buy nothing.
   const staffId = useAniListStaffIdQuery({
@@ -86,7 +85,7 @@ export function PersonLinksSection({
             <Text className="text-foreground font-sans text-sm">
               {PROVIDERS[provider].label}
             </Text>
-            <Ionicons color={mutedColor} name="open-outline" size={12} />
+            <Ionicons color={muted} name="open-outline" size={12} />
           </PresstableOpacity>
         ))}
       </View>

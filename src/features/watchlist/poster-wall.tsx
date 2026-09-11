@@ -2,7 +2,6 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
@@ -12,6 +11,7 @@ import { PROVIDER_DOT } from '@/features/trackers/provider-style';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { WatchlistEntry, WatchlistLayoutProps } from './types';
@@ -106,7 +106,7 @@ function PosterCell({
   onActions: (item: NormalizedMediaItem) => void;
 }) {
   const item = entry.item;
-  const foreground = useCSSVariable('--color-foreground');
+  const foreground = useThemeColor('--color-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
@@ -209,7 +209,7 @@ function PosterCell({
             onPress={() => onActions(item)}
           >
             <Ionicons
-              color={typeof foreground === 'string' ? foreground : undefined}
+              color={foreground}
               name="ellipsis-horizontal"
               size={14}
             />

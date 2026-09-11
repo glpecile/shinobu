@@ -1,6 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -8,6 +7,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { manualRowsFor } from '@/features/log-media/manual-write-links';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -41,8 +41,7 @@ export function ManualWriteRows({
    */
   reasons?: Partial<Record<ProviderId, string>>;
 }) {
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const muted = useThemeColor('--color-muted');
   const rows = manualRowsFor(manual, item);
 
   if (rows.length === 0) return null;
@@ -71,7 +70,7 @@ export function ManualWriteRows({
                 )}
               </View>
             </View>
-            <Ionicons color={mutedColor} name="open-outline" size={16} />
+            <Ionicons color={muted} name="open-outline" size={16} />
           </PresstableOpacity>
         );
       })}

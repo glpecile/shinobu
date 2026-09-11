@@ -1,10 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { releaseStops, type ReleaseStop } from '@/features/release-timeline/stops';
 import { cn } from '@/lib/cn';
+import { useThemeColor } from '@/lib/theme-color';
 import { formatCalendarDate } from '@/lib/time/calendar-date';
 import type { NormalizedMediaItem, ReleaseCalendar } from '@/types/media';
 
@@ -38,8 +38,8 @@ function Stop({
   first: boolean;
   last: boolean;
 }) {
-  const accent = useCSSVariable('--color-accent');
-  const muted = useCSSVariable('--color-muted');
+  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
   const iconColor = stop.upcoming ? accent : muted;
 
   return (
@@ -70,7 +70,7 @@ function Stop({
           the labels have to start on one line for the rail to read as a rail. */}
       <View className="w-5 items-center mr-2">
         <Ionicons
-          color={typeof iconColor === 'string' ? iconColor : undefined}
+          color={iconColor}
           name={ICONS[stop.kind]}
           size={15}
         />

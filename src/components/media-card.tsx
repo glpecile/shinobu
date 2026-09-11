@@ -2,13 +2,13 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -39,7 +39,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
   // Watched-feed items arrive artless (Trakt dropped images from /sync/
   // watched/* in 2026) — this recovers the poster lazily, per visible card.
   const { coverImage } = useTraktMediaImages(item);
-  const accentForeground = useCSSVariable('--color-accent-foreground');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
   // web-only ⋯ reveal rides on RN-web's pointer events instead.
   const [hovered, setHovered] = useState(false);
@@ -122,7 +122,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
         >
           <Ionicons
             color={
-              typeof accentForeground === 'string' ? accentForeground : undefined
+              accentForeground
             }
             name="ellipsis-horizontal"
             size={16}

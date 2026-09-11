@@ -8,12 +8,12 @@ import {
   Keyframe,
   useReducedMotion,
 } from 'react-native-reanimated';
-import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
 import { useLightbox, useLightboxControls } from '@/components/lightbox/state';
 import { PresstableOpacity } from '@/components/presstable';
+import { useThemeColor } from '@/lib/theme-color';
 
 /** Exit motion runs this long before the Modal unmounts — keep in sync below. */
 const EXIT_MS = 200;
@@ -59,7 +59,7 @@ const imageExiting = new Keyframe({
 export function Lightbox() {
   const { activeLightbox } = useLightbox();
   const { closeLightbox } = useLightboxControls();
-  const foreground = useCSSVariable('--color-foreground');
+  const foreground = useThemeColor('--color-foreground');
   const reduceMotion = useReducedMotion();
 
   // Retain the last shown lightbox so the exit animation still has an image to
@@ -165,7 +165,7 @@ export function Lightbox() {
                 onPress={closeLightbox}
               >
                 <Ionicons
-                  color={typeof foreground === 'string' ? foreground : undefined}
+                  color={foreground}
                   name="close"
                   size={22}
                 />

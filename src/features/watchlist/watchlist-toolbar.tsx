@@ -1,7 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -10,6 +9,7 @@ import { PROVIDER_DOT } from '@/features/trackers/provider-style';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 
 import {
   formatWatchlistCount,
@@ -45,9 +45,8 @@ function FilterPill({
   onOpen: () => void;
   onClear: () => void;
 }) {
-  const background = useCSSVariable('--color-background');
-  const muted = useCSSVariable('--color-muted');
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
+  const background = useThemeColor('--color-background');
+  const muted = useThemeColor('--color-muted');
 
   if (active == null) {
     return (
@@ -58,9 +57,9 @@ function FilterPill({
         className="flex-row items-center gap-2 rounded-full border border-border px-3 py-1.5"
         onPress={onOpen}
       >
-        <Ionicons color={mutedColor} name="funnel-outline" size={13} />
+        <Ionicons color={muted} name="funnel-outline" size={13} />
         <Text className="text-foreground font-sans text-sm">All trackers</Text>
-        <Ionicons color={mutedColor} name="chevron-down" size={11} />
+        <Ionicons color={muted} name="chevron-down" size={11} />
       </PresstableOpacity>
     );
   }
@@ -89,7 +88,7 @@ function FilterPill({
         onPress={onClear}
       >
         <Ionicons
-          color={typeof background === 'string' ? background : undefined}
+          color={background}
           name="close"
           size={14}
         />
@@ -106,11 +105,11 @@ export function ViewToggle({
   view: WatchlistView;
   onChange: (view: WatchlistView) => void;
 }) {
-  const foreground = useCSSVariable('--color-foreground');
-  const muted = useCSSVariable('--color-muted');
+  const foreground = useThemeColor('--color-foreground');
+  const muted = useThemeColor('--color-muted');
   const tint = (on: boolean) => {
     const color = on ? foreground : muted;
-    return typeof color === 'string' ? color : undefined;
+    return color;
   };
 
   return (
@@ -152,7 +151,7 @@ function FilterOption({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const accent = useCSSVariable('--color-accent');
+  const accent = useThemeColor('--color-accent');
   const label = provider == null ? 'All trackers' : PROVIDERS[provider].label;
   return (
     <PresstableOpacity
@@ -168,7 +167,7 @@ function FilterOption({
       <View className="w-4">
         {selected && (
           <Ionicons
-            color={typeof accent === 'string' ? accent : undefined}
+            color={accent}
             name="checkmark"
             size={16}
           />

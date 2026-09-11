@@ -1,12 +1,12 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
 /**
  * What the row is *for*, which decides how loud it is.
@@ -22,7 +22,7 @@ import type { ProviderId } from '@/lib/providers/types';
  */
 export type OutcomeLinkTone = 'accent' | 'neutral';
 
-const TONE: Record<OutcomeLinkTone, { token: string; label: string }> = {
+const TONE: Record<OutcomeLinkTone, { token: ThemeColorToken; label: string }> = {
   accent: { token: '--color-accent', label: 'text-accent' },
   neutral: { token: '--color-foreground', label: 'text-foreground' },
 };
@@ -33,7 +33,7 @@ const TONE: Record<OutcomeLinkTone, { token: string; label: string }> = {
  * sites are unchanged; the watchlist verbs pass their own (plan 0031 U1).
  *
  * It resolves its own colour from `tone` rather than taking one: every call
- * site used to run the same `useCSSVariable('--color-accent')` dance and drill
+ * site used to run the same `useThemeColor('--color-accent')` dance and drill
  * the result down, which is four copies of one decision and four chances for
  * the icon to stop matching the text beside it.
  */
@@ -48,13 +48,13 @@ export function OutcomeLink({
   tone?: OutcomeLinkTone;
   verb?: string;
 }) {
-  const color = useCSSVariable(TONE[tone].token);
+  const color = useThemeColor(TONE[tone].token);
 
   return (
     <PresstableOpacity onPress={() => openExternalUrl(url)}>
       <View className="flex-row items-center gap-1 mt-0.5">
         <Ionicons
-          color={typeof color === 'string' ? color : undefined}
+          color={color}
           name="open-outline"
           size={14}
         />

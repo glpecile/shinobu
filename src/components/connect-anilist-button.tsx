@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Linking, Platform, Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
@@ -13,6 +12,7 @@ import { Steps } from '@/components/steps';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { anilistAuthorizeUrl, anilistClientId } from '@/lib/providers/anilist/config';
 import { ANILIST_CREATE_CLIENT_URL } from '@/lib/providers/external-urls';
+import { useThemeColor } from '@/lib/theme-color';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import {
   clearProviderClientId,
@@ -115,7 +115,7 @@ export function ConnectAniListButton() {
     storedClientId,
     setStoredClientId,
   } = useAniListConnect();
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -196,7 +196,7 @@ export function ConnectAniListButton() {
               onChangeText={field.onChange}
               onSubmitEditing={() => submitClientId()}
               placeholder="AniList Client ID"
-              placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+              placeholderTextColor={muted}
               returnKeyType="done"
               value={field.value}
             />

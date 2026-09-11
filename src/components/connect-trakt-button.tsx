@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
@@ -19,6 +18,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
 import { TRAKT_CREATE_APP_URL } from '@/lib/providers/external-urls';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
+import { useThemeColor } from '@/lib/theme-color';
 import {
   getTraktRedirectUri,
   TRAKT_CORS_ORIGINS,
@@ -81,7 +81,7 @@ function CredentialInput({
   placeholder: string;
   onSubmit: () => void;
 }) {
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
   return (
     <Controller
       control={control}
@@ -95,7 +95,7 @@ function CredentialInput({
           onChangeText={field.onChange}
           onSubmitEditing={onSubmit}
           placeholder={placeholder}
-          placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+          placeholderTextColor={muted}
           returnKeyType="done"
           value={field.value}
         />

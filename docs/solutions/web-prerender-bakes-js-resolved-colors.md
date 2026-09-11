@@ -43,9 +43,15 @@ property instead. `react-native-web` forwards a `var()` color untouched —
 resolved by the cascade from `global.css`, is correct in both themes, and has
 no value for the prerender to get wrong.
 
+- **`lib/theme-color/`** is the one seam: `useThemeColor('--color-muted')`
+  returns `var(--color-muted)` on web (`index.web.ts`) and the resolved value
+  on native (`index.ts`, RN has no custom properties). All 60-odd icon/spinner
+  colour reads go through it, and it swallows the
+  `typeof x === 'string' ? x : undefined` dance every call site was repeating.
+  Importing `useCSSVariable` from `uniwind` directly is now an oxlint error.
 - `components/app-shell/index.web.tsx`: dropped the `useCssColor` helper; the
-  rail's glyphs and the collapse toggle take `var(--color-*)` literals. The
-  rail is the worst case for this bug because it never remounts.
+  rail's glyphs and the collapse toggle take `var(--color-*)` literals — the
+  rail is web-only and never remounts, which made it the worst case.
 - `app/_layout.tsx`: `backgroundColor` and the `ThemeProvider` theme's
   `colors.background` are `var(--color-background)` on web (native keeps the
   resolved hex — RN has no custom properties).
@@ -63,23 +69,36 @@ HTML, which is the artifact that was wrong:
 ```sh
 bun run build:web
 python3 -m http.server 8099 --directory dist
-grep -o 'font-size:22px;color:[^"]*' dist/index.html   # var(--color-accent) / var(--color-muted)
-grep -o 'background-color:[^";]*' dist/index.html      # no rgba(255,255,255) / rgba(242,242,242)
+# across every exported route, not just the landing page:
+grep -ro 'color:rgba(0,0,0,1.00)[^"]*Ionicons' dist/    # must be empty
+grep -rho 'background-color:rgba(\(255,255,255\|242,242,242\),1.00)' dist/  # must be empty
 ```
 
-Driven with playwright-core against `dist` in **Firefox and Chrome × dark and
-light** (see `web-headless-smoke-test-playwright.md`; Playwright's own Firefox
-build is needed, `npx playwright install firefox`). Before: glyphs
-`rgb(0,0,0)` in all four. After: `rgb(220,38,38)` active / `rgb(170,170,170)`
-dark / `rgb(102,102,102)` light, in all four.
+Then driven with playwright-core against `dist` over **Firefox and Chrome ×
+dark and light × `/`, `/connect`, `/diary`, `/search`** (see
+`web-headless-smoke-test-playwright.md`; Playwright's own Firefox build is
+needed — `npx playwright install firefox`). Serve it through something that
+maps `/connect` to `connect.html`: with the `.html` suffix in the URL the
+router renders its unmatched-route page and the check silently passes on
+nothing.
 
-## Still exposed
+Before: every glyph `rgb(0,0,0)`. After: `rgb(220,38,38)` active,
+`rgb(170,170,170)` dark / `rgb(102,102,102)` light, zero black, in all 16
+combinations.
 
-~45 files still call `useCSSVariable` directly for an icon color
-(`features/show-seasons/season-accordion.tsx`, `app/details/[id].tsx`,
-`features/write-sheet/*`, …). They hit the same prerender miss, but only on
-whichever route a visitor loads *first*, and they self-correct on the next
-navigation — unlike the rail, which never remounts. The durable fix is one
-platform-split `useThemeColor` wrapper in `@/lib` (web returns `var(--token)`,
-native delegates to `useCSSVariable`) plus an oxlint ban on importing
-`useCSSVariable` from `uniwind` directly, per AGENTS.md's wrapper rule.
+## The two exceptions
+
+A colour that is *composed* rather than painted can't be a `var()`: the hero
+scrims in `app/details/[id].tsx` and `features/episode-details/screen/index.tsx`
+build their transparent stop by concatenating an alpha pair onto the value
+(`${background}00`), and `var(--color-background)00` is not a colour. Those two
+read `useCSSVariable` directly, with the rule disabled on the line and the
+reason beside it. They still fall back to `#0a0a0a` on a prerender, i.e. the
+dark scrim shows in the light theme until the first navigation — acceptable
+because the scrim sits under a hero image. Fixing it properly needs the
+gradient expressed in CSS on web, which is a bigger change than the bug earns.
+
+## Don't diagnose this on the dev server
+
+`bun web` injects the Uniwind CSS through JS and does not prerender, so none of
+this reproduces there. Build the artifact that was wrong.

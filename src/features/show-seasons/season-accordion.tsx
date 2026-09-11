@@ -1,10 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { PresstableOpacity } from '@/components/presstable';
+import { useThemeColor } from '@/lib/theme-color';
 import { hasAired } from '@/lib/time/has-aired';
 import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
 import { formatRuntime, seasonRuntimeMinutes } from './runtime';
@@ -59,12 +59,9 @@ function EpisodeRow({
   onOpen?: (() => void) | undefined;
   onActions?: (() => void) | undefined;
 }) {
-  const accent = useCSSVariable('--color-accent');
-  const muted = useCSSVariable('--color-muted');
-  const foreground = useCSSVariable('--color-foreground');
-  const accentColor = typeof accent === 'string' ? accent : undefined;
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
-  const foregroundColor = typeof foreground === 'string' ? foreground : undefined;
+  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
+  const foreground = useThemeColor('--color-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // ⋯ reveal rides on RN-web's pointer events (the PersonCard pattern) —
   // long-press is not a discoverable web gesture.
@@ -75,7 +72,7 @@ function EpisodeRow({
   const label = (
     <>
       {isWatched ? (
-        <Ionicons color={accentColor} name="checkmark-circle" size={16} />
+        <Ionicons color={accent} name="checkmark-circle" size={16} />
       ) : (
         <View className="w-4" />
       )}
@@ -84,7 +81,7 @@ function EpisodeRow({
           className="font-sans text-sm"
           numberOfLines={2}
           style={{
-            color: aired ? foregroundColor : mutedColor,
+            color: aired ? foreground : muted,
             opacity: aired ? 1 : 0.6,
           }}
         >
@@ -126,7 +123,7 @@ function EpisodeRow({
           className="w-8 h-8 mr-2 items-center justify-center rounded-full"
           onPress={onActions}
         >
-          <Ionicons color={mutedColor} name="ellipsis-horizontal" size={16} />
+          <Ionicons color={muted} name="ellipsis-horizontal" size={16} />
         </PresstableOpacity>
       )}
       {aired ? (
@@ -164,11 +161,9 @@ export function SeasonAccordion({
   onEpisodeActions,
 }: SeasonAccordionProps) {
   const [open, setOpen] = useState(false);
-  const accent = useCSSVariable('--color-accent');
-  const muted = useCSSVariable('--color-muted');
+  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
   const runtime = seasonRuntimeMinutes(season);
-  const accentColor = typeof accent === 'string' ? accent : undefined;
-  const mutedColor = typeof muted === 'string' ? muted : undefined;
 
   const airedCount = season.episodes.filter((e) => hasAired(e.firstAired)).length;
   const seasonMarkable = airedCount > 0;
@@ -181,7 +176,7 @@ export function SeasonAccordion({
           onPress={() => setOpen(!open)}
         >
           <Ionicons
-            color={mutedColor}
+            color={muted}
             name={open ? 'chevron-down' : 'chevron-forward'}
             size={16}
           />
@@ -205,7 +200,7 @@ export function SeasonAccordion({
               className="flex-row items-center px-4 py-3 border-b border-border bg-accent/5"
               onPress={() => onMarkSeason(season)}
             >
-              <Ionicons color={accentColor} name="checkmark-done" size={16} />
+              <Ionicons color={accent} name="checkmark-done" size={16} />
               <Text className="text-accent font-sans-semibold text-sm ml-2">
                 Mark season as watched
               </Text>

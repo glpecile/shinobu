@@ -1,11 +1,11 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { useThemeColor } from '@/lib/theme-color';
 
 /** The round back button floating over detail-style screens. */
 export function FloatingBackButton({ onPress }: { onPress: () => void }) {
-  const foreground = useCSSVariable('--color-foreground');
+  const foreground = useThemeColor('--color-foreground');
 
   return (
     <PresstableOpacity
@@ -14,7 +14,7 @@ export function FloatingBackButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
     >
       <Ionicons
-        color={typeof foreground === 'string' ? foreground : undefined}
+        color={foreground}
         name="arrow-back"
         size={20}
       />

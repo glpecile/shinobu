@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
+// oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
@@ -42,6 +43,7 @@ import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import {
   anilistQueryKeys,
   useAniListEntryStateQuery,
@@ -150,7 +152,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     item,
     enabled: item.type === 'TV' && connected.includes('simkl'),
   });
-  const accent = useCSSVariable('--color-accent');
+  const accent = useThemeColor('--color-accent');
 
   let label: string | null = null;
   if (watched != null) {
@@ -194,7 +196,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   return (
     <View className="flex-row items-center gap-1.5 mt-1.5">
       <Ionicons
-        color={typeof accent === 'string' ? accent : undefined}
+        color={accent}
         name="checkmark-circle"
         size={13}
       />
@@ -367,11 +369,17 @@ export default function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const accent = useCSSVariable('--color-accent');
+  const accent = useThemeColor('--color-accent');
   // The hero scrim fades to the *page background*, not black: the title
   // straddles the image/page boundary and `text-foreground` is near-black in
   // the light theme, so a black scrim swallowed it there. Dark theme looks
   // the same as before (its background token is near-black).
+  // `useCSSVariable`, not `useThemeColor`: this colour is *composed* into the
+  // gradient's transparent stop (`${background}00`), and web's `var(--token)`
+  // cannot be concatenated. The prerender has no DOM to read, so the first
+  // page a visitor loads fades to this dark fallback even in the light theme
+  // — the scrim sits under a hero image, and it corrects on the next
+  // navigation. docs/solutions/web-prerender-bakes-js-resolved-colors.md
   const backgroundVariable = useCSSVariable('--color-background');
   const background =
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
@@ -553,7 +561,7 @@ export default function DetailsScreen() {
                 {shown.rating != null && (
                   <View className="flex-row items-center gap-1">
                     <Ionicons
-                      color={typeof accent === 'string' ? accent : undefined}
+                      color={accent}
                       name="star"
                       size={12}
                     />

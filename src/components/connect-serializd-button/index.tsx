@@ -2,12 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Text, TextInput, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 import { Effect } from 'effect';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';
 import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd';
+import { useThemeColor } from '@/lib/theme-color';
 import { serializdDeps } from '@/state/queries/serializd';
 import { connectSerializd } from '@/state/session/serializd';
 
@@ -30,7 +30,7 @@ type CredentialsForm = z.infer<typeof credentialsSchema>;
 export function ConnectSerializdButton() {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -88,7 +88,7 @@ export function ConnectSerializdButton() {
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             placeholder="Serializd email"
-            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+            placeholderTextColor={muted}
             value={field.value}
           />
         )}
@@ -108,7 +108,7 @@ export function ConnectSerializdButton() {
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
             placeholder="Password"
-            placeholderTextColor={typeof muted === 'string' ? muted : undefined}
+            placeholderTextColor={muted}
             returnKeyType="done"
             secureTextEntry
             value={field.value}

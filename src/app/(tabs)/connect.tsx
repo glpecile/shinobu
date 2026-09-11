@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
-import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { CARD_SHELL } from '@/components/card-shell';
@@ -17,6 +16,7 @@ import { ProviderCardsSection } from '@/features/trackers/provider-cards-section
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
 
 /**
@@ -44,7 +44,7 @@ const HEADER_COLUMN =
 function HiddenItemsSection() {
   const pushRoute = usePushRoute();
   const hidden = useHiddenItems();
-  const muted = useCSSVariable('--color-muted');
+  const muted = useThemeColor('--color-muted');
 
   if (hidden.length === 0) return null;
 
@@ -65,7 +65,7 @@ function HiddenItemsSection() {
               onPress={() => pushRoute(routes.details(item.id))}
             >
               <Ionicons
-                color={typeof muted === 'string' ? muted : undefined}
+                color={muted}
                 name="eye-off-outline"
                 size={18}
               />
