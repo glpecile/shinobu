@@ -37,6 +37,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
 import { removeWatchedFromWatchlist } from './remove-watched-from-watchlist';
 import { currentPlatform } from './use-log-targets';
+import { createAniListWriteQueue } from './anilist-write-queue';
 import { createSimklLogQueue } from './simkl-write-lock';
 import {
   anilistHasEpisodes,
@@ -56,21 +57,34 @@ import {
 } from './fan-out';
 
 /**
- * AniList tracks progress as one counter, so two logs of the same entry in
- * flight at once can land out of order and *regress* it (episode 4's write
- * answering after episode 5's). The catch-up chain (plan 0037) fires its
- * fan-outs concurrently — each Simkl leg may wait out the write lock — so
- * AniList writes are serialized here, app-wide: one at a time, in the order
- * they were asked for. Every other provider records episodes individually and
- * needs no ordering.
+ * The one gate every AniList write passes through (see
+ * `anilist-write-queue.ts`): one write in flight at a time — two logs of the
+ * same entry racing can land out of order and *regress* its single progress
+ * counter — and the ones that pile up behind it for the same entry collapse
+ * into a single write at the highest episode, which is all that counter can
+ * hold anyway. Module-level, like Simkl's queue: the budget is the account's,
+ * not a sheet's.
  */
-let anilistTail: Promise<unknown> = Promise.resolve();
-function serialized<V>(adapter: WriteAdapter<V>): WriteAdapter<V> {
-  return (variables) => {
-    const run = anilistTail.then(() => adapter(variables));
-    anilistTail = run.catch(() => undefined);
-    return run;
-  };
+const anilistWriteQueue = createAniListWriteQueue();
+
+/**
+ * The entry-relative episode this log records, which is also its rank in the
+ * queue above: AniList tracks one counter, so a whole-season batch lands as
+ * the batch's highest episode. Null for a film — nothing to count.
+ */
+function anilistProgress({
+  episode,
+  episodes,
+  entryEpisodes,
+}: Pick<LogMediaVariables, 'episode' | 'episodes' | 'entryEpisodes'>): number | null {
+  if (entryEpisodes != null && entryEpisodes.length > 0) {
+    return Math.max(...entryEpisodes);
+  }
+  if (episode != null) return episode.number;
+  if (episodes != null && episodes.length > 0) {
+    return Math.max(...episodes.map((e) => e.number));
+  }
+  return null;
 }
 
 /**
@@ -97,21 +111,25 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
   // reads `entryEpisodes` — the entry's own 1..n numbering — and never the
   // canonical `episodes` the ani.zip translation produced for Trakt/Serializd.
   // A sequel entry's episode 3 is `progress: 3` here while Trakt gets S02E03.
-  anilist: serialized(({ item, episode, episodes, entryEpisodes, rewatch }) =>
-    Effect.runPromise(
-      logToAniList(anilistDeps(), item, {
-        // AniList tracks a single progress counter — a whole-season batch
-        // lands as the batch's highest episode number.
-        ...(entryEpisodes != null && entryEpisodes.length > 0
-          ? { progress: Math.max(...entryEpisodes) }
-          : episode != null
-            ? { progress: episode.number }
-            : episodes != null && episodes.length > 0
-              ? { progress: Math.max(...episodes.map((e) => e.number)) }
-              : {}),
-        ...(rewatch === true ? { rewatch: true } : {}),
-      }),
-    ).then(okResult)),
+  anilist: ({ item, episode, episodes, entryEpisodes, rewatch }) => {
+    const progress = anilistProgress({ episode, episodes, entryEpisodes });
+    const mediaId = item.externalIds.anilist;
+    return anilistWriteQueue.submit(
+      // Foldable only where the write is a progress counter: a film's rewatch
+      // *increments* `repeat`, so two of those are two facts.
+      progress != null && mediaId != null
+        ? `${mediaId}:${rewatch === true}`
+        : null,
+      progress ?? 0,
+      () =>
+        Effect.runPromise(
+          logToAniList(anilistDeps(), item, {
+            ...(progress != null ? { progress } : {}),
+            ...(rewatch === true ? { rewatch: true } : {}),
+          }),
+        ).then(okResult),
+    );
+  },
   // Diary write as the signed-in web user (plan 0012): run the write inside the
   // authenticated WebView, POSTing the modern /api/v0/production-log-entries JSON
   // API (the legacy /s/save-diary-entry form is dead). Tags are the app's
