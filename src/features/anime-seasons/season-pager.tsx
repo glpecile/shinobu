@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Platform, View, type LayoutChangeEvent, type ScrollView } from 'react-native';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  Platform,
+  View,
+  type LayoutChangeEvent,
+  type ScrollView,
+  type ViewStyle,
+} from 'react-native';
 import {
   useAnimatedReaction,
   useAnimatedScrollHandler,
@@ -54,10 +60,14 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * re-snaps every mid-page write straight back to the page it started on.
  * Reanimated's `scrollTo` is a no-op on web, hence the DOM write.
  *
- * A trackpad swipe on web does not page: left to the browser it free scrolls
- * for as long as the OS keeps sending momentum and snaps late, and stepping a
- * page per gesture read as unpredictable. Horizontal wheel is swallowed, so
- * web switches cours by tap; touch on web stays the browser's snap.
+ * Web switches cours by tap only, so there the pager is not a horizontal
+ * scroller at all (`overflow-x: hidden`, which a `scrollLeft` write still
+ * moves). A trackpad swipe over the wall belongs to the page, not to us: it
+ * is what the browser's back gesture is made of. Paging on it was worse
+ * anyway — left to the browser it free scrolls for as long as the OS sends
+ * momentum, and intercepting the wheel to step a page read as unpredictable,
+ * killed the back gesture, and let a near-vertical flick nudge the pager into
+ * a snap-back wobble.
  */
 
 /** Quiet time after the last scroll event before a position counts as settled (web). */
@@ -65,6 +75,15 @@ const SETTLE_MS = 120;
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
 const BOUNDARY_TOLERANCE = 2;
 const isWeb = Platform.OS === 'web';
+/** Web pages by tap: `scrollLeft` still moves, a trackpad swipe reaches the page. */
+const webScrollLock = { overflowX: 'hidden' } as unknown as ViewStyle;
+/**
+ * The first position has to land before the first paint — after it, the pager
+ * paints one frame of the first cour, whose page is not even mounted, and
+ * then jumps. Static web rendering has no layout to correct, and
+ * `useLayoutEffect` is a no-op there anyway.
+ */
+const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export function SeasonPager({
   season,
@@ -115,7 +134,7 @@ export function SeasonPager({
     },
   );
 
-  useEffect(() => {
+  useBeforePaint(() => {
     if (size.width === 0) return;
     const animated = shown.current != null && shown.current !== index && !reduceMotion;
     shown.current = index;
@@ -140,16 +159,6 @@ export function SeasonPager({
       },
     );
   }, [index, size.width, reduceMotion, progress, driven]);
-
-  useEffect(() => {
-    const node = scrollNode();
-    if (node == null) return;
-    function onWheel(event: WheelEvent) {
-      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) event.preventDefault();
-    }
-    node.addEventListener('wheel', onWheel, { passive: false });
-    return () => node.removeEventListener('wheel', onWheel);
-  }, []);
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
@@ -194,6 +203,7 @@ export function SeasonPager({
       ref={scroller}
       scrollEventThrottle={16}
       showsHorizontalScrollIndicator={false}
+      style={isWeb ? webScrollLock : undefined}
     >
       {size.width > 0 &&
         ANIME_SEASONS.map((cour, i) => (
