@@ -9,6 +9,7 @@ import {
   providerItemUrl,
   providerPersonUrl,
   providerStudioUrl,
+  tmdbItemUrl,
 } from './external-urls';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
@@ -137,6 +138,31 @@ describe('providerItemUrl', () => {
     ).toBeNull();
     expect(providerItemUrl('simkl', { type: 'TV', ...ids({ trakt: 1 }) })).toBeNull();
     expect(providerItemUrl('simkl', { type: 'TV', ...ids() })).toBeNull();
+  });
+});
+
+describe('tmdbItemUrl', () => {
+  it('files a movie under /movie and a show under /tv', () => {
+    expect(tmdbItemUrl({ type: 'MOVIE', ...ids({ tmdb: 12 }) })).toBe(
+      'https://www.themoviedb.org/movie/12',
+    );
+    expect(tmdbItemUrl({ type: 'TV', ...ids({ tmdb: 34 }) })).toBe(
+      'https://www.themoviedb.org/tv/34',
+    );
+  });
+
+  it('sends an anime film to /movie and an anime series to /tv', () => {
+    expect(
+      tmdbItemUrl({ type: 'ANIME', isFilm: true, ...ids({ tmdb: 56 }) }),
+    ).toBe('https://www.themoviedb.org/movie/56');
+    expect(tmdbItemUrl({ type: 'ANIME', ...ids({ tmdb: 78 }) })).toBe(
+      'https://www.themoviedb.org/tv/78',
+    );
+  });
+
+  it('has no page without a tmdb id, or for manga', () => {
+    expect(tmdbItemUrl({ type: 'MOVIE', ...ids() })).toBeNull();
+    expect(tmdbItemUrl({ type: 'MANGA', ...ids({ tmdb: 90 }) })).toBeNull();
   });
 });
 

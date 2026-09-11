@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
+import { Button } from '@/components/button';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
@@ -541,6 +542,11 @@ function DiaryChildRow({
  * The R10 partial-failure banner: persistent (non-dismissible), names the
  * failed provider(s), tap-to-retry. Shown over the entries that did load,
  * never a blank screen (same contract as the feed and the log fan-out).
+ *
+ * It is a button, so it is `components/button` — a quiet pill that hugs its
+ * label rather than a full-bleed bar, which is what kept reading as an alert
+ * the list couldn't get rid of. The glyph is the app's retry verb; the label
+ * says what failed.
  */
 function DiaryFailureBanner({
   providers,
@@ -549,23 +555,17 @@ function DiaryFailureBanner({
   providers: ProviderId[];
   onRetry: () => void;
 }) {
-  const accent = useThemeColor('--color-accent');
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   return (
-    <PresstableOpacity
+    <Button
       accessibilityLabel={`Retry loading ${names}`}
-      className="mx-6 mt-3 flex-row items-center gap-2.5 rounded bg-surface border border-border px-4 py-3"
+      className="self-start ml-6 mt-3"
+      icon={<Button.Icon name="refresh" />}
+      label={`Couldn\u2019t load ${names}`}
       onPress={onRetry}
-    >
-      <Ionicons
-        color={accent}
-        name="warning-outline"
-        size={16}
-      />
-      <Text className="flex-1 text-foreground font-sans text-sm">
-        Couldn&apos;t load {names}. Tap to retry.
-      </Text>
-    </PresstableOpacity>
+      size="sm"
+      variant="quiet"
+    />
   );
 }
 

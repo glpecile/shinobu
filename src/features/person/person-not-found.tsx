@@ -19,6 +19,10 @@ export function PersonNotFound({
       <Head>
         <title>Not found — Shinobu</title>
       </Head>
+      {/* The 忍 mark, as on every other dead end (root error fallback, empty
+          search). Deliberately unstyled by family: neither app font ships
+          kanji (AGENTS.md, Theming). */}
+      <Text className="text-5xl text-muted mb-4">忍</Text>
       <Text className="text-2xl font-display text-foreground mb-2">
         Not found
       </Text>
