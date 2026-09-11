@@ -126,6 +126,7 @@ export function WatchlistRows({
   onRefresh,
   onEndReached,
   footer,
+  ref,
 }: WatchlistLayoutProps) {
   return (
     <List
@@ -139,6 +140,7 @@ export function WatchlistRows({
       keyExtractor={(entry) => entry.id}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
+      ref={ref}
       // The diary's row, recycled for the diary's reason
       // (docs/solutions/diary-scroll-jank-is-row-mount-cost.md); the same
       // stale-hover residual applies.

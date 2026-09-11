@@ -1,4 +1,6 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, Ref } from 'react';
+
+import type { LegendListRef } from '@/components/List';
 
 import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
@@ -144,4 +146,10 @@ export interface WatchlistLayoutProps {
   onEndReached?: (() => void) | undefined;
   /** The screen's loading/retry footer — rendered at the end of the list. */
   footer: ReactElement;
+  /**
+   * The underlying list, for a screen that has to move it (the seasons
+   * explorer scrolls back to the top when the filter changes under a wall it
+   * deliberately does not remount).
+   */
+  ref?: Ref<LegendListRef>;
 }

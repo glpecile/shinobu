@@ -5,7 +5,7 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { Suspense, startTransition, useEffect, useState } from 'react';
+import { Suspense, startTransition, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
@@ -13,6 +13,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
+import type { LegendListRef } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
 import { PresstableOpacity } from '@/components/presstable';
@@ -24,7 +25,7 @@ import { SeasonPager } from '@/features/anime-seasons/season-pager';
 import { SeasonPicker } from '@/features/anime-seasons/season-picker';
 import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
-import { PosterWall } from '@/features/watchlist/poster-wall';
+import { PosterWall, useWallMetrics } from '@/features/watchlist/poster-wall';
 import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
 import { ViewToggle } from '@/features/watchlist/watchlist-toolbar';
 import { cn } from '@/lib/cn';
@@ -80,7 +81,20 @@ function SeasonWall({
 }) {
   const pushRoute = usePushRoute();
   const pages = useSuspenseSeasonalAnimePagesQuery(window, format);
-  useWarmPosters(anilistQueryKeys.seasonalAnimePages(window, format), pages.data.pages[0] ?? []);
+  const { columns } = useWallMetrics();
+  // Three rows of the wall the device actually has: what the swap waits on
+  // before it may paint, so a phone must not queue a desktop's worth.
+  useWarmPosters(
+    anilistQueryKeys.seasonalAnimePages(window, format),
+    pages.data.pages[0] ?? [],
+    columns * 3,
+  );
+  const listRef = useRef<LegendListRef>(null);
+  // The wall is not remounted when the format changes (see below), so its
+  // scroll offset would survive into a different, usually shorter list.
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [format]);
   const [refreshing, setRefreshing] = useState(false);
   // AniList's popularity sort is not stable across pages, so a title can sit
   // on the tail of one page and the head of the next; the list needs unique
@@ -114,12 +128,17 @@ function SeasonWall({
     // back into view, and a per-cell entrance replays on every fast scroll
     // (docs/solutions/entering-animation-on-virtualized-cells-replays.md). A
     // CSS keyframes rule rather than a layout `entering`: presets have no
-    // blur and a custom Keyframe pins the element on web. Keyed by window so
-    // a year or format change is a new wall that plays it, instead of the
-    // posters hard-cutting under the same list.
+    // blur and a custom Keyframe pins the element on web.
+    //
+    // Once per *mount* is the whole point, and a format change is not one: it
+    // used to be keyed by format too, so narrowing to Movies unmounted a
+    // Legend List of poster cells and mounted another — the frame this screen
+    // already went to a pager to avoid for cours
+    // (docs/solutions/season-switch-jank-remount-and-blur-on-native.md), now
+    // landing across the format pill's slide. The filter swaps the wall's
+    // data under the same list; a new window is still a new wall, and plays.
     <AnimatedView
       className="flex-1"
-      key={`${window.season}-${window.year}-${format}`}
       style={
         reduceMotion
           ? undefined
@@ -148,6 +167,7 @@ function SeasonWall({
         onItemActions={onItemActions}
         onItemPress={(item) => pushRoute(routes.details(item.id))}
         onRefresh={() => void refresh()}
+        ref={listRef}
         refreshing={refreshing}
       />
     </AnimatedView>
@@ -190,33 +210,31 @@ function WallBoundary({
 }
 
 /**
- * The format, delivered once the segmented control's pill has finished sliding
- * — and as a transition, so the wall it feeds keeps its posters up while the
- * new ones load instead of dropping to a skeleton (the `useDeferredValue` this
- * replaces did the second half alone).
+ * The format the cours *behind the edges* switch to, a pill's slide after the
+ * one in front of the user — and as a transition, so each of those walls keeps
+ * its posters while the new ones load.
  *
- * The wait is for iOS. The pill is a Reanimated CSS transition: on web the
- * browser composites it off the main thread, so nothing the app does can
- * disturb it, but on native it runs on the UI thread — the thread that also
- * mounts native views. A format change unmounts one Legend List of poster
- * cells and mounts another, the expensive frame this screen already went to a
- * pager to avoid for cours
- * (docs/solutions/season-switch-jank-remount-and-blur-on-native.md), and with
- * the home row's entry already cached it landed a frame or two after the tap:
- * right across the pill's 200ms. Waiting the slide out leaves it a quiet
- * thread, and the swap then reads as the content following the control.
+ * The pager deliberately keeps the neighbouring cours mounted, so a format tap
+ * is three walls re-reading AniList, re-warming three screens of posters and
+ * re-rendering three lists of cells. On web that is free — the pill is a
+ * composited CSS transition and nothing on the main thread can reach it. On
+ * native the same transition runs on the UI thread, which is also the thread
+ * that renders those cells, so the two walls the user cannot see were landing
+ * on the frames of the one animation they were looking at. Staggering them
+ * costs nothing visible: a swipe takes longer to start than the slide takes to
+ * finish, so a neighbour is never reached before it has caught up.
  */
-function useFormatAfterThePill(format: AnimeFormatFilter): AnimeFormatFilter {
-  const [settled, setSettled] = useState(format);
+function useTrailingFormat(format: AnimeFormatFilter): AnimeFormatFilter {
+  const [trailing, setTrailing] = useState(format);
   useEffect(() => {
-    if (settled === format) return;
+    if (trailing === format) return;
     const timer = setTimeout(
-      () => startTransition(() => setSettled(format)),
+      () => startTransition(() => setTrailing(format)),
       DURATION.toggle,
     );
     return () => clearTimeout(timer);
-  }, [format, settled]);
-  return settled;
+  }, [format, trailing]);
+  return trailing;
 }
 
 export default function AnimeSeasonsScreen() {
@@ -232,16 +250,15 @@ export default function AnimeSeasonsScreen() {
   // every scroll frame and the season strip's pill reads it, so the pill rides
   // the finger instead of jumping once the swipe settles.
   const progress = useSharedValue(ANIME_SEASONS.indexOf(window.season));
-  // The format follows the URL a beat behind, so All ⇄ TV keeps the current
-  // posters up until the narrowed set has loaded: the same titles, fewer of
-  // them. A year change is the opposite case — a different catalogue — and
-  // holding last year's posters until this year's arrive reads as the tap
-  // having been ignored, then the wall silently swapped. Router param updates
-  // are React transitions, which keep revealed content up while the new
-  // render suspends, so the boundaries below are *keyed* by year: a new
-  // boundary shows its skeleton at once (React's documented opt-out). Cours
-  // need neither: the pager keeps the neighbouring walls mounted.
-  const deferredFormat = useFormatAfterThePill(format);
+  // The wall in front of the user takes the new format immediately: a router
+  // param update is a React transition, so its posters stay up until the
+  // narrowed set has loaded — the same titles, fewer of them — and it swaps
+  // the moment they are there rather than on a timer. A year change is the
+  // opposite case — a different catalogue — and holding last year's posters
+  // until this year's arrive reads as the tap having been ignored, then the
+  // wall silently swapping, so the boundaries below are *keyed* by year: a
+  // new boundary shows its skeleton at once (React's documented opt-out).
+  const trailingFormat = useTrailingFormat(format);
 
   // `setParams`, not a push: a different season is not a new destination,
   // and Back should leave the screen, not walk every season tried.
@@ -303,7 +320,7 @@ export default function AnimeSeasonsScreen() {
         progress={progress}
         renderSeason={(season) => (
           <WallBoundary
-            format={deferredFormat}
+            format={season === window.season ? format : trailingFormat}
             key={window.year}
             onItemActions={openActions}
             window={{ season, year: window.year }}
