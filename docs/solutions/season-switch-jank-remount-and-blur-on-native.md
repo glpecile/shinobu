@@ -39,6 +39,24 @@ No easing or duration change fixes either.
   variants by directory, per the file conventions.
 - **One actions sheet** at the screen, passed down as `onItemActions`, instead
   of one per mounted wall.
+- **The strip's pill rides the scroll.** The pager is a Reanimated
+  `Animated.ScrollView` whose `onScroll` worklet writes `offset / width` into a
+  shared value on the UI thread; `SegmentedControl` takes it as `progress` and
+  positions the pill from it with `useAnimatedStyle` instead of its own CSS
+  transition. The pill is under the finger mid-swipe and moves with the page
+  when a tab tap scrolls there, on every platform, with no JS on the gesture.
+
+## Web: settle only at rest
+
+react-native-web's ScrollView never fires `onMomentumScrollEnd`; it emits
+`onScroll` only, and with `scrollEventThrottle` at 0 that means exactly *two*
+events per scroll — one on the first moved frame and one 100ms after the last.
+Settling from that first event (or from any sample taken while a tab tap's
+page scroll is in flight) reads the page being *left*, and the URL snaps
+straight back to it — the "always reverts to the current season" bug. With
+`scrollEventThrottle={16}` every frame emits, a quiet-period timer that every
+event resets only ever fires at rest, and a resting offset with mandatory
+snap is a page boundary (±2px for fractional zoom).
 
 Year and format changes still remount (they are new walls), but they are
 discrete taps, and the native entrance is now a transform only.

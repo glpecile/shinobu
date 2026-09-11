@@ -7,7 +7,7 @@ import {
 } from 'expo-router';
 import { Suspense, useDeferredValue, useState } from 'react';
 import { Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
 import { useCSSVariable } from 'uniwind';
 
@@ -30,6 +30,7 @@ import { ViewToggle } from '@/features/watchlist/watchlist-toolbar';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import {
+  ANIME_SEASONS,
   animeSeasonAt,
   animeSeasonLabel,
   parseAnimeFormatFilter,
@@ -206,6 +207,10 @@ export default function AnimeSeasonsScreen() {
   };
   const view = useWatchlistView();
   const { openActions, sheetProps } = useCardActions();
+  // Where the pager is, as a continuous cour index: the pager writes it on
+  // every scroll frame and the season strip's pill reads it, so the pill rides
+  // the finger instead of jumping once the swipe settles.
+  const progress = useSharedValue(ANIME_SEASONS.indexOf(cour));
   // The controls track the URL instantly; the walls follow one step behind,
   // so changing year or format keeps the current posters on screen until the
   // next set has loaded instead of dropping to the skeleton for every tap.
@@ -257,7 +262,7 @@ export default function AnimeSeasonsScreen() {
         </PresstableOpacity>
         <Text className="text-2xl font-display text-foreground">Anime Seasons</Text>
       </View>
-      <SeasonPicker onChange={setWindow} window={window} />
+      <SeasonPicker onChange={setWindow} progress={progress} window={window} />
       <View className="flex-row items-center gap-3 px-4 pb-3">
         <SegmentedControl
           accessibilityLabel="Format"
@@ -283,6 +288,7 @@ export default function AnimeSeasonsScreen() {
       ) : (
         <SeasonPager
           onSettle={(season) => router.setParams({ season })}
+          progress={progress}
           renderSeason={(season) => (
             <WallBoundary
               format={deferredFormat}

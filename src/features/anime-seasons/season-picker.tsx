@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
 import { PresstableOpacity } from '@/components/presstable';
@@ -35,9 +36,12 @@ const SEASON_OPTIONS = ANIME_SEASONS.map((season) => ({
 export function SeasonPicker({
   window,
   onChange,
+  progress,
 }: {
   window: AnimeSeasonWindow;
   onChange: (next: AnimeSeasonWindow) => void;
+  /** The pager's position, so the cour pill rides the swipe. */
+  progress: SharedValue<number>;
 }) {
   const foreground = useCSSVariable('--color-foreground');
   const muted = useCSSVariable('--color-muted');
@@ -89,6 +93,7 @@ export function SeasonPicker({
           accessibilityLabel="Season"
           onChange={(season) => onChange({ ...window, season })}
           options={SEASON_OPTIONS}
+          progress={progress}
           value={window.season}
         />
       )}

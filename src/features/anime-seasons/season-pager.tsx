@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Platform, View, type LayoutChangeEvent, type ScrollView } from 'react-native';
 import {
-  Platform,
-  ScrollView,
-  View,
-  type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+  useAnimatedScrollHandler,
+  useReducedMotion,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
+import { AnimatedScrollView } from '@/components/animated-view';
 import { haptics } from '@/lib/haptics';
 import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season';
 
@@ -27,25 +26,33 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * tab tap scrolls past them, and they fill in as soon as they are selected.
  *
  * Controlled: `season` comes from the URL, `onSettle` reports where a swipe
- * landed. Native reports that through `onMomentumScrollEnd`; react-native-web
- * never fires it (its ScrollView only emits `onScroll`, with one trailing
- * event once scrolling stops), so a short quiet period after the last scroll
- * event stands in for it there — but only when the offset sits on a page
- * boundary, so a finger held still mid-page never flips the season under
- * itself. Pages get explicit sizes from the measured pager because a
- * horizontal scroll view does not stretch its children's height on every
- * platform.
+ * landed, and `progress` is the offset as a continuous cour index, written on
+ * the UI thread every scroll frame so the season strip's pill rides the
+ * finger. Native reports a settle through the momentum-end event;
+ * react-native-web never fires it (its ScrollView only emits `onScroll`), so
+ * on web a short quiet period after the last scroll event stands in for it.
+ * Every event resets that timer, so it only ever fires at rest: settling
+ * from a sample taken *during* a tab tap's page scroll would read the page
+ * being left and snap the URL straight back to it. Pages get explicit sizes
+ * from the measured pager because a horizontal scroll view does not stretch
+ * its children's height on every platform.
  */
 
-/** Quiet time after the last scroll event before a position counts as settled. */
+/** Quiet time after the last scroll event before a position counts as settled (web). */
 const SETTLE_MS = 120;
+/** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
+const BOUNDARY_TOLERANCE = 2;
+const isWeb = Platform.OS === 'web';
+
 export function SeasonPager({
   season,
   onSettle,
+  progress,
   renderSeason,
 }: {
   season: AnimeSeason;
   onSettle: (season: AnimeSeason) => void;
+  progress: SharedValue<number>;
   renderSeason: (season: AnimeSeason) => ReactNode;
 }) {
   const scroller = useRef<ScrollView>(null);
@@ -63,8 +70,10 @@ export function SeasonPager({
     if (size.width === 0) return;
     const animated = shown.current != null && shown.current !== index && !reduceMotion;
     shown.current = index;
+    // A jump fires no scroll frames on every platform; keep the pill honest.
+    if (!animated) progress.value = index;
     scroller.current?.scrollTo({ x: index * size.width, animated });
-  }, [index, size.width, reduceMotion]);
+  }, [index, size.width, reduceMotion, progress]);
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
@@ -74,35 +83,38 @@ export function SeasonPager({
   function settleAt(x: number) {
     if (size.width === 0) return;
     const page = Math.round(x / size.width);
-    if (Math.abs(x - page * size.width) > 1) return;
+    if (Math.abs(x - page * size.width) > BOUNDARY_TOLERANCE) return;
     const settled = ANIME_SEASONS[page];
     if (settled == null || settled === season) return;
     haptics.selection();
     onSettle(settled);
   }
 
-  function onMomentumScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    settleAt(event.nativeEvent.contentOffset.x);
-  }
-
-  function onScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const { x } = event.nativeEvent.contentOffset;
+  function scheduleSettle(x: number) {
     clearTimeout(settleTimer.current ?? undefined);
     settleTimer.current = setTimeout(() => settleAt(x), SETTLE_MS);
   }
 
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (size.width === 0) return;
+      progress.value = event.contentOffset.x / size.width;
+      if (isWeb) scheduleOnRN(scheduleSettle, event.contentOffset.x);
+    },
+    onMomentumEnd: (event) => {
+      scheduleOnRN(settleAt, event.contentOffset.x);
+    },
+  });
+
   return (
-    <ScrollView
+    <AnimatedScrollView
       className="flex-1"
       horizontal
       onLayout={onLayout}
-      onMomentumScrollEnd={onMomentumScrollEnd}
-      // Web only: native has the real momentum end, and a JS scroll handler
-      // there would only add bridge traffic on the gesture frames.
-      onScroll={Platform.OS === 'web' ? onScroll : undefined}
+      onScroll={onScroll}
       pagingEnabled
       ref={scroller}
-      scrollEventThrottle={SETTLE_MS}
+      scrollEventThrottle={16}
       showsHorizontalScrollIndicator={false}
     >
       {size.width > 0 &&
@@ -111,6 +123,6 @@ export function SeasonPager({
             {Math.abs(i - index) <= 1 ? renderSeason(cour) : null}
           </View>
         ))}
-    </ScrollView>
+    </AnimatedScrollView>
   );
 }

@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import {
+  useAnimatedStyle,
+  useReducedMotion,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useCSSVariable } from 'uniwind';
 
 import { AnimatedText, AnimatedView } from '@/components/animated-view';
@@ -25,6 +29,13 @@ export interface SegmentedControlProps<T extends string> {
   size?: 'sm' | 'md';
   /** Layout only (width, margins) — the control styles itself. */
   className?: string;
+  /**
+   * The selection as a continuous index (1.4 is between the second and third
+   * segment), for a control that fronts a pager: the pill follows it on the
+   * UI thread — under the finger mid-swipe, alongside a page scroll a tab tap
+   * started — instead of sliding on its own once `value` settles.
+   */
+  progress?: SharedValue<number>;
 }
 
 /** Inset between the border and the sliding pill, in px. */
@@ -52,6 +63,7 @@ export function SegmentedControl<T extends string>({
   accessibilityLabel,
   size = 'md',
   className,
+  progress,
 }: SegmentedControlProps<T>) {
   const foregroundToken = useCSSVariable('--color-foreground');
   const backgroundToken = useCSSVariable('--color-background');
@@ -69,6 +81,9 @@ export function SegmentedControl<T extends string>({
   const measured = width > 0;
   const segmentWidth = measured ? (width - INSET * 2) / options.length : 0;
   const index = Math.max(0, options.findIndex((option) => option.value === value));
+  const followStyle = useAnimatedStyle(() =>
+    progress ? { transform: [{ translateX: progress.value * segmentWidth }] } : {},
+  );
 
   function onLayout(event: LayoutChangeEvent) {
     const next = event.nativeEvent.layout.width;
@@ -98,16 +113,17 @@ export function SegmentedControl<T extends string>({
         <AnimatedView
           className="absolute rounded-full bg-foreground"
           pointerEvents="none"
-          style={{
-            top: INSET,
-            bottom: INSET,
-            left: INSET,
-            width: segmentWidth,
-            transform: [{ translateX: index * segmentWidth }],
-            transitionProperty: 'transform',
-            transitionDuration: reduceMotion ? 0 : DURATION.toggle,
-            transitionTimingFunction: EASE_IN_OUT,
-          }}
+          style={[
+            { top: INSET, bottom: INSET, left: INSET, width: segmentWidth },
+            progress
+              ? followStyle
+              : {
+                  transform: [{ translateX: index * segmentWidth }],
+                  transitionProperty: 'transform',
+                  transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+                  transitionTimingFunction: EASE_IN_OUT,
+                },
+          ]}
         />
       )}
       {options.map((option) => {
