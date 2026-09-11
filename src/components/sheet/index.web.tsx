@@ -176,7 +176,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         {open && (
           <>
             <AnimatedView
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               entering={backdropEntering}
               exiting={backdropExiting}
             />
@@ -190,8 +190,9 @@ export function Sheet({ open, onClose, children }: SheetProps) {
                 fills the overlay, and `justify-end` keeps the panel bottom-
                 anchored however tall it gets. The wrapper covers the scrim,
                 and a `box-none` style doesn't survive the animated view on
-                web, so the close target is the spacer above the panel, not
-                the scrim itself. */}
+                web, so the close target is a layer filling the wrapper,
+                painted under the panel: above it *and* beside it on wide
+                viewports, where the panel is narrower than the window. */}
             <AnimatedView
               className="flex-1 justify-end"
               entering={
@@ -201,7 +202,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
             >
               <PresstableOpacity
                 accessibilityLabel="Close"
-                className="flex-1"
+                className="absolute inset-0"
                 onPress={onClose}
               />
               <SheetPanel reduceMotion={reduceMotion}>{children}</SheetPanel>
