@@ -129,3 +129,52 @@ unlock `/{user}/rss/page/N/` or any other path).
 fingerprint wall on state-changing requests is untouched, and
 `worker/letterboxd-write-spike.ts` remains the standing harness that must prove
 otherwise before any write rule is considered.
+
+## Re-spike 2026-09-10: the wall is Cloudflare's bot score, not cookies or TLS alone — writes are closed for good
+
+Run against a throwaway test account with real Google Chrome 153 on macOS
+(headed, `--disable-blink-features=AutomationControlled`, `navigator.webdriver
+=== false`, plus the rebrowser Runtime.enable patch), then curl and the local
+`wrangler dev` spike relay from the **same residential IP**.
+
+| Client | Request | Result |
+|---|---|---|
+| Real Chrome under CDP | `/sign-in/` form submit | Never posts: the form is gated by **Cloudflare Turnstile** (`window.turnstile`, POST to `challenges.cloudflare.com`) that must fill the hidden `authenticationCode` input; under automation the token is never issued and the button spins forever |
+| Real Chrome under CDP (plain Playwright) | forced `POST /user/login.do` | 403 `cf-mitigated: challenge` |
+| Real Chrome under CDP, holding a fresh `cf_clearance` it earned itself | film page `GET /csi/film/{slug}/*` XHRs | 403 `cf-mitigated: challenge` (page itself 200) |
+| curl, same IP, same UA, HTTP/2, full Chrome header set, that `cf_clearance` + csrf cookie | `POST /api/v0/production-log-entries`, `POST /ajax/letterboxd-metadata/`, `GET /csi/...` | 403 challenge, all three |
+| local workerd (`wrangler dev` spike relay), same cookies | `POST /api/v0/production-log-entries` | `challenged: true` |
+| curl, no cookies | public film page, `/settings/` | 200 |
+
+**Reading:** every state-changing endpoint (and the `/csi/` + `/ajax/` XHR
+family) sits behind a bot-management *score* rule. `cf_clearance` does not
+rescue a non-browser client even on the IP+UA that earned it, and it does not
+even rescue the browser that earned it once JS detection has flagged that
+browser as automated. Cookies are therefore not the variable — the client's
+fingerprint and JS-detection verdict are. That closes the last untested cell
+(a *valid signed-in* session replayed from Workers egress) by inference: a
+Worker is a non-browser client on a different IP, strictly worse than the
+curl row above. Sign-in is doubly closed: even before the POST's challenge,
+the form needs a Turnstile token only a human-scored browser gets.
+
+**Deep link checked, no shortcut:** the main bundle
+(`static/js/es/main-*.js`) reads only `?s=` (list quick-find) and
+`#comment-` hashes from the URL; nothing opens the diary-entry modal. The
+plan 0022 manual link to `/film/{slug}/` is the ceiling on web.
+
+**Consequences.** Web writes stay manual-link-only, permanently, unless one of
+two things changes: Letterboxd grants official API access
+(`api-docs.letterboxd.com`, request-only; the 2026-07 request went
+unanswered), or Shinobu ships a browser extension whose content script runs
+*on* letterboxd.com in the user's own (human-scored) session — the web
+analogue of the native WebView bridge. No relay design, Workers Browser
+Rendering included (headless Chrome under CDP is exactly the flagged client
+above), can pass this gate. `worker/letterboxd-write-spike.ts` has now
+answered its question; keep or delete it at the owner's call.
+
+**Harness notes for anyone re-running this:** Playwright's bundled headless
+Chrome sends a `HeadlessChrome/` UA and is challenged everywhere; headed
+`channel: 'chrome'` with the automation flag hidden still fails Turnstile;
+`rebrowser-playwright-core` (Runtime.enable patch) changes nothing here. A
+genuine session can only come from a human logging in without any CDP client
+attached.
