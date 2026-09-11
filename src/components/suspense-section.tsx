@@ -1,8 +1,6 @@
 import { Component, Suspense, type ReactNode } from 'react';
-import { useReducedMotion } from 'react-native-reanimated';
 
-import { AnimatedView } from '@/components/animated-view';
-import { DURATION, EASE_OUT } from '@/lib/motion';
+import { SectionEnter } from '@/components/section-enter';
 import { toast } from '@/lib/toast';
 
 interface BoundaryProps {
@@ -46,43 +44,6 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   override render() {
     return this.state.failed ? null : this.props.children;
   }
-}
-
-/** Tiny: the skeleton it replaces occupied the same box. */
-const SECTION_RISE = 6;
-
-const sectionEntering = {
-  '0%': { opacity: 0, transform: [{ translateY: SECTION_RISE }] },
-  '100%': { opacity: 1, transform: [{ translateY: 0 }] },
-};
-
-/** Reduced motion keeps the fade and drops the travel. */
-const sectionFading = {
-  '0%': { opacity: 0 },
-  '100%': { opacity: 1 },
-};
-
-/**
- * Plays on mount, which is when the suspended child resolves. A CSS animation
- * rather than an `entering=` layout animation: the wrapper contributes its
- * height to the scroll view's flow on web, which a layout animation pins.
- */
-function SectionEnter({ children }: { children: ReactNode }) {
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <AnimatedView
-      style={{
-        animationName: reduceMotion ? sectionFading : sectionEntering,
-        animationDuration: `${DURATION.swap}ms`,
-        animationTimingFunction: EASE_OUT,
-        // Native honours it; Reanimated's web path drops it, harmlessly.
-        animationFillMode: 'both',
-      }}
-    >
-      {children}
-    </AnimatedView>
-  );
 }
 
 /**
