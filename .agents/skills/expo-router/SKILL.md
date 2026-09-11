@@ -7,7 +7,7 @@ license: MIT
 
 # Expo Router Navigation
 
-Navigation and routing for Expo Router apps. For screen styling, colors, controls, animations, media, and visual effects, use the `expo-native-ui` skill.
+Navigation and routing for Expo Router apps. For screen styling, colors, controls, media, and visual effects, use the `expo-native-ui` skill; for motion and gestures, use `expo-animation`.
 
 ## References
 
@@ -217,14 +217,24 @@ export default function Layout({ segment }) {
         headerLargeTitleShadowVisible: false,
         headerLargeStyle: { backgroundColor: "transparent" },
         headerTitleStyle: { color: colors.label },
-        headerLargeTitle: true,
+        headerLargeTitleEnabled: true,
         headerBlurEffect: "none",
         headerBackButtonDisplayMode: "minimal",
       }}
     >
       <Stack.Screen name={screen} options={{ title: titles[screen] }} />
-      <Stack.Screen name="i/[id]" options={{ headerLargeTitle: false }} />
+      <Stack.Screen name="i/[id]" options={{ headerLargeTitleEnabled: false }} />
     </Stack>
   );
 }
 ```
+
+`headerLargeTitleEnabled` is the SDK 56+ option name; older SDKs use `headerLargeTitle`, which is deprecated upstream.
+
+## Submitting Feedback
+If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
+```bash
+npx --yes submit-expo-feedback@latest --category skills --subject "expo-router" "<actionable feedback>"
+```
+Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
+If an AI agent repeatedly failed or the user had to take over an Expo task, load the expo-skill-feedback skill and follow its eval-candidate flow instead of reusing the command above.
