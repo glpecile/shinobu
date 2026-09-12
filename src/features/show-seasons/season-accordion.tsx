@@ -4,8 +4,10 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { PresstableOpacity } from '@/components/presstable';
+import { formatAirDate } from '@/features/episode-details/episode-label';
 import { useThemeColor } from '@/lib/theme-color';
 import { hasAired } from '@/lib/time/has-aired';
+import { formatRelativeDay } from '@/lib/time/relative-day';
 import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
 import { formatRuntime, seasonRuntimeMinutes } from './runtime';
 
@@ -69,6 +71,24 @@ function EpisodeRow({
   const showActionsButton =
     process.env.EXPO_OS === 'web' && hovered && onActions != null;
   const aired = hasAired(episode.firstAired);
+  // An unaired row is asked "when?" twice, so it answers twice rather than
+  // saying "Unaired" in both places: the meta line takes the date in the
+  // format the episode screen already uses, and the slot the mark button
+  // would occupy takes the countdown the details CTA speaks. Both fall back
+  // to the bare word when the provider carried no date at all — a
+  // synthesized AniList row for an announced season
+  // (docs/solutions/anilist-undated-episodes-arent-proof-of-airing.md).
+  const airsOn =
+    aired || episode.firstAired == null
+      ? null
+      : formatAirDate(episode.firstAired);
+  const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
+  const meta = [
+    episode.runtime != null ? `${episode.runtime} min` : null,
+    aired ? null : (airsOn ?? 'Unaired'),
+  ]
+    .filter((part) => part != null)
+    .join(' · ');
   const label = (
     <>
       {isWatched ? (
@@ -87,11 +107,7 @@ function EpisodeRow({
         >
           E{episode.number} · {episode.title}
         </Text>
-        <Text className="text-muted font-sans text-xs mt-0.5">
-          {episode.runtime != null ? `${episode.runtime} min` : ''}
-          {episode.runtime != null && !aired ? ' · ' : ''}
-          {!aired ? 'Unaired' : ''}
-        </Text>
+        <Text className="text-muted font-sans text-xs mt-0.5">{meta}</Text>
       </View>
     </>
   );
@@ -135,7 +151,9 @@ function EpisodeRow({
           variant="quiet"
         />
       ) : (
-        <Text className="text-muted font-sans text-xs px-3">Unaired</Text>
+        <Text className="text-muted font-sans text-xs px-3">
+          {airsIn ?? 'Unaired'}
+        </Text>
       )}
     </View>
   );
@@ -150,8 +168,9 @@ function EpisodeRow({
  * Watched episodes render a checkmark — the parent can pass `null` for the set
  * when Trakt is disconnected, in which case no checkmarks show. Episodes whose
  * `firstAired` is still in the future (parsed as an instant, compared in the
- * user's local timezone — `lib/time/has-aired.ts`) render distinct and can't
- * be logged: you can't mark an episode you couldn't have watched yet.
+ * user's local timezone — `lib/time/has-aired.ts`) render distinct, say when
+ * they land, and can't be logged: you can't mark an episode you couldn't have
+ * watched yet.
  */
 export function SeasonAccordion({
   season,

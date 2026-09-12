@@ -5,6 +5,7 @@ import { Sheet } from '@/components/sheet';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { hasAired } from '@/lib/time/has-aired';
+import { formatRelativeDay } from '@/lib/time/relative-day';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 import { episodeCode, episodeMetaLine } from './episode-label';
@@ -49,6 +50,7 @@ function SheetBody({
   const episode = view.episode ?? pointer.episode;
   const logs = useEpisodeLogs(item, season, number, episode.firstAired);
   const aired = hasAired(episode.firstAired);
+  const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
   const meta = episodeMetaLine(episode);
 
   return (
@@ -92,7 +94,10 @@ function SheetBody({
           />
         ) : (
           <Text className="text-muted font-sans text-sm">
-            Not aired yet — it can be logged once it&apos;s out.
+            {/* The date is already on the meta line above, so this says how
+                soon — the same countdown the details CTA speaks. */}
+            {airsIn == null ? 'Not aired yet' : `Airs ${airsIn.toLowerCase()}`} —
+            it can be logged once it&apos;s out.
           </Text>
         )}
       </View>
