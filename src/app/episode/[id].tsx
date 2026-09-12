@@ -1,4 +1,5 @@
 import {
+  Redirect,
   useLocalSearchParams,
   useRouter,
   type ErrorBoundaryProps,
@@ -75,17 +76,12 @@ export default function EpisodeRoute() {
     return <View className="flex-1 bg-background" />;
   }
 
+  // An episode we can't place — no resolvable show, or an entry number ani.zip
+  // hasn't mapped onto TMDB's layout — is still a link to a show we *can*
+  // open. A dead end that names an internal mapping gap is worse than the
+  // show's own screen, so it lands there instead.
   if (item == null || !pointerValid) {
-    return (
-      <PersonNotFound
-        detail={
-          placing
-            ? "This episode isn’t mapped to TMDB’s numbering yet."
-            : 'This episode isn’t in your current feed.'
-        }
-        onGoBack={goBack}
-      />
-    );
+    return <Redirect href={routes.details(id)} />;
   }
 
   return (

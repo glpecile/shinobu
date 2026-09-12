@@ -115,6 +115,20 @@ function simklUrl(item: UrlItem): string | null {
 }
 
 /**
+ * TMDB's own page for `item`, or null without a TMDB id (or for MANGA, which
+ * TMDB doesn't carry). Deliberately *not* a `providerItemUrl` case: TMDB is a
+ * metadata source with no `ProviderId` and no registry entry (AGENTS.md,
+ * "TMDB"), so it joins the details "View on" cluster without widening the
+ * provider union — the same exception `ProviderIcon`'s `IconSourceId` makes.
+ */
+export function tmdbItemUrl(item: UrlItem): string | null {
+  const tmdb = item.externalIds.tmdb;
+  if (tmdb == null) return null;
+  const shape = isMovieShaped(item) ? 'movie' : isShowShaped(item) ? 'tv' : null;
+  return shape == null ? null : `https://www.themoviedb.org/${shape}/${tmdb}`;
+}
+
+/**
  * The provider's public page for `item`, or null when no id path exists
  * (plan 0022 R8, shared with plan 0023's link selector). Pure and
  * platform-free — callers open the result via `@/lib/open-external-url`.
