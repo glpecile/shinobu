@@ -1,22 +1,34 @@
 import {
-  Redirect,
   useLocalSearchParams,
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { FloatingBackButton } from '@/components/floating-back-button';
 import { PersonNotFound, PersonSkeleton } from '@/features/person';
+import { StudioDetailsView } from '@/features/studio/studio-details-view';
 import { pickPersonMatch } from '@/lib/providers/tmdb/normalize';
 import { routes } from '@/lib/routes';
-import { useSuspenseTmdbStudioSearchQuery } from '@/state/queries/tmdb';
+import {
+  useSuspenseTmdbStudioQuery,
+  useSuspenseTmdbStudioSearchQuery,
+} from '@/state/queries/tmdb';
+
+function ResolvedStudio({ tmdbId }: { tmdbId: number }) {
+  const { data } = useSuspenseTmdbStudioQuery({ tmdbId });
+  return <StudioDetailsView {...data} />;
+}
 
 /**
- * Name → company-id resolution hop for studios whose origin provider has no
- * TMDB id (AniList's) — the studio twin of /person/lookup: suspend on the
- * company search, pick via `pickPersonMatch` (generic over names), then
- * replace this route with `/studio/[id]`.
+ * Name → company-id resolution for studios whose origin provider has no TMDB
+ * id (AniList's) — the studio twin of /person/lookup, picking via
+ * `pickPersonMatch` (generic over names).
+ *
+ * Renders the page here rather than redirecting to `/studio/[id]`, for the
+ * reason spelled out in `person/lookup.tsx`: the replace was a second screen
+ * transition that faded the stack through black and restarted the skeleton.
  */
 function LookupContent({ name, onGoBack }: { name: string; onGoBack: () => void }) {
   const { data } = useSuspenseTmdbStudioSearchQuery({ name });
@@ -27,7 +39,7 @@ function LookupContent({ name, onGoBack }: { name: string; onGoBack: () => void 
       <PersonNotFound detail={`No results for “${name}”.`} onGoBack={onGoBack} />
     );
   }
-  return <Redirect href={routes.studio(match.tmdbId)} />;
+  return <ResolvedStudio tmdbId={match.tmdbId} />;
 }
 
 export default function StudioLookupScreen() {
@@ -50,9 +62,12 @@ export default function StudioLookupScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Suspense fallback={<PersonSkeleton />}>
-        <LookupContent name={name} onGoBack={goBack} />
-      </Suspense>
+      <ScrollView className="flex-1">
+        <Suspense fallback={<PersonSkeleton />}>
+          <LookupContent name={name} onGoBack={goBack} />
+        </Suspense>
+      </ScrollView>
+      <FloatingBackButton onPress={goBack} />
     </View>
   );
 }

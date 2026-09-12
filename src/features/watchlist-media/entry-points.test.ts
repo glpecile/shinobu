@@ -32,8 +32,9 @@ describe('the want-to-watch row is on by default (plan 0031 R12)', () => {
     for (const path of [
       'src/app/(tabs)/search.tsx',
       'src/app/(tabs)/index.tsx',
-      'src/app/person/[id].tsx',
-      'src/app/studio/[id].tsx',
+      // The person page's body, shared by `/person/[id]` and `/person/lookup`.
+      'src/features/person/person-details-view.tsx',
+      'src/features/studio/studio-details-view.tsx',
     ]) {
       const text = await source(path);
       expect(text).toContain('CardActionsSheet');
