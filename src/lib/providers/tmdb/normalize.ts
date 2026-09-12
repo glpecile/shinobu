@@ -513,21 +513,52 @@ function tmdbPersonId(id: number): string {
   return `tmdb-person-${id}`;
 }
 
+/**
+ * Billing-ordered cast, one entry per person — TMDB credits the same person
+ * twice whenever a character is respelled or recast in place (Ted Lasso S4E7
+ * lists Jude Mack as both "Katie Quinn" and "Katie 'Boots' Quinn"), and two
+ * cards sharing a person key is a React key collision. Characters merge and
+ * the better billing wins (same contract as `normalizeCrewEntries`).
+ */
 function normalizeCastEntries(
   entries: Array<TmdbPersonRef & { characters: string[] }>,
   limit: number = CAST_LIMIT,
 ): NormalizedCastMember[] {
-  return entries
-    .filter((entry) => entry.name != null && entry.name !== '')
-    .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
+  const byPerson = new Map<
+    string,
+    { member: NormalizedCastMember; characters: string[]; order: number }
+  >();
+
+  for (const entry of entries) {
+    if (entry.name == null || entry.name === '') continue;
+    const id = tmdbPersonId(entry.id);
+    const characters = entry.characters.filter((character) => character !== '');
+    const order = entry.order ?? Number.MAX_SAFE_INTEGER;
+    const existing = byPerson.get(id);
+    if (existing != null) {
+      for (const character of characters) {
+        if (!existing.characters.includes(character)) existing.characters.push(character);
+      }
+      existing.order = Math.min(existing.order, order);
+      continue;
+    }
+    byPerson.set(id, {
+      member: {
+        id,
+        name: entry.name,
+        character: '',
+        headshot: tmdbImageUrl(entry.profile_path, 'w185'),
+        tmdbId: entry.id,
+      },
+      characters,
+      order,
+    });
+  }
+
+  return [...byPerson.values()]
+    .sort((a, b) => a.order - b.order)
     .slice(0, limit)
-    .map((entry) => ({
-      id: tmdbPersonId(entry.id),
-      name: entry.name ?? '',
-      character: entry.characters.filter((c) => c !== '').join(', '),
-      headshot: tmdbImageUrl(entry.profile_path, 'w185'),
-      tmdbId: entry.id,
-    }));
+    .map((entry) => ({ ...entry.member, character: entry.characters.join(', ') }));
 }
 
 /**
@@ -719,17 +750,14 @@ export function normalizeTvEpisode(
   const number = raw.episode_number ?? fallbackNumber;
   const regulars = raw.credits?.cast ?? [];
   const guests = raw.credits?.guest_stars ?? raw.guest_stars ?? [];
-  const seen = new Set(regulars.map((entry) => entry.id));
   const cast = normalizeCastEntries(
     [
       ...regulars.map((entry) => ({ ...entry, characters: [entry.character ?? ''] })),
-      ...guests
-        .filter((entry) => !seen.has(entry.id))
-        .map((entry) => ({
-          ...entry,
-          order: (entry.order ?? 0) + GUEST_ORDER_OFFSET,
-          characters: [entry.character ?? ''],
-        })),
+      ...guests.map((entry) => ({
+        ...entry,
+        order: (entry.order ?? 0) + GUEST_ORDER_OFFSET,
+        characters: [entry.character ?? ''],
+      })),
     ],
     EPISODE_CAST_LIMIT,
   );
