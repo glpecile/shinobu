@@ -1,7 +1,9 @@
 import { episodeCode } from '@/features/episode-details/episode-label';
 import { hasAired } from '@/lib/time/has-aired';
+import { localDayOffset } from '@/lib/time/relative-day';
 import type { SimklLibraryEntry } from '@/lib/providers/simkl/normalize';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
+import type { NormalizedSeason } from '@/types/media';
 
 export interface SeriesNextEpisode {
   season: number;
@@ -13,6 +15,8 @@ export interface SeriesNextEpisode {
    * so a catalogue gap never blocks a legitimate log.
    */
   aired: boolean;
+  /** The episode's air field when the provider carried one — what the CTA counts down to. */
+  firstAired?: string;
   /**
    * True when this isn't a *next* episode at all — the show is finished and
    * the episode is the wrap back to the start. Callers must say so rather
@@ -87,6 +91,7 @@ export function nextEpisodeFromProgress(
     // stays logable. "Nothing has aired" and "we don't know when this airs"
     // are different facts and only the first blocks a log.
     aired: next.firstAired == null ? true : hasAired(next.firstAired),
+    ...(next.firstAired != null ? { firstAired: next.firstAired } : {}),
     rewatch: false,
     unaired: false,
   };
@@ -135,6 +140,7 @@ export function nextEpisodeFromSimklEntry(
       number: next.episode,
       ...(next.title != null ? { title: next.title } : {}),
       aired: next.date == null ? true : hasAired(next.date),
+      ...(next.date != null ? { firstAired: next.date } : {}),
       rewatch: false,
       unaired: false,
     };
@@ -175,4 +181,57 @@ export function seriesEpisodeLabel(episode: {
   number: number;
 }): string {
   return episodeCode(episode.season, episode.number);
+}
+
+/**
+ * The first episode of a show that hasn't aired, read off the full season
+ * layout. Trakt's watched progress and Simkl's snapshot both stop at what has
+ * aired, so "you're caught up, more is coming" reaches us as the same absent
+ * pointer a *finished* show sends; the layout is the only source that knows
+ * the difference, and it carries the date the CTA counts down to.
+ *
+ * Specials are skipped — a season-0 extra must not speak for the show's next
+ * episode. An episode with no air date counts as unaired here: the caller has
+ * already been told there is nothing left to log, so an episode the tracker
+ * didn't count as aired is exactly that. (The opposite of the permissive rule
+ * on a *named* next episode, which must stay logable.)
+ */
+export function firstUnairedEpisode(
+  seasons: readonly NormalizedSeason[] | undefined,
+  now: Date = new Date(),
+): { season: number; number: number; firstAired?: string } | null {
+  for (const season of seasons ?? []) {
+    if (season.number === 0) continue;
+    for (const episode of season.episodes) {
+      if (hasAired(episode.firstAired, now)) continue;
+      return {
+        season: season.number,
+        number: episode.number,
+        ...(episode.firstAired != null ? { firstAired: episode.firstAired } : {}),
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * What the CTA says about an episode that can't be logged yet: "S1E5 airs in
+ * 3 days" when a date is known, "S1E5 not yet aired" when it isn't. The
+ * countdown is the whole point — "not yet aired" only repeats what the
+ * disabled button already says.
+ *
+ * Local calendar days (`localDayOffset`), so an episode airing tonight reads
+ * "today" wherever the user is. A date already behind us falls back to the
+ * plain line rather than counting down to it: that episode belongs to a
+ * caller whose air gate should have let it through.
+ */
+export function unairedEpisodeLabel(
+  label: string,
+  firstAired: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  const offset = localDayOffset(firstAired, now);
+  if (offset == null || offset < 0) return `${label} not yet aired`;
+  if (offset > 1) return `${label} airs in ${offset} days`;
+  return `${label} airs ${offset === 0 ? 'today' : 'tomorrow'}`;
 }
