@@ -34,9 +34,10 @@ function airingInstant(seconds: number): string {
 /**
  * Per-episode data for one anime series: titles, thumbnails, and air instants.
  * Falls back to synthetic "Episode N" rows when AniList has no streaming
- * metadata, and treats any episode without an air date as already aired (the
- * common case for catalogue/back-catalogue entries where schedules aren't
- * retained).
+ * metadata, so an announced season comes back as a full list with no dates at
+ * all — `firstAired` is simply absent, and what that means is the caller's
+ * call (`hasStartedAiring`: a gap inside an airing season, or a season that
+ * hasn't started).
  */
 export function getAnimeEpisodes(
   deps: AniListDeps,

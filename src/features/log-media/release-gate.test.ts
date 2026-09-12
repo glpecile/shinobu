@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
-import { filmReleaseStatus, watchlistCtaIsPrimary } from './release-gate';
+import {
+  filmReleaseStatus,
+  hasStartedAiring,
+  watchlistCtaIsPrimary,
+} from './release-gate';
 
 // Local noon: a bare release date parses as local midnight, so a UTC-anchored
 // "now" would flip these assertions in far-east/far-west timezones.
@@ -91,5 +95,44 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
       watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '1997-01-01' }, NOW),
     ).toBe(false);
     expect(watchlistCtaIsPrimary({ type: 'MOVIE', year: 2019 }, NOW)).toBe(false);
+  });
+});
+
+describe('hasStartedAiring', () => {
+  const NOW_2026 = new Date(2026, 8, 12, 12, 0, 0);
+
+  test('an aired episode proves the season is running', () => {
+    // The gap rule's home: episode 7 has no date yet, but 1–6 aired.
+    expect(
+      hasStartedAiring({ year: 2026 }, [
+        { firstAired: '2026-09-01T14:00:00.000Z' },
+        {},
+      ], NOW_2026),
+    ).toBe(true);
+  });
+
+  test('an entirely undated announced season has not started', () => {
+    // The reported case: AniList lists 10 episodes for Cyberpunk:
+    // Edgerunners 2 and dates none of them, and the CTA read "Log episode 1"
+    // over an accordion marking every episode Unaired.
+    const undated = Array.from({ length: 10 }, () => ({}));
+    expect(hasStartedAiring({ year: 2026 }, undated, NOW_2026)).toBe(false);
+    expect(
+      hasStartedAiring({ year: 2026, releaseDate: '2026-12-01' }, undated, NOW_2026),
+    ).toBe(false);
+  });
+
+  test('the back catalogue stays loggable without a single air date', () => {
+    // AniList retains no schedule for old series, so nothing is dated; the
+    // show's own year is what says it came out.
+    expect(hasStartedAiring({ year: 2005 }, [{}, {}], NOW_2026)).toBe(true);
+    expect(
+      hasStartedAiring({ releaseDate: '2026-04-05' }, [{}], NOW_2026),
+    ).toBe(true);
+  });
+
+  test('no episodes at all falls back to the show', () => {
+    expect(hasStartedAiring({ year: 2026 }, [], NOW_2026)).toBe(false);
+    expect(hasStartedAiring({ year: 1998 }, [], NOW_2026)).toBe(true);
   });
 });

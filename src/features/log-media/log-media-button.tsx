@@ -17,7 +17,7 @@ import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { toast } from '@/lib/toast';
-import { filmReleaseStatus } from './release-gate';
+import { filmReleaseStatus, hasStartedAiring } from './release-gate';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
@@ -137,7 +137,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   // While loading/pending/error, treat as not aired (disable button).
   // Once loaded:
   // - Episode not in schedule → not aired (new anime, episode not yet scheduled)
-  // - Episode in schedule but no air date → aired (catalogue entry)
+  // - Episode in schedule but no air date → aired *if the show has started*
+  //   (`hasStartedAiring`): the gap rule belongs to an airing season, and an
+  //   announced one is nothing but gaps
   // - Episode in schedule with air date → use hasAired
   const episodeData = anilistEpisodes.data?.episodes.find(
     (e) => e.number === nextEpisode,
@@ -149,7 +151,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       (episodeData == null
         ? false
         : episodeData.firstAired == null
-          ? true
+          ? hasStartedAiring(item, anilistEpisodes.data.episodes)
           : hasAired(episodeData.firstAired)));
 
   // The movie counterpart of that gate: a film that isn't out yet can't be
