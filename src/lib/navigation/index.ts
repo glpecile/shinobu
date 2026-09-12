@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 
+import { openedInNewTab } from './new-tab';
 import { createPushGuard } from './push-guard';
 
 export { PUSH_GUARD_MS, createPushGuard, type PushGuard } from './push-guard';
@@ -19,6 +20,9 @@ const pushGuard = createPushGuard();
 export function usePushRoute(): (href: string) => void {
   const router = useRouter();
   return (href: string) => {
+    // A cmd/ctrl-click is a request for a second tab, not for this one to
+    // navigate (web only; a no-op everywhere else).
+    if (openedInNewTab(href)) return;
     if (!pushGuard.allow(href)) return;
     // Cast: `routes.*` produces the literal template strings Expo Router's
     // `Href` union is built from, but they widen to `string` crossing this
