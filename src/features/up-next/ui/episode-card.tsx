@@ -145,8 +145,13 @@ export function EpisodeCard({
           </Text>
           {/* Morphs in place when a quick-log advances this card to the next
               episode — the one text on screen that changes as a result of user
-              state rather than navigation. */}
-          <MorphText className="text-muted font-sans text-xs mt-0.5">
+              state rather than navigation. One line, like the title above it:
+              an episode title can be a paragraph (a Wan! shorts compilation
+              names four segments) and the card's height is the row's. */}
+          <MorphText
+            className="text-muted font-sans text-xs mt-0.5"
+            numberOfLines={1}
+          >
             {label}
           </MorphText>
         </View>
