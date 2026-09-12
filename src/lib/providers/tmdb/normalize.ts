@@ -514,11 +514,11 @@ function tmdbPersonId(id: number): string {
 }
 
 /**
- * Billing-ordered cast, one entry per person — TMDB credits the same person
- * twice whenever a character is respelled or recast in place (Ted Lasso S4E7
- * lists Jude Mack as both "Katie Quinn" and "Katie 'Boots' Quinn"), and two
- * cards sharing a person key is a React key collision. Characters merge and
- * the better billing wins (same contract as `normalizeCrewEntries`).
+ * Billing-ordered cast, one entry per person — TMDB credits a person once per
+ * character, so a respelled character is a second credit and was a second
+ * card with the same key
+ * (docs/solutions/tmdb-credits-one-person-twice.md). Characters merge, the
+ * better billing wins, same as `normalizeCrewEntries`.
  */
 function normalizeCastEntries(
   entries: Array<TmdbPersonRef & { characters: string[] }>,

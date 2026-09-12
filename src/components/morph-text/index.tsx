@@ -5,7 +5,7 @@ export interface MorphTextProps {
   /** The current text — a change morphs on web, swaps on native. */
   children: string | number;
   className?: string;
-  /** Line cap, as on `Text`; web truncates on one line only (see the web variant). */
+  /** Line cap, as on `Text`; web truncates at one line only. */
   numberOfLines?: number;
 }
 

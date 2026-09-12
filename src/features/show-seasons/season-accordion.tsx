@@ -71,13 +71,10 @@ function EpisodeRow({
   const showActionsButton =
     process.env.EXPO_OS === 'web' && hovered && onActions != null;
   const aired = hasAired(episode.firstAired);
-  // An unaired row is asked "when?" twice, so it answers twice rather than
-  // saying "Unaired" in both places: the meta line takes the date in the
-  // format the episode screen already uses, and the slot the mark button
-  // would occupy takes the countdown the details CTA speaks. Both fall back
-  // to the bare word when the provider carried no date at all — a
-  // synthesized AniList row for an announced season
-  // (docs/solutions/anilist-undated-episodes-arent-proof-of-airing.md).
+  // The row asks "when?" twice — meta line and mark-button slot — so it
+  // answers with the date in one and the countdown in the other. No date at
+  // all means a synthesized AniList row for an announced season, where the
+  // bare word is all anyone knows.
   const airsOn =
     aired || episode.firstAired == null
       ? null

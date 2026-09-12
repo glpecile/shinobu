@@ -127,20 +127,15 @@ export function SeasonPager({
     if (node) node.style.scrollSnapType = '';
   }
 
-  /** Puts the scroll view on `page` with no animation. */
   function jumpTo(page: number) {
     scroller.current?.scrollTo({ x: page * size.width, animated: false });
   }
 
   /**
-   * The pages lay out after the commit that mounts them, so the jump below
-   * can reach a scroll view whose content is still empty. Android holds such
-   * an offset as pending and applies it only once the content has a size —
-   * this event — and the pager otherwise sits on the *first* cour while the
-   * strip reads the selected one, over a page that isn't even mounted (owner
-   * report: Android, cold start). Content size changes on mount and on a
-   * resize, never mid-gesture, so re-asserting the page here can't fight a
-   * swipe.
+   * Android drops an offset set before the content has a size, leaving the
+   * pager on the first cour while the strip reads the selected one; this is
+   * the event that says the content is measurable
+   * (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
    */
   function onContentSizeChange(width: number) {
     if (size.width === 0) return;
@@ -192,10 +187,8 @@ export function SeasonPager({
     if (Math.abs(x - page * size.width) > BOUNDARY_TOLERANCE) return;
     const landed = ANIME_SEASONS[page];
     if (landed == null) return;
-    // A swipe moves one page at most, so a rest further out than that is not
-    // a swipe at all: the scroll view is somewhere we never put it, and
-    // reporting it would move the URL to a cour the user never reached. Put
-    // the pager back on the selected one instead.
+    // A swipe moves one page at most, so a rest further out is the scroll
+    // view sitting somewhere we never put it — not a cour the user chose.
     if (Math.abs(page - index) > 1) {
       jumpTo(index);
       return;

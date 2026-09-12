@@ -69,28 +69,11 @@ export function watchlistCtaIsPrimary(
 }
 
 /**
- * Has this show actually started airing? What qualifies the permissive
- * episode rule: an episode AniList lists without an air date is loggable
- * *inside an airing season* — that gap is routine — and a lie everywhere
- * else. `getAnimeEpisodes` synthesizes a row per episode from the media's
- * episode count, so an announced season arrives as a full, entirely undated
- * list, and read permissively it offered "Log episode 1" for a show whose own
- * accordion marked every episode Unaired (owner report, Cyberpunk:
- * Edgerunners 2).
- *
- * Two kinds of evidence, either one enough:
- *
- * - **An episode has aired.** Then the season is running and an undated
- *   sibling is a catalogue gap, which is exactly what the permissive rule is
- *   for.
- * - **The show itself is out** (`filmReleaseStatus` reads only
- *   `releaseDate`/`year`, so it answers for a series too). This is what keeps
- *   the back catalogue loggable: AniList retains no schedule for a 2005
- *   series, so nothing there has an air date at all.
- *
- * Neither is deliberately strict — a season airing *this year* that AniList
- * has published no schedule for at all reads as not started, which is the
- * same answer its episode rows already give the accordion.
+ * Has this show started airing? Evidence that an episode AniList lists
+ * without a date is a catalogue gap rather than an announced season: an aired
+ * episode, or the show's own release date/year — which is what keeps the back
+ * catalogue, whose episodes are never dated, loggable
+ * (docs/solutions/anilist-undated-episodes-arent-proof-of-airing.md).
  */
 export function hasStartedAiring(
   item: Pick<NormalizedMediaItem, 'releaseDate' | 'year'>,

@@ -73,13 +73,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const isSeries = item.type === 'TV';
   const seriesNext =
     seriesNextState.status === 'ready' ? seriesNextState.episode : null;
-  // Trakt and Simkl both stop at what has aired, so "you're caught up, more
-  // is coming" arrives as the same missing pointer a *finished* show sends —
-  // and used to render as one: "🎉 You've watched every aired episode" over a
-  // Rewatch button, on a show four episodes into its run (owner report). The
-  // season layout is what tells the two apart, asked for only in the two
-  // states whose copy depends on it; on the details screen the accordion
-  // below has already filled that cache entry.
+  // The season layout is the only thing that tells "caught up, more coming"
+  // from "finished" (docs/solutions/trackers-cant-tell-caught-up-from-finished.md),
+  // so it is read only in the two states whose copy depends on it.
   const seasonsSource = useShowSeasonsSource(item);
   const upcomingNeeded =
     isSeries && (seriesNext?.rewatch === true || seriesNext?.unaired === true);
@@ -137,9 +133,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   // While loading/pending/error, treat as not aired (disable button).
   // Once loaded:
   // - Episode not in schedule → not aired (new anime, episode not yet scheduled)
-  // - Episode in schedule but no air date → aired *if the show has started*
-  //   (`hasStartedAiring`): the gap rule belongs to an airing season, and an
-  //   announced one is nothing but gaps
+  // - Episode in schedule but no air date → aired if the show has started
   // - Episode in schedule with air date → use hasAired
   const episodeData = anilistEpisodes.data?.episodes.find(
     (e) => e.number === nextEpisode,
@@ -159,9 +153,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   // *unknown* release date blocks too (see `filmReleaseStatus`).
   const releaseStatus = isFilmLike ? filmReleaseStatus(item) : 'released';
   const released = releaseStatus === 'released';
-  // Same gate on the TV side, from Trakt's air date rather than AniList's —
-  // and `upcoming` is the caught-up half of it: the wrap to S1E1 is "aired",
-  // but the episode this user is waiting on is not.
+  // Same gate on the TV side, from Trakt's air date rather than AniList's.
+  // The rewatch wrap to S1E1 reads as "aired"; `upcoming` is the episode this
+  // user is actually waiting on.
   const seriesEpisodeAired =
     !isSeries || (seriesNext?.aired === true && upcoming == null);
   const canLog = nextEpisodeAired && released && seriesEpisodeAired;
@@ -226,9 +220,8 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     ? upcoming != null
       ? unairedEpisodeLabel(seriesEpisodeLabel(upcoming), upcoming.firstAired)
       : seriesUnaired
-        ? // Not "S1E1 not yet aired": nothing at all has aired and no layout
-          // named a date, so an episode here implies a schedule the show
-          // doesn't have yet.
+        ? // No layout named a date either, so naming an episode would imply a
+          // schedule the show doesn't have.
           'Hasn’t aired yet'
         : seriesNext != null && !seriesNext.rewatch && !seriesNext.aired
           ? unairedEpisodeLabel(seriesLabel, seriesNext.firstAired)

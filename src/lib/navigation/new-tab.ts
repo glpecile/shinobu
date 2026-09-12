@@ -1,21 +1,13 @@
 /**
- * Cmd/Ctrl-click opens a route in a new tab (web). Every pressable in the app
- * is pressto over gesture-handler: it reports a press as an options object
- * with no DOM event behind it, and renders a view rather than an anchor, so
- * neither the browser nor the press handler can see the modifier. The last
- * pointerdown is where it still exists, and reading it here keeps every call
- * site — cards, rows, sheet actions — unaware that any of this happens.
- *
- * No `document` on native, and none during the static web export's prerender
- * either, so the listener simply never attaches there.
+ * Cmd/Ctrl-click opens a route in a new tab (web). The app's pressables are
+ * gesture-handler views, not anchors, and pressto reports a press with no DOM
+ * event behind it, so the modifier can only come from the pointer stream
+ * (docs/solutions/cmd-click-cant-open-a-pressable-in-a-new-tab.md). No
+ * `document` on native or in the static export's prerender, so the listener
+ * never attaches there.
  */
 
-/**
- * How long a recorded modifier stays valid. A press is a pointerdown away,
- * not a second — the window is what stops a stale cmd-click from turning the
- * *next* press (a keyboard activation, say, which has no pointerdown of its
- * own) into a new tab.
- */
+/** Stops a stale cmd-click from turning a later, pointerless press into a tab. */
 const MODIFIER_TTL_MS = 1_000;
 
 let modifiedAt = 0;
@@ -31,11 +23,7 @@ if (typeof document !== 'undefined') {
   );
 }
 
-/**
- * Opens `href` in a new tab when the press that asked for it was a
- * cmd/ctrl-click, and reports whether it did — a caller that gets `true`
- * leaves the current screen where it is.
- */
+/** Whether the press being handled was a cmd/ctrl-click, opening `href` if so. */
 export function openedInNewTab(href: string): boolean {
   if (modifiedAt === 0 || Date.now() - modifiedAt > MODIFIER_TTL_MS) return false;
   modifiedAt = 0;

@@ -5,15 +5,11 @@ export interface MorphTextProps {
   /** The current text — a change morphs on web, swaps on native. */
   children: string | number;
   className?: string;
-  /** Line cap, as on `Text`; only `1` truncates here (see `CLAMP_ONE_LINE`). */
+  /** Line cap, as on `Text`; only `1` truncates here. */
   numberOfLines?: number;
 }
 
-/**
- * Single line only: an ellipsis on a `nowrap` span leaves torph's own layout
- * alone, where a `-webkit-box` clamp would fight the characters it positions.
- * A larger cap wraps, as it did before.
- */
+/** A `-webkit-box` clamp fights torph's character positioning; `nowrap` doesn't. */
 const CLAMP_ONE_LINE = {
   whiteSpace: 'nowrap',
   overflow: 'hidden',

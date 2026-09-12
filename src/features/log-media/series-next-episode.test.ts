@@ -316,8 +316,6 @@ describe('firstUnairedEpisode', () => {
   });
 
   test('specials never speak for the show’s next episode', () => {
-    // Season 0 carries undated extras on half the catalogue; reading one as
-    // "the next episode" would block logging on every finished show.
     expect(
       firstUnairedEpisode(
         [
@@ -349,7 +347,6 @@ describe('unairedEpisodeLabel', () => {
     expect(unairedEpisodeLabel('Episode 11', '2026-09-13', now)).toBe(
       'Episode 11 airs tomorrow',
     );
-    // Later tonight, not "in 0 days" — and the whole reason the day is local.
     expect(unairedEpisodeLabel('S1E5', '2026-09-12T23:00:00.000Z', now)).toBe(
       'S1E5 airs today',
     );
@@ -362,7 +359,6 @@ describe('unairedEpisodeLabel', () => {
     expect(unairedEpisodeLabel('Episode 11', 'not a date', now)).toBe(
       'Episode 11 not yet aired',
     );
-    // A date behind us belongs to an episode the air gate should have passed.
     expect(unairedEpisodeLabel('S1E5', '2026-09-01', now)).toBe(
       'S1E5 not yet aired',
     );

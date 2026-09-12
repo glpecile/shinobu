@@ -20,8 +20,7 @@ const pushGuard = createPushGuard();
 export function usePushRoute(): (href: string) => void {
   const router = useRouter();
   return (href: string) => {
-    // A cmd/ctrl-click is a request for a second tab, not for this one to
-    // navigate (web only; a no-op everywhere else).
+    // Web only; a no-op elsewhere.
     if (openedInNewTab(href)) return;
     if (!pushGuard.allow(href)) return;
     // Cast: `routes.*` produces the literal template strings Expo Router's

@@ -15,7 +15,7 @@ export interface SeriesNextEpisode {
    * so a catalogue gap never blocks a legitimate log.
    */
   aired: boolean;
-  /** The episode's air field when the provider carried one — what the CTA counts down to. */
+  /** The episode's air field when the provider carried one. */
   firstAired?: string;
   /**
    * True when this isn't a *next* episode at all — the show is finished and
@@ -184,17 +184,12 @@ export function seriesEpisodeLabel(episode: {
 }
 
 /**
- * The first episode of a show that hasn't aired, read off the full season
- * layout. Trakt's watched progress and Simkl's snapshot both stop at what has
- * aired, so "you're caught up, more is coming" reaches us as the same absent
- * pointer a *finished* show sends; the layout is the only source that knows
- * the difference, and it carries the date the CTA counts down to.
- *
- * Specials are skipped — a season-0 extra must not speak for the show's next
- * episode. An episode with no air date counts as unaired here: the caller has
- * already been told there is nothing left to log, so an episode the tracker
- * didn't count as aired is exactly that. (The opposite of the permissive rule
- * on a *named* next episode, which must stay logable.)
+ * The first episode of a show that hasn't aired, off the season layout — the
+ * only source that tells "caught up, more coming" from "finished", which both
+ * trackers report as the same absent pointer
+ * (docs/solutions/trackers-cant-tell-caught-up-from-finished.md). Specials are
+ * skipped, and an undated episode counts as unaired here, unlike the
+ * permissive rule on a *named* next episode.
  */
 export function firstUnairedEpisode(
   seasons: readonly NormalizedSeason[] | undefined,
@@ -216,14 +211,10 @@ export function firstUnairedEpisode(
 
 /**
  * What the CTA says about an episode that can't be logged yet: "S1E5 airs in
- * 3 days" when a date is known, "S1E5 not yet aired" when it isn't. The
- * countdown is the whole point — "not yet aired" only repeats what the
- * disabled button already says.
- *
- * Local calendar days (`localDayOffset`), so an episode airing tonight reads
- * "today" wherever the user is. A date already behind us falls back to the
- * plain line rather than counting down to it: that episode belongs to a
- * caller whose air gate should have let it through.
+ * 3 days", or "S1E5 not yet aired" with no date to count down to. Local
+ * calendar days, so an episode airing tonight reads "today" wherever the user
+ * is; a date already behind us means the caller's air gate should have passed
+ * it, so it gets the plain line.
  */
 export function unairedEpisodeLabel(
   label: string,
