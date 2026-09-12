@@ -73,9 +73,11 @@ export function anilistTitle(media: AniListMedia): string {
 }
 
 /** AniList descriptions carry HTML line breaks/markup even as "plain text". */
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
+    // Descriptions are markdown too — a staff bio is often nothing but links.
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();

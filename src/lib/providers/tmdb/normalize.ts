@@ -212,7 +212,7 @@ function accumulate(
  * stray separator**; a credit with neither year nor role contributes nothing at
  * all, which is what keeps its subtitle key out of the map entirely.
  */
-function creditSubtitle(entry: {
+export function creditSubtitle(entry: {
   item: NormalizedMediaItem;
   details: string[];
 }): string {
