@@ -1,37 +1,39 @@
 import {
-  Redirect,
   useLocalSearchParams,
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { PersonNotFound, PersonSkeleton } from '@/features/person';
-import { pickPersonMatch } from '@/lib/providers/tmdb/normalize';
+import { FloatingBackButton } from '@/components/floating-back-button';
+import {
+  PersonDetailsView,
+  PersonNotFound,
+  PersonSkeleton,
+} from '@/features/person';
 import { routes } from '@/lib/routes';
-import { useSuspenseTmdbPersonSearchQuery } from '@/state/queries/tmdb';
+import { useSuspensePersonByNameQuery } from '@/state/queries/person-details';
 
 /**
- * Name → person-id resolution hop for credits whose origin provider carries
- * no TMDB person id (AniList voice actors/staff — there is no id bridge for
- * people). Suspends on a TMDB person search, picks the best candidate via
- * `pickPersonMatch` (never blindly the top hit), and replaces itself with
- * `/person/[id]` so back-navigation skips this route entirely.
+ * Name → person page for credits whose origin provider carries no TMDB person
+ * id (AniList voice actors and staff — there is no id bridge for people).
+ *
+ * It **renders the page here** rather than redirecting to `/person/[id]`: an
+ * AniList-resolved person has no TMDB id to redirect to, and the redirect was
+ * a second screen transition on top of the first — the push faded in this
+ * route's skeleton, then the replace faded the stack through black and started
+ * a *second* skeleton before the page landed.
  */
 function LookupContent({ name, onGoBack }: { name: string; onGoBack: () => void }) {
-  const { data } = useSuspenseTmdbPersonSearchQuery({ name });
-  const match = pickPersonMatch(data, name);
+  const { data } = useSuspensePersonByNameQuery({ name });
 
-  if (match == null) {
+  if (data == null) {
     return (
-      <PersonNotFound
-        detail={`No results for “${name}”.`}
-        onGoBack={onGoBack}
-      />
+      <PersonNotFound detail={`No results for “${name}”.`} onGoBack={onGoBack} />
     );
   }
-  return <Redirect href={routes.person(match.tmdbId)} />;
+  return <PersonDetailsView {...data} />;
 }
 
 export default function PersonLookupScreen() {
@@ -54,9 +56,12 @@ export default function PersonLookupScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Suspense fallback={<PersonSkeleton />}>
-        <LookupContent name={name} onGoBack={goBack} />
-      </Suspense>
+      <ScrollView className="flex-1">
+        <Suspense fallback={<PersonSkeleton />}>
+          <LookupContent name={name} onGoBack={goBack} />
+        </Suspense>
+      </ScrollView>
+      <FloatingBackButton onPress={goBack} />
     </View>
   );
 }

@@ -132,12 +132,14 @@ export interface NormalizedCrewMember {
 }
 
 /**
- * The person behind a cast/crew credit, backing the `/person/[id]` route.
- * TMDB is the single source of truth for people — there are no per-provider
- * person variants, so this is keyed by the TMDB id directly.
+ * The person behind a cast/crew credit, backing `/person/[id]` and the
+ * `/person/lookup` resolution route. TMDB is the primary source; an
+ * AniList-only person (voice actors, musicians, most anime staff) resolves
+ * through the lookup route's failover, which is why neither id is required.
  */
 export interface NormalizedPerson {
-  tmdbId: number;
+  tmdbId?: number;
+  anilistId?: number;
   name: string;
   /** Display headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;

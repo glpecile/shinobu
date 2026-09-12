@@ -5,6 +5,7 @@ export {
   PeopleSectionsSkeleton,
 } from './people-section';
 export { PersonAvatar } from './person-avatar';
+export { PersonDetailsView } from './person-details-view';
 export {
   creditRoleLine,
   PersonCreditSheet,

@@ -3,13 +3,20 @@ import { Clock, Effect } from 'effect';
 import type {
   NormalizedDiaryEntry,
   NormalizedMediaItem,
+  PersonCreditRow,
 } from '@/types/media';
-import type { ProviderError } from '@/lib/providers/errors';
+import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
+import {
+  ACTING_ROLE,
+  creditSubtitle,
+  type NormalizedPersonDetails,
+} from '@/lib/providers/tmdb/normalize';
 import type { AniListDeps } from './deps';
 import { anilistAuthedRequest, anilistRequest } from './http';
 import type { AnimeFormatFilter, AnimeSeason } from './season';
 import {
   normalizeAniListMedia,
+  stripHtml,
   normalizeCurrentAnimeEntry,
   normalizeListActivity,
   type AniListCurrentEntry,
@@ -349,6 +356,179 @@ export function searchAniListStudio(
       }),
     ),
   );
+}
+
+interface AniListFuzzyDate {
+  year?: number | null;
+  month?: number | null;
+  day?: number | null;
+}
+
+interface AniListStaffMediaEdge {
+  staffRole?: string | null;
+  node?: AniListMedia | null;
+}
+
+interface AniListCharacterMediaEdge {
+  characters?: Array<{ name?: { full?: string | null } | null } | null> | null;
+  node?: AniListMedia | null;
+}
+
+interface StaffResponse {
+  Staff: {
+    id: number;
+    name?: { full?: string | null; native?: string | null } | null;
+    image?: { large?: string | null } | null;
+    description?: string | null;
+    dateOfBirth?: AniListFuzzyDate | null;
+    dateOfDeath?: AniListFuzzyDate | null;
+    homeTown?: string | null;
+    primaryOccupations?: Array<string | null> | null;
+    staffMedia?: { edges?: Array<AniListStaffMediaEdge | null> | null } | null;
+    characterMedia?: { edges?: Array<AniListCharacterMediaEdge | null> | null } | null;
+  } | null;
+}
+
+const STAFF_CREDITS_PER_PAGE = 25;
+
+/** Only a complete fuzzy date is a date; a bare year would render as Jan 1. */
+function calendarDate(date: AniListFuzzyDate | null | undefined): string | null {
+  const { year, month, day } = date ?? {};
+  if (year == null || month == null || day == null) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** Deduped by item: a person credited twice on one show is one card. */
+function staffCreditRow(
+  role: string,
+  credits: Array<{ media: AniListMedia; detail: string }>,
+  nowIso: string,
+): PersonCreditRow | null {
+  const entries = new Map<
+    string,
+    { item: NormalizedMediaItem; details: string[] }
+  >();
+  for (const { media, detail } of credits) {
+    const item = normalizeAniListMedia(media, nowIso);
+    const existing = entries.get(item.id);
+    if (existing == null) {
+      entries.set(item.id, { item, details: detail === '' ? [] : [detail] });
+    } else if (detail !== '' && !existing.details.includes(detail)) {
+      existing.details.push(detail);
+    }
+  }
+  if (entries.size === 0) return null;
+  const list = [...entries.values()];
+  return {
+    role,
+    items: list.map((entry) => entry.item),
+    details: Object.fromEntries(
+      list
+        .map((entry) => [entry.item.id, creditSubtitle(entry)] as const)
+        .filter(([, subtitle]) => subtitle !== ''),
+    ),
+    roles: Object.fromEntries(
+      list
+        .map((entry) => [entry.item.id, entry.details.join(', ')] as const)
+        .filter(([, detail]) => detail !== ''),
+    ),
+  };
+}
+
+/**
+ * One staff member's profile and credits — the AniList half of the
+ * `/person/lookup` failover (`getPerson` is the TMDB half). Public, like
+ * `searchAniListStaff`.
+ *
+ * Rows group under `ACTING_ROLE` and the person's primary occupation rather
+ * than per-credit `staffRole` ("Theme Song Performance (OP)"), which is far
+ * too granular to title a row.
+ */
+export function getAniListStaff(
+  deps: AniListDeps,
+  params: { id: number },
+): Effect.Effect<NormalizedPersonDetails, ProviderError> {
+  return Effect.gen(function* () {
+    const data = yield* anilistRequest<StaffResponse>(
+      deps,
+      `query ($id: Int, $perPage: Int) {
+        Staff(id: $id) {
+          id
+          name { full native }
+          image { large }
+          description(asHtml: false)
+          dateOfBirth { year month day }
+          dateOfDeath { year month day }
+          homeTown
+          primaryOccupations
+          characterMedia(sort: START_DATE_DESC, perPage: $perPage) {
+            edges { characters { name { full } } node { ${MEDIA_FIELDS} } }
+          }
+          staffMedia(sort: START_DATE_DESC, perPage: $perPage) {
+            edges { staffRole node { ${MEDIA_FIELDS} } }
+          }
+        }
+      }`,
+      { variables: { id: params.id, perPage: STAFF_CREDITS_PER_PAGE } },
+    );
+    const staff = data.Staff;
+    if (staff == null) {
+      return yield* new ProviderDecodeError({
+        provider: 'anilist',
+        detail: `no staff record for id ${params.id}`,
+      });
+    }
+
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    const image = staff.image?.large ?? '';
+    const occupation = staff.primaryOccupations?.find((job) => job != null) ?? null;
+    const birthday = calendarDate(staff.dateOfBirth);
+    const deathday = calendarDate(staff.dateOfDeath);
+    const biography =
+      staff.description == null ? '' : stripHtml(staff.description);
+
+    const voiceRow = staffCreditRow(
+      ACTING_ROLE,
+      (staff.characterMedia?.edges ?? []).flatMap((edge) => {
+        const media = edge?.node;
+        if (media == null) return [];
+        const detail = (edge?.characters ?? [])
+          .map((character) => character?.name?.full ?? '')
+          .filter((name) => name !== '')
+          .join(', ');
+        return [{ media, detail }];
+      }),
+      nowIso,
+    );
+    const staffRow = staffCreditRow(
+      occupation ?? 'Credits',
+      (staff.staffMedia?.edges ?? []).flatMap((edge) => {
+        const media = edge?.node;
+        return media == null ? [] : [{ media, detail: edge?.staffRole ?? '' }];
+      }),
+      nowIso,
+    );
+
+    return {
+      person: {
+        anilistId: staff.id,
+        name: staff.name?.full ?? staff.name?.native ?? '',
+        headshot: image,
+        headshotFull: image,
+        ...(biography !== '' ? { biography } : {}),
+        ...(birthday != null ? { birthday } : {}),
+        ...(deathday != null ? { deathday } : {}),
+        ...(staff.homeTown != null ? { birthplace: staff.homeTown } : {}),
+        ...(occupation != null ? { knownForDepartment: occupation } : {}),
+      },
+      // Known-for row leads, same rule as TMDB's known-for department.
+      rows: (occupation === 'Actor' || occupation === 'Voice Actor'
+        ? [voiceRow, staffRow]
+        : [staffRow, voiceRow]
+      ).filter((row) => row != null),
+    };
+  });
 }
 
 /**
