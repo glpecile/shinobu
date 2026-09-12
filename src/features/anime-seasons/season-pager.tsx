@@ -127,6 +127,22 @@ export function SeasonPager({
     if (node) node.style.scrollSnapType = '';
   }
 
+  function jumpTo(page: number) {
+    scroller.current?.scrollTo({ x: page * size.width, animated: false });
+  }
+
+  /**
+   * Android drops an offset set before the content has a size, leaving the
+   * pager on the first cour while the strip reads the selected one; this is
+   * the event that says the content is measurable
+   * (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
+   */
+  function onContentSizeChange(width: number) {
+    if (size.width === 0) return;
+    if (width + BOUNDARY_TOLERANCE < size.width * ANIME_SEASONS.length) return;
+    jumpTo(index);
+  }
+
   useAnimatedReaction(
     () => driven.value,
     (x, previous) => {
@@ -171,6 +187,12 @@ export function SeasonPager({
     if (Math.abs(x - page * size.width) > BOUNDARY_TOLERANCE) return;
     const landed = ANIME_SEASONS[page];
     if (landed == null) return;
+    // A swipe moves one page at most, so a rest further out is the scroll
+    // view sitting somewhere we never put it — not a cour the user chose.
+    if (Math.abs(page - index) > 1) {
+      jumpTo(index);
+      return;
+    }
     setSettled(page);
     if (landed === season) return;
     haptics.selection();
@@ -197,6 +219,7 @@ export function SeasonPager({
     <AnimatedScrollView
       className="flex-1"
       horizontal
+      onContentSizeChange={onContentSizeChange}
       onLayout={onLayout}
       onScroll={onScroll}
       pagingEnabled

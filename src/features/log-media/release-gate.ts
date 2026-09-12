@@ -1,5 +1,5 @@
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 /**
  * `'unknown'` is its own outcome, not a flavour of `'unreleased'` — the button
@@ -66,4 +66,20 @@ export function watchlistCtaIsPrimary(
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   if (!isFilmLike) return false;
   return filmReleaseStatus(item, now) !== 'released';
+}
+
+/**
+ * Has this show started airing? Evidence that an episode AniList lists
+ * without a date is a catalogue gap rather than an announced season: an aired
+ * episode, or the show's own release date/year — which is what keeps the back
+ * catalogue, whose episodes are never dated, loggable
+ * (docs/solutions/anilist-undated-episodes-arent-proof-of-airing.md).
+ */
+export function hasStartedAiring(
+  item: Pick<NormalizedMediaItem, 'releaseDate' | 'year'>,
+  episodes: readonly Pick<NormalizedEpisode, 'firstAired'>[],
+  now: Date = new Date(),
+): boolean {
+  if (episodes.some((episode) => hasAired(episode.firstAired, now))) return true;
+  return filmReleaseStatus(item, now) === 'released';
 }

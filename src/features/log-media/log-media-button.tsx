@@ -8,17 +8,25 @@ import {
   useAniListEntryStateQuery,
   useAniListEpisodesQuery,
 } from '@/state/queries/anilist';
+import {
+  useShowSeasonsQuery,
+  useShowSeasonsSource,
+} from '@/state/queries/show-seasons';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { toast } from '@/lib/toast';
-import { filmReleaseStatus } from './release-gate';
+import { filmReleaseStatus, hasStartedAiring } from './release-gate';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit } from './use-log-targets';
-import { seriesEpisodeLabel } from './series-next-episode';
+import {
+  firstUnairedEpisode,
+  seriesEpisodeLabel,
+  unairedEpisodeLabel,
+} from './series-next-episode';
 import { useSeriesNextEpisode } from './use-series-next-episode';
 import { LogConfirmSheet } from './log-confirm-sheet';
 
@@ -63,6 +71,16 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
   const isSeries = item.type === 'TV';
+  const seriesNext =
+    seriesNextState.status === 'ready' ? seriesNextState.episode : null;
+  // The season layout is the only thing that tells "caught up, more coming"
+  // from "finished" (docs/solutions/trackers-cant-tell-caught-up-from-finished.md),
+  // so it is read only in the two states whose copy depends on it.
+  const seasonsSource = useShowSeasonsSource(item);
+  const upcomingNeeded =
+    isSeries && (seriesNext?.rewatch === true || seriesNext?.unaired === true);
+  const seasons = useShowSeasonsQuery(upcomingNeeded ? seasonsSource : null);
+  const upcoming = upcomingNeeded ? firstUnairedEpisode(seasons.data) : null;
   // A manual-only target (e.g. Letterboxd on web) still needs the button and
   // its "log manually" row (plan 0022 R3) — only hide when there's truly
   // nothing to offer.
@@ -76,8 +94,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     return null;
   }
 
-  const seriesNext =
-    seriesNextState.status === 'ready' ? seriesNextState.episode : null;
   const seriesLabel = seriesNext == null ? '' : seriesEpisodeLabel(seriesNext);
   // The one action the series button performs, reused by the confirm sheet's
   // title and confirm label so all three read identically. A finished show
@@ -117,7 +133,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   // While loading/pending/error, treat as not aired (disable button).
   // Once loaded:
   // - Episode not in schedule → not aired (new anime, episode not yet scheduled)
-  // - Episode in schedule but no air date → aired (catalogue entry)
+  // - Episode in schedule but no air date → aired if the show has started
   // - Episode in schedule with air date → use hasAired
   const episodeData = anilistEpisodes.data?.episodes.find(
     (e) => e.number === nextEpisode,
@@ -129,7 +145,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       (episodeData == null
         ? false
         : episodeData.firstAired == null
-          ? true
+          ? hasStartedAiring(item, anilistEpisodes.data.episodes)
           : hasAired(episodeData.firstAired)));
 
   // The movie counterpart of that gate: a film that isn't out yet can't be
@@ -138,7 +154,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const releaseStatus = isFilmLike ? filmReleaseStatus(item) : 'released';
   const released = releaseStatus === 'released';
   // Same gate on the TV side, from Trakt's air date rather than AniList's.
-  const seriesEpisodeAired = !isSeries || seriesNext?.aired === true;
+  // The rewatch wrap to S1E1 reads as "aired"; `upcoming` is the episode this
+  // user is actually waiting on.
+  const seriesEpisodeAired =
+    !isSeries || (seriesNext?.aired === true && upcoming == null);
   const canLog = nextEpisodeAired && released && seriesEpisodeAired;
 
   const result = logMedia.data;
@@ -198,17 +217,19 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   // Why the action can't run yet, when it can't — the only thing that ever
   // replaces it on the CTA (the sheet can't open in these states at all).
   const blocked = isSeries
-    ? seriesUnaired
-      ? // Not "S1E1 not yet aired": nothing at all has aired, so naming an
-        // episode implies a schedule the show doesn't have yet.
-        'Hasn’t aired yet'
-      : seriesNext != null && !seriesNext.rewatch && !seriesNext.aired
-        ? `${seriesLabel} not yet aired`
-        : null
+    ? upcoming != null
+      ? unairedEpisodeLabel(seriesEpisodeLabel(upcoming), upcoming.firstAired)
+      : seriesUnaired
+        ? // No layout named a date either, so naming an episode would imply a
+          // schedule the show doesn't have.
+          'Hasn’t aired yet'
+        : seriesNext != null && !seriesNext.rewatch && !seriesNext.aired
+          ? unairedEpisodeLabel(seriesLabel, seriesNext.firstAired)
+          : null
     : isAnimeSeries
       ? nextEpisodeAired
         ? null
-        : `Episode ${nextEpisode} not yet aired`
+        : unairedEpisodeLabel(`Episode ${nextEpisode}`, episodeData?.firstAired)
       : releaseStatus === 'unknown'
         ? 'No release date yet'
         : releaseStatus === 'unreleased'
@@ -246,7 +267,10 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         label={blocked ?? action}
         // The episode number arrives with Trakt's progress read — a spinner
         // says "resolving which episode", not "your tap did nothing".
-        loading={seriesNextState.status === 'loading'}
+        loading={
+          seriesNextState.status === 'loading' ||
+          (upcomingNeeded && seasons.isLoading)
+        }
         morphLabel
         onPress={() => {
           haptics.selection();
@@ -259,7 +283,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       />
       {/* The finished-show state earns a line of its own: the button below
           reads "Log rewatch", and this is what makes that make sense. */}
-      {seriesNext?.rewatch === true && result == null && (
+      {seriesNext?.rewatch === true && upcoming == null && result == null && (
         <Text className="text-muted font-sans text-sm mt-2 text-center">
           🎉 You’ve watched every aired episode.
         </Text>

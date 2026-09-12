@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  firstUnairedEpisode,
   nextEpisodeFromProgress,
   nextEpisodeFromSimklEntry,
   seriesEpisodeLabel,
+  unairedEpisodeLabel,
 } from './series-next-episode';
 
 const NO_WATCHED = new Set<string>();
@@ -25,6 +27,7 @@ describe('nextEpisodeFromProgress', () => {
       number: 5,
       title: 'The One With The Thing',
       aired: true,
+      firstAired: '2020-01-01T00:00:00.000Z',
       rewatch: false,
       unaired: false,
     });
@@ -40,6 +43,7 @@ describe('nextEpisodeFromProgress', () => {
       season: 1,
       number: 4,
       aired: false,
+      firstAired: '2099-01-01T00:00:00.000Z',
       rewatch: false,
       unaired: false,
     });
@@ -142,6 +146,7 @@ describe('nextEpisodeFromSimklEntry', () => {
       number: 11,
       title: 'The Night of the Hunters',
       aired: true,
+      firstAired: '2020-01-01T00:00:00Z',
       rewatch: false,
       unaired: false,
     });
@@ -274,5 +279,88 @@ describe('seriesEpisodeLabel', () => {
   test('renders the compact SxxEyy form the button uses', () => {
     expect(seriesEpisodeLabel({ season: 2, number: 5 })).toBe('S2E5');
     expect(seriesEpisodeLabel({ season: 1, number: 12 })).toBe('S1E12');
+  });
+});
+
+describe('firstUnairedEpisode', () => {
+  const now = new Date(2026, 8, 12, 14, 0);
+  const lanterns = [
+    {
+      number: 1,
+      title: 'Season 1',
+      episodes: [
+        { number: 1, title: 'One', firstAired: '2026-08-15T01:00:00.000Z' },
+        { number: 4, title: 'Four', firstAired: '2026-09-05T01:00:00.000Z' },
+        { number: 5, title: 'Five', firstAired: '2026-09-15T01:00:00.000Z' },
+        { number: 6, title: 'Six', firstAired: '2026-09-22T01:00:00.000Z' },
+      ],
+    },
+  ];
+
+  test('names the first episode still to air, with its date', () => {
+    expect(firstUnairedEpisode(lanterns, now)).toEqual({
+      season: 1,
+      number: 5,
+      firstAired: '2026-09-15T01:00:00.000Z',
+    });
+  });
+
+  test('a fully aired show has none — the rewatch state survives', () => {
+    expect(
+      firstUnairedEpisode(
+        [{ number: 1, title: 'Season 1', episodes: lanterns[0]!.episodes.slice(0, 2) }],
+        now,
+      ),
+    ).toBeNull();
+    expect(firstUnairedEpisode(undefined, now)).toBeNull();
+  });
+
+  test('specials never speak for the show’s next episode', () => {
+    expect(
+      firstUnairedEpisode(
+        [
+          { number: 0, title: 'Specials', episodes: [{ number: 1, title: 'Extra' }] },
+          { number: 1, title: 'Season 1', episodes: lanterns[0]!.episodes.slice(0, 2) },
+        ],
+        now,
+      ),
+    ).toBeNull();
+  });
+
+  test('an undated episode counts as unaired, without a date to count down', () => {
+    expect(
+      firstUnairedEpisode(
+        [{ number: 2, title: 'Season 2', episodes: [{ number: 1, title: 'Announced' }] }],
+        now,
+      ),
+    ).toEqual({ season: 2, number: 1 });
+  });
+});
+
+describe('unairedEpisodeLabel', () => {
+  const now = new Date(2026, 8, 12, 14, 0);
+
+  test('counts down in local calendar days', () => {
+    expect(unairedEpisodeLabel('S1E5', '2026-09-15T01:00:00.000Z', now)).toBe(
+      'S1E5 airs in 3 days',
+    );
+    expect(unairedEpisodeLabel('Episode 11', '2026-09-13', now)).toBe(
+      'Episode 11 airs tomorrow',
+    );
+    expect(unairedEpisodeLabel('S1E5', '2026-09-12T23:00:00.000Z', now)).toBe(
+      'S1E5 airs today',
+    );
+  });
+
+  test('falls back to the plain line without a usable date', () => {
+    expect(unairedEpisodeLabel('Episode 11', undefined, now)).toBe(
+      'Episode 11 not yet aired',
+    );
+    expect(unairedEpisodeLabel('Episode 11', 'not a date', now)).toBe(
+      'Episode 11 not yet aired',
+    );
+    expect(unairedEpisodeLabel('S1E5', '2026-09-01', now)).toBe(
+      'S1E5 not yet aired',
+    );
   });
 });

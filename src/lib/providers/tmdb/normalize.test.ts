@@ -374,6 +374,7 @@ import {
   normalizeStudioDetails,
   normalizeTitleSearch,
   normalizeTvCatalogue,
+  normalizeTvEpisode,
 } from './normalize';
 
 describe('normalizeMovieCatalogue', () => {
@@ -480,6 +481,33 @@ describe('normalizeTvCatalogue', () => {
     expect(result?.cast[0].character).toBe('Vi (voice), Young Vi (voice)');
     expect(result?.cast[0].tmdbId).toBe(22227);
     expect(result?.crew[0].job).toBe('Executive Producer');
+  });
+});
+
+describe('normalizeTvEpisode', () => {
+  test('merges a person TMDB credits twice into one card', () => {
+    const result = normalizeTvEpisode(
+      {
+        episode_number: 7,
+        name: 'Yes & Baby',
+        credits: {
+          cast: [
+            { id: 3593833, name: 'Jude Mack', character: 'Katie Quinn', order: 7 },
+            { id: 3593833, name: 'Jude Mack', character: "Katie 'Boots' Quinn", order: 12 },
+          ],
+          guest_stars: [
+            { id: 3593833, name: 'Jude Mack', character: 'Katie Quinn', order: 0 },
+            { id: 77, name: 'Guest Star', character: 'Themself', order: 1 },
+          ],
+        },
+      },
+      7,
+    );
+
+    expect(result.cast.map((member) => [member.id, member.character])).toEqual([
+      ['tmdb-person-3593833', "Katie Quinn, Katie 'Boots' Quinn"],
+      ['tmdb-person-77', 'Themself'],
+    ]);
   });
 });
 
