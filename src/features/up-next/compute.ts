@@ -356,7 +356,7 @@ function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
  * 0034 U9.5, the "Youjo Senki II" / "Saga of Tanya the Evil" duplicate).
  * Namespacing keeps a tvdb number from ever colliding with a tmdb one.
  */
-function identityKeys(
+export function identityKeys(
   ids: UpNextEntry['item']['externalIds'],
 ): string[] {
   const keys: string[] = [];

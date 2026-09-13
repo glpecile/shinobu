@@ -1,3 +1,4 @@
+import { identityKeys } from '@/features/up-next/compute';
 import type {
   AniListUpNextInput,
   CalendarUpNextInput,
@@ -73,10 +74,26 @@ const MAX_SCHEDULED = 50;
 const RELEASE_HOUR_LOCAL = 9;
 
 type RawCandidate = NotificationCandidate & {
-  tmdbId?: number;
+  /**
+   * Namespaced cross-provider ids (`identityKeys`) — the join every dedupe
+   * below runs on. TMDB alone was not enough: anime reaches here as an AniList
+   * entry keyed by `anilist`/`mal`, a Simkl row keyed by `mal`, and a Trakt row
+   * keyed by `tmdb`/`tvdb`, so a TMDB-only join left the same airing notifying
+   * two or three times. Same helper, same reasoning as Up Next's own dedupe
+   * (plan 0034 U9.5) — the cards collapsed while the tray still doubled.
+   */
+  keys: string[];
   /** The tracker that stated an episode candidate — the KTD-10 dedupe key. */
   source?: ProviderId;
 };
+
+/** Whether this candidate is the same show as something already kept. */
+function sharesIdentity(
+  candidate: RawCandidate,
+  keys: ReadonlySet<string>,
+): boolean {
+  return candidate.keys.some((key) => keys.has(key));
+}
 
 /**
  * When a release should actually alert (R10). A release date is a bare calendar
@@ -118,7 +135,7 @@ function progressCandidate(input: ProgressUpNextInput): RawCandidate | null {
     season: next.season ?? 1,
     episode: next.number,
     fireInstant: next.firstAired,
-    tmdbId: input.item.externalIds.tmdb,
+    keys: identityKeys(input.item.externalIds),
     source: input.source,
   };
 }
@@ -142,7 +159,10 @@ function anilistCandidate(input: AniListUpNextInput): RawCandidate | null {
     season: 1,
     episode: next,
     fireInstant: airing.airingAt,
-    tmdbId: input.tmdbId ?? input.item.externalIds.tmdb,
+    keys: identityKeys({
+      ...input.item.externalIds,
+      ...(input.tmdbId != null ? { tmdb: input.tmdbId } : {}),
+    }),
   };
 }
 
@@ -163,7 +183,7 @@ function calendarCandidate(input: CalendarUpNextInput): RawCandidate | null {
     season: input.episode.season ?? 1,
     episode: input.episode.number,
     fireInstant: input.episode.firstAired,
-    tmdbId: input.item.externalIds.tmdb,
+    keys: identityKeys(input.item.externalIds),
     source: input.source,
   };
 }
@@ -195,23 +215,20 @@ function dedupeEpisodeSources(
 
 /**
  * Same show tracked on Trakt and Simkl → one notification, Simkl's (plan 0034
- * KTD-10/R10 — the same precedence Up Next's `computeUpNext` applies). Keyed
- * on TMDB id like `dedupeByTmdb` below, and like it best-effort: no id leaves
- * both candidates standing.
+ * KTD-10/R10 — the same precedence Up Next's `computeUpNext` applies). Joins on
+ * any shared identity key, and best-effort like the rest: no id on either side
+ * leaves both candidates standing.
  */
 function dedupeTrackers(candidates: readonly RawCandidate[]): RawCandidate[] {
-  const simklTmdbIds = new Set(
+  const simklKeys = new Set(
     candidates
       .filter((candidate) => candidate.source === 'simkl')
-      .map((candidate) => candidate.tmdbId)
-      .filter((id): id is number => id != null),
+      .flatMap((candidate) => candidate.keys),
   );
-  if (simklTmdbIds.size === 0) return [...candidates];
+  if (simklKeys.size === 0) return [...candidates];
   return candidates.filter(
     (candidate) =>
-      candidate.source === 'simkl' ||
-      candidate.tmdbId == null ||
-      !simklTmdbIds.has(candidate.tmdbId),
+      candidate.source === 'simkl' || !sharesIdentity(candidate, simklKeys),
   );
 }
 
@@ -224,46 +241,44 @@ function releaseCandidate(input: ReleaseUpNextInput, now: Date): RawCandidate | 
     title: input.item.title,
     release: input.kind,
     fireInstant,
-    tmdbId: input.item.externalIds.tmdb,
+    keys: identityKeys(input.item.externalIds),
   };
 }
 
 /**
  * Same show tracked on AniList and a tracker → one notification. AniList wins
- * for anime, matching the Up Next dedupe precedence (plan 0019 R5).
+ * for anime, matching the Up Next dedupe precedence (plan 0019 R5). Runs after
+ * `dedupeTrackers` so the chain closes: AniList meets Simkl on `mal`, Simkl
+ * meets Trakt on `tmdb`/`tvdb`, and a show on all three notifies once even
+ * though AniList and Trakt may share no id at all.
  */
-function dedupeByTmdb(
+function dedupeAniList(
   anilist: readonly RawCandidate[],
   trackers: readonly RawCandidate[],
 ): RawCandidate[] {
-  const anilistTmdbIds = new Set(
-    anilist
-      .map((candidate) => candidate.tmdbId)
-      .filter((id): id is number => id != null),
-  );
-  const trackersKept = trackers.filter(
-    (candidate) =>
-      candidate.tmdbId == null || !anilistTmdbIds.has(candidate.tmdbId),
-  );
-  return [...anilist, ...trackersKept];
+  const anilistKeys = new Set(anilist.flatMap((candidate) => candidate.keys));
+  return [
+    ...anilist,
+    ...trackers.filter((candidate) => !sharesIdentity(candidate, anilistKeys)),
+  ];
 }
 
 /**
  * The same film reached the agenda from two watchlists → one notification per
- * release kind, not per source (KTD-6). Keyed on TMDB id when there is one and
- * the item id otherwise, so a Trakt and a Letterboxd row for the same film
- * collapse while its theatrical and streaming rows both survive. Deliberately
- * separate from the episode dedupe above: a film's release and a show's episode
- * are different events even when they share an id space.
+ * release kind, not per source (KTD-6). Keyed on every identity key the film
+ * carries, falling back to the item id, so a Trakt and a Letterboxd row for the
+ * same film collapse while its theatrical and streaming rows both survive.
+ * Deliberately separate from the episode dedupe above: a film's release and a
+ * show's episode are different events even when they share an id space.
  */
 function dedupeReleases(releases: readonly RawCandidate[]): RawCandidate[] {
   const seen = new Set<string>();
   return releases.filter((candidate) => {
-    const key = `${candidate.tmdbId ?? candidate.itemId}/${
-      candidate.kind === 'release' ? candidate.release : ''
-    }`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const kind = candidate.kind === 'release' ? candidate.release : '';
+    const base = candidate.keys.length > 0 ? candidate.keys : [candidate.itemId];
+    const keys = base.map((key) => `${key}/${kind}`);
+    if (keys.some((key) => seen.has(key))) return false;
+    for (const key of keys) seen.add(key);
     return true;
   });
 }
@@ -336,7 +351,7 @@ function fireOrder(candidate: RawCandidate): number {
 }
 
 function stripInternalFields(raw: RawCandidate): NotificationCandidate {
-  const { tmdbId: _tmdbId, source: _source, ...candidate } = raw;
+  const { keys: _keys, source: _source, ...candidate } = raw;
   return candidate;
 }
 
@@ -370,7 +385,7 @@ export function computeNotificationSchedule(
   );
 
   const deduped = [
-    ...dedupeByTmdb(anilistCandidates, trackerCandidates),
+    ...dedupeAniList(anilistCandidates, trackerCandidates),
     ...releaseCandidates,
   ];
 

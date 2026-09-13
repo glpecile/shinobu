@@ -177,6 +177,33 @@ describe('computeNotificationSchedule', () => {
     expect(result[0].itemId).toBe('anilist-1');
   });
 
+  /**
+   * The reported bug: one anime airing notified two or three times, because
+   * AniList, Simkl and Trakt share no single id. The join has to chain —
+   * AniList meets Simkl on `mal`, Simkl meets Trakt on `tmdb` — and no leg
+   * carries all three ids.
+   */
+  test('one anime on AniList, Simkl and Trakt notifies once', () => {
+    const anime = {
+      progress: [
+        {
+          ...traktInput('trakt-1', isoOffset(24), {}, { externalIds: { tmdb: 42, tvdb: 7 } }),
+        },
+        {
+          ...traktInput('simkl-1', isoOffset(24), {}, { externalIds: { tmdb: 42, mal: 100 } }),
+          source: 'simkl' as const,
+        },
+      ],
+      anilist: [
+        anilistInput('anilist-1', isoOffset(24), 11, { externalIds: { anilist: 5, mal: 100 } }),
+      ],
+    };
+
+    const result = computeNotificationSchedule(inputs(anime.progress, anime.anilist), NOW);
+    expect(result).toHaveLength(1);
+    expect(result[0].itemId).toBe('anilist-1');
+  });
+
   test('hash is order-insensitive on input but changes when an instant changes', () => {
     const a = traktInput('a', isoOffset(24));
     const b = traktInput('b', isoOffset(48));
