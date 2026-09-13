@@ -382,7 +382,12 @@ export default function SearchScreen() {
             // the inner input, inside the wrapper that carries the field's
             // border — the accent border below is the focus affordance instead,
             // and it works on native too.
-            className="flex-1 text-foreground pl-3 pr-4 py-3 font-sans outline-none"
+            // `min-w-0`: an `<input>` carries an intrinsic min-content width
+            // (its `size` default, ~20 characters) that `flex-1` alone can't
+            // shrink past on Firefox, so the clear button beside it was pushed
+            // out of the field and off the viewport
+            // (docs/solutions/firefox-flex-input-wont-shrink.md).
+            className="flex-1 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none"
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}
