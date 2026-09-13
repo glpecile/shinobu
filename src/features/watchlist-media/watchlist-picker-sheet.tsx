@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { SectionEnter } from '@/components/section-enter';
 import { Sheet } from '@/components/sheet';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
@@ -10,6 +11,7 @@ import { manualWriteReasons } from '@/features/write-sheet/manual-reasons';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderToggleList } from '@/features/write-sheet/provider-picker';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import type { ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
@@ -133,48 +135,59 @@ export function WatchlistAddPicker({
         Choose where “{item.title}” is added.
       </Text>
 
-      <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
-        Write to
-      </Text>
-      {writable.length > 0 && (
-        <ProviderToggleList
-          onSelectAll={selectAll}
-          onSelectNone={selectNone}
-          onToggle={toggle}
-          selectedProviders={selected}
-          targets={writable}
-        />
-      )}
-      <ManualWriteRows
-        item={item}
-        manual={manual}
-        reasons={manualWriteReasons(manual, 'watchlist', currentPlatform())}
-        verb="Add on"
-      />
-      {writable.length > 0 && selected.length === 0 && (
-        <Text className="text-accent font-sans text-sm mt-2">
-          Select at least one provider.
+      {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
+          mid-write would land on some providers and not others. */}
+      <View
+        className={cn(pending && 'opacity-50')}
+        style={{ pointerEvents: pending ? 'none' : 'auto' }}
+      >
+        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
+          Write to
         </Text>
-      )}
-
-      {result != null && result.succeeded.length > 0 && (
-        <Text className="text-muted font-sans text-sm mt-3">
-          {addedToSentence(result.succeeded)}
-        </Text>
-      )}
-      {result != null && (
-        <WriteResultReport
-          allSkipLine={alreadyOnSentence}
-          failedHeadline={failedOnSentence}
+        {writable.length > 0 && (
+          <ProviderToggleList
+            onSelectAll={selectAll}
+            onSelectNone={selectNone}
+            onToggle={toggle}
+            selectedProviders={selected}
+            targets={writable}
+          />
+        )}
+        <ManualWriteRows
           item={item}
-          outcomes={result.outcomes}
+          manual={manual}
+          reasons={manualWriteReasons(manual, 'watchlist', currentPlatform())}
           verb="Add on"
         />
-      )}
-      {watchlist.isError && (
-        <Text className="text-accent font-sans text-sm mt-3">
-          Could not add. Try again.
-        </Text>
+        {writable.length > 0 && selected.length === 0 && (
+          <Text className="text-accent font-sans text-sm mt-2">
+            Select at least one provider.
+          </Text>
+        )}
+      </View>
+
+      {(result != null || watchlist.isError) && (
+        <SectionEnter>
+          {result != null && result.succeeded.length > 0 && (
+            <Text className="text-muted font-sans text-sm mt-3">
+              {addedToSentence(result.succeeded)}
+            </Text>
+          )}
+          {result != null && (
+            <WriteResultReport
+              allSkipLine={alreadyOnSentence}
+              failedHeadline={failedOnSentence}
+              item={item}
+              outcomes={result.outcomes}
+              verb="Add on"
+            />
+          )}
+          {watchlist.isError && (
+            <Text className="text-accent font-sans text-sm mt-3">
+              Could not add. Try again.
+            </Text>
+          )}
+        </SectionEnter>
       )}
 
       <Button
@@ -296,65 +309,76 @@ export function WatchlistRemovePicker({
         Choose where “{entry.item.title}” is removed.
       </Text>
 
-      <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
-        Remove from
-      </Text>
-      {split.targets.length > 0 && (
-        <ProviderToggleList
-          onSelectAll={disarmThen(selectAll)}
-          onSelectNone={disarmThen(selectNone)}
-          onToggle={disarmThen(toggle)}
-          selectedProviders={selected}
-          targets={split.targets}
-        />
-      )}
-      {/* Manual-declared holders and unknown-membership providers share the
-          row slot (plan 0032 U3): identical on screen, different reasons. */}
-      <ManualWriteRows
-        item={entry.item}
-        manual={[...manual, ...unknown]}
-        reasons={{
-          ...manualWriteReasons(manual, 'watchlist-remove', currentPlatform()),
-          ...Object.fromEntries(
-            unknown.map((provider) => [
-              provider,
-              'Couldn’t confirm it’s on this list',
-            ]),
-          ),
-        }}
-        verb="Remove on"
-      />
-      {split.targets.length > 0 && selected.length === 0 && (
-        <Text className="text-accent font-sans text-sm mt-2">
-          Select at least one provider.
+      {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
+          mid-write would land on some providers and not others. */}
+      <View
+        className={cn(pending && 'opacity-50')}
+        style={{ pointerEvents: pending ? 'none' : 'auto' }}
+      >
+        <Text className="text-foreground font-sans-semibold text-sm mt-5 mb-2">
+          Remove from
         </Text>
-      )}
+        {split.targets.length > 0 && (
+          <ProviderToggleList
+            onSelectAll={disarmThen(selectAll)}
+            onSelectNone={disarmThen(selectNone)}
+            onToggle={disarmThen(toggle)}
+            selectedProviders={selected}
+            targets={split.targets}
+          />
+        )}
+        {/* Manual-declared holders and unknown-membership providers share the
+            row slot (plan 0032 U3): identical on screen, different reasons. */}
+        <ManualWriteRows
+          item={entry.item}
+          manual={[...manual, ...unknown]}
+          reasons={{
+            ...manualWriteReasons(manual, 'watchlist-remove', currentPlatform()),
+            ...Object.fromEntries(
+              unknown.map((provider) => [
+                provider,
+                'Couldn’t confirm it’s on this list',
+              ]),
+            ),
+          }}
+          verb="Remove on"
+        />
+        {split.targets.length > 0 && selected.length === 0 && (
+          <Text className="text-accent font-sans text-sm mt-2">
+            Select at least one provider.
+          </Text>
+        )}
+      </View>
       {warning != null && (
         <Text className="text-accent font-sans text-sm mt-3 leading-relaxed">
           {warning}
         </Text>
       )}
 
-      {result != null && result.succeeded.length > 0 && (
-        <Text className="text-muted font-sans text-sm mt-3">
-          {removedFromSentence(result.succeeded)}
-        </Text>
-      )}
-      {/* No all-skip headline, deliberately (plan 0031 U16): "wasn't on your
-          watchlist" and "removing would delete your AniList entry" are
-          different facts and no sentence collapses them. */}
-      {result != null && (
-        <WriteResultReport
-          failedHeadline={failedOnSentence}
-          item={entry.item}
-          outcomes={result.outcomes}
-          verb="Remove on"
-        />
-      )}
-      {remove.isError && (
-        <Text className="text-accent font-sans text-sm mt-3">
-          Could not remove. Try again.
-        </Text>
+      {(result != null || remove.isError) && (
+        <SectionEnter>
+          {result != null && result.succeeded.length > 0 && (
+            <Text className="text-muted font-sans text-sm mt-3">
+              {removedFromSentence(result.succeeded)}
+            </Text>
+          )}
+          {/* No all-skip headline, deliberately (plan 0031 U16): "wasn't on
+              your watchlist" and "removing would delete your AniList entry"
+              are different facts and no sentence collapses them. */}
+          {result != null && (
+            <WriteResultReport
+              failedHeadline={failedOnSentence}
+              item={entry.item}
+              outcomes={result.outcomes}
+              verb="Remove on"
+            />
+          )}
+          {remove.isError && (
+            <Text className="text-accent font-sans text-sm mt-3">
+              Could not remove. Try again.
+            </Text>
+          )}
+        </SectionEnter>
       )}
 
       <Button
