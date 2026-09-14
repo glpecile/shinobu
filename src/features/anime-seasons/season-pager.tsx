@@ -41,14 +41,11 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * Controlled: `season` comes from the URL, `onSettle` reports where a swipe
  * landed, and `progress` is the offset as a continuous cour index, written on
  * the UI thread every scroll frame so the season strip's pill rides the
- * finger. Native reports a settle through the momentum-end event;
- * react-native-web never fires it (its ScrollView only emits `onScroll`), so
- * on web a short quiet period after the last scroll event stands in for it.
- * Every event resets that timer, so it only ever fires at rest: settling
- * from a sample taken *during* a tab tap's page scroll would read the page
- * being left and snap the URL straight back to it. Pages get explicit sizes
- * from the measured pager because a horizontal scroll view does not stretch
- * its children's height on every platform.
+ * finger. Native reports a settle through the momentum-end event.
+ * react-native-web never fires it, but web only ever moves by tap, so there
+ * the tap's own animation reports where it came to rest. Pages get explicit
+ * sizes from the measured pager because a horizontal scroll view does not
+ * stretch its children's height on every platform.
  *
  * A tab tap's scroll is the platform's on native (`scrollTo`, animated). On
  * web that would be the browser's smooth scroll, whose duration scales with
@@ -70,12 +67,9 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * a snap-back wobble.
  */
 
-/** Quiet time after the last scroll event before a position counts as settled (web). */
-const SETTLE_MS = 120;
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
 const BOUNDARY_TOLERANCE = 2;
 const isWeb = Platform.OS === 'web';
-const isAndroid = Platform.OS === 'android';
 /** Web pages by tap: `scrollLeft` still moves, a trackpad swipe reaches the page. */
 const webScrollLock = { overflowX: 'hidden' } as unknown as ViewStyle;
 /**
@@ -102,7 +96,6 @@ export function SeasonPager({
   // The page last scrolled into place. Null until the first layout, so the
   // initial position is a jump, not a slide in from the first cour.
   const shown = useRef<number | null>(null);
-  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduceMotion = useReducedMotion();
   const index = ANIME_SEASONS.indexOf(season);
   // The page the scroll last came to rest on: what the mounted window is
@@ -111,18 +104,6 @@ export function SeasonPager({
   // Web only: the offset a tab tap is animating towards, retargeted from
   // wherever the scroll is if the next tap lands mid-flight.
   const driven = useSharedValue(0);
-  // The offset the scroll view last reported. No jump writes it, so it is what
-  // confirms a jump landed.
-  const nativeX = useSharedValue(0);
-  const jumpFrame = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      clearTimeout(settleTimer.current ?? undefined);
-      cancelJump();
-    },
-    [],
-  );
 
   function scrollNode(): HTMLElement | null {
     return isWeb ? (scroller.current?.getScrollableNode() ?? null) : null;
@@ -133,36 +114,10 @@ export function SeasonPager({
     if (node) node.scrollLeft = x;
   }
 
-  function restoreSnap() {
+  function finishWebTap(page: number) {
     const node = scrollNode();
     if (node) node.style.scrollSnapType = '';
-  }
-
-  function cancelJump() {
-    if (jumpFrame.current != null) cancelAnimationFrame(jumpFrame.current);
-    jumpFrame.current = null;
-  }
-
-  /**
-   * Android can run the `scrollTo` ahead of the mount that sizes the pages and
-   * lose it for good, and no event marks that mount — so repeat the jump each
-   * frame until the scroll view reports arriving
-   * (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
-   */
-  function jumpTo(page: number) {
-    cancelJump();
-    const x = page * size.width;
-    scroller.current?.scrollTo({ x, animated: false });
-    if (!isAndroid) return;
-    const confirm = () => {
-      if (Math.abs(nativeX.value - x) <= BOUNDARY_TOLERANCE) {
-        jumpFrame.current = null;
-        return;
-      }
-      scroller.current?.scrollTo({ x, animated: false });
-      jumpFrame.current = requestAnimationFrame(confirm);
-    };
-    jumpFrame.current = requestAnimationFrame(confirm);
+    setSettled(page);
   }
 
   useAnimatedReaction(
@@ -176,18 +131,15 @@ export function SeasonPager({
     if (size.width === 0) return;
     const animated = shown.current != null && shown.current !== index && !reduceMotion;
     shown.current = index;
+    const x = index * size.width;
     // A jump fires no scroll frames on every platform; keep the pill honest.
     if (!animated) {
       progress.value = index;
       setSettled(index);
-      jumpTo(index);
-      return;
     }
-    cancelJump();
-    const x = index * size.width;
-    const node = scrollNode();
+    const node = animated ? scrollNode() : null;
     if (node == null) {
-      scroller.current?.scrollTo({ x, animated: true });
+      scroller.current?.scrollTo({ x, animated });
       return;
     }
     node.style.scrollSnapType = 'none';
@@ -196,7 +148,7 @@ export function SeasonPager({
       x,
       { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT },
       (finished) => {
-        if (finished) scheduleOnRN(restoreSnap);
+        if (finished) scheduleOnRN(finishWebTap, index);
       },
     );
   }, [index, size.width, reduceMotion, progress, driven]);
@@ -215,7 +167,7 @@ export function SeasonPager({
     // A swipe moves one page at most, so a rest further out is the scroll
     // view sitting somewhere we never put it — not a cour the user chose.
     if (Math.abs(page - index) > 1) {
-      jumpTo(index);
+      scroller.current?.scrollTo({ x: index * size.width, animated: false });
       return;
     }
     setSettled(page);
@@ -224,17 +176,10 @@ export function SeasonPager({
     onSettle(landed);
   }
 
-  function scheduleSettle(x: number) {
-    clearTimeout(settleTimer.current ?? undefined);
-    settleTimer.current = setTimeout(() => settleAt(x), SETTLE_MS);
-  }
-
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      nativeX.value = event.contentOffset.x;
       if (size.width === 0) return;
       progress.value = event.contentOffset.x / size.width;
-      if (isWeb) scheduleOnRN(scheduleSettle, event.contentOffset.x);
     },
     onMomentumEnd: (event) => {
       scheduleOnRN(settleAt, event.contentOffset.x);
@@ -242,23 +187,30 @@ export function SeasonPager({
   });
 
   return (
-    <AnimatedScrollView
-      className="flex-1"
-      horizontal
-      onLayout={onLayout}
-      onScroll={onScroll}
-      pagingEnabled
-      ref={scroller}
-      scrollEventThrottle={16}
-      showsHorizontalScrollIndicator={false}
-      style={isWeb ? webScrollLock : undefined}
-    >
-      {size.width > 0 &&
-        ANIME_SEASONS.map((cour, i) => (
-          <View key={cour} style={{ width: size.width, height: size.height }}>
-            {Math.abs(i - settled) <= 1 || i === index ? renderSeason(cour) : null}
-          </View>
-        ))}
-    </AnimatedScrollView>
+    <View className="flex-1" onLayout={onLayout}>
+      {size.width > 0 && (
+        <AnimatedScrollView
+          className="flex-1"
+          // Where the pager rests, as a prop rather than only a `scrollTo`. The
+          // scroll view mounts together with its pages, so Android applies this
+          // once they are laid out; a command can run before they exist and be
+          // dropped (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
+          contentOffset={{ x: settled * size.width, y: 0 }}
+          horizontal
+          onScroll={onScroll}
+          pagingEnabled
+          ref={scroller}
+          scrollEventThrottle={16}
+          showsHorizontalScrollIndicator={false}
+          style={isWeb ? webScrollLock : undefined}
+        >
+          {ANIME_SEASONS.map((cour, i) => (
+            <View key={cour} style={{ width: size.width, height: size.height }}>
+              {Math.abs(i - settled) <= 1 || i === index ? renderSeason(cour) : null}
+            </View>
+          ))}
+        </AnimatedScrollView>
+      )}
+    </View>
   );
 }

@@ -41,19 +41,28 @@ snapped back ended momentum at x = 0 and `settleAt` reported Winter.
 
 ## Fix
 
-`jumpTo` in `season-pager.tsx`, on Android, repeats the non-animated `scrollTo`
-every frame until the scroll view's own `onScroll` reports the target offset
-(`nativeX`, a shared value no jump writes). A landed `scrollTo` always emits a
-scroll event (`OnScrollDispatchHelper` dispatches on any position change, and a
-16ms `scrollEventThrottle` never throttles), a dropped one never does, so the
-loop ends on the first frame after the mount. A settle more than one page from
-the selected cour is still refused and jumped back, so the URL can't follow a
-position nobody chose.
+Declare the offset, and create the scroll view together with its pages.
+
+`SeasonPager` measures an outer `View` and only then renders the scroll view,
+with its four pages and `contentOffset={{ x: settled * width }}`, in one commit.
+Within a mount transaction the `Differentiator` emits a new subtree
+bottom-up (creates, then the children's mutations, then this level's inserts),
+so the content container is inserted and laid out *before* the scroll view's
+own first `layout()`. The prop, applied at creation, parks the offset; that
+first `onLayout` finds the content ready and applies it. No command, no retry.
+
+`contentOffset` tracks where the pager *rests*, so it only changes where the
+view already is (a swipe's momentum end, a jump) or on resize, and the prop
+diff never sends it mid-gesture or mid-tap. react-native-web ignores the prop;
+web keeps its layout-effect jump, which has no race there.
+
+A settle more than one page from the selected cour is still refused and jumped
+back, so the URL can't follow a position nobody chose.
 
 ## Rule
 
 On Android Fabric, an imperative scroll command is not ordered with the mount
-that creates its content, and no JS-visible event marks that mount. Confirm a
-programmatic offset from the scroll view's own scroll event; don't trust a
-layout event to mean the native view is ready. Reproduce with a release build —
-a dev client hides the race.
+that creates its content, and no JS-visible event marks that mount. Put a
+scroll view's resting offset in `contentOffset` and mount the scroll view in the
+same commit as its content, rather than issuing `scrollTo` at a view that
+already exists. Reproduce with a release build — a dev client hides the race.
