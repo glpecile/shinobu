@@ -2,7 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { usePathname, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
@@ -14,10 +14,10 @@ import {
   useSidebarCollapsed,
 } from '@/state/prefs/sidebar';
 
-/** Below this width labels never fit, so the rail is forced regardless of pref. */
-const RAIL_BREAKPOINT = 768;
-
-/** Sidebar widths (px). */
+/**
+ * Sidebar widths (px). Their classes (`md:w-60` / `md:w-16`) are the values the
+ * browser actually paints — these mirror them for the toggle's `left`.
+ */
 const SIDEBAR_WIDTH = 240;
 const RAIL_WIDTH = 64;
 /** Fixed icon column so icons never shift between expanded/collapsed — only the
@@ -27,11 +27,6 @@ const ICON_COL = RAIL_WIDTH - 16;
 const TOGGLE_SIZE = 40;
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-const widthTransition = {
-  transitionDuration: '220ms',
-  transitionProperty: 'width',
-  transitionTimingFunction: EASE,
-} as const;
 const leftTransition = {
   transitionDuration: '220ms',
   transitionProperty: 'left',
@@ -93,6 +88,8 @@ const COLOR = {
 /**
  * A label that fades as the sidebar collapses. It never shrinks (`flexShrink 0`)
  * so it slides out under the sidebar's `overflow-hidden` instead of ellipsing.
+ * Below `md` it's `display: none`, not faded — the bottom bar is icons only, and
+ * an invisible label would still hold its width in that row.
  */
 function RevealLabel({
   children,
@@ -105,7 +102,7 @@ function RevealLabel({
 }) {
   return (
     <Text
-      className={className}
+      className={cn('hidden md:flex', className)}
       numberOfLines={1}
       style={{ flexShrink: 0, opacity: collapsed ? 0 : 1, ...opacityTransition }}
     >
@@ -155,7 +152,7 @@ function SidebarToggle({ collapsed }: { collapsed: boolean }) {
   return (
     <PresstableOpacity
       accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      className="absolute z-30 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center"
+      className="hidden md:flex absolute z-30 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center"
       style={{ bottom: 18, left: edge - TOGGLE_SIZE / 2, ...leftTransition }}
       onPress={toggleSidebarCollapsed}
     >
@@ -200,27 +197,31 @@ function SidebarItem({
 }
 
 /**
- * Persistent desktop navigation: a left rail (logo + destinations) with the
- * routed content filling the rest. Matches plan.md Rule 103's wide-screen
- * left-panel split. Native has no sidebar — see `index.tsx`.
+ * Persistent web navigation: at `md` and up a left rail (logo + destinations)
+ * with the routed content filling the rest, matching plan.md Rule 103's
+ * wide-screen left-panel split; below it the same nav lays itself out as a
+ * bottom bar, the idiom a phone expects. Native has no sidebar — see `index.tsx`.
+ *
+ * The breakpoint is pure CSS (`md:` classes, i.e. real media queries in the
+ * exported stylesheet — uniwind hands `className` straight to the DOM on web),
+ * never `useWindowDimensions`: a JS branch measures nothing during the static
+ * prerender, so the exported HTML would bake the desktop layout and snap to the
+ * bar only after hydration.
  *
  * Collapse behavior is adapted from shadcn's `collapsible="icon"` sidebar: the
  * floating edge toggle (and ⌘/Ctrl+B) switches between the full rail and an
  * icon-only rail, persisted via `state/prefs/sidebar`. The width, labels, and
- * toggle animate together (CSS transitions; web-only file). Below
- * `RAIL_BREAKPOINT` the rail is forced (labels can't fit) and the toggle hides.
+ * toggle animate together (CSS transitions; web-only file). The toggle and the
+ * pref only exist above `md` — the bottom bar has one shape.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const pushRoute = usePushRoute();
-  const { width } = useWindowDimensions();
-  const forced = width < RAIL_BREAKPOINT;
-  const userCollapsed = useSidebarCollapsed();
-  const collapsed = forced || userCollapsed;
+  const collapsed = useSidebarCollapsed();
 
-  // ⌘/Ctrl+B toggles the sidebar — the shadcn keyboard shortcut. Inert while
-  // forced (the stored pref still flips and applies once the window widens).
+  // ⌘/Ctrl+B toggles the sidebar — the shadcn keyboard shortcut. Below `md`
+  // the pref still flips; it just has nothing to widen until the viewport does.
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
     function onKeyDown(event: KeyboardEvent) {
@@ -253,14 +254,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [onSearch, router]);
 
   return (
-    <View className="flex-1 flex-row">
+    // `flex-col-reverse` puts the nav (first child) below the content on a
+    // phone and `md:flex-row` puts it back on the left; the bar is a flex
+    // sibling, not an overlay, so nothing needs bottom padding to clear it.
+    <View className="flex-1 flex-col-reverse md:flex-row">
       <View
-        className="h-full border-r border-border bg-background overflow-hidden px-2 pt-6"
-        style={{ width: collapsed ? RAIL_WIDTH : SIDEBAR_WIDTH, ...widthTransition }}
+        className={cn(
+          'w-full border-t border-border bg-background overflow-hidden px-2',
+          'pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2',
+          'md:h-full md:w-60 md:border-t-0 md:border-r md:pt-6 md:pb-0',
+          // Scoped to `md` so crossing the breakpoint snaps instead of sliding
+          // the whole bar's width; matches `leftTransition` on the toggle.
+          'md:transition-[width] md:duration-[220ms]',
+          collapsed && 'md:w-16',
+        )}
       >
         <PresstableOpacity
           accessibilityLabel="Home"
-          className="h-10 mb-6 flex-row items-center"
+          className="hidden md:flex h-10 mb-6 flex-row items-center"
           onPress={() => router.replace(routes.home)}
         >
           <View className="items-center justify-center" style={{ width: ICON_COL }}>
@@ -273,7 +284,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             Shinobu
           </RevealLabel>
         </PresstableOpacity>
-        <View className="gap-1">
+        <View className="flex-row justify-around md:flex-col md:gap-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
             return (
@@ -295,7 +306,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </View>
       <View className="flex-1">{children}</View>
       {/* Last child so it paints above the routed content it overlaps. */}
-      {!forced && <SidebarToggle collapsed={collapsed} />}
+      <SidebarToggle collapsed={collapsed} />
     </View>
   );
 }
