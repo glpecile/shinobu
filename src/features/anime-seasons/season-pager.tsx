@@ -75,6 +75,7 @@ const SETTLE_MS = 120;
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
 const BOUNDARY_TOLERANCE = 2;
 const isWeb = Platform.OS === 'web';
+const isAndroid = Platform.OS === 'android';
 /** Web pages by tap: `scrollLeft` still moves, a trackpad swipe reaches the page. */
 const webScrollLock = { overflowX: 'hidden' } as unknown as ViewStyle;
 /**
@@ -110,8 +111,18 @@ export function SeasonPager({
   // Web only: the offset a tab tap is animating towards, retargeted from
   // wherever the scroll is if the next tap lands mid-flight.
   const driven = useSharedValue(0);
+  // The offset the scroll view last reported. No jump writes it, so it is what
+  // confirms a jump landed.
+  const nativeX = useSharedValue(0);
+  const jumpFrame = useRef<number | null>(null);
 
-  useEffect(() => () => clearTimeout(settleTimer.current ?? undefined), []);
+  useEffect(
+    () => () => {
+      clearTimeout(settleTimer.current ?? undefined);
+      cancelJump();
+    },
+    [],
+  );
 
   function scrollNode(): HTMLElement | null {
     return isWeb ? (scroller.current?.getScrollableNode() ?? null) : null;
@@ -127,20 +138,31 @@ export function SeasonPager({
     if (node) node.style.scrollSnapType = '';
   }
 
-  function jumpTo(page: number) {
-    scroller.current?.scrollTo({ x: page * size.width, animated: false });
+  function cancelJump() {
+    if (jumpFrame.current != null) cancelAnimationFrame(jumpFrame.current);
+    jumpFrame.current = null;
   }
 
   /**
-   * Android drops an offset set before the content has a size, leaving the
-   * pager on the first cour while the strip reads the selected one; this is
-   * the event that says the content is measurable
+   * Android can run the `scrollTo` ahead of the mount that sizes the pages and
+   * lose it for good, and no event marks that mount — so repeat the jump each
+   * frame until the scroll view reports arriving
    * (docs/solutions/android-scrollview-drops-an-offset-set-before-layout.md).
    */
-  function onContentSizeChange(width: number) {
-    if (size.width === 0) return;
-    if (width + BOUNDARY_TOLERANCE < size.width * ANIME_SEASONS.length) return;
-    jumpTo(index);
+  function jumpTo(page: number) {
+    cancelJump();
+    const x = page * size.width;
+    scroller.current?.scrollTo({ x, animated: false });
+    if (!isAndroid) return;
+    const confirm = () => {
+      if (Math.abs(nativeX.value - x) <= BOUNDARY_TOLERANCE) {
+        jumpFrame.current = null;
+        return;
+      }
+      scroller.current?.scrollTo({ x, animated: false });
+      jumpFrame.current = requestAnimationFrame(confirm);
+    };
+    jumpFrame.current = requestAnimationFrame(confirm);
   }
 
   useAnimatedReaction(
@@ -154,15 +176,18 @@ export function SeasonPager({
     if (size.width === 0) return;
     const animated = shown.current != null && shown.current !== index && !reduceMotion;
     shown.current = index;
-    const x = index * size.width;
     // A jump fires no scroll frames on every platform; keep the pill honest.
     if (!animated) {
       progress.value = index;
       setSettled(index);
+      jumpTo(index);
+      return;
     }
-    const node = animated ? scrollNode() : null;
+    cancelJump();
+    const x = index * size.width;
+    const node = scrollNode();
     if (node == null) {
-      scroller.current?.scrollTo({ x, animated });
+      scroller.current?.scrollTo({ x, animated: true });
       return;
     }
     node.style.scrollSnapType = 'none';
@@ -206,6 +231,7 @@ export function SeasonPager({
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
+      nativeX.value = event.contentOffset.x;
       if (size.width === 0) return;
       progress.value = event.contentOffset.x / size.width;
       if (isWeb) scheduleOnRN(scheduleSettle, event.contentOffset.x);
@@ -219,7 +245,6 @@ export function SeasonPager({
     <AnimatedScrollView
       className="flex-1"
       horizontal
-      onContentSizeChange={onContentSizeChange}
       onLayout={onLayout}
       onScroll={onScroll}
       pagingEnabled
