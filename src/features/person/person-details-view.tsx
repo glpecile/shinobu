@@ -70,8 +70,12 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                 )}
               </View>
             </View>
+            {/* A measure, not the column: at 896px a bio line runs past a
+                hundred characters and the hero reads as an article. */}
             {person.biography != null && (
-              <ExpandableText lines={4} text={person.biography} />
+              <View className="max-w-xl">
+                <ExpandableText lines={4} text={person.biography} />
+              </View>
             )}
           </View>
         }

@@ -74,8 +74,10 @@ function normalizePerson(raw: TmdbPersonResponse): NormalizedPerson {
     name: raw.name,
     headshot: tmdbImageUrl(raw.profile_path, 'w342'),
     headshotFull: tmdbImageUrl(raw.profile_path, 'original'),
+    // Paragraphs come as blank lines; a clamp that lands on one shows a
+    // hole under the last visible line instead of text.
     ...(raw.biography != null && raw.biography !== ''
-      ? { biography: raw.biography }
+      ? { biography: raw.biography.replace(/\n\s*\n/g, '\n') }
       : {}),
     ...(raw.birthday != null && raw.birthday !== ''
       ? { birthday: raw.birthday }

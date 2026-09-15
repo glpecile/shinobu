@@ -1,17 +1,34 @@
-import { useState, type ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { useRef, useState, type ReactNode } from 'react';
+import {
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ViewStyle,
+} from 'react-native';
+import {
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { ActionableRow } from '@/components/actionable-row';
-import { AnimatedText, AnimatedView } from '@/components/animated-view';
+import { AnimatedView } from '@/components/animated-view';
+import { Button } from '@/components/button';
+import { EmptyStateTile } from '@/components/empty-state-tile';
 import { Image } from '@/components/image';
-import { List } from '@/components/List';
+import { List, type LegendListRef } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
+import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-top-fab';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
 import { cn } from '@/lib/cn';
-import { DURATION, EASE_OUT } from '@/lib/motion';
+import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
@@ -25,6 +42,7 @@ import {
   type Filmography,
   type FormatFilter,
 } from './group';
+import { RoleSheet } from './role-sheet';
 
 /**
  * The diary's rail, verbatim: a fixed gutter every row shares with one
@@ -43,18 +61,27 @@ const HEAD = 'flex-row items-center px-6 pt-5 pb-4 relative';
 /** The rail resumes under the year, from 40px down. */
 const HEAD_LINE = cn('absolute w-px bg-border top-10 bottom-0', RAIL_LINE);
 
+/** The role button sits under the pill on a phone and beside it from `md`. */
+const ROLE_BUTTON = 'self-start mt-3 md:mt-0 md:ml-3';
+
+/**
+ * How far the rows dip when a filter changes them. Not to zero: the list is
+ * refocusing, not arriving, and a dip from nothing reads as a reload.
+ */
+const SETTLE_FROM = 0.35;
+/** Blur is web-only: native re-rasterizes a filtered subtree every frame. */
+const SETTLE_BLUR = process.env.EXPO_OS === 'web' ? 4 : 0;
+
 /** "All" first, as on the seasons explorer — it is the shape the page opens in. */
 const FORMAT_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'MOVIE', label: 'Movies' },
   { value: 'TV', label: 'TV', accessibilityLabel: 'TV series' },
-] as const satisfies readonly { value: FormatFilter; label: string; accessibilityLabel?: string }[];
-
-const CHIP_TRANSITION = {
-  transitionProperty: 'color',
-  transitionDuration: DURATION.color,
-  transitionTimingFunction: EASE_OUT,
-} as const;
+] as const satisfies readonly {
+  value: FormatFilter;
+  label: string;
+  accessibilityLabel?: string;
+}[];
 
 /**
  * Wide screens read the page as one centred column. Centred from the outer
@@ -67,64 +94,6 @@ function Column({ children }: { children: ReactNode }) {
     <View className="w-full items-center">
       <View className="w-full max-w-4xl">{children}</View>
     </View>
-  );
-}
-
-/**
- * A role filter chip. Inverted when selected (foreground fill), never the
- * accent — it changes what you are looking at, not what you are about to do,
- * the same reasoning as the segmented control beside it. The fill crossfades
- * on a stacked layer and the label's colour transitions with it, so a tap
- * reads as one state settling rather than two classNames hard-swapping.
- */
-function RoleChip({
-  label,
-  count,
-  selected,
-  onPress,
-}: {
-  label: string;
-  count?: number;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const foreground = useThemeColor('--color-foreground');
-  const background = useThemeColor('--color-background');
-  const muted = useThemeColor('--color-muted');
-  return (
-    <PresstableOpacity
-      accessibilityLabel={count == null ? label : `${label}, ${count}`}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-    >
-      <View className="flex-row items-baseline gap-1.5 rounded-full px-3 py-1.5">
-        <View className="absolute inset-0 rounded-full border border-border" />
-        <AnimatedView
-          className="absolute inset-0 rounded-full bg-foreground"
-          style={{
-            opacity: selected ? 1 : 0,
-            transitionProperty: 'opacity',
-            transitionDuration: DURATION.color,
-            transitionTimingFunction: EASE_OUT,
-          }}
-        />
-        <AnimatedText
-          className="font-sans-semibold text-sm"
-          style={{ color: selected ? background : foreground, ...CHIP_TRANSITION }}
-        >
-          {label}
-        </AnimatedText>
-        {count != null && (
-          <AnimatedText
-            className="font-sans text-xs"
-            style={{ color: selected ? background : muted, ...CHIP_TRANSITION }}
-          >
-            {count}
-          </AnimatedText>
-        )}
-      </View>
-    </PresstableOpacity>
   );
 }
 
@@ -166,7 +135,11 @@ function TimelineHead({
       </Text>
       <Text className="text-muted/70 font-sans text-[11px] ml-2 mr-3">{label}</Text>
       <View className="flex-1 h-px bg-border" />
-      <Text className="text-muted font-sans-semibold text-xs ml-3">{open ? 'Hide' : 'Show'}</Text>
+      {/* Fixed width: "Show" and "Hide" differ by a few px, and the hairline
+          should end at one place down the whole page. */}
+      <Text className="text-muted font-sans-semibold text-xs ml-3 w-10 text-right">
+        {open ? 'Hide' : 'Show'}
+      </Text>
       {open && <View className={HEAD_LINE} />}
     </PresstableOpacity>
   );
@@ -248,9 +221,12 @@ export interface CreditTimelineProps {
  * A filmography down one rail, newest first, with a head per release year.
  * The controls above it narrow by format and by role — both
  * local state: a filter is a way of reading this page, not a destination, so
- * it lives in neither the URL nor a device pref. Filtering changes the rows in
- * place with no entrance of its own: chips are tapped many times a visit, and
- * the pill's slide and the chip's fill are already the answer to the tap.
+ * it lives in neither the URL nor a device pref. A filter change swaps the
+ * rows in place and lets them settle: one shared value dips every row to a
+ * soft blur and brings it back over `DURATION.swap`, so the new list reads
+ * as the old one refocusing rather than two lists cutting. No per-row
+ * entrance — the rows are recycled, and an `entering` on a cell replays on
+ * every scroll.
  *
  * The whole page is the list, hero included, so a long filmography (a
  * character actor's three hundred credits) mounts a screen of rows rather than
@@ -265,8 +241,33 @@ export function CreditTimeline({
   onItemActions,
 }: CreditTimelineProps) {
   const enter = usePageEnterStyle();
+  const muted = useThemeColor('--color-muted');
+  const reduceMotion = useReducedMotion();
+  const settle = useSharedValue(1);
+  const settleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(settle.value, [0, 1], [SETTLE_FROM, 1]),
+    ...(SETTLE_BLUR > 0 && !reduceMotion
+      ? // A CSS string, which is what react-native-web paints; RN's typed
+        // filter array is the native shape this never takes.
+        {
+          filter:
+            `blur(${((1 - settle.value) * SETTLE_BLUR).toFixed(1)}px)` as unknown as ViewStyle['filter'],
+        }
+      : {}),
+  }));
+  function refocus() {
+    settle.value = 0;
+    settle.value = withTiming(1, {
+      duration: DURATION.swap,
+      easing: KEYFRAME_EASE_OUT,
+    });
+  }
+  const listRef = useRef<LegendListRef>(null);
+  // Flipped on threshold crossings only, so scrolling doesn't re-render (the diary's rule).
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [format, setFormat] = useState<FormatFilter>('ALL');
   const [role, setRole] = useState<string | null>(null);
+  const [roleSheetOpen, setRoleSheetOpen] = useState(false);
   // Only unreleased work starts folded.
   const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set([UPCOMING_HEAD]));
   const toggleFold = (key: string) => {
@@ -279,20 +280,34 @@ export function CreditTimeline({
   // A role the new format emptied falls back to every role, rather than
   // showing nothing under a chip that is no longer there.
   const activeRole = counts.some((entry) => entry.role === role) ? role : null;
-  const rows = timelineRows(filmography.credits, { format, role: activeRole, folded });
+  const rows = timelineRows(filmography.credits, {
+    format,
+    role: activeRole,
+    folded,
+  });
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const past = event.nativeEvent.contentOffset.y > SCROLL_TO_TOP_THRESHOLD;
+    if (past !== showScrollTop) setShowScrollTop(past);
+  }
 
   return (
     <View className="flex-1" style={enter}>
       <List
+        ref={listRef}
+        onScroll={handleScroll}
         data={rows}
         estimatedItemSize={ROW_HEIGHT}
         getItemType={(row) => row.kind}
         keyExtractor={(row) => row.key}
         ListEmptyComponent={
           <Column>
-            <Text className="text-muted font-sans text-sm px-6 py-8">
-              Nothing here for this filter.
-            </Text>
+            <EmptyStateTile
+              className="py-10"
+              description="Try another format or role."
+              icon={<Ionicons color={muted} name="film-outline" size={28} />}
+              title="Nothing for this filter"
+            />
           </Column>
         }
         ListFooterComponent={
@@ -304,41 +319,46 @@ export function CreditTimeline({
         ListHeaderComponent={
           <Column>
             {header}
-            <View className="px-6 pt-6 pb-3">
-              <SegmentedControl
-                accessibilityLabel="Format"
-                className="w-52"
-                onChange={setFormat}
-                options={FORMAT_OPTIONS}
-                size="sm"
-                value={format}
-              />
-            </View>
-            {/* One role needs no chip to pick it. A strip, not a wrap: a
-                crew veteran has eight departments, and a wrapped row of them
-                pushes the filmography a screen down on a phone. */}
-            {counts.length > 1 && (
-              <ScrollView
-                contentContainerStyle={{ paddingHorizontal: 24, gap: 8 }}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-              >
-                <RoleChip
-                  label="All roles"
-                  onPress={() => setRole(null)}
-                  selected={activeRole == null}
+            <View className="px-6 pt-2">
+              {/* The section head the details page gives its sections: it
+                  names what the two control rows filter, and marks where
+                  the hero ends and the list begins. */}
+              <View className="flex-row items-baseline gap-2 mb-3">
+                <Text className="font-display text-xl text-foreground">Filmography</Text>
+                <Text className="text-muted font-sans text-xs">
+                  {filmography.credits.length}{' '}
+                  {filmography.credits.length === 1 ? 'title' : 'titles'}
+                </Text>
+              </View>
+              <View className="md:flex-row md:items-center pb-3">
+                <SegmentedControl
+                  accessibilityLabel="Format"
+                  className="w-52"
+                  onChange={(next) => {
+                    refocus();
+                    setFormat(next);
+                  }}
+                  options={FORMAT_OPTIONS}
+                  size="sm"
+                  value={format}
                 />
-                {counts.map((entry) => (
-                  <RoleChip
-                    count={entry.count}
-                    key={entry.role}
-                    label={entry.role}
-                    onPress={() => setRole(entry.role)}
-                    selected={activeRole === entry.role}
+                {/* One role needs no picker. */}
+                {counts.length > 1 && (
+                  <Button
+                    accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
+                    className={ROLE_BUTTON}
+                    icon={<Button.Icon name="filter-outline" />}
+                    label={activeRole ?? 'All roles'}
+                    morphLabel
+                    onPress={() => setRoleSheetOpen(true)}
+                    shape="pill"
+                    size="sm"
+                    trailingIcon={<Button.Icon name="chevron-down" />}
+                    variant="quiet"
                   />
-                ))}
-              </ScrollView>
-            )}
+                )}
+              </View>
+            </View>
           </Column>
         }
         // Rows derive entirely from props (the diary's reason, and its same
@@ -346,24 +366,41 @@ export function CreditTimeline({
         recycleItems
         renderItem={({ item: row }) => (
           <Column>
-            {row.kind === 'head' ? (
-              <TimelineHead
-                count={row.count}
-                onToggle={() => toggleFold(row.key)}
-                open={row.open}
-                year={row.year}
-              />
-            ) : (
-              <TimelineEntry
-                credit={row.credit}
-                last={row.last}
-                onActions={onItemActions}
-                onPress={onItemPress}
-                roles={row.roles}
-              />
-            )}
+            <AnimatedView style={settleStyle}>
+              {row.kind === 'head' ? (
+                <TimelineHead
+                  count={row.count}
+                  onToggle={() => toggleFold(row.key)}
+                  open={row.open}
+                  year={row.year}
+                />
+              ) : (
+                <TimelineEntry
+                  credit={row.credit}
+                  last={row.last}
+                  onActions={onItemActions}
+                  onPress={onItemPress}
+                  roles={row.roles}
+                />
+              )}
+            </AnimatedView>
           </Column>
         )}
+      />
+      <ScrollToTopFab
+        onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
+        visible={showScrollTop}
+      />
+      <RoleSheet
+        onClose={() => setRoleSheetOpen(false)}
+        onSelect={(next) => {
+          if (next === activeRole) return;
+          refocus();
+          setRole(next);
+        }}
+        open={roleSheetOpen}
+        roles={counts}
+        value={activeRole}
       />
     </View>
   );
@@ -393,7 +430,10 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
         <Skeleton className={POSTER} delay={staggerDelay(index)} />
         <View className="flex-1 ml-3">
           <Skeleton
-            className={cn('h-3.5 rounded', SKELETON_TITLE_WIDTHS[index % SKELETON_TITLE_WIDTHS.length])}
+            className={cn(
+              'h-3.5 rounded',
+              SKELETON_TITLE_WIDTHS[index % SKELETON_TITLE_WIDTHS.length],
+            )}
             delay={staggerDelay(index)}
           />
           <Skeleton className="h-2.5 w-20 rounded mt-1.5" delay={staggerDelay(index)} />
@@ -411,13 +451,12 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
 export function CreditTimelineSkeleton() {
   return (
     <View>
-      <View className="px-6 pt-6 pb-3">
-        <Skeleton className="h-7 w-52 rounded-full" />
-      </View>
-      <View className="flex-row gap-2 px-6 overflow-hidden">
-        {['w-20', 'w-24', 'w-20', 'w-24'].map((width, index) => (
-          <Skeleton className={cn('h-8 rounded-full', width)} delay={staggerDelay(index)} key={index} />
-        ))}
+      <View className="px-6 pt-2">
+        <Skeleton className="h-5 w-32 rounded mb-3" />
+        <View className="md:flex-row md:items-center pb-3">
+          <Skeleton className="h-7 w-52 rounded-full" />
+          <Skeleton className={cn(ROLE_BUTTON, 'h-9 w-32 rounded-full')} delay={staggerDelay(1)} />
+        </View>
       </View>
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>

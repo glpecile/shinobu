@@ -7,6 +7,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { CreditTimeline } from '@/features/credit-timeline/credit-timeline';
 import { catalogueFilmography } from '@/features/credit-timeline/group';
+import { StudioLinksSection } from '@/features/provider-links/studio-links-section';
 import { usePushRoute } from '@/lib/navigation';
 import type { NormalizedStudioDetails } from '@/lib/providers/tmdb/normalize';
 import { routes } from '@/lib/routes';
@@ -29,8 +30,13 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
       </Head>
       <CreditTimeline
         filmography={filmography}
+        footer={
+          <View className="px-6">
+            <StudioLinksSection studio={{ name: company.name }} />
+          </View>
+        }
         header={
-          <View className="px-6 pt-28">
+          <View className="px-6 pt-28 pb-6">
             <View className="flex-row items-center gap-5">
               {company.logo !== '' ? (
                 // Logos are wide transparent PNGs — contain, on a surface tile

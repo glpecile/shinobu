@@ -15,8 +15,10 @@ export function PersonSkeleton() {
             <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(1)} />
           </View>
         </View>
-        <Skeleton className="h-4 w-full rounded" delay={staggerDelay(2)} />
-        <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(2)} />
+        <View className="max-w-xl">
+          <Skeleton className="h-4 w-full rounded" delay={staggerDelay(2)} />
+          <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(2)} />
+        </View>
       </View>
       <CreditTimelineSkeleton />
     </View>

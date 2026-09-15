@@ -77,6 +77,14 @@ describe('normalizePersonDetails', () => {
     });
   });
 
+  test('collapses the blank lines between biography paragraphs', () => {
+    const { person } = normalizePersonDetails(
+      personResponse({ biography: 'One.\n\nTwo.\n \nThree.' }),
+      NOW,
+    );
+    expect(person.biography).toBe('One.\nTwo.\nThree.');
+  });
+
   test('renders empty strings for a person without a headshot', () => {
     const { person } = normalizePersonDetails(personResponse(), NOW);
     expect(person.headshot).toBe('');
