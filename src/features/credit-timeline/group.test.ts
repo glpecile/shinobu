@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem, PersonCreditRow } from '@/types/media';
 
-import { mergeCreditRows, roleCounts, timelineRows } from './group';
+import { mergeCreditRows, roleCounts, timelineRows, UPCOMING_HEAD } from './group';
 
 // Local noon: `filmReleaseStatus` parses a bare date as local midnight.
 const NOW = new Date(2026, 8, 15, 12, 0, 0);
@@ -79,11 +79,11 @@ describe('roleCounts', () => {
 describe('timelineRows', () => {
   const { credits } = mergeCreditRows(rows);
 
-  test('leads with a folded upcoming head, then one head per year, newest first', () => {
+  test('leads with the upcoming head, then one head per year, newest first; folded heads keep their entries', () => {
     const result = timelineRows(credits, {
       format: 'ALL',
       role: null,
-      showUpcoming: false,
+      folded: new Set([UPCOMING_HEAD, 'head-2013']),
       now: NOW,
     });
     expect(
@@ -92,8 +92,7 @@ describe('timelineRows', () => {
       [null, 2, false],
       [2023, 1, true],
       'm1',
-      [2013, 1, true],
-      'm2',
+      [2013, 1, false],
       [1984, 1, true],
       't1',
     ]);
@@ -103,7 +102,7 @@ describe('timelineRows', () => {
     const result = timelineRows(credits, {
       format: 'ALL',
       role: null,
-      showUpcoming: true,
+      folded: new Set(),
       now: NOW,
     });
     expect(result.slice(0, 3).map((row) => (row.kind === 'entry' ? [row.key, row.last] : row.open)))
@@ -111,14 +110,14 @@ describe('timelineRows', () => {
   });
 
   test('joins every role on a credit, or only the filtered one', () => {
-    const all = timelineRows(credits, { format: 'ALL', role: null, showUpcoming: false, now: NOW });
+    const all = timelineRows(credits, { format: 'ALL', role: null, folded: new Set(), now: NOW });
     const heronRow = all.find((row) => row.kind === 'entry' && row.key === 'm1');
     expect(heronRow?.kind === 'entry' && heronRow.roles).toBe('Director, Writer, Original Story');
 
     const writing = timelineRows(credits, {
       format: 'MOVIE',
       role: 'Writing',
-      showUpcoming: false,
+      folded: new Set([UPCOMING_HEAD]),
       now: NOW,
     });
     expect(writing.map((row) => row.key)).toEqual(['head-upcoming', 'head-2023', 'm1']);

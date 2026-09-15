@@ -66,9 +66,12 @@ export function roleCounts(
     .map((role) => ({ role, count: counts.get(role)! }));
 }
 
+export const UPCOMING_HEAD = 'head-upcoming';
+
 export type TimelineRow =
   | {
       kind: 'head';
+      /** `UPCOMING_HEAD`, or `head-<year>`; the fold state is keyed by it. */
       key: string;
       /** Null is the upcoming stop. */
       year: number | null;
@@ -96,8 +99,8 @@ function roleText(credit: Credit, role: string | null): string {
 /**
  * The flat row stream the list virtualizes: a head per release year, newest
  * first, with the year's titles hanging under it; unreleased and undated
- * work sits under one upcoming head at the top, soonest first, and stays
- * folded until asked for.
+ * work sits under one upcoming head at the top, soonest first. A head in
+ * `folded` keeps its entries out of the stream.
  *
  * `filmReleaseStatus` reads a title's date and year only, which is exactly
  * what a TMDB credit carries — a series with neither is an unannounced one.
@@ -108,11 +111,12 @@ export function timelineRows(
     format: FormatFilter;
     /** Null shows every role. */
     role: string | null;
-    showUpcoming: boolean;
+    /** Head keys whose entries are hidden. */
+    folded: ReadonlySet<string>;
     now?: Date;
   },
 ): TimelineRow[] {
-  const { format, role, showUpcoming, now = new Date() } = options;
+  const { format, role, folded, now = new Date() } = options;
   const upcoming: Credit[] = [];
   const released: Credit[] = [];
   for (const credit of credits) {
@@ -129,7 +133,10 @@ export function timelineRows(
   );
 
   const rows: TimelineRow[] = [];
-  const pushEntries = (group: readonly Credit[]) => {
+  const pushGroup = (key: string, year: number | null, group: readonly Credit[]) => {
+    const open = !folded.has(key);
+    rows.push({ kind: 'head', key, year, count: group.length, open });
+    if (!open) return;
     group.forEach((credit, index) =>
       rows.push({
         kind: 'entry',
@@ -141,16 +148,7 @@ export function timelineRows(
     );
   };
 
-  if (upcoming.length > 0) {
-    rows.push({
-      kind: 'head',
-      key: 'head-upcoming',
-      year: null,
-      count: upcoming.length,
-      open: showUpcoming,
-    });
-    if (showUpcoming) pushEntries(upcoming);
-  }
+  if (upcoming.length > 0) pushGroup(UPCOMING_HEAD, null, upcoming);
 
   // Insertion order is the sorted order, so the map is the year sequence.
   const byYear = new Map<number, Credit[]>();
@@ -160,9 +158,6 @@ export function timelineRows(
     if (group == null) byYear.set(year, [credit]);
     else group.push(credit);
   }
-  for (const [year, group] of byYear) {
-    rows.push({ kind: 'head', key: `head-${year}`, year, count: group.length, open: true });
-    pushEntries(group);
-  }
+  for (const [year, group] of byYear) pushGroup(`head-${year}`, year, group);
   return rows;
 }

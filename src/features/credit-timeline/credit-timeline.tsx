@@ -20,6 +20,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import {
   roleCounts,
   timelineRows,
+  UPCOMING_HEAD,
   type Credit,
   type Filmography,
   type FormatFilter,
@@ -27,9 +28,9 @@ import {
 
 /**
  * The diary's rail, verbatim: a fixed gutter every row shares with one
- * hairline down it, the year sitting *in* the gutter at the top of its run the
- * way the diary's date does. Two surfaces that list titles down a rail should
- * not have two rails.
+ * hairline down it. Two surfaces that list titles down a rail should not
+ * have two rails. Heads sit on the page gutter (`px-6`) with the hero and
+ * the controls, so every left edge above a poster is the same edge.
  */
 const RAIL_W = 'w-14';
 const RAIL_LINE = 'left-7';
@@ -37,8 +38,10 @@ const RAIL_LINE = 'left-7';
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-[54px] rounded';
 const ROW_HEIGHT = 66;
-/** A `text-xl leading-none` numeral under `pt-5` ends at 40px; the rail resumes there. */
-const HEAD_LINE_TOP = 'top-10';
+/** The head row is `pt-5` + a 20px `text-xl leading-none` year + `pb-4`. */
+const HEAD = 'flex-row items-center px-6 pt-5 pb-4 relative';
+/** The rail resumes under the year, from 40px down. */
+const HEAD_LINE = cn('absolute w-px bg-border top-10 bottom-0', RAIL_LINE);
 
 /** "All" first, as on the seasons explorer — it is the shape the page opens in. */
 const FORMAT_OPTIONS = [
@@ -126,11 +129,10 @@ function RoleChip({
 }
 
 /**
- * A run's head: the year in the gutter, its title count and a hairline
- * reaching right. The upcoming head is the one with a control — the whole row
- * toggles the fold, with Show/Hide where the diary's chevron sits — and it is
- * muted throughout: unreleased work is a footnote to a filmography, not its
- * headline.
+ * A run's head: the year, its title count, a hairline reaching right and
+ * Show/Hide where the diary's chevron sits; the whole row toggles the fold.
+ * The upcoming head is muted throughout: unreleased work is a footnote to a
+ * filmography, not its headline.
  */
 function TimelineHead({
   year,
@@ -144,46 +146,28 @@ function TimelineHead({
   onToggle: () => void;
 }) {
   const upcoming = year == null;
-  const body = (
-    <>
-      <View className={cn(RAIL_W, 'items-center relative')}>
-        <Text
-          className={cn(
-            'font-display text-xl leading-none',
-            upcoming ? 'text-muted' : 'text-foreground',
-          )}
-        >
-          {upcoming ? 'TBA' : year}
-        </Text>
-        {open && (
-          <View className={cn('absolute w-px bg-border bottom-0', HEAD_LINE_TOP, RAIL_LINE)} />
-        )}
-      </View>
-      <View className="flex-1 flex-row items-center pr-6 pb-4">
-        <Text className="text-muted/70 font-sans text-[11px] mr-3">
-          {count} {upcoming ? 'upcoming' : count === 1 ? 'title' : 'titles'}
-        </Text>
-        <View className="flex-1 h-px bg-border" />
-        {upcoming && (
-          <Text className="text-muted font-sans-semibold text-xs ml-3">
-            {open ? 'Hide' : 'Show'}
-          </Text>
-        )}
-      </View>
-    </>
-  );
-
-  if (!upcoming) return <View className="flex-row pt-5">{body}</View>;
+  const label = `${count} ${upcoming ? 'upcoming' : count === 1 ? 'title' : 'titles'}`;
   return (
     <PresstableOpacity
-      accessibilityHint={open ? 'Hides upcoming titles' : 'Shows upcoming titles'}
-      accessibilityLabel={`${count} upcoming`}
+      accessibilityHint={open ? 'Hides these titles' : 'Shows these titles'}
+      accessibilityLabel={`${upcoming ? 'Upcoming' : year}, ${label}`}
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}
-      className="flex-row pt-5"
+      className={HEAD}
       onPress={onToggle}
     >
-      {body}
+      <Text
+        className={cn(
+          'font-display text-xl leading-none',
+          upcoming ? 'text-muted' : 'text-foreground',
+        )}
+      >
+        {upcoming ? 'TBA' : year}
+      </Text>
+      <Text className="text-muted/70 font-sans text-[11px] ml-2 mr-3">{label}</Text>
+      <View className="flex-1 h-px bg-border" />
+      <Text className="text-muted font-sans-semibold text-xs ml-3">{open ? 'Hide' : 'Show'}</Text>
+      {open && <View className={HEAD_LINE} />}
     </PresstableOpacity>
   );
 }
@@ -283,13 +267,19 @@ export function CreditTimeline({
   const enter = usePageEnterStyle();
   const [format, setFormat] = useState<FormatFilter>('ALL');
   const [role, setRole] = useState<string | null>(null);
-  const [showUpcoming, setShowUpcoming] = useState(false);
+  // Only unreleased work starts folded.
+  const [folded, setFolded] = useState<ReadonlySet<string>>(() => new Set([UPCOMING_HEAD]));
+  const toggleFold = (key: string) => {
+    const next = new Set(folded);
+    if (!next.delete(key)) next.add(key);
+    setFolded(next);
+  };
 
   const counts = roleCounts(filmography, format);
   // A role the new format emptied falls back to every role, rather than
   // showing nothing under a chip that is no longer there.
   const activeRole = counts.some((entry) => entry.role === role) ? role : null;
-  const rows = timelineRows(filmography.credits, { format, role: activeRole, showUpcoming });
+  const rows = timelineRows(filmography.credits, { format, role: activeRole, folded });
 
   return (
     <View className="flex-1" style={enter}>
@@ -359,7 +349,7 @@ export function CreditTimeline({
             {row.kind === 'head' ? (
               <TimelineHead
                 count={row.count}
-                onToggle={() => setShowUpcoming(!showUpcoming)}
+                onToggle={() => toggleFold(row.key)}
                 open={row.open}
                 year={row.year}
               />
@@ -385,16 +375,12 @@ const SKELETON_RUNS = [2, 1, 3];
 
 function SkeletonHead() {
   return (
-    <View className="flex-row pt-5">
-      <View className={cn(RAIL_W, 'items-center relative')}>
-        {/* 20px tall: `font-display text-xl leading-none`. */}
-        <Skeleton className="w-10 h-5 rounded" />
-        <View className={cn('absolute w-px bg-border bottom-0', HEAD_LINE_TOP, RAIL_LINE)} />
-      </View>
-      <View className="flex-1 flex-row items-center pr-6 pb-4">
-        <Skeleton className="h-2.5 w-12 rounded mr-3" />
-        <View className="flex-1 h-px bg-border" />
-      </View>
+    <View className={HEAD}>
+      {/* 20px tall: `font-display text-xl leading-none`. */}
+      <Skeleton className="w-10 h-5 rounded" />
+      <Skeleton className="h-2.5 w-12 rounded ml-2 mr-3" />
+      <View className="flex-1 h-px bg-border" />
+      <View className={HEAD_LINE} />
     </View>
   );
 }
