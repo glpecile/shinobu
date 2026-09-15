@@ -15,11 +15,15 @@ import { usePageEnterStyle } from '@/lib/page-transition';
  * remounting (and un-scrolling) the tab underneath it.
  */
 function TabPage() {
-  const { state } = Navigator.useContext();
+  const { state, NavigationContent } = Navigator.useContext();
   const enter = usePageEnterStyle();
   return (
     <View className="flex-1" key={state.routes[state.index].key} style={enter}>
-      <Navigator.Slot />
+      {/* `Navigator.Slot` alone never reports its screen focused, so every tab's
+          `<Head>` stayed unmounted (docs/solutions/web-tab-titles-never-set.md). */}
+      <NavigationContent>
+        <Navigator.Slot />
+      </NavigationContent>
     </View>
   );
 }
