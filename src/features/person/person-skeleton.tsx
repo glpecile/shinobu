@@ -1,8 +1,9 @@
 import { View } from 'react-native';
 
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { CreditTimelineSkeleton } from '@/features/credit-timeline/credit-timeline';
 
-/** Mirrors the person screen layout so content lands without a shift. */
+/** Mirrors the person (and studio) screen layout so content lands without a shift. */
 export function PersonSkeleton() {
   return (
     <View className="w-full max-w-4xl self-center pt-28">
@@ -15,22 +16,9 @@ export function PersonSkeleton() {
           </View>
         </View>
         <Skeleton className="h-4 w-full rounded" delay={staggerDelay(2)} />
-        <Skeleton className="h-4 w-2/3 rounded mt-2 mb-8" delay={staggerDelay(2)} />
+        <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(2)} />
       </View>
-      <View className="px-6">
-        <Skeleton className="h-6 w-24 rounded mb-3" delay={staggerDelay(3)} />
-        {/* Enough cards to overflow any viewport up to the max-w-4xl container;
-            overflow-hidden clips the excess, reading as an off-screen carousel. */}
-        <View className="flex-row overflow-hidden gap-3">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <Skeleton
-              className="w-40 h-60 rounded-card"
-              delay={staggerDelay(index)}
-              key={index}
-            />
-          ))}
-        </View>
-      </View>
+      <CreditTimelineSkeleton />
     </View>
   );
 }

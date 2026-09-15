@@ -4,7 +4,7 @@ import {
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
 // Layout-generic despite the name — the studio page shares the person
@@ -40,11 +40,9 @@ export default function StudioScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1">
-        <Suspense fallback={<PersonSkeleton />}>
-          <StudioContent tmdbId={tmdbId} />
-        </Suspense>
-      </ScrollView>
+      <Suspense fallback={<PersonSkeleton />}>
+        <StudioContent tmdbId={tmdbId} />
+      </Suspense>
       <FloatingBackButton onPress={goBack} />
     </View>
   );
