@@ -7,7 +7,8 @@ import { Suspense } from 'react';
 import { View } from 'react-native';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
-import { PersonNotFound, PersonSkeleton } from '@/features/person';
+import { PersonNotFound } from '@/features/person';
+import { StudioSkeleton } from '@/features/studio/studio-skeleton';
 import { StudioDetailsView } from '@/features/studio/studio-details-view';
 import { pickPersonMatch } from '@/lib/providers/tmdb/normalize';
 import { routes } from '@/lib/routes';
@@ -62,7 +63,7 @@ export default function StudioLookupScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Suspense fallback={<PersonSkeleton />}>
+      <Suspense fallback={<StudioSkeleton />}>
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />

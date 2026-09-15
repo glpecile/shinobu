@@ -9,7 +9,8 @@ import { View } from 'react-native';
 import { FloatingBackButton } from '@/components/floating-back-button';
 // Layout-generic despite the name — the studio page shares the person
 // page's header-plus-rows shape, so its skeleton and miss state fit as-is.
-import { PersonNotFound, PersonSkeleton } from '@/features/person';
+import { PersonNotFound } from '@/features/person';
+import { StudioSkeleton } from '@/features/studio/studio-skeleton';
 import { StudioDetailsView } from '@/features/studio/studio-details-view';
 import { routes } from '@/lib/routes';
 import { useSuspenseTmdbStudioQuery } from '@/state/queries/tmdb';
@@ -40,7 +41,7 @@ export default function StudioScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Suspense fallback={<PersonSkeleton />}>
+      <Suspense fallback={<StudioSkeleton />}>
         <StudioContent tmdbId={tmdbId} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />

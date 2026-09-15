@@ -243,15 +243,21 @@ export function useTraktWatchedInfo(
     enabled: traktConnected && item.type === 'TV',
   });
 
-  const traktId = item.externalIds.trakt;
-  if (!traktConnected || traktId == null) return null;
+  // TMDB-sourced items (a filmography row) carry no Trakt id; the watched
+  // feed carries both, so either id is a match.
+  const { trakt: traktId, tmdb: tmdbId } = item.externalIds;
+  if (!traktConnected || (traktId == null && tmdbId == null)) return null;
 
   const source = movieLike
     ? watchedMovies.data
     : item.type === 'TV'
       ? watchedShows.data
       : undefined;
-  const match = source?.find((entry) => entry.externalIds.trakt === traktId);
+  const match = source?.find(
+    (entry) =>
+      (traktId != null && entry.externalIds.trakt === traktId) ||
+      (tmdbId != null && entry.externalIds.tmdb === tmdbId),
+  );
   if (match == null || match.currentProgress <= 0) return null;
 
   return { plays: match.currentProgress, lastWatchedAt: match.lastUpdated };
