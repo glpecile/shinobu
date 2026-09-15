@@ -272,7 +272,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <PresstableOpacity
           accessibilityLabel="Home"
           className="hidden md:flex h-10 mb-6 flex-row items-center"
-          onPress={() => router.replace(routes.home)}
+          onPress={() => {
+            if (!isActive(pathname, routes.home)) router.replace(routes.home);
+          }}
         >
           <View className="items-center justify-center" style={{ width: ICON_COL }}>
             <Text className="text-2xl font-display text-foreground">忍</Text>
