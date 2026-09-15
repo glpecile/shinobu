@@ -58,10 +58,10 @@ react-native-web's ScrollView never fires `onMomentumScrollEnd`; it emits
 events per scroll — one on the first moved frame and one 100ms after the last.
 Settling from that first event (or from any sample taken while a tab tap's
 page scroll is in flight) reads the page being *left*, and the URL snaps
-straight back to it — the "always reverts to the current season" bug. With
-`scrollEventThrottle={16}` every frame emits, a quiet-period timer that every
-event resets only ever fires at rest, and a resting offset with mandatory
-snap is a page boundary (±2px for fractional zoom).
+straight back to it — the "always reverts to the current season" bug. A
+quiet-period timer stood in for momentum end for a while; it's gone now that
+web moves only by tap (see "Trackpad swipes on web don't page"): the tap's
+own `withTiming` completion is the settle, with no sampling at all.
 
 Year and format changes still remount (they are new walls), but they are
 discrete taps, and the native entrance is now a transform only.
