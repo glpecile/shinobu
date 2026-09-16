@@ -4,9 +4,8 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { View } from 'react-native';
 
-import { EpisodeScreen } from '@/features/episode-details';
+import { EpisodeScreen, EpisodeScreenSkeleton } from '@/features/episode-details';
 import { PersonNotFound } from '@/features/person';
 import { placeInLayout } from '@/lib/providers/mapping/season-layout';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
@@ -73,7 +72,7 @@ export default function EpisodeRoute() {
   }
 
   if ((isLoading && item == null) || placingPending) {
-    return <View className="flex-1 bg-background" />;
+    return <EpisodeScreenSkeleton />;
   }
 
   // An episode we can't place — no resolvable show, or an entry number ani.zip

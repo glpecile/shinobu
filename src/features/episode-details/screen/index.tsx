@@ -3,9 +3,11 @@ import { ScrollView, Text, View } from 'react-native';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
+import { BlurEnter } from '@/components/blur-enter';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { EpisodeLogButton } from '@/features/episode-details/episode-log-button';
@@ -51,55 +53,74 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   return (
     <View className="flex-1 bg-background">
       <ScrollView className="flex-1">
-        <View className="h-64 relative">
-          {hero === '' ? (
-            <PosterPlaceholder className="w-full h-full" />
-          ) : (
-            <Image className="w-full h-full" contentFit="cover" source={{ uri: hero }} />
-          )}
-          <LinearGradient
-            colors={[`${background}00`, background]}
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 160 }}
-          />
-        </View>
-
-        <View className="px-6 -mt-10 pb-12">
-          {view.episode == null ? (
-            view.isLoading ? (
-              <EpisodeHeaderSkeleton />
+        <BlurEnter>
+          <View className="h-64 relative">
+            {hero === '' ? (
+              <PosterPlaceholder className="w-full h-full" />
             ) : (
-              <Text className="text-muted font-sans">This episode isn’t listed.</Text>
-            )
-          ) : (
-            <>
-              <EpisodeHeading
-                episode={view.episode}
-                number={number}
-                rating={view.rating}
-                season={season}
-                showTitle={item.title}
-              />
-              <EpisodeLogs className="mt-3" logs={logs} />
-              <EpisodeLogButton
-                className="mt-5"
-                episode={view.episode}
-                item={item}
-                number={number}
-                season={season}
-                watched={logs.length > 0}
-              />
-              <View className="mt-6">
-                <EpisodeOverview episode={view.episode} />
-              </View>
-            </>
-          )}
-          <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <EpisodeNav className="mt-8" id={item.id} next={view.next} prev={view.prev} />
-          <EpisodeSeriesLink className="mt-3" id={item.id} />
-        </View>
+              <Image className="w-full h-full" contentFit="cover" source={{ uri: hero }} />
+            )}
+            <LinearGradient
+              colors={[`${background}00`, background]}
+              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 160 }}
+            />
+          </View>
+
+          <View className="px-6 -mt-10 pb-12">
+            {view.episode == null ? (
+              view.isLoading ? (
+                <EpisodeHeaderSkeleton />
+              ) : (
+                <Text className="text-muted font-sans">This episode isn’t listed.</Text>
+              )
+            ) : (
+              <BlurEnter>
+                <EpisodeHeading
+                  episode={view.episode}
+                  number={number}
+                  rating={view.rating}
+                  season={season}
+                  showTitle={item.title}
+                />
+                <EpisodeLogs className="mt-3" logs={logs} />
+                <EpisodeLogButton
+                  className="mt-5"
+                  episode={view.episode}
+                  item={item}
+                  number={number}
+                  season={season}
+                  watched={logs.length > 0}
+                />
+                <View className="mt-6">
+                  <EpisodeOverview episode={view.episode} />
+                </View>
+              </BlurEnter>
+            )}
+            <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
+            <EpisodeNav className="mt-8" id={item.id} next={view.next} prev={view.prev} />
+            <EpisodeSeriesLink className="mt-3" id={item.id} />
+          </View>
+        </BlurEnter>
       </ScrollView>
 
       <FloatingBackButton onPress={onBack} />
+    </View>
+  );
+}
+
+/** Mirrors the loaded layout so content lands without a shift; delays run top-down. */
+export function EpisodeScreenSkeleton() {
+  return (
+    <View className="flex-1 bg-background">
+      <Skeleton className="h-64 w-full" delay={staggerDelay(0)} />
+      <View className="px-6 -mt-10">
+        <Skeleton className="h-3 w-32 rounded" delay={staggerDelay(1)} />
+        <Skeleton className="h-8 w-64 rounded mt-2" delay={staggerDelay(1)} />
+        <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(1)} />
+        <Skeleton className="h-11 w-44 rounded-full mt-5" delay={staggerDelay(2)} />
+        <Skeleton className="h-4 w-full rounded mt-6" delay={staggerDelay(3)} />
+        <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(3)} />
+      </View>
     </View>
   );
 }
