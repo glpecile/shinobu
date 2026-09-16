@@ -131,7 +131,7 @@ function anilistWatchedLabel(
       return `${read ? 'Rereading' : 'Rewatching'} · ${episodes}`;
     case 'COMPLETED': {
       const done = read ? 'Read' : 'Watched';
-      return entry.repeat > 0 ? `${done} ${entry.repeat + 1}×` : done;
+      return entry.repeat > 0 ? `${done} (${entry.repeat + 1})` : done;
     }
     case 'PAUSED':
       return `Paused · ${episodes}`;
@@ -169,7 +169,7 @@ function ProgressOfTotal({
 }
 
 /**
- * "Watched 2× · Sep 15, 2026 · Mar 3, 2024" under the meta line. A film lists
+ * "Watched (2) · Sep 15, 2026 · Mar 3, 2024" under the meta line. A film lists
  * every dated play across providers (`useFilmPlaysQuery`); otherwise it reads
  * whichever connected provider records the item: Trakt/Simkl (shows count
  * logged episodes), then the AniList list entry for anime, so
@@ -220,7 +220,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
         year: 'numeric',
       }),
     );
-    label = `Watched${count > 1 ? ` ${count}×` : ''} · ${dates.join(' · ')}`;
+    label = `Watched${count > 1 ? ` (${count})` : ''} · ${dates.join(' · ')}`;
   } else if (watched != null) {
     label = `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`;
   } else if (anilistEntry.data?.entry != null) {
