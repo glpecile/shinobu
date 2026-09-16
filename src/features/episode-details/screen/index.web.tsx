@@ -1,8 +1,12 @@
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { FadeOut } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { BlurEnter } from '@/components/blur-enter';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { DURATION } from '@/lib/motion';
+import { PeopleSectionsSkeleton } from '@/features/person/people-section';
 import Head from '@/components/head';
 import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -45,6 +49,10 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   const wide = width >= TWO_COLUMN_MIN_WIDTH;
   const title = view.episode?.title ?? '';
 
+  if (view.episode == null && view.isLoading) {
+    return <EpisodeScreenSkeleton onBack={onBack} />;
+  }
+
   return (
     <View className="flex-1 bg-background">
       <Head>
@@ -63,13 +71,9 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             />
             <View className={cn('flex-1', !wide && 'mt-5')}>
               {view.episode == null ? (
-                view.isLoading ? (
-                  <EpisodeHeaderSkeleton />
-                ) : (
-                  <Text className="text-muted font-sans">This episode isn’t listed.</Text>
-                )
+                <Text className="text-muted font-sans">This episode isn’t listed.</Text>
               ) : (
-                <BlurEnter>
+                <>
                   <EpisodeHeading
                     episode={view.episode}
                     number={number}
@@ -89,7 +93,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                   <View className="mt-5">
                     <EpisodeOverview episode={view.episode} />
                   </View>
-                </BlurEnter>
+                </>
               )}
             </View>
           </View>
@@ -104,28 +108,34 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   );
 }
 
-/** Mirrors the loaded layout so content lands without a shift; delays run top-down. */
-export function EpisodeScreenSkeleton() {
+/** Mirrors index.tsx — one shape for the route's and the screen's loading phase. */
+export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
   const { width } = useWindowDimensions();
   const wide = width >= TWO_COLUMN_MIN_WIDTH;
   return (
-    <View className="flex-1 bg-background">
-      <View className="w-full max-w-4xl self-center px-6 pt-24">
+    <AnimatedView className="flex-1 bg-background" exiting={FadeOut.duration(DURATION.exit)}>
+      <View className="w-full max-w-4xl self-center px-6 pt-24 pb-12">
         <View className={cn(wide && 'flex-row gap-8 items-start')}>
           <Skeleton
             className={cn('aspect-video rounded-card', wide ? 'flex-1' : 'w-full')}
             delay={staggerDelay(0)}
           />
           <View className={cn('flex-1', !wide && 'mt-5')}>
-            <Skeleton className="h-3 w-32 rounded" delay={staggerDelay(1)} />
-            <Skeleton className="h-8 w-64 rounded mt-2" delay={staggerDelay(1)} />
-            <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(1)} />
-            <Skeleton className="h-11 w-44 rounded-full mt-5" delay={staggerDelay(2)} />
-            <Skeleton className="h-4 w-full rounded mt-5" delay={staggerDelay(3)} />
-            <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(3)} />
+            <EpisodeHeaderSkeleton />
+            <Skeleton className="h-12 w-44 rounded-full mt-5" delay={staggerDelay(1)} />
+            <Skeleton className="h-4 w-full rounded mt-5" delay={staggerDelay(2)} />
+            <Skeleton className="h-4 w-full rounded mt-2" delay={staggerDelay(2)} />
+            <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(2)} />
           </View>
         </View>
+        <PeopleSectionsSkeleton />
+        <View className="flex-row gap-3 mt-8">
+          <Skeleton className="flex-1 h-10 rounded-full" delay={staggerDelay(3)} />
+          <Skeleton className="flex-1 h-10 rounded-full" delay={staggerDelay(3)} />
+        </View>
+        <Skeleton className="h-12 w-full rounded-full mt-3" delay={staggerDelay(4)} />
       </View>
-    </View>
+      <FloatingBackButton onPress={onBack} />
+    </AnimatedView>
   );
 }

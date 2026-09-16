@@ -72,7 +72,7 @@ export default function EpisodeRoute() {
   }
 
   if ((isLoading && item == null) || placingPending) {
-    return <EpisodeScreenSkeleton />;
+    return <EpisodeScreenSkeleton onBack={goBack} />;
   }
 
   // An episode we can't place — no resolvable show, or an entry number ani.zip
