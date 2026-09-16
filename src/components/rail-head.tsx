@@ -1,14 +1,10 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 
-import { AnimatedView } from '@/components/animated-view';
+import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
-import { DURATION, EASE_IN_OUT } from '@/lib/motion';
-import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * The rail every list down a gutter shares: a fixed-width left column with
@@ -120,23 +116,11 @@ function RailHeadTitle({ children, muted = false }: { children: ReactNode; muted
 /** The count, then the hairline out to the chevron that turns with the fold. */
 function RailHeadCount({ children }: { children: ReactNode }) {
   const open = useContext(OpenContext);
-  const muted = useThemeColor('--color-muted');
-  const reduceMotion = useReducedMotion();
   return (
     <View className={TRAILING}>
       <Text className="text-muted/70 font-sans text-[11px] mr-3">{children}</Text>
       <View className={RULE} />
-      <AnimatedView
-        className="ml-2.5"
-        style={{
-          transform: [{ rotate: open ? '180deg' : '0deg' }],
-          transitionProperty: 'transform',
-          transitionDuration: reduceMotion ? 0 : DURATION.toggle,
-          transitionTimingFunction: EASE_IN_OUT,
-        }}
-      >
-        <Ionicons color={muted} name="chevron-down" size={14} />
-      </AnimatedView>
+      <DisclosureChevron className="ml-2.5" open={open} size={14} />
     </View>
   );
 }

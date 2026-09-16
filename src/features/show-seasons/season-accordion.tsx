@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { formatAirDate } from '@/features/episode-details/episode-label';
 import { useThemeColor } from '@/lib/theme-color';
@@ -179,7 +180,6 @@ export function SeasonAccordion({
 }: SeasonAccordionProps) {
   const [open, setOpen] = useState(false);
   const accent = useThemeColor('--color-accent');
-  const muted = useThemeColor('--color-muted');
   const runtime = seasonRuntimeMinutes(season);
 
   const airedCount = season.episodes.filter((e) => hasAired(e.firstAired)).length;
@@ -192,11 +192,7 @@ export function SeasonAccordion({
           className="flex-1 flex-row items-center px-4 py-3"
           onPress={() => setOpen(!open)}
         >
-          <Ionicons
-            color={muted}
-            name={open ? 'chevron-down' : 'chevron-forward'}
-            size={16}
-          />
+          <DisclosureChevron from="forward" open={open} size={16} />
           <View className="ml-3 flex-1">
             <Text className="text-foreground font-sans-semibold text-base">
               {season.title}

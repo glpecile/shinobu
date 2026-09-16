@@ -26,7 +26,7 @@ import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { PosterWall, useWallMetrics } from '@/features/watchlist/poster-wall';
 import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
-import { ViewToggle } from '@/features/watchlist/watchlist-toolbar';
+import { ViewToggle } from '@/components/view-toggle';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import {

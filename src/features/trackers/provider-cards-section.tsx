@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Eyebrow } from '@/components/eyebrow';
 import { ProviderCard } from '@/features/trackers/provider-card';
 import {
   shouldAutoCloseSheet,
@@ -10,14 +11,6 @@ import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import { TraktMigrationBanner } from '@/features/trackers/trakt-migration-banner';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-      {children}
-    </Text>
-  );
-}
 
 /**
  * The Manage Trackers screen's two provider sections, both driven by the
@@ -69,7 +62,7 @@ export function ProviderCardsSection() {
 
       {connected.length > 0 && (
         <View>
-          <SectionLabel>Connected</SectionLabel>
+          <Eyebrow className="mb-3">Connected</Eyebrow>
           <View className="gap-3">
             {connected.map((id) => (
               <ProviderCard
@@ -85,7 +78,7 @@ export function ProviderCardsSection() {
 
       {disconnected.length > 0 && (
         <View>
-          <SectionLabel>Accounts</SectionLabel>
+          <Eyebrow className="mb-3">Accounts</Eyebrow>
           <View className="gap-3">
             {disconnected.map((id) => (
               <ProviderCard

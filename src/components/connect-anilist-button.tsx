@@ -3,16 +3,16 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Linking, Platform, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
+import { TextField } from '@/components/text-field';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { anilistAuthorizeUrl, anilistClientId } from '@/lib/providers/anilist/config';
 import { ANILIST_CREATE_CLIENT_URL } from '@/lib/providers/external-urls';
-import { useThemeColor } from '@/lib/theme-color';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import {
   clearProviderClientId,
@@ -115,7 +115,6 @@ export function ConnectAniListButton() {
     storedClientId,
     setStoredClientId,
   } = useAniListConnect();
-  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -187,16 +186,12 @@ export function ConnectAniListButton() {
           control={control}
           name="clientId"
           render={({ field }) => (
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+            <TextField
               inputMode="numeric"
               onBlur={field.onBlur}
               onChangeText={field.onChange}
               onSubmitEditing={() => submitClientId()}
               placeholder="AniList Client ID"
-              placeholderTextColor={muted}
               returnKeyType="done"
               value={field.value}
             />

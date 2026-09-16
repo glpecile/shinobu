@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
@@ -95,9 +96,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
             {item.title}
           </Text>
           <View className="flex-row justify-between items-center mt-1.5">
-            <Text className="text-accent text-xs font-sans-semibold uppercase tracking-wider">
-              {item.type}
-            </Text>
+            <Eyebrow tone="accent">{item.type}</Eyebrow>
             {progress != null && (
               <Text className="text-accent-foreground/70 text-xs font-sans">
                 {progress}

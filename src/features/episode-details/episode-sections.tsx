@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
+import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -84,15 +85,9 @@ export function EpisodeHeading({
   const centered = align === 'center';
   return (
     <View className={cn(centered && 'items-center')}>
-      <Text
-        className={cn(
-          'text-accent text-xs font-sans-semibold uppercase tracking-wider',
-          centered && 'text-center',
-        )}
-        numberOfLines={1}
-      >
+      <Eyebrow className={cn(centered && 'text-center')} numberOfLines={1} tone="accent">
         {episodeCode(season, number)} · {showTitle}
-      </Text>
+      </Eyebrow>
       <Text
         className={cn('text-3xl font-display text-foreground mt-1', centered && 'text-center')}
       >

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { SectionEnter } from '@/components/section-enter';
 import { Sheet } from '@/components/sheet';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
@@ -10,7 +9,7 @@ import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { manualWriteReasons } from '@/features/write-sheet/manual-reasons';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderToggleList } from '@/features/write-sheet/provider-picker';
-import { WriteResultReport } from '@/features/write-sheet/write-result-report';
+import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import type { ProviderId } from '@/lib/providers/types';
@@ -130,10 +129,10 @@ export function WatchlistAddPicker({
 
   return (
     <>
-      <Text className="text-2xl font-display text-foreground">{copy.idle}</Text>
-      <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-        Choose where “{item.title}” is added.
-      </Text>
+      <WriteSheet.Header
+        description={`Choose where “${item.title}” is added.`}
+        title={copy.idle}
+      />
 
       {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
           mid-write would land on some providers and not others. */}
@@ -166,46 +165,27 @@ export function WatchlistAddPicker({
         )}
       </View>
 
-      {(result != null || watchlist.isError) && (
-        <SectionEnter>
-          {result != null && result.succeeded.length > 0 && (
-            <Text className="text-muted font-sans text-sm mt-3">
-              {addedToSentence(result.succeeded)}
-            </Text>
-          )}
-          {result != null && (
-            <WriteResultReport
-              allSkipLine={alreadyOnSentence}
-              failedHeadline={failedOnSentence}
-              item={item}
-              outcomes={result.outcomes}
-              verb="Add on"
-            />
-          )}
-          {watchlist.isError && (
-            <Text className="text-accent font-sans text-sm mt-3">
-              Could not add. Try again.
-            </Text>
-          )}
-        </SectionEnter>
-      )}
+      <WriteSheet.Report
+        allSkipLine={alreadyOnSentence}
+        error={watchlist.isError ? 'Could not add. Try again.' : null}
+        failedHeadline={failedOnSentence}
+        item={item}
+        result={result}
+        succeededLine={addedToSentence}
+        verb="Add on"
+      />
 
-      <Button
-        className="mt-6"
-        disabled={selected.length === 0}
-        icon={<Button.Icon name="bookmark" />}
-        label={watchlistConfirmLabel(item, selected.length)}
-        loading={pending}
-        loadingLabel={copy.pending}
-        onPress={confirm}
-      />
-      <Button
-        className="mt-2"
-        icon={<Button.Icon name="close" />}
-        label="Cancel"
-        onPress={onCancel}
-        variant="quiet"
-      />
+      <WriteSheet.Actions>
+        <Button
+          disabled={selected.length === 0}
+          icon={<Button.Icon name="bookmark" />}
+          label={watchlistConfirmLabel(item, selected.length)}
+          loading={pending}
+          loadingLabel={copy.pending}
+          onPress={confirm}
+        />
+        <WriteSheet.Cancel onPress={onCancel} />
+      </WriteSheet.Actions>
     </>
   );
 }
@@ -304,10 +284,10 @@ export function WatchlistRemovePicker({
 
   return (
     <>
-      <Text className="text-2xl font-display text-foreground">{copy.idle}</Text>
-      <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-        Choose where “{entry.item.title}” is removed.
-      </Text>
+      <WriteSheet.Header
+        description={`Choose where “${entry.item.title}” is removed.`}
+        title={copy.idle}
+      />
 
       {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
           mid-write would land on some providers and not others. */}
@@ -355,59 +335,40 @@ export function WatchlistRemovePicker({
         </Text>
       )}
 
-      {(result != null || remove.isError) && (
-        <SectionEnter>
-          {result != null && result.succeeded.length > 0 && (
-            <Text className="text-muted font-sans text-sm mt-3">
-              {removedFromSentence(result.succeeded)}
-            </Text>
-          )}
-          {/* No all-skip headline, deliberately (plan 0031 U16): "wasn't on
-              your watchlist" and "removing would delete your AniList entry"
-              are different facts and no sentence collapses them. */}
-          {result != null && (
-            <WriteResultReport
-              failedHeadline={failedOnSentence}
-              item={entry.item}
-              outcomes={result.outcomes}
-              verb="Remove on"
-            />
-          )}
-          {remove.isError && (
-            <Text className="text-accent font-sans text-sm mt-3">
-              Could not remove. Try again.
-            </Text>
-          )}
-        </SectionEnter>
-      )}
+      {/* No all-skip headline, deliberately (plan 0031 U16): "wasn't on
+          your watchlist" and "removing would delete your AniList entry"
+          are different facts and no sentence collapses them. */}
+      <WriteSheet.Report
+        error={remove.isError ? 'Could not remove. Try again.' : null}
+        failedHeadline={failedOnSentence}
+        item={entry.item}
+        result={result}
+        succeededLine={removedFromSentence}
+        verb="Remove on"
+      />
 
-      <Button
-        className="mt-6"
-        disabled={selected.length === 0}
-        // `trash-outline` only once armed: the second press is the one that
-        // deletes an AniList/Simkl entry outright, and the glyph should say so.
-        icon={
-          <Button.Icon
-            name={warning != null && armed ? 'trash-outline' : 'bookmark-outline'}
-          />
-        }
-        label={
-          warning != null && armed
-            ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL
-            : unwatchlistConfirmLabel(entry.item, selected.length)
-        }
-        loading={pending}
-        loadingLabel={copy.pending}
-        morphLabel
-        onPress={confirm}
-      />
-      <Button
-        className="mt-2"
-        icon={<Button.Icon name="close" />}
-        label="Cancel"
-        onPress={onCancel}
-        variant="quiet"
-      />
+      <WriteSheet.Actions>
+        <Button
+          disabled={selected.length === 0}
+          // `trash-outline` only once armed: the second press is the one that
+          // deletes an AniList/Simkl entry outright, and the glyph should say so.
+          icon={
+            <Button.Icon
+              name={warning != null && armed ? 'trash-outline' : 'bookmark-outline'}
+            />
+          }
+          label={
+            warning != null && armed
+              ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL
+              : unwatchlistConfirmLabel(entry.item, selected.length)
+          }
+          loading={pending}
+          loadingLabel={copy.pending}
+          morphLabel
+          onPress={confirm}
+        />
+        <WriteSheet.Cancel onPress={onCancel} />
+      </WriteSheet.Actions>
     </>
   );
 }

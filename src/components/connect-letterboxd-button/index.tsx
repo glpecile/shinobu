@@ -2,10 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { useThemeColor } from '@/lib/theme-color';
+import { TextField } from '@/components/text-field';
 import { validateLetterboxdUsername } from '@/state/queries/letterboxd';
 import { connectLetterboxd } from '@/state/session/letterboxd';
 
@@ -36,7 +36,6 @@ type UsernameForm = z.infer<typeof usernameSchema>;
  */
 export function ConnectLetterboxdButton() {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
-  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -74,15 +73,11 @@ export function ConnectLetterboxdButton() {
         control={control}
         name="username"
         render={({ field }) => (
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+          <TextField
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
             placeholder="Letterboxd username"
-            placeholderTextColor={muted}
             returnKeyType="done"
             value={field.value}
           />

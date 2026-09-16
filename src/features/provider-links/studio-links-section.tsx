@@ -1,13 +1,11 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon } from '@/components/provider-icon';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { providerStudioUrl, type UrlStudio } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { useThemeColor } from '@/lib/theme-color';
 import { useAniListStudioIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
@@ -31,7 +29,6 @@ export function StudioLinksSection({
   enabled?: boolean;
 }) {
   const connected = useConnectedProviders();
-  const muted = useThemeColor('--color-muted');
   // Skipped entirely for a studio that already knows its id, and for a user
   // with no AniList connected (the pill wouldn't render either way).
   const studioId = useAniListStudioIdQuery({
@@ -58,17 +55,13 @@ export function StudioLinksSection({
       </Text>
       <View className="flex-row flex-wrap gap-2">
         {links.map(({ provider, url }) => (
-          <PresstableOpacity
-            className="flex-row items-center gap-2 bg-surface border border-border rounded-full px-4 py-2"
+          <LinkPill
+            external
+            icon={<ProviderIcon id={provider} size={16} />}
             key={provider}
+            label={PROVIDERS[provider].label}
             onPress={() => openExternalUrl(url)}
-          >
-            <ProviderIcon id={provider} size={16} />
-            <Text className="text-foreground font-sans text-sm">
-              {PROVIDERS[provider].label}
-            </Text>
-            <Ionicons color={muted} name="open-outline" size={12} />
-          </PresstableOpacity>
+          />
         ))}
       </View>
     </View>

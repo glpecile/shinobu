@@ -1,6 +1,7 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { SuspenseSection } from '@/components/suspense-section';
+import { Section } from '@/components/section';
 import { Skeleton } from '@/components/skeleton';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
@@ -172,13 +173,10 @@ function SeasonAccordionList({
   }
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-1">Seasons</Text>
-      {total > 0 && (
-        <Text className="text-muted font-sans text-sm mb-4">
-          {formatRuntime(total)} total runtime
-        </Text>
-      )}
+    <Section
+      subtitle={total > 0 ? `${formatRuntime(total)} total runtime` : undefined}
+      title="Seasons"
+    >
       {seasons.map((season) => (
         <SeasonAccordion
           key={season.number}
@@ -251,7 +249,7 @@ function SeasonAccordionList({
         title={pending?.title ?? ''}
         watchedAt={watchedAt}
       />
-    </View>
+    </Section>
   );
 }
 

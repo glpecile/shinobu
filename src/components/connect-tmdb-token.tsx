@@ -2,17 +2,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Linking, Text, TextInput, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
+import { Eyebrow } from '@/components/eyebrow';
 import { Steps } from '@/components/steps';
 import { CARD_SHELL } from '@/components/card-shell';
+import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { TMDB_API_SETTINGS_URL } from '@/lib/providers/external-urls';
 import { TMDB_API_BASE_URL } from '@/lib/providers/tmdb/config';
-import { useThemeColor } from '@/lib/theme-color';
 import { mediaDetailsQueryKeys } from '@/state/queries/media-details';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import {
@@ -74,7 +75,6 @@ export function ConnectTmdbTokenSection() {
   // (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
   const [saved, setSaved] = useState<string | null>(() => storedTmdbToken());
   const [status, setStatus] = useState<SaveStatus>('idle');
-  const muted = useThemeColor('--color-muted');
   const queryClient = useQueryClient();
 
   const {
@@ -131,9 +131,7 @@ export function ConnectTmdbTokenSection() {
 
   return (
     <View>
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-        TMDB token
-      </Text>
+      <Eyebrow className="mb-3">TMDB token</Eyebrow>
       <View className={cn(CARD_SHELL, 'gap-4')}>
         {saved != null ? (
           <>
@@ -203,17 +201,11 @@ export function ConnectTmdbTokenSection() {
               control={control}
               name="token"
               render={({ field }) => (
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  className="border border-border bg-background text-foreground px-4 py-3 rounded-full font-sans"
+                <TextField
                   onBlur={field.onBlur}
                   onChangeText={field.onChange}
                   onSubmitEditing={() => void submit()}
                   placeholder="API Read Access Token"
-                  placeholderTextColor={
-                    muted
-                  }
                   returnKeyType="done"
                   // Long opaque credential — never offer to save/suggest it,
                   // and keep it off screen-sharing shoulder-surfers.

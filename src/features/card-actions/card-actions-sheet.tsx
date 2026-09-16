@@ -5,6 +5,7 @@ import { Button } from '@/components/button';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
@@ -223,25 +224,15 @@ export function CardActionsSheet({
         )}
       {item != null && mode === 'actions' && (
         <>
-          {/* Poster beside the title: the dialog is opened from a long-press
-              with no page transition, so the artwork is what confirms *which*
-              item you grabbed. */}
-          <View className="flex-row items-center gap-4">
-            <SheetPoster item={item} />
-            <View className="flex-1">
-              <Text
-                className="text-2xl font-display text-foreground"
-                numberOfLines={2}
-              >
-                {item.title}
-              </Text>
-              <Text className="text-muted font-sans text-sm mt-1">
-                {[item.type, item.year != null ? String(item.year) : null]
-                  .filter((part) => part != null)
-                  .join(' · ')}
-              </Text>
-            </View>
-          </View>
+          {/* Opened by a long-press with no page transition, so the artwork
+              is what confirms *which* item you grabbed. */}
+          <SheetHeader
+            leading={<SheetPoster item={item} />}
+            subtitle={[item.type, item.year != null ? String(item.year) : null]
+              .filter((part) => part != null)
+              .join(' · ')}
+            title={item.title}
+          />
 
           {/* The credit that put this card in front of you (person/studio
               pages). The card clamps "2026 · Frank Castle" to one line, so the

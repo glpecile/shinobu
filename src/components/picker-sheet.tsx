@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
 import { Text, View } from 'react-native';
 
+import { Eyebrow } from '@/components/eyebrow';
 import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
@@ -50,9 +51,7 @@ export function PickerSheet<T extends PickerValue>({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-1">
-        {title}
-      </Text>
+      <Eyebrow className="mb-1">{title}</Eyebrow>
       <PickerContext.Provider value={{ value, select }}>{children}</PickerContext.Provider>
     </Sheet>
   );

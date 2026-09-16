@@ -3,11 +3,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FadeIn } from 'react-native-reanimated';
 
+import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
 import { Keyboard, Text, TextInput, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
+import { CenteredNotice } from '@/components/centered-notice';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
@@ -131,35 +133,7 @@ function SectionHeader({
   return (
     <View className="flex-row items-center gap-2 px-6 pt-4 pb-1.5">
       <ProviderIcon id={provider} size={14} />
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider">
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function CenteredHint({
-  kanji,
-  title,
-  body,
-}: {
-  kanji?: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <View className="flex-1 items-center justify-center px-8 -mt-16">
-      {kanji != null && (
-        // Renders in the OS fallback font on purpose — neither app family
-        // ships kanji (see AGENTS.md, Theming).
-        <Text className="text-5xl text-muted mb-4">{kanji}</Text>
-      )}
-      <Text className="text-2xl font-display text-foreground text-center">
-        {title}
-      </Text>
-      <Text className="text-base font-sans text-muted mt-3 text-center max-w-xs leading-relaxed">
-        {body}
-      </Text>
+      <Eyebrow>{label}</Eyebrow>
     </View>
   );
 }
@@ -432,20 +406,23 @@ export default function SearchScreen() {
           stale dim below. */}
       <SectionEnter className="flex-1" key={state}>
         {state === 'idle' ? (
-          <CenteredHint
+          <CenteredNotice
             body="Find any movie, show, anime, or manga — open its details or log it to your trackers."
-            kanji="忍"
+            className="-mt-16"
+            glyph="忍"
             title="Search"
           />
         ) : state === 'loading' ? (
           <ResultsSkeleton />
         ) : state === 'error' ? (
-          <CenteredHint
+          <CenteredNotice
+            className="-mt-16"
             body="Search failed. Check your connection and try again."
             title="Something went wrong"
           />
         ) : state === 'empty' ? (
-          <CenteredHint
+          <CenteredNotice
+            className="-mt-16"
             body={`Nothing matched \u201c${query.trim()}\u201d.`}
             title="No results"
           />

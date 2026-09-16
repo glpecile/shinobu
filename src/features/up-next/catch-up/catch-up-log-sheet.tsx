@@ -21,6 +21,7 @@ import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
+import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
@@ -450,28 +451,28 @@ function CatchUpSession({
                 (`chainLabel`). It used to be a row per fired write above the
                 button — a scrolling receipt — and then a status line, which is
                 still a second thing to read about what the button does. */}
-            {!currentLanded && (
+            <WriteSheet.Actions>
+              {!currentLanded && (
+                <Button
+                  disabled={selectedProviders.length === 0}
+                  icon={<Button.Icon name="eye" />}
+                  label={chainLabel(code, { landed, failed: problems.length })}
+                  loading={awaiting}
+                  loadingLabel="Logging…"
+                  morphLabel
+                  onPress={confirm}
+                />
+              )}
               <Button
-                className="mt-6"
-                disabled={selectedProviders.length === 0}
-                icon={<Button.Icon name="eye" />}
-                label={chainLabel(code, { landed, failed: problems.length })}
-                loading={awaiting}
-                loadingLabel="Logging…"
+                // Nothing written yet, so leaving is a dismissal; once a row has
+                // landed the same button is the end of the chain.
+                icon={<Button.Icon name={ledger.length > 0 ? 'checkmark' : 'close'} />}
+                label={ledger.length > 0 ? 'Done' : 'Cancel'}
                 morphLabel
-                onPress={confirm}
+                onPress={closeCatchUp}
+                variant="quiet"
               />
-            )}
-            <Button
-              className={currentLanded ? 'mt-6' : 'mt-2'}
-              // Nothing written yet, so leaving is a dismissal; once a row has
-              // landed the same button is the end of the chain.
-              icon={<Button.Icon name={ledger.length > 0 ? 'checkmark' : 'close'} />}
-              label={ledger.length > 0 ? 'Done' : 'Cancel'}
-              morphLabel
-              onPress={closeCatchUp}
-              variant="quiet"
-            />
+            </WriteSheet.Actions>
           </>
         )}
       </AnimatedView>
@@ -523,19 +524,19 @@ function ChainReport({
 
   return (
     <>
-      <Text className="text-2xl font-display text-foreground">
-        {chainFailure(
+      <WriteSheet.Header
+        title={chainFailure(
           problems.map((row) => catchUpEpisodeCode(row.episode)),
           failedProviders,
         )}
-      </Text>
-      {landed > 0 && succeededProviders.length > 0 && (
-        <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-          {`${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(
-            succeededProviders,
-          )}.`}
-        </Text>
-      )}
+        {...(landed > 0 && succeededProviders.length > 0
+          ? {
+              description: `${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(
+                succeededProviders,
+              )}.`,
+            }
+          : {})}
+      />
 
       {/* No top margin here: `WriteResultReport` brings its own (`mt-3`), and
           a wrapper adding a second one is how the headline ended up floating. */}
@@ -554,27 +555,27 @@ function ChainReport({
         />
       </View>
 
-      {retryable.length > 0 && (
+      <WriteSheet.Actions>
+        {retryable.length > 0 && (
+          <Button
+            icon={<Button.Icon name="refresh" />}
+            label={
+              retryable.length === 1
+                ? capitalize(`retry ${catchUpEpisodeCode(retryable[0]!.episode)}`)
+                : `Retry ${retryable.length} episodes`
+            }
+            loading={sending > 0}
+            loadingLabel="Retrying…"
+            onPress={onRetry}
+          />
+        )}
         <Button
-          className="mt-6"
-          icon={<Button.Icon name="refresh" />}
-          label={
-            retryable.length === 1
-              ? capitalize(`retry ${catchUpEpisodeCode(retryable[0]!.episode)}`)
-              : `Retry ${retryable.length} episodes`
-          }
-          loading={sending > 0}
-          loadingLabel="Retrying…"
-          onPress={onRetry}
+          icon={<Button.Icon name="checkmark" />}
+          label="Done"
+          onPress={onDone}
+          variant="quiet"
         />
-      )}
-      <Button
-        className={retryable.length > 0 ? 'mt-2' : 'mt-6'}
-        icon={<Button.Icon name="checkmark" />}
-        label="Done"
-        onPress={onDone}
-        variant="quiet"
-      />
+      </WriteSheet.Actions>
     </>
   );
 }

@@ -1,6 +1,7 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { useState } from 'react';
 
+import { Section } from '@/components/section';
 import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
@@ -174,13 +175,10 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const runtime = seasonRuntimeMinutes(season);
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-1">Seasons</Text>
-      {runtime > 0 && (
-        <Text className="text-muted font-sans text-sm mb-4">
-          {formatRuntime(runtime)} total runtime
-        </Text>
-      )}
+    <Section
+      subtitle={runtime > 0 ? `${formatRuntime(runtime)} total runtime` : undefined}
+      title="Seasons"
+    >
       <SeasonAccordion
         season={labelled}
         watched={watched}
@@ -271,7 +269,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         title={pending?.title ?? ''}
         watchedAt={watchedAt}
       />
-    </View>
+    </Section>
   );
 }
 
