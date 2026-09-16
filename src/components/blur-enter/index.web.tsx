@@ -23,7 +23,7 @@ const fading = css.keyframes({
 /** Mirrors index.tsx — keep both variants' props identical. */
 export function BlurEnter({
   children,
-  className = '',
+  className,
 }: {
   children: ReactNode;
   className?: string;

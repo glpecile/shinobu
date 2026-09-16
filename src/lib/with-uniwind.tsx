@@ -2,12 +2,7 @@ import type { JSXElementConstructor } from 'react';
 // oxlint-disable-next-line no-restricted-imports -- this *is* the wrapper the rule points at.
 import { withUniwind as uniwind } from 'uniwind';
 
-/**
- * uniwind's `withUniwind`, minus its web crash on an omitted class prop: it hands
- * `className={undefined}` to styleq as `tailwind: undefined`, which throws
- * (docs/solutions/uniwind-classname-undefined-throws.md). Dropping undefined
- * `*ClassName` props first makes forwarding an optional prop safe.
- */
+/** uniwind's `withUniwind`, minus its web crash on an undefined `*ClassName` (docs/solutions/uniwind-classname-undefined-throws.md). */
 export function withUniwind<T extends JSXElementConstructor<any>>(Component: T) {
   const Styled = uniwind(Component);
   return (props: Parameters<typeof Styled>[0]) => {

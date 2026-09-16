@@ -3,13 +3,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FadeIn } from 'react-native-reanimated';
 
-import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
 import { Keyboard, Text, TextInput, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
+import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
@@ -425,7 +425,7 @@ export default function SearchScreen() {
         ) : state === 'empty' ? (
           <CenteredNotice className="-mt-16">
             <CenteredNotice.Title>No results</CenteredNotice.Title>
-            <CenteredNotice.Body>{`Nothing matched \u201c${query.trim()}\u201d.`}</CenteredNotice.Body>
+            <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
           </CenteredNotice>
         ) : (
           // While a newer query is in flight the previous results stay visible
