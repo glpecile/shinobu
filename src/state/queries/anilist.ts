@@ -16,7 +16,6 @@ import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
 import {
   getCurrentAnime,
-  getAniListCharacter,
   getAnimeById,
   getEntryState,
   getSeasonalAnime,
@@ -34,7 +33,7 @@ import type {
 } from '@/lib/providers/anilist/season';
 import type { NormalizedSeason } from '@/types/media';
 import type { TokenStore } from '@/lib/providers/token-store';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import {
   clearProviderSession,
   getProviderSession,
@@ -132,8 +131,8 @@ export const anilistQueryKeys = {
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.searchRoot(), query, limit] as const,
-  /** One character's profile and appearances (`/character/[id]`). */
-  character: (id: number) => [...anilistQueryKeys.all, 'character', id] as const,
+  /** One staff member's profile and credits, by AniList id (`/person/anilist-<id>`). */
+  staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
   /** A person's AniList staff id, resolved by name (plan 0035 R12). */
   staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
   /** A studio's AniList id, resolved by name — the studio sheet's link. */
@@ -310,14 +309,20 @@ export function useAnimeByIdQuery(mediaId: number | null) {
  * 30 req/min budget — and a manga relation resolves at all, since no feed row
  * or search cache holds it.
  */
-export function useSuspenseAniListRelationsQuery(params: { mediaId: number }) {
+export function useSuspenseAniListRelationsQuery(params: {
+  mediaId: number;
+  type: MediaType;
+}) {
   const { mediaId } = params;
+  // Only manga takes its credits from here (anime's come from media-details);
+  // an id's type never changes, so the key needs no flag of its own.
+  const withCredits = params.type === 'MANGA';
   const queryClient = useQueryClient();
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.relations(mediaId),
     queryFn: async () => {
       const result = await Effect.runPromise(
-        getAnimeRelations(anilistDeps(), { mediaId }),
+        getAnimeRelations(anilistDeps(), { mediaId, withCredits }),
       );
       for (const item of [
         ...result.relations.map((relation) => relation.item),
@@ -329,16 +334,6 @@ export function useSuspenseAniListRelationsQuery(params: { mediaId: number }) {
       }
       return result;
     },
-    staleTime: SEASONAL_STALE_MS,
-  });
-}
-
-/** `/character/[id]`'s whole read — public, so it works before AniList is connected. */
-export function useSuspenseAniListCharacterQuery(params: { id: number }) {
-  return useSuspenseQuery({
-    queryKey: anilistQueryKeys.character(params.id),
-    queryFn: () =>
-      Effect.runPromise(getAniListCharacter(anilistDeps(), { id: params.id })),
     staleTime: SEASONAL_STALE_MS,
   });
 }

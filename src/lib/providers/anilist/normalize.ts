@@ -81,9 +81,6 @@ export function humanizeEnum(value: string): string {
 /** AniList descriptions carry HTML line breaks/markup even as "plain text". */
 export function stripHtml(html: string): string {
   return html
-    // `~!…!~` is a spoiler block; there is no tap-to-reveal here, so it goes.
-    .replace(/~![\s\S]*?!~/g, '')
-    .replace(/__(.+?)__/g, '$1')
     .replace(/<br\s*\/?>/gi, '\n')
     // Descriptions are markdown too — a staff bio is often nothing but links.
     .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1')

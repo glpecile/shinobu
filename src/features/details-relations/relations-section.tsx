@@ -7,13 +7,13 @@ import { SuspenseSection } from '@/components/suspense-section';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 /** Pulls the carousel's own `px-4` header and 16px card gutter out to the column's `px-6`. */
 const ALIGN_TO_COLUMN = '-mx-4 -mb-6 mt-8';
 
-function RelationsRow({ mediaId }: { mediaId: number }) {
-  const { data } = useSuspenseAniListRelationsQuery({ mediaId });
+function RelationsRow({ mediaId, type }: { mediaId: number; type: MediaType }) {
+  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
   const pushRoute = usePushRoute();
   if (data.relations.length === 0) return null;
   return (
@@ -32,8 +32,8 @@ function RelationsRow({ mediaId }: { mediaId: number }) {
   );
 }
 
-function RecommendationsRow({ mediaId }: { mediaId: number }) {
-  const { data } = useSuspenseAniListRelationsQuery({ mediaId });
+function RecommendationsRow({ mediaId, type }: { mediaId: number; type: MediaType }) {
+  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
   const pushRoute = usePushRoute();
   if (data.recommendations.length === 0) return null;
   return (
@@ -49,8 +49,8 @@ function RecommendationsRow({ mediaId }: { mediaId: number }) {
   );
 }
 
-function TagsList({ mediaId }: { mediaId: number }) {
-  const { data } = useSuspenseAniListRelationsQuery({ mediaId });
+function TagsList({ mediaId, type }: { mediaId: number; type: MediaType }) {
+  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
   if (data.tags.length === 0) return null;
   return (
     <Section>
@@ -115,7 +115,7 @@ export function RelationsSection({
   if (item.externalIds.anilist == null) return null;
   return (
     <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
-      <RelationsRow mediaId={item.externalIds.anilist} />
+      <RelationsRow mediaId={item.externalIds.anilist} type={item.type} />
     </SuspenseSection>
   );
 }
@@ -130,7 +130,7 @@ export function RecommendationsSection({
   if (item.externalIds.anilist == null) return null;
   return (
     <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
-      <RecommendationsRow mediaId={item.externalIds.anilist} />
+      <RecommendationsRow mediaId={item.externalIds.anilist} type={item.type} />
     </SuspenseSection>
   );
 }
@@ -145,7 +145,7 @@ export function TagsSection({
   if (item.externalIds.anilist == null) return null;
   return (
     <SuspenseSection fallback={<TagsSkeleton />} resetKey={resetKey}>
-      <TagsList mediaId={item.externalIds.anilist} />
+      <TagsList mediaId={item.externalIds.anilist} type={item.type} />
     </SuspenseSection>
   );
 }

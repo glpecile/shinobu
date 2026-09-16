@@ -20,10 +20,16 @@ const DEPS = {
 };
 
 describe('getAnimeRelations', () => {
-  test('humanizes relations and keeps recommendations and non-spoiler tags', async () => {
+  test('normalizes relations, recommendations, non-spoiler tags and credits', async () => {
     const fetch = mockFetch({
       data: {
         Media: {
+          characters: {
+            edges: [{ role: 'MAIN', node: { id: 10, name: { full: 'Makio' }, image: null } }],
+          },
+          staff: {
+            edges: [{ role: 'Story & Art', node: { id: 20, name: { full: 'Tomoko' }, image: null } }],
+          },
           tags: [
             { name: 'Family Life', isMediaSpoiler: false },
             { name: 'Yuri', isMediaSpoiler: true },
@@ -53,10 +59,12 @@ describe('getAnimeRelations', () => {
       },
     });
 
-    const { relations, recommendations, tags } = await Effect.runPromise(
-      getAnimeRelations({ ...DEPS, fetch }, { mediaId: 1 }),
+    const { relations, recommendations, tags, characters, staff } = await Effect.runPromise(
+      getAnimeRelations({ ...DEPS, fetch }, { mediaId: 1, withCredits: true }),
     );
 
+    expect(characters).toEqual([{ anilistId: 10, name: 'Makio', role: 'Main', image: '' }]);
+    expect(staff.map((member) => [member.anilistId, member.job])).toEqual([[20, 'Story & Art']]);
     expect(tags).toEqual(['Family Life']);
     expect(recommendations.map((item) => item.id)).toEqual(['anilist-4']);
     expect(relations.map((r) => [r.relation, r.item.id, r.item.type])).toEqual([

@@ -27,8 +27,7 @@ describe('getAnimeCredits', () => {
           characters: {
             edges: [
               {
-                role: 'MAIN',
-                node: { id: 10, name: { full: 'Momo Ayase' }, image: { large: 'https://img/momo.jpg' } },
+                node: { name: { full: 'Momo Ayase' } },
                 voiceActors: [
                   {
                     id: 1,
@@ -84,18 +83,13 @@ describe('getAnimeCredits', () => {
       getAnimeCredits({ ...DEPS, fetch }, { mediaId: 1 }),
     );
 
-    expect(credits.characters[0]).toEqual({
-      anilistId: 10,
-      name: 'Momo Ayase',
-      role: 'Main',
-      image: 'https://img/momo.jpg',
-    });
     expect(credits.cast).toEqual([
       {
         id: 'anilist-person-1',
         name: 'Shion Wakayama',
         character: 'Momo Ayase, Seiko Ayase',
         headshot: 'https://img/voice-actor.jpg',
+        anilistId: 1,
       },
     ]);
     expect(credits.crew).toEqual([
@@ -104,6 +98,7 @@ describe('getAnimeCredits', () => {
         name: 'Fuga Yamashiro',
         job: 'Director, Storyboard',
         headshot: 'https://img/director.jpg',
+        anilistId: 2,
       },
     ]);
     // The numeric id is carried, not discarded (plan 0035 R12): it deep-links
@@ -118,6 +113,6 @@ describe('getAnimeCredits', () => {
 
     await expect(
       Effect.runPromise(getAnimeCredits({ ...DEPS, fetch }, { mediaId: 1 })),
-    ).resolves.toEqual({ characters: [], cast: [], crew: [], studios: [] });
+    ).resolves.toEqual({ cast: [], crew: [], studios: [] });
   });
 });

@@ -148,7 +148,6 @@ describe('getMediaDetails', () => {
 
     expect(result).toEqual({
       catalogue: null,
-      characters: [],
       cast: [],
       crew: [],
       studios: [],
@@ -181,12 +180,11 @@ describe('getMediaDetails', () => {
   // Plan 0024 U8: manga details are AniList-sourced only. Nothing may reach
   // for TMDB — there is no manga there, and a stray request would 404 the
   // screen instead of degrading to the basic view.
-  test('manga performs no TMDB request and uses AniList credits', async () => {
+  test('manga performs no TMDB request and returns the empty credits shape', async () => {
     const requested: string[] = [];
-    const answer = fakeFetch([ANILIST_CREDITS]);
     const trackingFetch = (input: RequestInfo | URL): Promise<Response> => {
       requested.push(String(input));
-      return answer(input);
+      return Promise.resolve(new Response('{}', { status: 404 }));
     };
 
     const result = await Effect.runPromise(
@@ -201,7 +199,7 @@ describe('getMediaDetails', () => {
     );
 
     expect(requested.some((url) => url.includes('themoviedb'))).toBe(false);
-    expect(result.source).toBe('anilist');
+    expect(result.source).toBe('none');
     expect(result.catalogue).toBeNull();
   });
 
@@ -212,7 +210,6 @@ describe('getMediaDetails', () => {
 
     expect(result).toEqual({
       catalogue: null,
-      characters: [],
       cast: [],
       crew: [],
       studios: [],

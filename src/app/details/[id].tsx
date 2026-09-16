@@ -55,6 +55,7 @@ import { useThemeColor } from '@/lib/theme-color';
 import {
   anilistQueryKeys,
   useAniListEntryStateQuery,
+  useSuspenseAniListRelationsQuery,
 } from '@/state/queries/anilist';
 import {
   mediaDetailsQueryKeys,
@@ -70,7 +71,13 @@ import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { useConnectedProviders } from '@/state/session';
-import type { NormalizedMediaItem, NormalizedStudio } from '@/types/media';
+import type {
+  NormalizedCastMember,
+  NormalizedCharacter,
+  NormalizedCrewMember,
+  NormalizedMediaItem,
+  NormalizedStudio,
+} from '@/types/media';
 
 /** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
 function metaLine(item: NormalizedMediaItem): string {
@@ -296,13 +303,23 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
 }
 
 /**
- * Cast + Crew + Studios from the one TMDB-first metadata query (plan 0014) —
- * the same composed read regardless of the item's origin provider, with the
- * Trakt/AniList fallback handled inside the query, not by this boundary.
+ * Characters + Cast + Crew + Studios rails, with the long-press credit sheet
+ * they share. Source-agnostic: the two wrappers below decide where credits
+ * come from.
  */
-function CreditsSections({ item }: { item: NormalizedMediaItem }) {
-  const { data } = useSuspenseMediaDetailsQuery(item);
-  const pushRoute = usePushRoute();
+function CreditRails({
+  characters = [],
+  cast,
+  crew,
+  crewTitle,
+  studios,
+}: {
+  characters?: NormalizedCharacter[];
+  cast: NormalizedCastMember[];
+  crew: NormalizedCrewMember[];
+  crewTitle: string;
+  studios: NormalizedStudio[];
+}) {
   // Long-press (web: the hover ⋯) on a credit card opens this instead of
   // navigating — the role text a 96px card had to clip is the whole point.
   const [credit, setCredit] = useState<PersonCredit | null>(null);
@@ -316,12 +333,11 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
 
   return (
     <>
+      {/* No `onCreditActions`: a character isn't a person, so its card opens nothing. */}
       <PeopleSection
-        onPersonPress={(character) => pushRoute(routes.character(character.anilistId))}
         title="Characters"
-        people={data.characters.map((character) => ({
+        people={characters.map((character) => ({
           id: `anilist-character-${character.anilistId}`,
-          anilistId: character.anilistId,
           name: character.name,
           role: character.role,
           kind: 'cast' as const,
@@ -331,28 +347,30 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
       <PeopleSection
         onCreditActions={openCredit}
         title="Cast"
-        people={data.cast.map((member) => ({
+        people={cast.map((member) => ({
           id: member.id,
           name: member.name,
           role: member.character,
           kind: 'cast' as const,
           headshot: member.headshot,
           ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
+          ...(member.anilistId != null ? { anilistId: member.anilistId } : {}),
         }))}
       />
       <PeopleSection
         onCreditActions={openCredit}
-        title={item.type === 'MANGA' ? 'Staff' : 'Crew'}
-        people={data.crew.map((member) => ({
+        title={crewTitle}
+        people={crew.map((member) => ({
           id: member.id,
           name: member.name,
           role: member.job,
           kind: 'crew' as const,
           headshot: member.headshot,
           ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
+          ...(member.anilistId != null ? { anilistId: member.anilistId } : {}),
         }))}
       />
-      <StudiosList studios={data.studios} />
+      <StudiosList studios={studios} />
       {/* `credit` is kept (not nulled) while closing so the sheet's content
           doesn't vanish mid-animation — same contract as the card actions. */}
       <PersonCreditSheet
@@ -361,6 +379,35 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
         open={creditOpen}
       />
     </>
+  );
+}
+
+/**
+ * Credits from the one TMDB-first metadata query (plan 0014) — the same
+ * composed read regardless of the item's origin provider, with the
+ * Trakt/AniList fallback handled inside the query, not by this boundary.
+ */
+function CreditsSections({ item }: { item: NormalizedMediaItem }) {
+  const { data } = useSuspenseMediaDetailsQuery(item);
+  return (
+    <CreditRails cast={data.cast} crew={data.crew} crewTitle="Crew" studios={data.studios} />
+  );
+}
+
+/**
+ * Manga credits ride the AniList relations request the page already makes
+ * (TMDB has no manga to credit), so they cost no request of their own.
+ */
+function MangaCreditsSections({ mediaId }: { mediaId: number }) {
+  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
+  return (
+    <CreditRails
+      cast={[]}
+      characters={data.characters}
+      crew={data.staff}
+      crewTitle="Staff"
+      studios={[]}
+    />
   );
 }
 
@@ -690,7 +737,11 @@ export default function DetailsScreen() {
             }
             resetKey={refreshCount}
           >
-            <CreditsSections item={item} />
+            {shown.type === 'MANGA' && anilistId != null ? (
+              <MangaCreditsSections mediaId={anilistId} />
+            ) : (
+              <CreditsSections item={item} />
+            )}
           </SuspenseSection>
 
           <RecommendationsSection item={shown} resetKey={refreshCount} />

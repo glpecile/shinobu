@@ -18,19 +18,26 @@ interface AniListPerson {
 }
 
 interface AniListCharacter {
-  id: number;
   name: { full: string | null } | null;
-  image: { large: string | null } | null;
 }
 
 type AniListCharacterEdge = {
-  /** CharacterRole enum: MAIN, SUPPORTING, BACKGROUND. */
-  role: string | null;
   node: AniListCharacter | null;
   voiceActors: Array<AniListPerson | null> | null;
 } | null;
 
-type AniListStaffEdge = {
+/** A character with the fields a manga's Characters rail shows. */
+export type AniListCharacterRoleEdge = {
+  /** CharacterRole enum: MAIN, SUPPORTING, BACKGROUND. */
+  role: string | null;
+  node: {
+    id: number;
+    name: { full: string | null } | null;
+    image: { large: string | null } | null;
+  } | null;
+} | null;
+
+export type AniListStaffEdge = {
   role: string | null;
   node: AniListPerson | null;
 } | null;
@@ -52,7 +59,6 @@ interface AnimeCreditsResponse {
 }
 
 export interface AnimeCredits {
-  characters: NormalizedCharacter[];
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
   studios: NormalizedStudio[];
@@ -93,6 +99,7 @@ function normalizeCast(
           name: personName(voiceActor),
           character: '',
           headshot: personHeadshot(voiceActor),
+          anilistId: voiceActor.id,
         },
         characters: character !== '' ? [character] : [],
       });
@@ -105,8 +112,8 @@ function normalizeCast(
   }));
 }
 
-function normalizeCharacters(
-  edges: AniListCharacterEdge[] | null,
+export function normalizeCharacters(
+  edges: AniListCharacterRoleEdge[] | null,
 ): NormalizedCharacter[] {
   return (edges ?? []).flatMap((edge) =>
     edge?.node == null
@@ -120,7 +127,7 @@ function normalizeCharacters(
   );
 }
 
-function normalizeCrew(
+export function normalizeCrew(
   edges: AniListStaffEdge[] | null,
 ): NormalizedCrewMember[] {
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[] }>();
@@ -141,6 +148,7 @@ function normalizeCrew(
         name: personName(person),
         job: '',
         headshot: personHeadshot(person),
+        anilistId: person.id,
       },
       jobs: edge.role != null ? [edge.role] : [],
     });
@@ -173,10 +181,9 @@ function normalizeStudios(
 }
 
 /**
- * Anime and manga credits for a detail view. AniList models cast as characters
- * with one or more voice actors, so the visible person is the voice actor and
- * the character remains the card subtitle. Manga has no voice actors: its
- * `cast` is empty and `characters` is the whole cast.
+ * Anime credits for a detail view. AniList models cast as characters with one
+ * or more voice actors, so the visible person is the voice actor and the
+ * character remains the card subtitle.
  */
 export function getAnimeCredits(
   deps: AniListDeps,
@@ -188,8 +195,7 @@ export function getAnimeCredits(
       Media(id: $mediaId) {
         characters(sort: [ROLE, RELEVANCE, ID], perPage: 15) {
           edges {
-            role
-            node { id name { full } image { large } }
+            node { name { full } }
             voiceActors(language: JAPANESE) { id name { full } image { large } }
           }
         }
@@ -202,7 +208,6 @@ export function getAnimeCredits(
     { variables: { mediaId: params.mediaId } },
   ).pipe(
     Effect.map((data) => ({
-      characters: normalizeCharacters(data.Media?.characters?.edges ?? []),
       cast: normalizeCast(data.Media?.characters?.edges ?? []),
       crew: normalizeCrew(data.Media?.staff?.edges ?? []),
       studios: normalizeStudios(data.Media?.studios?.nodes ?? []),
