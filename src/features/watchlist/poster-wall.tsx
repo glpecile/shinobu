@@ -3,13 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 
-import { Image } from '@/components/image';
 import { List } from '@/components/List';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { PosterFace } from '@/components/poster-face';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
-import { ProviderIcon } from '@/components/provider-icon';
 import { PROVIDERS } from '@/lib/providers/registry';
-import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -35,9 +32,6 @@ const TARGET_COLUMN_PITCH = 132;
 const MIN_COLUMNS = 3;
 /** Tall enough that the caption's fade starts well above its first line. */
 const CAPTION_SCRIM_HEIGHT = 96;
-/** Short fade behind the always-on provider dots — enough to read them on
- *  bright artwork, shallow enough not to read as a caption bar. */
-const MARK_SCRIM_HEIGHT = 34;
 /** Past this the artwork is too small to recognize, however wide the display. */
 const MAX_COLUMNS = 8;
 
@@ -54,30 +48,6 @@ export function useWallMetrics(): { columns: number; rowHeight: number } {
   // an estimate the list corrects on first measure, wrong as a layout input.
   const posterWidth = (usable - GAP * (columns - 1)) / columns;
   return { columns, rowHeight: posterWidth / POSTER_ASPECT + GAP };
-}
-
-/**
- * The brand marks for the providers holding this film, bottom-right on the
- * same surface pill as the ⋯ button so they read on any artwork. Always on,
- * unlike the hover caption: the wall used to be bare artwork because a
- * Letterboxd-only grid had nothing to say about provenance, and a merged one
- * does — "on both my trackers" versus "only on Letterboxd" is the question
- * this surface exists to answer, and it survives the provider filter (a
- * filtered row keeps all its marks).
- */
-function PosterMarks({ sources }: { sources: readonly ProviderId[] }) {
-  // A catalogue wall (the seasons explorer) has no provenance to show.
-  if (sources.length === 0) return null;
-  return (
-    <View
-      accessibilityLabel={`On ${sources.map((id) => PROVIDERS[id].label).join(', ')}`}
-      className="absolute bottom-1.5 right-1.5 flex-row gap-1 p-1 rounded-full bg-surface/95 border border-border/40"
-    >
-      {sources.map((id) => (
-        <ProviderIcon id={id} key={id} size={12} />
-      ))}
-    </View>
-  );
 }
 
 /**
@@ -114,6 +84,41 @@ function PosterCell({
   const providers = entry.sources.map((id) => PROVIDERS[id].label).join(', ');
   const accessibilityLabel = providers === '' ? label : `${label}. On ${providers}`;
 
+  // A gradient, not a solid bar: the caption only exists while the
+  // pointer is on the poster, so it should fade out of the artwork rather than
+  // cut a hard edge across it. Both text tones are the on-accent (always light)
+  // foreground — `text-foreground` is near-black in the light theme and would
+  // vanish into the scrim.
+  const caption = showChrome ? (
+    <View className="absolute bottom-0 left-0 right-0">
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.92)']}
+        style={{
+          bottom: 0,
+          height: CAPTION_SCRIM_HEIGHT,
+          left: 0,
+          position: 'absolute',
+          right: 0,
+        }}
+      />
+      {/* `pr-8` keeps the caption clear of the provider dots, which
+          stay put whether or not the pointer is on the poster. */}
+      <View className="pl-2 pr-8 pb-1.5 pt-6">
+        <Text
+          className="text-accent-foreground font-sans-semibold text-xs leading-tight"
+          numberOfLines={2}
+        >
+          {item.title}
+        </Text>
+        {item.year != null && (
+          <Text className="text-accent-foreground/70 font-sans text-xs mt-0.5">
+            {item.year}
+          </Text>
+        )}
+      </View>
+    </View>
+  ) : undefined;
+
   return (
     <View style={{ padding: GAP / 2 }}>
       <View
@@ -131,65 +136,15 @@ function PosterCell({
           onLongPress={() => onActions(item)}
           onPress={() => onPress(item)}
         >
-          {item.coverImage !== '' ? (
-            <Image
-              source={{ uri: item.coverImage }}
-              className="w-full h-full"
-              contentFit="cover"
-              recyclingKey={item.id}
-            />
-          ) : (
-            <PosterPlaceholder className="w-full h-full border-0" />
-          )}
-          {/* The dots' own fade — skipped while the caption is up, whose
-              taller scrim already covers this band. */}
-          {!showChrome && (
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.72)']}
-              style={{
-                bottom: 0,
-                height: MARK_SCRIM_HEIGHT,
-                left: 0,
-                position: 'absolute',
-                right: 0,
-              }}
-            />
-          )}
-          {showChrome && (
-            // A gradient, not a solid bar: the caption only exists while the
-            // pointer is on the poster, so it should fade out of the artwork
-            // rather than cut a hard edge across it. Both text tones are the
-            // on-accent (always light) foreground — `text-foreground` is
-            // near-black in the light theme and would vanish into the scrim.
-            <View className="absolute bottom-0 left-0 right-0">
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.92)']}
-                style={{
-                  bottom: 0,
-                  height: CAPTION_SCRIM_HEIGHT,
-                  left: 0,
-                  position: 'absolute',
-                  right: 0,
-                }}
-              />
-              {/* `pr-8` keeps the caption clear of the provider dots, which
-                  stay put whether or not the pointer is on the poster. */}
-              <View className="pl-2 pr-8 pb-1.5 pt-6">
-                <Text
-                  className="text-accent-foreground font-sans-semibold text-xs leading-tight"
-                  numberOfLines={2}
-                >
-                  {item.title}
-                </Text>
-                {item.year != null && (
-                  <Text className="text-accent-foreground/70 font-sans text-xs mt-0.5">
-                    {item.year}
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
-          <PosterMarks sources={entry.sources} />
+          <PosterFace
+            // Always on, unlike the hover caption: "on both my trackers" versus
+            // "only on Letterboxd" is the question this surface answers, and
+            // a filtered row keeps all its marks.
+            caption={caption}
+            marks={entry.sources}
+            recyclingKey={item.id}
+            uri={item.coverImage}
+          />
         </PresstableScale>
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}

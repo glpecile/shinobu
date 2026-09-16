@@ -424,6 +424,7 @@ export default function SearchScreen() {
           </CenteredNotice>
         ) : state === 'empty' ? (
           <CenteredNotice className="-mt-16">
+            <CenteredNotice.Icon name="search-outline" />
             <CenteredNotice.Title>No results</CenteredNotice.Title>
             <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
           </CenteredNotice>

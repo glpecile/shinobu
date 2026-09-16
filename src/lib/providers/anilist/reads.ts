@@ -162,14 +162,15 @@ interface ListActivityResponse {
  */
 export function getListActivity(
   deps: AniListDeps,
-  params: { viewerId: number; page: number; perPage?: number },
+  /** `mediaId` narrows to one title's activity; omitted, it drops out of the body. */
+  params: { viewerId: number; page: number; perPage?: number; mediaId?: number },
 ): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
   const perPage = params.perPage ?? 50;
   return anilistAuthedRequest<ListActivityResponse>(
     deps,
-    `query ($userId: Int, $page: Int, $perPage: Int) {
+    `query ($userId: Int, $mediaId: Int, $page: Int, $perPage: Int) {
       Page(page: $page, perPage: $perPage) {
-        activities(userId: $userId, type: MEDIA_LIST, sort: ID_DESC) {
+        activities(userId: $userId, mediaId: $mediaId, type: MEDIA_LIST, sort: ID_DESC) {
           ... on ListActivity {
             id
             status
@@ -183,6 +184,7 @@ export function getListActivity(
     {
       variables: {
         userId: params.viewerId,
+        mediaId: params.mediaId,
         page: params.page,
         perPage,
       },

@@ -23,6 +23,7 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CopyTitle } from '@/features/copy-title/copy-title';
+import { DetailVariantsSection } from '@/features/detail-variants/detail-variants-section';
 import {
   RecommendationsAndTagsSection,
   RelationsSection,
@@ -45,7 +46,9 @@ import {
   SeriesRuntimeTile,
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
+import { localDayKey } from '@/features/diary/merge';
 import { haptics } from '@/lib/haptics';
+import { parseLocalInstant } from '@/lib/time/has-aired';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { useTmdbToken } from '@/state/session/tmdb-token';
@@ -67,6 +70,7 @@ import {
   useSimklLibraryEntryQuery,
 } from '@/state/queries/simkl';
 import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
+import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
@@ -127,7 +131,7 @@ function anilistWatchedLabel(
       return `${read ? 'Rereading' : 'Rewatching'} · ${episodes}`;
     case 'COMPLETED': {
       const done = read ? 'Read' : 'Watched';
-      return entry.repeat > 0 ? `${done} ${entry.repeat + 1}×` : done;
+      return entry.repeat > 0 ? `${done} (${entry.repeat + 1})` : done;
     }
     case 'PAUSED':
       return `Paused · ${episodes}`;
@@ -165,9 +169,10 @@ function ProgressOfTotal({
 }
 
 /**
- * "Watched 3× · Jul 13, 2026" under the meta line — from whichever connected
- * provider records this item as watched: Trakt first (movies count plays,
- * shows count logged episodes), then the AniList list entry for anime, so
+ * "Watched (2) · Sep 15, 2026 · Mar 3, 2024" under the meta line. A film lists
+ * every dated play across providers (`useFilmPlaysQuery`); otherwise it reads
+ * whichever connected provider records the item: Trakt/Simkl (shows count
+ * logged episodes), then the AniList list entry for anime, so
  * Trakt-sourced and AniList-sourced pages carry the same line. Lives as its
  * own element so the hooks only run once the screen has a resolved item.
  *
@@ -189,19 +194,35 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   });
   const accent = useThemeColor('--color-accent');
 
+  const plays = useFilmPlaysQuery(item).data ?? [];
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // One date per local day: a fan-out logs the same play to every provider.
+  const days = [
+    ...new Set(
+      [...plays, ...(watched != null ? [{ watchedAt: watched.lastWatchedAt }] : [])].map(
+        (play) => localDayKey(play, timeZone),
+      ),
+    ),
+  ].sort((a, b) => b.localeCompare(a));
+
   let label: string | null = null;
-  if (watched != null) {
-    const date = new Date(watched.lastWatchedAt).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    label =
-      item.type === 'TV'
-        ? `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`
-        : watched.plays > 1
-          ? `Watched ${watched.plays}× · ${date}`
-          : `Watched · ${date}`;
+  if ((item.type === 'MOVIE' || item.isFilm === true) && days.length > 0) {
+    const entry = anilistEntry.data?.entry;
+    const count = Math.max(
+      days.length,
+      watched?.plays ?? 0,
+      entry?.status === 'COMPLETED' ? entry.repeat + 1 : 0,
+    );
+    const dates = days.map((day) =>
+      parseLocalInstant(day)?.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    );
+    label = `Watched${count > 1 ? ` (${count})` : ''} · ${dates.join(' · ')}`;
+  } else if (watched != null) {
+    label = `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`;
   } else if (anilistEntry.data?.entry != null) {
     label = anilistWatchedLabel(anilistEntry.data.entry, item);
   } else if (
@@ -232,7 +253,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     <View className="flex-row items-center gap-1.5 mt-1.5">
       <Ionicons
         color={accent}
-        name="checkmark-circle"
+        name="eye"
         size={13}
       />
       <MorphText className="text-muted font-sans text-sm">{label}</MorphText>
@@ -742,6 +763,8 @@ export default function DetailsScreen() {
           <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
 
           <ReleaseTimeline item={shown} />
+
+          <DetailVariantsSection item={shown} />
 
           <ProviderLinksSection item={shown} />
         </View>
