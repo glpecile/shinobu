@@ -461,9 +461,10 @@ export default function DetailsScreen() {
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
   const meta = metaLine(shown);
   const alternates = alternateTitles(shown);
-  // "0 episodes" on a movie is noise — only show progress where it means
-  // something (any TV/manga item, or a movie already logged at least once).
-  const showProgress = shown.type !== 'MOVIE' || shown.currentProgress > 0;
+  // "0 / 1 episodes" on a film (anime films included) is noise — only show
+  // progress where it means something (series, manga, or a film already logged).
+  const showProgress =
+    (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
   const displayedProgress =
     shown.type === 'ANIME'
       ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
