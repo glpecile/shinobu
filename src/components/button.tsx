@@ -102,6 +102,7 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `search-outline` | search |
  * | `checkmark` | done, nothing left to do |
  * | `link-outline` / `unlink-outline` | connect / disconnect a tracker |
+ * | `chevron-back` / `chevron-forward` | step to the previous / next sibling in place |
  *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more

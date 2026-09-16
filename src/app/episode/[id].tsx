@@ -22,8 +22,8 @@ import { useResolvedMediaItem } from '@/state/queries/resolve-item';
  * entry's own numbering and this route places it on the trackers' layout the
  * way the seasons accordion does — the ani.zip read belongs to a details
  * screen, not to every diary row (plan 0027 R7). The screen itself is platform-split
- * (`features/episode-details/screen`): iOS presents it as a form sheet,
- * Android and web as full pages with their own layouts.
+ * (`features/episode-details/screen`): a full-bleed page on native, a page
+ * inside the sidebar shell on web.
  */
 export default function EpisodeRoute() {
   const { id, season, number } = useLocalSearchParams<{

@@ -1,9 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
 import Head from '@/components/head';
 import {
+  type ScrollView,
   Text,
   useWindowDimensions,
   View,
@@ -27,6 +28,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import {
   AnimeMoviesRow,
+  FeedEnd,
   SeasonalAnimeRow,
   TrendingMoviesRow,
   TrendingShowsRow,
@@ -164,6 +166,7 @@ function FeedScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
+  const scrollRef = useRef<ScrollView>(null);
 
   function openDetails(item: NormalizedMediaItem) {
     pushRoute(routes.details(item.id));
@@ -178,6 +181,7 @@ function FeedScreen() {
     <View className="flex-1">
       <RefreshableScrollView
         className="flex-1"
+        ref={scrollRef}
         // Web has no header (sidebar owns brand) so it needs top breathing room;
         // native clears the bottom tab bar, whose height can't be measured.
         contentContainerClassName={
@@ -261,6 +265,9 @@ function FeedScreen() {
           <TrendingShowsRow
             onItemActions={openActions}
             onItemPress={openDetails}
+          />
+          <FeedEnd
+            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
           />
         </SuspenseSection>
       </RefreshableScrollView>

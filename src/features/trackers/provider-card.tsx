@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
 import { CARD_SHELL } from '@/components/card-shell';
-import { compactStatus, PROVIDER_DOT } from '@/features/trackers/provider-style';
+import { compactStatus } from '@/features/trackers/provider-style';
 import { useConnectAction } from '@/features/trackers/use-connect-action';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import { cn } from '@/lib/cn';
@@ -55,9 +55,6 @@ export function ProviderCard({
             {PROVIDERS[id].label}
           </Text>
           <View className="flex-row items-center gap-1.5 mt-0.5">
-            {connected && (
-              <View className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])} />
-            )}
             <Text
               className="flex-1 text-muted font-sans text-xs"
               numberOfLines={1}

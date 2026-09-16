@@ -61,10 +61,11 @@ describe('groupDayEntries', () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.entries).toHaveLength(10);
-    // The lead is the first of the day's order, so the card keys and badges
-    // from the episode that actually leads the batch.
+    // The lead is the first of the day's order, so the card badges from the
+    // episode that actually leads the batch; the key is the show's, so a
+    // quick-log advancing it updates the card in place.
     expect(groups[0]?.lead).toBe(entries[0]!);
-    expect(groups[0]?.id).toBe(entries[0]!.id);
+    expect(groups[0]?.id).toBe('episode:trakt-1');
   });
 
   test('leaves a single episode as an ungrouped card', () => {
@@ -175,7 +176,7 @@ describe('soloGroup', () => {
     const entry = episode('trakt-1', 2, 1);
     const group = soloGroup(entry);
 
-    expect(group.id).toBe(entry.id);
+    expect(group.id).toBe('episode:trakt-1');
     expect(group.lead).toBe(entry);
     expect(group.entries).toEqual([entry]);
   });

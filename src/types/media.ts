@@ -40,6 +40,12 @@ export interface NormalizedMediaItem {
   /** Unique combined identifier: `${providerId}-${nativeId}`, e.g. `trakt-12345`. */
   id: string;
   title: string;
+  /**
+   * The other names this title goes by — AniList's romaji/english/native
+   * trio, TMDB's `original_title`/`original_name` as `native`. Any of them
+   * may repeat `title`; the details header dedupes.
+   */
+  titles?: { romaji?: string; english?: string; native?: string };
   coverImage: string;
   /** Wide hero/fanart image for detail views; '' when the provider has none. */
   backdropImage?: string;

@@ -26,7 +26,7 @@ import {
 } from './normalize';
 
 /** Media fields every read asks for — one fragment so normalization never misses a field. */
-const MEDIA_FIELDS = `
+export const MEDIA_FIELDS = `
   id
   idMal
   type
@@ -255,10 +255,11 @@ export function getSeasonalAnime(
 }
 
 /**
- * One anime by AniList id — the cold deep link (`/details/anilist-190143`
+ * One anime or manga by AniList id — the cold deep link (`/details/anilist-190143`
  * refreshed in a tab, or shared) when no cached surface holds it. Public data,
  * so no token; an unknown id is a GraphQL "Not Found" that surfaces as a
- * provider error, which the caller reads as not found.
+ * provider error, which the caller reads as not found. No `type` filter: a
+ * manga reached from a relations card must open the same way.
  */
 export function getAnimeById(
   deps: AniListDeps,
@@ -267,7 +268,7 @@ export function getAnimeById(
   return Effect.gen(function* () {
     const data = yield* anilistRequest<{ Media: AniListMedia | null }>(
       deps,
-      `query ($id: Int) { Media(id: $id, type: ANIME) { ${MEDIA_FIELDS} } }`,
+      `query ($id: Int) { Media(id: $id) { ${MEDIA_FIELDS} } }`,
       { variables: { id: mediaId } },
     );
     if (data.Media == null) return null;

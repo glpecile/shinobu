@@ -18,8 +18,8 @@ import {
   ScrollToTopFab,
 } from '@/components/scroll-to-top-fab';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
-import { PROVIDER_DOT } from '@/features/trackers/provider-style';
 import { cn } from '@/lib/cn';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { usePageEnterStyle } from '@/lib/page-transition';
@@ -234,13 +234,10 @@ function DiaryDayHead({
 }
 
 /**
- * The providers that logged this entry, as their own brand dots rather than
- * their marks. Two reasons: at 16px the marks read as noise beside a 36px
- * poster, and each one was an `expo-image` — three image views per row across a
- * list this long is real mount cost the dots do not pay. The wrapping label
- * still names every provider, since nothing adjacent does.
+ * The providers that logged this entry, as their brand marks. The wrapping
+ * label still names every provider, since nothing adjacent does.
  */
-function ProviderDots({ providers }: { providers: ProviderId[] }) {
+function ProviderMarks({ providers }: { providers: ProviderId[] }) {
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   return (
     <View
@@ -248,7 +245,7 @@ function ProviderDots({ providers }: { providers: ProviderId[] }) {
       className="flex-row items-center gap-1 flex-none"
     >
       {providers.map((id) => (
-        <View className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])} key={id} />
+        <ProviderIcon id={id} key={id} size={12} />
       ))}
     </View>
   );
@@ -316,7 +313,7 @@ function RowTrailing({
           <Text className="text-muted/70 font-sans text-[11px]">{time}</Text>
         )
       )}
-      <ProviderDots providers={providers} />
+      <ProviderMarks providers={providers} />
     </View>
   );
 }

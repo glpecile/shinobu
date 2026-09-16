@@ -1,4 +1,6 @@
+import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { MediaCarousel } from '@/components/media-carousel';
 import {
   animeSeasonLabel,
@@ -204,5 +206,25 @@ export function AnimeMoviesRow({
       provider="anilist"
       title={`Films of ${animeSeasonLabel(season)}`}
     />
+  );
+}
+
+/**
+ * The feed's sign-off, mounted inside the last row's `SuspenseSection` so it
+ * lands with that row rather than under a skeleton. `arrow-up` is the FAB's
+ * glyph for the same verb (`components/scroll-to-top-fab`).
+ */
+export function FeedEnd({ onPress }: { onPress: () => void }) {
+  return (
+    <View className="items-center gap-3 mt-2 px-4">
+      <Text className="text-muted font-sans text-sm">That’s all, folks</Text>
+      <Button
+        icon={<Button.Icon name="arrow-up" />}
+        label="Back to top"
+        onPress={onPress}
+        size="sm"
+        variant="quiet"
+      />
+    </View>
   );
 }

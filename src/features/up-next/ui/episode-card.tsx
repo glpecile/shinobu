@@ -7,7 +7,9 @@ import { MorphText } from '@/components/morph-text';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableScale } from '@/components/presstable';
 import type { CardBadge } from '@/features/up-next/badges';
+import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
+import { usePushRoute } from '@/lib/navigation';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { Badge } from './badge';
@@ -24,13 +26,15 @@ import { useCardArt } from './use-card-art';
  * backs peeking out behind the face card, plus a count chip. Depth carries the
  * meaning — the row still reads as one slot per show, which is the whole point
  * of collapsing a season drop. The stack is not expandable; tapping it opens the
- * show, where the episodes already live.
+ * show, where the episodes already live. A single episode the episode route can
+ * address (`episodeHref`) opens that episode instead.
  */
 interface EpisodeCardProps {
   group: UpNextGroup;
   badges?: CardBadge[];
   /** Trailing action — the quick-log checkmark; Calendar cards have none. */
   action?: ReactNode;
+  /** Opens the show — the stack, release and unaddressable-episode fallback. */
   onPress?: (item: NormalizedMediaItem) => void;
   onActionsPress?: (item: NormalizedMediaItem) => void;
   /** Card width class; the agenda row overrides the carousel default. */
@@ -53,9 +57,11 @@ export function EpisodeCard({
   className = 'w-64',
 }: EpisodeCardProps) {
   const { lead, entries } = group;
+  const pushRoute = usePushRoute();
   const art = useCardArt(lead.item);
   const label = groupLabel(group);
   const stacked = entries.length > 1;
+  const href = stacked ? undefined : episodeHref(lead);
 
   return (
     <View className={className}>
@@ -74,7 +80,7 @@ export function EpisodeCard({
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(lead.item)
         }
-        onPress={() => onPress?.(lead.item)}
+        onPress={() => (href == null ? onPress?.(lead.item) : pushRoute(href))}
       >
         {stacked && (
           // Drawn before the art so the art paints over them. Flat surface

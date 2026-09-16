@@ -48,12 +48,6 @@
       --color-border: #e5e5e5;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
-
-      --color-provider-trakt: #9f42c6;
-      --color-provider-anilist: #02a9ff;
-      --color-provider-letterboxd: #00e054;
-      --color-provider-serializd: #44bba4;
-      --color-provider-simkl: #73c26e;
     }
 
     @variant dark {
@@ -64,12 +58,6 @@
       --color-border: #333333;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
-
-      --color-provider-trakt: #9f42c6;
-      --color-provider-anilist: #02a9ff;
-      --color-provider-letterboxd: #00e054;
-      --color-provider-serializd: #44bba4;
-      --color-provider-simkl: #73c26e;
     }
   }
 }

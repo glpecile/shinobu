@@ -94,6 +94,11 @@ export function applyPrimaryMetadata(
     ...(primary.rating != null ? { rating: primary.rating } : {}),
     ...(primary.runtime != null ? { runtime: primary.runtime } : {}),
     ...(primary.year != null ? { year: primary.year } : {}),
+    // Per-key, item winning: AniList's native title is the canonical one for
+    // anime, and TMDB's English/original names fill what the provider lacks.
+    ...(primary.titles != null || item.titles != null
+      ? { titles: { ...primary.titles, ...item.titles } }
+      : {}),
     // Catalogue metadata, not user state — TMDB wins, same as year/runtime.
     // Load-bearing beyond display: the log button refuses an unreleased film.
     ...(primary.releaseDate != null ? { releaseDate: primary.releaseDate } : {}),

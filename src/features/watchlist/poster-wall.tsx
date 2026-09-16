@@ -7,8 +7,7 @@ import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
-import { PROVIDER_DOT } from '@/features/trackers/provider-style';
-import { cn } from '@/lib/cn';
+import { ProviderIcon } from '@/components/provider-icon';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
@@ -58,15 +57,13 @@ export function useWallMetrics(): { columns: number; rowHeight: number } {
 }
 
 /**
- * The brand dots for the providers holding this film, bottom-right over a
- * short fade (owner, 2026-08-01). Always on, unlike the hover caption: the
- * wall used to be bare artwork because a Letterboxd-only grid had nothing to
- * say about provenance, and a merged one does — "on both my trackers" versus
- * "only on Letterboxd" is the question this surface exists to answer, and it
- * survives the provider filter (a filtered row keeps all its marks).
- *
- * Dots rather than the brand icons the diary rows use: at this size a logo is
- * mush, and a dot with a dark ring reads on any artwork.
+ * The brand marks for the providers holding this film, bottom-right on the
+ * same surface pill as the ⋯ button so they read on any artwork. Always on,
+ * unlike the hover caption: the wall used to be bare artwork because a
+ * Letterboxd-only grid had nothing to say about provenance, and a merged one
+ * does — "on both my trackers" versus "only on Letterboxd" is the question
+ * this surface exists to answer, and it survives the provider filter (a
+ * filtered row keeps all its marks).
  */
 function PosterMarks({ sources }: { sources: readonly ProviderId[] }) {
   // A catalogue wall (the seasons explorer) has no provenance to show.
@@ -74,16 +71,10 @@ function PosterMarks({ sources }: { sources: readonly ProviderId[] }) {
   return (
     <View
       accessibilityLabel={`On ${sources.map((id) => PROVIDERS[id].label).join(', ')}`}
-      className="absolute bottom-1.5 right-1.5 flex-row gap-1"
+      className="absolute bottom-1.5 right-1.5 flex-row gap-1 p-1 rounded-full bg-surface/95 border border-border/40"
     >
       {sources.map((id) => (
-        <View
-          className={cn(
-            'w-[7px] h-[7px] rounded-full border border-black/40',
-            PROVIDER_DOT[id],
-          )}
-          key={id}
-        />
+        <ProviderIcon id={id} key={id} size={12} />
       ))}
     </View>
   );
@@ -93,7 +84,7 @@ function PosterMarks({ sources }: { sources: readonly ProviderId[] }) {
  * One poster. No type label at rest: on a watchlist "MOVIE" on every card is
  * noise, and the artwork already carries its own title, so burning ours over
  * it buys nothing. The title stays reachable through `accessibilityLabel`
- * everywhere and a hover caption on web. The provider dots are the one piece
+ * everywhere and a hover caption on web. The provider marks are the one piece
  * of chrome that *is* always on — see `PosterMarks`.
  */
 function PosterCell({

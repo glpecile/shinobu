@@ -5,11 +5,13 @@ import Head from '@/components/head';
 import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { EpisodeLogButton } from '@/features/episode-details/episode-log-button';
 import {
   EpisodeCreditsSection,
   EpisodeHeaderSkeleton,
   EpisodeHeading,
   EpisodeLogs,
+  EpisodeNav,
   EpisodeOverview,
   EpisodeSeriesLink,
   EpisodeStill,
@@ -17,7 +19,7 @@ import {
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
 
-/** Mirrors index.tsx — keep the three variants' props identical. */
+/** Mirrors index.tsx — keep both variants' props identical. */
 export interface EpisodeScreenProps {
   item: NormalizedMediaItem;
   season: number;
@@ -74,6 +76,14 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                     showTitle={item.title}
                   />
                   <EpisodeLogs className="mt-3" logs={logs} />
+                  <EpisodeLogButton
+                    className="mt-5 self-start"
+                    episode={view.episode}
+                    item={item}
+                    number={number}
+                    season={season}
+                    watched={logs.length > 0}
+                  />
                   <View className="mt-5">
                     <EpisodeOverview episode={view.episode} />
                   </View>
@@ -82,7 +92,8 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             </View>
           </View>
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <EpisodeSeriesLink id={item.id} />
+          <EpisodeNav className="mt-8" id={item.id} next={view.next} prev={view.prev} />
+          <EpisodeSeriesLink className="mt-3" id={item.id} />
         </View>
       </ScrollView>
 

@@ -20,6 +20,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
+import { RelationsSection } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -75,6 +76,18 @@ function metaLine(item: NormalizedMediaItem): string {
   ]
     .filter((part) => part != null)
     .join(' · ');
+}
+
+/** The item's other names, minus the one already shown and any repeat (case-insensitive). */
+function alternateTitles(item: NormalizedMediaItem): string {
+  const seen = new Set([item.title.toLowerCase()]);
+  const shown: string[] = [];
+  for (const candidate of [item.titles?.english, item.titles?.romaji, item.titles?.native]) {
+    if (candidate == null || candidate === '' || seen.has(candidate.toLowerCase())) continue;
+    seen.add(candidate.toLowerCase());
+    shown.push(candidate);
+  }
+  return shown.join(' · ');
 }
 
 /**
@@ -452,6 +465,7 @@ export default function DetailsScreen() {
 
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
   const meta = metaLine(shown);
+  const alternates = alternateTitles(shown);
   // "0 episodes" on a movie is noise — only show progress where it means
   // something (any TV/manga item, or a movie already logged at least once).
   const showProgress = shown.type !== 'MOVIE' || shown.currentProgress > 0;
@@ -488,6 +502,7 @@ export default function DetailsScreen() {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
         anilistQueryKeys.episodes(anilistId),
+        anilistQueryKeys.relations(anilistId),
       ]) {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
@@ -578,6 +593,11 @@ export default function DetailsScreen() {
               <Text className="text-3xl font-display text-foreground mt-1">
                 {shown.title}
               </Text>
+              {alternates !== '' && (
+                <Text className="text-muted font-sans text-sm mt-0.5">
+                  {alternates}
+                </Text>
+              )}
               {meta !== '' && (
                 <Text className="text-muted font-sans text-sm mt-1.5">
                   {meta}
@@ -636,6 +656,8 @@ export default function DetailsScreen() {
           {shown.type === 'ANIME' && shown.isFilm !== true && (
             <AnimeSeasonsSection item={shown} resetKey={refreshCount} />
           )}
+
+          <RelationsSection item={shown} resetKey={refreshCount} />
 
           <SuspenseSection
             fallback={

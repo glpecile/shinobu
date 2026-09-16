@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { entryInstant, entryLabel } from './entry';
+import { entryInstant, entryLabel, episodeHref } from './entry';
 import type { UpNextEntry, UpNextEpisode, UpNextRelease } from './types';
 
 /**
@@ -99,5 +99,25 @@ describe('entryInstant', () => {
     // Deliberately *not* normalized to an instant: `isDateOnly` is what stops
     // the card asserting a 00:00 screening nobody stated.
     expect(entryInstant(releaseEntry({ date: '2026-07-24' }))).toBe('2026-07-24');
+  });
+});
+
+describe('episodeHref', () => {
+  test('a tracker episode opens the episode by season and number', () => {
+    expect(episodeHref(episodeEntry())).toBe('/episode/trakt-1?season=1&number=4');
+  });
+
+  test('an AniList entry opens the anime episode by its own number', () => {
+    expect(
+      episodeHref({ ...episodeEntry({ season: undefined, number: 7 }), source: 'anilist' }),
+    ).toBe('/episode/trakt-1?number=7');
+  });
+
+  test('a seasonless tracker entry and a release have no episode to open', () => {
+    // Simkl numbers anime absolutely; the anime route places entry numbers.
+    expect(
+      episodeHref({ ...episodeEntry({ season: undefined, number: 40 }), source: 'simkl' }),
+    ).toBeUndefined();
+    expect(episodeHref(releaseEntry())).toBeUndefined();
   });
 });

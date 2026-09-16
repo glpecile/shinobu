@@ -8,18 +8,20 @@ import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { EpisodeLogButton } from '@/features/episode-details/episode-log-button';
 import {
   EpisodeCreditsSection,
   EpisodeHeaderSkeleton,
   EpisodeHeading,
   EpisodeLogs,
+  EpisodeNav,
   EpisodeOverview,
   EpisodeSeriesLink,
 } from '@/features/episode-details/episode-sections';
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
 
-/** Mirrors index.ios.tsx / index.web.tsx — keep the three variants' props identical. */
+/** Mirrors index.web.tsx — keep both variants' props identical. */
 export interface EpisodeScreenProps {
   item: NormalizedMediaItem;
   season: number;
@@ -28,7 +30,7 @@ export interface EpisodeScreenProps {
 }
 
 /**
- * Android (and the tsc default): a full-screen push shaped like the show's
+ * Native (and the tsc default): a full-screen push shaped like the show's
  * own details screen — the still runs full-bleed under the status bar and
  * fades into the page, the heading sits over the fade, the back button floats.
  */
@@ -78,13 +80,22 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                 showTitle={item.title}
               />
               <EpisodeLogs className="mt-3" logs={logs} />
+              <EpisodeLogButton
+                className="mt-5"
+                episode={view.episode}
+                item={item}
+                number={number}
+                season={season}
+                watched={logs.length > 0}
+              />
               <View className="mt-6">
                 <EpisodeOverview episode={view.episode} />
               </View>
             </>
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <EpisodeSeriesLink id={item.id} />
+          <EpisodeNav className="mt-8" id={item.id} next={view.next} prev={view.prev} />
+          <EpisodeSeriesLink className="mt-3" id={item.id} />
         </View>
       </ScrollView>
 

@@ -6,9 +6,14 @@ import { useTmdbEpisodeQuery } from '@/state/queries/tmdb';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
+import { episodeNeighbours, type EpisodeRef } from './episode-neighbours';
+
 export interface EpisodeView {
   /** Undefined while neither the seasons list nor TMDB has answered. */
   episode: NormalizedEpisode | undefined;
+  /** The episodes either side in the show's layout; absent at the ends or before it loads. */
+  prev?: EpisodeRef;
+  next?: EpisodeRef;
   /** Wide still from TMDB; '' until it answers or when there is none. */
   still: string;
   rating?: number;
@@ -50,6 +55,7 @@ export function useEpisode(
         };
   return {
     episode,
+    ...(seasons.data == null ? {} : episodeNeighbours(seasons.data, season, number)),
     still: tmdb.data?.still ?? '',
     ...(tmdb.data?.rating != null ? { rating: tmdb.data.rating } : {}),
     isLoading: episode == null && (seasons.isPending || tmdb.isPending),
