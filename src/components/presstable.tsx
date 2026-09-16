@@ -1,6 +1,6 @@
 import { PressableOpacity, PressableScale } from 'pressto';
 import { useRef, type ComponentProps } from 'react';
-import { withUniwind } from 'uniwind';
+import { withUniwind } from '@/lib/with-uniwind';
 
 /**
  * The app's pressables — pressto (gesture-handler + reanimated, animated on

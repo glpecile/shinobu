@@ -1,13 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Effect } from 'effect';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';
+import { TextField } from '@/components/text-field';
 import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd';
-import { useThemeColor } from '@/lib/theme-color';
 import { serializdDeps } from '@/state/queries/serializd';
 import { connectSerializd } from '@/state/session/serializd';
 
@@ -30,7 +30,6 @@ type CredentialsForm = z.infer<typeof credentialsSchema>;
 export function ConnectSerializdButton() {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -80,15 +79,11 @@ export function ConnectSerializdButton() {
         control={control}
         name="email"
         render={({ field }) => (
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+          <TextField
             keyboardType="email-address"
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             placeholder="Serializd email"
-            placeholderTextColor={muted}
             value={field.value}
           />
         )}
@@ -100,15 +95,11 @@ export function ConnectSerializdButton() {
         control={control}
         name="password"
         render={({ field }) => (
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+          <TextField
             onBlur={field.onBlur}
             onChangeText={field.onChange}
             onSubmitEditing={() => submit()}
             placeholder="Password"
-            placeholderTextColor={muted}
             returnKeyType="done"
             secureTextEntry
             value={field.value}

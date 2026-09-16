@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -115,8 +116,10 @@ export function PeopleSection({
   if (people.length === 0) return null;
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-4">{title}</Text>
+    <Section>
+      <Section.Header>
+        <Section.Title>{title}</Section.Title>
+      </Section.Header>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {people.map((credit) => (
           <PersonCard
@@ -136,7 +139,7 @@ export function PeopleSection({
           />
         ))}
       </ScrollView>
-    </View>
+    </Section>
   );
 }
 

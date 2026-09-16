@@ -1,8 +1,9 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
 import {
   capabilityLabels,
@@ -54,29 +55,19 @@ function ProviderSheetContent({
 
   return (
     <>
-      {/* Same identity block as the row it was opened from — icon chip, name,
-          then status — so the sheet reads as that row expanded rather
-          than as a different screen. */}
-      <View className="flex-row items-center">
+      <SheetHeader>
         <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
           <ProviderIcon id={id} size={22} />
         </View>
-        <View className="flex-1 ml-3">
-          <Text className="text-foreground font-display text-xl">
-            {PROVIDERS[id].label}
-          </Text>
-          <View className="flex-row items-center gap-1.5 mt-0.5">
-            <Text
-              className="flex-1 text-muted font-sans text-xs"
-              numberOfLines={1}
-            >
-              {connected
-                ? statusLine(connected, username)
-                : capabilityLabels(id).join(' · ')}
-            </Text>
-          </View>
-        </View>
-      </View>
+        <SheetHeader.Content>
+          <SheetHeader.Title>{PROVIDERS[id].label}</SheetHeader.Title>
+          <SheetHeader.Subtitle>
+            {connected
+              ? statusLine(connected, username)
+              : capabilityLabels(id).join(' · ')}
+          </SheetHeader.Subtitle>
+        </SheetHeader.Content>
+      </SheetHeader>
 
       <View className="mt-5">
         {connected ? (

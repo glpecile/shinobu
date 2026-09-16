@@ -1,13 +1,12 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
+import { Section } from '@/components/section';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { tmdbItemUrl } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { providerLinksFor } from '@/lib/providers/provider-links';
-import { useThemeColor } from '@/lib/theme-color';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -27,7 +26,6 @@ import type { NormalizedMediaItem } from '@/types/media';
  */
 export function ProviderLinksSection({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
-  const muted = useThemeColor('--color-muted');
   const tmdb = tmdbItemUrl(item);
   const links: { id: IconSourceId; label: string; url: string }[] = [
     ...providerLinksFor(item, connected).map(({ provider, url }) => ({
@@ -41,21 +39,21 @@ export function ProviderLinksSection({ item }: { item: NormalizedMediaItem }) {
   if (links.length === 0) return null;
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-4">View on</Text>
+    <Section>
+      <Section.Header>
+        <Section.Title>View on</Section.Title>
+      </Section.Header>
       <View className="flex-row flex-wrap gap-2">
         {links.map(({ id, label, url }) => (
-          <PresstableOpacity
-            className="flex-row items-center gap-2 bg-surface border border-border rounded-full px-4 py-2"
+          <LinkPill
+            external
+            icon={<ProviderIcon id={id} size={16} />}
             key={id}
+            label={label}
             onPress={() => openExternalUrl(url)}
-          >
-            <ProviderIcon id={id} size={16} />
-            <Text className="text-foreground font-sans text-sm">{label}</Text>
-            <Ionicons color={muted} name="open-outline" size={12} />
-          </PresstableOpacity>
+          />
         ))}
       </View>
-    </View>
+    </Section>
   );
 }

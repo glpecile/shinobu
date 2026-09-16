@@ -1,13 +1,12 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon } from '@/components/provider-icon';
+import { Section } from '@/components/section';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { providerPersonUrl, type UrlPerson } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { useThemeColor } from '@/lib/theme-color';
 import { useAniListStaffIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
@@ -48,7 +47,6 @@ export function PersonLinksSection({
   onOpened?: () => void;
 }) {
   const connected = useConnectedProviders();
-  const muted = useThemeColor('--color-muted');
   // Only while AniList is connected *and* the section wants links: an
   // unconnected AniList renders no pill, so resolving its id would buy nothing.
   const staffId = useAniListStaffIdQuery({
@@ -72,23 +70,21 @@ export function PersonLinksSection({
     return <ProviderLinkRows className="mt-2" links={links} onOpened={onOpened} />;
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-4">View on</Text>
+    <Section>
+      <Section.Header>
+        <Section.Title>View on</Section.Title>
+      </Section.Header>
       <View className="flex-row flex-wrap gap-2">
         {links.map(({ provider, url }) => (
-          <PresstableOpacity
-            className="flex-row items-center gap-2 bg-surface border border-border rounded-full px-4 py-2"
+          <LinkPill
+            external
+            icon={<ProviderIcon id={provider} size={16} />}
             key={provider}
+            label={PROVIDERS[provider].label}
             onPress={() => openExternalUrl(url)}
-          >
-            <ProviderIcon id={provider} size={16} />
-            <Text className="text-foreground font-sans text-sm">
-              {PROVIDERS[provider].label}
-            </Text>
-            <Ionicons color={muted} name="open-outline" size={12} />
-          </PresstableOpacity>
+          />
         ))}
       </View>
-    </View>
+    </Section>
   );
 }

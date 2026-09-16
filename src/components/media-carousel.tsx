@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
+import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -63,7 +64,6 @@ export function MediaCarousel({
   onViewAll,
 }: MediaCarouselProps) {
   const collapsed = useSectionCollapsed(collapseKey);
-  const muted = useThemeColor('--color-muted');
   const accent = useThemeColor('--color-accent');
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the pointer
   // events drive a Reanimated CSS transition instead (same approach as
@@ -87,11 +87,7 @@ export function MediaCarousel({
           <Text className="text-xl font-display text-foreground shrink" numberOfLines={1}>
             {title}
           </Text>
-          <Ionicons
-            color={muted}
-            name={collapsed ? 'chevron-down' : 'chevron-up'}
-            size={18}
-          />
+          <DisclosureChevron open={!collapsed} size={18} />
         </PresstableOpacity>
         {/* Sibling of the collapse toggle, never nested inside it — two
             gesture-handler buttons in one tree would double-fire the tap. */}

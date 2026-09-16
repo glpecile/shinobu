@@ -1,7 +1,6 @@
-import { Text } from 'react-native';
-
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { StudioLinksSection } from '@/features/provider-links/studio-links-section';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -35,12 +34,12 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
     <Sheet onClose={onClose} open={open && studio != null}>
       {studio != null && (
         <>
-          <Text className="text-2xl font-display text-foreground">
-            {studio.name}
-          </Text>
-          <Text className="text-accent font-sans-semibold text-xs uppercase tracking-wider mt-1">
-            Studio
-          </Text>
+          <SheetHeader>
+            <SheetHeader.Content>
+              <SheetHeader.Eyebrow>Studio</SheetHeader.Eyebrow>
+              <SheetHeader.Title>{studio.name}</SheetHeader.Title>
+            </SheetHeader.Content>
+          </SheetHeader>
 
           {canOpenStudio && (
             <Button

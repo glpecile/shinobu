@@ -1,16 +1,16 @@
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
+import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
-import { WriteResultReport } from '@/features/write-sheet/write-result-report';
+import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import { useLogMedia } from './use-log-media';
@@ -111,7 +111,6 @@ export function LogFormFields({
   onTagsChange,
   pending,
 }: LogFormFieldsProps) {
-  const muted = useThemeColor('--color-muted');
   const pushRoute = usePushRoute();
   // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
   // tags, so narrowing this would silently drop working Serializd functionality.
@@ -175,16 +174,10 @@ export function LogFormFields({
                 ({labels(tagProviders)})
               </Text>
             </Text>
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+            <TextField
               editable={!pending}
               onChangeText={onTagsChange}
               placeholder="tags, comma separated"
-              placeholderTextColor={
-                muted
-              }
               value={tags ?? ''}
             />
             <TagPicker onChange={onTagsChange} value={tags ?? ''} />
@@ -219,10 +212,8 @@ export function LogConfirmSheet({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Text className="text-2xl font-display text-foreground">{title}</Text>
-      <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-        {description}
-      </Text>
+      <WriteSheet.Title>{title}</WriteSheet.Title>
+      <WriteSheet.Description>{description}</WriteSheet.Description>
 
       <LogFormFields
         item={item}
@@ -239,49 +230,33 @@ export function LogConfirmSheet({
       />
       {/* Visible only on a report that kept the sheet open (a clean one closed
           it and became the toast): the success half of a partial outcome. */}
-      {result != null && result.succeeded.length > 0 && (
-        <Text className="text-muted font-sans text-sm mt-3">
-          {result.rewatch ? 'Logged rewatch to' : 'Logged to'}{' '}
-          {labels(result.succeeded)}.
-        </Text>
-      )}
-      {result != null && (
-        <WriteResultReport
-          failedHeadline={(failed, succeeded) =>
-            `Failed on ${labels(failed)}${
-              succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
-            }`
-          }
-          item={item}
-          outcomes={result.outcomes}
-          reconcileLine={(skipped) =>
-            `${labels(skipped)} already had this logged — skipped to keep both in sync.`
-          }
+      <WriteSheet.Report
+        failedHeadline={(failed, succeeded) =>
+          `Failed on ${labels(failed)}${
+            succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
+          }`
+        }
+        item={item}
+        reconcileLine={(skipped) =>
+          `${labels(skipped)} already had this logged — skipped to keep both in sync.`
+        }
+        result={result}
+        succeededLine={(succeeded) =>
+          `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
+        }
+      />
+      {logMedia.isError && <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>}
+      <WriteSheet.Actions>
+        <Button
+          disabled={selectedProviders.length === 0}
+          icon={<Button.Icon name="eye" />}
+          label={confirmLabel}
+          loading={pending}
+          loadingLabel={pendingLabel}
+          onPress={onConfirm}
         />
-      )}
-      {logMedia.isError && (
-        <Text className="text-accent font-sans text-sm mt-3">
-          Could not log. Try again.
-        </Text>
-      )}
-      {/* The fan-out can take seconds across four providers — a text swap to
-          "Logging…" alone read as a stuck button. */}
-      <Button
-        className="mt-6"
-        disabled={selectedProviders.length === 0}
-        icon={<Button.Icon name="eye" />}
-        label={confirmLabel}
-        loading={pending}
-        loadingLabel={pendingLabel}
-        onPress={onConfirm}
-      />
-      <Button
-        className="mt-2"
-        icon={<Button.Icon name="close" />}
-        label="Cancel"
-        onPress={onClose}
-        variant="quiet"
-      />
+        <WriteSheet.Cancel onPress={onClose} />
+      </WriteSheet.Actions>
     </Sheet>
   );
 }

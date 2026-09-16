@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
 import { Text, View } from 'react-native';
 
+import { Section } from '@/components/section';
 import { releaseStops, type ReleaseStop } from '@/features/release-timeline/stops';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
@@ -117,8 +118,10 @@ export function ReleaseTimeline({ item }: { item: NormalizedMediaItem }) {
   if (stops.length === 0) return null;
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-2">Release</Text>
+    <Section>
+      <Section.Header>
+        <Section.Title>Release</Section.Title>
+      </Section.Header>
       {stops.map((stop, index) => (
         <Stop
           first={index === 0}
@@ -127,6 +130,6 @@ export function ReleaseTimeline({ item }: { item: NormalizedMediaItem }) {
           stop={stop}
         />
       ))}
-    </View>
+    </Section>
   );
 }

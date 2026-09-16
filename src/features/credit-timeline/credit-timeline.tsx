@@ -24,6 +24,7 @@ import { List, type LegendListRef } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-top-fab';
+import { Section } from '@/components/section';
 import { SegmentedControl } from '@/components/segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
@@ -324,17 +325,15 @@ export function CreditTimeline({
         ListHeaderComponent={
           <Column>
             {header}
-            <View className="px-6 pt-2">
-              {/* The section head the details page gives its sections: it
-                  names what the two control rows filter, and marks where
-                  the hero ends and the list begins. */}
-              <View className="flex-row items-baseline gap-2 mb-3">
-                <Text className="font-display text-xl text-foreground">Filmography</Text>
-                <Text className="text-muted font-sans text-xs">
-                  {filmography.credits.length}{' '}
-                  {filmography.credits.length === 1 ? 'title' : 'titles'}
-                </Text>
-              </View>
+            {/* The details page's section head: it names what the two control
+                rows filter, and marks where the hero ends and the list begins. */}
+            <Section className="mt-2 px-6">
+              <Section.Header>
+                <Section.Title>Filmography</Section.Title>
+                <Section.Count>
+                  {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
+                </Section.Count>
+              </Section.Header>
               <View className="md:flex-row md:items-center pb-3">
                 <SegmentedControl
                   accessibilityLabel="Format"
@@ -363,7 +362,7 @@ export function CreditTimeline({
                   />
                 )}
               </View>
-            </View>
+            </Section>
           </Column>
         }
         // Rows derive entirely from props (the diary's reason, and its same
@@ -446,11 +445,11 @@ export function CreditTimelineSkeleton({ header }: { header: ReactNode }) {
   return (
     <View className="w-full max-w-4xl self-center">
       {header}
-      <View className="px-6 pt-2">
-        <View className="flex-row items-center gap-2 mb-3">
-          <Text className="font-display text-xl text-foreground">Filmography</Text>
+      <Section className="mt-2 px-6">
+        <Section.Header>
+          <Section.Title>Filmography</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
-        </View>
+        </Section.Header>
         <View className="md:flex-row md:items-center pb-3">
           {/* The segmented control is 30px tall, the role button 38. */}
           <Skeleton className="h-[30px] w-52 rounded-full" />
@@ -459,7 +458,7 @@ export function CreditTimelineSkeleton({ header }: { header: ReactNode }) {
             delay={staggerDelay(1)}
           />
         </View>
-      </View>
+      </Section>
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>
           <RailHead.Skeleton lead="title" />

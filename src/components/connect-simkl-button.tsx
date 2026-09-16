@@ -3,19 +3,19 @@ import { openAuthSessionAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Linking, Platform, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
+import { TextField } from '@/components/text-field';
 import { SIMKL_CREATE_APP_URL } from '@/lib/providers/external-urls';
 import {
   beginSimklAuthFlow,
   clearSimklAuthFlow,
 } from '@/lib/providers/simkl/auth';
 import { simklClientId } from '@/lib/providers/simkl/config';
-import { useThemeColor } from '@/lib/theme-color';
 import {
   getSimklRedirectUri,
   SIMKL_REDIRECT_URIS,
@@ -147,7 +147,6 @@ export function ConnectSimklButton() {
     storedClientId,
     setStoredClientId,
   } = useSimklConnect();
-  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -223,15 +222,11 @@ export function ConnectSimklButton() {
           control={control}
           name="clientId"
           render={({ field }) => (
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+            <TextField
               onBlur={field.onBlur}
               onChangeText={field.onChange}
               onSubmitEditing={() => submitClientId()}
               placeholder="Simkl Client ID"
-              placeholderTextColor={muted}
               returnKeyType="done"
               value={field.value}
             />

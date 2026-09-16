@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { RoundIconButton } from '@/components/round-icon-button';
 import { cn } from '@/lib/cn';
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { usePushRoute } from '@/lib/navigation';
@@ -23,7 +24,7 @@ const RAIL_WIDTH = 64;
 /** Fixed icon column so icons never shift between expanded/collapsed — only the
  *  labels reveal and the width slides. `RAIL_WIDTH` minus the `px-2` gutters. */
 const ICON_COL = RAIL_WIDTH - 16;
-/** Diameter of the floating edge toggle — matches FloatingBackButton (w-10). */
+/** Diameter of `RoundIconButton` (w-10). */
 const TOGGLE_SIZE = 40;
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
@@ -141,23 +142,20 @@ function PanelLeftIcon({ color }: { color: string }) {
 }
 
 /**
- * The collapse toggle: a round button floating at the bottom of the sidebar's
- * right edge — same treatment as `FloatingBackButton` (round, bg-surface/90,
- * bordered) so it reads as one design language with the detail screens' back
- * button. Its `left` slides in sync with the sidebar width.
+ * The collapse toggle floating at the bottom of the sidebar's right edge. Its
+ * `left` slides in sync with the sidebar width.
  */
 function SidebarToggle({ collapsed }: { collapsed: boolean }) {
   const edge = collapsed ? RAIL_WIDTH : SIDEBAR_WIDTH;
 
   return (
-    <PresstableOpacity
-      accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      className="hidden md:flex absolute z-30 w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center"
-      style={{ bottom: 18, left: edge - TOGGLE_SIZE / 2, ...leftTransition }}
+    <RoundIconButton
+      className="hidden md:flex absolute z-30"
+      icon={<PanelLeftIcon color={COLOR.foreground} />}
+      label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       onPress={toggleSidebarCollapsed}
-    >
-      <PanelLeftIcon color={COLOR.foreground} />
-    </PresstableOpacity>
+      style={{ bottom: 18, left: edge - TOGGLE_SIZE / 2, ...leftTransition }}
+    />
   );
 }
 

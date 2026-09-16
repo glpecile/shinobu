@@ -2,10 +2,11 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
-import { cn } from '@/lib/cn';
+import { ViewToggle } from '@/components/view-toggle';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
@@ -45,34 +46,33 @@ function FilterPill({
   onClear: () => void;
 }) {
   const background = useThemeColor('--color-background');
-  const muted = useThemeColor('--color-muted');
 
   if (active == null) {
     return (
-      <PresstableOpacity
-        accessibilityHint="Choose which tracker's watchlist to show"
+      <Button
         accessibilityLabel="Filter: all trackers"
-        accessibilityRole="button"
-        className="flex-row items-center gap-2 rounded-full border border-border px-3 py-1.5"
+        icon={<Button.Icon name="filter-outline" />}
+        label="All trackers"
         onPress={onOpen}
-      >
-        <Ionicons color={muted} name="funnel-outline" size={13} />
-        <Text className="text-foreground font-sans text-sm">All trackers</Text>
-        <Ionicons color={muted} name="chevron-down" size={11} />
-      </PresstableOpacity>
+        shape="pill"
+        size="sm"
+        trailingIcon={<Button.Icon name="chevron-down" />}
+        variant="quiet"
+      />
     );
   }
 
   // Two sibling pressables inside one bordered shell, never nested: a
   // gesture-handler button inside another lets the ✕ press bubble into the
   // one that opens the sheet (the same rule the poster wall's ⋯ follows).
+  // The same-colour border matches the idle `Button`'s height.
   return (
-    <View className="flex-row items-center rounded-full bg-foreground">
+    <View className="flex-row items-center rounded-full bg-foreground border border-foreground">
       <PresstableOpacity
         accessibilityHint="Choose a different tracker"
         accessibilityLabel={`Filter: ${PROVIDERS[active].label}`}
         accessibilityRole="button"
-        className="flex-row items-center gap-2 pl-3 pr-2 py-1.5"
+        className="flex-row items-center gap-2 pl-3 pr-2 py-2"
         onPress={onOpen}
       >
         <ProviderIcon id={active} size={14} />
@@ -83,7 +83,7 @@ function FilterPill({
       <PresstableOpacity
         accessibilityLabel="Show all trackers"
         accessibilityRole="button"
-        className="pl-1 pr-2.5 py-1.5"
+        className="pl-1 pr-2.5 py-2"
         onPress={onClear}
       >
         <Ionicons
@@ -92,44 +92,6 @@ function FilterPill({
           size={14}
         />
       </PresstableOpacity>
-    </View>
-  );
-}
-
-/** Grid ⇄ list, shared with the anime seasons explorer. */
-export function ViewToggle({
-  view,
-  onChange,
-}: {
-  view: WatchlistView;
-  onChange: (view: WatchlistView) => void;
-}) {
-  const foreground = useThemeColor('--color-foreground');
-  const muted = useThemeColor('--color-muted');
-  const tint = (on: boolean) => {
-    const color = on ? foreground : muted;
-    return color;
-  };
-
-  return (
-    <View className="flex-row rounded-md border border-border overflow-hidden">
-      {(
-        [
-          { id: 'grid', icon: 'grid', label: 'Poster grid' },
-          { id: 'list', icon: 'list', label: 'List' },
-        ] as const
-      ).map(({ id, icon, label }) => (
-        <PresstableOpacity
-          accessibilityLabel={label}
-          accessibilityRole="button"
-          accessibilityState={{ selected: view === id }}
-          className={cn('w-9 h-7 items-center justify-center', view === id && 'bg-surface')}
-          key={id}
-          onPress={() => onChange(id)}
-        >
-          <Ionicons color={tint(view === id)} name={icon} size={15} />
-        </PresstableOpacity>
-      ))}
     </View>
   );
 }

@@ -8,7 +8,6 @@ import {
   Linking,
   Platform,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -16,9 +15,9 @@ import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { PresstableOpacity } from '@/components/presstable';
 import { Steps } from '@/components/steps';
+import { TextField } from '@/components/text-field';
 import { TRAKT_CREATE_APP_URL } from '@/lib/providers/external-urls';
 import { TRAKT_AUTHORIZE_URL } from '@/lib/providers/trakt/config';
-import { useThemeColor } from '@/lib/theme-color';
 import {
   getTraktRedirectUri,
   TRAKT_CORS_ORIGINS,
@@ -81,21 +80,16 @@ function CredentialInput({
   placeholder: string;
   onSubmit: () => void;
 }) {
-  const muted = useThemeColor('--color-muted');
   return (
     <Controller
       control={control}
       name={name}
       render={({ field }) => (
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          className="border border-border bg-surface text-foreground px-4 py-3 rounded-full font-sans"
+        <TextField
           onBlur={field.onBlur}
           onChangeText={field.onChange}
           onSubmitEditing={onSubmit}
           placeholder={placeholder}
-          placeholderTextColor={muted}
           returnKeyType="done"
           value={field.value}
         />

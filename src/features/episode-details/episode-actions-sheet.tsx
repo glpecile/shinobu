@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { hasAired } from '@/lib/time/has-aired';
@@ -51,28 +52,19 @@ function SheetBody({
   const logs = useEpisodeLogs(item, season, number, episode.firstAired);
   const aired = hasAired(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
-  const meta = episodeMetaLine(episode);
+
+  const metaLine = episodeMetaLine(episode);
 
   return (
     <>
-      {/* Same header shape as the card-actions sheet: artwork beside the
-          title, one muted line under it, so the long-press dialogs read as
-          one control. The full title wraps here — the row's clamp is the
-          reason this sheet exists. */}
-      <View className="flex-row items-center gap-4">
+      <SheetHeader>
         <EpisodeStill className="w-32 rounded" title={episode.title} uri={view.still} />
-        <View className="flex-1">
-          <Text className="text-accent text-xs font-sans-semibold uppercase tracking-wider">
-            {episodeCode(season, number)}
-          </Text>
-          <Text className="text-2xl font-display text-foreground" numberOfLines={3}>
-            {episode.title}
-          </Text>
-          {meta !== '' && (
-            <Text className="text-muted font-sans text-sm mt-1">{meta}</Text>
-          )}
-        </View>
-      </View>
+        <SheetHeader.Content>
+          <SheetHeader.Eyebrow>{episodeCode(season, number)}</SheetHeader.Eyebrow>
+          <SheetHeader.Title>{episode.title}</SheetHeader.Title>
+          {metaLine !== '' && <SheetHeader.Subtitle>{metaLine}</SheetHeader.Subtitle>}
+        </SheetHeader.Content>
+      </SheetHeader>
 
       <EpisodeLogs className="mt-4" logs={logs} />
 

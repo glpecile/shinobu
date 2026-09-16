@@ -163,22 +163,28 @@ function WatchlistGrid({
   // it would send the user chasing a network problem that isn't there.
   if (entries.length === 0 && errors.length > 0) {
     return (
-      <CenteredNotice
-        actionIcon={<Button.Icon name="refresh" />}
-        actionLabel="Try again"
-        body="Your watchlist couldn’t be loaded. Check your connection and try again."
-        onAction={() => void refresh()}
-        title="Something went wrong"
-      />
+      <CenteredNotice>
+        <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+        <CenteredNotice.Body>
+          Your watchlist couldn’t be loaded. Check your connection and try again.
+        </CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label="Try again"
+          onPress={() => void refresh()}
+        />
+      </CenteredNotice>
     );
   }
 
   if (entries.length === 0) {
     return (
-      <CenteredNotice
-        body="Anything you add to a connected tracker’s watchlist shows up here."
-        title="Nothing here yet"
-      />
+      <CenteredNotice>
+        <CenteredNotice.Title>Nothing here yet</CenteredNotice.Title>
+        <CenteredNotice.Body>
+          Anything you add to a connected tracker’s watchlist shows up here.
+        </CenteredNotice.Body>
+      </CenteredNotice>
     );
   }
 
@@ -187,13 +193,17 @@ function WatchlistGrid({
   // provider's leg failed this gather and legitimately holds nothing.
   const layout =
     shown.length === 0 ? (
-      <CenteredNotice
-        actionIcon={<Button.Icon name="albums-outline" />}
-        actionLabel="Show all trackers"
-        body={`Nothing on your ${provider == null ? '' : PROVIDERS[provider].label} watchlist right now.`}
-        onAction={() => onProviderChange(null)}
-        title="Nothing here"
-      />
+      <CenteredNotice>
+        <CenteredNotice.Title>Nothing here</CenteredNotice.Title>
+        <CenteredNotice.Body>
+          {`Nothing on your ${provider == null ? '' : PROVIDERS[provider].label} watchlist right now.`}
+        </CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="albums-outline" />}
+          label="Show all trackers"
+          onPress={() => onProviderChange(null)}
+        />
+      </CenteredNotice>
     ) : (
       <Layout
         entries={shown}
@@ -302,7 +312,10 @@ export default function WatchlistScreen() {
       </View>
       <Suspense
         fallback={
-          <CenteredNotice body="Loading your watchlist…" title="Watchlist" />
+          <CenteredNotice>
+            <CenteredNotice.Title>Watchlist</CenteredNotice.Title>
+            <CenteredNotice.Body>Loading your watchlist…</CenteredNotice.Body>
+          </CenteredNotice>
         }
       >
         <WatchlistGrid onProviderChange={setProvider} provider={provider} />
@@ -321,13 +334,15 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (
     <View className="flex-1 bg-background">
-      <CenteredNotice
-        actionIcon={<Button.Icon name="refresh" />}
-        actionLabel="Try again"
-        body="Your watchlist couldn’t be displayed."
-        onAction={retry}
-        title="Something went wrong"
-      />
+      <CenteredNotice>
+        <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+        <CenteredNotice.Body>Your watchlist couldn’t be displayed.</CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label="Try again"
+          onPress={retry}
+        />
+      </CenteredNotice>
       <PresstableOpacity
         className="self-center mb-12"
         onPress={() => router.replace(routes.home)}

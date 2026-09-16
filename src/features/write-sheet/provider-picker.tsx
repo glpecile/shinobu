@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 import { useState } from 'react';
 
+import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
@@ -150,7 +151,6 @@ export function ProviderPicker({
 }: ProviderPickerProps & { onConnect?: () => void }) {
   const { targets, selectedProviders } = props;
   const [expanded, setExpanded] = useState(false);
-  const muted = useThemeColor('--color-muted');
   if (targets.length === 0) return <NoTargets onConnect={onConnect} />;
   const selected = targets.filter((id) => selectedProviders.includes(id));
   const selectionLabel =
@@ -184,11 +184,7 @@ export function ProviderPicker({
             {selectionLabel}
           </Text>
         </View>
-        <Ionicons
-          color={muted}
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-        />
+        <DisclosureChevron open={expanded} size={18} />
       </PresstableOpacity>
       {expanded && (
         <View className="mt-2">

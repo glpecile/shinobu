@@ -1,5 +1,5 @@
 import { KeyboardAvoidingView as ControllerKeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { withUniwind } from 'uniwind';
+import { withUniwind } from '@/lib/with-uniwind';
 
 /**
  * The app's keyboard-avoiding view — react-native-keyboard-controller's

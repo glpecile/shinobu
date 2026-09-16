@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 
+import { Eyebrow } from '@/components/eyebrow';
 import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
@@ -29,9 +30,7 @@ export function YearSheet({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-        Jump to year
-      </Text>
+      <Eyebrow className="mb-3">Jump to year</Eyebrow>
       <View className="flex-row flex-wrap gap-2">
         {years.map((year) => {
           const selected = year === value;

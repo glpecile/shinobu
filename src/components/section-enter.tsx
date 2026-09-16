@@ -30,9 +30,7 @@ const sectionFading = {
  */
 export function SectionEnter({
   children,
-  // Defaulted, not left undefined: uniwind hands `className` to styleq, which
-  // rejects `undefined` outright ('typeof undefined is not "string" or "null"').
-  className = '',
+  className,
 }: {
   children: ReactNode;
   className?: string;

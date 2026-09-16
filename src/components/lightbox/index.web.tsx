@@ -13,6 +13,7 @@ import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
 import { useLightbox, useLightboxControls } from '@/components/lightbox/state';
 import { PresstableOpacity } from '@/components/presstable';
+import { RoundIconButton } from '@/components/round-icon-button';
 import { useThemeColor } from '@/lib/theme-color';
 
 /** Exit motion runs this long before the Modal unmounts — keep in sync below. */
@@ -159,17 +160,11 @@ export function Lightbox() {
               entering={FadeIn.delay(120).duration(200)}
               exiting={FadeOut.duration(EXIT_MS)}
             >
-              <PresstableOpacity
-                accessibilityLabel="Close image viewer"
-                className="w-10 h-10 rounded-full bg-surface/90 border border-border items-center justify-center"
+              <RoundIconButton
+                icon={<Ionicons color={foreground} name="close" size={22} />}
+                label="Close image viewer"
                 onPress={closeLightbox}
-              >
-                <Ionicons
-                  color={foreground}
-                  name="close"
-                  size={22}
-                />
-              </PresstableOpacity>
+              />
             </AnimatedView>
           </>
         )}

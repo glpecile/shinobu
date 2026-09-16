@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
+import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
@@ -13,9 +14,10 @@ import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
+import { LinkPill } from '@/components/link-pill';
 import { MorphText } from '@/components/morph-text';
-import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
+import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
@@ -247,19 +249,15 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   if (studios.length === 0) return null;
 
   return (
-    <View className="mt-8">
-      <Text className="text-xl font-display text-foreground mb-4">
-        Studios
-      </Text>
+    <Section>
+      <Section.Header>
+        <Section.Title>Studios</Section.Title>
+      </Section.Header>
       <View className="flex-row flex-wrap gap-2">
         {studios.map((entry) => (
-          <PresstableOpacity
-            // The border lives on the pressable's own className rather than an
-            // inner View because uniwind maps it through the wrapper here — the
-            // Android border gotcha applies to hand-rolled inner boxes, which
-            // this is not (docs/solutions/pressto-border-not-drawn-on-android.md).
-            className="bg-surface border border-border rounded-full px-4 py-2"
+          <LinkPill
             key={entry.id}
+            label={entry.name}
             onLongPress={canOpenStudios ? () => openStudio(entry) : undefined}
             onPress={
               canOpenStudios
@@ -271,11 +269,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
                     )
                 : () => openStudio(entry)
             }
-          >
-            <Text className="text-foreground font-sans text-sm">
-              {entry.name}
-            </Text>
-          </PresstableOpacity>
+          />
         ))}
       </View>
       {/* Kept (not nulled) while closing so the sheet's content doesn't vanish
@@ -285,7 +279,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
         open={sheetOpen}
         studio={studio}
       />
-    </View>
+    </Section>
   );
 }
 
@@ -575,9 +569,7 @@ export default function DetailsScreen() {
             />
             <View className="flex-1 ml-4 pb-1">
               <View className="flex-row items-center gap-3">
-                <Text className="text-accent text-xs font-sans-semibold uppercase tracking-wider">
-                  {shown.type}
-                </Text>
+                <Eyebrow tone="accent">{shown.type}</Eyebrow>
                 {shown.rating != null && (
                   <View className="flex-row items-center gap-1">
                     <Ionicons

@@ -26,7 +26,7 @@ const fading = css.keyframes({
  */
 export function BlurEnter({
   children,
-  className = '',
+  className,
 }: {
   children: ReactNode;
   className?: string;

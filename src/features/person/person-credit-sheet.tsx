@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
+import { SheetHeader } from '@/components/sheet-header';
 import { Skeleton } from '@/components/skeleton';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { usePushRoute } from '@/lib/navigation';
@@ -118,28 +119,20 @@ export function PersonCreditSheet({
     <Sheet onClose={onClose} open={open && credit != null}>
       {credit != null && (
         <>
-          {/* Same header shape as the card-actions sheet — image, title, one
-              muted line under it — so the two long-press dialogs read as one
-              control. The role sits in that line rather than a paragraph below
-              a red CAST chip: it is the answer the long-press asked for, and
-              it wraps here instead of clamping (the card's ellipsis is the
-              whole reason this sheet exists). */}
-          <View className="flex-row items-center gap-4">
+          {/* The role is the subtitle rather than a paragraph below a CAST
+              chip: it is the answer the long-press asked for. */}
+          <SheetHeader>
             <PersonAvatar
               className="w-20 h-20"
               headshot={credit.headshot}
               name={credit.name}
               textClassName="text-xl"
             />
-            <View className="flex-1">
-              <Text className="text-2xl font-display text-foreground">
-                {credit.name}
-              </Text>
-              <Text className="text-muted font-sans text-sm mt-1">
-                {creditRoleLine(credit)}
-              </Text>
-            </View>
-          </View>
+            <SheetHeader.Content>
+              <SheetHeader.Title>{credit.name}</SheetHeader.Title>
+              <SheetHeader.Subtitle>{creditRoleLine(credit)}</SheetHeader.Subtitle>
+            </SheetHeader.Content>
+          </SheetHeader>
 
           <CreditMeta
             loading={credit.tmdbId != null && hasTmdb && personQuery.isPending}

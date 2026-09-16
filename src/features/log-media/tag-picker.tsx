@@ -8,10 +8,11 @@ import {
 } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
+import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
-import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import type { LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import { useThemeColor } from '@/lib/theme-color';
 import { useRecentTags } from '@/state/prefs/recent-tags';
@@ -302,7 +303,6 @@ export function TagPicker({
   const letterboxdTags = useLetterboxdTagsQuery();
   const recentTags = useRecentTags();
   const reduceMotion = useReducedMotion();
-  const muted = useThemeColor('--color-muted');
   // The field as the sheet opened, and the only thing the pinning reads.
   // Pinning off the *live* value would re-sort the row on every tap, sliding
   // the chips out from under the finger that just pressed one — the same
@@ -462,20 +462,7 @@ export function TagPicker({
           <Text className="text-muted font-sans text-xs">
             {expanded ? 'Show less' : 'Show more'}
           </Text>
-          <AnimatedView
-            style={{
-              transform: [{ rotate: expanded ? '180deg' : '0deg' }],
-              transitionProperty: 'transform',
-              transitionDuration: reduceMotion ? 0 : DURATION.toggle,
-              transitionTimingFunction: EASE_IN_OUT,
-            }}
-          >
-            <Ionicons
-              color={muted}
-              name="chevron-down"
-              size={12}
-            />
-          </AnimatedView>
+          <DisclosureChevron open={expanded} size={12} />
         </PresstableOpacity>
       </AnimatedView>
     </View>

@@ -6,6 +6,7 @@ import { Text, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { CARD_SHELL } from '@/components/card-shell';
+import { Eyebrow } from '@/components/eyebrow';
 import { cn } from '@/lib/cn';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
 import { cancelAllScheduledNotifications, scheduleTestNotification } from '@/features/notifications/scheduler';
@@ -56,9 +57,7 @@ export function NotificationsSettingsSection() {
 
   return (
     <View>
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-        Notifications
-      </Text>
+      <Eyebrow className="mb-3">Notifications</Eyebrow>
       <View className={cn(CARD_SHELL, 'gap-3')}>
         <View className="flex-row items-center justify-between">
           <View className="flex-1 mr-3">

@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
 import { Text, View } from 'react-native';
 
@@ -50,9 +51,7 @@ function HiddenItemsSection() {
 
   return (
     <View>
-      <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-3">
-        Hidden items
-      </Text>
+      <Eyebrow className="mb-3">Hidden items</Eyebrow>
       <View className="gap-3">
         {hidden.map((item) => (
           <View
