@@ -233,7 +233,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     <View className="flex-row items-center gap-1.5 mt-1.5">
       <Ionicons
         color={accent}
-        name="checkmark-circle"
+        name={/^(Re)?(watch|read)ing\b/i.test(label) ? 'eye' : 'checkmark-circle'}
         size={13}
       />
       <MorphText className="text-muted font-sans text-sm">{label}</MorphText>
