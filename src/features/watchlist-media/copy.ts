@@ -243,13 +243,6 @@ export function isWatchlistCtaSettled(
   );
 }
 
-/** "Already on Trakt, AniList." — the all-skip report's own headline. */
-export function alreadyOnSentence(
-  reasonedSkips: SkippedOutcomesSplit['reasonedSkips'],
-): string {
-  return `Already on ${providerLabelList(reasonedSkips.map((skip) => skip.provider))}.`;
-}
-
 /** "Added to Trakt, AniList." — the success headline. */
 export function addedToSentence(succeeded: readonly ProviderId[]): string {
   return `Added to ${providerLabelList(succeeded)}.`;

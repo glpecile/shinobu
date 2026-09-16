@@ -4,7 +4,6 @@ import {
   manualLinkForOutcome,
   okReasonOutcomes,
   splitSkippedOutcomes,
-  type SkippedOutcomesSplit,
 } from '@/features/log-media/manual-write-links';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { OutcomeLink, type OutcomeLinkTone } from '@/features/log-media/outcome-link';
@@ -69,12 +68,6 @@ export interface WriteResultReportProps {
   ) => string;
   /** The reconcile-skip line ("already had this logged"); omitted → not rendered. */
   reconcileLine?: (skipped: readonly ProviderId[]) => string;
-  /**
-   * The all-skip headline (plan 0031 U8): every applicable provider reported an
-   * already-there skip — the most common repeat interaction, which would
-   * otherwise render as a list of footnotes with no sentence.
-   */
-  allSkipLine?: (skips: SkippedOutcomesSplit['reasonedSkips']) => string;
 }
 
 /**
@@ -95,7 +88,6 @@ export function WriteResultReport({
   verb,
   failedHeadline,
   reconcileLine,
-  allSkipLine,
 }: WriteResultReportProps) {
   const failed = outcomes.filter((outcome) => outcome.status === 'error');
   const succeeded = outcomes
@@ -103,8 +95,6 @@ export function WriteResultReport({
     .map((outcome) => outcome.provider);
   const { reconcileSkipped, reasonedSkips } = splitSkippedOutcomes(outcomes);
   const okReasons = okReasonOutcomes(outcomes);
-  const allSkip =
-    failed.length === 0 && succeeded.length === 0 && reasonedSkips.length > 0;
 
   return (
     <>
@@ -130,11 +120,6 @@ export function WriteResultReport({
             />
           ))}
         </View>
-      )}
-      {allSkip && allSkipLine != null && (
-        <Text className="text-muted font-sans text-sm mt-3">
-          {allSkipLine(reasonedSkips)}
-        </Text>
       )}
       {reconcileSkipped.length > 0 && reconcileLine != null && (
         <Text className="text-muted font-sans text-sm mt-3">
