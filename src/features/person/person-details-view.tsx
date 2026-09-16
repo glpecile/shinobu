@@ -5,6 +5,7 @@ import Head from '@/components/head';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { CopyTitle } from '@/features/copy-title/copy-title';
 import { CreditTimeline } from '@/features/credit-timeline/credit-timeline';
 import { mergeCreditRows } from '@/features/credit-timeline/group';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
@@ -62,9 +63,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                 </View>
               )}
               <View className="flex-1">
-                <Text className="text-3xl font-display text-foreground">
-                  {person.name}
-                </Text>
+                <CopyTitle title={person.name} />
                 {meta !== '' && (
                   <Text className="text-muted font-sans text-sm mt-1.5">{meta}</Text>
                 )}
