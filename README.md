@@ -7,11 +7,11 @@
 <p align="center">A DB-less, cross-platform harness for your media trackers — log a movie, show, or anime once and every one you've connected stays in sync.</p>
 
 <p align="center">
-  <img src="./docs/images/screenshot-home.png" alt="Shinobu home — “One log. Every tracker.” hero with floating provider tiles, beside the web sidebar" />
+  <img src="./docs/images/screenshot-home.png" alt="Shinobu home — Continue Watching, this week’s calendar, and your watchlist, beside the web sidebar" />
 </p>
 
 <p align="center">
-  <img src="./docs/images/screenshot-details.png" width="49%" alt="A film's detail screen — backdrop, poster, rating, overview, and cast" />
+  <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen — backdrop, poster, romaji and native titles, progress, seasons, and related entries" />
   <img src="./docs/images/screenshot-person.png" width="49%" alt="A person's page — headshot, biography, and filmography down one timeline, newest first, filtered by format and role" /><br />
   <sub>Detail and person screens, both TMDB-first — no tracker connected.</sub>
 </p>
