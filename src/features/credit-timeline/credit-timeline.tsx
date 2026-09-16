@@ -117,8 +117,9 @@ function TimelineHead({
 }
 
 /**
- * The accent tick at a row's edge once a connected tracker records the title
- * as watched — the season accordion's mark, at the diary's dot size. Always
+ * The accent eye at a row's edge once a connected tracker records the title
+ * as watched — Letterboxd's "seen" glyph, at the diary's dot size; a check
+ * here reads as done, not seen. Always
  * mounted at a fixed width and faded by state rather than conditionally
  * rendered: the answer arrives after the row does (a library snapshot
  * resolving), and a mark that pops in reads as a glitch where one that
@@ -143,7 +144,7 @@ function WatchedMark({ item }: { item: NormalizedMediaItem }) {
       className="w-4 items-end"
       style={style}
     >
-      <Ionicons color={accent} name="checkmark-circle" size={14} />
+      <Ionicons color={accent} name="eye" size={14} />
     </AnimatedView>
   );
 }
