@@ -1,5 +1,5 @@
 import { KeyboardAwareScrollView as ControllerKeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { withUniwind } from 'uniwind';
+import { withUniwind } from '@/lib/with-uniwind';
 
 /**
  * Scroll view that both pads for the soft keyboard *and* scrolls the focused

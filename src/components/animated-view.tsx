@@ -1,5 +1,5 @@
 import Animated from 'react-native-reanimated';
-import { withUniwind } from 'uniwind';
+import { withUniwind } from '@/lib/with-uniwind';
 
 /**
  * Reanimated's Animated.View with uniwind className support — className on a

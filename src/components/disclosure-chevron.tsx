@@ -16,7 +16,7 @@ export function DisclosureChevron({
   open,
   from = 'down',
   size,
-  className = '',
+  className,
 }: {
   open: boolean;
   from?: 'down' | 'forward';

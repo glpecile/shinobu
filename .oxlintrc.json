@@ -185,6 +185,13 @@
           {
             "name": "uniwind",
             "importNames": [
+              "withUniwind"
+            ],
+            "message": "Import { withUniwind } from @/lib/with-uniwind \u2014 uniwind's own passes an omitted className to styleq as undefined and crashes the web build (docs/solutions/uniwind-classname-undefined-throws.md)."
+          },
+          {
+            "name": "uniwind",
+            "importNames": [
               "useCSSVariable"
             ],
             "message": "Import { useThemeColor } from @/lib/theme-color \u2014 the web build is a static export and reading a CSS variable in JS there resolves to nothing at prerender time, which React then never repaints (AGENTS.md: Theming). A colour that gets composed rather than painted is the one exception; say so in a comment and disable this rule on the line."

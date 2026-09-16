@@ -1,6 +1,6 @@
 import { Image as ExpoImage, type ImageProps } from 'expo-image';
 import type { ComponentProps } from 'react';
-import { withUniwind } from 'uniwind';
+import { withUniwind } from '@/lib/with-uniwind';
 
 import { DURATION } from '@/lib/motion';
 
