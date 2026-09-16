@@ -185,22 +185,23 @@ export function CardActionsSheet({
     open && canWatchlist && hostRemoval == null,
   );
   const removal = hostRemoval ?? cachedRemoval;
-  // R12 as amended (U16): once the item is known to be on a watchlist, the add
-  // row is offered only while some applicable connected provider is still
-  // missing it — a film on the Letterboxd watchlist and not on Simkl's is
-  // exactly where an add is most useful, and one already on every tracker it
-  // can reach has nothing left to offer (so no disabled row stands in for the
-  // removal below). An item the gather doesn't name keeps the default-on row.
-  const showWatchlistAdd =
-    canWatchlist &&
-    (removal == null ||
-      shouldOfferWatchlistAdd(
-        removal.entry,
-        connected,
-        currentPlatform(),
-        removal.errors,
-        removal.incomplete,
-      ));
+  // One watchlist row, never "Add to" stacked on "Remove from". R12 as amended
+  // (U16): the add stays offered while some applicable connected provider is
+  // still missing the item, so a partially-listed one gets the add — as on the
+  // details screen — except on `/watchlist`, whose verb is the removal.
+  const watchlistVerb = !canWatchlist
+    ? null
+    : removal != null &&
+        (hostRemoval != null ||
+          !shouldOfferWatchlistAdd(
+            removal.entry,
+            connected,
+            currentPlatform(),
+            removal.errors,
+            removal.incomplete,
+          ))
+      ? 'remove'
+      : 'add';
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
@@ -274,7 +275,7 @@ export function CardActionsSheet({
                 0032 U3). The picker stays mounted through the write — a toast
                 can't carry a link, so a Trakt 420, an expired session or a
                 manual row lands there; only a clean report closes the sheet. */}
-            {showWatchlistAdd && (
+            {watchlistVerb === 'add' && (
               <WatchlistMediaButton
                 item={item}
                 key={`watchlist-${item.id}`}
@@ -288,7 +289,7 @@ export function CardActionsSheet({
                 lands, so the picker is the only place its partial-failure
                 report, its AniList refusal or its unknown-membership rows can
                 still be read. */}
-            {canWatchlist && removal != null && (
+            {watchlistVerb === 'remove' && removal != null && (
               <UnwatchlistMediaButton
                 entry={removal.entry}
                 errors={removal.errors}
