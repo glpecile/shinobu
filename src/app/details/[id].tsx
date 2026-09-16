@@ -20,6 +20,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
+import { CopyTitle } from '@/features/copy-title/copy-title';
 import { RelationsSection } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
@@ -590,9 +591,7 @@ export default function DetailsScreen() {
                   </View>
                 )}
               </View>
-              <Text className="text-3xl font-display text-foreground mt-1">
-                {shown.title}
-              </Text>
+              <CopyTitle item={shown} />
               {alternates !== '' && (
                 <Text className="text-muted font-sans text-sm mt-0.5">
                   {alternates}
