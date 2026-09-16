@@ -9,11 +9,8 @@ import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
-import {
-  creditRoleLine,
-  PersonAvatar,
-  type PersonCredit,
-} from '@/features/person';
+import { PersonAvatar } from '@/features/person/person-avatar';
+import { creditRoleLine, type PersonCredit } from '@/features/person/person-credit-sheet';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';

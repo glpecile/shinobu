@@ -12,7 +12,7 @@
 
 <p align="center">
   <img src="./docs/images/screenshot-details.png" width="49%" alt="A film's detail screen — backdrop, poster, rating, overview, and cast" />
-  <img src="./docs/images/screenshot-person.png" width="49%" alt="A person's page — headshot, biography, and filmography grouped by department" /><br />
+  <img src="./docs/images/screenshot-person.png" width="49%" alt="A person's page — headshot, biography, and filmography down one timeline, newest first, filtered by format and role" /><br />
   <sub>Detail and person screens, both TMDB-first — no tracker connected.</sub>
 </p>
 

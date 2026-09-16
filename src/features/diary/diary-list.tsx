@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,7 +12,7 @@ import { ActionableRow } from '@/components/actionable-row';
 import { Button } from '@/components/button';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
-import { PresstableOpacity } from '@/components/presstable';
+import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import {
   SCROLL_TO_TOP_THRESHOLD,
   ScrollToTopFab,
@@ -27,7 +26,6 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
@@ -58,11 +56,11 @@ import {
  * geometry) are gone.
  *
  * Kept flat, not nested in per-day containers: the list virtualizes one stream
- * of rows, so a day cannot own a wrapping View without defeating it.
+ * of rows, so a day cannot own a wrapping View without defeating it. The rail's
+ * own geometry lives with the head it shares with the filmography
+ * (`components/rail-head`).
  */
-const RAIL_W = 'w-14';
-/** Centre of `RAIL_W` (56px), where the hairline sits. */
-const RAIL_LINE = 'left-7';
+
 /**
  * The two class strings that set a row's height, named once because
  * `DiaryListSkeleton` has to reproduce it exactly — a skeleton whose rows are a
@@ -212,11 +210,8 @@ function RailLine({ stop = false }: { stop?: boolean }) {
 }
 
 /**
- * A day's head: the date stacked in the gutter (numeral over month), the entry
- * count beneath it, and a hairline reaching right with the collapse chevron at
- * its end. The whole row is the collapse target — the same persisted
- * `collapsed-diary-days` gesture as before, given a wider and more obvious
- * surface than the old 14px chevron.
+ * A day's head on the shared rail head; the whole row is the collapse target,
+ * the same persisted `collapsed-diary-days` gesture as before.
  */
 function DiaryDayHead({
   parts,
@@ -229,47 +224,12 @@ function DiaryDayHead({
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const muted = useThemeColor('--color-muted');
+  const label = `${count} ${count === 1 ? 'entry' : 'entries'}`;
   return (
-    <PresstableOpacity
-      accessibilityHint={collapsed ? 'Expands this day' : 'Minimizes this day'}
-      accessibilityLabel={`${parts.label} ${parts.day}, ${count} ${count === 1 ? 'entry' : 'entries'}`}
-      accessibilityRole="button"
-      accessibilityState={{ expanded: !collapsed }}
-      className="flex-row pt-5"
-      onPress={onToggle}
-    >
-      <View className={cn(RAIL_W, 'items-center relative')}>
-        <Text
-          className={cn(
-            'font-display text-2xl leading-none',
-            parts.isToday ? 'text-accent' : 'text-foreground',
-          )}
-        >
-          {parts.day}
-        </Text>
-        <Text className="text-muted font-sans-semibold text-[9px] uppercase tracking-widest mt-1">
-          {parts.label}
-        </Text>
-        {/* The rail picks up below the date block, so the hairline runs
-            unbroken from one day into the next rather than restarting. */}
-        <View className={cn('absolute w-px bg-border top-11 bottom-0', RAIL_LINE)} />
-      </View>
-      <View className="flex-1 flex-row items-center pr-6 pb-3">
-        {/* The count lives out here, not stacked under the date: in the gutter
-            a bare numeral under "18 AUG" reads as part of the date. */}
-        <Text className="text-muted/70 font-sans text-[11px] mr-3">
-          {count} {count === 1 ? 'entry' : 'entries'}
-        </Text>
-        <View className="flex-1 h-px bg-border" />
-        <Ionicons
-          color={muted}
-          name={collapsed ? 'chevron-down' : 'chevron-up'}
-          size={14}
-          style={{ marginLeft: 10 }}
-        />
-      </View>
-    </PresstableOpacity>
+    <RailHead label={`${parts.label} ${parts.day}, ${label}`} onToggle={onToggle} open={!collapsed}>
+      <RailHead.Date day={parts.day} label={parts.label} today={parts.isToday} />
+      <RailHead.Count>{label}</RailHead.Count>
+    </RailHead>
   );
 }
 
@@ -596,23 +556,6 @@ function DiaryFooter({ loading }: { loading: boolean }) {
  * slot for the hover ⋯: the skeleton's bars are fixed widths rather than text,
  * so nothing reflows when that slot appears alongside real content.
  */
-function SkeletonDayHead() {
-  return (
-    <View className="flex-row pt-5">
-      <View className={cn(RAIL_W, 'items-center relative')}>
-        {/* 24px tall: `font-display text-2xl leading-none`. */}
-        <Skeleton className="w-7 h-6 rounded" />
-        <Skeleton className="w-6 h-3 rounded mt-1" />
-        <View className={cn('absolute w-px bg-border top-11 bottom-0', RAIL_LINE)} />
-      </View>
-      <View className="flex-1 flex-row items-center pr-6 pb-3">
-        <Skeleton className="h-2.5 w-16 rounded mr-3" />
-        <View className="flex-1 h-px bg-border" />
-      </View>
-    </View>
-  );
-}
-
 /** Cycled rather than random so the placeholder is stable across renders. */
 const SKELETON_TITLE_WIDTHS = ['w-2/3', 'w-1/2', 'w-3/5', 'w-5/12'];
 
@@ -645,7 +588,7 @@ export function DiaryListSkeleton() {
     <View>
       {SKELETON_DAYS.map((rows, day) => (
         <View key={day}>
-          <SkeletonDayHead />
+          <RailHead.Skeleton lead="date" />
           {Array.from({ length: rows }).map((_, row) => (
             <SkeletonRow index={day + row} key={row} last={row === rows - 1} />
           ))}

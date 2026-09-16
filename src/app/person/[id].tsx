@@ -4,7 +4,7 @@ import {
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
 import {
@@ -41,11 +41,9 @@ export default function PersonScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1">
-        <Suspense fallback={<PersonSkeleton />}>
-          <PersonContent tmdbId={tmdbId} />
-        </Suspense>
-      </ScrollView>
+      <Suspense fallback={<PersonSkeleton />}>
+        <PersonContent tmdbId={tmdbId} />
+      </Suspense>
       <FloatingBackButton onPress={goBack} />
     </View>
   );

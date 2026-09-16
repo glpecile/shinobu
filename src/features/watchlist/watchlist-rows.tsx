@@ -37,13 +37,18 @@ const TYPE_LABEL: Record<NormalizedMediaItem['type'], string> = {
   MANGA: 'Manga',
 };
 
+/**
+ * "Film" / "Series" / "Anime film". Anime films are `ANIME` with `isFilm`
+ * (never a fifth MediaType), and the distinction is worth surfacing: it is
+ * what routes them to the movie targets on a log.
+ */
+export function mediaKindLabel(item: NormalizedMediaItem): string {
+  return item.type === 'ANIME' && item.isFilm === true ? 'Anime film' : TYPE_LABEL[item.type];
+}
+
 /** `2024 · Film`, degrading cleanly when the year is missing. */
 export function watchlistRowDetail(item: NormalizedMediaItem): string {
-  // Anime films are `ANIME` with `isFilm` (never a fifth MediaType), and the
-  // distinction is worth surfacing here: it is what routes them to the movie
-  // targets on a log.
-  const kind =
-    item.type === 'ANIME' && item.isFilm === true ? 'Anime film' : TYPE_LABEL[item.type];
+  const kind = mediaKindLabel(item);
   return item.year == null ? kind : `${item.year} · ${kind}`;
 }
 
