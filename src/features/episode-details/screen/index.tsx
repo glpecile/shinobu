@@ -91,6 +91,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                   className="mt-5"
                   episode={view.episode}
                   item={item}
+                  next={view.next}
                   number={number}
                   season={season}
                   watched={logs.length > 0}
