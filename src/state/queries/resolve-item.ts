@@ -151,6 +151,18 @@ export function useResolvedMediaItem(id: string): {
   };
 }
 
+/**
+ * The record a cold `/details/[id]` fetches for a TMDB or AniList id, from the
+ * same queries — so previewing that page also warms it. `undefined` for any
+ * other id, and while loading.
+ */
+export function useDeepLinkItem(id: string): NormalizedMediaItem | undefined {
+  const tmdb = parseTmdbItemId(id);
+  const details = useMediaDetailsQuery(tmdb != null ? tmdbStub(id, tmdb) : undefined);
+  const anime = useAnimeByIdQuery(parseAniListItemId(id));
+  return details.data?.catalogue ?? anime.data ?? undefined;
+}
+
 function tmdbStub(
   id: string,
   parsed: { kind: 'movie' | 'tv'; tmdbId: number },
