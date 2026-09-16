@@ -440,7 +440,14 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
  * resolve replaces bars with text and moves nothing. The section's title is
  * text, not a bar: it is known before the data is.
  */
-export function CreditTimelineSkeleton({ header }: { header: ReactNode }) {
+export function CreditTimelineSkeleton({
+  header,
+  roles = false,
+}: {
+  header: ReactNode;
+  /** A studio's timeline has no role picker. */
+  roles?: boolean;
+}) {
   return (
     <View className="w-full max-w-4xl self-center">
       {header}
@@ -452,7 +459,9 @@ export function CreditTimelineSkeleton({ header }: { header: ReactNode }) {
         <View className={CONTROLS}>
           {/* The segmented control is 30px tall, the role button 38. */}
           <Skeleton className="h-[30px] w-52 rounded-full" />
-          <Skeleton className="h-[38px] w-[118px] rounded-full" delay={staggerDelay(1)} />
+          {roles && (
+            <Skeleton className="h-[38px] w-[118px] rounded-full" delay={staggerDelay(1)} />
+          )}
         </View>
       </Section>
       {SKELETON_RUNS.map((rows, run) => (
