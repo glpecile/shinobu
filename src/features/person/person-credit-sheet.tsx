@@ -23,6 +23,13 @@ export function creditRoleLine(credit: {
   return credit.kind === 'cast' ? `as ${credit.role}` : credit.role;
 }
 
+/** Where a credit opens: TMDB's person, else AniList's, else a name search. */
+export function creditRoute(credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anilistId'>) {
+  if (credit.tmdbId != null) return routes.person(credit.tmdbId);
+  if (credit.anilistId != null) return routes.anilistPerson(credit.anilistId);
+  return routes.personLookup(credit.name);
+}
+
 /**
  * A credit exactly as the detail screen's Cast/Crew rails hold it — the sheet
  * is opened from a card, so everything the header needs is already in hand and
@@ -36,8 +43,10 @@ export interface PersonCredit {
   /** Which rail the card came from — the role's kind, not its text. */
   kind: 'cast' | 'crew';
   headshot: string;
-  /** TMDB person id; absent for AniList people (name lookup instead). */
+  /** TMDB person id; absent for AniList people. */
   tmdbId?: number;
+  /** AniList staff id, for AniList people. */
+  anilistId?: number;
 }
 
 /**
@@ -105,7 +114,7 @@ export function PersonCreditSheet({
   onClose,
 }: PersonCreditSheetProps) {
   const pushRoute = usePushRoute();
-  // No TMDB token, no person pages and no bio — same gate the cards use.
+  // No TMDB token, no bio, and no person page unless AniList can serve it.
   const hasTmdb = useTmdbToken() !== '';
   // Fetched only while the sheet is open, and keyed the same as the person
   // route's query, so opening this warms that page and vice versa.
@@ -139,18 +148,14 @@ export function PersonCreditSheet({
             person={person}
           />
 
-          {hasTmdb && (
+          {(hasTmdb || credit.anilistId != null) && (
             <Button
               className="mt-5"
               icon={<Button.Icon name="person-outline" />}
               label="View filmography"
               onPress={() => {
                 onClose();
-                pushRoute(
-                  credit.tmdbId != null
-                    ? routes.person(credit.tmdbId)
-                    : routes.personLookup(credit.name),
-                );
+                pushRoute(creditRoute(credit));
               }}
               variant="quiet"
             />
@@ -166,6 +171,8 @@ export function PersonCreditSheet({
             onOpened={onClose}
             person={{
               name: credit.name,
+              // A known id skips the name search against the AniList budget.
+              ...(credit.anilistId != null ? { anilistId: credit.anilistId } : {}),
               ...(person?.knownForDepartment != null
                 ? { knownForDepartment: person.knownForDepartment }
                 : credit.kind === 'cast'

@@ -23,7 +23,10 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CopyTitle } from '@/features/copy-title/copy-title';
-import { RelationsSection } from '@/features/details-relations/relations-section';
+import {
+  RecommendationsAndTagsSection,
+  RelationsSection,
+} from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -44,6 +47,7 @@ import {
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
+import { PROVIDERS } from '@/lib/providers/registry';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -51,6 +55,7 @@ import { useThemeColor } from '@/lib/theme-color';
 import {
   anilistQueryKeys,
   useAniListEntryStateQuery,
+  useSuspenseAniListRelationsQuery,
 } from '@/state/queries/anilist';
 import {
   mediaDetailsQueryKeys,
@@ -66,7 +71,13 @@ import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { useConnectedProviders } from '@/state/session';
-import type { NormalizedMediaItem, NormalizedStudio } from '@/types/media';
+import type {
+  NormalizedCastMember,
+  NormalizedCharacter,
+  NormalizedCrewMember,
+  NormalizedMediaItem,
+  NormalizedStudio,
+} from '@/types/media';
 
 /** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
 function metaLine(item: NormalizedMediaItem): string {
@@ -98,19 +109,26 @@ function alternateTitles(item: NormalizedMediaItem): string[] {
  * Trakt line uses, so both providers' detail pages read identically. Null for
  * plan-to-watch (nothing watched yet to report).
  */
-function anilistWatchedLabel(entry: {
-  status: string | null;
-  progress: number;
-  repeat: number;
-}): string | null {
-  const episodes = `${entry.progress} ${entry.progress === 1 ? 'episode' : 'episodes'} logged`;
+function anilistWatchedLabel(
+  entry: {
+    status: string | null;
+    progress: number;
+    repeat: number;
+  },
+  item: NormalizedMediaItem,
+): string | null {
+  const read = item.progressUnit === 'chapter';
+  const unit = read ? 'chapter' : 'episode';
+  const episodes = `${entry.progress} ${entry.progress === 1 ? unit : `${unit}s`} logged`;
   switch (entry.status) {
     case 'CURRENT':
-      return `Watching · ${episodes}`;
+      return `${read ? 'Reading' : 'Watching'} · ${episodes}`;
     case 'REPEATING':
-      return `Rewatching · ${episodes}`;
-    case 'COMPLETED':
-      return entry.repeat > 0 ? `Watched ${entry.repeat + 1}×` : 'Watched';
+      return `${read ? 'Rereading' : 'Rewatching'} · ${episodes}`;
+    case 'COMPLETED': {
+      const done = read ? 'Read' : 'Watched';
+      return entry.repeat > 0 ? `${done} ${entry.repeat + 1}×` : done;
+    }
     case 'PAUSED':
       return `Paused · ${episodes}`;
     case 'DROPPED':
@@ -137,8 +155,9 @@ function ProgressOfTotal({
 }) {
   return (
     <View className="flex-row items-baseline mt-0.5">
+      {/* Clamped: AniList counts a manga's extra chapters past its total (62 of 59). */}
       <MorphText className="text-foreground text-2xl font-sans-semibold">
-        {progress}
+        {Math.min(progress, total)}
       </MorphText>
       <Text className="text-muted text-2xl font-sans-semibold">{` / ${total}`}</Text>
     </View>
@@ -160,7 +179,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const watched = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
-    enabled: item.type === 'ANIME' && connected.includes('anilist'),
+    enabled: PROVIDERS.anilist.mediaTypes.includes(item.type) && connected.includes('anilist'),
   });
   // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
   // same line Trakt-sourced pages carry.
@@ -184,7 +203,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
           ? `Watched ${watched.plays}× · ${date}`
           : `Watched · ${date}`;
   } else if (anilistEntry.data?.entry != null) {
-    label = anilistWatchedLabel(anilistEntry.data.entry);
+    label = anilistWatchedLabel(anilistEntry.data.entry, item);
   } else if (
     simklEntry.data != null &&
     simklEntry.data.item.currentProgress > 0
@@ -284,12 +303,23 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
 }
 
 /**
- * Cast + Crew + Studios from the one TMDB-first metadata query (plan 0014) —
- * the same composed read regardless of the item's origin provider, with the
- * Trakt/AniList fallback handled inside the query, not by this boundary.
+ * Characters + Cast + Crew + Studios rails, with the long-press credit sheet
+ * they share. Source-agnostic: the two wrappers below decide where credits
+ * come from.
  */
-function CreditsSections({ item }: { item: NormalizedMediaItem }) {
-  const { data } = useSuspenseMediaDetailsQuery(item);
+function CreditRails({
+  characters = [],
+  cast = [],
+  crew,
+  crewTitle,
+  studios = [],
+}: {
+  characters?: NormalizedCharacter[];
+  cast?: NormalizedCastMember[];
+  crew: NormalizedCrewMember[];
+  crewTitle: string;
+  studios?: NormalizedStudio[];
+}) {
   // Long-press (web: the hover ⋯) on a credit card opens this instead of
   // navigating — the role text a 96px card had to clip is the whole point.
   const [credit, setCredit] = useState<PersonCredit | null>(null);
@@ -303,31 +333,44 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
 
   return (
     <>
+      {/* No `onCreditActions`: a character isn't a person, so its card opens nothing. */}
+      <PeopleSection
+        title="Characters"
+        people={characters.map((character) => ({
+          id: `anilist-character-${character.anilistId}`,
+          name: character.name,
+          role: character.role,
+          kind: 'cast' as const,
+          headshot: character.image,
+        }))}
+      />
       <PeopleSection
         onCreditActions={openCredit}
         title="Cast"
-        people={data.cast.map((member) => ({
+        people={cast.map((member) => ({
           id: member.id,
           name: member.name,
           role: member.character,
           kind: 'cast' as const,
           headshot: member.headshot,
           ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
+          ...(member.anilistId != null ? { anilistId: member.anilistId } : {}),
         }))}
       />
       <PeopleSection
         onCreditActions={openCredit}
-        title="Crew"
-        people={data.crew.map((member) => ({
+        title={crewTitle}
+        people={crew.map((member) => ({
           id: member.id,
           name: member.name,
           role: member.job,
           kind: 'crew' as const,
           headshot: member.headshot,
           ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
+          ...(member.anilistId != null ? { anilistId: member.anilistId } : {}),
         }))}
       />
-      <StudiosList studios={data.studios} />
+      <StudiosList studios={studios} />
       {/* `credit` is kept (not nulled) while closing so the sheet's content
           doesn't vanish mid-animation — same contract as the card actions. */}
       <PersonCreditSheet
@@ -336,6 +379,29 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
         open={creditOpen}
       />
     </>
+  );
+}
+
+/**
+ * Credits from the one TMDB-first metadata query (plan 0014) — the same
+ * composed read regardless of the item's origin provider, with the
+ * Trakt/AniList fallback handled inside the query, not by this boundary.
+ */
+function CreditsSections({ item }: { item: NormalizedMediaItem }) {
+  const { data } = useSuspenseMediaDetailsQuery(item);
+  return (
+    <CreditRails cast={data.cast} crew={data.crew} crewTitle="Crew" studios={data.studios} />
+  );
+}
+
+/**
+ * Manga credits ride the AniList relations request the page already makes
+ * (TMDB has no manga to credit), so they cost no request of their own.
+ */
+function MangaCreditsSections({ mediaId }: { mediaId: number }) {
+  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
+  return (
+    <CreditRails characters={data.characters} crew={data.staff} crewTitle="Staff" />
   );
 }
 
@@ -408,11 +474,12 @@ export default function DetailsScreen() {
   const traktId = item?.externalIds.trakt;
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
+  const onAniList = item != null && PROVIDERS.anilist.mediaTypes.includes(item.type);
   // Items resolved from trending/search carry 0 progress even when the viewer
   // has already watched episodes. The live entry state corrects the stat tile.
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
-    enabled: item?.type === 'ANIME' && connected.includes('anilist'),
+    enabled: onAniList && connected.includes('anilist'),
   });
   // The same correction for TV, from Simkl's library entry — a show opened
   // from search showed "0 / 153" for a series watched end to end. Shares
@@ -466,7 +533,7 @@ export default function DetailsScreen() {
   const showProgress =
     (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
   const displayedProgress =
-    shown.type === 'ANIME'
+    onAniList
       ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
       : (simklEntry.data?.item.currentProgress ?? shown.currentProgress);
 
@@ -494,7 +561,7 @@ export default function DetailsScreen() {
         type: 'inactive',
       });
     }
-    if (anilistId != null && item?.type === 'ANIME') {
+    if (anilistId != null && onAniList) {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
         anilistQueryKeys.episodes(anilistId),
@@ -665,8 +732,14 @@ export default function DetailsScreen() {
             }
             resetKey={refreshCount}
           >
-            <CreditsSections item={item} />
+            {shown.type === 'MANGA' && anilistId != null ? (
+              <MangaCreditsSections mediaId={anilistId} />
+            ) : (
+              <CreditsSections item={item} />
+            )}
           </SuspenseSection>
+
+          <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
 
           <ReleaseTimeline item={shown} />
 

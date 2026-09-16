@@ -1,8 +1,9 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
+import { getAniListStaff } from '@/lib/providers/anilist/reads';
 import { getPersonByName } from '@/lib/providers/person-details';
-import { anilistDeps } from '@/state/queries/anilist';
+import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { tmdbDeps } from '@/state/queries/tmdb';
 import { tmdbToken } from '@/state/session/tmdb-token';
 
@@ -25,6 +26,15 @@ export function useSuspensePersonByNameQuery(params: { name: string }) {
           { name },
         ),
       ),
+    staleTime: PERSON_STALE_TIME_MS,
+  });
+}
+
+/** `/person/anilist-<id>`: an AniList credit's own profile, no name search. Public. */
+export function useSuspenseAniListStaffQuery(params: { id: number }) {
+  return useSuspenseQuery({
+    queryKey: anilistQueryKeys.staff(params.id),
+    queryFn: () => Effect.runPromise(getAniListStaff(anilistDeps(), { id: params.id })),
     staleTime: PERSON_STALE_TIME_MS,
   });
 }

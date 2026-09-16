@@ -48,7 +48,13 @@ export const routes = {
     `/anime-seasons?season=${season}&year=${year}&format=${format}` as const,
   /** Keyed by TMDB person id — the single source of truth for people. */
   person: (tmdbId: number) => `/person/${tmdbId}` as const,
-  /** For credits without a TMDB person id (AniList people): resolve by name. */
+  /**
+   * An AniList staff member by their own id — the same `/person/[id]` screen,
+   * prefixed like `details`' `anilist-<id>`. No name search, so a manga author
+   * never lands on a namesake TMDB person.
+   */
+  anilistPerson: (anilistId: number) => `/person/anilist-${anilistId}` as const,
+  /** For credits without a TMDB or AniList person id: resolve by name. */
   personLookup: (name: string) =>
     `/person/lookup?name=${encodeURIComponent(name)}` as const,
   /** Keyed by TMDB company id — same single-source rule as /person. */

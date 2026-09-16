@@ -33,7 +33,7 @@ import type {
 } from '@/lib/providers/anilist/season';
 import type { NormalizedSeason } from '@/types/media';
 import type { TokenStore } from '@/lib/providers/token-store';
-import type { NormalizedMediaItem } from '@/types/media';
+import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import {
   clearProviderSession,
   getProviderSession,
@@ -121,7 +121,7 @@ export const anilistQueryKeys = {
   /** Per-episode air dates + titles for one anime series (detail screen). */
   episodes: (mediaId: number) =>
     [...anilistQueryKeys.all, 'episodes', mediaId] as const,
-  /** Prequels, sequels, adaptations… of one media (detail screen's related row). */
+  /** Prequels, sequels, adaptations… plus recommendations and tags of one media. */
   relations: (mediaId: number) =>
     [...anilistQueryKeys.all, 'relations', mediaId] as const,
   /** Prefix over every search entry — details/[id] scans this for cache hits
@@ -131,6 +131,8 @@ export const anilistQueryKeys = {
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.searchRoot(), query, limit] as const,
+  /** One staff member's profile and credits, by AniList id (`/person/anilist-<id>`). */
+  staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
   /** A person's AniList staff id, resolved by name (plan 0035 R12). */
   staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
   /** A studio's AniList id, resolved by name — the studio sheet's link. */
@@ -301,27 +303,36 @@ export function useAnimeByIdQuery(mediaId: number | null) {
 }
 
 /**
- * The related-media row of a details screen. Each related item is also seeded
+ * The related, recommended and tag sections of a details screen. Each item is also seeded
  * under `anime(id)`, the key the cold deep-link resolver reads, so tapping a
  * card opens it from cache instead of spending a second request of the
  * 30 req/min budget — and a manga relation resolves at all, since no feed row
  * or search cache holds it.
  */
-export function useSuspenseAniListRelationsQuery(params: { mediaId: number }) {
+export function useSuspenseAniListRelationsQuery(params: {
+  mediaId: number;
+  type: MediaType;
+}) {
   const { mediaId } = params;
+  // Only manga takes its credits from here (anime's come from media-details);
+  // an id's type never changes, so the key needs no flag of its own.
+  const withCredits = params.type === 'MANGA';
   const queryClient = useQueryClient();
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.relations(mediaId),
     queryFn: async () => {
-      const relations = await Effect.runPromise(
-        getAnimeRelations(anilistDeps(), { mediaId }),
+      const result = await Effect.runPromise(
+        getAnimeRelations(anilistDeps(), { mediaId, withCredits }),
       );
-      for (const { item } of relations) {
+      for (const item of [
+        ...result.relations.map((relation) => relation.item),
+        ...result.recommendations,
+      ]) {
         if (item.externalIds.anilist != null) {
           queryClient.setQueryData(anilistQueryKeys.anime(item.externalIds.anilist), item);
         }
       }
-      return relations;
+      return result;
     },
     staleTime: SEASONAL_STALE_MS,
   });

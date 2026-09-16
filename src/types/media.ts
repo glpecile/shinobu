@@ -118,10 +118,12 @@ export interface NormalizedCastMember {
   headshot: string;
   /**
    * TMDB person id when the origin provider carries one (Trakt does) — the
-   * person route is keyed by TMDB only. Absent (AniList people) means the
-   * route resolves by name search instead.
+   * person route is keyed by TMDB. Absent (AniList people) means the route
+   * opens by `anilistId` instead, or by name search when neither is known.
    */
   tmdbId?: number;
+  /** AniList staff id (AniList voice actors) — opens their AniList profile directly. */
+  anilistId?: number;
 }
 
 /** A crew credit — one entry per person, jobs merged across departments. */
@@ -135,6 +137,18 @@ export interface NormalizedCrewMember {
   headshot: string;
   /** See NormalizedCastMember.tmdbId. */
   tmdbId?: number;
+  /** See NormalizedCastMember.anilistId. */
+  anilistId?: number;
+}
+
+/** An AniList character — a manga's cast, since print has no voice actors to credit. */
+export interface NormalizedCharacter {
+  anilistId: number;
+  name: string;
+  /** "Main", "Supporting", "Background"; '' when omitted. */
+  role: string;
+  /** '' when unavailable — render an initials fallback. */
+  image: string;
 }
 
 /**

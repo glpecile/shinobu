@@ -72,6 +72,12 @@ export function anilistTitle(media: AniListMedia): string {
   return title?.english ?? title?.romaji ?? title?.native ?? '';
 }
 
+/** "SIDE_STORY" → "Side story" — AniList enums as display text. */
+export function humanizeEnum(value: string): string {
+  const lower = value.toLowerCase().replace(/_/g, ' ');
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
 /** AniList descriptions carry HTML line breaks/markup even as "plain text". */
 export function stripHtml(html: string): string {
   return html

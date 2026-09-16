@@ -89,6 +89,7 @@ describe('getAnimeCredits', () => {
         name: 'Shion Wakayama',
         character: 'Momo Ayase, Seiko Ayase',
         headshot: 'https://img/voice-actor.jpg',
+        anilistId: 1,
       },
     ]);
     expect(credits.crew).toEqual([
@@ -97,6 +98,7 @@ describe('getAnimeCredits', () => {
         name: 'Fuga Yamashiro',
         job: 'Director, Storyboard',
         headshot: 'https://img/director.jpg',
+        anilistId: 2,
       },
     ]);
     // The numeric id is carried, not discarded (plan 0035 R12): it deep-links

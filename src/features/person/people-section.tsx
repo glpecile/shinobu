@@ -6,30 +6,14 @@ import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
-import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 
 import { PersonAvatar } from './person-avatar';
-import type { PersonCredit } from './person-credit-sheet';
+import { creditRoute, type PersonCredit } from './person-credit-sheet';
 
-function PersonCard({
-  credit,
-  onPress,
-  onActions,
-}: {
-  credit: PersonCredit;
-  onPress?: () => void;
-  onActions: (credit: PersonCredit) => void;
-}) {
-  const accentForeground = useThemeColor('--color-accent-foreground');
-  // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
-  // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
-  // the media card's).
-  const [hovered, setHovered] = useState(false);
-  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
-
-  const content = (
+function PersonCardContent({ credit }: { credit: PersonCredit }) {
+  return (
     <>
       <PersonAvatar
         className="w-20 h-20 bg-surface"
@@ -53,6 +37,25 @@ function PersonCard({
       )}
     </>
   );
+}
+
+function PersonCard({
+  credit,
+  onPress,
+  onActions,
+}: {
+  credit: PersonCredit;
+  onPress?: () => void;
+  onActions: (credit: PersonCredit) => void;
+}) {
+  const accentForeground = useThemeColor('--color-accent-foreground');
+  // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
+  // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
+  // the media card's).
+  const [hovered, setHovered] = useState(false);
+  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
+
+  const content = <PersonCardContent credit={credit} />;
 
   return (
     // The ⋯ is a *sibling* of the pressable, not a child — nesting two
@@ -100,6 +103,10 @@ function PersonCard({
   );
 }
 
+/**
+ * A rail of credit cards. Without `onCreditActions` the cards are display-only:
+ * AniList characters, which have no person behind them to open.
+ */
 export function PeopleSection({
   title,
   people,
@@ -107,11 +114,11 @@ export function PeopleSection({
 }: {
   title: string;
   people: PersonCredit[];
-  onCreditActions: (credit: PersonCredit) => void;
+  onCreditActions?: (credit: PersonCredit) => void;
 }) {
   const pushRoute = usePushRoute();
-  // No TMDB token, no person pages — press falls back to the credit sheet.
-  const canOpenPeople = useTmdbToken() !== '';
+  // No TMDB token, no TMDB person pages — AniList people still open theirs.
+  const hasTmdb = useTmdbToken() !== '';
 
   if (people.length === 0) return null;
 
@@ -121,23 +128,22 @@ export function PeopleSection({
         <Section.Title>{title}</Section.Title>
       </Section.Header>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {people.map((credit) => (
-          <PersonCard
-            credit={credit}
-            key={credit.id}
-            onActions={onCreditActions}
-            {...(canOpenPeople
-              ? {
-                  onPress: () =>
-                    pushRoute(
-                      credit.tmdbId != null
-                        ? routes.person(credit.tmdbId)
-                        : routes.personLookup(credit.name),
-                    ),
-                }
-              : {})}
-          />
-        ))}
+        {people.map((credit) =>
+          onCreditActions == null ? (
+            <View className="w-24 mr-4 items-center" key={credit.id}>
+              <PersonCardContent credit={credit} />
+            </View>
+          ) : (
+            <PersonCard
+              credit={credit}
+              key={credit.id}
+              onActions={onCreditActions}
+              {...(hasTmdb || credit.anilistId != null
+                ? { onPress: () => pushRoute(creditRoute(credit)) }
+                : {})}
+            />
+          ),
+        )}
       </ScrollView>
     </Section>
   );

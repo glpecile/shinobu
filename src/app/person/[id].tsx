@@ -12,7 +12,9 @@ import {
   PersonNotFound,
   PersonSkeleton,
 } from '@/features/person';
+import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
 import { routes } from '@/lib/routes';
+import { useSuspenseAniListStaffQuery } from '@/state/queries/person-details';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
 
 function PersonContent({ tmdbId }: { tmdbId: number }) {
@@ -20,9 +22,16 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
   return <PersonDetailsView {...data} />;
 }
 
+function AniListPersonContent({ anilistId }: { anilistId: number }) {
+  const { data } = useSuspenseAniListStaffQuery({ id: anilistId });
+  return <PersonDetailsView {...data} />;
+}
+
 export default function PersonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  // `anilist-<id>` is an AniList staff id (`routes.anilistPerson`); a bare number is TMDB's.
+  const anilistId = parseAniListItemId(id);
   const tmdbId = Number(id);
 
   function goBack() {
@@ -33,7 +42,7 @@ export default function PersonScreen() {
     }
   }
 
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
+  if (anilistId == null && (!Number.isFinite(tmdbId) || tmdbId <= 0)) {
     return (
       <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />
     );
@@ -42,7 +51,11 @@ export default function PersonScreen() {
   return (
     <View className="flex-1 bg-background">
       <Suspense fallback={<PersonSkeleton />}>
-        <PersonContent tmdbId={tmdbId} />
+        {anilistId != null ? (
+          <AniListPersonContent anilistId={anilistId} />
+        ) : (
+          <PersonContent tmdbId={tmdbId} />
+        )}
       </Suspense>
       <FloatingBackButton onPress={goBack} />
     </View>

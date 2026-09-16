@@ -2,12 +2,14 @@ import { Effect } from 'effect';
 
 import type {
   NormalizedCastMember,
+  NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedStudio,
 } from '@/types/media';
 import type { ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
 import { anilistRequest } from './http';
+import { humanizeEnum } from './normalize';
 
 interface AniListPerson {
   id: number;
@@ -24,7 +26,18 @@ type AniListCharacterEdge = {
   voiceActors: Array<AniListPerson | null> | null;
 } | null;
 
-type AniListStaffEdge = {
+/** A character with the fields a manga's Characters rail shows. */
+export type AniListCharacterRoleEdge = {
+  /** CharacterRole enum: MAIN, SUPPORTING, BACKGROUND. */
+  role: string | null;
+  node: {
+    id: number;
+    name: { full: string | null } | null;
+    image: { large: string | null } | null;
+  } | null;
+} | null;
+
+export type AniListStaffEdge = {
   role: string | null;
   node: AniListPerson | null;
 } | null;
@@ -55,8 +68,14 @@ function personName(person: AniListPerson): string {
   return person.name?.full ?? '';
 }
 
+/** AniList's "NO IMAGE" placeholder counts as no image, so the initials fallback renders. */
+function anilistImage(image: { large: string | null } | null): string {
+  const url = image?.large ?? '';
+  return url.endsWith('/default.jpg') ? '' : url;
+}
+
 function personHeadshot(person: AniListPerson): string {
-  return person.image?.large ?? '';
+  return anilistImage(person.image);
 }
 
 function normalizeCast(
@@ -80,6 +99,7 @@ function normalizeCast(
           name: personName(voiceActor),
           character: '',
           headshot: personHeadshot(voiceActor),
+          anilistId: voiceActor.id,
         },
         characters: character !== '' ? [character] : [],
       });
@@ -92,7 +112,22 @@ function normalizeCast(
   }));
 }
 
-function normalizeCrew(
+export function normalizeCharacters(
+  edges: AniListCharacterRoleEdge[] | null,
+): NormalizedCharacter[] {
+  return (edges ?? []).flatMap((edge) =>
+    edge?.node == null
+      ? []
+      : [{
+          anilistId: edge.node.id,
+          name: edge.node.name?.full ?? '',
+          role: edge.role == null ? '' : humanizeEnum(edge.role),
+          image: anilistImage(edge.node.image),
+        }],
+  );
+}
+
+export function normalizeCrew(
   edges: AniListStaffEdge[] | null,
 ): NormalizedCrewMember[] {
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[] }>();
@@ -113,6 +148,7 @@ function normalizeCrew(
         name: personName(person),
         job: '',
         headshot: personHeadshot(person),
+        anilistId: person.id,
       },
       jobs: edge.role != null ? [edge.role] : [],
     });
