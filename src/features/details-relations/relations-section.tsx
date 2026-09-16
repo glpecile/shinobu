@@ -32,39 +32,37 @@ function RelationsRow({ mediaId, type }: { mediaId: number; type: MediaType }) {
   );
 }
 
-function RecommendationsRow({ mediaId, type }: { mediaId: number; type: MediaType }) {
+function RecommendationsAndTags({ mediaId, type }: { mediaId: number; type: MediaType }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
   const pushRoute = usePushRoute();
-  if (data.recommendations.length === 0) return null;
   return (
-    <View className={ALIGN_TO_COLUMN}>
-      <MediaCarousel
-        collapseKey="details-recommendations"
-        items={data.recommendations}
-        onItemPress={(item) => pushRoute(routes.details(item.id))}
-        provider="anilist"
-        title="Recommendations"
-      />
-    </View>
-  );
-}
-
-function TagsList({ mediaId, type }: { mediaId: number; type: MediaType }) {
-  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
-  if (data.tags.length === 0) return null;
-  return (
-    <Section>
-      <Section.Header>
-        <Section.Title>Tags</Section.Title>
-      </Section.Header>
-      <View className="flex-row flex-wrap gap-2">
-        {data.tags.map((tag) => (
-          <View className="bg-surface border border-border rounded-full px-3 py-1.5" key={tag}>
-            <Text className="text-muted font-sans text-xs">{tag}</Text>
+    <>
+      {data.recommendations.length > 0 && (
+        <View className={ALIGN_TO_COLUMN}>
+          <MediaCarousel
+            collapseKey="details-recommendations"
+            items={data.recommendations}
+            onItemPress={(item) => pushRoute(routes.details(item.id))}
+            provider="anilist"
+            title="Recommendations"
+          />
+        </View>
+      )}
+      {data.tags.length > 0 && (
+        <Section>
+          <Section.Header>
+            <Section.Title>Tags</Section.Title>
+          </Section.Header>
+          <View className="flex-row flex-wrap gap-2">
+            {data.tags.map((tag) => (
+              <View className="bg-surface border border-border rounded-full px-3 py-1.5" key={tag}>
+                <Text className="text-muted font-sans text-xs">{tag}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
-    </Section>
+        </Section>
+      )}
+    </>
   );
 }
 
@@ -85,25 +83,11 @@ function CarouselSkeleton() {
   );
 }
 
-function TagsSkeleton() {
-  return (
-    <View className="mt-8">
-      <Skeleton className="h-6 w-16 rounded mb-4" />
-      <View className="flex-row flex-wrap gap-2">
-        <Skeleton className="h-7 w-20 rounded-full" delay={staggerDelay(0)} />
-        <Skeleton className="h-7 w-28 rounded-full" delay={staggerDelay(1)} />
-        <Skeleton className="h-7 w-16 rounded-full" delay={staggerDelay(2)} />
-        <Skeleton className="h-7 w-24 rounded-full" delay={staggerDelay(3)} />
-      </View>
-    </View>
-  );
-}
-
 /**
  * AniList's relations graph (prequel, sequel, side story, adaptation…) for
  * any AniList-resolvable item; TMDB has no such API, so a TV/movie page
- * without an AniList id renders nothing here. The recommendations and tags
- * sections below read the same query, so all three cost one request.
+ * without an AniList id renders nothing here. `RecommendationsAndTagsSection`
+ * reads the same query, so both cost one request.
  */
 export function RelationsSection({
   item,
@@ -120,7 +104,7 @@ export function RelationsSection({
   );
 }
 
-export function RecommendationsSection({
+export function RecommendationsAndTagsSection({
   item,
   resetKey,
 }: {
@@ -130,22 +114,7 @@ export function RecommendationsSection({
   if (item.externalIds.anilist == null) return null;
   return (
     <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
-      <RecommendationsRow mediaId={item.externalIds.anilist} type={item.type} />
-    </SuspenseSection>
-  );
-}
-
-export function TagsSection({
-  item,
-  resetKey,
-}: {
-  item: NormalizedMediaItem;
-  resetKey?: unknown;
-}) {
-  if (item.externalIds.anilist == null) return null;
-  return (
-    <SuspenseSection fallback={<TagsSkeleton />} resetKey={resetKey}>
-      <TagsList mediaId={item.externalIds.anilist} type={item.type} />
+      <RecommendationsAndTags mediaId={item.externalIds.anilist} type={item.type} />
     </SuspenseSection>
   );
 }

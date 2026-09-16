@@ -24,9 +24,8 @@ import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CopyTitle } from '@/features/copy-title/copy-title';
 import {
-  RecommendationsSection,
+  RecommendationsAndTagsSection,
   RelationsSection,
-  TagsSection,
 } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
@@ -48,6 +47,7 @@ import {
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
+import { PROVIDERS } from '@/lib/providers/registry';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -179,7 +179,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const watched = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
-    enabled: (item.type === 'ANIME' || item.type === 'MANGA') && connected.includes('anilist'),
+    enabled: PROVIDERS.anilist.mediaTypes.includes(item.type) && connected.includes('anilist'),
   });
   // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
   // same line Trakt-sourced pages carry.
@@ -309,16 +309,16 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
  */
 function CreditRails({
   characters = [],
-  cast,
+  cast = [],
   crew,
   crewTitle,
-  studios,
+  studios = [],
 }: {
   characters?: NormalizedCharacter[];
-  cast: NormalizedCastMember[];
+  cast?: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
   crewTitle: string;
-  studios: NormalizedStudio[];
+  studios?: NormalizedStudio[];
 }) {
   // Long-press (web: the hover ⋯) on a credit card opens this instead of
   // navigating — the role text a 96px card had to clip is the whole point.
@@ -401,13 +401,7 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
 function MangaCreditsSections({ mediaId }: { mediaId: number }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
   return (
-    <CreditRails
-      cast={[]}
-      characters={data.characters}
-      crew={data.staff}
-      crewTitle="Staff"
-      studios={[]}
-    />
+    <CreditRails characters={data.characters} crew={data.staff} crewTitle="Staff" />
   );
 }
 
@@ -480,11 +474,12 @@ export default function DetailsScreen() {
   const traktId = item?.externalIds.trakt;
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
+  const onAniList = item != null && PROVIDERS.anilist.mediaTypes.includes(item.type);
   // Items resolved from trending/search carry 0 progress even when the viewer
   // has already watched episodes. The live entry state corrects the stat tile.
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
-    enabled: (item?.type === 'ANIME' || item?.type === 'MANGA') && connected.includes('anilist'),
+    enabled: onAniList && connected.includes('anilist'),
   });
   // The same correction for TV, from Simkl's library entry — a show opened
   // from search showed "0 / 153" for a series watched end to end. Shares
@@ -538,7 +533,7 @@ export default function DetailsScreen() {
   const showProgress =
     (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
   const displayedProgress =
-    shown.type === 'ANIME' || shown.type === 'MANGA'
+    onAniList
       ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
       : (simklEntry.data?.item.currentProgress ?? shown.currentProgress);
 
@@ -566,7 +561,7 @@ export default function DetailsScreen() {
         type: 'inactive',
       });
     }
-    if (anilistId != null && (item?.type === 'ANIME' || item?.type === 'MANGA')) {
+    if (anilistId != null && onAniList) {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
         anilistQueryKeys.episodes(anilistId),
@@ -744,8 +739,7 @@ export default function DetailsScreen() {
             )}
           </SuspenseSection>
 
-          <RecommendationsSection item={shown} resetKey={refreshCount} />
-          <TagsSection item={shown} resetKey={refreshCount} />
+          <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
 
           <ReleaseTimeline item={shown} />
 

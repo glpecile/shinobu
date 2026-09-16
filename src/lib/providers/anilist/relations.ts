@@ -54,8 +54,6 @@ export interface AnimeRelations {
   staff: NormalizedCrewMember[];
 }
 
-const RECOMMENDATIONS_PER_PAGE = 15;
-
 /**
  * Everything AniList links from one media (anime and manga): relations,
  * recommendations and tags, plus characters and staff with `withCredits`. One
@@ -72,7 +70,7 @@ export function getAnimeRelations(
   return Effect.gen(function* () {
     const data = yield* anilistRequest<RelationsResponse>(
       deps,
-      `query ($id: Int, $perPage: Int, $withCredits: Boolean!) {
+      `query ($id: Int, $withCredits: Boolean!) {
         Media(id: $id) {
           characters(sort: [ROLE, RELEVANCE, ID], perPage: 15) @include(if: $withCredits) {
             edges { role node { id name { full } image { large } } }
@@ -82,18 +80,12 @@ export function getAnimeRelations(
           }
           tags { name isMediaSpoiler }
           relations { edges { relationType node { ${MEDIA_FIELDS} } } }
-          recommendations(sort: [RATING_DESC, ID], perPage: $perPage) {
+          recommendations(sort: [RATING_DESC, ID], perPage: 15) {
             nodes { mediaRecommendation { ${MEDIA_FIELDS} } }
           }
         }
       }`,
-      {
-        variables: {
-          id: params.mediaId,
-          perPage: RECOMMENDATIONS_PER_PAGE,
-          withCredits: params.withCredits,
-        },
-      },
+      { variables: { id: params.mediaId, withCredits: params.withCredits } },
     );
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
@@ -114,8 +106,8 @@ export function getAnimeRelations(
       tags: (data.Media?.tags ?? []).flatMap((tag) =>
         tag?.name == null || tag.isMediaSpoiler === true ? [] : [tag.name],
       ),
-      characters: normalizeCharacters(data.Media?.characters?.edges ?? []),
-      staff: normalizeCrew(data.Media?.staff?.edges ?? []),
+      characters: normalizeCharacters(data.Media?.characters?.edges ?? null),
+      staff: normalizeCrew(data.Media?.staff?.edges ?? null),
     };
   });
 }
