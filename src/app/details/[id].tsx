@@ -82,7 +82,7 @@ function metaLine(item: NormalizedMediaItem): string {
 }
 
 /** The item's other names, minus the one already shown and any repeat (case-insensitive). */
-function alternateTitles(item: NormalizedMediaItem): string {
+function alternateTitles(item: NormalizedMediaItem): string[] {
   const seen = new Set([item.title.toLowerCase()]);
   const shown: string[] = [];
   for (const candidate of [item.titles?.english, item.titles?.romaji, item.titles?.native]) {
@@ -90,7 +90,7 @@ function alternateTitles(item: NormalizedMediaItem): string {
     seen.add(candidate.toLowerCase());
     shown.push(candidate);
   }
-  return shown.join(' · ');
+  return shown;
 }
 
 /**
@@ -583,10 +583,15 @@ export default function DetailsScreen() {
                   </View>
                 )}
               </View>
-              <CopyTitle item={shown} />
-              {alternates !== '' && (
+              <CopyTitle
+                alternates={alternates}
+                className="mt-1"
+                title={shown.title}
+                year={shown.year}
+              />
+              {alternates.length > 0 && (
                 <Text className="text-muted font-sans text-sm mt-0.5">
-                  {alternates}
+                  {alternates.join(' · ')}
                 </Text>
               )}
               {meta !== '' && (

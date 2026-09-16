@@ -6,16 +6,29 @@ import { Button } from '@/components/button';
 import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { toast } from '@/lib/toast';
-import type { NormalizedMediaItem } from '@/types/media';
 
 /**
- * The details-page title, pressable: opens a small sheet that copies the title
- * alone or with its year (the Letterboxd gesture — one tap gets you the string
- * you paste into another tracker's search box).
+ * A page's heading, pressable: opens a small sheet that copies it alone, with
+ * its year, or as one of its alternate names (the Letterboxd gesture — one tap
+ * gets you the string you paste into another tracker's search box).
  */
-export function CopyTitle({ item }: { item: Pick<NormalizedMediaItem, 'title' | 'year'> }) {
+export function CopyTitle({
+  alternates = [],
+  className,
+  title,
+  year,
+}: {
+  alternates?: string[];
+  className?: string;
+  title: string;
+  year?: number | null;
+}) {
   const [open, setOpen] = useState(false);
-  const withYear = item.year != null ? `${item.title} (${item.year})` : null;
+  const choices = [
+    title,
+    ...(year != null ? [`${title} (${year})`] : []),
+    ...alternates,
+  ];
 
   const copy = async (text: string) => {
     setOpen(false);
@@ -26,33 +39,28 @@ export function CopyTitle({ item }: { item: Pick<NormalizedMediaItem, 'title' | 
   return (
     <>
       <PresstableOpacity
-        accessibilityHint="Copy the title"
+        accessibilityHint={choices.length > 1 ? 'Opens copy options' : 'Copies it'}
         accessibilityRole="button"
-        onPress={() => setOpen(true)}
+        className={className}
+        onPress={() => (choices.length > 1 ? setOpen(true) : copy(title))}
       >
-        <Text className="text-3xl font-display text-foreground mt-1">{item.title}</Text>
+        <Text className="text-3xl font-display text-foreground">{title}</Text>
       </PresstableOpacity>
       <Sheet onClose={() => setOpen(false)} open={open}>
         <Text className="text-2xl font-display text-foreground" numberOfLines={2}>
-          {item.title}
+          {title}
         </Text>
         <View className="mt-5 gap-2">
-          <Button
-            align="start"
-            icon={<Button.Icon name="copy-outline" />}
-            label="Copy title"
-            onPress={() => copy(item.title)}
-            variant="quiet"
-          />
-          {withYear != null && (
+          {choices.map((choice) => (
             <Button
               align="start"
               icon={<Button.Icon name="copy-outline" />}
-              label="Copy title and year"
-              onPress={() => copy(withYear)}
+              key={choice}
+              label={`Copy “${choice}”`}
+              onPress={() => copy(choice)}
               variant="quiet"
             />
-          )}
+          ))}
         </View>
       </Sheet>
     </>

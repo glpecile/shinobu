@@ -5,6 +5,7 @@ import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { CopyTitle } from '@/features/copy-title/copy-title';
 import { CreditTimeline } from '@/features/credit-timeline/credit-timeline';
 import { catalogueFilmography } from '@/features/credit-timeline/group';
 import { StudioLinksSection } from '@/features/provider-links/studio-links-section';
@@ -52,9 +53,7 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
                 <PosterPlaceholder className="w-28 h-28 rounded-card" />
               )}
               <View className="flex-1">
-                <Text className="text-3xl font-display text-foreground">
-                  {company.name}
-                </Text>
+                <CopyTitle title={company.name} />
                 {company.headquarters != null && (
                   <Text className="text-muted font-sans text-sm mt-1.5">
                     {company.headquarters}
