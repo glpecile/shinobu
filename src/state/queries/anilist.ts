@@ -13,6 +13,7 @@ import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
+import { getAnimeRelations } from '@/lib/providers/anilist/relations';
 import {
   getCurrentAnime,
   getAnimeById,
@@ -120,6 +121,9 @@ export const anilistQueryKeys = {
   /** Per-episode air dates + titles for one anime series (detail screen). */
   episodes: (mediaId: number) =>
     [...anilistQueryKeys.all, 'episodes', mediaId] as const,
+  /** Prequels, sequels, adaptations… of one media (detail screen's related row). */
+  relations: (mediaId: number) =>
+    [...anilistQueryKeys.all, 'relations', mediaId] as const,
   /** Prefix over every search entry — details/[id] scans this for cache hits
    *  (the only route a manga result can resolve through). Shared root so the
    *  scan in `search-cache.ts` can't drift from the key built here. */
@@ -292,6 +296,33 @@ export function useAnimeByIdQuery(mediaId: number | null) {
     queryKey: anilistQueryKeys.anime(mediaId ?? 0),
     queryFn: () => Effect.runPromise(getAnimeById(anilistDeps(), mediaId ?? 0)),
     enabled: mediaId != null,
+    staleTime: SEASONAL_STALE_MS,
+  });
+}
+
+/**
+ * The related-media row of a details screen. Each related item is also seeded
+ * under `anime(id)`, the key the cold deep-link resolver reads, so tapping a
+ * card opens it from cache instead of spending a second request of the
+ * 30 req/min budget — and a manga relation resolves at all, since no feed row
+ * or search cache holds it.
+ */
+export function useSuspenseAniListRelationsQuery(params: { mediaId: number }) {
+  const { mediaId } = params;
+  const queryClient = useQueryClient();
+  return useSuspenseQuery({
+    queryKey: anilistQueryKeys.relations(mediaId),
+    queryFn: async () => {
+      const relations = await Effect.runPromise(
+        getAnimeRelations(anilistDeps(), { mediaId }),
+      );
+      for (const { item } of relations) {
+        if (item.externalIds.anilist != null) {
+          queryClient.setQueryData(anilistQueryKeys.anime(item.externalIds.anilist), item);
+        }
+      }
+      return relations;
+    },
     staleTime: SEASONAL_STALE_MS,
   });
 }

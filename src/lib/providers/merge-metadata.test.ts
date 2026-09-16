@@ -159,6 +159,23 @@ describe('applyPrimaryMetadata', () => {
     expect(merged.externalIds).toEqual({ trakt: 1, tmdb: 94605, imdb: 'tt11126994' });
   });
 
+  test('titles merge per key with the item winning', () => {
+    const merged = applyPrimaryMetadata(
+      { ...item, titles: { romaji: 'Arcane', native: 'アーケイン' } },
+      {
+        ...item,
+        id: 'tmdb-tv-94605',
+        titles: { english: 'Arcane', native: 'Arcane: League of Legends' },
+      },
+    );
+    expect(merged.titles).toEqual({
+      english: 'Arcane',
+      romaji: 'Arcane',
+      native: 'アーケイン',
+    });
+    expect(applyPrimaryMetadata(item, { ...item, id: 'tmdb-tv-94605' }).titles).toBeUndefined();
+  });
+
   test('keeps item fields when primary lacks them, and passes through on null', () => {
     const sparse = applyPrimaryMetadata(item, {
       id: 'tmdb-tv-94605',

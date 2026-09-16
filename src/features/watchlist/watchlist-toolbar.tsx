@@ -5,7 +5,6 @@ import { Text, View } from 'react-native';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
-import { PROVIDER_DOT } from '@/features/trackers/provider-style';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -76,7 +75,7 @@ function FilterPill({
         className="flex-row items-center gap-2 pl-3 pr-2 py-1.5"
         onPress={onOpen}
       >
-        <View className={cn('w-2 h-2 rounded-full', PROVIDER_DOT[active])} />
+        <ProviderIcon id={active} size={14} />
         <Text className="text-background font-sans-semibold text-sm">
           {PROVIDERS[active].label}
         </Text>

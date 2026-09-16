@@ -6,11 +6,9 @@ import { Sheet } from '@/components/sheet';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
 import {
   capabilityLabels,
-  PROVIDER_DOT,
   statusLine,
 } from '@/features/trackers/provider-style';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
-import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders, useDisconnectProvider } from '@/state/session';
@@ -57,7 +55,7 @@ function ProviderSheetContent({
   return (
     <>
       {/* Same identity block as the row it was opened from — icon chip, name,
-          then dot + status — so the sheet reads as that row expanded rather
+          then status — so the sheet reads as that row expanded rather
           than as a different screen. */}
       <View className="flex-row items-center">
         <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
@@ -68,9 +66,6 @@ function ProviderSheetContent({
             {PROVIDERS[id].label}
           </Text>
           <View className="flex-row items-center gap-1.5 mt-0.5">
-            {connected && (
-              <View className={cn('w-1.5 h-1.5 rounded-full', PROVIDER_DOT[id])} />
-            )}
             <Text
               className="flex-1 text-muted font-sans text-xs"
               numberOfLines={1}

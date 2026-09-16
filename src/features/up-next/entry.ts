@@ -1,3 +1,5 @@
+import { routes } from '@/lib/routes';
+
 import type { UpNextEntry, UpNextRelease } from './types';
 
 /**
@@ -40,4 +42,19 @@ export function entryLabel(entry: UpNextEntry): string {
   const { season, number, title } = entry.episode;
   const code = season == null ? `E${number}` : `S${season}E${number}`;
   return title == null ? code : `${code} · ${title}`;
+}
+
+/**
+ * The episode route for a single episode the route can address: a tracker
+ * season pointer, or an AniList entry number the route places itself.
+ * Undefined for a release, and for a seasonless tracker entry (Simkl anime is
+ * numbered absolutely, which the anime route can't place) — the card opens
+ * the show instead.
+ */
+export function episodeHref(entry: UpNextEntry): string | undefined {
+  if (entry.kind !== 'episode') return undefined;
+  const { season, number } = entry.episode;
+  if (season != null) return routes.episode(entry.item.id, season, number);
+  if (entry.source === 'anilist') return routes.animeEpisode(entry.item.id, number);
+  return undefined;
 }

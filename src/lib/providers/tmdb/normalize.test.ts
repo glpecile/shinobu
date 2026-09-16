@@ -391,6 +391,7 @@ describe('normalizeMovieCatalogue', () => {
       {
         id: 603,
         title: 'The Matrix',
+        original_title: 'The Matrix',
         overview: 'A hacker learns the truth.',
         poster_path: '/matrix.jpg',
         backdrop_path: '/matrix-wide.jpg',
@@ -419,6 +420,8 @@ describe('normalizeMovieCatalogue', () => {
     expect(result?.catalogue).toEqual({
       id: 'tmdb-movie-603',
       title: 'The Matrix',
+      // An original title equal to the title is no alternate — omitted.
+      titles: { english: 'The Matrix' },
       coverImage: 'https://image.tmdb.org/t/p/w342/matrix.jpg',
       backdropImage: 'https://image.tmdb.org/t/p/w1280/matrix-wide.jpg',
       overview: 'A hacker learns the truth.',

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import {
   FadeIn,
+  FadeOut,
   Keyframe,
+  LinearTransition,
   useReducedMotion,
   type EntryOrExitLayoutType,
 } from 'react-native-reanimated';
@@ -94,6 +96,20 @@ function dayContentAnimation(
   return direction > 0 ? dayContentForward : dayContentBackward;
 }
 
+/**
+ * A logged show moves to the head of Continue Watching (most recently watched
+ * first) or leaves the row once it's caught up; the cards slide and fade
+ * rather than snapping. Native only: on web a `layout` transition scales the
+ * card's text and an `exiting` clone reparents it out of the row
+ * (docs/solutions/reanimated-web-layout-transition-scales-text.md,
+ * reanimated-web-exiting-pulls-child-out-of-flow.md). No `entering`: the
+ * section already rises in as one, and a card should not perform on load.
+ */
+const CARD_LAYOUT =
+  Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
+const CARD_EXIT =
+  Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
+
 /** Label, date and dots ride the same curve as the fill under them, instead
  * of flipping instantly against a fading background. */
 const LABEL_TRANSITION = {
@@ -167,12 +183,17 @@ export function UpNextSection({
             className="px-4"
             showsHorizontalScrollIndicator={false}
           >
-            {/* Keyed on the *entry* id, not the item's: one film contributes a
-                theatrical and a streaming row that share an item id (R3), so
-                keying on the item would collide the moment both land on the
-                same day. The entry id carries the episode or release kind. */}
+            {/* Keyed on the *show*, not the entry: a quick-log advances the
+                entry (its id carries the episode), and the card has to stay
+                mounted for the line to morph and the art to hold still. One
+                entry per show here by construction, so the item id is unique. */}
             {continueWatching.map((entry) => (
-              <View key={entry.id} className="mr-3">
+              <AnimatedView
+                key={entry.item.id}
+                className="mr-3"
+                exiting={CARD_EXIT}
+                layout={reduceMotion ? undefined : CARD_LAYOUT}
+              >
                 <EpisodeCard
                   // Continue Watching is aired episodes by construction; the
                   // narrowing is what the union buys — no release row can slip
@@ -190,7 +211,7 @@ export function UpNextSection({
                   onActionsPress={onItemActions}
                   onPress={onItemPress}
                 />
-              </View>
+              </AnimatedView>
             ))}
           </ScrollView>
         </UpNextSectionHeader>
@@ -334,8 +355,8 @@ export function UpNextSection({
                 contentContainerStyle={{ paddingTop: STACK_HEADROOM }}
                 showsHorizontalScrollIndicator={false}
               >
-                {/* Entry id, for the same reason as Continue Watching above —
-                    carried on the group by its lead. */}
+                {/* The group id is per show (per release row for films), for
+                    the same reason as Continue Watching above. */}
                 {selected.groups.map((group) => (
                   <View key={group.id} className="mr-3">
                     <EpisodeCard

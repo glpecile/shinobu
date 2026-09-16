@@ -20,9 +20,9 @@ import { useThemeColor } from '@/lib/theme-color';
  * The button owns nothing but the tap. Nothing advances optimistically
  * (KTD-6): once a write lands, the button spins until the Up Next slot's
  * awaited invalidation resolves, and the card then advances, moves, or
- * disappears purely from recomputed data — which is why it simply unmounts
- * (its entry id carries the episode number) rather than animating a counter.
- * The sheet lives above the card for exactly that reason.
+ * disappears purely from recomputed data — the button never animates a
+ * counter of its own. The sheet lives above the card, which can unmount
+ * mid-chain once the show is caught up.
  *
  * Typed to the `episode` arm of the union, not `UpNextEntry`: a release entry
  * has no episode to log (plan 0030 R5), so callers narrow rather than this

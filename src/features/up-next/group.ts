@@ -15,8 +15,9 @@ import type { UpNextEntry } from './types';
  */
 export interface UpNextGroup {
   /**
-   * Stable list key. The lead entry's id, which already carries its episode —
-   * so a quick-log that advances the show re-keys the card exactly as before.
+   * Stable list key, per *show* (`groupKey`) rather than per episode: a
+   * quick-log that advances the show must update the card in place — the
+   * entry line morphs and the art stays put — not remount it.
    */
   id: string;
   /** The entry the card renders from: the first of the batch in the day's order. */
@@ -53,9 +54,10 @@ export function groupDayEntries(
 ): UpNextGroup[] {
   const groups = new Map<string, UpNextGroup>();
   for (const entry of entries) {
-    const existing = groups.get(groupKey(entry));
+    const key = groupKey(entry);
+    const existing = groups.get(key);
     if (existing == null) {
-      groups.set(groupKey(entry), { id: entry.id, lead: entry, entries: [entry] });
+      groups.set(key, { id: key, lead: entry, entries: [entry] });
       continue;
     }
     existing.entries.push(entry);
@@ -70,7 +72,7 @@ export function groupDayEntries(
  * in a section that can't produce them.
  */
 export function soloGroup(entry: UpNextEntry): UpNextGroup {
-  return { id: entry.id, lead: entry, entries: [entry] };
+  return { id: groupKey(entry), lead: entry, entries: [entry] };
 }
 
 /**

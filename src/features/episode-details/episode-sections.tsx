@@ -1,4 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -26,6 +27,7 @@ import type { NormalizedEpisode } from '@/types/media';
 
 import type { EpisodeLog } from './use-episode-logs';
 import { episodeCode, episodeMetaLine, formatAirDate } from './episode-label';
+import type { EpisodeRef } from './episode-neighbours';
 
 /**
  * The building blocks every episode surface composes — the three screen
@@ -36,8 +38,8 @@ import { episodeCode, episodeMetaLine, formatAirDate } from './episode-label';
 
 /**
  * The wide still, or the 忍 placeholder while TMDB hasn't answered / has none.
- * Plain image, not `ZoomableImage`: the iOS variant lives in a form sheet, and
- * the lightbox's zoom transition renders inside the sheet's clip.
+ * Plain image, not `ZoomableImage`: the actions sheet draws it too, and the
+ * lightbox's zoom transition renders inside the sheet's clip.
  */
 export function EpisodeStill({
   uri,
@@ -258,13 +260,59 @@ export function EpisodeSeriesLink({
   );
 }
 
+/**
+ * Previous / next episode, across season boundaries, from the show's layout
+ * (`useEpisode` → `episodeNeighbours`). Always the tracker's explicit
+ * `season`+`number`, which is what the route places without ani.zip.
+ */
+export function EpisodeNav({
+  id,
+  prev,
+  next,
+  className,
+}: {
+  id: string;
+  prev: EpisodeRef | undefined;
+  next: EpisodeRef | undefined;
+  className?: string;
+}) {
+  const router = useRouter();
+  // push-guard-exempt: `replace`, not push — stepping through episodes must
+  // not stack one screen per step, so back still returns to the show.
+  function go(target: EpisodeRef) {
+    router.replace(routes.episode(id, target.season, target.number));
+  }
+  return (
+    <View className={cn('flex-row gap-3', className)}>
+      <Button
+        className="flex-1"
+        disabled={prev == null}
+        icon={<Button.Icon name="chevron-back" />}
+        label="Previous"
+        onPress={() => prev != null && go(prev)}
+        size="sm"
+        variant="quiet"
+      />
+      <Button
+        className="flex-1"
+        disabled={next == null}
+        icon={<Button.Icon name="chevron-forward" />}
+        label="Next"
+        onPress={() => next != null && go(next)}
+        size="sm"
+        variant="quiet"
+      />
+    </View>
+  );
+}
+
 /** Mirrors the loaded header so content lands without a shift. */
 export function EpisodeHeaderSkeleton() {
   return (
     <View>
-      <Skeleton className="h-3 w-32 rounded" />
-      <Skeleton className="h-8 w-64 rounded mt-2" />
-      <Skeleton className="h-3 w-40 rounded mt-2" />
+      <Skeleton className="h-3 w-32 rounded mt-0.5" />
+      <Skeleton className="h-9 w-64 rounded mt-1.5" />
+      <Skeleton className="h-3.5 w-40 rounded mt-2" />
     </View>
   );
 }

@@ -230,6 +230,27 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     expect(days[0].entries).toHaveLength(2);
   });
 
+  test('a rewatch on a later day is its own row — the merge keys on the log, not the item', () => {
+    const movie = { id: 'trakt-603', title: 'Fight Club', externalIds: { tmdb: 603 } };
+    const merged = mergeDiaryEntries([
+      state('trakt', [
+        entry('trakt', 'first', '2026-07-01T20:00:00.000Z', { item: item(movie) }),
+        entry('trakt', 'again', '2026-07-20T20:00:00.000Z', { item: item(movie) }),
+      ]),
+      // Simkl's snapshot holds only the latest play, so it contributes one entry
+      // that collapses into the rewatch's row and never erases the first watch.
+      state('simkl', [
+        entry('simkl', '603', '2026-07-20T20:00:00.000Z', {
+          item: item({ ...movie, id: 'simkl-603' }),
+        }),
+      ]),
+    ]);
+    const days = groupDiaryEntries(merged, TZ_MINUS_5);
+    expect(days.map((day) => day.entries.length)).toEqual([1, 1]);
+    expect(days[0].entries[0].providers).toEqual(['trakt', 'simkl']);
+    expect(days[1].entries[0].providers).toEqual(['trakt']);
+  });
+
   test('cross-provider entries with mismatched episode sets do not merge', () => {
     const merged = mergeDiaryEntries([
       state('trakt', [

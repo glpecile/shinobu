@@ -18,6 +18,9 @@ interface TmdbCreditBase {
   /** Movies title under `title`, TV under `name`. */
   title?: string | null;
   name?: string | null;
+  /** The title in its original language, same movie/TV split as above. */
+  original_title?: string | null;
+  original_name?: string | null;
   poster_path?: string | null;
   backdrop_path?: string | null;
   overview?: string | null;
@@ -629,10 +632,18 @@ function catalogueExtras(
   const genres = (raw.genres ?? [])
     .map((genre) => genre.name ?? '')
     .filter((name) => name !== '');
+  const original = raw.original_title ?? raw.original_name ?? '';
+  const title = raw.title ?? raw.name ?? '';
   return {
     // Detail hero wants the sharper backdrop; the base normalizer's w780
     // suits cards, not a full-bleed header.
     backdropImage: tmdbImageUrl(raw.backdrop_path, 'w1280'),
+    // The English title rides along as `english` so an AniList item shown
+    // under its romaji title (no English title there) still gets one.
+    titles: {
+      english: title,
+      ...(original !== '' && original !== title ? { native: original } : {}),
+    },
     ...(genres.length > 0 ? { genres } : {}),
     ...(runtime != null && runtime > 0 ? { runtime } : {}),
     ...(totalEpisodes != null && totalEpisodes > 0 ? { totalEpisodes } : {}),

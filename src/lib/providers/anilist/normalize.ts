@@ -102,10 +102,16 @@ export function normalizeAniListMedia(
   const total = type === 'MANGA' ? media.chapters : media.episodes;
   const year = media.seasonYear ?? media.startDate?.year;
   const genres = media.genres?.filter((genre): genre is string => genre != null);
+  const titles = {
+    ...(media.title?.romaji != null ? { romaji: media.title.romaji } : {}),
+    ...(media.title?.english != null ? { english: media.title.english } : {}),
+    ...(media.title?.native != null ? { native: media.title.native } : {}),
+  };
 
   return {
     id: `anilist-${media.id}`,
     title: anilistTitle(media),
+    ...(Object.keys(titles).length > 0 ? { titles } : {}),
     coverImage: media.coverImage?.extraLarge ?? media.coverImage?.large ?? '',
     ...(media.bannerImage != null ? { backdropImage: media.bannerImage } : {}),
     ...(media.description != null ? { overview: stripHtml(media.description) } : {}),
@@ -236,9 +242,10 @@ export interface AniListListActivity {
 }
 
 // Only watch/read-shaped updates are diary logs: a "watched episode",
-// "rewatched episode", "read chapter", or "completed" activity. Plan/pause/drop
-// status changes are list bookkeeping, not a watch — they drop out.
-const DIARY_STATUS = /^(watched|rewatched|read|completed)/i;
+// "rewatched episode", "read chapter", "reread chapter", or "completed"
+// activity. Plan/pause/drop status changes (and the "rewatching"/"rereading"
+// flip to REPEATING) are list bookkeeping, not a watch — they drop out.
+const DIARY_STATUS = /^(watched|rewatched|read|reread|completed)/i;
 
 /**
  * Parses an AniList activity `progress` string into the episode/chapter number

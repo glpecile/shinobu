@@ -48,6 +48,7 @@ describe('normalizeAniListMedia', () => {
     expect(item).toMatchObject({
       id: 'anilist-21',
       title: 'One Piece',
+      titles: { english: 'One Piece', romaji: 'ONE PIECE', native: 'ONE PIECE' },
       coverImage: 'https://img/xl.png',
       backdropImage: 'https://img/banner.png',
       overview: 'Gold Roger was known as the Pirate King.\n\nThe end.',
@@ -80,6 +81,7 @@ describe('normalizeAniListMedia', () => {
       NOW_ISO,
     );
     expect(item.title).toBe('Sen to Chihiro no Kamikakushi');
+    expect(item.titles).toEqual({ romaji: 'Sen to Chihiro no Kamikakushi' });
   });
 
   test('manga counts chapters, not episodes', () => {
@@ -187,6 +189,20 @@ describe('normalizeListActivity', () => {
     expect(entry?.item.type).toBe('MANGA');
     expect(entry?.item.progressUnit).toBe('chapter');
     expect(entry?.episodes).toEqual([41]);
+  });
+
+  test('a reread-chapter activity (a manga rewatch) is a log, not bookkeeping', () => {
+    const activity: AniListListActivity = {
+      id: 5006,
+      status: 'reread chapter 12 of',
+      progress: '12',
+      createdAt: 1_752_000_250,
+      media: MANGA,
+    };
+
+    const entry = normalizeListActivity(activity);
+    expect(entry?.item.type).toBe('MANGA');
+    expect(entry?.episodes).toEqual([12]);
   });
 
   test('a plans-to-watch activity is filtered out', () => {
