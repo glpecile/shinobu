@@ -55,8 +55,8 @@ const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-[54px] rounded';
 const ROW_HEIGHT = 66;
 
-/** The role button sits under the pill on a phone and beside it from `md`. */
-const ROLE_BUTTON = 'self-start mt-3 md:mt-0 md:ml-3';
+/** Pill and role button share a row, wrapping only when a long role label won't fit. */
+const CONTROLS = 'flex-row flex-wrap items-center gap-3 pb-3';
 
 /**
  * How far the rows dip when a filter changes them. Not to zero: the list is
@@ -334,7 +334,7 @@ export function CreditTimeline({
                   {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
                 </Section.Count>
               </Section.Header>
-              <View className="md:flex-row md:items-center pb-3">
+              <View className={CONTROLS}>
                 <SegmentedControl
                   accessibilityLabel="Format"
                   className="w-52"
@@ -350,7 +350,6 @@ export function CreditTimeline({
                 {counts.length > 1 && (
                   <Button
                     accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
-                    className={ROLE_BUTTON}
                     icon={<Button.Icon name="filter-outline" />}
                     label={activeRole ?? 'All roles'}
                     morphLabel
@@ -450,13 +449,10 @@ export function CreditTimelineSkeleton({ header }: { header: ReactNode }) {
           <Section.Title>Filmography</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
         </Section.Header>
-        <View className="md:flex-row md:items-center pb-3">
+        <View className={CONTROLS}>
           {/* The segmented control is 30px tall, the role button 38. */}
           <Skeleton className="h-[30px] w-52 rounded-full" />
-          <Skeleton
-            className={cn(ROLE_BUTTON, 'h-[38px] w-[118px] rounded-full')}
-            delay={staggerDelay(1)}
-          />
+          <Skeleton className="h-[38px] w-[118px] rounded-full" delay={staggerDelay(1)} />
         </View>
       </Section>
       {SKELETON_RUNS.map((rows, run) => (
