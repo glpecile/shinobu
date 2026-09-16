@@ -137,6 +137,17 @@ export interface NormalizedCrewMember {
   tmdbId?: number;
 }
 
+/** An AniList character — a manga's cast, since print has no voice actors to credit. */
+export interface NormalizedCharacter {
+  /** The `/character/[id]` route key. */
+  anilistId: number;
+  name: string;
+  /** "Main", "Supporting", "Background"; '' when omitted. */
+  role: string;
+  /** '' when unavailable — render an initials fallback. */
+  image: string;
+}
+
 /**
  * The person behind a cast/crew credit, backing `/person/[id]` and the
  * `/person/lookup` resolution route. TMDB is the primary source; an

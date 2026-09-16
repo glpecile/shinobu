@@ -16,6 +16,7 @@ import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
 import {
   getCurrentAnime,
+  getAniListCharacter,
   getAnimeById,
   getEntryState,
   getSeasonalAnime,
@@ -121,7 +122,7 @@ export const anilistQueryKeys = {
   /** Per-episode air dates + titles for one anime series (detail screen). */
   episodes: (mediaId: number) =>
     [...anilistQueryKeys.all, 'episodes', mediaId] as const,
-  /** Prequels, sequels, adaptations… of one media (detail screen's related row). */
+  /** Prequels, sequels, adaptations… plus recommendations and tags of one media. */
   relations: (mediaId: number) =>
     [...anilistQueryKeys.all, 'relations', mediaId] as const,
   /** Prefix over every search entry — details/[id] scans this for cache hits
@@ -131,6 +132,8 @@ export const anilistQueryKeys = {
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.searchRoot(), query, limit] as const,
+  /** One character's profile and appearances (`/character/[id]`). */
+  character: (id: number) => [...anilistQueryKeys.all, 'character', id] as const,
   /** A person's AniList staff id, resolved by name (plan 0035 R12). */
   staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
   /** A studio's AniList id, resolved by name — the studio sheet's link. */
@@ -301,7 +304,7 @@ export function useAnimeByIdQuery(mediaId: number | null) {
 }
 
 /**
- * The related-media row of a details screen. Each related item is also seeded
+ * The related, recommended and tag sections of a details screen. Each item is also seeded
  * under `anime(id)`, the key the cold deep-link resolver reads, so tapping a
  * card opens it from cache instead of spending a second request of the
  * 30 req/min budget — and a manga relation resolves at all, since no feed row
@@ -313,16 +316,29 @@ export function useSuspenseAniListRelationsQuery(params: { mediaId: number }) {
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.relations(mediaId),
     queryFn: async () => {
-      const relations = await Effect.runPromise(
+      const result = await Effect.runPromise(
         getAnimeRelations(anilistDeps(), { mediaId }),
       );
-      for (const { item } of relations) {
+      for (const item of [
+        ...result.relations.map((relation) => relation.item),
+        ...result.recommendations,
+      ]) {
         if (item.externalIds.anilist != null) {
           queryClient.setQueryData(anilistQueryKeys.anime(item.externalIds.anilist), item);
         }
       }
-      return relations;
+      return result;
     },
+    staleTime: SEASONAL_STALE_MS,
+  });
+}
+
+/** `/character/[id]`'s whole read — public, so it works before AniList is connected. */
+export function useSuspenseAniListCharacterQuery(params: { id: number }) {
+  return useSuspenseQuery({
+    queryKey: anilistQueryKeys.character(params.id),
+    queryFn: () =>
+      Effect.runPromise(getAniListCharacter(anilistDeps(), { id: params.id })),
     staleTime: SEASONAL_STALE_MS,
   });
 }

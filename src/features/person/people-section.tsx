@@ -20,14 +20,15 @@ function PersonCard({
 }: {
   credit: PersonCredit;
   onPress?: () => void;
-  onActions: (credit: PersonCredit) => void;
+  onActions?: (credit: PersonCredit) => void;
 }) {
   const accentForeground = useThemeColor('--color-accent-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
   // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
   // the media card's).
   const [hovered, setHovered] = useState(false);
-  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
+  const showActionsButton =
+    process.env.EXPO_OS === 'web' && hovered && onActions != null;
 
   const content = (
     <>
@@ -67,14 +68,14 @@ function PersonCard({
         // still has the full role to show, so the card stays pressable.
         <PresstableScale
           className="items-center"
-          onPress={() => onActions(credit)}
+          onPress={() => onActions?.(credit)}
         >
           {content}
         </PresstableScale>
       ) : (
         <PresstableScale
           className="items-center"
-          onLongPress={() => onActions(credit)}
+          onLongPress={onActions == null ? undefined : () => onActions(credit)}
           onPress={onPress}
         >
           {content}
@@ -85,7 +86,7 @@ function PersonCard({
           accessibilityLabel={`More about ${credit.name}`}
           accessibilityRole="button"
           className="absolute top-0 right-0 w-7 h-7 items-center justify-center rounded-full bg-black/70"
-          onPress={() => onActions(credit)}
+          onPress={() => onActions?.(credit)}
         >
           <Ionicons
             color={
@@ -100,14 +101,20 @@ function PersonCard({
   );
 }
 
-export function PeopleSection({
+/**
+ * A rail of credits that open person pages. `onPersonPress` replaces that for
+ * cards that aren't people (AniList characters), which have no credit sheet.
+ */
+export function PeopleSection<Credit extends PersonCredit>({
   title,
   people,
   onCreditActions,
+  onPersonPress,
 }: {
   title: string;
-  people: PersonCredit[];
-  onCreditActions: (credit: PersonCredit) => void;
+  people: Credit[];
+  onCreditActions?: (credit: PersonCredit) => void;
+  onPersonPress?: (credit: Credit) => void;
 }) {
   const pushRoute = usePushRoute();
   // No TMDB token, no person pages — press falls back to the credit sheet.
@@ -126,7 +133,9 @@ export function PeopleSection({
             credit={credit}
             key={credit.id}
             onActions={onCreditActions}
-            {...(canOpenPeople
+            {...(onPersonPress != null
+              ? { onPress: () => onPersonPress(credit) }
+              : canOpenPeople
               ? {
                   onPress: () =>
                     pushRoute(

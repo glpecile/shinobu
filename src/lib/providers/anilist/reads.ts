@@ -15,6 +15,7 @@ import type { AniListDeps } from './deps';
 import { anilistAuthedRequest, anilistRequest } from './http';
 import type { AnimeFormatFilter, AnimeSeason } from './season';
 import {
+  humanizeEnum,
   normalizeAniListMedia,
   stripHtml,
   normalizeCurrentAnimeEntry,
@@ -528,6 +529,80 @@ export function getAniListStaff(
         ? [voiceRow, staffRow]
         : [staffRow, voiceRow]
       ).filter((row) => row != null),
+    };
+  });
+}
+
+interface CharacterResponse {
+  Character: {
+    id: number;
+    name?: { full?: string | null; native?: string | null } | null;
+    image?: { large?: string | null } | null;
+    description?: string | null;
+    media?: {
+      edges?: Array<{ characterRole?: string | null; node?: AniListMedia | null } | null> | null;
+    } | null;
+  } | null;
+}
+
+/**
+ * One character's profile and appearances, shaped as person details so
+ * `/character/[id]` renders through the person page. Public, like
+ * `getAniListStaff`.
+ */
+export function getAniListCharacter(
+  deps: AniListDeps,
+  params: { id: number },
+): Effect.Effect<NormalizedPersonDetails, ProviderError> {
+  return Effect.gen(function* () {
+    const data = yield* anilistRequest<CharacterResponse>(
+      deps,
+      `query ($id: Int, $perPage: Int) {
+        Character(id: $id) {
+          id
+          name { full native }
+          image { large }
+          description(asHtml: false)
+          media(sort: START_DATE_DESC, perPage: $perPage) {
+            edges { characterRole node { ${MEDIA_FIELDS} } }
+          }
+        }
+      }`,
+      { variables: { id: params.id, perPage: STAFF_CREDITS_PER_PAGE } },
+    );
+    const character = data.Character;
+    if (character == null) {
+      return yield* new ProviderDecodeError({
+        provider: 'anilist',
+        detail: `no character record for id ${params.id}`,
+      });
+    }
+
+    const now = yield* Clock.currentTimeMillis;
+    const image = character.image?.large ?? '';
+    const biography =
+      character.description == null ? '' : stripHtml(character.description);
+    const appearances = staffCreditRow(
+      'Appearances',
+      (character.media?.edges ?? []).flatMap((edge) =>
+        edge?.node == null
+          ? []
+          : [{
+              media: edge.node,
+              detail: edge.characterRole == null ? '' : humanizeEnum(edge.characterRole),
+            }],
+      ),
+      new Date(now).toISOString(),
+    );
+
+    return {
+      person: {
+        name: character.name?.full ?? character.name?.native ?? '',
+        headshot: image,
+        headshotFull: image,
+        ...(biography !== '' ? { biography } : {}),
+      },
+      rows: appearances == null ? [] : [appearances],
     };
   });
 }

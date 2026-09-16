@@ -51,6 +51,8 @@ export const routes = {
   /** For credits without a TMDB person id (AniList people): resolve by name. */
   personLookup: (name: string) =>
     `/person/lookup?name=${encodeURIComponent(name)}` as const,
+  /** An AniList character — characters exist only there, so its id is the key. */
+  character: (anilistId: number) => `/character/${anilistId}` as const,
   /** Keyed by TMDB company id — same single-source rule as /person. */
   studio: (tmdbId: number) => `/studio/${tmdbId}` as const,
   /** For studios without a TMDB id (AniList's): resolve by name. */

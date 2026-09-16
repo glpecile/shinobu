@@ -18,10 +18,15 @@ import { routes } from '@/lib/routes';
 import { personMetaLine } from './meta-line';
 
 /**
- * The person page itself, shared by `/person/[id]` and `/person/lookup` — the
- * two differ only in how the details were fetched.
+ * The person page itself, shared by `/person/[id]`, `/person/lookup` and
+ * `/character/[id]`. A character has no person page on any provider, so it
+ * passes `showLinks={false}`.
  */
-export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
+export function PersonDetailsView({
+  person,
+  rows,
+  showLinks = true,
+}: NormalizedPersonDetails & { showLinks?: boolean }) {
   const pushRoute = usePushRoute();
   const meta = personMetaLine(person);
   // Same per-card actions dialog as the home feed.
@@ -39,9 +44,11 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
       <CreditTimeline
         filmography={filmography}
         footer={
-          <View className="px-6">
-            <PersonLinksSection person={person} />
-          </View>
+          showLinks ? (
+            <View className="px-6">
+              <PersonLinksSection person={person} />
+            </View>
+          ) : undefined
         }
         header={
           <View className="px-6 pt-28">

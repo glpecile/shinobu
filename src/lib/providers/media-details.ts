@@ -14,6 +14,7 @@ import {
 import type {
   MediaType,
   NormalizedCastMember,
+  NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedMediaItem,
   NormalizedStudio,
@@ -46,6 +47,8 @@ export interface MediaDetails {
    * (`applyPrimaryMetadata`); null when only provider credits were available.
    */
   catalogue: NormalizedMediaItem | null;
+  /** AniList-only; empty from TMDB and Trakt. */
+  characters: NormalizedCharacter[];
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
   studios: NormalizedStudio[];
@@ -70,6 +73,7 @@ export function tmdbKindFor(type: MediaType, isFilm?: boolean): TmdbKind | null 
 
 const EMPTY: MediaDetails = {
   catalogue: null,
+  characters: [],
   cast: [],
   crew: [],
   studios: [],
@@ -80,10 +84,11 @@ function providerFallback(
   deps: MediaDetailsDeps,
   params: MediaDetailsParams,
 ): Effect.Effect<MediaDetails, ProviderError> {
-  if (params.type === 'ANIME' && params.anilistId != null) {
+  if ((params.type === 'ANIME' || params.type === 'MANGA') && params.anilistId != null) {
     return getAnimeCredits(deps.anilist, { mediaId: params.anilistId }).pipe(
       Effect.map((credits) => ({
         catalogue: null,
+        characters: credits.characters,
         cast: credits.cast,
         crew: credits.crew,
         studios: credits.studios,
@@ -108,6 +113,7 @@ function providerFallback(
     ).pipe(
       Effect.map(({ people, studios }) => ({
         catalogue: null,
+        characters: [],
         cast: people.cast,
         crew: people.crew,
         studios,
@@ -132,6 +138,7 @@ export function getMediaDetails(
     Effect.map(
       (result): MediaDetails => ({
         catalogue: result.catalogue,
+        characters: [],
         cast: result.cast,
         crew: result.crew,
         studios: result.studios,

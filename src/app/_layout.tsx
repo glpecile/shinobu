@@ -139,6 +139,7 @@ export default function Layout() {
                   <Stack.Screen name="episode/[id]" />
                   <Stack.Screen name="person/[id]" />
                   <Stack.Screen name="person/lookup" />
+                  <Stack.Screen name="character/[id]" />
                   <Stack.Screen name="studio/[id]" />
                   <Stack.Screen name="studio/lookup" />
                   <Stack.Screen name="watchlist/index" />

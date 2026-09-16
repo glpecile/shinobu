@@ -23,7 +23,11 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CopyTitle } from '@/features/copy-title/copy-title';
-import { RelationsSection } from '@/features/details-relations/relations-section';
+import {
+  RecommendationsSection,
+  RelationsSection,
+  TagsSection,
+} from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -98,19 +102,26 @@ function alternateTitles(item: NormalizedMediaItem): string[] {
  * Trakt line uses, so both providers' detail pages read identically. Null for
  * plan-to-watch (nothing watched yet to report).
  */
-function anilistWatchedLabel(entry: {
-  status: string | null;
-  progress: number;
-  repeat: number;
-}): string | null {
-  const episodes = `${entry.progress} ${entry.progress === 1 ? 'episode' : 'episodes'} logged`;
+function anilistWatchedLabel(
+  entry: {
+    status: string | null;
+    progress: number;
+    repeat: number;
+  },
+  item: NormalizedMediaItem,
+): string | null {
+  const read = item.progressUnit === 'chapter';
+  const unit = read ? 'chapter' : 'episode';
+  const episodes = `${entry.progress} ${entry.progress === 1 ? unit : `${unit}s`} logged`;
   switch (entry.status) {
     case 'CURRENT':
-      return `Watching · ${episodes}`;
+      return `${read ? 'Reading' : 'Watching'} · ${episodes}`;
     case 'REPEATING':
-      return `Rewatching · ${episodes}`;
-    case 'COMPLETED':
-      return entry.repeat > 0 ? `Watched ${entry.repeat + 1}×` : 'Watched';
+      return `${read ? 'Rereading' : 'Rewatching'} · ${episodes}`;
+    case 'COMPLETED': {
+      const done = read ? 'Read' : 'Watched';
+      return entry.repeat > 0 ? `${done} ${entry.repeat + 1}×` : done;
+    }
     case 'PAUSED':
       return `Paused · ${episodes}`;
     case 'DROPPED':
@@ -137,8 +148,9 @@ function ProgressOfTotal({
 }) {
   return (
     <View className="flex-row items-baseline mt-0.5">
+      {/* Clamped: AniList counts a manga's extra chapters past its total (62 of 59). */}
       <MorphText className="text-foreground text-2xl font-sans-semibold">
-        {progress}
+        {Math.min(progress, total)}
       </MorphText>
       <Text className="text-muted text-2xl font-sans-semibold">{` / ${total}`}</Text>
     </View>
@@ -160,7 +172,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const watched = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
-    enabled: item.type === 'ANIME' && connected.includes('anilist'),
+    enabled: (item.type === 'ANIME' || item.type === 'MANGA') && connected.includes('anilist'),
   });
   // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
   // same line Trakt-sourced pages carry.
@@ -184,7 +196,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
           ? `Watched ${watched.plays}× · ${date}`
           : `Watched · ${date}`;
   } else if (anilistEntry.data?.entry != null) {
-    label = anilistWatchedLabel(anilistEntry.data.entry);
+    label = anilistWatchedLabel(anilistEntry.data.entry, item);
   } else if (
     simklEntry.data != null &&
     simklEntry.data.item.currentProgress > 0
@@ -290,6 +302,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
  */
 function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
+  const pushRoute = usePushRoute();
   // Long-press (web: the hover ⋯) on a credit card opens this instead of
   // navigating — the role text a 96px card had to clip is the whole point.
   const [credit, setCredit] = useState<PersonCredit | null>(null);
@@ -304,6 +317,18 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
   return (
     <>
       <PeopleSection
+        onPersonPress={(character) => pushRoute(routes.character(character.anilistId))}
+        title="Characters"
+        people={data.characters.map((character) => ({
+          id: `anilist-character-${character.anilistId}`,
+          anilistId: character.anilistId,
+          name: character.name,
+          role: character.role,
+          kind: 'cast' as const,
+          headshot: character.image,
+        }))}
+      />
+      <PeopleSection
         onCreditActions={openCredit}
         title="Cast"
         people={data.cast.map((member) => ({
@@ -317,7 +342,7 @@ function CreditsSections({ item }: { item: NormalizedMediaItem }) {
       />
       <PeopleSection
         onCreditActions={openCredit}
-        title="Crew"
+        title={item.type === 'MANGA' ? 'Staff' : 'Crew'}
         people={data.crew.map((member) => ({
           id: member.id,
           name: member.name,
@@ -412,7 +437,7 @@ export default function DetailsScreen() {
   // has already watched episodes. The live entry state corrects the stat tile.
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
-    enabled: item?.type === 'ANIME' && connected.includes('anilist'),
+    enabled: (item?.type === 'ANIME' || item?.type === 'MANGA') && connected.includes('anilist'),
   });
   // The same correction for TV, from Simkl's library entry — a show opened
   // from search showed "0 / 153" for a series watched end to end. Shares
@@ -466,7 +491,7 @@ export default function DetailsScreen() {
   const showProgress =
     (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
   const displayedProgress =
-    shown.type === 'ANIME'
+    shown.type === 'ANIME' || shown.type === 'MANGA'
       ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
       : (simklEntry.data?.item.currentProgress ?? shown.currentProgress);
 
@@ -494,7 +519,7 @@ export default function DetailsScreen() {
         type: 'inactive',
       });
     }
-    if (anilistId != null && item?.type === 'ANIME') {
+    if (anilistId != null && (item?.type === 'ANIME' || item?.type === 'MANGA')) {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
         anilistQueryKeys.episodes(anilistId),
@@ -667,6 +692,9 @@ export default function DetailsScreen() {
           >
             <CreditsSections item={item} />
           </SuspenseSection>
+
+          <RecommendationsSection item={shown} resetKey={refreshCount} />
+          <TagsSection item={shown} resetKey={refreshCount} />
 
           <ReleaseTimeline item={shown} />
 
