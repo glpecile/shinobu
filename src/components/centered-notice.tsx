@@ -1,8 +1,10 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps, ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { cn } from '@/lib/cn';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * Centered message with an optional action — a dedicated screen's
@@ -36,6 +38,16 @@ function CenteredNoticeGlyph({ children }: { children: ReactNode }) {
   return <Text className="text-5xl text-muted mb-4">{children}</Text>;
 }
 
+/** An Ionicon over the title, in the Glyph's slot and tone. */
+function CenteredNoticeIcon({ name }: { name: ComponentProps<typeof Ionicons>['name'] }) {
+  const muted = useThemeColor('--color-muted');
+  return (
+    <View className="mb-4">
+      <Ionicons color={muted} name={name} size={44} />
+    </View>
+  );
+}
+
 function CenteredNoticeTitle({ children }: { children: ReactNode }) {
   return (
     <Text className="text-2xl font-display text-foreground text-center">{children}</Text>
@@ -55,6 +67,7 @@ function CenteredNoticeAction(props: Omit<ComponentProps<typeof Button>, 'classN
 }
 
 CenteredNotice.Glyph = CenteredNoticeGlyph;
+CenteredNotice.Icon = CenteredNoticeIcon;
 CenteredNotice.Title = CenteredNoticeTitle;
 CenteredNotice.Body = CenteredNoticeBody;
 CenteredNotice.Action = CenteredNoticeAction;

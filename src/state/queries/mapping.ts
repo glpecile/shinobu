@@ -171,6 +171,29 @@ export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) 
 }
 
 /**
+ * A TMDB-keyed anime's AniList id, for the details variants row. Only for an
+ * animated title: ani.zip documents run to ~1 MB, and every live-action show
+ * would spend a request on a guaranteed miss. TMDB's movie and TV ids share a
+ * number space, so ani.zip's `type` has to agree with the item's.
+ */
+export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
+  const { tmdb, anilist } = item.externalIds;
+  const lookup = { tmdbId: tmdb ?? 0 };
+  const isMovie = item.type === 'MOVIE';
+  return useQuery({
+    queryKey: mappingQueryKeys.anizip(lookup),
+    queryFn: () => fetchAniZipIds(httpFetch, lookup),
+    ...FOREVER,
+    enabled:
+      tmdb != null &&
+      anilist == null &&
+      (isMovie || item.type === 'TV') &&
+      item.genres?.some((genre) => /anim/i.test(genre)) === true,
+    select: (ids) => (ids?.anilist != null && (ids.type === 'MOVIE') === isMovie ? ids.anilist : null),
+  });
+}
+
+/**
  * Not `FOREVER`, unlike every other mapping here: the episode table is the one
  * ani.zip read whose *content* changes — a just-aired episode lands in the
  * dataset hours after it airs, and a forever-cached miss would keep skipping

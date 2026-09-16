@@ -23,6 +23,7 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CopyTitle } from '@/features/copy-title/copy-title';
+import { DetailVariantsSection } from '@/features/detail-variants/detail-variants-section';
 import {
   RecommendationsAndTagsSection,
   RelationsSection,
@@ -742,6 +743,8 @@ export default function DetailsScreen() {
           <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
 
           <ReleaseTimeline item={shown} />
+
+          <DetailVariantsSection item={shown} />
 
           <ProviderLinksSection item={shown} />
         </View>
