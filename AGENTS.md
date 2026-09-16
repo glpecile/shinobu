@@ -250,9 +250,11 @@ same decision made again at every call site. What genuinely isn't a button stays
 its own pressable — a card, a list row that navigates, a row with a subtitle
 under its label (`write-sheet/manual-write-rows.tsx`).
 
-`MorphText` (`components/morph-text`) is web-only enhancement with a native
-fallback. Reserve it for text that *changes in place* from user state (progress
-counts, the log button's episode number), not static text or high-frequency churn.
+`MorphText` (`components/morph-text`) morphs a text change in place on every
+platform: torph on web, one Reanimated `Text` per glyph on native (shared
+characters slide, the rest crossfade). Reserve it for text that *changes in
+place* from user state (progress counts, the log button's episode number), not
+static text or high-frequency churn; `numberOfLines` opts a site back to a swap.
 
 **Sheets are `components/sheet`**, wrapping
 `@swmansion/react-native-bottom-sheet`. It works, so don't swap it: the
