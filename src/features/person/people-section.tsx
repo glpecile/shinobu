@@ -116,7 +116,10 @@ export function PeopleSection({
   if (people.length === 0) return null;
 
   return (
-    <Section title={title}>
+    <Section>
+      <Section.Header>
+        <Section.Title>{title}</Section.Title>
+      </Section.Header>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {people.map((credit) => (
           <PersonCard

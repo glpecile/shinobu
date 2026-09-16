@@ -109,10 +109,12 @@ function SeasonWall({
 
   if (items.length === 0) {
     return (
-      <CenteredNotice
-        body={`AniList lists nothing for ${animeSeasonLabel(window)} yet.`}
-        title="Nothing here"
-      />
+      <CenteredNotice>
+        <CenteredNotice.Title>Nothing here</CenteredNotice.Title>
+        <CenteredNotice.Body>
+          {`AniList lists nothing for ${animeSeasonLabel(window)} yet.`}
+        </CenteredNotice.Body>
+      </CenteredNotice>
     );
   }
 
@@ -181,13 +183,17 @@ function WallBoundary({
   return (
     <QueryErrorBoundary
       fallbackRender={({ resetErrorBoundary }) => (
-        <CenteredNotice
-          actionIcon={<Button.Icon name="refresh" />}
-          actionLabel="Try again"
-          body="AniList didn’t respond. Check your connection and try again."
-          onAction={resetErrorBoundary}
-          title="Something went wrong"
-        />
+        <CenteredNotice>
+          <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+          <CenteredNotice.Body>
+            AniList didn’t respond. Check your connection and try again.
+          </CenteredNotice.Body>
+          <CenteredNotice.Action
+            icon={<Button.Icon name="refresh" />}
+            label="Try again"
+            onPress={resetErrorBoundary}
+          />
+        </CenteredNotice>
       )}
       onReset={reset}
       resetKeys={[window.season, window.year, format]}
@@ -343,13 +349,15 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
   return (
     <View className="flex-1 bg-background">
-      <CenteredNotice
-        actionIcon={<Button.Icon name="refresh" />}
-        actionLabel="Try again"
-        body="The season couldn’t be displayed."
-        onAction={retry}
-        title="Something went wrong"
-      />
+      <CenteredNotice>
+        <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+        <CenteredNotice.Body>The season couldn’t be displayed.</CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label="Try again"
+          onPress={retry}
+        />
+      </CenteredNotice>
       <PresstableOpacity
         className="self-center mb-12"
         onPress={() => router.replace(routes.home)}

@@ -129,10 +129,8 @@ export function WatchlistAddPicker({
 
   return (
     <>
-      <WriteSheet.Header
-        description={`Choose where “${item.title}” is added.`}
-        title={copy.idle}
-      />
+      <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
+      <WriteSheet.Description>Choose where “{item.title}” is added.</WriteSheet.Description>
 
       {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
           mid-write would land on some providers and not others. */}
@@ -167,13 +165,13 @@ export function WatchlistAddPicker({
 
       <WriteSheet.Report
         allSkipLine={alreadyOnSentence}
-        error={watchlist.isError ? 'Could not add. Try again.' : null}
         failedHeadline={failedOnSentence}
         item={item}
         result={result}
         succeededLine={addedToSentence}
         verb="Add on"
       />
+      {watchlist.isError && <WriteSheet.Error>Could not add. Try again.</WriteSheet.Error>}
 
       <WriteSheet.Actions>
         <Button
@@ -284,10 +282,10 @@ export function WatchlistRemovePicker({
 
   return (
     <>
-      <WriteSheet.Header
-        description={`Choose where “${entry.item.title}” is removed.`}
-        title={copy.idle}
-      />
+      <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
+      <WriteSheet.Description>
+        Choose where “{entry.item.title}” is removed.
+      </WriteSheet.Description>
 
       {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
           mid-write would land on some providers and not others. */}
@@ -339,13 +337,13 @@ export function WatchlistRemovePicker({
           your watchlist" and "removing would delete your AniList entry"
           are different facts and no sentence collapses them. */}
       <WriteSheet.Report
-        error={remove.isError ? 'Could not remove. Try again.' : null}
         failedHeadline={failedOnSentence}
         item={entry.item}
         result={result}
         succeededLine={removedFromSentence}
         verb="Remove on"
       />
+      {remove.isError && <WriteSheet.Error>Could not remove. Try again.</WriteSheet.Error>}
 
       <WriteSheet.Actions>
         <Button

@@ -226,13 +226,17 @@ export function CardActionsSheet({
         <>
           {/* Opened by a long-press with no page transition, so the artwork
               is what confirms *which* item you grabbed. */}
-          <SheetHeader
-            leading={<SheetPoster item={item} />}
-            subtitle={[item.type, item.year != null ? String(item.year) : null]
-              .filter((part) => part != null)
-              .join(' · ')}
-            title={item.title}
-          />
+          <SheetHeader>
+            <SheetPoster item={item} />
+            <SheetHeader.Content>
+              <SheetHeader.Title>{item.title}</SheetHeader.Title>
+              <SheetHeader.Subtitle>
+                {[item.type, item.year != null ? String(item.year) : null]
+                  .filter((part) => part != null)
+                  .join(' · ')}
+              </SheetHeader.Subtitle>
+            </SheetHeader.Content>
+          </SheetHeader>
 
           {/* The credit that put this card in front of you (person/studio
               pages). The card clamps "2026 · Frank Castle" to one line, so the

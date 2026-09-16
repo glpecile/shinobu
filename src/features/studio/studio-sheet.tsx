@@ -34,7 +34,12 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
     <Sheet onClose={onClose} open={open && studio != null}>
       {studio != null && (
         <>
-          <SheetHeader eyebrow="Studio" title={studio.name} />
+          <SheetHeader>
+            <SheetHeader.Content>
+              <SheetHeader.Eyebrow>Studio</SheetHeader.Eyebrow>
+              <SheetHeader.Title>{studio.name}</SheetHeader.Title>
+            </SheetHeader.Content>
+          </SheetHeader>
 
           {canOpenStudio && (
             <Button

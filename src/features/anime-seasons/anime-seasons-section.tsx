@@ -175,10 +175,13 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const runtime = seasonRuntimeMinutes(season);
 
   return (
-    <Section
-      subtitle={runtime > 0 ? `${formatRuntime(runtime)} total runtime` : undefined}
-      title="Seasons"
-    >
+    <Section>
+      <Section.Header>
+        <Section.Title>Seasons</Section.Title>
+        {runtime > 0 && (
+          <Section.Subtitle>{`${formatRuntime(runtime)} total runtime`}</Section.Subtitle>
+        )}
+      </Section.Header>
       <SeasonAccordion
         season={labelled}
         watched={watched}

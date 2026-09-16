@@ -121,18 +121,18 @@ export function PersonCreditSheet({
         <>
           {/* The role is the subtitle rather than a paragraph below a CAST
               chip: it is the answer the long-press asked for. */}
-          <SheetHeader
-            leading={
-              <PersonAvatar
-                className="w-20 h-20"
-                headshot={credit.headshot}
-                name={credit.name}
-                textClassName="text-xl"
-              />
-            }
-            subtitle={creditRoleLine(credit)}
-            title={credit.name}
-          />
+          <SheetHeader>
+            <PersonAvatar
+              className="w-20 h-20"
+              headshot={credit.headshot}
+              name={credit.name}
+              textClassName="text-xl"
+            />
+            <SheetHeader.Content>
+              <SheetHeader.Title>{credit.name}</SheetHeader.Title>
+              <SheetHeader.Subtitle>{creditRoleLine(credit)}</SheetHeader.Subtitle>
+            </SheetHeader.Content>
+          </SheetHeader>
 
           <CreditMeta
             loading={credit.tmdbId != null && hasTmdb && personQuery.isPending}

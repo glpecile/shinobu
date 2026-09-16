@@ -11,50 +11,50 @@ import {
   type WriteResultReportProps,
 } from './write-result-report';
 
-function Header({ title, description }: { title: string; description?: string }) {
+function Title({ children }: { children: ReactNode }) {
+  return <Text className="text-2xl font-display text-foreground">{children}</Text>;
+}
+
+function Description({ children }: { children: ReactNode }) {
   return (
-    <>
-      <Text className="text-2xl font-display text-foreground">{title}</Text>
-      {description != null && (
-        <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
-          {description}
-        </Text>
-      )}
-    </>
+    <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
+      {children}
+    </Text>
   );
 }
 
 /**
- * A settled write, kept on the sheet: what landed, the per-provider report
- * (reasons and manual links), and the thrown-write error. Renders nothing
- * until one of them exists.
+ * A settled write, kept on the sheet: what landed and the per-provider report
+ * (reasons and manual links). Renders nothing until a result exists.
  */
 function Report({
   result,
   succeededLine,
-  error,
   ...report
 }: Omit<WriteResultReportProps, 'outcomes'> & {
   result:
     | { outcomes: readonly ProviderWriteOutcome[]; succeeded: readonly ProviderId[] }
     | undefined;
   succeededLine: (succeeded: readonly ProviderId[]) => string;
-  error: string | null;
 }) {
-  if (result == null && error == null) return null;
+  if (result == null) return null;
   return (
     <SectionEnter>
-      {result != null && result.succeeded.length > 0 && (
+      {result.succeeded.length > 0 && (
         <Text className="text-muted font-sans text-sm mt-3">
           {succeededLine(result.succeeded)}
         </Text>
       )}
-      {result != null && (
-        <WriteResultReport outcomes={result.outcomes} {...report} />
-      )}
-      {error != null && (
-        <Text className="text-accent font-sans text-sm mt-3">{error}</Text>
-      )}
+      <WriteResultReport outcomes={result.outcomes} {...report} />
+    </SectionEnter>
+  );
+}
+
+/** The thrown-write error, under the report. */
+function WriteError({ children }: { children: ReactNode }) {
+  return (
+    <SectionEnter>
+      <Text className="text-accent font-sans text-sm mt-3">{children}</Text>
     </SectionEnter>
   );
 }
@@ -79,4 +79,4 @@ function Cancel({ onPress }: { onPress: () => void }) {
  * The write verbs' sheet body (log, watchlist add/remove, catch-up), composed
  * around each verb's own fields and confirm button.
  */
-export const WriteSheet = { Header, Report, Actions, Cancel };
+export const WriteSheet = { Title, Description, Report, Error: WriteError, Actions, Cancel };

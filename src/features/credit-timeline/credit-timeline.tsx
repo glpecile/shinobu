@@ -327,11 +327,13 @@ export function CreditTimeline({
             {header}
             {/* The details page's section head: it names what the two control
                 rows filter, and marks where the hero ends and the list begins. */}
-            <Section
-              className="mt-2 px-6"
-              count={`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
-              title="Filmography"
-            >
+            <Section className="mt-2 px-6">
+              <Section.Header>
+                <Section.Title>Filmography</Section.Title>
+                <Section.Count>
+                  {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
+                </Section.Count>
+              </Section.Header>
               <View className="md:flex-row md:items-center pb-3">
                 <SegmentedControl
                   accessibilityLabel="Format"
@@ -443,11 +445,11 @@ export function CreditTimelineSkeleton({ header }: { header: ReactNode }) {
   return (
     <View className="w-full max-w-4xl self-center">
       {header}
-      <Section
-        className="mt-2 px-6"
-        count={<Skeleton className="h-3 w-12 rounded" />}
-        title="Filmography"
-      >
+      <Section className="mt-2 px-6">
+        <Section.Header>
+          <Section.Title>Filmography</Section.Title>
+          <Skeleton className="h-3 w-12 rounded" />
+        </Section.Header>
         <View className="md:flex-row md:items-center pb-3">
           {/* The segmented control is 30px tall, the role button 38. */}
           <Skeleton className="h-[30px] w-52 rounded-full" />

@@ -524,19 +524,17 @@ function ChainReport({
 
   return (
     <>
-      <WriteSheet.Header
-        title={chainFailure(
+      <WriteSheet.Title>
+        {chainFailure(
           problems.map((row) => catchUpEpisodeCode(row.episode)),
           failedProviders,
         )}
-        {...(landed > 0 && succeededProviders.length > 0
-          ? {
-              description: `${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(
-                succeededProviders,
-              )}.`,
-            }
-          : {})}
-      />
+      </WriteSheet.Title>
+      {landed > 0 && succeededProviders.length > 0 && (
+        <WriteSheet.Description>
+          {`${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(succeededProviders)}.`}
+        </WriteSheet.Description>
+      )}
 
       {/* No top margin here: `WriteResultReport` brings its own (`mt-3`), and
           a wrapper adding a second one is how the headline ended up floating. */}

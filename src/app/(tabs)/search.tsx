@@ -406,26 +406,27 @@ export default function SearchScreen() {
           stale dim below. */}
       <SectionEnter className="flex-1" key={state}>
         {state === 'idle' ? (
-          <CenteredNotice
-            body="Find any movie, show, anime, or manga — open its details or log it to your trackers."
-            className="-mt-16"
-            glyph="忍"
-            title="Search"
-          />
+          <CenteredNotice className="-mt-16">
+            <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
+            <CenteredNotice.Title>Search</CenteredNotice.Title>
+            <CenteredNotice.Body>
+              Find any movie, show, anime, or manga — open its details or log it to your trackers.
+            </CenteredNotice.Body>
+          </CenteredNotice>
         ) : state === 'loading' ? (
           <ResultsSkeleton />
         ) : state === 'error' ? (
-          <CenteredNotice
-            className="-mt-16"
-            body="Search failed. Check your connection and try again."
-            title="Something went wrong"
-          />
+          <CenteredNotice className="-mt-16">
+            <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+            <CenteredNotice.Body>
+              Search failed. Check your connection and try again.
+            </CenteredNotice.Body>
+          </CenteredNotice>
         ) : state === 'empty' ? (
-          <CenteredNotice
-            className="-mt-16"
-            body={`Nothing matched \u201c${query.trim()}\u201d.`}
-            title="No results"
-          />
+          <CenteredNotice className="-mt-16">
+            <CenteredNotice.Title>No results</CenteredNotice.Title>
+            <CenteredNotice.Body>{`Nothing matched \u201c${query.trim()}\u201d.`}</CenteredNotice.Body>
+          </CenteredNotice>
         ) : (
           // While a newer query is in flight the previous results stay visible
           // (keepPreviousData), dimmed so the staleness is legible — and the

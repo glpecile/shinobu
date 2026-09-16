@@ -173,10 +173,13 @@ function SeasonAccordionList({
   }
 
   return (
-    <Section
-      subtitle={total > 0 ? `${formatRuntime(total)} total runtime` : undefined}
-      title="Seasons"
-    >
+    <Section>
+      <Section.Header>
+        <Section.Title>Seasons</Section.Title>
+        {total > 0 && (
+          <Section.Subtitle>{`${formatRuntime(total)} total runtime`}</Section.Subtitle>
+        )}
+      </Section.Header>
       {seasons.map((season) => (
         <SeasonAccordion
           key={season.number}

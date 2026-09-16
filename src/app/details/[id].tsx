@@ -249,7 +249,10 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   if (studios.length === 0) return null;
 
   return (
-    <Section title="Studios">
+    <Section>
+      <Section.Header>
+        <Section.Title>Studios</Section.Title>
+      </Section.Header>
       <View className="flex-row flex-wrap gap-2">
         {studios.map((entry) => (
           <LinkPill

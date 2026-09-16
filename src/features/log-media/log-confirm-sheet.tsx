@@ -212,7 +212,8 @@ export function LogConfirmSheet({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <WriteSheet.Header description={description} title={title} />
+      <WriteSheet.Title>{title}</WriteSheet.Title>
+      <WriteSheet.Description>{description}</WriteSheet.Description>
 
       <LogFormFields
         item={item}
@@ -230,7 +231,6 @@ export function LogConfirmSheet({
       {/* Visible only on a report that kept the sheet open (a clean one closed
           it and became the toast): the success half of a partial outcome. */}
       <WriteSheet.Report
-        error={logMedia.isError ? 'Could not log. Try again.' : null}
         failedHeadline={(failed, succeeded) =>
           `Failed on ${labels(failed)}${
             succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
@@ -245,6 +245,7 @@ export function LogConfirmSheet({
           `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
         }
       />
+      {logMedia.isError && <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>}
       <WriteSheet.Actions>
         <Button
           disabled={selectedProviders.length === 0}

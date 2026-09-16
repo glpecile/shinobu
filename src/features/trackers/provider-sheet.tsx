@@ -55,19 +55,19 @@ function ProviderSheetContent({
 
   return (
     <>
-      <SheetHeader
-        leading={
-          <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
-            <ProviderIcon id={id} size={22} />
-          </View>
-        }
-        subtitle={
-          connected
-            ? statusLine(connected, username)
-            : capabilityLabels(id).join(' · ')
-        }
-        title={PROVIDERS[id].label}
-      />
+      <SheetHeader>
+        <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
+          <ProviderIcon id={id} size={22} />
+        </View>
+        <SheetHeader.Content>
+          <SheetHeader.Title>{PROVIDERS[id].label}</SheetHeader.Title>
+          <SheetHeader.Subtitle>
+            {connected
+              ? statusLine(connected, username)
+              : capabilityLabels(id).join(' · ')}
+          </SheetHeader.Subtitle>
+        </SheetHeader.Content>
+      </SheetHeader>
 
       <View className="mt-5">
         {connected ? (

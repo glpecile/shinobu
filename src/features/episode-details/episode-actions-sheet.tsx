@@ -53,16 +53,18 @@ function SheetBody({
   const aired = hasAired(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
 
+  const metaLine = episodeMetaLine(episode);
+
   return (
     <>
-      <SheetHeader
-        eyebrow={episodeCode(season, number)}
-        leading={
-          <EpisodeStill className="w-32 rounded" title={episode.title} uri={view.still} />
-        }
-        subtitle={episodeMetaLine(episode)}
-        title={episode.title}
-      />
+      <SheetHeader>
+        <EpisodeStill className="w-32 rounded" title={episode.title} uri={view.still} />
+        <SheetHeader.Content>
+          <SheetHeader.Eyebrow>{episodeCode(season, number)}</SheetHeader.Eyebrow>
+          <SheetHeader.Title>{episode.title}</SheetHeader.Title>
+          {metaLine !== '' && <SheetHeader.Subtitle>{metaLine}</SheetHeader.Subtitle>}
+        </SheetHeader.Content>
+      </SheetHeader>
 
       <EpisodeLogs className="mt-4" logs={logs} />
 

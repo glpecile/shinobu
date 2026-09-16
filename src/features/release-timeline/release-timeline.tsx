@@ -118,7 +118,10 @@ export function ReleaseTimeline({ item }: { item: NormalizedMediaItem }) {
   if (stops.length === 0) return null;
 
   return (
-    <Section title="Release">
+    <Section>
+      <Section.Header>
+        <Section.Title>Release</Section.Title>
+      </Section.Header>
       {stops.map((stop, index) => (
         <Stop
           first={index === 0}

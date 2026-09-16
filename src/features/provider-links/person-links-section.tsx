@@ -70,7 +70,10 @@ export function PersonLinksSection({
     return <ProviderLinkRows className="mt-2" links={links} onOpened={onOpened} />;
 
   return (
-    <Section title="View on">
+    <Section>
+      <Section.Header>
+        <Section.Title>View on</Section.Title>
+      </Section.Header>
       <View className="flex-row flex-wrap gap-2">
         {links.map(({ provider, url }) => (
           <LinkPill
