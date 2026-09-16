@@ -15,6 +15,10 @@ Sequencing is decided: **finish plan 0031 first** (PRs B, C1, C2), then plan thi
 The write verb, the read surface and removal all land against today's inline result
 block; this todo replaces that surface afterwards rather than racing it.
 
+> **Superseded 2026-08-03 (#60):** `burnt` was replaced by `sonner-native` (native)
+> + `sonner` (web) behind `lib/toast/`. Wherever this todo says `burnt`, read the
+> toast wrapper; the no-tap-in-a-toast constraint still holds.
+
 > **Built 2026-07-29** — plan 0032's four units all landed (the `burnt` wrapper,
 > the shared `features/write-sheet` picker, the watchlist add/remove picker sheet,
 > and the retirement of every inline result surface). One gap is deliberately left
@@ -166,21 +170,21 @@ sentence has to be amended in the same PR rather than quietly contradicted.
       variant/affordance, not just different label text. *(2026-07-28)*
 - [x] Both CTAs carry an icon, from the existing icon set, sized and aligned per the
       `components/button` contract rather than hand-placed. *(2026-07-28 — `Button.Icon`)*
-- [ ] Watchlisting opens a picker; every applicable connected provider starts
+- [x] Watchlisting opens a picker; every applicable connected provider starts
       selected; deselecting narrows the write; the confirm label names what will
       happen without naming providers in a tagline.
-- [ ] Success surfaces as a `burnt` toast on all four targets, one implementation.
-- [ ] **Nothing that needs a tap lives in a toast** — burnt has no press handler, so
+- [x] Success surfaces as a `burnt` toast on all four targets, one implementation.
+- [x] **Nothing that needs a tap lives in a toast** — burnt has no press handler, so
       every `providerItemUrl` link lives on a real surface (the picker), not a toast.
-- [ ] Plan 0022's contract survives the move: a manual target and a reasoned skip
+- [x] Plan 0022's contract survives the move: a manual target and a reasoned skip
       still reach the user with a working link. If the owner chooses to drop the
       Letterboxd-on-web affordance entirely, AGENTS.md's never-a-dead-end sentence is
       amended in the **same** PR, not silently contradicted.
-- [ ] The persistent "Add on …" rows are gone from the details screen — by the spikes
+- [x] The persistent "Add on …" rows are gone from the details screen — by the spikes
       landing (Serializd, Letterboxd native) and by moving the web-Letterboxd case
       into the picker, not by deleting the contract.
-- [ ] `expo prebuild` + a dev-client rebuild is stated in the PR (AGENTS.md).
-- [ ] The log path and the watchlist path use one result idiom, not two.
+- [x] `expo prebuild` + a dev-client rebuild is stated in the PR (AGENTS.md).
+- [x] The log path and the watchlist path use one result idiom, not two.
 - [x] `components/button`'s API absorbs the icon rather than call sites hand-rolling
       it (AGENTS.md: buttons are `components/button`, `className` is layout only).
       *(2026-07-28 — `icon` prop + `Button.Icon`)*

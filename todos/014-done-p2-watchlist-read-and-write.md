@@ -1,7 +1,14 @@
 ---
-status: pending
+status: done
 priority: P2
 ---
+
+> **Done (2026-08-01):** shipped across #42, #47, #50 (Letterboxd, plan 0033),
+> #51 (Serializd U10), #53 (plan 0035) and #57. Two deliberate deviations:
+> `/watchlist/letterboxd` was **deleted, not redirected** (the single surface
+> answers it with `?provider=letterboxd`, see `app/watchlist/index.tsx`), and
+> Serializd's `watchlistRemove` stays `'manual'` until a Serializd watchlist read
+> leg lands (`registry.ts`), as the risks section below anticipated.
 
 # Watchlist read and write
 
@@ -111,13 +118,13 @@ gates it on `letterboxdUsername != null`).
 
 **Capability and write core**
 
-- [ ] `ProviderDescriptor` carries **two** three-state declarations, `watchlistWrite` and
+- [x] `ProviderDescriptor` carries **two** three-state declarations, `watchlistWrite` and
       `watchlistRemove`; `routing.ts` derives each verb's targets from them through the
       same pure split functions, never from `canWrite`, and never with an
       `if (provider === …)` at a call site. A `'manual'` provider lands in `manual`,
       never in neither list. `unsupportedWritePlatforms` stays one flat list — the verb
       axis splits, the platform axis does not.
-- [ ] `runProviderWrites<V>` is the shared write core — extracted **in place** in
+- [x] `runProviderWrites<V>` is the shared write core — extracted **in place** in
       `fan-out.ts`, not copied, with `fanOutLog` left as a thin wrapper so `todos/010`'s
       rename does not grow — preserving the completion-order → routing-order rebuild
       and the missing-adapter-throws rule. `useLogMedia`'s behaviour is byte-identical.
@@ -125,12 +132,12 @@ gates it on `letterboxdUsername != null`).
 
 **Data integrity**
 
-- [ ] An AniList entry that **exists at all** is never written over: the mutation is not
+- [x] An AniList entry that **exists at all** is never written over: the mutation is not
       issued and the outcome is a reason-carrying skip naming the existing status. The
       guard is **fail-closed** — a failed guard read is an `error`, never a write — and
       is always a fresh in-effect read, never the query cache and never
       `useIsWatchlisted`.
-- [ ] A Serializd watchlist write **never clears watched state**: only eligible, unwatched
+- [x] A Serializd watchlist write **never clears watched state**: only eligible, unwatched
       season ids are sent (specials and year-based seasons excluded), a show with none is a
       reasoned skip, a *partial* filter is reported with its reason rather than a bare
       `ok`, and a failed progress read is a fail-closed `error` with **no POST issued**.
@@ -147,11 +154,11 @@ gates it on `letterboxdUsername != null`).
       *(Amended 2026-08-01, plan 0035 R3: the refusal — and nothing else — is lifted by
       an explicit `allowDestructive` opt-in, which the picker earns with a destructive
       warning and a second press. The fresh read and the fresh id are unconditional.)*
-- [ ] A mid-run AniList PLANNING entry created by this feature appears **nowhere** in Up
+- [x] A mid-run AniList PLANNING entry created by this feature appears **nowhere** in Up
       Next — in particular never in Continue Watching — and **does** appear in the new
       watchlist surface. One **four-way** test (plan 0035 U1) asserts all of it and names
       `anilist-shared-list-query-status-gate.md`.
-- [ ] Trakt reports already-there from its own write response (`existing: 1`), with no
+- [x] Trakt reports already-there from its own write response (`existing: 1`), with no
       per-item membership read issued; a 420 surfaces as a specific limit-exceeded
       message and is not retried. Its remove mirrors it (`deleted: 0` + empty
       `not_found` → reasoned skip) and has no 420.
@@ -160,12 +167,12 @@ gates it on `letterboxdUsername != null`).
 
 **Reporting**
 
-- [ ] Every writable provider yields exactly one outcome (`ok` | `error` | `skipped`)
+- [x] Every writable provider yields exactly one outcome (`ok` | `error` | `skipped`)
       **in routing order**; every manual provider renders an upfront row
       (`providerItemUrl ?? providerHomeUrl`) before any tap. Failed and reasoned-skip
       outcome links keep `manualLinkForOutcome`'s existing semantics — item URL only,
       no home fallback. Never a silent drop.
-- [ ] The payload crossing the routing boundary is the `NormalizedMediaItem` only — no
+- [x] The payload crossing the routing boundary is the `NormalizedMediaItem` only — no
       episodes, no season, no `watchedAt`, no `tags`, no `rewatch`. Watchlisting a show
       is show-level at the surface; Serializd's season enumeration is contained inside
       its adapter.
@@ -188,7 +195,7 @@ gates it on `letterboxdUsername != null`).
 
 **Agenda and cache coherence**
 
-- [ ] A successful add invalidates the provider keys **then** `upNextQueryKeys.inputs()`
+- [x] A successful add invalidates the provider keys **then** `upNextQueryKeys.inputs()`
       **then** `watchlistQueryKeys.inputs()` — **three** derived AniList keys
       (`currentAnimeEntries()`, `currentAnime()`, `plannedAnime()`); both
       `watchlist(username)` and `watchlistPages(username)`; new Trakt `myCalendarRoot()`
@@ -200,39 +207,39 @@ gates it on `letterboxdUsername != null`).
       creates it — `watchlistRoot()` and `plannedAnime()` land in `invalidateAfterLog` in
       the same units that add them, and `watchlistQueryKeys.inputs()` joins
       `invalidateAfterWatchlist` when the surface ships, not with removal.
-- [ ] `useDisconnectProvider` purges `watchlistQueryKeys.all` — the merged surface is the
+- [x] `useDisconnectProvider` purges `watchlistQueryKeys.all` — the merged surface is the
       **second** cross-provider query root (Up Next is the first), so without it
       disconnecting Trakt leaves that account's rows in the surface for the stale window
       and reconnecting as another account serves them.
-- [ ] `watchlistQueryKeys.inputs()` is persisted (`PERSISTED_PREFIXES` + a `BUSTER` bump),
+- [x] `watchlistQueryKeys.inputs()` is persisted (`PERSISTED_PREFIXES` + a `BUSTER` bump),
       so the row restores with the rest of the feed instead of popping in, and the settled
       label is genuinely correct after a restart.
-- [ ] `invalidateAfterLog` also invalidates `traktQueryKeys.watchlistRoot()` — Trakt
+- [x] `invalidateAfterLog` also invalidates `traktQueryKeys.watchlistRoot()` — Trakt
       auto-removes watched items server-side, so without it a logged show sits in the
       watchlist surface for the full 15-minute stale window.
-- [ ] A 1997 film added successfully changes nothing in the computed agenda and triggers
+- [x] A 1997 film added successfully changes nothing in the computed agenda and triggers
       no notification regather, but **does** appear in `/watchlist`. A
       theatrically-released film with a digital date next week legitimately *does* reach
       Calendar — that is plan 0030 working, not a leak.
-- [ ] The Trakt watchlist read is **never** a second Calendar source: Calendar's Trakt
+- [x] The Trakt watchlist read is **never** a second Calendar source: Calendar's Trakt
       half stays `/calendars/my/*`, `computeWatchlist` never returns `UpNextEntry`, and
       `fetchWatchlistInputs` is never called by `fetchUpNextInputs`.
-- [ ] The Trakt watchlist read **always paginates explicitly** (`limit ≤ 250`, loop until
+- [x] The Trakt watchlist read **always paginates explicitly** (`limit ≤ 250`, loop until
       a short page), against the blueprint's stale "Pagination Optional" badge, and the
       #681 drift is recorded in a new `docs/solutions/` file distinct from the #775 one
       already there. The paged loop is `getWatchedPages` generalized, not a second copy.
 
 **Read surface**
 
-- [ ] `/watchlist` is one cross-provider surface with no provider mark;
+- [x] `/watchlist` is one cross-provider surface with no provider mark;
       `/watchlist/letterboxd` becomes a redirect, not a deletion. `YourWatchlistRow`
       loses its provider identity and its `letterboxdUsername` mount gate, so a
       Trakt-only or AniList-only user gets a watchlist row for the first time.
-- [ ] The AniList leg costs **zero extra requests warm** — a selector over the
+- [x] The AniList leg costs **zero extra requests warm** — a selector over the
       already cached `currentAnimeEntries()` entry, not a new query — and 2 cold
       (`viewer()` then the list). Total surface cost is **0 warm from home**, up to 4 on a
       fully cold open. Never quoted as an unqualified "zero" or "3".
-- [ ] The merged surface is **not** a `feedOptions` slot: the slot contract is
+- [x] The merged surface is **not** a `feedOptions` slot: the slot contract is
       `NormalizedMediaItem[]` and `useUnifiedFeed` is also mounted by the details screen,
       so a slot would break the type *and* run the gather on every details open. It is
       registered in `activeSectionKeys` for pull-to-refresh (with that function's
@@ -240,21 +247,21 @@ gates it on `letterboxdUsername != null`).
       details-screen resolution goes through a new `findInWatchlistCache` that matches
       **every contributing item** — otherwise a Trakt- or AniList-sourced watchlist card
       opens the "Not found" screen.
-- [ ] The Letterboxd contribution is `pages.flat()` of the **infinite** query, so
+- [x] The Letterboxd contribution is `pages.flat()` of the **infinite** query, so
       `onEndReached` grows the merge and a 600-film watchlist still pages as it does
       today — no truncation to page 1, and appended films merge against Trakt rather than
       duplicating.
-- [ ] Dedupe is a **merge**, not a suppression: colliding rows collapse into one entry
+- [x] Dedupe is a **merge**, not a suppression: colliding rows collapse into one entry
       whose `sources` is the union. Keys are tmdb+kind, then imdb, then exact
       `title|year` for film-like items — never fuzzy, and an unmatchable duplicate
       **stands** rather than being guessed at. No TMDB resolve fan over the Letterboxd
       watchlist, and no auto-paging it to complete dedupe.
-- [ ] Partial failure on the merged grid is **one list plus an inline per-provider
+- [x] Partial failure on the merged grid is **one list plus an inline per-provider
       notice**, not a `SuspenseSection` per source — argued in the file's docblock as a
       structural divergence from AGENTS.md (dedupe needs every source in hand before
       anything renders), not slipped in. The notice names a provider **in a result**, and
       it is not a per-provider toggle.
-- [ ] Hidden-items filtering runs over **every contributing id**, via a shared
+- [x] Hidden-items filtering runs over **every contributing id**, via a shared
       `visibleByIds` in `hidden-items.ts` that preserves the identity contract in its
       stronger form — the same array reference back whenever the filter removed *nothing*,
       not merely when the hidden set is empty, or Up Next's Continue Watching and Calendar
@@ -263,29 +270,29 @@ gates it on `letterboxdUsername != null`).
       `visibleEntries` becomes a one-liner over it, behaviourally unchanged. Hides stay
       one **global** provider-scoped set: hiding from `/watchlist` also suppresses that
       item elsewhere — accepted, and asserted in a test.
-- [ ] Plan 0030 R12 and `anilist-shared-list-query-status-gate.md` are **amended** —
+- [x] Plan 0030 R12 and `anilist-shared-list-query-status-gate.md` are **amended** —
       both currently say PLANNING reaches Calendar *only*, which the read surface makes
       false, and tests cite that doc by name.
 
 **Surfaces and copy**
 
-- [ ] The CTA is a sibling of `LogMediaButton`, present for manga and for series with no
+- [x] The CTA is a sibling of `LogMediaButton`, present for manga and for series with no
       nameable next episode; primary when a **film-like** item is unreleased or undated.
       The release consult never fires for series, so an airing show keeps its log button.
       No add row on the diary; the card sheet stays open through the write and renders
       the same result surface.
-- [ ] The settled label's truth source is `useIsWatchlisted(item)` — **cache-only, never
+- [x] The settled label's truth source is `useIsWatchlisted(item)` — **cache-only, never
       fetching**, three-state (`true` / `false` / `undefined` = today's behaviour) — so it
       is correct after an app restart, on a second device, and for an item added on the
       provider's own site. The shared `mutationKey` **pending** guard survives unchanged;
       only the settled-result derivation is retired.
-- [ ] Removal is offered on `/watchlist` only, and writes **only to the providers in the
+- [x] Removal is offered on `/watchlist` only, and writes **only to the providers in the
       entry's `sources`**, reusing the same write core and result surface with
       `Remove on` links. Absence from `sources` is **not** proof of absence: a connected,
       applicable provider with no read leg (Serializd in v1, AniList for MANGA) or whose
       leg errored renders an upfront manual `Remove on X` row, and the settled `Removed`
       label is withheld while any applicable provider's membership was unknown.
-- [ ] Copy contains no provider name in any label and no mechanism word; the label morphs
+- [x] Copy contains no provider name in any label and no mechanism word; the label morphs
       in place via `morphLabel` and does **not** settle on a mixed report.
 
 ## Risks

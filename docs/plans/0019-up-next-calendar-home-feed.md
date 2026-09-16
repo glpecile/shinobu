@@ -12,7 +12,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Ship two new home-feed sections — Continue Watching (next unwatched episode that has already aired, with a quick-log checkmark that fires the cross-provider fan-out) and Calendar (upcoming episodes ≤7 days with relative-day badges) — rendered as three complete UI variants stacked on the home route for the owner to compare with real data. Closes the surface half of `todos/006-pending-p2-up-next-timezone-correctness.md`.
+- **Objective:** Ship two new home-feed sections — Continue Watching (next unwatched episode that has already aired, with a quick-log checkmark that fires the cross-provider fan-out) and Calendar (upcoming episodes ≤7 days with relative-day badges) — rendered as three complete UI variants stacked on the home route for the owner to compare with real data. Closes the surface half of `todos/006-done-p2-up-next-timezone-correctness.md`.
 - **Authority:** AGENTS.md conventions override implementation choices in this plan; this plan overrides implementer preference on scope and sequencing; the owner's live decisions override both.
 - **Execution profile:** `execution: code`. Pure computation units are test-first; UI variant units are smoke-verified (web headless + dev client).
 - **Stop conditions:** Stop and surface — do not guess — if (a) Trakt's `/shows/:id/progress/watched?extended=full` does not return `next_episode.first_aired` as assumed (KTD-1), (b) AniList rejects or rate-limits the widened `MEDIA_FIELDS` query, or (c) any change would touch the Worker proxies or provider registry semantics (out of scope).
@@ -253,7 +253,7 @@ Quality gates: no Effect types outside `lib/providers`/`lib/http` boundaries; no
 - `docs/solutions/trakt-watched-endpoints-2026-api-changes.md` — mandatory pagination, `extended=progress`, no images, 1000/5-min budget, lazy art recovery pattern.
 - `docs/solutions/trakt-progress-episodes-have-no-season-field.md` — progress payload shape + fixture-test rule.
 - `docs/solutions/anilist-rate-limit-retry-storm.md`, `docs/solutions/web-cors-anilist.md` — 30 req/min real budget, staleTime discipline, retry predicate.
-- `todos/006-pending-p2-up-next-timezone-correctness.md` — acceptance criteria this plan discharges; `todos/009` — pre-registered Trakt N+1 mitigation.
+- `todos/006-done-p2-up-next-timezone-correctness.md` — acceptance criteria this plan discharges; `todos/009` — pre-registered Trakt N+1 mitigation.
 - `src/state/queries/use-unified-feed.ts` (`feedOptions` triple-consumption pattern), `src/features/log-media/use-log-media.ts` (`LogMediaVariables`, `invalidateAfterLog`), `src/features/diary/merge.ts` (day-grouping precedents), `src/components/media-carousel.tsx` / `media-card.tsx` (carousel + lazy-art precedents).
 - `docs/solutions/web-cors-anizip.md` — ani.zip mapping shape, `staleTime: Infinity`, decode-only-what-you-need (responses can be ~1 MB).
 - CORS: Trakt, AniList, TMDB, ani.zip all browser-callable (`docs/solutions/web-cors-*.md`) — no proxy work anywhere in this plan.

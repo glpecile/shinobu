@@ -1,7 +1,12 @@
 ---
-status: pending
+status: done
 priority: P2
 ---
+
+> **Done (2026-09-16):** every acceptance criterion below is met, and the
+> notification build-out (`todos/007`) shipped. Not built: TMDB per-episode stills
+> on the Up Next cards, which still use the show backdrop. That is a polish
+> follow-up, not part of this todo.
 
 # "Up Next" Section — Timezone-Correct Air Dates
 

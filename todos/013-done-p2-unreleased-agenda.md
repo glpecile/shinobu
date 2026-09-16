@@ -1,7 +1,12 @@
 ---
-status: pending
+status: done
 priority: P2
 ---
+
+> **Done (2026-07-27, #39):** shipped per plan 0030. One criterion was later
+> reversed on purpose: #58 lets a watchlisted show's premiere reach Continue
+> Watching, so "Continue Watching is behaviourally unchanged" held at ship time,
+> not today.
 
 # Unreleased Items in the Agenda
 
@@ -35,17 +40,17 @@ scrape.
 
 ## Acceptance criteria
 
-- [ ] A watchlisted, never-watched show premiering inside the window appears in
+- [x] A watchlisted, never-watched show premiering inside the window appears in
       Calendar, with no quick-log affordance.
-- [ ] A film releasing inside the window appears as two labelled rows
+- [x] A film releasing inside the window appears as two labelled rows
       ("In theaters", "Streaming"), deduped across Trakt and Letterboxd.
-- [ ] An AniList PLANNING anime that is already mid-run appears **nowhere** —
+- [x] An AniList PLANNING anime that is already mid-run appears **nowhere** —
       in particular never in Continue Watching.
-- [ ] Continue Watching is behaviourally unchanged.
-- [ ] Shows past the old 20-show pool cap now reach Calendar.
-- [ ] Release notifications fire at 09:00 local on release day, never midnight,
+- [x] Continue Watching is behaviourally unchanged.
+- [x] Shows past the old 20-show pool cap now reach Calendar.
+- [x] Release notifications fire at 09:00 local on release day, never midnight,
       and never retroactively.
-- [ ] Each new source fails independently; hidden items stay hidden.
+- [x] Each new source fails independently; hidden items stay hidden.
 
 ## Risks
 

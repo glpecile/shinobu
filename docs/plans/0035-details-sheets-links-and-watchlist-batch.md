@@ -258,6 +258,6 @@ Manual QA per unit is listed in each unit's Verification line; run on the iOS si
 - All seven units landed in dependency order, each passing the Verification Contract gates for its row.
 - The four-way AniList selector regression test exists and passes; the status-gate solution doc carries the CURRENT-widening amendment.
 - No remaining reference to the AniList search-URL shape (`/search/staff?search=`) in `src/` or tests.
-- `todos/014-pending-p2-watchlist-read-and-write.md` amended to reflect the CURRENT read/removal scope shipped here.
+- `todos/014-done-p2-watchlist-read-and-write.md` amended to reflect the CURRENT read/removal scope shipped here.
 - Abandoned experiments removed from the diff; no dead exports left behind (e.g. `fetchPlannedAnime` deleted if orphaned, kept if Calendar consumes it).
 - Manual QA pass on iOS covering: CURRENT anime in watchlist + destructive remove, bio-less credit sheet, studio sheet with both link kinds, deep-linked AniList staff page, filmography years on both routes, and an unaired show's disabled CTA.
