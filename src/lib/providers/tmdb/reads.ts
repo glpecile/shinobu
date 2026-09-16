@@ -38,21 +38,30 @@ import {
 } from './normalize';
 
 /**
- * Bio + full filmography for the person route in one request —
- * `append_to_response=combined_credits` folds the credits into the person
- * document, so the screen never fans out per-section here.
+ * Bio + full filmography for the person route. Two requests, not
+ * `append_to_response=combined_credits`: TMDB 500s that combination for some
+ * people (71070) while both halves succeed on their own.
  */
 export function getPerson(
   deps: TmdbDeps,
   params: { tmdbId: number },
 ): Effect.Effect<NormalizedPersonDetails, ProviderError> {
   return Effect.gen(function* () {
-    const raw = yield* tmdbRequest<TmdbPersonResponse>(
-      deps,
-      `/person/${params.tmdbId}?append_to_response=combined_credits`,
+    const { person, credits } = yield* Effect.all(
+      {
+        person: tmdbRequest<TmdbPersonResponse>(deps, `/person/${params.tmdbId}`),
+        credits: tmdbRequest<TmdbPersonResponse['combined_credits']>(
+          deps,
+          `/person/${params.tmdbId}/combined_credits`,
+        ),
+      },
+      { concurrency: 2 },
     );
     const now = yield* Clock.currentTimeMillis;
-    return normalizePersonDetails(raw, new Date(now).toISOString());
+    return normalizePersonDetails(
+      { ...person, combined_credits: credits },
+      new Date(now).toISOString(),
+    );
   });
 }
 

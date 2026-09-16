@@ -31,6 +31,7 @@ export function PersonSkeleton() {
           </View>
         </View>
       }
+      roles
     />
   );
 }
