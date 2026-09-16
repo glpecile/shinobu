@@ -2,9 +2,9 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
+import { PickerSheet } from '@/components/picker-sheet';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
-import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -134,50 +134,30 @@ export function ViewToggle({
   );
 }
 
-/** One option row in the picker. `count` is 0 only for a deep-linked filter
- *  whose leg failed this gather — see `watchlistFilterOptions`. */
+/** `count` is 0 only for a deep-linked filter whose leg failed this gather —
+ *  see `watchlistFilterOptions`. `partial` renders `46+`: the leg has pages it
+ *  hasn't read. */
 function FilterOption({
   provider,
   count,
   partial,
-  selected,
-  onSelect,
 }: {
   provider: ProviderId | null;
   count: number;
-  /** Renders `46+` — the leg has pages it hasn't read. */
   partial: boolean;
-  selected: boolean;
-  onSelect: () => void;
 }) {
-  const accent = useThemeColor('--color-accent');
   const label = provider == null ? 'All trackers' : PROVIDERS[provider].label;
   return (
-    <PresstableOpacity
+    <PickerSheet.Option
       // The `+` is punctuation a screen reader drops or reads as "plus", so
       // the row spells the claim out — the whole point of the glyph is that
       // the number is a floor.
       accessibilityLabel={`${label}, ${count}${partial ? ' or more' : ''}`}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      className="flex-row items-center gap-3 py-3"
-      onPress={onSelect}
-    >
-      <View className="w-4">
-        {selected && (
-          <Ionicons
-            color={accent}
-            name="checkmark"
-            size={16}
-          />
-        )}
-      </View>
-      {provider != null && <ProviderIcon id={provider} size={18} />}
-      <Text className="text-foreground font-sans text-base flex-1">{label}</Text>
-      <Text className="text-muted font-sans text-sm">
-        {formatWatchlistCount(count, partial)}
-      </Text>
-    </PresstableOpacity>
+      count={formatWatchlistCount(count, partial)}
+      icon={provider == null ? undefined : <ProviderIcon id={provider} size={18} />}
+      label={label}
+      value={provider}
+    />
   );
 }
 
@@ -205,11 +185,6 @@ export function WatchlistToolbar({
   const options = watchlistFilterOptions(entries, provider, incomplete);
   const total = watchlistTotal(entries, incomplete);
 
-  function select(next: ProviderId | null) {
-    setPickerOpen(false);
-    onProviderChange(next);
-  }
-
   return (
     <View className="flex-row items-center gap-3 px-6 pb-3">
       <FilterPill
@@ -219,28 +194,18 @@ export function WatchlistToolbar({
       />
       <View className="flex-1" />
       <ViewToggle onChange={setWatchlistView} view={view} />
-      <Sheet onClose={() => setPickerOpen(false)} open={pickerOpen}>
-        <Text className="text-muted font-sans-semibold text-xs uppercase tracking-wider mb-1">
-          Show titles from
-        </Text>
-        <FilterOption
-          count={total.count}
-          onSelect={() => select(null)}
-          partial={total.partial}
-          provider={null}
-          selected={provider == null}
-        />
+      <PickerSheet
+        onClose={() => setPickerOpen(false)}
+        onSelect={onProviderChange}
+        open={pickerOpen}
+        title="Show titles from"
+        value={provider}
+      >
+        <FilterOption {...total} provider={null} />
         {options.map((option) => (
-          <FilterOption
-            count={option.count}
-            key={option.provider}
-            onSelect={() => select(option.provider)}
-            partial={option.partial}
-            provider={option.provider}
-            selected={provider === option.provider}
-          />
+          <FilterOption {...option} key={option.provider} />
         ))}
-      </Sheet>
+      </PickerSheet>
     </View>
   );
 }
