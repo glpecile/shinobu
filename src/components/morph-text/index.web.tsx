@@ -2,7 +2,7 @@ import { TextMorph } from 'torph/react';
 
 /** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface MorphTextProps {
-  /** The current text — a change morphs on web, swaps on native. */
+  /** The current text — a change morphs in place. */
   children: string | number;
   className?: string;
   /** Line cap, as on `Text`; only `1` truncates here. */
