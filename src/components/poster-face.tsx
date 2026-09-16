@@ -34,7 +34,7 @@ export function PosterFace({
           source={{ uri }}
           className="w-full h-full"
           contentFit="cover"
-          {...(recyclingKey != null ? { recyclingKey } : {})}
+          recyclingKey={recyclingKey}
         />
       ) : (
         <PosterPlaceholder className="w-full h-full border-0" />

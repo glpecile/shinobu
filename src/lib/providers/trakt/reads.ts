@@ -285,16 +285,7 @@ export function getHistory(
   params: { page: number; limit?: number },
 ): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
   const limit = params.limit ?? 50;
-  return traktAuthedRequest<TraktHistoryItem[]>(
-    deps,
-    `/sync/history?extended=full&page=${params.page}&limit=${limit}`,
-  ).pipe(
-    Effect.map((rows) =>
-      rows
-        .map((row) => normalizeHistoryItem(row))
-        .filter((entry): entry is NormalizedDiaryEntry => entry != null),
-    ),
-  );
+  return historyAt(deps, `/sync/history?extended=full&page=${params.page}&limit=${limit}`);
 }
 
 /** Every play of one movie, newest first — `/sync/history` narrowed to it. */
@@ -302,15 +293,15 @@ export function getMovieHistory(
   deps: TraktDeps,
   params: { traktId: number },
 ): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
-  return traktAuthedRequest<TraktHistoryItem[]>(
-    deps,
-    `/sync/history/movies/${params.traktId}?limit=100`,
-  ).pipe(
-    Effect.map((rows) =>
-      rows
-        .map((row) => normalizeHistoryItem(row))
-        .filter((entry): entry is NormalizedDiaryEntry => entry != null),
-    ),
+  return historyAt(deps, `/sync/history/movies/${params.traktId}?limit=100`);
+}
+
+function historyAt(
+  deps: TraktDeps,
+  path: string,
+): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
+  return traktAuthedRequest<TraktHistoryItem[]>(deps, path).pipe(
+    Effect.map((rows) => rows.map(normalizeHistoryItem).filter((entry) => entry != null)),
   );
 }
 

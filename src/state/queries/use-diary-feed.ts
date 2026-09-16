@@ -233,19 +233,11 @@ export interface DiaryFeedResult {
  */
 export function useFilmPlaysQuery(item: NormalizedMediaItem) {
   const queryClient = useQueryClient();
-  const readable = providersForFeed(useConnectedProviders());
+  const providers = providersForFeed(useConnectedProviders());
   const { trakt, anilist, tmdb, letterboxd } = item.externalIds;
-  const filmLike = item.type === 'MOVIE' || item.isFilm === true;
-  const providers = readable.filter((provider) =>
-    provider === 'trakt'
-      ? trakt != null
-      : provider === 'anilist'
-        ? anilist != null
-        : provider === 'letterboxd' && (tmdb != null || letterboxd != null),
-  );
 
   return useQuery({
-    queryKey: diaryQueryKeys.filmPlays(item.id, providers, item.externalIds),
+    queryKey: diaryQueryKeys.filmPlays(providers, item.externalIds),
     queryFn: async () => {
       const settled = await Promise.allSettled([
         providers.includes('trakt') && trakt != null
@@ -254,7 +246,7 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
         providers.includes('anilist') && anilist != null
           ? fetchAniListActivityPage(queryClient, 1, anilist)
           : [],
-        providers.includes('letterboxd')
+        providers.includes('letterboxd') && (tmdb != null || letterboxd != null)
           ? Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 })).then((entries) =>
               entries.filter(
                 (entry) =>
@@ -266,7 +258,7 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
       ]);
       return settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
     },
-    enabled: filmLike && providers.length > 0,
+    enabled: item.type === 'MOVIE' || item.isFilm === true,
     staleTime: DIARY_STALE_MS,
   });
 }

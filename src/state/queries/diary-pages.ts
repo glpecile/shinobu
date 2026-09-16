@@ -40,8 +40,8 @@ export const diaryQueryKeys = {
       serializdUsername,
     ] as const,
   /** One film's dated plays (`useFilmPlaysQuery`) — under the root, so a log refreshes it. */
-  filmPlays: (itemId: string, providers: readonly ProviderId[], ids: NormalizedMediaItem['externalIds']) =>
-    [...DIARY_QUERY_ROOT, 'film-plays', itemId, providers.join(','), ids] as const,
+  filmPlays: (providers: readonly ProviderId[], ids: NormalizedMediaItem['externalIds']) =>
+    [...DIARY_QUERY_ROOT, 'film-plays', providers.join(','), ids] as const,
 };
 
 /** The page param: which page each *advancing* provider fetches next. */
