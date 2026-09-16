@@ -297,6 +297,23 @@ export function getHistory(
   );
 }
 
+/** Every play of one movie, newest first — `/sync/history` narrowed to it. */
+export function getMovieHistory(
+  deps: TraktDeps,
+  params: { traktId: number },
+): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
+  return traktAuthedRequest<TraktHistoryItem[]>(
+    deps,
+    `/sync/history/movies/${params.traktId}?limit=100`,
+  ).pipe(
+    Effect.map((rows) =>
+      rows
+        .map((row) => normalizeHistoryItem(row))
+        .filter((entry): entry is NormalizedDiaryEntry => entry != null),
+    ),
+  );
+}
+
 export function getWatchedMovies(
   deps: TraktDeps,
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {

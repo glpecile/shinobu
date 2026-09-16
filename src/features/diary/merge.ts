@@ -160,7 +160,7 @@ function episodesKey(episodes: number[] | undefined): string {
 
 /** Local `YYYY-MM-DD` day for an entry (date-only entries pass through). */
 export function localDayKey(
-  entry: NormalizedDiaryEntry,
+  entry: Pick<NormalizedDiaryEntry, 'watchedAt' | 'dateOnly'>,
   timeZone: string,
 ): string {
   if (entry.dateOnly === true) return entry.watchedAt;

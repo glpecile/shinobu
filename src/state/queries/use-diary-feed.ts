@@ -1,5 +1,6 @@
 import {
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
@@ -13,9 +14,9 @@ import {
 } from '@/lib/providers/serializd/diary';
 import { providersForFeed } from '@/lib/providers/routing';
 import { getSimklDiary } from '@/lib/providers/simkl/diary';
-import { getHistory } from '@/lib/providers/trakt/reads';
+import { getHistory, getMovieHistory } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
-import type { DiaryDay, NormalizedDiaryEntry } from '@/types/media';
+import type { DiaryDay, NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -56,6 +57,7 @@ function pageAfter(entries: NormalizedDiaryEntry[], page: number) {
 async function fetchAniListActivityPage(
   queryClient: QueryClient,
   page: number,
+  mediaId?: number,
 ): Promise<NormalizedDiaryEntry[]> {
   const deps = anilistDeps();
   const viewer = await queryClient.fetchQuery({
@@ -65,7 +67,7 @@ async function fetchAniListActivityPage(
     gcTime: Number.POSITIVE_INFINITY,
   });
   return Effect.runPromise(
-    getListActivity(deps, { viewerId: viewer.id, page, perPage: PAGE_SIZE }),
+    getListActivity(deps, { viewerId: viewer.id, page, perPage: PAGE_SIZE, mediaId }),
   );
 }
 
@@ -219,4 +221,52 @@ export interface DiaryFeedResult {
   /** Advances only the watermark provider(s), never every cursor at once. */
   fetchNextPage: () => void;
   refetch: () => Promise<unknown>;
+}
+
+/**
+ * Every logged play of one film, from the providers that date each play:
+ * Trakt's per-movie history, AniList's activity for the title, and
+ * Letterboxd's RSS window. Simkl keeps only the latest play, which
+ * `useWatchedInfo` already carries. Under the diary root, so the log fan-out's
+ * diary invalidation refreshes it too. A failing leg drops out; the others
+ * still answer.
+ */
+export function useFilmPlaysQuery(item: NormalizedMediaItem) {
+  const queryClient = useQueryClient();
+  const readable = providersForFeed(useConnectedProviders());
+  const { trakt, anilist, tmdb, letterboxd } = item.externalIds;
+  const filmLike = item.type === 'MOVIE' || item.isFilm === true;
+  const providers = readable.filter((provider) =>
+    provider === 'trakt'
+      ? trakt != null
+      : provider === 'anilist'
+        ? anilist != null
+        : provider === 'letterboxd' && (tmdb != null || letterboxd != null),
+  );
+
+  return useQuery({
+    queryKey: diaryQueryKeys.filmPlays(item.id, providers, item.externalIds),
+    queryFn: async () => {
+      const settled = await Promise.allSettled([
+        providers.includes('trakt') && trakt != null
+          ? Effect.runPromise(getMovieHistory(traktDeps(), { traktId: trakt }))
+          : [],
+        providers.includes('anilist') && anilist != null
+          ? fetchAniListActivityPage(queryClient, 1, anilist)
+          : [],
+        providers.includes('letterboxd')
+          ? Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 })).then((entries) =>
+              entries.filter(
+                (entry) =>
+                  (tmdb != null && entry.item.externalIds.tmdb === tmdb) ||
+                  (letterboxd != null && entry.item.externalIds.letterboxd === letterboxd),
+              ),
+            )
+          : [],
+      ]);
+      return settled.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
+    },
+    enabled: filmLike && providers.length > 0,
+    staleTime: DIARY_STALE_MS,
+  });
 }

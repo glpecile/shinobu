@@ -5,7 +5,7 @@ import {
   type DiaryProviderState,
 } from '@/features/diary/merge';
 import type { ProviderId } from '@/lib/providers/types';
-import type { NormalizedDiaryEntry } from '@/types/media';
+import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
 /**
  * The unified diary is **one** infinite query (the Up Next / watchlist gather
@@ -39,6 +39,9 @@ export const diaryQueryKeys = {
       letterboxdUsername,
       serializdUsername,
     ] as const,
+  /** One film's dated plays (`useFilmPlaysQuery`) — under the root, so a log refreshes it. */
+  filmPlays: (itemId: string, providers: readonly ProviderId[], ids: NormalizedMediaItem['externalIds']) =>
+    [...DIARY_QUERY_ROOT, 'film-plays', itemId, providers.join(','), ids] as const,
 };
 
 /** The page param: which page each *advancing* provider fetches next. */
