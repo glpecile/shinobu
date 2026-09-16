@@ -1,15 +1,36 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
+import { FadeIn } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { SectionEnter } from '@/components/section-enter';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
+import { DURATION } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
 
 import {
   WriteResultReport,
   type WriteResultReportProps,
 } from './write-result-report';
+
+/**
+ * The drawer's view swap. The sheet shows **one view at a time** — the form,
+ * or the report — and a change of `key` crossfades the new view in while the
+ * sheet's own height animates under it (native: the `'content'` detent; web:
+ * the panel's height transition).
+ *
+ * A preset, not a custom `Keyframe`: the entering view has to contribute its
+ * height to the sheet's flow, and a `Keyframe`'s web cleanup pins the element
+ * out of it (docs/solutions/reanimated-web-keyframe-pins-position.md). No
+ * `exiting` either — an exiting view keeps its layout space on native, so the
+ * sheet would briefly measure both views stacked and lurch to the sum.
+ */
+const stepEntering = FadeIn.duration(DURATION.swap);
+
+function Step({ children }: { children: ReactNode }) {
+  return <AnimatedView entering={stepEntering}>{children}</AnimatedView>;
+}
 
 function Title({ children }: { children: ReactNode }) {
   return <Text className="text-2xl font-display text-foreground">{children}</Text>;
@@ -79,4 +100,4 @@ function Cancel({ onPress }: { onPress: () => void }) {
  * The write verbs' sheet body (log, watchlist add/remove, catch-up), composed
  * around each verb's own fields and confirm button.
  */
-export const WriteSheet = { Title, Description, Report, Error: WriteError, Actions, Cancel };
+export const WriteSheet = { Step, Title, Description, Report, Error: WriteError, Actions, Cancel };

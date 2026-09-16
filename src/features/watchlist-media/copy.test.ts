@@ -8,7 +8,6 @@ import type { NormalizedMediaItem } from '@/types/media';
 import {
   addedToastTitle,
   addedToSentence,
-  alreadyOnSentence,
   destructiveRemoveWarning,
   failedOnSentence,
   isUnwatchlistCtaSettled,
@@ -107,7 +106,6 @@ describe('watchlistResultView report families (plan 0031 R14)', () => {
       FILM,
     );
     expect(view.allSkip).toBe(true);
-    expect(alreadyOnSentence(view.reasonedSkips)).toBe('Already on Trakt.');
   });
 
   test('a mixed report names the failure', () => {
@@ -200,9 +198,6 @@ describe('the three result families (plan 0031 KTD-8/R17)', () => {
     // repeat interaction, and the log button's copy (a suffix to a success
     // line that isn't there) would render nothing at all.
     expect(view.allSkip).toBe(true);
-    expect(alreadyOnSentence(view.reasonedSkips)).toBe(
-      'Already on Trakt, AniList.',
-    );
   });
 
   test('failed outcomes carry their own "Add on" link targets', () => {

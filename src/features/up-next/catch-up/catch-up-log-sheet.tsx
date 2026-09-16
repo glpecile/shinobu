@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
-import { FadeIn, Keyframe } from 'react-native-reanimated';
+import { Keyframe } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
@@ -53,21 +53,6 @@ const headerEntering = new Keyframe({
     easing: KEYFRAME_EASE_OUT,
   },
 }).duration(DURATION.swap);
-
-/**
- * The drawer's view swap. The sheet shows **one view at a time** — the form,
- * or the report — and a change crossfades the new view in while the sheet's
- * own height animates under it (native: the `'content'` detent; web: the
- * panel's height transition). That pairing is the whole effect: content
- * follows the height, the height follows the content.
- *
- * A preset, not a custom `Keyframe`: the entering view has to contribute its
- * height to the sheet's flow, and a `Keyframe`'s web cleanup pins the element
- * out of it (docs/solutions/reanimated-web-keyframe-pins-position.md). No
- * `exiting` either — an exiting view keeps its layout space on native, so the
- * sheet would briefly measure both views stacked and lurch to the sum.
- */
-const viewEntering = FadeIn.duration(DURATION.swap);
 
 interface LedgerRow {
   episode: CatchUpEpisode;
@@ -389,7 +374,7 @@ function CatchUpSession({
 
   return (
     <Sheet onClose={closeCatchUp} open={open}>
-      <AnimatedView entering={viewEntering} key={reported ? 'report' : 'form'}>
+      <WriteSheet.Step key={reported ? 'report' : 'form'}>
         {reported ? (
           <ChainReport
             item={entry.item}
@@ -475,7 +460,7 @@ function CatchUpSession({
             </WriteSheet.Actions>
           </>
         )}
-      </AnimatedView>
+      </WriteSheet.Step>
     </Sheet>
   );
 }
