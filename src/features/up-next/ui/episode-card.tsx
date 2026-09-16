@@ -1,15 +1,17 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
 import { MorphText } from '@/components/morph-text';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { PresstableScale } from '@/components/presstable';
+import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import type { CardBadge } from '@/features/up-next/badges';
 import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
 import { usePushRoute } from '@/lib/navigation';
+import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { Badge } from './badge';
@@ -62,84 +64,106 @@ export function EpisodeCard({
   const label = groupLabel(group);
   const stacked = entries.length > 1;
   const href = stacked ? undefined : episodeHref(lead);
+  const accentForeground = useThemeColor('--color-accent-foreground');
+  // Web-only hover ⋯, as on the media card; it takes the stack count's corner.
+  const [hovered, setHovered] = useState(false);
+  const showActionsButton =
+    onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
   return (
     <View className={className}>
-      <PresstableScale
-        // The badges carry information that exists nowhere else on the card —
-        // the air time above all — so they belong in the spoken label too.
-        accessibilityLabel={[
-          lead.item.title,
-          label,
-          ...badges.map((badge) => badge.label),
-        ].join(', ')}
-        // No `overflow-hidden` here any more: the card backs sit *outside* this
-        // box (up and to the right) and clipping them would erase the stack.
-        // The art below keeps its own rounding and clipping instead.
+      {/* The ⋯ is a sibling of the pressable so its click can't bubble into the
+          card press. */}
+      <View
         className="w-full h-36"
-        onLongPress={
-          onActionsPress == null ? undefined : () => onActionsPress(lead.item)
-        }
-        onPress={() => (href == null ? onPress?.(lead.item) : pushRoute(href))}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
       >
-        {stacked && (
-          // Drawn before the art so the art paints over them. Flat surface
-          // fills rather than copies of the poster: they read as "more cards
-          // behind this one", and repeating the artwork three times at three
-          // opacities is the visual noise this whole change removes.
-          <>
-            <View
-              className="absolute inset-0 rounded-card border border-border/50 bg-surface opacity-30"
-              style={{
-                transform: [
-                  { translateX: STACK_OFFSET * 2 },
-                  { translateY: -STACK_OFFSET * 2 },
-                ],
-              }}
-            />
-            <View
-              className="absolute inset-0 rounded-card border border-border/50 bg-surface opacity-60"
-              style={{
-                transform: [
-                  { translateX: STACK_OFFSET },
-                  { translateY: -STACK_OFFSET },
-                ],
-              }}
-            />
-          </>
-        )}
-
-        <View className="w-full h-full rounded-card overflow-hidden border border-border/50">
-          {art !== '' ? (
-            <Image className="w-full h-full" contentFit="cover" source={{ uri: art }} />
-          ) : (
-            <PosterPlaceholder className="w-full h-full border-0" />
+        <PresstableScale
+          // The badges carry information that exists nowhere else on the card —
+          // the air time above all — so they belong in the spoken label too.
+          accessibilityLabel={[
+            lead.item.title,
+            label,
+            ...badges.map((badge) => badge.label),
+          ].join(', ')}
+          // No `overflow-hidden` here any more: the card backs sit *outside* this
+          // box (up and to the right) and clipping them would erase the stack.
+          // The art below keeps its own rounding and clipping instead.
+          className="w-full h-36"
+          onLongPress={
+            onActionsPress == null ? undefined : () => onActionsPress(lead.item)
+          }
+          onPress={() => (href == null ? onPress?.(lead.item) : pushRoute(href))}
+        >
+          {stacked && (
+            // Drawn before the art so the art paints over them. Flat surface
+            // fills rather than copies of the poster: they read as "more cards
+            // behind this one", and repeating the artwork three times at three
+            // opacities is the visual noise this whole change removes.
+            <>
+              <View
+                className="absolute inset-0 rounded-card border border-border/50 bg-surface opacity-30"
+                style={{
+                  transform: [
+                    { translateX: STACK_OFFSET * 2 },
+                    { translateY: -STACK_OFFSET * 2 },
+                  ],
+                }}
+              />
+              <View
+                className="absolute inset-0 rounded-card border border-border/50 bg-surface opacity-60"
+                style={{
+                  transform: [
+                    { translateX: STACK_OFFSET },
+                    { translateY: -STACK_OFFSET },
+                  ],
+                }}
+              />
+            </>
           )}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.85)']}
-            style={{ bottom: 0, height: 72, left: 0, position: 'absolute', right: 0 }}
-          />
-          {badges.length > 0 && (
-            <View className="absolute bottom-2 left-2 flex-row gap-1.5">
-              {badges.map((badge) => (
-                <Badge key={badge.label} label={badge.label} tone={badge.tone} />
-              ))}
+
+          <View className="w-full h-full rounded-card overflow-hidden border border-border/50">
+            {art !== '' ? (
+              <Image className="w-full h-full" contentFit="cover" source={{ uri: art }} />
+            ) : (
+              <PosterPlaceholder className="w-full h-full border-0" />
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.85)']}
+              style={{ bottom: 0, height: 72, left: 0, position: 'absolute', right: 0 }}
+            />
+            {badges.length > 0 && (
+              <View className="absolute bottom-2 left-2 flex-row gap-1.5">
+                {badges.map((badge) => (
+                  <Badge key={badge.label} label={badge.label} tone={badge.tone} />
+                ))}
+              </View>
+            )}
+          </View>
+
+          {stacked && !showActionsButton && (
+            // Sits on the face card's own corner rather than on the backs, so it
+            // stays legible whatever the artwork behind it does. The count is
+            // already in the label below and in the accessibility label, so this
+            // is decoration for the eye, not the only place the number appears.
+            <View className="absolute top-2 right-2 rounded-full bg-black/70 border border-border/60 px-2 py-0.5">
+              <Text className="text-accent-foreground font-sans-semibold text-xs">
+                {entries.length}
+              </Text>
             </View>
           )}
-        </View>
-
-        {stacked && (
-          // Sits on the face card's own corner rather than on the backs, so it
-          // stays legible whatever the artwork behind it does. The count is
-          // already in the label below and in the accessibility label, so this
-          // is decoration for the eye, not the only place the number appears.
-          <View className="absolute top-2 right-2 rounded-full bg-black/70 border border-border/60 px-2 py-0.5">
-            <Text className="text-accent-foreground font-sans-semibold text-xs">
-              {entries.length}
-            </Text>
-          </View>
+        </PresstableScale>
+        {showActionsButton && (
+          <PresstableOpacity
+            accessibilityLabel={`More options for ${lead.item.title}`}
+            className="absolute top-2 right-2 w-8 h-8 items-center justify-center rounded-full bg-black/60"
+            onPress={() => onActionsPress(lead.item)}
+          >
+            <Ionicons color={accentForeground} name="ellipsis-horizontal" size={16} />
+          </PresstableOpacity>
         )}
-      </PresstableScale>
+      </View>
 
       <View className="flex-row items-start justify-between gap-2 mt-2">
         <View className="flex-1">
