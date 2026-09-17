@@ -88,6 +88,9 @@ export function ScrolledTitle({
     const frame = frameRef.current;
     if (frame == null) return;
     anchorRef.current?.measureLayout(frame, (_x, y, _width, height) => {
+      // A screen parked under a pushed one lays out at zero (web hides it with
+      // `display: none`); keep the real frame so the bar doesn't exit and re-enter.
+      if (height === 0) return;
       anchor.value = { y: y + scrollY.value, height };
     });
   }
