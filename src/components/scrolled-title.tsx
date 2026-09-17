@@ -33,7 +33,6 @@ interface AnchorFrame {
 }
 
 interface ScrolledTitleContextValue {
-  frameRef: RefObject<View | null>;
   anchorRef: RefObject<View | null>;
   scrollY: SharedValue<number>;
   anchor: SharedValue<AnchorFrame>;
@@ -107,7 +106,7 @@ export function ScrolledTitle({
 
   return (
     <ScrolledTitleContext.Provider
-      value={{ frameRef, anchorRef, scrollY, anchor, measure }}
+      value={{ anchorRef, scrollY, anchor, measure }}
     >
       <View className={cn('flex-1', className)} ref={frameRef}>
         {children}
@@ -155,9 +154,7 @@ function Bar({ title }: { title: string }) {
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
       const target = isCovered ? 1 : 0;
-      // No previous state means the screen is (re)appearing, not scrolling:
-      // a page returned to mid-way shows its bar, it doesn't slide it in.
-      shown.value = reduceMotion || wasCovered == null
+      shown.value = reduceMotion
         ? target
         : withTiming(
             target,

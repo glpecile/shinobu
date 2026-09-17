@@ -447,7 +447,7 @@ function StudiosSkeleton() {
  */
 function DetailsSkeleton() {
   return (
-    <View className="flex-1 bg-background">
+    <>
       <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end -mt-24 mb-6">
@@ -460,7 +460,7 @@ function DetailsSkeleton() {
         </View>
         <ExpandableText.Skeleton />
       </View>
-    </View>
+    </>
   );
 }
 
@@ -492,12 +492,6 @@ function DetailsScreen() {
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
-  // The hero title's bottom edge in scroll-content coordinates, measured on
-  // layout (it wraps to as many lines as it needs); the handler then reads
-  // only the event's own offset. Measuring the title *per scroll frame*
-  // (`measure`) reads the scroll view's shadow state, which Android updates
-  // once a fling settles, so the last event saw a stale position and the bar
-  // stayed hidden after a fast scroll.
   const scrolledTitle = useScrolledTitle();
 
   const { item, isLoading, refetchFeed } = useResolvedMediaItem(id);
@@ -621,7 +615,7 @@ function DetailsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <>
       <Head>
         <title>{`${shown.title} — Shinobu`}</title>
         {shown.overview != null && (
@@ -790,6 +784,6 @@ function DetailsScreen() {
 
       <ScrolledTitle.Bar title={shown.title} />
       <FloatingBackButton onPress={goBack} />
-    </View>
+    </>
   );
 }
