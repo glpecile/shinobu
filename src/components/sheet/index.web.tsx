@@ -29,8 +29,9 @@ export interface SheetProps {
 }
 
 /**
- * Ref callback for the sheet overlay. Focuses its first text field once the
- * entering animation has made it visible, where React's `autoFocus` is dropped
+ * Ref callback for the sheet overlay, passed only while open so a reopen during
+ * the exit re-arms it. Focuses its first text field once the entering animation
+ * has made it visible, where React's `autoFocus` is dropped
  * (docs/solutions/web-sheet-autofocus-dropped.md).
  */
 function focusFirstFieldOnReveal(view: View | null) {
@@ -204,7 +205,7 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
     <Modal animationType="none" onRequestClose={onClose} transparent visible>
       <View
         className="flex-1 justify-end"
-        ref={autoFocus ? focusFirstFieldOnReveal : undefined}
+        ref={autoFocus && open ? focusFirstFieldOnReveal : undefined}
       >
         {open && (
           <>

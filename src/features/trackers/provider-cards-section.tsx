@@ -11,7 +11,10 @@ import {
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import { TraktMigrationBanner } from '@/features/trackers/trakt-migration-banner';
 import type { ProviderId } from '@/lib/providers/types';
-import { useConnectedProviders } from '@/state/session';
+import {
+  SERVER_CONNECTED_PROVIDERS,
+  useConnectedProviders,
+} from '@/state/session';
 
 /**
  * The Manage Trackers screen's two provider sections, both driven by the
@@ -31,11 +34,14 @@ export function ProviderCardsSection() {
   const [movedIds, setMovedIds] = useState<ProviderId[]>([]);
   if (connectedIds !== shownIds) {
     setShownIds(connectedIds);
-    setMovedIds([
-      ...movedIds,
-      ...connectedIds.filter((id) => !shownIds.includes(id)),
-      ...shownIds.filter((id) => !connectedIds.includes(id)),
-    ]);
+    // Web hydration swapping in the real sessions isn't the user moving a card.
+    if (shownIds !== SERVER_CONNECTED_PROVIDERS) {
+      setMovedIds([
+        ...movedIds,
+        ...connectedIds.filter((id) => !shownIds.includes(id)),
+        ...shownIds.filter((id) => !connectedIds.includes(id)),
+      ]);
+    }
   }
   // `sheetId` is kept while closing so the content doesn't vanish mid-animation
   // (the shape `card-actions-sheet` uses for its `item`).
