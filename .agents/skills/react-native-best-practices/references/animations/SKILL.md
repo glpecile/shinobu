@@ -1,6 +1,6 @@
 ---
 name: animations
-description: "Production animation patterns for React Native using Reanimated 4, Skia, WebGPU, and TypeGPU. Covers CSS transitions, CSS animations, shared value animations, canvas animations with react-native-skia, GPU shader animations, layout animations, scroll-driven animations, interpolation, particle systems, procedural noise, SDF rendering, performance tuning, and accessibility. Trigger on: Reanimated, useSharedValue, useAnimatedStyle, withSpring, withTiming, withDecay, withRepeat, withSequence, CSS transition, CSS animation, layout animation, FadeIn, SlideIn, ZoomIn, LinearTransition, keyframe, interpolate, scrollTo, useFrameCallback, react-native-skia, Skia Canvas, Atlas, usePathInterpolation, usePathValue, useClock, useTexture, SKSL, interpolateColors, Picture API, canvas animation, sprite animation, WebGPU, react-native-wgpu, TypeGPU, GPU shader, WGSL, particle system, Perlin noise, SDF, Three.js, react-three-fiber, animation performance, or any request to animate UI in React Native."
+description: "Production animation patterns for React Native using Reanimated 4, Skia, WebGPU, and TypeGPU. Covers CSS transitions, CSS animations, CSS pseudo-selectors, CSS callbacks, shared value animations, canvas animations with react-native-skia, GPU shader animations, layout animations, scroll-driven animations, particle systems, procedural noise, SDF rendering, performance tuning, and accessibility. Trigger on: Reanimated, useSharedValue, useAnimatedStyle, withSpring, withTiming, withDecay, withRepeat, withSequence, CSS transition, CSS animation, layout animation, FadeIn, SlideIn, ZoomIn, LinearTransition, keyframe, interpolate, scrollTo, useFrameCallback, react-native-skia, Skia Canvas, Atlas, usePathInterpolation, usePathValue, useClock, useTexture, SKSL, interpolateColors, Picture API, canvas animation, sprite animation, WebGPU, react-native-wgpu, TypeGPU, GPU shader, WGSL, particle system, Perlin noise, SDF, Three.js, react-three-fiber, animation performance, or any request to animate UI in React Native."
 ---
 
 # Animations
@@ -8,6 +8,10 @@ description: "Production animation patterns for React Native using Reanimated 4,
 Software Mansion's production animation patterns for React Native on Reanimated 4 and the New Architecture.
 
 Load at most one reference file per question. For API signatures and config options, webfetch the documentation pages linked in each reference file.
+
+## Version Check
+
+Read the installed Reanimated version before writing animation code: `node_modules/react-native-reanimated/package.json` or the lockfile, not the `package.json` range. Reanimated 3.x has no CSS transitions or animations; use shared values there. On 4.x, a feature used below the version that added it (table in `animations.md`) is silently ignored or throws: do not emit it, and if the user asked for that feature, say which version adds it.
 
 ## Critical Rules
 
@@ -17,7 +21,8 @@ Load at most one reference file per question. For API signatures and config opti
 
 | File | When to read |
 |------|-------------|
-| `animations.md` | Choosing between CSS transitions, CSS animations, and shared value animations; CSS transition and CSS animation patterns and rules; animating text; infinite animation cleanup; `scheduleOnRN` |
+| `animations.md` | Choosing between CSS transitions, CSS animations, and shared value animations; CSS feature availability by Reanimated version; CSS transition and CSS animation patterns and rules; CSS callbacks (`onCSS*`, 4.6.0+); animating text; infinite animation cleanup; `scheduleOnRN` |
+| `css-pseudo-selectors.md` | Interaction state without React state: `:hover`, `:active`, `:active-deepest`, `:focus`, `:focus-within` (4.5.0+), selector precedence, the property lock, per-platform press traps |
 | `animation-functions.md` | Gotchas and rules for core hooks (`useSharedValue`, `useAnimatedStyle`, `useAnimatedProps`, `useDerivedValue`); `withSpring` config modes; `withRepeat` and `withClamp` caveats; composing animations |
 | `layout-animations.md` | Entering/exiting animation gotchas (`nativeID` conflict, view flattening); layout transitions; keyframe animation rules; list item animations (`itemLayoutAnimation`); shared element transitions |
 | `scroll-and-events.md` | Scroll-driven animation patterns (`useAnimatedScrollHandler`, `scrollTo`, `useScrollOffset`); `useAnimatedReaction` patterns; `useFrameCallback`; `measure` rules |
