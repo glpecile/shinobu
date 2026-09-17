@@ -203,18 +203,16 @@ export function useSimklLibraryEntryQuery(params: {
 }
 
 /**
- * Whether Simkl already records this **film-like** item as watched — the Simkl
- * half of `useWatchedInfo` (`state/queries/watched-info.ts`).
+ * Whether Simkl already records this item as watched — the Simkl half of
+ * `useWatchedInfo` (`state/queries/watched-info.ts`).
  *
- * Films only, deliberately. Shinobu writes movie logs to Simkl but read them
- * back nowhere, so a movie logged to Simkl and not Trakt kept offering "Mark
- * as watched" forever (owner report 2026-08-01, Hokum). TV goes through
- * `useSimklLibraryEntryQuery` directly, whose per-episode progress line is
- * richer than the play count this returns.
- *
- * `plays` is always ≥ 1: Simkl records only the latest play of a movie, with
- * no rewatch counter, so this proves "watched" without ever claiming a count
- * it doesn't have.
+ * Films count once `completed` (owner report 2026-08-01, Hokum: a movie
+ * logged to Simkl and not Trakt kept offering "Mark as watched" forever);
+ * `plays` is always ≥ 1 because Simkl records only the latest play, with no
+ * rewatch counter. A series counts once any episode is logged, whatever its
+ * status — the same contract as Trakt's TV leg, so a studio or person page
+ * marks a Simkl-only user's shows the way it marks a Trakt user's. The details
+ * screen still reads the richer status verb off `useSimklLibraryEntryQuery`.
  */
 export function useSimklWatchedInfo(
   item: NormalizedMediaItem,
@@ -223,18 +221,16 @@ export function useSimklWatchedInfo(
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const entry = useSimklLibraryEntryQuery({
     item,
-    enabled: useConnectedProviders().includes('simkl') && filmLike,
+    enabled: useConnectedProviders().includes('simkl') && (filmLike || item.type === 'TV'),
   }).data;
   // `enabled: false` stops the *fetch*, not the read: the snapshot is one
-  // shared cache entry, so a TV screen — where another hook already populated
-  // it — still selects a real entry here. Gate the answer, not just the
-  // request, or a fully-watched series reports as a watched *film* and the
-  // details line reads "Watching · 153 episodes logged" from the movie path.
-  if (!filmLike) return null;
-  // No instant means Simkl knows the film is finished but not when — it can
-  // still say "watched", so the entry's own `lastUpdated` stands in rather
-  // than dropping a true watch on the floor.
-  if (entry == null || entry.status !== 'completed') return null;
+  // shared cache entry, so a screen another hook populated it for still
+  // selects a real entry here. Gate the answer, not just the request.
+  if (entry == null || !(filmLike || item.type === 'TV')) return null;
+  if (filmLike && entry.status !== 'completed') return null;
+  if (!filmLike && entry.item.currentProgress <= 0) return null;
+  // No instant means Simkl knows it's watched but not when — the entry's own
+  // `lastUpdated` stands in rather than dropping a true watch on the floor.
   return {
     plays: Math.max(1, entry.item.currentProgress),
     lastWatchedAt: entry.lastWatchedAt ?? entry.item.lastUpdated,

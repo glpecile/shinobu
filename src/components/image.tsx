@@ -24,8 +24,20 @@ const DEFAULT_TRANSITION: ImageProps['transition'] = {
   effect: 'cross-dissolve',
 };
 
+/**
+ * `memory-disk`, not expo-image's `disk` default: on Android `disk` sets
+ * Glide's `skipMemoryCache(true)`, so a poster is decoded from disk again
+ * (40–110ms each) every time its card is re-mounted or recycled — the home
+ * carousels' "posters die while scrolling". Glide's memory cache is a bounded
+ * LRU sized from the screen, so this costs no unbounded memory.
+ * docs/solutions/android-home-carousel-fling-remounts-every-card.md
+ */
+const DEFAULT_CACHE_POLICY: ImageProps['cachePolicy'] = 'memory-disk';
+
 export function Image(props: ComponentProps<typeof StyledImage>) {
-  return <StyledImage transition={DEFAULT_TRANSITION} {...props} />;
+  return (
+    <StyledImage cachePolicy={DEFAULT_CACHE_POLICY} transition={DEFAULT_TRANSITION} {...props} />
+  );
 }
 
 /**

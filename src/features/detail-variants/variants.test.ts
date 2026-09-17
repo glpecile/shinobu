@@ -18,6 +18,22 @@ describe('detailVariants', () => {
     ).toEqual([{ source: 'tmdb', id: 'tmdb-movie-129' }]);
   });
 
+  it('offers Simkl and Letterboxd pages, Letterboxd for films only', () => {
+    expect(
+      detailVariants({
+        id: 'tmdb-movie-949',
+        type: 'MOVIE',
+        externalIds: { tmdb: 949, simkl: 12, letterboxd: 'heat-1995' },
+      }),
+    ).toEqual([
+      { source: 'simkl', id: 'simkl-12' },
+      { source: 'letterboxd', id: 'letterboxd-heat-1995' },
+    ]);
+    expect(
+      detailVariants({ id: 'simkl-7', type: 'TV', externalIds: { simkl: 7, letterboxd: 'x' } }),
+    ).toEqual([]);
+  });
+
   it('never mints a TMDB page for manga', () => {
     expect(detailVariants({ id: 'anilist-30013', type: 'MANGA', externalIds: { anilist: 30013, tmdb: 1 } })).toEqual([]);
   });

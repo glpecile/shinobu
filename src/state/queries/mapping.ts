@@ -15,7 +15,10 @@ import {
   pickMovieMatch,
 } from '@/lib/providers/pick-movie-match';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
-import { lookupByExternalId as lookupSimklByExternalId } from '@/lib/providers/simkl/reads';
+import {
+  lookupByExternalId as lookupSimklByExternalId,
+  type SimklLookupParams,
+} from '@/lib/providers/simkl/reads';
 import {
   findByTvdbId,
   getTvSeasonLayout,
@@ -152,6 +155,8 @@ export const mappingQueryKeys = {
   /** Title+year → TMDB movie id, for id-less films (Letterboxd). */
   tmdbMovieSearch: (title: string, year: number | undefined, via: TmdbVia) =>
     ['mapping', 'tmdb-movie-search', title, year ?? 'any', via] as const,
+  /** Public Simkl `/search/id` by any foreign (or Simkl's own) id — via-less, no session. */
+  simklLookup: (params: SimklLookupParams) => ['mapping', 'simkl-lookup', params] as const,
   /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
@@ -191,6 +196,43 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
       item.genres?.some((genre) => /anim/i.test(genre)) === true,
     select: (ids) => (ids?.anilist != null && (ids.type === 'MOVIE') === isMovie ? ids.anilist : null),
   });
+}
+
+/**
+ * The Simkl record behind a foreign id, or Simkl's own: the details variants
+ * row discovers an item's Simkl page with it, and a cold `/details/simkl-<id>`
+ * resolves through it (`resolve-item.ts`). Public read on the bundled client
+ * id, so it never varies by session. `null` params disable it.
+ */
+export function useSimklLookupQuery(params: SimklLookupParams | null) {
+  return useQuery({
+    queryKey: mappingQueryKeys.simklLookup(params ?? {}),
+    queryFn: () =>
+      Effect.runPromise(lookupSimklByExternalId(simklDeps(), params ?? {})).then(
+        (results) => results[0] ?? null,
+      ),
+    ...FOREVER,
+    enabled: params != null,
+  });
+}
+
+/**
+ * The lookup params that name `item` to Simkl: its own id needs nothing, a
+ * tracker-keyed anime goes by AniList/MAL, and the rest by TMDB (whose movie
+ * and TV ids collide, hence `type`). `null` when nothing identifies it.
+ */
+export function simklLookupParamsFor(
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>,
+): SimklLookupParams | null {
+  const { simkl, anilist, mal, tmdb } = item.externalIds;
+  if (simkl != null) return null;
+  if (item.type === 'MANGA') return null;
+  if (anilist != null) return { anilist };
+  if (mal != null) return { mal };
+  if (tmdb != null) {
+    return { tmdb, type: item.type === 'MOVIE' || item.isFilm === true ? 'movie' : 'show' };
+  }
+  return null;
 }
 
 /**

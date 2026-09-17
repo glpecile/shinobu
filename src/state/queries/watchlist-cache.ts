@@ -1,6 +1,9 @@
 import type { QueryClient } from '@tanstack/react-query';
 
+import { watchlistMergeKeys } from '@/features/watchlist/compute';
 import type { NormalizedMediaItem } from '@/types/media';
+
+import { cachedDiaryEntries } from './diary-pages';
 
 /**
  * The cross-provider watchlist query root, in its own module for exactly the
@@ -49,4 +52,36 @@ export function findInWatchlistCache(
     // `findInDiaryCache`. A resolution helper must degrade to "Not found",
     // never throw and take the route's ErrorBoundary with it.
     .find((input) => input?.item?.id === id)?.item;
+}
+
+/**
+ * The Letterboxd-sourced twin of `item` (a `letterboxd-<slug>` item) from the
+ * cached watchlist gather or diary pages, for the details variants row.
+ * Cache-only by necessity, not choice: Letterboxd film pages sit behind the
+ * Cloudflare wall and the web relay is username-locked, so a slug can't be
+ * looked up — it is known only where the user's own Letterboxd surfaces
+ * already carried it. Matched by the watchlist merge's own keys (tmdb, imdb,
+ * title|year), so it pairs exactly what the merged grid pairs.
+ */
+export function findLetterboxdTwinInCache(
+  queryClient: QueryClient,
+  item: NormalizedMediaItem,
+): NormalizedMediaItem | undefined {
+  const keys = new Set(watchlistMergeKeys(item));
+  if (keys.size === 0) return undefined;
+  const candidates = [
+    ...queryClient
+      .getQueriesData<{ inputs?: Array<{ item: NormalizedMediaItem; source?: string }> }>({
+        queryKey: WATCHLIST_QUERY_ROOT,
+      })
+      .flatMap(([, data]) => data?.inputs ?? [])
+      .filter((input) => input?.source === 'letterboxd')
+      .map((input) => input.item),
+    ...cachedDiaryEntries(queryClient)
+      .filter((entry) => entry?.provider === 'letterboxd')
+      .map((entry) => entry.item),
+  ];
+  return candidates.find(
+    (twin) => twin?.externalIds?.letterboxd != null && watchlistMergeKeys(twin).some((key) => keys.has(key)),
+  );
 }

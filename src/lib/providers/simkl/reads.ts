@@ -206,6 +206,8 @@ export function getUserSettings(
 // ---- Id resolution (KTD-6) ----
 
 export interface SimklLookupParams {
+  /** Simkl's own id — how a cold `/details/simkl-<id>` resolves (verified live 2026-09-17). */
+  simkl?: number;
   tmdb?: number;
   imdb?: string;
   tvdb?: number;
@@ -227,7 +229,7 @@ export function lookupByExternalId(
   params: SimklLookupParams,
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const query = new URLSearchParams();
-  for (const key of ['tmdb', 'imdb', 'tvdb', 'mal', 'anilist', 'anidb', 'type'] as const) {
+  for (const key of ['simkl', 'tmdb', 'imdb', 'tvdb', 'mal', 'anilist', 'anidb', 'type'] as const) {
     const value = params[key];
     if (value != null) query.set(key, String(value));
   }

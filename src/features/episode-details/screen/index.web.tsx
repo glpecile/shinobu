@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { FadeOut } from 'react-native-reanimated';
 
@@ -19,8 +20,10 @@ import {
   EpisodeLogs,
   EpisodeNav,
   EpisodeOverview,
+  EpisodeOverviewSkeleton,
   EpisodeSeriesLink,
   EpisodeStill,
+  useGoToEpisode,
 } from '@/features/episode-details/episode-sections';
 import { useEpisode } from '@/features/episode-details/use-episode';
 import { useEpisodeLogs } from '@/features/episode-details/use-episode-logs';
@@ -48,6 +51,29 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   const { width } = useWindowDimensions();
   const wide = width >= TWO_COLUMN_MIN_WIDTH;
   const title = view.episode?.title ?? '';
+  const go = useGoToEpisode(item.id, season, number);
+  const { prev, next } = view;
+  // ← / → step between episodes — the keyboard's swipe. A subscription to
+  // the document, so an effect; skipped while a field has focus.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const focused = document.activeElement;
+      if (
+        focused instanceof HTMLInputElement ||
+        focused instanceof HTMLTextAreaElement ||
+        (focused instanceof HTMLElement && focused.isContentEditable)
+      ) {
+        return;
+      }
+      const target = event.key === 'ArrowRight' ? next : event.key === 'ArrowLeft' ? prev : undefined;
+      if (target == null) return;
+      event.preventDefault();
+      go(target);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [go, next, prev]);
 
   if (view.episode == null && view.isLoading) {
     return <EpisodeScreenSkeleton onBack={onBack} />;
@@ -99,7 +125,14 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             </View>
           </View>
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <EpisodeNav className="mt-8" id={item.id} next={view.next} prev={view.prev} />
+          <EpisodeNav
+            className="mt-8"
+            id={item.id}
+            next={view.next}
+            number={number}
+            prev={view.prev}
+            season={season}
+          />
           <EpisodeSeriesLink className="mt-3" id={item.id} />
         </BlurEnter>
       </ScrollView>
@@ -124,15 +157,13 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
           <View className={cn('flex-1', !wide && 'mt-5')}>
             <EpisodeHeaderSkeleton />
             <Skeleton className="h-12 w-44 rounded-full mt-5" delay={staggerDelay(1)} />
-            <Skeleton className="h-4 w-full rounded mt-5" delay={staggerDelay(2)} />
-            <Skeleton className="h-4 w-full rounded mt-2" delay={staggerDelay(2)} />
-            <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(2)} />
+            <EpisodeOverviewSkeleton className="mt-5" />
           </View>
         </View>
         <PeopleSectionsSkeleton />
         <View className="flex-row gap-3 mt-8">
-          <Skeleton className="flex-1 h-10 rounded-full" delay={staggerDelay(3)} />
-          <Skeleton className="flex-1 h-10 rounded-full" delay={staggerDelay(3)} />
+          <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />
+          <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />
         </View>
         <Skeleton className="h-12 w-full rounded-full mt-3" delay={staggerDelay(4)} />
       </View>
