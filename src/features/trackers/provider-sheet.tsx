@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -12,7 +12,7 @@ import {
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
-import { useConnectedProviders, useDisconnectProvider } from '@/state/session';
+import { useDisconnectProvider } from '@/state/session';
 
 /**
  * The one provider sheet for the whole screen.
@@ -26,30 +26,36 @@ import { useConnectedProviders, useDisconnectProvider } from '@/state/session';
  */
 export function ProviderSheet({
   id,
+  connected,
   open,
   onClose,
 }: {
   /** Kept (not nulled) while closing so content doesn't vanish mid-animation. */
   id: ProviderId | null;
+  /** Whether the provider was connected when the sheet opened. */
+  connected: boolean;
   open: boolean;
   onClose: () => void;
 }) {
   return (
-    <Sheet onClose={onClose} open={open && id != null}>
-      {id != null && <ProviderSheetContent id={id} onDone={onClose} />}
+    <Sheet autoFocus onClose={onClose} open={open && id != null}>
+      {id != null && (
+        <ProviderSheetContent connected={connected} id={id} onDone={onClose} />
+      )}
     </Sheet>
   );
 }
 
 function ProviderSheetContent({
   id,
+  connected,
   onDone,
 }: {
   id: ProviderId;
+  connected: boolean;
   onDone: () => void;
 }) {
   const disconnect = useDisconnectProvider();
-  const connected = useConnectedProviders().includes(id);
   const username = useProviderUsername(id, connected);
   const ConnectButton = CONNECT_BUTTONS[id];
 
@@ -69,8 +75,13 @@ function ProviderSheetContent({
         </SheetHeader.Content>
       </SheetHeader>
 
-      <View className="mt-5">
-        {connected ? (
+      {connected ? (
+        <View className="mt-5 gap-3">
+          <Text className="text-muted font-sans text-sm">
+            Shinobu forgets this {PROVIDERS[id].label} session on this device.
+            Nothing on {PROVIDERS[id].label} is deleted, and you can reconnect
+            any time.
+          </Text>
           <Button
             icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
@@ -78,12 +89,19 @@ function ProviderSheetContent({
               disconnect(id);
               onDone();
             }}
-            variant="outline"
           />
-        ) : (
+          <Button
+            icon={<Button.Icon name="close" />}
+            label="Cancel"
+            onPress={onDone}
+            variant="quiet"
+          />
+        </View>
+      ) : (
+        <View className="mt-5">
           <ConnectButton />
-        )}
-      </View>
+        </View>
+      )}
     </>
   );
 }

@@ -16,6 +16,9 @@ export {
 
 let cachedConnected: ProviderId[] | null = null;
 
+/** What `useConnectedProviders` returns while the prerendered web page hydrates. */
+export const SERVER_CONNECTED_PROVIDERS: ProviderId[] = [];
+
 function isServer(): boolean {
   return typeof window === 'undefined';
 }
@@ -28,13 +31,13 @@ function readConnected(): ProviderId[] {
   if (cachedConnected == null && !isServer()) {
     cachedConnected = usableProviderIds();
   }
-  return cachedConnected ?? [];
+  return cachedConnected ?? SERVER_CONNECTED_PROVIDERS;
 }
 
 function getServerSnapshot(): ProviderId[] {
   // During server rendering there is no session state; hydration will pick up
   // the client's real tokens on the client.
-  return [];
+  return SERVER_CONNECTED_PROVIDERS;
 }
 
 function subscribe(onStoreChange: () => void): () => void {

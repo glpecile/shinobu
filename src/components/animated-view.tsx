@@ -1,3 +1,4 @@
+import { TextInput } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { withUniwind } from '@/lib/with-uniwind';
 
@@ -13,3 +14,8 @@ export const AnimatedText = withUniwind(Animated.Text);
 
 /** Same wrapper for a scroll view whose offset drives a shared value (a pager). */
 export const AnimatedScrollView = withUniwind(Animated.ScrollView);
+
+/** Same wrapper for a field whose border transitions on focus. */
+export const AnimatedTextInput = withUniwind(
+  Animated.createAnimatedComponent(TextInput),
+);
