@@ -498,19 +498,6 @@ describe('removeFromTraktWatchlist (plan 0031 R34)', () => {
     expect(calls.bodies[0]).toEqual({ movies: [{ ids: { trakt: 42, tmdb: 43 } }] });
   });
 
-  test('a TV show posts under `shows`', async () => {
-    const calls = { bodies: [] as unknown[] };
-    const deps = removeDeps(
-      [json({ deleted: { ...ZERO, shows: 1 }, not_found: EMPTY_NOT_FOUND })],
-      calls,
-    );
-
-    const result = await Effect.runPromise(removeFromTraktWatchlist(deps, TV_ITEM));
-
-    expect(result).toEqual({ status: 'ok' });
-    expect(calls.bodies[0]).toEqual({ shows: [{ ids: { trakt: 7, tmdb: 8 } }] });
-  });
-
   test('nothing deleted and nothing unmatched is a reasoned skip, not a failure', async () => {
     const calls = { bodies: [] as unknown[] };
     const deps = removeDeps([json({ deleted: ZERO, not_found: EMPTY_NOT_FOUND })], calls);
@@ -543,19 +530,5 @@ describe('removeFromTraktWatchlist (plan 0031 R34)', () => {
     if (result._tag === 'Left') {
       expect(result.left.message).toContain('Sinners');
     }
-  });
-
-  test('an item with no usable id fails before any request', async () => {
-    const calls = { bodies: [] as unknown[] };
-    const deps = removeDeps([], calls);
-
-    const result = await Effect.runPromise(
-      Effect.either(
-        removeFromTraktWatchlist(deps, { ...MOVIE_ITEM, externalIds: {} }),
-      ),
-    );
-
-    expect(result._tag).toBe('Left');
-    expect(calls.bodies).toHaveLength(0);
   });
 });

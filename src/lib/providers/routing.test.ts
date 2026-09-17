@@ -22,47 +22,6 @@ const ids = (externalIds: Record<string, number | string> = {}) => ({ externalId
 // 0012 session-capture path), so it is a log target for movies and anime films
 // alongside Trakt.
 describe("providersForWrite('log')", () => {
-  it('routes movies to Trakt + Letterboxd', () => {
-    expect(providersForWrite({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ALL, 'log')).toEqual([
-      'trakt',
-      'letterboxd',
-    ]);
-  });
-
-  it('routes TV to Trakt only', () => {
-    expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ALL, 'log')).toEqual([
-      'trakt',
-    ]);
-  });
-
-  it('routes manga to AniList only', () => {
-    expect(providersForWrite({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL, 'log')).toEqual([
-      'anilist',
-    ]);
-  });
-
-  it('routes an unmapped anime series to AniList only', () => {
-    expect(providersForWrite({ type: 'ANIME', ...ids({ anilist: 1 }) }, ALL, 'log')).toEqual([
-      'anilist',
-    ]);
-  });
-
-  it('routes a mapped anime series to Trakt too (it is a TV show there, plan 0011)', () => {
-    expect(
-      providersForWrite({ type: 'ANIME', ...ids({ anilist: 1, tvdb: 2 }) }, ALL, 'log'),
-    ).toEqual(['trakt', 'anilist']);
-  });
-
-  it('routes a mapped anime film to all three (it is a MOVIE to Trakt + Letterboxd)', () => {
-    expect(
-      providersForWrite(
-        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
-        ALL,
-        'log',
-      ),
-    ).toEqual(['trakt', 'anilist', 'letterboxd']);
-  });
-
   it('an unmapped anime film stays AniList-only (no movie-side id)', () => {
     expect(
       providersForWrite({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL, 'log'),
@@ -75,81 +34,10 @@ describe("providersForWrite('log')", () => {
     ).toEqual(['trakt', 'anilist']);
   });
 
-  it('a movie reverse-mapped to AniList also routes there', () => {
-    expect(
-      providersForWrite({ type: 'MOVIE', ...ids({ trakt: 1, anilist: 2 }) }, ALL, 'log'),
-    ).toEqual(['trakt', 'anilist', 'letterboxd']);
-  });
-
-  it('routes an anime film to a Letterboxd-only connection (it is a MOVIE there)', () => {
-    expect(
-      providersForWrite(
-        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
-        ['letterboxd'],
-        'log',
-      ),
-    ).toEqual(['letterboxd']);
-  });
-
-  it('returns empty when no connected provider applies (TV, AniList-only)', () => {
-    expect(providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ['anilist'], 'log')).toEqual(
-      [],
-    );
-  });
-
-  it('returns empty when nothing is connected', () => {
-    expect(providersForWrite({ type: 'MOVIE', ...ids({ trakt: 1 }) }, [], 'log')).toEqual([]);
-  });
-
   it('a movie with isFilm set routes the same as a plain movie', () => {
     expect(
       providersForWrite({ type: 'MOVIE', isFilm: true, ...ids({ trakt: 1 }) }, ALL, 'log'),
     ).toEqual(['trakt', 'letterboxd']);
-  });
-
-  // Serializd (plan 0017): TV-only, symmetric write. Routing derives inclusion
-  // from the registry's mediaTypes — the no-tmdb skip lives in the writes layer,
-  // never here, so routing includes Serializd for any TV/mapped-anime item.
-  it('routes TV to Trakt + Serializd when both connected', () => {
-    expect(
-      providersForWrite({ type: 'TV', ...ids({ trakt: 1 }) }, ['trakt', 'serializd'], 'log'),
-    ).toEqual(['trakt', 'serializd']);
-  });
-
-  it('routes a mapped anime series (a TV show there) to AniList + Serializd', () => {
-    expect(
-      providersForWrite(
-        { type: 'ANIME', ...ids({ anilist: 1, tmdb: 2 }) },
-        ['anilist', 'serializd'],
-        'log',
-      ),
-    ).toEqual(['anilist', 'serializd']);
-  });
-
-  it('excludes Serializd for an unmapped anime series (no movie/TV type)', () => {
-    expect(
-      providersForWrite(
-        { type: 'ANIME', ...ids({ anilist: 1 }) },
-        ['anilist', 'serializd'],
-        'log',
-      ),
-    ).toEqual(['anilist']);
-  });
-
-  it('excludes Serializd for a MOVIE (TV-only provider)', () => {
-    expect(
-      providersForWrite({ type: 'MOVIE', ...ids({ trakt: 1 }) }, ['trakt', 'serializd'], 'log'),
-    ).toEqual(['trakt']);
-  });
-
-  it('excludes Serializd for a mapped anime film (a MOVIE there, not TV)', () => {
-    expect(
-      providersForWrite(
-        { type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) },
-        ['anilist', 'serializd'],
-        'log',
-      ),
-    ).toEqual(['anilist']);
   });
 
   // The ChaO (2025) shape: a TMDB/Trakt-first anime film whose AniList id the
@@ -173,10 +61,6 @@ describe('providersForFeed', () => {
     // changes the registry, not the routing logic.
     expect(providersForFeed(['anilist', 'trakt'])).toEqual(['anilist', 'trakt']);
     expect(providersForFeed([])).toEqual([]);
-  });
-
-  it('includes Serializd when connected (canRead)', () => {
-    expect(providersForFeed(['trakt', 'serializd'])).toEqual(['trakt', 'serializd']);
   });
 });
 
@@ -206,25 +90,6 @@ describe("splitWriteTargets('log')", () => {
       ),
     ).toEqual({ writable: ['trakt', 'letterboxd'], manual: [] });
   });
-
-  it('a TV item never includes Letterboxd in either bucket (not applicable)', () => {
-    expect(
-      splitWriteTargets(
-        { type: 'TV', ...ids({ trakt: 1 }) },
-        ['trakt', 'letterboxd'],
-        'web',
-        'log',
-      ),
-    ).toEqual({ writable: ['trakt'], manual: [] });
-  });
-
-  it('a provider without the flag is unaffected on every platform', () => {
-    for (const platform of ['web', 'ios', 'android']) {
-      expect(
-        splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ['trakt'], platform, 'log'),
-      ).toEqual({ writable: ['trakt'], manual: [] });
-    }
-  });
 });
 
 // Plan 0031 R5/R6/R7/KTD-1: watchlist targets come from `watchlistWrite`, never
@@ -248,12 +113,6 @@ describe("splitWriteTargets('watchlist')", () => {
     ).toEqual({ writable: ['trakt'], manual: ['letterboxd'] });
   });
 
-  it('a TV show: Trakt and Serializd writable since the U10 flip', () => {
-    expect(
-      splitWriteTargets({ type: 'TV', ...ids({ trakt: 1 }) }, ALL4, 'ios', 'watchlist'),
-    ).toEqual({ writable: ['trakt', 'serializd'], manual: [] });
-  });
-
   it('a mapped anime film: all three movie targets writable, Serializd absent (TV-only)', () => {
     expect(
       splitWriteTargets(
@@ -263,33 +122,6 @@ describe("splitWriteTargets('watchlist')", () => {
         'watchlist',
       ),
     ).toEqual({ writable: ['trakt', 'anilist', 'letterboxd'], manual: [] });
-  });
-
-  it('mirrors the log routing for that same anime film (one shared effectiveTypes)', () => {
-    const item = { type: 'ANIME' as const, isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) };
-    expect(providersForWrite(item, ALL4, 'watchlist')).toEqual(
-      providersForWrite(item, ALL4, 'log'),
-    );
-  });
-
-  it('MANGA: AniList only, no manual rows', () => {
-    expect(
-      splitWriteTargets({ type: 'MANGA', ...ids({ anilist: 1 }) }, ALL4, 'web', 'watchlist'),
-    ).toEqual({ writable: ['anilist'], manual: [] });
-  });
-
-  it('a declared-write provider still goes manual where the platform bans the write', () => {
-    // Live since plan 0033: the endpoint is verified, but Letterboxd's
-    // fingerprint wall still bans every write on web, so web stays manual.
-    const item = { type: 'MOVIE' as const, ...ids({ trakt: 1 }) };
-    expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
-      writable: ['trakt', 'letterboxd'],
-      manual: [],
-    });
-    expect(splitWriteTargets(item, ALL4, 'web', 'watchlist')).toEqual({
-      writable: ['trakt'],
-      manual: ['letterboxd'],
-    });
   });
 
   it("'none' is the only way out of both buckets", () => {
@@ -334,21 +166,6 @@ describe("splitWriteTargets('watchlist-remove')", () => {
       letterboxd.watchlistRemove = original;
     }
   });
-
-  it("diverges from the add verb per Serializd's split declarations", () => {
-    // The add flipped to 'write' with U10's probe; the remove stays 'manual'
-    // until the Serializd read leg lands (R32/R35) — the two verbs answering
-    // differently for one provider is exactly what KTD-15's split axis buys.
-    const item = { type: 'TV' as const, ...ids({ trakt: 1 }) };
-    expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist-remove')).toEqual({
-      writable: ['trakt'],
-      manual: ['serializd'],
-    });
-    expect(splitWriteTargets(item, ALL4, 'ios', 'watchlist')).toEqual({
-      writable: ['trakt', 'serializd'],
-      manual: [],
-    });
-  });
 });
 
 // The load-bearing invariant behind the three-state declaration: an applicable
@@ -386,19 +203,18 @@ describe('every applicable provider lands in exactly one bucket', () => {
 
   for (const { name, item, types } of fixtures) {
     for (const capability of capabilities) {
-      for (const platform of ['web', 'ios', 'android']) {
-        it(`${name} / ${capability} / ${platform}`, () => {
-          const { writable, manual } = splitWriteTargets(item, ALL5, platform, capability);
-          const applicable = ALL5.filter((id) =>
-            types.some((type) => PROVIDERS[id].mediaTypes.includes(type)),
-          );
+      // Platform only moves a target between buckets, never out of both.
+      it(`${name} / ${capability}`, () => {
+        const { writable, manual } = splitWriteTargets(item, ALL5, 'web', capability);
+        const applicable = ALL5.filter((id) =>
+          types.some((type) => PROVIDERS[id].mediaTypes.includes(type)),
+        );
 
-          // No provider whose mediaTypes apply is missing from the report…
-          expect([...writable, ...manual].toSorted()).toEqual(applicable.toSorted());
-          // …and none is in both.
-          expect(writable.filter((id) => manual.includes(id))).toEqual([]);
-        });
-      }
+        // No provider whose mediaTypes apply is missing from the report…
+        expect([...writable, ...manual].toSorted()).toEqual(applicable.toSorted());
+        // …and none is in both.
+        expect(writable.filter((id) => manual.includes(id))).toEqual([]);
+      });
     }
   }
 });

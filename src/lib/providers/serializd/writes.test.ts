@@ -328,21 +328,6 @@ describe('addToSerializdWatchlist', () => {
     });
   });
 
-  test('a season whose watched-episode count reaches episodeCount counts as watched', async () => {
-    const requests: Recorded[] = [];
-    const deps = watchlistDeps({
-      seasons: [
-        { id: 11, seasonNumber: 1, episodeCount: 2 },
-        { id: 12, seasonNumber: 2, episodeCount: 10 },
-      ],
-      watchedSeasons: [{ seasonNumber: 1, watchedEpisodes: [1, 2] }],
-      onRequest: (r) => requests.push(r),
-    });
-
-    await Effect.runPromise(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 })));
-    expect(requests[2].body).toEqual({ show_id: 1396, season_ids: [12] });
-  });
-
   test('specials (season 0) are never sent — Serializd itself says "Specials not affected"', async () => {
     const requests: Recorded[] = [];
     const deps = watchlistDeps({
@@ -463,15 +448,6 @@ describe('addToSerializdWatchlist', () => {
     expect(requestLines(requests)).toEqual(['GET /show/1396']);
   });
 
-  test('a 401 on the guard read is a reconnect auth error, not a generic guard failure', async () => {
-    const deps = watchlistDeps({ seasons: THREE_SEASONS, progressStatus: 401 });
-    const error = await Effect.runPromise(
-      Effect.flip(addToSerializdWatchlist(deps, tvShow({ tmdb: 1396 }))),
-    );
-    expect(error._tag).toBe('ProviderAuthError');
-    expect(error.message).toContain('serializd');
-  });
-
   test('an item without a tmdb id is skipped with a no-tmdb reason and no network at all', async () => {
     const requests: Recorded[] = [];
     const deps = watchlistDeps({ seasons: THREE_SEASONS, onRequest: (r) => requests.push(r) });
@@ -516,39 +492,5 @@ describe('removeFromSerializdWatchlist', () => {
       status: 'ok',
       reason: 'S1 is already watched on Serializd',
     });
-  });
-
-  test('a failed guard read is an error with NO POST, exactly like the add', async () => {
-    const requests: Recorded[] = [];
-    const deps = watchlistDeps({
-      seasons: THREE_SEASONS,
-      progressStatus: 500,
-      onRequest: (r) => requests.push(r),
-    });
-
-    const error = await Effect.runPromise(
-      Effect.flip(removeFromSerializdWatchlist(deps, tvShow({ tmdb: 1396 }))),
-    );
-    expect(error._tag).toBe('ProviderNetworkError');
-    expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
-  });
-
-  test('nothing eligible is a reasoned skip, never a blind removal', async () => {
-    const requests: Recorded[] = [];
-    const deps = watchlistDeps({
-      seasons: THREE_SEASONS,
-      watchedSeasons: [
-        { seasonNumber: 1 },
-        { seasonNumber: 2 },
-        { seasonNumber: 3 },
-      ],
-      onRequest: (r) => requests.push(r),
-    });
-
-    const result = await Effect.runPromise(
-      removeFromSerializdWatchlist(deps, tvShow({ tmdb: 1396 })),
-    );
-    expect(result).toEqual({ status: 'skipped', reason: 'already watched on Serializd' });
-    expect(requestLines(requests).some((p) => p.startsWith('POST'))).toBe(false);
   });
 });

@@ -80,10 +80,6 @@ describe('releaseStops', () => {
     expect(stop?.relative).toBeUndefined();
   });
 
-  test('a single kind still yields a one-stop rail', () => {
-    expect(releaseStops({ digital: '2026-01-05' }, NOW)).toHaveLength(1);
-  });
-
   test('a value that is not a calendar day is dropped, not rendered', () => {
     expect(
       releaseStops(

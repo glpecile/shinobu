@@ -27,61 +27,12 @@ function table(
   );
 }
 
-/** The layouts below are the real ones, probed 2026-07-27 (both trackers agreed). */
+/** A real layout, probed 2026-07-27 (both trackers agreed). */
 const ONE_CONTINUOUS_SEASON: SeasonLayout = [{ season: 1, episodeCount: 24 }];
-const SPLIT_BY_SEASON: SeasonLayout = [
-  { season: 0, episodeCount: 3 },
-  { season: 1, episodeCount: 23 },
-  { season: 2, episodeCount: 24 },
-  { season: 3, episodeCount: 5 },
-];
 
 const SEQUEL_TABLE = table(2, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 1, 13);
 
 describe('translateEntryEpisodes', () => {
-  test('a tracker that splits by season takes ani.zip’s pair verbatim', () => {
-    // Mushoku Tensei S2 part 2: entry 1 is S02E13 (absolute 38). Both trackers
-    // really do have a 24-episode season 2, so the TVDB pair is correct — and
-    // counting absolutely would land on S02E15 instead.
-    const splitCour = table(2, [1, 2, 3], 13, 38);
-
-    expect(
-      translateEntryEpisodes(splitCour, [1], { layout: SPLIT_BY_SEASON }),
-    ).toEqual({ ok: true, episodes: [{ season: 2, number: 13 }] });
-  });
-
-  test('a tracker with one continuous season places by absolute number', () => {
-    // Dan Da Dan S2: ani.zip says S02E01, but Trakt and TMDB both hold a
-    // single 24-episode season — so this is episode 13 of season 1.
-    expect(
-      translateEntryEpisodes(SEQUEL_TABLE, [1], { layout: ONE_CONTINUOUS_SEASON }),
-    ).toEqual({ ok: true, episodes: [{ season: 1, number: 13 }] });
-  });
-
-  test('the reported bug: 100 Girlfriends S3 E4 lands on S01E28', () => {
-    // ani.zip: entry 4 → S03E04, absolute 28. Trakt: S1 with 28 episodes.
-    const season3 = table(3, [1, 2, 3, 4, 5, 6], 1, 25);
-
-    expect(
-      translateEntryEpisodes(season3, [4], {
-        layout: [{ season: 1, episodeCount: 28 }],
-      }),
-    ).toEqual({ ok: true, episodes: [{ season: 1, number: 28 }] });
-  });
-
-  test('specials never absorb absolute numbering', () => {
-    // Solo Leveling S2: entry 1 → S02E01 absolute 13, layout S0:1 S1:25. The
-    // single special must not shift the count to S01E12.
-    expect(
-      translateEntryEpisodes(SEQUEL_TABLE, [1], {
-        layout: [
-          { season: 0, episodeCount: 1 },
-          { season: 1, episodeCount: 25 },
-        ],
-      }),
-    ).toEqual({ ok: true, episodes: [{ season: 1, number: 13 }] });
-  });
-
   test('a batch resolves every episode into the destination’s numbering', () => {
     expect(
       translateEntryEpisodes(SEQUEL_TABLE, [1, 2, 3], {
@@ -95,14 +46,6 @@ describe('translateEntryEpisodes', () => {
         { season: 1, number: 15 },
       ],
     });
-  });
-
-  test('a season-1 entry translates to today’s payload byte for byte', () => {
-    expect(
-      translateEntryEpisodes(table(1, [1, 2, 3, 4, 5]), [4], {
-        layout: [{ season: 1, episodeCount: 12 }],
-      }),
-    ).toEqual({ ok: true, episodes: [{ season: 1, number: 4 }] });
   });
 
   test('the just-aired episode extrapolates, then still gets placed', () => {

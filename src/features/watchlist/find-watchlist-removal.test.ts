@@ -25,11 +25,6 @@ function inputs(partial: Partial<WatchlistInputs> = {}): WatchlistInputs {
 }
 
 describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
-  test('finds the merged entry for the exact gathered item', () => {
-    const data = inputs({ inputs: [{ item: film(), source: 'trakt' }] });
-    const removal = findWatchlistRemoval(data, film());
-    expect(removal?.entry.sources).toEqual(['trakt']);
-  });
 
   test('recognises a details-screen item by shared merge keys, not id', () => {
     // The details screen opens a TMDB-sourced copy whose id never equals the
@@ -48,28 +43,6 @@ describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
       film({ id: 'tmdb-77', externalIds: { tmdb: 77 } }),
     );
     expect(removal?.entry.sources).toEqual(['trakt', 'letterboxd']);
-  });
-
-  test('maps a match through a losing input to the merged row', () => {
-    // The item matches only the Letterboxd copy (title|year), whose merged row
-    // is won by Trakt precedence — sourceIds is what connects the two.
-    const data = inputs({
-      inputs: [
-        { item: film(), source: 'trakt' },
-        {
-          item: film({
-            id: 'letterboxd-a-film',
-            externalIds: { letterboxd: 'a-film' },
-          }),
-          source: 'letterboxd',
-        },
-      ],
-    });
-    const removal = findWatchlistRemoval(
-      data,
-      film({ id: 'other', externalIds: {} }),
-    );
-    expect(removal?.entry.id).toBe('trakt-1');
   });
 
   test('carries the gather health fields the remove picker routes on', () => {

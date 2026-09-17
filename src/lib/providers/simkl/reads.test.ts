@@ -68,25 +68,6 @@ describe('getAllItems', () => {
     expect(calls[0]!.url.pathname).toBe('/sync/all-items/all/plantowatch');
   });
 
-  test('normalizes the buckets into library entries', async () => {
-    const { deps } = makeDeps(() =>
-      Response.json({
-        shows: [
-          {
-            status: 'watching',
-            watched_episodes_count: 2,
-            show: { title: 'A', ids: { simkl: 7, tmdb: '99' } },
-          },
-        ],
-      }),
-    );
-    const library = await Effect.runPromise(getAllItems(deps));
-    expect(library.shows).toHaveLength(1);
-    expect(library.shows[0]!.item.externalIds).toMatchObject({ simkl: 7, tmdb: 99 });
-    expect(library.movies).toEqual([]);
-    expect(library.anime).toEqual([]);
-  });
-
   test('an X-Pagination header fails loudly — the snapshot assumption is named', async () => {
     // Docs (2026-07-31) state /sync/all-items is never paginated; if Simkl
     // ever changes that, silently reading page 1 as "the whole library" would
@@ -154,14 +135,6 @@ describe('getCalendar', () => {
     expect(headersOf(calls[0]!).Authorization).toBeUndefined();
     expect(entries[0]!.date).toBe('2026-08-02T16:00:00Z');
   });
-
-  test('the anime and movie_release kinds map to their files', async () => {
-    const { deps, calls } = makeDeps(() => Response.json({ calendar: [], metadata: {} }));
-    await Effect.runPromise(getCalendar(deps, 'anime'));
-    await Effect.runPromise(getCalendar(deps, 'movie_release'));
-    expect(calls[0]!.url.pathname).toBe('/calendar/v2/anime.json');
-    expect(calls[1]!.url.pathname).toBe('/calendar/v2/movie_release.json');
-  });
 });
 
 describe('getMonthlyCalendar', () => {
@@ -171,12 +144,6 @@ describe('getMonthlyCalendar', () => {
     expect(calls[0]!.url.origin).toBe('https://data.simkl.in');
     expect(calls[0]!.url.pathname).toBe('/calendar/v2/2026/03/tv.json');
     expect(headersOf(calls[0]!).Authorization).toBeUndefined();
-  });
-
-  test('a two-digit month stays two digits', async () => {
-    const { deps, calls } = makeDeps(() => Response.json({ calendar: [], metadata: {} }));
-    await Effect.runPromise(getMonthlyCalendar(deps, 'movie_release', 2025, 11));
-    expect(calls[0]!.url.pathname).toBe('/calendar/v2/2025/11/movie_release.json');
   });
 });
 
@@ -253,20 +220,5 @@ describe('lookupByExternalId', () => {
     expect(url.searchParams.get('type')).toBe('show');
     expect(matches).toHaveLength(1);
     expect(matches[0]!.externalIds.simkl).toBe(1197910);
-  });
-
-  test('mal/anilist/imdb lookups pass their params through', async () => {
-    const { deps, calls } = makeDeps(() => Response.json([]));
-    await Effect.runPromise(lookupByExternalId(deps, { mal: 437 }));
-    await Effect.runPromise(lookupByExternalId(deps, { anilist: 21, imdb: 'tt1' }));
-    expect(calls[0]!.url.searchParams.get('mal')).toBe('437');
-    expect(calls[1]!.url.searchParams.get('anilist')).toBe('21');
-    expect(calls[1]!.url.searchParams.get('imdb')).toBe('tt1');
-  });
-
-  test('an unknown id resolves to an empty array (Simkl 200s with [])', async () => {
-    const { deps } = makeDeps(() => Response.json([]));
-    const matches = await Effect.runPromise(lookupByExternalId(deps, { tvdb: 1 }));
-    expect(matches).toEqual([]);
   });
 });

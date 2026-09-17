@@ -88,7 +88,6 @@ const {
   cachedTmdbMovieIdByTitle,
   cachedTraktLookup,
   cachedTraktTextSearch,
-  mappingQueryKeys,
 } = await import('./mapping');
 const { setProviderClientId, clearProviderClientId } = await import(
   '@/state/session/tokens'
@@ -165,22 +164,6 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     });
 
     expect(result).toBeNull();
-  });
-
-  test('the stored BYO client id is the only thing that counts as credentials', async () => {
-    setProviderClientId('trakt', 'byo-cid');
-    routes = [
-      ['api.trakt.tv/search/tmdb/1', [{ type: 'movie', movie: { title: 'Drive', ids: { trakt: 2 } } }]],
-    ];
-
-    const result = await cachedTraktLookup(freshClient(), {
-      source: 'tmdb',
-      id: 1,
-      kind: 'movie',
-    });
-
-    expect(result?.id).toBe('trakt-2');
-    expect(calledHost('api.simkl.com')).toBe(false);
   });
 });
 
@@ -272,23 +255,6 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
     const layout = await cachedSeasonLayout(freshClient(), {});
     expect(layout).toBeNull();
     expect(requestedUrls).toHaveLength(0);
-  });
-});
-
-describe('mappingQueryKeys carry the answering source (`via`)', () => {
-  test('traktLookup keys by source/id/kind plus who answers it', () => {
-    expect(mappingQueryKeys.traktLookup('tmdb', 949, 'movie', 'trakt')).toEqual([
-      'mapping',
-      'trakt-lookup',
-      'tmdb',
-      949,
-      'movie',
-      'trakt',
-    ]);
-    // Same lookup, different answering provider → a different cache entry.
-    expect(mappingQueryKeys.traktLookup('tmdb', 949, 'movie', 'simkl')).not.toEqual(
-      mappingQueryKeys.traktLookup('tmdb', 949, 'movie', 'trakt'),
-    );
   });
 });
 

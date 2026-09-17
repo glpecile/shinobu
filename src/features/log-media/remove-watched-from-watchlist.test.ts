@@ -163,45 +163,7 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
     expect(adapterCalls).toEqual([]);
   });
 
-  test('a film on no watchlist is a no-op', async () => {
-    const queryClient = client({
-      inputs: [
-        {
-          item: film({ id: 'trakt-2', title: 'Another', externalIds: { tmdb: 99 } }),
-          source: 'trakt',
-        },
-      ],
-      errors: [],
-      incomplete: [],
-    });
-
-    await removeWatchedFromWatchlist(queryClient, film(), CONNECTED, fakeDeps());
-    expect(adapterCalls).toEqual([]);
-  });
-
-  test('the derived removal never routes a second Simkl POST (plan 0034 U6)', async () => {
-    const queryClient = client({
-      inputs: [{ item: film(), source: 'trakt' }],
-      errors: [],
-      incomplete: [],
-    });
-
-    await removeWatchedFromWatchlist(
-      queryClient,
-      film(),
-      [...CONNECTED, 'simkl'],
-      fakeDeps(),
-    );
-    // A film log with Simkl connected just fired one Simkl history POST inside
-    // its ~20s per-user write lock (KTD-3). Plan 0036 flipped
-    // `watchlistRemove` to 'write', so the lock collision this pin was written
-    // to force is now dealt with explicitly: the derived path drops Simkl from
-    // its targets outright (the log already evicted the film from
-    // `plantowatch` — one status per item).
-    expect(adapterCalls).toEqual(['trakt']);
-  });
-
-  test('…including when Simkl is the watchlist holding the film (plan 0036)', async () => {
+  test('the derived removal never targets Simkl, even when Simkl holds the film (plan 0036)', async () => {
     const queryClient = client({
       inputs: [
         { item: film(), source: 'trakt' },

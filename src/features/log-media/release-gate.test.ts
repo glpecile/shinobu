@@ -58,15 +58,6 @@ describe('filmReleaseStatus', () => {
 });
 
 describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
-  test('an unreleased film promotes the CTA and drops the log button', () => {
-    expect(
-      watchlistCtaIsPrimary(
-        { type: 'MOVIE', releaseDate: '2030-01-01', year: 2030 },
-        NOW,
-      ),
-    ).toBe(true);
-  });
-
   test('a film with no date at all counts too — "unknown" is not "released"', () => {
     expect(watchlistCtaIsPrimary({ type: 'MOVIE' }, NOW)).toBe(true);
   });
@@ -84,10 +75,6 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
     // logging from exactly the shows people watch weekly.
     expect(filmReleaseStatus({}, NOW)).toBe('unknown');
     expect(watchlistCtaIsPrimary({ type: 'TV' }, NOW)).toBe(false);
-  });
-
-  test('MANGA never consults the release gate', () => {
-    expect(watchlistCtaIsPrimary({ type: 'MANGA' }, NOW)).toBe(false);
   });
 
   test('a released film keeps both controls', () => {
@@ -123,10 +110,5 @@ describe('hasStartedAiring', () => {
     expect(
       hasStartedAiring({ releaseDate: '2026-04-05' }, [{}], NOW_2026),
     ).toBe(true);
-  });
-
-  test('no episodes at all falls back to the show', () => {
-    expect(hasStartedAiring({ year: 2026 }, [], NOW_2026)).toBe(false);
-    expect(hasStartedAiring({ year: 1998 }, [], NOW_2026)).toBe(true);
   });
 });

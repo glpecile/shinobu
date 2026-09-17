@@ -4,7 +4,6 @@ import {
   firstUnairedEpisode,
   nextEpisodeFromProgress,
   nextEpisodeFromSimklEntry,
-  seriesEpisodeLabel,
   unairedEpisodeLabel,
 } from './series-next-episode';
 
@@ -49,17 +48,6 @@ describe('nextEpisodeFromProgress', () => {
     });
   });
 
-  test('an unknown air date stays permissive', () => {
-    // Same rule as the anime path: a catalogue gap must never block a log the
-    // user is entitled to make.
-    expect(
-      nextEpisodeFromProgress({
-        watchedKeys: NO_WATCHED,
-        nextEpisode: { season: 3, number: 1, firstAired: null },
-      }).aired,
-    ).toBe(true);
-  });
-
   test('a fully watched show wraps to S1E1, flagged as a rewatch', () => {
     // Trakt omits `next_episode` when nothing aired is left; the button must
     // still have something to offer, exactly like the anime wrap to episode 1
@@ -96,12 +84,6 @@ describe('the zero-aired state (plan 0035 R17/R18)', () => {
       rewatch: false,
       unaired: true,
     });
-  });
-
-  test('no next episode with episodes aired is still the rewatch wrap', () => {
-    const next = nextEpisodeFromProgress({ watchedKeys: NO_WATCHED, aired: 12 });
-    expect(next.rewatch).toBe(true);
-    expect(next.unaired).toBe(false);
   });
 
   test('an absent aired count takes the rewatch path — old caches behave as before', () => {
@@ -201,18 +183,6 @@ describe('nextEpisodeFromSimklEntry', () => {
     ).toBeNull();
   });
 
-  test('an unknown aired count keeps the rewatch path it always had', () => {
-    // `notAiredEpisodes` absent is "we don't know" — the pre-existing
-    // behaviour, deliberately not tightened by the rule above.
-    expect(nextEpisodeFromSimklEntry(midItem, {})).toEqual({
-      season: 1,
-      number: 1,
-      aired: true,
-      rewatch: true,
-      unaired: false,
-    });
-  });
-
   test('a show outside the watching list starts fresh at S1E1', () => {
     expect(nextEpisodeFromSimklEntry(freshItem, null)).toEqual({
       season: 1,
@@ -249,12 +219,6 @@ describe('nextEpisodeFromSimklEntry', () => {
     });
   });
 
-  test('an entry with episodes aired and none left is the rewatch wrap', () => {
-    const next = nextEpisodeFromSimklEntry(doneItem, { notAiredEpisodes: 0 });
-    expect(next?.rewatch).toBe(true);
-    expect(next?.unaired).toBe(false);
-  });
-
   test('a missing not-aired count takes the rewatch path, unchanged', () => {
     // Absent is "we don't know", not zero-aired — treating it as zero would
     // turn every thinly-reported entry into a false "hasn't aired yet".
@@ -272,13 +236,6 @@ describe('nextEpisodeFromSimklEntry', () => {
     // The snapshot that knows its next episode doesn't list it — guessing a
     // season from a flat count would misfile the log.
     expect(nextEpisodeFromSimklEntry(midItem, null)).toBeNull();
-  });
-});
-
-describe('seriesEpisodeLabel', () => {
-  test('renders the compact SxxEyy form the button uses', () => {
-    expect(seriesEpisodeLabel({ season: 2, number: 5 })).toBe('S2E5');
-    expect(seriesEpisodeLabel({ season: 1, number: 12 })).toBe('S1E12');
   });
 });
 

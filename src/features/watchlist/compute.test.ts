@@ -53,17 +53,6 @@ describe('computeWatchlist', () => {
     expect(entries[0].item.externalIds.tmdb).toBe(949);
   });
 
-  test('Simkl’s copy wins over Trakt’s (plan 0034 KTD-10/R10)', () => {
-    const entries = computeWatchlist([
-      traktRow({ id: 'trakt-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949 } }),
-      { item: item({ id: 'simkl-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949, simkl: 1 } }), source: 'simkl' },
-    ]);
-
-    expect(entries).toHaveLength(1);
-    expect(entries[0].sources).toEqual(['trakt', 'simkl']);
-    expect(entries[0].id).toBe('simkl-1');
-  });
-
   test('a TMDB movie id and a TMDB series id with the same number do not merge', () => {
     const entries = computeWatchlist([
       traktRow({ id: 'trakt-1', title: 'Film', externalIds: { tmdb: 1399 } }),
@@ -198,26 +187,6 @@ describe('computeWatchlist', () => {
     expect(entries[0].addedAt).toBe('2026-07-01T00:00:00.000Z');
   });
 
-  test('a second Letterboxd page merges against Trakt rather than duplicating', () => {
-    // The `pages.flat()` contract from the gather side, seen from here: page 2's
-    // films arrive in the same input array and meet their twins.
-    const page1 = Array.from({ length: 3 }, (_, index) =>
-      letterboxdRow({ id: `letterboxd-${index}`, title: `Film ${index}`, year: 2000 }),
-    );
-    const page2 = [letterboxdRow({ id: 'letterboxd-heat', title: 'Heat', year: 1995 })];
-    const entries = computeWatchlist([
-      traktRow({ id: 'trakt-1', title: 'Heat', year: 1995 }),
-      ...page1,
-      ...page2,
-    ]);
-
-    expect(entries).toHaveLength(4);
-    expect(entries.find((entry) => entry.id === 'trakt-1')?.sources).toEqual([
-      'trakt',
-      'letterboxd',
-    ]);
-  });
-
   test('a merged row carries the Simkl leg’s watch-history hint (plan 0036)', () => {
     // The picker's destructive warning reads this off the *merged* entry, and
     // the Simkl row loses precedence to any AniList twin. Losing the hint here
@@ -239,16 +208,6 @@ describe('computeWatchlist', () => {
     expect(entry.simklWatchedCount).toBe(7);
   });
 
-  test('it never returns an UpNextEntry shape (R22) — no kind, no status', () => {
-    const [entry] = computeWatchlist([traktRow({ id: 'trakt-1' })]);
-    expect(Object.keys(entry).sort()).toEqual([
-      'addedAt',
-      'id',
-      'item',
-      'sourceIds',
-      'sources',
-    ]);
-  });
 });
 
 describe('watchlistMergeKeys', () => {

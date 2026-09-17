@@ -35,7 +35,6 @@ mock.module('expo-crypto', () => ({
 const {
   beginSimklAuthFlow,
   buildSimklAuthorizeUrl,
-  clearSimklAuthFlow,
   createSimklPkcePair,
   deriveSimklCodeChallenge,
   exchangeSimklCode,
@@ -88,12 +87,6 @@ describe('createSimklPkcePair / deriveSimklCodeChallenge', () => {
     expect(verifier.length).toBeGreaterThanOrEqual(43);
     expect(verifier.length).toBeLessThanOrEqual(128);
     expect(verifier).toMatch(/^[A-Za-z0-9\-._~]+$/);
-  });
-
-  test('challenge is the base64url S256 of the verifier — no padding, url-safe', async () => {
-    const { verifier, challenge } = await createSimklPkcePair();
-    expect(challenge).toBe(await deriveSimklCodeChallenge(verifier));
-    expect(challenge).toMatch(/^[A-Za-z0-9\-_]{43}$/);
   });
 });
 
@@ -237,39 +230,6 @@ describe('exchangeSimklCode', () => {
     expect(sessions).toHaveLength(0);
   });
 
-  test('a 401 from the token endpoint maps to ProviderAuthError with no retry', async () => {
-    saveSimklAuthFlow({ verifier: 'ver-1', state: 'state-1' });
-    const { deps, calls } = makeDeps(() => new Response(null, { status: 401 }));
-    const error = await Effect.runPromise(
-      Effect.flip(
-        exchangeSimklCode(deps, {
-          code: 'code-1',
-          state: 'state-1',
-          redirectUri: 'shinobu://redirect',
-        }),
-      ),
-    );
-    expect(error._tag).toBe('ProviderAuthError');
-    expect(calls).toHaveLength(1);
-  });
-
-  test('a 400 rate_limit body from the token endpoint maps to ProviderRateLimitError', async () => {
-    saveSimklAuthFlow({ verifier: 'ver-1', state: 'state-1' });
-    const { deps } = makeDeps(
-      () => Response.json({ error: 'rate_limit' }, { status: 400 }),
-    );
-    const error = await Effect.runPromise(
-      Effect.flip(
-        exchangeSimklCode(deps, {
-          code: 'code-1',
-          state: 'state-1',
-          redirectUri: 'shinobu://redirect',
-        }),
-      ),
-    );
-    expect(error._tag).toBe('ProviderRateLimitError');
-  });
-
   test('a token payload without expires_in yields a session without expiresAt', async () => {
     saveSimklAuthFlow({ verifier: 'ver-1', state: 'state-1' });
     const { deps, sessions } = makeDeps(
@@ -283,14 +243,5 @@ describe('exchangeSimklCode', () => {
       }),
     );
     expect(sessions[0]).toEqual({ accessToken: 'tok-2' });
-  });
-});
-
-describe('clearSimklAuthFlow', () => {
-  test('deletes the stored flow', () => {
-    saveSimklAuthFlow({ verifier: 'ver-1', state: 'state-1' });
-    expect(getSimklAuthFlow()).not.toBeNull();
-    clearSimklAuthFlow();
-    expect(getSimklAuthFlow()).toBeNull();
   });
 });

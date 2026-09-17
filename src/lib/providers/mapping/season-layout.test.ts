@@ -64,19 +64,6 @@ describe('placeInLayout', () => {
     ).toEqual({ season: 1, number: 13 });
   });
 
-  test('an absolute number spanning seasons lands in the right one', () => {
-    expect(
-      placeInLayout(
-        [
-          { season: 1, episodeCount: 12 },
-          { season: 2, episodeCount: 12 },
-          { season: 3, episodeCount: 12 },
-        ],
-        { season: 9, number: 1, absolute: 25 },
-      ),
-    ).toEqual({ season: 3, number: 1 });
-  });
-
   test('a row past the end of the show has nowhere to go', () => {
     expect(
       placeInLayout([{ season: 1, episodeCount: 12 }], {

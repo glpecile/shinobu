@@ -38,14 +38,13 @@ function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMedia
 
 function fakeDeps(options: {
   webResponse?: LetterboxdWebResponse;
-  session?: LetterboxdSession | null;
   withTransport?: boolean;
   onWrite?: (request: LetterboxdWatchlistWebRequest) => void;
 }): LetterboxdDeps {
   const withTransport = options.withTransport ?? true;
   return {
     username: 'gian',
-    session: options.session === undefined ? SESSION : options.session,
+    session: SESSION,
     fetch: async () => new Response(FILM_PAGE, { status: 200 }),
     watchlistWebFetch: withTransport
       ? async (request) => {
@@ -79,24 +78,6 @@ describe('setLetterboxdWatchlist (plan 0033 R3/R4)', () => {
     );
 
     expect(captured?.inWatchlist).toBe(false);
-  });
-
-  test('resolves via the /tmdb/ redirect when there is no Letterboxd slug', async () => {
-    let captured: LetterboxdWatchlistWebRequest | undefined;
-    const deps = fakeDeps({ onWrite: (r) => (captured = r) });
-
-    await Effect.runPromise(addToLetterboxdWatchlist(deps, movie({ tmdb: 999 })));
-
-    expect(captured?.filmPath).toBe('/tmdb/999/');
-    expect(captured?.filmLid).toBe('294O');
-  });
-
-  test('fails as a dead session when no web login was captured', async () => {
-    const deps = fakeDeps({ session: null });
-    const outcome = await Effect.runPromise(
-      Effect.flip(addToLetterboxdWatchlist(deps, movie({ letterboxd: 'the-thing' }))),
-    );
-    expect(outcome._tag).toBe('ProviderAuthError');
   });
 
   test('fails as a dead session when the transport is absent (web)', async () => {

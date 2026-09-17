@@ -155,18 +155,6 @@ describe('getMediaDetails', () => {
     });
   });
 
-  test('anime still uses AniList credits when Trakt has no client id at all', async () => {
-    const result = await Effect.runPromise(
-      getMediaDetails(deps([ANILIST_CREDITS], { tmdb: false, trakt: false }), {
-        type: 'ANIME',
-        anilistId: 42,
-      }),
-    );
-
-    expect(result.source).toBe('anilist');
-    expect(result.cast[0].name).toBe('Aoi Yuki');
-  });
-
   test('anime without a TMDB id uses AniList credits', async () => {
     const result = await Effect.runPromise(
       getMediaDetails(deps([ANILIST_CREDITS]), { type: 'ANIME', anilistId: 42 }),
@@ -201,19 +189,5 @@ describe('getMediaDetails', () => {
     expect(requested.some((url) => url.includes('themoviedb'))).toBe(false);
     expect(result.source).toBe('none');
     expect(result.catalogue).toBeNull();
-  });
-
-  test('yields the empty result when no source can serve', async () => {
-    const result = await Effect.runPromise(
-      getMediaDetails(deps([]), { type: 'MOVIE' }),
-    );
-
-    expect(result).toEqual({
-      catalogue: null,
-      cast: [],
-      crew: [],
-      studios: [],
-      source: 'none',
-    });
   });
 });

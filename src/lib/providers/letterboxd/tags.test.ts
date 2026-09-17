@@ -43,18 +43,6 @@ describe('parseTagsPage', () => {
     ]);
   });
 
-  test('keeps multi-word tag names intact', () => {
-    expect(parseTagsPage(REAL_PAGE)[0].name).toBe('criterion collection');
-  });
-
-  test('decodes HTML entities in the display name', () => {
-    expect(parseTagsPage(REAL_PAGE)[2].name).toBe("bill's & ted's");
-  });
-
-  test('a count-less <li> still contributes its name (count 0)', () => {
-    expect(parseTagsPage(REAL_PAGE)[3]).toEqual({ name: 'no count', count: 0 });
-  });
-
   test('falls back to the link text when the title attribute is gone', () => {
     const html = `<ul class="js-tags-section tags tags-columns">
       <li><a href="/gian/tag/rewatch/films/">re<em>watch</em></a><span class="detail -has-count">4</span></li>
@@ -112,13 +100,6 @@ describe('getUserTags', () => {
     expect(urls[0]).toBe('https://letterboxd.com/davidehrlich/tags/');
     expect(tags).toHaveLength(4);
     expect(tags[0]).toEqual({ name: 'criterion collection', count: 11 });
-  });
-
-  test('a member with no tags yields [] rather than an error', async () => {
-    const tags = await Effect.runPromise(
-      getUserTags(recordingDeps(() => new Response('<html></html>'), [])),
-    );
-    expect(tags).toEqual([]);
   });
 
   test('fails with a dead-session auth error when no username is connected', async () => {

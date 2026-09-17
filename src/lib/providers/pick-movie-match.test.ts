@@ -22,14 +22,6 @@ const kubrick = movie('1', '2001: A Space Odyssey', 1968);
 const nolan = movie('2', 'The Odyssey', 2026);
 
 describe('pickMovieMatch', () => {
-  test('prefers the exact-year match over a more popular top hit', () => {
-    expect(pickMovieMatch([kubrick, nolan], 2026)).toBe(nolan);
-  });
-
-  test('accepts a ±1 year offset (festival vs wide release)', () => {
-    expect(pickMovieMatch([kubrick, nolan], 2025)).toBe(nolan);
-  });
-
   test('returns null when the year is known and nothing lands close', () => {
     // The regression from the field: falling back to the top hit resolved
     // Nolan's The Odyssey (2026) to Kubrick's 2001 — no match is correct.
@@ -46,11 +38,6 @@ describe('pickMovieMatch', () => {
     expect(pickMovieMatch([], undefined)).toBeNull();
   });
 
-  test('exact match wins over an earlier ±1 candidate', () => {
-    const remake = movie('4', 'The Odyssey', 2025);
-    expect(pickMovieMatch([remake, nolan], 2026)).toBe(nolan);
-  });
-
   // The field regression: a 2025 film whose title a much older, far more
   // popular film also carries. Trakt/TMDB rank the classic first.
   describe('same-title different-year (Labyrinth / Motor City)', () => {
@@ -61,10 +48,6 @@ describe('pickMovieMatch', () => {
       expect(pickMovieMatch([jareth, labyrinth2025], 2025, 'Labyrinth')).toBe(
         labyrinth2025,
       );
-    });
-
-    test('returns null when only the wrong-year film exists', () => {
-      expect(pickMovieMatch([jareth], 2025, 'Labyrinth')).toBeNull();
     });
 
     test('an exact title beats a substring title at the same year', () => {

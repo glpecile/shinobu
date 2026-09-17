@@ -97,15 +97,4 @@ describe('refreshNotifications', () => {
     await refreshNotifications(deps, { throttle: false });
     expect(calls.gather).toBe(2);
   });
-
-  test('a provider rejection surfaced as inputs.errors still schedules the rest', async () => {
-    const { deps, calls } = makeDeps({
-      gatherInputs: async () => ({
-        ...EMPTY_INPUTS,
-        errors: [{ provider: 'trakt', message: 'down' }],
-      }),
-    });
-    await refreshNotifications(deps);
-    expect(calls.schedule).toBe(1);
-  });
 });

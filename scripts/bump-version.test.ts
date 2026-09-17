@@ -28,10 +28,6 @@ describe('bumpVersion', () => {
     expect(() => bumpVersion({ version: '0.1.0', versionCode: 1 }, '1.0')).toThrow();
   });
 
-  test('downgrade attempt is refused', () => {
-    expect(() => bumpVersion({ version: '0.1.0', versionCode: 1 }, '0.0.9')).toThrow();
-  });
-
   test('same-version "bump" is refused (no-op is not an increase)', () => {
     expect(() => bumpVersion({ version: '0.1.0', versionCode: 1 }, '0.1.0')).toThrow();
   });

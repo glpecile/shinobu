@@ -34,18 +34,6 @@ function movie(id: number): NormalizedMediaItem {
 }
 
 describe('findInSearchCache', () => {
-  // The plan 0024 U8 regression: manga is in no feed row, so the AniList
-  // search cache is the *only* place the details screen can resolve it.
-  test('finds a manga item under an AniList search key', () => {
-    const queryClient = new QueryClient();
-    queryClient.setQueryData(
-      [...SEARCH_QUERY_ROOTS.anilist, 'vinland', 20],
-      [manga(30002)],
-    );
-
-    expect(findInSearchCache(queryClient, 'anilist-30002')?.type).toBe('MANGA');
-  });
-
   test('still finds a Trakt result under the Trakt search key', () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(

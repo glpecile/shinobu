@@ -14,10 +14,6 @@ describe('sourceProviderOf', () => {
     expect(sourceProviderOf({ id: 'tmdb-123' })).toBeNull();
   });
 
-  it('returns null for an id with no separator at all', () => {
-    expect(sourceProviderOf({ id: 'nope' })).toBeNull();
-  });
-
   it('treats a bare id matching a provider id as that provider (no separator needed)', () => {
     expect(sourceProviderOf({ id: 'trakt' })).toBe('trakt');
   });
@@ -47,18 +43,6 @@ describe('sourceLinkFor', () => {
 });
 
 describe('providerLinksFor', () => {
-  it('orders the source provider first, then connected providers', () => {
-    expect(
-      providerLinksFor(
-        { id: 'trakt-1', type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) },
-        ['trakt', 'letterboxd'],
-      ),
-    ).toEqual([
-      { provider: 'trakt', url: 'https://trakt.tv/movies/1' },
-      { provider: 'letterboxd', url: 'https://letterboxd.com/film/heat/' },
-    ]);
-  });
-
   it('still includes the source provider first even when disconnected', () => {
     expect(
       providerLinksFor(
@@ -93,29 +77,5 @@ describe('providerLinksFor', () => {
         ['trakt'],
       ),
     ).toEqual([{ provider: 'trakt', url: 'https://trakt.tv/movies/1' }]);
-  });
-
-  it('returns an empty array with no buildable URLs and an unknown source', () => {
-    expect(
-      providerLinksFor({ id: 'tmdb-123', type: 'MOVIE', ...ids() }, ['trakt']),
-    ).toEqual([]);
-  });
-
-  it('includes both movie-shaped URLs for an anime film', () => {
-    expect(
-      providerLinksFor(
-        {
-          id: 'anilist-1',
-          type: 'ANIME',
-          isFilm: true,
-          ...ids({ anilist: 1, trakt: 2, letterboxd: 'your-name' }),
-        },
-        ['trakt', 'letterboxd'],
-      ),
-    ).toEqual([
-      { provider: 'anilist', url: 'https://anilist.co/anime/1' },
-      { provider: 'trakt', url: 'https://trakt.tv/movies/2' },
-      { provider: 'letterboxd', url: 'https://letterboxd.com/film/your-name/' },
-    ]);
   });
 });

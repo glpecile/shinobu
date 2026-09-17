@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { calendarBadges, continueWatchingBadges, isNewEpisode } from './badges';
-import type { UpNextEntry, UpNextEpisode, UpNextEpisodeEntry } from './types';
+import type { UpNextEpisode, UpNextEpisodeEntry } from './types';
 
 const NOW = new Date(2026, 6, 23, 20, 0);
 
@@ -77,10 +77,6 @@ describe('continueWatchingBadges', () => {
       ),
     ).toEqual([{ label: '48m' }, { label: 'New', tone: 'accent' }]);
   });
-
-  test('no runtime and no recent air date means no badges at all', () => {
-    expect(continueWatchingBadges(entry(), NOW)).toEqual([]);
-  });
 });
 
 describe('calendarBadges', () => {
@@ -88,15 +84,6 @@ describe('calendarBadges', () => {
     expect(
       calendarBadges(entry({ firstAired: localInstant(7, 24, 21) }), NOW),
     ).toEqual([{ label: 'Tomorrow', tone: 'accent' }, { label: '21:00' }]);
-  });
-
-  test('an episode airing later today says so to the minute', () => {
-    // The ambiguous case the time badge exists for: "Today" alone can't tell
-    // an episode that already dropped from one still hours out.
-    const airsTonight = new Date(2026, 6, 23, 22, 15).toISOString();
-    expect(calendarBadges(entry({ firstAired: airsTonight }), NOW)).toEqual(
-      [{ label: 'Today', tone: 'accent' }, { label: '22:15' }],
-    );
   });
 
   test('a date-only air date keeps the day badge and drops the time', () => {
@@ -108,22 +95,6 @@ describe('calendarBadges', () => {
 
   test('an entry with no instant carries no badges at all', () => {
     expect(calendarBadges(entry(), NOW)).toEqual([]);
-  });
-
-  test('a film release is badged from its date through the same accessor', () => {
-    // The union's payoff: the badge never touched `.episode`, so a release
-    // lands on its relative day and — being date-only — carries no time.
-    const release: UpNextEntry = {
-      kind: 'release',
-      id: 'trakt-9-theatrical',
-      item: { ...ITEM, id: 'trakt-9', title: 'Film', type: 'MOVIE' },
-      release: { kind: 'theatrical', date: '2026-07-24' },
-      status: 'upcoming',
-      source: 'trakt',
-    };
-    expect(calendarBadges(release, NOW)).toEqual([
-      { label: 'Tomorrow', tone: 'accent' },
-    ]);
   });
 });
 

@@ -21,10 +21,6 @@ describe('manualRowsFor', () => {
       { provider: 'letterboxd', url: 'https://letterboxd.com' },
     ]);
   });
-
-  it('returns no rows for an empty manual list (e.g. native)', () => {
-    expect(manualRowsFor([], { type: 'MOVIE', ...ids({ letterboxd: 'heat' }) })).toEqual([]);
-  });
 });
 
 describe('manualLinkForOutcome', () => {
@@ -34,15 +30,6 @@ describe('manualLinkForOutcome', () => {
     expect(
       manualLinkForOutcome({ provider: 'letterboxd', status: 'error', message: 'boom' }, item),
     ).toBe('https://letterboxd.com/film/heat/');
-  });
-
-  it('returns null for an error outcome with no buildable URL', () => {
-    expect(
-      manualLinkForOutcome(
-        { provider: 'serializd', status: 'error', message: 'boom' },
-        { type: 'MOVIE', ...ids() },
-      ),
-    ).toBeNull();
   });
 
   it('returns a link for a reasoned skip', () => {
@@ -58,10 +45,6 @@ describe('manualLinkForOutcome', () => {
     expect(
       manualLinkForOutcome({ provider: 'letterboxd', status: 'skipped' }, item),
     ).toBeNull();
-  });
-
-  it('returns null for an ok outcome', () => {
-    expect(manualLinkForOutcome({ provider: 'letterboxd', status: 'ok' }, item)).toBeNull();
   });
 });
 
@@ -81,10 +64,6 @@ describe('errorOutcomeLinks', () => {
       ),
     ).toEqual([{ provider: 'letterboxd', url: 'https://letterboxd.com/film/heat/' }]);
   });
-
-  it('returns an empty array when no error outcomes exist', () => {
-    expect(errorOutcomeLinks([{ provider: 'trakt', status: 'ok' }], item)).toEqual([]);
-  });
 });
 
 describe('splitSkippedOutcomes', () => {
@@ -101,13 +80,6 @@ describe('splitSkippedOutcomes', () => {
       reasonedSkips: [
         { provider: 'serializd', status: 'skipped', reason: 'season unresolved' },
       ],
-    });
-  });
-
-  it('returns empty buckets when there are no skipped outcomes', () => {
-    expect(splitSkippedOutcomes([{ provider: 'trakt', status: 'ok' }])).toEqual({
-      reconcileSkipped: [],
-      reasonedSkips: [],
     });
   });
 });

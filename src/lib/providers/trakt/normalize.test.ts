@@ -9,7 +9,6 @@ import {
   normalizeMovie,
   normalizeSearchResult,
   normalizeSeason,
-  normalizeStudio,
   normalizeWatchedMovie,
   normalizeWatchedProgress,
   normalizeWatchedShow,
@@ -65,10 +64,6 @@ describe('normalizeCrew', () => {
     jobs: ['Director'],
     person: person(1, 'Harry Bradbeer'),
   };
-
-  test('returns [] when crew is missing', () => {
-    expect(normalizeCrew(undefined)).toEqual([]);
-  });
 
   test('orders departments by billing, unknown departments last', () => {
     const crew = normalizeCrew({
@@ -183,12 +178,6 @@ describe('normalizeWatchedMovie', () => {
       externalIds: { trakt: 100, tmdb: 10494 },
     });
   });
-
-  test('prefixes scheme-less poster paths with https', () => {
-    expect(normalizeWatchedMovie(watched).coverImage).toBe(
-      'https://walter.trakt.tv/movies/100/poster.jpg',
-    );
-  });
 });
 
 describe('normalizeMovie release date', () => {
@@ -213,12 +202,6 @@ describe('normalizeMovie release date', () => {
 });
 
 describe('normalizeStudio', () => {
-  test('builds the combined id from the trakt id', () => {
-    expect(normalizeStudio({ name: 'Legendary', ids: { trakt: 5 } })).toEqual({
-      id: 'trakt-studio-5',
-      name: 'Legendary',
-    });
-  });
 });
 
 describe('orderSeasons', () => {
@@ -333,10 +316,6 @@ describe('normalizeWatchedProgress', () => {
     ]);
   });
 
-  test('empty / missing seasons yield an empty set', () => {
-    expect(normalizeWatchedProgress({}).watchedKeys).toEqual(new Set());
-  });
-
   /**
    * Plan 0035 KTD4. `aired` used to be read off the payload and dropped, which
    * left the two `next_episode: null` cases — "nothing has aired" and "you
@@ -353,25 +332,6 @@ describe('normalizeWatchedProgress', () => {
     // claim an unaired show for something the user finished long ago.
     const { aired: _dropped, ...noAired } = PROGRESS_PAYLOAD;
     expect(normalizeWatchedProgress(noAired).aired).toBeUndefined();
-  });
-
-  test('the aired count rides along with a next episode too', () => {
-    const result = normalizeWatchedProgress({
-      ...PROGRESS_PAYLOAD,
-      aired: 7,
-      next_episode: { season: 1, number: 7, first_aired: null },
-    });
-    expect(result.aired).toBe(7);
-    expect(result.nextEpisode?.number).toBe(7);
-  });
-
-  test('specials (season 0) are excluded by the request, not the normalizer', () => {
-    // Trakt omits season 0 unless `specials=true` is sent, which the app never
-    // does — so a progress payload simply never carries specials, and the
-    // watched-key set stays free of "0-x" entries.
-    expect(normalizeWatchedProgress(PROGRESS_PAYLOAD).watchedKeys).toEqual(
-      new Set(['1-1', '1-2', '1-3', '1-4', '1-5', '1-6']),
-    );
   });
 });
 
@@ -406,10 +366,6 @@ describe('normalizeWatchedProgress next_episode (plan 0019 U1)', () => {
     expect(result.nextEpisode).toBeUndefined();
     // The watched-key half is unaffected by the pointer's absence.
     expect(result.watchedKeys.has('1-6')).toBe(true);
-  });
-
-  test('a missing next_episode key behaves like null', () => {
-    expect(normalizeWatchedProgress(PROGRESS_PAYLOAD).nextEpisode).toBeUndefined();
   });
 
   test('first_aired: null is carried as null, not dropped', () => {
@@ -519,18 +475,6 @@ describe('normalizeHistoryItem', () => {
     // The media item is the show, not the episode.
     expect(entry?.item.type).toBe('TV');
     expect(entry?.item.id).toBe('trakt-200');
-  });
-
-  test('watched_at is preserved verbatim as an instant, not a bare date (AE4)', () => {
-    const raw: TraktHistoryItem = {
-      id: 7,
-      watched_at: '2026-07-20T23:30:00.000Z',
-      type: 'movie',
-      movie,
-    };
-    // The instant survives untouched — day grouping (not this normalizer)
-    // converts it to a local day, so no truncation happens here.
-    expect(normalizeHistoryItem(raw)?.watchedAt).toBe('2026-07-20T23:30:00.000Z');
   });
 
   test('a row of an unmodeled type drops out as null', () => {
@@ -692,22 +636,6 @@ describe('normalizeCalendarMovieRow', () => {
     // Exactly one slot — an absent sibling means "Trakt didn't answer for it",
     // not "no such release" (the TMDB catalogue may fill it later).
     expect(theatrical?.item.releaseCalendar).toEqual({ theatrical: '2026-07-31' });
-
-    expect(
-      normalizeCalendarMovieRow(
-        { released: '2026-08-12', movie: CALENDAR_MOVIE },
-        'digital',
-        NOW_ISO,
-      )?.item.releaseCalendar,
-    ).toEqual({ digital: '2026-08-12' });
-
-    expect(
-      normalizeCalendarMovieRow(
-        { released: '2026-09-01', movie: CALENDAR_MOVIE },
-        'physical',
-        NOW_ISO,
-      )?.item.releaseCalendar,
-    ).toEqual({ physical: '2026-09-01' });
   });
 
   test('a malformed row drops instead of throwing', () => {

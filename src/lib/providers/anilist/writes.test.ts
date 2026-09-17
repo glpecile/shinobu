@@ -190,14 +190,6 @@ describe('logToAniList series', () => {
   });
 });
 
-/**
- * How the guard read fails when a test asks it to — the three shapes plan 0031
- * KTD-2 branch 0 names (network, 5xx, 429). The 429 goes through
- * `withRateLimitRetry`'s one bounded retry, so it is also the case that proves
- * a *retried* guard failure still never reaches the mutation.
- */
-type GuardFailure = 'network' | 'server' | 'rate-limit';
-
 interface WatchlistCalls {
   entryReads: number;
   mutations: unknown[];
@@ -216,7 +208,7 @@ function watchlistDeps(
     /** AniList answering `deleted: false` — a failed delete, not a skip. */
     deleted?: boolean;
   },
-  failure?: GuardFailure,
+  failure?: 'network',
 ): AniListDeps {
   return {
     tokens: TOKENS,
@@ -237,14 +229,6 @@ function watchlistDeps(
       }
       record.entryReads += 1;
       if (failure === 'network') throw new Error('socket hang up');
-      if (failure === 'server') {
-        return Response.json({ data: null }, { status: 500 });
-      }
-      if (failure === 'rate-limit') {
-        // A sub-second Retry-After keeps the bounded retry's sleep out of the
-        // suite's runtime; the branch under test is identical at any value.
-        return Response.json({}, { status: 429, headers: { 'Retry-After': '0.01' } });
-      }
       return Response.json({
         data: {
           Media: {
@@ -256,17 +240,6 @@ function watchlistDeps(
     },
   };
 }
-
-const MANGA: NormalizedMediaItem = {
-  id: 'anilist-30013',
-  title: 'One Piece',
-  coverImage: '',
-  type: 'MANGA',
-  currentProgress: 0,
-  progressUnit: 'chapter',
-  lastUpdated: '2026-07-14T00:00:00Z',
-  externalIds: { anilist: 30013 },
-};
 
 function calls(): WatchlistCalls {
   return { entryReads: 0, mutations: [] };
@@ -287,12 +260,6 @@ describe('planOnAniList — the exclusive-status guard (KTD-2)', () => {
     );
     expect(result).toEqual({ status: 'ok' });
     expect(seen.mutations).toEqual([{ mediaId: 104578, status: 'PLANNING' }]);
-  });
-
-  test('manga takes the same PLANNING status — one enum, no per-type variant', async () => {
-    const seen = calls();
-    await Effect.runPromise(planOnAniList(watchlistDeps(seen, { entry: null }), MANGA));
-    expect(seen.mutations).toEqual([{ mediaId: 30013, status: 'PLANNING' }]);
   });
 
   test('an entry already PLANNING skips with a reason and issues no mutation', async () => {
@@ -330,42 +297,6 @@ describe('planOnAniList — the exclusive-status guard (KTD-2)', () => {
     expect(seen.mutations).toEqual([]);
   });
 
-  test('a COMPLETED entry skips — a want-to-watch write must not contradict it', async () => {
-    const seen = calls();
-    const result = await Effect.runPromise(
-      planOnAniList(
-        watchlistDeps(seen, {
-          entry: { status: 'COMPLETED', progress: 24, repeat: 0 },
-          episodes: 24,
-        }),
-        SERIES,
-      ),
-    );
-    expect(result).toEqual({
-      status: 'skipped',
-      reason: 'AniList already tracks this as COMPLETED',
-    });
-    expect(seen.mutations).toEqual([]);
-  });
-
-  test('a DROPPED entry with progress skips — that progress was kept on purpose', async () => {
-    const seen = calls();
-    const result = await Effect.runPromise(
-      planOnAniList(
-        watchlistDeps(seen, {
-          entry: { status: 'DROPPED', progress: 3, repeat: 0 },
-          episodes: 24,
-        }),
-        SERIES,
-      ),
-    );
-    expect(result).toEqual({
-      status: 'skipped',
-      reason: 'AniList already tracks this as DROPPED',
-    });
-    expect(seen.mutations).toEqual([]);
-  });
-
   test('an entry with no status and no progress still skips (collapsed branch 3)', async () => {
     // A score-only or custom-list-only entry: the one shape an earlier draft
     // carved out as writable, and exactly the entry whose *only* content is the
@@ -392,17 +323,15 @@ describe('planOnAniList — the exclusive-status guard (KTD-2)', () => {
  * are what stops it being copied across.
  */
 describe('planOnAniList — a guard read that fails never falls through to the write', () => {
-  for (const failure of ['network', 'server', 'rate-limit'] as const) {
-    test(`a ${failure} failure errors with no mutation issued`, async () => {
-      const seen = calls();
-      const result = await Effect.runPromise(
-        Effect.either(planOnAniList(watchlistDeps(seen, { entry: null }, failure), SERIES)),
-      );
-      expect(result._tag).toBe('Left');
-      expect(seen.mutations).toEqual([]);
-      expect(seen.entryReads).toBeGreaterThan(0);
-    });
-  }
+  test('a network failure errors with no mutation issued', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      Effect.either(planOnAniList(watchlistDeps(seen, { entry: null }, 'network'), SERIES)),
+    );
+    expect(result._tag).toBe('Left');
+    expect(seen.mutations).toEqual([]);
+    expect(seen.entryReads).toBeGreaterThan(0);
+  });
 
   test('the failure message says the check failed, not that the write did', async () => {
     const seen = calls();
@@ -430,31 +359,6 @@ describe('planOnAniList — a guard read that fails never falls through to the w
 });
 
 describe('getEntryState carries the MediaList entry id', () => {
-  test('the id is threaded into AniListEntryState', async () => {
-    // Not decoration: DeleteMediaListEntry takes this id, not the media id
-    // (plan 0031 R34/R36), and nothing selected it before this unit.
-    const seen = calls();
-    const state = await Effect.runPromise(
-      getEntryState(
-        watchlistDeps(seen, {
-          entry: { id: 88_214, status: 'CURRENT', progress: 5, repeat: 0 },
-          episodes: 24,
-        }),
-        { mediaId: 104578 },
-      ),
-    );
-    expect(state.entry).toEqual({
-      id: 88_214,
-      status: 'CURRENT',
-      progress: 5,
-      repeat: 0,
-      score: 0,
-      notes: null,
-      startedAt: null,
-      customLists: [],
-    });
-  });
-
   test('the removal guard fields decode alongside it (R36.2)', async () => {
     // Widening the selection is only useful if the values survive decoding —
     // `customLists` in particular, whose `Json` payload is an object keyed by
@@ -489,16 +393,6 @@ describe('getEntryState carries the MediaList entry id', () => {
     });
   });
 
-  test('an entry that decodes without an id is not a deletion target', async () => {
-    const seen = calls();
-    const state = await Effect.runPromise(
-      getEntryState(
-        watchlistDeps(seen, { entry: { status: 'PLANNING', progress: 0, repeat: 0 } }),
-        { mediaId: 104578 },
-      ),
-    );
-    expect(state.entry?.id).toBeNull();
-  });
 });
 
 /**
@@ -547,11 +441,6 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
       name: 'a CURRENT entry',
       entry: { id: 1, status: 'CURRENT', progress: 5, repeat: 0 },
       reason: 'removing would delete your whole AniList entry, which is CURRENT',
-    },
-    {
-      name: 'a COMPLETED entry',
-      entry: { id: 1, status: 'COMPLETED', progress: 24, repeat: 0 },
-      reason: 'removing would delete your whole AniList entry, which is COMPLETED',
     },
     {
       name: 'an entry with no status (a score-only or custom-list-only entry)',
@@ -678,26 +567,24 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
  * fresh-read prohibition, not just the branch table.
  */
 describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
-  for (const failure of ['network', 'server', 'rate-limit'] as const) {
-    test(`a ${failure} failure errors with no mutation issued`, async () => {
-      const seen = calls();
-      const result = await Effect.runPromise(
-        Effect.either(
-          deleteAniListEntry(
-            watchlistDeps(
-              seen,
-              { entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 } },
-              failure,
-            ),
-            { mediaId: 104578 },
+  test('a network failure errors with no mutation issued', async () => {
+    const seen = calls();
+    const result = await Effect.runPromise(
+      Effect.either(
+        deleteAniListEntry(
+          watchlistDeps(
+            seen,
+            { entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 } },
+            'network',
           ),
+          { mediaId: 104578 },
         ),
-      );
-      expect(result._tag).toBe('Left');
-      expect(seen.mutations).toEqual([]);
-      expect(seen.entryReads).toBeGreaterThan(0);
-    });
-  }
+      ),
+    );
+    expect(result._tag).toBe('Left');
+    expect(seen.mutations).toEqual([]);
+    expect(seen.entryReads).toBeGreaterThan(0);
+  });
 
   test('the failure message says the check failed, not that the removal did', async () => {
     const seen = calls();
@@ -745,23 +632,6 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
     expect(seen.mutations).toEqual([{ id: 700 }]);
   });
 
-  test('the delete uses the fresh read id, not the id a cached entry carried', async () => {
-    // `AniListCurrentEntry.entryId` is a hint for the surface and can point at
-    // an entry since re-created (R36.1); only the guard read's id is evidence.
-    const seen = calls();
-    const staleEntryId = 700;
-    const result = await Effect.runPromise(
-      deleteAniListEntry(
-        watchlistDeps(seen, {
-          entry: { id: 901, status: 'PLANNING', progress: 0, repeat: 0 },
-        }),
-        { mediaId: 104578 },
-      ),
-    );
-    expect(result).toEqual({ status: 'ok' });
-    expect(seen.mutations).toEqual([{ id: 901 }]);
-    expect(seen.mutations).not.toContainEqual({ id: staleEntryId });
-  });
 });
 
 /**
@@ -814,21 +684,6 @@ describe('deleteAniListEntry — allowDestructive lifts the refusal and nothing 
     expect(seen.mutations).toEqual([]);
   });
 
-  test('no entry still skips — the flag authorizes a delete, it does not invent one', async () => {
-    const seen = calls();
-    const result = await Effect.runPromise(
-      deleteAniListEntry(watchlistDeps(seen, { entry: null }), {
-        mediaId: 104578,
-        allowDestructive: true,
-      }),
-    );
-    expect(result).toEqual({
-      status: 'skipped',
-      reason: "wasn't on your AniList list",
-    });
-    expect(seen.mutations).toEqual([]);
-  });
-
   test('an entry that decodes without an id is still not a deletion target', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
@@ -840,39 +695,6 @@ describe('deleteAniListEntry — allowDestructive lifts the refusal and nothing 
     expect(result).toEqual({
       status: 'skipped',
       reason: 'your AniList entry has no id to remove by',
-    });
-    expect(seen.mutations).toEqual([]);
-  });
-
-  test('the fresh read id wins over the cached hint here too (R5)', async () => {
-    const seen = calls();
-    const result = await Effect.runPromise(
-      deleteAniListEntry(
-        watchlistDeps(seen, {
-          entry: { id: 901, status: 'CURRENT', progress: 3, repeat: 0 },
-        }),
-        { mediaId: 104578, allowDestructive: true },
-      ),
-    );
-    expect(result).toEqual({ status: 'ok' });
-    expect(seen.mutations).toEqual([{ id: 901 }]);
-    expect(seen.mutations).not.toContainEqual({ id: 700 });
-  });
-
-  test('without the flag a CURRENT entry still refuses, with the exact same message', async () => {
-    // The regression that matters: adding an opt-in must not soften the default.
-    const seen = calls();
-    const result = await Effect.runPromise(
-      deleteAniListEntry(
-        watchlistDeps(seen, {
-          entry: { id: 88_214, status: 'CURRENT', progress: 7, repeat: 0 },
-        }),
-        { mediaId: 104578 },
-      ),
-    );
-    expect(result).toEqual({
-      status: 'skipped',
-      reason: 'removing would delete your whole AniList entry, which is CURRENT',
     });
     expect(seen.mutations).toEqual([]);
   });

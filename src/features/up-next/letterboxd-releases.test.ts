@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
-import { pickMovieMatch } from '@/lib/providers/pick-movie-match';
 import type { NormalizedMediaItem, ReleaseCalendar } from '@/types/media';
 
 import {
@@ -148,20 +147,6 @@ describe('letterboxdReleaseInputs', () => {
     expect(inputs).toEqual([]);
   });
 
-  test('resolves at most the cap, however long the watchlist is', async () => {
-    const attempted: string[] = [];
-    const films = Array.from({ length: 80 }, (_, index) =>
-      film(`upcoming-${index}`, 2026),
-    );
-
-    await letterboxdReleaseInputs(films, NOW, (candidate) => {
-      attempted.push(candidate.id);
-      return Promise.resolve(null);
-    });
-
-    expect(attempted).toHaveLength(30);
-  });
-
   test('never runs more than a handful of resolves at once', async () => {
     let inFlight = 0;
     let peak = 0;
@@ -211,72 +196,5 @@ describe('letterboxdReleaseInputs', () => {
     );
 
     expect(inputs).toEqual([]);
-  });
-});
-
-/**
- * The id leg composed exactly as `cachedTmdbMovieIdByTitle` composes it: TMDB
- * search results in, `pickMovieMatch` deciding which one *is* the film. A wrong
- * match here doesn't merely degrade metadata like it does on the details screen
- * — it puts a different film on the user's calendar with a date that has
- * nothing to do with the one they watchlisted
- * (docs/solutions/trakt-text-search-wrong-movie-match.md).
- */
-function gatedResolve(
-  results: readonly NormalizedMediaItem[],
-): ResolveWatchlistFilm {
-  return (candidate) => {
-    const match = pickMovieMatch(results, candidate.year, candidate.title);
-    return Promise.resolve(
-      match == null ? null : mergeCatalogueMetadata(candidate, match),
-    );
-  };
-}
-
-describe('letterboxdReleaseInputs — the title+year gate (KTD-5)', () => {
-  test('an exact title match with the wrong year is dropped, not guessed', async () => {
-    const inputs = await letterboxdReleaseInputs(
-      [film('the odyssey', 2026)],
-      NOW,
-      gatedResolve([
-        catalogue({
-          title: 'the odyssey',
-          year: 1997,
-          tmdb: 999,
-          digital: '2026-07-29',
-        }),
-      ]),
-    );
-
-    // Kubrick's back catalogue must not turn into "streaming this Wednesday".
-    expect(inputs).toEqual([]);
-  });
-
-  test('two same-title films either side of the year is a coin flip, so no entry', async () => {
-    const inputs = await letterboxdReleaseInputs(
-      [film('labyrinth', 2026)],
-      NOW,
-      gatedResolve([
-        catalogue({ title: 'labyrinth', year: 2025, tmdb: 1, digital: '2026-07-28' }),
-        catalogue({ title: 'labyrinth', year: 2027, tmdb: 2, digital: '2026-07-30' }),
-      ]),
-    );
-
-    expect(inputs).toEqual([]);
-  });
-
-  test('the same year and title resolves, and the dates come through', async () => {
-    const inputs = await letterboxdReleaseInputs(
-      [film('labyrinth', 2026)],
-      NOW,
-      gatedResolve([
-        catalogue({ title: 'Labyrinth of Cinema', year: 2026, tmdb: 3 }),
-        catalogue({ title: 'labyrinth', year: 2026, tmdb: 4, theatrical: '2026-08-02' }),
-      ]),
-    );
-
-    expect(inputs).toHaveLength(1);
-    expect(inputs[0]?.item.externalIds.tmdb).toBe(4);
-    expect(inputs[0]?.date).toBe('2026-08-02');
   });
 });

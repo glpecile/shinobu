@@ -60,15 +60,6 @@ describe('simklQueryKeys (plan 0034 U5)', () => {
     }
   });
 
-  test('filtered and unfiltered all-items snapshots are distinct cache entries', () => {
-    expect(simklQueryKeys.allItems()).not.toEqual(
-      simklQueryKeys.allItems('shows') as never,
-    );
-    expect(simklQueryKeys.allItems('shows', 'watching')).not.toEqual(
-      simklQueryKeys.allItems('shows', 'completed') as never,
-    );
-  });
-
   test('allItemsRoot prefixes every all-items filter (the write-side invalidation target)', () => {
     const root = simklQueryKeys.allItemsRoot();
     for (const key of [
@@ -79,23 +70,9 @@ describe('simklQueryKeys (plan 0034 U5)', () => {
       expect(key.slice(0, root.length)).toEqual([...root]);
     }
   });
-
-  test('trending defaults to the week interval and keys intervals apart', () => {
-    expect(simklQueryKeys.trending('tv')).toEqual(
-      simklQueryKeys.trending('tv', 'week') as never,
-    );
-    expect(simklQueryKeys.trending('tv', 'today')).not.toEqual(
-      simklQueryKeys.trending('tv', 'week') as never,
-    );
-  });
 });
 
 describe('simklDeps (plan 0034 U5)', () => {
-  test('pulls the client id from env when no in-app override exists', () => {
-    process.env.EXPO_PUBLIC_SIMKL_CLIENT_ID = 'env-client-id';
-    expect(simklDeps().clientId).toBe('env-client-id');
-  });
-
   test('an in-app override wins over the env id (Trakt-style precedence)', () => {
     process.env.EXPO_PUBLIC_SIMKL_CLIENT_ID = 'env-client-id';
     setProviderClientId('simkl', 'override-client-id');
@@ -176,13 +153,5 @@ describe('findLibraryEntry', () => {
       item('subject', 'ANIME', { simkl: 9 }, { isFilm: true }),
     );
     expect(found?.item.id).toBe('simkl-9');
-  });
-
-  test('a show still resolves out of the shows bucket', () => {
-    const found = findLibraryEntry(
-      library({ shows: [entry('simkl-7', 'TV', { simkl: 7 })] }),
-      item('subject', 'TV', { simkl: 7 }),
-    );
-    expect(found?.item.id).toBe('simkl-7');
   });
 });

@@ -24,10 +24,6 @@ const { prefsStorage } = await import('./storage');
 const KEY = 'recentTags';
 
 describe('mergeRecentTags', () => {
-  test('puts the newest tags first and keeps the rest in order', () => {
-    expect(mergeRecentTags(['b', 'c'], ['a'])).toEqual(['a', 'b', 'c']);
-  });
-
   test('preserves the order within a single batch', () => {
     expect(mergeRecentTags([], ['first', 'second', 'third'])).toEqual([
       'first',
@@ -56,10 +52,6 @@ describe('mergeRecentTags', () => {
     expect(merged.at(-1)).toBe('old-28');
     expect(merged).not.toContain('old-29');
   });
-
-  test('an empty batch leaves the list untouched', () => {
-    expect(mergeRecentTags(['a', 'b'], [])).toEqual(['a', 'b']);
-  });
 });
 
 describe('recordRecentTags', () => {
@@ -87,13 +79,6 @@ describe('recordRecentTags', () => {
     expect(getRecentTags()).toEqual([]);
     recordRecentTags(['criterion collection', 'nyff']);
     expect(getRecentTags()).toEqual(['criterion collection', 'nyff']);
-  });
-
-  test('a later log moves its tags to the front', () => {
-    recordRecentTags(['a', 'b']);
-    recordRecentTags(['c']);
-    recordRecentTags(['B']);
-    expect(getRecentTags()).toEqual(['B', 'c', 'a']);
   });
 
   test('an empty list writes nothing at all', () => {

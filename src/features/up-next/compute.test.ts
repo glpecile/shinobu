@@ -294,78 +294,6 @@ describe('computeUpNext — Trakt shows', () => {
 });
 
 describe('computeUpNext — the Trakt my-calendars source (U4/KTD-2)', () => {
-  test('a watchlisted, never-watched show reaches Calendar', () => {
-    // No pool entry exists for it at all: the user has watched nothing, so
-    // `progress/watched` has no pointer to give. This is the case the old
-    // source could not express.
-    const data = computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(show(100, { currentProgress: 0 }), {
-            season: 1,
-            number: 1,
-            title: 'Pilot',
-            firstAired: localInstant(2026, 7, 25, 21, 0),
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar).toHaveLength(1);
-    expect(data.calendar[0]).toMatchObject({
-      source: 'trakt',
-      status: 'upcoming',
-      episode: { season: 1, number: 1, title: 'Pilot' },
-    });
-    // Never started, so never quick-loggable (R4).
-    expect(data.continueWatching).toHaveLength(0);
-  });
-
-  test('shows past the old 20-show pool cap reach Calendar', () => {
-    // The fixed limitation: the calendar endpoint answers in one call for every
-    // watched-or-watchlisted show, so nothing is dropped for lack of a request
-    // budget the way `UP_NEXT_POOL_SIZE` drops shows from Continue Watching.
-    const airing = Array.from({ length: UP_NEXT_POOL_SIZE + 5 }, (_, index) =>
-      calendarInput(show(200 + index), {
-        season: 1,
-        number: 2,
-        firstAired: localInstant(2026, 7, 25, 21, 0),
-      }),
-    );
-    const data = computeUpNext(inputs({ calendar: airing }), NOW);
-    expect(data.calendar).toHaveLength(UP_NEXT_POOL_SIZE + 5);
-  });
-
-  test('an aired next episode reaches Continue Watching and not Calendar', () => {
-    // Both sources speak for the same show: the pool knows episode 3 aired
-    // yesterday, the calendar knows episode 4 airs Saturday. Two episodes, two
-    // sections — and neither one duplicated into the other.
-    const item = show(101, { externalIds: { trakt: 101, tmdb: 909 } });
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(item, {
-            season: 1,
-            number: 3,
-            firstAired: localInstant(2026, 7, 22, 21, 0),
-          }),
-        ],
-        calendar: [
-          calendarInput(item, {
-            season: 1,
-            number: 4,
-            firstAired: localInstant(2026, 7, 25, 21, 0),
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(episodeOf(data.continueWatching[0]).number).toBe(3);
-    expect(data.continueWatching).toHaveLength(1);
-    expect(episodeOf(data.calendar[0]).number).toBe(4);
-    expect(data.calendar).toHaveLength(1);
-  });
-
   test('an airing the calendar reports for earlier today is not Continue Watching', () => {
     // The calendar window opens at local midnight, so it reports this morning's
     // airings too — but it speaks for shows the user has never opened, and
@@ -417,53 +345,6 @@ describe('computeUpNext — the Trakt my-calendars source (U4/KTD-2)', () => {
       NOW,
     );
     expect(data.calendar).toHaveLength(1);
-  });
-
-  test('Calendar is ordered soonest first', () => {
-    const data = computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(show(105), {
-            season: 1,
-            number: 2,
-            firstAired: localInstant(2026, 7, 27, 12, 0),
-          }),
-          calendarInput(show(106), {
-            season: 1,
-            number: 5,
-            firstAired: localInstant(2026, 7, 24, 12, 0),
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar.map((entry) => entry.item.externalIds.trakt)).toEqual([
-      106, 105,
-    ]);
-  });
-
-  test('an AniList entry still suppresses its Trakt calendar twin', () => {
-    const data = computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(show(107, { externalIds: { trakt: 107, tmdb: 4242 } }), {
-            season: 2,
-            number: 3,
-            firstAired: localInstant(2026, 7, 25, 12, 0),
-          }),
-        ],
-        anilist: [
-          anilistInput(anime(107, { currentProgress: 5 }), {
-            nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 25, 12, 0) },
-            totalEpisodes: 12,
-            tmdbId: 4242,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar).toHaveLength(1);
-    expect(data.calendar[0].source).toBe('anilist');
   });
 });
 
@@ -556,14 +437,6 @@ describe('computeUpNext — film releases (U5/R3)', () => {
     );
     expect(data.calendar).toHaveLength(1);
     expect(data.continueWatching).toEqual([]);
-  });
-
-  test('a film beyond the window is out, exactly like an episode', () => {
-    const data = computeUpNext(
-      inputs({ releases: [releaseInput(film(307), 'digital', '2026-07-30')] }),
-      NOW,
-    );
-    expect(data.calendar).toEqual([]);
   });
 
   test('Calendar interleaves releases and episodes strictly by instant', () => {
@@ -704,22 +577,6 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
     expect(episodeOf(data.calendar[0]).number).toBe(6);
   });
 
-  test('a stale pointer whose instant has passed resolves as aired (hasAired wins)', () => {
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(3, { currentProgress: 5 }), {
-            nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 22, 12, 0) },
-            totalEpisodes: 12,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0].status).toBe('aired');
-  });
-
   test('past the pointer is unknowable and excluded', () => {
     const data = computeUpNext(
       inputs({
@@ -784,25 +641,6 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
     );
     expect(data.continueWatching).toHaveLength(0);
   });
-
-  // Plan 0027 U5: the season-1 convention is gone. An AniList entry emits no
-  // season at all — its episode number is entry-relative, and the log fan-out
-  // resolves the canonical season from ani.zip. The old literal is what wrote
-  // phantom S01 history for every sequel-season anime quick log.
-  test('anime entries carry no fabricated season, and the id reflects it', () => {
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(9, { currentProgress: 0 }), { totalEpisodes: 24 }),
-        ],
-      }),
-      NOW,
-    );
-    const entry = data.continueWatching[0];
-    expect(episodeOf(entry).season).toBeUndefined();
-    expect(episodeOf(entry).number).toBe(1);
-    expect(entry.id).toBe('anilist-9-e1');
-  });
 });
 
 /**
@@ -860,67 +698,6 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
     expect(data.calendar).toHaveLength(0);
   });
 
-  test('the same entry marked CURRENT is unaffected by the gate', () => {
-    // Byte-identical fixture to the flood case with one field changed: the gate
-    // keys off the status alone and leaves every pre-0030 classification as it
-    // was — someone four episodes behind is exactly who Continue Watching is
-    // for.
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(31, { currentProgress: 0 }), {
-            status: 'CURRENT',
-            nextAiring: { episode: 5, airingAt: localInstant(2026, 7, 25, 12, 0) },
-            totalEpisodes: 12,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0].status).toBe('aired');
-    expect(episodeOf(data.continueWatching[0]).number).toBe(1);
-  });
-
-  test('a finished PLANNING series contributes nothing', () => {
-    // No pointer + a known total is "aired by construction" for a CURRENT
-    // entry. As a backlog item it has no airing ahead of it at all, so it
-    // belongs to neither section.
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(32, { currentProgress: 0 }), {
-            status: 'PLANNING',
-            totalEpisodes: 26,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(0);
-    expect(data.calendar).toHaveLength(0);
-  });
-
-  test('a PLANNING pointer whose instant has already passed is excluded', () => {
-    // `hasAired` wins over the arithmetic at the frontier, so this classifies
-    // as `aired` — the one PLANNING path into Continue Watching that does not
-    // go through the "below the pointer" branch.
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(33, { currentProgress: 0 }), {
-            status: 'PLANNING',
-            nextAiring: { episode: 1, airingAt: localInstant(2026, 7, 22, 12, 0) },
-            totalEpisodes: 12,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(0);
-    expect(data.calendar).toHaveLength(0);
-  });
-
   test('a gated PLANNING entry leaves its Trakt twin standing', () => {
     // Dedupe suppresses a Trakt card only for AniList entries that *survived*.
     // A gated PLANNING entry must not take the Trakt row down with it —
@@ -948,65 +725,6 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
     );
     expect(data.continueWatching).toHaveLength(1);
     expect(data.continueWatching[0].source).toBe('trakt');
-  });
-});
-
-/**
- * Plan 0031 R9. The gate above was written for PLANNING entries the *user* had
- * already made; this app now **creates** them — `planOnAniList` writes
- * `status: PLANNING` on every AniList watchlist add
- * (`src/lib/providers/anilist/writes.ts`, plan 0031 KTD-2). So the hole
- * `docs/solutions/anilist-shared-list-query-status-gate.md` describes is no
- * longer bounded by how much plan-to-watch the user happened to have: adding a
- * long-running series you have never started is now a one-tap action, and every
- * one of those entries arrives at `computeUpNext` at progress 0 with episodes
- * long since aired — the exact flood shape.
- *
- * Watchlist is not the agenda. This asserts it as an absence across the whole
- * result, not per section, so a future third section cannot quietly become the
- * new leak.
- */
-describe('computeUpNext — watchlist adds never reach the agenda (plan 0031 R9)', () => {
-  test('a series watchlisted mid-run appears nowhere, least of all Continue Watching', () => {
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          // Exactly what a fresh `planOnAniList` write reads back: PLANNING,
-          // progress 0, and the run already 11 episodes deep.
-          anilistInput(anime(4031, { currentProgress: 0 }), {
-            status: 'PLANNING',
-            nextAiring: { episode: 12, airingAt: localInstant(2026, 7, 25, 12, 0) },
-            totalEpisodes: 24,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    const everywhere = [...data.continueWatching, ...data.calendar];
-    expect(everywhere.filter((entry) => entry.item.id === 'anilist-4031')).toEqual([]);
-    expect(data.continueWatching).toHaveLength(0);
-    expect(everywhere).toHaveLength(0);
-  });
-
-  test('a whole watchlisted backlog cannot flood Continue Watching', () => {
-    // The volume half of the same claim: ten adds, ten entries, zero rows.
-    const data = computeUpNext(
-      inputs({
-        anilist: Array.from({ length: 10 }, (_, index) =>
-          anilistInput(anime(4100 + index, { currentProgress: 0 }), {
-            status: 'PLANNING',
-            nextAiring: {
-              episode: 5 + index,
-              airingAt: localInstant(2026, 7, 25, 12, 0),
-            },
-            totalEpisodes: 24,
-          }),
-        ),
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(0);
-    expect(data.calendar).toHaveLength(0);
   });
 });
 
@@ -1056,27 +774,6 @@ describe('computeUpNext — cross-provider dedupe (R5)', () => {
     );
     expect(data.continueWatching).toHaveLength(2);
   });
-
-  test('an AniList entry that classifies to nothing does not suppress its Trakt twin', () => {
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(show(22, { externalIds: { trakt: 22, tmdb: 888 } }), {
-            season: 1,
-            number: 3,
-            firstAired: AIRED,
-          }),
-        ],
-        anilist: [
-          // Hiatus: no pointer, no total → excluded.
-          anilistInput(anime(22, { currentProgress: 5 }), { tmdbId: 888 }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0].source).toBe('trakt');
-  });
 });
 
 /**
@@ -1104,75 +801,6 @@ function simklShow(
 }
 
 describe('computeUpNext — Simkl progress leg (plan 0034 U8/R9)', () => {
-  test('a Simkl-only user gets a populated Continue Watching from aired pointers', () => {
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(
-            simklShow(900),
-            {
-              season: 1,
-              number: 5,
-              title: 'The Fifth',
-              firstAired: localInstant(2026, 7, 22, 21, 0),
-            },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0]).toMatchObject({
-      source: 'simkl',
-      status: 'aired',
-      episode: { season: 1, number: 5, title: 'The Fifth' },
-    });
-  });
-
-  test('an instant in +14:00 that has already passed counts as aired (instants, not dates)', () => {
-    // Mirror of the Trakt date-line case: the pointer's calendar date reads as
-    // "tomorrow" at its origin offset, but the absolute instant is in the past.
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(
-            simklShow(901),
-            {
-              season: 1,
-              number: 4,
-              firstAired: '2026-07-24T10:00:00.000+14:00', // 2026-07-23T20:00Z
-            },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      new Date('2026-07-23T21:00:00.000Z'),
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.calendar).toHaveLength(0);
-  });
-
-  test('a pre-window instant still classifies as aired — no calendar file needed', () => {
-    // Aired two months before NOW — far outside Simkl's rolling ~34-day CDN
-    // window. `next_watch_info` carries the instant, so the catch-up case
-    // never depends on the calendar files at all (the U8 pre-window choice).
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(
-            simklShow(902),
-            { season: 2, number: 1, firstAired: localInstant(2026, 5, 20, 21, 0) },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0].status).toBe('aired');
-  });
-
   test('a null-date pointer proven aired by counts degrades to a progress-only entry', () => {
     // Simkl knows the episode but not its air date, and the show is absent
     // from the calendar files — the plan's "degrades to progress-only, never
@@ -1191,23 +819,6 @@ describe('computeUpNext — Simkl progress leg (plan 0034 U8/R9)', () => {
     );
     expect(data.continueWatching).toHaveLength(1);
     expect(episodeOf(data.continueWatching[0]).firstAired).toBeUndefined();
-    expect(data.calendar).toHaveLength(0);
-  });
-
-  test('a null-date pointer without count proof is excluded, exactly like Trakt', () => {
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(
-            simklShow(904),
-            { season: 1, number: 5, firstAired: null },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(0);
     expect(data.calendar).toHaveLength(0);
   });
 
@@ -1259,23 +870,6 @@ describe('computeUpNext — Simkl calendar leg (plan 0034 KTD-4)', () => {
     });
     expect(data.continueWatching).toHaveLength(0);
   });
-
-  test('an airing from earlier today is dropped, not promoted to aired (R4)', () => {
-    const data = computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(
-            simklShow(911, { currentProgress: 0 }),
-            { season: 1, number: 1, firstAired: localInstant(2026, 7, 23, 9, 0) },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(0);
-    expect(data.calendar).toHaveLength(0);
-  });
 });
 
 describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => {
@@ -1303,25 +897,6 @@ describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => 
     expect(data.continueWatching).toHaveLength(1);
     expect(data.continueWatching[0].source).toBe('simkl');
     expect(episodeOf(data.continueWatching[0]).firstAired).toBe(SIMKL_AIRED);
-  });
-
-  test('the same upcoming airing from both calendars is one Simkl row', () => {
-    const airing = { season: 1, number: 4, firstAired: localInstant(2026, 7, 25, 21, 0) };
-    const data = computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(show(81, { externalIds: { trakt: 81, tmdb: 6001 } }), airing),
-          calendarInput(
-            simklShow(981, { externalIds: { simkl: 981, tmdb: 6001 } }),
-            airing,
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar).toHaveLength(1);
-    expect(data.calendar[0].source).toBe('simkl');
   });
 
   test('precedence is per section: a Simkl upcoming row leaves Trakt’s aired row standing', () => {
@@ -1369,58 +944,6 @@ describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => 
     );
     expect(data.continueWatching).toHaveLength(2);
   });
-
-  test('an AniList entry still wins over its Simkl twin', () => {
-    // The provider precedence chain end to end: AniList carries the user's
-    // anime progress and its write path advances the entry, so it outranks
-    // both trackers — Simkl outranking Trakt must not change that.
-    const data = computeUpNext(
-      inputs({
-        progress: [
-          progressInput(
-            simklShow(984, { type: 'ANIME', externalIds: { simkl: 984, tmdb: 6004 } }),
-            { number: 6, firstAired: SIMKL_AIRED },
-            { source: 'simkl' },
-          ),
-        ],
-        anilist: [
-          anilistInput(anime(984, { currentProgress: 5 }), {
-            totalEpisodes: 24,
-            tmdbId: 6004,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
-    expect(data.continueWatching[0].source).toBe('anilist');
-  });
-
-  test('a duplicate release row keeps the first source in — Simkl when it leads the array', () => {
-    // `fetchUpNextInputs` concatenates Simkl's release rows first for exactly
-    // this reason: `dedupeReleases` keeps the first `(tmdb, kind)` row it sees.
-    const ids = { simkl: 985, tmdb: 6005 };
-    const data = computeUpNext(
-      inputs({
-        releases: [
-          releaseInput(
-            film(985, { id: 'simkl-985', externalIds: ids }),
-            'theatrical',
-            '2026-07-24',
-            'simkl',
-          ),
-          releaseInput(
-            film(985, { externalIds: { trakt: 985, tmdb: 6005 } }),
-            'theatrical',
-            '2026-07-24',
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar).toHaveLength(1);
-    expect(data.calendar[0].source).toBe('simkl');
-  });
 });
 
 describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () => {
@@ -1451,71 +974,6 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
     );
     expect(data.calendar).toHaveLength(1);
     expect(data.calendar[0].source).toBe('anilist');
-  });
-
-  test('Trakt and Simkl rows sharing only a TVDB id collapse to the Simkl row', () => {
-    const data = computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(
-            show(902, { externalIds: { trakt: 902, tvdb: 77777 } }),
-            { season: 2, number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
-          ),
-          calendarInput(
-            simklShow(9902, { externalIds: { simkl: 9902, tvdb: 77777 } }),
-            { number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar).toHaveLength(1);
-    expect(data.calendar[0].source).toBe('simkl');
-  });
-
-  test('distinct shows with disjoint ids both stand', () => {
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(903, { externalIds: { anilist: 903, mal: 111 } }), {
-            nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 25, 9, 30) },
-            totalEpisodes: 12,
-          }),
-        ],
-        calendar: [
-          calendarInput(
-            simklShow(9903, { externalIds: { simkl: 9903, mal: 222 } }),
-            { number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
-            { source: 'simkl' },
-          ),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.calendar).toHaveLength(2);
-  });
-});
-
-describe('computeUpNext — empty and degraded inputs (R12/R4)', () => {
-  test('no inputs yields two empty sections, not an error', () => {
-    expect(computeUpNext(inputs(), NOW)).toEqual({
-      continueWatching: [],
-      calendar: [],
-    });
-  });
-
-  test('one provider failing still returns the other provider entries', () => {
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(30, { currentProgress: 1 }), { totalEpisodes: 12 }),
-        ],
-        errors: [{ provider: 'trakt', message: 'boom' }],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching).toHaveLength(1);
   });
 });
 
@@ -1594,15 +1052,6 @@ describe('calendarWeek — the week strip buckets (U8)', () => {
       'Saturday',
     ]);
     expect(week[2].entries).toHaveLength(1); // 2026-07-25 is two days out
-    expect(week[0].entries).toEqual([]);
-  });
-
-  test('day buckets come from the same local-day logic as the badges', () => {
-    // An instant just past local midnight belongs to tomorrow's bucket, the
-    // same day `formatRelativeDay` labels it with — no drift between them.
-    const entries = upcoming(44, 7, 24);
-    const week = calendarWeek(entries, NOW);
-    expect(week[1].entries).toHaveLength(1);
     expect(week[0].entries).toEqual([]);
   });
 

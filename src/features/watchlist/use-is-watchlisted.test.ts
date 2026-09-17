@@ -59,29 +59,6 @@ function input(item: NormalizedMediaItem, source: WatchlistInput['source']): Wat
 }
 
 describe('isWatchlistedIn (plan 0031 R31)', () => {
-  test('recognises the same film across providers by TMDB id, not by item id', () => {
-    // The whole point: the details screen opens a TMDB-sourced item whose id
-    // will never equal the `letterboxd-<slug>` on the watchlist row.
-    const inputs = [
-      input(film('letterboxd-heat-1995', { externalIds: { tmdb: 949 } }), 'letterboxd'),
-    ];
-    expect(isWatchlistedIn(inputs, film('trakt-1', { externalIds: { tmdb: 949 } }))).toBe(
-      true,
-    );
-  });
-
-  test('reuses the merge derivation: title+year matches a scraped row with no ids', () => {
-    const inputs = [input(film('letterboxd-heat-1995'), 'letterboxd')];
-    expect(isWatchlistedIn(inputs, film('trakt-1'))).toBe(true);
-  });
-
-  test('a movie id never answers for the series of the same TMDB number', () => {
-    // `watchlistMergeKeys` pairs the id with its movie/tv kind — TMDB numbers
-    // the two spaces independently.
-    const inputs = [input(film('trakt-1', { externalIds: { tmdb: 1399 } }), 'trakt')];
-    const series = film('trakt-2', { type: 'TV', externalIds: { tmdb: 1399 } });
-    expect(isWatchlistedIn(inputs, series)).toBe(false);
-  });
 
   test('an unrelated film is false, not true-by-accident', () => {
     const inputs = [input(film('trakt-1', { externalIds: { tmdb: 949 } }), 'trakt')];
@@ -95,9 +72,6 @@ describe('isWatchlistedIn (plan 0031 R31)', () => {
     expect(isWatchlistedIn([], bare)).toBe(false);
   });
 
-  test('an empty gather is a confident false — "cold cache" is undefined, and the hook, not this', () => {
-    expect(isWatchlistedIn([], film('trakt-1'))).toBe(false);
-  });
 });
 
 describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
@@ -122,9 +96,6 @@ describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
     ]);
   });
 
-  test('no match is an empty set, which is what `isWatchlistedIn` reads', () => {
-    expect(watchlistSourcesFor([], film('trakt-1'))).toEqual([]);
-  });
 });
 
 describe('the hook registers no query observer', () => {

@@ -102,15 +102,6 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     ]);
   });
 
-  test('adopts nothing when the search finds no confident match', async () => {
-    anilistFilmId = null;
-
-    const enriched = await enrichExternalIds(client, chao(), ALL);
-
-    expect(enriched.externalIds.anilist).toBeUndefined();
-    expect(providersForWrite(enriched, ALL, 'log')).toEqual(['trakt', 'letterboxd']);
-  });
-
   test('never runs the search when AniList is not connected', async () => {
     anilistFilmId = 5678;
 

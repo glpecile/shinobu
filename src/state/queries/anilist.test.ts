@@ -76,28 +76,6 @@ describe('fetchPlannedAnime — the watchlist selector', () => {
     // read costs 0 calls because plan 0030 already paid for these entries.
     expect(client.getQueryData(anilistQueryKeys.plannedAnime())).toBeUndefined();
   });
-
-  test('carries the MediaList entry id through as a hint for the removal path', async () => {
-    const client = new QueryClient();
-    client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [
-      entry(2, 'PLANNING'),
-    ]);
-
-    const planned = await fetchPlannedAnime(client);
-    // A hint only (R36): the removal guard re-reads the entry in-effect and
-    // deletes by *that* id. Asserted here so the field is known to survive the
-    // slice, not so anything may guard on it.
-    expect(planned[0]?.entryId).toBe(200);
-  });
-
-  test('a list of nothing but watching yields an empty watchlist leg', async () => {
-    const client = new QueryClient();
-    client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [
-      entry(5, 'CURRENT'),
-    ]);
-
-    expect(await fetchPlannedAnime(client)).toEqual([]);
-  });
 });
 
 /**
@@ -123,19 +101,6 @@ describe('fetchWatchlistAnime — CURRENT ∪ PLANNING (plan 0035 R1)', () => {
     ]);
     // Still zero extra requests: nothing was cached under a derived key.
     expect(client.getQueryData(anilistQueryKeys.plannedAnime())).toBeUndefined();
-  });
-
-  test('a CURRENT entry keeps its entry-id hint for the removal path', async () => {
-    const client = new QueryClient();
-    client.setQueryData(anilistQueryKeys.currentAnimeEntries(), [
-      entry(9, 'CURRENT'),
-    ]);
-
-    const watchlist = await fetchWatchlistAnime(client);
-    expect(watchlist[0]?.entryId).toBe(900);
-    // The status rides along too — it is what tells the picker the removal is
-    // destructive (plan 0035 R3).
-    expect(watchlist[0]?.status).toBe('CURRENT');
   });
 });
 

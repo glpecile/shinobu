@@ -8,8 +8,6 @@ import {
   normalizeSearchIdMatch,
   normalizeTrendingItem,
   normalizeUserSettings,
-  simklFanartUrl,
-  simklPosterUrl,
   type SimklActivitiesRaw,
   type SimklAllItemsEntry,
   type SimklAllItemsResponse,
@@ -20,25 +18,6 @@ import {
 } from './normalize';
 
 const NOW = '2026-07-31T12:00:00.000Z';
-
-describe('simkl image URLs', () => {
-  test('poster fragments compose to the direct simkl.in medium webp', () => {
-    // Convention: api.simkl.org/conventions/images (poster `_m` size); the
-    // direct simkl.in host was live-probed 2026-07-31 (200 image/webp).
-    expect(simklPosterUrl('20/20233461737b3bf5ec')).toBe(
-      'https://simkl.in/posters/20/20233461737b3bf5ec_m.webp',
-    );
-    expect(simklPosterUrl(null)).toBe('');
-    expect(simklPosterUrl(undefined)).toBe('');
-  });
-
-  test('fanart fragments compose to the mobile-size webp', () => {
-    expect(simklFanartUrl('20/20397495e29a88fd8d')).toBe(
-      'https://simkl.in/fanart/20/20397495e29a88fd8d_mobile.webp',
-    );
-    expect(simklFanartUrl(null)).toBe('');
-  });
-});
 
 describe('normalizeLibraryEntry', () => {
   const showEntry: SimklAllItemsEntry = {
@@ -277,11 +256,6 @@ describe('normalizeLibraryEntry', () => {
 });
 
 describe('normalizeAllItems', () => {
-  test('an empty library ({} response) yields empty buckets', () => {
-    const library = normalizeAllItems({}, NOW);
-    expect(library).toEqual({ shows: [], movies: [], anime: [] });
-  });
-
   test('buckets are normalized independently and drops are silent', () => {
     const raw: SimklAllItemsResponse = {
       shows: [
@@ -345,15 +319,6 @@ describe('normalizeCalendarFile', () => {
       },
     },
   };
-
-  test('keeps the Z instants byte-for-byte (the has-aired contract)', () => {
-    const entries = normalizeCalendarFile(file);
-    expect(entries.map((entry) => entry.date)).toEqual([
-      '2026-07-30T04:00:00Z',
-      '2026-08-02T16:00:00Z',
-      '2026-07-15T00:00:00Z',
-    ]);
-  });
 
   test('joins metadata by simkl id: title, poster, ids, finale flag', () => {
     const [finale] = normalizeCalendarFile(file);
@@ -453,23 +418,6 @@ describe('normalizeTrendingItem', () => {
     );
     expect(item!.type).toBe('TV');
     expect(item!.totalEpisodes).toBe(26);
-  });
-
-  test('a trending anime film is ANIME + isFilm with mal/anilist ids', () => {
-    const item = normalizeTrendingItem(
-      {
-        title: 'Demon Slayer: Infinity Castle',
-        poster: '24/24b1c1',
-        anime_type: 'movie',
-        ids: { simkl_id: 2498112, mal: '59192', anilist: '178788' },
-      },
-      'anime',
-      NOW,
-    );
-    expect(item!.type).toBe('ANIME');
-    expect(item!.isFilm).toBe(true);
-    expect(item!.externalIds.mal).toBe(59192);
-    expect(item!.externalIds.anilist).toBe(178788);
   });
 
   test('items without a simkl id drop', () => {

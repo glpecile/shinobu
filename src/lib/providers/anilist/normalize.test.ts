@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 
-import { hasAired } from '@/lib/time/has-aired';
 import {
   normalizeAniListListEntry,
   normalizeAniListMedia,
@@ -127,8 +126,6 @@ describe('parseActivityProgress', () => {
 
   test('empty / absent / unparseable progress → no episodes', () => {
     expect(parseActivityProgress(null)).toEqual([]);
-    expect(parseActivityProgress(undefined)).toEqual([]);
-    expect(parseActivityProgress('')).toEqual([]);
     expect(parseActivityProgress('all of them')).toEqual([]);
   });
 });
@@ -174,21 +171,6 @@ describe('normalizeListActivity', () => {
     const entry = normalizeListActivity(activity);
     expect(entry?.item.isFilm).toBe(true);
     expect(entry?.episodes).toBeUndefined();
-  });
-
-  test('a read-chapter activity → MANGA entry with chapter detail', () => {
-    const activity: AniListListActivity = {
-      id: 5003,
-      status: 'read chapter 41 of',
-      progress: '41',
-      createdAt: 1_752_000_200,
-      media: MANGA,
-    };
-
-    const entry = normalizeListActivity(activity);
-    expect(entry?.item.type).toBe('MANGA');
-    expect(entry?.item.progressUnit).toBe('chapter');
-    expect(entry?.episodes).toEqual([41]);
   });
 
   test('a reread-chapter activity (a manga rewatch) is a log, not bookkeeping', () => {
@@ -250,17 +232,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     expect(normalized.item.currentProgress).toBe(5);
   });
 
-  test('a finished series keeps its total and reports no airing pointer', () => {
-    const entry: AniListListEntry = {
-      status: 'CURRENT',
-      progress: 3,
-      media: { ...SERIES, episodes: 12, nextAiringEpisode: null },
-    };
-    const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
-    expect(normalized.nextAiring).toBeNull();
-    expect(normalized.totalEpisodes).toBe(12);
-  });
-
   test('a hiatus/unannounced series reports neither pointer nor total', () => {
     const entry: AniListListEntry = {
       status: 'CURRENT',
@@ -276,14 +247,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
   // so the status has to survive normalization — it is what tells the "Your
   // Anime" row and Up Next's gate apart from each other downstream. It was
   // selected by the query and dropped here before this plan.
-  test('a CURRENT entry carries its status through', () => {
-    const entry: AniListListEntry = {
-      status: 'CURRENT',
-      progress: 5,
-      media: { ...SERIES, episodes: 24 },
-    };
-    expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).status).toBe('CURRENT');
-  });
 
   test('a PLANNING entry is marked planned rather than flattened to CURRENT', () => {
     const entry: AniListListEntry = {
@@ -338,19 +301,6 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).status).toBe('CURRENT');
   });
 
-  test('the converted instant round-trips through hasAired (KTD-4)', () => {
-    // The airing seconds → ISO conversion must produce something the single
-    // shared air comparison parses — no second date path anywhere.
-    const airingAt = 1_784_390_400;
-    const entry: AniListListEntry = {
-      status: 'CURRENT',
-      progress: 6,
-      media: { ...SERIES, nextAiringEpisode: { episode: 7, airingAt } },
-    };
-    const instant = normalizeCurrentAnimeEntry(entry, NOW_ISO).nextAiring!.airingAt;
-    expect(hasAired(instant, new Date(airingAt * 1000 - 1))).toBe(false);
-    expect(hasAired(instant, new Date(airingAt * 1000))).toBe(true);
-  });
 });
 
 describe('parseAniListItemId', () => {

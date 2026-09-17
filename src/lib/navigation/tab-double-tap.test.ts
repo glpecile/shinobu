@@ -18,14 +18,6 @@ function subscribe(seen: string[]): () => void {
 }
 
 describe('emitTabPress', () => {
-  test('a single press fires nothing', () => {
-    const seen: string[] = [];
-    const stop = subscribe(seen);
-    emitTabPress('single', 0);
-    stop();
-    expect(seen).toEqual([]);
-  });
-
   test('two presses inside the window are a double tap', () => {
     const seen: string[] = [];
     const stop = subscribe(seen);

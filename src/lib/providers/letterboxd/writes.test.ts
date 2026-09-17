@@ -43,14 +43,13 @@ function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMedia
 function fakeDeps(options: {
   filmPageStatus?: number;
   webResponse?: LetterboxdWebResponse;
-  session?: LetterboxdSession | null;
   withWebFetch?: boolean;
   onWrite?: (request: LetterboxdWebRequest) => void;
 }): LetterboxdDeps {
   const withWebFetch = options.withWebFetch ?? true;
   return {
     username: 'gian',
-    session: options.session === undefined ? SESSION : options.session,
+    session: SESSION,
     fetch: async () => new Response(FILM_PAGE, { status: options.filmPageStatus ?? 200 }),
     webFetch: withWebFetch
       ? async (request) => {
@@ -109,14 +108,6 @@ describe('logToLetterboxd', () => {
     await Effect.runPromise(logToLetterboxd(deps, movie({ letterboxd: 'tuner' })));
 
     expect(captured?.rewatch).toBe(false);
-  });
-
-  test('fails as a dead session when no web login was captured', async () => {
-    const deps = fakeDeps({ session: null });
-    const outcome = await Effect.runPromise(
-      Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'tuner' }))),
-    );
-    expect(outcome._tag).toBe('ProviderAuthError');
   });
 
   test('fails as a dead session when the WebView write transport is absent (web)', async () => {

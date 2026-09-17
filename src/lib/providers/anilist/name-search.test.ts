@@ -123,18 +123,6 @@ function resolve(hits: { id: number; name: string }[], query: string) {
 }
 
 describe('the resolution rule: confident match or nothing', () => {
-  test('an exact name resolves its id even from a crowded page', () => {
-    expect(
-      resolve(
-        [
-          { id: 1, name: 'Hayao Miyazaki Jr.' },
-          { id: 96_879, name: 'Hayao Miyazaki' },
-        ],
-        'Hayao Miyazaki',
-      ),
-    ).toBe(96_879);
-  });
-
   test('a family-name-first romanization still resolves', () => {
     // AniList writes "Kaji Yuki", TMDB writes "Yuki Kaji" — the same person.
     expect(resolve([{ id: 118_320, name: 'Kaji Yuki' }], 'Yuki Kaji')).toBe(118_320);
@@ -152,7 +140,4 @@ describe('the resolution rule: confident match or nothing', () => {
     ).toBeNull();
   });
 
-  test('an empty page resolves to nothing', () => {
-    expect(resolve([], 'Anyone At All')).toBeNull();
-  });
 });

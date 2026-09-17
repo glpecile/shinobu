@@ -16,8 +16,18 @@ Build only what the task asks for. No interface with one implementation, no
 factory for one product, no config for a constant, no scaffolding for a later
 PR. Reuse the repo, then the platform, then an installed dependency. A bug fix
 is one guard where every caller routes through. An unrelated bug you notice is
-a follow-up in your summary. Commit tests only where the repo already tests that
-kind of change, sized like the neighbouring `*.test.ts`.
+a follow-up in your summary.
+
+## Tests
+
+Write as few tests as cover the change. Add tests only where the repo already
+tests that kind of change, sized like the neighbouring `*.test.ts`. Before
+adding one, read the existing tests for that code and the layer below it. Extend
+or keep a test that already pins the branch, and never add a second. Write one
+case per branch, not another input from the same class. Don't test constants,
+query-key shapes, pass-throughs, or library behaviour. Keep timezone and air-time
+boundaries, regressions tied to `docs/solutions/`, and proxy allowlists. When
+you touch a test file, delete the tests your change made redundant.
 
 ## Comments
 

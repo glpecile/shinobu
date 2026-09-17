@@ -94,15 +94,6 @@ describe('mergeCatalogueMetadata', () => {
       digital: '2026-01-20',
     });
   });
-
-  test('keeps the item’s own release date over the catalogue’s', () => {
-    const merged = mergeCatalogueMetadata(
-      { ...letterboxdItem, releaseDate: '2025-01-01' },
-      { ...catalogue, releaseDate: '2025-11-14' },
-    );
-
-    expect(merged.releaseDate).toBe('2025-01-01');
-  });
 });
 
 import { applyPrimaryMetadata } from './merge-metadata';
@@ -246,28 +237,5 @@ describe('applyPrimaryMetadata', () => {
     });
     // User state still untouched.
     expect(merged.currentProgress).toBe(5);
-  });
-
-  test('a primary without release dates leaves the item’s intact', () => {
-    const merged = applyPrimaryMetadata(
-      {
-        ...item,
-        releaseDate: '2021-11-06',
-        releaseCalendar: { digital: '2021-12-01' },
-      },
-      {
-        id: 'tmdb-tv-94605',
-        title: 'Arcane',
-        coverImage: '',
-        type: 'TV',
-        currentProgress: 0,
-        progressUnit: 'episode',
-        lastUpdated: '2026-07-19T01:00:00Z',
-        externalIds: { tmdb: 94605 },
-      },
-    );
-
-    expect(merged.releaseDate).toBe('2021-11-06');
-    expect(merged.releaseCalendar).toEqual({ digital: '2021-12-01' });
   });
 });

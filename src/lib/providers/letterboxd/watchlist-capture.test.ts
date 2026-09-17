@@ -1,8 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
-  buildCaptureScript,
-  captureReport,
   parseCaptureMessage,
   redactHeaders,
   shouldCapture,
@@ -89,24 +87,5 @@ describe('parseCaptureMessage', () => {
     expect(parsed?.headers['X-CSRF-TOKEN']).toBe('«present, redacted»');
     expect(parsed?.method).toBe('POST');
     expect(parsed?.status).toBe(200);
-  });
-});
-
-describe('buildCaptureScript', () => {
-  test('is idempotent — a double onLoadEnd cannot double every capture', () => {
-    expect(buildCaptureScript()).toContain('if (window.__shinobuWatchlistCapture) return');
-  });
-
-  test('reads the response from a clone, so the page keeps its own stream', () => {
-    // Consuming the original would break the very control being driven.
-    expect(buildCaptureScript()).toContain('response.clone()');
-  });
-});
-
-describe('captureReport', () => {
-  test('demands the classification rather than leaving it implied', () => {
-    const report = captureReport([]);
-    expect(report).toContain('add-only | toggle | add + separate remove');
-    expect(report).toContain('does the RESPONSE say which of the two happened');
   });
 });

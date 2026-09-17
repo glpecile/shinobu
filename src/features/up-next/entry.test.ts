@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { entryInstant, entryLabel, episodeHref } from './entry';
+import { entryLabel, episodeHref } from './entry';
 import type { UpNextEntry, UpNextEpisode, UpNextRelease } from './types';
 
 /**
@@ -71,34 +71,6 @@ describe('entryLabel', () => {
     // canonical season — stamping "S1" here is the fabrication that wrote
     // phantom season-1 history for every sequel-season anime.
     expect(entryLabel(episodeEntry({ season: undefined, number: 7 }))).toBe('E7');
-  });
-
-  test('each release kind names itself rather than repeating the date', () => {
-    expect(entryLabel(releaseEntry({ kind: 'theatrical' }))).toBe('In theaters');
-    expect(entryLabel(releaseEntry({ kind: 'digital' }))).toBe('Streaming');
-    expect(entryLabel(releaseEntry({ kind: 'physical' }))).toBe(
-      'Physical release',
-    );
-  });
-});
-
-describe('entryInstant', () => {
-  test('an episode answers with its air instant', () => {
-    expect(entryInstant(episodeEntry({ firstAired: '2026-07-24T21:00:00Z' }))).toBe(
-      '2026-07-24T21:00:00Z',
-    );
-  });
-
-  test('an episode with no air instant answers undefined, not an empty string', () => {
-    // AniList back-episodes are aired by construction with nothing to prove it;
-    // every caller treats undefined as "no cell, no badge".
-    expect(entryInstant(episodeEntry())).toBeUndefined();
-  });
-
-  test('a release answers with its bare calendar date, unflattened', () => {
-    // Deliberately *not* normalized to an instant: `isDateOnly` is what stops
-    // the card asserting a 00:00 screening nobody stated.
-    expect(entryInstant(releaseEntry({ date: '2026-07-24' }))).toBe('2026-07-24');
   });
 });
 

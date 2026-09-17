@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
 import {
-  anilistStaffUrl,
-  anilistStudioUrl,
   letterboxdPersonSlug,
   letterboxdStudioUrl,
-  providerHomeUrl,
   providerItemUrl,
   providerPersonUrl,
   providerStudioUrl,
@@ -59,10 +56,6 @@ describe('providerItemUrl', () => {
         ...ids({ letterboxd: 'not-a-film', tmdb: 1 }),
       }),
     ).toBeNull();
-  });
-
-  it('returns null for Serializd without a tmdb id', () => {
-    expect(providerItemUrl('serializd', { type: 'TV', ...ids({ trakt: 1 }) })).toBeNull();
   });
 
   it('builds a Serializd URL from a tmdb id', () => {
@@ -167,20 +160,10 @@ describe('tmdbItemUrl', () => {
 });
 
 describe('letterboxdPersonSlug', () => {
-  it('lowercases and hyphenates a plain name', () => {
-    expect(letterboxdPersonSlug('Greta Gerwig')).toBe('greta-gerwig');
-  });
-
   it('strips diacritics onto their base letter', () => {
     expect(letterboxdPersonSlug('Joaquín Phoenix')).toBe('joaquin-phoenix');
     expect(letterboxdPersonSlug('Chloë Sevigny')).toBe('chloe-sevigny');
     expect(letterboxdPersonSlug("Lupita Nyong'o")).toBe('lupita-nyong-o');
-  });
-
-  it('collapses apostrophes and periods into single hyphens', () => {
-    expect(letterboxdPersonSlug("Conan O'Brien")).toBe('conan-o-brien');
-    expect(letterboxdPersonSlug('Robert Downey Jr.')).toBe('robert-downey-jr');
-    expect(letterboxdPersonSlug('J.K. Simmons')).toBe('j-k-simmons');
   });
 
   it('collapses middle dots and interpunct-style separators', () => {
@@ -197,10 +180,6 @@ describe('letterboxdPersonSlug', () => {
     expect(letterboxdPersonSlug('宮崎 駿')).toBe('');
     expect(letterboxdPersonSlug('新海誠')).toBe('');
     expect(letterboxdPersonSlug('   ')).toBe('');
-  });
-
-  it('keeps digits', () => {
-    expect(letterboxdPersonSlug('Travis Scott 2')).toBe('travis-scott-2');
   });
 });
 
@@ -269,19 +248,6 @@ describe('providerPersonUrl', () => {
     expect(providerPersonUrl('anilist', { name: '宮崎 駿' })).toBeNull();
     expect(providerPersonUrl('anilist', { name: '   ' })).toBeNull();
   });
-
-  it('returns null for Trakt, Serializd and Simkl (no addressable person surface)', () => {
-    expect(providerPersonUrl('trakt', { name: 'Ada Lovelace' })).toBeNull();
-    expect(providerPersonUrl('serializd', { name: 'Ada Lovelace' })).toBeNull();
-    expect(providerPersonUrl('simkl', { name: 'Ada Lovelace' })).toBeNull();
-  });
-});
-
-describe('the id-keyed AniList builders (plan 0035 R11)', () => {
-  it('builds staff and studio pages from a numeric id', () => {
-    expect(anilistStaffUrl(96_879)).toBe('https://anilist.co/staff/96879');
-    expect(anilistStudioUrl(21)).toBe('https://anilist.co/studio/21');
-  });
 });
 
 describe('letterboxdStudioUrl (plan 0035 R9)', () => {
@@ -292,18 +258,6 @@ describe('letterboxdStudioUrl (plan 0035 R9)', () => {
     );
   });
 
-  it('folds diacritics and collapses punctuation runs, as the slug rules say', () => {
-    expect(letterboxdStudioUrl('Gaumont Français')).toBe(
-      'https://letterboxd.com/studio/gaumont-francais/',
-    );
-    expect(letterboxdStudioUrl('Metro·Goldwyn·Mayer')).toBe(
-      'https://letterboxd.com/studio/metro-goldwyn-mayer/',
-    );
-    expect(letterboxdStudioUrl('  Toho   Co., Ltd.  ')).toBe(
-      'https://letterboxd.com/studio/toho-co-ltd/',
-    );
-  });
-
   it('returns null rather than a URL with an empty segment', () => {
     expect(letterboxdStudioUrl('東宝')).toBeNull();
     expect(letterboxdStudioUrl('   ')).toBeNull();
@@ -311,32 +265,10 @@ describe('letterboxdStudioUrl (plan 0035 R9)', () => {
 });
 
 describe('providerStudioUrl (plan 0035 R9/R10)', () => {
-  it('links Letterboxd from the name alone', () => {
-    expect(providerStudioUrl('letterboxd', { name: 'A24' })).toBe(
-      'https://letterboxd.com/studio/a24/',
-    );
-  });
-
   it('links AniList only with a resolved id — never a name search', () => {
     expect(providerStudioUrl('anilist', { name: 'Studio Ghibli' })).toBeNull();
     expect(
       providerStudioUrl('anilist', { name: 'Studio Ghibli', anilistId: 21 }),
     ).toBe('https://anilist.co/studio/21');
-  });
-
-  it('returns null for Trakt, Serializd and Simkl (no studio surface at all)', () => {
-    expect(providerStudioUrl('trakt', { name: 'A24' })).toBeNull();
-    expect(providerStudioUrl('serializd', { name: 'A24' })).toBeNull();
-    expect(providerStudioUrl('simkl', { name: 'A24' })).toBeNull();
-  });
-});
-
-describe('providerHomeUrl', () => {
-  it('returns each provider log surface root', () => {
-    expect(providerHomeUrl('trakt')).toBe('https://trakt.tv');
-    expect(providerHomeUrl('anilist')).toBe('https://anilist.co');
-    expect(providerHomeUrl('letterboxd')).toBe('https://letterboxd.com');
-    expect(providerHomeUrl('serializd')).toBe('https://serializd.com');
-    expect(providerHomeUrl('simkl')).toBe('https://simkl.com');
   });
 });

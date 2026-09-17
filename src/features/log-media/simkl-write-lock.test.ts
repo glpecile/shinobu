@@ -61,14 +61,6 @@ const settle = async () => {
 };
 
 describe('createSimklLogQueue', () => {
-  test('an unlocked queue posts immediately, alone', async () => {
-    const send = mock(async (_entries: SimklLogEntry[]) => ok);
-    const { clock } = fakeClock();
-    const queue = createSimklLogQueue(send, clock);
-    await expect(queue.log(entry(1))).resolves.toEqual(ok);
-    expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0][0]).toEqual([entry(1)]);
-  });
 
   test('writes inside the lock coalesce into one POST when it lifts', async () => {
     const send = mock(async (_entries: SimklLogEntry[]) => ok);

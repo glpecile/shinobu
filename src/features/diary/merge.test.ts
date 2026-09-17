@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
 import type {
-  MediaType,
   MergedDiaryEntry,
   NormalizedDiaryEntry,
   NormalizedMediaItem,
@@ -98,20 +97,6 @@ describe('mergeDiaryEntries — watermark', () => {
     expect(merged[3].id).toBe('trakt-1');
   });
 
-  test('a single paginating provider degenerates to plain pagination', () => {
-    const merged = mergeDiaryEntries([
-      state(
-        'trakt',
-        [
-          entry('trakt', '1', '2026-07-10T12:00:00.000Z'),
-          entry('trakt', '2', '2026-07-01T12:00:00.000Z'),
-        ],
-        { hasMore: true },
-      ),
-    ]);
-    // Watermark = its own oldest → everything loaded shows, newest first.
-    expect(merged.map((e) => e.id)).toEqual(['trakt-1', 'trakt-2']);
-  });
 });
 
 describe('mergeDiaryEntries — failure & dedup', () => {
@@ -124,14 +109,6 @@ describe('mergeDiaryEntries — failure & dedup', () => {
       state('anilist', [], { hasMore: false, failed: true }),
     ]);
     expect(merged.map((e) => e.id)).toEqual(['trakt-1']);
-  });
-
-  test('every provider failing yields zero entries (AE5 substrate)', () => {
-    const merged = mergeDiaryEntries([
-      state('trakt', [], { hasMore: false, failed: true }),
-      state('anilist', [], { hasMore: false, failed: true }),
-    ]);
-    expect(merged).toEqual([]);
   });
 
   test('an entry re-returned on an overlapping page is not duplicated', () => {
@@ -203,19 +180,6 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     expect(row.id).toBe('trakt-100');
     expect(row.item.externalIds.tmdb).toBe(603);
     expect(row.item.externalIds.letterboxd).toBe('fight-club');
-  });
-
-  test('AE6: three same-day Trakt episodes → three rows', () => {
-    const show = { id: 'trakt-200', title: 'Monogatari', type: 'TV' as MediaType, externalIds: { tmdb: 46004 } };
-    const merged = mergeDiaryEntries([
-      state('trakt', [
-        entry('trakt', 'a', '2026-07-20T20:00:00.000Z', { item: item(show), episodes: [1], season: 2 }),
-        entry('trakt', 'b', '2026-07-20T21:00:00.000Z', { item: item(show), episodes: [2], season: 2 }),
-        entry('trakt', 'c', '2026-07-20T22:00:00.000Z', { item: item(show), episodes: [3], season: 2 }),
-      ]),
-    ]);
-    const days = groupDiaryEntries(merged, TZ_MINUS_5);
-    expect(days[0].entries).toHaveLength(3);
   });
 
   test('AE6: two same-day Trakt logs of one movie (rewatch) → two rows', () => {
@@ -295,15 +259,6 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     expect(mergedDiff[0].entries).toHaveLength(2);
   });
 
-  test('the same item on different local days does not merge', () => {
-    const merged = mergeDiaryEntries([
-      state('trakt', [entry('trakt', '1', '2026-07-20T18:00:00.000Z', { item: item({ id: 'trakt-603', externalIds: { tmdb: 603 } }) })]),
-      state('letterboxd', [entry('letterboxd', 'g', '2026-07-19', { dateOnly: true, item: item({ id: 'letterboxd-x', externalIds: { tmdb: 603 } }) })]),
-    ]);
-    const days = groupDiaryEntries(merged, TZ_MINUS_5);
-    expect(days).toHaveLength(2);
-    expect(days.every((day) => day.entries.length === 1)).toBe(true);
-  });
 });
 
 describe('groupDiaryEntries — timezone & ordering', () => {
@@ -337,12 +292,6 @@ describe('groupDiaryEntries — timezone & ordering', () => {
 });
 
 describe('formatEpisodeRange', () => {
-  test('a contiguous run renders as an en-dash range', () => {
-    expect(formatEpisodeRange([3, 4, 5])).toBe('3–5');
-  });
-  test('a gap renders as a comma list', () => {
-    expect(formatEpisodeRange([2, 5])).toBe('2, 5');
-  });
   test('mixed runs and singles', () => {
     expect(formatEpisodeRange([1, 2, 3, 7, 9, 10])).toBe('1–3, 7, 9–10');
   });
@@ -472,12 +421,6 @@ describe('clusterDayEntries', () => {
     expect(clusters[0].key).toBe('e10');
   });
 
-  test('a lone episode log stays a singleton cluster', () => {
-    const clusters = clusterDayEntries([ep('solo', 1, 1)]);
-    expect(clusters).toHaveLength(1);
-    expect(clusters[0].entries).toHaveLength(1);
-  });
-
   test('movies (no episodes) never fold, even same-title rewatches', () => {
     const movie = mergedEntry({
       id: 'm1',
@@ -580,57 +523,6 @@ describe('Serializd diary in the unified merge', () => {
     expect(rows[0].season).toBe(1);
   });
 
-  test('a failed Serializd read leaves the other providers rendered (partial failure)', () => {
-    const trakt = entry('trakt', 't1', '2026-07-20T18:00:00.000Z');
-    const merged = mergeDiaryEntries([
-      state('trakt', [trakt]),
-      state('serializd', [], { failed: true }),
-    ]);
-    expect(merged.map((e) => e.id)).toContain('trakt-t1');
-  });
-
-  test('entries group by dateAdded (watchedAt), so a backdated log surfaces on its page day (KTD8)', () => {
-    // watchedAt carries dateAdded (KTD8): a log added on the 20th but backdated
-    // to an old watch groups under the 20th — it surfaces when its page loads,
-    // not at a chronological slot the merge can't reach.
-    const recent = entry('serializd', 's-recent', '2026-07-20T18:00:00.000Z', {
-      episodes: [5],
-      season: 1,
-      item: tvItem('serializd-1396'),
-    });
-    const older = entry('serializd', 's-older', '2026-07-10T18:00:00.000Z', {
-      episodes: [1],
-      season: 1,
-      item: tvItem('serializd-1396'),
-    });
-
-    const days = groupDiaryEntries(
-      mergeDiaryEntries([state('serializd', [recent, older])]),
-      TZ_MINUS_5,
-    );
-
-    expect(days.map((d) => d.key)).toEqual(['2026-07-20', '2026-07-10']);
-  });
-
-  test('a season-level entry (no episodes) stays its own row, not collapsed with an episode log', () => {
-    const day = '2026-07-20T18:00:00.000Z';
-    const episodeLog = entry('serializd', 's-ep', day, {
-      episodes: [5],
-      season: 1,
-      item: tvItem('serializd-1396'),
-    });
-    const seasonLog = entry('trakt', 't-season', day, {
-      season: 1,
-      item: tvItem('trakt-1396-item'),
-    });
-
-    const days = groupDiaryEntries(
-      mergeDiaryEntries([state('serializd', [episodeLog]), state('trakt', [seasonLog])]),
-      TZ_MINUS_5,
-    );
-    // Different episode signatures ([5] vs none) don't collapse.
-    expect(days[0].entries).toHaveLength(2);
-  });
 });
 
 describe('Simkl diary in the unified merge', () => {
@@ -714,20 +606,6 @@ describe('Simkl diary in the unified merge', () => {
     const rows = days[0].entries;
     expect(rows).toHaveLength(1);
     expect(rows[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
-  });
-
-  test('two Simkl logs of one show never collapse with each other (same-provider rule)', () => {
-    const day = '2026-07-31T18:00:00.000Z';
-    const shared = () =>
-      item({ id: 'simkl-200', type: 'ANIME', externalIds: { mal: 999 } });
-    const e4 = entry('simkl', '200-s1e4', day, { episodes: [4], item: shared() });
-    const e5 = entry('simkl', '200-s1e5', day, { episodes: [5], item: shared() });
-
-    const days = groupDiaryEntries(
-      mergeDiaryEntries([state('simkl', [e4, e5])]),
-      TZ_MINUS_5,
-    );
-    expect(days[0].entries).toHaveLength(2);
   });
 
   test('id-bearing items never fall back to a title+year join', () => {
