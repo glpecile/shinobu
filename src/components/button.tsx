@@ -139,8 +139,10 @@ export interface ButtonProps {
    * never grows a second icon-set dependency in its own signature, and so a
    * call site can pass nothing at all without a sentinel.
    *
-   * Hidden while `loading`: the spinner already occupies that slot, and showing
-   * both makes the row jump as the spinner mounts.
+   * While `loading` with a `loadingLabel`, the spinner takes this slot and the
+   * glyph drops out. Without one the spinner overlays the label instead, so the
+   * glyph stays in layout and only fades out — an unmounted glyph would shrink
+   * the pill under a spinner that is centred on its old width.
    */
   icon?: ReactNode;
   /**
@@ -292,7 +294,7 @@ export function Button({
             <ActivityIndicator color={spinnerColor} size="small" />
           </AnimatedView>
         )}
-        {icon != null && !loading && (
+        {icon != null && (overlay || !loading) && (
           // Same own-box wrapper as the spinner, for the same native reason.
           // The dimming rides here rather than on the icon so `Button.Icon`
           // stays a pure "draw this glyph" leaf: the icon inherits one colour
@@ -310,7 +312,7 @@ export function Button({
                 full by its own enter, and Reanimated warned about exactly
                 that. docs/solutions/reanimated-fade-overwrites-static-opacity.md */}
             <AnimatedView
-              className={cn(unavailable && 'opacity-60')}
+              className={cn(overlay ? 'opacity-0' : unavailable && 'opacity-60')}
               style={COLOR_TRANSITION}
             >
               <ButtonIconContext.Provider
