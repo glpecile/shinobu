@@ -4,9 +4,9 @@ import {
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { View } from 'react-native';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { ScrolledTitle } from '@/components/scrolled-title';
 // Layout-generic despite the name — the studio page shares the person
 // page's header-plus-rows shape, so its skeleton and miss state fit as-is.
 import { PersonNotFound } from '@/features/person';
@@ -40,12 +40,12 @@ export default function StudioScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <ScrolledTitle className="bg-background">
       <Suspense fallback={<StudioSkeleton />}>
         <StudioContent tmdbId={tmdbId} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />
-    </View>
+    </ScrolledTitle>
   );
 }
 

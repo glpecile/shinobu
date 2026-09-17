@@ -4,6 +4,7 @@ import { FadeOut } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { BlurEnter } from '@/components/blur-enter';
+import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { DURATION } from '@/lib/motion';
@@ -20,7 +21,6 @@ import {
   EpisodeLogs,
   EpisodeNav,
   EpisodeOverview,
-  EpisodeOverviewSkeleton,
   EpisodeSeriesLink,
   EpisodeStill,
   useGoToEpisode,
@@ -41,9 +41,9 @@ const TWO_COLUMN_MIN_WIDTH = 768;
 
 /**
  * Web: a page inside the sidebar shell. Wide viewports get the still beside
- * the heading and overview (a 16:9 image stacked over text wastes the width
- * a desktop has); narrow ones stack like the native screens. Credits run the
- * full width below either way.
+ * the heading (a 16:9 image stacked over text wastes the width a desktop
+ * has); narrow ones stack like the native screens. The overview and credits
+ * run the full width below either way.
  */
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
@@ -117,13 +117,13 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                     season={season}
                     watched={logs.length > 0}
                   />
-                  <View className="mt-5">
-                    <EpisodeOverview episode={view.episode} />
-                  </View>
                 </>
               )}
             </View>
           </View>
+          {view.episode != null && (
+            <EpisodeOverview className="mt-6" episode={view.episode} />
+          )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
           <EpisodeNav
             className="mt-8"
@@ -157,9 +157,9 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
           <View className={cn('flex-1', !wide && 'mt-5')}>
             <EpisodeHeaderSkeleton />
             <Skeleton className="h-12 w-44 rounded-full mt-5" delay={staggerDelay(1)} />
-            <EpisodeOverviewSkeleton className="mt-5" />
           </View>
         </View>
+        <ExpandableText.Skeleton className="mt-6" lines={4} />
         <PeopleSectionsSkeleton />
         <View className="flex-row gap-3 mt-8">
           <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />

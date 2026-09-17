@@ -4,9 +4,9 @@ import {
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { View } from 'react-native';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { ScrolledTitle } from '@/components/scrolled-title';
 import { PersonNotFound } from '@/features/person';
 import { StudioSkeleton } from '@/features/studio/studio-skeleton';
 import { StudioDetailsView } from '@/features/studio/studio-details-view';
@@ -62,12 +62,12 @@ export default function StudioLookupScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <ScrolledTitle className="bg-background">
       <Suspense fallback={<StudioSkeleton />}>
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />
-    </View>
+    </ScrolledTitle>
   );
 }
 

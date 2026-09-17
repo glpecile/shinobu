@@ -9,7 +9,7 @@ import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
-import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import {
   PeopleSection,
@@ -148,9 +148,15 @@ export function EpisodeLogs({
   );
 }
 
-export function EpisodeOverview({ episode }: { episode: NormalizedEpisode }) {
+export function EpisodeOverview({
+  episode,
+  className,
+}: {
+  episode: NormalizedEpisode;
+  className?: string;
+}) {
   if (episode.overview == null) return null;
-  return <ExpandableText lines={4} text={episode.overview} />;
+  return <ExpandableText className={className} lines={4} text={episode.overview} />;
 }
 
 function EpisodeCredits({
@@ -328,21 +334,6 @@ export function EpisodeHeaderSkeleton() {
       <Skeleton className="h-3 w-32 rounded mt-0.5" />
       <Skeleton className="h-7 w-64 rounded mt-2.5" />
       <Skeleton className="h-3.5 w-40 rounded mt-3" />
-    </View>
-  );
-}
-
-/**
- * The overview's four clamped lines on `ExpandableText`'s geometry — a
- * `text-base leading-relaxed` line is 26px — plus the `mb-6` it carries.
- */
-export function EpisodeOverviewSkeleton({ className }: { className?: string }) {
-  return (
-    <View className={cn('mt-6 mb-6', className)}>
-      <Skeleton className="h-4 w-full rounded mt-1" delay={staggerDelay(2)} />
-      <Skeleton className="h-4 w-full rounded mt-2.5" delay={staggerDelay(2)} />
-      <Skeleton className="h-4 w-full rounded mt-2.5" delay={staggerDelay(2)} />
-      <Skeleton className="h-4 w-2/3 rounded mt-2.5" delay={staggerDelay(2)} />
     </View>
   );
 }

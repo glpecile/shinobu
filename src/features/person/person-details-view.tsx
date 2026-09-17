@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { ExpandableText } from '@/components/expandable-text';
 import Head from '@/components/head';
+import { ScrolledTitle } from '@/components/scrolled-title';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -63,18 +64,16 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                 </View>
               )}
               <View className="flex-1">
-                <CopyTitle title={person.name} />
+                <ScrolledTitle.Anchor>
+                  <CopyTitle title={person.name} />
+                </ScrolledTitle.Anchor>
                 {meta !== '' && (
                   <Text className="text-muted font-sans text-sm mt-1.5">{meta}</Text>
                 )}
               </View>
             </View>
-            {/* A measure, not the column: at 896px a bio line runs past a
-                hundred characters and the hero reads as an article. */}
             {person.biography != null && (
-              <View className="max-w-xl">
-                <ExpandableText lines={4} text={person.biography} title="Biography" />
-              </View>
+              <ExpandableText lines={4} text={person.biography} title="Biography" />
             )}
           </View>
         }
@@ -92,6 +91,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
         }
         onItemPress={(item) => pushRoute(routes.details(item.id))}
       />
+      <ScrolledTitle.Bar title={person.name} />
       <CardActionsSheet {...sheetProps} />
     </>
   );

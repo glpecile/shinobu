@@ -3,8 +3,11 @@ import { LayoutAnimation, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { DisclosureChevron } from '@/components/disclosure-chevron';
-import { PresstableOpacity } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
+import { cn } from '@/lib/cn';
 import { DISCLOSURE_LAYOUT } from '@/lib/motion';
+
+import { ExpandableTextSkeleton } from './skeleton';
 
 const BODY = 'text-foreground/90 font-sans text-base leading-relaxed';
 
@@ -13,10 +16,13 @@ export function ExpandableText({
   text,
   title = 'Overview',
   lines = 2,
+  className,
 }: {
   text: string;
   title?: string;
   lines?: number;
+  /** Layout only. */
+  className?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [fullLines, setFullLines] = useState(0);
@@ -31,10 +37,11 @@ export function ExpandableText({
   return (
     // The card is an inner View: a border on the pressable itself is never
     // drawn on Android (docs/solutions/pressto-border-not-drawn-on-android.md).
-    <PresstableOpacity
+    <PresstableScale
       accessibilityState={{ expanded }}
-      className="rounded-lg mb-6"
+      className={cn('rounded-lg mb-6', className)}
       disabled={!expandable}
+      minScale={0.985}
       onPress={toggle}
     >
       <View className="bg-surface border border-border rounded-lg px-4 py-3">
@@ -70,6 +77,8 @@ export function ExpandableText({
           </View>
         </View>
       </View>
-    </PresstableOpacity>
+    </PresstableScale>
   );
 }
+
+ExpandableText.Skeleton = ExpandableTextSkeleton;
