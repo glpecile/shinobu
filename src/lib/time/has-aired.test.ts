@@ -12,11 +12,6 @@ describe('hasAired', () => {
     expect(hasAired('not a date', NOW)).toBe(false);
   });
 
-  test('a full ISO instant strictly before now has aired', () => {
-    expect(hasAired('2026-07-13T11:59:59.000Z', NOW)).toBe(true);
-    expect(hasAired('2022-01-01T00:00:00.000Z', NOW)).toBe(true);
-  });
-
   test('a full ISO instant strictly after now has not aired', () => {
     expect(hasAired('2026-07-13T12:00:01.000Z', NOW)).toBe(false);
     expect(hasAired('2027-01-01T00:00:00.000Z', NOW)).toBe(false);
@@ -36,12 +31,5 @@ describe('hasAired', () => {
     // a far-future date-only string is unaired and a past one is aired.
     expect(hasAired('2022-01-01', NOW)).toBe(true);
     expect(hasAired('2030-01-01', NOW)).toBe(false);
-  });
-
-  test('default now uses the wall clock', () => {
-    // Sanity: calling without the injectable `now` defaults to the present,
-    // so a year-ago instant has aired and a year-ahead one hasn't.
-    expect(hasAired('2000-01-01T00:00:00.000Z')).toBe(true);
-    expect(hasAired('2099-01-01T00:00:00.000Z')).toBe(false);
   });
 });

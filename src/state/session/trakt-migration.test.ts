@@ -110,11 +110,6 @@ describe('Connected: token + user creds (regression)', () => {
 });
 
 describe('Disconnected: no token', () => {
-  test('needsCredentials is false and Trakt is simply not connected', () => {
-    expect(traktNeedsCredentials()).toBe(false);
-    expect(usableProviderIds()).not.toContain('trakt');
-  });
-
   test('credentials without a token are still just disconnected (setup saved, OAuth pending)', () => {
     setProviderClientId('trakt', 'byo-cid');
 

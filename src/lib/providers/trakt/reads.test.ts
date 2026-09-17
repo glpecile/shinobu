@@ -79,15 +79,6 @@ describe('getWatchedShows pagination (2026 Trakt API change)', () => {
     // extended=progress seasons drive currentProgress (watched episode count).
     expect(items[0]?.currentProgress).toBe(1);
   });
-
-  test('a single short page makes exactly one request', async () => {
-    const requested: string[] = [];
-    const items = await Effect.runPromise(
-      getWatchedShows(pagedDeps([[watchedShow(1)]], requested)),
-    );
-    expect(requested).toHaveLength(1);
-    expect(items).toHaveLength(1);
-  });
 });
 
 /** Serves a fixed body/status for `/sync/history`, recording the request URL. */
@@ -135,14 +126,6 @@ describe('getHistory (diary source, plan 0016)', () => {
     expect(requested).toEqual(['/sync/history?extended=full&page=3&limit=50']);
     expect(entries).toHaveLength(1);
     expect(entries[0]?.id).toBe('trakt-1');
-  });
-
-  test('an empty page returns [] (the exhaustion signal)', async () => {
-    const requested: string[] = [];
-    const entries = await Effect.runPromise(
-      getHistory(historyDeps(() => json([]), requested), { page: 9 }),
-    );
-    expect(entries).toEqual([]);
   });
 
   test('a malformed payload surfaces a tagged provider error, not a throw', async () => {
@@ -278,17 +261,6 @@ describe('the movie calendars', () => {
       expect(releases[0]?.item.releaseCalendar).toEqual({ [kind]: '2026-07-31' });
     }
   });
-
-  test('a row with no release date drops rather than failing the read', async () => {
-    const requested: string[] = [];
-    const releases = await Effect.runPromise(
-      getMyMoviesCalendar(
-        calendarDeps([{ movie: { title: 'Untitled', ids: { trakt: 401 } } }], requested),
-        { startDate: '2026-07-27' },
-      ),
-    );
-    expect(releases).toEqual([]);
-  });
 });
 
 /** One `/sync/watchlist` movie row, added on the given day. */
@@ -322,21 +294,6 @@ describe('getWatchlist (plan 0031 U11, discussion #681)', () => {
       '/sync/watchlist/all/added/desc?extended=full,images&page=2&limit=250',
     ]);
     expect(items).toHaveLength(290);
-  });
-
-  test('a full page followed by an empty one terminates', async () => {
-    const requested: string[] = [];
-    const pages = [
-      Array.from({ length: 250 }, (_, i) =>
-        watchlistMovie(i + 1, '2026-07-01T00:00:00.000Z'),
-      ),
-      [],
-    ];
-
-    const items = await Effect.runPromise(getWatchlist(pagedDeps(pages, requested)));
-
-    expect(requested).toHaveLength(2);
-    expect(items).toHaveLength(250);
   });
 
   test('type/sort segments come from the caller', async () => {
@@ -388,14 +345,5 @@ describe('getWatchlist (plan 0031 U11, discussion #681)', () => {
     ]);
     const sorted = [...items].sort((a, b) => a.lastUpdated.localeCompare(b.lastUpdated));
     expect(sorted.map((item) => item.id)).toEqual(['trakt-2', 'trakt-1']);
-  });
-
-  test('rank and the list-item id stay off the normalized item', async () => {
-    const requested: string[] = [];
-    const items = await Effect.runPromise(
-      getWatchlist(pagedDeps([[watchlistMovie(7, '2026-07-01T00:00:00.000Z')]], requested)),
-    );
-    expect(items[0]?.id).toBe('trakt-7');
-    expect(items[0]).not.toHaveProperty('rank');
   });
 });

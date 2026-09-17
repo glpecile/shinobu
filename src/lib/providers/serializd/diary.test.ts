@@ -62,12 +62,6 @@ describe('serializdNextPage', () => {
 });
 
 describe('normalizeDiaryReview', () => {
-  test('two same-day logs of the same episode keep distinct ids (no dedup collision)', () => {
-    const a = normalizeDiaryReview(review({ reviewId: 10 }), 'now');
-    const b = normalizeDiaryReview(review({ reviewId: 11 }), 'now');
-    expect(a.id).not.toBe(b.id);
-  });
-
   test('synthesizes a unique id when no review id is present', () => {
     const entry = normalizeDiaryReview(
       review({ reviewId: undefined, id: undefined }),

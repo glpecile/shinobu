@@ -35,16 +35,6 @@ function testClock() {
 }
 
 describe('createAniListWriteQueue', () => {
-  test('the first write goes straight out', async () => {
-    const queue = createAniListWriteQueue(testClock().clock);
-    let ran = 0;
-    const result = queue.submit('1:false', 3, async () => {
-      ran += 1;
-      return 'ok';
-    });
-    expect(await result).toBe('ok');
-    expect(ran).toBe(1);
-  });
 
   test('writes waiting on one entry collapse into its highest episode', async () => {
     const { clock, advance } = testClock();

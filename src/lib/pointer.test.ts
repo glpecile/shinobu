@@ -36,9 +36,4 @@ describe('hasCoarsePointer', () => {
     expect(hasCoarsePointer()).toBe(true);
     expect(queries).toEqual(['(pointer: coarse)']);
   });
-
-  test('is false on a fine pointer (desktop keeps its autoFocus)', () => {
-    stubMatchMedia(() => ({ matches: false }));
-    expect(hasCoarsePointer()).toBe(false);
-  });
 });

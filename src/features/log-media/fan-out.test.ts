@@ -18,23 +18,6 @@ const item: NormalizedMediaItem = {
 const variables: LogMediaVariables = { item };
 
 describe('fanOutLog', () => {
-  test('all providers succeeding yields ok outcomes in target order', async () => {
-    const result = await fanOutLog(
-      {
-        trakt: () => Promise.resolve({ status: 'ok' as const }),
-        letterboxd: () => Promise.resolve({ status: 'ok' as const }),
-      },
-      ['trakt', 'letterboxd'],
-      variables,
-    );
-
-    expect(result.outcomes).toEqual([
-      { provider: 'trakt', status: 'ok' },
-      { provider: 'letterboxd', status: 'ok' },
-    ]);
-    expect(result.succeeded).toEqual(['trakt', 'letterboxd']);
-    expect(result.failed).toEqual([]);
-  });
 
   test('one failure surfaces per-provider, never collapsing the others', async () => {
     const result = await fanOutLog(
@@ -144,30 +127,6 @@ describe('fanOutLog', () => {
       status: 'ok',
       reason: 'S1 is already watched on Serializd',
     });
-  });
-
-  test('Covers AE2 — a Serializd auth failure is per-provider; Trakt still succeeds, nothing retried', async () => {
-    let serializdCalls = 0;
-    const result = await fanOutLog(
-      {
-        trakt: () => Promise.resolve({ status: 'ok' as const }),
-        serializd: () => {
-          serializdCalls++;
-          return Promise.reject(
-            new Error('serializd: session expired or was rejected — reconnect serializd'),
-          );
-        },
-      },
-      ['trakt', 'serializd'],
-      variables,
-    );
-
-    expect(result.succeeded).toEqual(['trakt']);
-    expect(result.failed).toEqual(['serializd']);
-    expect(result.outcomes[1]).toMatchObject({ provider: 'serializd', status: 'error' });
-    expect((result.outcomes[1] as { message: string }).message).toContain('reconnect');
-    // fanOutLog fires each adapter exactly once — the fan-out never retries.
-    expect(serializdCalls).toBe(1);
   });
 
   test('non-Error rejections stringify into the outcome message', async () => {

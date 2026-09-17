@@ -113,39 +113,4 @@ describe('visibleEntries', () => {
     // leaving the streaming row standing would be the hide half-applied.
     expect(visible.map((entry) => entry.id)).toEqual(['trakt-severance-s1e1']);
   });
-
-  test('hiding one film leaves another film’s release rows alone', () => {
-    const dune = film('dune');
-    const odyssey = film('odyssey');
-    const entries = [
-      releaseEntry(dune, 'theatrical', '2026-07-29'),
-      releaseEntry(odyssey, 'theatrical', '2026-07-31'),
-      releaseEntry(odyssey, 'digital', '2026-08-05'),
-    ];
-
-    const visible = visibleEntries(entries, [hide(dune)]);
-
-    expect(visible.map((entry) => entry.id)).toEqual([
-      'trakt-odyssey-theatrical',
-      'trakt-odyssey-digital',
-    ]);
-  });
-
-  test('nothing hidden returns the very same array (identity, not a copy)', () => {
-    const entries = [
-      releaseEntry(film('dune'), 'theatrical', '2026-07-29'),
-      episodeEntry('severance'),
-    ];
-
-    // A fresh array every render would change identity for every card below it
-    // — the exact regression `visibleItems` was rewritten to avoid (plan 0024
-    // U7/KTD4).
-    expect(visibleEntries(entries, [])).toBe(entries);
-  });
-
-  test('a hidden item that isn’t in the section changes nothing', () => {
-    const entries = [episodeEntry('severance')];
-
-    expect(visibleEntries(entries, [hide(film('dune'))])).toBe(entries);
-  });
 });

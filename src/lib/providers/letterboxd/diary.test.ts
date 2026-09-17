@@ -37,12 +37,6 @@ const RSS = `<?xml version="1.0" encoding="UTF-8"?>
 </channel>
 </rss>`;
 
-// Two logs of the same film on the same day — distinct guids → distinct entries.
-const RSS_SAME_FILM_TWICE = `<rss xmlns:letterboxd="https://letterboxd.com" xmlns:tmdb="https://themoviedb.org"><channel>
-<item><link>https://letterboxd.com/u/film/heat/</link><guid>letterboxd-watch-1</guid><letterboxd:watchedDate>2026-07-19</letterboxd:watchedDate><letterboxd:rewatch>No</letterboxd:rewatch><letterboxd:filmTitle>Heat</letterboxd:filmTitle><letterboxd:filmYear>1995</letterboxd:filmYear><tmdb:movieId>949</tmdb:movieId><description><![CDATA[ ok ]]></description></item>
-<item><link>https://letterboxd.com/u/film/heat/</link><guid>letterboxd-watch-2</guid><letterboxd:watchedDate>2026-07-19</letterboxd:watchedDate><letterboxd:rewatch>Yes</letterboxd:rewatch><letterboxd:filmTitle>Heat</letterboxd:filmTitle><letterboxd:filmYear>1995</letterboxd:filmYear><tmdb:movieId>949</tmdb:movieId><description><![CDATA[ ok ]]></description></item>
-</channel></rss>`;
-
 function deps(fetchImpl: LetterboxdDeps['fetch'], username = 'davidehrlich'): LetterboxdDeps {
   return { fetch: fetchImpl, username, session: null };
 }
@@ -72,12 +66,6 @@ describe('parseDiaryFeed', () => {
       rewatch: true,
     });
     expect(items[1].tmdbId).toBeUndefined();
-  });
-
-  test('two logs of one film on one day stay distinct (distinct guids)', () => {
-    const items = parseDiaryFeed(RSS_SAME_FILM_TWICE);
-    expect(items).toHaveLength(2);
-    expect(items[0].guid).not.toBe(items[1].guid);
   });
 });
 

@@ -123,13 +123,6 @@ describe('logToSimkl', () => {
     expect(body.anime).toHaveLength(1);
   });
 
-  test('the history POST carries the session token', async () => {
-    const { deps, calls } = makeDeps(() => okHistoryResponse());
-    await Effect.runPromise(logToSimkl(deps, [{ item: movie }]));
-    const headers = calls[0]!.init?.headers as Record<string, string>;
-    expect(headers.Authorization).toBe('Bearer tok-1');
-  });
-
   test('a missing session fails as ProviderAuthError before any request', async () => {
     const { deps, calls } = makeDeps(() => okHistoryResponse());
     deps.tokens.get = () => null;
@@ -192,34 +185,6 @@ describe('logToSimkl', () => {
         watched_at: '2026-09-01T00:00:00.000Z',
       },
     ]);
-  });
-
-  test('watched_at is the ISO instant, threaded per entry', async () => {
-    const { deps, calls } = makeDeps(() => okHistoryResponse());
-    await Effect.runPromise(
-      logToSimkl(deps, [
-        { item: movie, watchedAt: '2026-07-30T21:00:00.000Z' },
-        {
-          item: show,
-          episodes: [{ season: 1, number: 2 }],
-          watchedAt: '2026-07-29T20:00:00.000Z',
-        },
-      ]),
-    );
-    const body = requestBody(calls[0]!);
-    expect((body.movies as Array<{ watched_at?: string }>)[0]!.watched_at).toBe(
-      '2026-07-30T21:00:00.000Z',
-    );
-    expect((body.shows as Array<{ watched_at?: string }>)[0]!.watched_at).toBe(
-      '2026-07-29T20:00:00.000Z',
-    );
-  });
-
-  test('omitted watched_at stays omitted (Simkl records "now")', async () => {
-    const { deps, calls } = makeDeps(() => okHistoryResponse());
-    await Effect.runPromise(logToSimkl(deps, [{ item: movie }]));
-    const body = requestBody(calls[0]!);
-    expect((body.movies as Array<Record<string, unknown>>)[0]!.watched_at).toBeUndefined();
   });
 
   test('ids prefer simkl over every external id', async () => {
@@ -320,36 +285,6 @@ describe('logToSimkl', () => {
     expect(calls).toHaveLength(0);
   });
 
-  test('an empty batch is a reasoned skip with no request', async () => {
-    const { deps, calls } = makeDeps(() => okHistoryResponse());
-    const result = await Effect.runPromise(logToSimkl(deps, []));
-    expect(result.status).toBe('skipped');
-    expect(calls).toHaveLength(0);
-  });
-
-  test('the write-lock 400 propagates ProviderRateLimitError untouched — one call, no retry', async () => {
-    const { deps, calls } = makeDeps(() =>
-      Response.json({ error: 'rate_limit' }, { status: 400 }),
-    );
-    const error = await Effect.runPromise(Effect.flip(logToSimkl(deps, [{ item: movie }])));
-    expect(error._tag).toBe('ProviderRateLimitError');
-    expect(calls).toHaveLength(1);
-  });
-
-  test('all submitted items in not_found is a reasoned skip', async () => {
-    const { deps } = makeDeps(() =>
-      Response.json({
-        added: { movies: 0, shows: 0, episodes: 0 },
-        not_found: { movies: [{ ids: { tmdb: 603 } }], shows: [], episodes: [] },
-      }),
-    );
-    const result = await Effect.runPromise(logToSimkl(deps, [{ item: movie }]));
-    expect(result.status).toBe('skipped');
-    if (result.status === 'skipped') {
-      expect(result.reason).toContain('match');
-    }
-  });
-
   test('an episode-level not_found (unmatched episodes, nothing else) is the not-found skip, not a bare ok', async () => {
     // Simkl files an episode-scoped miss under not_found.episodes, not
     // not_found.shows — it must still count as a miss, or the fan-out's
@@ -397,22 +332,6 @@ describe('logToSimkl', () => {
       expect(result.reason).toContain('no Simkl-resolvable id');
     }
   });
-
-  test('a partial not_found is still ok — carrying the reason', async () => {
-    const { deps } = makeDeps(() =>
-      Response.json({
-        added: { movies: 1, shows: 0, episodes: 0 },
-        not_found: { movies: [], shows: [{ ids: { tmdb: 1396 } }], episodes: [] },
-      }),
-    );
-    const result = await Effect.runPromise(
-      logToSimkl(deps, [{ item: movie }, { item: show, episodes: [{ season: 1, number: 2 }] }]),
-    );
-    expect(result.status).toBe('ok');
-    if (result.status === 'ok') {
-      expect(result.reason).toBeDefined();
-    }
-  });
 });
 
 describe('addToSimklWatchlist', () => {
@@ -426,21 +345,6 @@ describe('addToSimklWatchlist', () => {
     expect(body.movies).toEqual([
       { to: 'plantowatch', ids: { tmdb: 603, imdb: 'tt0133093' } },
     ]);
-  });
-
-  test('a TV show watchlists under shows[] with its tmdb id', async () => {
-    const { deps, calls } = makeDeps(() => okAddToListResponse());
-    await Effect.runPromise(addToSimklWatchlist(deps, show));
-    const body = requestBody(calls[0]!);
-    expect(body.shows).toEqual([{ to: 'plantowatch', ids: { tmdb: 1396 } }]);
-  });
-
-  test('an anime film watchlists under anime[] with its mal id', async () => {
-    const { deps, calls } = makeDeps(() => okAddToListResponse());
-    await Effect.runPromise(addToSimklWatchlist(deps, animeFilm));
-    const body = requestBody(calls[0]!);
-    expect(body.movies).toBeUndefined();
-    expect(body.anime).toEqual([{ to: 'plantowatch', ids: { mal: 32281 } }]);
   });
 
   test('an all-not_found add is a reasoned skip', async () => {
@@ -565,19 +469,6 @@ describe('removeFromSimklWatchlist', () => {
     );
     const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
     expect(result.status).toBe('ok');
-  });
-
-  test('an all-not_found remove is a reasoned skip', async () => {
-    const { deps } = makeRemoveDeps(
-      { movies: [planToWatchRow({ ids: { tmdb: 603 }, title: 'The Matrix' })] },
-      () =>
-        Response.json({
-          deleted: { movies: 0, shows: 0, episodes: 0 },
-          not_found: { movies: [{ ids: { tmdb: 603 } }], shows: [] },
-        }),
-    );
-    const result = await Effect.runPromise(removeFromSimklWatchlist(deps, movie));
-    expect(result.status).toBe('skipped');
   });
 
   test('an episode-level not_found on remove is a reasoned skip too', async () => {

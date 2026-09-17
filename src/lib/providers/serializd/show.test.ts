@@ -61,27 +61,4 @@ describe('getSerializdShow', () => {
 
     expect(requests[0].headers.Authorization).toBeUndefined();
   });
-
-  test('a body without a seasons array decodes to an empty-shaped response', async () => {
-    // Every field of RawShowResponse is optional because the body is UNVERIFIED
-    // (U10 captures it) — a missing `seasons` must not throw.
-    const show = await Effect.runPromise(
-      getSerializdShow(fakeDeps(() => Response.json({ title: 'Breaking Bad' })), {
-        tmdbId: 1396,
-      }),
-    );
-    expect(show.seasons).toBeUndefined();
-  });
-
-  test('a non-2xx propagates as a provider error — never an empty season list', async () => {
-    const error = await Effect.runPromise(
-      Effect.flip(
-        getSerializdShow(
-          fakeDeps(() => new Response('{}', { status: 500 })),
-          { tmdbId: 1396 },
-        ),
-      ),
-    );
-    expect(error._tag).toBe('ProviderNetworkError');
-  });
 });

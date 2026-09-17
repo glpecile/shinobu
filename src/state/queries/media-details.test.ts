@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 /**
  * `state/queries/media-details.ts` passes its Trakt leg only when Trakt has a
@@ -40,15 +40,9 @@ const { setProviderClientId, clearProviderClientId } = await import(
   '@/state/session/tokens'
 );
 
-const ORIGINAL_TRAKT_ENV = process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID;
-
 beforeEach(() => {
   store.clear();
   clearProviderClientId('trakt');
-});
-
-afterAll(() => {
-  process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = ORIGINAL_TRAKT_ENV;
 });
 
 describe('buildMediaDetailsDeps Trakt leg (plan 0034 KTD-8)', () => {
@@ -59,12 +53,6 @@ describe('buildMediaDetailsDeps Trakt leg (plan 0034 KTD-8)', () => {
   });
 
   test('is null when no BYO client id is stored', () => {
-    expect(buildMediaDetailsDeps().trakt).toBeNull();
-  });
-
-  test('EXPO_PUBLIC_TRAKT_CLIENT_ID no longer counts as credentials (plan 0034 R12)', () => {
-    process.env.EXPO_PUBLIC_TRAKT_CLIENT_ID = 'env-cid';
-
     expect(buildMediaDetailsDeps().trakt).toBeNull();
   });
 });

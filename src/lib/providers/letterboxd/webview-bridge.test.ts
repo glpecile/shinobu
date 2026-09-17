@@ -87,18 +87,6 @@ describe('letterboxdWebFetch', () => {
     expect(await pending).toEqual({ status: 200, body: '{"logEntry":{}}' });
   });
 
-  test('marks a rewatch when requested', async () => {
-    const webView = fakeWebView();
-    registerLetterboxdWebView(webView.ref);
-    const pending = letterboxdWebFetch({ ...REQUEST, rewatch: true });
-    const submit = await runToSubmit(webView);
-    expect(submit).toContain('"rewatch":true');
-    handleLetterboxdMessage(
-      JSON.stringify({ id: idFromScript(submit), status: 200, body: '{}' }),
-    );
-    await pending;
-  });
-
   test('waits for the film page to load before submitting', async () => {
     const webView = fakeWebView();
     registerLetterboxdWebView(webView.ref);

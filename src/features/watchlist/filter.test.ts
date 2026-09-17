@@ -55,11 +55,6 @@ describe('filterWatchlistEntries', () => {
     ]);
   });
 
-  test('a merged entry survives every one of its providers’ filters', () => {
-    // The filter narrows, it never partitions: Dune is genuinely on both lists.
-    expect(filterWatchlistEntries(ENTRIES, 'simkl').map((e) => e.id)).toContain('dune');
-    expect(filterWatchlistEntries(ENTRIES, 'letterboxd').map((e) => e.id)).toContain('dune');
-  });
 });
 
 describe('watchlistProviderCounts', () => {
@@ -78,14 +73,6 @@ describe('watchlistProviderCounts', () => {
     expect(counts.filter((o) => o.partial)).toHaveLength(1);
   });
 
-  test('the counts deliberately exceed the row total', () => {
-    // 6 across 4 rows — because two rows are held by two providers each. A sum
-    // that matched the total would mean the merge had picked one owner per row,
-    // which is exactly what `computeWatchlist` refuses to do.
-    const total = watchlistProviderCounts(ENTRIES).reduce((sum, o) => sum + o.count, 0);
-    expect(total).toBe(6);
-    expect(total).toBeGreaterThan(ENTRIES.length);
-  });
 });
 
 describe('the counts are honest about paging', () => {

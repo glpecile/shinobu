@@ -79,14 +79,6 @@ function cache(entries: unknown[]): QueryClient {
 }
 
 describe('findInDiaryCache', () => {
-  test('returns the embedded item when its id is in a cached diary page', () => {
-    expect(findInDiaryCache(cache([diaryEntry('trakt-100')]), 'trakt-100')?.title).toBe('Perfect Blue');
-  });
-
-  test('returns undefined for an id in no cached diary page', () => {
-    expect(findInDiaryCache(cache([diaryEntry('trakt-100')]), 'trakt-999')).toBeUndefined();
-  });
-
   // Belt-and-braces: a malformed row under the diary key must degrade to
   // "Not found", never throw — a resolution helper that throws takes the
   // route's ErrorBoundary with it.

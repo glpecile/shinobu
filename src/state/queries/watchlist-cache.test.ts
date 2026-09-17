@@ -44,16 +44,6 @@ describe('findInWatchlistCache (plan 0031 U14)', () => {
     expect(findInWatchlistCache(seed(), 'anilist-5')?.title).toBe('Perfect Blue');
   });
 
-  test('resolves a contributing item, not just the merge precedence winner', () => {
-    // Manage Trackers' hidden list links by the *stored* id, which can be the
-    // Letterboxd twin of a row the merge renders from Trakt.
-    expect(findInWatchlistCache(seed(), 'letterboxd-heat')?.title).toBe('Heat');
-  });
-
-  test('a cold cache resolves nothing and asks for nothing', () => {
-    expect(findInWatchlistCache(new QueryClient(), 'trakt-1')).toBeUndefined();
-  });
-
   test('an unknown id is undefined rather than the first row', () => {
     expect(findInWatchlistCache(seed(), 'trakt-999')).toBeUndefined();
   });

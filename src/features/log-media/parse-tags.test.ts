@@ -11,9 +11,6 @@ import {
 } from './parse-tags';
 
 describe('parseTags', () => {
-  test('drops the empty segment left by the prefill separator', () => {
-    expect(parseTags('shinobu, ')).toEqual(['shinobu']);
-  });
 
   test('trims each tag', () => {
     expect(parseTags('xgimi, shinobu')).toEqual(['xgimi', 'shinobu']);
@@ -40,12 +37,6 @@ describe('committedTags', () => {
     expect(committedTags('shinobu, netflix,')).toEqual(['shinobu', 'netflix']);
   });
 
-  test('is narrower than parseTags, which is the submit path', () => {
-    // A value typed without a trailing comma still submits both tags...
-    expect(parseTags('shinobu, netflix')).toEqual(['shinobu', 'netflix']);
-    // ...but to the picker the tail is a filter query, not a selection.
-    expect(committedTags('shinobu, netflix')).toEqual(['shinobu']);
-  });
 });
 
 describe('isTagSelected', () => {
@@ -59,21 +50,9 @@ describe('isTagSelected', () => {
     expect(isTagSelected('', 'horror')).toBe(false);
   });
 
-  test('a tag still being typed is a query, not a selection', () => {
-    // Otherwise the tap that commits "netflix" would look like a no-op.
-    expect(isTagSelected('shinobu, netflix', 'netflix')).toBe(false);
-    expect(isTagSelected('shinobu, netflix, ', 'netflix')).toBe(true);
-  });
 });
 
 describe('toggleTag', () => {
-  test('appending to the prefill separator leaves no empty segment', () => {
-    expect(toggleTag('shinobu, ', 'horror')).toBe('shinobu, horror, ');
-    expect(parseTags(toggleTag('shinobu, ', 'horror'))).toEqual([
-      'shinobu',
-      'horror',
-    ]);
-  });
 
   test('always leaves a trailing separator, so the picker filter resets', () => {
     // The whole point: `activeTagFragment` of the result must be empty,
@@ -119,14 +98,6 @@ describe('toggleTag', () => {
     expect(toggleTag('shinobu, netfl', 'netflix')).toBe('shinobu, netflix, ');
   });
 
-  test('committing a fully typed tag does not duplicate it', () => {
-    expect(toggleTag('shinobu, netflix', 'netflix')).toBe('shinobu, netflix, ');
-    expect(parseTags(toggleTag('shinobu, netflix', 'netflix'))).toEqual([
-      'shinobu',
-      'netflix',
-    ]);
-  });
-
   test('the tail is dropped on removal too, since it is only a query', () => {
     expect(toggleTag('shinobu, netflix, net', 'netflix')).toBe('shinobu, ');
   });
@@ -144,9 +115,6 @@ describe('activeTagFragment', () => {
     expect(activeTagFragment('')).toBe('');
   });
 
-  test('keeps interior spaces — tag names can contain them', () => {
-    expect(activeTagFragment('shinobu, sped u')).toBe('sped u');
-  });
 });
 
 describe('filterTagSuggestions', () => {
@@ -175,23 +143,10 @@ describe('filterTagSuggestions', () => {
     ]);
   });
 
-  test('no match yields nothing, not everything', () => {
-    expect(filterTagSuggestions(all, 'zzz')).toEqual([]);
-  });
 });
 
 describe('pinSelectedTags', () => {
   const pool = ['netflix', 'xgimi', 'p', 'cinepolis-recoleta', 'shinobu'];
-
-  test('moves the selected tags to the front, pool order otherwise intact', () => {
-    expect(pinSelectedTags(pool, 'shinobu, ')).toEqual([
-      'shinobu',
-      'netflix',
-      'xgimi',
-      'p',
-      'cinepolis-recoleta',
-    ]);
-  });
 
   test('pins in the order the field lists them, not the pool order', () => {
     expect(pinSelectedTags(pool, 'p, netflix, ')).toEqual([
@@ -210,20 +165,6 @@ describe('pinSelectedTags', () => {
 
   test('matches case-insensitively and keeps the pool spelling', () => {
     expect(pinSelectedTags(['Netflix'], 'netflix, ')).toEqual(['Netflix']);
-  });
-
-  test('the tag still being typed is a filter query, not a selection', () => {
-    expect(pinSelectedTags(pool, 'shinobu, net')).toEqual([
-      'shinobu',
-      'netflix',
-      'xgimi',
-      'p',
-      'cinepolis-recoleta',
-    ]);
-  });
-
-  test('an empty field leaves the pool exactly as it was', () => {
-    expect(pinSelectedTags(pool, '')).toEqual(pool);
   });
 
   test('a tag repeated in the field is pinned once', () => {

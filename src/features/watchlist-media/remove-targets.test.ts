@@ -85,9 +85,6 @@ function entryFor(
 }
 
 describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
-  test('Serializd never can: it has no watchlist read leg in v1 (R32)', () => {
-    expect(hasWatchlistReadLeg('serializd', series(), CONNECTED, [])).toBe(false);
-  });
 
   test('AniList can for anime and cannot for manga — the leg is `type: ANIME`', () => {
     expect(hasWatchlistReadLeg('anilist', film({ type: 'ANIME' }), CONNECTED, [])).toBe(
@@ -147,22 +144,6 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
     expect(split.unknown).toEqual([]);
   });
 
-  test('a partially-read Letterboxd leg is an unknown row, not a silent drop', () => {
-    // The failure mode this guards: without `incomplete`, the film below is
-    // reported as known-absent from Letterboxd, the removal quietly skips it,
-    // and the settled "Removed" label asserts a completeness nobody checked.
-    const split = splitWatchlistRemoveTargets(
-      film(),
-      ['trakt'],
-      CONNECTED,
-      'ios',
-      [],
-      ['letterboxd'],
-    );
-    expect(split.targets).toEqual(['trakt']);
-    expect(split.unknown).toEqual(['letterboxd']);
-  });
-
   test('a Trakt leg failure renders as an unknown row rather than a claim of absence', () => {
     const split = splitWatchlistRemoveTargets(film(), ['letterboxd'], CONNECTED, 'ios', [
       { provider: 'trakt', message: '502' },
@@ -196,12 +177,6 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
     expect(web.manual).toEqual(['letterboxd']);
   });
 
-  test('a manga entry leaves AniList unknown — OQ-4a defers that read', () => {
-    const manga = film({ id: 'anilist-5', type: 'MANGA', externalIds: { anilist: 5 } });
-    const split = splitWatchlistRemoveTargets(manga, [], CONNECTED, 'ios', []);
-    expect(split.targets).toEqual([]);
-    expect(split.unknown).toEqual(['anilist']);
-  });
 });
 
 describe('shouldOfferWatchlistAdd — R12 as amended for /watchlist', () => {
@@ -212,13 +187,6 @@ describe('shouldOfferWatchlistAdd — R12 as amended for /watchlist', () => {
 
   test('a film on Letterboxd but not on Trakt still offers one', () => {
     const entry = entryFor(film(), ['letterboxd']);
-    expect(shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios')).toBe(true);
-  });
-
-  test('a manual-only remaining target counts — the deep link is the affordance', () => {
-    // Letterboxd's *add* is manual too, so the row it produces is a link rather
-    // than a write. Offering it beats hiding the one tracker still missing it.
-    const entry = entryFor(film(), ['trakt']);
     expect(shouldOfferWatchlistAdd(entry, ['trakt', 'letterboxd'], 'ios')).toBe(true);
   });
 

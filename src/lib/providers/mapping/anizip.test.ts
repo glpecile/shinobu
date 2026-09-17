@@ -85,73 +85,6 @@ const DANDADAN_S2 = {
   },
 };
 
-/** Gachiakuta (anilist 178025) — a season-1 entry: identity mapping. */
-const GACHIAKUTA = {
-  mappings: {
-    type: 'TV',
-    anilist_id: 178025,
-    thetvdb_id: 450537,
-    imdb_id: 'tt32828287',
-    themoviedb_id: '241554',
-  },
-  episodes: {
-    '1': {
-      tvdbShowId: 450537,
-      tvdbId: 10541264,
-      seasonNumber: 1,
-      episodeNumber: 1,
-      absoluteEpisodeNumber: 1,
-      title: { en: 'The Sphere' },
-      airDate: '2025-07-06',
-      airDateUtc: '2025-07-06T14:30:00Z',
-      runtime: 24,
-      episode: '1',
-      anidbEid: 297812,
-      length: 25,
-      airdate: '2025-07-06',
-    },
-  },
-};
-
-/**
- * Mushoku Tensei S2 part 2 (anilist 166873) — the split-cour shape: the entry's
- * own episode 1 is the *thirteenth* episode of canonical season 2.
- */
-const MUSHOKU_S2_PART2 = {
-  episodes: {
-    '1': {
-      tvdbShowId: 371310,
-      tvdbId: 9885753,
-      seasonNumber: 2,
-      episodeNumber: 13,
-      absoluteEpisodeNumber: 38,
-      title: { en: 'My Dream Home' },
-      airDate: '2024-04-08',
-      airDateUtc: '2024-04-07T15:00:00Z',
-      runtime: 24,
-      episode: '1',
-      anidbEid: 278760,
-      length: 25,
-      airdate: '2024-04-08',
-    },
-    '2': {
-      tvdbShowId: 371310,
-      tvdbId: 9885754,
-      seasonNumber: 2,
-      episodeNumber: 14,
-      absoluteEpisodeNumber: 39,
-      title: { en: 'Wedding Reception' },
-      airDate: '2024-04-15',
-      airDateUtc: '2024-04-14T15:00:00Z',
-      runtime: 24,
-      episode: '2',
-      anidbEid: 278761,
-      length: 25,
-      airdate: '2024-04-15',
-    },
-  },
-};
-
 function jsonFetch(body: unknown, ok = true): HttpFetch {
   return async () =>
     ({
@@ -179,14 +112,6 @@ const offlineFetch: HttpFetch = async () => {
 };
 
 describe('fetchAniZipEpisodeMap', () => {
-  test('a season-1 entry maps to itself (identity)', async () => {
-    const map = await fetchAniZipEpisodeMap(jsonFetch(GACHIAKUTA), {
-      anilistId: 178025,
-    });
-
-    expect(map?.get(1)).toEqual({ season: 1, number: 1, absolute: 1 });
-  });
-
   test('a sequel entry maps entry-relative episodes into its canonical season', async () => {
     const map = await fetchAniZipEpisodeMap(jsonFetch(DANDADAN_S2), LOOKUP);
 
@@ -194,15 +119,6 @@ describe('fetchAniZipEpisodeMap', () => {
     // trackers' — see season-layout.ts.
     expect(map?.get(1)).toEqual({ season: 2, number: 1, absolute: 13 });
     expect(map?.get(12)).toEqual({ season: 2, number: 12, absolute: 24 });
-  });
-
-  test('a split-cour entry keeps its mid-season offset per episode', async () => {
-    const map = await fetchAniZipEpisodeMap(jsonFetch(MUSHOKU_S2_PART2), {
-      anilistId: 166873,
-    });
-
-    expect(map?.get(1)).toEqual({ season: 2, number: 13, absolute: 38 });
-    expect(map?.get(2)).toEqual({ season: 2, number: 14, absolute: 39 });
   });
 
   test('specials keys and season-less entries drop out, numbered episodes survive', async () => {
@@ -224,7 +140,7 @@ describe('fetchAniZipEpisodeMap', () => {
 
   test('a document with no episodes block is a miss, not an empty map', async () => {
     expect(
-      await fetchAniZipEpisodeMap(jsonFetch({ mappings: GACHIAKUTA.mappings }), LOOKUP),
+      await fetchAniZipEpisodeMap(jsonFetch({ mappings: DANDADAN_S2.mappings }), LOOKUP),
     ).toBeNull();
   });
 

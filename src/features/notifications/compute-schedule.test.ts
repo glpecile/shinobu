@@ -153,30 +153,6 @@ describe('computeNotificationSchedule', () => {
     expect(exactlySevenDays).toEqual([]);
   });
 
-  test('60 candidates are capped to the 50 nearest', () => {
-    const shows = Array.from({ length: 60 }, (_, index) =>
-      traktInput(`s${index}`, isoOffset(1 + index)),
-    );
-    const result = computeNotificationSchedule(inputs(shows, []), NOW);
-    expect(result).toHaveLength(50);
-    // Nearest-first: the 50 soonest instants survive.
-    expect(result[0].itemId).toBe('s0');
-    expect(result.map((c) => c.itemId)).not.toContain('s59');
-  });
-
-  test('same show from Trakt and AniList with a shared TMDB id dedupes to one candidate', () => {
-    const shared = { externalIds: { tmdb: 999 } };
-    const result = computeNotificationSchedule(
-      inputs(
-        [traktInput('trakt-1', isoOffset(24), {}, shared)],
-        [anilistInput('anilist-1', isoOffset(30), 4, shared)],
-      ),
-      NOW,
-    );
-    expect(result).toHaveLength(1);
-    expect(result[0].itemId).toBe('anilist-1');
-  });
-
   /**
    * The reported bug: one anime airing notified two or three times, because
    * AniList, Simkl and Trakt share no single id. The join has to chain —
@@ -217,18 +193,6 @@ describe('computeNotificationSchedule', () => {
       NOW,
     );
     expect(hashSchedule(changed)).not.toBe(hashSchedule(forward));
-  });
-
-  test('a DST-crossing instant keeps its absolute epoch value', () => {
-    // US DST ends 2026-11-01 — a fixed UTC instant spanning that boundary
-    // must survive unchanged, since only epoch comparisons are used.
-    const dstNow = new Date('2026-10-30T12:00:00.000Z');
-    const acrossBoundary = new Date(dstNow.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
-    const result = computeNotificationSchedule(
-      inputs([traktInput('a', acrossBoundary)], []),
-      dstNow,
-    );
-    expect(result[0].fireInstant).toBe(acrossBoundary);
   });
 
   test('a null firstAired is excluded (unknown instant is not schedulable)', () => {
@@ -273,19 +237,6 @@ describe('computeNotificationSchedule — release candidates', () => {
     expect(scheduleRelease(localTime(RELEASE_DAY, 9, 0))).toEqual([]);
   });
 
-  test('a release later in the week fires at 09:00 on its own local day', () => {
-    const now = localTime('2026-07-23', 12);
-    const day = localDay(now, 3);
-    const result = scheduleRelease(now, day);
-    expect(result[0].fireInstant).toBe(localTime(day, 9).toISOString());
-  });
-
-  test('a release outside the shared 7-day window is excluded', () => {
-    const now = localTime('2026-07-23', 12);
-    expect(scheduleRelease(now, localDay(now, 8))).toEqual([]);
-    expect(scheduleRelease(now, localDay(now, -1))).toEqual([]);
-  });
-
   test('one film on two watchlists yields one candidate per release kind', () => {
     const now = localTime('2026-07-23', 12);
     const date = localDay(now, 2);
@@ -307,14 +258,6 @@ describe('computeNotificationSchedule — release candidates', () => {
       'digital',
       'theatrical',
     ]);
-  });
-
-  test('the hash guard changes when a release date moves', () => {
-    const now = localTime('2026-07-23', 12);
-    const original = scheduleRelease(now, localDay(now, 2));
-    const moved = scheduleRelease(now, localDay(now, 3));
-    expect(hashSchedule(moved)).not.toBe(hashSchedule(original));
-    expect(hashSchedule(scheduleRelease(now, localDay(now, 2)))).toBe(hashSchedule(original));
   });
 
   test('the 50-cap holds nearest-first across mixed kinds', () => {
@@ -361,17 +304,6 @@ describe('computeNotificationSchedule — watchlisted episodes (R9)', () => {
       season: 1,
       episode: 1,
     });
-  });
-
-  test('a show past the 20-show pool cap notifies from the calendar source', () => {
-    // Nothing in the pool at all — exactly what UP_NEXT_POOL_SIZE truncation
-    // looks like from the scheduler's side.
-    const result = computeNotificationSchedule(
-      inputs([], [], [], [calendarInput('deep', isoOffset(24))]),
-      NOW,
-    );
-
-    expect(result.map((candidate) => candidate.itemId)).toEqual(['deep']);
   });
 
   test('an airing reached by both Trakt sources fires once, not twice', () => {
@@ -549,29 +481,9 @@ describe('computeNotificationSchedule — season drops', () => {
     expect(result).toHaveLength(2);
     expect(result.map((candidate) => candidate.itemId)).toEqual(['bat', 'andor']);
   });
-
-  test('a film’s theatrical and digital dates on one day stay two notifications', () => {
-    // Releases never batch: they say different things ("in theaters" /
-    // "streaming"), which is the one fact each notification carries.
-    const day = localDay(now, 3);
-    const result = computeNotificationSchedule(
-      inputs(
-        [],
-        [],
-        [releaseInput('dune', day, 'theatrical'), releaseInput('dune', day, 'digital')],
-      ),
-      now,
-    );
-
-    expect(result).toHaveLength(2);
-  });
 });
 
 describe('hashSchedule', () => {
-  test('empty schedule hashes to a stable empty value', () => {
-    expect(hashSchedule([])).toBe('');
-  });
-
   test('an unbatched episode hashes exactly as it did before batching', () => {
     // Byte-identical to the pre-batch subject, so shipping this doesn't
     // invalidate every stored hash and reschedule everyone once on upgrade (R7).

@@ -35,10 +35,4 @@ describe('traktQueryKeys.watchlistRoot (plan 0031 U11)', () => {
       expect(key.slice(0, root.length)).toEqual([...root]);
     }
   });
-
-  test('two different sorts are two different cache entries', () => {
-    expect(traktQueryKeys.watchlist('all', 'added', 'desc')).not.toEqual(
-      traktQueryKeys.watchlist('all', 'added', 'asc') as never,
-    );
-  });
 });

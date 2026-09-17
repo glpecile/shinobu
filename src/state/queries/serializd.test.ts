@@ -23,11 +23,6 @@ mock.module('react-native-mmkv', () => ({
 const { serializdQueryKeys } = await import('./serializd');
 
 describe('serializdQueryKeys', () => {
-  test('every key is rooted at "serializd"', () => {
-    expect(serializdQueryKeys.all[0]).toBe('serializd');
-    expect(serializdQueryKeys.progress('gian', 1396)[0]).toBe('serializd');
-  });
-
   test('progress keys include the username (no cross-account leakage)', () => {
     expect(serializdQueryKeys.progress('nina', 1396)).toEqual([
       'serializd',

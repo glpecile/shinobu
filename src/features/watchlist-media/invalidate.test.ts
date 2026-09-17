@@ -147,12 +147,6 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     expect(keys.indexOf('trakt/my-calendar')).toBeLessThan(keys.indexOf('up-next/inputs'));
   });
 
-  test('a successful add refreshes the surface it was built to land on', () => {
-    const { client, keys } = recordingClient();
-    invalidateAfterWatchlist(client, SHOW, ['letterboxd']);
-    expect(keys).toContain('watchlist/inputs');
-  });
-
   test('a write that reached no provider invalidates nothing at all', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, []);

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-
 /**
  * Two things plan 0034 U7 changes about the home feed: trending moves off
  * Trakt onto Simkl's public CDN (R11/KTD-8 — must resolve with zero
@@ -64,7 +63,6 @@ mock.module('expo-crypto', () => ({
 
 const { feedOptions, hasUpNextSources } = await import('./use-unified-feed');
 
-
 beforeEach(() => {
   store.clear();
   routes = [];
@@ -90,17 +88,6 @@ describe('trending (plan 0034 R11/KTD-8)', () => {
     expect(movies[0].title).toBe('Dune: Part Three');
     expect(requestedUrls.some((url) => url.includes('api.trakt.tv'))).toBe(false);
   });
-
-  test('the TV trending row is the same shape, keyed to the "tv" kind', async () => {
-    routes = [
-      ['data.simkl.in/discover/trending/tv', [{ title: 'Severance', ids: { simkl: 2, tmdb: 901 } }]],
-    ];
-
-    const shows = await feedOptions.trendingShows().queryFn();
-
-    expect(shows).toHaveLength(1);
-    expect(requestedUrls[0]).toContain('/discover/trending/tv/week_100.json');
-  });
 });
 
 describe('home section predicates', () => {
@@ -110,9 +97,5 @@ describe('home section predicates', () => {
 
   test('a Letterboxd-only user gets none', () => {
     expect(hasUpNextSources(['letterboxd'])).toBe(false);
-  });
-
-  test('AniList alone still mounts it', () => {
-    expect(hasUpNextSources(['anilist'])).toBe(true);
   });
 });

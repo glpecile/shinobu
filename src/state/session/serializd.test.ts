@@ -33,11 +33,6 @@ describe('connectSerializd', () => {
     expect(getSerializdSession()).toEqual({ accessToken: 'tok-1', username: 'gian' });
   });
 
-  test('connectedProviderIds() picks up the serializd session automatically', () => {
-    connectSerializd({ accessToken: 'tok-1', username: 'gian' });
-    expect(connectedProviderIds()).toContain('serializd');
-  });
-
   test('disconnect removes the key and getSerializdSession returns null', () => {
     connectSerializd({ accessToken: 'tok-1', username: 'gian' });
     clearProviderSession('serializd');

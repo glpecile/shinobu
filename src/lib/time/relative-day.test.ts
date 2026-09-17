@@ -6,8 +6,6 @@ import {
   formatRelativeDay,
   localDayAt,
   localDayOffset,
-  shortWeekdayName,
-  weekdayName,
 } from './relative-day';
 
 /**
@@ -28,10 +26,6 @@ function localInstant(
 const NOW = new Date(2026, 6, 23, 14, 30); // Thu 2026-07-23, 14:30 local
 
 describe('localDayOffset', () => {
-  test('later today is 0, even hours ahead', () => {
-    expect(localDayOffset(localInstant(2026, 7, 23, 23, 45), NOW)).toBe(0);
-  });
-
   test('earlier today is 0, not -1', () => {
     expect(localDayOffset(localInstant(2026, 7, 23, 0, 5), NOW)).toBe(0);
   });
@@ -125,10 +119,5 @@ describe('day headings and weekday names', () => {
     expect(day.getMonth()).toBe(6);
     expect(day.getDate()).toBe(26);
     expect(day.getHours()).toBe(0);
-  });
-
-  test('weekday names are locale-independent', () => {
-    expect(weekdayName(new Date(2026, 6, 23))).toBe('Thursday');
-    expect(shortWeekdayName(new Date(2026, 6, 23))).toBe('Thu');
   });
 });

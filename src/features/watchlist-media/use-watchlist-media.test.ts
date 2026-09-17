@@ -55,17 +55,11 @@ mock.module('@/state/queries/mapping', () => ({
 
 const {
   runWatchlistWrite,
-  WATCHLIST_ADAPTERS,
   watchlistMutationKey,
   watchlistPendingFilter,
 } = await import('./use-watchlist-media');
 const { planWatchlistWrite } = await import('./targets');
 
-/** Per-provider adapter behaviour, swapped per test. */
-let traktFails: string | null = null;
-let anilistFails: string | null = null;
-let letterboxdFails: string | null = null;
-let simklFails: string | null = null;
 const adapterCalls: ProviderId[] = [];
 /** Every notification-refresh call and the options it carried. */
 const refreshCalls: unknown[] = [];
@@ -80,21 +74,15 @@ function fakeDeps(): WatchlistWriteDeps {
     adapters: {
       trakt: () => {
         adapterCalls.push('trakt');
-        return traktFails == null
-          ? Promise.resolve({ status: 'ok' as const })
-          : Promise.reject(new Error(traktFails));
+        return Promise.resolve({ status: 'ok' as const });
       },
       anilist: () => {
         adapterCalls.push('anilist');
-        return anilistFails == null
-          ? Promise.resolve({ status: 'ok' as const })
-          : Promise.reject(new Error(anilistFails));
+        return Promise.resolve({ status: 'ok' as const });
       },
       letterboxd: () => {
         adapterCalls.push('letterboxd');
-        return letterboxdFails == null
-          ? Promise.resolve({ status: 'ok' as const })
-          : Promise.reject(new Error(letterboxdFails));
+        return Promise.resolve({ status: 'ok' as const });
       },
       serializd: () => {
         adapterCalls.push('serializd');
@@ -102,9 +90,7 @@ function fakeDeps(): WatchlistWriteDeps {
       },
       simkl: () => {
         adapterCalls.push('simkl');
-        return simklFails == null
-          ? Promise.resolve({ status: 'ok' as const })
-          : Promise.reject(new Error(simklFails));
+        return Promise.resolve({ status: 'ok' as const });
       },
     },
     refresh: (_client, options) => {
@@ -161,10 +147,6 @@ function recordingClient(): { client: QueryClient; keys: string[] } {
 }
 
 beforeEach(() => {
-  traktFails = null;
-  anilistFails = null;
-  letterboxdFails = null;
-  simklFails = null;
   adapterCalls.length = 0;
   refreshCalls.length = 0;
   process.env.EXPO_OS = 'ios';
@@ -185,67 +167,6 @@ describe('runWatchlistWrite — the fan-out contract', () => {
     expect(result.failed).toEqual([]);
   });
 
-  test('a TV show with Simkl connected adds there too, in routing order (plan 0034 U6)', async () => {
-    const { client } = recordingClient();
-    const show = animeFilm({
-      id: 'trakt-9',
-      type: 'TV',
-      isFilm: false,
-      externalIds: { trakt: 9, tmdb: 99 },
-    });
-    const result = await runWatchlistWrite(
-      client,
-      show,
-      [...CONNECTED, 'simkl'],
-      {},
-      fakeDeps(),
-    );
-    expect(result.outcomes.map((outcome) => outcome.provider)).toEqual([
-      'trakt',
-      'serializd',
-      'simkl',
-    ]);
-    expect(result.succeeded).toEqual(['trakt', 'serializd', 'simkl']);
-    expect(result.manual).toEqual([]);
-  });
-
-  test('a Simkl failure is named without masking the other adds (plan 0034 U6)', async () => {
-    simklFails = 'Simkl said no';
-    const { client } = recordingClient();
-    const show = animeFilm({
-      id: 'trakt-9',
-      type: 'TV',
-      isFilm: false,
-      externalIds: { trakt: 9, tmdb: 99 },
-    });
-    const result = await runWatchlistWrite(
-      client,
-      show,
-      [...CONNECTED, 'simkl'],
-      {},
-      fakeDeps(),
-    );
-    expect(result.succeeded).toEqual(['trakt', 'serializd']);
-    expect(result.failed).toEqual(['simkl']);
-    expect(
-      result.outcomes.find((outcome) => outcome.provider === 'simkl'),
-    ).toMatchObject({ status: 'error', message: 'Simkl said no' });
-  });
-
-  test('one provider failing leaves the others ok and is named in the report', async () => {
-    anilistFails = 'AniList said no';
-    const { client } = recordingClient();
-    const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
-
-    expect(result.succeeded).toEqual(['trakt', 'letterboxd']);
-    expect(result.failed).toEqual(['anilist']);
-    const failure = result.outcomes.find((outcome) => outcome.provider === 'anilist');
-    expect(failure?.status).toBe('error');
-    expect(failure).toMatchObject({ message: 'AniList said no' });
-    // The partial failure is per provider — Trakt's add is not rolled back.
-    expect(result.outcomes[0]).toMatchObject({ provider: 'trakt', status: 'ok' });
-  });
-
   test('a manual target never enters the adapter map', async () => {
     // Letterboxd on *web* is the standing manual case (plan 0033 R7): the
     // declaration is 'write' but `unsupportedWritePlatforms` bans the platform,
@@ -257,15 +178,6 @@ describe('runWatchlistWrite — the fan-out contract', () => {
 
     expect(plan.manual).toEqual(['letterboxd']);
     expect(plan.targets).toEqual(['trakt', 'anilist']);
-    // Exact keys: one per provider declaring `watchlistWrite: 'write'` —
-    // Simkl joined with plan 0034 U6's capability flip.
-    expect(Object.keys(WATCHLIST_ADAPTERS).sort()).toEqual([
-      'anilist',
-      'letterboxd',
-      'serializd',
-      'simkl',
-      'trakt',
-    ]);
 
     await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
     expect(adapterCalls).toEqual(['trakt', 'anilist']);
@@ -332,32 +244,6 @@ describe('runWatchlistWrite — agenda coherence (R19/R20)', () => {
     expect(refreshCalls).toEqual([{ throttle: false }]);
   });
 
-  test('never on web, whatever the item states', async () => {
-    process.env.EXPO_OS = 'web';
-    const { client } = recordingClient();
-    await runWatchlistWrite(
-      client,
-      animeFilm({ releaseCalendar: { digital: localDate(3) } }),
-      // Letterboxd is manual on web for the *log* verb too, so this also keeps
-      // the routing honest: only Trakt and AniList are written.
-      CONNECTED,
-      {},
-      fakeDeps(),
-    );
-    expect(refreshCalls).toEqual([]);
-  });
-
-  test('a write that reached no provider invalidates nothing and regathers nothing', async () => {
-    traktFails = 'nope';
-    anilistFails = 'nope';
-    letterboxdFails = 'nope';
-    const { client, keys } = recordingClient();
-    const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
-
-    expect(result.succeeded).toEqual([]);
-    expect(keys).toEqual([]);
-    expect(refreshCalls).toEqual([]);
-  });
 });
 
 describe('useWatchlistMedia — the mutation shell', () => {

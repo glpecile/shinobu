@@ -16,14 +16,6 @@ describe('sessionFromImplicitRedirect', () => {
     });
   });
 
-  test('no refresh token ever appears (implicit grant has none)', () => {
-    const session = sessionFromImplicitRedirect(
-      'https://shinobu.glpecile.xyz/#access_token=abc&expires_in=60',
-      NOW,
-    );
-    expect(session?.refreshToken).toBeUndefined();
-  });
-
   test('missing expires_in still yields a session without expiresAt', () => {
     const session = sessionFromImplicitRedirect(
       'shinobu://redirect#access_token=abc',

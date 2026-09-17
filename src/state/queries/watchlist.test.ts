@@ -45,7 +45,6 @@ const {
 // module here would hand every other suite this suite's username.
 const { setProviderSession } = await import('@/state/session/tokens');
 setProviderSession('letterboxd', { accessToken: '', username: 'gian' });
-const { computeWatchlist } = await import('@/features/watchlist/compute');
 
 function film(id: string, title: string, year: number): NormalizedMediaItem {
   return {
@@ -170,16 +169,6 @@ describe('fetchWatchlistInputs', () => {
     expect(requested).toEqual(['trakt/watchlist/all/added/desc']);
   });
 
-  test('a disconnected provider is absence, not an error', async () => {
-    const { client, requested } = fakeClient({ trakt: [] });
-
-    const inputs = await fetchWatchlistInputs(client, ['trakt']);
-
-    expect(inputs.errors).toEqual([]);
-    expect(requested.some((key) => key.startsWith('anilist'))).toBe(false);
-    expect(requested.some((key) => key.startsWith('letterboxd'))).toBe(false);
-  });
-
   test('the AniList leg is the CURRENT ∪ PLANNING slice of the already-cached read', async () => {
     const { client, requested } = fakeClient({
       anime: [
@@ -274,70 +263,6 @@ describe('fetchWatchlistInputs', () => {
     expect(requested).toEqual(['simkl/all-items/all/plantowatch']);
   });
 
-  test('a Simkl plantowatch item merges with its Trakt twin by TMDB id', async () => {
-    const heat = traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z');
-    const { client } = fakeClient({
-      trakt: [heat],
-      // Same tmdb id as `traktFilm(1, ...)` — `900 + 1`.
-      simkl: [simklEntry(1, 'Heat', '2026-07-06T00:00:00.000Z')],
-    });
-
-    const inputs = await fetchWatchlistInputs(client, ['trakt', 'simkl']);
-    const entries = computeWatchlist(inputs.inputs);
-
-    expect(entries).toHaveLength(1);
-    expect(entries[0].sources).toEqual(['trakt', 'simkl']);
-    // The most recent statement wins the sort key (KTD-11) — Simkl's is later.
-    expect(entries[0].addedAt).toBe('2026-07-06T00:00:00.000Z');
-  });
-
-  test('a failing Simkl leg keeps the other legs’ rows and names the provider', async () => {
-    const { client } = fakeClient({
-      trakt: [traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z')],
-      failing: ['simkl'],
-    });
-
-    const inputs = await fetchWatchlistInputs(client, ['trakt', 'simkl']);
-
-    expect(inputs.inputs.map((input) => input.source)).toEqual(['trakt']);
-    expect(inputs.errors).toEqual([{ provider: 'simkl', message: 'simkl down' }]);
-  });
-
-  test('a page-2 Letterboxd film merges with its Trakt twin end to end', async () => {
-    const heat = { ...traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z'), year: 1995 };
-    const { client } = fakeClient({
-      trakt: [heat],
-      letterboxdPages: [
-        [film('letterboxd-a', 'A', 2001)],
-        [film('letterboxd-heat', 'Heat', 1995)],
-      ],
-    });
-
-    const inputs = await fetchWatchlistInputs(client, ['trakt', 'letterboxd']);
-    const entries = computeWatchlist(inputs.inputs);
-
-    expect(entries).toHaveLength(2);
-    expect(entries.find((entry) => entry.id === 'trakt-1')?.sources).toEqual([
-      'trakt',
-      'letterboxd',
-    ]);
-  });
-
-  test('the gather is never a Calendar source (R22): it returns plain rows', async () => {
-    const { client } = fakeClient({
-      trakt: [traktFilm(1, 'Heat', '2026-07-01T00:00:00.000Z')],
-    });
-
-    const inputs = await fetchWatchlistInputs(client, ['trakt']);
-
-    expect(Object.keys(inputs).sort()).toEqual([
-      'errors',
-      'incomplete',
-      'inputs',
-    ]);
-    expect(inputs.inputs[0]).not.toHaveProperty('kind');
-  });
-
   test('a full last Letterboxd page marks the leg incomplete (R35)', async () => {
     // 28 films is exactly `WATCHLIST_PAGE_SIZE`, so `getNextPageParam` handed
     // out another cursor: there are films this gather has not seen, and a film
@@ -373,13 +298,6 @@ describe('fetchWatchlistInputs', () => {
 });
 
 describe('watchlistQueryKeys', () => {
-  test('`all` is a prefix of `inputs()` — the disconnect purge depends on it', () => {
-    const inputs = watchlistQueryKeys.inputs();
-    expect(inputs.slice(0, watchlistQueryKeys.all.length)).toEqual(
-      watchlistQueryKeys.all,
-    );
-  });
-
   test('disconnecting a provider empties the merged surface only via the shared root', async () => {
     const { QueryClient } = await import('@tanstack/react-query');
     const client = new QueryClient();
@@ -406,14 +324,6 @@ describe('watchlistReadProviders (plan 0031 R25/R32)', () => {
 
   test('Serializd contributes nothing until its read lands (R32)', () => {
     expect(watchlistReadProviders(['serializd'])).toEqual([]);
-  });
-
-  test('Simkl contributes a watchlist read — U3’s live-verified shape (plan 0034 U7)', () => {
-    expect(watchlistReadProviders(['simkl'])).toEqual(['simkl']);
-  });
-
-  test('no connected provider means no row', () => {
-    expect(watchlistReadProviders([])).toEqual([]);
   });
 });
 

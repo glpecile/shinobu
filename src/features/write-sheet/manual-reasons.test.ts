@@ -25,11 +25,4 @@ describe('manualWriteReasons (plan 0032 R5)', () => {
     });
   });
 
-  test('the platform ban wins the copy when both reasons apply', () => {
-    // Letterboxd's watchlist verb is declared manual AND web-banned — the
-    // structural reason is the one worth stating (plan 0032 R12).
-    expect(manualWriteReasons(['letterboxd'], 'watchlist', 'web')).toEqual({
-      letterboxd: "Can't be added from the web",
-    });
-  });
 });

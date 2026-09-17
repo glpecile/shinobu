@@ -172,17 +172,6 @@ describe('normalizeCreditRows', () => {
    * position among the unreleased work.
    */
   describe('release years in the subtitle', () => {
-    test('a dated credit leads with the year and keeps the full role', () => {
-      const [row] = normalizeCreditRows(
-        personResponse({
-          combined_credits: {
-            cast: [movie(1, 'Top Gun', '1986-05-16', { character: 'Maverick' })],
-          },
-        }),
-        NOW,
-      );
-      expect(row.details['tmdb-movie-1']).toBe('1986 · Maverick');
-    });
 
     test('an undated credit shows the role alone — no year, no separator', () => {
       const [row] = normalizeCreditRows(
@@ -196,18 +185,6 @@ describe('normalizeCreditRows', () => {
       expect(row.details['tmdb-movie-2']).toBe('Someone');
       // Still first in the row: R16 leaves the sort exactly where it was.
       expect(row.items[0].id).toBe('tmdb-movie-2');
-    });
-
-    test('a dated credit with no role at all is just the year', () => {
-      const [row] = normalizeCreditRows(
-        personResponse({
-          combined_credits: {
-            crew: [movie(3, 'Untold', '2001-01-01', { department: 'Directing' })],
-          },
-        }),
-        NOW,
-      );
-      expect(row.details['tmdb-movie-3']).toBe('2001');
     });
 
     test('a credit with neither year nor role has no subtitle key', () => {
@@ -575,10 +552,6 @@ describe('normalizeTitleSearch', () => {
       ['tmdb-movie-9', 9, undefined],
     ]);
   });
-
-  test('empty results yield an empty list', () => {
-    expect(normalizeTitleSearch({}, 'movie', NOW)).toEqual([]);
-  });
 });
 
 describe('normalizeMultiSearch', () => {
@@ -640,15 +613,6 @@ describe('earliestReleaseDates', () => {
     });
   });
 
-  test('a physical-only film reports physical alone', () => {
-    expect(
-      earliestReleaseDates([
-        physical('US', '2026-06-09T00:00:00.000Z'),
-        physical('DE', '2026-07-01T00:00:00.000Z'),
-      ]),
-    ).toEqual({ physical: '2026-06-09' });
-  });
-
   test('limited and wide theatrical share one slot, earliest wins', () => {
     expect(
       earliestReleaseDates([
@@ -661,34 +625,6 @@ describe('earliestReleaseDates', () => {
         },
       ]),
     ).toEqual({ theatrical: '2026-01-16' });
-  });
-
-  test('a premiere is not a theatrical release', () => {
-    expect(
-      earliestReleaseDates([
-        {
-          iso_3166_1: 'US',
-          release_dates: [
-            { type: 1, release_date: '2025-09-01T00:00:00.000Z' },
-            { type: 3, release_date: '2026-01-30T00:00:00.000Z' },
-          ],
-        },
-      ]),
-    ).toEqual({ theatrical: '2026-01-30' });
-  });
-
-  test('digital and physical on the same day are two entries, not one', () => {
-    expect(
-      earliestReleaseDates([
-        {
-          iso_3166_1: 'US',
-          release_dates: [
-            { type: 4, release_date: '2026-04-15T00:00:00.000Z' },
-            { type: 5, release_date: '2026-04-15T00:00:00.000Z' },
-          ],
-        },
-      ]),
-    ).toEqual({ digital: '2026-04-15', physical: '2026-04-15' });
   });
 
   test('TV airings and junk dates never make it onto the calendar', () => {

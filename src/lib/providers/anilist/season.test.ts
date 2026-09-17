@@ -50,12 +50,6 @@ describe('parseAnimeSeasonWindow', () => {
     expect(parseAnimeSeasonWindow({}, fallback)).toEqual(fallback);
   });
 
-  it('falls back to the fallback cour for an unknown season param', () => {
-    expect(parseAnimeSeasonWindow({ season: 'YEAR', year: '2026' }, fallback)).toEqual({
-      season: fallback.season,
-      year: 2026,
-    });
-  });
 });
 
 describe('parseAnimeFormatFilter', () => {

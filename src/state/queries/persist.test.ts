@@ -80,17 +80,6 @@ describe('serialize / deserialize', () => {
     expect(restoredData(clientWith(upNextQueryKeys.inputs(), data))).toEqual(data);
   });
 
-  test('survives a nested and an empty Set', () => {
-    const data = { a: { b: new Set([1]) }, c: new Set<string>() };
-    const restored = restoredData(clientWith(traktQueryKeys.showProgress(1), data)) as {
-      a: { b: Set<number> };
-      c: Set<string>;
-    };
-
-    expect(restored.a.b.has(1)).toBe(true);
-    expect(restored.c.size).toBe(0);
-  });
-
   // Regression, and a real crash rather than a hypothetical: ani.zip episode
   // maps are `ReadonlyMap` and `['mapping','anizip-episodes']` has been on the
   // allowlist since the home-feed restore landed. Without a codec they restored

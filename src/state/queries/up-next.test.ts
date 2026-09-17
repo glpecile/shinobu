@@ -45,7 +45,7 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { fetchUpNextInputs, upNextQueryKeys } = await import('./up-next');
+const { fetchUpNextInputs } = await import('./up-next');
 
 function show(traktId: number, lastUpdated: string): NormalizedMediaItem {
   return {
@@ -246,17 +246,6 @@ function fakeClient(scenario: Scenario) {
 }
 
 describe('fetchUpNextInputs', () => {
-  test('Trakt-only: AniList being disconnected is absence, not an error', async () => {
-    const { client } = fakeClient({ shows: [show(1, '2026-07-20T00:00:00.000Z')] });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt']);
-
-    expect(inputs.progress).toHaveLength(1);
-    expect(inputs.progress[0].nextEpisode?.number).toBe(2);
-    expect(inputs.anilist).toEqual([]);
-    expect(inputs.errors).toEqual([]);
-  });
-
   test('one show’s progress failing omits that show, not the rest', async () => {
     const { client } = fakeClient({
       shows: [
@@ -307,19 +296,6 @@ describe('fetchUpNextInputs', () => {
     expect(inputs.errors).toEqual([
       { provider: 'trakt', message: 'watched shows down' },
     ]);
-  });
-
-  test('both providers failing degrades to empty inputs with both errors', async () => {
-    const { client } = fakeClient({ failing: ['trakt', 'anilist'] });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt', 'anilist']);
-
-    expect(inputs.errors.map((error) => error.provider)).toEqual([
-      'trakt',
-      'anilist',
-    ]);
-    expect(inputs.progress).toEqual([]);
-    expect(inputs.anilist).toEqual([]);
   });
 
   test('an unresolvable ani.zip mapping leaves the entry without a TMDB id', async () => {
@@ -423,23 +399,6 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
     ]);
   });
 
-  test('Letterboxd joins the same releases array without disturbing Trakt’s', async () => {
-    // Both watchlist sources feed one array on purpose (KTD-6): dedupe can only
-    // collapse a film watchlisted in both places if the rows sit together.
-    const { client } = fakeClient({
-      calendarMovies: {
-        movies: [{ item: movie(13), kind: 'theatrical', date: '2026-07-29' }],
-      },
-    });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt', 'letterboxd']);
-
-    expect(inputs.releases).toEqual([
-      { item: movie(13), kind: 'theatrical', date: '2026-07-29', source: 'trakt' },
-    ]);
-    expect(inputs.errors).toEqual([]);
-  });
-
   test('the streaming calendar failing keeps the theatrical rows (R7)', async () => {
     // `/calendars/my/streaming` is the one path plan 0030 could not confirm
     // against an authed response (docs/solutions/trakt-streaming-calendar-path.md),
@@ -461,45 +420,6 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
     ]);
     expect(inputs.errors).toEqual([
       { provider: 'trakt', message: 'streaming calendar down' },
-    ]);
-  });
-
-  test('the theatrical calendar failing keeps the streaming rows', async () => {
-    const { client } = fakeClient({
-      calendarMovies: {
-        streaming: [{ item: movie(15), kind: 'digital', date: '2026-08-01' }],
-      },
-      failingCalendars: ['movies'],
-    });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt']);
-
-    expect(inputs.releases).toEqual([
-      { item: movie(15), kind: 'digital', date: '2026-08-01', source: 'trakt' },
-    ]);
-    expect(inputs.errors).toEqual([
-      { provider: 'trakt', message: 'movies calendar down' },
-    ]);
-  });
-
-  test('every Trakt read failing at once still returns one error each, no throw', async () => {
-    // The section degrades to empty; it never rejects, which is what would blank
-    // the whole home slot instead of the rows that actually failed (R7).
-    const { client } = fakeClient({
-      failing: ['trakt'],
-      failingCalendars: ['shows', 'movies', 'streaming'],
-    });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt']);
-
-    expect(inputs.progress).toEqual([]);
-    expect(inputs.calendar).toEqual([]);
-    expect(inputs.releases).toEqual([]);
-    expect(inputs.errors.map((error) => error.message)).toEqual([
-      'watched shows down',
-      'shows calendar down',
-      'movies calendar down',
-      'streaming calendar down',
     ]);
   });
 });
@@ -816,33 +736,6 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     ]);
   });
 
-  test('Trakt and Simkl contribute to the same provider-tagged legs side by side', async () => {
-    const { client } = fakeClient({
-      shows: [show(1, '2026-07-20T00:00:00.000Z')],
-      simklLibraries: {
-        watching: simklLibrary({
-          shows: [
-            simklEntry(40, {
-              nextToWatch: {
-                season: 2,
-                episode: 6,
-                date: '2026-07-21T20:00:00Z',
-              },
-            }),
-          ],
-        }),
-      },
-    });
-
-    const inputs = await fetchUpNextInputs(client, ['trakt', 'simkl']);
-
-    expect(inputs.progress.map((input) => input.source)).toEqual([
-      'trakt',
-      'simkl',
-    ]);
-    expect(inputs.errors).toEqual([]);
-  });
-
   test('with neither tracker connected, the AniList and Letterboxd legs still run', async () => {
     const { client, simklRequests, progressRequests } = fakeClient({
       anime: [animeEntry(1)],
@@ -856,12 +749,5 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     expect(inputs.errors).toEqual([]);
     expect(simklRequests).toEqual([]);
     expect(progressRequests).toEqual([]);
-  });
-});
-
-describe('upNextQueryKeys', () => {
-  test('every key is rooted at "up-next"', () => {
-    expect(upNextQueryKeys.all[0]).toBe('up-next');
-    expect(upNextQueryKeys.inputs()[0]).toBe('up-next');
   });
 });

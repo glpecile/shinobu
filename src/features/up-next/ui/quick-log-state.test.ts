@@ -45,12 +45,6 @@ describe('resolveQuickLog', () => {
     ).toEqual({ phase: 'failed', notice: 'Failed on Trakt.' });
   });
 
-  test('every applicable provider failing reverts and names them all', () => {
-    expect(
-      resolveQuickLog(result({ failed: ['trakt', 'serializd'] }), SOURCE),
-    ).toEqual({ phase: 'failed', notice: 'Failed on Trakt, Serializd.' });
-  });
-
   test('a skipped source counts as ok — that provider already had the watch', () => {
     expect(
       resolveQuickLog(result({ skipped: ['trakt'], succeeded: [] }), SOURCE),

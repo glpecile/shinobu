@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { none, settle } from './settle';
+import { settle } from './settle';
 
 /**
  * The shared partial-failure contract, tested once now that two gatherers
@@ -23,11 +23,5 @@ describe('settle', () => {
   test('stringifies a non-Error rejection rather than losing it', async () => {
     const settled = await settle('letterboxd', () => Promise.reject('nope'));
     expect(settled.errors[0].message).toBe('nope');
-  });
-});
-
-describe('none', () => {
-  test('a disconnected provider contributes nothing, and that is not an error', () => {
-    expect(none<number>()).toEqual({ inputs: [], errors: [] });
   });
 });

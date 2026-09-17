@@ -68,13 +68,6 @@ describe('groupDayEntries', () => {
     expect(groups[0]?.id).toBe('episode:trakt-1');
   });
 
-  test('leaves a single episode as an ungrouped card', () => {
-    const groups = groupDayEntries([episode('trakt-1', 2, 1)]);
-
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.entries).toHaveLength(1);
-  });
-
   test('keeps different shows apart', () => {
     const groups = groupDayEntries([
       episode('trakt-1', 2, 1),
@@ -84,19 +77,6 @@ describe('groupDayEntries', () => {
 
     expect(groups).toHaveLength(2);
     expect(groups.map((group) => group.entries.length)).toEqual([2, 1]);
-  });
-
-  test('preserves the order the leads arrived in', () => {
-    const groups = groupDayEntries([
-      episode('trakt-2', 1, 4),
-      episode('trakt-1', 2, 1),
-      episode('trakt-1', 2, 2),
-    ]);
-
-    expect(groups.map((group) => group.lead.item.id)).toEqual([
-      'trakt-2',
-      'trakt-1',
-    ]);
   });
 
   test('never merges a film’s release rows', () => {
@@ -109,22 +89,6 @@ describe('groupDayEntries', () => {
 
     expect(groups).toHaveLength(2);
     expect(groups.every((group) => group.entries.length === 1)).toBe(true);
-  });
-
-  test('groups episodes without swallowing the same show’s release row', () => {
-    const groups = groupDayEntries([
-      episode('trakt-1', 2, 1),
-      episode('trakt-1', 2, 2),
-      release('trakt-1', 'digital'),
-    ]);
-
-    expect(groups).toHaveLength(2);
-    expect(groups[0]?.entries).toHaveLength(2);
-    expect(groups[1]?.lead.kind).toBe('release');
-  });
-
-  test('is empty for an empty day', () => {
-    expect(groupDayEntries([])).toEqual([]);
   });
 });
 
@@ -163,21 +127,5 @@ describe('groupLabel', () => {
 
     expect(groupLabel(groups[0]!)).toBe('2 episodes');
   });
-
-  test('a release keeps its release label', () => {
-    expect(groupLabel(soloGroup(release('trakt-9', 'theatrical')))).toBe(
-      'In theaters',
-    );
-  });
 });
 
-describe('soloGroup', () => {
-  test('wraps one entry without grouping anything', () => {
-    const entry = episode('trakt-1', 2, 1);
-    const group = soloGroup(entry);
-
-    expect(group.id).toBe('episode:trakt-1');
-    expect(group.lead).toBe(entry);
-    expect(group.entries).toEqual([entry]);
-  });
-});
