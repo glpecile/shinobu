@@ -18,6 +18,28 @@ export default function TabsLayout() {
   // global.css (same values `_layout.tsx` uses for the screen `contentStyle`).
   const colorScheme = useColorScheme();
   const backgroundColor = colorScheme === 'dark' ? '#0a0a0a' : '#ffffff';
+  const foreground = colorScheme === 'dark' ? '#ffffff' : '#0a0a0a';
+  const muted = colorScheme === 'dark' ? '#aaaaaa' : '#666666';
+  // Android reads as Google TV's bar: a foreground pill behind the selected
+  // glyph, which inverts to the bar colour, and every label in foreground.
+  // The accent stays for iOS, whose selected tab is a tint, not a pill.
+  const android =
+    process.env.EXPO_OS === 'android'
+      ? {
+          iconColor: { default: muted, selected: backgroundColor },
+          indicatorColor: foreground,
+          // Material hides inactive labels past three tabs; Google TV labels all four.
+          labelVisibilityMode: 'labeled' as const,
+          labelStyle: {
+            default: { color: foreground },
+            selected: { color: foreground },
+          },
+          rippleColor:
+            colorScheme === 'dark'
+              ? 'rgba(255, 255, 255, 0.12)'
+              : 'rgba(10, 10, 10, 0.08)',
+        }
+      : {};
 
   return (
     // Vampiric Crimson selected tint (plan.md 1.1) — the brand accent, matching
@@ -35,6 +57,7 @@ export default function TabsLayout() {
       minimizeBehavior="onScrollDown"
       rippleColor="rgba(220, 38, 38, 0.24)"
       tintColor="#DC2626"
+      {...android}
     >
       <NativeTabs.Trigger
         listeners={{ tabPress: () => emitTabPress('index') }}

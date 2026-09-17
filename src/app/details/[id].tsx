@@ -2,14 +2,23 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
-import { Text, View } from 'react-native';
+import { type ScrollView, Text, View } from 'react-native';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
+import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
@@ -426,6 +435,43 @@ function MangaCreditsSections({ mediaId }: { mediaId: number }) {
   );
 }
 
+/**
+ * `top-12` + the 40px floating back button + 8: the bar's title row centres on
+ * that button, which floats over it and stays where it always was.
+ */
+const TITLE_BAR_HEIGHT = 96;
+
+/**
+ * The inline title that takes over once the hero title scrolls under it —
+ * `progress` is 0 with the hero on screen and 1 once its last line has passed
+ * the bar. Never interactive, so it must never catch a scroll's first touch.
+ */
+function ScrolledTitleBar({
+  progress,
+  title,
+}: {
+  progress: SharedValue<number>;
+  title: string;
+}) {
+  const barStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
+  const titleStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - progress.value) * 8 }],
+  }));
+  return (
+    <AnimatedView
+      className="absolute top-0 left-0 right-0 h-24 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border"
+      pointerEvents="none"
+      style={barStyle}
+    >
+      <AnimatedView className="h-10 justify-center" style={titleStyle}>
+        <Text className="font-display text-lg text-foreground" numberOfLines={1}>
+          {title}
+        </Text>
+      </AnimatedView>
+    </AnimatedView>
+  );
+}
+
 function StudiosSkeleton() {
   return (
     <View className="mt-8">
@@ -484,6 +530,36 @@ export default function DetailsScreen() {
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
+  // The hero title's bottom edge in scroll-content coordinates, measured on
+  // layout (it wraps to as many lines as it needs); the handler then reads
+  // only the event's own offset. Measuring the title *per scroll frame*
+  // (`measure`) reads the scroll view's shadow state, which Android updates
+  // once a fling settles, so the last event saw a stale position and the bar
+  // stayed hidden after a fast scroll.
+  const scrollRef = useRef<ScrollView>(null);
+  const heroTitleRef = useRef<View>(null);
+  const heroTitleBottom = useSharedValue(0);
+  const titleBarProgress = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    if (heroTitleBottom.value === 0) return;
+    titleBarProgress.value = interpolate(
+      event.contentOffset.y,
+      [heroTitleBottom.value - TITLE_BAR_HEIGHT, heroTitleBottom.value - TITLE_BAR_HEIGHT + 24],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+  });
+  function measureHeroTitle() {
+    // Runtime API on native and web, missing from RN's `.d.ts`; the node-handle
+    // sibling `getInnerViewNode` is what Fabric's `measureLayout` rejects.
+    const content = (
+      scrollRef.current as (ScrollView & { getInnerViewRef(): View | null }) | null
+    )?.getInnerViewRef();
+    if (content == null) return;
+    heroTitleRef.current?.measureLayout(content, (_x, y, _width, height) => {
+      heroTitleBottom.value = y + height;
+    });
+  }
 
   const { item, isLoading, refetchFeed } = useResolvedMediaItem(id);
   // TMDB is the metadata source of truth (plan 0014): the same composed
@@ -618,6 +694,9 @@ export default function DetailsScreen() {
       <RefreshableScrollView
         className="flex-1"
         onRefresh={refresh}
+        onScroll={onScroll}
+        ref={scrollRef}
+        scrollEventThrottle={16}
         spinnerBelowStatusBar
       >
         <View className="h-80 relative">
@@ -656,7 +735,10 @@ export default function DetailsScreen() {
               className="w-28 h-40 rounded-card border border-border bg-surface"
               contentFit="cover"
             />
-            <View className="flex-1 ml-4 pb-1">
+            {/* Measured on the column, not the title: the row bottom-aligns the
+                column to the poster, so a meta line landing later moves the
+                title without changing its own layout. */}
+            <View className="flex-1 ml-4 pb-1" onLayout={measureHeroTitle}>
               <View className="flex-row items-center gap-3">
                 <Eyebrow tone="accent">{shown.type}</Eyebrow>
                 {shown.rating != null && (
@@ -672,12 +754,14 @@ export default function DetailsScreen() {
                   </View>
                 )}
               </View>
-              <CopyTitle
-                alternates={alternates}
-                className="mt-1"
-                title={shown.title}
-                year={shown.year}
-              />
+              <View ref={heroTitleRef}>
+                <CopyTitle
+                  alternates={alternates}
+                  className="mt-1"
+                  title={shown.title}
+                  year={shown.year}
+                />
+              </View>
               {alternates.length > 0 && (
                 <Text className="text-muted font-sans text-sm mt-0.5">
                   {alternates.join(' · ')}
@@ -770,6 +854,7 @@ export default function DetailsScreen() {
         </View>
       </RefreshableScrollView>
 
+      <ScrolledTitleBar progress={titleBarProgress} title={shown.title} />
       <FloatingBackButton onPress={goBack} />
     </View>
   );

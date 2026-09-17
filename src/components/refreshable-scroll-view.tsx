@@ -1,11 +1,12 @@
 import { type Ref, useState } from 'react';
 import {
   RefreshControl,
-  ScrollView,
+  type ScrollView,
   type ScrollViewProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AnimatedScrollView } from '@/components/animated-view';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { useThemeColor } from '@/lib/theme-color';
 
@@ -68,7 +69,9 @@ export function RefreshableScrollView({
   useTabDoubleTap(tab, refresh);
 
   return (
-    <ScrollView
+    // Reanimated's, so a screen can hand `onScroll` a worklet (the details
+    // screen's title bar); for everyone else it is a plain ScrollView.
+    <AnimatedScrollView
       {...rest}
       refreshControl={
         <RefreshControl
@@ -83,6 +86,6 @@ export function RefreshableScrollView({
       }
     >
       {children}
-    </ScrollView>
+    </AnimatedScrollView>
   );
 }

@@ -73,7 +73,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                 hundred characters and the hero reads as an article. */}
             {person.biography != null && (
               <View className="max-w-xl">
-                <ExpandableText lines={4} text={person.biography} />
+                <ExpandableText lines={4} text={person.biography} title="Biography" />
               </View>
             )}
           </View>

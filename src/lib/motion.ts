@@ -1,3 +1,4 @@
+import { LayoutAnimation } from 'react-native';
 import { cubicBezier, Easing } from 'react-native-reanimated';
 
 /**
@@ -79,3 +80,15 @@ export const DURATION = {
    * 300ms ceiling every other number here sits under. */
   pulse: 1400,
 } as const;
+
+/**
+ * One CoreAnimation pass over a disclosure's layout diff (an overview box or
+ * a season accordion opening): everything below it reflows together, which a
+ * per-frame JS height animation stutters through. Native only; react-native-web
+ * makes `configureNext` a no-op.
+ */
+export const DISCLOSURE_LAYOUT = LayoutAnimation.create(
+  DURATION.toggle,
+  LayoutAnimation.Types.easeInEaseOut,
+  LayoutAnimation.Properties.opacity,
+);

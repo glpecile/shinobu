@@ -1,11 +1,13 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { LayoutAnimation, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { formatAirDate } from '@/features/episode-details/episode-label';
+import { DISCLOSURE_LAYOUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import { hasAired } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
@@ -179,8 +181,14 @@ export function SeasonAccordion({
   onEpisodeActions,
 }: SeasonAccordionProps) {
   const [open, setOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
   const accent = useThemeColor('--color-accent');
   const runtime = seasonRuntimeMinutes(season);
+
+  function toggle() {
+    if (!reduceMotion) LayoutAnimation.configureNext(DISCLOSURE_LAYOUT);
+    setOpen(!open);
+  }
 
   const airedCount = season.episodes.filter((e) => hasAired(e.firstAired)).length;
   const seasonMarkable = airedCount > 0;
@@ -190,7 +198,7 @@ export function SeasonAccordion({
       <View className="flex-row items-center">
         <PresstableOpacity
           className="flex-1 flex-row items-center px-4 py-3"
-          onPress={() => setOpen(!open)}
+          onPress={toggle}
         >
           <DisclosureChevron from="forward" open={open} size={16} />
           <View className="ml-3 flex-1">

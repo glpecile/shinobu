@@ -329,7 +329,11 @@ export function CreditTimeline({
                 rows filter, and marks where the hero ends and the list begins. */}
             <Section className="mt-2 px-6">
               <Section.Header>
-                <Section.Title>Filmography</Section.Title>
+                <Section.Title>
+                  {filmography.credits.some((credit) => credit.item.type === 'MANGA')
+                    ? 'Works'
+                    : 'Filmography'}
+                </Section.Title>
                 <Section.Count>
                   {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
                 </Section.Count>
