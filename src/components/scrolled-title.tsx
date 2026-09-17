@@ -7,18 +7,19 @@ import {
 } from 'react';
 import { Text, View } from 'react-native';
 import {
-  Extrapolation,
-  interpolate,
   type SharedValue,
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedView } from '@/components/animated-view';
 import { cn } from '@/lib/cn';
+import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
 /** `top-12` + the 40px `FloatingBackButton` + 8: the bar's title row centres on that button. */
 const BAR_HEIGHT = 96;
@@ -47,12 +48,10 @@ function useScrolledTitleContext(caller: string): ScrolledTitleContextValue {
   return context;
 }
 
-/** How much of the anchored title the bar covers: 0 until its top reaches the bar, 1 once it is under. */
-function coverProgress(scrollY: number, anchor: AnchorFrame): number {
+/** Whether the bar has started to cover the anchored title. */
+function covered(scrollY: number, anchor: AnchorFrame): boolean {
   'worklet';
-  if (anchor.height === 0) return 0;
-  const top = anchor.y - BAR_HEIGHT;
-  return interpolate(scrollY, [top, top + anchor.height], [0, 1], Extrapolation.CLAMP);
+  return anchor.height > 0 && scrollY > anchor.y - BAR_HEIGHT;
 }
 
 /**
@@ -66,10 +65,11 @@ function coverProgress(scrollY: number, anchor: AnchorFrame): number {
  *     <FloatingBackButton … />                        … and under the button
  *   </ScrolledTitle>
  *
- * As the scroll carries the anchored title under the bar, the bar fades in
- * over it and its own title slides up from under the bar's edge on the same
- * beat: the text is covered and rises again, small. Scroll-driven, so there
- * is no animation to reduce.
+ * The moment the scroll carries the anchored title under the bar, the bar
+ * fades in over it and its own title slides up from under the bar's edge:
+ * the text is covered and rises again, small. Timed from that crossing
+ * rather than tied to the offset, so a fast wheel tick that skips the whole
+ * overlap still gets a full slide.
  */
 export function ScrolledTitle({
   children,
@@ -145,20 +145,26 @@ function Anchor({
 /** The bar. Never interactive, so it must never catch a scroll's first touch. */
 function Bar({ title }: { title: string }) {
   const { scrollY, anchor } = useScrolledTitleContext('ScrolledTitle.Bar');
-  // Solid well before the title is fully under, so the slide reads as the
-  // covered text rising, not as two titles crossing on a see-through bar.
-  const barStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      coverProgress(scrollY.value, anchor.value),
-      [0, 0.35],
-      [0, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
+  const reduceMotion = useReducedMotion();
+  const shown = useSharedValue(0);
+  useAnimatedReaction(
+    () => covered(scrollY.value, anchor.value),
+    (isCovered, wasCovered) => {
+      if (isCovered === wasCovered) return;
+      const target = isCovered ? 1 : 0;
+      shown.value = reduceMotion
+        ? target
+        : withTiming(
+            target,
+            isCovered
+              ? { duration: DURATION.toggle, easing: KEYFRAME_EASE_OUT }
+              : { duration: DURATION.exit, easing: KEYFRAME_EASE_EXIT },
+          );
+    },
+  );
+  const barStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
   const titleStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: (1 - coverProgress(scrollY.value, anchor.value)) * ROW_TOP },
-    ],
+    transform: [{ translateY: (1 - shown.value) * ROW_TOP }],
   }));
   return (
     <AnimatedView
