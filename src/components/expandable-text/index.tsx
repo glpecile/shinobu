@@ -41,7 +41,7 @@ export function ExpandableText({
       accessibilityState={{ expanded }}
       className={cn('rounded-lg mb-6', className)}
       disabled={!expandable}
-      minScale={0.985}
+      minScale={0.99}
       onPress={toggle}
     >
       <View className="bg-surface border border-border rounded-lg px-4 py-3">
