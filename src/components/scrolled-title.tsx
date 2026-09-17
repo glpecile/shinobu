@@ -152,7 +152,9 @@ function Bar({ title }: { title: string }) {
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
       const target = isCovered ? 1 : 0;
-      shown.value = reduceMotion
+      // No previous state means the screen is (re)appearing, not scrolling:
+      // a page returned to mid-way shows its bar, it doesn't slide it in.
+      shown.value = reduceMotion || wasCovered == null
         ? target
         : withTiming(
             target,
