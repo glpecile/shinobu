@@ -20,24 +20,20 @@ export default function TabsLayout() {
   const backgroundColor = colorScheme === 'dark' ? '#0a0a0a' : '#ffffff';
   const foreground = colorScheme === 'dark' ? '#ffffff' : '#0a0a0a';
   const muted = colorScheme === 'dark' ? '#aaaaaa' : '#666666';
-  // Android reads as Google TV's bar: a foreground pill behind the selected
-  // glyph, which inverts to the bar colour, and every label in foreground.
-  // The accent stays for iOS, whose selected tab is a tint, not a pill.
+  // Android reads as Google TV's bar, in the brand colour: a solid accent pill
+  // behind the selected glyph, which goes white on it, and every label shown.
+  // iOS keeps its tint, its selected tab is not a pill.
   const android =
     process.env.EXPO_OS === 'android'
       ? {
-          iconColor: { default: muted, selected: backgroundColor },
-          indicatorColor: foreground,
+          iconColor: { default: muted, selected: '#ffffff' },
+          indicatorColor: '#DC2626',
           // Material hides inactive labels past three tabs; Google TV labels all four.
           labelVisibilityMode: 'labeled' as const,
           labelStyle: {
             default: { color: foreground },
-            selected: { color: foreground },
+            selected: { color: '#DC2626' },
           },
-          rippleColor:
-            colorScheme === 'dark'
-              ? 'rgba(255, 255, 255, 0.12)'
-              : 'rgba(10, 10, 10, 0.08)',
         }
       : {};
 
