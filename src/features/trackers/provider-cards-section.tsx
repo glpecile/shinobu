@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Eyebrow } from '@/components/eyebrow';
+import { SectionEnter } from '@/components/section-enter';
 import { ProviderCard } from '@/features/trackers/provider-card';
 import {
   shouldAutoCloseSheet,
@@ -26,6 +27,16 @@ import { useConnectedProviders } from '@/state/session';
 export function ProviderCardsSection() {
   const connectedIds = useConnectedProviders();
   const { connected, disconnected } = splitProviders(connectedIds);
+  const [shownIds, setShownIds] = useState(connectedIds);
+  const [movedIds, setMovedIds] = useState<ProviderId[]>([]);
+  if (connectedIds !== shownIds) {
+    setShownIds(connectedIds);
+    setMovedIds([
+      ...movedIds,
+      ...connectedIds.filter((id) => !shownIds.includes(id)),
+      ...shownIds.filter((id) => !connectedIds.includes(id)),
+    ]);
+  }
   // `sheetId` is kept while closing so the content doesn't vanish mid-animation
   // (the shape `card-actions-sheet` uses for its `item`).
   const [sheetId, setSheetId] = useState<ProviderId | null>(null);
@@ -65,12 +76,13 @@ export function ProviderCardsSection() {
           <Eyebrow className="mb-3">Connected</Eyebrow>
           <View className="gap-3">
             {connected.map((id) => (
-              <ProviderCard
-                connected
-                id={id}
-                key={id}
-                onOpenSheet={() => openSheet(id)}
-              />
+              <MovedCard key={id} moved={movedIds.includes(id)}>
+                <ProviderCard
+                  connected
+                  id={id}
+                  onOpenSheet={() => openSheet(id)}
+                />
+              </MovedCard>
             ))}
           </View>
         </View>
@@ -81,12 +93,13 @@ export function ProviderCardsSection() {
           <Eyebrow className="mb-3">Accounts</Eyebrow>
           <View className="gap-3">
             {disconnected.map((id) => (
-              <ProviderCard
-                connected={false}
-                id={id}
-                key={id}
-                onOpenSheet={() => openSheet(id)}
-              />
+              <MovedCard key={id} moved={movedIds.includes(id)}>
+                <ProviderCard
+                  connected={false}
+                  id={id}
+                  onOpenSheet={() => openSheet(id)}
+                />
+              </MovedCard>
             ))}
           </View>
         </View>
@@ -100,4 +113,15 @@ export function ProviderCardsSection() {
       />
     </>
   );
+}
+
+/** Settles a card into the section it just moved to during this visit. */
+function MovedCard({
+  moved,
+  children,
+}: {
+  moved: boolean;
+  children: ReactNode;
+}) {
+  return moved ? <SectionEnter>{children}</SectionEnter> : children;
 }

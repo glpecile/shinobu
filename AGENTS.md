@@ -21,9 +21,10 @@ kind of change, sized like the neighbouring `*.test.ts`.
 
 ## Comments
 
-Comment only what the code can't say: a reason, a constraint, a platform trap,
-or where a number came from. Never restate the code or describe an earlier
-version. `docs/solutions/` holds solved bugs and non-obvious platform behavior,
+Comments describe how a thing is used, and move when the code moves. Write them
+mostly on functions, not on every line of behavior. Inside a body, comment only
+what the code can't say: a reason, a constraint, a platform trap, or where a
+number came from. Never restate the code or describe an earlier version. `docs/solutions/` holds solved bugs and non-obvious platform behavior,
 not design notes.
 
 ## Effects and timers

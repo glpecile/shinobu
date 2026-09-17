@@ -19,11 +19,7 @@ export interface SheetProps {
   /** Called when the sheet reaches its closed detent (drag, scrim tap, …). */
   onClose: () => void;
   children: ReactNode;
-  /**
-   * Focus the first text field as the sheet opens. Desktop web only: a touch
-   * browser won't raise the keyboard for it, and on native it would cover the
-   * sheet.
-   */
+  /** Focuses the first text field when the sheet opens. Desktop web only. */
   autoFocus?: boolean;
 }
 

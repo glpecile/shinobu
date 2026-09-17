@@ -32,11 +32,7 @@ export function ProviderSheet({
 }: {
   /** Kept (not nulled) while closing so content doesn't vanish mid-animation. */
   id: ProviderId | null;
-  /**
-   * Whether the provider was connected when the sheet opened, not now: a
-   * connect or disconnect flips the live value while the sheet is still
-   * closing, which swapped in the other form for its last frames.
-   */
+  /** Whether the provider was connected when the sheet opened. */
   connected: boolean;
   open: boolean;
   onClose: () => void;

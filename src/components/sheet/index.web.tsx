@@ -24,20 +24,14 @@ export interface SheetProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
-  /**
-   * Focus the first text field as the sheet opens. Desktop web only: a touch
-   * browser won't raise the keyboard for it, and on native it would cover the
-   * sheet.
-   */
+  /** Focuses the first text field when the sheet opens. Desktop web only. */
   autoFocus?: boolean;
 }
 
 /**
- * React's `autoFocus` can't work in here: the Modal commits its content under
- * `display: none`, and Reanimated keeps an `entering` element at
- * `visibility: hidden` until its own `animationstart` handler reveals it. A
- * focus call before then is silently dropped, so retry as each animation start
- * bubbles up, until one lands.
+ * Ref callback for the sheet overlay. Focuses its first text field once the
+ * entering animation has made it visible, where React's `autoFocus` is dropped
+ * (docs/solutions/web-sheet-autofocus-dropped.md).
  */
 function focusFirstFieldOnReveal(view: View | null) {
   const overlay = view as unknown as HTMLElement | null;
