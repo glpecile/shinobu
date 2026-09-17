@@ -5,6 +5,7 @@ import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { ScrolledTitle } from '@/components/scrolled-title';
 import { CopyTitle } from '@/features/copy-title/copy-title';
 import { CreditTimeline } from '@/features/credit-timeline/credit-timeline';
 import { catalogueFilmography } from '@/features/credit-timeline/group';
@@ -53,7 +54,9 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
                 <PosterPlaceholder className="w-28 h-28 rounded-card" />
               )}
               <View className="flex-1">
-                <CopyTitle title={company.name} />
+                <ScrolledTitle.Anchor>
+                  <CopyTitle title={company.name} />
+                </ScrolledTitle.Anchor>
                 {company.headquarters != null && (
                   <Text className="text-muted font-sans text-sm mt-1.5">
                     {company.headquarters}
@@ -66,6 +69,7 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
         onItemActions={(credit) => openActions(credit.item)}
         onItemPress={(item) => pushRoute(routes.details(item.id))}
       />
+      <ScrolledTitle.Bar title={company.name} />
       <CardActionsSheet {...sheetProps} />
     </>
   );

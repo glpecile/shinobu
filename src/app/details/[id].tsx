@@ -17,6 +17,7 @@ import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
 import { MorphText } from '@/components/morph-text';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
+import { ScrolledTitle, useScrolledTitle } from '@/components/scrolled-title';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
@@ -446,7 +447,7 @@ function StudiosSkeleton() {
  */
 function DetailsSkeleton() {
   return (
-    <View className="flex-1 bg-background">
+    <>
       <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end -mt-24 mb-6">
@@ -457,14 +458,21 @@ function DetailsSkeleton() {
             <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(2)} />
           </View>
         </View>
-        <Skeleton className="h-4 w-full rounded" delay={staggerDelay(3)} />
-        <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(3)} />
+        <ExpandableText.Skeleton />
       </View>
-    </View>
+    </>
   );
 }
 
-export default function DetailsScreen() {
+export default function DetailsRoute() {
+  return (
+    <ScrolledTitle className="bg-background">
+      <DetailsScreen />
+    </ScrolledTitle>
+  );
+}
+
+function DetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -484,6 +492,7 @@ export default function DetailsScreen() {
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
+  const scrolledTitle = useScrolledTitle();
 
   const { item, isLoading, refetchFeed } = useResolvedMediaItem(id);
   // TMDB is the metadata source of truth (plan 0014): the same composed
@@ -606,7 +615,7 @@ export default function DetailsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <>
       <Head>
         <title>{`${shown.title} — Shinobu`}</title>
         {shown.overview != null && (
@@ -618,6 +627,8 @@ export default function DetailsScreen() {
       <RefreshableScrollView
         className="flex-1"
         onRefresh={refresh}
+        onScroll={scrolledTitle.onScroll}
+        scrollEventThrottle={scrolledTitle.scrollEventThrottle}
         spinnerBelowStatusBar
       >
         <View className="h-80 relative">
@@ -672,12 +683,13 @@ export default function DetailsScreen() {
                   </View>
                 )}
               </View>
-              <CopyTitle
-                alternates={alternates}
-                className="mt-1"
-                title={shown.title}
-                year={shown.year}
-              />
+              <ScrolledTitle.Anchor className="mt-1">
+                <CopyTitle
+                  alternates={alternates}
+                  title={shown.title}
+                  year={shown.year}
+                />
+              </ScrolledTitle.Anchor>
               {alternates.length > 0 && (
                 <Text className="text-muted font-sans text-sm mt-0.5">
                   {alternates.join(' · ')}
@@ -770,7 +782,8 @@ export default function DetailsScreen() {
         </View>
       </RefreshableScrollView>
 
+      <ScrolledTitle.Bar title={shown.title} />
       <FloatingBackButton onPress={goBack} />
-    </View>
+    </>
   );
 }

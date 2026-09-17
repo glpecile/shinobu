@@ -14,6 +14,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { BlurEnter } from '@/components/blur-enter';
+import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
@@ -31,7 +32,6 @@ import {
   EpisodeLogs,
   EpisodeNav,
   EpisodeOverview,
-  EpisodeOverviewSkeleton,
   EpisodeSeriesLink,
   useGoToEpisode,
 } from '@/features/episode-details/episode-sections';
@@ -171,9 +171,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                   season={season}
                   watched={logs.length > 0}
                 />
-                <View className="mt-6">
-                  <EpisodeOverview episode={view.episode} />
-                </View>
+                <EpisodeOverview className="mt-6" episode={view.episode} />
               </>
             )}
             <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
@@ -212,7 +210,7 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
         <EpisodeHeaderSkeleton />
         {/* The log button fills the column here (no `self-start`, unlike web). */}
         <Skeleton className="h-12 w-full rounded-full mt-5" delay={staggerDelay(1)} />
-        <EpisodeOverviewSkeleton />
+        <ExpandableText.Skeleton className="mt-6" lines={4} />
         <PeopleSectionsSkeleton />
         <View className="flex-row gap-3 mt-8">
           <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />

@@ -23,6 +23,7 @@ import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
+import { useScrolledTitle } from '@/components/scrolled-title';
 import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-top-fab';
 import { Section } from '@/components/section';
 import { SegmentedControl } from '@/components/segmented-control';
@@ -269,6 +270,7 @@ export function CreditTimeline({
     });
   }
   const listRef = useRef<LegendListRef>(null);
+  const { scrollY } = useScrolledTitle();
   // Flipped on threshold crossings only, so scrolling doesn't re-render (the diary's rule).
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [format, setFormat] = useState<FormatFilter>('ALL');
@@ -293,6 +295,9 @@ export function CreditTimeline({
   });
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    // Fed from here, on the JS thread: the title bar only moves while the
+    // header is on screen, where nothing else is keeping this thread busy.
+    scrollY.value = event.nativeEvent.contentOffset.y;
     const past = event.nativeEvent.contentOffset.y > SCROLL_TO_TOP_THRESHOLD;
     if (past !== showScrollTop) setShowScrollTop(past);
   }
@@ -329,7 +334,11 @@ export function CreditTimeline({
                 rows filter, and marks where the hero ends and the list begins. */}
             <Section className="mt-2 px-6">
               <Section.Header>
-                <Section.Title>Filmography</Section.Title>
+                <Section.Title>
+                  {filmography.credits.some((credit) => credit.item.type === 'MANGA')
+                    ? 'Works'
+                    : 'Filmography'}
+                </Section.Title>
                 <Section.Count>
                   {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
                 </Section.Count>

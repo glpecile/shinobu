@@ -4,9 +4,9 @@ import {
   type ErrorBoundaryProps,
 } from 'expo-router';
 import { Suspense } from 'react';
-import { View } from 'react-native';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { ScrolledTitle } from '@/components/scrolled-title';
 import {
   PersonDetailsView,
   PersonNotFound,
@@ -49,7 +49,7 @@ export default function PersonScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <ScrolledTitle className="bg-background">
       <Suspense fallback={<PersonSkeleton />}>
         {anilistId != null ? (
           <AniListPersonContent anilistId={anilistId} />
@@ -58,7 +58,7 @@ export default function PersonScreen() {
         )}
       </Suspense>
       <FloatingBackButton onPress={goBack} />
-    </View>
+    </ScrolledTitle>
   );
 }
 

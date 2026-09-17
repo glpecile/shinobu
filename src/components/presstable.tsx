@@ -1,5 +1,6 @@
-import { PressableOpacity, PressableScale } from 'pressto';
+import { createAnimatedPressable, PressableOpacity } from 'pressto';
 import { useRef, type ComponentProps } from 'react';
+import { interpolate } from 'react-native-reanimated';
 import { withUniwind } from '@/lib/with-uniwind';
 
 /**
@@ -35,6 +36,23 @@ const PRESS_DEBOUNCE_MS = 500;
  */
 const RIPPLE_COLOR = 'transparent';
 
+/** pressto's own scale pressable, with the shrink overridable per instance. */
+const PressableScale = createAnimatedPressable<{ minScale?: number }>(
+  (progress, { config, metadata }) => {
+    'worklet';
+    return {
+      transform: [
+        {
+          scale: interpolate(
+            progress,
+            [0, 1],
+            [config.baseScale, metadata?.minScale ?? config.minScale],
+          ),
+        },
+      ],
+    };
+  },
+);
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
@@ -51,16 +69,24 @@ function useDebouncedPress<Args extends unknown[]>(
   };
 }
 
-/** Scales down while pressed — media cards, poster-like surfaces. */
+/**
+ * Scales down while pressed — media cards, poster-like surfaces. `minScale`
+ * softens the shrink for a wide surface, where the default 0.96 reads as a
+ * lurch.
+ */
 export function PresstableScale({
+  minScale,
   onPress,
   ...rest
-}: ComponentProps<typeof UniwindPressableScale>) {
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> & {
+  minScale?: number;
+}) {
   const debouncedPress = useDebouncedPress(onPress);
   return (
     <UniwindPressableScale
       rippleColor={RIPPLE_COLOR}
       {...rest}
+      metadata={{ minScale }}
       onPress={debouncedPress}
     />
   );
