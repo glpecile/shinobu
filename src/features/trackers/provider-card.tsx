@@ -9,7 +9,6 @@ import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
-import { useDisconnectProvider } from '@/state/session';
 
 /**
  * One provider's row, in whichever of its two states applies.
@@ -34,7 +33,6 @@ export function ProviderCard({
   connected: boolean;
   onOpenSheet: () => void;
 }) {
-  const disconnect = useDisconnectProvider();
   const username = useProviderUsername(id, connected);
   const { needsSheet, connect, connecting } = useConnectAction(id);
 
@@ -69,7 +67,7 @@ export function ProviderCard({
             className="shrink-0"
             icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
-            onPress={() => disconnect(id)}
+            onPress={onOpenSheet}
             size="sm"
             variant="quiet"
           />

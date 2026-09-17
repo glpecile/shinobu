@@ -9,6 +9,7 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
+import { hasCoarsePointer } from '@/lib/pointer';
 import {
   DURATION,
   EASE_OUT,
@@ -23,6 +24,37 @@ export interface SheetProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  /**
+   * Focus the first text field as the sheet opens. Desktop web only: a touch
+   * browser won't raise the keyboard for it, and on native it would cover the
+   * sheet.
+   */
+  autoFocus?: boolean;
+}
+
+/**
+ * React's `autoFocus` can't work in here: the Modal commits its content under
+ * `display: none`, and Reanimated keeps an `entering` element at
+ * `visibility: hidden` until its own `animationstart` handler reveals it. A
+ * focus call before then is silently dropped, so retry as each animation start
+ * bubbles up, until one lands.
+ */
+function focusFirstFieldOnReveal(view: View | null) {
+  const overlay = view as unknown as HTMLElement | null;
+  if (overlay == null || hasCoarsePointer()) return;
+
+  function stop() {
+    overlay?.removeEventListener('animationstart', focusField);
+  }
+  function focusField() {
+    const field = overlay?.querySelector<HTMLElement>('input, textarea');
+    if (field == null) return stop();
+    field.focus();
+    if (document.activeElement === field) stop();
+  }
+
+  overlay.addEventListener('animationstart', focusField);
+  return stop;
 }
 
 /** Exit motion runs this long before the Modal unmounts — keep in sync below. */
@@ -155,7 +187,7 @@ function SheetPanel({
  * springs don't run on web. The Modal is held mounted for `EXIT_MS` after
  * `open` flips false so the exit actually plays before unmount.
  */
-export function Sheet({ open, onClose, children }: SheetProps) {
+export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const reduceMotion = useReducedMotion();
 
@@ -176,7 +208,10 @@ export function Sheet({ open, onClose, children }: SheetProps) {
 
   return (
     <Modal animationType="none" onRequestClose={onClose} transparent visible>
-      <View className="flex-1 justify-end">
+      <View
+        className="flex-1 justify-end"
+        ref={autoFocus ? focusFirstFieldOnReveal : undefined}
+      >
         {open && (
           <>
             <AnimatedView

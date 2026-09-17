@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -35,7 +35,7 @@ export function ProviderSheet({
   onClose: () => void;
 }) {
   return (
-    <Sheet onClose={onClose} open={open && id != null}>
+    <Sheet autoFocus onClose={onClose} open={open && id != null}>
       {id != null && <ProviderSheetContent id={id} onDone={onClose} />}
     </Sheet>
   );
@@ -69,8 +69,13 @@ function ProviderSheetContent({
         </SheetHeader.Content>
       </SheetHeader>
 
-      <View className="mt-5">
-        {connected ? (
+      {connected ? (
+        <View className="mt-5 gap-3">
+          <Text className="text-muted font-sans text-sm">
+            Shinobu forgets this {PROVIDERS[id].label} session on this device.
+            Nothing on {PROVIDERS[id].label} is deleted, and you can reconnect
+            any time.
+          </Text>
           <Button
             icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
@@ -78,12 +83,19 @@ function ProviderSheetContent({
               disconnect(id);
               onDone();
             }}
-            variant="outline"
           />
-        ) : (
+          <Button
+            icon={<Button.Icon name="close" />}
+            label="Cancel"
+            onPress={onDone}
+            variant="quiet"
+          />
+        </View>
+      ) : (
+        <View className="mt-5">
           <ConnectButton />
-        )}
-      </View>
+        </View>
+      )}
     </>
   );
 }
