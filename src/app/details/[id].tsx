@@ -221,10 +221,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
       }),
     );
     label = `Watched${count > 1 ? ` (${count})` : ''} · ${dates.join(' · ')}`;
-  } else if (watched != null) {
-    label = `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`;
-  } else if (anilistEntry.data?.entry != null) {
-    label = anilistWatchedLabel(anilistEntry.data.entry, item);
   } else if (
     simklEntry.data != null &&
     simklEntry.data.item.currentProgress > 0
@@ -246,6 +242,10 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
           : simklEntry.data.status === 'hold'
             ? `Paused · ${episodes}`
             : `Watching · ${episodes}`;
+  } else if (watched != null) {
+    label = `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`;
+  } else if (anilistEntry.data?.entry != null) {
+    label = anilistWatchedLabel(anilistEntry.data.entry, item);
   }
   if (label == null) return null;
 

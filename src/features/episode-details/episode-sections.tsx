@@ -9,7 +9,7 @@ import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import {
   PeopleSection,
@@ -256,27 +256,43 @@ export function EpisodeSeriesLink({
 }
 
 /**
+ * The one way an episode screen steps to a sibling — the nav buttons, the
+ * native swipe and the web arrow keys all call this. `replace`, not push:
+ * stepping through episodes must not stack one screen per step, so back
+ * still returns to the show. The direction is derived from the target's
+ * position so the root stack can animate a step back as a pop.
+ */
+export function useGoToEpisode(id: string, season: number, number: number) {
+  const router = useRouter();
+  // push-guard-exempt: `replace`, see above.
+  return (target: EpisodeRef) => {
+    const back =
+      target.season < season || (target.season === season && target.number < number);
+    router.replace(routes.episode(id, target.season, target.number, back ? 'back' : 'forward'));
+  };
+}
+
+/**
  * Previous / next episode, across season boundaries, from the show's layout
  * (`useEpisode` → `episodeNeighbours`). Always the tracker's explicit
  * `season`+`number`, which is what the route places without ani.zip.
  */
 export function EpisodeNav({
   id,
+  season,
+  number,
   prev,
   next,
   className,
 }: {
   id: string;
+  season: number;
+  number: number;
   prev: EpisodeRef | undefined;
   next: EpisodeRef | undefined;
   className?: string;
 }) {
-  const router = useRouter();
-  // push-guard-exempt: `replace`, not push — stepping through episodes must
-  // not stack one screen per step, so back still returns to the show.
-  function go(target: EpisodeRef) {
-    router.replace(routes.episode(id, target.season, target.number));
-  }
+  const go = useGoToEpisode(id, season, number);
   return (
     <View className={cn('flex-row gap-3', className)}>
       <Button
@@ -301,13 +317,32 @@ export function EpisodeNav({
   );
 }
 
-/** Mirrors the loaded header so content lands without a shift. */
+/**
+ * Mirrors the loaded header so content lands without a shift: the eyebrow's
+ * 16px line, the title's 36px line a `mt-1` under it, the meta line's 20px a
+ * `mt-1.5` under that — each bar centred in its text line.
+ */
 export function EpisodeHeaderSkeleton() {
   return (
     <View>
       <Skeleton className="h-3 w-32 rounded mt-0.5" />
-      <Skeleton className="h-9 w-64 rounded mt-1.5" />
-      <Skeleton className="h-3.5 w-40 rounded mt-2" />
+      <Skeleton className="h-7 w-64 rounded mt-2.5" />
+      <Skeleton className="h-3.5 w-40 rounded mt-3" />
+    </View>
+  );
+}
+
+/**
+ * The overview's four clamped lines on `ExpandableText`'s geometry — a
+ * `text-base leading-relaxed` line is 26px — plus the `mb-6` it carries.
+ */
+export function EpisodeOverviewSkeleton({ className }: { className?: string }) {
+  return (
+    <View className={cn('mt-6 mb-6', className)}>
+      <Skeleton className="h-4 w-full rounded mt-1" delay={staggerDelay(2)} />
+      <Skeleton className="h-4 w-full rounded mt-2.5" delay={staggerDelay(2)} />
+      <Skeleton className="h-4 w-full rounded mt-2.5" delay={staggerDelay(2)} />
+      <Skeleton className="h-4 w-2/3 rounded mt-2.5" delay={staggerDelay(2)} />
     </View>
   );
 }

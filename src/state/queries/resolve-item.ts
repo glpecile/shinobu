@@ -2,13 +2,14 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
+import { parseSimklItemId } from '@/lib/providers/simkl/normalize';
 import { parseTmdbItemId } from '@/lib/providers/tmdb/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
-import { useMovieCatalogueQuery, useTraktIdentityQuery } from './mapping';
+import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
 import { findInUpNextCache } from './up-next-cache';
@@ -130,10 +131,16 @@ export function useResolvedMediaItem(id: string): {
   const anilistDeepLink =
     resolvedItem == null && !feed.isLoading ? parseAniListItemId(id) : null;
   const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink);
+  // And the Simkl one: a variant poster or a shared link to a Simkl-minted id.
+  const simklDeepLink = resolvedItem == null && !feed.isLoading ? parseSimklItemId(id) : null;
+  const simklDeepLinkItem = useSimklLookupQuery(
+    simklDeepLink != null ? { simkl: simklDeepLink } : null,
+  );
   const cachedOrFetched =
     resolvedItem ??
     deepLinkDetails.data?.catalogue ??
     anilistDeepLinkItem.data ??
+    simklDeepLinkItem.data ??
     undefined;
   const catalogue = useMovieCatalogueQuery(cachedOrFetched);
   const traktIdentity = useTraktIdentityQuery(cachedOrFetched);
@@ -146,13 +153,14 @@ export function useResolvedMediaItem(id: string): {
     isLoading:
       feed.isLoading ||
       (deepLink != null && deepLinkDetails.isPending) ||
-      (anilistDeepLink != null && anilistDeepLinkItem.isPending),
+      (anilistDeepLink != null && anilistDeepLinkItem.isPending) ||
+      (simklDeepLink != null && simklDeepLinkItem.isPending),
     refetchFeed: feed.refetch,
   };
 }
 
 /**
- * The record a cold `/details/[id]` fetches for a TMDB or AniList id, from the
+ * The record a cold `/details/[id]` fetches for a TMDB, AniList or Simkl id, from the
  * same queries — so previewing that page also warms it. `undefined` for any
  * other id, and while loading.
  */
@@ -160,7 +168,9 @@ export function useDeepLinkItem(id: string): NormalizedMediaItem | undefined {
   const tmdb = parseTmdbItemId(id);
   const details = useMediaDetailsQuery(tmdb != null ? tmdbStub(id, tmdb) : undefined);
   const anime = useAnimeByIdQuery(parseAniListItemId(id));
-  return details.data?.catalogue ?? anime.data ?? undefined;
+  const simkl = parseSimklItemId(id);
+  const simklItem = useSimklLookupQuery(simkl != null ? { simkl } : null);
+  return details.data?.catalogue ?? anime.data ?? simklItem.data ?? undefined;
 }
 
 function tmdbStub(

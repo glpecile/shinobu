@@ -332,6 +332,12 @@ function simklIdFrom(ids: SimklIds | undefined): number | undefined {
   return numericId(ids?.simkl ?? ids?.simkl_id);
 }
 
+/** Inverse of the `simkl-<id>` minting below: the Simkl id behind an item id, or null. */
+export function parseSimklItemId(id: string): number | null {
+  const match = /^simkl-(\d+)$/.exec(id);
+  return match == null ? null : Number(match[1]);
+}
+
 /** mal/simkl join tmdb/tvdb/imdb as bridge ids (plan 0034 KTD-6). */
 function externalIdsFrom(ids: SimklIds | undefined): NormalizedMediaItem['externalIds'] {
   const simkl = simklIdFrom(ids);
