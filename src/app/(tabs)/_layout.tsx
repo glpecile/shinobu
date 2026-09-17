@@ -1,8 +1,8 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { emitTabPress } from '@/lib/navigation/tab-double-tap';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * Native bottom tab bar for iOS/Android — liquid glass on iOS 26, Material 3
@@ -12,27 +12,27 @@ import { emitTabPress } from '@/lib/navigation/tab-double-tap';
  */
 export default function TabsLayout() {
   // NativeTabs renders through react-native-screens, outside the
-  // `ThemeProvider` in app/_layout.tsx — it doesn't inherit that theme, so
-  // without an explicit backgroundColor Android's Material 3 default paints
-  // the bar white regardless of dark mode. Matches `--color-background` in
-  // global.css (same values `_layout.tsx` uses for the screen `contentStyle`).
-  const colorScheme = useColorScheme();
-  const backgroundColor = colorScheme === 'dark' ? '#0a0a0a' : '#ffffff';
-  const foreground = colorScheme === 'dark' ? '#ffffff' : '#0a0a0a';
-  const muted = colorScheme === 'dark' ? '#aaaaaa' : '#666666';
+  // `ThemeProvider` in app/_layout.tsx, so it inherits no colours: without an
+  // explicit backgroundColor Android's Material 3 default paints the bar white
+  // regardless of dark mode. Everything is a `global.css` token via
+  // `useThemeColor` (these props take strings, not classes).
+  const background = useThemeColor('--color-background');
+  const muted = useThemeColor('--color-muted');
+  const accent = useThemeColor('--color-accent');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   // Android reads as Google TV's bar, in the brand colour: a solid accent pill
   // behind the selected glyph, which goes white on it, and every label shown.
   // iOS keeps its tint, its selected tab is not a pill.
   const android =
     process.env.EXPO_OS === 'android'
       ? {
-          iconColor: { default: muted, selected: '#ffffff' },
-          indicatorColor: '#DC2626',
+          iconColor: { default: muted, selected: accentForeground },
+          indicatorColor: accent,
           // Material hides inactive labels past three tabs; Google TV labels all four.
           labelVisibilityMode: 'labeled' as const,
           labelStyle: {
-            default: { color: foreground },
-            selected: { color: '#DC2626' },
+            default: { color: muted },
+            selected: { color: accent },
           },
         }
       : {};
@@ -48,11 +48,11 @@ export default function TabsLayout() {
     // (correctly red) selected pill. A translucent accent reads as a tinted
     // pill/ripple in both themes without a light/dark branch.
     <NativeTabs
-      backgroundColor={backgroundColor}
+      backgroundColor={background}
       indicatorColor="rgba(220, 38, 38, 0.18)"
       minimizeBehavior="onScrollDown"
       rippleColor="rgba(220, 38, 38, 0.24)"
-      tintColor="#DC2626"
+      tintColor={accent}
       {...android}
     >
       <NativeTabs.Trigger

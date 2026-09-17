@@ -5,7 +5,9 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
+import { cn } from '@/lib/cn';
 import { formatAirDate } from '@/features/episode-details/episode-label';
 import { DISCLOSURE_LAYOUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
@@ -194,28 +196,27 @@ export function SeasonAccordion({
   const seasonMarkable = airedCount > 0;
 
   return (
-    <View className="border border-border rounded-lg mb-3 overflow-hidden">
-      <View className="flex-row items-center">
-        <PresstableOpacity
-          className="flex-1 flex-row items-center px-4 py-3"
-          onPress={toggle}
-        >
-          <DisclosureChevron from="forward" open={open} size={16} />
-          <View className="ml-3 flex-1">
-            <Text className="text-foreground font-sans-semibold text-base">
-              {season.title}
-            </Text>
-            <Text className="text-muted font-sans text-xs mt-0.5">
-              {season.episodes.length}{' '}
-              {season.episodes.length === 1 ? 'episode' : 'episodes'}
-              {runtime > 0 ? ` · ${formatRuntime(runtime)}` : ''}
-            </Text>
-          </View>
-        </PresstableOpacity>
-      </View>
+    <View className="mb-3">
+      <PressableCard
+        accessibilityState={{ expanded: open }}
+        cardClassName={cn('flex-row items-center', open && 'rounded-b-none')}
+        onPress={toggle}
+      >
+        <DisclosureChevron from="forward" open={open} size={16} />
+        <View className="ml-3 flex-1">
+          <Text className="text-foreground font-sans-semibold text-base">
+            {season.title}
+          </Text>
+          <Text className="text-muted font-sans text-xs mt-0.5">
+            {season.episodes.length}{' '}
+            {season.episodes.length === 1 ? 'episode' : 'episodes'}
+            {runtime > 0 ? ` · ${formatRuntime(runtime)}` : ''}
+          </Text>
+        </View>
+      </PressableCard>
 
       {open && (
-        <View className="border-t border-border">
+        <View className="border border-border border-t-0 rounded-b-lg overflow-hidden">
           {seasonMarkable && (
             <PresstableOpacity
               className="flex-row items-center px-4 py-3 border-b border-border bg-accent/5"
