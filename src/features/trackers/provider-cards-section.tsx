@@ -93,6 +93,7 @@ export function ProviderCardsSection() {
       )}
 
       <ProviderSheet
+        connected={sheetWasConnected}
         id={sheetId}
         onClose={() => setSheetOpen(false)}
         open={sheetOpen}

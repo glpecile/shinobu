@@ -12,7 +12,7 @@ import {
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
-import { useConnectedProviders, useDisconnectProvider } from '@/state/session';
+import { useDisconnectProvider } from '@/state/session';
 
 /**
  * The one provider sheet for the whole screen.
@@ -26,30 +26,40 @@ import { useConnectedProviders, useDisconnectProvider } from '@/state/session';
  */
 export function ProviderSheet({
   id,
+  connected,
   open,
   onClose,
 }: {
   /** Kept (not nulled) while closing so content doesn't vanish mid-animation. */
   id: ProviderId | null;
+  /**
+   * Whether the provider was connected when the sheet opened, not now: a
+   * connect or disconnect flips the live value while the sheet is still
+   * closing, which swapped in the other form for its last frames.
+   */
+  connected: boolean;
   open: boolean;
   onClose: () => void;
 }) {
   return (
     <Sheet autoFocus onClose={onClose} open={open && id != null}>
-      {id != null && <ProviderSheetContent id={id} onDone={onClose} />}
+      {id != null && (
+        <ProviderSheetContent connected={connected} id={id} onDone={onClose} />
+      )}
     </Sheet>
   );
 }
 
 function ProviderSheetContent({
   id,
+  connected,
   onDone,
 }: {
   id: ProviderId;
+  connected: boolean;
   onDone: () => void;
 }) {
   const disconnect = useDisconnectProvider();
-  const connected = useConnectedProviders().includes(id);
   const username = useProviderUsername(id, connected);
   const ConnectButton = CONNECT_BUTTONS[id];
 
