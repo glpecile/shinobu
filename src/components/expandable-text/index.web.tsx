@@ -4,7 +4,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
-import { PresstableScale } from '@/components/presstable';
+import { PressableCard } from '@/components/pressable-card';
 import { cn } from '@/lib/cn';
 import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 
@@ -41,44 +41,39 @@ export function ExpandableText({
   const expandable = fullHeight > collapsed + 1;
 
   return (
-    // The card is an inner View: a border on the pressable itself is never
-    // drawn on Android (docs/solutions/pressto-border-not-drawn-on-android.md).
-    <PresstableScale
+    <PressableCard
       accessibilityState={{ expanded }}
-      className={cn('rounded-lg mb-6', className)}
+      className={cn('mb-6', className)}
       disabled={!expandable}
-      minScale={0.99}
       onPress={() => setExpanded(!expanded)}
     >
-      <View className="bg-surface border border-border rounded-lg px-4 py-3">
-        <View className="flex-row items-center justify-between mb-1.5">
-          <Text className="text-foreground font-sans-semibold text-base">
-            {title}
-          </Text>
-          {expandable && <DisclosureChevron open={expanded} size={18} />}
-        </View>
-        <AnimatedView
-          className="overflow-hidden"
-          style={{
-            height: expanded ? fullHeight : collapsed,
-            ...(reduceMotion
-              ? null
-              : {
-                  transitionProperty: 'height',
-                  transitionDuration: DURATION.toggle,
-                  transitionTimingFunction: EASE_IN_OUT,
-                }),
-          }}
-        >
-          <Text
-            className="text-foreground/90 font-sans text-base leading-relaxed"
-            onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
-          >
-            {text}
-          </Text>
-        </AnimatedView>
+      <View className="flex-row items-center justify-between mb-1.5">
+        <Text className="text-foreground font-sans-semibold text-base">
+          {title}
+        </Text>
+        {expandable && <DisclosureChevron open={expanded} size={18} />}
       </View>
-    </PresstableScale>
+      <AnimatedView
+        className="overflow-hidden"
+        style={{
+          height: expanded ? fullHeight : collapsed,
+          ...(reduceMotion
+            ? null
+            : {
+                transitionProperty: 'height',
+                transitionDuration: DURATION.toggle,
+                transitionTimingFunction: EASE_IN_OUT,
+              }),
+        }}
+      >
+        <Text
+          className="text-foreground/90 font-sans text-base leading-relaxed"
+          onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
+        >
+          {text}
+        </Text>
+      </AnimatedView>
+    </PressableCard>
   );
 }
 

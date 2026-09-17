@@ -3,7 +3,7 @@ import { LayoutAnimation, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { DisclosureChevron } from '@/components/disclosure-chevron';
-import { PresstableScale } from '@/components/presstable';
+import { PressableCard } from '@/components/pressable-card';
 import { cn } from '@/lib/cn';
 import { DISCLOSURE_LAYOUT } from '@/lib/motion';
 
@@ -35,49 +35,44 @@ export function ExpandableText({
   }
 
   return (
-    // The card is an inner View: a border on the pressable itself is never
-    // drawn on Android (docs/solutions/pressto-border-not-drawn-on-android.md).
-    <PresstableScale
+    <PressableCard
       accessibilityState={{ expanded }}
-      className={cn('rounded-lg mb-6', className)}
+      className={cn('mb-6', className)}
       disabled={!expandable}
-      minScale={0.99}
       onPress={toggle}
     >
-      <View className="bg-surface border border-border rounded-lg px-4 py-3">
-        <View className="flex-row items-center justify-between mb-1.5">
-          <Text className="text-foreground font-sans-semibold text-base">
-            {title}
-          </Text>
-          {expandable && <DisclosureChevron open={expanded} size={18} />}
-        </View>
-        {/* Both paragraphs share this box so the hidden one measures at the
-          clamped one's width (an absolute child ignores the card's padding). */}
-        <View>
-          <Text className={BODY} numberOfLines={expanded ? undefined : lines}>
+      <View className="flex-row items-center justify-between mb-1.5">
+        <Text className="text-foreground font-sans-semibold text-base">
+          {title}
+        </Text>
+        {expandable && <DisclosureChevron open={expanded} size={18} />}
+      </View>
+      {/* Both paragraphs share this box so the hidden one measures at the
+        clamped one's width (an absolute child ignores the card's padding). */}
+      <View>
+        <Text className={BODY} numberOfLines={expanded ? undefined : lines}>
+          {text}
+        </Text>
+        {/* iOS lays a paragraph out to fit whatever box it's in, so the clamped
+          copy can't say how long the text really is. This one is unconstrained,
+          and it's the only thing that knows whether there's more to read. */}
+        <View
+          accessibilityElementsHidden
+          className="absolute left-0 right-0 opacity-0"
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+        >
+          <Text
+            className={BODY}
+            onTextLayout={(event) =>
+              setFullLines(event.nativeEvent.lines.length)
+            }
+          >
             {text}
           </Text>
-          {/* iOS lays a paragraph out to fit whatever box it's in, so the clamped
-            copy can't say how long the text really is. This one is unconstrained,
-            and it's the only thing that knows whether there's more to read. */}
-          <View
-            accessibilityElementsHidden
-            className="absolute left-0 right-0 opacity-0"
-            importantForAccessibility="no-hide-descendants"
-            pointerEvents="none"
-          >
-            <Text
-              className={BODY}
-              onTextLayout={(event) =>
-                setFullLines(event.nativeEvent.lines.length)
-              }
-            >
-              {text}
-            </Text>
-          </View>
         </View>
       </View>
-    </PresstableScale>
+    </PressableCard>
   );
 }
 
