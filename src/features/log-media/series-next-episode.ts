@@ -175,6 +175,28 @@ function simklAiredCount(
   return totalEpisodes - notAired;
 }
 
+/**
+ * Whether an anime entry's `number` has aired, from its Simkl library entry
+ * alone — the log button's gate for an anime with no AniList id, whose AniList
+ * schedule can never load. `number` is entry-relative, the domain Simkl's
+ * anime catalog already counts in. An episode the user has watched aired (the
+ * rewatch wrap), then `total - not_aired` decides, and only without those
+ * counts does the pointer speak — permissively on a null date, like the TV
+ * path. No evidence is not aired.
+ */
+export function simklAnimeEpisodeAired(
+  number: number,
+  item: { currentProgress: number; totalEpisodes: number | null | undefined },
+  entry: Pick<SimklLibraryEntry, 'nextToWatch' | 'notAiredEpisodes'>,
+  now: Date = new Date(),
+): boolean {
+  if (number <= item.currentProgress) return true;
+  const aired = simklAiredCount(item, entry);
+  if (aired != null) return number <= aired;
+  const next = entry.nextToWatch;
+  return next?.episode === number && (next.date == null || hasAired(next.date, now));
+}
+
 /** Display form of an episode reference — "S2E5". */
 export function seriesEpisodeLabel(episode: {
   season: number;

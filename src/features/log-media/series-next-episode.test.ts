@@ -4,6 +4,7 @@ import {
   firstUnairedEpisode,
   nextEpisodeFromProgress,
   nextEpisodeFromSimklEntry,
+  simklAnimeEpisodeAired,
   unairedEpisodeLabel,
 } from './series-next-episode';
 
@@ -236,6 +237,36 @@ describe('nextEpisodeFromSimklEntry', () => {
     // The snapshot that knows its next episode doesn't list it — guessing a
     // season from a flat count would misfile the log.
     expect(nextEpisodeFromSimklEntry(midItem, null)).toBeNull();
+  });
+});
+
+describe('simklAnimeEpisodeAired', () => {
+  const now = new Date(2026, 8, 12, 14, 0);
+
+  test('an episode the user already watched aired — the rewatch wrap', () => {
+    // A completed entry, opened cold (owner report 2026-09-18): no counts, no
+    // pointer, and episode 1 still has to read as aired.
+    expect(simklAnimeEpisodeAired(1, { currentProgress: 10, totalEpisodes: 10 }, {})).toBe(true);
+  });
+
+  test('`total - not_aired` decides the next episode', () => {
+    const item = { currentProgress: 5, totalEpisodes: 12 };
+    expect(simklAnimeEpisodeAired(6, item, { notAiredEpisodes: 6 })).toBe(true);
+    expect(simklAnimeEpisodeAired(6, item, { notAiredEpisodes: 7 })).toBe(false);
+  });
+
+  test('without counts only the pointer speaks, permissive on a null date', () => {
+    const item = { currentProgress: 5, totalEpisodes: null };
+    expect(simklAnimeEpisodeAired(6, item, { nextToWatch: { episode: 6, date: null } })).toBe(true);
+    expect(
+      simklAnimeEpisodeAired(
+        6,
+        item,
+        { nextToWatch: { episode: 6, date: '2026-09-20T15:00:00+09:00' } },
+        now,
+      ),
+    ).toBe(false);
+    expect(simklAnimeEpisodeAired(6, item, {})).toBe(false);
   });
 });
 

@@ -12,6 +12,7 @@ import {
   useShowSeasonsQuery,
   useShowSeasonsSource,
 } from '@/state/queries/show-seasons';
+import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -25,6 +26,7 @@ import { useLogTargetsSplit } from './use-log-targets';
 import {
   firstUnairedEpisode,
   seriesEpisodeLabel,
+  simklAnimeEpisodeAired,
   unairedEpisodeLabel,
 } from './series-next-episode';
 import { useSeriesNextEpisode } from './use-series-next-episode';
@@ -61,6 +63,13 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     enabled: item.type === 'ANIME' && item.externalIds.anilist != null,
   });
   const seriesNextState = useSeriesNextEpisode(item);
+  const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
+  // Only an item that names its own Simkl entry: a TMDB id is shared by every
+  // season of an anime, so matching on it would read a sibling's progress.
+  const simklAnimeEntry = useSimklLibraryEntryQuery({
+    item: isAnimeSeries && item.externalIds.simkl != null ? item : null,
+    enabled: connected.includes('simkl'),
+  });
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   const [tags, setTags] = useState(DEFAULT_TAGS);
@@ -69,7 +78,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
-  const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
   const isSeries = item.type === 'TV';
   const seriesNext =
     seriesNextState.status === 'ready' ? seriesNextState.episode : null;
@@ -120,13 +128,15 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     anilistStatus === 'COMPLETED' ||
     anilistStatus === 'REPEATING';
 
-  // Anime series log the next unwatched episode. Prefer the live AniList
-  // entry progress over the feed's cached progress, so a detail screen opened
-  // from trending still recognizes already-watched episodes.
+  // Anime series log the next unwatched episode. Prefer the provider's live
+  // entry over the item's own progress, which is a snapshot of wherever the
+  // tap came from: 0 on a trending card or a cold-resolved Simkl page.
   const total = item.totalEpisodes;
-  const currentProgress = anilistProgress ?? item.currentProgress;
-  const nextEpisode =
-    total != null && currentProgress >= total ? 1 : currentProgress + 1;
+  const currentProgress =
+    anilistProgress ?? simklAnimeEntry.data?.item.currentProgress ?? item.currentProgress;
+  // A finished entry wraps to episode 1 and says so, like the series path.
+  const animeRewatch = isAnimeSeries && total != null && currentProgress >= total;
+  const nextEpisode = animeRewatch ? 1 : currentProgress + 1;
 
   // Never offer to log an episode that hasn't aired yet (todos/006).
   // Only evaluate aired status once the episodes query has successfully loaded.
@@ -138,15 +148,25 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const episodeData = anilistEpisodes.data?.episodes.find(
     (e) => e.number === nextEpisode,
   );
+  // Without an AniList id that schedule never loads, so the Simkl entry is
+  // the evidence instead, and failing that the show's own release.
   const nextEpisodeAired =
     !isAnimeSeries ||
-    (anilistEpisodes.status === 'success' &&
-      anilistEpisodes.data != null &&
-      (episodeData == null
-        ? false
-        : episodeData.firstAired == null
-          ? hasStartedAiring(item, anilistEpisodes.data.episodes)
-          : hasAired(episodeData.firstAired)));
+    (item.externalIds.anilist == null
+      ? simklAnimeEntry.data != null
+        ? simklAnimeEpisodeAired(
+            nextEpisode,
+            { currentProgress, totalEpisodes: total },
+            simklAnimeEntry.data,
+          )
+        : hasStartedAiring(item, [])
+      : anilistEpisodes.status === 'success' &&
+        anilistEpisodes.data != null &&
+        (episodeData == null
+          ? false
+          : episodeData.firstAired == null
+            ? hasStartedAiring(item, anilistEpisodes.data.episodes)
+            : hasAired(episodeData.firstAired)));
 
   // The movie counterpart of that gate: a film that isn't out yet can't be
   // watched, so it can't be logged — and unlike the episode rule above, an
@@ -209,7 +229,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const action = isSeries
     ? seriesAction
     : isAnimeSeries
-      ? `Log episode ${nextEpisode}`
+      ? animeRewatch
+        ? 'Rewatch'
+        : `Log episode ${nextEpisode}`
       : isRewatch
         ? 'Rewatch'
         : 'Mark as watched';
@@ -244,7 +266,9 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       ? `You’ve watched every aired episode of “${item.title}” — this starts a rewatch at ${seriesLabel}.`
       : isSeries && seriesNext?.title != null
         ? `“${item.title}” — ${seriesLabel}: ${seriesNext.title}`
-        : isFilmLike && isRewatch
+        : animeRewatch
+          ? `You’ve watched every episode of “${item.title}” — this starts a rewatch at episode 1.`
+          : isFilmLike && isRewatch
           ? `“${item.title}” is already in your history — this logs another watch.`
           : `“${item.title}”`;
 
@@ -269,7 +293,8 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         // says "resolving which episode", not "your tap did nothing".
         loading={
           seriesNextState.status === 'loading' ||
-          (upcomingNeeded && seasons.isLoading)
+          (upcomingNeeded && seasons.isLoading) ||
+          simklAnimeEntry.isLoading
         }
         morphLabel
         onPress={() => {
@@ -283,7 +308,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       />
       {/* The finished-show state earns a line of its own: the button below
           reads "Log rewatch", and this is what makes that make sense. */}
-      {seriesNext?.rewatch === true && upcoming == null && result == null && (
+      {((seriesNext?.rewatch === true && upcoming == null) || animeRewatch) && result == null && (
         <Text className="text-muted font-sans text-sm mt-2 text-center">
           🎉 You’ve watched every aired episode.
         </Text>
