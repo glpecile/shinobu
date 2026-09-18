@@ -134,7 +134,7 @@ export function EpisodeLogs({
         <View className="flex-row items-center gap-2" key={log.provider}>
           <Ionicons
             color={accent}
-            name="checkmark-circle"
+            name="eye"
             size={14}
           />
           <ProviderIcon id={log.provider} size={16} />

@@ -15,7 +15,7 @@ export interface EpisodeLog {
  * Which connected providers record this episode as watched, and when — from
  * the two that expose per-episode state on a read: Trakt's progress (its
  * `last_watched_at`) and Simkl's library snapshot (`episode_watched_at`).
- * Both are the same cache entries the seasons accordion draws its checkmarks
+ * Both are the same cache entries the seasons accordion draws its watched marks
  * from, so this costs no extra request.
  *
  * ponytail: Serializd and AniList only expose episode logs through the

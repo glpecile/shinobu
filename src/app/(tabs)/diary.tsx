@@ -8,6 +8,7 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
+import { SectionEnter } from '@/components/section-enter';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
@@ -150,7 +151,11 @@ export default function DiaryScreen() {
         <title>Diary — Shinobu</title>
       </Head>
       <DiaryHeader />
-      {content}
+      {/* Keyed so the list fades and settles in over the skeleton instead of
+          cutting; the wrapper sits outside the list, never on its recycled rows. */}
+      <SectionEnter className="flex-1" key={diary.isLoading ? 'skeleton' : 'content'}>
+        {content}
+      </SectionEnter>
       {/* Same dialog as the feed's cards, opened by a row long-press (or the
           web hover ⋯) — the hide row names this surface. */}
       {/* No want-to-watch row here (plan 0031 R12): every diary entry is

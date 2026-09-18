@@ -19,10 +19,9 @@ import {
 } from '@/components/scroll-to-top-fab';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
-import { Skeleton } from '@/components/skeleton';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
-import { usePageEnterStyle } from '@/lib/page-transition';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -557,21 +556,23 @@ function DiaryFooter({ loading }: { loading: boolean }) {
 const SKELETON_TITLE_WIDTHS = ['w-2/3', 'w-1/2', 'w-3/5', 'w-5/12'];
 
 function SkeletonRow({ index, last }: { index: number; last: boolean }) {
+  const delay = staggerDelay(index);
   return (
     <View className="flex-row">
       <RailLine stop={last} />
       <View className={cn(ROW_BODY, 'flex-row items-center')}>
-        <Skeleton className={POSTER} />
+        <Skeleton className={POSTER} delay={delay} />
         <View className="flex-1 ml-3">
           <Skeleton
             className={cn(
               'h-3.5 rounded',
               SKELETON_TITLE_WIDTHS[index % SKELETON_TITLE_WIDTHS.length],
             )}
+            delay={delay}
           />
-          <Skeleton className="h-2.5 w-14 rounded mt-1.5" />
+          <Skeleton className="h-2.5 w-14 rounded mt-1.5" delay={delay} />
         </View>
-        <Skeleton className="h-2 w-8 rounded ml-3" />
+        <Skeleton className="h-2 w-8 rounded ml-3" delay={delay} />
       </View>
     </View>
   );
@@ -627,8 +628,6 @@ export function DiaryList({
   onOpen,
   onItemActions,
 }: DiaryListProps) {
-  // Mounts once, over the skeleton, with every provider merged: one fade.
-  const enter = usePageEnterStyle();
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
@@ -689,7 +688,7 @@ export function DiaryList({
   }
 
   return (
-    <View className="flex-1" style={enter}>
+    <View className="flex-1">
       <List
         ref={listRef}
         onScroll={handleScroll}

@@ -34,7 +34,7 @@ import { useCardArt } from './use-card-art';
 interface EpisodeCardProps {
   group: UpNextGroup;
   badges?: CardBadge[];
-  /** Trailing action — the quick-log checkmark; Calendar cards have none. */
+  /** Trailing action — the quick-log button; Calendar cards have none. */
   action?: ReactNode;
   /** Opens the show — the stack, release and unaddressable-episode fallback. */
   onPress?: (item: NormalizedMediaItem) => void;

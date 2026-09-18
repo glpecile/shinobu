@@ -11,7 +11,7 @@ import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
 /**
- * The Continue Watching checkmark. Tapping it opens the app-level catch-up
+ * The Continue Watching log button. Tapping it opens the app-level catch-up
  * sheet (`features/up-next/catch-up`, plan 0037) on this entry: the same
  * confirm modal every log entry point uses, which then walks the show's
  * aired-but-unwatched backlog one confirm at a time. The write itself is the
@@ -53,7 +53,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
         {pending ? (
           <ActivityIndicator color={iconColor} size="small" />
         ) : (
-          <Ionicons color={iconColor} name="checkmark" size={18} />
+          <Ionicons color={iconColor} name="eye-outline" size={18} />
         )}
       </PresstableScale>
     </View>

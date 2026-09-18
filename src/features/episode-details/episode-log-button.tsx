@@ -104,6 +104,7 @@ export function EpisodeLogButton({
             : unairedEpisodeLabel(code, episode.firstAired)
         }
         loading={logMedia.isPending}
+        morphLabel
         onPress={() => {
           haptics.selection();
           logMedia.reset();

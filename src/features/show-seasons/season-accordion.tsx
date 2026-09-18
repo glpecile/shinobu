@@ -4,6 +4,7 @@ import { LayoutAnimation, Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
+import { Collapse } from '@/components/collapse';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
@@ -94,7 +95,7 @@ function EpisodeRow({
   const label = (
     <>
       {isWatched ? (
-        <Ionicons color={accent} name="checkmark-circle" size={16} />
+        <Ionicons color={accent} name="eye" size={16} />
       ) : (
         <View className="w-4" />
       )}
@@ -148,6 +149,7 @@ function EpisodeRow({
         <Button
           icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
           label={isWatched ? 'Rewatch' : 'Mark as watched'}
+          morphLabel
           onPress={onMark}
           size="sm"
           variant="quiet"
@@ -167,8 +169,8 @@ function EpisodeRow({
  * route through the shared confirm sheet (the parent owns the mutation). A
  * row tap opens the episode screen and a long-press its actions sheet — the
  * row clamps the title to two lines, the sheet and screen never do.
- * Watched episodes render a checkmark — the parent can pass `null` for the set
- * when Trakt is disconnected, in which case no checkmarks show. Episodes whose
+ * Watched episodes render an eye — the parent can pass `null` for the set
+ * when Trakt is disconnected, in which case no eyes show. Episodes whose
  * `firstAired` is still in the future (parsed as an instant, compared in the
  * user's local timezone — `lib/time/has-aired.ts`) render distinct, say when
  * they land, and can't be logged: you can't mark an episode you couldn't have
@@ -215,14 +217,14 @@ export function SeasonAccordion({
         </View>
       </PressableCard>
 
-      {open && (
+      <Collapse open={open}>
         <View className="border border-border border-t-0 rounded-b-lg overflow-hidden">
           {seasonMarkable && (
             <PresstableOpacity
               className="flex-row items-center px-4 py-3 border-b border-border bg-accent/5"
               onPress={() => onMarkSeason(season)}
             >
-              <Ionicons color={accent} name="checkmark-done" size={16} />
+              <Ionicons color={accent} name="eye-outline" size={16} />
               <Text className="text-accent font-sans-semibold text-sm ml-2">
                 Mark season as watched
               </Text>
@@ -246,7 +248,7 @@ export function SeasonAccordion({
             />
           ))}
         </View>
-      )}
+      </Collapse>
     </View>
   );
 }
