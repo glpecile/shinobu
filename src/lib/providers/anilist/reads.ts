@@ -283,6 +283,8 @@ export function getAnimeById(
 export interface AniListNamedEntity {
   id: number;
   name: string;
+  /** Staff headshot, for the search screen's people results. */
+  image?: string;
 }
 
 interface StaffSearchResponse {
@@ -290,6 +292,7 @@ interface StaffSearchResponse {
     staff: Array<{
       id: number | null;
       name: { full?: string | null; native?: string | null } | null;
+      image?: { medium?: string | null } | null;
     } | null> | null;
   } | null;
 }
@@ -316,22 +319,29 @@ const NAME_SEARCH_PER_PAGE = 5;
  */
 export function searchAniListStaff(
   deps: AniListDeps,
-  params: { name: string },
+  params: { name: string; limit?: number },
 ): Effect.Effect<AniListNamedEntity[], ProviderError> {
   return anilistRequest<StaffSearchResponse>(
     deps,
     `query ($search: String, $perPage: Int) {
       Page(page: 1, perPage: $perPage) {
-        staff(search: $search) { id name { full native } }
+        staff(search: $search) { id name { full native } image { medium } }
       }
     }`,
-    { variables: { search: params.name, perPage: NAME_SEARCH_PER_PAGE } },
+    {
+      variables: {
+        search: params.name,
+        perPage: params.limit ?? NAME_SEARCH_PER_PAGE,
+      },
+    },
   ).pipe(
     Effect.map((data) =>
       (data.Page?.staff ?? []).flatMap((staff) => {
         const id = staff?.id;
         const name = staff?.name?.full ?? staff?.name?.native ?? '';
-        return id == null || name === '' ? [] : [{ id, name }];
+        return id == null || name === ''
+          ? []
+          : [{ id, name, image: staff?.image?.medium ?? undefined }];
       }),
     ),
   );

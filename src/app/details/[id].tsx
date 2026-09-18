@@ -687,6 +687,7 @@ function DetailsScreen() {
                 <CopyTitle
                   alternates={alternates}
                   title={shown.title}
+                  tmdbId={shown.externalIds.tmdb}
                   year={shown.year}
                 />
               </ScrolledTitle.Anchor>

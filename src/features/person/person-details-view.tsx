@@ -65,7 +65,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
               )}
               <View className="flex-1">
                 <ScrolledTitle.Anchor>
-                  <CopyTitle title={person.name} />
+                  <CopyTitle title={person.name} tmdbId={person.tmdbId} />
                 </ScrolledTitle.Anchor>
                 {meta !== '' && (
                   <Text className="text-muted font-sans text-sm mt-1.5">{meta}</Text>

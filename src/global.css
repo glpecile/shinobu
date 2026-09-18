@@ -48,6 +48,8 @@
       --color-border: #e5e5e5;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
+      --color-accent-tonal: #fee2e2;
+      --color-accent-on-tonal: #991b1b;
     }
 
     @variant dark {
@@ -58,6 +60,8 @@
       --color-border: #333333;
       --color-accent: #dc2626;
       --color-accent-foreground: #ffffff;
+      --color-accent-tonal: #450a0a;
+      --color-accent-on-tonal: #fecaca;
     }
   }
 }
