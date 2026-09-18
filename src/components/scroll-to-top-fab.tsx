@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
   FadeIn,
   FadeOut,
@@ -7,9 +6,8 @@ import {
 } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
-import { PresstableOpacity } from '@/components/presstable';
+import { Fab } from '@/components/fab';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
-import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * How far (px) a list must be scrolled before the FAB appears. Under half a
@@ -59,7 +57,6 @@ export function ScrollToTopFab({
   visible: boolean;
   onPress: () => void;
 }) {
-  const accentForeground = useThemeColor('--color-accent-foreground');
   const reduceMotion = useReducedMotion();
   if (!visible) return null;
   return (
@@ -68,18 +65,7 @@ export function ScrollToTopFab({
       entering={reduceMotion ? fabFadingIn : fabEntering}
       exiting={reduceMotion ? fabFadingOut : fabExiting}
     >
-      <PresstableOpacity
-        accessibilityLabel="Scroll to top"
-        accessibilityRole="button"
-        className="w-11 h-11 rounded-full bg-accent items-center justify-center"
-        onPress={onPress}
-      >
-        <Ionicons
-          color={accentForeground}
-          name="arrow-up"
-          size={20}
-        />
-      </PresstableOpacity>
+      <Fab icon="arrow-up" label="Scroll to top" onPress={onPress} size="sm" />
     </AnimatedView>
   );
 }
