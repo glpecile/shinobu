@@ -55,7 +55,7 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
               )}
               <View className="flex-1">
                 <ScrolledTitle.Anchor>
-                  <CopyTitle title={company.name} />
+                  <CopyTitle title={company.name} tmdbId={company.tmdbId} />
                 </ScrolledTitle.Anchor>
                 {company.headquarters != null && (
                   <Text className="text-muted font-sans text-sm mt-1.5">
