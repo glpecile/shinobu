@@ -26,14 +26,12 @@ export function Collapse({ open, children }: { open: boolean; children: ReactNod
         // accessibility tree. CSS flips `visibility` at the visible end of a
         // transition, so the body stays drawn while it closes. Cast: a
         // react-native-web style key that React Native's `ViewStyle` lacks.
-        ...({ visibility: open ? 'visible' : 'hidden' } as ViewStyle),
-        ...(reduceMotion
-          ? null
-          : {
-              transitionProperty: ['height', 'visibility'],
-              transitionDuration: DURATION.toggle,
-              transitionTimingFunction: EASE_IN_OUT,
-            }),
+        ...({
+          visibility: open ? 'visible' : 'hidden',
+          transitionProperty: ['height', 'visibility'],
+        } as ViewStyle),
+        transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+        transitionTimingFunction: EASE_IN_OUT,
       }}
     >
       <View onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}>

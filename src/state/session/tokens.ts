@@ -28,10 +28,8 @@ export function getProviderSession(id: ProviderId): ProviderSession | null {
 let connectListener: ((id: ProviderId) => void) | undefined;
 
 /**
- * Registers the one listener told when a user connects a provider. The root
- * layout uses it to confirm the connect. It lives outside this module because
- * the toast library can't load under `bun:test`, and every session test
- * imports this file.
+ * The root layout's connect toast. A listener rather than an import: the toast
+ * library can't load under `bun:test`, and every session test imports this file.
  */
 export function onProviderConnected(listener: (id: ProviderId) => void): void {
   connectListener = listener;

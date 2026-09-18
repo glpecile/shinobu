@@ -170,7 +170,7 @@ function EpisodeRow({
  * row tap opens the episode screen and a long-press its actions sheet — the
  * row clamps the title to two lines, the sheet and screen never do.
  * Watched episodes render an eye — the parent can pass `null` for the set
- * when Trakt is disconnected, in which case no eyes show. Episodes whose
+ * when Trakt is disconnected, in which case no marks show. Episodes whose
  * `firstAired` is still in the future (parsed as an instant, compared in the
  * user's local timezone — `lib/time/has-aired.ts`) render distinct, say when
  * they land, and can't be logged: you can't mark an episode you couldn't have
