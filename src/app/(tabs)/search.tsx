@@ -524,7 +524,9 @@ export default function SearchScreen() {
             // shrink past on Firefox, so the clear button beside it was pushed
             // out of the field and off the viewport
             // (docs/solutions/firefox-flex-input-wont-shrink.md).
-            className="flex-1 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none"
+            className="flex-1 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
+            // Android's caret is its own prop; the class above is web's.
+            cursorColor={accent}
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}
@@ -532,6 +534,7 @@ export default function SearchScreen() {
             placeholderTextColor={muted}
             ref={inputRef}
             returnKeyType="search"
+            selectionColor={accent}
             value={input}
           />
           {input !== '' && (

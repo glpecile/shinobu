@@ -31,9 +31,13 @@ export default function TabsLayout() {
           indicatorColor: accentTonal,
           // Material hides inactive labels past three tabs; WhatsApp labels all four.
           labelVisibilityMode: 'labeled' as const,
-          // No bold selected label: Android reads one weight for the whole bar,
-          // from the default style only.
-          labelStyle: { default: { color: foreground } },
+          // `selected` is spelled out because it otherwise falls back to the
+          // tint. No bold selected label: Android reads one weight for the
+          // whole bar, from the default style only.
+          labelStyle: {
+            default: { color: foreground },
+            selected: { color: foreground },
+          },
         }
       : {};
 
