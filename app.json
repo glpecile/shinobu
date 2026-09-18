@@ -44,6 +44,7 @@
       "expo-font",
       "expo-background-task",
       "./plugins/with-release-signing.js",
+      "./plugins/with-android-layout-animations.js",
       [
         "expo-notifications",
         {
