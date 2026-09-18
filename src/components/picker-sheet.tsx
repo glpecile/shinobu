@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
 import { Text, View } from 'react-native';
 
@@ -7,7 +6,6 @@ import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { useThemeColor } from '@/lib/theme-color';
 
 type PickerValue = string | number | null;
 
@@ -18,8 +16,8 @@ const PickerContext = createContext<{
 
 /**
  * Single-choice list in the app's bottom sheet: a titled column of options,
- * each with an optional leading icon and a trailing count, the chosen one
- * checked. Picking selects and closes.
+ * each with an optional leading icon and a trailing count, the chosen one on
+ * the tonal pill the nav bars use. Picking selects and closes.
  *
  * ```tsx
  * <PickerSheet onClose={close} onSelect={setRole} open={open} title="Role" value={role}>
@@ -51,8 +49,10 @@ export function PickerSheet<T extends PickerValue>({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Eyebrow className="mb-1">{title}</Eyebrow>
-      <PickerContext.Provider value={{ value, select }}>{children}</PickerContext.Provider>
+      <Eyebrow className="mb-3">{title}</Eyebrow>
+      <PickerContext.Provider value={{ value, select }}>
+        <View className="gap-1">{children}</View>
+      </PickerContext.Provider>
     </Sheet>
   );
 }
@@ -71,7 +71,6 @@ function PickerOption({
   accessibilityLabel?: string;
 }) {
   const picker = useContext(PickerContext);
-  const foreground = useThemeColor('--color-foreground');
   const selected = picker.value === value;
 
   return (
@@ -79,7 +78,13 @@ function PickerOption({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      className="flex-row items-center gap-3 py-3"
+      // The negative margin lets the pill bleed past the text, so labels stay
+      // aligned with the title. It bleeds half the sheet's padding, which
+      // leaves the pill as far from the sheet's edge as its text is from its own.
+      className={cn(
+        '-mx-3 flex-row items-center gap-3 rounded-full px-3 py-2.5',
+        selected && 'bg-accent-tonal',
+      )}
       onPress={() => picker.select(value)}
     >
       {icon}
@@ -92,10 +97,6 @@ function PickerOption({
         {label}
       </Text>
       {count != null && <Text className="text-muted font-sans text-sm">{count}</Text>}
-      {/* A fixed slot, so the counts line up whether or not a row is checked. */}
-      <View className="w-5 items-end">
-        {selected && <Ionicons color={foreground} name="checkmark" size={18} />}
-      </View>
     </PresstableOpacity>
   );
 }
