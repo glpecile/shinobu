@@ -127,7 +127,9 @@ export function PeopleSection({
       <Section.Header>
         <Section.Title>{title}</Section.Title>
       </Section.Header>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {/* nestedScrollEnabled: on Android the episode pager otherwise takes
+          every horizontal drag that starts on the rail. */}
+      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
         {people.map((credit) =>
           onCreditActions == null ? (
             <View className="w-24 mr-4 items-center" key={credit.id}>
