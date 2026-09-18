@@ -488,6 +488,8 @@ export function earliestReleaseDates(
 
 export interface TmdbTvResponse extends TmdbCreditBase {
   genres?: TmdbGenre[];
+  /** TMDB has no showrunner job; the creators stand in for it. */
+  created_by?: TmdbPersonRef[];
   episode_run_time?: number[];
   number_of_episodes?: number | null;
   production_companies?: TmdbCompanyRef[];
@@ -509,7 +511,7 @@ const CAST_LIMIT = 15;
 const CREW_LIMIT = 20;
 
 /** TMDB capitalizes departments; higher-billing ones surface first. */
-const TMDB_CREW_DEPARTMENT_ORDER = [
+const TMDB_CREW_ORDER = [
   'Directing',
   'Writing',
   'Production',
@@ -520,6 +522,9 @@ const TMDB_CREW_DEPARTMENT_ORDER = [
   'Costume & Make-Up',
   'Visual Effects',
 ];
+
+/** A series is billed by its writers' room: creators, writers, then directors. */
+const TMDB_SERIES_CREW_ORDER = ['Creator', 'Writing', 'Directing', ...TMDB_CREW_ORDER.slice(2)];
 
 function tmdbPersonId(id: number): string {
   return `tmdb-person-${id}`;
@@ -580,10 +585,11 @@ function normalizeCastEntries(
  */
 function normalizeCrewEntries(
   entries: Array<TmdbPersonRef & { department: string; jobs: string[] }>,
+  departmentOrder: string[],
 ): NormalizedCrewMember[] {
   const departmentRank = (department: string): number => {
-    const index = TMDB_CREW_DEPARTMENT_ORDER.indexOf(department);
-    return index === -1 ? TMDB_CREW_DEPARTMENT_ORDER.length : index;
+    const index = departmentOrder.indexOf(department);
+    return index === -1 ? departmentOrder.length : index;
   };
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[]; rank: number }>();
 
@@ -682,6 +688,7 @@ export function normalizeMovieCatalogue(
         department: entry.department ?? '',
         jobs: [entry.job ?? ''],
       })),
+      TMDB_CREW_ORDER,
     ),
     studios: normalizeCompanies(raw.production_companies),
   };
@@ -709,11 +716,19 @@ export function normalizeTvCatalogue(
       })),
     ),
     crew: normalizeCrewEntries(
-      (raw.aggregate_credits?.crew ?? []).map((entry) => ({
-        ...entry,
-        department: entry.department ?? '',
-        jobs: (entry.jobs ?? []).map((job) => job.job ?? ''),
-      })),
+      [
+        ...(raw.created_by ?? []).map((entry) => ({
+          ...entry,
+          department: 'Creator',
+          jobs: ['Creator'],
+        })),
+        ...(raw.aggregate_credits?.crew ?? []).map((entry) => ({
+          ...entry,
+          department: entry.department ?? '',
+          jobs: (entry.jobs ?? []).map((job) => job.job ?? ''),
+        })),
+      ],
+      TMDB_SERIES_CREW_ORDER,
     ),
     studios: normalizeCompanies(raw.production_companies),
   };
@@ -787,6 +802,7 @@ export function normalizeTvEpisode(
       department: entry.department ?? '',
       jobs: [entry.job ?? ''],
     })),
+    TMDB_CREW_ORDER,
   );
   return {
     episode: {

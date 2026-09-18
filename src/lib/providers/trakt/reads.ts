@@ -139,7 +139,7 @@ export function getMediaPeople(
       cast: (response.cast ?? [])
         .slice(0, params.castLimit ?? 15)
         .map(normalizeCastEntry),
-      crew: normalizeCrew(response.crew).slice(0, params.crewLimit ?? 20),
+      crew: normalizeCrew(response.crew, params.type).slice(0, params.crewLimit ?? 20),
     })),
   );
 }

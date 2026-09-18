@@ -446,6 +446,7 @@ describe('normalizeTvCatalogue', () => {
         first_air_date: '2021-11-06',
         episode_run_time: [41],
         number_of_episodes: 18,
+        created_by: [{ id: 7, name: 'Christian Linke' }],
         aggregate_credits: {
           cast: [
             {
@@ -456,7 +457,10 @@ describe('normalizeTvCatalogue', () => {
             },
           ],
           crew: [
-            { id: 5, name: 'Show Runner', department: 'Production', jobs: [{ job: 'Executive Producer' }] },
+            { id: 5, name: 'Producer', department: 'Production', jobs: [{ job: 'Executive Producer' }] },
+            { id: 6, name: 'Director', department: 'Directing', jobs: [{ job: 'Director' }] },
+            { id: 8, name: 'Writer', department: 'Writing', jobs: [{ job: 'Writer' }] },
+            { id: 7, name: 'Christian Linke', department: 'Writing', jobs: [{ job: 'Writer' }] },
           ],
         },
       },
@@ -468,7 +472,13 @@ describe('normalizeTvCatalogue', () => {
     expect(result?.catalogue.totalEpisodes).toBe(18);
     expect(result?.cast[0].character).toBe('Vi (voice), Young Vi (voice)');
     expect(result?.cast[0].tmdbId).toBe(22227);
-    expect(result?.crew[0].job).toBe('Executive Producer');
+    // Creators stand in for the showrunner, then writers, then directors.
+    expect(result?.crew.map((member) => [member.name, member.job])).toEqual([
+      ['Christian Linke', 'Creator, Writer'],
+      ['Writer', 'Writer'],
+      ['Director', 'Director'],
+      ['Producer', 'Executive Producer'],
+    ]);
   });
 });
 
