@@ -47,7 +47,7 @@ interface NavItem {
   icon: IoniconName;
 }
 
-// Outline icons only — active state is the accent colour + pill, never a heavy
+// Outline icons only — active state is the tonal red pill, never a heavy
 // filled glyph (the solid variants read poorly when selected).
 // Diary uses `reader-outline` (a lined page), not `book-outline`: the open-book
 // glyph is much wider and optically heavier than its home/search/settings
@@ -81,9 +81,8 @@ function isActive(pathname: string, href: string): boolean {
  * first page. See docs/solutions/web-prerender-bakes-js-resolved-colors.md.
  */
 const COLOR = {
-  accent: 'var(--color-accent)',
+  accentOnTonal: 'var(--color-accent-on-tonal)',
   foreground: 'var(--color-foreground)',
-  muted: 'var(--color-muted)',
 } as const;
 
 /**
@@ -170,22 +169,19 @@ function SidebarItem({
   collapsed: boolean;
   onPress: () => void;
 }) {
-  const color = active ? COLOR.accent : COLOR.muted;
+  const color = active ? COLOR.accentOnTonal : COLOR.foreground;
 
   return (
     <PresstableOpacity
       accessibilityLabel={item.label}
-      className={cn('h-11 flex-row items-center rounded-lg', active && 'bg-surface')}
+      className={cn('h-11 flex-row items-center rounded-full', active && 'bg-accent-tonal')}
       onPress={onPress}
     >
       <View className="items-center justify-center" style={{ width: ICON_COL }}>
         <Ionicons color={color} name={item.icon} size={22} />
       </View>
       <RevealLabel
-        className={cn(
-          'font-sans-semibold text-base',
-          active ? 'text-accent' : 'text-foreground',
-        )}
+        className="font-sans-semibold text-base text-foreground"
         collapsed={collapsed}
       >
         {item.label}
