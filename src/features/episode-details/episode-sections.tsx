@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { createContext, use, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -262,20 +262,21 @@ export function EpisodeSeriesLink({
 }
 
 /**
- * The one way an episode screen steps to a sibling — the nav buttons, the
- * native swipe and the web arrow keys all call this. `replace`, not push:
- * stepping through episodes must not stack one screen per step, so back
- * still returns to the show. The direction is derived from the target's
- * position so the root stack can animate a step back as a pop.
+ * How the screen steps to a sibling episode. The native pager provides it and
+ * scrolls there; without a provider (web) a step is a `replace`.
  */
-export function useGoToEpisode(id: string, season: number, number: number) {
+export const EpisodeStep = createContext<((target: EpisodeRef) => void) | null>(null);
+
+/**
+ * Steps to a sibling episode: the nav buttons, the log button's advance and
+ * the web arrow keys all call this. Never a push: stepping through episodes
+ * must not stack one screen per step, so back still returns to the show.
+ */
+export function useGoToEpisode(id: string) {
   const router = useRouter();
+  const step = use(EpisodeStep);
   // push-guard-exempt: `replace`, see above.
-  return (target: EpisodeRef) => {
-    const back =
-      target.season < season || (target.season === season && target.number < number);
-    router.replace(routes.episode(id, target.season, target.number, back ? 'back' : 'forward'));
-  };
+  return step ?? ((target: EpisodeRef) => router.replace(routes.episode(id, target.season, target.number)));
 }
 
 /**
@@ -285,20 +286,16 @@ export function useGoToEpisode(id: string, season: number, number: number) {
  */
 export function EpisodeNav({
   id,
-  season,
-  number,
   prev,
   next,
   className,
 }: {
   id: string;
-  season: number;
-  number: number;
   prev: EpisodeRef | undefined;
   next: EpisodeRef | undefined;
   className?: string;
 }) {
-  const go = useGoToEpisode(id, season, number);
+  const go = useGoToEpisode(id);
   return (
     <View className={cn('flex-row gap-3', className)}>
       <Button

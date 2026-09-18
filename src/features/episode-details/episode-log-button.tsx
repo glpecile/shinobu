@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -12,12 +11,12 @@ import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
 import type { ProviderId } from '@/lib/providers/types';
-import { routes } from '@/lib/routes';
 import { hasAired } from '@/lib/time/has-aired';
 import { toast } from '@/lib/toast';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 import { episodeCode } from './episode-label';
+import { useGoToEpisode } from './episode-sections';
 import type { EpisodeRef } from './episode-neighbours';
 
 /**
@@ -44,7 +43,7 @@ export function EpisodeLogButton({
   next: EpisodeRef | undefined;
   className?: string;
 }) {
-  const router = useRouter();
+  const go = useGoToEpisode(item.id);
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [open, setOpen] = useState(false);
@@ -52,7 +51,7 @@ export function EpisodeLogButton({
   const [tags, setTags] = useState('');
   const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>(targets);
   // Provider reads lag a write (AniList/Serializd never feed `watched`); keyed
-  // by code so it can't carry over if `replace` reuses this instance.
+  // by code so it can't carry over between episodes.
   const [loggedCode, setLoggedCode] = useState<string | null>(null);
   if (targets.length === 0 && manualTargets.length === 0) return null;
 
@@ -80,8 +79,8 @@ export function EpisodeLogButton({
             toast.success(copy.title, copy.message);
             setOpen(false);
             setLoggedCode(code);
-            // `replace`, like `EpisodeNav`: back still returns to the show.
-            if (next != null) router.replace(routes.episode(item.id, next.season, next.number));
+            // Steps like `EpisodeNav`: back still returns to the show.
+            if (next != null) go(next);
           } else if (outcome.failed.length > 0) {
             haptics.error();
           }

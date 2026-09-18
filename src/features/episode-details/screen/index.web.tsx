@@ -51,7 +51,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   const { width } = useWindowDimensions();
   const wide = width >= TWO_COLUMN_MIN_WIDTH;
   const title = view.episode?.title ?? '';
-  const go = useGoToEpisode(item.id, season, number);
+  const go = useGoToEpisode(item.id);
   const { prev, next } = view;
   // ← / → step between episodes — the keyboard's swipe. A subscription to
   // the document, so an effect; skipped while a field has focus.
@@ -129,9 +129,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             className="mt-8"
             id={item.id}
             next={view.next}
-            number={number}
             prev={view.prev}
-            season={season}
           />
           <EpisodeSeriesLink className="mt-3" id={item.id} />
         </BlurEnter>

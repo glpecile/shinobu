@@ -154,4 +154,14 @@ describe('findLibraryEntry', () => {
     );
     expect(found?.item.id).toBe('simkl-9');
   });
+
+  test('an anime season never matches a sibling season sharing its TMDB id', () => {
+    const seasons = library({
+      anime: [
+        entry('simkl-1', 'ANIME', { simkl: 1, tmdb: 42 }),
+        entry('simkl-2', 'ANIME', { simkl: 2, tmdb: 42 }),
+      ],
+    });
+    expect(findLibraryEntry(seasons, item('s3', 'ANIME', { simkl: 3, tmdb: 42 }))).toBeNull();
+  });
 });

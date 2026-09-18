@@ -511,12 +511,16 @@ function DetailsScreen() {
     mediaId: anilistId,
     enabled: onAniList && connected.includes('anilist'),
   });
-  // The same correction for TV, from Simkl's library entry — a show opened
-  // from search showed "0 / 153" for a series watched end to end. Shares
-  // `WatchedLine`'s cache entry, so it costs no extra request.
+  // The same correction from Simkl's library entry — a show opened from
+  // search showed "0 / 153" for a series watched end to end. An anime series
+  // only when it names its own Simkl entry: every season shares the TMDB id.
+  // Shares `WatchedLine`'s cache entry, so it costs no extra request.
+  const onSimkl =
+    item?.type === 'TV' ||
+    (item?.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null);
   const simklEntry = useSimklLibraryEntryQuery({
-    item: item?.type === 'TV' ? item : null,
-    enabled: item?.type === 'TV' && connected.includes('simkl'),
+    item: onSimkl ? item : null,
+    enabled: connected.includes('simkl'),
   });
   // Items resolved from the watched feed arrive artless (Trakt dropped images
   // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
@@ -563,9 +567,9 @@ function DetailsScreen() {
   const showProgress =
     (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
   const displayedProgress =
-    onAniList
-      ? (anilistEntry.data?.entry?.progress ?? shown.currentProgress)
-      : (simklEntry.data?.item.currentProgress ?? shown.currentProgress);
+    (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
+    simklEntry.data?.item.currentProgress ??
+    shown.currentProgress;
 
   function refresh() {
     // Sections that failed are unmounted, leaving their queries inactive and

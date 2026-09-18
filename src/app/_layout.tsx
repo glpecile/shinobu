@@ -143,20 +143,7 @@ export default function Layout() {
                       sit at the root so they push over the tab bar. */}
                   <Stack.Screen name="(tabs)" options={{ title: "Shinobu" }} />
                   <Stack.Screen name="details/[id]" />
-                  {/* Stepping to the previous episode replaces the screen with
-                      `?dir=back`, and a replace animates as a push unless the
-                      new screen says otherwise. Read off the route here, not
-                      via `<Stack.Screen options>` inside the page: that lands
-                      a commit after the transition has already started. */}
-                  <Stack.Screen
-                    name="episode/[id]"
-                    options={({ route }) => ({
-                      animationTypeForReplace:
-                        (route.params as { dir?: string } | undefined)?.dir === 'back'
-                          ? 'pop'
-                          : 'push',
-                    })}
-                  />
+                  <Stack.Screen name="episode/[id]" />
                   <Stack.Screen name="person/[id]" />
                   <Stack.Screen name="person/lookup" />
                   <Stack.Screen name="studio/[id]" />
