@@ -84,8 +84,9 @@ export const DURATION = {
 /**
  * One CoreAnimation pass over a disclosure's layout diff (an overview box or
  * a season accordion opening): everything below it reflows together, which a
- * per-frame JS height animation stutters through. Native only; react-native-web
- * makes `configureNext` a no-op.
+ * per-frame JS height animation stutters through. iOS only: react-native-web
+ * makes `configureNext` a no-op and Android ships it disabled, so both take
+ * a height transition instead (`components/collapse`, `expandable-text`).
  */
 export const DISCLOSURE_LAYOUT = LayoutAnimation.create(
   DURATION.toggle,
