@@ -11,7 +11,10 @@ import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
+import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
+import { PickerSheet } from '@/components/picker-sheet';
+import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { SectionEnter } from '@/components/section-enter';
@@ -19,6 +22,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -26,8 +30,15 @@ import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
-import { useAniListSearchQuery } from '@/state/queries/anilist';
-import { useTmdbSearchQuery } from '@/state/queries/tmdb';
+import {
+  useAniListSearchQuery,
+  useAniListStaffSearchQuery,
+} from '@/state/queries/anilist';
+import {
+  useTmdbPersonSearchQuery,
+  useTmdbSearchQuery,
+  useTmdbStudioSearchQuery,
+} from '@/state/queries/tmdb';
 import {
   SEARCH_MIN_QUERY_LENGTH,
   useTraktSearchQuery,
@@ -37,6 +48,30 @@ import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+/** What the field searches for. Rides the URL as `?scope=`, like `?q=`. */
+const SCOPES = [
+  {
+    value: 'titles',
+    label: 'Titles',
+    icon: 'film-outline',
+    placeholder: 'Search movies, shows, anime & manga',
+  },
+  {
+    value: 'people',
+    label: 'Cast & crew',
+    icon: 'people-outline',
+    placeholder: 'Search cast & crew',
+  },
+  {
+    value: 'studios',
+    label: 'Studios',
+    icon: 'business-outline',
+    placeholder: 'Search studios',
+  },
+] as const;
+
+type SearchScope = (typeof SCOPES)[number]['value'];
 
 function resultMeta(item: NormalizedMediaItem): string {
   return [item.type, item.year != null ? String(item.year) : null]
@@ -100,6 +135,48 @@ function SearchResultRow({
   );
 }
 
+/** A person or studio hit: a face or a logo, a name, and a press to its page. */
+function EntityResultRow({
+  row,
+  onPress,
+}: {
+  row: Extract<SearchRow, { kind: 'entity' }>;
+  onPress: (href: string) => void;
+}) {
+  return (
+    <PresstableOpacity
+      accessibilityLabel={row.name}
+      accessibilityRole="button"
+      className="flex-row items-center px-6 py-2.5"
+      onPress={() => onPress(row.href)}
+    >
+      {row.shape === 'face' ? (
+        <PersonAvatar
+          className="w-12 h-12"
+          headshot={row.image}
+          name={row.name}
+          textClassName="text-sm"
+        />
+      ) : row.image !== '' ? (
+        // Same treatment as the studio page's logo: contain, on a surface tile.
+        <Image
+          className="w-12 h-12 rounded bg-surface border border-border/50 p-1"
+          contentFit="contain"
+          source={{ uri: row.image }}
+        />
+      ) : (
+        <PosterPlaceholder className="w-12 h-12 rounded" />
+      )}
+      <Text
+        className="shrink ml-4 text-foreground font-sans-semibold text-base"
+        numberOfLines={1}
+      >
+        {row.name}
+      </Text>
+    </PresstableOpacity>
+  );
+}
+
 function RowSkeleton({ index = 0 }: { index?: number }) {
   const delay = staggerDelay(index);
   return (
@@ -139,26 +216,40 @@ function SectionHeader({
 }
 
 /**
- * One flat virtualized list holds both provider sections — headers and status
+ * One flat virtualized list holds every provider section — headers and status
  * rows are list items too, so Legend List keeps virtualizing long result sets
  * instead of nesting per-section lists.
  */
 type SearchRow =
   | { kind: 'header'; key: string; provider: IconSourceId; label: string }
   | { kind: 'result'; key: string; item: NormalizedMediaItem }
+  | {
+      kind: 'entity';
+      key: string;
+      name: string;
+      image: string;
+      shape: 'face' | 'logo';
+      href: string;
+    }
   | { kind: 'loading'; key: string }
   | { kind: 'error'; key: string };
 
-interface SectionQueryState {
+interface SectionQueryState<Hit> {
   isLoading: boolean;
   isError: boolean;
-  data?: NormalizedMediaItem[] | undefined;
+  isPlaceholderData: boolean;
+  data?: Hit[] | undefined;
 }
 
-function sectionRows(
+function titleRow(item: NormalizedMediaItem): SearchRow {
+  return { kind: 'result', key: item.id, item };
+}
+
+function sectionRows<Hit>(
   provider: IconSourceId,
   label: string,
-  search: SectionQueryState,
+  search: SectionQueryState<Hit>,
+  toRow: (hit: Hit) => SearchRow,
 ): SearchRow[] {
   const header: SearchRow = {
     kind: 'header',
@@ -175,23 +266,20 @@ function sectionRows(
   const items = search.data ?? [];
   // A section with nothing to say disappears — the other one keeps the screen.
   if (items.length === 0) return [];
-  return [
-    header,
-    ...items.map(
-      (item): SearchRow => ({ kind: 'result', key: item.id, item }),
-    ),
-  ];
+  return [header, ...items.map(toRow)];
 }
 
 export default function SearchScreen() {
   const router = useRouter();
   const pushRoute = usePushRoute();
-  const params = useLocalSearchParams<{ q?: string }>();
+  const params = useLocalSearchParams<{ q?: string; scope?: string }>();
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
+  const [scopeOpen, setScopeOpen] = useState(false);
   const muted = useThemeColor('--color-muted');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   // Colour as a style, not a class: a className swap between the two border
   // tokens is a hard cut on the one moment the field is responding to a tap.
   const accent = useThemeColor('--color-accent');
@@ -265,32 +353,107 @@ export default function SearchScreen() {
     : getClientIdForProvider('trakt') !== ''
       ? 'trakt'
       : null;
+  // Studios exist on TMDB only, so without a token the scope isn't offered,
+  // and a shared `?scope=studios` link falls back to titles.
+  const scopes = SCOPES.filter(
+    (entry) => entry.value !== 'studios' || tmdbAvailable,
+  );
+  const scope = scopes.find((entry) => entry.value === params.scope) ?? SCOPES[0];
+
   const tmdbSearch = useTmdbSearchQuery({
     query,
-    enabled: moviesTvSource === 'tmdb',
+    enabled: scope.value === 'titles' && moviesTvSource === 'tmdb',
   });
   const traktSearch = useTraktSearchQuery({
     query,
-    enabled: moviesTvSource === 'trakt',
+    enabled: scope.value === 'titles' && moviesTvSource === 'trakt',
   });
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
-  const anilistSearch = useAniListSearchQuery({ query });
+  const anilistSearch = useAniListSearchQuery({
+    query,
+    enabled: scope.value === 'titles',
+  });
+  const personSearch = useTmdbPersonSearchQuery({
+    query,
+    enabled: scope.value === 'people' && tmdbAvailable,
+  });
+  const staffSearch = useAniListStaffSearchQuery({
+    query,
+    enabled: scope.value === 'people',
+  });
+  const studioSearch = useTmdbStudioSearchQuery({
+    query,
+    enabled: scope.value === 'studios',
+  });
 
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
-  const rows = [
-    ...(moviesTvSource == null
-      ? []
-      : sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch)),
-    ...sectionRows('anilist', 'Anime & Manga', anilistSearch),
-  ];
+  const sections =
+    scope.value === 'titles'
+      ? [
+          ...(moviesTvSource == null
+            ? []
+            : [
+                {
+                  search: moviesTvSearch,
+                  rows: sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch, titleRow),
+                },
+              ]),
+          {
+            search: anilistSearch,
+            rows: sectionRows('anilist', 'Anime & Manga', anilistSearch, titleRow),
+          },
+        ]
+      : scope.value === 'people'
+        ? [
+            ...(tmdbAvailable
+              ? [
+                  {
+                    search: personSearch,
+                    rows: sectionRows('tmdb', 'Movies & TV', personSearch, (hit) => ({
+                      kind: 'entity',
+                      key: `tmdb-person-${hit.tmdbId}`,
+                      name: hit.name,
+                      image: hit.image,
+                      shape: 'face',
+                      href: routes.person(hit.tmdbId),
+                    })),
+                  },
+                ]
+              : []),
+            {
+              search: staffSearch,
+              rows: sectionRows('anilist', 'Anime & Manga', staffSearch, (hit) => ({
+                kind: 'entity',
+                key: `anilist-staff-${hit.id}`,
+                name: hit.name,
+                image: hit.image ?? '',
+                shape: 'face',
+                href: routes.anilistPerson(hit.id),
+              })),
+            },
+          ]
+        : [
+            {
+              search: studioSearch,
+              rows: sectionRows('tmdb', 'Studios', studioSearch, (hit) => ({
+                kind: 'entity',
+                key: `tmdb-studio-${hit.tmdbId}`,
+                name: hit.name,
+                image: hit.image,
+                shape: 'logo',
+                href: routes.studio(hit.tmdbId),
+              })),
+            },
+          ];
+  const rows = sections.flatMap((section) => section.rows);
 
   // The screen below the field is one of five mutually exclusive states; the
   // name is the key that makes a change of state remount — and so re-enter.
   const state = !searchable
     ? 'idle'
-    : moviesTvSearch.isLoading && anilistSearch.isLoading
+    : sections.every((section) => section.search.isLoading)
       ? 'loading'
-      : moviesTvSearch.isError && anilistSearch.isError
+      : sections.every((section) => section.search.isError)
         ? 'error'
         : rows.length === 0
           ? 'empty'
@@ -365,7 +528,7 @@ export default function SearchScreen() {
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}
-            placeholder="Search movies, shows, anime & manga"
+            placeholder={scope.placeholder}
             placeholderTextColor={muted}
             ref={inputRef}
             returnKeyType="search"
@@ -404,77 +567,110 @@ export default function SearchScreen() {
           skeleton they replace instead of cutting. The list itself stays
           mounted across queries — a later search swaps its rows in under the
           stale dim below. */}
-      <SectionEnter className="flex-1" key={state}>
-        {state === 'idle' ? (
-          <CenteredNotice className="-mt-16">
-            <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
-            <CenteredNotice.Title>Search</CenteredNotice.Title>
-            <CenteredNotice.Body>
-              Find any movie, show, anime, or manga — open its details or log it to your trackers.
-            </CenteredNotice.Body>
-          </CenteredNotice>
-        ) : state === 'loading' ? (
-          <ResultsSkeleton />
-        ) : state === 'error' ? (
-          <CenteredNotice className="-mt-16">
-            <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
-            <CenteredNotice.Body>
-              Search failed. Check your connection and try again.
-            </CenteredNotice.Body>
-          </CenteredNotice>
-        ) : state === 'empty' ? (
-          <CenteredNotice className="-mt-16">
-            <CenteredNotice.Icon name="search-outline" />
-            <CenteredNotice.Title>No results</CenteredNotice.Title>
-            <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
-          </CenteredNotice>
-        ) : (
-          // While a newer query is in flight the previous results stay visible
-          // (keepPreviousData), dimmed so the staleness is legible — and the
-          // dim crossfades, since it changes twice per search.
-          <AnimatedView
-            className="flex-1"
-            style={{
-              opacity:
-                moviesTvSearch.isPlaceholderData ||
-                anilistSearch.isPlaceholderData
+      {/* Padding, so the scope button rides above the keyboard with the list. */}
+      <KeyboardAvoidingView behavior="padding" className="flex-1">
+        <SectionEnter className="flex-1" key={state}>
+          {state === 'idle' ? (
+            <CenteredNotice className="-mt-16">
+              <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
+              <CenteredNotice.Title>Search</CenteredNotice.Title>
+              <CenteredNotice.Body>
+                Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
+                {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
+              </CenteredNotice.Body>
+            </CenteredNotice>
+          ) : state === 'loading' ? (
+            <ResultsSkeleton />
+          ) : state === 'error' ? (
+            <CenteredNotice className="-mt-16">
+              <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+              <CenteredNotice.Body>
+                Search failed. Check your connection and try again.
+              </CenteredNotice.Body>
+            </CenteredNotice>
+          ) : state === 'empty' ? (
+            <CenteredNotice className="-mt-16">
+              <CenteredNotice.Icon name="search-outline" />
+              <CenteredNotice.Title>No results</CenteredNotice.Title>
+              <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
+            </CenteredNotice>
+          ) : (
+            // While a newer query is in flight the previous results stay visible
+            // (keepPreviousData), dimmed so the staleness is legible — and the
+            // dim crossfades, since it changes twice per search.
+            <AnimatedView
+              className="flex-1"
+              style={{
+                opacity: sections.some(
+                  (section) => section.search.isPlaceholderData,
+                )
                   ? 0.6
                   : 1,
-              transitionProperty: 'opacity',
-              transitionDuration: DURATION.swap,
-              transitionTimingFunction: EASE_OUT,
-            }}
-          >
-            <List
-              // Clear the native bottom tab bar (unmeasurable height) so the last
-              // result isn't hidden behind it; web has no tab bar.
-              contentContainerStyle={
-                process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
-              }
-              data={rows}
-              keyExtractor={(row) => row.key}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item: row }) =>
-                row.kind === 'header' ? (
-                  <SectionHeader label={row.label} provider={row.provider} />
-                ) : row.kind === 'result' ? (
-                  <SearchResultRow
-                    item={row.item}
-                    onActions={openActions}
-                    onPress={openDetails}
-                  />
-                ) : row.kind === 'loading' ? (
-                  <RowSkeleton />
-                ) : (
-                  <Text className="text-muted font-sans text-sm px-6 py-3">
-                    Search failed for this source — try again in a moment.
-                  </Text>
-                )
-              }
-            />
-          </AnimatedView>
-        )}
-      </SectionEnter>
+                transitionProperty: 'opacity',
+                transitionDuration: DURATION.swap,
+                transitionTimingFunction: EASE_OUT,
+              }}
+            >
+              <List
+                // Clear the native bottom tab bar (unmeasurable height) so the last
+                // result isn't hidden behind it; web has no tab bar.
+                contentContainerStyle={
+                  process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
+                }
+                data={rows}
+                keyExtractor={(row) => row.key}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item: row }) =>
+                  row.kind === 'header' ? (
+                    <SectionHeader label={row.label} provider={row.provider} />
+                  ) : row.kind === 'result' ? (
+                    <SearchResultRow
+                      item={row.item}
+                      onActions={openActions}
+                      onPress={openDetails}
+                    />
+                  ) : row.kind === 'entity' ? (
+                    <EntityResultRow onPress={pushRoute} row={row} />
+                  ) : row.kind === 'loading' ? (
+                    <RowSkeleton />
+                  ) : (
+                    <Text className="text-muted font-sans text-sm px-6 py-3">
+                      Search failed for this source — try again in a moment.
+                    </Text>
+                  )
+                }
+              />
+            </AnimatedView>
+          )}
+        </SectionEnter>
+        <PresstableOpacity
+          accessibilityHint="Chooses what to search for"
+          accessibilityLabel={`Searching ${scope.label}`}
+          accessibilityRole="button"
+          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center"
+          onPress={() => setScopeOpen(true)}
+        >
+          <Ionicons color={accentForeground} name={scope.icon} size={24} />
+        </PresstableOpacity>
+      </KeyboardAvoidingView>
+      <PickerSheet
+        onClose={() => setScopeOpen(false)}
+        onSelect={(next: SearchScope) =>
+          router.setParams({ scope: next === 'titles' ? undefined : next })
+        }
+        open={scopeOpen}
+        title="Search for"
+        value={scope.value}
+      >
+        {scopes.map((entry) => (
+          <PickerSheet.Option
+            icon={<Ionicons color={muted} name={entry.icon} size={20} />}
+            key={entry.value}
+            label={entry.label}
+            value={entry.value}
+          />
+        ))}
+      </PickerSheet>
       {/* `canHide={false}`: a search result is not a feed entry, and hiding one
           would quietly suppress it everywhere. `providerLinks="connected"`
           because a result's source provider is an accident of which search

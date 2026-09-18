@@ -157,6 +157,39 @@ export function useTmdbSearchQuery(params: {
   });
 }
 
+/**
+ * People and studios by name for the search tab's scopes. Same contract as
+ * `useTmdbSearchQuery`, and the same keys as the `/lookup` routes' suspense
+ * reads below, so a name searched here is already resolved there.
+ */
+export function useTmdbPersonSearchQuery(params: {
+  query: string;
+  enabled: boolean;
+}) {
+  const query = params.query.trim();
+  return useQuery({
+    queryKey: tmdbQueryKeys.personSearch(query),
+    queryFn: () => Effect.runPromise(searchPerson(tmdbDeps(), { query })),
+    enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+}
+
+export function useTmdbStudioSearchQuery(params: {
+  query: string;
+  enabled: boolean;
+}) {
+  const query = params.query.trim();
+  return useQuery({
+    queryKey: tmdbQueryKeys.studioSearch(query),
+    queryFn: () => Effect.runPromise(searchCompany(tmdbDeps(), { query })),
+    enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+}
+
 /** Name → candidate people, for the `/person/lookup` resolution route. */
 export function useSuspenseTmdbPersonSearchQuery(params: { name: string }) {
   return useSuspenseQuery({

@@ -349,7 +349,7 @@ describe('normalizePersonSearch', () => {
           { id: 3 },
         ],
       }),
-    ).toEqual([{ tmdbId: 1, name: 'A' }]);
+    ).toEqual([{ tmdbId: 1, name: 'A', image: '' }]);
   });
 });
 

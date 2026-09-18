@@ -62,10 +62,13 @@ export interface TmdbPersonSearchResponse {
   }>;
 }
 
-/** A `/search/person` hit, just enough to pick a match and route to it. */
+/** A `/search/person` or `/search/company` hit: enough to pick a match, route
+ *  to it, and draw it as a search result. */
 export interface PersonMatch {
   tmdbId: number;
   name: string;
+  /** Headshot or logo URL; '' when TMDB has none. */
+  image: string;
 }
 
 /** The cast row's department name — every other row is a crew department. */
@@ -302,7 +305,11 @@ export function normalizePersonSearch(
   raw: TmdbPersonSearchResponse,
 ): PersonMatch[] {
   return (raw.results ?? [])
-    .map((entry) => ({ tmdbId: entry.id, name: entry.name ?? '' }))
+    .map((entry) => ({
+      tmdbId: entry.id,
+      name: entry.name ?? '',
+      image: tmdbImageUrl(entry.profile_path, 'w185'),
+    }))
     .filter((entry) => entry.name !== '');
 }
 
@@ -862,14 +869,22 @@ export function normalizeStudioDetails(
 }
 
 export interface TmdbCompanySearchResponse {
-  results?: Array<{ id: number; name?: string | null }>;
+  results?: Array<{
+    id: number;
+    name?: string | null;
+    logo_path?: string | null;
+  }>;
 }
 
 export function normalizeCompanySearch(
   raw: TmdbCompanySearchResponse,
 ): PersonMatch[] {
   return (raw.results ?? [])
-    .map((entry) => ({ tmdbId: entry.id, name: entry.name ?? '' }))
+    .map((entry) => ({
+      tmdbId: entry.id,
+      name: entry.name ?? '',
+      image: tmdbImageUrl(entry.logo_path, 'w185'),
+    }))
     .filter((entry) => entry.name !== '');
 }
 

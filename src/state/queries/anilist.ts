@@ -133,6 +133,8 @@ export const anilistQueryKeys = {
     [...anilistQueryKeys.searchRoot(), query, limit] as const,
   /** One staff member's profile and credits, by AniList id (`/person/anilist-<id>`). */
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
+  staffSearch: (query: string) =>
+    [...anilistQueryKeys.all, 'staff-search', query] as const,
   /** A person's AniList staff id, resolved by name (plan 0035 R12). */
   staffId: (name: string) => [...anilistQueryKeys.all, 'staff-id', name] as const,
   /** A studio's AniList id, resolved by name — the studio sheet's link. */
@@ -365,6 +367,7 @@ export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
 export function useAniListSearchQuery(params: {
   query: string;
   limit?: number;
+  enabled?: boolean;
 }) {
   const query = params.query.trim();
   const limit = params.limit ?? 20;
@@ -372,7 +375,29 @@ export function useAniListSearchQuery(params: {
     queryKey: anilistQueryKeys.search(query, limit),
     queryFn: () =>
       Effect.runPromise(searchMedia(anilistDeps(), { query, limit })),
-    enabled: query.length >= SEARCH_MIN_QUERY_LENGTH,
+    enabled:
+      params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Staff by name for the search tab's People scope — the people TMDB doesn't
+ * index (manga authors) and the only people search without a TMDB token.
+ */
+export function useAniListStaffSearchQuery(params: {
+  query: string;
+  enabled: boolean;
+}) {
+  const query = params.query.trim();
+  return useQuery({
+    queryKey: anilistQueryKeys.staffSearch(query),
+    queryFn: () =>
+      Effect.runPromise(
+        searchAniListStaff(anilistDeps(), { name: query, limit: 20 }),
+      ),
+    enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
