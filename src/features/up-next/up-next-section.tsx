@@ -174,47 +174,51 @@ export function UpNextSection({
   return (
     <View>
       {continueWatching.length > 0 && (
-        <UpNextSectionHeader
-          collapseKey="up-next-continue"
-          title="Continue Watching"
-        >
-          <ScrollView
-            horizontal
-            className="px-4"
-            showsHorizontalScrollIndicator={false}
+        // The last card's own exit can't play once the whole block unmounts
+        // with it, so the block carries the same fade.
+        <AnimatedView exiting={CARD_EXIT}>
+          <UpNextSectionHeader
+            collapseKey="up-next-continue"
+            title="Continue Watching"
           >
-            {/* Keyed on the *show*, not the entry: a quick-log advances the
-                entry (its id carries the episode), and the card has to stay
-                mounted for the line to morph and the art to hold still. One
-                entry per show here by construction, so the item id is unique. */}
-            {continueWatching.map((entry) => (
-              <AnimatedView
-                key={entry.item.id}
-                className="mr-3"
-                exiting={CARD_EXIT}
-                layout={reduceMotion ? undefined : CARD_LAYOUT}
-              >
-                <EpisodeCard
-                  // Continue Watching is aired episodes by construction; the
-                  // narrowing is what the union buys — no release row can slip
-                  // in here and render a quick-log for something with no episode.
-                  action={
-                    entry.kind === 'episode' ? (
-                      <QuickLogButton entry={entry} />
-                    ) : undefined
-                  }
-                  badges={continueWatchingBadges(entry, now)}
-                  // Wrapped, not grouped: this section holds one entry per show
-                  // by construction (the pool fan answers with a single
-                  // `next_episode` pointer each), so it can't produce a batch.
-                  group={soloGroup(entry)}
-                  onActionsPress={onItemActions}
-                  onPress={onItemPress}
-                />
-              </AnimatedView>
-            ))}
-          </ScrollView>
-        </UpNextSectionHeader>
+            <ScrollView
+              horizontal
+              className="px-4"
+              showsHorizontalScrollIndicator={false}
+            >
+              {/* Keyed on the *show*, not the entry: a quick-log advances the
+                  entry (its id carries the episode), and the card has to stay
+                  mounted for the line to morph and the art to hold still. One
+                  entry per show here by construction, so the item id is unique. */}
+              {continueWatching.map((entry) => (
+                <AnimatedView
+                  key={entry.item.id}
+                  className="mr-3"
+                  exiting={CARD_EXIT}
+                  layout={reduceMotion ? undefined : CARD_LAYOUT}
+                >
+                  <EpisodeCard
+                    // Continue Watching is aired episodes by construction; the
+                    // narrowing is what the union buys — no release row can slip
+                    // in here and render a quick-log for something with no episode.
+                    action={
+                      entry.kind === 'episode' ? (
+                        <QuickLogButton entry={entry} />
+                      ) : undefined
+                    }
+                    badges={continueWatchingBadges(entry, now)}
+                    // Wrapped, not grouped: this section holds one entry per show
+                    // by construction (the pool fan answers with a single
+                    // `next_episode` pointer each), so it can't produce a batch.
+                    group={soloGroup(entry)}
+                    onActionsPress={onItemActions}
+                    onPress={onItemPress}
+                  />
+                </AnimatedView>
+              ))}
+            </ScrollView>
+          </UpNextSectionHeader>
+        </AnimatedView>
       )}
 
       <UpNextSectionHeader

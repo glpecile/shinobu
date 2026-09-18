@@ -16,9 +16,12 @@ mock.module('react-native-mmkv', () => ({
 const { connectSerializd, getSerializdSession, getSerializdUsername } = await import(
   './serializd'
 );
-const { connectedProviderIds, clearProviderSession, getProviderSession } = await import(
-  './tokens'
-);
+const {
+  connectedProviderIds,
+  clearProviderSession,
+  getProviderSession,
+  onProviderConnected,
+} = await import('./tokens');
 
 beforeEach(() => store.clear());
 
@@ -38,6 +41,14 @@ describe('connectSerializd', () => {
     clearProviderSession('serializd');
     expect(getSerializdSession()).toBeNull();
     expect(connectedProviderIds()).not.toContain('serializd');
+  });
+
+  test('announces a first connect, not an overwrite such as a token refresh', () => {
+    const connected: string[] = [];
+    onProviderConnected((id) => connected.push(id));
+    connectSerializd({ accessToken: 'tok-1', username: 'gian' });
+    connectSerializd({ accessToken: 'tok-2', username: 'gian' });
+    expect(connected).toEqual(['serializd']);
   });
 
   test('a session missing the token or username is treated as disconnected', () => {

@@ -69,9 +69,9 @@ function SeasonAccordionList({
   // A manual-only target still needs the sheet openable (plan 0022 R3) —
   // matches LogMediaButton's gate.
   const canLog = targets.length > 0 || manualTargets.length > 0;
-  // Watched checkmarks from whichever tracker knows: Trakt's progress read
+  // Watched marks from whichever tracker knows: Trakt's progress read
   // first, else the Simkl `watching` snapshot's per-episode keys (the same
-  // `"${season}-${number}"` format). Neither connected → no checkmarks.
+  // `"${season}-${number}"` format). Neither connected → no marks.
   const { data: traktWatched } = useTraktShowProgressQuery({
     traktId: traktId ?? undefined,
     enabled: connected.includes('trakt') && traktId != null,

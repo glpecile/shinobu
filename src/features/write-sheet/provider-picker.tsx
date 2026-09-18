@@ -2,10 +2,12 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 import { useState } from 'react';
 
+import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
@@ -18,6 +20,12 @@ import { useConnectedProviders } from '@/state/session';
  * here (they are `ManualWriteRows`, never a toggle), and nothing in this file
  * may affect a caller's `canConfirm` beyond the selected set it reports.
  */
+
+const SELECTION_FADE = {
+  transitionProperty: 'opacity',
+  transitionDuration: DURATION.color,
+  transitionTimingFunction: EASE_OUT,
+} as const;
 
 interface ProviderToggleProps {
   id: ProviderId;
@@ -38,23 +46,31 @@ function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
       // role on a pressto pressable silently kills onPress on web
       // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
       accessibilityState={{ checked: selected }}
-      className={cn(
-        'flex-row items-center justify-between px-3 py-2.5 rounded-md',
-        selected ? 'bg-accent/10' : 'bg-surface',
-      )}
+      className="flex-row items-center justify-between px-3 py-2.5 rounded-md bg-surface"
       onPress={onToggle}
     >
+      {/* Selection crossfades over the resting state, the tag chips' recipe
+          (log-media/tag-picker.tsx): an animated backgroundColor would lose
+          the accent's /10 alpha. */}
+      <AnimatedView
+        className="absolute inset-0 rounded-md bg-accent/10"
+        style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
+      />
       <View className="flex-row items-center gap-3">
         <ProviderIcon id={id} size={18} />
         <Text className="text-foreground font-sans-semibold text-sm">
           {descriptor.label}
         </Text>
       </View>
-      <Ionicons
-        color={selected ? accent : muted}
-        name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-        size={20}
-      />
+      <View>
+        <Ionicons color={muted} name="ellipse-outline" size={20} />
+        <AnimatedView
+          className="absolute inset-0"
+          style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
+        >
+          <Ionicons color={accent} name="checkmark-circle" size={20} />
+        </AnimatedView>
+      </View>
     </PresstableOpacity>
   );
 }

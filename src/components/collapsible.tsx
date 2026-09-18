@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
+import { Collapse } from '@/components/collapse';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 
@@ -28,7 +29,9 @@ export function Collapsible({
           {label}
         </Text>
       </PresstableOpacity>
-      {open && <View className="px-4 pb-4">{children}</View>}
+      <Collapse open={open}>
+        <View className="px-4 pb-4">{children}</View>
+      </Collapse>
     </View>
   );
 }

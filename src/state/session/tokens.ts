@@ -25,8 +25,25 @@ export function getProviderSession(id: ProviderId): ProviderSession | null {
   }
 }
 
+let connectListener: ((id: ProviderId) => void) | undefined;
+
+/**
+ * The root layout's connect toast. A listener rather than an import: the toast
+ * library can't load under `bun:test`, and every session test imports this file.
+ */
+export function onProviderConnected(listener: (id: ProviderId) => void): void {
+  connectListener = listener;
+}
+
+/**
+ * Every connect path and every token refresh writes through here. A write with
+ * no session before it is a user connecting. A refresh, or a reconnect over a
+ * live session, overwrites one and stays silent.
+ */
 export function setProviderSession(id: ProviderId, session: ProviderSession): void {
+  const connecting = storage.getString(keyFor(id)) == null;
   storage.set(keyFor(id), JSON.stringify(session));
+  if (connecting) connectListener?.(id);
 }
 
 export function clearProviderSession(id: ProviderId): void {
