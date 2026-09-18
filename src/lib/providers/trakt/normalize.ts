@@ -4,6 +4,7 @@ import type {
   NormalizedDiaryEntry,
   NormalizedMediaItem,
   NormalizedSeason,
+  MediaType,
   NormalizedStudio,
   ReleaseCalendar,
 } from '@/types/media';
@@ -307,6 +308,14 @@ const CREW_DEPARTMENT_ORDER = [
   'visual effects',
 ];
 
+/** A series is billed by its writers' room: creators, writers, then directors. */
+const SERIES_CREW_DEPARTMENT_ORDER = [
+  'created by',
+  'writing',
+  'directing',
+  ...CREW_DEPARTMENT_ORDER.slice(2),
+];
+
 /**
  * Flattens the department-keyed crew map into one billing-ordered list, one
  * entry per person — someone credited in several departments (director who
@@ -314,14 +323,16 @@ const CREW_DEPARTMENT_ORDER = [
  */
 export function normalizeCrew(
   raw: TraktPeopleResponse['crew'],
+  type: MediaType,
 ): NormalizedCrewMember[] {
   if (raw == null) return [];
+  const order = type === 'MOVIE' ? CREW_DEPARTMENT_ORDER : SERIES_CREW_DEPARTMENT_ORDER;
 
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[] }>();
   const departments = [
-    ...CREW_DEPARTMENT_ORDER.filter((department) => department in raw),
+    ...order.filter((department) => department in raw),
     ...Object.keys(raw).filter(
-      (department) => !CREW_DEPARTMENT_ORDER.includes(department),
+      (department) => !order.includes(department),
     ),
   ];
 

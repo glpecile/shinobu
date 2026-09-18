@@ -72,12 +72,26 @@ describe('normalizeCrew', () => {
       ],
       editing: [{ jobs: ['Editor'], person: person(2, 'Adam Bosman') }],
       directing: [director],
-    });
+    }, 'MOVIE');
 
     expect(crew.map((member) => member.name)).toEqual([
       'Harry Bradbeer',
       'Adam Bosman',
       'Zed Last',
+    ]);
+  });
+
+  test('bills a series by creators, then writers, then directors', () => {
+    const crew = normalizeCrew({
+      directing: [director],
+      writing: [{ jobs: ['Writer'], person: person(2, 'Jesse Armstrong') }],
+      'created by': [{ jobs: ['Creator'], person: person(3, 'Phoebe Waller-Bridge') }],
+    }, 'TV');
+
+    expect(crew.map((member) => member.name)).toEqual([
+      'Phoebe Waller-Bridge',
+      'Jesse Armstrong',
+      'Harry Bradbeer',
     ]);
   });
 
@@ -87,7 +101,7 @@ describe('normalizeCrew', () => {
       writing: [
         { jobs: ['Writer', 'Director'], person: person(1, 'Harry Bradbeer') },
       ],
-    });
+    }, 'MOVIE');
 
     expect(crew).toHaveLength(1);
     expect(crew[0].job).toBe('Director, Writer');
@@ -96,7 +110,7 @@ describe('normalizeCrew', () => {
   test('supports legacy singular `job`', () => {
     const crew = normalizeCrew({
       camera: [{ job: 'Director of Photography', person: person(9, 'Giles Nuttgens') }],
-    });
+    }, 'MOVIE');
 
     expect(crew[0].job).toBe('Director of Photography');
   });
