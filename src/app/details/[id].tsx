@@ -520,7 +520,7 @@ function DetailsScreen() {
     (item?.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null);
   const simklEntry = useSimklLibraryEntryQuery({
     item: onSimkl ? item : null,
-    enabled: onSimkl && connected.includes('simkl'),
+    enabled: connected.includes('simkl'),
   });
   // Items resolved from the watched feed arrive artless (Trakt dropped images
   // from /sync/watched/* in 2026) — recover poster/backdrop lazily.

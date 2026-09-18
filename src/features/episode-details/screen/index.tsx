@@ -59,7 +59,7 @@ const BOUNDARY_TOLERANCE = 2;
  */
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
-  if ((view.episode == null && view.isLoading) || view.orderLoading) {
+  if (view.isLoading || view.orderLoading) {
     return <EpisodeScreenSkeleton onBack={onBack} />;
   }
   return (
@@ -175,10 +175,6 @@ function EpisodePage({
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   const hero = view.still || item.backdropImage || '';
 
-  if (view.episode == null && view.isLoading) {
-    return <EpisodeSkeletonBody />;
-  }
-
   return (
     <ScrollView className="flex-1">
       <BlurEnter>
@@ -228,10 +224,16 @@ function EpisodePage({
   );
 }
 
-/** The loading placeholders shared by the route's and the screen's loading phase. */
-function EpisodeSkeletonBody() {
+/**
+ * The whole screen as placeholders, block for block, so the content blurs in
+ * over the same geometry. Rendered by the route while the item resolves and
+ * by the screen while the episode loads — one shape for both, so the two
+ * phases are indistinguishable. Its `exiting` fade runs over the arriving
+ * content: the crossfade Emil's blur bridges, with no timer on this side.
+ */
+export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
   return (
-    <>
+    <AnimatedView className="flex-1 bg-background" exiting={FadeOut.duration(DURATION.exit)}>
       <Skeleton className="h-64 w-full" delay={staggerDelay(0)} />
       <View className="px-6 -mt-10 pb-12">
         <EpisodeHeaderSkeleton />
@@ -245,21 +247,6 @@ function EpisodeSkeletonBody() {
         </View>
         <Skeleton className="h-12 w-full rounded-full mt-3" delay={staggerDelay(4)} />
       </View>
-    </>
-  );
-}
-
-/**
- * The whole screen as placeholders, block for block, so the content blurs in
- * over the same geometry. Rendered by the route while the item resolves and
- * by the screen while the episode loads — one shape for both, so the two
- * phases are indistinguishable. Its `exiting` fade runs over the arriving
- * content: the crossfade Emil's blur bridges, with no timer on this side.
- */
-export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
-  return (
-    <AnimatedView className="flex-1 bg-background" exiting={FadeOut.duration(DURATION.exit)}>
-      <EpisodeSkeletonBody />
       <FloatingBackButton onPress={onBack} />
     </AnimatedView>
   );

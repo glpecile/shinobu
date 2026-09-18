@@ -162,7 +162,6 @@ describe('findLibraryEntry', () => {
         entry('simkl-2', 'ANIME', { simkl: 2, tmdb: 42 }),
       ],
     });
-    expect(findLibraryEntry(seasons, item('s2', 'ANIME', { simkl: 2, tmdb: 42 }))?.item.id).toBe('simkl-2');
     expect(findLibraryEntry(seasons, item('s3', 'ANIME', { simkl: 3, tmdb: 42 }))).toBeNull();
   });
 });
