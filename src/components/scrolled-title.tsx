@@ -47,10 +47,11 @@ function useScrolledTitleContext(caller: string): ScrolledTitleContextValue {
   return context;
 }
 
-/** Whether the bar has started to cover the anchored title. */
-function covered(scrollY: number, anchor: AnchorFrame): boolean {
+/** Whether the bar has started to cover the anchored title or, with `whole`, covers all of it. */
+function covered(scrollY: number, anchor: AnchorFrame, whole: boolean): boolean {
   'worklet';
-  return anchor.height > 0 && scrollY > anchor.y - BAR_HEIGHT;
+  const edge = whole ? anchor.y + anchor.height : anchor.y;
+  return anchor.height > 0 && scrollY > edge - BAR_HEIGHT;
 }
 
 /**
@@ -64,11 +65,11 @@ function covered(scrollY: number, anchor: AnchorFrame): boolean {
  *     <FloatingBackButton … />                        … and under the button
  *   </ScrolledTitle>
  *
- * The moment the scroll carries the anchored title under the bar, the bar
- * fades in over it and its own title slides up from under the bar's edge:
- * the text is covered and rises again, small. Timed from that crossing
- * rather than tied to the offset, so a fast wheel tick that skips the whole
- * overlap still gets a full slide.
+ * The moment the scroll carries the anchored title's top under the bar, the
+ * bar fades in over it; once its last line is under, the bar's own title
+ * slides up from under the bar's edge: the text is covered and rises again,
+ * small. Timed from those crossings rather than tied to the offset, so a fast
+ * wheel tick that skips the whole overlap still gets a full slide.
  */
 export function ScrolledTitle({
   children,
@@ -144,32 +145,43 @@ function Anchor({
   );
 }
 
-/** The bar. Never interactive, so it must never catch a scroll's first touch. */
-function Bar({ title }: { title: string }) {
+/** 0 to 1, timed from the bar starting to cover the anchored title or, with `whole`, covering all of it. */
+function useCovered(whole: boolean, duration: number): SharedValue<number> {
   const { scrollY, anchor } = useScrolledTitleContext('ScrolledTitle.Bar');
-  const reduceMotion = useReducedMotion();
-  const shown = useSharedValue(0);
+  const progress = useSharedValue(0);
   useAnimatedReaction(
-    () => covered(scrollY.value, anchor.value),
+    () => covered(scrollY.value, anchor.value, whole),
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
-      const target = isCovered ? 1 : 0;
-      shown.value = reduceMotion
-        ? target
-        : withTiming(
-            target,
-            isCovered
-              ? { duration: DURATION.toggle, easing: KEYFRAME_EASE_OUT }
-              : { duration: DURATION.exit, easing: KEYFRAME_EASE_EXIT },
-          );
+      progress.value = withTiming(
+        isCovered ? 1 : 0,
+        isCovered
+          ? { duration, easing: KEYFRAME_EASE_OUT }
+          : { duration: DURATION.exit, easing: KEYFRAME_EASE_EXIT },
+      );
     },
   );
+  return progress;
+}
+
+/**
+ * The bar. Never interactive, so it must never catch a scroll's first touch,
+ * and hidden from screen readers: the anchored title already says it.
+ */
+function Bar({ title }: { title: string }) {
+  const reduceMotion = useReducedMotion();
+  const shown = useCovered(false, DURATION.enter);
+  const risen = useCovered(true, DURATION.toggle);
   const barStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
-  const titleStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (1 - shown.value) * ROW_TOP }],
-  }));
+  // Reduced motion keeps the second crossing as a fade, with no travel.
+  const titleStyle = useAnimatedStyle(() =>
+    reduceMotion
+      ? { opacity: risen.value }
+      : { transform: [{ translateY: (1 - risen.value) * ROW_TOP }] },
+  );
   return (
     <AnimatedView
+      aria-hidden
       className="absolute top-0 left-0 right-0 h-24 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border overflow-hidden"
       style={[{ pointerEvents: 'none' }, barStyle]}
     >
