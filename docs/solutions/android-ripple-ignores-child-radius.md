@@ -57,3 +57,9 @@ had no effect. `curl -s localhost:8081/json/list` returning `[]` is the tell —
 relaunch through
 `shinobu://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081`
 before concluding a fix didn't work.
+
+**Keyboard focus.** A button with no ripple has no drawable for
+`state_focused`, so Android draws its default focus highlight. That highlight is
+a rectangle over the view's bounds, whatever radius the view has. `components/fab`
+keeps a ripple for this reason: a `RippleDrawable` draws its own focused state,
+masked by the pressable's `rounded-full`, so a Tab-focused FAB draws a circle.

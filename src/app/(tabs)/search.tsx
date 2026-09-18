@@ -10,6 +10,7 @@ import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { Eyebrow } from '@/components/eyebrow';
+import { Fab } from '@/components/fab';
 import { Image } from '@/components/image';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
@@ -277,8 +278,10 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
+  // State seeded from `?scope=`, like `input` from `?q=`: every tap on the
+  // search tab dispatches a `JUMP_TO` with no params, which wipes the route's.
+  const [scopeParam, setScopeParam] = useState(params.scope);
   const muted = useThemeColor('--color-muted');
-  const accentForeground = useThemeColor('--color-accent-foreground');
   // Colour as a style, not a class: a className swap between the two border
   // tokens is a hard cut on the one moment the field is responding to a tap.
   const accent = useThemeColor('--color-accent');
@@ -357,7 +360,7 @@ export default function SearchScreen() {
   const scopes = SCOPES.filter(
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
-  const scope = scopes.find((entry) => entry.value === params.scope) ?? SCOPES[0];
+  const scope = scopes.find((entry) => entry.value === scopeParam) ?? SCOPES[0];
 
   const tmdbSearch = useTmdbSearchQuery({
     query,
@@ -643,21 +646,20 @@ export default function SearchScreen() {
             </AnimatedView>
           )}
         </SectionEnter>
-        <PresstableOpacity
-          accessibilityHint="Chooses what to search for"
-          accessibilityLabel={`Searching ${scope.label}`}
-          accessibilityRole="button"
-          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center"
+        <Fab
+          className="absolute bottom-6 right-6"
+          hint="Chooses what to search for"
+          icon={scope.icon}
+          label={`Searching ${scope.label}`}
           onPress={() => setScopeOpen(true)}
-        >
-          <Ionicons color={accentForeground} name={scope.icon} size={24} />
-        </PresstableOpacity>
+        />
       </KeyboardAvoidingView>
       <PickerSheet
         onClose={() => setScopeOpen(false)}
-        onSelect={(next: SearchScope) =>
-          router.setParams({ scope: next === 'titles' ? undefined : next })
-        }
+        onSelect={(next: SearchScope) => {
+          setScopeParam(next);
+          router.setParams({ scope: next === 'titles' ? undefined : next });
+        }}
         open={scopeOpen}
         title="Search for"
         value={scope.value}
