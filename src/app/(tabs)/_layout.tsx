@@ -17,23 +17,23 @@ export default function TabsLayout() {
   // regardless of dark mode. Everything is a `global.css` token via
   // `useThemeColor` (these props take strings, not classes).
   const background = useThemeColor('--color-background');
-  const muted = useThemeColor('--color-muted');
+  const foreground = useThemeColor('--color-foreground');
   const accent = useThemeColor('--color-accent');
-  const accentForeground = useThemeColor('--color-accent-foreground');
-  // Android reads as Google TV's bar, in the brand colour: a solid accent pill
-  // behind the selected glyph, which goes white on it, and every label shown.
+  const accentTonal = useThemeColor('--color-accent-tonal');
+  const accentOnTonal = useThemeColor('--color-accent-on-tonal');
+  // Android reads as WhatsApp's bar, in reds: a tonal pill behind the selected
+  // glyph and every label shown in the foreground colour.
   // iOS keeps its tint, its selected tab is not a pill.
   const android =
     process.env.EXPO_OS === 'android'
       ? {
-          iconColor: { default: muted, selected: accentForeground },
-          indicatorColor: accent,
-          // Material hides inactive labels past three tabs; Google TV labels all four.
+          iconColor: { default: foreground, selected: accentOnTonal },
+          indicatorColor: accentTonal,
+          // Material hides inactive labels past three tabs; WhatsApp labels all four.
           labelVisibilityMode: 'labeled' as const,
-          labelStyle: {
-            default: { color: muted },
-            selected: { color: accent },
-          },
+          // No bold selected label: Android reads one weight for the whole bar,
+          // from the default style only.
+          labelStyle: { default: { color: foreground } },
         }
       : {};
 
