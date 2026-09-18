@@ -237,7 +237,6 @@ type SearchRow =
 interface SectionQueryState<Hit> {
   isLoading: boolean;
   isError: boolean;
-  isPlaceholderData: boolean;
   data?: Hit[] | undefined;
 }
 
@@ -525,8 +524,6 @@ export default function SearchScreen() {
             // out of the field and off the viewport
             // (docs/solutions/firefox-flex-input-wont-shrink.md).
             className="flex-1 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
-            // Android's caret is its own prop; the class above is web's.
-            cursorColor={accent}
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}
