@@ -6,7 +6,7 @@ import { useTmdbEpisodeQuery } from '@/state/queries/tmdb';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
-import { episodeNeighbours, type EpisodeRef } from './episode-neighbours';
+import { episodeNeighbours, episodeOrder, type EpisodeRef } from './episode-neighbours';
 
 export interface EpisodeView {
   /** Undefined while neither the seasons list nor TMDB has answered. */
@@ -20,6 +20,10 @@ export interface EpisodeView {
   isLoading: boolean;
   /** Whether the credit sections can be fetched at all (id + token). */
   tmdbId: number | undefined;
+  /** The sequence this episode sits in (`episodeOrder`); empty until the seasons list loads. */
+  order: EpisodeRef[];
+  /** The seasons list is still in flight, so `order` is not final. */
+  orderLoading: boolean;
 }
 
 /**
@@ -60,5 +64,7 @@ export function useEpisode(
     ...(tmdb.data?.rating != null ? { rating: tmdb.data.rating } : {}),
     isLoading: episode == null && (seasons.isPending || tmdb.isPending),
     tmdbId,
+    order: seasons.data == null ? [] : episodeOrder(seasons.data, season),
+    orderLoading: seasons.isLoading,
   };
 }

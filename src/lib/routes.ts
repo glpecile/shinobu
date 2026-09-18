@@ -8,13 +8,6 @@ import type { ProviderId } from '@/lib/providers/types';
  * Centralized route definitions. Use this instead of hardcoding path strings so
  * Expo Router route changes only require updates in one place.
  */
-/**
- * Which way a step between sibling episodes goes. `back` rides the URL as
- * `?dir=back` so the root stack can play the *pop* animation for a replace
- * (`app/_layout.tsx`); forward is the default and needs no param.
- */
-export type EpisodeStepDirection = 'forward' | 'back';
-
 export const routes = {
   home: '/',
   connect: '/connect',
@@ -26,8 +19,8 @@ export const routes = {
    * way `/details` resolves it). Season and number ride as query params so
    * the route stays one segment beside `/details`.
    */
-  episode: (id: string, season: number, number: number, direction?: EpisodeStepDirection) =>
-    `/episode/${id}?season=${season}&number=${number}${direction === 'back' ? '&dir=back' : ''}` as const,
+  episode: (id: string, season: number, number: number) =>
+    `/episode/${id}?season=${season}&number=${number}` as const,
   /**
    * An anime episode by its *entry-relative* number, no season: anime logs
    * carry no tracker season, so the route places the number on the trackers'

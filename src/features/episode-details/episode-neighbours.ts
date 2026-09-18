@@ -6,16 +6,15 @@ export interface EpisodeRef {
 }
 
 /**
- * The episodes either side of `{season, number}` in the show's own layout,
- * crossing season boundaries (S1's last → S2's first). Specials (season 0)
- * are their own sequence: stepping back from S1E1 must not land on one.
+ * The sequence `season` belongs to, in the show's own layout, crossing season
+ * boundaries (S1's last → S2's first). Specials (season 0) are their own
+ * sequence: stepping back from S1E1 must not land on one.
  */
-export function episodeNeighbours(
+export function episodeOrder(
   seasons: readonly NormalizedSeason[],
   season: number,
-  number: number,
-): { prev?: EpisodeRef; next?: EpisodeRef } {
-  const ordered = [...seasons]
+): EpisodeRef[] {
+  return [...seasons]
     .filter((entry) => (entry.number === 0) === (season === 0))
     .sort((a, b) => a.number - b.number)
     .flatMap((entry) =>
@@ -23,6 +22,15 @@ export function episodeNeighbours(
         .sort((a, b) => a.number - b.number)
         .map((episode) => ({ season: entry.number, number: episode.number })),
     );
+}
+
+/** The episodes either side of `{season, number}` in `episodeOrder`. */
+export function episodeNeighbours(
+  seasons: readonly NormalizedSeason[],
+  season: number,
+  number: number,
+): { prev?: EpisodeRef; next?: EpisodeRef } {
+  const ordered = episodeOrder(seasons, season);
   const index = ordered.findIndex(
     (entry) => entry.season === season && entry.number === number,
   );
