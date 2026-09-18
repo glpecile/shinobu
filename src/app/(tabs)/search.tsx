@@ -278,9 +278,9 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(initialQuery);
   const [focused, setFocused] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
-  // State seeded from `?scope=`, like `input` from `?q=`: every tap on the
-  // search tab dispatches a `JUMP_TO` with no params, which wipes the route's.
-  const [scopeParam, setScopeParam] = useState(params.scope);
+  // Seeded from `?scope=`, like `input` from `?q=`: a tab tap wipes route
+  // params (docs/solutions/native-tab-press-wipes-route-params.md).
+  const [selectedScope, setSelectedScope] = useState(params.scope);
   const muted = useThemeColor('--color-muted');
   // Colour as a style, not a class: a className swap between the two border
   // tokens is a hard cut on the one moment the field is responding to a tap.
@@ -360,7 +360,7 @@ export default function SearchScreen() {
   const scopes = SCOPES.filter(
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
-  const scope = scopes.find((entry) => entry.value === scopeParam) ?? SCOPES[0];
+  const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
 
   const tmdbSearch = useTmdbSearchQuery({
     query,
@@ -657,7 +657,7 @@ export default function SearchScreen() {
       <PickerSheet
         onClose={() => setScopeOpen(false)}
         onSelect={(next: SearchScope) => {
-          setScopeParam(next);
+          setSelectedScope(next);
           router.setParams({ scope: next === 'titles' ? undefined : next });
         }}
         open={scopeOpen}

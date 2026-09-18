@@ -12,12 +12,11 @@ const SIZE = {
 
 /**
  * The accent circle floating in a screen's corner. The caller positions it
- * through `className`.
+ * through `className`. Not a `Button`: that is a labelled pill, like
+ * `RoundIconButton`'s reason for being its own pressable.
  *
- * It keeps a ripple where `PresstableOpacity` turns it off. On Android a
- * pressable with no ripple gets the platform's default keyboard-focus
- * highlight, which is a rectangle. A ripple handles the focused state itself
- * and is masked by the pressable's `rounded-full`, so focus draws a circle.
+ * Keeps a ripple so Android's keyboard focus draws a circle
+ * (docs/solutions/android-ripple-ignores-child-radius.md).
  */
 export function Fab({
   icon,
@@ -47,7 +46,7 @@ export function Fab({
         className,
       )}
       onPress={onPress}
-      // A composed color needs a hex, so this can't be a token. Android only.
+      // 3D is 24% alpha, the tab bar's ripple strength. Android only.
       rippleColor={`${accentForeground}3D`}
     >
       <Ionicons color={accentForeground} name={icon} size={SIZE[size].icon} />
