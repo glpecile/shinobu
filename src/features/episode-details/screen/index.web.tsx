@@ -9,6 +9,7 @@ import { FloatingBackButton } from '@/components/floating-back-button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { DURATION } from '@/lib/motion';
 import { PeopleSectionsSkeleton } from '@/features/person/people-section';
+import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
 import Head from '@/components/head';
 import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -132,6 +133,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             prev={view.prev}
           />
           <EpisodeSeriesLink className="mt-3" id={item.id} />
+          <ProviderLinksSection episode={{ season, number }} item={item} />
         </BlurEnter>
       </ScrollView>
 

@@ -572,87 +572,91 @@ export default function SearchScreen() {
           stale dim below. */}
       {/* Padding, so the scope button rides above the keyboard with the list. */}
       <KeyboardAvoidingView behavior="padding" className="flex-1">
-        <SectionEnter className="flex-1" key={state}>
-          {state === 'idle' ? (
-            <CenteredNotice className="-mt-16">
-              <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
-              <CenteredNotice.Title>Search</CenteredNotice.Title>
-              <CenteredNotice.Body>
-                Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
-                {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
-              </CenteredNotice.Body>
-            </CenteredNotice>
-          ) : state === 'loading' ? (
-            <ResultsSkeleton />
-          ) : state === 'error' ? (
-            <CenteredNotice className="-mt-16">
-              <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
-              <CenteredNotice.Body>
-                Search failed. Check your connection and try again.
-              </CenteredNotice.Body>
-            </CenteredNotice>
-          ) : state === 'empty' ? (
-            <CenteredNotice className="-mt-16">
-              <CenteredNotice.Icon name="search-outline" />
-              <CenteredNotice.Title>No results</CenteredNotice.Title>
-              <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
-            </CenteredNotice>
-          ) : (
-            // While a newer query is in flight the previous results stay visible
-            // (keepPreviousData), dimmed so the staleness is legible — and the
-            // dim crossfades, since it changes twice per search.
-            <AnimatedView
-              className="flex-1"
-              style={{
-                opacity: sections.some(
-                  (section) => section.search.isPlaceholderData,
-                )
-                  ? 0.6
-                  : 1,
-                transitionProperty: 'opacity',
-                transitionDuration: DURATION.swap,
-                transitionTimingFunction: EASE_OUT,
-              }}
-            >
-              <List
-                // Clear the native bottom tab bar (unmeasurable height) so the last
-                // result isn't hidden behind it; web has no tab bar.
-                contentContainerStyle={
-                  process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
-                }
-                data={rows}
-                keyExtractor={(row) => row.key}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item: row }) =>
-                  row.kind === 'header' ? (
-                    <SectionHeader label={row.label} provider={row.provider} />
-                  ) : row.kind === 'result' ? (
-                    <SearchResultRow
-                      item={row.item}
-                      onActions={openActions}
-                      onPress={openDetails}
-                    />
-                  ) : row.kind === 'entity' ? (
-                    <EntityResultRow onPress={pushRoute} row={row} />
-                  ) : row.kind === 'loading' ? (
-                    <RowSkeleton />
-                  ) : (
-                    <Text className="text-muted font-sans text-sm px-6 py-3">
-                      Search failed for this source — try again in a moment.
-                    </Text>
+        {/* The Fab anchors to this frame: an absolute child of the padded view
+            sits on its padding box, under the keyboard. */}
+        <View className="flex-1">
+          <SectionEnter className="flex-1" key={state}>
+            {state === 'idle' ? (
+              <CenteredNotice className="-mt-16">
+                <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
+                <CenteredNotice.Title>Search</CenteredNotice.Title>
+                <CenteredNotice.Body>
+                  Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
+                  {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
+                </CenteredNotice.Body>
+              </CenteredNotice>
+            ) : state === 'loading' ? (
+              <ResultsSkeleton />
+            ) : state === 'error' ? (
+              <CenteredNotice className="-mt-16">
+                <CenteredNotice.Title>Something went wrong</CenteredNotice.Title>
+                <CenteredNotice.Body>
+                  Search failed. Check your connection and try again.
+                </CenteredNotice.Body>
+              </CenteredNotice>
+            ) : state === 'empty' ? (
+              <CenteredNotice className="-mt-16">
+                <CenteredNotice.Icon name="search-outline" />
+                <CenteredNotice.Title>No results</CenteredNotice.Title>
+                <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
+              </CenteredNotice>
+            ) : (
+              // While a newer query is in flight the previous results stay visible
+              // (keepPreviousData), dimmed so the staleness is legible — and the
+              // dim crossfades, since it changes twice per search.
+              <AnimatedView
+                className="flex-1"
+                style={{
+                  opacity: sections.some(
+                    (section) => section.search.isPlaceholderData,
                   )
-                }
-              />
-            </AnimatedView>
-          )}
-        </SectionEnter>
-        <Fab
-          className="absolute bottom-6 right-6"
-          hint="Chooses what to search for"
-          icon={scope.icon}
-          label={`Searching ${scope.label}`}
-          onPress={() => setScopeOpen(true)}
-        />
+                    ? 0.6
+                    : 1,
+                  transitionProperty: 'opacity',
+                  transitionDuration: DURATION.swap,
+                  transitionTimingFunction: EASE_OUT,
+                }}
+              >
+                <List
+                  // Clear the native bottom tab bar (unmeasurable height) so the last
+                  // result isn't hidden behind it; web has no tab bar.
+                  contentContainerStyle={
+                    process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
+                  }
+                  data={rows}
+                  keyExtractor={(row) => row.key}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item: row }) =>
+                    row.kind === 'header' ? (
+                      <SectionHeader label={row.label} provider={row.provider} />
+                    ) : row.kind === 'result' ? (
+                      <SearchResultRow
+                        item={row.item}
+                        onActions={openActions}
+                        onPress={openDetails}
+                      />
+                    ) : row.kind === 'entity' ? (
+                      <EntityResultRow onPress={pushRoute} row={row} />
+                    ) : row.kind === 'loading' ? (
+                      <RowSkeleton />
+                    ) : (
+                      <Text className="text-muted font-sans text-sm px-6 py-3">
+                        Search failed for this source — try again in a moment.
+                      </Text>
+                    )
+                  }
+                />
+              </AnimatedView>
+            )}
+          </SectionEnter>
+          <Fab
+            className="absolute bottom-6 right-6"
+            hint="Chooses what to search for"
+            icon={scope.icon}
+            label={`Searching ${scope.label}`}
+            onPress={() => setScopeOpen(true)}
+          />
+        </View>
       </KeyboardAvoidingView>
       <PickerSheet
         onClose={() => setScopeOpen(false)}

@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { ExpandableText } from '@/components/expandable-text';
 import Head from '@/components/head';
+import { useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -23,6 +24,7 @@ import { personMetaLine } from './meta-line';
  * two differ only in how the details were fetched.
  */
 export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
+  const headerTop = useFloatingBackButtonClearance();
   const pushRoute = usePushRoute();
   const meta = personMetaLine(person);
   // Same per-card actions dialog as the home feed.
@@ -45,7 +47,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
           </View>
         }
         header={
-          <View className="px-6 pt-28">
+          <View className="px-6" style={{ paddingTop: headerTop }}>
             <View className="flex-row items-center gap-5 mb-6">
               {person.headshot !== '' ? (
                 <ZoomableImage

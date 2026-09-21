@@ -18,13 +18,12 @@ import {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedView } from '@/components/animated-view';
+import { useFloatingBackButtonTop } from '@/components/floating-back-button';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
-/** `top-12` + the 40px `FloatingBackButton` + 8: the bar's title row centres on that button. */
-const BAR_HEIGHT = 96;
-/** The title row's top, `top-12`: slid this far down, the row is fully under the bar's edge. */
-const ROW_TOP = 48;
+/** The 40px `FloatingBackButton` + 8 under its top: the bar's title row centres on that button. */
+const BAR_BELOW_BUTTON_TOP = 48;
 
 /** Where the anchored title sits in the scroll content; zero until measured. */
 interface AnchorFrame {
@@ -48,10 +47,15 @@ function useScrolledTitleContext(caller: string): ScrolledTitleContextValue {
 }
 
 /** Whether the bar has started to cover the anchored title or, with `whole`, covers all of it. */
-function covered(scrollY: number, anchor: AnchorFrame, whole: boolean): boolean {
+function covered(
+  scrollY: number,
+  anchor: AnchorFrame,
+  whole: boolean,
+  barHeight: number,
+): boolean {
   'worklet';
   const edge = whole ? anchor.y + anchor.height : anchor.y;
-  return anchor.height > 0 && scrollY > edge - BAR_HEIGHT;
+  return anchor.height > 0 && scrollY > edge - barHeight;
 }
 
 /**
@@ -146,11 +150,15 @@ function Anchor({
 }
 
 /** 0 to 1, timed from the bar starting to cover the anchored title or, with `whole`, covering all of it. */
-function useCovered(whole: boolean, duration: number): SharedValue<number> {
+function useCovered(
+  whole: boolean,
+  duration: number,
+  barHeight: number,
+): SharedValue<number> {
   const { scrollY, anchor } = useScrolledTitleContext('ScrolledTitle.Bar');
   const progress = useSharedValue(0);
   useAnimatedReaction(
-    () => covered(scrollY.value, anchor.value, whole),
+    () => covered(scrollY.value, anchor.value, whole, barHeight),
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
       progress.value = withTiming(
@@ -170,20 +178,24 @@ function useCovered(whole: boolean, duration: number): SharedValue<number> {
  */
 function Bar({ title }: { title: string }) {
   const reduceMotion = useReducedMotion();
-  const shown = useCovered(false, DURATION.enter);
-  const risen = useCovered(true, DURATION.toggle);
+  // The title row's top is the button's: slid that far down, the row is fully
+  // under the bar's edge.
+  const rowTop = useFloatingBackButtonTop();
+  const barHeight = rowTop + BAR_BELOW_BUTTON_TOP;
+  const shown = useCovered(false, DURATION.enter, barHeight);
+  const risen = useCovered(true, DURATION.toggle, barHeight);
   const barStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
   // Reduced motion keeps the second crossing as a fade, with no travel.
   const titleStyle = useAnimatedStyle(() =>
     reduceMotion
       ? { opacity: risen.value }
-      : { transform: [{ translateY: (1 - risen.value) * ROW_TOP }] },
+      : { transform: [{ translateY: (1 - risen.value) * rowTop }] },
   );
   return (
     <AnimatedView
       aria-hidden
-      className="absolute top-0 left-0 right-0 h-24 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border overflow-hidden"
-      style={[{ pointerEvents: 'none' }, barStyle]}
+      className="absolute top-0 left-0 right-0 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border overflow-hidden"
+      style={[{ pointerEvents: 'none', height: barHeight }, barStyle]}
     >
       <AnimatedView className="h-10 justify-center" style={titleStyle}>
         <Text className="font-display text-lg text-foreground" numberOfLines={1}>

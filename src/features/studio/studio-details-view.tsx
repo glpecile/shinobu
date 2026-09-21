@@ -5,6 +5,7 @@ import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import { CopyTitle } from '@/features/copy-title/copy-title';
 import { CreditTimeline } from '@/features/credit-timeline/credit-timeline';
@@ -20,6 +21,7 @@ import { routes } from '@/lib/routes';
  * timeline with no roles: the format pill is the film/TV split.
  */
 export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
+  const headerTop = useFloatingBackButtonClearance();
   const pushRoute = usePushRoute();
   // Same per-card actions dialog as the home feed.
   const { openActions, sheetProps } = useCardActions();
@@ -38,7 +40,7 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
           </View>
         }
         header={
-          <View className="px-6 pt-28 pb-6">
+          <View className="px-6 pb-6" style={{ paddingTop: headerTop }}>
             <View className="flex-row items-center gap-5">
               {company.logo !== '' ? (
                 // Logos are wide transparent PNGs — contain, on a surface tile
