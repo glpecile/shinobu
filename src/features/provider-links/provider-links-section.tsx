@@ -4,7 +4,7 @@ import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { Section } from '@/components/section';
 import { openExternalUrl } from '@/lib/open-external-url';
-import { tmdbItemUrl } from '@/lib/providers/external-urls';
+import { tmdbItemUrl, type UrlEpisode } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { providerLinksFor } from '@/lib/providers/provider-links';
 import { useConnectedProviders } from '@/state/session';
@@ -24,11 +24,17 @@ import type { NormalizedMediaItem } from '@/types/media';
  * provider — it has no session to be connected to, so unlike the pills before
  * it, it shows on the id alone.
  */
-export function ProviderLinksSection({ item }: { item: NormalizedMediaItem }) {
+export function ProviderLinksSection({
+  item,
+  episode,
+}: {
+  item: NormalizedMediaItem;
+  episode?: UrlEpisode;
+}) {
   const connected = useConnectedProviders();
-  const tmdb = tmdbItemUrl(item);
+  const tmdb = tmdbItemUrl(item, episode);
   const links: { id: IconSourceId; label: string; url: string }[] = [
-    ...providerLinksFor(item, connected).map(({ provider, url }) => ({
+    ...providerLinksFor(item, connected, episode).map(({ provider, url }) => ({
       id: provider,
       label: PROVIDERS[provider].label,
       url,

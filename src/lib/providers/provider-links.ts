@@ -1,4 +1,4 @@
-import { providerItemUrl } from './external-urls';
+import { providerItemUrl, type UrlEpisode } from './external-urls';
 import { PROVIDERS } from './registry';
 import type { ProviderId } from './types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -50,6 +50,7 @@ export function sourceLinkFor(item: LinkItem): ProviderLink | undefined {
 export function providerLinksFor(
   item: LinkItem,
   connected: readonly ProviderId[],
+  episode?: UrlEpisode,
 ): ProviderLink[] {
   const source = sourceProviderOf(item);
   const candidates: ProviderId[] = [
@@ -58,7 +59,7 @@ export function providerLinksFor(
   ];
   const links: ProviderLink[] = [];
   for (const provider of candidates) {
-    const url = providerItemUrl(provider, item);
+    const url = providerItemUrl(provider, item, episode);
     if (url != null) links.push({ provider, url });
   }
   return links;

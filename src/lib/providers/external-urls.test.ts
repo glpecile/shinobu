@@ -153,6 +153,16 @@ describe('tmdbItemUrl', () => {
     );
   });
 
+  it('links an episode on TMDB and Trakt', () => {
+    const episode = { season: 1, number: 6 };
+    expect(tmdbItemUrl({ type: 'TV', ...ids({ tmdb: 34 }) }, episode)).toBe(
+      'https://www.themoviedb.org/tv/34/season/1/episode/6',
+    );
+    expect(providerItemUrl('trakt', { type: 'TV', ...ids({ trakt: 222 }) }, episode)).toBe(
+      'https://trakt.tv/shows/222/seasons/1/episodes/6',
+    );
+  });
+
   it('has no page without a tmdb id, or for manga', () => {
     expect(tmdbItemUrl({ type: 'MOVIE', ...ids() })).toBeNull();
     expect(tmdbItemUrl({ type: 'MANGA', ...ids({ tmdb: 90 }) })).toBeNull();

@@ -31,6 +31,12 @@ export const TMDB_API_SETTINGS_URL = 'https://www.themoviedb.org/settings/api';
 
 export type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
 
+/** An episode on the trackers' (TMDB's) season layout, for the builders that can address one. */
+export interface UrlEpisode {
+  season: number;
+  number: number;
+}
+
 /**
  * Whether `item` is movie-shaped in Trakt/Letterboxd's world: a MOVIE, or an
  * anime film — via the single shared `animeEffectiveMovieTvType` mapping
@@ -52,12 +58,15 @@ function isShowShaped(item: UrlItem): boolean {
   );
 }
 
-function traktUrl(item: UrlItem): string | null {
+function traktUrl(item: UrlItem, episode?: UrlEpisode): string | null {
   const shape = isMovieShaped(item) ? 'movie' : isShowShaped(item) ? 'show' : null;
   if (shape == null) return null;
   const { trakt, tmdb } = item.externalIds;
   if (trakt != null) {
-    return `https://trakt.tv/${shape === 'movie' ? 'movies' : 'shows'}/${trakt}`;
+    const page = `https://trakt.tv/${shape === 'movie' ? 'movies' : 'shows'}/${trakt}`;
+    return shape === 'show' && episode != null
+      ? `${page}/seasons/${episode.season}/episodes/${episode.number}`
+      : page;
   }
   if (tmdb != null) {
     return `https://trakt.tv/search/tmdb/${tmdb}?id_type=${shape}`;
@@ -121,22 +130,33 @@ function simklUrl(item: UrlItem): string | null {
  * "TMDB"), so it joins the details "View on" cluster without widening the
  * provider union — the same exception `ProviderIcon`'s `IconSourceId` makes.
  */
-export function tmdbItemUrl(item: UrlItem): string | null {
+export function tmdbItemUrl(item: UrlItem, episode?: UrlEpisode): string | null {
   const tmdb = item.externalIds.tmdb;
   if (tmdb == null) return null;
   const shape = isMovieShaped(item) ? 'movie' : isShowShaped(item) ? 'tv' : null;
-  return shape == null ? null : `https://www.themoviedb.org/${shape}/${tmdb}`;
+  if (shape == null) return null;
+  const page = `https://www.themoviedb.org/${shape}/${tmdb}`;
+  return shape === 'tv' && episode != null
+    ? `${page}/season/${episode.season}/episode/${episode.number}`
+    : page;
 }
 
 /**
  * The provider's public page for `item`, or null when no id path exists
  * (plan 0022 R8, shared with plan 0023's link selector). Pure and
  * platform-free — callers open the result via `@/lib/open-external-url`.
+ *
+ * With `episode`, Trakt links to that episode. The other providers have no
+ * episode page addressable by number, so they stay on the show.
  */
-export function providerItemUrl(providerId: ProviderId, item: UrlItem): string | null {
+export function providerItemUrl(
+  providerId: ProviderId,
+  item: UrlItem,
+  episode?: UrlEpisode,
+): string | null {
   switch (providerId) {
     case 'trakt':
-      return traktUrl(item);
+      return traktUrl(item, episode);
     case 'anilist':
       return anilistUrl(item);
     case 'letterboxd':

@@ -1,14 +1,16 @@
 import { View } from 'react-native';
 
+import { useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { CreditTimelineSkeleton } from '@/features/credit-timeline/credit-timeline';
 
 /** The studio hero on the studio screen's geometry: a square logo tile, no bio. */
 export function StudioSkeleton() {
+  const headerTop = useFloatingBackButtonClearance();
   return (
     <CreditTimelineSkeleton
       header={
-        <View className="px-6 pt-28 pb-6">
+        <View className="px-6 pb-6" style={{ paddingTop: headerTop }}>
           <View className="flex-row items-center gap-5">
             <Skeleton className="w-28 h-28 rounded-card" delay={staggerDelay(0)} />
             <View className="flex-1">
