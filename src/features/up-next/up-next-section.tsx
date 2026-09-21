@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 import {
   FadeIn,
@@ -15,7 +15,7 @@ import {
   calendarBadges,
   continueWatchingBadges,
 } from '@/features/up-next/badges';
-import { calendarWeek } from '@/features/up-next/compute';
+import { calendarWeek, nextSplitChange } from '@/features/up-next/compute';
 import { groupDayEntries, soloGroup } from '@/features/up-next/group';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { EpisodeCard, STACK_OFFSET } from '@/features/up-next/ui/episode-card';
@@ -24,6 +24,7 @@ import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
 import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import { shortWeekdayName } from '@/lib/time/relative-day';
+import { useWakeAt } from '@/lib/time/use-wake-at';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -102,11 +103,14 @@ function dayContentAnimation(
  * rather than snapping. Native only: on web a `layout` transition scales the
  * card's text and an `exiting` clone reparents it out of the row
  * (docs/solutions/reanimated-web-layout-transition-scales-text.md,
- * reanimated-web-exiting-pulls-child-out-of-flow.md). No `entering`: the
- * section already rises in as one, and a card should not perform on load.
+ * reanimated-web-exiting-pulls-child-out-of-flow.md). The slide is iOS only:
+ * on Android it strands the neighbours mid-travel or on top of each other
+ * (docs/solutions/android-layout-transition-strands-carousel-cards.md). No
+ * `entering`: the section already rises in as one, and a card should not
+ * perform on load.
  */
 const CARD_LAYOUT =
-  Platform.OS === 'web' ? undefined : LinearTransition.duration(DURATION.swap);
+  Platform.OS === 'ios' ? LinearTransition.duration(DURATION.swap) : undefined;
 const CARD_EXIT =
   Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
 
@@ -135,11 +139,20 @@ function emptyDayCopy(offset: number, label: string): string {
   return `Nothing airing on ${label}.`;
 }
 
+function newDate(): Date {
+  return new Date();
+}
+
 export function UpNextSection({
   onItemPress,
   onItemActions,
 }: UpNextSectionProps) {
-  const { continueWatching, calendar, now } = useUpNextSections();
+  // State, not an ambient `new Date()`: React Compiler caches that together
+  // with the split computed from it until the query data changes, which froze
+  // the sections (and the strip's "today") between refetches.
+  const [now, refreshNow] = useReducer(newDate, undefined, newDate);
+  const { continueWatching, calendar } = useUpNextSections(now);
+  useWakeAt(nextSplitChange(calendar, now), now, refreshNow);
   const [selectedOffset, setSelectedOffset] = useState(0);
   /** 0 until the first switch, then +1 for a later day and -1 for an earlier. */
   const [direction, setDirection] = useState(0);

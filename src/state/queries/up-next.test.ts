@@ -504,6 +504,33 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     expect(byId.get('simkl-4')?.nextEpisodeAiredByCount).toBeUndefined();
   });
 
+  // docs/solutions/simkl-caught-up-shows-vanish-at-air-time.md
+  test('a caught-up row takes its pointer from the calendar’s earliest unwatched airing', async () => {
+    const { client } = fakeClient({
+      simklLibraries: {
+        watching: simklLibrary({
+          shows: [simklEntry(6, { watchedKeys: new Set(['1-4']) })],
+        }),
+      },
+      simklCalendars: {
+        tv: [
+          simklCalendarEntry(6, { episode: { season: 1, number: 6 }, date: '2026-08-10T20:00:00Z' }),
+          simklCalendarEntry(6, { episode: { season: 1, number: 5, title: 'Fifth' } }),
+          simklCalendarEntry(6, { date: '2026-07-27T20:00:00Z' }),
+        ],
+      },
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['simkl']);
+
+    expect(inputs.progress[0]?.nextEpisode).toEqual({
+      season: 1,
+      number: 5,
+      title: 'Fifth',
+      firstAired: '2026-08-03T20:00:00Z',
+    });
+  });
+
   test('anime pointers keep absolute numbering — no season fabricated', async () => {
     const { client } = fakeClient({
       simklLibraries: {
