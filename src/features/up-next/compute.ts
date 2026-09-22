@@ -432,6 +432,23 @@ function entryOrder(entry: UpNextEntry): number {
 }
 
 /**
+ * When the split next changes with no new data (epoch ms): the soonest
+ * upcoming airing becoming aired, or local midnight moving the week strip and
+ * the day badges. What the section's clock waits for.
+ */
+export function nextSplitChange(
+  calendar: readonly UpNextEntry[],
+  now: Date,
+): number {
+  const airings = calendar.flatMap((entry) => {
+    const instant = entryInstant(entry);
+    const time = instant == null ? null : parseLocalInstant(instant)?.getTime();
+    return time != null && time > now.getTime() ? [time] : [];
+  });
+  return Math.min(localDayAt(1, now).getTime(), ...airings);
+}
+
+/**
  * Both home sections from one pass. Entries appear in exactly one of them
  * (R3): aired → Continue Watching, unaired and inside the 7-day window →
  * Calendar, anything further out or unknowable → neither.

@@ -4,6 +4,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import {
   calendarWeek,
+  nextSplitChange,
   computeUpNext,
   selectUpNextPool,
   UP_NEXT_POOL_SIZE,
@@ -1151,5 +1152,22 @@ describe('episodesBehind', () => {
       NOW,
     );
     expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 1 });
+  });
+});
+
+describe('nextSplitChange — what the section’s clock waits for', () => {
+  function upcomingAt(id: number, instant: string): UpNextEntry[] {
+    return computeUpNext(
+      inputs({ calendar: [calendarInput(show(id), { season: 1, number: 2, firstAired: instant })] }),
+      NOW,
+    ).calendar;
+  }
+
+  test('the soonest upcoming airing, or local midnight when none comes first', () => {
+    const tonight = localInstant(2026, 7, 23, 21, 30);
+    expect(nextSplitChange(upcomingAt(90, tonight), NOW)).toBe(Date.parse(tonight));
+    expect(nextSplitChange(upcomingAt(91, localInstant(2026, 7, 25, 9)), NOW)).toBe(
+      new Date(2026, 6, 24).getTime(),
+    );
   });
 });

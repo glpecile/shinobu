@@ -12,8 +12,8 @@ import type { UpNextEntry } from './types';
  * hid, plus the render-time clock their badges are labelled from. One hook so
  * the three comparison variants can't drift in what they filter (R12).
  */
-export function useUpNextSections(): UpNextResult {
-  const sections = useSuspenseUpNextQuery();
+export function useUpNextSections(now: Date): UpNextResult {
+  const sections = useSuspenseUpNextQuery(now);
   return {
     ...sections,
     continueWatching: useVisibleEntries(sections.continueWatching),

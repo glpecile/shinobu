@@ -23,6 +23,7 @@ import type {
   SimklCalendarEntry,
   SimklLibrary,
   SimklLibraryEntry,
+  SimklNextToWatch,
 } from '@/lib/providers/simkl/normalize';
 import {
   getAllItems,
@@ -299,8 +300,51 @@ function simklAiredByCount(entry: SimklLibraryEntry): boolean {
   return (simklEpisodesBehind(entry) ?? 0) > 0;
 }
 
-function simklProgressInput(entry: SimklLibraryEntry): ProgressUpNextInput {
-  const next = entry.nextToWatch;
+/**
+ * The pointer for a row Simkl states none for. A caught-up show has no
+ * `next_to_watch` until Simkl marks the new episode aired, and the `watching`
+ * snapshot trails that by its own staleTime — while Calendar drops the airing
+ * the instant it airs, so the episode sat in neither section
+ * (docs/solutions/simkl-caught-up-shows-vanish-at-air-time.md). The calendar
+ * file's earliest unwatched airing stands in, unaired ones included:
+ * `progressEntry` classifies it against a live `now`.
+ */
+function calendarPointer(
+  entry: SimklLibraryEntry,
+  airings: readonly SimklCalendarEntry[],
+): SimklNextToWatch | undefined {
+  const simklId = entry.item.externalIds.simkl;
+  const [next] = airings
+    .filter(
+      (airing) =>
+        airing.simklId === simklId &&
+        airing.episode != null &&
+        // Simkl's own pointer never names a special.
+        airing.episode.season !== 0 &&
+        // Anime airings are seasonless; the snapshot files them under season 1.
+        !entry.watchedKeys.has(
+          `${airing.episode.season ?? 1}-${airing.episode.number}`,
+        ),
+    )
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        (a.episode?.number ?? 0) - (b.episode?.number ?? 0),
+    );
+  if (next?.episode == null) return undefined;
+  return {
+    ...(next.episode.season != null ? { season: next.episode.season } : {}),
+    episode: next.episode.number,
+    ...(next.episode.title != null ? { title: next.episode.title } : {}),
+    date: next.date,
+  };
+}
+
+function simklProgressInput(
+  entry: SimklLibraryEntry,
+  airings: readonly SimklCalendarEntry[],
+): ProgressUpNextInput {
+  const next = entry.nextToWatch ?? calendarPointer(entry, airings);
   if (next == null) return { item: entry.item, source: 'simkl' };
   const behind = simklEpisodesBehind(entry);
   return {
@@ -416,9 +460,19 @@ async function simklInputs(
       : [...parked.shows, ...parked.anime].filter(
           (entry) => startedInSimkl(entry) || recentlyReleased(entry, now),
         );
-  return [...watching.shows, ...watching.anime, ...parkedEntries].map(
-    simklProgressInput,
-  );
+  const entries = [...watching.shows, ...watching.anime, ...parkedEntries];
+  // Best-effort like the parked read: the calendar leg settles this same
+  // file's failure into `errors`.
+  const airings = entries.some((entry) => entry.nextToWatch == null)
+    ? await Promise.all([
+        simklCalendarFile(queryClient, 'tv'),
+        simklCalendarFile(queryClient, 'anime'),
+      ]).then(
+        (files) => files.flat(),
+        () => [],
+      )
+    : [];
+  return entries.map((entry) => simklProgressInput(entry, airings));
 }
 
 /** One parsed rolling CDN calendar file, held for `SIMKL_CALENDAR_STALE_MS`. */
@@ -738,15 +792,15 @@ export interface UpNextResult extends UpNextData {
 }
 
 /**
- * Both Up Next sections, recomputed from cached inputs on every render.
- * Suspense variant — mount it under a `SuspenseSection` like every other feed
+ * Both Up Next sections, computed from cached inputs against the caller's
+ * `now` — clock state the caller refreshes (`UpNextSection`), so an airing
+ * moves sections without a refetch. Suspense variant — mount it under a `SuspenseSection` like every other feed
  * row (AGENTS.md "Loading & Error States").
  */
-export function useSuspenseUpNextQuery(): UpNextResult {
+export function useSuspenseUpNextQuery(now: Date): UpNextResult {
   const queryClient = useQueryClient();
   const connected = useConnectedProviders();
   const { data } = useSuspenseQuery(upNextOptions(queryClient, connected));
-  const now = new Date();
   return { ...computeUpNext(data, now), errors: data.errors, now };
 }
 
