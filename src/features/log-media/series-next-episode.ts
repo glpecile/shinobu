@@ -115,13 +115,17 @@ export function nextEpisodeFromProgress(
  *   `watching`, so a 10-of-20 show read out of the `plantowatch` snapshot used
  *   to report as finished and offer a rewatch of S1E1.
  * - No entry (the snapshots don't list this show): a fresh show starts at S1E1,
- *   a finished one (progress ≥ total) wraps to a rewatch, and a mid-show one is
+ *   air-gated by the show's premiere date when the item carries one, a finished one (progress ≥ total) wraps to a rewatch, and a mid-show one is
  *   unnameable — nothing here knows which season its next episode falls in.
  * - A TV pointer without a season number (Simkl's absolute anime numbering
  *   leaking onto a show) is unnameable rather than mislabeled as season 1.
  */
 export function nextEpisodeFromSimklEntry(
-  item: { currentProgress: number; totalEpisodes: number | null | undefined },
+  item: {
+    currentProgress: number;
+    totalEpisodes: number | null | undefined;
+    releaseDate?: string | null;
+  },
   entry: Pick<SimklLibraryEntry, 'nextToWatch' | 'notAiredEpisodes'> | null,
 ): SeriesNextEpisode | null {
   if (entry != null) {
@@ -146,7 +150,14 @@ export function nextEpisodeFromSimklEntry(
     };
   }
   if (item.currentProgress === 0) {
-    return { ...FIRST_EPISODE, aired: true, rewatch: false, unaired: false };
+    const premiere = item.releaseDate;
+    return {
+      ...FIRST_EPISODE,
+      aired: premiere == null ? true : hasAired(premiere),
+      ...(premiere != null ? { firstAired: premiere } : {}),
+      rewatch: false,
+      unaired: false,
+    };
   }
   if (
     item.totalEpisodes != null &&
