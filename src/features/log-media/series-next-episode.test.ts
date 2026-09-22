@@ -194,6 +194,15 @@ describe('nextEpisodeFromSimklEntry', () => {
     });
   });
 
+  test('a fresh show outside the watching list waits for its premiere', () => {
+    const next = nextEpisodeFromSimklEntry(
+      { ...freshItem, releaseDate: '2999-09-22' },
+      null,
+    );
+    expect(next?.aired).toBe(false);
+    expect(next?.firstAired).toBe('2999-09-22');
+  });
+
   test('a finished show outside the watching list offers a rewatch', () => {
     expect(nextEpisodeFromSimklEntry(doneItem, null)).toEqual({
       season: 1,

@@ -72,6 +72,7 @@ export function useSeriesNextEpisode(
     {
       currentProgress: entryItem?.currentProgress ?? item.currentProgress,
       totalEpisodes: entryItem?.totalEpisodes ?? item.totalEpisodes ?? null,
+      releaseDate: item.releaseDate ?? null,
     },
     simklEntry.data,
   );
