@@ -11,7 +11,7 @@ const CARD_GAP = 12;
 function SkeletonCard({ index }: { index: number }) {
   return (
     <Skeleton
-      className="w-40 h-60 rounded-card mr-3"
+      className="w-40 h-60 rounded-lg mr-3"
       delay={staggerDelay(index)}
     />
   );
@@ -57,7 +57,7 @@ function SkeletonLandscapeCard({ index }: { index: number }) {
   const delay = staggerDelay(index);
   return (
     <View className="w-64 mr-3">
-      <Skeleton className="w-full h-36 rounded-card" delay={delay} />
+      <Skeleton className="w-full h-36 rounded-lg" delay={delay} />
       <Skeleton className="h-4 w-2/3 rounded mt-2" delay={delay} />
       <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={delay} />
     </View>

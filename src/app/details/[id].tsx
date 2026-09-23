@@ -451,7 +451,7 @@ function DetailsSkeleton() {
       <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end -mt-24 mb-6">
-          <Skeleton className="w-28 h-40 rounded-card" delay={staggerDelay(1)} />
+          <Skeleton className="w-28 h-40 rounded-lg" delay={staggerDelay(1)} />
           <View className="flex-1 ml-4 pb-1">
             <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-8 w-56 rounded mt-2" delay={staggerDelay(2)} />
@@ -668,7 +668,7 @@ function DetailsScreen() {
               alt={shown.title}
               uri={shown.coverImage || artwork.coverImage}
               type="image"
-              className="w-28 h-40 rounded-card border border-border bg-surface"
+              className="w-28 h-40 rounded-lg border border-border bg-surface"
               contentFit="cover"
             />
             <View className="flex-1 ml-4 pb-1">

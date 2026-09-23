@@ -92,7 +92,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
         <BlurEnter className="w-full max-w-4xl self-center px-6 pt-24 pb-12">
           <View className={cn(wide && 'flex-row gap-8 items-start')}>
             <EpisodeStill
-              className={cn('rounded-card border border-border', wide ? 'flex-1' : 'w-full')}
+              className={cn('rounded-lg border border-border', wide ? 'flex-1' : 'w-full')}
               title={title}
               uri={view.still}
             />
@@ -151,7 +151,7 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
       <View className="w-full max-w-4xl self-center px-6 pt-24 pb-12">
         <View className={cn(wide && 'flex-row gap-8 items-start')}>
           <Skeleton
-            className={cn('aspect-video rounded-card', wide ? 'flex-1' : 'w-full')}
+            className={cn('aspect-video rounded-lg', wide ? 'flex-1' : 'w-full')}
             delay={staggerDelay(0)}
           />
           <View className={cn('flex-1', !wide && 'mt-5')}>

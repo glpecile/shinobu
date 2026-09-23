@@ -103,7 +103,7 @@ export function EpisodeCard({
             // opacities is the visual noise this whole change removes.
             <>
               <View
-                className="absolute inset-0 rounded-card border border-border/50 bg-surface opacity-30"
+                className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-30"
                 style={{
                   transform: [
                     { translateX: STACK_OFFSET * 2 },
@@ -112,7 +112,7 @@ export function EpisodeCard({
                 }}
               />
               <View
-                className="absolute inset-0 rounded-card border border-border/50 bg-surface opacity-60"
+                className="absolute inset-0 rounded-lg border border-border/50 bg-surface opacity-60"
                 style={{
                   transform: [
                     { translateX: STACK_OFFSET },
@@ -123,7 +123,7 @@ export function EpisodeCard({
             </>
           )}
 
-          <View className="w-full h-full rounded-card overflow-hidden border border-border/50">
+          <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
             {art !== '' ? (
               <Image className="w-full h-full" contentFit="cover" source={{ uri: art }} />
             ) : (

@@ -49,11 +49,11 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
                 // broken, unlike posters/headshots.
                 <Image
                   source={{ uri: company.logo }}
-                  className="w-28 h-28 rounded-card bg-surface border border-border p-2"
+                  className="w-28 h-28 rounded-lg bg-surface border border-border p-2"
                   contentFit="contain"
                 />
               ) : (
-                <PosterPlaceholder className="w-28 h-28 rounded-card" />
+                <PosterPlaceholder className="w-28 h-28 rounded-lg" />
               )}
               <View className="flex-1">
                 <ScrolledTitle.Anchor>
