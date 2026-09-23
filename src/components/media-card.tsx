@@ -65,7 +65,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
       onPointerLeave={() => setHovered(false)}
     >
       <PresstableScale
-        className="w-full h-full rounded-card overflow-hidden border border-border/50"
+        className="w-full h-full rounded-lg overflow-hidden border border-border/50"
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(item)
         }

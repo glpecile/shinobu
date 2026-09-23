@@ -255,13 +255,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <View
         className={cn(
           'border-t border-border bg-background overflow-hidden px-2',
+          // oxlint-disable-next-line shadcn/no-arbitrary-values -- the home indicator's inset has no scale value
           'pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2',
           'md:h-full md:w-60 md:border-t-0 md:border-r md:pt-6 md:pb-0',
           // The bar is stretched, not `w-full`: `auto` can't interpolate, so
           // crossing `md` snaps. From `100%` it slid down to 240px, squeezing
           // the page to ~0px wide and latching Legend List's width
           // (docs/solutions/web-breakpoint-cross-blanks-list.md).
-          'md:transition-[width] md:duration-[220ms]',
+          // oxlint-disable-next-line shadcn/no-arbitrary-values -- Tailwind has no width-only transition
+          'md:transition-[width] md:duration-220',
           collapsed && 'md:w-16',
         )}
       >

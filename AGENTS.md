@@ -73,8 +73,13 @@ one. The app already needs a custom dev client.
 A convention that can be a lint rule is one, and lands with its rule.
 `.oxlintrc.json` bans direct imports of wrapped libraries (use `@/components/*`
 or `@/lib/*`), `../` across directories, and non-kebab-case filenames.
-`bun check:classnames`, `bun check:router-push`, and `bun check:links` cover
-the rest. Reviewers enforce the Suspense, no-dead-end, and proxy rules.
+`@shadcn/lint` (an oxlint JS plugin) bans palette colors, classes the theme
+can't generate, and arbitrary values that have a scale equivalent. It limits a
+shared component's `className` to layout. Primitive wrappers take any class,
+and `ActionableRow` and `PressableCard` have contracts in `.oxlintrc.json`.
+When a component rejects a class, add a variant, or give it a contract when its
+docs say it owns that class. `bun check:classnames`, `bun check:router-push`,
+and `bun check:links` cover the rest. Reviewers enforce the Suspense, no-dead-end, and proxy rules.
 
 ## Navigation
 

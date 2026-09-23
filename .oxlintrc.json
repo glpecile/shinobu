@@ -14,7 +14,8 @@
     "suspicious": "warn"
   },
   "jsPlugins": [
-    "eslint-plugin-react-you-might-not-need-an-effect"
+    "eslint-plugin-react-you-might-not-need-an-effect",
+    "@shadcn/lint"
   ],
   "rules": {
     "no-underscore-dangle": [
@@ -210,7 +211,61 @@
     "react-you-might-not-need-an-effect/no-pass-live-state-to-parent": "error",
     "react-you-might-not-need-an-effect/no-pass-data-to-parent": "error",
     "react-you-might-not-need-an-effect/no-external-store-subscription": "error",
-    "react-you-might-not-need-an-effect/no-initialize-state": "error"
+    "react-you-might-not-need-an-effect/no-initialize-state": "error",
+    "shadcn/no-restyle": [
+      "error",
+      {
+        "allow": [
+          "layout"
+        ],
+        "contracts": [
+          {
+            "pattern": "^(Animated\\w+|Presstable\\w+|Image|ZoomableImage|KeyboardAvoidingView|KeyboardAwareScrollView|RefreshableScrollView|List|Skeleton|PosterPlaceholder|MorphText|BlurEnter|SectionEnter)$",
+            "allow": [
+              "layout",
+              "spacing",
+              "color",
+              "typography",
+              "shape",
+              "effects",
+              "motion"
+            ]
+          },
+          {
+            "pattern": "^ActionableRow$",
+            "allow": [
+              "layout",
+              "spacing"
+            ]
+          },
+          {
+            "pattern": "^PressableCard$",
+            "allow": [
+              "layout",
+              "shape"
+            ]
+          }
+        ]
+      }
+    ],
+    "shadcn/no-raw-colors": "error",
+    "shadcn/no-arbitrary-values": [
+      "error",
+      {
+        "allow": [
+          "font-size"
+        ]
+      }
+    ],
+    "shadcn/no-unknown-classes": "error",
+    "shadcn/require-static-classes": [
+      "error",
+      {
+        "ignoreImports": [
+          "^@/components/(animated-view|presstable|image|zoomable-image|keyboard-avoiding-view|keyboard-aware-scroll-view|refreshable-scroll-view|List|skeleton|poster-placeholder|morph-text|blur-enter|section-enter)$"
+        ]
+      }
+    ]
   },
   "overrides": [
     {
@@ -305,5 +360,12 @@
         ]
       }
     }
-  ]
+  ],
+  "settings": {
+    "shadcn": {
+      "componentImports": [
+        "^@/components/"
+      ]
+    }
+  }
 }

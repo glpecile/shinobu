@@ -39,6 +39,7 @@ export function YearSheet({
               accessibilityRole="button"
               accessibilityState={{ selected }}
               className={cn(
+                // oxlint-disable-next-line shadcn/no-arbitrary-values -- four to a row with the wrap gap
                 'w-[23%] py-2.5 items-center rounded-lg border border-border',
                 selected && 'bg-foreground border-foreground',
               )}

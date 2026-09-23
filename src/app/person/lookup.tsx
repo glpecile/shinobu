@@ -55,7 +55,7 @@ export default function PersonLookupScreen() {
   }
 
   return (
-    <ScrolledTitle className="bg-background">
+    <ScrolledTitle>
       <Suspense fallback={<PersonSkeleton />}>
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>

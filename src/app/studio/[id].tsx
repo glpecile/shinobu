@@ -40,7 +40,7 @@ export default function StudioScreen() {
   }
 
   return (
-    <ScrolledTitle className="bg-background">
+    <ScrolledTitle>
       <Suspense fallback={<StudioSkeleton />}>
         <StudioContent tmdbId={tmdbId} />
       </Suspense>

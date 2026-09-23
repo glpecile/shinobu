@@ -68,7 +68,7 @@ import {
  * are the whole geometry: 54 + 6 + 6 = 66px.
  */
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
-const POSTER = 'w-9 h-[54px] rounded';
+const POSTER = 'w-9 h-13.5 rounded';
 
 /** Flattened list rows: a day's gutter head, then that day's entries. */
 type DiaryListItem =
@@ -274,9 +274,9 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
  */
 function PosterFan({ item }: { item: NormalizedMediaItem }) {
   return (
-    <View className="w-[46px] h-[54px] flex-none">
-      <View className="absolute left-[10px] top-[3px] w-9 h-12 rounded bg-surface border border-border/40" />
-      <View className="absolute left-[5px] top-[1px] w-9 h-[52px] rounded bg-surface border border-border/50" />
+    <View className="w-11.5 h-13.5 flex-none">
+      <View className="absolute left-2.5 top-0.75 w-9 h-12 rounded bg-surface border border-border/40" />
+      <View className="absolute left-1.25 top-0.25 w-9 h-13 rounded bg-surface border border-border/50" />
       <View className="absolute left-0 top-0">
         <DiaryPoster item={item} />
       </View>

@@ -73,7 +73,7 @@ function CarouselSkeleton() {
       <View className="flex-row gap-3 overflow-hidden">
         {[0, 1, 2].map((index) => (
           <Skeleton
-            className="w-40 h-60 rounded-card"
+            className="w-40 h-60 rounded-lg"
             delay={staggerDelay(index)}
             key={index}
           />
