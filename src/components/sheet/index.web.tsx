@@ -147,7 +147,7 @@ function SheetPanel({
 
   return (
     <AnimatedView
-      className="w-full max-w-xl self-center max-h-[90%] bg-surface border border-border rounded-t-3xl overflow-hidden"
+      className="w-full max-w-xl self-center max-h-9/10 bg-surface border border-border rounded-t-3xl overflow-hidden"
       style={{
         height,
         transitionProperty: 'height',

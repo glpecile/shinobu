@@ -62,8 +62,8 @@ function Stop({
           className={cn(
             'absolute rounded-full',
             stop.upcoming
-              ? 'left-[3px] top-[13px] w-2.5 h-2.5 border-2 border-accent bg-background'
-              : 'left-1 top-[14px] w-2 h-2 bg-muted',
+              ? 'left-0.75 top-3.25 w-2.5 h-2.5 border-2 border-accent bg-background'
+              : 'left-1 top-3.5 w-2 h-2 bg-muted',
           )}
         />
       </View>

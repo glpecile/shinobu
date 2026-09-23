@@ -28,7 +28,7 @@ function RowsSkeleton() {
     <View>
       {Array.from({ length: 8 }).map((_, index) => (
         <View className="flex-row items-center px-6 py-2.5" key={index}>
-          <Skeleton className="w-12 h-[72px] rounded" delay={staggerDelay(index)} />
+          <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />
           <View className="ml-4 gap-2">
             <Skeleton className="h-4 w-44 rounded" delay={staggerDelay(index)} />
             <Skeleton className="h-3 w-24 rounded" delay={staggerDelay(index)} />

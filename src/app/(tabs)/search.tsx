@@ -109,11 +109,11 @@ function SearchResultRow({
           {item.coverImage !== '' ? (
             <Image
               source={{ uri: item.coverImage }}
-              className="w-12 h-[72px] rounded bg-surface border border-border/50"
+              className="w-12 h-18 rounded bg-surface border border-border/50"
               contentFit="cover"
             />
           ) : (
-            <View className="w-12 h-[72px] rounded bg-surface border border-border items-center justify-center">
+            <View className="w-12 h-18 rounded bg-surface border border-border items-center justify-center">
               <Text className="text-muted font-display text-lg">忍</Text>
             </View>
           )}
@@ -182,7 +182,7 @@ function RowSkeleton({ index = 0 }: { index?: number }) {
   const delay = staggerDelay(index);
   return (
     <View className="flex-row items-center px-6 py-2.5">
-      <Skeleton className="w-12 h-[72px] rounded" delay={delay} />
+      <Skeleton className="w-12 h-18 rounded" delay={delay} />
       <View className="flex-1 ml-4">
         <Skeleton className="h-4 w-2/3 rounded" delay={delay} />
         <Skeleton className="h-3 w-24 rounded mt-2" delay={delay} />

@@ -49,7 +49,7 @@ export default function PersonScreen() {
   }
 
   return (
-    <ScrolledTitle className="bg-background">
+    <ScrolledTitle>
       <Suspense fallback={<PersonSkeleton />}>
         {anilistId != null ? (
           <AniListPersonContent anilistId={anilistId} />

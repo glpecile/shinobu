@@ -62,7 +62,7 @@ export default function StudioLookupScreen() {
   }
 
   return (
-    <ScrolledTitle className="bg-background">
+    <ScrolledTitle>
       <Suspense fallback={<StudioSkeleton />}>
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>

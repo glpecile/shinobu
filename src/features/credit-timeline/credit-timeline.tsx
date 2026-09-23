@@ -53,7 +53,7 @@ import { RoleSheet } from './role-sheet';
  * poster plus padding: 54 + 6 + 6 = 66px.
  */
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
-const POSTER = 'w-9 h-[54px] rounded';
+const POSTER = 'w-9 h-13.5 rounded';
 const ROW_HEIGHT = 66;
 
 /** Pill and role button share a row, wrapping only when a long role label won't fit. */
@@ -314,7 +314,7 @@ export function CreditTimeline({
         ListEmptyComponent={
           <Column>
             <EmptyStateTile
-              className="py-10"
+              className="my-10"
               description="Try another format or role."
               icon={<Ionicons color={muted} name="film-outline" size={28} />}
               title="Nothing for this filter"
@@ -332,7 +332,7 @@ export function CreditTimeline({
             {header}
             {/* The details page's section head: it names what the two control
                 rows filter, and marks where the hero ends and the list begins. */}
-            <Section className="mt-2 px-6">
+            <Section className="mt-2 mx-6">
               <Section.Header>
                 <Section.Title>
                   {filmography.credits.some((credit) => credit.item.type === 'MANGA')
@@ -460,16 +460,16 @@ export function CreditTimelineSkeleton({
   return (
     <View className="w-full max-w-4xl self-center">
       {header}
-      <Section className="mt-2 px-6">
+      <Section className="mt-2 mx-6">
         <Section.Header>
           <Section.Title>Filmography</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
         </Section.Header>
         <View className={CONTROLS}>
           {/* The segmented control is 30px tall, the role button 38. */}
-          <Skeleton className="h-[30px] w-52 rounded-full" />
+          <Skeleton className="h-7.5 w-52 rounded-full" />
           {roles && (
-            <Skeleton className="h-[38px] w-[118px] rounded-full" delay={staggerDelay(1)} />
+            <Skeleton className="h-9.5 w-29.5 rounded-full" delay={staggerDelay(1)} />
           )}
         </View>
       </Section>

@@ -57,11 +57,11 @@ function RowPoster({ item }: { item: NormalizedMediaItem }) {
   // Trakt sync endpoints dropped images in 2026, so a Trakt-sourced watchlist
   // row has no art until this resolves it — same treatment as the diary's.
   const { coverImage } = useTraktMediaImages(item);
-  if (coverImage === '') return <PosterPlaceholder className="w-12 h-[72px] rounded" />;
+  if (coverImage === '') return <PosterPlaceholder className="w-12 h-18 rounded" />;
   return (
     <Image
       source={{ uri: coverImage }}
-      className="w-12 h-[72px] rounded bg-surface border border-border/50"
+      className="w-12 h-18 rounded bg-surface border border-border/50"
       contentFit="cover"
       recyclingKey={item.id}
     />

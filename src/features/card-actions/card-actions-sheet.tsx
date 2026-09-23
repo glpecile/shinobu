@@ -110,11 +110,11 @@ interface CardActionsSheetProps {
 function SheetPoster({ item }: { item: NormalizedMediaItem }) {
   const { coverImage } = useTraktMediaImages(item);
   if (coverImage === '')
-    return <PosterPlaceholder className="w-14 h-[84px] rounded" />;
+    return <PosterPlaceholder className="w-14 h-21 rounded" />;
   return (
     <Image
       source={{ uri: coverImage }}
-      className="w-14 h-[84px] rounded bg-surface border border-border/50"
+      className="w-14 h-21 rounded bg-surface border border-border/50"
       contentFit="cover"
       recyclingKey={item.id}
     />

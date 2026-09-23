@@ -19,7 +19,6 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedView } from '@/components/animated-view';
 import { useFloatingBackButtonTop } from '@/components/floating-back-button';
-import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
 /** The 40px `FloatingBackButton` + 8 under its top: the bar's title row centres on that button. */
@@ -61,7 +60,7 @@ function covered(
 /**
  * A page title that scrolls away and comes back as a top bar, in three parts:
  *
- *   <ScrolledTitle className="bg-background">      the screen's frame
+ *   <ScrolledTitle>                                the screen's frame
  *     <ScrollView {...useScrolledTitle()}>           or a JS onScroll writing scrollY
  *       <ScrolledTitle.Anchor><CopyTitle … /></…>    the title in the content
  *     </ScrollView>
@@ -75,14 +74,7 @@ function covered(
  * small. Timed from those crossings rather than tied to the offset, so a fast
  * wheel tick that skips the whole overlap still gets a full slide.
  */
-export function ScrolledTitle({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  /** Layout only. */
-  className?: string;
-}) {
+export function ScrolledTitle({ children }: { children: ReactNode }) {
   const frameRef = useRef<View>(null);
   const anchorRef = useRef<View>(null);
   const scrollY = useSharedValue(0);
@@ -113,7 +105,7 @@ export function ScrolledTitle({
     <ScrolledTitleContext.Provider
       value={{ anchorRef, scrollY, anchor, measure }}
     >
-      <View className={cn('flex-1', className)} ref={frameRef}>
+      <View className="flex-1 bg-background" ref={frameRef}>
         {children}
       </View>
     </ScrolledTitleContext.Provider>

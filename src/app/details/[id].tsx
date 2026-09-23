@@ -466,7 +466,7 @@ function DetailsSkeleton() {
 
 export default function DetailsRoute() {
   return (
-    <ScrolledTitle className="bg-background">
+    <ScrolledTitle>
       <DetailsScreen />
     </ScrolledTitle>
   );
