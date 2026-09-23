@@ -1,3 +1,4 @@
+import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { FadeOut } from 'react-native-reanimated';
@@ -54,9 +55,13 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   const title = view.episode?.title ?? '';
   const go = useGoToEpisode(item.id);
   const { prev, next } = view;
+  // Web stacks keep covered screens mounted, so a screen pushed on top (the
+  // series via "View series") would otherwise still hear the arrows.
+  const isFocused = useIsFocused();
   // ← / → step between episodes — the keyboard's swipe. A subscription to
   // the document, so an effect; skipped while a field has focus.
   useEffect(() => {
+    if (!isFocused) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const focused = document.activeElement;
@@ -67,14 +72,16 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
       ) {
         return;
       }
-      const target = event.key === 'ArrowRight' ? next : event.key === 'ArrowLeft' ? prev : undefined;
-      if (target == null) return;
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+      // Claimed even at either end: Safari rubber-bands the page on an
+      // unhandled arrow key.
       event.preventDefault();
-      go(target);
+      const target = event.key === 'ArrowRight' ? next : prev;
+      if (target != null) go(target);
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [go, next, prev]);
+  }, [isFocused, go, next, prev]);
 
   if (view.episode == null && view.isLoading) {
     return <EpisodeScreenSkeleton onBack={onBack} />;
