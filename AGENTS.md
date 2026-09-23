@@ -43,7 +43,9 @@ design notes.
 `useEffect` subscribes to something outside React and cleans up. `setTimeout`
 waits for wall-clock time. Neither derives state, sequences UI, or waits for an
 animation. Compute during render, or delete the state variable that made you
-want one.
+want one. A side effect a press causes runs in that press's
+handler. `eslint-plugin-react-you-might-not-need-an-effect`, loaded by oxlint
+as a JS plugin, enforces this.
 
 ## Tech stack
 
