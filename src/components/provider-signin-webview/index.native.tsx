@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Modal, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,13 +58,9 @@ export function ProviderSigninWebView<T>({
 }: ProviderSigninWebViewProps<T>) {
   const webViewRef = useRef<NitroWebViewType | null>(null);
   // The capture must fire exactly once even though several navigation events
-  // race after login. Reset each time the modal (re)opens.
+  // race after login. Reset when each open mounts a fresh WebView.
   const capturedRef = useRef(false);
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (visible) capturedRef.current = false;
-  }, [visible]);
 
   const tryCapture = async () => {
     if (capturedRef.current) return;
@@ -135,6 +131,7 @@ export function ProviderSigninWebView<T>({
               style={{ flex: 1 }}
               hybridRef={callback((ref) => {
                 webViewRef.current = ref;
+                capturedRef.current = false;
               })}
             />
           )}

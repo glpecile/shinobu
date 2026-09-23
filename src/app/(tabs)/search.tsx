@@ -654,7 +654,11 @@ export default function SearchScreen() {
             hint="Chooses what to search for"
             icon={scope.icon}
             label={`Searching ${scope.label}`}
-            onPress={() => setScopeOpen(true)}
+            onPress={() => {
+              // The picker sheet would otherwise open behind the keyboard.
+              Keyboard.dismiss();
+              setScopeOpen(true);
+            }}
           />
         </View>
       </KeyboardAvoidingView>

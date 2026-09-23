@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -151,13 +151,16 @@ export function CardActionsSheet({
    * stacked over this one. Cancel returns to the rows; a clean report closes
    * the whole sheet (the picker fires the toast first).
    */
-  const [mode, setMode] = useState<'actions' | 'watchlist-add' | 'watchlist-remove'>(
-    'actions',
-  );
   const itemId = item?.id;
-  useEffect(() => {
-    setMode('actions');
-  }, [open, itemId]);
+  // Remembers which opening chose the mode, so reopening or a new item falls
+  // back to the rows.
+  const [chosen, setChosen] = useState<{
+    mode: 'actions' | 'watchlist-add' | 'watchlist-remove';
+    open: boolean;
+    itemId: string | undefined;
+  }>({ mode: 'actions', open, itemId });
+  const mode = chosen.open === open && chosen.itemId === itemId ? chosen.mode : 'actions';
+  const setMode = (next: typeof chosen.mode) => setChosen({ mode: next, open, itemId });
   // Same read `LogMediaButton` uses (one cache entry, one request): a series
   // whose next episode Trakt can name gets the button, so the pointer to the
   // season picker below is only for the shows that don't.

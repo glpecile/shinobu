@@ -226,29 +226,39 @@ function CatchUpSession({
     // Once, on open — later episodes are warmed as the chain advances.
   }, []);
 
+  // The write handlers read the ledger as of the latest landing, not their
+  // render's snapshot.
+  const ledgerRef = useRef<LedgerRow[]>([]);
+  /** Set once the chain's last episode has been confirmed. */
+  const lastFiredRef = useRef(false);
+
   // The chain's end: every queued episode confirmed and every write settled.
   // Clean all round → close and announce; otherwise the sheet stays, the
   // ledger naming what needs a hand (plan 0032 R7: a failure keeps its links).
-  // No latch: a retry un-settles the ledger and this fires again when it lands.
-  useEffect(() => {
-    if (!allSettled) return;
+  // Runs on every landing, so a retry that lands clean ends the chain too.
+  function finishIfSettled(rows: LedgerRow[]) {
+    if (!lastFiredRef.current) return;
     if (!openRef.current) return; // dismissed early — the rows already toasted
-    if (!allClean) return;
-    if (ledger.length > 1) {
-      const succeeded = new Set(ledger.flatMap((row) => row.result?.succeeded ?? []));
+    if (rows.some((row) => row.status === 'pending')) return;
+    const clean = rows.every(
+      (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
+    );
+    if (!clean) return;
+    if (rows.length > 1) {
+      const succeeded = new Set(rows.flatMap((row) => row.result?.succeeded ?? []));
       toast.success(
         'Caught up',
-        `Logged ${ledger.length} episodes to ${labels([...succeeded])}`,
+        `Logged ${rows.length} episodes to ${labels([...succeeded])}`,
       );
     } else {
-      const only = ledger[0]?.result;
+      const only = rows[0]?.result;
       if (only != null) {
         const copy = logToastCopy(only);
         toast.success(copy.title, copy.message);
       }
     }
     closeCatchUp();
-  }, [allSettled, allClean, ledger, closeCatchUp]);
+  }
 
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {
     const parsedTags = parseTags(tags);
@@ -261,10 +271,13 @@ function CatchUpSession({
   }
 
   function record(episode: CatchUpEpisode, row: Omit<LedgerRow, 'episode'>) {
-    setLedger((rows) => [
-      ...rows.filter((existing) => !sameEpisode(existing.episode, episode)),
+    const rows = [
+      ...ledgerRef.current.filter((existing) => !sameEpisode(existing.episode, episode)),
       { episode, ...row },
-    ]);
+    ];
+    ledgerRef.current = rows;
+    setLedger(rows);
+    return rows;
   }
 
   /** One episode's write: a pending row, the fan-out, the card's settle signal, the landing. */
@@ -291,7 +304,7 @@ function CatchUpSession({
 
     write.then(
       (result) => {
-        record(episode, { status: 'done', result });
+        finishIfSettled(record(episode, { status: 'done', result }));
         const clean = isCleanWriteReport(result);
         if (openRef.current) {
           if (!clean) haptics.error();
@@ -323,6 +336,7 @@ function CatchUpSession({
     const plan = queue ?? [current];
     if (frozen == null) setFrozen(plan);
     const episode = plan[index] ?? current;
+    if (index >= plan.length - 1) lastFiredRef.current = true;
     fire(episode, variablesFor(episode));
 
     if (index >= plan.length - 1) return;

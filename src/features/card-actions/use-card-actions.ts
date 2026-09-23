@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Keyboard } from 'react-native';
 
 import type { PersonCredit } from '@/features/person';
 import { haptics } from '@/lib/haptics';
@@ -32,6 +33,8 @@ export function useCardActions() {
    */
   function openActions(next: NormalizedMediaItem, nextCredit?: CardCredit) {
     haptics.selection();
+    // A native sheet presents under the keyboard (long-press on a search result).
+    Keyboard.dismiss();
     setItem(next);
     setCredit(nextCredit ?? null);
     setOpen(true);
