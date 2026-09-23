@@ -2,9 +2,8 @@ import {
   BottomSheetProvider,
   ModalBottomSheet,
 } from '@swmansion/react-native-bottom-sheet';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
-  Keyboard,
   ScrollView,
   useWindowDimensions,
   View,
@@ -31,12 +30,6 @@ export interface SheetProps {
  * sizes to content. The only allowed import of the lib (oxlint-enforced).
  */
 export function Sheet({ open, onClose, children }: SheetProps) {
-  // The sheet presents under an open keyboard, so a sheet opened from a
-  // focused field (the search scope Fab) would sit hidden behind it.
-  useEffect(() => {
-    if (open) Keyboard.dismiss();
-  }, [open]);
-
   return (
     <ModalBottomSheet
       detents={[0, 'content']}
