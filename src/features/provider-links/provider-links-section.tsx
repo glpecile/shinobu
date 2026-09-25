@@ -1,5 +1,3 @@
-import { View } from 'react-native';
-
 import { LinkPill } from '@/components/link-pill';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { Section } from '@/components/section';
@@ -49,7 +47,7 @@ export function ProviderLinksSection({
       <Section.Header>
         <Section.Title>View on</Section.Title>
       </Section.Header>
-      <View className="flex-row flex-wrap gap-2">
+      <LinkPill.Rail>
         {links.map(({ id, label, url }) => (
           <LinkPill
             external
@@ -59,7 +57,7 @@ export function ProviderLinksSection({
             onPress={() => openExternalUrl(url)}
           />
         ))}
-      </View>
+      </LinkPill.Rail>
     </Section>
   );
 }

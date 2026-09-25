@@ -294,7 +294,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
       <Section.Header>
         <Section.Title>Studios</Section.Title>
       </Section.Header>
-      <View className="flex-row flex-wrap gap-2">
+      <LinkPill.Rail>
         {studios.map((entry) => (
           <LinkPill
             key={entry.id}
@@ -312,7 +312,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
             }
           />
         ))}
-      </View>
+      </LinkPill.Rail>
       {/* Kept (not nulled) while closing so the sheet's content doesn't vanish
           mid-animation — same contract as the credit sheet above. */}
       <StudioSheet

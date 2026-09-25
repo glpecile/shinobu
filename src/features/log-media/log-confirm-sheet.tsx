@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
+import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -35,8 +36,9 @@ export function labels(ids: readonly ProviderId[]): string {
 /**
  * The shared confirm/backdate sheet behind every log action (plan 0010
  * extracts this from the movie `LogMediaButton`). It shows the write targets,
- * a backdate field, per-provider partial failure (kept in context rather than
- * flashed after close), and the confirm/cancel pair. The parent owns the
+ * a backdate field and the confirm/cancel pair, then swaps to a report step
+ * for per-provider partial failure (kept in context rather than flashed after
+ * close). The parent owns the
  * `useLogMedia` mutation (so the season picker and the sheet share one), the
  * `watchedAt` state, and the confirm handler that fills `LogMediaVariables`.
  *
@@ -209,54 +211,92 @@ export function LogConfirmSheet({
 }: LogConfirmSheetProps) {
   const result = logMedia.data;
   const pending = logMedia.isPending;
+  // A clean report closes the sheet into a toast, so anything else settled is
+  // the drawer's next step rather than a line under a form that can outgrow
+  // the screen (a long tag list pushed Simkl's skip out of sight).
+  const reported =
+    logMedia.isError || (result != null && !isCleanWriteReport(result));
+  const retryable = logMedia.isError || (result?.failed.length ?? 0) > 0;
+
+  // Back to the form with only what failed selected: re-sending a provider
+  // that already landed would log the watch twice.
+  function retry() {
+    if (result != null && result.failed.length > 0) {
+      onSelectedProvidersChange([...result.failed]);
+    }
+    logMedia.reset();
+  }
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <WriteSheet.Title>{title}</WriteSheet.Title>
-      <WriteSheet.Description>{description}</WriteSheet.Description>
-
-      <LogFormFields
-        item={item}
-        manualTargets={manualTargets}
-        onClose={onClose}
-        onSelectedProvidersChange={onSelectedProvidersChange}
-        onWatchedAtChange={onWatchedAtChange}
-        pending={pending}
-        selectedProviders={selectedProviders}
-        targets={targets}
-        watchedAt={watchedAt}
-        {...(tags != null ? { tags } : {})}
-        {...(onTagsChange != null ? { onTagsChange } : {})}
-      />
-      {/* Visible only on a report that kept the sheet open (a clean one closed
-          it and became the toast): the success half of a partial outcome. */}
-      <WriteSheet.Report
-        failedHeadline={(failed, succeeded) =>
-          `Failed on ${labels(failed)}${
-            succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
-          }`
-        }
-        item={item}
-        reconcileLine={(skipped) =>
-          `${labels(skipped)} already had this logged — skipped to keep both in sync.`
-        }
-        result={result}
-        succeededLine={(succeeded) =>
-          `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
-        }
-      />
-      {logMedia.isError && <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>}
-      <WriteSheet.Actions>
-        <Button
-          disabled={selectedProviders.length === 0}
-          icon={<Button.Icon name="eye" />}
-          label={confirmLabel}
-          loading={pending}
-          loadingLabel={pendingLabel}
-          onPress={onConfirm}
-        />
-        <WriteSheet.Cancel onPress={onClose} />
-      </WriteSheet.Actions>
+      <WriteSheet.Step key={reported ? 'report' : 'form'}>
+        <WriteSheet.Title>{title}</WriteSheet.Title>
+        {reported ? (
+          <>
+            <WriteSheet.Report
+              failedHeadline={(failed, succeeded) =>
+                `Failed on ${labels(failed)}${
+                  succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
+                }`
+              }
+              item={item}
+              reconcileLine={(skipped) =>
+                `${labels(skipped)} already had this logged — skipped to keep both in sync.`
+              }
+              result={result}
+              succeededLine={(succeeded) =>
+                `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
+              }
+            />
+            {logMedia.isError && (
+              <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>
+            )}
+            <WriteSheet.Actions>
+              {retryable && (
+                <Button
+                  icon={<Button.Icon name="refresh" />}
+                  label="Try again"
+                  onPress={retry}
+                />
+              )}
+              <Button
+                icon={<Button.Icon name="checkmark" />}
+                label="Done"
+                onPress={onClose}
+                variant="quiet"
+              />
+            </WriteSheet.Actions>
+          </>
+        ) : (
+          <>
+            <WriteSheet.Description>{description}</WriteSheet.Description>
+            <LogFormFields
+              item={item}
+              manualTargets={manualTargets}
+              onClose={onClose}
+              onSelectedProvidersChange={onSelectedProvidersChange}
+              onWatchedAtChange={onWatchedAtChange}
+              pending={pending}
+              selectedProviders={selectedProviders}
+              targets={targets}
+              watchedAt={watchedAt}
+              {...(tags != null ? { tags } : {})}
+              {...(onTagsChange != null ? { onTagsChange } : {})}
+            />
+            <WriteSheet.Actions>
+              <Button
+                disabled={selectedProviders.length === 0}
+                icon={<Button.Icon name="eye" />}
+                label={confirmLabel}
+                loading={pending}
+                loadingLabel={pendingLabel}
+                onPress={onConfirm}
+              />
+              <WriteSheet.Cancel onPress={onClose} />
+            </WriteSheet.Actions>
+          </>
+        )}
+      </WriteSheet.Step>
     </Sheet>
   );
 }

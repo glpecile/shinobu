@@ -4,7 +4,6 @@ import { Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { PresstableOpacity } from '@/components/presstable';
-import { SegmentedControl } from '@/components/segmented-control';
 import { useThemeColor } from '@/lib/theme-color';
 import {
   ANIME_SEASONS,
@@ -14,6 +13,7 @@ import {
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 
+import { SeasonTabs } from './season-tabs';
 import { YearSheet } from './year-sheet';
 
 /** "WINTER" → "Winter". */
@@ -83,7 +83,7 @@ export function SeasonPicker({
           <Ionicons color={tint(canGoForward)} name="chevron-forward" size={20} />
         </PresstableOpacity>
       </View>
-      <SegmentedControl
+      <SeasonTabs
         accessibilityLabel="Season"
         onChange={(season) => onChange({ ...window, season })}
         options={SEASON_OPTIONS}
