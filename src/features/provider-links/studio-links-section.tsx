@@ -53,7 +53,7 @@ export function StudioLinksSection({
       <Text className="text-foreground font-sans-semibold text-sm mb-2">
         View on
       </Text>
-      <View className="flex-row flex-wrap gap-2">
+      <LinkPill.Rail>
         {links.map(({ provider, url }) => (
           <LinkPill
             external
@@ -63,7 +63,7 @@ export function StudioLinksSection({
             onPress={() => openExternalUrl(url)}
           />
         ))}
-      </View>
+      </LinkPill.Rail>
     </View>
   );
 }

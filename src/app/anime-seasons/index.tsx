@@ -19,8 +19,8 @@ import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import { SegmentedControl } from '@/components/segmented-control';
 import { SeasonPager } from '@/features/anime-seasons/season-pager';
+import { SeasonTabs } from '@/features/anime-seasons/season-tabs';
 import { SeasonPicker } from '@/features/anime-seasons/season-picker';
 import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
@@ -306,7 +306,7 @@ export default function AnimeSeasonsScreen() {
       </View>
       <SeasonPicker onChange={setWindow} progress={progress} window={window} />
       <View className="flex-row items-center gap-3 px-4 pb-3">
-        <SegmentedControl
+        <SeasonTabs
           accessibilityLabel="Format"
           className="w-52"
           onChange={setFormat}
