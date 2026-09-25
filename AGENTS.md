@@ -76,7 +76,8 @@ or `@/lib/*`), `../` across directories, and non-kebab-case filenames.
 `@shadcn/lint` (an oxlint JS plugin) bans palette colors, classes the theme
 can't generate, and arbitrary values that have a scale equivalent. It limits a
 shared component's `className` to layout. Primitive wrappers take any class,
-and `ActionableRow` and `PressableCard` have contracts in `.oxlintrc.json`.
+and `ActionableRow`, `PressableCard`, and `Rail` have contracts in
+`.oxlintrc.json`.
 When a component rejects a class, add a variant, or give it a contract when its
 docs say it owns that class. `bun check:classnames`, `bun check:router-push`,
 and `bun check:links` cover the rest. Reviewers enforce the Suspense, no-dead-end, and proxy rules.
@@ -194,8 +195,10 @@ native-only, and web needs the Modal fallback.
 ## Long lists
 
 Use `components/List` for any data-driven list, never `FlatList` or
-`ScrollView` with `map`. Leave `recycleItems` off unless a list measurably needs
-it, and derive item state from props when it's on. Posters go through
+`ScrollView` with `map`. A short horizontal row is `components/rail`, which
+fades its trailing edge while more of it sits offscreen. Leave `recycleItems`
+off unless a list measurably needs it, and derive item state from props when
+it's on. Posters go through
 `components/image`, never React Native's `Image`.
 
 ## Up Next and timezones

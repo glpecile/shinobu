@@ -1,5 +1,6 @@
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 
+import { Rail } from '@/components/rail';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 
@@ -21,15 +22,13 @@ function SkeletonRow({ cardCount }: { cardCount: number }) {
   return (
     <View className="mb-6">
       <SkeletonSectionHeader widthClass="w-40" />
-      <ScrollView
-        horizontal
+      <Rail
         className="px-4"
-        showsHorizontalScrollIndicator={false}
       >
         {Array.from({ length: cardCount }).map((_, index) => (
           <SkeletonCard index={index} key={index} />
         ))}
-      </ScrollView>
+      </Rail>
     </View>
   );
 }
@@ -110,43 +109,37 @@ export function UpNextSectionSkeleton() {
       {/* Continue Watching */}
       <View className="mb-6">
         <SkeletonSectionHeader widthClass="w-48" />
-        <ScrollView
-          horizontal
+        <Rail
           className="px-4"
-          showsHorizontalScrollIndicator={false}
         >
           {Array.from({ length: cardCount }).map((_, index) => (
             <SkeletonLandscapeCard index={index} key={index} />
           ))}
-        </ScrollView>
+        </Rail>
       </View>
 
       {/* This week */}
       <View className="mb-6">
         <SkeletonSectionHeader widthClass="w-28" />
-        <ScrollView
-          horizontal
+        <Rail
           className="px-4"
-          showsHorizontalScrollIndicator={false}
         >
           {Array.from({ length: dayCount }).map((_, index) => (
             <SkeletonDayCell index={index} key={index} />
           ))}
-        </ScrollView>
+        </Rail>
         {/* The content area below the strip — a landscape card row, mirroring a
             selected day that holds upcoming episodes. Same height as the
             reserved box either way (card height ≈ DAY_CONTENT_MIN_HEIGHT), so a
             day that resolves empty still doesn't shift the feed. */}
         <View className="mt-3" style={{ minHeight: DAY_CONTENT_MIN_HEIGHT }}>
-          <ScrollView
-            horizontal
+          <Rail
             className="px-4"
-            showsHorizontalScrollIndicator={false}
           >
             {Array.from({ length: cardCount }).map((_, index) => (
               <SkeletonLandscapeCard index={index} key={index} />
             ))}
-          </ScrollView>
+          </Rail>
         </View>
       </View>
     </View>
