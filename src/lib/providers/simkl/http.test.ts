@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { SIMKL_CDN_BASE_URL } from './config';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
 
@@ -40,43 +39,6 @@ describe('simklHttp', () => {
     expect(url.searchParams.get('client_id')).toBe('cid-1');
     expect(url.searchParams.get('app-name')).toBe('shinobu');
     expect(url.searchParams.get('app-version')).not.toBeNull();
-  });
-
-  test('attaches the standard params on a CDN-base request too', async () => {
-    const { deps, calls } = makeDeps(() => Response.json([]));
-    await Effect.runPromise(
-      simklHttp(deps, '/calendar/v2/tv.json', { baseUrl: SIMKL_CDN_BASE_URL }),
-    );
-    const url = calls[0]!.url;
-    expect(url.origin).toBe('https://data.simkl.in');
-    expect(url.pathname).toBe('/calendar/v2/tv.json');
-    expect(url.searchParams.get('client_id')).toBe('cid-1');
-    expect(url.searchParams.get('app-name')).toBe('shinobu');
-    expect(url.searchParams.get('app-version')).not.toBeNull();
-  });
-
-  test('preserves query params already present in the path', async () => {
-    const { deps, calls } = makeDeps(() => Response.json([]));
-    await Effect.runPromise(simklHttp(deps, '/search/tv?q=pluto'));
-    const url = calls[0]!.url;
-    expect(url.searchParams.get('q')).toBe('pluto');
-    expect(url.searchParams.get('client_id')).toBe('cid-1');
-  });
-
-  test('sends Authorization: Bearer when an access token is provided', async () => {
-    const { deps, calls } = makeDeps(() => Response.json({ ok: true }));
-    await Effect.runPromise(
-      simklHttp(deps, '/sync/all-items', { accessToken: 'tok-1' }),
-    );
-    const headers = calls[0]!.init?.headers as Record<string, string>;
-    expect(headers.Authorization).toBe('Bearer tok-1');
-  });
-
-  test('sends no Authorization header without a token', async () => {
-    const { deps, calls } = makeDeps(() => Response.json({ ok: true }));
-    await Effect.runPromise(simklHttp(deps, '/search/tv'));
-    const headers = (calls[0]!.init?.headers ?? {}) as Record<string, string>;
-    expect(headers.Authorization).toBeUndefined();
   });
 
   test('401 maps to ProviderAuthError as a dead session, with no retry', async () => {

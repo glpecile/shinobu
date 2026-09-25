@@ -34,7 +34,7 @@ import type {
  * `/calendars/my/shows` instead, one call for every watched *or watchlisted*
  * show (KTD-2).
  */
-export const UP_NEXT_POOL_SIZE = 20;
+const UP_NEXT_POOL_SIZE = 20;
 
 /** Calendar covers today … today+6 — "In 6 days" is the furthest label (R2). */
 export const UP_NEXT_WINDOW_DAYS = 7;

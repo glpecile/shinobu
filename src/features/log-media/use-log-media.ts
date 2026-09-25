@@ -557,12 +557,7 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('anilist')) {
-    // A CURRENT write moves the entry *out* of the PLANNING slice, so the
-    // watchlist's AniList leg is stale the moment this succeeds — third derived
-    // key over the same read (plan 0031 U12/KTD-5).
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.plannedAnime() });
-    // Both derived keys come off this one — invalidating only the derived keys
-    // would refetch them straight off a stale entries cache (plan 0019 U2).
+    // Up Next and the watchlist both select off this one read.
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentAnimeEntries(),
     });

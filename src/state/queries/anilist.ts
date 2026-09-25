@@ -80,18 +80,6 @@ export const anilistQueryKeys = {
   all: ['anilist'] as const,
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
   /**
-   * The PLANNING slice of the same cached entries read — the AniList leg of the
-   * cross-provider watchlist (plan 0031 U12). A *third derived key*, not a
-   * third request: `currentAnimeEntries` already carries PLANNING (plan 0030
-   * R12), which is precisely why the watchlist read costs 0 extra calls against
-   * the 30 req/min budget (docs/solutions/anilist-rate-limit-retry-storm.md).
-   *
-   * Derived, so it inherits `currentAnime`'s invalidation trap: anything that
-   * invalidates this key must invalidate `currentAnimeEntries()` too, or the
-   * refetch runs straight off the stale entries cache.
-   */
-  plannedAnime: () => [...anilistQueryKeys.all, 'planned-anime'] as const,
-  /**
    * The same list read, cached with its airing info and list status intact
    * (plan 0019 U2). `currentAnime` is derived from *this* entry, so the feed
    * row keeps its plain `NormalizedMediaItem[]` contract while Up Next reads
@@ -185,46 +173,16 @@ export function fetchCurrentAnimeEntries(
 }
 
 /**
- * The plan-to-watch slice of the same cached list — the AniList leg of the
- * cross-provider watchlist (plan 0031 U12/R26). A **selector, not a query**:
- * plan 0030 R12 already widened the one list read to
- * `status_in: [CURRENT, PLANNING]`, so those entries are sitting in the
- * `currentAnimeEntries()` cache already and this costs **0 extra requests**.
- * That is the whole reason 0030 chose `status_in` over a second read, and the
- * 30 req/min budget is why it must stay that way
- * (docs/solutions/anilist-rate-limit-retry-storm.md) — never "fix" this by
- * adding a PLANNING query.
- *
- * The sibling slices are deliberately disjoint and stay that way: this one is
- * PLANNING only, and Up Next's gate (`features/up-next/compute.ts`) still lets
- * a PLANNING entry reach Calendar alone. Widening any of them re-opens the
- * regression in `docs/solutions/anilist-shared-list-query-status-gate.md`.
- *
- * Returns the rich entries rather than plain items: the watchlist surface
- * needs `entryId` for the removal path, and callers that only want cards take
- * `.item`.
- */
-export async function fetchPlannedAnime(
-  queryClient: QueryClient,
-): Promise<AniListCurrentEntry[]> {
-  const entries = await fetchCurrentAnimeEntries(queryClient);
-  return entries.filter((entry) => entry.status === 'PLANNING');
-}
-
-/**
  * The **watchlist** slice: CURRENT ∪ PLANNING off the same cached read (plan
  * 0035 R1/KTD1). An anime you are actively watching is on your watchlist —
  * that is what the owner means by watchlisted — so the surface reads both
  * statuses while every other consumer keeps its own narrower slice.
  *
- * A **separate selector, never a widened `fetchPlannedAnime`** — that one stays
- * PLANNING-only, and Up Next's gate
- * (`features/up-next/compute.ts`) still confines PLANNING to Calendar. That
- * separation is the whole point of
- * `docs/solutions/anilist-shared-list-query-status-gate.md`: the gate restricts
- * what PLANNING may reach, so letting CURRENT reach one more read-only surface
- * does not touch it. Editing any existing selector instead of adding this one
- * is what re-opens the regression.
+ * Up Next's gate (`features/up-next/compute.ts`) still confines PLANNING to
+ * Calendar: the gate restricts what PLANNING may reach
+ * (`docs/solutions/anilist-shared-list-query-status-gate.md`), so letting
+ * CURRENT reach one more read-only surface does not touch it. A new consumer
+ * gets its own selector; widening an existing one re-opens that regression.
  *
  * Still 0 extra requests — same cached `currentAnimeEntries()` payload.
  */

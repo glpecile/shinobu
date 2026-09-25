@@ -86,8 +86,8 @@ describe('getWatchlist', () => {
   test('fails with a dead-session auth error when no username is connected', async () => {
     const deps = depsRespondingWith(new Response('', { status: 200 }), '');
     deps.username = null;
-    const outcome = await Effect.runPromise(Effect.either(getWatchlist(deps)));
-    expect(outcome._tag).toBe('Left');
+    const outcome = await Effect.runPromise(Effect.flip(getWatchlist(deps)));
+    expect(outcome._tag).toBe('ProviderAuthError');
   });
 
   test('maps a 404 (renamed/deleted account) to a dead-session auth error', async () => {
@@ -128,9 +128,6 @@ describe('getWatchlistPage', () => {
     );
     expect(urls[0]).toBe('https://letterboxd.com/gian/watchlist/page/2/');
   });
-
-  // The cursor contract the infinite query reads: a full page has a successor,
-  // anything shorter (including empty) ends the list.
 
   test('a failing page surfaces the tagged provider error', async () => {
     const outcome = await Effect.runPromise(

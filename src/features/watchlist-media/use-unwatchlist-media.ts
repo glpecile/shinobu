@@ -145,12 +145,12 @@ const WATCHLIST_REMOVE_MUTATION_ROOT = ['watchlist-media-remove'] as const;
  * both at once today (the add row hides once every applicable provider holds
  * the item), but collapsing them would make that a silent assumption.
  */
-export function watchlistRemoveMutationKey(itemId: string) {
+function watchlistRemoveMutationKey(itemId: string) {
   return [...WATCHLIST_REMOVE_MUTATION_ROOT, itemId] as const;
 }
 
-/** The exact filter the guard reads — exported as data so callers share one definition. */
-export function watchlistRemovePendingFilter(itemId: string) {
+/** The exact filter the pending guard reads. */
+function watchlistRemovePendingFilter(itemId: string) {
   return {
     mutationKey: watchlistRemoveMutationKey(itemId),
     status: 'pending',

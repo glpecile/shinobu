@@ -43,7 +43,7 @@ export function watchlistSourcesFor(
 }
 
 /** Whether `item` is on *any* gathered watchlist row. */
-export function isWatchlistedIn(
+function isWatchlistedIn(
   inputs: readonly WatchlistInput[],
   item: NormalizedMediaItem,
 ): boolean {

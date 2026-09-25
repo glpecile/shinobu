@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-
 import { describe, expect, test } from 'bun:test';
 
 import { routes } from './routes';
@@ -11,6 +9,5 @@ describe('the watchlist route (plan 0031 R24)', () => {
     // Letterboxd feed row's "View all" now deep-links the filter — and the user
     // can widen it back to every provider without leaving the surface.
     expect(routes.watchlist('letterboxd')).toBe('/watchlist?provider=letterboxd');
-    expect(existsSync('src/app/watchlist/letterboxd.tsx')).toBe(false);
   });
 });

@@ -86,11 +86,10 @@ describe('selectReleaseCandidates', () => {
       film(`upcoming-${index}`, 2026),
     );
 
-    expect(selectReleaseCandidates(films, NOW)).toHaveLength(30);
     // The cap applies *after* the filter, so a backlog-heavy watchlist doesn't
     // spend its whole budget on films the filter would have dropped.
-    expect(selectReleaseCandidates([...films, film('old', 1999)], NOW, 5)).toEqual(
-      films.slice(0, 5),
+    expect(selectReleaseCandidates([film('old', 1999), ...films], NOW)).toEqual(
+      films.slice(0, 30),
     );
   });
 });

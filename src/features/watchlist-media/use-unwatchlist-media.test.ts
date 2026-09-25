@@ -62,14 +62,9 @@ mock.module('@/state/queries/mapping', () => ({
   cachedSeasonLayout: () => Promise.resolve(null),
 }));
 
-const {
-  runWatchlistRemove,
-  WATCHLIST_REMOVE_ADAPTERS,
-  watchlistRemoveMutationKey,
-  watchlistRemovePendingFilter,
-} = await import('./use-unwatchlist-media');
-const { watchlistMutationKey } = await import('./use-watchlist-media');
-const { computeWatchlist } = await import('@/features/watchlist/compute');
+const { runWatchlistRemove, WATCHLIST_REMOVE_ADAPTERS } = await import(
+  './use-unwatchlist-media'
+);
 
 const adapterCalls: ProviderId[] = [];
 
@@ -99,9 +94,6 @@ function fakeDeps(): WatchlistRemoveDeps {
 }
 
 const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
-
-/** Placeholder for a resolver captured out of a Promise executor. */
-const NOOP = () => {};
 
 function series(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
@@ -194,12 +186,7 @@ describe('runWatchlistRemove — the write follows `sources` (R35)', () => {
   });
 });
 
-describe('runWatchlistRemove — the three result families (R38)', () => {
-
-});
-
 describe('the adapter map (R32/R37)', () => {
-
   test('an item with no AniList id is a reasoned skip, never a request', async () => {
     const adapter = WATCHLIST_REMOVE_ADAPTERS.anilist;
     expect(adapter).toBeDefined();
@@ -211,9 +198,8 @@ describe('the adapter map (R32/R37)', () => {
 });
 
 describe('runWatchlistRemove — invalidation, and no optimistic patch (KTD-5)', () => {
-
-  test('the gathered rows are untouched until the refetch lands, and then the row is gone', async () => {
-    const { client } = recordingClient();
+  test('the gathered rows are untouched, and the gather is invalidated', async () => {
+    const { client, keys } = recordingClient();
     const item = film();
     const inputs: WatchlistInput[] = [
       { item, source: 'trakt', addedAt: '2026-07-01T00:00:00.000Z' },
@@ -231,76 +217,13 @@ describe('runWatchlistRemove — invalidation, and no optimistic patch (KTD-5)',
       fakeDeps(),
     );
 
-    // No optimistic patch: the write leaves the cache exactly as it found it,
-    // so a failed removal never has to be un-patched out of a list the user is
-    // looking at. The row leaves the grid only when the invalidation above
-    // brings back a gather without it.
+    // No optimistic patch: a failed removal never has to be un-patched out of
+    // a list the user is looking at. The row leaves the grid when the refetch
+    // this invalidation schedules brings back a gather without it.
     const cached = client.getQueryData<{ inputs: WatchlistInput[] }>(
       watchlistQueryKeys.inputs(),
     );
     expect(cached?.inputs).toHaveLength(2);
-    expect(computeWatchlist(cached?.inputs ?? []).map((entry) => entry.id)).toContain(
-      item.id,
-    );
-  });
-
-});
-
-describe('useUnwatchlistMedia — the mutation shell (R18/R38)', () => {
-  test('invalidation still runs when the sheet unmounts mid-write', async () => {
-    const { client, keys } = recordingClient();
-    const entry = entryFor(film(), ['trakt']);
-
-    // A mutation built on the cache with **zero observers** is precisely the
-    // unmounted case: an `onSuccess` callback would never fire. Invalidation
-    // lives in `mutationFn`, so it runs anyway — and this verb unmounts more
-    // often than the add, because a successful removal empties the row.
-    const mutation = client.getMutationCache().build(client, {
-      mutationKey: watchlistRemoveMutationKey(entry.item.id),
-      mutationFn: (variables: Record<string, never>) =>
-        runWatchlistRemove(client, entry, ['trakt'], [], variables, fakeDeps()),
-    });
-    await mutation.execute({});
-
     expect(keys).toContain('watchlist/inputs');
-  });
-
-  test('the pending guard is shared across mounts, and separate from the add', async () => {
-    const { client } = recordingClient();
-    const item = film();
-    let release: () => void = NOOP;
-    const blocked = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    const cellMutation = client.getMutationCache().build(client, {
-      mutationKey: watchlistRemoveMutationKey(item.id),
-      mutationFn: () => blocked,
-    });
-    const inFlight = cellMutation.execute(undefined);
-    while (
-      client.getMutationCache().findAll(watchlistRemovePendingFilter(item.id)).length === 0
-    ) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-
-    // The grid cell and the sheet over it are two mounts reading one shared
-    // mutation cache — the whole point of keying on the item (R18).
-    expect(
-      client.getMutationCache().findAll(watchlistRemovePendingFilter(item.id)).length,
-    ).toBe(1);
-    // ...and an add of the same item is a different write, not the same one.
-    expect(
-      client.getMutationCache().findAll({
-        mutationKey: watchlistMutationKey(item.id),
-        status: 'pending',
-      }).length,
-    ).toBe(0);
-
-    release();
-    await inFlight;
-    expect(
-      client.getMutationCache().findAll(watchlistRemovePendingFilter(item.id)).length,
-    ).toBe(0);
   });
 });

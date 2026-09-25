@@ -2,8 +2,7 @@ import { isDateOnly, parseLocalInstant } from '@/lib/time/has-aired';
 
 /**
  * Relative-day labels for upcoming releases (plan 0019 KTD-10) — "Today",
- * "Tomorrow", "In 3 days". The diary's `formatDayHeader` is past-facing and
- * stays untouched; what these two share is `parseLocalInstant`, so an air
+ * "Tomorrow", "In 3 days". Values parse through `parseLocalInstant`, so an air
  * instant is bucketed by the *user's* calendar day, never the origin
  * timezone's (AGENTS.md "Up Next & Timezones").
  *

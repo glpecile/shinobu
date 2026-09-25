@@ -218,20 +218,8 @@ describe('fetchLetterboxdReleaseInputs', () => {
     expect(inputs[0]?.item.externalIds.tmdb).toBe(2);
   });
 
-  test('a watchlist that will not load fails the source, for `settle` to catch', async () => {
-    const { client } = fakeClient({ failingWatchlist: true });
-
-    // Deliberately *not* swallowed here: `fetchUpNextInputs` settles each source
-    // separately, so a dead watchlist has to reach it as a rejection to be
-    // reported as Letterboxd's error rather than as silence (R7).
-    await expect(fetchLetterboxdReleaseInputs(client, NOW)).rejects.toThrow(
-      'watchlist 429',
-    );
-  });
-
-  test('and `fetchUpNextInputs` settles it as a Letterboxd error, not a throw', async () => {
-    // The other end of the same contract (plan 0030 U8). It lives here rather
-    // than in `up-next.test.ts` because reaching the resolve at all needs a TMDB
+  test('a watchlist that will not load settles as a Letterboxd error, not a throw', async () => {
+    // Lives here rather than in `up-next.test.ts` because reaching the resolve at all needs a TMDB
     // token, and `tmdbToken()` memoizes its first client read for the whole
     // process — so the suite that fakes a `window` in has to be the one that
     // already owns that state.

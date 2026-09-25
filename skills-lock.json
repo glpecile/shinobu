@@ -238,6 +238,12 @@
       "skillPath": "skills/review-animations/SKILL.md",
       "computedHash": "b4e5f0f4fe3e2743c85bf7354108f48a0b9d502cb20ef5c4a9c195da91f93736"
     },
+    "test-audit": {
+      "source": "openclaw/openclaw",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/test-audit/SKILL.md",
+      "computedHash": "1c493e8f99f4c5ac2b1d9e2928a88312cf72d823f1486106d9edfebf08d20c27"
+    },
     "unslop": {
       "source": "cursor/plugins",
       "sourceType": "github",

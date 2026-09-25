@@ -79,20 +79,21 @@ function localDate(days: number): string {
 }
 
 describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
-  test('Trakt invalidates the calendar *prefix*, never a per-window key', () => {
+  test('Trakt invalidates the calendar and watchlist *prefixes*, never a per-window key', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['trakt']);
+    // A write path cannot know the calendar's `startDate`/`days` or the
+    // watchlist's sort arguments — naming one would silently refresh nothing.
     expect(keys).toContain('trakt/my-calendar');
-    // A write path cannot know `startDate`/`days` — naming one would silently
-    // refresh nothing.
     expect(keys.some((key) => key.startsWith('trakt/my-calendar/'))).toBe(false);
+    expect(keys).toContain('trakt/watchlist');
+    expect(keys.some((key) => key.startsWith('trakt/watchlist/'))).toBe(false);
   });
 
-  test('AniList invalidates the entries read *and* the key derived from it', () => {
+  test('AniList invalidates the entries read and the entry-state guard', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['anilist']);
     expect(keys).toContain('anilist/current-anime-entries');
-    expect(keys).toContain('anilist/planned-anime');
     // KTD-2's guard reads this before the next write.
     expect(keys).toContain('anilist/entry-state/9');
   });
@@ -115,26 +116,6 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     invalidateAfterWatchlist(client, SHOW, ['simkl']);
     expect(keys).toContain('simkl/all-items');
     expect(keys).toContain('simkl/activities');
-  });
-
-  test('Trakt invalidates the watchlist read as a prefix (plan 0031 U14)', () => {
-    const { client, keys } = recordingClient();
-    invalidateAfterWatchlist(client, SHOW, ['trakt']);
-    // The gather reads `watchlist('all', 'added', 'desc')`; an add must not
-    // have to know those sort arguments to refresh it.
-    expect(keys).toContain('trakt/watchlist');
-    expect(keys.some((key) => key.startsWith('trakt/watchlist/'))).toBe(false);
-  });
-
-  test('AniList invalidates the PLANNING slice the watchlist renders', () => {
-    const { client, keys } = recordingClient();
-    invalidateAfterWatchlist(client, SHOW, ['anilist']);
-    // Derived from the entries read, so it inherits the same trap — both, and
-    // the entries key first.
-    expect(keys).toContain('anilist/planned-anime');
-    expect(keys.indexOf('anilist/current-anime-entries')).toBeLessThan(
-      keys.indexOf('anilist/planned-anime'),
-    );
   });
 
   test('the gatherers are invalidated after the provider keys, not before', () => {

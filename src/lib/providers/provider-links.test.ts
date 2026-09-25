@@ -1,23 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
-import { providerLinksFor, sourceLinkFor, sourceProviderOf } from './provider-links';
+import { providerLinksFor, sourceLinkFor } from './provider-links';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
-
-describe('sourceProviderOf', () => {
-  it('parses the provider prefix from the id', () => {
-    expect(sourceProviderOf({ id: 'trakt-12345' })).toBe('trakt');
-    expect(sourceProviderOf({ id: 'letterboxd-fight-club' })).toBe('letterboxd');
-  });
-
-  it('returns null for an unknown prefix', () => {
-    expect(sourceProviderOf({ id: 'tmdb-123' })).toBeNull();
-  });
-
-  it('treats a bare id matching a provider id as that provider (no separator needed)', () => {
-    expect(sourceProviderOf({ id: 'trakt' })).toBe('trakt');
-  });
-});
 
 describe('sourceLinkFor', () => {
   it('returns the source provider link when buildable', () => {
@@ -33,6 +18,13 @@ describe('sourceLinkFor', () => {
     expect(
       sourceLinkFor({ id: 'letterboxd-not-a-film', type: 'TV', ...ids({ trakt: 1 }) }),
     ).toBeUndefined();
+  });
+
+  it('reads a bare provider id with no separator as that provider', () => {
+    expect(sourceLinkFor({ id: 'trakt', type: 'MOVIE', ...ids({ trakt: 1 }) })).toEqual({
+      provider: 'trakt',
+      url: 'https://trakt.tv/movies/1',
+    });
   });
 
   it('returns undefined for an unknown source prefix', () => {

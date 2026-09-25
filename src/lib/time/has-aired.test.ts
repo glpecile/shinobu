@@ -22,14 +22,9 @@ describe('hasAired', () => {
   });
 
   test('a date-only string is treated as local midnight, not UTC midnight', () => {
-    // The classic trap: "2026-07-13" via `new Date(...)` is UTC midnight,
-    // which is still Jul 13 in most timezones at the NOW instant — so either
-    // parse should agree it has aired. The contrast shows up on Jul 14 local:
-    // a date-only "2026-07-14" should NOT have aired at the NOW instant even
-    // though UTC-midnight parsing might place it before or after NOW depending
-    // on the host timezone. Assert date-only uses local midnight by checking
-    // a far-future date-only string is unaired and a past one is aired.
-    expect(hasAired('2022-01-01', NOW)).toBe(true);
-    expect(hasAired('2030-01-01', NOW)).toBe(false);
+    // Local wall-clock `now` on either side of local midnight: UTC-midnight
+    // parsing flips one of these on any host that isn't at UTC+0.
+    expect(hasAired('2026-07-14', new Date(2026, 6, 14, 0, 0))).toBe(true);
+    expect(hasAired('2026-07-14', new Date(2026, 6, 13, 23, 59))).toBe(false);
   });
 });

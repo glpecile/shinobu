@@ -76,7 +76,7 @@ export interface WatchlistRemovePlan {
  *   `WATCHLIST_READ_PROVIDERS`. Reading that list rather than re-listing the
  *   providers here is deliberate: the day R32's leg lands, this answer changes
  *   with it instead of staying wrong in a second copy.
- * - **AniList for MANGA** — the leg is `fetchPlannedAnime`, a selector over the
+ * - **AniList for MANGA** — the leg is `fetchWatchlistAnime`, a selector over the
  *   `type: ANIME` shared list read (OQ-4a defers the manga read).
  * - **Any leg that errored on this gather** — R29 renders the grid with that
  *   leg's rows missing, which is indistinguishable from the provider not

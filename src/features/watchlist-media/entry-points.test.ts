@@ -87,8 +87,8 @@ describe('the remove row routes off gathered evidence (plan 0031 R35)', () => {
       'src/app/(tabs)/search.tsx',
       'src/app/(tabs)/index.tsx',
       'src/app/(tabs)/diary.tsx',
-      'src/app/person/[id].tsx',
-      'src/app/studio/[id].tsx',
+      'src/features/person/person-details-view.tsx',
+      'src/features/studio/studio-details-view.tsx',
     ]) {
       const text = await source(path);
       expect(text).not.toContain('watchlistRemoval');

@@ -39,11 +39,13 @@ const { getSimklAuthFlow, saveSimklAuthFlow } = await import(
   '@/lib/providers/simkl/auth'
 );
 const { simklQueryKeys } = await import('@/state/queries/simkl');
+const { UP_NEXT_QUERY_ROOT } = await import('@/state/queries/up-next-cache');
+const { WATCHLIST_QUERY_ROOT } = await import('@/state/queries/watchlist-cache');
 
 beforeEach(() => store.clear());
 
 describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
-  test("clears the token and removes every ['simkl']-rooted query", () => {
+  test("clears the token, every ['simkl']-rooted query and the merged caches", () => {
     setProviderSession('simkl', { accessToken: 'tok-1' });
     const queryClient = new QueryClient();
     queryClient.setQueryData(simklQueryKeys.userSettings(), {
@@ -51,12 +53,20 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
     });
     queryClient.setQueryData(simklQueryKeys.allItems(), { shows: [] });
     queryClient.setQueryData(['trakt', 'viewer'], 'unrelated');
+    // Both hold every provider's rows under a key naming none of them, so the
+    // per-provider purge can't reach them.
+    const watchlistKey = [...WATCHLIST_QUERY_ROOT, 'inputs'];
+    const upNextKey = [...UP_NEXT_QUERY_ROOT, 'inputs'];
+    queryClient.setQueryData(watchlistKey, { inputs: [], errors: [] });
+    queryClient.setQueryData(upNextKey, { progress: [] });
 
     disconnectProvider(queryClient, 'simkl');
 
     expect(getProviderSession('simkl')).toBeNull();
     expect(queryClient.getQueryData(simklQueryKeys.userSettings())).toBeUndefined();
     expect(queryClient.getQueryData(simklQueryKeys.allItems())).toBeUndefined();
+    expect(queryClient.getQueryData(watchlistKey)).toBeUndefined();
+    expect(queryClient.getQueryData(upNextKey)).toBeUndefined();
     // Another provider's cache must survive a Simkl disconnect untouched.
     expect(queryClient.getQueryData(['trakt', 'viewer'])).toBe(
       'unrelated' as never,

@@ -1,25 +1,16 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 /**
- * Two things plan 0034 U7 changes about the home feed: trending moves off
- * Trakt onto Simkl's public CDN (R11/KTD-8 — must resolve with zero
- * providers connected and no Trakt env creds at all), and `yourShows` becomes
- * a Trakt+Simkl merge with Simkl precedence (KTD-10/R10). `mergeYourShows` is
- * pure and tested directly; the trending/`yourShowsSimkl` slot builders are
- * tested by calling their `queryFn`s against a fake `fetch` (real
- * `lib/providers/simkl/reads.ts`) rather than a `mock.module`-replaced reads
- * module — that module has its own `reads.test.ts` importing it by a relative
- * path, and bun's module-mock registry doesn't reconcile an alias-registered
- * mock with a relative-imported consumer, so replacing the whole module here
- * would leak into (and silently break) that suite whenever both run in the
- * same `bun test` process. Faking `fetch` instead is the pattern every
- * provider's own `reads.test.ts` already uses, and never touches the module
- * registry at all.
+ * Trending runs off Simkl's public CDN and must resolve with zero providers
+ * connected and no Trakt credentials (plan 0034 R11/KTD-8). Its `queryFn` runs
+ * against a fake `fetch` (real `lib/providers/simkl/reads.ts`), not a
+ * `mock.module`-replaced reads module: `reads.test.ts` imports that module by a
+ * relative path, and bun's module-mock registry doesn't reconcile an
+ * alias-registered mock with a relative-imported consumer, so replacing it
+ * here would silently break that suite in a shared `bun test` process.
  *
- * This file *does* still import the real `./use-unified-feed` (relative)
- * while `state/queries/simkl.test.ts` and others coexist in the suite — see
- * docs/solutions/bun-test-mock-module-cross-file-leak.md for why `bun test
- * --isolate` is the gate that actually needs to be green.
+ * `bun test --isolate` is the gate that must be green for this file
+ * (docs/solutions/bun-test-mock-module-cross-file-leak.md).
  */
 
 const store = new Map<string, string>();

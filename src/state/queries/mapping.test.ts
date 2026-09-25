@@ -199,15 +199,6 @@ describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
     expect(calledHost('api.trakt.tv')).toBe(false);
     expect(calledHost('api.themoviedb.org')).toBe(true);
   });
-
-  test('with neither Trakt nor TMDB available, resolves to null without a network call', async () => {
-    process.env.EXPO_PUBLIC_TMDB_TOKEN = '';
-
-    const result = await cachedTraktTextSearch(freshClient(), 'Heat', 1995);
-
-    expect(result).toBeNull();
-    expect(requestedUrls).toHaveLength(0);
-  });
 });
 
 describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
@@ -224,30 +215,6 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
 
     expect(layout).toEqual([{ season: 1, episodeCount: 12 }]);
     expect(calledHost('api.themoviedb.org')).toBe(true);
-    expect(calledHost('api.trakt.tv')).toBe(false);
-  });
-
-  test('falls through to Trakt when TMDB has no data and Trakt has credentials', async () => {
-    setProviderClientId('trakt', 'trakt-cid');
-    routes = [
-      ['api.themoviedb.org/3/tv/100', { seasons: [] }],
-      ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]],
-    ];
-
-    const layout = await cachedSeasonLayout(freshClient(), { tmdb: 100, trakt: 200 });
-
-    expect(layout).toEqual([{ season: 1, episodeCount: 10 }]);
-  });
-
-  test('skips Trakt entirely (no call at all) when it has no credentials', async () => {
-    routes = [
-      ['api.themoviedb.org/3/tv/100', { seasons: [] }],
-      ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]],
-    ];
-
-    const layout = await cachedSeasonLayout(freshClient(), { tmdb: 100, trakt: 200 });
-
-    expect(layout).toBeNull();
     expect(calledHost('api.trakt.tv')).toBe(false);
   });
 

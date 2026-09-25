@@ -14,15 +14,9 @@ describe('manualWriteReasons (plan 0032 R5)', () => {
   });
 
   test("a declared-'manual' verb reads as not-yet, not never", () => {
-    // Serializd's watchlist verb stays 'manual' until U10's probe (registry.ts).
-    expect(manualWriteReasons(['serializd'], 'watchlist', 'ios')).toEqual({
-      serializd: "Can't be added from Shinobu yet",
-    });
-    expect(
-      manualWriteReasons(['letterboxd'], 'watchlist-remove', 'ios'),
-    ).toEqual({
-      letterboxd: "Can't be removed from Shinobu yet",
+    // Serializd's watchlist remove stays 'manual' until its read leg lands (registry.ts).
+    expect(manualWriteReasons(['serializd'], 'watchlist-remove', 'ios')).toEqual({
+      serializd: "Can't be removed from Shinobu yet",
     });
   });
-
 });

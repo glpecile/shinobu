@@ -139,8 +139,8 @@ describe('getHistory (diary source, plan 0016)', () => {
       requested,
     );
 
-    const exit = await Effect.runPromiseExit(getHistory(deps, { page: 1 }));
-    expect(exit._tag).toBe('Failure');
+    const error = await Effect.runPromise(Effect.flip(getHistory(deps, { page: 1 })));
+    expect(error._tag).toBe('ProviderDecodeError');
   });
 })
 

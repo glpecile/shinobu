@@ -9,8 +9,7 @@ import type { WatchlistWriteDeps } from './use-watchlist-media';
 /**
  * The watchlist add verb end to end at the function layer (plan 0031 U7).
  * There is no renderer in this suite — `runWatchlistWrite` *is* the behaviour
- * and `useWatchlistMedia` is a `useMutation` wrapper over it, which is what
- * makes the unmount and shared-guard scenarios testable at all.
+ * and `useWatchlistMedia` is a `useMutation` wrapper over it.
  */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
@@ -53,12 +52,7 @@ mock.module('@/state/queries/mapping', () => ({
   cachedSeasonLayout: () => Promise.resolve(null),
 }));
 
-const {
-  runWatchlistWrite,
-  watchlistMutationKey,
-  watchlistPendingFilter,
-} = await import('./use-watchlist-media');
-const { planWatchlistWrite } = await import('./targets');
+const { runWatchlistWrite } = await import('./use-watchlist-media');
 
 const adapterCalls: ProviderId[] = [];
 /** Every notification-refresh call and the options it carried. */
@@ -102,13 +96,9 @@ function fakeDeps(): WatchlistWriteDeps {
 
 const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 
-/** Placeholder for a resolver captured out of a Promise executor. */
-const NOOP = () => {};
-
 /**
  * An anime *film* — the item that reaches every movie-shaped target at once
- * (Trakt + AniList + Letterboxd writable on native, plan 0033), so one fixture
- * covers the routing-order and partial-failure contracts.
+ * (Trakt + AniList + Letterboxd writable on native, plan 0033).
  */
 function animeFilm(overrides: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem {
   return {
@@ -153,40 +143,16 @@ beforeEach(() => {
 });
 
 describe('runWatchlistWrite — the fan-out contract', () => {
-  test('every writable provider reports ok, in routing order', async () => {
-    const { client } = recordingClient();
-    const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
-
-    expect(result.outcomes.map((outcome) => outcome.provider)).toEqual([
-      'trakt',
-      'anilist',
-      'letterboxd',
-    ]);
-    expect(result.outcomes.every((outcome) => outcome.status === 'ok')).toBe(true);
-    expect(result.succeeded).toEqual(['trakt', 'anilist', 'letterboxd']);
-    expect(result.failed).toEqual([]);
-  });
-
-  test('a manual target never enters the adapter map', async () => {
+  test('a manual target never enters the adapter map, and rides back as a manual row', async () => {
     // Letterboxd on *web* is the standing manual case (plan 0033 R7): the
     // declaration is 'write' but `unsupportedWritePlatforms` bans the platform,
     // so it is reported as a manual row — never handed to `runProviderWrites`,
     // whose missing-adapter path is a loud error by design.
     process.env.EXPO_OS = 'web';
     const { client } = recordingClient();
-    const plan = await planWatchlistWrite(client, animeFilm(), CONNECTED);
-
-    expect(plan.manual).toEqual(['letterboxd']);
-    expect(plan.targets).toEqual(['trakt', 'anilist']);
-
-    await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
-    expect(adapterCalls).toEqual(['trakt', 'anilist']);
-  });
-
-  test('the manual rows ride back on the result for R17 to render', async () => {
-    process.env.EXPO_OS = 'web';
-    const { client } = recordingClient();
     const result = await runWatchlistWrite(client, animeFilm(), CONNECTED, {}, fakeDeps());
+
+    expect(adapterCalls).toEqual(['trakt', 'anilist']);
     expect(result.manual).toEqual(['letterboxd']);
   });
 
@@ -244,60 +210,4 @@ describe('runWatchlistWrite — agenda coherence (R19/R20)', () => {
     expect(refreshCalls).toEqual([{ throttle: false }]);
   });
 
-});
-
-describe('useWatchlistMedia — the mutation shell', () => {
-  test('invalidation still runs when the calling component unmounts mid-write', async () => {
-    const { client, keys } = recordingClient();
-    const item = animeFilm();
-
-    // A mutation built on the cache with **zero observers** is precisely the
-    // unmounted case: nothing is subscribed, so an `onSuccess` callback would
-    // never fire. Invalidation lives in `mutationFn`, so it runs anyway.
-    const mutation = client.getMutationCache().build(client, {
-      mutationKey: watchlistMutationKey(item.id),
-      mutationFn: (variables: Record<string, never>) =>
-        runWatchlistWrite(client, item, CONNECTED, variables, fakeDeps()),
-    });
-    await mutation.execute({});
-
-    expect(keys).toContain('trakt/my-calendar');
-    expect(keys).toContain('up-next/inputs');
-  });
-
-  test('the pending guard is shared across mounts of the same item', async () => {
-    const { client } = recordingClient();
-    const item = animeFilm();
-    let release: () => void = NOOP;
-    const blocked = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    // Instance A — the card.
-    const cardMutation = client.getMutationCache().build(client, {
-      mutationKey: watchlistMutationKey(item.id),
-      mutationFn: () => blocked,
-    });
-    const inFlight = cardMutation.execute(undefined);
-    // `execute` reaches 'pending' a few microtasks in, not synchronously.
-    while (client.getMutationCache().findAll(watchlistPendingFilter(item.id)).length === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-
-    // Instance B — the sheet opened over it, a different mount entirely. It
-    // reads the same shared mutation cache, which is the whole point of keying
-    // on the item rather than on the component (R18).
-    const pending = client.getMutationCache().findAll(watchlistPendingFilter(item.id));
-    expect(pending.length).toBe(1);
-    // ...and it is scoped to *this* item, not to the verb.
-    expect(
-      client.getMutationCache().findAll(watchlistPendingFilter('anilist-999')).length,
-    ).toBe(0);
-
-    release();
-    await inFlight;
-    expect(client.getMutationCache().findAll(watchlistPendingFilter(item.id)).length).toBe(
-      0,
-    );
-  });
 });

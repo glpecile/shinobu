@@ -131,30 +131,34 @@ describe('getDiary', () => {
     expect(called).toBe(false);
   });
 
-  test('a private/nonexistent profile (404) surfaces a tagged error', async () => {
-    const exit = await Effect.runPromiseExit(
-      getDiary(
-        deps(async () => new Response('', { status: 404 })),
-        { page: 1 },
+  test('a private/nonexistent profile (404) is a dead session', async () => {
+    const error = await Effect.runPromise(
+      Effect.flip(
+        getDiary(
+          deps(async () => new Response('', { status: 404 })),
+          { page: 1 },
+        ),
       ),
     );
-    expect(exit._tag).toBe('Failure');
+    expect(error._tag).toBe('ProviderAuthError');
   });
 
-  test('a non-feed body (private profile HTML) surfaces a tagged error', async () => {
-    const exit = await Effect.runPromiseExit(
-      getDiary(
-        deps(async () => new Response('<html>Not found</html>', { status: 200 })),
-        { page: 1 },
+  test('a non-feed body (private profile HTML) surfaces a decode error', async () => {
+    const error = await Effect.runPromise(
+      Effect.flip(
+        getDiary(
+          deps(async () => new Response('<html>Not found</html>', { status: 200 })),
+          { page: 1 },
+        ),
       ),
     );
-    expect(exit._tag).toBe('Failure');
+    expect(error._tag).toBe('ProviderDecodeError');
   });
 
   test('a missing username fails as a dead session, never empty-success', async () => {
-    const exit = await Effect.runPromiseExit(
-      getDiary(deps(async () => new Response(RSS), ''), { page: 1 }),
+    const error = await Effect.runPromise(
+      Effect.flip(getDiary(deps(async () => new Response(RSS), ''), { page: 1 })),
     );
-    expect(exit._tag).toBe('Failure');
+    expect(error._tag).toBe('ProviderAuthError');
   });
 });

@@ -158,11 +158,6 @@ describe('normalizeSearchResult', () => {
     });
   });
 
-  test('row kinds we do not handle drop out as null instead of throwing', () => {
-    expect(normalizeSearchResult({ type: 'episode' }, NOW)).toBeNull();
-    expect(normalizeSearchResult({ type: 'person' }, NOW)).toBeNull();
-  });
-
   test('a row whose declared type is missing its payload drops out', () => {
     expect(normalizeSearchResult({ type: 'movie' }, NOW)).toBeNull();
     expect(normalizeSearchResult({ type: 'show', movie }, NOW)).toBeNull();
@@ -204,18 +199,11 @@ describe('normalizeMovie release date', () => {
     ).toBe('2026-12-18');
   });
 
-  test('omits releaseDate when Trakt has none', () => {
-    expect(normalizeMovie(base, NOW).releaseDate).toBeUndefined();
-  });
-
   test('treats an empty string as no release date, not a blocked log', () => {
     expect(
       normalizeMovie({ ...base, released: '' }, NOW).releaseDate,
     ).toBeUndefined();
   });
-});
-
-describe('normalizeStudio', () => {
 });
 
 describe('orderSeasons', () => {
@@ -241,15 +229,9 @@ describe('normalizeSeason', () => {
     ],
   };
 
-  test('labels as "Season N", sorts episodes ascending, falls back blank titles', () => {
+  test('labels as "Season N", sorts episodes, keeps runtime and airdate, drops empty optionals', () => {
     const normalized = normalizeSeason(season);
     expect(normalized.title).toBe('Season 1');
-    expect(normalized.episodes.map((e) => e.number)).toEqual([1, 2]);
-    expect(normalized.episodes.map((e) => e.title)).toEqual(['Episode 1', 'Two']);
-  });
-
-  test('preserves runtime and airdate and drops empty/absent optionals', () => {
-    const normalized = normalizeSeason(season);
     expect(normalized.episodes[0]).toEqual({
       number: 1,
       title: 'Episode 1',

@@ -52,7 +52,6 @@ const { removeWatchedFromWatchlist } = await import('./remove-watched-from-watch
 const { watchlistQueryKeys } = await import('@/state/queries/watchlist');
 
 const adapterCalls: ProviderId[] = [];
-let letterboxdFails: string | null = null;
 
 function fakeDeps(): WatchlistRemoveDeps {
   return {
@@ -63,9 +62,7 @@ function fakeDeps(): WatchlistRemoveDeps {
       },
       letterboxd: () => {
         adapterCalls.push('letterboxd');
-        return letterboxdFails == null
-          ? Promise.resolve({ status: 'ok' as const })
-          : Promise.reject(new Error(letterboxdFails));
+        return Promise.resolve({ status: 'ok' as const });
       },
       // Bait, not dead code (plan 0036): Simkl's remove *is* live now, and the
       // derived path is the one caller that must still never reach this key.
@@ -107,7 +104,6 @@ const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 
 beforeEach(() => {
   adapterCalls.length = 0;
-  letterboxdFails = null;
   process.env.EXPO_OS = 'ios';
 });
 
@@ -213,8 +209,9 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
     expect(adapterCalls).toEqual([]);
   });
 
-  test('a failed removal resolves silently — best-effort by contract', async () => {
-    letterboxdFails = 'session expired';
+  test('a removal nothing can act on resolves silently — best-effort by contract', async () => {
+    // Letterboxd holds the film but isn't connected, so `runWatchlistRemove`
+    // has no target, manual row or unknown to offer and throws.
     const queryClient = client({
       inputs: [
         {
@@ -227,8 +224,8 @@ describe('removeWatchedFromWatchlist (plan 0033 U7)', () => {
     });
 
     await expect(
-      removeWatchedFromWatchlist(queryClient, film(), CONNECTED, fakeDeps()),
+      removeWatchedFromWatchlist(queryClient, film(), ['trakt'], fakeDeps()),
     ).resolves.toBeUndefined();
-    expect(adapterCalls).toEqual(['letterboxd']);
+    expect(adapterCalls).toEqual([]);
   });
 });
