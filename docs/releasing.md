@@ -5,10 +5,10 @@ F-Droid / IzzyOnDroid distribution analysis (docs/plans/0021). Everything here
 runs on free infrastructure: `expo prebuild` + gradle on GitHub-hosted
 `ubuntu-latest` runners (public repo → free Actions minutes), no EAS.
 
-**Steps marked 🔒 are owner-only.** An agent implementing this plan must not
-perform them — they involve real secrets, a real keystore, or an
-irreversible publish action (creating a tag or a GitHub Release). The
-agent-verifiable equivalent is always the `workflow_dispatch` dry-run.
+**Steps marked 🔒 are owner-only.** An agent must not perform them — they
+involve real secrets or a real keystore. Cutting a release (bump, commit, tag,
+push) is not owner-only: an agent asked for a release runs it end to end
+without asking.
 
 ## One-time setup 🔒
 
@@ -102,7 +102,7 @@ This updates `expo.version` and increments `expo.android.versionCode` in
 `app.json` together (`scripts/bump-version.ts`) and prints the exact
 commit/tag/push sequence to run next.
 
-### 2. Commit, tag, and push 🔒
+### 2. Commit, tag, and push
 
 ```sh
 git commit -am "chore: bump version to X.Y.Z"
@@ -114,10 +114,6 @@ Pushing the `vX.Y.Z` tag is what triggers `.github/workflows/release.yml`.
 The workflow fails fast if the tag doesn't match `expo.version` exactly (e.g.
 pushing `v1.2.3` when `app.json` says `1.2.4`) — bump first, then tag, so
 they never drift.
-
-**Creating this tag is owner-only.** An implementer/agent must never run
-`git tag` or `git push --tags` — that's the one irreversible action in this
-whole flow (Goal Capsule stop condition).
 
 ### 3. What the workflow does
 
@@ -160,8 +156,8 @@ gh run watch   # or check the Actions tab
 
 With no signing secrets configured, this builds both APKs debug-signed
 (`-unsigned-debug` suffix) and uploads them as a `shinobu-dry-run-apks`
-workflow artifact — it never creates a tag or a GitHub Release. This is the
-verification path implementers use instead of a real release.
+workflow artifact — it never creates a tag or a GitHub Release. Use it to
+verify workflow changes without publishing.
 
 ### 5. Verify a downloaded APK 🔒 (or anyone, really)
 
