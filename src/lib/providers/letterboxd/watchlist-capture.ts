@@ -54,44 +54,12 @@ export interface CapturedRequest {
 /** Header names whose values are never relayed out of the page. */
 const REDACTED = new Set(['cookie', 'authorization', 'x-csrf-token', 'set-cookie']);
 
-export function redactHeaders(headers: Record<string, string>): Record<string, string> {
+function redactHeaders(headers: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [name, value] of Object.entries(headers)) {
     out[name] = REDACTED.has(name.toLowerCase()) ? '«present, redacted»' : value;
   }
   return out;
-}
-
-/**
- * Whether a request is worth relaying. Letterboxd's pages are chatty, and a
- * flooded log is one you stop reading — which is how the one request you were
- * waiting for gets missed.
- *
- * **First-party only.** The first live run of this harness filled the log with
- * four `POST https://cd836371f1d.cdn.intergient.com/…` ad-analytics beacons
- * before the film page had even finished rendering — the page's third-party
- * tags are *all* non-GET, so "every state change" on its own is not a filter at
- * all. A watchlist write is necessarily same-origin (it needs the session
- * cookie and the CSRF token), so anything off letterboxd.com cannot be the
- * answer and is dropped.
- *
- * Within first-party traffic: every non-GET is relayed, because a watchlist
- * change is a state change and one of them *is* the answer. GETs are relayed
- * only when the URL mentions the watchlist, which still catches the
- * "GET /s/watch-list/…" shape the legacy site used.
- */
-export function isFirstParty(url: string): boolean {
-  // Relative URLs are same-origin by construction — and are the likelier shape,
-  // since the site's own JS composes paths, not absolute URLs.
-  if (!/^https?:\/\//i.test(url)) return true;
-  const host = url.replace(/^https?:\/\//i, '').split(/[/?#]/)[0] ?? '';
-  return host === 'letterboxd.com' || host.endsWith('.letterboxd.com');
-}
-
-export function shouldCapture(method: string, url: string): boolean {
-  if (!isFirstParty(url)) return false;
-  if (method.toUpperCase() !== 'GET') return true;
-  return /watch-?list/i.test(url);
 }
 
 /** The postMessage envelope, so page-native messages are ignored. */

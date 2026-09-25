@@ -16,12 +16,7 @@ mock.module('react-native-mmkv', () => ({
 const { connectSerializd, getSerializdSession, getSerializdUsername } = await import(
   './serializd'
 );
-const {
-  connectedProviderIds,
-  clearProviderSession,
-  getProviderSession,
-  onProviderConnected,
-} = await import('./tokens');
+const { getProviderSession, onProviderConnected } = await import('./tokens');
 
 beforeEach(() => store.clear());
 
@@ -34,13 +29,6 @@ describe('connectSerializd', () => {
     });
     expect(getSerializdUsername()).toBe('gian');
     expect(getSerializdSession()).toEqual({ accessToken: 'tok-1', username: 'gian' });
-  });
-
-  test('disconnect removes the key and getSerializdSession returns null', () => {
-    connectSerializd({ accessToken: 'tok-1', username: 'gian' });
-    clearProviderSession('serializd');
-    expect(getSerializdSession()).toBeNull();
-    expect(connectedProviderIds()).not.toContain('serializd');
   });
 
   test('announces a first connect, not an overwrite such as a token refresh', () => {

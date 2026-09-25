@@ -32,7 +32,7 @@ mock.module('expo-crypto', () => ({
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-const { isWatchlistedIn, watchlistSourcesFor } = await import('./use-is-watchlisted');
+const { watchlistSourcesFor } = await import('./use-is-watchlisted');
 
 import type { WatchlistInput } from './types';
 
@@ -58,22 +58,6 @@ function input(item: NormalizedMediaItem, source: WatchlistInput['source']): Wat
   return { item, source };
 }
 
-describe('isWatchlistedIn (plan 0031 R31)', () => {
-
-  test('an unrelated film is false, not true-by-accident', () => {
-    const inputs = [input(film('trakt-1', { externalIds: { tmdb: 949 } }), 'trakt')];
-    const other = film('trakt-9', { title: 'Ronin', year: 1998, externalIds: { tmdb: 9 } });
-    expect(isWatchlistedIn(inputs, other)).toBe(false);
-  });
-
-  test('an id-less, year-less item still matches its own row by item id', () => {
-    const bare = film('serializd-3', { type: 'TV', year: undefined });
-    expect(isWatchlistedIn([input(bare, 'trakt')], bare)).toBe(true);
-    expect(isWatchlistedIn([], bare)).toBe(false);
-  });
-
-});
-
 describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
   test('names every provider whose row matches, across id spaces', () => {
     // The state the whole-item boolean could not express: on Letterboxd's
@@ -84,6 +68,17 @@ describe('watchlistSourcesFor (owner report 2026-08-01)', () => {
     ];
     const sources = watchlistSourcesFor(inputs, film('tmdb-949', { externalIds: { tmdb: 949 } }));
     expect([...sources].sort()).toEqual(['letterboxd', 'trakt']);
+  });
+
+  test('an unrelated film matches nothing', () => {
+    const inputs = [input(film('trakt-1', { externalIds: { tmdb: 949 } }), 'trakt')];
+    const other = film('trakt-9', { title: 'Ronin', year: 1998, externalIds: { tmdb: 9 } });
+    expect(watchlistSourcesFor(inputs, other)).toEqual([]);
+  });
+
+  test('an id-less, year-less item still matches its own row by item id', () => {
+    const bare = film('serializd-3', { type: 'TV', year: undefined });
+    expect(watchlistSourcesFor([input(bare, 'trakt')], bare)).toEqual(['trakt']);
   });
 
   test('a provider contributing two matching rows is named once', () => {

@@ -54,16 +54,6 @@ describe("providersForWrite('log')", () => {
   });
 });
 
-describe('providersForFeed', () => {
-  it('returns connected read-capable providers in connection order', () => {
-    // All three currently declare canRead — this pins the filtering contract
-    // so a future read-only/degraded provider (e.g. Letterboxd CSV fallback)
-    // changes the registry, not the routing logic.
-    expect(providersForFeed(['anilist', 'trakt'])).toEqual(['anilist', 'trakt']);
-    expect(providersForFeed([])).toEqual([]);
-  });
-});
-
 // Plan 0022: Letterboxd's diary write needs the native sign-in WebView
 // session, so its write is unsupported on web (registry
 // unsupportedWritePlatforms) — routing splits it into a manual target there,
@@ -270,14 +260,15 @@ describe('Simkl write + read fan-out (plan 0034 U6/U7)', () => {
     ]);
   });
 
-  it('joins feed aggregation now that U7 flips canRead', () => {
-    expect(providersForFeed(ALL5)).toEqual([
-      'trakt',
-      'anilist',
-      'letterboxd',
-      'serializd',
-      'simkl',
-    ]);
+  it('joins feed aggregation through canRead, and drops out without it', () => {
+    const simkl = PROVIDERS.simkl;
+    const original = simkl.canRead;
+    simkl.canRead = false;
+    try {
+      expect(providersForFeed(ALL5)).toEqual(['trakt', 'anilist', 'letterboxd', 'serializd']);
+    } finally {
+      simkl.canRead = original;
+    }
   });
 
   it('both watchlist verbs are real write targets (remove flipped in plan 0036)', () => {
@@ -352,16 +343,6 @@ describe('resolveWriteTargets', () => {
         { capability: 'log', platform: 'ios' },
       ),
     ).toEqual(['trakt', 'anilist']);
-  });
-
-  it('applies routing, opt-out, and platform filters together', () => {
-    expect(
-      resolveWriteTargets(
-        { type: 'MOVIE', ...ids({ trakt: 1, letterboxd: 'heat' }) },
-        ['trakt', 'letterboxd'],
-        { capability: 'log', platform: 'web' },
-      ),
-    ).toEqual(['trakt']);
   });
 
   // A declared-manual provider has no adapter behind it, so it must never

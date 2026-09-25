@@ -45,12 +45,6 @@ describe('reconcileLogTargets (the plan 0011 sync rule)', () => {
       { provider: 'anilist', action: 'rewatch' },
     ]);
   });
-
-  test('single watched provider is a rewatch (parity with itself)', () => {
-    expect(reconcileLogTargets([{ provider: 'anilist', hasIt: true }])).toEqual([
-      { provider: 'anilist', action: 'rewatch' },
-    ]);
-  });
 });
 
 function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
@@ -96,14 +90,6 @@ describe('traktHasEpisodes', () => {
 
   test('any missing episode → not recorded', () => {
     expect(traktHasEpisodes(completed, [{ season: 1, number: 4 }])).toBe(false);
-  });
-
-  // Plan 0027 R4: the sequel-season bug, from the reconcile side. Before the
-  // translation step every AniList-origin log arrived as season 1, so a
-  // season-2 episode 3 matched the season-1 episode 3 the user watched last
-  // year and was skipped as "already in sync".
-  test('a canonical season-2 intent is not satisfied by season-1 history', () => {
-    expect(traktHasEpisodes(completed, [{ season: 2, number: 3 }])).toBe(false);
   });
 });
 

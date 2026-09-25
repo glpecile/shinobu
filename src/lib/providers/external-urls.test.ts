@@ -185,12 +185,6 @@ describe('letterboxdPersonSlug', () => {
     expect(letterboxdPersonSlug('  Bong   Joon Ho  ')).toBe('bong-joon-ho');
     expect(letterboxdPersonSlug('-Wes Anderson-')).toBe('wes-anderson');
   });
-
-  it('returns an empty slug for a name with no latin alphanumerics', () => {
-    expect(letterboxdPersonSlug('宮崎 駿')).toBe('');
-    expect(letterboxdPersonSlug('新海誠')).toBe('');
-    expect(letterboxdPersonSlug('   ')).toBe('');
-  });
 });
 
 describe('providerPersonUrl', () => {

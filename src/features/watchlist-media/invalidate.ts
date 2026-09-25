@@ -44,11 +44,7 @@ export function invalidateAfterWatchlist(
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
   }
   if (succeeded.includes('anilist')) {
-    // `plannedAnime` derives from `currentAnimeEntries` — invalidating only the
-    // derived key refetches it straight off a stale entries cache (the exact
-    // trap `invalidateAfterLog` documents). Both, always, entries first.
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnimeEntries() });
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.plannedAnime() });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
       // KTD-2's exclusive-status guard reads this before the next write; a

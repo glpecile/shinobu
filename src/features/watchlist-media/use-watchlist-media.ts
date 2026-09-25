@@ -108,16 +108,12 @@ const WATCHLIST_MUTATION_ROOT = ['watchlist-media'] as const;
  * spans a card and the sheet opened over it, which is precisely the double-fire
  * this key defends against.
  */
-export function watchlistMutationKey(itemId: string) {
+function watchlistMutationKey(itemId: string) {
   return [...WATCHLIST_MUTATION_ROOT, itemId] as const;
 }
 
-/**
- * The exact filter the guard reads. Exported as data so the hook below and any
- * non-React caller (tests, a future imperative guard) share one definition
- * rather than two that can drift.
- */
-export function watchlistPendingFilter(itemId: string) {
+/** The exact filter the pending guard reads. */
+function watchlistPendingFilter(itemId: string) {
   return { mutationKey: watchlistMutationKey(itemId), status: 'pending' } as const;
 }
 

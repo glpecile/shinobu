@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   earliestReleaseDates,
+  namesMatch,
   normalizeCreditRows,
   normalizePersonDetails,
   normalizePersonSearch,
@@ -200,37 +201,9 @@ describe('normalizeCreditRows', () => {
     });
   });
 
-  /**
-   * `roles` is the same credit without the year the card's subtitle carries —
-   * it feeds the card-actions sheet, whose header already reads "MOVIE · 2026".
-   */
-  test('roles carry the bare credit, no year prefix and no yearless key', () => {
-    const rows = normalizeCreditRows(
-      personResponse({
-        combined_credits: {
-          cast: [movie(1, 'Top Gun', '1986-05-16', { character: 'Maverick' })],
-          crew: [
-            movie(2, 'Mission', '1996-05-22', {
-              department: 'Directing',
-              job: 'Director',
-            }),
-            // Year but no job: a subtitle ("2001"), never a role.
-            movie(3, 'Untold', '2001-01-01', { department: 'Directing' }),
-          ],
-        },
-      }),
-      NOW,
-    );
-
-    expect(rows.find((row) => row.role === 'Acting')?.roles).toEqual({
-      'tmdb-movie-1': 'Maverick',
-    });
-    expect(rows.find((row) => row.role === 'Directing')?.roles).toEqual({
-      'tmdb-movie-2': 'Director',
-    });
-  });
-
-  test('carries character/job details keyed by item id', () => {
+  // `roles` is the same credit without the year: it feeds the card-actions
+  // sheet, whose header already reads "MOVIE · 2026".
+  test('carries character/job details and bare roles keyed by item id', () => {
     const rows = normalizeCreditRows(
       personResponse({
         combined_credits: {
@@ -253,6 +226,9 @@ describe('normalizeCreditRows', () => {
       'tmdb-movie-2': '1996 · Director',
       'tmdb-movie-3': '2001',
     });
+    // Year but no job: a subtitle, never a role.
+    expect(acting?.roles).toEqual({ 'tmdb-movie-1': 'Maverick' });
+    expect(directing?.roles).toEqual({ 'tmdb-movie-2': 'Director' });
   });
 
   test('drops unknown media types, untitled credits, and department-less crew', () => {
@@ -336,6 +312,16 @@ describe('pickPersonMatch', () => {
   test('falls back to the top hit, and null on no results', () => {
     expect(pickPersonMatch(candidates, 'Thomas Cruise Mapother')?.tmdbId).toBe(1);
     expect(pickPersonMatch([], 'Anyone')).toBeNull();
+  });
+});
+
+// The veto `state/queries/anilist.ts` puts on `pickPersonMatch`'s top-hit
+// fallback before deep-linking an AniList staff page (plan 0035 R13).
+describe('namesMatch', () => {
+  test('accepts a word-order swap and folded diacritics, rejects a near-name', () => {
+    expect(namesMatch('Kaji Yuki', 'Yuki Kaji')).toBe(true);
+    expect(namesMatch('Jose Gonzalez', 'José González')).toBe(true);
+    expect(namesMatch('Timothy Chalamet-Adjacent', 'Timothée Chalamet')).toBe(false);
   });
 });
 

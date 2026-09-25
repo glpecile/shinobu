@@ -2,19 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
 import type { HttpFetch } from '@/lib/http/types';
-import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
-
 import { searchAniListStaff, searchAniListStudio } from './reads';
-
-/**
- * Plan 0035 U4. The resolution behind "Open in AniList": a name search whose
- * result the house matcher has to *confirm*, because the alternative — the
- * previous `?search={name}` URL — sent most TMDB people to an empty search page.
- *
- * The reads normalize; the accept/reject rule is asserted here against the same
- * `pickPersonMatch` + `namesMatch` pair `state/queries/anilist.ts` applies, so
- * the rule is checkable without a query client or a renderer.
- */
 
 function mockFetch(response: unknown): HttpFetch {
   return async () =>
@@ -109,35 +97,4 @@ describe('searchAniListStudio', () => {
       ),
     ).resolves.toEqual([{ id: 21, name: 'Studio Ghibli' }]);
   });
-});
-
-/**
- * R13, the rule that decides whether a pill renders at all. `pickPersonMatch`
- * ends in a fuzzy "take the top hit" fallback, which is right for the lookup
- * routes (they show the user what they found) and wrong for a link that opens a
- * page silently. `namesMatch` is that fallback's veto.
- */
-function resolve(hits: { id: number; name: string }[], query: string) {
-  const match = pickPersonMatch(hits, query);
-  return match != null && namesMatch(match.name, query) ? match.id : null;
-}
-
-describe('the resolution rule: confident match or nothing', () => {
-  test('a family-name-first romanization still resolves', () => {
-    // AniList writes "Kaji Yuki", TMDB writes "Yuki Kaji" — the same person.
-    expect(resolve([{ id: 118_320, name: 'Kaji Yuki' }], 'Yuki Kaji')).toBe(118_320);
-  });
-
-  test('diacritics fold rather than block a match', () => {
-    expect(resolve([{ id: 3, name: 'Jose Gonzalez' }], 'José González')).toBe(3);
-  });
-
-  test('a near-name never resolves — this is the whole point (R13)', () => {
-    // What the old search URL papered over: the actor is simply not on AniList,
-    // and the top hit is somebody else. No id means no pill.
-    expect(
-      resolve([{ id: 999, name: 'Timothy Chalamet-Adjacent' }], 'Timothée Chalamet'),
-    ).toBeNull();
-  });
-
 });

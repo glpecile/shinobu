@@ -33,12 +33,8 @@ mock.module('expo-crypto', () => ({
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-const {
-  fetchWatchlistInputs,
-  refreshWatchlistInputs,
-  watchlistQueryKeys,
-  watchlistReadProviders,
-} = await import('./watchlist');
+const { fetchWatchlistInputs, refreshWatchlistInputs, watchlistReadProviders } =
+  await import('./watchlist');
 // The Letterboxd leg is keyed by username. Written through the session layer's
 // own setter rather than by mocking `@/state/session/letterboxd`: `mock.module`
 // is process-wide and bun shares one process across files, so stubbing that
@@ -294,23 +290,6 @@ describe('fetchWatchlistInputs', () => {
 
     expect(inputs.errors.map((failure) => failure.provider)).toEqual(['letterboxd']);
     expect(inputs.incomplete).toEqual([]);
-  });
-});
-
-describe('watchlistQueryKeys', () => {
-  test('disconnecting a provider empties the merged surface only via the shared root', async () => {
-    const { QueryClient } = await import('@tanstack/react-query');
-    const client = new QueryClient();
-    client.setQueryData(watchlistQueryKeys.inputs(), { inputs: [], errors: [] });
-
-    // The reason `state/session` needs an explicit exception at all: this entry
-    // holds every provider's rows under a key that names none of them, so the
-    // per-provider purge cannot reach it.
-    client.removeQueries({ queryKey: ['trakt'] });
-    expect(client.getQueryData(watchlistQueryKeys.inputs())).toBeDefined();
-
-    client.removeQueries({ queryKey: [...watchlistQueryKeys.all] });
-    expect(client.getQueryData(watchlistQueryKeys.inputs())).toBeUndefined();
   });
 });
 

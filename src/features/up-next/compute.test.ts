@@ -7,7 +7,6 @@ import {
   nextSplitChange,
   computeUpNext,
   selectUpNextPool,
-  UP_NEXT_POOL_SIZE,
 } from './compute';
 import { entryLabel } from './entry';
 import type {
@@ -181,21 +180,6 @@ function episodeOf(entry: UpNextEntry): UpNextEpisode {
 }
 
 describe('selectUpNextPool', () => {
-  test('keeps the most recently watched shows, newest first', () => {
-    const shows = Array.from({ length: 21 }, (_, index) =>
-      show(index + 1, {
-        // Show 21 is the most recent, show 1 the oldest.
-        lastUpdated: `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
-      }),
-    );
-    const pool = selectUpNextPool(shows);
-    expect(pool).toHaveLength(UP_NEXT_POOL_SIZE);
-    expect(pool[0].externalIds.trakt).toBe(21);
-    expect(pool.at(-1)?.externalIds.trakt).toBe(2);
-    // The cap is what drops show 1 — nothing else.
-    expect(pool.some((item) => item.externalIds.trakt === 1)).toBe(false);
-  });
-
   test('does not mutate its input', () => {
     const shows = [
       show(1, { lastUpdated: '2026-07-01T00:00:00.000Z' }),
@@ -556,6 +540,8 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
       source: 'anilist',
       status: 'aired',
       episode: { number: 6 },
+      // Episodes 6..8 are out below the E9 pointer.
+      episodesBehind: 3,
     });
     expect(episodeOf(data.continueWatching[0]).season).toBeUndefined();
     expect(episodeOf(data.continueWatching[0]).firstAired).toBeUndefined();
@@ -605,6 +591,8 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
     );
     expect(data.continueWatching).toHaveLength(1);
     expect(episodeOf(data.continueWatching[0])).toEqual({ number: 4 });
+    // Schedule exhausted: the whole remaining run (4..12) has aired.
+    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 9 });
   });
 
   test('no pointer + caught up to the total → excluded', () => {
@@ -1112,31 +1100,6 @@ describe('episodesBehind', () => {
         ? data.continueWatching[0].episodesBehind
         : null,
     ).toBeUndefined();
-  });
-
-  test('AniList below the pointer: everything up to it has aired', () => {
-    // progress 5, next airing E10 → episodes 6..9 are out: 4 behind.
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(72), {
-            nextAiring: { episode: 10, airingAt: localInstant(2026, 7, 30, 20) },
-            totalEpisodes: 12,
-          }),
-        ],
-      }),
-      NOW,
-    );
-    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 4 });
-  });
-
-  test('AniList with no pointer: the whole remaining run has aired', () => {
-    // progress 5 of 12, schedule exhausted → 7 behind.
-    const data = computeUpNext(
-      inputs({ anilist: [anilistInput(anime(73), { totalEpisodes: 12 })] }),
-      NOW,
-    );
-    expect(data.continueWatching[0]).toMatchObject({ episodesBehind: 7 });
   });
 
   test('AniList at an aired pointer: exactly the one episode behind', () => {

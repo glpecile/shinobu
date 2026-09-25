@@ -25,7 +25,7 @@ import type { ReleaseUpNextInput, UpNextRelease } from './types';
  * cap is slack in practice. It is here as the standing guard: it is what stops
  * a later, wider watchlist source from silently becoming an 800-call fan.
  */
-export const LETTERBOXD_RESOLVE_CAP = 30;
+const LETTERBOXD_RESOLVE_CAP = 30;
 
 /**
  * How many resolves are in flight at once. Bounded for the same reason the
@@ -56,12 +56,11 @@ const RENDERED_KINDS: ReadonlyArray<UpNextRelease['kind']> = [
 export function selectReleaseCandidates(
   films: readonly NormalizedMediaItem[],
   now: Date,
-  cap: number = LETTERBOXD_RESOLVE_CAP,
 ): NormalizedMediaItem[] {
   const currentYear = now.getFullYear();
   return films
     .filter((film) => film.year == null || film.year >= currentYear)
-    .slice(0, Math.max(0, cap));
+    .slice(0, LETTERBOXD_RESOLVE_CAP);
 }
 
 /**
@@ -84,9 +83,8 @@ export async function letterboxdReleaseInputs(
   films: readonly NormalizedMediaItem[],
   now: Date,
   resolve: ResolveWatchlistFilm,
-  cap: number = LETTERBOXD_RESOLVE_CAP,
 ): Promise<ReleaseUpNextInput[]> {
-  const candidates = selectReleaseCandidates(films, now, cap);
+  const candidates = selectReleaseCandidates(films, now);
   const resolved = await mapBounded(candidates, RESOLVE_CONCURRENCY, (film) =>
     resolve(film).catch(() => null),
   );

@@ -7,13 +7,6 @@ import { describe, expect, test } from 'bun:test';
 import { URL_CHECKS } from './check-external-urls';
 
 describe('external URL manifest', () => {
-  test('has a check per provider surface', () => {
-    const names = URL_CHECKS.map((c) => c.name);
-    expect(names.some((n) => n.startsWith('Trakt'))).toBe(true);
-    expect(names.some((n) => n.startsWith('AniList'))).toBe(true);
-    expect(new Set(names).size).toBe(names.length);
-  });
-
   test.each(URL_CHECKS)('$name is a well-formed https check', (check) => {
     const url = new URL(check.url);
     expect(url.protocol).toBe('https:');

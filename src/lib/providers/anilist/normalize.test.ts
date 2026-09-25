@@ -5,7 +5,6 @@ import {
   normalizeAniListMedia,
   normalizeCurrentAnimeEntry,
   normalizeListActivity,
-  parseActivityProgress,
   parseAniListItemId,
   type AniListListActivity,
   type AniListListEntry,
@@ -115,21 +114,6 @@ describe('normalizeAniListListEntry', () => {
   });
 });
 
-describe('parseActivityProgress', () => {
-  test('a single number becomes a one-element set', () => {
-    expect(parseActivityProgress('12')).toEqual([12]);
-  });
-
-  test('a hyphen range expands inclusively', () => {
-    expect(parseActivityProgress('3 - 5')).toEqual([3, 4, 5]);
-  });
-
-  test('empty / absent / unparseable progress → no episodes', () => {
-    expect(parseActivityProgress(null)).toEqual([]);
-    expect(parseActivityProgress('all of them')).toEqual([]);
-  });
-});
-
 describe('normalizeListActivity', () => {
   const MANGA: AniListMedia = {
     id: 30002,
@@ -185,6 +169,20 @@ describe('normalizeListActivity', () => {
     const entry = normalizeListActivity(activity);
     expect(entry?.item.type).toBe('MANGA');
     expect(entry?.episodes).toEqual([12]);
+  });
+
+  test('absent or unparseable progress logs the watch without episode detail', () => {
+    for (const progress of [null, 'all of them']) {
+      const entry = normalizeListActivity({
+        id: 5003,
+        status: 'watched episode',
+        progress,
+        createdAt: 1_752_000_200,
+        media: SERIES,
+      });
+      expect(entry?.item.type).toBe('ANIME');
+      expect(entry?.episodes).toBeUndefined();
+    }
   });
 
   test('a plans-to-watch activity is filtered out', () => {

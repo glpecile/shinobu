@@ -384,9 +384,8 @@ export function summarizeCluster(cluster: DiaryCluster): DiaryClusterSummary {
 // ---- Presentation helpers (pure) ----
 
 /** "3–5" for a contiguous run, "2, 5" across a gap (plan 0016 KTD2). */
-export function formatEpisodeRange(episodes: number[]): string {
+function formatEpisodeRange(episodes: number[]): string {
   const sorted = [...new Set(episodes)].sort((a, b) => a - b);
-  if (sorted.length === 0) return '';
 
   const parts: string[] = [];
   let start = sorted[0];
@@ -439,23 +438,7 @@ export function formatClusterCount(type: MediaType, count: number): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
-
-const MONTHS_SHORT = MONTHS.map((month) => month.slice(0, 3));
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** The day header split for the rail gutter: a numeral over a short label. */
 export interface DiaryDayParts {
@@ -468,10 +451,10 @@ export interface DiaryDayParts {
 }
 
 /**
- * `formatDayHeader` restructured for the rail layout, which stacks the date
- * rather than setting it on one line: the numeral carries the day and the
- * label below it carries the month — or "Today", or a `Jul 25` month+year when
- * scroll-back crosses into another year (the same R8 rule, same threshold).
+ * The rail gutter's stacked date: the numeral carries the day and the label
+ * below it carries the month — or "Today", or a `Jul 25` month+year when the
+ * day's local year differs from the current one (R8), since multi-year
+ * scroll-back otherwise repeats identical labels.
  */
 export function formatDayParts(
   dayKey: string,
@@ -520,25 +503,4 @@ export function formatLogTime(
     timeFormatters.set(timeZone, formatter);
   }
   return formatter.format(instant);
-}
-
-/**
- * The day header: "Today", "July 20", or "July 20, 2025" — the year appends only
- * when the day's local calendar year differs from the current one (R8), since
- * multi-year scroll-back otherwise repeats identical headers.
- */
-export function formatDayHeader(
-  dayKey: string,
-  now: Date,
-  timeZone: string,
-): string {
-  const todayKey = dayKeyForInstant(now, timeZone);
-  if (dayKey === todayKey) return 'Today';
-
-  const [year, month, day] = dayKey.split('-').map(Number);
-  const monthName = MONTHS[(month ?? 1) - 1] ?? '';
-  const currentYear = Number(todayKey.slice(0, 4));
-  return year === currentYear
-    ? `${monthName} ${day}`
-    : `${monthName} ${day}, ${year}`;
 }

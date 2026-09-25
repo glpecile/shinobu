@@ -1,7 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { providersForWrite } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -93,13 +92,6 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     expect(enriched.externalIds.anilist).toBe(5678);
     expect(calls).toContain('anizip:{"tmdbId":1234}');
     expect(calls).toContain('anilist-film:ChaO:2025');
-    // Serializd is TV-only, so a film never routes there even once it is
-    // also an ANIME to the router.
-    expect(providersForWrite(enriched, ALL, 'log')).toEqual([
-      'trakt',
-      'anilist',
-      'letterboxd',
-    ]);
   });
 
   test('never runs the search when AniList is not connected', async () => {

@@ -110,6 +110,13 @@ CURRENT entry deletes the whole AniList entry and the picker has to warn first
 (plan 0035 R3) — the same "carry the discriminating field through normalization,
 filter per consumer" move as the rule below.
 
+## Amendment (2026-09-25): the dead selectors are gone
+
+`fetchCurrentAnime` (#63) and `fetchPlannedAnime` lost their last callers and
+were deleted, along with the never-read `plannedAnime()` key. The regression
+test in `state/queries/anilist.test.ts` is one case now: a mid-run PLANNING
+entry reaches the watchlist (`fetchWatchlistAnime`) and nowhere in Up Next.
+
 ## Rule of thumb
 
 When a provider read is shared by two consumers on a budget, **widening the

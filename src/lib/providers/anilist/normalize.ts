@@ -257,7 +257,7 @@ const DIARY_STATUS = /^(watched|rewatched|read|reread|completed)/i;
  * Parses an AniList activity `progress` string into the episode/chapter number
  * set (plan 0016 KTD2). "3 - 5" → [3, 4, 5]; "12" → [12]; empty/absent → [].
  */
-export function parseActivityProgress(
+function parseActivityProgress(
   progress: string | null | undefined,
 ): number[] {
   if (progress == null) return [];

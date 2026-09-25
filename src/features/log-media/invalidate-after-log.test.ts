@@ -62,17 +62,12 @@ function recordingClient(): { client: QueryClient; keys: string[] } {
 }
 
 describe('invalidateAfterLog (plan 0019 U4)', () => {
-  test('a successful Trakt log recomputes the Up Next sections', () => {
+  test('a successful Trakt log recomputes Up Next and refreshes the watchlist', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['trakt']);
     expect(keys).toContain('up-next/inputs');
     // The per-show progress the sections are computed from still refreshes too.
     expect(keys).toContain('trakt/show-progress/1');
-  });
-
-  test('a successful Trakt log refreshes the watchlist Trakt already changed', () => {
-    const { client, keys } = recordingClient();
-    invalidateAfterLog(client, ITEM, ['trakt']);
     // Trakt auto-removes a watched show from the watchlist server-side, so the
     // cached read is stale the moment the log lands — and the prefix is what
     // gets named, because this path can't know the type/sort the surface used
@@ -86,16 +81,6 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).toContain('up-next/inputs');
     // The derived slices re-derive from the entries key — invalidating only
     // them would read a stale cache (U2).
-    expect(keys).toContain('anilist/current-anime-entries');
-  });
-
-  test('a successful AniList log drops the entry out of the watchlist slice', () => {
-    const { client, keys } = recordingClient();
-    invalidateAfterLog(client, ITEM, ['anilist']);
-    // Logging an episode makes the entry CURRENT, so it is no longer plan-to-
-    // watch — the watchlist's AniList leg is a third derived key over the same
-    // entries read and goes stale on this write too (plan 0031 U12/KTD-5).
-    expect(keys).toContain('anilist/planned-anime');
     expect(keys).toContain('anilist/current-anime-entries');
   });
 

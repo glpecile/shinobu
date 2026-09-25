@@ -323,23 +323,15 @@ describe('planOnAniList — the exclusive-status guard (KTD-2)', () => {
  * are what stops it being copied across.
  */
 describe('planOnAniList — a guard read that fails never falls through to the write', () => {
-  test('a network failure errors with no mutation issued', async () => {
-    const seen = calls();
-    const result = await Effect.runPromise(
-      Effect.either(planOnAniList(watchlistDeps(seen, { entry: null }, 'network'), SERIES)),
-    );
-    expect(result._tag).toBe('Left');
-    expect(seen.mutations).toEqual([]);
-    expect(seen.entryReads).toBeGreaterThan(0);
-  });
-
-  test('the failure message says the check failed, not that the write did', async () => {
+  test('a network failure errors as a failed check, with no mutation issued', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
       Effect.either(planOnAniList(watchlistDeps(seen, { entry: null }, 'network'), SERIES)),
     );
     if (result._tag !== 'Left') throw new Error('expected a failure');
     expect(result.left.message).toContain('could not check your AniList entry');
+    expect(seen.mutations).toEqual([]);
+    expect(seen.entryReads).toBeGreaterThan(0);
   });
 
   test('an item with no anilist id fails loudly without any request', async () => {
@@ -567,26 +559,7 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
  * fresh-read prohibition, not just the branch table.
  */
 describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
-  test('a network failure errors with no mutation issued', async () => {
-    const seen = calls();
-    const result = await Effect.runPromise(
-      Effect.either(
-        deleteAniListEntry(
-          watchlistDeps(
-            seen,
-            { entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 } },
-            'network',
-          ),
-          { mediaId: 104578 },
-        ),
-      ),
-    );
-    expect(result._tag).toBe('Left');
-    expect(seen.mutations).toEqual([]);
-    expect(seen.entryReads).toBeGreaterThan(0);
-  });
-
-  test('the failure message says the check failed, not that the removal did', async () => {
+  test('a network failure errors as a failed check, with no mutation issued', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
       Effect.either(
@@ -602,6 +575,8 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
     );
     if (result._tag !== 'Left') throw new Error('expected a failure');
     expect(result.left.message).toContain('could not check your AniList entry');
+    expect(seen.mutations).toEqual([]);
+    expect(seen.entryReads).toBeGreaterThan(0);
   });
 
   test('a stale PLANNING snapshot never authorizes a delete — every call re-reads', async () => {

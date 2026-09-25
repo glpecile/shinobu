@@ -12,7 +12,7 @@ const PROVIDER_IDS = new Set(Object.keys(PROVIDERS));
  * an unknown/invalid prefix (e.g. a TMDB-catalogue-resolved item) — callers
  * hide the row rather than guess.
  */
-export function sourceProviderOf(item: Pick<NormalizedMediaItem, 'id'>): ProviderId | null {
+function sourceProviderOf(item: Pick<NormalizedMediaItem, 'id'>): ProviderId | null {
   const separatorIndex = item.id.indexOf('-');
   const prefix = separatorIndex === -1 ? item.id : item.id.slice(0, separatorIndex);
   return PROVIDER_IDS.has(prefix) ? (prefix as ProviderId) : null;

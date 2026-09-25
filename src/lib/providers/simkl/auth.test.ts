@@ -164,6 +164,7 @@ describe('exchangeSimklCode', () => {
     expect(Object.keys(body)).not.toContain('client_secret');
     expect(session.accessToken).toBe('tok-1');
     expect(sessions).toEqual([session]);
+    expect(getSimklAuthFlow()).toBeNull();
   });
 
   test('a mismatched state never POSTs', async () => {
@@ -198,19 +199,6 @@ describe('exchangeSimklCode', () => {
     );
     expect(error._tag).toBe('ProviderAuthError');
     expect(calls).toHaveLength(0);
-  });
-
-  test('clears the stored verifier + state after a successful exchange', async () => {
-    saveSimklAuthFlow({ verifier: 'ver-1', state: 'state-1' });
-    const { deps } = makeDeps(() => Response.json(token));
-    await Effect.runPromise(
-      exchangeSimklCode(deps, {
-        code: 'code-1',
-        state: 'state-1',
-        redirectUri: 'shinobu://redirect',
-      }),
-    );
-    expect(getSimklAuthFlow()).toBeNull();
   });
 
   test('clears the stored verifier + state after a failed exchange too', async () => {

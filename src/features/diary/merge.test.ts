@@ -9,11 +9,9 @@ import type { ProviderId } from '@/lib/providers/types';
 import {
   clusterDayEntries,
   formatClusterCount,
-  formatDayHeader,
   formatDayParts,
   formatEpisodeDetail,
   formatLogTime,
-  formatEpisodeRange,
   groupDiaryEntries,
   mergeDiaryEntries,
   shortClusterCount,
@@ -291,40 +289,20 @@ describe('groupDiaryEntries — timezone & ordering', () => {
   });
 });
 
-describe('formatEpisodeRange', () => {
-  test('mixed runs and singles', () => {
-    expect(formatEpisodeRange([1, 2, 3, 7, 9, 10])).toBe('1–3, 7, 9–10');
-  });
-  test('empty → empty string', () => {
-    expect(formatEpisodeRange([])).toBe('');
-  });
-});
-
 describe('formatEpisodeDetail', () => {
   test('TV episode with a season', () => {
     expect(formatEpisodeDetail({ type: 'TV', season: 2, episodes: [5] })).toBe('S2E5');
   });
-  test('anime episodes without a season', () => {
-    expect(formatEpisodeDetail({ type: 'ANIME', episodes: [3, 4, 5] })).toBe('Ep 3–5');
+  test('anime episodes without a season, runs and singles', () => {
+    expect(formatEpisodeDetail({ type: 'ANIME', episodes: [1, 2, 3, 7, 9, 10] })).toBe(
+      'Ep 1–3, 7, 9–10',
+    );
   });
   test('manga chapters', () => {
     expect(formatEpisodeDetail({ type: 'MANGA', episodes: [41] })).toBe('Ch 41');
   });
   test('a movie has no detail line', () => {
     expect(formatEpisodeDetail({ type: 'MOVIE', episodes: [] })).toBe('');
-  });
-});
-
-describe('formatDayHeader', () => {
-  const now = new Date('2026-07-21T12:00:00.000Z');
-  test('the current local day reads "Today"', () => {
-    expect(formatDayHeader('2026-07-21', now, TZ_MINUS_5)).toBe('Today');
-  });
-  test('a same-year day omits the year', () => {
-    expect(formatDayHeader('2026-07-20', now, TZ_MINUS_5)).toBe('July 20');
-  });
-  test('a prior-year day appends the year', () => {
-    expect(formatDayHeader('2025-07-20', now, TZ_MINUS_5)).toBe('July 20, 2025');
   });
 });
 
