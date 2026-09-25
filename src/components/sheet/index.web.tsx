@@ -9,6 +9,7 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
+import { RailFadeColor } from '@/components/rail';
 import { hasCoarsePointer } from '@/lib/pointer';
 import {
   DURATION,
@@ -163,7 +164,7 @@ function SheetPanel({
           setContentHeight(Math.ceil(contentSize))
         }
       >
-        {children}
+        <RailFadeColor value="--color-surface">{children}</RailFadeColor>
       </ScrollView>
     </AnimatedView>
   );

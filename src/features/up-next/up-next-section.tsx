@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import {
   FadeIn,
   FadeOut,
@@ -11,6 +11,7 @@ import {
 
 import { AnimatedText, AnimatedView } from '@/components/animated-view';
 import { PresstableScale } from '@/components/presstable';
+import { Rail } from '@/components/rail';
 import {
   calendarBadges,
   continueWatchingBadges,
@@ -194,10 +195,8 @@ export function UpNextSection({
             collapseKey="up-next-continue"
             title="Continue Watching"
           >
-            <ScrollView
-              horizontal
+            <Rail
               className="px-4"
-              showsHorizontalScrollIndicator={false}
             >
               {/* Keyed on the *show*, not the entry: a quick-log advances the
                   entry (its id carries the episode), and the card has to stay
@@ -229,7 +228,7 @@ export function UpNextSection({
                   />
                 </AnimatedView>
               ))}
-            </ScrollView>
+            </Rail>
           </UpNextSectionHeader>
         </AnimatedView>
       )}
@@ -238,10 +237,8 @@ export function UpNextSection({
         collapseKey="up-next-calendar"
         title="This week"
       >
-        <ScrollView
-          horizontal
+        <Rail
           className="px-4"
-          showsHorizontalScrollIndicator={false}
         >
           {week.map((day) => {
             const isSelected = day.offset === selected.offset;
@@ -328,7 +325,7 @@ export function UpNextSection({
               </PresstableScale>
             );
           })}
-        </ScrollView>
+        </Rail>
 
         {/* Reserved height so switching to an empty day never collapses the row
             and shifts the feed beneath it — the empty line sits in the space a
@@ -363,14 +360,12 @@ export function UpNextSection({
                 </Text>
               </View>
             ) : (
-              <ScrollView
-                horizontal
+              <Rail
                 // The top padding is the stack headroom: a grouped card's backs
-                // sit above its face card, and a horizontal ScrollView clips at
+                // sit above its face card, and a horizontal scroll view clips at
                 // its own frame.
                 className="px-4"
                 contentContainerStyle={{ paddingTop: STACK_HEADROOM }}
-                showsHorizontalScrollIndicator={false}
               >
                 {/* The group id is per show (per release row for films), for
                     the same reason as Continue Watching above. */}
@@ -401,7 +396,7 @@ export function UpNextSection({
                     />
                   </View>
                 ))}
-              </ScrollView>
+              </Rail>
             )}
           </AnimatedView>
         </View>

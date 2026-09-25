@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
+import { RailFadeColor } from '@/components/rail';
 
 import { sheetScrollMetrics } from './metrics';
 
@@ -48,7 +49,9 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         <View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />
       }
     >
-      <SheetContent>{children}</SheetContent>
+      <SheetContent>
+        <RailFadeColor value="--color-surface">{children}</RailFadeColor>
+      </SheetContent>
     </ModalBottomSheet>
   );
 }

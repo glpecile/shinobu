@@ -1,8 +1,9 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ReactNode } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { Rail } from '@/components/rail';
 import { useThemeColor } from '@/lib/theme-color';
 
 /** A bordered pill that opens something; `external` marks a link that leaves the app. */
@@ -39,20 +40,10 @@ export function LinkPill({
 
 /**
  * One scrolling row of `LinkPill`s, so a section of them stays one line tall
- * however many there are. `nestedScrollEnabled`: on Android the episode pager
- * otherwise takes every horizontal drag that starts on the row.
+ * however many there are.
  */
 function LinkPillRail({ children }: { children: ReactNode }) {
-  return (
-    <ScrollView
-      contentContainerClassName="gap-2"
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-    >
-      {children}
-    </ScrollView>
-  );
+  return <Rail contentContainerClassName="gap-2">{children}</Rail>;
 }
 
 LinkPill.Rail = LinkPillRail;

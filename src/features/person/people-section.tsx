@@ -1,8 +1,9 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
@@ -127,9 +128,7 @@ export function PeopleSection({
       <Section.Header>
         <Section.Title>{title}</Section.Title>
       </Section.Header>
-      {/* nestedScrollEnabled: on Android the episode pager otherwise takes
-          every horizontal drag that starts on the rail. */}
-      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
+      <Rail>
         {people.map((credit) =>
           onCreditActions == null ? (
             <View className="w-24 mr-4 items-center" key={credit.id}>
@@ -146,7 +145,7 @@ export function PeopleSection({
             />
           ),
         )}
-      </ScrollView>
+      </Rail>
     </Section>
   );
 }
