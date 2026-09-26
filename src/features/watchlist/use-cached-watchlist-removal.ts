@@ -1,7 +1,11 @@
 import { useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
+import {
+  subscribeWatchlistInputs,
+  watchlistQueryKeys,
+  type WatchlistInputs,
+} from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -37,10 +41,8 @@ export function useCachedWatchlistRemoval(
   enabled: boolean,
 ): WatchlistRemovalTarget | null {
   const queryClient = useQueryClient();
-  const cache = queryClient.getQueryCache();
-
   const data = useSyncExternalStore(
-    (onStoreChange) => cache.subscribe(() => onStoreChange()),
+    (onStoreChange) => subscribeWatchlistInputs(queryClient, onStoreChange),
     () => queryClient.getQueryData<WatchlistInputs>(watchlistQueryKeys.inputs()),
     // Web SSR has no cache to read — the same "unknown, so offer nothing"
     // answer `useIsWatchlisted` gives.

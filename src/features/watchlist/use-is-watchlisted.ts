@@ -2,7 +2,11 @@ import { useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { ProviderId } from '@/lib/providers/types';
-import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
+import {
+  subscribeWatchlistInputs,
+  watchlistQueryKeys,
+  type WatchlistInputs,
+} from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { watchlistMergeKeys } from './compute';
@@ -83,12 +87,10 @@ export function useIsWatchlisted(
   item: NormalizedMediaItem | undefined,
 ): boolean | undefined {
   const queryClient = useQueryClient();
-  const cache = queryClient.getQueryCache();
-
   // The snapshot is a primitive (`true | false | undefined`), so it is stable by
   // value and `useSyncExternalStore` cannot loop on a fresh object identity.
   return useSyncExternalStore(
-    (onStoreChange) => cache.subscribe(() => onStoreChange()),
+    (onStoreChange) => subscribeWatchlistInputs(queryClient, onStoreChange),
     () => {
       if (item == null) return undefined;
       const data = queryClient.getQueryData<WatchlistInputs>(

@@ -1,4 +1,9 @@
-import { useQueryClient, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
+import {
+  hashKey,
+  useQueryClient,
+  useSuspenseQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import type { WatchlistInput, WatchlistInputs } from '@/features/watchlist/types';
@@ -41,6 +46,22 @@ export const watchlistQueryKeys = {
   /** The gathered rows — persisted, and what a successful add invalidates. */
   inputs: () => [...watchlistQueryKeys.all, 'inputs'] as const,
 };
+
+/** Listen only for changes to the gathered inputs, not query creation elsewhere during render. */
+export function subscribeWatchlistInputs(
+  queryClient: QueryClient,
+  onStoreChange: () => void,
+) {
+  const inputsHash = hashKey(watchlistQueryKeys.inputs());
+  return queryClient.getQueryCache().subscribe((event) => {
+    if (
+      (event.type === 'updated' || event.type === 'removed') &&
+      event.query.queryHash === inputsHash
+    ) {
+      onStoreChange();
+    }
+  });
+}
 
 /**
  * A watchlist changes only when the user changes it, and the user's own changes
