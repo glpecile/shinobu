@@ -27,12 +27,14 @@ export function SeasonTabs<T extends string>({
 }: SegmentedControlProps<T>) {
   const foreground = useThemeColor('--color-foreground');
   const background = useThemeColor('--color-background');
-  const surface = useThemeColor('--color-surface');
   const border = useThemeColor('--color-border');
+  const accent = useThemeColor('--color-accent');
+  const accentTonal = useThemeColor('--color-accent-tonal');
+  const accentOnTonal = useThemeColor('--color-accent-on-tonal');
   const colors = {
-    activeContainerColor: surface,
-    activeContentColor: foreground,
-    activeBorderColor: border,
+    activeContainerColor: accentTonal,
+    activeContentColor: accentOnTonal,
+    activeBorderColor: accent,
     inactiveContainerColor: background,
     inactiveContentColor: foreground,
     inactiveBorderColor: border,
@@ -55,6 +57,7 @@ export function SeasonTabs<T extends string>({
             >
               <SegmentedButton.Label>
                 <Text
+                  color={option.value === value ? accentOnTonal : foreground}
                   maxLines={1}
                   style={{ typography: size === 'sm' ? 'labelMedium' : 'labelLarge' }}
                 >
