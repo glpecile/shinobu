@@ -42,7 +42,7 @@ export function SeasonTabs<T extends string>({
 
   return (
     <View accessibilityLabel={accessibilityLabel} className={className}>
-      <Host matchContents={size === 'sm' ? true : { vertical: true }}>
+      <Host matchContents={size === 'sm' ? true : { vertical: true }} seedColor={accent}>
         <SingleChoiceSegmentedButtonRow>
           {options.map((option) => (
             <SegmentedButton
