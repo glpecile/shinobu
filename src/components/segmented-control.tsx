@@ -26,6 +26,7 @@ export interface SegmentedControlProps<T extends string> {
   /** Names the group for assistive tech ("Season", "Format"). */
   accessibilityLabel: string;
   size?: 'sm' | 'md';
+  tone?: 'default' | 'accent';
   /** Layout only (width, margins) — the control styles itself. */
   className?: string;
   /**
@@ -63,12 +64,14 @@ function SelectionPill<T extends string>({
   segmentWidth,
   size,
   progress,
+  tone,
 }: {
   options: readonly SegmentedOption<T>[];
   value: T;
   segmentWidth: number;
   size: 'sm' | 'md';
   progress?: SharedValue<number>;
+  tone: 'default' | 'accent';
 }) {
   const reduceMotion = useReducedMotion();
   const index = Math.max(0, options.findIndex((option) => option.value === value));
@@ -87,7 +90,10 @@ function SelectionPill<T extends string>({
 
   return (
     <AnimatedView
-      className="absolute rounded-full bg-foreground overflow-hidden"
+      className={cn(
+        'absolute rounded-full overflow-hidden',
+        tone === 'accent' ? 'bg-accent-tonal' : 'bg-foreground',
+      )}
       style={[
         { top: INSET, bottom: INSET, left: INSET, width: segmentWidth, pointerEvents: 'none' },
         progress ? pillFollow : slide(index * segmentWidth),
@@ -102,7 +108,13 @@ function SelectionPill<T extends string>({
       >
         {options.map((option) => (
           <View className={segmentClass(size)} key={option.value}>
-            <Text className={cn(labelClass(size), 'text-background')} numberOfLines={1}>
+            <Text
+              className={cn(
+                labelClass(size),
+                tone === 'accent' ? 'text-accent-on-tonal' : 'text-background',
+              )}
+              numberOfLines={1}
+            >
               {option.label}
             </Text>
           </View>
@@ -138,6 +150,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   accessibilityLabel,
   size = 'md',
+  tone = 'default',
   className,
   progress,
 }: SegmentedControlProps<T>) {
@@ -198,6 +211,7 @@ export function SegmentedControl<T extends string>({
           progress={progress}
           segmentWidth={segmentWidth}
           size={size}
+          tone={tone}
           value={value}
         />
       )}

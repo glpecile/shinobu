@@ -6,17 +6,11 @@ import {
 } from '@expo/ui/jetpack-compose';
 import { View } from 'react-native';
 
-import type { SegmentedControlProps } from '@/components/segmented-control';
+import { SegmentedControl, type SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * The seasons explorer's tab strips as Material 3's segmented button row,
- * built from the Compose primitives because `@expo/ui`'s community wrapper
- * only themes the selected fill. A surface fill and native check mark indicate
- * selection without competing with the posters. Like iOS, it moves once
- * the pager settles rather than following `progress`.
- */
+/** Android's pager strip follows the swipe; its format strip keeps native buttons. */
 export function SeasonTabs<T extends string>({
   options,
   value,
@@ -24,6 +18,7 @@ export function SeasonTabs<T extends string>({
   accessibilityLabel,
   size = 'md',
   className,
+  progress,
 }: SegmentedControlProps<T>) {
   const foreground = useThemeColor('--color-foreground');
   const background = useThemeColor('--color-background');
@@ -40,9 +35,26 @@ export function SeasonTabs<T extends string>({
     inactiveBorderColor: border,
   };
 
+  // Compose paints the pager row with its Material palette despite the button
+  // colors. The app control keeps the selection red and follows the swipe.
+  if (progress != null) {
+    return (
+      <SegmentedControl
+        accessibilityLabel={accessibilityLabel}
+        className={className}
+        onChange={onChange}
+        options={options}
+        progress={progress}
+        size={size}
+        tone="accent"
+        value={value}
+      />
+    );
+  }
+
   return (
     <View accessibilityLabel={accessibilityLabel} className={className}>
-      <Host matchContents={size === 'sm' ? true : { vertical: true }} seedColor={accent}>
+      <Host matchContents={size === 'sm' ? true : { vertical: true }}>
         <SingleChoiceSegmentedButtonRow>
           {options.map((option) => (
             <SegmentedButton
