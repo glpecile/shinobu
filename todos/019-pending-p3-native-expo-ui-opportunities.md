@@ -7,7 +7,7 @@ priority: P3
 
 A source-only audit against the installed `@expo/ui` 57.0.19, following
 `018-done-p3-animation-opportunities.md`. Items are ordered by usefulness and
-confidence. Item 4 has a source implementation but no device validation yet;
+confidence. Item 4 was tried on iOS and reverted after device validation;
 the other items remain unimplemented. Paths below start at `src/` unless
 otherwise stated.
 
@@ -81,20 +81,19 @@ Keep the web implementation initially. Its role workaround is documented in
 
 ## 4. Use native disclosures for connection instructions
 
-- [x] Give `components/collapsible/` a native implementation using
+- [ ] Give `components/collapsible.tsx` a native implementation using
   `Host` and `Collapsible` from `@expo/ui`.
 
-`components/collapsible/index.tsx` now uses Expo's controlled disclosure with
-`Host` and `RNHostView`; `index.web.tsx` retains the pressable header, chevron
-and animated height. The four callers (Simkl, Trakt, AniList and TMDB) keep
-their existing instruction bodies. The native host follows the color scheme,
-uses the app's accent and foreground tokens, and sizes vertically with its
-content. `bun typecheck`, `bun lint`, `bun check:classnames`,
-`bun check:router-push` and `bun check:links` pass.
-
-- [ ] Validate on iOS and Android inside the existing sheet: expanded height,
-  long Trakt instructions, link presses, light/dark colors, larger text and
-  spoken disclosure state; confirm web still behaves as before.
+The first implementation put the RN instruction body in an `RNHostView`
+with `matchContents` inside Expo UI's native `Collapsible` and a vertically
+content-sized `Host`. On iOS, the collapsed header appeared, but expanding
+Trakt produced a tall blank region with clipped, horizontally displaced text;
+the instructions were unusable inside the setup sheet. That implementation
+was reverted in PR #159. Do not repeat this `RNHostView` layout without a
+device-tested fix. A future attempt must preserve usable long instructions,
+link presses, light/dark colors, larger text and spoken disclosure state on
+both native platforms, as well as existing web behavior. The current shared
+React Native disclosure remains in `components/collapsible.tsx`.
 
 Do not extend this change to season accordions or virtualized diary groups;
 those headers carry progress, actions and list-specific behavior.
