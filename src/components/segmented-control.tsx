@@ -154,13 +154,9 @@ export function SegmentedControl<T extends string>({
   className,
   progress,
 }: SegmentedControlProps<T>) {
-  // The pill's geometry derives from the measured width, so it is not
-  // rendered at all until the first layout. A pill mounted at the left edge
-  // and then moved into place slides there — on web unavoidably, because the
-  // browser transitions from the last *painted* style whatever the duration
-  // was at the moment of the move — so every screen opened on a non-first
-  // option played that slide. A freshly mounted element has nothing to
-  // transition from, on either platform.
+  // Before measurement the selected segment paints its own fill. The sliding
+  // pill replaces it once its width is known, without a blank first frame or
+  // an initial slide in from the left on a non-first option.
   const [width, setWidth] = useState(0);
   const measured = width > 0;
   const segmentWidth = measured ? (width - INSET * 2) / options.length : 0;
@@ -196,11 +192,23 @@ export function SegmentedControl<T extends string>({
           accessibilityLabel={option.accessibilityLabel ?? option.label}
           accessibilityRole="button"
           accessibilityState={{ selected: option.value === value }}
-          className={segmentClassName}
+          className={cn(
+            segmentClassName,
+            !measured && option.value === value &&
+              (tone === 'accent' ? 'bg-accent-tonal' : 'bg-foreground'),
+          )}
           key={option.value}
           onPress={() => select(option.value)}
         >
-          <Text className={cn(labelClassName, 'text-foreground')} numberOfLines={1}>
+          <Text
+            className={cn(
+              labelClassName,
+              !measured && option.value === value
+                ? tone === 'accent' ? 'text-accent-on-tonal' : 'text-background'
+                : 'text-foreground',
+            )}
+            numberOfLines={1}
+          >
             {option.label}
           </Text>
         </PresstableOpacity>
