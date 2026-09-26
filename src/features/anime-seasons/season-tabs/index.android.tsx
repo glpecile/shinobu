@@ -4,6 +4,7 @@ import {
   SingleChoiceSegmentedButtonRow,
   Text,
 } from '@expo/ui/jetpack-compose';
+import { height } from '@expo/ui/jetpack-compose/modifiers';
 import { useColorScheme, View } from 'react-native';
 
 import type { SegmentedControlProps } from '@/components/segmented-control';
@@ -17,6 +18,7 @@ export function SeasonTabs<T extends string>({
   onChange,
   accessibilityLabel,
   className,
+  size,
 }: SegmentedControlProps<T>) {
   const scheme = useColorScheme();
   const accent = useThemeColor('--color-accent');
@@ -40,6 +42,7 @@ export function SeasonTabs<T extends string>({
                 inactiveContentColor: foreground,
               }}
               key={option.value}
+              modifiers={size === 'sm' ? [height(36)] : undefined}
               onClick={() => {
                 if (option.value === value) return;
                 haptics.selection();
