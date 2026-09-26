@@ -308,7 +308,7 @@ export default function AnimeSeasonsScreen() {
       <View className="flex-row flex-wrap items-center justify-between gap-2 px-4 pb-3">
         <SeasonTabs
           accessibilityLabel="Format"
-          className={cn(process.env.EXPO_OS !== 'android' && 'w-52')}
+          className="w-52"
           onChange={setFormat}
           options={FORMAT_OPTIONS}
           size="sm"

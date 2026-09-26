@@ -20,7 +20,6 @@ import { AnimatedScrollView } from '@/components/animated-view';
 import { haptics } from '@/lib/haptics';
 import { DURATION, TIMING_EASE_IN_OUT } from '@/lib/motion';
 import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season';
-import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 
 /**
  * The four cours of a year as horizontal pages: a swipe moves to the
@@ -189,9 +188,7 @@ export function SeasonPager({
 
   return (
     <View className="flex-1" onLayout={onLayout}>
-      {size.width === 0 || size.height === 0 ? (
-        <WallSkeleton />
-      ) : (
+      {size.width > 0 && (
         <AnimatedScrollView
           className="flex-1"
           // Where the pager rests, as a prop rather than only a `scrollTo`. The
