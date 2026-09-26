@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoundIconButton } from '@/components/round-icon-button';
 import { useThemeColor } from '@/lib/theme-color';
 
-/** The back button's top: 8 under the status bar, never above 48 (web, short status bars). */
+/** The back button's top: compact on web; native clears the status bar. */
 export function useFloatingBackButtonTop() {
-  return Math.max(48, useSafeAreaInsets().top + 8);
+  const insets = useSafeAreaInsets();
+  if (process.env.EXPO_OS === 'web') return 16;
+  return Math.max(48, insets.top + 8);
 }
 
 /** Top padding for a header that starts under the button, 24 clear of it. */
