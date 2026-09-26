@@ -182,10 +182,14 @@ function FeedScreen() {
       <RefreshableScrollView
         className="flex-1"
         ref={scrollRef}
-        // Web has no header (sidebar owns brand) so it needs top breathing room;
-        // native clears the bottom tab bar, whose height can't be measured.
+        // Web has no header (sidebar owns brand) so it needs top breathing room.
+        // Android's tab bar reserves its own space; iOS's floating bar needs clearance.
         contentContainerClassName={
-          process.env.EXPO_OS === 'web' ? 'pt-6 pb-8' : 'pt-2 pb-24'
+          process.env.EXPO_OS === 'web'
+            ? 'pt-6 pb-8'
+            : process.env.EXPO_OS === 'android'
+              ? 'pt-2 pb-4'
+              : 'pt-2 pb-24'
         }
         onRefresh={refresh}
         tab="index"
