@@ -4,16 +4,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoundIconButton } from '@/components/round-icon-button';
 import { useThemeColor } from '@/lib/theme-color';
 
+export const FLOATING_BACK_BUTTON_SIZE = 40;
+export const FLOATING_BACK_BUTTON_GAP = 8;
+const WEB_BACK_BUTTON_TOP = 16;
+
 /** The back button's top: compact on web; native clears the status bar. */
 export function useFloatingBackButtonTop() {
   const insets = useSafeAreaInsets();
-  if (process.env.EXPO_OS === 'web') return 16;
-  return Math.max(48, insets.top + 8);
+  if (process.env.EXPO_OS === 'web') return WEB_BACK_BUTTON_TOP;
+  return Math.max(
+    FLOATING_BACK_BUTTON_SIZE + FLOATING_BACK_BUTTON_GAP,
+    insets.top + FLOATING_BACK_BUTTON_GAP,
+  );
 }
 
 /** Top padding for a header that starts under the button, 24 clear of it. */
 export function useFloatingBackButtonClearance() {
-  return useFloatingBackButtonTop() + 64;
+  return useFloatingBackButtonTop() + FLOATING_BACK_BUTTON_SIZE + 24;
 }
 
 /** The round back button floating over detail-style screens. */

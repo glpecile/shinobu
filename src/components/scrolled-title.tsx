@@ -18,11 +18,12 @@ import {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedView } from '@/components/animated-view';
-import { useFloatingBackButtonTop } from '@/components/floating-back-button';
+import {
+  FLOATING_BACK_BUTTON_GAP,
+  FLOATING_BACK_BUTTON_SIZE,
+  useFloatingBackButtonTop,
+} from '@/components/floating-back-button';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
-
-/** The 40px `FloatingBackButton` + 8 under its top: the bar's title row centres on that button. */
-const BAR_BELOW_BUTTON_TOP = 48;
 
 /** Where the anchored title sits in the scroll content; zero until measured. */
 interface AnchorFrame {
@@ -173,7 +174,7 @@ function Bar({ title }: { title: string }) {
   // The title row's top is the button's: slid that far down, the row is fully
   // under the bar's edge.
   const rowTop = useFloatingBackButtonTop();
-  const barHeight = rowTop + BAR_BELOW_BUTTON_TOP;
+  const barHeight = rowTop + FLOATING_BACK_BUTTON_SIZE + FLOATING_BACK_BUTTON_GAP;
   const shown = useCovered(false, DURATION.enter, barHeight);
   const risen = useCovered(true, DURATION.toggle, barHeight);
   const barStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
