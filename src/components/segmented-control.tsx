@@ -27,6 +27,8 @@ export interface SegmentedControlProps<T extends string> {
   accessibilityLabel: string;
   size?: 'sm' | 'md';
   tone?: 'default' | 'accent';
+  /** Paint selection in place instead of mounting a measured sliding pill. */
+  animated?: boolean;
   /** Layout only (width, margins) — the control styles itself. */
   className?: string;
   /**
@@ -158,6 +160,7 @@ export function SegmentedControl<T extends string>({
   accessibilityLabel,
   size = 'md',
   tone = 'default',
+  animated = true,
   className,
   progress,
 }: SegmentedControlProps<T>) {
@@ -171,6 +174,7 @@ export function SegmentedControl<T extends string>({
   const labelClassName = labelClass(size);
 
   function onLayout(event: LayoutChangeEvent) {
+    if (!animated) return;
     const next = event.nativeEvent.layout.width;
     if (next !== width) setWidth(next);
   }
@@ -201,7 +205,7 @@ export function SegmentedControl<T extends string>({
           accessibilityState={{ selected: option.value === value }}
           className={cn(
             segmentClassName,
-            !measured && option.value === value &&
+            (!animated || !measured) && option.value === value &&
               (tone === 'accent' ? 'bg-accent-tonal' : 'bg-foreground'),
           )}
           key={option.value}
@@ -210,7 +214,7 @@ export function SegmentedControl<T extends string>({
           <Text
             className={cn(
               labelClassName,
-              !measured && option.value === value
+              (!animated || !measured) && option.value === value
                 ? tone === 'accent' ? 'text-accent-on-tonal' : 'text-background'
                 : 'text-foreground',
             )}
@@ -220,7 +224,7 @@ export function SegmentedControl<T extends string>({
           </Text>
         </PresstableOpacity>
       ))}
-      {measured && (
+      {animated && measured && (
         <SelectionPill
           options={options}
           progress={progress}

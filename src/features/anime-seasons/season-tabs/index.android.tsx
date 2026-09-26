@@ -10,7 +10,7 @@ import { SegmentedControl, type SegmentedControlProps } from '@/components/segme
 import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
-/** Android's pager strip follows the swipe; its format strip keeps native buttons. */
+/** Android uses a stable selected segment for the pager and native format buttons. */
 export function SeasonTabs<T extends string>({
   options,
   value,
@@ -36,15 +36,16 @@ export function SeasonTabs<T extends string>({
   };
 
   // Compose paints the pager row with its Material palette despite the button
-  // colors. The app control keeps the selection red and follows the swipe.
+  // colors. A static selected segment stays red from the first frame without
+  // swapping to a measured pill once layout completes.
   if (progress != null) {
     return (
       <SegmentedControl
         accessibilityLabel={accessibilityLabel}
+        animated={false}
         className={className}
         onChange={onChange}
         options={options}
-        progress={progress}
         size={size}
         tone="accent"
         value={value}
