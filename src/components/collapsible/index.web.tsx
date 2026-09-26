@@ -5,10 +5,7 @@ import { Collapse } from '@/components/collapse';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 
-/**
- * Disclosure for secondary content (how-to instructions, fine print): a
- * chevron header that toggles its children, collapsed by default.
- */
+/** Disclosure for secondary content, collapsed by default. */
 export function Collapsible({
   label,
   children,
