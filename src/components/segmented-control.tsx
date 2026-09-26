@@ -40,6 +40,7 @@ export interface SegmentedControlProps<T extends string> {
 
 /** Inset between the border and the sliding pill, in px. */
 const INSET = 2;
+const BORDER = 1;
 
 const segmentClass = (size: 'sm' | 'md') =>
   cn('flex-1 items-center rounded-full', size === 'sm' ? 'py-1' : 'py-1.5');
@@ -95,7 +96,13 @@ function SelectionPill<T extends string>({
         tone === 'accent' ? 'bg-accent-tonal' : 'bg-foreground',
       )}
       style={[
-        { top: INSET, bottom: INSET, left: INSET, width: segmentWidth, pointerEvents: 'none' },
+        {
+          top: INSET + BORDER,
+          bottom: INSET + BORDER,
+          left: INSET + BORDER,
+          width: segmentWidth,
+          pointerEvents: 'none',
+        },
         progress ? pillFollow : slide(index * segmentWidth),
       ]}
     >
@@ -159,7 +166,7 @@ export function SegmentedControl<T extends string>({
   // an initial slide in from the left on a non-first option.
   const [width, setWidth] = useState(0);
   const measured = width > 0;
-  const segmentWidth = measured ? (width - INSET * 2) / options.length : 0;
+  const segmentWidth = measured ? (width - (INSET + BORDER) * 2) / options.length : 0;
   const segmentClassName = segmentClass(size);
   const labelClassName = labelClass(size);
 
