@@ -773,7 +773,7 @@ export function DiaryList({
         }
       />
       <ScrollToTopFab
-        className="ios:bottom-28"
+        className="ios:bottom-24"
         onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
         visible={showScrollTop}
       />

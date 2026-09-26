@@ -653,7 +653,7 @@ export default function SearchScreen() {
               )}
             </SectionEnter>
             <Fab
-              className="absolute bottom-6 ios:bottom-28 right-6"
+              className="absolute bottom-6 right-6"
               hint="Chooses what to search for"
               icon={scope.icon}
               label={`Searching ${scope.label}`}
