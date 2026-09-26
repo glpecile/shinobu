@@ -1,5 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 
 import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
@@ -16,6 +17,7 @@ import { NotificationsSettingsSection } from '@/features/notifications/notificat
 import { ProviderCardsSection } from '@/features/trackers/provider-cards-section';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
@@ -136,6 +138,30 @@ export default function ConnectScreen() {
             <ConnectTmdbTokenSection />
             <NotificationsSettingsSection />
             <HiddenItemsSection />
+            <View>
+              <Eyebrow className="mb-3">About</Eyebrow>
+              <View className={cn(CARD_SHELL, 'flex-row items-center justify-between gap-3')}>
+                <View className="flex-1">
+                  <Text className="text-foreground font-sans-semibold text-base">
+                    Shinobu
+                  </Text>
+                  <Text className="text-muted font-sans text-xs mt-0.5">
+                    Version {Constants.expoConfig?.version ?? 'unknown'}
+                  </Text>
+                </View>
+                {process.env.EXPO_OS !== 'web' && (
+                  <Button
+                    icon={<Button.Icon name="open-outline" />}
+                    label="View releases"
+                    onPress={() => {
+                      void openExternalUrl('https://github.com/glpecile/shinobu/releases');
+                    }}
+                    size="sm"
+                    variant="quiet"
+                  />
+                )}
+              </View>
+            </View>
           </View>
         </RefreshableScrollView>
       </KeyboardAvoidingView>
