@@ -123,5 +123,6 @@ describe('findLibraryEntry', () => {
       ],
     });
     expect(findLibraryEntry(seasons, item('s3', 'ANIME', { simkl: 3, tmdb: 42 }))).toBeNull();
+    expect(findLibraryEntry(seasons, item('s3', 'ANIME', { tmdb: 42 }))).toBeNull();
   });
 });

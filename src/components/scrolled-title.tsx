@@ -190,7 +190,7 @@ function Bar({ title }: { title: string }) {
       style={[{ pointerEvents: 'none', height: barHeight }, barStyle]}
     >
       <AnimatedView className="h-10 justify-center" style={titleStyle}>
-        <Text className="font-display text-lg text-foreground" numberOfLines={1}>
+        <Text className="font-display text-lg web:text-sm text-foreground" numberOfLines={1}>
           {title}
         </Text>
       </AnimatedView>

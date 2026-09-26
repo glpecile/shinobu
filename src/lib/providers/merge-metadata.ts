@@ -53,7 +53,9 @@ export function mergeCatalogueMetadata(
  * The TMDB-first inverse of `mergeCatalogueMetadata` (plan 0014): `primary`
  * (the TMDB catalogue record) WINS for pure *text* display fields when it has
  * them — overview, genres, rating, runtime, year, release dates — because TMDB
- * is the source of truth for metadata. Fill-only for `totalEpisodes` (provider
+ * is the source of truth for metadata. AniList series entries are the exception:
+ * each is a separate cour, while the TMDB record covers the whole show, so only
+ * missing artwork and external identity are merged there. Fill-only for `totalEpisodes` (provider
  * totals drive the progress UI and must agree with `currentProgress`), and
  * identity/user state (id, type, progress, lastUpdated) plus external-id
  * precedence stay exactly as in `mergeCatalogueMetadata`. A null primary is
@@ -75,6 +77,11 @@ export function applyPrimaryMetadata(
 ): NormalizedMediaItem {
   if (primary == null) return item;
 
+  // AniList's TV entries are individual cours; TMDB's match is the entire
+  // series. Its year, dates, synopsis and episode count do not describe this
+  // entry, but its identity and missing artwork still help the detail page.
+  const isAnimeCour = item.type === 'ANIME' && item.isFilm !== true;
+
   const hasBackdrop = item.backdropImage != null && item.backdropImage !== '';
   const primaryBackdrop =
     primary.backdropImage != null && primary.backdropImage !== ''
@@ -87,28 +94,28 @@ export function applyPrimaryMetadata(
     ...(!hasBackdrop && primaryBackdrop != null
       ? { backdropImage: primaryBackdrop }
       : {}),
-    ...(primary.overview != null ? { overview: primary.overview } : {}),
-    ...(primary.genres != null && primary.genres.length > 0
+    ...(!isAnimeCour && primary.overview != null ? { overview: primary.overview } : {}),
+    ...(!isAnimeCour && primary.genres != null && primary.genres.length > 0
       ? { genres: primary.genres }
       : {}),
-    ...(primary.rating != null ? { rating: primary.rating } : {}),
-    ...(primary.runtime != null ? { runtime: primary.runtime } : {}),
-    ...(primary.year != null ? { year: primary.year } : {}),
+    ...(!isAnimeCour && primary.rating != null ? { rating: primary.rating } : {}),
+    ...(!isAnimeCour && primary.runtime != null ? { runtime: primary.runtime } : {}),
+    ...(!isAnimeCour && primary.year != null ? { year: primary.year } : {}),
     // Per-key, item winning: AniList's native title is the canonical one for
     // anime, and TMDB's English/original names fill what the provider lacks.
-    ...(primary.titles != null || item.titles != null
+    ...(!isAnimeCour && (primary.titles != null || item.titles != null)
       ? { titles: { ...primary.titles, ...item.titles } }
       : {}),
     // Catalogue metadata, not user state — TMDB wins, same as year/runtime.
     // Load-bearing beyond display: the log button refuses an unreleased film.
-    ...(primary.releaseDate != null ? { releaseDate: primary.releaseDate } : {}),
+    ...(!isAnimeCour && primary.releaseDate != null ? { releaseDate: primary.releaseDate } : {}),
     // Whole-object override, not a per-kind merge: the calendar always arrives
     // from one TMDB read, so a provider-sourced half and a TMDB-sourced half
     // could only disagree, never combine.
-    ...(primary.releaseCalendar != null
+    ...(!isAnimeCour && primary.releaseCalendar != null
       ? { releaseCalendar: primary.releaseCalendar }
       : {}),
-    ...(item.totalEpisodes == null && primary.totalEpisodes != null
+    ...(!isAnimeCour && item.totalEpisodes == null && primary.totalEpisodes != null
       ? { totalEpisodes: primary.totalEpisodes }
       : {}),
     externalIds: { ...primary.externalIds, ...item.externalIds },

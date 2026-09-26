@@ -191,7 +191,10 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   // same line Trakt-sourced pages carry.
   const simklEntry = useSimklLibraryEntryQuery({
     item,
-    enabled: item.type === 'TV' && connected.includes('simkl'),
+    enabled:
+      (item.type === 'TV' ||
+        (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
+      connected.includes('simkl'),
   });
   const accent = useThemeColor('--color-accent');
 
@@ -222,7 +225,11 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
       }),
     );
     label = `Watched${count > 1 ? ` (${count})` : ''} · ${dates.join(' · ')}`;
+  } else if (item.type === 'ANIME' && anilistEntry.data?.entry != null) {
+    label = anilistWatchedLabel(anilistEntry.data.entry, item);
   } else if (
+    (item.type === 'TV' ||
+      (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
     simklEntry.data != null &&
     simklEntry.data.item.currentProgress > 0
   ) {
@@ -566,16 +573,10 @@ function DetailsScreen() {
   // progress where it means something (series, manga, or a film already logged).
   const showProgress =
     (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
-  // Anime detail tiles may carry a series-wide total from TMDB while AniList's
-  // entry is only the current cour. Keep the larger logged count for this tile;
-  // the episode checkmarks below still use the cour's own AniList progress.
+  // AniList progress belongs to this cour, not the whole TMDB series.
   const displayedProgress =
     shown.type === 'ANIME' && shown.isFilm !== true
-      ? Math.max(
-          shown.currentProgress,
-          anilistEntry.data?.entry?.progress ?? 0,
-          simklEntry.data?.item.currentProgress ?? 0,
-        )
+      ? anilistEntry.data?.entry?.progress ?? shown.currentProgress
       : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
         simklEntry.data?.item.currentProgress ??
         shown.currentProgress;

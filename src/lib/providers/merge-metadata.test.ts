@@ -150,6 +150,35 @@ describe('applyPrimaryMetadata', () => {
     expect(merged.externalIds).toEqual({ trakt: 1, tmdb: 94605, imdb: 'tt11126994' });
   });
 
+  test('keeps an AniList cour distinct from its TMDB series', () => {
+    const cour: NormalizedMediaItem = {
+      ...item,
+      id: 'anilist-3',
+      title: 'The Apothecary Diaries Season 3',
+      type: 'ANIME',
+      year: 2026,
+      currentProgress: 0,
+      totalEpisodes: undefined,
+      externalIds: { anilist: 3 },
+    };
+    const merged = applyPrimaryMetadata(cour, {
+      ...item,
+      id: 'tmdb-tv-1',
+      year: 2023,
+      releaseDate: '2023-10-22',
+      totalEpisodes: 60,
+      externalIds: { tmdb: 1 },
+    });
+
+    expect(merged.title).toBe(cour.title);
+    expect(merged.year).toBe(2026);
+    expect(merged.overview).toBe(cour.overview);
+    expect(merged.totalEpisodes).toBeUndefined();
+    expect(merged.releaseDate).toBeUndefined();
+    expect(merged.currentProgress).toBe(0);
+    expect(merged.externalIds).toEqual({ anilist: 3, tmdb: 1 });
+  });
+
   test('titles merge per key with the item winning', () => {
     const merged = applyPrimaryMetadata(
       { ...item, titles: { romaji: 'Arcane', native: 'アーケイン' } },

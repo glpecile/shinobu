@@ -134,10 +134,10 @@ export function findLibraryEntry(
   const filmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const simklId = item.externalIds.simkl;
-  // Every season of an anime shares the show's TMDB id, so an anime series
-  // that names its own Simkl entry never falls back to a sibling's.
+  // Every season of an anime shares the show's TMDB id. Only a Simkl id
+  // identifies the same cour; otherwise a sibling's progress leaks through.
   const tmdbId =
-    item.type === 'ANIME' && !filmLike && simklId != null
+    item.type === 'ANIME' && !filmLike
       ? undefined
       : item.externalIds.tmdb;
   // Anime is in both lists: Simkl files anime films under its anime catalog,
