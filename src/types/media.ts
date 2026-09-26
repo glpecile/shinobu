@@ -166,6 +166,8 @@ export interface NormalizedPerson {
   /** Full-resolution headshot for the zoom viewer; '' when unavailable. */
   headshotFull: string;
   biography?: string;
+  /** AniList biography with its Markdown links intact; biography stays plain text. */
+  biographyMarkdown?: string;
   /** Bare calendar date (YYYY-MM-DD) as TMDB sends it — display only. */
   birthday?: string;
   /** Bare calendar date (YYYY-MM-DD) as TMDB sends it — display only. */

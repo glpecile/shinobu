@@ -16,9 +16,10 @@ import { anilistAuthedRequest, anilistRequest } from './http';
 import type { AnimeFormatFilter, AnimeSeason } from './season';
 import {
   normalizeAniListMedia,
-  stripHtml,
   normalizeCurrentAnimeEntry,
   normalizeListActivity,
+  stripHtml,
+  stripHtmlMarkup,
   type AniListCurrentEntry,
   type AniListListActivity,
   type AniListListEntry,
@@ -499,6 +500,8 @@ export function getAniListStaff(
     const deathday = calendarDate(staff.dateOfDeath);
     const biography =
       staff.description == null ? '' : stripHtml(staff.description);
+    const biographyMarkdown =
+      staff.description == null ? '' : stripHtmlMarkup(staff.description);
 
     const voiceRow = staffCreditRow(
       ACTING_ROLE,
@@ -529,6 +532,7 @@ export function getAniListStaff(
         headshot: image,
         headshotFull: image,
         ...(biography !== '' ? { biography } : {}),
+        ...(biographyMarkdown !== biography ? { biographyMarkdown } : {}),
         ...(birthday != null ? { birthday } : {}),
         ...(deathday != null ? { deathday } : {}),
         ...(staff.homeTown != null ? { birthplace: staff.homeTown } : {}),

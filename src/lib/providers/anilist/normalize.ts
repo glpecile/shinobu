@@ -78,15 +78,18 @@ export function humanizeEnum(value: string): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-/** AniList descriptions carry HTML line breaks/markup even as "plain text". */
-export function stripHtml(html: string): string {
+/** Retain AniList's Markdown links while removing its HTML-like formatting. */
+export function stripHtmlMarkup(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
-    // Descriptions are markdown too — a staff bio is often nothing but links.
-    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1')
     .replace(/<[^>]+>/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+/** Plain-text variant for overviews and search/SEO descriptions. */
+export function stripHtml(html: string): string {
+  return stripHtmlMarkup(html).replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1');
 }
 
 /** Inverse of the `anilist-<id>` minting below: the AniList id behind an item id, or null. */

@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 
 import { ExpandableTextSkeleton } from './skeleton';
+import { LinkedText } from './linked-text';
 
 /** `text-base` (16) × `leading-relaxed` (1.625) — keep in sync with the class. */
 const LINE_HEIGHT = 26;
@@ -21,11 +22,13 @@ const LINE_HEIGHT = 26;
  */
 export function ExpandableText({
   text,
+  linkedText,
   title = 'Overview',
   lines = 2,
   className,
 }: {
   text: string;
+  linkedText?: string;
   title?: string;
   lines?: number;
   /** Layout only. */
@@ -70,7 +73,7 @@ export function ExpandableText({
           className="text-foreground/90 font-sans text-base leading-relaxed"
           onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
         >
-          {text}
+          {linkedText == null ? text : <LinkedText text={linkedText} />}
         </Text>
       </AnimatedView>
     </PressableCard>

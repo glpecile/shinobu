@@ -75,7 +75,12 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
               </View>
             </View>
             {person.biography != null && (
-              <ExpandableText lines={4} text={person.biography} title="Biography" />
+              <ExpandableText
+                lines={4}
+                linkedText={person.biographyMarkdown}
+                text={person.biography}
+                title="Biography"
+              />
             )}
           </View>
         }
