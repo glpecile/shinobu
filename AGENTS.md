@@ -18,6 +18,8 @@ PR. Reuse the repo, then the platform, then an installed dependency. A bug fix
 is one guard where every caller routes through. An unrelated bug you notice is
 a follow-up in your summary.
 
+PR titles follow Conventional Commits, e.g. `fix(person): make biography links tappable`.
+
 ## Tests
 
 Write as few tests as cover the change. Add tests only where the repo already
