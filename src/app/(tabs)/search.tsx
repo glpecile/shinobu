@@ -573,7 +573,7 @@ export default function SearchScreen() {
           stale dim below. */}
       {/* Inset before keyboard avoidance so the tab bar and keyboard overlap
           aren't added together. Android's tab host already insets content. */}
-      <SafeAreaView edges={{ bottom: process.env.EXPO_OS === 'ios' }}>
+      <SafeAreaView edges={{ bottom: process.env.EXPO_OS === 'ios' }} style={{ flex: 1 }}>
         <KeyboardAvoidingView automaticOffset behavior="padding" className="flex-1">
           {/* The Fab anchors to this frame: an absolute child of the padded view
               sits on its padding box, under the keyboard. */}
