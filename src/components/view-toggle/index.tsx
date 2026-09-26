@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
-/** Grid ⇄ list. */
+/** Grid ⇄ list for web. Native platforms use their own controls. */
 export function ViewToggle({
   view,
   onChange,

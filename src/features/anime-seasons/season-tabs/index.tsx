@@ -5,9 +5,9 @@ import type { SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 
 /**
- * The seasons explorer's tab strips as the platform's own control: a SwiftUI
- * segmented `Picker` on iOS, a Material 3 segmented button row on Android.
- * Web keeps `SegmentedControl`. The native control can't follow the pager's
+ * The seasons explorer's tab strips as SwiftUI's segmented `Picker`. Android
+ * has its own themed Material 3 row, and web keeps `SegmentedControl`.
+ * The native control can't follow the pager's
  * `progress` mid-swipe, so it moves once the swipe settles and `value` changes.
  */
 export function SeasonTabs<T extends string>({

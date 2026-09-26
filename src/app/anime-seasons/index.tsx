@@ -305,16 +305,15 @@ export default function AnimeSeasonsScreen() {
         <Text className="text-2xl font-display text-foreground">Anime Seasons</Text>
       </View>
       <SeasonPicker onChange={setWindow} progress={progress} window={window} />
-      <View className="flex-row items-center gap-3 px-4 pb-3">
+      <View className="flex-row flex-wrap items-center justify-between gap-2 px-4 pb-3">
         <SeasonTabs
           accessibilityLabel="Format"
-          className="w-52"
+          className={cn(process.env.EXPO_OS !== 'android' && 'w-52')}
           onChange={setFormat}
           options={FORMAT_OPTIONS}
           size="sm"
           value={format}
         />
-        <View className="flex-1" />
         <ViewToggle onChange={setWatchlistView} view={view} />
       </View>
       {/* Every format is cour-scoped, films included: the pager is the only
