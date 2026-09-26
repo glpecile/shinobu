@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, mock, test } from 'bun:test';
 
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
@@ -33,8 +33,28 @@ mock.module('expo-crypto', () => ({
   CryptoEncoding: { BASE64: 'base64' },
   digestStringAsync: async () => 'unused',
 }));
-const { fetchWatchlistInputs, refreshWatchlistInputs, watchlistReadProviders } =
-  await import('./watchlist');
+const {
+  fetchWatchlistInputs,
+  refreshWatchlistInputs,
+  subscribeWatchlistInputs,
+  watchlistQueryKeys,
+  watchlistReadProviders,
+} = await import('./watchlist');
+
+test('cache-only watchlist listeners ignore unrelated query creation but observe changes to gathered inputs', () => {
+  const client = new QueryClient();
+  let notifications = 0;
+  const unsubscribe = subscribeWatchlistInputs(client, () => notifications++);
+
+  client.getQueryCache().build(client, { queryKey: ['anilist', 'viewer'] });
+  expect(notifications).toBe(0);
+
+  client.setQueryData(watchlistQueryKeys.inputs(), { inputs: [], errors: [], incomplete: [] });
+  expect(notifications).toBe(1);
+  client.removeQueries({ queryKey: watchlistQueryKeys.inputs() });
+  expect(notifications).toBe(2);
+  unsubscribe();
+});
 // The Letterboxd leg is keyed by username. Written through the session layer's
 // own setter rather than by mocking `@/state/session/letterboxd`: `mock.module`
 // is process-wide and bun shares one process across files, so stubbing that

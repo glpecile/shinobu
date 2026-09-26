@@ -7,7 +7,7 @@ priority: P3
 
 A source-only audit against the installed `@expo/ui` 57.0.19, following
 `018-done-p3-animation-opportunities.md`. Items are ordered by usefulness and
-confidence. Item 4 was tried on iOS and reverted after device validation;
+confidence. Item 4 was tried on iOS and rejected after device validation;
 the other items remain unimplemented. Paths below start at `src/` unless
 otherwise stated.
 
@@ -79,21 +79,21 @@ Keep the web implementation initially. Its role workaround is documented in
 `docs/solutions/web-pressto-accessibility-role-kills-onpress.md`; adding
 `role="checkbox"` to its existing pressable would break it.
 
-## 4. Use native disclosures for connection instructions
+## 4. Native connection disclosures — rejected
 
-- [ ] Give `components/collapsible.tsx` a native implementation using
-  `Host` and `Collapsible` from `@expo/ui`.
+Do not replace `components/collapsible.tsx` with Expo UI `Host` and
+`Collapsible` for the connection instructions. Keep the shared React Native
+disclosure on iOS, Android and web.
 
 The first implementation put the RN instruction body in an `RNHostView`
 with `matchContents` inside Expo UI's native `Collapsible` and a vertically
 content-sized `Host`. On iOS, the collapsed header appeared, but expanding
 Trakt produced a tall blank region with clipped, horizontally displaced text;
 the instructions were unusable inside the setup sheet. That implementation
-was reverted in PR #159. Do not repeat this `RNHostView` layout without a
-device-tested fix. A future attempt must preserve usable long instructions,
+was reverted in PR #159. This approach is rejected, not a pending implementation
+check. Any different proposal would need to demonstrate usable long instructions,
 link presses, light/dark colors, larger text and spoken disclosure state on
-both native platforms, as well as existing web behavior. The current shared
-React Native disclosure remains in `components/collapsible.tsx`.
+both native platforms, as well as existing web behavior.
 
 Do not extend this change to season accordions or virtualized diary groups;
 those headers carry progress, actions and list-specific behavior.

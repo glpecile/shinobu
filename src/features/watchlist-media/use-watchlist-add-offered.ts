@@ -3,7 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { watchlistSourcesFor } from '@/features/watchlist/use-is-watchlisted';
-import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
+import {
+  subscribeWatchlistInputs,
+  watchlistQueryKeys,
+  type WatchlistInputs,
+} from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -36,12 +40,11 @@ export function useWatchlistAddStillOffered(
   item: NormalizedMediaItem | undefined,
 ): boolean {
   const queryClient = useQueryClient();
-  const cache = queryClient.getQueryCache();
   const connected = useConnectedProviders();
   const platform = currentPlatform();
 
   return useSyncExternalStore(
-    (onStoreChange) => cache.subscribe(() => onStoreChange()),
+    (onStoreChange) => subscribeWatchlistInputs(queryClient, onStoreChange),
     () => {
       if (item == null) return false;
       const data = queryClient.getQueryData<WatchlistInputs>(
