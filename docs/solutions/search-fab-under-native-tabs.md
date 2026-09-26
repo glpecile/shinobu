@@ -7,7 +7,10 @@ issue. Changing the tab's tint or selected icon color did not move the FAB.
 Native tabs draw iOS content beneath the tab bar. A list can receive automatic
 scroll insets, but an absolutely positioned sibling does not. Wrap the search
 content in `SafeAreaView` from `react-native-screens/experimental` with the
-bottom edge enabled on iOS. Android's native tab host already insets content.
+bottom edge enabled on iOS. Give the wrapper `style={{ flex: 1 }}`: without it,
+the wrapper shrinks to the search header's height on web, leaving the empty
+state at the top and the FAB beside it instead of in the bottom corner. Android's
+native tab host already insets content.
 
 Place the safe-area wrapper outside `KeyboardAvoidingView`. Putting it inside
 adds the tab-bar padding above the keyboard too. Set `automaticOffset` on the
