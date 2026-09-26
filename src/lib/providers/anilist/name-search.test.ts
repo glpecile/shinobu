@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
 import type { HttpFetch } from '@/lib/http/types';
-import { searchAniListStaff, searchAniListStudio } from './reads';
+import { getAniListStaff, searchAniListStaff, searchAniListStudio } from './reads';
 
 function mockFetch(response: unknown): HttpFetch {
   return async () =>
@@ -18,6 +18,26 @@ const DEPS = {
   fetch: mockFetch({}),
   tokens: { get: () => null, set: () => {}, clear: () => {} },
 };
+
+test('staff biographies retain link targets for display and plain text for metadata', async () => {
+  const fetch = mockFetch({
+    data: {
+      Staff: {
+        id: 19,
+        name: { full: 'Baku Kinoshita' },
+        description: '[Website](https://example.com) | [Twitter](https://x.com/baku)<br><br>An animator.',
+      },
+    },
+  });
+
+  const { person } = await Effect.runPromise(
+    getAniListStaff({ ...DEPS, fetch }, { id: 19 }),
+  );
+  expect(person.biography).toBe('Website | Twitter\n\nAn animator.');
+  expect(person.biographyMarkdown).toBe(
+    '[Website](https://example.com) | [Twitter](https://x.com/baku)\n\nAn animator.',
+  );
+});
 
 describe('searchAniListStaff', () => {
   test('normalizes a page of hits to { id, name }', async () => {

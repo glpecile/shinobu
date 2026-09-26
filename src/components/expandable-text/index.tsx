@@ -8,17 +8,20 @@ import { cn } from '@/lib/cn';
 import { DISCLOSURE_LAYOUT } from '@/lib/motion';
 
 import { ExpandableTextSkeleton } from './skeleton';
+import { LinkedText } from './linked-text';
 
 const BODY = 'text-foreground/90 font-sans text-base leading-relaxed';
 
 /** A titled overview box; the whole card toggles between clamped and full text. */
 export function ExpandableText({
   text,
+  linkedText,
   title = 'Overview',
   lines = 2,
   className,
 }: {
   text: string;
+  linkedText?: string;
   title?: string;
   lines?: number;
   /** Layout only. */
@@ -51,7 +54,7 @@ export function ExpandableText({
         clamped one's width (an absolute child ignores the card's padding). */}
       <View>
         <Text className={BODY} numberOfLines={expanded ? undefined : lines}>
-          {text}
+          {linkedText == null ? text : <LinkedText text={linkedText} />}
         </Text>
         {/* iOS lays a paragraph out to fit whatever box it's in, so the clamped
           copy can't say how long the text really is. This one is unconstrained,
@@ -68,7 +71,7 @@ export function ExpandableText({
               setFullLines(event.nativeEvent.lines.length)
             }
           >
-            {text}
+            {linkedText == null ? text : <LinkedText text={linkedText} />}
           </Text>
         </View>
       </View>
