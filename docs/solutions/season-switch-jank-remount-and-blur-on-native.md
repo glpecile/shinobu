@@ -44,12 +44,12 @@ No easing or duration change fixes either.
   variants by directory, per the file conventions.
 - **One actions sheet** at the screen, passed down as `onItemActions`, instead
   of one per mounted wall.
-- **The strip's pill rides the scroll.** The pager is a Reanimated
+- **The web strip's pill rides the scroll.** The pager is a Reanimated
   `Animated.ScrollView` whose `onScroll` worklet writes `offset / width` into a
-  shared value on the UI thread; `SegmentedControl` takes it as `progress` and
-  positions the pill from it with `useAnimatedStyle` instead of its own CSS
-  transition. The pill is under the finger mid-swipe and moves with the page
-  when a tab tap scrolls there, on every platform, with no JS on the gesture.
+  shared value on the UI thread. The web `SegmentedControl` takes it as
+  `progress` and positions the pill with `useAnimatedStyle`. Native uses
+  SwiftUI's segmented `Picker` on iOS and Material 3's single-choice segmented
+  buttons on Android; their selection updates when the swipe settles.
 
 ## Web: settle only at rest
 
@@ -94,11 +94,11 @@ back to the page it started on (a `scrollLeft = 500` read back as `0`). Snap
 is restored in the timing callback, once the offset sits on a page boundary.
 A tap mid-flight retargets from the current offset.
 
-## The pill's text colour: a clipped copy, not a fade
+## The web pill's text colour: a clipped copy, not a fade
 
 Fading each label between foreground and background can only be keyed to the
 settled `value`, so it lagged the pill during a swipe and jumped at the end.
-`SegmentedControl` now renders the pill as an `overflow-hidden` copy of the
+The web `SegmentedControl` renders the pill as an `overflow-hidden` copy of the
 whole label row in inverted colours, counter-translated by the same amount
 the pill moves, so the inverted text *is* the pill and tracks it to the pixel
 at every position. Both the pill and the copy read the same `progress` shared

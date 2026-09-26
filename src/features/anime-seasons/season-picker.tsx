@@ -38,7 +38,7 @@ export function SeasonPicker({
 }: {
   window: AnimeSeasonWindow;
   onChange: (next: AnimeSeasonWindow) => void;
-  /** The pager's position, so the cour pill rides the swipe. */
+  /** The pager's position for the web season indicator. */
   progress: SharedValue<number>;
 }) {
   const foreground = useThemeColor('--color-foreground');

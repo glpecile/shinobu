@@ -180,6 +180,10 @@ instead. The 忍 kanji uses the OS font on purpose.
 Compose every `className` with `cn()` from `@/lib/cn`, never a template literal,
 so a caller's class replaces the default instead of competing with it.
 
+Prefer Uniwind's `ios:`, `android:`, and `web:` variants for platform-specific
+styling. Use platform files only when the implementation differs or a native-only
+import requires them; don't split a component just to vary its classes.
+
 Buttons are `components/button`, never a hand-built pressable and `Text`. Use
 its `variant`, `size`, and `align`, and keep `className` to layout. An action
 that awaits passes `loading`. A label that changes from user state uses

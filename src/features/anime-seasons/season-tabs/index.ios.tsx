@@ -1,15 +1,12 @@
-import NativeSegmentedControl from '@expo/ui/community/segmented-control';
+import { Host } from '@expo/ui';
+import { Picker, Text } from '@expo/ui/swift-ui';
+import { accessibilityLabel as nativeAccessibilityLabel, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { useColorScheme, View } from 'react-native';
 
 import type { SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 
-/**
- * The seasons explorer's tab strips as SwiftUI's segmented `Picker`. Other
- * platforms share the app's animated segmented control.
- * The native control can't follow the pager's
- * `progress` mid-swipe, so it moves once the swipe settles and `value` changes.
- */
+/** SwiftUI owns the selection appearance and its native transition. */
 export function SeasonTabs<T extends string>({
   options,
   value,
@@ -19,18 +16,31 @@ export function SeasonTabs<T extends string>({
 }: SegmentedControlProps<T>) {
   const scheme = useColorScheme();
   return (
-    <View accessibilityLabel={accessibilityLabel} className={className}>
-      <NativeSegmentedControl
-        {...(scheme === 'light' || scheme === 'dark' ? { appearance: scheme } : {})}
-        onChange={({ nativeEvent }) => {
-          const next = options[nativeEvent.selectedSegmentIndex];
-          if (next == null || next.value === value) return;
-          haptics.selection();
-          onChange(next.value);
-        }}
-        selectedIndex={options.findIndex((option) => option.value === value)}
-        values={options.map((option) => option.label)}
-      />
+    <View className={className}>
+      <Host colorScheme={scheme} style={{ height: 36, width: '100%' }}>
+        <Picker
+          label={accessibilityLabel}
+          modifiers={[pickerStyle('segmented')]}
+          onSelectionChange={(next) => {
+            if (next === value) return;
+            haptics.selection();
+            onChange(next as T);
+          }}
+          selection={value}
+        >
+          {options.map((option) => (
+            <Text
+              key={option.value}
+              modifiers={[
+                tag(option.value),
+                nativeAccessibilityLabel(option.accessibilityLabel ?? option.label),
+              ]}
+            >
+              {option.label}
+            </Text>
+          ))}
+        </Picker>
+      </Host>
     </View>
   );
 }
