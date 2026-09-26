@@ -40,9 +40,9 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  *
  * Controlled: `season` comes from the URL, `onSettle` reports where a swipe
  * landed, and `progress` is the offset as a continuous cour index, written on
- * the UI thread every scroll frame so the season strip's pill rides the
- * finger. Native reports a settle through the momentum-end event.
- * react-native-web never fires it, but web only ever moves by tap, so there
+ * the UI thread every scroll frame for the web season indicator. Native
+ * controls update their selection after the swipe settles via the
+ * momentum-end event. react-native-web never fires it, but web only moves by tap, so there
  * the tap's own animation reports where it came to rest. Pages get explicit
  * sizes from the measured pager because a horizontal scroll view does not
  * stretch its children's height on every platform.

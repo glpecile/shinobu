@@ -1,51 +1,48 @@
+import { Host } from '@expo/ui';
 import {
-  Host,
   SegmentedButton,
   SingleChoiceSegmentedButtonRow,
   Text,
 } from '@expo/ui/jetpack-compose';
-import { View } from 'react-native';
+import { height } from '@expo/ui/jetpack-compose/modifiers';
+import { useColorScheme, View } from 'react-native';
 
 import type { SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
-/**
- * The seasons explorer's tab strips as Material 3's segmented button row,
- * built from the Compose primitives because `@expo/ui`'s community wrapper
- * only themes the selected fill. A surface fill and native check mark indicate
- * selection without competing with the posters. Like iOS, it moves once
- * the pager settles rather than following `progress`.
- */
+/** Material 3 owns the selected shape, colours, and press feedback. */
 export function SeasonTabs<T extends string>({
   options,
   value,
   onChange,
   accessibilityLabel,
-  size = 'md',
   className,
+  size,
 }: SegmentedControlProps<T>) {
-  const foreground = useThemeColor('--color-foreground');
+  const scheme = useColorScheme();
+  const accent = useThemeColor('--color-accent');
+  const active = useThemeColor('--color-accent-tonal');
+  const activeText = useThemeColor('--color-accent-on-tonal');
   const background = useThemeColor('--color-background');
-  const surface = useThemeColor('--color-surface');
   const border = useThemeColor('--color-border');
-  const colors = {
-    activeContainerColor: surface,
-    activeContentColor: foreground,
-    activeBorderColor: border,
-    inactiveContainerColor: background,
-    inactiveContentColor: foreground,
-    inactiveBorderColor: border,
-  };
-
+  const foreground = useThemeColor('--color-foreground');
   return (
     <View accessibilityLabel={accessibilityLabel} className={className}>
-      <Host matchContents={size === 'sm' ? true : { vertical: true }}>
+      <Host colorScheme={scheme} matchContents={{ vertical: true }} seedColor={accent} style={{ width: '100%' }}>
         <SingleChoiceSegmentedButtonRow>
           {options.map((option) => (
             <SegmentedButton
-              colors={colors}
+              colors={{
+                activeBorderColor: border,
+                activeContainerColor: active,
+                activeContentColor: activeText,
+                inactiveBorderColor: border,
+                inactiveContainerColor: background,
+                inactiveContentColor: foreground,
+              }}
               key={option.value}
+              modifiers={size === 'sm' ? [height(36)] : undefined}
               onClick={() => {
                 if (option.value === value) return;
                 haptics.selection();
@@ -54,12 +51,7 @@ export function SeasonTabs<T extends string>({
               selected={option.value === value}
             >
               <SegmentedButton.Label>
-                <Text
-                  maxLines={1}
-                  style={{ typography: size === 'sm' ? 'labelMedium' : 'labelLarge' }}
-                >
-                  {option.label}
-                </Text>
+                <Text>{option.label}</Text>
               </SegmentedButton.Label>
             </SegmentedButton>
           ))}

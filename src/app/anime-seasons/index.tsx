@@ -56,7 +56,7 @@ function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
 const FORMAT_OPTIONS = [
   { value: 'ALL', label: 'All' },
   { value: 'TV', label: 'TV', accessibilityLabel: 'TV series' },
-  { value: 'MOVIE', label: 'Movies' },
+  { value: 'MOVIE', label: 'Films' },
 ] as const satisfies readonly { value: AnimeFormatFilter; label: string; accessibilityLabel?: string }[];
 
 /**
@@ -250,9 +250,8 @@ export default function AnimeSeasonsScreen() {
   const format = parseAnimeFormatFilter(params.format);
   const view = useWatchlistView();
   const { openActions, sheetProps } = useCardActions();
-  // Where the pager is, as a continuous cour index: the pager writes it on
-  // every scroll frame and the season strip's pill reads it, so the pill rides
-  // the finger instead of jumping once the swipe settles.
+  // The web season strip follows the pager's continuous cour index; native
+  // controls let their platform animate the settled selection.
   const progress = useSharedValue(ANIME_SEASONS.indexOf(window.season));
   // The wall in front of the user takes the new format immediately, and the
   // boundaries below are *keyed* by it as they already were by year: a router
@@ -308,7 +307,7 @@ export default function AnimeSeasonsScreen() {
       <View className="flex-row flex-wrap items-center justify-between gap-2 px-4 pb-3">
         <SeasonTabs
           accessibilityLabel="Format"
-          className={cn(process.env.EXPO_OS !== 'android' && 'w-52')}
+          className="w-52 android:w-64"
           onChange={setFormat}
           options={FORMAT_OPTIONS}
           size="sm"

@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Text, View, type LayoutChangeEvent } from 'react-native';
+import { Text, View } from 'react-native';
 import {
   useAnimatedStyle,
   useReducedMotion,
@@ -26,6 +25,7 @@ export interface SegmentedControlProps<T extends string> {
   /** Names the group for assistive tech ("Season", "Format"). */
   accessibilityLabel: string;
   size?: 'sm' | 'md';
+  tone?: 'default' | 'accent';
   /** Layout only (width, margins) — the control styles itself. */
   className?: string;
   /**
@@ -37,48 +37,38 @@ export interface SegmentedControlProps<T extends string> {
   progress?: SharedValue<number>;
 }
 
-/** Inset between the border and the sliding pill, in px. */
-const INSET = 2;
-
 const segmentClass = (size: 'sm' | 'md') =>
   cn('flex-1 items-center rounded-full', size === 'sm' ? 'py-1' : 'py-1.5');
 const labelClass = (size: 'sm' | 'md') =>
   cn('font-sans-semibold', size === 'sm' ? 'text-xs' : 'text-sm');
 
 /**
- * The sliding pill and its inverted copy of the label row, mounted only once
- * the control has been measured — and a component of its own *because* of
- * that. Reanimated computes an animated style's initial value on the hook's
- * first render and never recomputes it, so hooks living in the parent run
- * first on the pre-measurement render, where the segment width is still 0:
- * the pill paints on the first segment for a frame before the post-paint
- * update moves it, and reloading Summer flashed Winter
- * (docs/solutions/reanimated-animated-style-initial-value-is-first-render.md).
- * Mounted here, the first run sees the real width and the pill's first paint
- * is its resting place.
+ * Percentage translations are relative to each moving view: one segment for
+ * the pill, the whole row for its counter-moving text. Neither needs a layout
+ * measurement, so the same pill is visible from the first frame.
  */
 function SelectionPill<T extends string>({
   options,
   value,
-  segmentWidth,
   size,
   progress,
+  tone,
 }: {
   options: readonly SegmentedOption<T>[];
   value: T;
-  segmentWidth: number;
   size: 'sm' | 'md';
   progress?: SharedValue<number>;
+  tone: 'default' | 'accent';
 }) {
   const reduceMotion = useReducedMotion();
   const index = Math.max(0, options.findIndex((option) => option.value === value));
   const pillFollow = useAnimatedStyle(() =>
-    progress ? { transform: [{ translateX: progress.value * segmentWidth }] } : {},
+    progress ? { transform: [{ translateX: `${progress.value * 100}%` }] } : {},
   );
   const copyFollow = useAnimatedStyle(() =>
-    progress ? { transform: [{ translateX: -progress.value * segmentWidth }] } : {},
+    progress ? { transform: [{ translateX: `${-progress.value * 100 / options.length}%` }] } : {},
   );
-  const slide = (offset: number) => ({
+  const slide = (offset: `${number}%`) => ({
     transform: [{ translateX: offset }],
     transitionProperty: 'transform' as const,
     transitionDuration: reduceMotion ? 0 : DURATION.toggle,
@@ -87,22 +77,37 @@ function SelectionPill<T extends string>({
 
   return (
     <AnimatedView
-      className="absolute rounded-full bg-foreground overflow-hidden"
+      className={cn(
+        'absolute rounded-full overflow-hidden',
+        tone === 'accent' ? 'bg-accent-tonal' : 'bg-foreground',
+      )}
       style={[
-        { top: INSET, bottom: INSET, left: INSET, width: segmentWidth, pointerEvents: 'none' },
-        progress ? pillFollow : slide(index * segmentWidth),
+        {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: `${100 / options.length}%` as `${number}%`,
+          pointerEvents: 'none',
+        },
+        progress ? pillFollow : slide(`${index * 100}%`),
       ]}
     >
       <AnimatedView
         className="flex-1 flex-row"
         style={[
-          { width: segmentWidth * options.length },
-          progress ? copyFollow : slide(-index * segmentWidth),
+          { width: `${options.length * 100}%` as `${number}%` },
+          progress ? copyFollow : slide(`${-index * 100 / options.length}%`),
         ]}
       >
         {options.map((option) => (
           <View className={segmentClass(size)} key={option.value}>
-            <Text className={cn(labelClass(size), 'text-background')} numberOfLines={1}>
+            <Text
+              className={cn(
+                labelClass(size),
+                tone === 'accent' ? 'text-accent-on-tonal' : 'text-background',
+              )}
+              numberOfLines={1}
+            >
               {option.label}
             </Text>
           </View>
@@ -138,26 +143,12 @@ export function SegmentedControl<T extends string>({
   onChange,
   accessibilityLabel,
   size = 'md',
+  tone = 'default',
   className,
   progress,
 }: SegmentedControlProps<T>) {
-  // The pill's geometry derives from the measured width, so it is not
-  // rendered at all until the first layout. A pill mounted at the left edge
-  // and then moved into place slides there — on web unavoidably, because the
-  // browser transitions from the last *painted* style whatever the duration
-  // was at the moment of the move — so every screen opened on a non-first
-  // option played that slide. A freshly mounted element has nothing to
-  // transition from, on either platform.
-  const [width, setWidth] = useState(0);
-  const measured = width > 0;
-  const segmentWidth = measured ? (width - INSET * 2) / options.length : 0;
   const segmentClassName = segmentClass(size);
   const labelClassName = labelClass(size);
-
-  function onLayout(event: LayoutChangeEvent) {
-    const next = event.nativeEvent.layout.width;
-    if (next !== width) setWidth(next);
-  }
 
   function select(next: T) {
     if (next === value) return;
@@ -172,11 +163,9 @@ export function SegmentedControl<T extends string>({
     <View
       accessibilityLabel={accessibilityLabel}
       className={cn(
-        'flex-row rounded-full border border-border',
+        'flex-row rounded-full border border-border p-0.5',
         className,
       )}
-      onLayout={onLayout}
-      style={{ padding: INSET }}
     >
       {options.map((option) => (
         <PresstableOpacity
@@ -187,20 +176,23 @@ export function SegmentedControl<T extends string>({
           key={option.value}
           onPress={() => select(option.value)}
         >
-          <Text className={cn(labelClassName, 'text-foreground')} numberOfLines={1}>
+          <Text
+            className={cn(labelClassName, 'text-foreground')}
+            numberOfLines={1}
+          >
             {option.label}
           </Text>
         </PresstableOpacity>
       ))}
-      {measured && (
+      <View className="absolute inset-0.5 border border-transparent" pointerEvents="none">
         <SelectionPill
           options={options}
           progress={progress}
-          segmentWidth={segmentWidth}
           size={size}
+          tone={tone}
           value={value}
         />
-      )}
+      </View>
     </View>
   );
 }

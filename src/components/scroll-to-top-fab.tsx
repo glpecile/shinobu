@@ -7,6 +7,7 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { Fab } from '@/components/fab';
+import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
 /**
@@ -53,15 +54,18 @@ const fabFadingOut = FadeOut.duration(DURATION.exit);
 export function ScrollToTopFab({
   visible,
   onPress,
+  className,
 }: {
   visible: boolean;
   onPress: () => void;
+  /** Layout only; tab screens can clear the floating iOS tab bar. */
+  className?: string;
 }) {
   const reduceMotion = useReducedMotion();
   if (!visible) return null;
   return (
     <AnimatedView
-      className="absolute bottom-6 right-6"
+      className={cn('absolute bottom-6 right-6', className)}
       entering={reduceMotion ? fabFadingIn : fabEntering}
       exiting={reduceMotion ? fabFadingOut : fabExiting}
     >

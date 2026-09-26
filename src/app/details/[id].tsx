@@ -566,10 +566,19 @@ function DetailsScreen() {
   // progress where it means something (series, manga, or a film already logged).
   const showProgress =
     (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
+  // Anime detail tiles may carry a series-wide total from TMDB while AniList's
+  // entry is only the current cour. Keep the larger logged count for this tile;
+  // the episode checkmarks below still use the cour's own AniList progress.
   const displayedProgress =
-    (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
-    simklEntry.data?.item.currentProgress ??
-    shown.currentProgress;
+    shown.type === 'ANIME' && shown.isFilm !== true
+      ? Math.max(
+          shown.currentProgress,
+          anilistEntry.data?.entry?.progress ?? 0,
+          simklEntry.data?.item.currentProgress ?? 0,
+        )
+      : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
+        simklEntry.data?.item.currentProgress ??
+        shown.currentProgress;
 
   function refresh() {
     // Sections that failed are unmounted, leaving their queries inactive and
