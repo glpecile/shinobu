@@ -39,6 +39,7 @@ export interface SimklMediaSummary {
 
 export interface SimklAllItemsEpisode {
   number: number;
+  tvdb?: { season?: number; episode?: number } | null;
   /** ISO instant; present with `episode_watched_at=yes`. */
   watched_at?: string | null;
 }
@@ -66,6 +67,8 @@ export interface SimklNextToWatchInfoRaw {
 
 export interface SimklAllItemsEntry {
   status?: string;
+  anime_type?: string | null;
+  mapped_tvdb_seasons?: number[];
   watched_episodes_count?: number;
   total_episodes_count?: number;
   not_aired_episodes_count?: number;
@@ -109,6 +112,8 @@ const SIMKL_WATCH_STATUSES: readonly SimklWatchStatus[] = [
 export interface SimklWatchedEpisode {
   season: number;
   number: number;
+  /** Explicit canonical coordinates for entry-relative anime episodes. */
+  canonical?: { season: number; number: number };
   /** ISO instant, verbatim; absent when Simkl didn't record one. */
   watchedAt?: string;
 }
@@ -136,6 +141,7 @@ export interface SimklNextToWatch {
  */
 export interface SimklLibraryEntry {
   item: NormalizedMediaItem;
+  mappedSeasons?: readonly number[];
   status: SimklWatchStatus;
   addedToWatchlistAt?: string;
   lastWatchedAt?: string;
@@ -402,9 +408,15 @@ function watchedEpisodesFrom(raw: SimklAllItemsEntry): SimklWatchedEpisode[] {
   const episodes: SimklWatchedEpisode[] = [];
   for (const season of raw.seasons ?? []) {
     for (const episode of season.episodes ?? []) {
+      const mappedSeason = episode.tvdb?.season;
+      const mappedEpisode = episode.tvdb?.episode;
       episodes.push({
         season: season.number,
         number: episode.number,
+        ...(mappedSeason != null && Number.isInteger(mappedSeason) && mappedSeason >= 0 &&
+        mappedEpisode != null && Number.isInteger(mappedEpisode) && mappedEpisode > 0
+          ? { canonical: { season: mappedSeason, number: mappedEpisode } }
+          : {}),
         ...(episode.watched_at != null && episode.watched_at !== ''
           ? { watchedAt: episode.watched_at }
           : {}),
@@ -429,7 +441,7 @@ export function normalizeLibraryEntry(
   const status = SIMKL_WATCH_STATUSES.find((known) => known === raw.status);
   if (status == null) return null;
 
-  const { type, isFilm } = mediaTypeFor(bucket, media.anime_type);
+  const { type, isFilm } = mediaTypeFor(bucket, raw.anime_type ?? media.anime_type);
   const watchedEpisodes = watchedEpisodesFrom(raw);
   const watchedCount =
     raw.watched_episodes_count ??
@@ -465,6 +477,13 @@ export function normalizeLibraryEntry(
       externalIds: externalIdsFrom(media.ids),
     },
     status,
+    ...(bucket === 'anime'
+      ? {
+          mappedSeasons: (raw.mapped_tvdb_seasons ?? []).filter(
+            (season) => Number.isInteger(season) && season >= 0,
+          ),
+        }
+      : {}),
     ...(addedToWatchlistAt != null ? { addedToWatchlistAt } : {}),
     ...(lastWatchedAt != null ? { lastWatchedAt } : {}),
     ...(raw.not_aired_episodes_count != null

@@ -45,3 +45,30 @@ normalizer has no mapped-season fields, and both `use-episode-logs.ts` and
 `seasons-section.tsx` still infer every aired episode from an empty completed
 entry. Verify the owner-reported S2E11 state after the mapping lands; the
 original lookup failure alone no longer describes the current behavior.
+
+## Implementation result, 2026-09-27
+
+- The current API schema documents `full_anime_seasons` as a superset of
+  `full`, including watched timestamps. The existing request now uses that
+  single value. No separate anime request is required by the documented
+  contract. An authenticated response comparison remains unverified.
+- Exact Simkl IDs win across the bucket before TMDB fallback. The non-film
+  ANIME fallback guard remains. Anime films stay in the film lookup path.
+- A separate query selection combines non-film anime entries for TV-shaped
+  items sharing their TMDB ID. It maps explicit episode coordinates, keeps
+  completion within mapped seasons, and refuses ungrounded season-1 fallback.
+  Incomplete cours sharing a season suppress that season's completion inference.
+- The episode log button and seasons accordion share the same canonical
+  watched predicate. Original entry-relative episodes remain intact for diary
+  reads. Provider routing is unchanged.
+- Focused regression coverage includes Tanya S2E11, mapped S2E1, missing
+  mappings, overlapping cours, ordinary show lookup/completion, anime film
+  lookup, and unaired episodes. 52 relevant tests, typecheck, and lint passed.
+
+Still pending: verify the owner's live S2E11 state on both surfaces and compare
+an authenticated API response. No Simkl account token or device debugger was
+available in this session. The fixture regression passes, but that is not live
+verification of the reported state, so this todo remains pending.
+
+API findings: `docs/solutions/simkl-anime-cour-episode-mapping.md`.
+These are JS-only changes and hot reload without a native rebuild.

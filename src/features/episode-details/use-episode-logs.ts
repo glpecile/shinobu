@@ -1,6 +1,6 @@
 import type { ProviderId } from '@/lib/providers/types';
-import { hasAired } from '@/lib/time/has-aired';
-import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
+import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
+import { useSimklEpisodeStateQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -25,7 +25,7 @@ export function useEpisodeLogs(
   item: NormalizedMediaItem,
   season: number,
   number: number,
-  /** The episode's air field — a `completed` Simkl show implies every aired episode. */
+  /** Completion only implies aired episodes within the entry's mapped seasons. */
   firstAired: string | undefined,
 ): EpisodeLog[] {
   const connected = useConnectedProviders();
@@ -34,7 +34,7 @@ export function useEpisodeLogs(
     traktId: item.externalIds.trakt ?? undefined,
     enabled: connected.includes('trakt'),
   });
-  const simkl = useSimklLibraryEntryQuery({
+  const simkl = useSimklEpisodeStateQuery({
     item,
     enabled: connected.includes('simkl'),
   });
@@ -52,12 +52,7 @@ export function useEpisodeLogs(
       ...(simklEpisode.watchedAt != null ? { watchedAt: simklEpisode.watchedAt } : {}),
     });
   } else if (
-    // A `completed` Simkl entry carries no per-episode detail at all
-    // (docs/solutions/simkl-completed-shows-have-no-episode-detail.md), and
-    // "completed" means every aired episode — same rule as the accordion.
-    simkl.data?.status === 'completed' &&
-    simkl.data.watchedKeys.size === 0 &&
-    hasAired(firstAired)
+    simklEpisodeIsWatched(simkl.data, season, number, firstAired)
   ) {
     logs.push({ provider: 'simkl' });
   }

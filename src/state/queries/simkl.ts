@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import { httpFetch } from '@/lib/http/client';
 import { exchangeSimklCode as exchangeSimklCodeForSession } from '@/lib/providers/simkl/auth';
 import type { SimklDeps } from '@/lib/providers/simkl/deps';
+import { simklEpisodeState } from '@/lib/providers/simkl/episode-state';
 import type {
   SimklLibrary,
   SimklLibraryBucket,
@@ -143,13 +144,36 @@ export function findLibraryEntry(
   // Anime is in both lists: Simkl files anime films under its anime catalog,
   // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
   const buckets = filmLike
-    ? [...library.movies, ...library.anime]
-    : [...library.shows, ...library.anime];
-  for (const entry of buckets) {
-    if (simklId != null && entry.item.externalIds.simkl === simklId) return entry;
-    if (tmdbId != null && entry.item.externalIds.tmdb === tmdbId) return entry;
-  }
-  return null;
+    ? [...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)]
+    : [...library.shows, ...library.anime.filter((entry) => entry.item.isFilm !== true)];
+  const exact = simklId == null
+    ? undefined
+    : buckets.find((entry) => entry.item.externalIds.simkl === simklId);
+  return exact ?? (tmdbId == null
+    ? null
+    : buckets.find((entry) => entry.item.externalIds.tmdb === tmdbId) ?? null);
+}
+
+/** TV layouts span cours; ANIME items still resolve only their exact entry. */
+export function findLibraryEpisodeState(library: SimklLibrary, item: NormalizedMediaItem) {
+  const exact = findLibraryEntry(library, item);
+  const tmdbId = item.externalIds.tmdb;
+  const anime = item.type === 'TV' && tmdbId != null
+    ? library.anime.filter((entry) => entry.item.isFilm !== true && entry.item.externalIds.tmdb === tmdbId)
+    : [];
+  const entries = [...(exact == null || anime.includes(exact) ? [] : [exact]), ...anime];
+  return entries.length === 0 ? null : simklEpisodeState(entries);
+}
+
+export function useSimklEpisodeStateQuery(params: {
+  item: NormalizedMediaItem;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    ...simklLibraryQuery(),
+    enabled: params.enabled,
+    select: (library: SimklLibrary) => findLibraryEpisodeState(library, params.item),
+  });
 }
 
 /**
