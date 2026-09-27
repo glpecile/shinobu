@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 priority: P1
 ---
 
@@ -65,10 +65,8 @@ original lookup failure alone no longer describes the current behavior.
   mappings, overlapping cours, ordinary show lookup/completion, anime film
   lookup, and unaired episodes. 52 relevant tests, typecheck, and lint passed.
 
-Still pending: verify the owner's live S2E11 state on both surfaces and compare
-an authenticated API response. No Simkl account token or device debugger was
-available in this session. The fixture regression passes, but that is not live
-verification of the reported state, so this todo remains pending.
+Verified live by the owner on 2026-09-27: the Tanya S2E11 episode screen and
+seasons accordion both show the correct watched state.
 
 API findings: `docs/solutions/simkl-anime-cour-episode-mapping.md`.
 These are JS-only changes and hot reload without a native rebuild.
