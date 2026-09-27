@@ -55,3 +55,25 @@ one seasonal fetch), subsequent cycles **0** until a staleTime expires.
 Any new provider read that isn't user-mutable state should declare a
 staleTime matched to how fast the data actually changes — the default floor
 only protects navigation churn, not polling-style waste.
+
+## Episode navigation follow-up, 2026-09-27
+
+Adding AniList watched state to episode details added an observer of the
+existing entry-state key, not a separate per-episode GraphQL query. However,
+the 60-second stale window allowed episode navigation to refetch progress
+every minute. Entry state now stays fresh for five minutes. Successful logs
+and watchlist writes already invalidate its exact key, and manual refresh
+still refetches it. Edits made outside Shinobu can remain cached for five
+minutes.
+
+The provider's retry also truncated a long `Retry-After` to five seconds.
+A regression using `Retry-After: 30` observed two requests five seconds apart.
+It now fails with the original rate-limit error when the advertised wait
+exceeds the five-second budget. Short waits retain the one retry; TanStack
+Query still never retries rate-limit errors. This avoids a premature replay
+without delaying a user action through a long cooldown.
+
+The reported `CreditsSections` stack identifies the consumer that encountered
+the limit, not the requests that exhausted it. No live request trace was
+available for this report; these changes address the verified cache policy
+and retry behavior, not a measured attribution of the entire request budget.

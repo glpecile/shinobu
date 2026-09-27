@@ -48,17 +48,20 @@ describe('anilistGraphQL error mapping', () => {
     }
   });
 
-  test('429 carries Retry-After as retryAfterMs', async () => {
+  test('a long Retry-After propagates without an early retry', async () => {
+    let calls = 0;
     const result = await Effect.runPromise(
       Effect.either(
-        anilistGraphQL(
-          depsReplying(
-            () => new Response('', { status: 429, headers: { 'Retry-After': '30' } }),
-          ),
+        anilistAuthedRequest(
+          depsReplying(() => {
+            calls += 1;
+            return new Response('', { status: 429, headers: { 'Retry-After': '30' } });
+          }),
           'query { Viewer { id } }',
         ),
       ),
     );
+    expect(calls).toBe(1);
     expect(result._tag).toBe('Left');
     if (result._tag === 'Left') {
       expect(result.left._tag).toBe('ProviderRateLimitError');
@@ -66,7 +69,7 @@ describe('anilistGraphQL error mapping', () => {
         result.left._tag === 'ProviderRateLimitError' && result.left.retryAfterMs,
       ).toBe(30_000);
     }
-  });
+  }, 10_000);
 
   test('every request carries the app Referer (AniList 403s referer-less clients)', async () => {
     let sent: RequestInit | undefined;

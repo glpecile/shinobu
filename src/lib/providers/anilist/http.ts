@@ -126,19 +126,19 @@ export function anilistGraphQL<A>(
   });
 }
 
-// Writes fired from a tap must not hang for a long Retry-After — sleep at
-// most this long, retry once, then surface the error (same policy as Trakt).
+// A tap must not wait through a long cooldown. Only retry when the full
+// advertised delay fits this budget; never shorten the server's Retry-After.
 const RATE_LIMIT_MAX_SLEEP_MS = 5_000;
 
 function withRateLimitRetry<A>(
   effect: Effect.Effect<A, ProviderError>,
 ): Effect.Effect<A, ProviderError> {
   return effect.pipe(
-    Effect.catchTag('ProviderRateLimitError', (error) =>
-      Effect.sleep(
-        Duration.millis(Math.min(error.retryAfterMs ?? 1_000, RATE_LIMIT_MAX_SLEEP_MS)),
-      ).pipe(Effect.zipRight(effect)), // second 429 propagates as-is
-    ),
+    Effect.catchTag('ProviderRateLimitError', (error) => {
+      const delay = error.retryAfterMs ?? 1_000;
+      if (delay > RATE_LIMIT_MAX_SLEEP_MS) return Effect.fail(error);
+      return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(effect));
+    }),
   );
 }
 
