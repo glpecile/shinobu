@@ -112,12 +112,14 @@ function PanelIcon({ color, collapsed }: { color: string; collapsed: boolean }) 
       }}
     >
       <View
+        className="transition-transform duration-200 ease-in-out motion-reduce:transition-none"
         style={{
           backgroundColor: color,
           bottom: 0,
-          ...(collapsed ? { right: 4 } : { left: 4 }),
+          left: 4,
           position: 'absolute',
           top: 0,
+          transform: [{ translateX: collapsed ? 6 : 0 }],
           width: 1.75,
         }}
       />
