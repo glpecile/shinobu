@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
-import { RoundIconButton } from '@/components/round-icon-button';
 import { cn } from '@/lib/cn';
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { usePushRoute } from '@/lib/navigation';
@@ -15,24 +14,10 @@ import {
   useSidebarCollapsed,
 } from '@/state/prefs/sidebar';
 
-/**
- * Sidebar widths (px). Their classes (`md:w-60` / `md:w-16`) are the values the
- * browser actually paints — these mirror them for the toggle's `left`.
- */
-const SIDEBAR_WIDTH = 240;
 const RAIL_WIDTH = 64;
 /** Fixed icon column so icons never shift between expanded/collapsed — only the
  *  labels reveal and the width slides. `RAIL_WIDTH` minus the `px-2` gutters. */
 const ICON_COL = RAIL_WIDTH - 16;
-/** Diameter of `RoundIconButton` (w-10). */
-const TOGGLE_SIZE = 40;
-
-const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-const leftTransition = {
-  transitionDuration: '220ms',
-  transitionProperty: 'left',
-  transitionTimingFunction: EASE,
-} as const;
 const opacityTransition = {
   transitionDuration: '160ms',
   transitionProperty: 'opacity',
@@ -112,10 +97,10 @@ function RevealLabel({
 }
 
 /**
- * The lucide/shadcn "panel-left" glyph, composed from Views (no SVG/icon-font
- * dependency): a rounded rect with a vertical divider a third of the way in.
+ * The sidebar control uses opposite divider positions to show which edge the
+ * panel will move toward when pressed.
  */
-function PanelLeftIcon({ color }: { color: string }) {
+function PanelIcon({ color, collapsed }: { color: string; collapsed: boolean }) {
   return (
     <View
       style={{
@@ -127,12 +112,14 @@ function PanelLeftIcon({ color }: { color: string }) {
       }}
     >
       <View
+        className="transition-transform duration-200 ease-in-out motion-reduce:transition-none"
         style={{
           backgroundColor: color,
           bottom: 0,
           left: 4,
           position: 'absolute',
           top: 0,
+          transform: [{ translateX: collapsed ? 6 : 0 }],
           width: 1.75,
         }}
       />
@@ -141,20 +128,19 @@ function PanelLeftIcon({ color }: { color: string }) {
 }
 
 /**
- * The collapse toggle floating at the bottom of the sidebar's right edge. Its
- * `left` slides in sync with the sidebar width.
+ * The collapse control sits in the sidebar footer in both states.
  */
 function SidebarToggle({ collapsed }: { collapsed: boolean }) {
-  const edge = collapsed ? RAIL_WIDTH : SIDEBAR_WIDTH;
-
   return (
-    <RoundIconButton
-      className="hidden md:flex absolute z-30"
-      icon={<PanelLeftIcon color={COLOR.foreground} />}
-      label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+    <PresstableOpacity
+      accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      accessibilityRole="button"
+      className="h-14 items-center justify-center"
       onPress={toggleSidebarCollapsed}
-      style={{ bottom: 18, left: edge - TOGGLE_SIZE / 2, ...leftTransition }}
-    />
+      style={{ width: ICON_COL }}
+    >
+      <PanelIcon color={COLOR.foreground} collapsed={collapsed} />
+    </PresstableOpacity>
   );
 }
 
@@ -203,10 +189,10 @@ function SidebarItem({
  * bar only after hydration.
  *
  * Collapse behavior is adapted from shadcn's `collapsible="icon"` sidebar: the
- * floating edge toggle (and ⌘/Ctrl+B) switches between the full rail and an
- * icon-only rail, persisted via `state/prefs/sidebar`. The width, labels, and
- * toggle animate together (CSS transitions; web-only file). The toggle and the
- * pref only exist above `md` — the bottom bar has one shape.
+ * footer toggle (and ⌘/Ctrl+B) switches between the full rail and an icon-only
+ * rail, persisted via `state/prefs/sidebar`. The width and labels animate
+ * together (CSS transitions; web-only file). The toggle and the pref only exist
+ * above `md` — the bottom bar has one shape.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -254,10 +240,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <View className="flex-1 flex-col-reverse md:flex-row">
       <View
         className={cn(
-          'border-t border-border bg-background overflow-hidden px-2',
+          'border-t border-border bg-background overflow-hidden md:px-2',
           // oxlint-disable-next-line shadcn/no-arbitrary-values -- the home indicator's inset has no scale value
-          'pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2',
-          'md:h-full md:w-60 md:border-t-0 md:border-r md:pt-6 md:pb-0',
+          'pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3',
+          'md:h-full md:w-60 md:border-t-0 md:border-r md:pt-6 md:pb-0 md:flex-col',
           // The bar is stretched, not `w-full`: `auto` can't interpolate, so
           // crossing `md` snaps. From `100%` it slid down to 240px, squeezing
           // the page to ~0px wide and latching Legend List's width
@@ -284,7 +270,36 @@ export function AppShell({ children }: { children: ReactNode }) {
             Shinobu
           </RevealLabel>
         </PresstableOpacity>
-        <View className="flex-row justify-around md:flex-col md:gap-1">
+        <View className="flex-row md:hidden">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <PresstableOpacity
+                accessibilityLabel={item.label}
+                accessibilityRole="button"
+                className="flex-1 items-center justify-center"
+                key={item.href}
+                onPress={() => {
+                  if (!active) pushRoute(item.href);
+                }}
+              >
+                <View
+                  className={cn(
+                    'h-12 w-12 items-center justify-center rounded-full',
+                    active && 'bg-accent-tonal',
+                  )}
+                >
+                  <Ionicons
+                    color={active ? COLOR.accentOnTonal : COLOR.foreground}
+                    name={item.icon}
+                    size={23}
+                  />
+                </View>
+              </PresstableOpacity>
+            );
+          })}
+        </View>
+        <View className="hidden md:flex md:flex-col md:gap-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
             return (
@@ -303,10 +318,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </View>
+        <View className="hidden md:flex mt-auto border-t border-border">
+          <SidebarToggle collapsed={collapsed} />
+        </View>
       </View>
       <View className="flex-1">{children}</View>
-      {/* Last child so it paints above the routed content it overlaps. */}
-      <SidebarToggle collapsed={collapsed} />
     </View>
   );
 }

@@ -7,8 +7,13 @@
 <p align="center">One app for all your media trackers. Log a movie, show, anime, or manga once, and Shinobu writes it to every tracker you've connected.</p>
 
 <p align="center">
-  <img src="./docs/images/screenshot-home.png" alt="Shinobu home with the &quot;One log. Every tracker.&quot; hero, floating provider tiles, and the web sidebar" />
+  <img src="./docs/images/screenshot-home.png" alt="Shinobu home with the &quot;One log. Every tracker.&quot; hero and expanded web sidebar with its footer control" />
 </p>
+
+<details>
+  <summary>See the collapsed web sidebar</summary>
+  <img src="./docs/images/screenshot-home-collapsed.png" alt="Shinobu home with the icon-only sidebar and its footer control" />
+</details>
 
 <p align="center">
   <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen with its backdrop, poster, native title, overview card, progress, seasons, and related entries" />
