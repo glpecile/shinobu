@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
+import { findWatchlistRemoval } from '@/features/watchlist/find-watchlist-removal';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { watchlistSourcesFor } from '@/features/watchlist/use-is-watchlisted';
 import {
@@ -191,12 +193,16 @@ export function WatchlistAddPicker({
   // Who already holds it, per the gathered watchlists — read once at open
   // (cache-only, never a fetch), so the write's own invalidation can't shift
   // the rows mid-sheet. A cold cache holds nothing and offers every target.
-  const [held] = useState(() => {
+  const [{ held, removal }] = useState(() => {
     const data = queryClient.getQueryData<WatchlistInputs>(
       watchlistQueryKeys.inputs(),
     );
-    return data == null ? [] : watchlistSourcesFor(data.inputs, item);
+    return {
+      held: data == null ? [] : watchlistSourcesFor(data.inputs, item),
+      removal: data == null ? null : findWatchlistRemoval(data, item),
+    };
   });
+  const [removing, setRemoving] = useState(false);
   const writable = split.writable.filter((id) => !held.includes(id));
   const alreadyOn = split.writable.filter((id) => held.includes(id));
   const { manual } = split;
@@ -215,6 +221,18 @@ export function WatchlistAddPicker({
     if (pending || providers.length === 0) return;
     haptics.confirm();
     watchlist.mutate({ providers }, step.callbacks);
+  }
+
+  if (removing && removal != null) {
+    return (
+      <WatchlistRemovePicker
+        entry={removal.entry}
+        errors={removal.errors}
+        incomplete={removal.incomplete}
+        onCancel={() => setRemoving(false)}
+        onCleanClose={onCleanClose}
+      />
+    );
   }
 
   if (step.reported) {
@@ -267,9 +285,29 @@ export function WatchlistAddPicker({
           verb="Add on"
         />
         {alreadyOn.length > 0 && (
-          <Text className="text-muted font-sans text-sm mt-2">
-            {`Already on ${providerLabelList(alreadyOn)}.`}
-          </Text>
+          <View className="mt-2 rounded-lg border border-border bg-background flex-row items-center gap-3 px-3 py-2">
+            <View className="flex-row items-center gap-2 flex-1">
+              {alreadyOn.map((id) => (
+                <ProviderIcon id={id} key={id} size={18} />
+              ))}
+              <Text className="text-muted font-sans text-sm flex-1" numberOfLines={1}>
+                {`Already on ${providerLabelList(alreadyOn)}`}
+              </Text>
+            </View>
+            {removal != null && (
+              <Button
+                accessibilityLabel={`Choose where to remove ${item.title} from watchlist`}
+                icon={<Button.Icon name="bookmark-outline" />}
+                label="Remove"
+                onPress={() => {
+                  haptics.selection();
+                  setRemoving(true);
+                }}
+                size="sm"
+                variant="quiet"
+              />
+            )}
+          </View>
         )}
         {writable.length > 0 && selected.length === 0 && (
           <Text className="text-accent font-sans text-sm mt-2">
