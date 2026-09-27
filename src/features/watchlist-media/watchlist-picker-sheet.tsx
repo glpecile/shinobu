@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { findWatchlistRemoval } from '@/features/watchlist/find-watchlist-removal';
@@ -284,23 +285,29 @@ export function WatchlistAddPicker({
           verb="Add on"
         />
         {alreadyOn.length > 0 && (
-          <>
-            <Text className="text-muted font-sans text-sm mt-2">
-              {`Already on ${providerLabelList(alreadyOn)}.`}
-            </Text>
+          <View className="mt-2 rounded-lg border border-border bg-background flex-row items-center gap-3 px-3 py-2">
+            <View className="flex-row items-center gap-2 flex-1">
+              {alreadyOn.map((id) => (
+                <ProviderIcon id={id} key={id} size={18} />
+              ))}
+              <Text className="text-muted font-sans text-sm flex-1" numberOfLines={1}>
+                {`Already on ${providerLabelList(alreadyOn)}`}
+              </Text>
+            </View>
             {removal != null && (
               <Button
-                className="mt-2"
+                accessibilityLabel={`Choose where to remove ${item.title} from watchlist`}
                 icon={<Button.Icon name="bookmark-outline" />}
-                label="Remove from watchlist"
+                label="Remove"
                 onPress={() => {
                   haptics.selection();
                   setRemoving(true);
                 }}
+                size="sm"
                 variant="quiet"
               />
             )}
-          </>
+          </View>
         )}
         {writable.length > 0 && selected.length === 0 && (
           <Text className="text-accent font-sans text-sm mt-2">
