@@ -17,11 +17,11 @@ otherwise stated.
   `components/segmented-control/` directory and use them for filmography's
   Format control in `features/credit-timeline/credit-timeline.tsx:347`.
 
-Filmography still uses the 206-line custom control with measured widths,
-duplicated labels and a sliding selection mask. Seasons already use Expo's
-community segmented control on iOS and a themed Compose
+Filmography still uses `components/segmented-control.tsx`, a shared custom
+control with a sliding selection mask and optional pager `progress`. Seasons
+already use Expo's community segmented control on iOS and a themed Compose
 `SingleChoiceSegmentedButtonRow` on Android. Reuse those implementations rather
-than add another native wrapper. Keep the current custom implementation as
+than add another native wrapper. Move the current custom implementation to
 `index.web.tsx`, where the season pager needs continuous `progress`.
 
 Preserve `size="sm"`, per-option spoken labels, controlled selection and the

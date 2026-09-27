@@ -17,6 +17,11 @@ Code is in: provider lib (`lib/providers/anilist/`), otraku-style implicit-grant
 auth, feed rows (Your Anime + Trending Anime), the ani.zip identity mapping,
 and the reconcile/rewatch fan-out. Unit-tested; **not yet live-verified**.
 
+Checked 2026-09-27: `lib/providers/anilist/config.ts` still has empty bundled
+native and web client IDs. The connect form can accept a user-supplied ID, but
+the one-tap bundled-client criterion and the account-bound live pass below
+remain open. Registering those clients requires owner access to AniList.
+
 Remaining before this closes:
 
 - [ ] Register the Shinobu AniList API clients (one per redirect URL — native

@@ -29,7 +29,10 @@ techniques) — judged against grep-ability and how well it reads in identifiers
 - Code comments across `lib/providers/*` and `features/log-media/*`
 - `AGENTS.md` ("Providers, Sessions & Log Fan-Out" section and scattered
   mentions)
-- `docs/plans/` and `todos/005-pending-p1-unified-log-fanout.md`
+- `docs/plans/` and `todos/005-done-p1-unified-log-fanout.md`
+
+This is still a naming-only P3 task. The public copy has already moved away
+from "fan-out"; do not rename behavior or reopen the completed log-write todo.
 
 ## Acceptance Criteria
 
