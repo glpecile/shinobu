@@ -1,13 +1,13 @@
 import { Duration, Effect } from 'effect';
 
+import {
+  RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
+  RATE_LIMIT_MAX_RETRY_DELAY_MS,
+} from '@/lib/providers/rate-limits';
 import type { ProviderError } from '@/lib/providers/errors';
 import { coalescedRefreshSession } from './auth';
 import type { TraktDeps } from './deps';
 import { traktHttp, type TraktHttpOptions } from './http';
-
-// Writes fired from a tap on a media card must not hang for a long
-// Retry-After — sleep at most this long, retry once, then surface the error.
-const RATE_LIMIT_MAX_SLEEP_MS = 5_000;
 
 function withRateLimitRetry<A>(
   effect: Effect.Effect<A, ProviderError>,
@@ -15,7 +15,12 @@ function withRateLimitRetry<A>(
   return effect.pipe(
     Effect.catchTag('ProviderRateLimitError', (error) =>
       Effect.sleep(
-        Duration.millis(Math.min(error.retryAfterMs ?? 1_000, RATE_LIMIT_MAX_SLEEP_MS)),
+        Duration.millis(
+          Math.min(
+            error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
+            RATE_LIMIT_MAX_RETRY_DELAY_MS,
+          ),
+        ),
       ).pipe(Effect.zipRight(effect)), // second 429 propagates as-is
     ),
   );

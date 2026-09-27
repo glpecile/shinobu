@@ -3,6 +3,10 @@ import { Duration, Effect } from 'effect';
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 
 import {
+  RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
+  RATE_LIMIT_MAX_RETRY_DELAY_MS,
+} from '@/lib/providers/rate-limits';
+import {
   ProviderAuthError,
   ProviderDecodeError,
   ProviderNetworkError,
@@ -127,16 +131,13 @@ export function anilistGraphQL<A>(
 }
 
 // A tap must not wait through a long cooldown. Only retry when the full
-// advertised delay fits this budget; never shorten the server's Retry-After.
-const RATE_LIMIT_MAX_SLEEP_MS = 5_000;
-
 function withRateLimitRetry<A>(
   effect: Effect.Effect<A, ProviderError>,
 ): Effect.Effect<A, ProviderError> {
   return effect.pipe(
     Effect.catchTag('ProviderRateLimitError', (error) => {
-      const delay = error.retryAfterMs ?? 1_000;
-      if (delay > RATE_LIMIT_MAX_SLEEP_MS) return Effect.fail(error);
+      const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
+      if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
       return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(effect));
     }),
   );
