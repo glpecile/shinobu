@@ -1,10 +1,8 @@
 import { useReducer, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import {
   FadeIn,
-  FadeOut,
   Keyframe,
-  LinearTransition,
   useReducedMotion,
   type EntryOrExitLayoutType,
 } from 'react-native-reanimated';
@@ -19,7 +17,8 @@ import {
 import { calendarWeek, nextSplitChange } from '@/features/up-next/compute';
 import { groupDayEntries, soloGroup } from '@/features/up-next/group';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
-import { EpisodeCard, STACK_OFFSET } from '@/features/up-next/ui/episode-card';
+import { CARD_EXIT, CardSlot } from '@/features/up-next/ui/card-slot';
+import { STACK_OFFSET } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
 import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
@@ -97,23 +96,6 @@ function dayContentAnimation(
   if (reduceMotion) return dayContentFading;
   return direction > 0 ? dayContentForward : dayContentBackward;
 }
-
-/**
- * A logged show moves to the head of Continue Watching (most recently watched
- * first) or leaves the row once it's caught up; the cards slide and fade
- * rather than snapping. Native only: on web a `layout` transition scales the
- * card's text and an `exiting` clone reparents it out of the row
- * (docs/solutions/reanimated-web-layout-transition-scales-text.md,
- * reanimated-web-exiting-pulls-child-out-of-flow.md). The slide is iOS only:
- * on Android it strands the neighbours mid-travel or on top of each other
- * (docs/solutions/android-layout-transition-strands-carousel-cards.md). No
- * `entering`: the section already rises in as one, and a card should not
- * perform on load.
- */
-const CARD_LAYOUT =
-  Platform.OS === 'ios' ? LinearTransition.duration(DURATION.swap) : undefined;
-const CARD_EXIT =
-  Platform.OS === 'web' ? undefined : FadeOut.duration(DURATION.exit);
 
 /** Label, date and dots ride the same curve as the fill under them, instead
  * of flipping instantly against a fading background. */
@@ -203,30 +185,24 @@ export function UpNextSection({
                   mounted for the line to morph and the art to hold still. One
                   entry per show here by construction, so the item id is unique. */}
               {continueWatching.map((entry) => (
-                <AnimatedView
+                <CardSlot
                   key={entry.item.id}
-                  className="mr-3"
-                  exiting={CARD_EXIT}
-                  layout={reduceMotion ? undefined : CARD_LAYOUT}
-                >
-                  <EpisodeCard
-                    // Continue Watching is aired episodes by construction; the
-                    // narrowing is what the union buys — no release row can slip
-                    // in here and render a quick-log for something with no episode.
-                    action={
-                      entry.kind === 'episode' ? (
-                        <QuickLogButton entry={entry} />
-                      ) : undefined
-                    }
-                    badges={continueWatchingBadges(entry, now)}
-                    // Wrapped, not grouped: this section holds one entry per show
-                    // by construction (the pool fan answers with a single
-                    // `next_episode` pointer each), so it can't produce a batch.
-                    group={soloGroup(entry)}
-                    onActionsPress={onItemActions}
-                    onPress={onItemPress}
-                  />
-                </AnimatedView>
+                  // Continue Watching is aired episodes by construction; the
+                  // narrowing is what the union buys — no release row can slip
+                  // in here and render a quick-log for something with no episode.
+                  action={
+                    entry.kind === 'episode' ? (
+                      <QuickLogButton entry={entry} />
+                    ) : undefined
+                  }
+                  badges={continueWatchingBadges(entry, now)}
+                  // Wrapped, not grouped: this section holds one entry per show
+                  // by construction (the pool fan answers with a single
+                  // `next_episode` pointer each), so it can't produce a batch.
+                  group={soloGroup(entry)}
+                  onActionsPress={onItemActions}
+                  onPress={onItemPress}
+                />
               ))}
             </Rail>
           </UpNextSectionHeader>
@@ -339,10 +315,12 @@ export function UpNextSection({
           }}
           style={{ minHeight: dayContentHeight }}
         >
-          {/* Keyed on the day so picking a new one remounts and replays the
-              enter. Enter-only, no exit: an exiting copy would sit in flow
-              beside the incoming one and shove the feed around — the reserved
-              minHeight above is what keeps the swap visually still. */}
+          {/* Keyed on the day so a switch remounts and replays the enter. No exit
+              on the block: an exiting copy would sit in flow beside the
+              incoming one and shove the feed around, which the reserved
+              minHeight above is there to prevent. The cards keep `CardSlot`'s
+              exit, but a day switch unmounts this subtree whole, so only the
+              enter plays. */}
           <AnimatedView
             key={selected.offset}
             className="flex-1"
@@ -370,31 +348,30 @@ export function UpNextSection({
                 {/* The group id is per show (per release row for films), for
                     the same reason as Continue Watching above. */}
                 {selected.groups.map((group) => (
-                  <View key={group.id} className="mr-3">
-                    <EpisodeCard
-                      // Aired-today episodes are watchable right now, so they
-                      // keep the quick-log checkmark here too; still-upcoming
-                      // ones — and release rows, which are never loggable —
-                      // only carry their day badge. A batch never gets one
-                      // either: the checkmark logs a single episode, and there
-                      // is no honest answer to which of ten it would advance.
-                      action={
-                        group.entries.length === 1 &&
-                        group.lead.status === 'aired' &&
-                        group.lead.kind === 'episode' ? (
-                          <QuickLogButton entry={group.lead} />
-                        ) : undefined
-                      }
-                      badges={
-                        group.lead.status === 'aired'
-                          ? continueWatchingBadges(group.lead, now)
-                          : calendarBadges(group.lead, now)
-                      }
-                      group={group}
-                      onActionsPress={onItemActions}
-                      onPress={onItemPress}
-                    />
-                  </View>
+                  <CardSlot
+                    key={group.id}
+                    // Aired-today episodes are watchable right now, so they
+                    // keep the quick-log checkmark here too; still-upcoming
+                    // ones — and release rows, which are never loggable —
+                    // only carry their day badge. A batch never gets one
+                    // either: the checkmark logs a single episode, and there
+                    // is no honest answer to which of ten it would advance.
+                    action={
+                      group.entries.length === 1 &&
+                      group.lead.status === 'aired' &&
+                      group.lead.kind === 'episode' ? (
+                        <QuickLogButton entry={group.lead} />
+                      ) : undefined
+                    }
+                    badges={
+                      group.lead.status === 'aired'
+                        ? continueWatchingBadges(group.lead, now)
+                        : calendarBadges(group.lead, now)
+                    }
+                    group={group}
+                    onActionsPress={onItemActions}
+                    onPress={onItemPress}
+                  />
                 ))}
               </Rail>
             )}
