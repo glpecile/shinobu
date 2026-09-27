@@ -1,4 +1,4 @@
-import type { AniZipCanonicalEpisode } from './anizip';
+import type { AniZipCanonicalEpisode, AniZipEpisodeMap } from './anizip';
 
 /**
  * How the *destination* tracker carves a show into seasons — the arbiter plan
@@ -64,4 +64,19 @@ export function placeInLayout(
     consumed += slot.episodeCount;
   }
   return null;
+}
+
+/** AniList progress only vouches for mapped episodes belonging to that entry. */
+export function watchedKeysInLayout(
+  layout: SeasonLayout | null | undefined,
+  episodes: AniZipEpisodeMap | null | undefined,
+  progress: number,
+): ReadonlySet<string> {
+  const keys = new Set<string>();
+  for (const [entryNumber, episode] of episodes ?? []) {
+    if (entryNumber > progress) continue;
+    const placed = placeInLayout(layout, episode);
+    if (placed != null) keys.add(`${placed.season}-${placed.number}`);
+  }
+  return keys;
 }

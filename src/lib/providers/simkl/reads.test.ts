@@ -48,7 +48,7 @@ describe('getAllItems', () => {
     const url = calls[0]!.url;
     expect(url.origin).toBe('https://api.simkl.com');
     expect(url.pathname).toBe('/sync/all-items');
-    expect(url.searchParams.get('extended')).toBe('full');
+    expect(url.searchParams.get('extended')).toBe('full_anime_seasons');
     expect(url.searchParams.get('episode_watched_at')).toBe('yes');
     // `next_to_watch_info` (the air instant U8 falls back on) only exists
     // under this param — api.simkl.org get-all-items, verified 2026-07-31.

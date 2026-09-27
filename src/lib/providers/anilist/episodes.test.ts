@@ -17,7 +17,7 @@ function mockFetch(response: unknown): HttpFetch {
 const DEPS = { fetch: mockFetch({}), tokens: { get: () => null, set: () => {}, clear: () => {} } };
 
 describe('getAnimeEpisodes', () => {
-  test('builds a single season from airing schedule and streaming episodes', async () => {
+  test('joins airing dates to numbered streaming titles even when newest-first with duplicates', async () => {
     const fetch = mockFetch({
       data: {
         Media: {
@@ -30,8 +30,9 @@ describe('getAnimeEpisodes', () => {
             ],
           },
           streamingEpisodes: [
-            { title: 'The First Case', thumbnail: 'https://img/1.jpg' },
-            { title: 'The Second Case', thumbnail: 'https://img/2.jpg' },
+            { title: 'Episode 2 - The Second Case', thumbnail: 'https://img/2.jpg' },
+            { title: 'Episode 1 - The First Case', thumbnail: 'https://img/1.jpg' },
+            { title: 'Episode 2 - The Second Case', thumbnail: 'https://other/2.jpg' },
           ],
         },
       },
@@ -49,26 +50,26 @@ describe('getAnimeEpisodes', () => {
     expect(season.episodes).toHaveLength(2);
     expect(season.episodes[0]).toMatchObject({
       number: 1,
-      title: 'The First Case',
+      title: 'Episode 1 - The First Case',
       runtime: 24,
       firstAired: new Date(1_000_000_000 * 1000).toISOString(),
     });
     expect(season.episodes[1]).toMatchObject({
       number: 2,
-      title: 'The Second Case',
+      title: 'Episode 2 - The Second Case',
       runtime: 24,
       firstAired: new Date(1_000_086_400 * 1000).toISOString(),
     });
   });
 
-  test('falls back to synthetic titles when streaming episodes are missing', async () => {
+  test('falls back to synthetic titles when streaming titles have no episode identity', async () => {
     const fetch = mockFetch({
       data: {
         Media: {
           episodes: 1,
           duration: null,
           airingSchedule: { edges: [] },
-          streamingEpisodes: null,
+          streamingEpisodes: [{ title: 'Unnumbered title', thumbnail: '' }],
         },
       },
     });

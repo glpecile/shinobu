@@ -376,6 +376,9 @@ export function useAniListEntryStateQuery(params: {
     queryFn: (): Promise<AniListEntryState> =>
       Effect.runPromise(getEntryState(anilistDeps(), { mediaId: mediaId ?? -1 })),
     enabled: enabled && mediaId != null,
+    // Episode navigation shares this read with the accordion. Logs invalidate
+    // it immediately; browsing need not recheck unchanged progress every minute.
+    staleTime: 5 * 60_000,
   });
 }
 
@@ -483,4 +486,3 @@ export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
     staleTime: EPISODES_STALE_MS,
   });
 }
-

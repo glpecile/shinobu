@@ -1,8 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
 
 /**
- * Failures a blind retry can never fix — and would make worse. A 429 already
- * got its one polite Retry-After sleep inside the provider layer's http.ts,
+ * Failures a blind retry can never fix — and would make worse. The provider
+ * layer owns whether a 429's Retry-After permits a retry,
  * so retrying again from TanStack Query just burns
  * more of the same rate budget (docs/solutions/anilist-rate-limit-retry-storm.md).
  * Auth failures need a reconnect, not a replay. Effect surfaces these as a

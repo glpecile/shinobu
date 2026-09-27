@@ -91,7 +91,7 @@ export function getAllItems(
   return Effect.gen(function* () {
     const raw = yield* simklHttp<SimklAllItemsResponse>(
       deps,
-      `/sync/all-items${segments}?extended=full&episode_watched_at=yes&next_watch_info=yes`,
+      `/sync/all-items${segments}?extended=full_anime_seasons&episode_watched_at=yes&next_watch_info=yes`,
       { accessToken: accessToken(deps), inspectResponse: fullSnapshotGuard },
     );
     const now = yield* Clock.currentTimeMillis;

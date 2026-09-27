@@ -12,7 +12,8 @@ import {
   useSuspenseShowSeasonsQuery,
   type ShowSeasonsSource,
 } from '@/state/queries/show-seasons';
-import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
+import { useSimklEpisodeStateQuery } from '@/state/queries/simkl';
+import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
@@ -69,39 +70,24 @@ function SeasonAccordionList({
   // A manual-only target still needs the sheet openable (plan 0022 R3) —
   // matches LogMediaButton's gate.
   const canLog = targets.length > 0 || manualTargets.length > 0;
-  // Watched marks from whichever tracker knows: Trakt's progress read
-  // first, else the Simkl `watching` snapshot's per-episode keys (the same
-  // `"${season}-${number}"` format). Neither connected → no marks.
+  // Trakt progress takes precedence over Simkl's canonical episode view.
   const { data: traktWatched } = useTraktShowProgressQuery({
     traktId: traktId ?? undefined,
     enabled: connected.includes('trakt') && traktId != null,
   });
-  const { data: simklEntry } = useSimklLibraryEntryQuery({
+  const { data: simklEntry } = useSimklEpisodeStateQuery({
     item,
     enabled: connected.includes('simkl'),
   });
-  // A `completed` Simkl entry carries **no** `seasons[]` array at all — the
-  // API omits per-episode detail once a show is finished (verified on Doctor
-  // Who: `status: 'completed'`, `watched_episodes_count: 153`,
-  // `watchedEpisodes: []`). Reading its empty key set literally left every
-  // episode of a fully-watched series showing an unticked "Mark as watched"
-  // (owner report 2026-08-01). "Completed" *means* every aired episode, so the
-  // layout on screen is the key set — aired only, because ticking an episode
-  // that hasn't come out yet would be a worse lie than the missing tick.
-  const simklWatchedAll =
-    simklEntry?.status === 'completed' && simklEntry.watchedKeys.size === 0;
   const watchedKeys =
     traktWatched?.watchedKeys ??
-    (simklWatchedAll
-      ? new Set(
-          seasons.flatMap((season) =>
-            season.episodes
-              .filter((episode) => hasAired(episode.firstAired))
-              .map((episode) => `${season.number}-${episode.number}`),
-          ),
-        )
-      : simklEntry?.watchedKeys) ??
-    null;
+    new Set(seasons.flatMap((season) =>
+      season.episodes
+        .filter((episode) => simklEpisodeIsWatched(
+          simklEntry, season.number, episode.number, episode.firstAired,
+        ))
+        .map((episode) => `${season.number}-${episode.number}`),
+    ));
 
   const logMedia = useLogMedia();
   const pushRoute = usePushRoute();

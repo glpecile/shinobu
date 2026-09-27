@@ -72,19 +72,25 @@ export function getAnimeEpisodes(
       airByEpisode.set(edge.node.episode, airingInstant(edge.node.airingAt));
     }
 
-    const streaming = (media.streamingEpisodes ?? []).filter(
-      (episode): episode is AniListStreamingEpisode => episode != null,
-    );
+    // Streaming lists can be newest-first or contain several providers.
+    // Array position is not an episode number. Unnumbered titles stay unknown.
+    const streaming = new Map<number, AniListStreamingEpisode>();
+    for (const episode of media.streamingEpisodes ?? []) {
+      const match = episode?.title.match(/^Episode\s+(\d+)\s*(?:[-–—:]|$)/i);
+      if (episode == null || match == null) continue;
+      const number = Number(match[1]);
+      if (number > 0 && !streaming.has(number)) streaming.set(number, episode);
+    }
 
     // Ongoing anime has no final `episodes` count and commonly no streaming
     // metadata, but its airing schedule still identifies every known episode.
     const scheduledCount = Math.max(0, ...airByEpisode.keys());
-    const count = media.episodes ?? Math.max(streaming.length, scheduledCount);
+    const count = media.episodes ?? Math.max(0, ...streaming.keys(), scheduledCount);
     const duration = media.duration ?? undefined;
 
     const episodes: NormalizedEpisode[] = [];
     for (let number = 1; number <= count; number++) {
-      const streamingEpisode = streaming[number - 1];
+      const streamingEpisode = streaming.get(number);
       episodes.push({
         number,
         title: streamingEpisode?.title ?? `Episode ${number}`,
