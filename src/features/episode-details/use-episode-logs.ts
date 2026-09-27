@@ -2,6 +2,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
 import { useSimklEpisodeStateQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
+import { useAniListEpisodeWatchedQuery } from '@/state/queries/mapping';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -12,14 +13,9 @@ export interface EpisodeLog {
 }
 
 /**
- * Which connected providers record this episode as watched, and when — from
- * the two that expose per-episode state on a read: Trakt's progress (its
- * `last_watched_at`) and Simkl's library snapshot (`episode_watched_at`).
- * Both are the same cache entries the seasons accordion draws its watched marks
- * from, so this costs no extra request.
- *
- * ponytail: Serializd and AniList only expose episode logs through the
- * paginated diary — add a `findInDiaryCache` step here if their rows are wanted.
+ * Watched state from Trakt, Simkl, and the item's mapped AniList entry.
+ * AniList's progress proves a watch but carries no per-episode timestamp.
+ * Its mapping and progress reads share the anime accordion's query cache.
  */
 export function useEpisodeLogs(
   item: NormalizedMediaItem,
@@ -38,7 +34,12 @@ export function useEpisodeLogs(
     item,
     enabled: connected.includes('simkl'),
   });
+  const anilist = useAniListEpisodeWatchedQuery({
+    item,
+    enabled: connected.includes('anilist'),
+  });
   const logs: EpisodeLog[] = [];
+  if (anilist.data.has(key)) logs.push({ provider: 'anilist' });
   if (trakt.data?.watchedKeys.has(key)) {
     const watchedAt = trakt.data.lastWatchedAt?.[key];
     logs.push({ provider: 'trakt', ...(watchedAt != null ? { watchedAt } : {}) });

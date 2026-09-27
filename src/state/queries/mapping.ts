@@ -15,6 +15,7 @@ import {
   pickMovieMatch,
 } from '@/lib/providers/pick-movie-match';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
+import { watchedKeysInLayout } from '@/lib/providers/mapping/season-layout';
 import {
   lookupByExternalId as lookupSimklByExternalId,
   type SimklLookupParams,
@@ -34,7 +35,7 @@ import { hasBuilderTmdbToken, tmdbToken } from '@/state/session/tmdb-token';
 import { onSessionChange } from '@/state/session/tokens';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistDeps } from './anilist';
+import { anilistDeps, useAniListEntryStateQuery } from './anilist';
 import { simklDeps } from './simkl';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
@@ -355,6 +356,25 @@ export function useSeasonLayoutQuery(ids: { tmdb?: number | undefined; trakt?: n
     ...seasonLayoutQueryOptions(ids.tmdb, ids.trakt),
     enabled: ids.tmdb != null || ids.trakt != null,
   });
+}
+
+/** Share the anime accordion's progress in the episode screen's canonical coordinates. */
+export function useAniListEpisodeWatchedQuery(params: {
+  item: NormalizedMediaItem;
+  enabled: boolean;
+}) {
+  const { item, enabled } = params;
+  const mediaId = enabled ? item.externalIds.anilist : undefined;
+  const entry = useAniListEntryStateQuery({ mediaId, enabled });
+  const episodes = useAniZipEpisodeMapQuery(mediaId);
+  const layout = useSeasonLayoutQuery(mediaId == null ? {} : item.externalIds);
+  // Only an ANIME item carries entry-relative progress. TV's count covers
+  // the whole show and cannot stand in for a single AniList cour.
+  const progress = entry.data?.entry?.progress ?? (item.type === 'ANIME' ? item.currentProgress : 0);
+  return {
+    ...entry,
+    data: watchedKeysInLayout(layout.data, episodes.data, enabled ? progress : 0),
+  };
 }
 
 /**

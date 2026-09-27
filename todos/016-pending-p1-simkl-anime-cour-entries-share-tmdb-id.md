@@ -72,3 +72,16 @@ verification of the reported state, so this todo remains pending.
 
 API findings: `docs/solutions/simkl-anime-cour-episode-mapping.md`.
 These are JS-only changes and hot reload without a native rebuild.
+
+## Follow-up from Link Click screenshots
+
+The anime accordion is a separate consumer that reads AniList progress. The
+episode detail had no AniList read at all, so watched Bridon Arc episodes
+could lose their Rewatch label on navigation even with the Simkl fix present.
+Episode details now map the same entry's progress through ani.zip and the
+destination season layout. The screenshots also revealed reversed streaming
+titles, fixed by joining AniList titles by episode number rather than position.
+
+64 focused tests, typecheck, and lint pass with this follow-up. Live UI
+verification is still blocked by the disconnected browser. See
+`docs/solutions/anime-episode-detail-misses-anilist-progress.md`.

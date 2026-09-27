@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { placeInLayout, type SeasonLayout } from './season-layout';
+import { placeInLayout, watchedKeysInLayout, type SeasonLayout } from './season-layout';
 
 /**
  * Every layout below is a real one, probed against both Trakt and TMDB on
@@ -9,6 +9,17 @@ import { placeInLayout, type SeasonLayout } from './season-layout';
  */
 
 describe('placeInLayout', () => {
+  test('Link Click Bridon progress marks only its mapped season 3 episodes', () => {
+    const layout = [{ season: 2, episodeCount: 12 }, { season: 3, episodeCount: 6 }];
+    const episodes = new Map([
+      [1, { season: 3, number: 1 }],
+      [6, { season: 3, number: 6 }],
+    ]);
+    expect([...watchedKeysInLayout(layout, episodes, 6)]).toEqual(['3-1', '3-6']);
+    expect([...watchedKeysInLayout(layout, episodes, 5)]).toEqual(['3-1']);
+    expect([...watchedKeysInLayout(layout, null, 6)]).toEqual([]);
+    expect([...watchedKeysInLayout(null, episodes, 6)]).toEqual([]);
+  });
   test('keeps the TVDB pair when the destination really has that season', () => {
     // Mushoku Tensei: both trackers split it the way TVDB does.
     const layout: SeasonLayout = [
