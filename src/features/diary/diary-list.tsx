@@ -21,6 +21,7 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
+import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -224,8 +225,9 @@ function DiaryDayHead({
   onToggle: () => void;
 }) {
   const label = `${count} ${count === 1 ? 'entry' : 'entries'}`;
+  const toggle = useDisclosureToggle(onToggle);
   return (
-    <RailHead label={`${parts.label} ${parts.day}, ${label}`} onToggle={onToggle} open={!collapsed}>
+    <RailHead label={`${parts.label} ${parts.day}, ${label}`} onToggle={toggle} open={!collapsed}>
       <RailHead.Date day={parts.day} label={parts.label} today={parts.isToday} />
       <RailHead.Count>{label}</RailHead.Count>
     </RailHead>
@@ -657,10 +659,6 @@ export function DiaryList({
     });
   }
 
-  function toggleDay(dayKey: string) {
-    setDiaryDayCollapsed(dayKey, !collapsedDays.has(dayKey));
-  }
-
   async function refresh() {
     setRefreshing(true);
     try {
@@ -701,7 +699,7 @@ export function DiaryList({
                 <DiaryDayHead
                   collapsed={item.collapsed}
                   count={item.count}
-                  onToggle={() => toggleDay(item.dayKey)}
+                  onToggle={() => setDiaryDayCollapsed(item.dayKey, !collapsedDays.has(item.dayKey))}
                   parts={item.parts}
                 />
               );

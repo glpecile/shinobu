@@ -20,7 +20,7 @@ import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { CARD_EXIT, CardSlot } from '@/features/up-next/ui/card-slot';
 import { STACK_OFFSET } from '@/features/up-next/ui/episode-card';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
-import { UpNextSectionHeader } from '@/features/up-next/ui/section-header';
+import { CollapsibleSection } from '@/components/collapsible-section';
 import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import { shortWeekdayName } from '@/lib/time/relative-day';
@@ -173,7 +173,7 @@ export function UpNextSection({
         // The last card's own exit can't play once the whole block unmounts
         // with it, so the block carries the same fade.
         <AnimatedView exiting={CARD_EXIT}>
-          <UpNextSectionHeader
+          <CollapsibleSection
             collapseKey="up-next-continue"
             title="Continue Watching"
           >
@@ -205,11 +205,11 @@ export function UpNextSection({
                 />
               ))}
             </Rail>
-          </UpNextSectionHeader>
+          </CollapsibleSection>
         </AnimatedView>
       )}
 
-      <UpNextSectionHeader
+      <CollapsibleSection
         collapseKey="up-next-calendar"
         title="This week"
       >
@@ -377,7 +377,7 @@ export function UpNextSection({
             )}
           </AnimatedView>
         </View>
-      </UpNextSectionHeader>
+      </CollapsibleSection>
     </View>
   );
 }

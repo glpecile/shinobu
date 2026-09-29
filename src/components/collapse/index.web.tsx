@@ -12,8 +12,10 @@ import { DURATION, EASE_IN_OUT } from '@/lib/motion';
  */
 export function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
   const [mounted, setMounted] = useState(open);
-  const [fullHeight, setFullHeight] = useState(0);
+  const [fullHeight, setFullHeight] = useState<number | undefined>(open ? undefined : 0);
+  const [motion, setMotion] = useState({ open, enabled: false });
   const reduceMotion = useReducedMotion();
+  if (motion.open !== open) setMotion({ open, enabled: true });
   if (open && !mounted) setMounted(true);
   if (!mounted) return null;
 
@@ -30,7 +32,8 @@ export function Collapse({ open, children }: { open: boolean; children: ReactNod
           visibility: open ? 'visible' : 'hidden',
           transitionProperty: ['height', 'visibility'],
         } as ViewStyle),
-        transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+        // Initial layout belongs to SectionEnter, not a second reveal from zero.
+        transitionDuration: reduceMotion || !motion.enabled ? 0 : DURATION.toggle,
         transitionTimingFunction: EASE_IN_OUT,
       }}
     >

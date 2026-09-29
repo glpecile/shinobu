@@ -1,7 +1,9 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
+import type { ErrorBoundaryProps } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
 import { EmptyStateTile } from '@/components/empty-state-tile';
 import {
@@ -18,6 +20,25 @@ import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
+
+/** Keep render failures inside this route so the app shell stays usable. */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  return (
+    <View className="flex-1 bg-background">
+      <Head><title>Diary — Shinobu</title></Head>
+      <DiaryHeader />
+      <CenteredNotice>
+        <CenteredNotice.Title>Couldn't display your diary</CenteredNotice.Title>
+        <CenteredNotice.Body>Try again, or switch to another screen.</CenteredNotice.Body>
+        <CenteredNotice.Action
+          icon={<Button.Icon name="refresh" />}
+          label="Try again"
+          onPress={retry}
+        />
+      </CenteredNotice>
+    </View>
+  );
+}
 
 function DiaryHeader() {
   // Same brand-header treatment as Home (spacing + title size) so top-level

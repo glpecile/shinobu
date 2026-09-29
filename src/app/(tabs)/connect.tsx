@@ -149,17 +149,19 @@ export default function ConnectScreen() {
                     Version {Constants.expoConfig?.version ?? 'unknown'}
                   </Text>
                 </View>
-                {process.env.EXPO_OS !== 'web' && (
-                  <Button
-                    icon={<Button.Icon name="open-outline" />}
-                    label="View releases"
-                    onPress={() => {
-                      void openExternalUrl('https://github.com/glpecile/shinobu/releases');
-                    }}
-                    size="sm"
-                    variant="quiet"
-                  />
-                )}
+                <Button
+                  icon={<Button.Icon name="open-outline" />}
+                  label={process.env.EXPO_OS === 'web' ? 'View code' : 'View releases'}
+                  onPress={() => {
+                    void openExternalUrl(
+                      process.env.EXPO_OS === 'web'
+                        ? 'https://github.com/glpecile/shinobu'
+                        : 'https://github.com/glpecile/shinobu/releases',
+                    );
+                  }}
+                  size="sm"
+                  variant="quiet"
+                />
               </View>
             </View>
           </View>

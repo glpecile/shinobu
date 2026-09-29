@@ -3,7 +3,8 @@
 Add an About card at the bottom of Manage Trackers with the Shinobu name,
 the running app's Expo config version, and a View releases button linking to
 https://github.com/glpecile/shinobu/releases.
-Place the name and version beside the button in one row. Hide the button on web.
+Place the name and version beside the button in one row. On web, show View code
+linking to https://github.com/glpecile/shinobu instead of View releases.
 
 Reuse the screen's card styles, Button, and openExternalUrl helper. Read the
 version through the installed expo-constants package so release bumps appear
