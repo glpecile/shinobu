@@ -12,7 +12,7 @@ import { DURATION, EASE_IN_OUT } from '@/lib/motion';
  */
 export function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
   const [mounted, setMounted] = useState(open);
-  const [fullHeight, setFullHeight] = useState<number>();
+  const [fullHeight, setFullHeight] = useState<number | undefined>(open ? undefined : 0);
   const [motion, setMotion] = useState({ open, enabled: false });
   const reduceMotion = useReducedMotion();
   if (motion.open !== open) setMotion({ open, enabled: true });
