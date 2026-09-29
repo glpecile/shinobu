@@ -3,17 +3,13 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
-import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { CollapsibleSection } from '@/components/collapsible-section';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useRailFade } from '@/components/rail';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
-import {
-  setSectionCollapsed,
-  useSectionCollapsed,
-} from '@/state/prefs/collapsed-sections';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { MediaCard } from './media-card';
@@ -64,7 +60,6 @@ export function MediaCarousel({
   onItemActions,
   onViewAll,
 }: MediaCarouselProps) {
-  const collapsed = useSectionCollapsed(collapseKey);
   const { scrollProps, fade } = useRailFade();
   const accent = useThemeColor('--color-accent');
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the pointer
@@ -75,25 +70,11 @@ export function MediaCarousel({
   if (items.length === 0) return null;
 
   return (
-    <View className="mb-6">
-      <View className="flex-row items-center justify-between px-4 mb-3">
-        <PresstableOpacity
-          accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
-          accessibilityState={{ expanded: !collapsed }}
-          className="flex-row items-center gap-2 shrink"
-          onPress={() => setSectionCollapsed(collapseKey, !collapsed)}
-        >
-          {provider != null && <ProviderIcon id={provider} size={16} />}
-          {/* `shrink` + one line: a long title ("Anime Series of Summer
-              2026") gives way before it pushes "View all" off the edge. */}
-          <Text className="text-xl font-display text-foreground shrink" numberOfLines={1}>
-            {title}
-          </Text>
-          <DisclosureChevron open={!collapsed} size={18} />
-        </PresstableOpacity>
-        {/* Sibling of the collapse toggle, never nested inside it — two
-            gesture-handler buttons in one tree would double-fire the tap. */}
-        {onViewAll != null && !collapsed && (
+    <CollapsibleSection
+      collapseKey={collapseKey}
+      leading={provider != null ? <ProviderIcon id={provider} size={16} /> : undefined}
+      title={title}
+      action={onViewAll != null && (
           // Hover lives on a plain wrapper: pressto's pressables take
           // gesture-handler props, not RN-web pointer ones.
           <View
@@ -131,46 +112,44 @@ export function MediaCarousel({
               </AnimatedView>
             </PresstableOpacity>
           </View>
-        )}
-      </View>
-      {!collapsed && (
-        <View>
-          {/* Virtualized, not `ScrollView` + `map` (AGENTS.md "Long Lists"): a
-              mapped row mounts every card at once, and each `MediaCard` fires its
-              own poster request — the Your Shows row turned that into an app-wide
-              stall (plan 0024 U7). `recycleItems` stays off: `MediaCard` keeps
-              local `hovered` state, which would leak across recycled cells. */}
-          <List
-            data={items}
-            estimatedItemSize={CARD_WIDTH + CARD_GAP}
-            horizontal
-            keyExtractor={(item) => item.id}
-            // Spacer elements, not `contentContainerStyle` padding: Legend List
-            // drops that on web for *horizontal* lists (vertical ones honor it),
-            // which left the rows butted against the sidebar and bleeding off the
-            // right edge while their section headers stayed inset
-            // (docs/solutions/legend-list-horizontal-content-padding-web.md).
-            // The trailing spacer is short by one gutter — every card already
-            // carries `mr-3`.
-            ListHeaderComponent={<View style={{ width: EDGE_GUTTER }} />}
-            ListFooterComponent={<View style={{ width: EDGE_GUTTER - CARD_GAP }} />}
-            renderItem={({ item }) => (
-              <View className="mr-3">
-                <MediaCard
-                  item={item}
-                  onActionsPress={onItemActions}
-                  onPress={onItemPress}
-                  subtitle={subtitles?.[item.id]}
-                />
-              </View>
-            )}
-            showsHorizontalScrollIndicator={false}
-            style={{ height: CARD_HEIGHT }}
-            {...scrollProps}
-          />
-          {fade}
-        </View>
       )}
-    </View>
+    >
+      <View>
+        {/* Virtualized, not `ScrollView` + `map` (AGENTS.md "Long Lists"): a
+            mapped row mounts every card at once, and each `MediaCard` fires its
+            own poster request — the Your Shows row turned that into an app-wide
+            stall (plan 0024 U7). `recycleItems` stays off: `MediaCard` keeps
+            local `hovered` state, which would leak across recycled cells. */}
+        <List
+          data={items}
+          estimatedItemSize={CARD_WIDTH + CARD_GAP}
+          horizontal
+          keyExtractor={(item) => item.id}
+          // Spacer elements, not `contentContainerStyle` padding: Legend List
+          // drops that on web for *horizontal* lists (vertical ones honor it),
+          // which left the rows butted against the sidebar and bleeding off the
+          // right edge while their section headers stayed inset
+          // (docs/solutions/legend-list-horizontal-content-padding-web.md).
+          // The trailing spacer is short by one gutter — every card already
+          // carries `mr-3`.
+          ListHeaderComponent={<View style={{ width: EDGE_GUTTER }} />}
+          ListFooterComponent={<View style={{ width: EDGE_GUTTER - CARD_GAP }} />}
+          renderItem={({ item }) => (
+            <View className="mr-3">
+              <MediaCard
+                item={item}
+                onActionsPress={onItemActions}
+                onPress={onItemPress}
+                subtitle={subtitles?.[item.id]}
+              />
+            </View>
+          )}
+          showsHorizontalScrollIndicator={false}
+          style={{ height: CARD_HEIGHT }}
+          {...scrollProps}
+        />
+        {fade}
+      </View>
+    </CollapsibleSection>
   );
 }
