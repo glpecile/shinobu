@@ -65,8 +65,8 @@ const PERSON_STALE_TIME_MS = 24 * 60 * 60 * 1000;
 export function useSuspenseTmdbPersonQuery(params: { tmdbId: number }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.person(params.tmdbId),
-    queryFn: () =>
-      Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: params.tmdbId })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: params.tmdbId }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
   });
 }
@@ -84,8 +84,8 @@ export function useTmdbPersonQuery(params: {
   const { tmdbId } = params;
   return useQuery({
     queryKey: tmdbQueryKeys.person(tmdbId ?? 0),
-    queryFn: () =>
-      Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: tmdbId as number })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: tmdbId as number }), { signal }),
     enabled: tmdbId != null && params.enabled !== false,
     staleTime: PERSON_STALE_TIME_MS,
   });
@@ -98,7 +98,7 @@ function episodeQueryOptions(params: {
 }) {
   return {
     queryKey: tmdbQueryKeys.episode(params.tmdbId, params.season, params.number),
-    queryFn: () => Effect.runPromise(getTvEpisode(tmdbDeps(), params)),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTvEpisode(tmdbDeps(), params), { signal }),
     // Credits and stills for an aired episode don't move — same budget as a
     // person page, so sheet → screen → back costs one request, not three.
     staleTime: PERSON_STALE_TIME_MS,
@@ -149,7 +149,7 @@ export function useTmdbSearchQuery(params: {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.search(query),
-    queryFn: () => Effect.runPromise(searchTitles(tmdbDeps(), { query })),
+    queryFn: ({ signal }) => Effect.runPromise(searchTitles(tmdbDeps(), { query }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
@@ -169,7 +169,7 @@ export function useTmdbPersonSearchQuery(params: {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.personSearch(query),
-    queryFn: () => Effect.runPromise(searchPerson(tmdbDeps(), { query })),
+    queryFn: ({ signal }) => Effect.runPromise(searchPerson(tmdbDeps(), { query }), { signal }),
     enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
@@ -183,7 +183,7 @@ export function useTmdbStudioSearchQuery(params: {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.studioSearch(query),
-    queryFn: () => Effect.runPromise(searchCompany(tmdbDeps(), { query })),
+    queryFn: ({ signal }) => Effect.runPromise(searchCompany(tmdbDeps(), { query }), { signal }),
     enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
     staleTime: 60_000,
@@ -194,8 +194,8 @@ export function useTmdbStudioSearchQuery(params: {
 export function useSuspenseTmdbPersonSearchQuery(params: { name: string }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.personSearch(params.name),
-    queryFn: () =>
-      Effect.runPromise(searchPerson(tmdbDeps(), { query: params.name })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchPerson(tmdbDeps(), { query: params.name }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
   });
 }
@@ -204,8 +204,8 @@ export function useSuspenseTmdbPersonSearchQuery(params: { name: string }) {
 export function useSuspenseTmdbStudioQuery(params: { tmdbId: number }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.studio(params.tmdbId),
-    queryFn: () =>
-      Effect.runPromise(getStudio(tmdbDeps(), { tmdbId: params.tmdbId })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getStudio(tmdbDeps(), { tmdbId: params.tmdbId }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
   });
 }
@@ -214,8 +214,8 @@ export function useSuspenseTmdbStudioQuery(params: { tmdbId: number }) {
 export function useSuspenseTmdbStudioSearchQuery(params: { name: string }) {
   return useSuspenseQuery({
     queryKey: tmdbQueryKeys.studioSearch(params.name),
-    queryFn: () =>
-      Effect.runPromise(searchCompany(tmdbDeps(), { query: params.name })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchCompany(tmdbDeps(), { query: params.name }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
   });
 }

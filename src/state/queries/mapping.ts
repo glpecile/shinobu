@@ -208,8 +208,8 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
 export function useSimklLookupQuery(params: SimklLookupParams | null) {
   return useQuery({
     queryKey: mappingQueryKeys.simklLookup(params ?? {}),
-    queryFn: () =>
-      Effect.runPromise(lookupSimklByExternalId(simklDeps(), params ?? {})).then(
+    queryFn: ({ signal }) =>
+      Effect.runPromise(lookupSimklByExternalId(simklDeps(), params ?? {}), { signal }).then(
         (results) => results[0] ?? null,
       ),
     ...FOREVER,
@@ -287,6 +287,11 @@ export function useAniZipEpisodeMapQuery(anilistId: number | undefined) {
   });
 }
 
+function mappingMiss(error: unknown, signal: AbortSignal): null {
+  if (signal.aborted) throw error;
+  return null;
+}
+
 /**
  * How the trackers themselves carve this show into seasons — the arbiter the
  * anime log fan-out places an ani.zip row against (plan 0027;
@@ -305,11 +310,12 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
   const via = seasonLayoutVia();
   return {
     queryKey: mappingQueryKeys.seasonLayout(tmdbId ?? null, traktId ?? null, via),
-    queryFn: async (): Promise<SeasonLayout | null> => {
+    queryFn: async ({ signal }: { signal: AbortSignal }): Promise<SeasonLayout | null> => {
       if (tmdbId != null) {
         const layout = await Effect.runPromise(
           getTvSeasonLayout(tmdbDeps(), { tmdbId }),
-        ).catch(() => null);
+          { signal },
+        ).catch((error) => mappingMiss(error, signal));
         // An empty array means TMDB answered but knows no seasons — fall
         // through to Trakt rather than treating "no data" as an answer.
         if (layout != null && layout.length > 0) return layout;
@@ -325,7 +331,8 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
       if (traktId != null && (via === 'tmdb+trakt' || via === 'trakt')) {
         const layout = await Effect.runPromise(
           getShowSeasonLayout(traktDeps(), { traktId }),
-        ).catch(() => null);
+          { signal },
+        ).catch((error) => mappingMiss(error, signal));
         if (layout != null && layout.length > 0) return layout;
       }
       return null;
@@ -398,9 +405,11 @@ function traktOrSimklLookup(
     id: number | string;
     kind: 'movie' | 'show';
   },
+  signal: AbortSignal,
 ): Promise<NormalizedMediaItem | null> {
   if (via === 'trakt') {
-    return Effect.runPromise(lookupByExternalId(traktDeps(), params)).catch(() => null);
+    return Effect.runPromise(lookupByExternalId(traktDeps(), params), { signal })
+      .catch((error) => mappingMiss(error, signal));
   }
   return Effect.runPromise(
     lookupSimklByExternalId(simklDeps(), {
@@ -409,9 +418,10 @@ function traktOrSimklLookup(
       ...(params.source === 'tmdb' ? { tmdb: Number(params.id) } : {}),
       ...(params.source === 'imdb' ? { imdb: String(params.id) } : {}),
     }),
+    { signal },
   )
     .then((results) => results[0] ?? null)
-    .catch(() => null);
+    .catch((error) => mappingMiss(error, signal));
 }
 
 export function cachedTraktLookup(
@@ -430,7 +440,7 @@ export function cachedTraktLookup(
       params.kind,
       via,
     ),
-    queryFn: () => traktOrSimklLookup(via, params),
+    queryFn: ({ signal }) => traktOrSimklLookup(via, params, signal),
     ...FOREVER,
   });
 }
@@ -454,18 +464,18 @@ function movieSearchQuery(
 ) {
   return {
     queryKey: mappingQueryKeys.traktSearch(title, year, via),
-    queryFn: (): Promise<NormalizedMediaItem | null> => {
+    queryFn: ({ signal }: { signal: AbortSignal }): Promise<NormalizedMediaItem | null> => {
       if (via === 'trakt') {
         // limit 10, not 5: an upcoming film can rank below a popular classic
         // sharing its title, and the year gate needs it in the result set.
-        return Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }))
+        return Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }), { signal })
           .then((results) => pickMovieMatch(results, year, title))
-          .catch(() => null);
+          .catch((error) => mappingMiss(error, signal));
       }
       if (via === 'none') return Promise.resolve(null);
-      return Effect.runPromise(searchMovie(tmdbDeps(), { query: title, year }))
+      return Effect.runPromise(searchMovie(tmdbDeps(), { query: title, year }), { signal })
         .then((results) => pickMovieMatch(results, year, title))
-        .catch(() => null);
+        .catch((error) => mappingMiss(error, signal));
     },
     ...FOREVER,
   };
@@ -482,8 +492,9 @@ export function cachedTmdbTvIdByTvdb(
 ): Promise<number | null> {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.tmdbFind(tvdbId, tmdbVia()),
-    queryFn: (): Promise<number | null> =>
-      Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId })).catch(() => null),
+    queryFn: ({ signal }): Promise<number | null> =>
+      Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId }), { signal })
+        .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
   });
 }
@@ -509,8 +520,9 @@ export function cachedTmdbMovieIdByTitle(
 ): Promise<number | null> {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year, tmdbVia()),
-    queryFn: (): Promise<number | null> =>
-      searchTmdbMovieId(params).catch(() => null),
+    queryFn: ({ signal }): Promise<number | null> =>
+      searchTmdbMovieId(params, signal)
+        .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
   });
 }
@@ -523,18 +535,20 @@ export function cachedTmdbMovieIdByTitle(
  * release tolerance — so a miss retries unfiltered and re-runs the same gate.
  * The second request only ever fires on a miss.
  */
-async function searchTmdbMovieId(params: {
-  title: string;
-  year: number | undefined;
-}): Promise<number | null> {
+async function searchTmdbMovieId(
+  params: { title: string; year: number | undefined },
+  signal: AbortSignal,
+): Promise<number | null> {
   const gated = await Effect.runPromise(
     searchMovie(tmdbDeps(), { query: params.title, year: params.year }),
+    { signal },
   ).then((results) => pickMovieMatch(results, params.year, params.title));
   if (gated != null || params.year == null) {
     return gated?.externalIds.tmdb ?? null;
   }
   return Effect.runPromise(
     searchMovie(tmdbDeps(), { query: params.title }),
+    { signal },
   ).then(
     (results) =>
       pickMovieMatch(results, params.year, params.title)?.externalIds.tmdb ??
@@ -560,16 +574,17 @@ export function cachedAniListFilmId(
 ): Promise<number | null> {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.anilistFilmSearch(params.title, params.year),
-    queryFn: (): Promise<number | null> =>
+    queryFn: ({ signal }): Promise<number | null> =>
       Effect.runPromise(
         searchAnimeFilms(anilistDeps(), { query: params.title }),
+        { signal },
       )
         .then(
           (results) =>
             pickAnimeFilmMatch(results, params.year, params.title)?.externalIds
               .anilist ?? null,
         )
-        .catch(() => null),
+        .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
   });
 }
@@ -615,7 +630,7 @@ export function useTraktIdentityQuery(item: NormalizedMediaItem | undefined) {
   const via = useIdentityLookupVia();
   return useQuery({
     queryKey: mappingQueryKeys.traktLookup('tmdb', tmdbId ?? 0, kind, via),
-    queryFn: () => traktOrSimklLookup(via, { source: 'tmdb', id: tmdbId ?? 0, kind }),
+    queryFn: ({ signal }) => traktOrSimklLookup(via, { source: 'tmdb', id: tmdbId ?? 0, kind }, signal),
     ...FOREVER,
     enabled:
       item != null &&

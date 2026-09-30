@@ -116,9 +116,10 @@ export function watchlistReadProviders(
 async function traktInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const items = await queryClient.fetchQuery({
     queryKey: traktQueryKeys.watchlist('all', 'added', 'desc'),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       Effect.runPromise(
         getWatchlist(traktDeps(), { type: 'all', sortBy: 'added', sortHow: 'desc' }),
+        { signal },
       ),
     staleTime: WATCHLIST_STALE_MS,
   });
@@ -197,8 +198,8 @@ async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInpu
   const cached = queryClient.getQueryData<WatchlistPages>(queryKey);
   const data = await queryClient.fetchInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }: { pageParam: number }) =>
-      Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam })),
+    queryFn: ({ pageParam, signal }: { pageParam: number; signal: AbortSignal }) =>
+      Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam }), { signal }),
     initialPageParam: 1,
     getNextPageParam: (lastPage: NormalizedMediaItem[], _pages, lastPageParam: number) =>
       lastPage.length < WATCHLIST_PAGE_SIZE ? undefined : lastPageParam + 1,
@@ -219,8 +220,8 @@ async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInpu
 async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
   const library = await queryClient.fetchQuery({
     queryKey: simklQueryKeys.allItems(undefined, 'plantowatch'),
-    queryFn: () =>
-      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' }), { signal }),
     staleTime: WATCHLIST_STALE_MS,
   });
   const entries = [...library.shows, ...library.movies, ...library.anime];

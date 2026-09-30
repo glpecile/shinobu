@@ -57,7 +57,7 @@ interface FeedQueryConfig {
   slot: FeedSlot;
   provider: ProviderId;
   queryKey: readonly unknown[];
-  queryFn: () => Promise<NormalizedMediaItem[]>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedMediaItem[]>;
   staleTime?: number;
 }
 
@@ -88,25 +88,25 @@ export const feedOptions = {
   // resolve with zero providers connected and no Trakt env creds at all.
   trendingMovies: () => ({
     queryKey: simklQueryKeys.trending('movies'),
-    queryFn: () => Effect.runPromise(getTrending(simklDeps(), 'movies')),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTrending(simklDeps(), 'movies'), { signal }),
     staleTime: CATALOGUE_STALE_MS,
   }),
   trendingShows: () => ({
     queryKey: simklQueryKeys.trending('tv'),
-    queryFn: () => Effect.runPromise(getTrending(simklDeps(), 'tv')),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getTrending(simklDeps(), 'tv'), { signal }),
     staleTime: CATALOGUE_STALE_MS,
   }),
   // `TV` (everything but films) — the row is titled "Anime series of …" and
   // the films have their own row below it.
   seasonalAnime: (season: AnimeSeasonWindow, format: AnimeFormatFilter = 'TV') => ({
     queryKey: anilistQueryKeys.seasonalAnime(season, format),
-    queryFn: () => fetchSeasonalAnime(season, format),
+    queryFn: ({ signal }: { signal: AbortSignal }) => fetchSeasonalAnime(season, format, 1, signal),
     staleTime: CATALOGUE_STALE_MS,
   }),
   // Personal rows — only fetched while their provider is connected.
   yourWatchlist: (username: string) => ({
     queryKey: letterboxdQueryKeys.watchlist(username),
-    queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getWatchlist(letterboxdDeps()), { signal }),
   }),
 };
 

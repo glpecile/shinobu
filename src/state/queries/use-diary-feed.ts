@@ -58,47 +58,51 @@ async function fetchAniListActivityPage(
   queryClient: QueryClient,
   page: number,
   mediaId?: number,
+  signal?: AbortSignal,
 ): Promise<NormalizedDiaryEntry[]> {
   const deps = anilistDeps();
   const viewer = await queryClient.fetchQuery({
     queryKey: anilistQueryKeys.viewer(),
-    queryFn: () => Effect.runPromise(getViewer(deps)),
+    queryFn: ({ signal: viewerSignal }) => Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
   });
   return Effect.runPromise(
     getListActivity(deps, { viewerId: viewer.id, page, perPage: PAGE_SIZE, mediaId }),
+    { signal },
   );
 }
 
 type FetchSlice = (
   queryClient: QueryClient,
   page: number,
+  signal?: AbortSignal,
 ) => Promise<Pick<DiarySlice, 'entries' | 'next'>>;
 
 /** One page of each provider's diary; the effects run here (containment rule). */
 const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
-  trakt: async (_queryClient, page) => {
-    const entries = await Effect.runPromise(getHistory(traktDeps(), { page }));
+  trakt: async (_queryClient, page, signal) => {
+    const entries = await Effect.runPromise(getHistory(traktDeps(), { page }), { signal });
     return { entries, next: pageAfter(entries, page) };
   },
-  anilist: async (queryClient, page) => {
-    const entries = await fetchAniListActivityPage(queryClient, page);
+  anilist: async (queryClient, page, signal) => {
+    const entries = await fetchAniListActivityPage(queryClient, page, undefined, signal);
     return { entries, next: pageAfter(entries, page) };
   },
   // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
   // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
   // exhausts after page 1 and drops out of the watermark early. On web it
   // reads through the Worker proxy (plan 0018); native reads letterboxd.com.
-  letterboxd: async () => ({
-    entries: await Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 })),
+  letterboxd: async (_queryClient, _page, signal) => ({
+    entries: await Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 }), { signal }),
     next: undefined,
   }),
   // A real paginated read: the page carries `{ entries, totalPages }`.
   // Watermark ordering keys on `dateAdded` (KTD8), already `watchedAt`.
-  serializd: async (_queryClient, page) => {
+  serializd: async (_queryClient, page, signal) => {
     const result = await Effect.runPromise(
       getSerializdDiary(serializdDeps(), { page }),
+      { signal },
     );
     return { entries: result.entries, next: serializdNextPage(result, page) };
   },
@@ -106,8 +110,8 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   // `/sync/all-items` snapshot (per-episode watched instants), so like
   // Letterboxd it is a single window (rate-limit discipline:
   // docs/solutions/simkl-rate-limits-and-write-lock.md).
-  simkl: async () => ({
-    entries: await Effect.runPromise(getSimklDiary(simklDeps())),
+  simkl: async (_queryClient, _page, signal) => ({
+    entries: await Effect.runPromise(getSimklDiary(simklDeps()), { signal }),
     next: undefined,
   }),
 };
@@ -122,13 +126,15 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
 async function fetchDiaryPage(
   queryClient: QueryClient,
   cursor: DiaryCursor,
+  signal?: AbortSignal,
 ): Promise<DiaryPage> {
   const slices = await Promise.all(
     (Object.entries(cursor) as Array<[ProviderId, number]>).map(
       async ([provider, page]): Promise<[ProviderId, DiarySlice]> => {
         try {
-          return [provider, await FETCH_SLICE[provider](queryClient, page)];
+          return [provider, await FETCH_SLICE[provider](queryClient, page, signal)];
         } catch (error: unknown) {
+          if (signal?.aborted) throw error;
           const message = error instanceof Error ? error.message : String(error);
           return [provider, { entries: [], next: page, error: message }];
         }
@@ -170,7 +176,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
 
   const query = useInfiniteQuery({
     queryKey: diaryQueryKeys.feed(active, letterboxdUsername, serializdUsername),
-    queryFn: ({ pageParam }) => fetchDiaryPage(queryClient, pageParam),
+    queryFn: ({ pageParam, signal }) => fetchDiaryPage(queryClient, pageParam, signal),
     initialPageParam: Object.fromEntries(
       active.map((provider) => [provider, 1]),
     ) as DiaryCursor,
@@ -238,16 +244,16 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
 
   return useQuery({
     queryKey: diaryQueryKeys.filmPlays(providers, item.externalIds),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const settled = await Promise.allSettled([
         providers.includes('trakt') && trakt != null
-          ? Effect.runPromise(getMovieHistory(traktDeps(), { traktId: trakt }))
+          ? Effect.runPromise(getMovieHistory(traktDeps(), { traktId: trakt }), { signal })
           : [],
         providers.includes('anilist') && anilist != null
-          ? fetchAniListActivityPage(queryClient, 1, anilist)
+          ? fetchAniListActivityPage(queryClient, 1, anilist, signal)
           : [],
         providers.includes('letterboxd') && (tmdb != null || letterboxd != null)
-          ? Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 })).then((entries) =>
+          ? Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 }), { signal }).then((entries) =>
               entries.filter(
                 (entry) =>
                   (tmdb != null && entry.item.externalIds.tmdb === tmdb) ||

@@ -64,8 +64,9 @@ export function loginToSerializd(
 ): Effect.Effect<SerializdAuthResult, ProviderError> {
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         deps.fetch(`${deps.baseUrl}/login`, {
+          signal,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -116,8 +117,9 @@ export function validateAuthToken(
 ): Effect.Effect<SerializdAuthResult, ProviderError> {
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         deps.fetch(`${deps.baseUrl}/validateauthtoken`, {
+          signal,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),

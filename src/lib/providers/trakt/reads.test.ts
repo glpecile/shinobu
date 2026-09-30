@@ -10,6 +10,7 @@ import {
   getMyStreamingCalendar,
   getWatchedShows,
   getWatchlist,
+  searchMedia,
   traktCalendarRange,
 } from './reads';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -104,6 +105,33 @@ function json(body: unknown): Response {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+describe('searchMedia response decoding', () => {
+  test.each([
+    { shape: 'non-array', body: {} },
+    { shape: 'null row', body: [null] },
+    { shape: 'missing IDs', body: [{ type: 'movie', movie: { title: 'Missing IDs' } }] },
+  ])(
+    'rejects $shape as ProviderDecodeError',
+    async ({ body }) => {
+      const deps = historyDeps(() => json(body), []);
+      const error = await Effect.runPromise(Effect.flip(searchMedia(deps, { query: 'test' })));
+      expect(error._tag).toBe('ProviderDecodeError');
+    },
+  );
+
+  test('normalizes movie and show results and ignores unsupported types', async () => {
+    const deps = historyDeps(() => json([
+      { type: 'movie', movie: { title: 'Film', ids: { trakt: 1 }, images: { poster: ['example.com/poster'] }, genres: ['drama'] } },
+      { type: 'show', show: { title: 'Show', ids: { trakt: 2 }, aired_episodes: 4 } },
+      { type: 'episode', episode: { title: 'Ignored' } },
+    ]), []);
+    const items = await Effect.runPromise(searchMedia(deps, { query: 'test' }));
+    expect(items.map((item) => item.title)).toEqual(['Film', 'Show']);
+    expect(items[0]?.coverImage).toBe('https://example.com/poster');
+    expect(items[0]?.genres).toEqual(['drama']);
+  });
+});
 
 describe('getHistory (diary source, plan 0016)', () => {
   test('requests one page at extended=full and normalizes rows', async () => {

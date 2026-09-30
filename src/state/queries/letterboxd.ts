@@ -138,8 +138,8 @@ export function useLetterboxdTagsQuery() {
 
   return useQuery({
     queryKey: letterboxdQueryKeys.tags(username),
-    queryFn: (): Promise<LetterboxdTag[]> =>
-      Effect.runPromise(getUserTags(letterboxdDeps())).catch(() => []),
+    queryFn: ({ signal }): Promise<LetterboxdTag[]> =>
+      Effect.runPromise(getUserTags(letterboxdDeps()).pipe(Effect.catchAll(() => Effect.succeed([]))), { signal }),
     enabled: username !== '',
     staleTime: TAGS_STALE_MS,
     gcTime: TAGS_GC_MS,
@@ -163,8 +163,8 @@ export function useLetterboxdWatchlistPagesQuery() {
 
   return useInfiniteQuery({
     queryKey: letterboxdQueryKeys.watchlistPages(username),
-    queryFn: ({ pageParam }) =>
-      Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam })),
+    queryFn: ({ pageParam, signal }) =>
+      Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam }), { signal }),
     initialPageParam: 1,
     getNextPageParam: (lastPage: NormalizedMediaItem[], _pages, lastPageParam) =>
       lastPage.length < WATCHLIST_PAGE_SIZE ? undefined : lastPageParam + 1,
@@ -218,8 +218,8 @@ function resolveWatchlistFilm(
 
     const catalogue = await queryClient.fetchQuery({
       queryKey: tmdbQueryKeys.catalogue('movie', tmdbId),
-      queryFn: () =>
-        Effect.runPromise(getMediaCatalogue(tmdbDeps(), { kind: 'movie', tmdbId })),
+      queryFn: ({ signal }) =>
+        Effect.runPromise(getMediaCatalogue(tmdbDeps(), { kind: 'movie', tmdbId }), { signal }),
       staleTime: CATALOGUE_STALE_MS,
     });
     return mergeCatalogueMetadata(film, catalogue.catalogue);
@@ -247,7 +247,7 @@ export function fetchLetterboxdReleaseInputs(
   return queryClient
     .fetchQuery({
       queryKey: letterboxdQueryKeys.watchlist(username),
-      queryFn: () => Effect.runPromise(getWatchlist(letterboxdDeps())),
+      queryFn: ({ signal }) => Effect.runPromise(getWatchlist(letterboxdDeps()), { signal }),
       staleTime: WATCHLIST_STALE_MS,
     })
     .then((films: NormalizedMediaItem[]) =>

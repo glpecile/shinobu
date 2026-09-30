@@ -154,7 +154,7 @@ export function getDiary(
 
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/rss/`),
+      try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/rss/`, { signal }),
       catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
     });
 

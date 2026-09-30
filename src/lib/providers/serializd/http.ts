@@ -42,8 +42,9 @@ export function serializdHttp<A>(
     }
 
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         deps.fetch(`${deps.baseUrl}${path}`, {
+          signal,
           method: options.method ?? 'GET',
           headers: {
             'Content-Type': 'application/json',

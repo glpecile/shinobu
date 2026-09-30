@@ -46,6 +46,21 @@ GraphQL-error path now also carries `status` and says "AniList refused the
 request (HTTP 403)" instead of "network error", so the next time this fires
 the log names the refusal.
 
+## Error classification follow-up, 2026-09-29
+
+The HTTP layer previously returned `ProviderRateLimitError` immediately on
+429, before reading AniList's error body. It now checks the decoded envelope
+first. An explicit "AniList API has been temporarily disabled" message
+remains a provider refusal even if the HTTP status is 429. Other 429s keep
+their rate-limit classification and Retry-After policy. This is not an
+inference that all 403s or all 429s mean an outage.
+
+Non-JSON HTTP failures, such as a 503 HTML page, now retain their status in
+`ProviderNetworkError`. Invalid JSON on a successful response remains a
+decode error. Refusals and service failures do not clear the AniList session.
+The mixed-status and HTML cases are regression fixtures, not a new live
+measurement of AniList's edge behavior.
+
 ## Decision (owner, 2026-09-10)
 
 The check exists to catch URL rot, not outages; a first cut that day reported

@@ -117,7 +117,7 @@ function mediaDetailsQuery(
 ) {
   return {
     queryKey: mediaDetailsQueryKeys.details(item),
-    queryFn: async (): Promise<MediaDetails> => {
+    queryFn: async ({ signal }: { signal: AbortSignal }): Promise<MediaDetails> => {
       if (item == null) throw new Error('media-details query ran without an item');
       const tmdbId = await resolveTmdbId(queryClient, item);
       return Effect.runPromise(
@@ -135,6 +135,7 @@ function mediaDetailsQuery(
               : {}),
           },
         ),
+        { signal },
       );
     },
     staleTime: DETAILS_STALE_TIME_MS,

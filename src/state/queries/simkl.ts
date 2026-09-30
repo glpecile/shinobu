@@ -116,8 +116,8 @@ export const SIMKL_WATCHING_STALE_MS = 15 * 60_000;
 export function simklWatchingLibraryQuery() {
   return {
     queryKey: simklQueryKeys.allItems(undefined, 'watching'),
-    queryFn: (): Promise<SimklLibrary> =>
-      Effect.runPromise(getAllItems(simklDeps(), { status: 'watching' })),
+    queryFn: ({ signal }: { signal: AbortSignal }): Promise<SimklLibrary> =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'watching' }), { signal }),
     staleTime: SIMKL_WATCHING_STALE_MS,
   };
 }
@@ -206,8 +206,8 @@ export function useSimklEpisodeStateQuery(params: {
 export function simklLibraryQuery() {
   return {
     queryKey: simklQueryKeys.allItems(),
-    queryFn: (): Promise<SimklLibrary> =>
-      Effect.runPromise(getAllItems(simklDeps(), {})),
+    queryFn: ({ signal }: { signal: AbortSignal }): Promise<SimklLibrary> =>
+      Effect.runPromise(getAllItems(simklDeps(), {}), { signal }),
     staleTime: SIMKL_WATCHING_STALE_MS,
   };
 }
@@ -277,7 +277,7 @@ export function useSimklWatchedInfo(
 export function useSimklUsernameQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: simklQueryKeys.userSettings(),
-    queryFn: () => Effect.runPromise(getUserSettings(simklDeps())),
+    queryFn: ({ signal }) => Effect.runPromise(getUserSettings(simklDeps()), { signal }),
     enabled: options.enabled,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,

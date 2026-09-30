@@ -74,8 +74,9 @@ export function simklHttp<A>(
 ): Effect.Effect<A, ProviderError> {
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         deps.fetch(buildSimklUrl(deps.clientId, options.baseUrl ?? SIMKL_API_BASE_URL, path), {
+          signal,
           method: options.method ?? 'GET',
           headers: {
             // Content-Type only travels with a body: bare GETs (CDN calendar

@@ -158,15 +158,15 @@ export function fetchCurrentAnimeEntries(
 ): Promise<AniListCurrentEntry[]> {
   return queryClient.fetchQuery({
     queryKey: anilistQueryKeys.currentAnimeEntries(),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const deps = anilistDeps();
       const viewer = await queryClient.fetchQuery({
         queryKey: anilistQueryKeys.viewer(),
-        queryFn: () => Effect.runPromise(getViewer(deps)),
+        queryFn: ({ signal: viewerSignal }) => Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
         staleTime: Number.POSITIVE_INFINITY,
         gcTime: Number.POSITIVE_INFINITY,
       });
-      return Effect.runPromise(getCurrentAnime(deps, { viewerId: viewer.id }));
+      return Effect.runPromise(getCurrentAnime(deps, { viewerId: viewer.id }), { signal });
     },
     staleTime: CURRENT_ANIME_STALE_MS,
   });
@@ -204,6 +204,7 @@ export function fetchSeasonalAnime(
   window: AnimeSeasonWindow,
   format: AnimeFormatFilter = 'TV',
   page = 1,
+  signal?: AbortSignal,
 ): Promise<NormalizedMediaItem[]> {
   return Effect.runPromise(
     getSeasonalAnime(anilistDeps(), {
@@ -213,6 +214,7 @@ export function fetchSeasonalAnime(
       limit: SEASONAL_PAGE_SIZE,
       page,
     }),
+    { signal },
   );
 }
 
@@ -233,7 +235,7 @@ export function useSuspenseSeasonalAnimePagesQuery(
   const rowKey = anilistQueryKeys.seasonalAnime(window, format);
   return useSuspenseInfiniteQuery({
     queryKey: anilistQueryKeys.seasonalAnimePages(window, format),
-    queryFn: ({ pageParam }) => fetchSeasonalAnime(window, format, pageParam),
+    queryFn: ({ pageParam, signal }) => fetchSeasonalAnime(window, format, pageParam, signal),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.length < SEASONAL_PAGE_SIZE ? undefined : lastPageParam + 1,
@@ -256,7 +258,7 @@ const SEASONAL_STALE_MS = 15 * 60_000;
 export function useAnimeByIdQuery(mediaId: number | null) {
   return useQuery({
     queryKey: anilistQueryKeys.anime(mediaId ?? 0),
-    queryFn: () => Effect.runPromise(getAnimeById(anilistDeps(), mediaId ?? 0)),
+    queryFn: ({ signal }) => Effect.runPromise(getAnimeById(anilistDeps(), mediaId ?? 0), { signal }),
     enabled: mediaId != null,
     staleTime: SEASONAL_STALE_MS,
   });
@@ -280,9 +282,10 @@ export function useSuspenseAniListRelationsQuery(params: {
   const queryClient = useQueryClient();
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.relations(mediaId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const result = await Effect.runPromise(
         getAnimeRelations(anilistDeps(), { mediaId, withCredits }),
+        { signal },
       );
       for (const item of [
         ...result.relations.map((relation) => relation.item),
@@ -308,7 +311,7 @@ export function useSuspenseAniListRelationsQuery(params: {
 export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: anilistQueryKeys.viewer(),
-    queryFn: () => Effect.runPromise(getViewer(anilistDeps())),
+    queryFn: ({ signal }) => Effect.runPromise(getViewer(anilistDeps()), { signal }),
     enabled: options.enabled,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
@@ -331,8 +334,8 @@ export function useAniListSearchQuery(params: {
   const limit = params.limit ?? 20;
   return useQuery({
     queryKey: anilistQueryKeys.search(query, limit),
-    queryFn: () =>
-      Effect.runPromise(searchMedia(anilistDeps(), { query, limit })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchMedia(anilistDeps(), { query, limit }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
@@ -351,9 +354,10 @@ export function useAniListStaffSearchQuery(params: {
   const query = params.query.trim();
   return useQuery({
     queryKey: anilistQueryKeys.staffSearch(query),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       Effect.runPromise(
         searchAniListStaff(anilistDeps(), { name: query, limit: 20 }),
+        { signal },
       ),
     enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
@@ -373,8 +377,8 @@ export function useAniListEntryStateQuery(params: {
   const { mediaId, enabled = true } = params;
   return useQuery({
     queryKey: anilistQueryKeys.entryState(mediaId ?? -1),
-    queryFn: (): Promise<AniListEntryState> =>
-      Effect.runPromise(getEntryState(anilistDeps(), { mediaId: mediaId ?? -1 })),
+    queryFn: ({ signal }): Promise<AniListEntryState> =>
+      Effect.runPromise(getEntryState(anilistDeps(), { mediaId: mediaId ?? -1 }), { signal }),
     enabled: enabled && mediaId != null,
     // Episode navigation shares this read with the accordion. Logs invalidate
     // it immediately; browsing need not recheck unchanged progress every minute.
@@ -395,8 +399,8 @@ export function useAniListEpisodesQuery(params: {
   const { mediaId, enabled = true } = params;
   return useQuery({
     queryKey: anilistQueryKeys.episodes(mediaId ?? -1),
-    queryFn: (): Promise<NormalizedSeason> =>
-      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId: mediaId ?? -1 })),
+    queryFn: ({ signal }): Promise<NormalizedSeason> =>
+      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId: mediaId ?? -1 }), { signal }),
     enabled: enabled && mediaId != null,
     staleTime: EPISODES_STALE_MS,
   });
@@ -427,9 +431,10 @@ export function useAniListStaffIdQuery(params: {
   const name = params.name.trim();
   return useQuery({
     queryKey: anilistQueryKeys.staffId(name),
-    queryFn: async (): Promise<number | null> => {
+    queryFn: async ({ signal }): Promise<number | null> => {
       const hits = await Effect.runPromise(
         searchAniListStaff(anilistDeps(), { name }),
+        { signal },
       );
       return exactNameMatchId(hits, name);
     },
@@ -446,9 +451,10 @@ export function useAniListStudioIdQuery(params: {
   const name = params.name.trim();
   return useQuery({
     queryKey: anilistQueryKeys.studioId(name),
-    queryFn: async (): Promise<number | null> => {
+    queryFn: async ({ signal }): Promise<number | null> => {
       const hits = await Effect.runPromise(
         searchAniListStudio(anilistDeps(), { name }),
+        { signal },
       );
       return exactNameMatchId(hits, name);
     },
@@ -481,8 +487,8 @@ export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
   const { mediaId } = params;
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.episodes(mediaId),
-    queryFn: (): Promise<NormalizedSeason> =>
-      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId })),
+    queryFn: ({ signal }): Promise<NormalizedSeason> =>
+      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId }), { signal }),
     staleTime: EPISODES_STALE_MS,
   });
 }

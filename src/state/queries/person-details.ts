@@ -19,12 +19,13 @@ export function useSuspensePersonByNameQuery(params: { name: string }) {
   const name = params.name.trim();
   return useSuspenseQuery({
     queryKey: ['person-by-name', name],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       Effect.runPromise(
         getPersonByName(
           { tmdb: tmdbToken() === '' ? null : tmdbDeps(), anilist: anilistDeps() },
           { name },
         ),
+        { signal },
       ),
     staleTime: PERSON_STALE_TIME_MS,
   });
@@ -34,7 +35,7 @@ export function useSuspensePersonByNameQuery(params: { name: string }) {
 export function useSuspenseAniListStaffQuery(params: { id: number }) {
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.staff(params.id),
-    queryFn: () => Effect.runPromise(getAniListStaff(anilistDeps(), { id: params.id })),
+    queryFn: ({ signal }) => Effect.runPromise(getAniListStaff(anilistDeps(), { id: params.id }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
   });
 }

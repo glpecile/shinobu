@@ -3,6 +3,7 @@ import { Effect, Either } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
 import { traktAuthedRequest } from './api';
+import { tmdbRequest } from '@/lib/providers/tmdb/api';
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { TraktDeps } from './deps';
 
@@ -73,13 +74,51 @@ function raceDeps(options: { refreshStatus?: number } = {}) {
   return { deps, tokens, refreshCalls: () => refreshCalls };
 }
 
-function run(deps: TraktDeps) {
+function run(deps: TraktDeps, signal?: AbortSignal) {
   return Effect.runPromise(
     Effect.either(traktAuthedRequest<{ ok: boolean }>(deps, '/data')),
+    { signal },
   );
 }
 
+test.each(['trakt', 'tmdb'] as const)('%s does not retry before a long Retry-After expires', async (provider) => {
+  let calls = 0;
+  const { deps } = raceDeps();
+  deps.fetch = async () => {
+    calls += 1;
+    return new Response(null, { status: 429, headers: { 'Retry-After': '60' } });
+  };
+  const error = await Effect.runPromise(Effect.flip(
+    provider === 'trakt'
+      ? traktAuthedRequest(deps, '/data')
+      : tmdbRequest({ fetch: deps.fetch, token: 'test' }, '/data'),
+  ));
+  expect(calls).toBe(1);
+  expect(error._tag).toBe('ProviderRateLimitError');
+  if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBe(60_000);
+}, 10_000);
+
 describe('traktAuthedRequest refresh coalescing', () => {
+  test('cancelling one waiter does not cancel the shared token grant', async () => {
+    const { deps, tokens, refreshCalls } = raceDeps();
+    const fetch = deps.fetch;
+    let grantStarted!: () => void;
+    const started = new Promise<void>((resolve) => { grantStarted = resolve; });
+    deps.fetch = (input, init) => {
+      if (String(input).includes('/oauth/token')) grantStarted();
+      return fetch(input, init);
+    };
+    const controller = new AbortController();
+    const cancelled = run(deps, controller.signal).catch(() => null);
+    const surviving = run(deps);
+    await started;
+    controller.abort();
+    expect(await cancelled).toBeNull();
+    expect(Either.isRight(await surviving)).toBe(true);
+    expect(refreshCalls()).toBe(1);
+    expect(tokens.get()?.accessToken).toBe('fresh-1');
+  });
+
   test('concurrent 401s share one token grant and all succeed', async () => {
     const { deps, tokens, refreshCalls } = raceDeps();
 

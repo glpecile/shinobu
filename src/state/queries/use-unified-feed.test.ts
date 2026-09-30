@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { QueryClient } from '@tanstack/react-query';
+import type { HttpFetch } from '@/lib/http/types';
 
 /**
  * Trending runs off Simkl's public CDN and must resolve with zero providers
@@ -27,8 +29,10 @@ mock.module('react-native-mmkv', () => ({
 /** Routes each request by URL substring; unmatched URLs 404 (media-details.test.ts pattern). */
 let routes: Array<[match: string, body: unknown, status?: number]> = [];
 const requestedUrls: string[] = [];
+let fetchOverride: HttpFetch | undefined;
 mock.module('@/lib/http/client', () => ({
-  httpFetch: async (input: RequestInfo | URL): Promise<Response> => {
+  httpFetch: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (fetchOverride != null) return fetchOverride(input, init);
     const url = String(input);
     requestedUrls.push(url);
     const hit = routes.find(([match]) => url.includes(match));
@@ -58,6 +62,7 @@ beforeEach(() => {
   store.clear();
   routes = [];
   requestedUrls.length = 0;
+  fetchOverride = undefined;
   // The exact no-BYO-Trakt-creds state R11 requires trending to survive:
   // Simkl's client id stays bundled (owner-registered app), while Trakt has
   // none at all — env credentials were removed outright in U9 (R12), so a
@@ -65,6 +70,26 @@ beforeEach(() => {
 });
 
 describe('trending (plan 0034 R11/KTD-8)', () => {
+  test('cancelling a query aborts its provider transport', async () => {
+    let notifyStarted!: () => void;
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    let aborted = false;
+    fetchOverride = (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        aborted = true;
+        reject(new DOMException('Cancelled', 'AbortError'));
+      }, { once: true });
+      notifyStarted();
+    });
+    const client = new QueryClient();
+    const options = feedOptions.trendingMovies();
+    const pending = client.fetchQuery(options).catch(() => null);
+    await started;
+    await client.cancelQueries({ queryKey: options.queryKey });
+    expect(await pending).toBeNull();
+    expect(aborted).toBe(true);
+  });
+
   test('resolves via Simkl with zero providers connected and no Trakt env creds', async () => {
     routes = [
       [
@@ -73,7 +98,7 @@ describe('trending (plan 0034 R11/KTD-8)', () => {
       ],
     ];
 
-    const movies = await feedOptions.trendingMovies().queryFn();
+    const movies = await new QueryClient().fetchQuery(feedOptions.trendingMovies());
 
     expect(movies).toHaveLength(1);
     expect(movies[0].title).toBe('Dune: Part Three');
