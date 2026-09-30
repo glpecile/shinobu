@@ -106,7 +106,7 @@ async function traktInputs(
 ): Promise<ProgressUpNextInput[]> {
   const shows = await queryClient.fetchQuery({
     queryKey: traktQueryKeys.watchedShows(),
-    queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
+    queryFn: ({ signal }) => Effect.runPromise(getWatchedShows(traktDeps()), { signal }),
     staleTime: WATCHED_SHOWS_STALE_MS,
   });
 
@@ -121,9 +121,10 @@ async function traktInputs(
           try {
             const progress = await queryClient.fetchQuery({
               queryKey: traktQueryKeys.showProgress(traktId),
-              queryFn: () =>
+              queryFn: ({ signal }) =>
                 Effect.runPromise(
                   getShowWatchedProgress(traktDeps(), { traktId }),
+                  { signal },
                 ),
               staleTime: SHOW_PROGRESS_STALE_MS,
             });
@@ -184,7 +185,7 @@ async function traktCalendarInputs(
   const range = calendarRange();
   const rows = await queryClient.fetchQuery({
     queryKey: traktQueryKeys.myCalendar('shows', range.startDate, range.days),
-    queryFn: () => Effect.runPromise(getMyShowsCalendar(traktDeps(), range)),
+    queryFn: ({ signal }) => Effect.runPromise(getMyShowsCalendar(traktDeps(), range), { signal }),
     staleTime: CALENDAR_STALE_MS,
   });
   // Tagged outside the queryFn so the cache keeps holding the provider-shaped
@@ -227,7 +228,7 @@ async function traktReleaseInputs(
       range.startDate,
       range.days,
     ),
-    queryFn: () => Effect.runPromise(calendar.read(traktDeps(), range)),
+    queryFn: ({ signal }) => Effect.runPromise(calendar.read(traktDeps(), range), { signal }),
     staleTime: CALENDAR_STALE_MS,
   });
   return rows.map(releaseInput);
@@ -270,8 +271,8 @@ function simklWatchingLibrary(queryClient: QueryClient): Promise<SimklLibrary> {
 function simklPlannedLibrary(queryClient: QueryClient): Promise<SimklLibrary> {
   return queryClient.fetchQuery({
     queryKey: simklQueryKeys.allItems(undefined, 'plantowatch'),
-    queryFn: () =>
-      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' })),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getAllItems(simklDeps(), { status: 'plantowatch' }), { signal }),
     staleTime: WATCHLIST_STALE_MS,
   });
 }
@@ -482,7 +483,7 @@ function simklCalendarFile(
 ): Promise<SimklCalendarEntry[]> {
   return queryClient.fetchQuery({
     queryKey: simklQueryKeys.calendar(kind),
-    queryFn: () => Effect.runPromise(getCalendar(simklDeps(), kind)),
+    queryFn: ({ signal }) => Effect.runPromise(getCalendar(simklDeps(), kind), { signal }),
     staleTime: SIMKL_CALENDAR_STALE_MS,
   });
 }
@@ -803,4 +804,3 @@ export function useSuspenseUpNextQuery(now: Date): UpNextResult {
   const { data } = useSuspenseQuery(upNextOptions(queryClient, connected));
   return { ...computeUpNext(data, now), errors: data.errors, now };
 }
-

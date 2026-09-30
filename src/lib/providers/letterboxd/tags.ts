@@ -116,7 +116,7 @@ export function getUserTags(
 
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/tags/`),
+      try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/tags/`, { signal }),
       catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
     });
 

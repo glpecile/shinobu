@@ -17,6 +17,7 @@ import type {
 } from '@/lib/providers/mapping/season-layout';
 import { isDateOnly } from '@/lib/time/has-aired';
 import { traktAuthedRequest, traktRequest } from './api';
+import { decodeSearchResponse } from './search-response';
 import type { TraktDeps } from './deps';
 import {
   normalizeCalendarMovieRow,
@@ -41,7 +42,6 @@ import {
   type TraktHistoryItem,
   type TraktImages,
   type TraktPeopleResponse,
-  type TraktSearchResult,
   type TraktShowProgress,
   type TraktShowProgressResult,
   type TraktShowSeason,
@@ -73,10 +73,10 @@ export function searchMedia(
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const limit = params.limit ?? 20;
   return Effect.gen(function* () {
-    const raw = yield* traktRequest<TraktSearchResult[]>(
+    const raw = yield* traktRequest<unknown>(
       deps,
       `/search/movie,show?query=${encodeURIComponent(params.query)}&fields=title,aliases&extended=full,images&limit=${limit}`,
-    );
+    ).pipe(Effect.flatMap(decodeSearchResponse));
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return raw
@@ -99,10 +99,10 @@ export function lookupByExternalId(
   },
 ): Effect.Effect<NormalizedMediaItem | null, ProviderError> {
   return Effect.gen(function* () {
-    const raw = yield* traktRequest<TraktSearchResult[]>(
+    const raw = yield* traktRequest<unknown>(
       deps,
       `/search/${params.source}/${params.id}?type=${params.kind}&extended=full,images`,
-    );
+    ).pipe(Effect.flatMap(decodeSearchResponse));
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return (

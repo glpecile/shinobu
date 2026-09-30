@@ -89,7 +89,7 @@ export function resolveFilmLid(
     // Film pages are public — resolve the LID over plain nitro-fetch. Only the
     // *write* needs the authenticated WebView (deps.webFetch).
     const response = yield* Effect.tryPromise({
-      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`),
+      try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`, { signal }),
       catch: (cause) => new ProviderNetworkError({ provider, cause }),
     });
 

@@ -1,4 +1,4 @@
-import { Duration, Effect } from 'effect';
+import { Duration, Effect, Schema } from 'effect';
 
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 
@@ -36,10 +36,13 @@ export interface AniListGraphQLOptions {
   accessToken?: string;
 }
 
-interface GraphQLResponseBody<A> {
-  data?: A | null;
-  errors?: Array<{ message?: string; status?: number }>;
-}
+const graphQLResponse = Schema.Struct({
+  data: Schema.optional(Schema.Unknown),
+  errors: Schema.optionalWith(Schema.Array(Schema.Struct({
+    message: Schema.optionalWith(Schema.String, { nullable: true }),
+    status: Schema.optionalWith(Schema.Number, { nullable: true }),
+  })), { nullable: true }),
+});
 
 /**
  * Lowest layer: one GraphQL round-trip mapped into the ProviderError
@@ -56,8 +59,9 @@ export function anilistGraphQL<A>(
 ): Effect.Effect<A, ProviderError> {
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         deps.fetch(ANILIST_GRAPHQL_URL, {
+          signal,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -78,31 +82,50 @@ export function anilistGraphQL<A>(
     if (response.status === 401) {
       return yield* new ProviderAuthError({ provider: 'anilist', refreshFailed: true });
     }
-    if (response.status === 429) {
-      // Real budget is 30 req/min (docs/solutions/web-cors-anilist.md).
+    const rateLimitError = () => {
       const retryAfterSeconds = Number(response.headers.get('Retry-After'));
-      return yield* new ProviderRateLimitError({
+      return new ProviderRateLimitError({
         provider: 'anilist',
         ...(Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? { retryAfterMs: retryAfterSeconds * 1000 }
           : {}),
       });
-    }
+    };
 
-    const body = yield* Effect.tryPromise({
-      try: () => response.json() as Promise<GraphQLResponseBody<A>>,
-      catch: () =>
-        new ProviderDecodeError({
-          provider: 'anilist',
-          detail: `non-JSON GraphQL response (HTTP ${response.status})`,
-        }),
+    const responseError = (detail: string) => {
+      if (response.status === 429) return rateLimitError();
+      return response.ok
+        ? new ProviderDecodeError({ provider: 'anilist', detail })
+        : new ProviderNetworkError({
+            provider: 'anilist',
+            status: response.status,
+            cause: new Error(`AniList refused the request (HTTP ${response.status}): ${detail}`),
+          });
+    };
+
+    const json = yield* Effect.tryPromise({
+      try: (): Promise<unknown> => response.json(),
+      catch: () => responseError(`non-JSON GraphQL response (HTTP ${response.status})`),
     });
+
+    const body = yield* Schema.decodeUnknown(graphQLResponse)(json).pipe(
+      Effect.mapError((error) => responseError(`invalid GraphQL response: ${error.message}`)),
+    );
+
+    // An explicit API-disabled response describes a refusal, even if an edge
+    // returns 429. Without that evidence, 429 remains a rate limit.
+    const apiDisabled = body.errors?.some((error) =>
+      /AniList API has been temporarily disabled/i.test(error.message ?? ''),
+    ) === true;
+    if (response.status === 429 && !apiDisabled) {
+      return yield* rateLimitError();
+    }
 
     if (body.errors != null && body.errors.length > 0) {
       const messages = body.errors.map((e) => e.message ?? 'unknown').join('; ');
       // AniList reports a dead/invalid bearer token as a GraphQL error
       // ("Invalid token"), not always as a bare 401.
-      if (body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))) {
+      if (!apiDisabled && body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))) {
         return yield* new ProviderAuthError({ provider: 'anilist', refreshFailed: true });
       }
       // Name the refusal for what it is. A 2xx with `errors[]` is a query
@@ -122,11 +145,12 @@ export function anilistGraphQL<A>(
     if (!response.ok || body.data == null) {
       return yield* new ProviderNetworkError({
         provider: 'anilist',
+        status: response.status,
         cause: new Error(`AniList responded ${response.status} with no data`),
       });
     }
 
-    return body.data;
+    return body.data as A;
   });
 }
 

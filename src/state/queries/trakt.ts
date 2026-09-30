@@ -135,9 +135,10 @@ export function useTraktMediaImages(
   const missingArt = item != null && item.coverImage === '';
   const { data } = useQuery({
     queryKey: traktQueryKeys.images(type, traktId ?? -1),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       Effect.runPromise(
         getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }),
+        { signal },
       ),
     enabled: missingArt && traktId != null,
     staleTime: Number.POSITIVE_INFINITY,
@@ -167,9 +168,10 @@ export function useTraktShowProgressQuery(params: {
   const { traktId, enabled = true } = params;
   return useQuery({
     queryKey: traktQueryKeys.showProgress(traktId ?? -1),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       Effect.runPromise(
         getShowWatchedProgress(traktDeps(), { traktId: traktId ?? -1 }),
+        { signal },
       ),
     enabled: enabled && traktId != null,
   });
@@ -188,7 +190,7 @@ export function useTraktShowProgressQuery(params: {
 export function useTraktViewerQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: traktQueryKeys.viewer(),
-    queryFn: () => Effect.runPromise(getViewerUsername(traktDeps())),
+    queryFn: ({ signal }) => Effect.runPromise(getViewerUsername(traktDeps()), { signal }),
     enabled: options.enabled,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
@@ -198,7 +200,7 @@ export function useTraktViewerQuery(options: { enabled?: boolean } = {}) {
 export function useWatchedShowsQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: traktQueryKeys.watchedShows(),
-    queryFn: () => Effect.runPromise(getWatchedShows(traktDeps())),
+    queryFn: ({ signal }) => Effect.runPromise(getWatchedShows(traktDeps()), { signal }),
     enabled: options.enabled,
   });
 }
@@ -210,7 +212,7 @@ export function useWatchedShowsQuery(options: { enabled?: boolean } = {}) {
 export function useWatchedMoviesQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: traktQueryKeys.watchedMovies(),
-    queryFn: () => Effect.runPromise(getWatchedMovies(traktDeps())),
+    queryFn: ({ signal }) => Effect.runPromise(getWatchedMovies(traktDeps()), { signal }),
     enabled: options.enabled,
   });
 }
@@ -280,7 +282,7 @@ export function useTraktSearchQuery(params: {
   const limit = params.limit ?? 20;
   return useQuery({
     queryKey: traktQueryKeys.search(query, limit),
-    queryFn: () => Effect.runPromise(searchMedia(traktDeps(), { query, limit })),
+    queryFn: ({ signal }) => Effect.runPromise(searchMedia(traktDeps(), { query, limit }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,

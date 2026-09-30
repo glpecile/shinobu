@@ -27,8 +27,9 @@ export function tmdbRequest<A>(
 ): Effect.Effect<A, ProviderError> {
   const attempt = Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         deps.fetch(`${TMDB_API_BASE_URL}${path}`, {
+          signal,
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${deps.token}`,
@@ -67,15 +68,10 @@ export function tmdbRequest<A>(
   });
 
   return attempt.pipe(
-    Effect.catchTag('ProviderRateLimitError', (error) =>
-      Effect.sleep(
-        Duration.millis(
-          Math.min(
-            error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
-            RATE_LIMIT_MAX_RETRY_DELAY_MS,
-          ),
-        ),
-      ).pipe(Effect.zipRight(attempt)), // second 429 propagates as-is
-    ),
+    Effect.catchTag('ProviderRateLimitError', (error) => {
+      const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
+      if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
+      return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(attempt));
+    }),
   );
 }

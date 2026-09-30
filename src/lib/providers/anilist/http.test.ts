@@ -19,6 +19,47 @@ function depsReplying(response: () => Response, tokens = fakeTokens()): AniListD
 }
 
 describe('anilistGraphQL error mapping', () => {
+  test('an API-disabled response is not a rate limit even with HTTP 429', async () => {
+    let calls = 0;
+    let cleared = false;
+    const error = await Effect.runPromise(Effect.flip(
+      anilistAuthedRequest(depsReplying(() => {
+        calls += 1;
+        return Response.json({ errors: [{
+          message: 'The AniList API has been temporarily disabled due to severe stability issues.',
+          status: 403,
+        }] }, { status: 429 });
+      }, fakeTokens({ clear: () => { cleared = true; } })), 'query { Viewer { id } }'),
+    ));
+    expect(error._tag).toBe('ProviderNetworkError');
+    if (error._tag === 'ProviderNetworkError') {
+      expect(error.status).toBe(429);
+      expect(error.message).toContain('temporarily disabled');
+      expect(error.message).not.toContain('rate limited');
+    }
+    expect(calls).toBe(1);
+    expect(cleared).toBe(false);
+  });
+
+  test('an HTML service failure retains its HTTP status instead of becoming a decode error', async () => {
+    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(
+      depsReplying(() => new Response('<html>Service unavailable</html>', { status: 503 })),
+      'query { Viewer { id } }',
+    )));
+    expect(error._tag).toBe('ProviderNetworkError');
+    if (error._tag === 'ProviderNetworkError') expect(error.status).toBe(503);
+  });
+
+  test.each([
+    { shape: 'null envelope', body: null },
+    { shape: 'non-array errors', body: { errors: {} } },
+  ])('rejects a $shape as a typed decode error', async ({ body }) => {
+    const error = await Effect.runPromise(Effect.flip(
+      anilistGraphQL(depsReplying(() => Response.json(body)), 'query { Viewer { id } }'),
+    ));
+    expect(error._tag).toBe('ProviderDecodeError');
+  });
+
   test('HTTP 401 maps to ProviderAuthError with refreshFailed (no refresh grant exists)', async () => {
     const result = await Effect.runPromise(
       Effect.either(

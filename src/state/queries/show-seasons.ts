@@ -64,20 +64,21 @@ export function useShowSeasonsSource(
  *  type lets the two sources' literal key tuples share one options shape. */
 function showSeasonsQueryOptions(source: ShowSeasonsSource): {
   queryKey: readonly unknown[];
-  queryFn: () => Promise<NormalizedSeason[]>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedSeason[]>;
 } {
   return source.source === 'trakt'
     ? {
         queryKey: traktQueryKeys.seasons(source.traktId),
-        queryFn: (): Promise<NormalizedSeason[]> =>
+        queryFn: ({ signal }): Promise<NormalizedSeason[]> =>
           Effect.runPromise(
             getShowSeasons(traktDeps(), { traktId: source.traktId }),
+            { signal },
           ),
       }
     : {
         queryKey: tmdbQueryKeys.seasons(source.tmdbId),
-        queryFn: (): Promise<NormalizedSeason[]> =>
-          Effect.runPromise(getTvSeasons(tmdbDeps(), { tmdbId: source.tmdbId })),
+        queryFn: ({ signal }): Promise<NormalizedSeason[]> =>
+          Effect.runPromise(getTvSeasons(tmdbDeps(), { tmdbId: source.tmdbId }), { signal }),
       };
 }
 

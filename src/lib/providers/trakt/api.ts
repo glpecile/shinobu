@@ -13,16 +13,11 @@ function withRateLimitRetry<A>(
   effect: Effect.Effect<A, ProviderError>,
 ): Effect.Effect<A, ProviderError> {
   return effect.pipe(
-    Effect.catchTag('ProviderRateLimitError', (error) =>
-      Effect.sleep(
-        Duration.millis(
-          Math.min(
-            error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
-            RATE_LIMIT_MAX_RETRY_DELAY_MS,
-          ),
-        ),
-      ).pipe(Effect.zipRight(effect)), // second 429 propagates as-is
-    ),
+    Effect.catchTag('ProviderRateLimitError', (error) => {
+      const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
+      if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
+      return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(effect));
+    }),
   );
 }
 

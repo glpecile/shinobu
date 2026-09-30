@@ -120,7 +120,7 @@ export function getWatchlistPage(
 
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`),
+      try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`, { signal }),
       catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
     });
 
@@ -174,7 +174,7 @@ export function checkUsernameExists(
 ): Effect.Effect<boolean, ProviderError> {
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
-      try: () => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/rss/`),
+      try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/rss/`, { signal }),
       catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
     });
     if (response.status === 404) return false;
