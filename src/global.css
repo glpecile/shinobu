@@ -49,6 +49,10 @@
       --color-accent-foreground: #ffffff;
       --color-accent-tonal: #fee2e2;
       --color-accent-on-tonal: #991b1b;
+      --color-success: #15803d;
+      --color-success-tonal: #dcfce7;
+      --color-toast-shadow: #0000001f;
+      --color-toast-surface: #ffffff;
     }
 
     @variant dark {
@@ -61,6 +65,10 @@
       --color-accent-foreground: #ffffff;
       --color-accent-tonal: #450a0a;
       --color-accent-on-tonal: #fecaca;
+      --color-success: #86efac;
+      --color-success-tonal: #052e16;
+      --color-toast-shadow: #00000066;
+      --color-toast-surface: #1c1c1f;
     }
   }
 }
