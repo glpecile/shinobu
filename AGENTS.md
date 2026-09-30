@@ -76,6 +76,18 @@ app-level fixes, and maintained alternatives. Explain why those options cannot
 solve the problem and get user approval before adding a patch. Keep an approved
 patch minimal and document when it can be removed.
 
+## Learning more about Effect
+
+This repository uses the Effect TypeScript library. The vendored `effect-ts`
+skill describes release-candidate setup; keep the version in `package.json`
+unless a task explicitly requests an upgrade.
+
+Before writing any Effect code, read `node_modules/effect/AGENTS.md` completely
+when present, and follow its links when required. Effect 3 does not ship that
+file, so consult the installed API documentation in `node_modules/effect/src`
+instead. Use the installed source for APIs and concepts the guide does not cover.
+Keep Effect within the provider and HTTP boundaries described above.
+
 ## Enforcement
 
 A convention that can be a lint rule is one, and lands with its rule.
