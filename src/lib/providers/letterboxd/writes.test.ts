@@ -61,6 +61,20 @@ function fakeDeps(options: {
 }
 
 describe('logToLetterboxd', () => {
+  test('logs through a userscript without captured cookies or a CORS-blocked film fetch', async () => {
+    let captured: LetterboxdWebRequest | undefined;
+    const deps: LetterboxdDeps = {
+      username: 'gian',
+      fetch: async () => { throw new Error('Web film fetch must not run'); },
+      userscriptFetch: async (request) => {
+        captured = request;
+        return { status: 200, body: '{"logEntry":{"id":"abc"}}' };
+      },
+    };
+    await Effect.runPromise(logToLetterboxd(deps, movie({ tmdb: 999 }), { tags: ['spike'] }));
+    expect(captured?.filmPath).toBe('/tmdb/999/');
+    expect(captured?.tags).toEqual(['spike']);
+  });
   test('navigates to the film page and drives the diary write in the WebView', async () => {
     let captured: LetterboxdWebRequest | undefined;
     const deps = fakeDeps({ onWrite: (r) => (captured = r) });

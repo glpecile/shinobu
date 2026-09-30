@@ -29,6 +29,9 @@ export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize'
 /** Where a user copies their own TMDB v4 read token (BYO key, plan 0024 U10). */
 export const TMDB_API_SETTINGS_URL = 'https://www.themoviedb.org/settings/api';
 
+/** Browser extension used by Letterboxd's optional web logging setup. */
+export const TAMPERMONKEY_URL = 'https://www.tampermonkey.net/';
+
 export type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
 
 /** An episode on the trackers' (TMDB's) season layout, for the builders that can address one. */

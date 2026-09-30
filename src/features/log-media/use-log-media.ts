@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 
 import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
+import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { logToSerializd } from '@/lib/providers/serializd/writes';
 import { logToSimkl, type SimklLogEntry } from '@/lib/providers/simkl/writes';
 import {
@@ -333,6 +334,7 @@ async function resolveLogPlan(
       canonicalInput.some((episode) => episode.season !== 1),
     onlyProviders: variables.providers,
     platform: currentPlatform(),
+    letterboxdUserscript: hasLetterboxdUserscript(),
   });
 
   const mappingSkips = new Map<ProviderId, string>();

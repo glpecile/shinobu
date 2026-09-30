@@ -32,24 +32,16 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     watchlistWrite: 'write',
     watchlistRemove: 'write',
   },
-  // No official API (todos/004, plan 0012). Reads scrape the public watchlist
-  // (native-only on web — docs/solutions/web-cors-letterboxd.md). canWrite is
-  // ON: movies log as diary entries via the captured signed-in web session
-  // (the CSV path was rejected 2026-07-15). Writes need that session, which
-  // only the native sign-in WebView captures — a movie logged before Letterboxd
-  // is connected on mobile surfaces a per-provider "reconnect" failure, exactly
-  // the partial-failure contract in AGENTS.md, not a silent drop.
+  // Public reads use the GET-only relay on web. Film logs write in a signed-in
+  // session through the native WebView or the optional web userscript bridge.
   letterboxd: {
     id: 'letterboxd',
     label: 'Letterboxd',
     mediaTypes: ['MOVIE'],
     canRead: true,
     canWrite: true,
-    // The diary write needs the native sign-in WebView's captured session
-    // (plan 0012) — there is none on web, and proxying the write is banned
-    // (three failed spikes, docs/solutions/letterboxd-web-proxy.md). Routing
-    // still lists Letterboxd as an applicable target on web; it's just routed
-    // to the manual-log fallback instead of the fan-out (plan 0022).
+    // Web defaults to manual. Routing lifts this for film logs only when the
+    // Tampermonkey bridge is detected (plan 0042); proxies remain GET-only.
     unsupportedWritePlatforms: ['web'],
     // Both verbs verified by plan 0031 U6's account-bound capture
     // (docs/solutions/letterboxd-watchlist-write.md): `PATCH
@@ -59,8 +51,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // does not exist on this endpoint and a repeat add is idempotent. The
     // adapter (plan 0033, `letterboxd/watchlist-writes.ts`) rides the same
     // captured-WebView-session plumbing as the diary write, so
-    // `unsupportedWritePlatforms` above keeps web manual regardless — correct
-    // and permanent (docs/solutions/letterboxd-web-proxy.md). Standing
+    // `unsupportedWritePlatforms` above still keeps web watchlist writes manual. Standing
     // rollback: revert both tokens to 'manual' if the endpoint regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'write',

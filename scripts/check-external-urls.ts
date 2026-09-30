@@ -20,6 +20,7 @@ import {
   letterboxdStudioUrl,
   SIMKL_CREATE_APP_URL,
   TMDB_API_SETTINGS_URL,
+  TAMPERMONKEY_URL,
   TRAKT_CREATE_APP_URL,
 } from '@/lib/providers/external-urls';
 import { ANILIST_GRAPHQL_URL } from '@/lib/providers/anilist/http';
@@ -50,6 +51,7 @@ export interface UrlCheck {
 }
 
 export const URL_CHECKS: UrlCheck[] = [
+  { name: 'Tampermonkey install page', url: TAMPERMONKEY_URL, expect: [200] },
   { name: 'Trakt create-app page', url: TRAKT_CREATE_APP_URL, expect: [200] },
   {
     name: 'Trakt authorize endpoint',

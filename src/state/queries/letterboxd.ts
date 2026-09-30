@@ -19,6 +19,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
+import { getLetterboxdUserscriptFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
@@ -68,7 +69,8 @@ const letterboxdWebProxyFetch: HttpFetch = (input, init) => {
  * (writes) live here in state, injected into the provider lib. `webFetch` is
  * the authenticated-WebView write transport (native only; `undefined` on web
  * or when no WebView is mounted), since replayed cookies don't authenticate at
- * Letterboxd's origin (plan 0012).
+ * Letterboxd's origin (plan 0012). On web, `userscriptFetch` hands the write to
+ * Tampermonkey in the user's normal browser session without capturing cookies.
  */
 export function letterboxdDeps(): LetterboxdDeps {
   return {
@@ -77,6 +79,7 @@ export function letterboxdDeps(): LetterboxdDeps {
     username: getLetterboxdUsername(),
     session: getLetterboxdSession(),
     webFetch: getLetterboxdWebFetch(),
+    userscriptFetch: getLetterboxdUserscriptFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
   };
 }

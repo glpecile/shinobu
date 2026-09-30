@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { splitWriteTargets } from '@/lib/providers/routing';
+import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -28,17 +29,19 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
   const platform = currentPlatform();
+  const letterboxdUserscript = useLetterboxdUserscript();
 
   const { data } = useQuery({
-    queryKey: ['log-targets', item.id, ...connected, platform],
+    queryKey: ['log-targets', item.id, ...connected, platform, letterboxdUserscript],
     queryFn: async () =>
       splitWriteTargets(
         await enrichExternalIds(queryClient, item, connected),
         connected,
         platform,
         'log',
+        letterboxdUserscript,
       ),
   });
 
-  return data ?? splitWriteTargets(item, connected, platform, 'log');
+  return data ?? splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript);
 }
