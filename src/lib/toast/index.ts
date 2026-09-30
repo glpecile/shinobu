@@ -1,17 +1,10 @@
 import { haptics } from '@/lib/haptics';
 
-import { sonnerToast } from './sonner';
+import { showToast } from './sonner';
 
 /** Errors linger longer: "Failed on Letterboxd" earns a beat more reading time.
  *  Milliseconds — sonner's unit (burnt used seconds). */
 const DURATION_MS = { success: 2000, error: 3500 } as const;
-
-function toastOptions(kind: keyof typeof DURATION_MS, message?: string) {
-  return {
-    ...(message != null && message !== '' ? { description: message } : {}),
-    duration: DURATION_MS[kind],
-  };
-}
 
 /**
  * The only allowed import of the toast library (oxlint-enforced, the same
@@ -35,7 +28,7 @@ export const toast = {
   /** The committed action succeeded — ephemeral, no recourse needed (R7). */
   success(title: string, message?: string): void {
     haptics.success();
-    sonnerToast.success(title, toastOptions('success', message));
+    showToast('success', title, message, DURATION_MS.success);
   },
   /**
    * The committed action failed *and the recourse lives elsewhere*. Toasts
@@ -46,6 +39,6 @@ export const toast = {
    */
   error(title: string, message?: string): void {
     haptics.error();
-    sonnerToast.error(title, toastOptions('error', message));
+    showToast('error', title, message, DURATION_MS.error);
   },
 };

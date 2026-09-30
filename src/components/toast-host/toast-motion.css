@@ -1,0 +1,25 @@
+[data-sonner-toaster] [data-sonner-toast][data-swiping='false'] {
+  transition-property: transform, opacity;
+  transition-duration: var(--toast-enter);
+  transition-timing-function: var(--toast-ease);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-mounted='false'] {
+  --y: translateY(16px) scale(0.97);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false'] {
+  --y: translateY(16px) scale(0.97);
+  transition-duration: var(--toast-exit);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toaster] [data-sonner-toast][data-swiping='false'] {
+    transition-property: opacity;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-mounted='false'],
+  [data-sonner-toaster] [data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false'] {
+    --y: translateY(0);
+  }
+}

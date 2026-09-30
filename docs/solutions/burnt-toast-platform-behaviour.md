@@ -28,6 +28,13 @@ and web keeps the exact sonner it always rendered through.
 
 ## The wrapper's contract (unchanged)
 
+The current presentation uses `ToastCard` through each library's `toast.custom`
+API (plan 0041), so web, iOS, and Android render the same card. The wrapper still
+owns durations and haptics. Native Sonner's custom-JSX path bypasses host
+`toastOptions.style`, including the default horizontal margins; the native
+binding wraps the card in a `View` with 16-point gutters instead. Web keeps
+Sonner's host offsets.
+
 - `toast.success(title, message?)` → 2 s; `toast.error(title, message?)` → 3.5 s.
 - The haptic fires from `@/lib/haptics` inside the wrapper, never delegated to
   the toast library (R10) — covers Android, no double-fire on iOS.
@@ -42,7 +49,7 @@ and web keeps the exact sonner it always rendered through.
 ## Gotchas worth keeping
 
 - `duration` is now **milliseconds** (sonner's unit) — burnt used seconds; the
-  conversion lives in `src/lib/toast/options.ts` and nowhere else.
+  durations live in `src/lib/toast/index.ts` and nowhere else.
 - sonner-native peer-deps `react-native-svg` (new native dep at adoption) —
   adding/upgrading needs `bun ios.clean` / `bun android.clean` (AGENTS.md §
   CNG). Its dismiss gestures need `GestureHandlerRootView` (already at root)

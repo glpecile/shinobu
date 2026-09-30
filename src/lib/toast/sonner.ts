@@ -1,7 +1,23 @@
-/**
- * The library binding — the only platform split in the toast stack. Native
- * renders through sonner-native; the `.web.ts` sibling re-exports web sonner,
- * which shares the same `toast.success(title, { description, duration })`
- * call shape, so `index.ts` stays one implementation for all four targets.
- */
-export { toast as sonnerToast } from 'sonner-native';
+import { createElement } from 'react';
+import { View } from 'react-native';
+import { toast } from 'sonner-native';
+
+import { ToastCard, type ToastKind } from '@/components/toast-card';
+
+/** Native Sonner owns gestures and overlays around the shared card. */
+export function showToast(
+  kind: ToastKind,
+  title: string,
+  message: string | undefined,
+  duration: number,
+) {
+  // Custom JSX bypasses the native host's toast styles, including its gutters.
+  toast.custom(
+    createElement(
+      View,
+      { style: { marginHorizontal: 16 } },
+      createElement(ToastCard, { kind, title, message }),
+    ),
+    { duration },
+  );
+}
