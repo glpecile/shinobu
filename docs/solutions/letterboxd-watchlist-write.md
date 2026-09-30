@@ -1,5 +1,12 @@
 # Letterboxd: the watchlist endpoint, as observed
 
+Update 2026-09-30: userscript 0.5.0 adds an optional browser-session transport
+for web watchlist additions and removals. The user reported a removal landing,
+but 0.5.0 rejected its HTTP 2xx response because it expected an empty 204.
+Version 0.5.1 accepts HTTP 2xx outcomes as the native adapter already does,
+with guards for explicit JSON errors and non-JSON bodies.
+See `letterboxd-web-userscript-bridge.md`.
+
 Captured 2026-07-29 by `app/dev/letterboxd-watchlist-spike` (plan 0031 U6)
 inside the authenticated WebView on the iOS dev client, by driving the site's
 own watchlist control on `/film/the-thing/` — add, then remove. Credential

@@ -19,6 +19,7 @@ import { ProviderToggleList } from '@/features/write-sheet/provider-picker';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
+import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import type { ProviderFailure } from '@/state/queries/settle';
@@ -344,6 +345,7 @@ export function WatchlistRemovePicker({
 }) {
   const connected = useConnectedProviders();
   const remove = useUnwatchlistMedia(entry, errors, incomplete);
+  const letterboxdUserscript = useLetterboxdUserscript('watchlist-remove');
   const pending = useIsUnwatchlistPending(entry.item.id);
   const split = splitWatchlistRemoveTargets(
     entry.item,
@@ -352,6 +354,7 @@ export function WatchlistRemovePicker({
     currentPlatform(),
     errors,
     incomplete,
+    letterboxdUserscript,
   );
   const { selected, toggle, selectAll, selectNone } = useSelectedTargets(
     split.targets,

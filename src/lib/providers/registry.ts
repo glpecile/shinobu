@@ -40,8 +40,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     mediaTypes: ['MOVIE'],
     canRead: true,
     canWrite: true,
-    // Web defaults to manual. Routing lifts this for film logs only when the
-    // Tampermonkey bridge is detected (plan 0042); proxies remain GET-only.
+    // Web defaults to manual. Routing lifts this for logs and watchlist writes
+    // when the supporting bridge is detected (plans 0042/0043); proxies remain GET-only.
     unsupportedWritePlatforms: ['web'],
     // Both verbs verified by plan 0031 U6's account-bound capture
     // (docs/solutions/letterboxd-watchlist-write.md): `PATCH
@@ -49,9 +49,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // (`inWatchlist: true|false`), not a toggle, so KTD-6's data-loss hazard
     // (a wrong idempotency guess *removing* a film while reporting success)
     // does not exist on this endpoint and a repeat add is idempotent. The
-    // adapter (plan 0033, `letterboxd/watchlist-writes.ts`) rides the same
-    // captured-WebView-session plumbing as the diary write, so
-    // `unsupportedWritePlatforms` above still keeps web watchlist writes manual. Standing
+    // adapter uses the native WebView session or a supporting web userscript. Standing
     // rollback: revert both tokens to 'manual' if the endpoint regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'write',

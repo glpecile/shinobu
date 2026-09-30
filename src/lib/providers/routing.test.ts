@@ -59,11 +59,14 @@ describe("providersForWrite('log')", () => {
 // unsupportedWritePlatforms) — routing splits it into a manual target there,
 // not out of the target list entirely.
 describe("splitWriteTargets('log')", () => {
-  it('allows userscript-backed web logs in both the picker and mutation, but not watchlist writes', () => {
+  it('allows supported userscript-backed web logs and watchlist writes', () => {
     const item = { type: 'MOVIE' as const, ...ids({ tmdb: 348 }) };
     expect(splitWriteTargets(item, ['letterboxd'], 'web', 'log', true)).toEqual({ writable: ['letterboxd'], manual: [] });
     expect(resolveWriteTargets(item, ['letterboxd'], { platform: 'web', capability: 'log', letterboxdUserscript: true })).toEqual(['letterboxd']);
-    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist', true)).toEqual({ writable: [], manual: ['letterboxd'] });
+    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist', true)).toEqual({ writable: ['letterboxd'], manual: [] });
+    expect(resolveWriteTargets(item, ['letterboxd'], { platform: 'web', capability: 'watchlist', letterboxdUserscript: true })).toEqual(['letterboxd']);
+    expect(splitWriteTargets(item, ['letterboxd'], 'web', 'watchlist-remove', true)).toEqual({ writable: ['letterboxd'], manual: [] });
+    expect(resolveWriteTargets(item, ['letterboxd'], { platform: 'web', capability: 'watchlist-remove', letterboxdUserscript: true })).toEqual(['letterboxd']);
   });
   it('routes Letterboxd to manual on web, Trakt stays writable', () => {
     expect(

@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { enrichExternalIds } from '@/features/log-media/enrich';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
+import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { providersForWrite, splitWriteTargets } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
@@ -119,12 +120,14 @@ export function splitWatchlistRemoveTargets(
   platform: string,
   errors: readonly ProviderFailure[],
   incomplete: readonly ProviderId[] = [],
+  letterboxdUserscript = false,
 ): { targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
   const { writable, manual } = splitWriteTargets(
     item,
     connected,
     platform,
     'watchlist-remove',
+    letterboxdUserscript,
   );
   const unknown = providersForWrite(item, connected, 'watchlist-remove').filter(
     (provider) =>
@@ -163,6 +166,7 @@ export async function planWatchlistRemove(
     platform,
     errors,
     incomplete,
+    hasLetterboxdUserscript('watchlist-remove'),
   );
   const only = variables.providers;
   const targets =

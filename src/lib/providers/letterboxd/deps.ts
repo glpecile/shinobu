@@ -44,6 +44,8 @@ export interface LetterboxdDeps {
   webFetch?: LetterboxdWebFetch;
   /** Tampermonkey's browser-session transport; needs a username, not captured cookies. */
   userscriptFetch?: LetterboxdWebFetch;
+  /** Browser-session watchlist transport; no captured cookies required. */
+  userscriptWatchlistFetch?: LetterboxdWatchlistWebFetch;
   /**
    * Same-origin *watchlist* transport, running in the same authenticated
    * WebView as `webFetch` (plan 0033 KTD-4). A separate field rather than a

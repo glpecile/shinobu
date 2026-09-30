@@ -2,6 +2,7 @@ import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-quer
 
 import { enrichExternalIds } from '@/features/log-media/enrich';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
+import { hasLetterboxdUserscript, useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { resolveWriteTargets, splitWriteTargets } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
@@ -69,13 +70,15 @@ export async function planWatchlistWrite(
 ): Promise<WatchlistWritePlan> {
   const enriched = await enrichExternalIds(queryClient, item, connected);
   const platform = currentPlatform();
+  const letterboxdUserscript = hasLetterboxdUserscript('watchlist');
 
   const targets = resolveWriteTargets(enriched, connected, {
     capability: 'watchlist',
     platform,
+    letterboxdUserscript,
     ...(variables.providers != null ? { onlyProviders: variables.providers } : {}),
   });
-  const { manual } = splitWriteTargets(enriched, connected, platform, 'watchlist');
+  const { manual } = splitWriteTargets(enriched, connected, platform, 'watchlist', letterboxdUserscript);
 
   return { item: enriched, targets, manual };
 }
@@ -94,17 +97,19 @@ export function useWatchlistTargetsSplit(item: NormalizedMediaItem): {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
   const platform = currentPlatform();
+  const letterboxdUserscript = useLetterboxdUserscript('watchlist');
 
   const { data } = useQuery({
-    queryKey: ['watchlist-targets', item.id, ...connected, platform],
+    queryKey: ['watchlist-targets', item.id, ...connected, platform, letterboxdUserscript],
     queryFn: async () =>
       splitWriteTargets(
         await enrichExternalIds(queryClient, item, connected),
         connected,
         platform,
         'watchlist',
+        letterboxdUserscript,
       ),
   });
 
-  return data ?? splitWriteTargets(item, connected, platform, 'watchlist');
+  return data ?? splitWriteTargets(item, connected, platform, 'watchlist', letterboxdUserscript);
 }

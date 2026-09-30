@@ -56,11 +56,12 @@ function interpretWatchlistResponse(
  * **declarative state set**, `{"inWatchlist": true|false}`, never a toggle —
  * so a repeat add is idempotent and plan 0031 KTD-6's hazard (a wrong guess
  * *removing* a film while reporting success) does not exist on this endpoint.
- * Native only, riding the same captured-WebView-session plumbing as the diary
+ * Native writes ride the same captured-WebView-session plumbing as the diary
  * write (`deps.watchlistWebFetch`): the film's LID resolves over public
  * nitro-fetch as a fallback (the injected script reads it off the page meta
  * too), then the CSRF fetch + PATCH run *inside* the authenticated login
- * WebView. No captured session or no transport (web, disconnected) fails as a
+ * WebView. Web writes can instead use the userscript, resolving the LID in the
+ * signed-in browser tab without exporting cookies. No session or transport fails as a
  * dead session so the caller surfaces "reconnect Letterboxd" rather than
  * silently dropping the write.
  */
@@ -70,8 +71,9 @@ export function setLetterboxdWatchlist(
   inWatchlist: boolean,
 ): Effect.Effect<ProviderWriteResult, ProviderError> {
   const session = deps.session;
-  const watchlistWebFetch = deps.watchlistWebFetch;
-  if (session == null || session.cookie === '' || watchlistWebFetch == null) {
+  const userscriptFetch = deps.userscriptWatchlistFetch;
+  const watchlistWebFetch = userscriptFetch ?? deps.watchlistWebFetch;
+  if (watchlistWebFetch == null || (userscriptFetch == null && (session == null || session.cookie === ''))) {
     return Effect.fail(new ProviderAuthError({ provider, refreshFailed: true }));
   }
 
@@ -96,7 +98,7 @@ export function setLetterboxdWatchlist(
     );
   }
 
-  return resolveFilmLid(deps, item).pipe(
+  return (userscriptFetch != null ? Effect.succeed('') : resolveFilmLid(deps, item)).pipe(
     Effect.flatMap((filmLid) =>
       Effect.gen(function* () {
         const response = yield* Effect.tryPromise({

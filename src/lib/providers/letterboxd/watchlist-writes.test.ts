@@ -56,6 +56,21 @@ function fakeDeps(options: {
 }
 
 describe('setLetterboxdWatchlist (plan 0033 R3/R4)', () => {
+  test('adds and removes through the userscript without cookies or a public film fetch', async () => {
+    let captured: LetterboxdWatchlistWebRequest | undefined;
+    const deps: LetterboxdDeps = {
+      username: 'gian',
+      fetch: async () => { throw new Error('Web film fetch must not run'); },
+      userscriptWatchlistFetch: async (request) => {
+        captured = request;
+        return { status: 204, body: '' };
+      },
+    };
+    expect(await Effect.runPromise(addToLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({ status: 'ok' });
+    expect(captured).toEqual({ filmPath: '/tmdb/348/', filmLid: '', inWatchlist: true });
+    expect(await Effect.runPromise(removeFromLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({ status: 'ok' });
+    expect(captured).toEqual({ filmPath: '/tmdb/348/', filmLid: '', inWatchlist: false });
+  });
   test('the add navigates to the film page and PATCHes inWatchlist: true', async () => {
     let captured: LetterboxdWatchlistWebRequest | undefined;
     const deps = fakeDeps({ onWrite: (r) => (captured = r) });
