@@ -16,7 +16,7 @@ does not hit this crash. JavaScript `try/catch` cannot catch WebKit's native tra
 
 ## Sign-in fix
 
-`ProviderSigninWebView` captures `navigator.userAgent` using the supported
+On iOS, `ProviderSigninWebView` captures `navigator.userAgent` using the supported
 `injectedJavaScript` prop and receives it through `onMessage`. WebKit runs the
 script at document end without calling the unsafe imperative method. The handler
 accepts only the tagged user-agent message from the provider's cookie domain.
@@ -24,6 +24,8 @@ accepts only the tagged user-agent message from the provider's cookie domain.
 Cookie capture waits for the user-agent message when requested. Both load-end
 and message arrival can trigger capture, so their arrival order does not matter.
 Serializd does not request user-agent capture and keeps its cookie-based flow.
+Android keeps its existing imperative `evaluateJavaScript` user-agent capture;
+it receives neither the injected script nor the message handler.
 
 This is an app-level JS change and hot reloads. No dependency patch or library
 replacement is required. The Letterboxd write bridge still calls the imperative

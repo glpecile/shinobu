@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Modal, Text, View } from 'react-native';
+import { Modal, Platform, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -72,16 +72,25 @@ export function ProviderSigninWebView<T>({
   const capturedRef = useRef(false);
   const userAgentRef = useRef<string | undefined>(undefined);
   const insets = useSafeAreaInsets();
+  const injectUserAgent = captureUserAgent && Platform.OS === 'ios';
 
   const tryCapture = async () => {
     if (capturedRef.current) return;
-    if (captureUserAgent && userAgentRef.current == null) return;
+    if (injectUserAgent && userAgentRef.current == null) return;
     const ref = webViewRef.current;
     if (ref == null) return;
 
     const cookies = await ref.getCookies(cookieDomain);
+    let userAgent = userAgentRef.current;
+    if (captureUserAgent && !injectUserAgent) {
+      try {
+        userAgent = await ref.evaluateJavaScript('navigator.userAgent');
+      } catch {
+        userAgent = undefined;
+      }
+    }
     if (capturedRef.current || webViewRef.current !== ref || !visible) return;
-    const captured = extractSession(cookies, userAgentRef.current);
+    const captured = extractSession(cookies, userAgent);
     // Not signed in yet — leave the WebView open for the user to finish.
     if (captured == null) return;
 
@@ -96,7 +105,7 @@ export function ProviderSigninWebView<T>({
   };
 
   const onMessage = (event: WebViewMessageEvent) => {
-    if (!captureUserAgent) return;
+    if (!injectUserAgent) return;
     try {
       const host = new URL(event.nativeEvent.url).hostname;
       const domain = new URL(cookieDomain).hostname;
@@ -152,12 +161,12 @@ export function ProviderSigninWebView<T>({
           </View>
           {visible && (
             <NitroWebView
-              injectedJavaScript={captureUserAgent ? CAPTURE_USER_AGENT_SCRIPT : undefined}
+              injectedJavaScript={injectUserAgent ? CAPTURE_USER_AGENT_SCRIPT : undefined}
               // Nitro dispatches event props across the JSI boundary — each one
               // must be wrapped in callback(...) or it throws at render time.
               onLoadEnd={callback(() => void tryCapture())}
               onNavigationStateChange={callback(onNavigationStateChange)}
-              onMessage={callback(onMessage)}
+              onMessage={injectUserAgent ? callback(onMessage) : undefined}
               source={{ uri }}
               style={{ flex: 1 }}
               hybridRef={callback((ref) => {
