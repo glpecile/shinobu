@@ -7,17 +7,17 @@ export interface AnimeSeasonWindow {
 }
 
 /**
- * The anime season a given instant falls in, by AniList's quarter boundaries
- * (WINTER Jan–Mar, SPRING Apr–Jun, SUMMER Jul–Sep, FALL Oct–Dec), evaluated
- * in the user's local timezone — "what season is it now" is a coarse,
- * user-facing question, not an airing-instant comparison (that stays in
- * lib/time/has-aired.ts).
+ * The browse season advances 10 local calendar days before AniList's quarter
+ * boundaries (January, April, July, October), so upcoming titles appear early.
+ * Airing-instant comparisons stay in lib/time/has-aired.ts.
  */
 export function animeSeasonAt(date: Date): { season: AnimeSeason; year: number } {
-  const month = date.getMonth();
+  const browseDate = new Date(date);
+  browseDate.setDate(browseDate.getDate() + 10);
+  const month = browseDate.getMonth();
   const season: AnimeSeason =
     month <= 2 ? 'WINTER' : month <= 5 ? 'SPRING' : month <= 8 ? 'SUMMER' : 'FALL';
-  return { season, year: date.getFullYear() };
+  return { season, year: browseDate.getFullYear() };
 }
 
 /** "Summer 2026" — display form of a season window. */

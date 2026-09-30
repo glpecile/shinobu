@@ -8,12 +8,22 @@ import {
 } from './season';
 
 describe('animeSeasonAt', () => {
-  it('maps each quarter to its AniList season', () => {
-    expect(animeSeasonAt(new Date(2026, 0, 15))).toEqual({ season: 'WINTER', year: 2026 });
-    expect(animeSeasonAt(new Date(2026, 2, 31))).toEqual({ season: 'WINTER', year: 2026 });
-    expect(animeSeasonAt(new Date(2026, 3, 1))).toEqual({ season: 'SPRING', year: 2026 });
-    expect(animeSeasonAt(new Date(2026, 6, 14))).toEqual({ season: 'SUMMER', year: 2026 });
-    expect(animeSeasonAt(new Date(2026, 11, 31))).toEqual({ season: 'FALL', year: 2026 });
+  it('advances each season 10 local calendar days early, including the year', () => {
+    const boundaries = [
+      { month: 2, day: 22, before: 'WINTER', after: 'SPRING', year: 2026 },
+      { month: 5, day: 21, before: 'SPRING', after: 'SUMMER', year: 2026 },
+      { month: 8, day: 21, before: 'SUMMER', after: 'FALL', year: 2026 },
+      { month: 11, day: 22, before: 'FALL', after: 'WINTER', year: 2027 },
+    ] as const;
+    for (const { month, day, before, after, year } of boundaries) {
+      expect(animeSeasonAt(new Date(2026, month, day - 1, 23, 59, 59))).toEqual({
+        season: before,
+        year: 2026,
+      });
+      const date = new Date(2026, month, day);
+      expect(animeSeasonAt(date)).toEqual({ season: after, year });
+      expect(date.getDate()).toBe(day);
+    }
   });
 });
 
