@@ -70,6 +70,12 @@ as a JS plugin, enforces this.
 Prefer a [Nitro Modules](https://nitro.margelo.com) library over a bridge-based
 one. The app already needs a custom dev client.
 
+Avoid patching third-party libraries. Dependency patches are an escape hatch,
+used only as a last resort after checking upstream releases, supported APIs,
+app-level fixes, and maintained alternatives. Explain why those options cannot
+solve the problem and get user approval before adding a patch. Keep an approved
+patch minimal and document when it can be removed.
+
 ## Enforcement
 
 A convention that can be a lint rule is one, and lands with its rule.
