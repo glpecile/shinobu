@@ -155,14 +155,31 @@ export function findLibraryEntry(
 }
 
 /** TV layouts span cours; ANIME items still resolve only their exact entry. */
-export function findLibraryEpisodeState(library: SimklLibrary, item: NormalizedMediaItem) {
+function libraryEpisodeEntries(library: SimklLibrary, item: NormalizedMediaItem) {
   const exact = findLibraryEntry(library, item);
   const tmdbId = item.externalIds.tmdb;
   const anime = item.type === 'TV' && tmdbId != null
     ? library.anime.filter((entry) => entry.item.isFilm !== true && entry.item.externalIds.tmdb === tmdbId)
     : [];
-  const entries = [...(exact == null || anime.includes(exact) ? [] : [exact]), ...anime];
+  return [...(exact == null || anime.includes(exact) ? [] : [exact]), ...anime];
+}
+
+export function findLibraryEpisodeState(library: SimklLibrary, item: NormalizedMediaItem) {
+  const entries = libraryEpisodeEntries(library, item);
   return entries.length === 0 ? null : simklEpisodeState(entries);
+}
+
+/** Count both cours on a TV page, without counting a parallel TV entry twice. */
+export function findLibraryProgress(library: SimklLibrary, item: NormalizedMediaItem): number | null {
+  const entries = libraryEpisodeEntries(library, item);
+  if (entries.length === 0) return null;
+  const animeProgress = entries
+    .filter((entry) => entry.item.type === 'ANIME')
+    .reduce((count, entry) => count + entry.item.currentProgress, 0);
+  const tvProgress = entries
+    .filter((entry) => entry.item.type !== 'ANIME')
+    .reduce((count, entry) => Math.max(count, entry.item.currentProgress), 0);
+  return Math.max(animeProgress, tvProgress);
 }
 
 export function useSimklEpisodeStateQuery(params: {
@@ -231,6 +248,20 @@ export function useSimklLibraryEntryQuery(params: {
   });
 }
 
+/** Shares the library cache with the episode marks and per-cour entry reads. */
+export function useSimklProgressQuery(params: {
+  item: NormalizedMediaItem | null;
+  enabled?: boolean;
+}) {
+  const { item, enabled = true } = params;
+  return useQuery({
+    ...simklLibraryQuery(),
+    enabled: enabled && item != null,
+    select: (library: SimklLibrary) =>
+      item == null ? null : findLibraryProgress(library, item),
+  });
+}
+
 /**
  * Whether Simkl already records this item as watched — the Simkl half of
  * `useWatchedInfo` (`state/queries/watched-info.ts`).
@@ -252,16 +283,20 @@ export function useSimklWatchedInfo(
     item,
     enabled: useConnectedProviders().includes('simkl') && (filmLike || item.type === 'TV'),
   }).data;
+  const progress = useSimklProgressQuery({
+    item,
+    enabled: useConnectedProviders().includes('simkl') && (filmLike || item.type === 'TV'),
+  }).data;
   // `enabled: false` stops the *fetch*, not the read: the snapshot is one
   // shared cache entry, so a screen another hook populated it for still
   // selects a real entry here. Gate the answer, not just the request.
   if (entry == null || !(filmLike || item.type === 'TV')) return null;
   if (filmLike && entry.status !== 'completed') return null;
-  if (!filmLike && entry.item.currentProgress <= 0) return null;
+  if (!filmLike && (progress ?? 0) <= 0) return null;
   // No instant means Simkl knows it's watched but not when — the entry's own
   // `lastUpdated` stands in rather than dropping a true watch on the floor.
   return {
-    plays: Math.max(1, entry.item.currentProgress),
+    plays: Math.max(1, progress ?? entry.item.currentProgress),
     lastWatchedAt: entry.lastWatchedAt ?? entry.item.lastUpdated,
   };
 }

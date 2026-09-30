@@ -30,7 +30,7 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { findLibraryEntry, findLibraryEpisodeState, simklDeps } = await import('./simkl');
+const { findLibraryEntry, findLibraryEpisodeState, findLibraryProgress, simklDeps } = await import('./simkl');
 const { clearProviderClientId, setProviderClientId } = await import(
   '@/state/session/tokens'
 );
@@ -148,6 +148,27 @@ describe('findLibraryEntry', () => {
 });
 
 describe('canonical Simkl episode state', () => {
+  test('TV progress combines completed anime cours while a cour page keeps its own count', () => {
+    const snapshot = normalizeAllItems({
+      anime: [
+        { status: 'completed', watched_episodes_count: 12,
+          show: { title: 'You and I Are Polar Opposites', ids: { simkl: 1, tmdb: 42 } } },
+        { status: 'completed', watched_episodes_count: 12,
+          show: { title: 'You and I Are Polar Opposites Part 2', ids: { simkl: 2, tmdb: 42 } } },
+        { status: 'completed', anime_type: 'movie', watched_episodes_count: 1,
+          show: { title: 'Unrelated film', ids: { simkl: 3, tmdb: 42 } } },
+      ],
+    }, '2026-09-30T00:00:00Z');
+    expect(findLibraryProgress(snapshot, item('show', 'TV', { simkl: 1, tmdb: 42 }))).toBe(24);
+    expect(findLibraryProgress(snapshot, item('cour', 'ANIME', { simkl: 1, tmdb: 42 }))).toBe(12);
+    expect(findLibraryProgress(snapshot, item('unknown', 'TV', { tmdb: 99 }))).toBeNull();
+    snapshot.shows.push(normalizeAllItems({ shows: [
+      { status: 'completed', watched_episodes_count: 24,
+        show: { title: 'Parallel TV entry', ids: { simkl: 4, tmdb: 42 } } },
+    ] }, '2026-09-30T00:00:00Z').shows[0]!);
+    expect(findLibraryProgress(snapshot, item('show', 'TV', { tmdb: 42 }))).toBe(24);
+  });
+
   test('Saga of Tanya the Evil S2E11 stays unwatched when only season 1 is complete', () => {
     const snapshot = normalizeAllItems({ anime: [
       {

@@ -69,6 +69,7 @@ import {
 import {
   simklQueryKeys,
   useSimklLibraryEntryQuery,
+  useSimklProgressQuery,
 } from '@/state/queries/simkl';
 import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
 import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
@@ -196,6 +197,10 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
         (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
       connected.includes('simkl'),
   });
+  const simklProgress = useSimklProgressQuery({
+    item,
+    enabled: connected.includes('simkl'),
+  }).data;
   const accent = useThemeColor('--color-accent');
 
   const plays = useFilmPlaysQuery(item).data ?? [];
@@ -231,16 +236,11 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     (item.type === 'TV' ||
       (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
     simklEntry.data != null &&
-    simklEntry.data.item.currentProgress > 0
+    (simklProgress ?? 0) > 0
   ) {
-    // The verb is the entry's own status, not an assumption: the snapshot used
-    // to be `watching`-filtered, so "Watching" was true by construction, and a
-    // finished show saying "Watching · 153 episodes logged" is its own small
-    // lie. The count is `watched_episodes_count`, **not** `watchedKeys.size` —
-    // Simkl omits the per-episode `seasons[]` array entirely for a `completed`
-    // show (verified on Doctor Who, 2026-08-01), so the key set is empty there
-    // while the count is right.
-    const count = simklEntry.data.item.currentProgress;
+    // Completed entries can omit episode rows; the shared count uses provider
+    // totals and combines anime cours for a TV-shaped detail page.
+    const count = simklProgress ?? 0;
     const episodes = `${count} ${count === 1 ? 'episode' : 'episodes'} logged`;
     label =
       simklEntry.data.status === 'completed'
@@ -518,14 +518,12 @@ function DetailsScreen() {
     mediaId: anilistId,
     enabled: onAniList && connected.includes('anilist'),
   });
-  // The same correction from Simkl's library entry — a show opened from
-  // search showed "0 / 153" for a series watched end to end. An anime series
-  // only when it names its own Simkl entry: every season shares the TMDB id.
-  // Shares `WatchedLine`'s cache entry, so it costs no extra request.
+  // TV progress spans anime cours; anime progress stays entry-relative.
+  // Shares `WatchedLine`'s library cache, so it costs no extra request.
   const onSimkl =
     item?.type === 'TV' ||
     (item?.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null);
-  const simklEntry = useSimklLibraryEntryQuery({
+  const simklProgress = useSimklProgressQuery({
     item: onSimkl ? item : null,
     enabled: connected.includes('simkl'),
   });
@@ -576,9 +574,9 @@ function DetailsScreen() {
   // AniList progress belongs to this cour, not the whole TMDB series.
   const displayedProgress =
     shown.type === 'ANIME' && shown.isFilm !== true
-      ? anilistEntry.data?.entry?.progress ?? shown.currentProgress
+      ? anilistEntry.data?.entry?.progress ?? simklProgress.data ?? shown.currentProgress
       : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
-        simklEntry.data?.item.currentProgress ??
+        simklProgress.data ??
         shown.currentProgress;
 
   function refresh() {
