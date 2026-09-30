@@ -154,7 +154,7 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
     expect(split.unknown).toEqual(['trakt']);
   });
 
-  test('Letterboxd removes via the fan-out on native, manual only on web (plan 0033 R7)', () => {
+  test('Letterboxd removes on native and with a supporting web userscript, otherwise stays manual', () => {
     for (const platform of ['ios', 'android']) {
       const split = splitWatchlistRemoveTargets(
         film(),
@@ -175,6 +175,9 @@ describe('splitWatchlistRemoveTargets — writes follow `sources` (R35)', () => 
     );
     expect(web.targets).toEqual(['trakt']);
     expect(web.manual).toEqual(['letterboxd']);
+    const scripted = splitWatchlistRemoveTargets(film(), ['trakt', 'letterboxd'], CONNECTED, 'web', [], [], true);
+    expect(scripted.targets).toEqual(['trakt', 'letterboxd']);
+    expect(scripted.manual).toEqual([]);
   });
 
 });

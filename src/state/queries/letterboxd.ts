@@ -19,7 +19,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
-import { getLetterboxdUserscriptFetch } from '@/lib/providers/letterboxd/userscript-bridge';
+import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
@@ -80,6 +80,7 @@ export function letterboxdDeps(): LetterboxdDeps {
     session: getLetterboxdSession(),
     webFetch: getLetterboxdWebFetch(),
     userscriptFetch: getLetterboxdUserscriptFetch(getLetterboxdUsername()),
+    userscriptWatchlistFetch: getLetterboxdUserscriptWatchlistFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
   };
 }

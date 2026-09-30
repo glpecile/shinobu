@@ -102,7 +102,7 @@ export function isManualWriteTarget(
   capability?: WriteCapability,
   letterboxdUserscript = false,
 ): boolean {
-  if (provider === 'letterboxd' && platform === 'web' && capability === 'log' && letterboxdUserscript) return false;
+  if (provider === 'letterboxd' && platform === 'web' && capability != null && letterboxdUserscript) return false;
   return PROVIDERS[provider].unsupportedWritePlatforms?.includes(platform) ?? false;
 }
 
@@ -157,7 +157,7 @@ export interface WriteTargetOptions {
   onlyProviders?: readonly ProviderId[];
   /** `process.env.EXPO_OS` — excludes anything manual-only on this platform (plan 0022 R2/KTD-3). */
   platform: string;
-  /** Only film logs gain a web transport; watchlist writes remain manual. */
+  /** Whether the detected userscript supports the requested capability. */
   letterboxdUserscript?: boolean;
 }
 

@@ -5,6 +5,7 @@ import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { haptics } from '@/lib/haptics';
+import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
@@ -61,6 +62,7 @@ export function UnwatchlistMediaButton({
   onOpenPicker: () => void;
 }) {
   const connected = useConnectedProviders();
+  const letterboxdUserscript = useLetterboxdUserscript('watchlist-remove');
   const pending = useIsUnwatchlistPending(entry.item.id);
   const result = useLatestUnwatchlistResult(entry.item.id);
 
@@ -76,6 +78,7 @@ export function UnwatchlistMediaButton({
     currentPlatform(),
     errors,
     incomplete,
+    letterboxdUserscript,
   );
 
   const copy = unwatchlistCtaCopy(entry.item);

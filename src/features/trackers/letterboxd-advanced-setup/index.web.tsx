@@ -10,18 +10,20 @@ import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-b
 
 export function LetterboxdAdvancedSetup() {
   const detected = useLetterboxdUserscript();
+  const watchlistDetected = useLetterboxdUserscript('watchlist');
+  const removalDetected = useLetterboxdUserscript('watchlist-remove');
 
   return (
     <View className="mt-5">
-      <Collapsible label="Advanced setup: web logging">
+      <Collapsible label="Advanced setup: web writes">
         <View className="gap-4">
           <Text className="text-muted font-sans text-sm">
-            Experimental and optional. Log films from Shinobu using Tampermonkey
+            Experimental and optional. Log films and change your watchlist using Tampermonkey
             and your signed-in Letterboxd browser session. Your cookies stay in
             Letterboxd. This is not an official API integration.
           </Text>
           <Text accessibilityLiveRegion="polite" className="text-foreground font-sans-semibold text-sm">
-            {detected ? 'Script detected in this tab' : 'Script not detected in this tab'}
+            {removalDetected ? 'Script detected: logs and watchlist changes' : watchlistDetected ? 'Older script detected: update for watchlist removals' : detected ? 'Older script detected: update for watchlist changes' : 'Script not detected in this tab'}
           </Text>
           <Steps>
             <Steps.Item>
@@ -39,7 +41,7 @@ export function LetterboxdAdvancedSetup() {
             </Steps.Item>
             <Steps.Item>
               <Text className="text-muted font-sans text-sm">
-                Install the Shinobu script and allow it on Shinobu and Letterboxd.
+                Install or update the Shinobu script and allow it on Shinobu and Letterboxd.
                 If the link shows source code, paste it into a new Tampermonkey
                 script and save. Then reload this Shinobu tab.
               </Text>
@@ -55,7 +57,7 @@ export function LetterboxdAdvancedSetup() {
               <Text className="text-muted font-sans text-sm">
                 Sign into Letterboxd as the same username connected here. Once
                 the script is detected, select Letterboxd under Write to and
-                use Mark as watched as usual.
+                use Mark as watched, Add to watchlist, or Remove from watchlist as usual.
               </Text>
               <Button
                 icon={<Button.Icon name="open-outline" />}
@@ -67,13 +69,12 @@ export function LetterboxdAdvancedSetup() {
             </Steps.Item>
           </Steps>
           <Text className="text-muted font-sans text-sm">
-            Logging opens a Letterboxd tab. If it stays open or does not return
+            Each write opens a Letterboxd tab. If it stays open or does not return
             you here, switch back to your original Shinobu tab to see the result.
             If the result is uncertain, check Letterboxd before retrying.
           </Text>
           <Text className="text-muted font-sans text-sm">
-            Web watchlist changes still need to be made on Letterboxd. Without
-            the script, Shinobu keeps the manual-log link. You can disable the
+            Without the script, Shinobu keeps the manual links. You can disable the
             script in Tampermonkey and reload Shinobu to return to that mode.
           </Text>
         </View>
