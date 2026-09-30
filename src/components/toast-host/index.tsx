@@ -1,31 +1,25 @@
 import { useColorScheme } from 'react-native';
-import { type EntryExitAnimationFunction, withTiming } from 'react-native-reanimated';
+import { Keyframe } from 'react-native-reanimated';
 import { Toaster } from 'sonner-native';
 
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
-const ENTER: EntryExitAnimationFunction = () => {
-  'worklet';
-  const timing = { duration: DURATION.enter, easing: KEYFRAME_EASE_OUT };
-  return {
-    initialValues: { opacity: 0, transform: [{ translateY: -16 }, { scale: 0.97 }] },
-    animations: {
-      opacity: withTiming(1, timing),
-      transform: [{ translateY: withTiming(0, timing) }, { scale: withTiming(1, timing) }],
-    },
-  };
-};
-const EXIT: EntryExitAnimationFunction = () => {
-  'worklet';
-  const timing = { duration: DURATION.exit, easing: KEYFRAME_EASE_OUT };
-  return {
-    initialValues: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] },
-    animations: {
-      opacity: withTiming(0, timing),
-      transform: [{ translateY: withTiming(-16, timing) }, { scale: withTiming(0.97, timing) }],
-    },
-  };
-};
+const ENTER = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: -16 }, { scale: 0.97 }] },
+  100: {
+    opacity: 1,
+    transform: [{ translateY: 0 }, { scale: 1 }],
+    easing: KEYFRAME_EASE_OUT,
+  },
+}).duration(DURATION.enter);
+const EXIT = new Keyframe({
+  0: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] },
+  100: {
+    opacity: 0,
+    transform: [{ translateY: -16 }, { scale: 0.97 }],
+    easing: KEYFRAME_EASE_OUT,
+  },
+}).duration(DURATION.exit);
 
 /**
  * Native host: sonner-native's `<Toaster />`, mounted once at the root
