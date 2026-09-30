@@ -5,6 +5,7 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
+import { LetterboxdAdvancedSetup } from '@/features/trackers/letterboxd-advanced-setup';
 import {
   capabilityLabels,
   statusLine,
@@ -102,6 +103,7 @@ function ProviderSheetContent({
           <ConnectButton />
         </View>
       )}
+      {id === 'letterboxd' && <LetterboxdAdvancedSetup />}
     </>
   );
 }

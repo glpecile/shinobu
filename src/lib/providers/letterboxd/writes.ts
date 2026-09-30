@@ -218,7 +218,8 @@ function interpretDiaryResponse(
  * Movies and anime films only; routing.ts guarantees nothing else reaches here.
  * No captured session (or no WebView transport, e.g. web) fails as a dead session
  * so the caller surfaces "reconnect Letterboxd" rather than silently dropping the
- * write.
+ * write. The web userscript transport uses the connected username instead of a
+ * captured cookie session and resolves the film LID in the Letterboxd tab.
  */
 export function logToLetterboxd(
   deps: LetterboxdDeps,
@@ -226,8 +227,8 @@ export function logToLetterboxd(
   options: LetterboxdLogOptions = {},
 ): Effect.Effect<void, ProviderError> {
   const session = deps.session;
-  const webFetch = deps.webFetch;
-  if (session == null || session.cookie === '' || webFetch == null) {
+  const webFetch = deps.userscriptFetch ?? deps.webFetch;
+  if (webFetch == null || (deps.userscriptFetch == null && (session == null || session.cookie === ''))) {
     return Effect.fail(new ProviderAuthError({ provider, refreshFailed: true }));
   }
 
@@ -252,7 +253,9 @@ export function logToLetterboxd(
     );
   }
 
-  return resolveFilmLid(deps, item).pipe(
+  // The userscript resolves the film inside Letterboxd; web must not fetch a
+  // film page through the public-feed proxy, whose allowlist excludes it.
+  return (deps.userscriptFetch != null ? Effect.succeed('') : resolveFilmLid(deps, item)).pipe(
     Effect.flatMap((filmLid) =>
       Effect.gen(function* () {
         const response = yield* Effect.tryPromise({

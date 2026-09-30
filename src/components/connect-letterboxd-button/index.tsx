@@ -28,8 +28,8 @@ type UsernameForm = z.infer<typeof usernameSchema>;
 
 /**
  * Web Letterboxd connect: read-only, a public username (plan 0012 decision 1).
- * There's no OAuth and no write path on web — logging needs a signed-in web
- * session, which only the native sign-in WebView can capture (index.native.tsx).
+ * Optional web logging uses the Tampermonkey setup in the provider sheet,
+ * without capturing cookies. Native signs in through a WebView (index.native.tsx).
  * Reads and the validation fetch below run through the same-origin Worker
  * proxy (plan 0018), so the username is validated against the live RSS feed
  * before saving, same as native.
@@ -65,9 +65,9 @@ export function ConnectLetterboxdButton() {
   return (
     <View className="w-full gap-3">
       <Text className="text-muted font-sans text-sm">
-        On the web, Shinobu reads your public Letterboxd profile — your watchlist
-        shows up in the feed. Logging movies to Letterboxd happens in the mobile
-        app, where you sign in securely and your session stays on your device.
+        Connect your public Letterboxd profile to read your watchlist and diary.
+        For film logging, use the mobile app or the optional browser script
+        under Advanced setup below.
       </Text>
       <Controller
         control={control}

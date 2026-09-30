@@ -42,6 +42,8 @@ export interface LetterboxdDeps {
    * web (read-only) and in tests that don't exercise the write path.
    */
   webFetch?: LetterboxdWebFetch;
+  /** Tampermonkey's browser-session transport; needs a username, not captured cookies. */
+  userscriptFetch?: LetterboxdWebFetch;
   /**
    * Same-origin *watchlist* transport, running in the same authenticated
    * WebView as `webFetch` (plan 0033 KTD-4). A separate field rather than a

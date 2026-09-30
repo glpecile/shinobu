@@ -96,7 +96,13 @@ export function providersForFeed(connected: readonly ProviderId[]): ProviderId[]
 }
 
 /** Whether `provider`'s write is structurally unsupported on `platform` (plan 0022 KTD-1). */
-export function isManualWriteTarget(provider: ProviderId, platform: string): boolean {
+export function isManualWriteTarget(
+  provider: ProviderId,
+  platform: string,
+  capability?: WriteCapability,
+  letterboxdUserscript = false,
+): boolean {
+  if (provider === 'letterboxd' && platform === 'web' && capability === 'log' && letterboxdUserscript) return false;
   return PROVIDERS[provider].unsupportedWritePlatforms?.includes(platform) ?? false;
 }
 
@@ -118,11 +124,13 @@ export function splitWriteTargets(
   connected: readonly ProviderId[],
   platform: string,
   capability: WriteCapability,
+  letterboxdUserscript = false,
 ): { writable: ProviderId[]; manual: ProviderId[] } {
   const targets = providersForWrite(item, connected, capability);
   const manual = targets.filter(
     (id) =>
-      writeSupport(PROVIDERS[id], capability) === 'manual' || isManualWriteTarget(id, platform),
+      writeSupport(PROVIDERS[id], capability) === 'manual' ||
+      isManualWriteTarget(id, platform, capability, letterboxdUserscript),
   );
   const writable = targets.filter((id) => !manual.includes(id));
   return { writable, manual };
@@ -149,6 +157,8 @@ export interface WriteTargetOptions {
   onlyProviders?: readonly ProviderId[];
   /** `process.env.EXPO_OS` — excludes anything manual-only on this platform (plan 0022 R2/KTD-3). */
   platform: string;
+  /** Only film logs gain a web transport; watchlist writes remain manual. */
+  letterboxdUserscript?: boolean;
 }
 
 /**
@@ -175,6 +185,6 @@ export function resolveWriteTargets(
   return targets.filter(
     (provider) =>
       writeSupport(PROVIDERS[provider], options.capability) !== 'manual' &&
-      !isManualWriteTarget(provider, options.platform),
+      !isManualWriteTarget(provider, options.platform, options.capability, options.letterboxdUserscript),
   );
 }

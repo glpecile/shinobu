@@ -1,5 +1,11 @@
 # Letterboxd web proxy spike: server-side reads work, writes are Cloudflare-walled
 
+**Update 2026-09-30:** web film logs now work through an optional Tampermonkey
+bridge in the user's normal signed-in browser. The user confirmed the integrated
+Shinobu flow. See `letterboxd-web-userscript-bridge.md`. The relay and automated
+browser failures below still stand; the conclusion that all web writes are
+permanently closed does not.
+
 **Date:** 2026-07-20 · **Context:** plan 0015 phase-0 spike (R1/R2 gate),
 todos/011
 
