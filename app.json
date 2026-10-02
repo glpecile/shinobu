@@ -65,6 +65,33 @@
     },
     "android": {
       "package": "xyz.glpecile.shinobu",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            { "scheme": "https", "host": "letterboxd.com", "pathPrefix": "/film/" },
+            { "scheme": "https", "host": "www.letterboxd.com", "pathPrefix": "/film/" }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            { "scheme": "https", "host": "imdb.com", "pathPrefix": "/title/" },
+            { "scheme": "https", "host": "www.imdb.com", "pathPrefix": "/title/" },
+            { "scheme": "https", "host": "m.imdb.com", "pathPrefix": "/title/" }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            { "scheme": "https", "host": "anilist.co", "pathPrefix": "/anime/" },
+            { "scheme": "https", "host": "anilist.co", "pathPrefix": "/manga/" }
+          ]
+        }
+      ],
       "versionCode": 20,
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,

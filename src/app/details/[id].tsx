@@ -55,6 +55,8 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { mediaLinkUrl } from '@/lib/media-link';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { useThemeColor } from '@/lib/theme-color';
 import {
   anilistQueryKeys,
@@ -480,7 +482,7 @@ export default function DetailsRoute() {
 }
 
 function DetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mediaType } = useLocalSearchParams<{ id: string; mediaType?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const accent = useThemeColor('--color-accent');
@@ -548,6 +550,7 @@ function DetailsScreen() {
   }
 
   if (item == null) {
+    const externalUrl = mediaLinkUrl(id, mediaType);
     return (
       <View className="flex-1 bg-background items-center justify-center px-8">
         <Head>
@@ -557,8 +560,16 @@ function DetailsScreen() {
           Not found
         </Text>
         <Text className="text-muted font-sans text-center mb-6">
-          This item is not in your current feed.
+          {externalUrl == null ? 'This item is not in your current feed.' : 'This linked item could not be loaded.'}
         </Text>
+        {externalUrl != null && (
+          <Button
+            icon={<Button.Icon name="open-outline" />}
+            label="Open original page"
+            className="mb-3"
+            onPress={() => openExternalUrl(externalUrl)}
+          />
+        )}
         <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} />
       </View>
     );

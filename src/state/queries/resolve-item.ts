@@ -9,6 +9,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
+import { useLetterboxdFilmTmdbQuery } from './letterboxd';
 import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
@@ -66,15 +67,16 @@ function findInSeasonalPagesCache(
 
 /**
  * The item behind a `/details/[id]` or `/episode/[id]` route, resolved
- * **cache-only** from every surface a card can be tapped on: the personal
+ * from the cached surfaces a card can be tapped on: the personal
  * feed first (its copy carries real progress), then Up Next, search, diary,
  * the merged watchlist and the TMDB person/studio pages. Items whose origin
  * carries no metadata (a Letterboxd watchlist film is a slug + title + year)
  * get a catalogue record resolved by title+year merged in; TMDB-keyed
  * filmography credits get their Trakt identity discovered the same way.
  *
- * A cold deep link to a TMDB-minted id (`/details/tmdb-tv-32905` refreshed in
- * a browser tab) is the one non-cache step: it fetches the catalogue record.
+ * Cold TMDB, AniList and Simkl links fetch public records by ID. Incoming
+ * IMDb links use Simkl's ID lookup; Letterboxd film links first resolve their
+ * exact TMDB movie ID from the native public film page.
  *
  * `undefined` while the feed or that fetch is still loading — the caller
  * tells "loading" and "not found" apart with `isLoading`.
@@ -136,11 +138,27 @@ export function useResolvedMediaItem(id: string): {
   const simklDeepLinkItem = useSimklLookupQuery(
     simklDeepLink != null ? { simkl: simklDeepLink } : null,
   );
+  const imdb = resolvedItem == null ? /^imdb-(tt[0-9]+)$/.exec(id)?.[1] : undefined;
+  const letterboxd = resolvedItem == null ? /^letterboxd-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1] : undefined;
+  const filmTmdb = useLetterboxdFilmTmdbQuery(letterboxd ?? null);
+  const externalItem = useSimklLookupQuery(
+    imdb != null ? { imdb } : filmTmdb.data != null ? { tmdb: filmTmdb.data, type: 'movie' } : null,
+  );
+  const external = externalItem.data == null ? undefined : {
+    ...externalItem.data,
+    externalIds: {
+      ...externalItem.data.externalIds,
+      ...(imdb != null ? { imdb } : {}),
+      ...(filmTmdb.data != null ? { tmdb: filmTmdb.data } : {}),
+      ...(letterboxd != null ? { letterboxd } : {}),
+    },
+  };
   const cachedOrFetched =
     resolvedItem ??
     deepLinkDetails.data?.catalogue ??
     anilistDeepLinkItem.data ??
     simklDeepLinkItem.data ??
+    external ??
     undefined;
   const catalogue = useMovieCatalogueQuery(cachedOrFetched);
   const traktIdentity = useTraktIdentityQuery(cachedOrFetched);
@@ -154,6 +172,8 @@ export function useResolvedMediaItem(id: string): {
       feed.isLoading ||
       (deepLink != null && deepLinkDetails.isPending) ||
       (anilistDeepLink != null && anilistDeepLinkItem.isPending) ||
+      (letterboxd != null && process.env.EXPO_OS !== 'web' && filmTmdb.isPending) ||
+      ((imdb != null || filmTmdb.data != null) && externalItem.isPending) ||
       (simklDeepLink != null && simklDeepLinkItem.isPending),
     refetchFeed: feed.refetch,
   };
