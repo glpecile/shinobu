@@ -19,6 +19,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
+import { getFilmTmdbId } from '@/lib/providers/letterboxd/film';
 import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
@@ -98,6 +99,7 @@ export function validateLetterboxdUsername(username: string): Promise<boolean> {
 
 export const letterboxdQueryKeys = {
   all: ['letterboxd'] as const,
+  film: (slug: string) => [...letterboxdQueryKeys.all, 'film', slug] as const,
   watchlist: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist', username] as const,
   /** The paginated "View all" grid — a separate entry from the feed row's
@@ -111,6 +113,16 @@ export const letterboxdQueryKeys = {
    */
   tags: (username: string) => [...letterboxdQueryKeys.all, 'tags', username] as const,
 };
+
+/** Native incoming film links only. The web proxy does not allow film pages. */
+export function useLetterboxdFilmTmdbQuery(slug: string | null) {
+  return useQuery({
+    queryKey: letterboxdQueryKeys.film(slug ?? ''),
+    queryFn: ({ signal }) => Effect.runPromise(getFilmTmdbId({ fetch: httpFetch }, slug ?? ''), { signal }),
+    enabled: slug != null && process.env.EXPO_OS !== 'web',
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
 
 /**
  * A tag vocabulary changes on the order of weeks, and this query fires every
