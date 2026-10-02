@@ -10,7 +10,7 @@ import type { ProviderId } from '@/lib/providers/types';
  */
 export const routes = {
   home: '/',
-  connect: '/connect',
+  settings: '/settings',
   search: '/search',
   diary: '/diary',
   details: (id: string) => `/details/${id}` as const,

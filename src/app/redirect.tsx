@@ -16,8 +16,8 @@ import { routes } from '@/lib/routes';
  * `connect-simkl-button.tsx`), but
  * expo-router's own Linking listener sees the same intent and, finding no
  * route named "redirect", lands on +not-found. This route exists purely to
- * give it somewhere real to land — send it straight to the Connect screen.
+ * give it somewhere real to land — send it straight to Settings.
  */
 export default function OAuthRedirect() {
-  return <Redirect href={routes.connect} />;
+  return <Redirect href={routes.settings} />;
 }

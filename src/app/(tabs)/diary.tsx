@@ -93,7 +93,7 @@ export default function DiaryScreen() {
           cta={{
             icon: <Button.Icon name="link-outline" />,
             label: 'Connect your trackers',
-            onPress: () => pushRoute(routes.connect),
+            onPress: () => pushRoute(routes.settings),
           }}
           description="Connect a tracker to see everything you've logged — from Shinobu and from the providers directly — in one place."
           icon={<StateIcon name="book-outline" />}

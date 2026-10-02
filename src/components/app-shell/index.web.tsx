@@ -43,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: routes.home, icon: 'home-outline' },
   { label: 'Diary', href: routes.diary, icon: 'reader-outline' },
   { label: 'Search', href: routes.search, icon: 'search-outline' },
-  { label: 'Settings', href: routes.connect, icon: 'settings-outline' },
+  { label: 'Settings', href: routes.settings, icon: 'settings-outline' },
 ];
 
 function isActive(pathname: string, href: string): boolean {

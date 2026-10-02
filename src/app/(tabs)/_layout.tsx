@@ -74,8 +74,8 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Diary</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger
-        listeners={{ tabPress: () => emitTabPress('connect') }}
-        name="connect"
+        listeners={{ tabPress: () => emitTabPress('settings') }}
+        name="settings"
       >
         <NativeTabs.Trigger.Icon md="settings" sf="gearshape.fill" />
         <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>

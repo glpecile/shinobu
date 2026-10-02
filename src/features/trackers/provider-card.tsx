@@ -2,11 +2,9 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
-import { CARD_SHELL } from '@/components/card-shell';
 import { compactStatus } from '@/features/trackers/provider-style';
 import { useConnectAction } from '@/features/trackers/use-connect-action';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
-import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -37,10 +35,7 @@ export function ProviderCard({
   const { needsSheet, connect, connecting } = useConnectAction(id);
 
   return (
-    // `p-4` overrides the shell's `p-5` (cn resolves the collision): a row
-    // that has to fit a chip, a name, a status line *and* a button needs the
-    // 8px back — "Letterboxd" truncated to "Letterb…" at 390px without it.
-    <View className={cn(CARD_SHELL, 'p-4')}>
+    <View className="py-4">
       <View className="flex-row items-center">
         <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
           <ProviderIcon id={id} size={22} />

@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Eyebrow } from '@/components/eyebrow';
+import { GroupedList } from '@/components/grouped-list';
 import { SectionEnter } from '@/components/section-enter';
 import { ProviderCard } from '@/features/trackers/provider-card';
 import {
@@ -17,7 +18,7 @@ import {
 } from '@/state/session';
 
 /**
- * The Manage Trackers screen's two provider sections, both driven by the
+ * The Settings screen's two provider sections, both driven by the
  * registry (AGENTS.md: adding a provider widens `PROVIDERS`, nothing else).
  *
  * Returns a fragment, not a wrapper `View`, so the screen's `gap-6` still sees
@@ -79,8 +80,8 @@ export function ProviderCardsSection() {
 
       {connected.length > 0 && (
         <View>
-          <Eyebrow className="mb-3">Connected</Eyebrow>
-          <View className="gap-3">
+          <Eyebrow className="mb-3">Connected trackers</Eyebrow>
+          <GroupedList>
             {connected.map((id) => (
               <MovedCard key={id} moved={movedIds.includes(id)}>
                 <ProviderCard
@@ -90,14 +91,14 @@ export function ProviderCardsSection() {
                 />
               </MovedCard>
             ))}
-          </View>
+          </GroupedList>
         </View>
       )}
 
       {disconnected.length > 0 && (
         <View>
-          <Eyebrow className="mb-3">Accounts</Eyebrow>
-          <View className="gap-3">
+          <Eyebrow className="mb-3">Available trackers</Eyebrow>
+          <GroupedList>
             {disconnected.map((id) => (
               <MovedCard key={id} moved={movedIds.includes(id)}>
                 <ProviderCard
@@ -107,7 +108,7 @@ export function ProviderCardsSection() {
                 />
               </MovedCard>
             ))}
-          </View>
+          </GroupedList>
         </View>
       )}
 

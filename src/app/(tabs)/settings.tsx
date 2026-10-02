@@ -9,6 +9,7 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { CARD_SHELL } from '@/components/card-shell';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
+import { GroupedList } from '@/components/grouped-list';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
@@ -54,10 +55,10 @@ function HiddenItemsSection() {
   return (
     <View>
       <Eyebrow className="mb-3">Hidden items</Eyebrow>
-      <View className="gap-3">
+      <GroupedList>
         {hidden.map((item) => (
           <View
-            className={cn('flex-row items-center justify-between opacity-60', CARD_SHELL)}
+            className="flex-row items-center justify-between py-5"
             key={item.id}
           >
             <PresstableOpacity
@@ -87,18 +88,18 @@ function HiddenItemsSection() {
             />
           </View>
         ))}
-      </View>
+      </GroupedList>
     </View>
   );
 }
 
-export default function ConnectScreen() {
+export default function SettingsScreen() {
   const queryClient = useQueryClient();
 
   return (
     <View className="flex-1 bg-background">
       <Head>
-        <title>Manage Trackers — Shinobu</title>
+        <title>Settings — Shinobu</title>
       </Head>
       {/* A top-level tab now (native tab bar / web sidebar) — no back button. */}
       <View
@@ -110,7 +111,7 @@ export default function ConnectScreen() {
         )}
       >
         <Text className="text-2xl font-display text-foreground">
-          Manage Trackers
+          Settings
         </Text>
       </View>
 
@@ -125,7 +126,7 @@ export default function ConnectScreen() {
           // This screen has no server data of its own — the useful refresh is
           // marking every cached query stale so the feed refetches on return.
           onRefresh={() => queryClient.invalidateQueries()}
-          tab="connect"
+          tab="settings"
         >
           {/* One `gap-6` owns the rhythm between sections instead of each
               section carrying its own `mt-6`/`mb-6` — sections that render

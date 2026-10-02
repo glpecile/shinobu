@@ -1,5 +1,5 @@
 /**
- * One card shell for every card on the Manage Trackers screen. The four connect
+ * One card shell for every card on the Settings screen. The four connect
  * shells and the connected row had drifted apart (`p-5` vs `px-5 py-4`, bare
  * `rounded` vs `rounded-xl`); this constant is what "normalized" means, so a
  * new card can't drift again.
