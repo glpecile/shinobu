@@ -71,7 +71,7 @@ export function tmdbRequest<A>(
     Effect.catchTag('ProviderRateLimitError', (error) => {
       const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
       if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
-      return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(attempt));
+      return Effect.sleep(Duration.millis(delay)).pipe(Effect.andThen(attempt));
     }),
   );
 }

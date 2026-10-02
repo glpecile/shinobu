@@ -140,6 +140,6 @@ export function getMediaDetails(
     ),
     // Any TMDB failure — auth, rate limit exhausted, 5xx, decode — degrades
     // to the provider path instead of blanking the sections.
-    Effect.catchAll(() => providerFallback(deps, params)),
+    Effect.catch(() => providerFallback(deps, params)),
   );
 }

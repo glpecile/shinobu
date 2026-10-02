@@ -1,6 +1,7 @@
 import { Duration, Effect, Schema } from 'effect';
 
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
+import { optionalNullable } from '@/lib/providers/schema';
 
 import {
   RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
@@ -38,10 +39,10 @@ export interface AniListGraphQLOptions {
 
 const graphQLResponse = Schema.Struct({
   data: Schema.optional(Schema.Unknown),
-  errors: Schema.optionalWith(Schema.Array(Schema.Struct({
-    message: Schema.optionalWith(Schema.String, { nullable: true }),
-    status: Schema.optionalWith(Schema.Number, { nullable: true }),
-  })), { nullable: true }),
+  errors: optionalNullable(Schema.Array(Schema.Struct({
+    message: optionalNullable(Schema.String),
+    status: optionalNullable(Schema.Number),
+  }))),
 });
 
 /**
@@ -108,7 +109,7 @@ export function anilistGraphQL<A>(
       catch: () => responseError(`non-JSON GraphQL response (HTTP ${response.status})`),
     });
 
-    const body = yield* Schema.decodeUnknown(graphQLResponse)(json).pipe(
+    const body = yield* Schema.decodeUnknownEffect(graphQLResponse)(json).pipe(
       Effect.mapError((error) => responseError(`invalid GraphQL response: ${error.message}`)),
     );
 
@@ -162,7 +163,7 @@ function withRateLimitRetry<A>(
     Effect.catchTag('ProviderRateLimitError', (error) => {
       const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
       if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
-      return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(effect));
+      return Effect.sleep(Duration.millis(delay)).pipe(Effect.andThen(effect));
     }),
   );
 }

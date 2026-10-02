@@ -169,24 +169,24 @@ describe('logToAniList series', () => {
   test('a series log without progress fails loudly', async () => {
     const captured = { variables: null as unknown };
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         logToAniList(capturingDeps(captured, { entry: null, episodes: 16 }), SERIES),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
   });
 
   test('an item without an anilist id fails loudly', async () => {
     const captured = { variables: null as unknown };
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         logToAniList(
           capturingDeps(captured, { entry: null, episodes: 1 }),
           { ...FILM, externalIds: {} },
         ),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
   });
 });
 
@@ -326,10 +326,10 @@ describe('planOnAniList — a guard read that fails never falls through to the w
   test('a network failure errors as a failed check, with no mutation issued', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
-      Effect.either(planOnAniList(watchlistDeps(seen, { entry: null }, 'network'), SERIES)),
+      Effect.result(planOnAniList(watchlistDeps(seen, { entry: null }, 'network'), SERIES)),
     );
-    if (result._tag !== 'Left') throw new Error('expected a failure');
-    expect(result.left.message).toContain('could not check your AniList entry');
+    if (result._tag !== 'Failure') throw new Error('expected a failure');
+    expect(result.failure.message).toContain('could not check your AniList entry');
     expect(seen.mutations).toEqual([]);
     expect(seen.entryReads).toBeGreaterThan(0);
   });
@@ -337,14 +337,14 @@ describe('planOnAniList — a guard read that fails never falls through to the w
   test('an item with no anilist id fails loudly without any request', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         planOnAniList(watchlistDeps(seen, { entry: null }), {
           ...SERIES,
           externalIds: {},
         }),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(seen.entryReads).toBe(0);
     expect(seen.mutations).toEqual([]);
   });
@@ -539,7 +539,7 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
   test('AniList answering deleted: false is an error, not a silent success', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         deleteAniListEntry(
           watchlistDeps(seen, {
             entry: { id: 88_214, status: 'PLANNING', progress: 0, repeat: 0 },
@@ -549,7 +549,7 @@ describe('deleteAniListEntry — only a bare PLANNING entry is deletable (R36)',
         ),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
   });
 });
 
@@ -562,7 +562,7 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
   test('a network failure errors as a failed check, with no mutation issued', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         deleteAniListEntry(
           watchlistDeps(
             seen,
@@ -573,8 +573,8 @@ describe('deleteAniListEntry — the guard is fresh and fail-closed', () => {
         ),
       ),
     );
-    if (result._tag !== 'Left') throw new Error('expected a failure');
-    expect(result.left.message).toContain('could not check your AniList entry');
+    if (result._tag !== 'Failure') throw new Error('expected a failure');
+    expect(result.failure.message).toContain('could not check your AniList entry');
     expect(seen.mutations).toEqual([]);
     expect(seen.entryReads).toBeGreaterThan(0);
   });
@@ -644,7 +644,7 @@ describe('deleteAniListEntry — allowDestructive lifts the refusal and nothing 
   test('the guard read still fails closed — no mutation on a destructive removal either', async () => {
     const seen = calls();
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         deleteAniListEntry(
           watchlistDeps(
             seen,
@@ -655,7 +655,7 @@ describe('deleteAniListEntry — allowDestructive lifts the refusal and nothing 
         ),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(seen.mutations).toEqual([]);
   });
 

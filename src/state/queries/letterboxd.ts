@@ -143,7 +143,7 @@ export function useLetterboxdTagsQuery() {
   return useQuery({
     queryKey: letterboxdQueryKeys.tags(username),
     queryFn: ({ signal }): Promise<LetterboxdTag[]> =>
-      Effect.runPromise(getUserTags(letterboxdDeps()).pipe(Effect.catchAll(() => Effect.succeed([]))), { signal }),
+      Effect.runPromise(getUserTags(letterboxdDeps()).pipe(Effect.catch(() => Effect.succeed([]))), { signal }),
     enabled: username !== '',
     staleTime: TAGS_STALE_MS,
     gcTime: TAGS_GC_MS,

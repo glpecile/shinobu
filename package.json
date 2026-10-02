@@ -16,7 +16,7 @@
     "@tanstack/react-query-persist-client": "^5.102.8",
     "babel-plugin-react-compiler": "^1.0.0",
     "cn": "^0.3.2",
-    "effect": "^3.22.2",
+    "effect": "^4.0.0",
     "expo": "~57.0.24",
     "expo-auth-session": "~57.0.12",
     "expo-background-task": "~57.0.19",

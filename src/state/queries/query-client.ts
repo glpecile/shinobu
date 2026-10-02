@@ -5,8 +5,8 @@ import { QueryClient } from '@tanstack/react-query';
  * layer owns whether a 429's Retry-After permits a retry,
  * so retrying again from TanStack Query just burns
  * more of the same rate budget (docs/solutions/anilist-rate-limit-retry-storm.md).
- * Auth failures need a reconnect, not a replay. Effect surfaces these as a
- * FiberFailure whose `name` carries the tagged-error tag.
+ * Auth failures need a reconnect, not a replay. Effect.runPromise rejects with
+ * the provider error, whose name carries the tagged-error tag.
  */
 const NEVER_RETRY = /ProviderRateLimitError|ProviderAuthError/;
 

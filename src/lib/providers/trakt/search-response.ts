@@ -1,9 +1,10 @@
 import { Effect, Schema } from 'effect';
 
 import { ProviderDecodeError } from '@/lib/providers/errors';
+import { optionalNullable } from '@/lib/providers/schema';
 
-const optionalNumber = Schema.optionalWith(Schema.Number, { nullable: true });
-const optionalString = Schema.optionalWith(Schema.String, { nullable: true });
+const optionalNumber = optionalNullable(Schema.Number);
+const optionalString = optionalNullable(Schema.String);
 const mediaFields = {
   title: Schema.String,
   ids: Schema.Struct({
@@ -17,14 +18,14 @@ const mediaFields = {
   overview: optionalString,
   runtime: optionalNumber,
   rating: optionalNumber,
-  genres: Schema.optionalWith(Schema.mutable(Schema.Array(Schema.String)), { nullable: true }),
-  images: Schema.optionalWith(Schema.Struct({
-    poster: Schema.optionalWith(Schema.mutable(Schema.Array(Schema.String)), { nullable: true }),
-    fanart: Schema.optionalWith(Schema.mutable(Schema.Array(Schema.String)), { nullable: true }),
-  }), { nullable: true }),
+  genres: optionalNullable(Schema.mutable(Schema.Array(Schema.String))),
+  images: optionalNullable(Schema.Struct({
+    poster: optionalNullable(Schema.mutable(Schema.Array(Schema.String))),
+    fanart: optionalNullable(Schema.mutable(Schema.Array(Schema.String))),
+  })),
 };
 
-const searchResponse = Schema.Array(Schema.Union(
+const searchResponse = Schema.Array(Schema.Union([
   Schema.Struct({
     type: Schema.Literal('movie'),
     movie: Schema.Struct({ ...mediaFields, released: optionalString }),
@@ -34,13 +35,13 @@ const searchResponse = Schema.Array(Schema.Union(
     show: Schema.Struct({ ...mediaFields, aired_episodes: optionalNumber }),
   }),
   Schema.Struct({
-    type: Schema.String.pipe(Schema.filter((type) => type !== 'movie' && type !== 'show')),
+    type: Schema.String.check(Schema.makeFilter((type) => type !== 'movie' && type !== 'show')),
   }),
-));
+]));
 
 /** Both Trakt search endpoints share this shape; unsupported result types are ignored. */
 export function decodeSearchResponse(input: unknown) {
-  return Schema.decodeUnknown(searchResponse)(input).pipe(
+  return Schema.decodeUnknownEffect(searchResponse)(input).pipe(
     Effect.mapError((error) => new ProviderDecodeError({
       provider: 'trakt',
       detail: `invalid search response: ${error.message}`,

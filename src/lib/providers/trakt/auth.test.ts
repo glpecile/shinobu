@@ -63,7 +63,7 @@ function makeDeps(overrides: {
 }
 
 async function run(deps: TraktDeps) {
-  return Effect.runPromise(Effect.either(refreshSession(deps)));
+  return Effect.runPromise(Effect.result(refreshSession(deps)));
 }
 
 describe('refreshSession credential short-circuit (plan 0034 U9)', () => {
@@ -75,9 +75,9 @@ describe('refreshSession credential short-circuit (plan 0034 U9)', () => {
 
     const outcome = await run(deps);
 
-    expect(outcome._tag).toBe('Left');
-    if (outcome._tag === 'Left') {
-      expect(outcome.left._tag).toBe('ProviderAuthError');
+    expect(outcome._tag).toBe('Failure');
+    if (outcome._tag === 'Failure') {
+      expect(outcome.failure._tag).toBe('ProviderAuthError');
     }
     expect(fetchCalls).toHaveLength(0);
     // The stored token is migration evidence (R13) — it must survive.
@@ -93,7 +93,7 @@ describe('refreshSession credential short-circuit (plan 0034 U9)', () => {
 
     const outcome = await run(deps);
 
-    expect(outcome._tag).toBe('Left');
+    expect(outcome._tag).toBe('Failure');
     expect(fetchCalls).toHaveLength(0);
     expect(store.session).toEqual(STORED_SESSION);
   });

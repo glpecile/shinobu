@@ -11,9 +11,8 @@ import {
 import { isRetryable, retryCountFor, retryDelay } from './query-client';
 
 /**
- * The retry predicate keys off the FiberFailure label Effect produces when a
- * tagged error is thrown out of `Effect.runPromise` — so exercise it through a
- * real `runPromise`, not hand-built strings, to stay honest about the shape.
+ * Exercise retry classification through the real Effect.runPromise boundary,
+ * so changes to its rejection shape cannot silently enable auth/rate retries.
  */
 async function reject(effect: Effect.Effect<never, unknown>): Promise<unknown> {
   try {
