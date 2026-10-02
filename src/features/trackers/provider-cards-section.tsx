@@ -83,13 +83,15 @@ export function ProviderCardsSection() {
           <Eyebrow className="mb-3">Connected trackers</Eyebrow>
           <GroupedList>
             {connected.map((id) => (
-              <MovedCard key={id} moved={movedIds.includes(id)}>
-                <ProviderCard
-                  connected
-                  id={id}
-                  onOpenSheet={() => openSheet(id)}
-                />
-              </MovedCard>
+              <GroupedList.Item key={id}>
+                <MovedCard moved={movedIds.includes(id)}>
+                  <ProviderCard
+                    connected
+                    id={id}
+                    onOpenSheet={() => openSheet(id)}
+                  />
+                </MovedCard>
+              </GroupedList.Item>
             ))}
           </GroupedList>
         </View>
@@ -100,13 +102,15 @@ export function ProviderCardsSection() {
           <Eyebrow className="mb-3">Available trackers</Eyebrow>
           <GroupedList>
             {disconnected.map((id) => (
-              <MovedCard key={id} moved={movedIds.includes(id)}>
-                <ProviderCard
-                  connected={false}
-                  id={id}
-                  onOpenSheet={() => openSheet(id)}
-                />
-              </MovedCard>
+              <GroupedList.Item key={id}>
+                <MovedCard moved={movedIds.includes(id)}>
+                  <ProviderCard
+                    connected={false}
+                    id={id}
+                    onOpenSheet={() => openSheet(id)}
+                  />
+                </MovedCard>
+              </GroupedList.Item>
             ))}
           </GroupedList>
         </View>

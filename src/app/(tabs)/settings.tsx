@@ -57,8 +57,8 @@ function HiddenItemsSection() {
       <Eyebrow className="mb-3">Hidden items</Eyebrow>
       <GroupedList>
         {hidden.map((item) => (
-          <View
-            className="flex-row items-center justify-between py-5"
+          <GroupedList.Item
+            className="flex-row items-center justify-between"
             key={item.id}
           >
             <PresstableOpacity
@@ -86,7 +86,7 @@ function HiddenItemsSection() {
               size="sm"
               variant="quiet"
             />
-          </View>
+          </GroupedList.Item>
         ))}
       </GroupedList>
     </View>

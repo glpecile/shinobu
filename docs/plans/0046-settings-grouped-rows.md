@@ -8,6 +8,7 @@
   box per section, with inset dividers between rows.
 - Replace the Accounts heading with Available trackers.
 - Share the box and divider styling through `components/grouped-list.tsx`.
+- Let `GroupedList.Item` own row padding and read divider position from context.
 - Keep connection actions and provider behavior unchanged.
 
 ## Validation
