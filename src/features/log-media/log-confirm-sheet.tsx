@@ -152,7 +152,7 @@ export function LogFormFields({
         <ProviderPicker
           onConnect={() => {
             onClose();
-            pushRoute(routes.connect);
+            pushRoute(routes.settings);
           }}
           onSelectAll={selectAllProviders}
           onSelectNone={selectNoProviders}

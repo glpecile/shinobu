@@ -2,11 +2,9 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
-import { CARD_SHELL } from '@/components/card-shell';
 import { compactStatus } from '@/features/trackers/provider-style';
 import { useConnectAction } from '@/features/trackers/use-connect-action';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
-import { cn } from '@/lib/cn';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -37,55 +35,50 @@ export function ProviderCard({
   const { needsSheet, connect, connecting } = useConnectAction(id);
 
   return (
-    // `p-4` overrides the shell's `p-5` (cn resolves the collision): a row
-    // that has to fit a chip, a name, a status line *and* a button needs the
-    // 8px back — "Letterboxd" truncated to "Letterb…" at 390px without it.
-    <View className={cn(CARD_SHELL, 'p-4')}>
-      <View className="flex-row items-center">
-        <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
-          <ProviderIcon id={id} size={22} />
-        </View>
-        <View className="flex-1 ml-3 mr-3">
+    <View className="flex-row items-center">
+      <View className="w-10 h-10 rounded-md bg-background border border-border items-center justify-center">
+        <ProviderIcon id={id} size={22} />
+      </View>
+      <View className="flex-1 ml-3 mr-3">
+        <Text
+          className="text-foreground font-sans-semibold text-base"
+          numberOfLines={1}
+        >
+          {PROVIDERS[id].label}
+        </Text>
+        <View className="flex-row items-center gap-1.5 mt-0.5">
           <Text
-            className="text-foreground font-sans-semibold text-base"
+            className="flex-1 text-muted font-sans text-xs"
             numberOfLines={1}
           >
-            {PROVIDERS[id].label}
+            {compactStatus(connected, username)}
           </Text>
-          <View className="flex-row items-center gap-1.5 mt-0.5">
-            <Text
-              className="flex-1 text-muted font-sans text-xs"
-              numberOfLines={1}
-            >
-              {compactStatus(connected, username)}
-            </Text>
-          </View>
         </View>
-        {connected ? (
-          <Button
-            accessibilityLabel={`Disconnect ${PROVIDERS[id].label}`}
-            className="shrink-0"
-            icon={<Button.Icon name="unlink-outline" />}
-            label="Disconnect"
-            onPress={onOpenSheet}
-            size="sm"
-            variant="quiet"
-          />
-        ) : (
-          <Button
-            accessibilityLabel={`Connect ${PROVIDERS[id].label}`}
-            className="shrink-0"
-            icon={<Button.Icon name="link-outline" />}
-            label="Connect"
-            // The one-tap providers open a browser session, which takes long
-            // enough on a cold start to look like a dead tap without this.
-            loading={connecting}
-            onPress={needsSheet ? onOpenSheet : connect}
-            size="sm"
-            variant="outline"
-          />
-        )}
       </View>
+      {connected ? (
+        <Button
+          accessibilityLabel={`Disconnect ${PROVIDERS[id].label}`}
+          className="shrink-0"
+          icon={<Button.Icon name="unlink-outline" />}
+          label="Disconnect"
+          onPress={onOpenSheet}
+          size="sm"
+          variant="quiet"
+        />
+      ) : (
+        <Button
+          accessibilityLabel={`Connect ${PROVIDERS[id].label}`}
+          className="shrink-0"
+          icon={<Button.Icon name="link-outline" />}
+          label="Connect"
+          // The one-tap providers open a browser session, which takes long
+          // enough on a cold start to look like a dead tap without this.
+          loading={connecting}
+          onPress={needsSheet ? onOpenSheet : connect}
+          size="sm"
+          variant="outline"
+        />
+      )}
     </View>
   );
 }

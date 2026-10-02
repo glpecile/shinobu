@@ -116,7 +116,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
         cta={{
           icon: <Button.Icon name="link-outline" />,
           label: 'Connect your trackers',
-          onPress: () => pushRoute(routes.connect),
+          onPress: () => pushRoute(routes.settings),
         }}
         description="Shinobu is a harness for your media trackers — log a movie, show, or anime once and every one you've connected stays in sync."
         size="hero"
@@ -298,7 +298,7 @@ export default function App() {
           duplicate title is dropped there. */}
       {process.env.EXPO_OS !== 'web' && (
         <View className={homeHeaderClassName}>
-          {/* No connection status here (2026-07-14) — that lives on Manage Trackers. */}
+          {/* Connection status lives in Settings. */}
           <Text
             className={cn(
               homeHeaderTitleSize,
