@@ -36,7 +36,7 @@ are not Effect requests and retain their existing behavior.
 
 `response.json() as Promise<A>` only parses JSON. A Trakt search returning `{}`
 reached `.map` and produced an Effect defect, bypassing typed-error recovery.
-Both search endpoints now decode their common response with Effect 3 Schema
+Both search endpoints now decode their common response with Effect Schema
 before normalization. Required movie/show records are checked; unsupported
 result types still drop out, and nullable optional metadata stays optional.
 

@@ -38,7 +38,7 @@ export function resolveSeasonId(
     ).pipe(
       // A 404 for an as-yet-unlisted season is a miss, not an error — the show
       // exists, the season just isn't ingested. Any other error propagates.
-      Effect.catchAll((error) =>
+      Effect.catch((error) =>
         error instanceof ProviderNetworkError &&
         / 404 /.test(String((error.cause as Error | undefined)?.message ?? ''))
           ? Effect.succeed<RawSeasonResponse>({ seasonId: null })

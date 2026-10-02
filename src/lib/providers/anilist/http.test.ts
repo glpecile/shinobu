@@ -62,37 +62,37 @@ describe('anilistGraphQL error mapping', () => {
 
   test('HTTP 401 maps to ProviderAuthError with refreshFailed (no refresh grant exists)', async () => {
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         anilistGraphQL(depsReplying(() => new Response('', { status: 401 })), 'query { Viewer { id } }'),
       ),
     );
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
-      expect(result.left._tag).toBe('ProviderAuthError');
-      expect(result.left._tag === 'ProviderAuthError' && result.left.refreshFailed).toBe(true);
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure._tag).toBe('ProviderAuthError');
+      expect(result.failure._tag === 'ProviderAuthError' && result.failure.refreshFailed).toBe(true);
     }
   });
 
   test('a 400 body with "Invalid token" GraphQL error is also an auth error', async () => {
     const body = { errors: [{ message: 'Invalid token', status: 400 }] };
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         anilistGraphQL(
           depsReplying(() => Response.json(body, { status: 400 })),
           'query { Viewer { id } }',
         ),
       ),
     );
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
-      expect(result.left._tag).toBe('ProviderAuthError');
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure._tag).toBe('ProviderAuthError');
     }
   });
 
   test('a long Retry-After propagates without an early retry', async () => {
     let calls = 0;
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         anilistAuthedRequest(
           depsReplying(() => {
             calls += 1;
@@ -103,11 +103,11 @@ describe('anilistGraphQL error mapping', () => {
       ),
     );
     expect(calls).toBe(1);
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
-      expect(result.left._tag).toBe('ProviderRateLimitError');
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure._tag).toBe('ProviderRateLimitError');
       expect(
-        result.left._tag === 'ProviderRateLimitError' && result.left.retryAfterMs,
+        result.failure._tag === 'ProviderRateLimitError' && result.failure.retryAfterMs,
       ).toBe(30_000);
     }
   }, 10_000);
@@ -118,7 +118,7 @@ describe('anilistGraphQL error mapping', () => {
       tokens: fakeTokens(),
       fetch: async (_url, init) => {
         sent = init;
-        return Response.json({ data: { Media: { id: 1 } } });
+        return Response.json({ data: { Media: { id: 1 } }, errors: null });
       },
     };
     await Effect.runPromise(anilistGraphQL(deps, '{ Media(id: 1) { id } }'));
@@ -136,31 +136,34 @@ describe('anilistGraphQL error mapping', () => {
       data: null,
     };
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         anilistGraphQL(
           depsReplying(() => Response.json(body, { status: 403 })),
           '{ Media(id: 1) { id } }',
         ),
       ),
     );
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
-      expect(result.left._tag).toBe('ProviderNetworkError');
-      if (result.left._tag === 'ProviderNetworkError') {
-        expect(result.left.status).toBe(403);
-        expect(result.left.message).toContain('refused the request (HTTP 403)');
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure._tag).toBe('ProviderNetworkError');
+      if (result.failure._tag === 'ProviderNetworkError') {
+        expect(result.failure.status).toBe(403);
+        expect(result.failure.message).toContain('refused the request (HTTP 403)');
       }
     }
   });
 
   test('GraphQL errors on a 200 fail instead of returning partial data', async () => {
-    const body = { data: null, errors: [{ message: 'Not Found.', status: 404 }] };
+    const body = { data: null, errors: [{ message: 'Not Found.', status: 404 }, { message: null, status: null }] };
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         anilistGraphQL(depsReplying(() => Response.json(body)), 'query { X }'),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure.message).toContain('Not Found.; unknown');
+    }
   });
 });
 
@@ -169,14 +172,14 @@ describe('anilistAuthedRequest', () => {
     let cleared = false;
     const tokens = fakeTokens({ clear: () => { cleared = true; } });
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         anilistAuthedRequest(
           depsReplying(() => new Response('', { status: 401 }), tokens),
           'query { Viewer { id } }',
         ),
       ),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(cleared).toBe(true);
   });
 
@@ -190,9 +193,9 @@ describe('anilistAuthedRequest', () => {
       },
     };
     const result = await Effect.runPromise(
-      Effect.either(anilistAuthedRequest(deps, 'query { Viewer { id } }')),
+      Effect.result(anilistAuthedRequest(deps, 'query { Viewer { id } }')),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(fetched).toBe(false);
   });
 

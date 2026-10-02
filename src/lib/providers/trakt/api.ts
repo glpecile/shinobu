@@ -16,7 +16,7 @@ function withRateLimitRetry<A>(
     Effect.catchTag('ProviderRateLimitError', (error) => {
       const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
       if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
-      return Effect.sleep(Duration.millis(delay)).pipe(Effect.zipRight(effect));
+      return Effect.sleep(Duration.millis(delay)).pipe(Effect.andThen(effect));
     }),
   );
 }
@@ -62,7 +62,7 @@ export function traktAuthedRequest<A>(
       Effect.catchTag('ProviderAuthError', (error) =>
         error.refreshFailed
           ? Effect.fail(error)
-          : coalescedRefreshSession(deps).pipe(Effect.zipRight(attempt())),
+          : coalescedRefreshSession(deps).pipe(Effect.andThen(attempt())),
       ),
     ),
   );

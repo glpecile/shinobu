@@ -35,8 +35,8 @@ const REAL_CLOCK: QueueClock = {
 };
 
 function isRateLimit(error: unknown): boolean {
-  // Effect surfaces the tagged error as a FiberFailure whose name/message
-  // carries the tag — the same test `state/queries/query-client.ts` runs.
+  // The runPromise rejection's name/message carries the provider error tag,
+  // as in state/queries/query-client.ts.
   const label =
     error instanceof Error ? `${error.name} ${error.message}` : String(error);
   return /ProviderRateLimitError/.test(label);

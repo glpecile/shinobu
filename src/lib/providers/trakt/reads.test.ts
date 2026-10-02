@@ -123,13 +123,16 @@ describe('searchMedia response decoding', () => {
   test('normalizes movie and show results and ignores unsupported types', async () => {
     const deps = historyDeps(() => json([
       { type: 'movie', movie: { title: 'Film', ids: { trakt: 1 }, images: { poster: ['example.com/poster'] }, genres: ['drama'] } },
-      { type: 'show', show: { title: 'Show', ids: { trakt: 2 }, aired_episodes: 4 } },
+      { type: 'show', show: { title: 'Show', ids: { trakt: 2, tmdb: null }, year: null, overview: null, genres: null, images: { poster: null, fanart: null }, aired_episodes: 4 } },
       { type: 'episode', episode: { title: 'Ignored' } },
     ]), []);
     const items = await Effect.runPromise(searchMedia(deps, { query: 'test' }));
     expect(items.map((item) => item.title)).toEqual(['Film', 'Show']);
     expect(items[0]?.coverImage).toBe('https://example.com/poster');
     expect(items[0]?.genres).toEqual(['drama']);
+    expect(items[1]?.externalIds.tmdb).toBeUndefined();
+    expect(items[1]?.genres).toBeUndefined();
+    expect(items[1]?.coverImage).toBe('');
   });
 });
 

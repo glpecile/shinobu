@@ -45,27 +45,27 @@ export function ConnectSerializdButton() {
     setErrorMessage(null);
     const deps = serializdDeps();
     const login = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         loginToSerializd(deps, { email: values.email.trim(), password: values.password }),
       ),
     );
-    if (login._tag === 'Left') {
+    if (login._tag === 'Failure') {
       // Surface the API's own message (wrong password, etc.); store nothing.
-      setErrorMessage(loginErrorText(login.left.message));
+      setErrorMessage(loginErrorText(login.failure.message));
       setStatus('idle');
       return;
     }
 
     // Some login responses omit the username — recover it from the token.
-    let username = login.right.username;
+    let username = login.success.username;
     if (username === '') {
       const validated = await Effect.runPromise(
-        Effect.either(validateAuthToken(deps, login.right.token)),
+        Effect.result(validateAuthToken(deps, login.success.token)),
       );
-      if (validated._tag === 'Right') username = validated.right.username;
+      if (validated._tag === 'Success') username = validated.success.username;
     }
 
-    connectSerializd({ accessToken: login.right.token, username });
+    connectSerializd({ accessToken: login.success.token, username });
     setStatus('idle');
   });
 

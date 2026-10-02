@@ -115,9 +115,9 @@ describe('logToTrakt TV batch', () => {
   test('a TV log with neither episode nor episodes fails loudly', async () => {
     const captured = { body: null as unknown };
     const result = await Effect.runPromise(
-      Effect.either(logToTrakt(capturingDeps(captured), TV_ITEM, {})),
+      Effect.result(logToTrakt(capturingDeps(captured), TV_ITEM, {})),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
   });
 });
 
@@ -350,12 +350,12 @@ describe('addToTraktWatchlist', () => {
     );
 
     const result = await Effect.runPromise(
-      Effect.either(addToTraktWatchlist(deps, MOVIE_ITEM)),
+      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
     );
 
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
-      expect(result.left.message).toContain('Sinners');
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure.message).toContain('Sinners');
     }
   });
 
@@ -367,10 +367,10 @@ describe('addToTraktWatchlist', () => {
     );
 
     const result = await Effect.runPromise(
-      Effect.either(addToTraktWatchlist(deps, MOVIE_ITEM)),
+      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
     );
 
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
   });
 
   test('an item with no usable id fails before any request', async () => {
@@ -378,12 +378,12 @@ describe('addToTraktWatchlist', () => {
     const deps = watchlistDeps([], calls);
 
     const result = await Effect.runPromise(
-      Effect.either(
+      Effect.result(
         addToTraktWatchlist(deps, { ...MOVIE_ITEM, externalIds: { anilist: 1 } }),
       ),
     );
 
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(calls.bodies).toHaveLength(0);
   });
 
@@ -392,10 +392,10 @@ describe('addToTraktWatchlist', () => {
     const deps = watchlistDeps([], calls);
 
     const result = await Effect.runPromise(
-      Effect.either(addToTraktWatchlist(deps, { ...MOVIE_ITEM, type: 'MANGA' as const })),
+      Effect.result(addToTraktWatchlist(deps, { ...MOVIE_ITEM, type: 'MANGA' as const })),
     );
 
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(calls.bodies).toHaveLength(0);
   });
 
@@ -413,15 +413,15 @@ describe('addToTraktWatchlist', () => {
     );
 
     const result = await Effect.runPromise(
-      Effect.either(addToTraktWatchlist(deps, MOVIE_ITEM)),
+      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
     );
 
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
       // Not the meaningless "Trakt responded 420" the generic non-2xx path gives.
-      expect(result.left.message).toContain('account limit');
-      expect(result.left.message).toContain('100');
-      expect(result.left.message).toContain('https://trakt.tv/vip');
+      expect(result.failure.message).toContain('account limit');
+      expect(result.failure.message).toContain('100');
+      expect(result.failure.message).toContain('https://trakt.tv/vip');
     }
     // The account limit is permanent for this request — a retry could only fail
     // again (and would double the write attempt).
@@ -453,10 +453,10 @@ describe('addToTraktWatchlist', () => {
     const deps = watchlistDeps([rateLimited, rateLimited], calls);
 
     const result = await Effect.runPromise(
-      Effect.either(addToTraktWatchlist(deps, MOVIE_ITEM)),
+      Effect.result(addToTraktWatchlist(deps, MOVIE_ITEM)),
     );
 
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(calls.bodies).toHaveLength(2);
   });
 });
@@ -523,12 +523,12 @@ describe('removeFromTraktWatchlist (plan 0031 R34)', () => {
     );
 
     const result = await Effect.runPromise(
-      Effect.either(removeFromTraktWatchlist(deps, MOVIE_ITEM)),
+      Effect.result(removeFromTraktWatchlist(deps, MOVIE_ITEM)),
     );
 
-    expect(result._tag).toBe('Left');
-    if (result._tag === 'Left') {
-      expect(result.left.message).toContain('Sinners');
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') {
+      expect(result.failure.message).toContain('Sinners');
     }
   });
 });

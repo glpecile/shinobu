@@ -1,4 +1,4 @@
-import { Effect, type Either } from 'effect';
+import { Effect, type Result } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
@@ -83,14 +83,14 @@ export function refreshSession(
     Effect.map(toSession),
     Effect.tap((session) => Effect.sync(() => deps.tokens.set(session))),
     Effect.catchTag('ProviderAuthError', () =>
-      Effect.sync(() => deps.tokens.clear()).pipe(Effect.zipRight(Effect.fail(dead))),
+      Effect.sync(() => deps.tokens.clear()).pipe(Effect.andThen(Effect.fail(dead))),
     ),
   );
 }
 
 const inflightRefreshes = new WeakMap<
   TokenStore,
-  Promise<Either.Either<ProviderSession, ProviderError>>
+  Promise<Result.Result<ProviderSession, ProviderError>>
 >();
 
 /**
@@ -110,11 +110,11 @@ export function coalescedRefreshSession(
   return Effect.promise(() => {
     let inflight = inflightRefreshes.get(deps.tokens);
     if (inflight == null) {
-      inflight = Effect.runPromise(Effect.either(refreshSession(deps))).finally(
+      inflight = Effect.runPromise(Effect.result(refreshSession(deps))).finally(
         () => inflightRefreshes.delete(deps.tokens),
       );
       inflightRefreshes.set(deps.tokens, inflight);
     }
     return inflight;
-  }).pipe(Effect.flatMap((outcome) => outcome));
+  }).pipe(Effect.flatMap(Effect.fromResult));
 }

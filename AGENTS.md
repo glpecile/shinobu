@@ -78,14 +78,13 @@ patch minimal and document when it can be removed.
 
 ## Learning more about Effect
 
-This repository uses the Effect TypeScript library. The vendored `effect-ts`
-skill describes release-candidate setup; keep the version in `package.json`
-unless a task explicitly requests an upgrade.
+This repository uses stable Effect v4. The vendored `effect-ts` skill describes
+release-candidate setup; keep the stable version in `package.json` unless a task
+explicitly requests an upgrade.
 
 Before writing any Effect code, read `node_modules/effect/AGENTS.md` completely
-when present, and follow its links when required. Effect 3 does not ship that
-file, so consult the installed API documentation in `node_modules/effect/src`
-instead. Use the installed source for APIs and concepts the guide does not cover.
+and follow its links when required. Use the installed source in
+`node_modules/effect/src` for APIs and concepts the guide does not cover.
 Keep Effect within the provider and HTTP boundaries described above.
 
 ## Enforcement

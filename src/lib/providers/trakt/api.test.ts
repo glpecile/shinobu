@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Effect, Either } from 'effect';
+import { Effect, Result } from 'effect';
 
 import type { ProviderSession } from '@/types/session';
 import { traktAuthedRequest } from './api';
@@ -76,7 +76,7 @@ function raceDeps(options: { refreshStatus?: number } = {}) {
 
 function run(deps: TraktDeps, signal?: AbortSignal) {
   return Effect.runPromise(
-    Effect.either(traktAuthedRequest<{ ok: boolean }>(deps, '/data')),
+    Effect.result(traktAuthedRequest<{ ok: boolean }>(deps, '/data')),
     { signal },
   );
 }
@@ -114,7 +114,7 @@ describe('traktAuthedRequest refresh coalescing', () => {
     await started;
     controller.abort();
     expect(await cancelled).toBeNull();
-    expect(Either.isRight(await surviving)).toBe(true);
+    expect(Result.isSuccess(await surviving)).toBe(true);
     expect(refreshCalls()).toBe(1);
     expect(tokens.get()?.accessToken).toBe('fresh-1');
   });
@@ -126,7 +126,7 @@ describe('traktAuthedRequest refresh coalescing', () => {
 
     expect(refreshCalls()).toBe(1);
     for (const result of results) {
-      expect(Either.isRight(result)).toBe(true);
+      expect(Result.isSuccess(result)).toBe(true);
     }
     // The rotated session survives — no loser wiped it.
     expect(tokens.get()?.accessToken).toBe('fresh-1');
@@ -142,7 +142,7 @@ describe('traktAuthedRequest refresh coalescing', () => {
     const result = await run(deps);
 
     expect(refreshCalls()).toBe(2);
-    expect(Either.isRight(result)).toBe(true);
+    expect(Result.isSuccess(result)).toBe(true);
   });
 
   test('a definitively rejected refresh fails every waiter and clears once', async () => {
@@ -152,11 +152,11 @@ describe('traktAuthedRequest refresh coalescing', () => {
 
     expect(refreshCalls()).toBe(1);
     for (const result of results) {
-      expect(Either.isLeft(result)).toBe(true);
-      if (Either.isLeft(result)) {
-        expect(result.left._tag).toBe('ProviderAuthError');
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure._tag).toBe('ProviderAuthError');
         expect(
-          result.left._tag === 'ProviderAuthError' && result.left.refreshFailed,
+          result.failure._tag === 'ProviderAuthError' && result.failure.refreshFailed,
         ).toBe(true);
       }
     }
