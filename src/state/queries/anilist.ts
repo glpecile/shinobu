@@ -84,7 +84,7 @@ export const anilistQueryKeys = {
    * (plan 0019 U2). `currentAnime` is derived from *this* entry, so the feed
    * row keeps its plain `NormalizedMediaItem[]` contract while Up Next reads
    * the richer shape — one network request feeds both, now including the
-   * PLANNING entries only Up Next's Calendar half wants (plan 0030 R12).
+   * PLANNING entries used by Calendar and recent premieres in Continue Watching.
    */
   currentAnimeEntries: () =>
     [...anilistQueryKeys.all, 'current-anime-entries'] as const,
@@ -178,8 +178,8 @@ export function fetchCurrentAnimeEntries(
  * that is what the owner means by watchlisted — so the surface reads both
  * statuses while every other consumer keeps its own narrower slice.
  *
- * Up Next's gate (`features/up-next/compute.ts`) still confines PLANNING to
- * Calendar: the gate restricts what PLANNING may reach
+ * Up Next's gate (`features/up-next/compute.ts`) excludes planned backlog but
+ * admits recent premieres. The gate restricts what PLANNING may reach
  * (`docs/solutions/anilist-shared-list-query-status-gate.md`), so letting
  * CURRENT reach one more read-only surface does not touch it. A new consumer
  * gets its own selector; widening an existing one re-opens that regression.

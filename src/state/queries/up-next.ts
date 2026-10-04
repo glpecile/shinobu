@@ -9,6 +9,7 @@ import {
   computeUpNext,
   selectUpNextPool,
   UP_NEXT_WINDOW_DAYS,
+  withinPremiereWindow,
 } from '@/features/up-next/compute';
 import type {
   AniListUpNextInput,
@@ -40,7 +41,6 @@ import {
   getWatchedShows,
   traktCalendarRange,
 } from '@/lib/providers/trakt/reads';
-import { parseLocalInstant } from '@/lib/time/has-aired';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -397,14 +397,8 @@ function startedInSimkl(entry: SimklLibraryEntry): boolean {
  * out: with no instant, "recent" is unknowable, and `simklAiredByCount` would
  * otherwise classify the user's whole fully-aired backlog as aired.
  */
-const PREMIERE_ADMIT_WINDOW_MS = UP_NEXT_WINDOW_DAYS * 24 * 60 * 60_000;
-
 function recentlyReleased(entry: SimklLibraryEntry, now: Date): boolean {
-  const date = entry.nextToWatch?.date;
-  if (date == null) return false;
-  const instant = parseLocalInstant(date);
-  if (instant == null) return false;
-  return now.getTime() - instant.getTime() <= PREMIERE_ADMIT_WINDOW_MS;
+  return withinPremiereWindow(entry.nextToWatch?.date, now);
 }
 
 /**
@@ -612,12 +606,14 @@ async function simklReleaseInputs(
  * Widening the list read to PLANNING (U2) also widened the mapping fan below:
  * a 400-title plan-to-watch list would otherwise cost ~400 external lookups at
  * concurrency 4 — blocking the whole slot on its skeleton — to resolve dedupe
- * ids for entries the KTD-3 gate then discards anyway. A PLANNING entry only
- * survives that gate while it is still unaired, which is exactly the condition
- * `nextAiring` states.
+ * ids for old backlog the PLANNING gate discards. Scheduled entries and known
+ * premieres retain their mapping so the aired/un-aired split can change live.
  */
-function worthMapping(entry: AniListUpNextInput): boolean {
-  return entry.status !== 'PLANNING' || entry.nextAiring != null;
+function worthMapping(entry: AniListUpNextInput, now: Date): boolean {
+  return (
+    entry.status !== 'PLANNING' || entry.nextAiring != null ||
+    withinPremiereWindow(entry.firstAired, now)
+  );
 }
 
 async function anilistInputs(
@@ -626,10 +622,11 @@ async function anilistInputs(
 ): Promise<AniListUpNextInput[]> {
   const entries = await fetchCurrentAnimeEntries(queryClient);
   if (!needsTmdbIds) return entries;
+  const now = new Date();
 
   const resolved = await Effect.runPromise(
     Effect.forEach(
-      entries.filter(worthMapping),
+      entries.filter((entry) => worthMapping(entry, now)),
       (entry) =>
         Effect.promise(async (): Promise<AniListUpNextInput> => {
           const known = entry.item.externalIds.tmdb;
@@ -662,7 +659,7 @@ async function anilistInputs(
   // The skipped entries still belong in the inputs — they simply carry no
   // resolved TMDB id, which is the same best-effort degradation an ani.zip
   // miss already produces (R5 leaves the duplicate card standing).
-  return [...resolved, ...entries.filter((entry) => !worthMapping(entry))];
+  return [...resolved, ...entries.filter((entry) => !worthMapping(entry, now))];
 }
 
 /**

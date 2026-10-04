@@ -37,6 +37,7 @@ export interface AniListMedia {
    * Null for finished and hiatus/unscheduled series alike.
    */
   nextAiringEpisode?: AniListNextAiringEpisode | null;
+  airingSchedule?: { nodes?: Array<AniListNextAiringEpisode | null> | null } | null;
 }
 
 /** AniList's pointer at the next episode to air. `airingAt` is Unix seconds. */
@@ -170,12 +171,8 @@ export interface AniListCurrentEntry {
   item: NormalizedMediaItem;
   /**
    * The viewer's list status for this entry. The list read asks for CURRENT
-   * *and* PLANNING in one request (plan 0030 R12), and the two mean opposite
-   * things downstream — a PLANNING entry may only ever reach Calendar, and the
-   * "Your Anime" row shows CURRENT alone. This field used to be selected by the
-   * query and then dropped right here, which is exactly what made widening the
-   * request dangerous: with the status gone, nothing downstream could tell a
-   * plan-to-watch title from something the user is halfway through (KTD-3).
+   * and PLANNING in one request. Up Next uses this to exclude planned backlog
+   * while admitting recent premieres. The watchlist includes both statuses.
    */
   status: 'CURRENT' | 'PLANNING';
   /**
@@ -202,6 +199,8 @@ export interface AniListCurrentEntry {
    * `totalEpisodes` is what separates those two.
    */
   nextAiring: { episode: number; airingAt: string } | null;
+  /** Episode 1's air instant, retained when the next-airing pointer advances. */
+  firstAired?: string;
   /** Total episodes when AniList knows it; null while unannounced. */
   totalEpisodes: number | null;
 }
@@ -211,6 +210,7 @@ export function normalizeCurrentAnimeEntry(
   nowIso: string,
 ): AniListCurrentEntry {
   const airing = entry.media.nextAiringEpisode;
+  const premiere = entry.media.airingSchedule?.nodes?.[0];
   return {
     item: normalizeAniListListEntry(entry, nowIso),
     // Only an explicit PLANNING is planned. The read asks for exactly these two
@@ -220,6 +220,9 @@ export function normalizeCurrentAnimeEntry(
     // user really is watching.
     status: entry.status === 'PLANNING' ? 'PLANNING' : 'CURRENT',
     ...(entry.id != null ? { entryId: entry.id } : {}),
+    ...(premiere?.episode === 1
+      ? { firstAired: new Date(premiere.airingAt * 1000).toISOString() }
+      : {}),
     nextAiring:
       airing == null
         ? null

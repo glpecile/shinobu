@@ -19,8 +19,11 @@ export function TextField(props: Omit<TextInputProps, 'className'>) {
       autoCapitalize="none"
       autoCorrect={false}
       placeholderTextColor={muted}
+      selectionColor={accent}
+      cursorColor={accent}
+      selectionHandleColor={accent}
       {...props}
-      className="border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none"
+      className="border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent"
       onBlur={(event) => {
         setFocused(false);
         props.onBlur?.(event);

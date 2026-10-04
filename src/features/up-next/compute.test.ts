@@ -641,21 +641,15 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
  * these cases are the whole safety net.
  */
 describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
-  test('a PLANNING series premiering this week reaches Calendar', () => {
-    const data = computeUpNext(
-      inputs({
-        anilist: [
-          anilistInput(anime(30, { currentProgress: 0 }), {
-            status: 'PLANNING',
-            // Nothing has aired yet, so the pointer still sits on episode 1 —
-            // the one shape where a plan-to-watch title is a schedule event.
-            nextAiring: { episode: 1, airingAt: localInstant(2026, 7, 25, 12, 0) },
-            totalEpisodes: 12,
-          }),
-        ],
-      }),
-      NOW,
-    );
+  test('a planned premiere moves from Calendar to Continue Watching until its window expires', () => {
+    const airingAt = localInstant(2026, 7, 25, 12, 0);
+    const planned = anilistInput(anime(30, { currentProgress: 0 }), {
+      status: 'PLANNING',
+      firstAired: airingAt,
+      nextAiring: { episode: 1, airingAt },
+      totalEpisodes: 12,
+    });
+    const data = computeUpNext(inputs({ anilist: [planned] }), NOW);
     expect(data.continueWatching).toHaveLength(0);
     expect(data.calendar).toHaveLength(1);
     expect(data.calendar[0]).toMatchObject({
@@ -663,6 +657,24 @@ describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
       status: 'upcoming',
     });
     expect(episodeOf(data.calendar[0]).number).toBe(1);
+
+    for (const nextAiring of [
+      planned.nextAiring,
+      { episode: 2, airingAt: localInstant(2026, 8, 1, 12, 0) },
+      null,
+    ]) {
+      const refreshed = inputs({ anilist: [{ ...planned, nextAiring }] });
+      const aired = computeUpNext(refreshed, new Date(airingAt));
+      expect(aired.calendar).toEqual([]);
+      expect(aired.continueWatching).toHaveLength(1);
+      expect(aired.continueWatching[0]).toMatchObject({
+        source: 'anilist',
+        episode: { number: 1 },
+      });
+      expect(
+        computeUpNext(refreshed, new Date(2026, 7, 1, 12, 0, 0, 1)).continueWatching,
+      ).toEqual([]);
+    }
   });
 
   test('a PLANNING series already mid-run is excluded from both sections', () => {

@@ -39,6 +39,18 @@ const UP_NEXT_POOL_SIZE = 20;
 /** Calendar covers today … today+6 — "In 6 days" is the furthest label (R2). */
 export const UP_NEXT_WINDOW_DAYS = 7;
 
+/** Admit future premieres too, so a cached input can cross its airing live. */
+export function withinPremiereWindow(
+  date: string | null | undefined,
+  now: Date,
+): boolean {
+  const instant = date == null ? null : parseLocalInstant(date);
+  return (
+    instant != null &&
+    now.getTime() - instant.getTime() <= UP_NEXT_WINDOW_DAYS * 24 * 60 * 60_000
+  );
+}
+
 /**
  * The shows worth spending progress requests on: most recently watched first
  * (`lastUpdated` is Trakt's `last_watched_at` on watched-show items). Called
@@ -253,18 +265,9 @@ function classifyAnilistEntry(
 }
 
 /**
- * A PLANNING entry can only ever be `upcoming` (KTD-3). The list read now
- * carries plan-to-watch entries (R12), and their progress is 0 — so a PLANNING
- * series that is already five episodes into its run computes `next = 1`, falls
- * below the airing pointer, and classifies as `aired`: without this gate the
- * user's entire plan-to-watch backlog pours into Continue Watching, which means
- * "aired, waiting, one tap away" (R4).
- *
- * A mid-run PLANNING series therefore yields *nothing at all* rather than
- * moving to Calendar. It is not up next (nothing has been started), and
- * episode 1 having aired weeks ago is not a calendar event either — only a
- * PLANNING series whose next airing is still ahead has anything to say about
- * this week.
+ * Planned premieres stay available for the same seven-day window as Simkl's
+ * premiere exception. Episode 1's instant survives a refreshed airing pointer;
+ * unknown dates and old planned backlog remain excluded.
  */
 function anilistEntry(
   input: AniListUpNextInput,
@@ -272,7 +275,12 @@ function anilistEntry(
 ): UpNextEntry | null {
   const entry = classifyAnilistEntry(input, now);
   if (entry == null) return null;
-  if (input.status === 'PLANNING' && entry.status !== 'upcoming') return null;
+  if (input.status === 'PLANNING' && entry.status !== 'upcoming') {
+    const premiere = input.firstAired ??
+      (input.nextAiring?.episode === 1 ? input.nextAiring.airingAt : undefined);
+    if (premiere == null || !hasAired(premiere, now)) return null;
+    if (!withinPremiereWindow(premiere, now)) return null;
+  }
   return entry;
 }
 
