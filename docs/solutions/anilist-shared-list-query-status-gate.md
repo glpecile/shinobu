@@ -119,6 +119,11 @@ entry reaches the watchlist (`fetchWatchlistAnime`) and nowhere in Up Next.
 
 ## Rule of thumb
 
+As of 2026-10-04, recent premieres are an exception to the historical PLANNING
+gate above. They reach Continue Watching for seven days after episode 1 airs,
+matching Simkl. Old backlog remains excluded. See
+`anilist-planned-premiere-disappears-after-airing.md`.
+
 When a provider read is shared by two consumers on a budget, **widening the
 query is a change to every consumer**. Carry the discriminating field through
 normalization first, filter per consumer second — and check what the *derived*

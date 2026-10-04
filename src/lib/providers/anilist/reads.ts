@@ -87,8 +87,8 @@ interface MediaListCollectionResponse {
  * budget forbids doubling this call.
  *
  * The two statuses are not interchangeable and are *not* separated here: every
- * consumer takes its own slice of one cached list — Up Next confines PLANNING
- * to Calendar (`features/up-next/compute.ts`), and the cross-provider watchlist
+ * consumer takes its own slice of one cached list. Up Next admits planned
+ * premieres but excludes old backlog, and the cross-provider watchlist
  * takes CURRENT ∪ PLANNING (`fetchWatchlistAnime`) — which is only possible
  * because `normalizeCurrentAnimeEntry` carries `status` through (KTD-3). Adding
  * the watchlist consumer cost **zero** extra requests for exactly this reason;
@@ -118,6 +118,7 @@ export function getCurrentAnime(
               media {
                 ${MEDIA_FIELDS}
                 nextAiringEpisode { episode airingAt }
+                airingSchedule(perPage: 1) { nodes { episode airingAt } }
               }
             }
           }

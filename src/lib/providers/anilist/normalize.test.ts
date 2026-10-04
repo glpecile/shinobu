@@ -254,6 +254,7 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
         ...SERIES,
         episodes: 12,
         nextAiringEpisode: { episode: 5, airingAt: 1_784_390_400 },
+        airingSchedule: { nodes: [{ episode: 1, airingAt: 1_784_044_800 }] },
       },
     };
     const normalized = normalizeCurrentAnimeEntry(entry, NOW_ISO);
@@ -261,6 +262,7 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     // Still a full entry otherwise — the airing pointer is exactly what decides
     // whether it is a calendar event or nothing at all.
     expect(normalized.nextAiring?.episode).toBe(5);
+    expect(normalized.firstAired).toBe('2026-07-14T16:00:00.000Z');
   });
 
   // Plan 0031 U12: the MediaList row's own id, threaded through for the removal
