@@ -4,7 +4,7 @@ import {
   SingleChoiceSegmentedButtonRow,
   Text,
 } from '@expo/ui/jetpack-compose';
-import { height } from '@expo/ui/jetpack-compose/modifiers';
+import { height, weight } from '@expo/ui/jetpack-compose/modifiers';
 import { useColorScheme, View } from 'react-native';
 
 import type { SegmentedControlProps } from '@/components/segmented-control';
@@ -42,7 +42,11 @@ export function NativeSegmentedControl<T extends string>({
                 inactiveContentColor: foreground,
               }}
               key={option.value}
-              modifiers={size === 'sm' ? [height(36)] : undefined}
+              modifiers={[
+                // Reserve space for padding and the selected checkmark as well as the label.
+                weight(option.label.length + (option.value === value ? 8 : 4)),
+                ...(size === 'sm' ? [height(36)] : []),
+              ]}
               onClick={() => {
                 if (option.value === value) return;
                 haptics.selection();
