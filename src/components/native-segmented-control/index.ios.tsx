@@ -7,7 +7,7 @@ import type { SegmentedControlProps } from '@/components/segmented-control';
 import { haptics } from '@/lib/haptics';
 
 /** SwiftUI owns the selection appearance and its native transition. */
-export function SeasonTabs<T extends string>({
+export function NativeSegmentedControl<T extends string>({
   options,
   value,
   onChange,

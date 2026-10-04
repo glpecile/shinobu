@@ -63,7 +63,7 @@ export function ExpandableText({
           accessibilityElementsHidden
           className="absolute left-0 right-0 opacity-0"
           importantForAccessibility="no-hide-descendants"
-          pointerEvents="none"
+          style={{ pointerEvents: 'none' }}
         >
           <Text
             className={BODY}

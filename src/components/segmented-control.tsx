@@ -128,11 +128,6 @@ function SelectionPill<T extends string>({
  * could only ever be keyed to the settled value, so it lagged the pill and
  * jumped at the end.
  *
- * Inverted active state (foreground pill, background text), not the accent:
- * the accent means "this is the action" everywhere else, and a segmented
- * control only changes what you are looking at (same reasoning as
- * `features/watchlist/watchlist-toolbar.tsx`'s filter pill).
- *
  * Controlled only. Segments are equal width by design — a content-sized
  * variant would need per-segment measurement; add it when a caller has labels
  * too uneven to share a width.
@@ -184,7 +179,7 @@ export function SegmentedControl<T extends string>({
           </Text>
         </PresstableOpacity>
       ))}
-      <View className="absolute inset-0.5 border border-transparent" pointerEvents="none">
+      <View className="absolute inset-0.5 border border-transparent" style={{ pointerEvents: 'none' }}>
         <SelectionPill
           options={options}
           progress={progress}
