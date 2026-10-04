@@ -276,6 +276,7 @@ function anilistEntry(
   const entry = classifyAnilistEntry(input, now);
   if (entry == null) return null;
   if (input.status === 'PLANNING' && entry.status !== 'upcoming') {
+    if (input.hasUnfinishedPrequel === true) return null;
     const premiere = input.firstAired ??
       (input.nextAiring?.episode === 1 ? input.nextAiring.airingAt : undefined);
     if (premiere == null || !hasAired(premiere, now)) return null;

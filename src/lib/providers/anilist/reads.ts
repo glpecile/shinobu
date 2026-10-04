@@ -119,6 +119,7 @@ export function getCurrentAnime(
                 ${MEDIA_FIELDS}
                 nextAiringEpisode { episode airingAt }
                 airingSchedule(perPage: 1) { nodes { episode airingAt } }
+                relations { edges { relationType node { type mediaListEntry { status } } } }
               }
             }
           }

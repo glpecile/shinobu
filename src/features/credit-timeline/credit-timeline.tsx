@@ -21,6 +21,7 @@ import { Button } from '@/components/button';
 import { EmptyStateTile } from '@/components/empty-state-tile';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
+import { MediaCard } from '@/components/media-card';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { useScrolledTitle } from '@/components/scrolled-title';
@@ -28,6 +29,7 @@ import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-
 import { Section } from '@/components/section';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { ViewToggle } from '@/components/view-toggle';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
@@ -35,6 +37,7 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useWatchedInfo } from '@/state/queries/watched-info';
+import type { WatchlistView } from '@/state/prefs/watchlist-view';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -57,7 +60,20 @@ const POSTER = 'w-9 h-13.5 rounded';
 const ROW_HEIGHT = 66;
 
 /** The format control takes the space left by the role picker. */
-const CONTROLS = 'flex-row items-center gap-2 pb-3';
+function TimelineControls({ children, view, onViewChange }: {
+  children: ReactNode;
+  view: WatchlistView;
+  onViewChange: (view: WatchlistView) => void;
+}) {
+  return (
+    <View className="flex-row flex-wrap items-center gap-2 pb-3">
+      <View className="flex-1 min-w-64 flex-row items-center gap-2">{children}</View>
+      <View className="ml-auto">
+        <ViewToggle onChange={onViewChange} view={view} />
+      </View>
+    </View>
+  );
+}
 
 /**
  * How far the rows dip when a filter changes them. Not to zero: the list is
@@ -129,7 +145,7 @@ function TimelineHead({
  * re-targets whenever `watched` flips, which covers the resolve and a recycled
  * row's new item alike with no shared value to own.
  */
-function WatchedMark({ item }: { item: NormalizedMediaItem }) {
+function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; poster?: boolean }) {
   const accent = useThemeColor('--color-accent');
   const watched = useWatchedInfo(item) != null;
   const style = useAnimatedStyle(() => {
@@ -143,7 +159,11 @@ function WatchedMark({ item }: { item: NormalizedMediaItem }) {
     <AnimatedView
       accessibilityLabel="Watched"
       aria-hidden={!watched}
-      className="w-4 items-end"
+      className={cn(
+        'w-4 items-end',
+        poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95',
+      )}
+      pointerEvents="none"
       style={style}
     >
       <Ionicons color={accent} name="eye" size={14} />
@@ -274,6 +294,10 @@ export function CreditTimeline({
   // Flipped on threshold crossings only, so scrolling doesn't re-render (the diary's rule).
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [format, setFormat] = useState<FormatFilter>('ALL');
+  const [view, setView] = useState<WatchlistView>('list');
+  const [width, setWidth] = useState(0);
+  // The 896px column, 24px page gutters and 12px gaps target MediaCard's 160px width.
+  const columns = Math.max(2, Math.floor((Math.min(width, 896) - 48 + 12) / 172));
   const [role, setRole] = useState<string | null>(null);
   const [roleSheetOpen, setRoleSheetOpen] = useState(false);
   // Only unreleased work starts folded.
@@ -292,6 +316,7 @@ export function CreditTimeline({
     format,
     role: activeRole,
     folded,
+    ...(view === 'grid' ? { columns } : {}),
   });
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -303,12 +328,16 @@ export function CreditTimeline({
   }
 
   return (
-    <View className="flex-1" style={enter}>
+    <View
+      className="flex-1"
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={enter}
+    >
       <List
         ref={listRef}
         onScroll={handleScroll}
         data={rows}
-        estimatedItemSize={ROW_HEIGHT}
+        estimatedItemSize={view === 'grid' ? 252 : ROW_HEIGHT}
         getItemType={(row) => row.kind}
         keyExtractor={(row) => row.key}
         ListEmptyComponent={
@@ -342,7 +371,7 @@ export function CreditTimeline({
                   {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
                 </Section.Count>
               </Section.Header>
-              <View className={CONTROLS}>
+              <TimelineControls onViewChange={setView} view={view}>
                 <NativeSegmentedControl
                   accessibilityLabel="Format"
                   className="flex-1 min-w-0 max-w-64"
@@ -369,13 +398,12 @@ export function CreditTimeline({
                     variant="quiet"
                   />
                 )}
-              </View>
+              </TimelineControls>
             </Section>
           </Column>
         }
-        // Rows derive entirely from props (the diary's reason, and its same
-        // stale-hover residual on web).
-        recycleItems
+        // Poster cards own hover state and must not carry it to a recycled credit.
+        recycleItems={view === 'list'}
         renderItem={({ item: row }) => (
           <Column>
             <AnimatedView style={settleStyle}>
@@ -386,6 +414,24 @@ export function CreditTimeline({
                   open={row.open}
                   year={row.year}
                 />
+              ) : row.kind === 'posters' ? (
+                <View className="flex-row gap-3 mx-6 pb-3">
+                  {row.entries.map(({ credit, roles }) => (
+                    <View className="flex-1 min-w-0 relative" key={credit.item.id}>
+                      <MediaCard
+                        className="w-full h-auto aspect-2/3"
+                        item={credit.item}
+                        onActionsPress={() => onItemActions(credit, roles)}
+                        onPress={onItemPress}
+                        subtitle={roles}
+                      />
+                      <WatchedMark item={credit.item} poster />
+                    </View>
+                  ))}
+                  {Array.from({ length: columns - row.entries.length }, (_, index) => (
+                    <View className="flex-1" key={`empty-${index}`} />
+                  ))}
+                </View>
               ) : (
                 <TimelineEntry
                   credit={row.credit}
@@ -465,13 +511,29 @@ export function CreditTimelineSkeleton({
           <Section.Title>Filmography</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
         </Section.Header>
-        <View className={CONTROLS}>
-          {/* The segmented control is 30px tall, the role button 38. */}
-          <Skeleton className="h-7.5 w-52 rounded-full" />
+        <TimelineControls onViewChange={() => {}} view="list">
+          <NativeSegmentedControl
+            accessibilityLabel="Format"
+            className="flex-1 min-w-0 max-w-64"
+            onChange={() => {}}
+            options={FORMAT_OPTIONS}
+            size="sm"
+            value="ALL"
+          />
           {roles && (
-            <Skeleton className="h-9.5 w-29.5 rounded-full" delay={staggerDelay(1)} />
+            <Button
+              className="max-w-28 sm:max-w-36 shrink"
+              disabled
+              icon={<Button.Icon name="filter-outline" />}
+              label="All roles"
+              numberOfLines={1}
+              onPress={() => {}}
+              shape="pill"
+              size="sm"
+              variant="quiet"
+            />
           )}
-        </View>
+        </TimelineControls>
       </Section>
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>

@@ -76,6 +76,8 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
             </View>
             {person.biography != null && (
               <ExpandableText
+                // Four 26px lines plus the title, gap, padding and border reserve 160px.
+                className="min-h-40"
                 lines={4}
                 linkedText={person.biographyMarkdown}
                 text={person.biography}

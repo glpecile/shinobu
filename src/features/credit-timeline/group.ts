@@ -80,6 +80,11 @@ export type TimelineRow =
       open: boolean;
     }
   | {
+      kind: 'posters';
+      key: string;
+      entries: readonly { credit: Credit; roles: string }[];
+    }
+  | {
       kind: 'entry';
       key: string;
       credit: Credit;
@@ -114,6 +119,8 @@ export function timelineRows(
     /** Head keys whose entries are hidden. */
     folded: ReadonlySet<string>;
     now?: Date;
+    /** Poster columns; omitted for the timeline list. */
+    columns?: number;
   },
 ): TimelineRow[] {
   const { format, role, folded, now = new Date() } = options;
@@ -137,6 +144,19 @@ export function timelineRows(
     const open = !folded.has(key);
     rows.push({ kind: 'head', key, year, count: group.length, open });
     if (!open) return;
+    if (options.columns != null) {
+      for (let index = 0; index < group.length; index += options.columns) {
+        rows.push({
+          kind: 'posters',
+          key: `${key}-posters-${index}`,
+          entries: group.slice(index, index + options.columns).map((credit) => ({
+            credit,
+            roles: roleText(credit, role),
+          })),
+        });
+      }
+      return;
+    }
     group.forEach((credit, index) =>
       rows.push({
         kind: 'entry',

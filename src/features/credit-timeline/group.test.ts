@@ -105,7 +105,9 @@ describe('timelineRows', () => {
       folded: new Set(),
       now: NOW,
     });
-    expect(result.slice(0, 3).map((row) => (row.kind === 'entry' ? [row.key, row.last] : row.open)))
+    expect(result.slice(0, 3).map((row) => (
+      row.kind === 'entry' ? [row.key, row.last] : row.kind === 'head' && row.open
+    )))
       .toEqual([true, ['m4', false], ['m3', true]]);
   });
 
@@ -122,5 +124,36 @@ describe('timelineRows', () => {
     });
     expect(writing.map((row) => row.key)).toEqual(['head-upcoming', 'head-2023', 'm1']);
     expect(writing[2].kind === 'entry' && writing[2].roles).toBe('Writer, Original Story');
+  });
+
+  test('poster rows stay within each year, preserve roles and keep folded years closed', () => {
+    const result = timelineRows([
+      ...credits,
+      {
+        item: { ...wind, id: 'm5', year: 2023, releaseDate: '2023-01-01' },
+        roles: [{ role: 'Directing', detail: 'Director' }],
+      },
+      {
+        item: { ...wind, id: 'm6', year: 2023, releaseDate: '2023-02-01' },
+        roles: [{ role: 'Directing', detail: 'Director' }],
+      },
+    ], {
+      format: 'ALL',
+      role: 'Directing',
+      folded: new Set([UPCOMING_HEAD, 'head-2013']),
+      columns: 2,
+      now: NOW,
+    });
+    expect(result.map((row) => row.kind === 'posters'
+      ? row.entries.map((entry) => [entry.credit.item.id, entry.roles])
+      : row.key)).toEqual([
+      'head-upcoming',
+      'head-2023',
+      [['m1', 'Director'], ['m5', 'Director']],
+      [['m6', 'Director']],
+      'head-2013',
+      'head-1984',
+      [['t1', 'Director']],
+    ]);
   });
 });

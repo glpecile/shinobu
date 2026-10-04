@@ -8,6 +8,7 @@ import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { useNewTabPress } from '@/components/use-new-tab-press';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useTraktMediaImages } from '@/state/queries/trakt';
@@ -15,6 +16,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 interface MediaCardProps {
   item: NormalizedMediaItem;
+  /** Layout only, including responsive poster dimensions. */
+  className?: string;
   /** Extra context line under the type label (e.g. a person's character/job). */
   subtitle?: string;
   onPress?: (item: NormalizedMediaItem) => void;
@@ -35,7 +38,7 @@ function progressLabel(item: NormalizedMediaItem): string | null {
   return `${item.currentProgress} ${unit}`;
 }
 
-export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCardProps) {
+export function MediaCard({ item, className, subtitle, onPress, onActionsPress }: MediaCardProps) {
   const progress = progressLabel(item);
   // Watched-feed items arrive artless (Trakt dropped images from /sync/
   // watched/* in 2026) — this recovers the poster lazily, per visible card.
@@ -59,7 +62,7 @@ export function MediaCard({ item, subtitle, onPress, onActionsPress }: MediaCard
     // The ⋯ button is a *sibling* of the pressable, not a child — nesting two
     // gesture-handler buttons would let a ⋯ click bubble into the card press.
     <View
-      className="w-40 h-60 relative"
+      className={cn('w-40 h-60 relative', className)}
       onPointerDown={newTab.onPointerDown}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}

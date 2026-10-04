@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
+import { normalizeCurrentAnimeEntry } from '@/lib/providers/anilist/normalize';
 
 import {
   calendarWeek,
@@ -641,6 +642,38 @@ describe('computeUpNext — AniList entries (KTD-3)', () => {
  * these cases are the whole safety net.
  */
 describe('computeUpNext — AniList PLANNING entries (KTD-3)', () => {
+  test('a planned sequel waits for its prequel to be completed without hiding current progress or its upcoming premiere', () => {
+    const airingAt = Math.floor(NOW.getTime() / 1000);
+    for (const status of ['CURRENT', null, 'COMPLETED']) {
+      const sequel = normalizeCurrentAnimeEntry({
+        status: 'PLANNING',
+        progress: 0,
+        media: {
+          id: 40,
+          episodes: 12,
+          nextAiringEpisode: { episode: 1, airingAt },
+          airingSchedule: { nodes: [{ episode: 1, airingAt }] },
+          relations: {
+            edges: [
+              {
+                relationType: 'PREQUEL',
+                node: { type: 'ANIME', mediaListEntry: status == null ? null : { status } },
+              },
+              { relationType: 'SIDE_STORY', node: { type: 'ANIME' } },
+              { relationType: 'PREQUEL', node: { type: 'MANGA' } },
+            ],
+          },
+        },
+      }, NOW.toISOString());
+      const current = anilistInput(anime(38), { totalEpisodes: 24 });
+      const data = inputs({ anilist: [current, sequel] });
+      expect(computeUpNext(data, NOW).continueWatching.map((entry) => entry.item.id))
+        .toEqual(status === 'COMPLETED' ? ['anilist-40', 'anilist-38'] : ['anilist-38']);
+      expect(computeUpNext(data, new Date(NOW.getTime() - 1)).calendar.map((entry) => entry.item.id))
+        .toEqual(['anilist-40']);
+    }
+  });
+
   test('a planned premiere moves from Calendar to Continue Watching until its window expires', () => {
     const airingAt = localInstant(2026, 7, 25, 12, 0);
     const planned = anilistInput(anime(30, { currentProgress: 0 }), {
