@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
+import { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { ExpandableText } from '@/components/expandable-text';
 import Head from '@/components/head';
 import { useFloatingBackButtonClearance } from '@/components/floating-back-button';
@@ -12,6 +14,7 @@ import { CreditTimeline } from '@/features/credit-timeline/credit-timeline';
 import { mergeCreditRows } from '@/features/credit-timeline/group';
 import { PersonLinksSection } from '@/features/provider-links/person-links-section';
 import { initials } from '@/lib/initials';
+import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePushRoute } from '@/lib/navigation';
 import { ACTING_ROLE } from '@/lib/providers/tmdb/normalize';
 import type { NormalizedPersonDetails } from '@/lib/providers/tmdb/normalize';
@@ -19,12 +22,18 @@ import { routes } from '@/lib/routes';
 
 import { personMetaLine } from './meta-line';
 
+// Identity, biography, then controls. Only the static header staggers, not virtualized credits.
+const personEntering = [0, 40, 80].map((delay) =>
+  FadeIn.duration(DURATION.enter).easing(KEYFRAME_EASE_OUT).delay(delay),
+);
+
 /**
  * The person page itself, shared by `/person/[id]` and `/person/lookup` — the
  * two differ only in how the details were fetched.
  */
 export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
   const headerTop = useFloatingBackButtonClearance();
+  const reduceMotion = useReducedMotion();
   const pushRoute = usePushRoute();
   const meta = personMetaLine(person);
   // Same per-card actions dialog as the home feed.
@@ -41,6 +50,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
       </Head>
       <CreditTimeline
         filmography={filmography}
+        sectionEntering={reduceMotion ? undefined : personEntering[2]}
         footer={
           <View className="px-6">
             <PersonLinksSection person={person} />
@@ -48,7 +58,10 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
         }
         header={
           <View className="px-6" style={{ paddingTop: headerTop }}>
-            <View className="flex-row items-center gap-5 mb-6">
+            <AnimatedView
+              className="flex-row items-center gap-5 mb-6"
+              entering={reduceMotion ? undefined : personEntering[0]}
+            >
               {person.headshot !== '' ? (
                 <ZoomableImage
                   alt={person.name}
@@ -73,14 +86,18 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                   <Text className="text-muted font-sans text-sm mt-1.5">{meta}</Text>
                 )}
               </View>
-            </View>
+            </AnimatedView>
             {person.biography != null && (
-              <ExpandableText
-                lines={4}
-                linkedText={person.biographyMarkdown}
-                text={person.biography}
-                title="Biography"
-              />
+              <AnimatedView entering={reduceMotion ? undefined : personEntering[1]}>
+                <ExpandableText
+                  // Four 26px lines plus the title, gap, padding and border reserve 160px.
+                  className="min-h-40"
+                  lines={4}
+                  linkedText={person.biographyMarkdown}
+                  text={person.biography}
+                  title="Biography"
+                />
+              </AnimatedView>
             )}
           </View>
         }

@@ -15,9 +15,11 @@
   },
   "jsPlugins": [
     "eslint-plugin-react-you-might-not-need-an-effect",
-    "@shadcn/lint"
+    "@shadcn/lint",
+    "./scripts/lint-rules.mjs"
   ],
   "rules": {
+    "shinobu/no-pointer-events-prop": "error",
     "no-underscore-dangle": [
       "warn",
       {

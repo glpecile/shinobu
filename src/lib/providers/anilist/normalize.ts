@@ -38,6 +38,12 @@ export interface AniListMedia {
    */
   nextAiringEpisode?: AniListNextAiringEpisode | null;
   airingSchedule?: { nodes?: Array<AniListNextAiringEpisode | null> | null } | null;
+  relations?: {
+    edges?: Array<{
+      relationType: string;
+      node: { type?: string | null; mediaListEntry?: { status?: string | null } | null } | null;
+    } | null> | null;
+  } | null;
 }
 
 /** AniList's pointer at the next episode to air. `airingAt` is Unix seconds. */
@@ -201,6 +207,8 @@ export interface AniListCurrentEntry {
   nextAiring: { episode: number; airingAt: string } | null;
   /** Episode 1's air instant, retained when the next-airing pointer advances. */
   firstAired?: string;
+  /** A planned sequel is not ready until its preceding anime is completed. */
+  hasUnfinishedPrequel?: boolean;
   /** Total episodes when AniList knows it; null while unannounced. */
   totalEpisodes: number | null;
 }
@@ -220,6 +228,10 @@ export function normalizeCurrentAnimeEntry(
     // user really is watching.
     status: entry.status === 'PLANNING' ? 'PLANNING' : 'CURRENT',
     ...(entry.id != null ? { entryId: entry.id } : {}),
+    hasUnfinishedPrequel: (entry.media.relations?.edges ?? []).some(
+      (edge) => edge?.relationType === 'PREQUEL' && edge.node?.type === 'ANIME' &&
+        edge.node.mediaListEntry?.status !== 'COMPLETED',
+    ),
     ...(premiere?.episode === 1
       ? { firstAired: new Date(premiere.airingAt * 1000).toISOString() }
       : {}),

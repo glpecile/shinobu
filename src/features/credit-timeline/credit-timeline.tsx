@@ -5,6 +5,7 @@ import {
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
 import {
@@ -13,6 +14,7 @@ import {
   useReducedMotion,
   useSharedValue,
   withTiming,
+  type EntryOrExitLayoutType,
 } from 'react-native-reanimated';
 
 import { ActionableRow } from '@/components/actionable-row';
@@ -21,6 +23,7 @@ import { Button } from '@/components/button';
 import { EmptyStateTile } from '@/components/empty-state-tile';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
+import { MediaCard } from '@/components/media-card';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { useScrolledTitle } from '@/components/scrolled-title';
@@ -28,6 +31,7 @@ import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-
 import { Section } from '@/components/section';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { ViewToggle } from '@/components/view-toggle';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
@@ -35,6 +39,7 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useWatchedInfo } from '@/state/queries/watched-info';
+import { setWatchlistView, useWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -56,8 +61,30 @@ const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
 const ROW_HEIGHT = 66;
 
+function usePosterColumns() {
+  const [width, setWidth] = useState(0);
+  // The 896px column, 24px page gutters and 12px gaps target MediaCard's 160px width.
+  return {
+    columns: Math.max(2, Math.floor((Math.min(width, 896) - 48 + 12) / 172)),
+    onLayout: (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width),
+  };
+}
+
 /** The format control takes the space left by the role picker. */
-const CONTROLS = 'flex-row items-center gap-2 pb-3';
+function TimelineControls({ children, view, onViewChange }: {
+  children: ReactNode;
+  view: WatchlistView;
+  onViewChange: (view: WatchlistView) => void;
+}) {
+  return (
+    <View className="flex-row flex-wrap items-center gap-2 pb-3">
+      <View className="flex-1 min-w-64 min-h-10 flex-row items-center gap-2">{children}</View>
+      <View className="ml-auto">
+        <ViewToggle onChange={onViewChange} view={view} />
+      </View>
+    </View>
+  );
+}
 
 /**
  * How far the rows dip when a filter changes them. Not to zero: the list is
@@ -129,7 +156,7 @@ function TimelineHead({
  * re-targets whenever `watched` flips, which covers the resolve and a recycled
  * row's new item alike with no shared value to own.
  */
-function WatchedMark({ item }: { item: NormalizedMediaItem }) {
+function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; poster?: boolean }) {
   const accent = useThemeColor('--color-accent');
   const watched = useWatchedInfo(item) != null;
   const style = useAnimatedStyle(() => {
@@ -143,8 +170,11 @@ function WatchedMark({ item }: { item: NormalizedMediaItem }) {
     <AnimatedView
       accessibilityLabel="Watched"
       aria-hidden={!watched}
-      className="w-4 items-end"
-      style={style}
+      className={cn(
+        'w-4 items-end',
+        poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95',
+      )}
+      style={[style, { pointerEvents: 'none' }]}
     >
       <Ionicons color={accent} name="eye" size={14} />
     </AnimatedView>
@@ -219,6 +249,8 @@ export interface CreditTimelineProps {
   /** The page's hero (name, portrait, biography) — scrolls with the list. */
   header: ReactNode;
   footer?: ReactNode;
+  /** Optional entrance for the section heading and controls, never recycled rows. */
+  sectionEntering?: EntryOrExitLayoutType;
   onItemPress: (item: NormalizedMediaItem) => void;
   /** Long-press, or the web hover ⋯ — with the credit's role text for the sheet. */
   onItemActions: (credit: Credit, roles: string) => void;
@@ -228,7 +260,8 @@ export interface CreditTimelineProps {
  * A filmography down one rail, newest first, with a head per release year.
  * The controls above it narrow by format and by role — both
  * local state: a filter is a way of reading this page, not a destination, so
- * it lives in neither the URL nor a device pref. A filter change swaps the
+ * it lives in neither the URL nor a device pref. The grid/list choice shares
+ * the Watchlist's saved view preference. A filter change swaps the
  * rows in place and lets them settle: one shared value dips every row to a
  * soft blur and brings it back over `DURATION.swap`, so the new list reads
  * as the old one refocusing rather than two lists cutting. No per-row
@@ -244,6 +277,7 @@ export function CreditTimeline({
   filmography,
   header,
   footer,
+  sectionEntering,
   onItemPress,
   onItemActions,
 }: CreditTimelineProps) {
@@ -274,6 +308,8 @@ export function CreditTimeline({
   // Flipped on threshold crossings only, so scrolling doesn't re-render (the diary's rule).
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [format, setFormat] = useState<FormatFilter>('ALL');
+  const view = useWatchlistView();
+  const { columns, onLayout } = usePosterColumns();
   const [role, setRole] = useState<string | null>(null);
   const [roleSheetOpen, setRoleSheetOpen] = useState(false);
   // Only unreleased work starts folded.
@@ -292,6 +328,7 @@ export function CreditTimeline({
     format,
     role: activeRole,
     folded,
+    ...(view === 'grid' ? { columns } : {}),
   });
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -303,12 +340,17 @@ export function CreditTimeline({
   }
 
   return (
-    <View className="flex-1" style={enter}>
+    <View
+      className="flex-1"
+      onLayout={onLayout}
+      style={enter}
+    >
       <List
+        style={{ flex: 1 }}
         ref={listRef}
         onScroll={handleScroll}
         data={rows}
-        estimatedItemSize={ROW_HEIGHT}
+        estimatedItemSize={view === 'grid' ? 252 : ROW_HEIGHT}
         getItemType={(row) => row.kind}
         keyExtractor={(row) => row.key}
         ListEmptyComponent={
@@ -331,51 +373,52 @@ export function CreditTimeline({
           <Column>
             {header}
             {/* The section head names what the controls filter. */}
-            <Section className="mt-2 mx-6">
-              <Section.Header>
-                <Section.Title>
-                  {filmography.credits.some((credit) => credit.item.type === 'MANGA')
-                    ? 'Works'
-                    : 'Filmography'}
-                </Section.Title>
-                <Section.Count>
-                  {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
-                </Section.Count>
-              </Section.Header>
-              <View className={CONTROLS}>
-                <NativeSegmentedControl
-                  accessibilityLabel="Format"
-                  className="flex-1 min-w-0 max-w-64"
-                  onChange={(next) => {
-                    refocus();
-                    setFormat(next);
-                  }}
-                  options={FORMAT_OPTIONS}
-                  size="sm"
-                  value={format}
-                />
-                {/* One role needs no picker. */}
-                {counts.length > 1 && (
-                  <Button
-                    accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
-                    className="max-w-28 sm:max-w-36 shrink"
-                    icon={<Button.Icon name="filter-outline" />}
-                    label={activeRole ?? 'All roles'}
-                    morphLabel
-                    numberOfLines={1}
-                    onPress={() => setRoleSheetOpen(true)}
-                    shape="pill"
+            <AnimatedView entering={sectionEntering}>
+              <Section className="mt-2 mx-6">
+                <Section.Header>
+                  <Section.Title>
+                    {filmography.credits.some((credit) => credit.item.type === 'MANGA')
+                      ? 'Works'
+                      : 'Filmography'}
+                  </Section.Title>
+                  <Section.Count>
+                    {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
+                  </Section.Count>
+                </Section.Header>
+                <TimelineControls onViewChange={setWatchlistView} view={view}>
+                  <NativeSegmentedControl
+                    accessibilityLabel="Format"
+                    className="flex-1 min-w-0 max-w-64"
+                    onChange={(next) => {
+                      refocus();
+                      setFormat(next);
+                    }}
+                    options={FORMAT_OPTIONS}
                     size="sm"
-                    variant="quiet"
+                    value={format}
                   />
-                )}
-              </View>
-            </Section>
+                  {/* One role needs no picker. */}
+                  {counts.length > 1 && (
+                    <Button
+                      accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
+                      className="max-w-28 sm:max-w-36 shrink"
+                      icon={<Button.Icon name="filter-outline" />}
+                      label={activeRole ?? 'All roles'}
+                      morphLabel
+                      numberOfLines={1}
+                      onPress={() => setRoleSheetOpen(true)}
+                      shape="pill"
+                      size="sm"
+                      variant="quiet"
+                    />
+                  )}
+                </TimelineControls>
+              </Section>
+            </AnimatedView>
           </Column>
         }
-        // Rows derive entirely from props (the diary's reason, and its same
-        // stale-hover residual on web).
-        recycleItems
+        // Poster cards own hover state and must not carry it to a recycled credit.
+        recycleItems={view === 'list'}
         renderItem={({ item: row }) => (
           <Column>
             <AnimatedView style={settleStyle}>
@@ -386,6 +429,24 @@ export function CreditTimeline({
                   open={row.open}
                   year={row.year}
                 />
+              ) : row.kind === 'posters' ? (
+                <View className="flex-row gap-3 mx-6 pb-3">
+                  {row.entries.map(({ credit, roles }) => (
+                    <View className="flex-1 min-w-0 relative" key={credit.item.id}>
+                      <MediaCard
+                        className="w-full h-auto aspect-2/3"
+                        item={credit.item}
+                        onActionsPress={() => onItemActions(credit, roles)}
+                        onPress={onItemPress}
+                        subtitle={roles}
+                      />
+                      <WatchedMark item={credit.item} poster />
+                    </View>
+                  ))}
+                  {Array.from({ length: columns - row.entries.length }, (_, index) => (
+                    <View className="flex-1" key={`empty-${index}`} />
+                  ))}
+                </View>
               ) : (
                 <TimelineEntry
                   credit={row.credit}
@@ -457,27 +518,57 @@ export function CreditTimelineSkeleton({
   /** A studio's timeline has no role picker. */
   roles?: boolean;
 }) {
+  const view = useWatchlistView();
+  const { columns, onLayout } = usePosterColumns();
   return (
-    <View className="w-full max-w-4xl self-center">
+    <View className="w-full max-w-4xl self-center" onLayout={onLayout}>
       {header}
       <Section className="mt-2 mx-6">
         <Section.Header>
           <Section.Title>Filmography</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
         </Section.Header>
-        <View className={CONTROLS}>
-          {/* The segmented control is 30px tall, the role button 38. */}
-          <Skeleton className="h-7.5 w-52 rounded-full" />
+        <TimelineControls onViewChange={setWatchlistView} view={view}>
+          <NativeSegmentedControl
+            accessibilityLabel="Format"
+            className="flex-1 min-w-0 max-w-64"
+            onChange={() => {}}
+            options={FORMAT_OPTIONS}
+            size="sm"
+            value="ALL"
+          />
           {roles && (
-            <Skeleton className="h-9.5 w-29.5 rounded-full" delay={staggerDelay(1)} />
+            <Button
+              className="max-w-28 sm:max-w-36 shrink"
+              disabled
+              icon={<Button.Icon name="filter-outline" />}
+              label="All roles"
+              numberOfLines={1}
+              onPress={() => {}}
+              shape="pill"
+              size="sm"
+              variant="quiet"
+            />
           )}
-        </View>
+        </TimelineControls>
       </Section>
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>
           <RailHead.Skeleton lead="title" />
-          {Array.from({ length: rows }).map((_, row) => (
-            <SkeletonRow index={run + row} key={row} last={row === rows - 1} />
+          {Array.from({ length: rows }, (_entry, row) => (
+            view === 'grid' ? (
+              <View className="flex-row gap-3 mx-6 pb-3" key={row}>
+                {Array.from({ length: columns }, (_, column) => (
+                  <Skeleton
+                    className="flex-1 aspect-2/3 rounded-lg"
+                    delay={staggerDelay(run + row)}
+                    key={column}
+                  />
+                ))}
+              </View>
+            ) : (
+              <SkeletonRow index={run + row} key={row} last={row === rows - 1} />
+            )
           ))}
         </View>
       ))}
