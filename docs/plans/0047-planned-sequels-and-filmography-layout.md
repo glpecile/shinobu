@@ -13,5 +13,8 @@
 - Stagger the person header, biography and filmography controls by 40ms with
   160ms ease-out fades. Skip the stagger for reduced motion and never animate
   virtualized credit mounts.
+- Bound the filmography list's viewport and reserve the controls row's height
+  when a format has only one role. Refresh the README screenshots and verify
+  the shared poster toggle on Android.
 - Validate the premiere regression, timeline grouping, types, lint and web UI.
   Publish one PR, run ponytail review, then squash-merge and update main.

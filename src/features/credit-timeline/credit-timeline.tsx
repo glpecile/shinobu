@@ -78,7 +78,7 @@ function TimelineControls({ children, view, onViewChange }: {
 }) {
   return (
     <View className="flex-row flex-wrap items-center gap-2 pb-3">
-      <View className="flex-1 min-w-64 flex-row items-center gap-2">{children}</View>
+      <View className="flex-1 min-w-64 min-h-10 flex-row items-center gap-2">{children}</View>
       <View className="ml-auto">
         <ViewToggle onChange={onViewChange} view={view} />
       </View>
@@ -346,6 +346,7 @@ export function CreditTimeline({
       style={enter}
     >
       <List
+        style={{ flex: 1 }}
         ref={listRef}
         onScroll={handleScroll}
         data={rows}
