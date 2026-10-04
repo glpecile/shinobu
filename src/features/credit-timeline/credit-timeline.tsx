@@ -56,8 +56,8 @@ const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
 const ROW_HEIGHT = 66;
 
-/** Pill and role button share a row, wrapping only when a long role label won't fit. */
-const CONTROLS = 'flex-row flex-wrap items-center gap-3 pb-3';
+/** The format control takes the space left by the role picker. */
+const CONTROLS = 'flex-row items-center gap-2 pb-3';
 
 /**
  * How far the rows dip when a filter changes them. Not to zero: the list is
@@ -330,8 +330,7 @@ export function CreditTimeline({
         ListHeaderComponent={
           <Column>
             {header}
-            {/* The details page's section head: it names what the two control
-                rows filter, and marks where the hero ends and the list begins. */}
+            {/* The section head names what the controls filter. */}
             <Section className="mt-2 mx-6">
               <Section.Header>
                 <Section.Title>
@@ -346,7 +345,7 @@ export function CreditTimeline({
               <View className={CONTROLS}>
                 <NativeSegmentedControl
                   accessibilityLabel="Format"
-                  className="w-52 android:w-64"
+                  className="flex-1 min-w-0 max-w-64"
                   onChange={(next) => {
                     refocus();
                     setFormat(next);
@@ -359,13 +358,14 @@ export function CreditTimeline({
                 {counts.length > 1 && (
                   <Button
                     accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
+                    className="max-w-28 sm:max-w-36 shrink"
                     icon={<Button.Icon name="filter-outline" />}
                     label={activeRole ?? 'All roles'}
                     morphLabel
+                    numberOfLines={1}
                     onPress={() => setRoleSheetOpen(true)}
                     shape="pill"
                     size="sm"
-                    trailingIcon={<Button.Icon name="chevron-down" />}
                     variant="quiet"
                   />
                 )}

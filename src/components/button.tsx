@@ -185,6 +185,8 @@ export interface ButtonProps {
    * animates anyway (AGENTS.md: Tech Stack → torph).
    */
   morphLabel?: boolean;
+  /** Truncate a label when the button has a constrained width. */
+  numberOfLines?: number;
   accessibilityLabel?: string;
   /**
    * Layout only — `shrink-0`, `self-start`, `self-stretch`, `mt-2`.
@@ -231,6 +233,7 @@ export function Button({
   loadingLabel,
   disabled = false,
   morphLabel = false,
+  numberOfLines,
   accessibilityLabel,
   className,
 }: ButtonProps) {
@@ -326,11 +329,16 @@ export function Button({
         <AnimatedView
           // A row's label takes the free space so a trailing glyph is pushed
           // to the far edge rather than sitting against the label's last word.
-          className={cn(overlay && 'opacity-0', align === 'start' && 'flex-1')}
+          className={cn(
+            overlay && 'opacity-0',
+            align === 'start' && 'flex-1',
+            numberOfLines != null && 'min-w-0 shrink',
+          )}
           layout={BOX_LAYOUT}
           style={COLOR_TRANSITION}
         >
           <LabelText
+            numberOfLines={numberOfLines}
             className={cn(
               'font-sans-semibold',
               morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
