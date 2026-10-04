@@ -26,7 +26,7 @@ import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { useScrolledTitle } from '@/components/scrolled-title';
 import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-top-fab';
 import { Section } from '@/components/section';
-import { SegmentedControl } from '@/components/segmented-control';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
 import { cn } from '@/lib/cn';
@@ -344,9 +344,9 @@ export function CreditTimeline({
                 </Section.Count>
               </Section.Header>
               <View className={CONTROLS}>
-                <SegmentedControl
+                <NativeSegmentedControl
                   accessibilityLabel="Format"
-                  className="w-52"
+                  className="w-52 android:w-64"
                   onChange={(next) => {
                     refocus();
                     setFormat(next);

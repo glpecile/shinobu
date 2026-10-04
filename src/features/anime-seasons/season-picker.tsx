@@ -13,7 +13,7 @@ import {
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 
-import { SeasonTabs } from './season-tabs';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { YearSheet } from './year-sheet';
 
 /** "WINTER" → "Winter". */
@@ -83,7 +83,7 @@ export function SeasonPicker({
           <Ionicons color={tint(canGoForward)} name="chevron-forward" size={20} />
         </PresstableOpacity>
       </View>
-      <SeasonTabs
+      <NativeSegmentedControl
         accessibilityLabel="Season"
         onChange={(season) => onChange({ ...window, season })}
         options={SEASON_OPTIONS}

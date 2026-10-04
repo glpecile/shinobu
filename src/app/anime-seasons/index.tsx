@@ -20,7 +20,7 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { SeasonPager } from '@/features/anime-seasons/season-pager';
-import { SeasonTabs } from '@/features/anime-seasons/season-tabs';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { SeasonPicker } from '@/features/anime-seasons/season-picker';
 import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
@@ -305,7 +305,7 @@ export default function AnimeSeasonsScreen() {
       </View>
       <SeasonPicker onChange={setWindow} progress={progress} window={window} />
       <View className="flex-row flex-wrap items-center justify-between gap-2 px-4 pb-3">
-        <SeasonTabs
+        <NativeSegmentedControl
           accessibilityLabel="Format"
           className="w-52 android:w-64"
           onChange={setFormat}

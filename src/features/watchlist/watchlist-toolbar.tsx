@@ -19,22 +19,6 @@ import {
 import type { WatchlistEntry } from './types';
 import { setWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
 
-/**
- * `/watchlist`'s one line of chrome (owner, 2026-08-01 — direction B of three
- * prototyped): a filter control on the left naming the tracker in words, and a
- * grid/list toggle on the right. **Fixed height whatever the provider count**,
- * which is what it was chosen for — a chip-per-provider rail grows with the
- * registry and scrolls out of reach on a phone at five trackers.
- *
- * The active state is inverted (foreground fill), **not** the accent. Crimson
- * was the first pass and was wrong twice over: the label already changes from
- * "All trackers" to the tracker's name, so the colour was restating state, and
- * the accent means "this is the action" everywhere else in the app — on a
- * surface whose actual action is the poster you tap next. Inverting also spends
- * no hue at all, so nothing competes with the provider dots on the artwork
- * below it.
- */
-
 /** Filtered → the control carries its own way out, so clearing is one tap. */
 function FilterPill({
   active,
@@ -45,7 +29,7 @@ function FilterPill({
   onOpen: () => void;
   onClear: () => void;
 }) {
-  const background = useThemeColor('--color-background');
+  const foreground = useThemeColor('--color-foreground');
 
   if (active == null) {
     return (
@@ -65,9 +49,9 @@ function FilterPill({
   // Two sibling pressables inside one bordered shell, never nested: a
   // gesture-handler button inside another lets the ✕ press bubble into the
   // one that opens the sheet (the same rule the poster wall's ⋯ follows).
-  // The same-colour border matches the idle `Button`'s height.
+  // The border matches the idle `Button`'s height.
   return (
-    <View className="flex-row items-center rounded-full bg-foreground border border-foreground">
+    <View className="flex-row items-center rounded-full bg-surface border border-border">
       <PresstableOpacity
         accessibilityHint="Choose a different tracker"
         accessibilityLabel={`Filter: ${PROVIDERS[active].label}`}
@@ -76,7 +60,7 @@ function FilterPill({
         onPress={onOpen}
       >
         <ProviderIcon id={active} size={14} />
-        <Text className="text-background font-sans-semibold text-sm">
+        <Text className="text-foreground font-sans-semibold text-sm">
           {PROVIDERS[active].label}
         </Text>
       </PresstableOpacity>
@@ -87,7 +71,7 @@ function FilterPill({
         onPress={onClear}
       >
         <Ionicons
-          color={background}
+          color={foreground}
           name="close"
           size={14}
         />
