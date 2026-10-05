@@ -41,6 +41,12 @@ does this once, so no call site has to know:
 The pressable keeps `rounded-md` too, so the press ripple/opacity clips to the
 same shape as the box it wraps.
 
+## Poster corner clipping
+
+`MediaCard` puts `rounded-lg overflow-hidden` and its border on an inner
+`View`. The pressto button did not clip poster corners on Android. The inner
+view clips the artwork and gradient; the pressable scales the card.
+
 **Scope.** Anything bordered *and* pressable is suspect on Android. Buttons are
 handled by the primitive; the remaining hand-rolled cases (e.g. the log sheet's
 provider-picker rows, which use `border border-border` directly on a
