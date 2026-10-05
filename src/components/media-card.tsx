@@ -21,11 +21,7 @@ interface MediaCardProps {
   /** Extra context line under the type label (e.g. a person's character/job). */
   subtitle?: string;
   onPress?: (item: NormalizedMediaItem) => void;
-  /**
-   * Opens the card actions dialog (quick log / hide). Triggered by long-press
-   * everywhere and by a hover-revealed ⋯ button on web, where long-press
-   * isn't a discoverable gesture.
-   */
+  /** Opens quick log/hide via long-press or the web hover button. */
   onActionsPress?: (item: NormalizedMediaItem) => void;
 }
 
@@ -40,17 +36,14 @@ function progressLabel(item: NormalizedMediaItem): string | null {
 
 export function MediaCard({ item, className, subtitle, onPress, onActionsPress }: MediaCardProps) {
   const progress = progressLabel(item);
-  // Watched-feed items arrive artless (Trakt dropped images from /sync/
-  // watched/* in 2026) — this recovers the poster lazily, per visible card.
+  // Trakt's watched feed omits artwork; fetch it for visible cards.
   const { coverImage } = useTraktMediaImages(item);
   const accentForeground = useThemeColor('--color-accent-foreground');
-  // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
-  // web-only ⋯ reveal rides on RN-web's pointer events instead.
+  // Uniwind has no group-hover support.
   const [hovered, setHovered] = useState(false);
   const showActionsButton =
     onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
-  // Web only: ⌘/Ctrl+click opens details in a new tab, like any other link.
   const newTab = useNewTabPress(routes.details(item.id));
 
   function onCardPress() {
@@ -59,8 +52,7 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
   }
 
   return (
-    // The ⋯ button is a *sibling* of the pressable, not a child — nesting two
-    // gesture-handler buttons would let a ⋯ click bubble into the card press.
+    // Keep the actions button separate so its press cannot open details.
     <View
       className={cn('w-40 h-60 relative', className)}
       onPointerDown={newTab.onPointerDown}
@@ -68,52 +60,51 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
       onPointerLeave={() => setHovered(false)}
     >
       <PresstableScale
-        className="w-full h-full rounded-lg overflow-hidden border border-border/50"
+        className="w-full h-full"
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(item)
         }
         onPress={onCardPress}
       >
-        {coverImage !== '' ? (
-          <Image
-            source={{ uri: coverImage }}
-            className="w-full h-full"
-            contentFit="cover"
+        <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
+          {coverImage !== '' ? (
+            <Image
+              source={{ uri: coverImage }}
+              className="w-full h-full"
+              contentFit="cover"
+            />
+          ) : (
+            <PosterPlaceholder className="w-full h-full border-0" />
+          )}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)']}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 112 }}
           />
-        ) : (
-          <PosterPlaceholder className="w-full h-full border-0" />
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.85)']}
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 112 }}
-        />
-        {/* Everything here sits on the dark scrim over artwork, so text takes
-            the on-accent (always light) foreground — `text-foreground` and
-            `text-muted` are near-black in the light theme and would vanish
-            into the poster. */}
-        <View className="absolute bottom-0 left-0 right-0 p-3">
-          <Text
-            className="text-accent-foreground font-sans-semibold text-sm leading-tight"
-            numberOfLines={2}
-          >
-            {item.title}
-          </Text>
-          <View className="flex-row justify-between items-center mt-1.5">
-            <Eyebrow tone="accent">{item.type}</Eyebrow>
-            {progress != null && (
-              <Text className="text-accent-foreground/70 text-xs font-sans">
-                {progress}
+          {/* Keep text light over the dark scrim in both themes. */}
+          <View className="absolute bottom-0 left-0 right-0 p-3">
+            <Text
+              className="text-accent-foreground font-sans-semibold text-sm leading-tight"
+              numberOfLines={2}
+            >
+              {item.title}
+            </Text>
+            <View className="flex-row justify-between items-center mt-1.5">
+              <Eyebrow tone="accent">{item.type}</Eyebrow>
+              {progress != null && (
+                <Text className="text-accent-foreground/70 text-xs font-sans">
+                  {progress}
+                </Text>
+              )}
+            </View>
+            {subtitle != null && subtitle !== '' && (
+              <Text
+                className="text-accent-foreground/70 text-xs font-sans mt-0.5"
+                numberOfLines={1}
+              >
+                {subtitle}
               </Text>
             )}
           </View>
-          {subtitle != null && subtitle !== '' && (
-            <Text
-              className="text-accent-foreground/70 text-xs font-sans mt-0.5"
-              numberOfLines={1}
-            >
-              {subtitle}
-            </Text>
-          )}
         </View>
       </PresstableScale>
       {showActionsButton && (
