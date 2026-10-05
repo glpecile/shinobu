@@ -1,0 +1,61 @@
+steps:
+  - await: { visible: { text: Collapse Continue Watching } }
+  - await: { idle: true }
+  - echo: Measure three vertical Home flings down, then three up. Raw gestures
+      deliberately preserve the same velocity and screen geometry for profiling
+      (Pixel 9 portrait); they do not seek an element.
+  - tool: run-sequence
+    args:
+      steps:
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.8
+            toX: 0.5
+            toY: 0.25
+            durationMs: 300
+          delayMs: 800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.8
+            toX: 0.5
+            toY: 0.25
+            durationMs: 300
+          delayMs: 800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.8
+            toX: 0.5
+            toY: 0.25
+            durationMs: 300
+          delayMs: 800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.25
+            toX: 0.5
+            toY: 0.8
+            durationMs: 300
+          delayMs: 800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.25
+            toX: 0.5
+            toY: 0.8
+            durationMs: 300
+          delayMs: 800
+        - tool: gesture-swipe
+          args:
+            fromX: 0.5
+            fromY: 0.25
+            toX: 0.5
+            toY: 0.8
+            durationMs: 300
+          delayMs: 800
+  - await: { visible: { text: Collapse Continue Watching } }
+  - await: { idle: true }
+executionPrerequisite: Android app on Home at the top; signed-in feed restored
+  and loaded. Start and end at the top, without opening or logging media.
