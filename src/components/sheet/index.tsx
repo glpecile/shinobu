@@ -17,7 +17,7 @@ import { sheetScrollMetrics } from './metrics';
 
 export interface SheetProps {
   open: boolean;
-  /** Called when the sheet reaches its closed detent (drag, scrim tap, …). */
+  /** Called on Android Back or when the sheet reaches its closed detent. */
   onClose: () => void;
   children: ReactNode;
   /** Focuses the first text field when the sheet opens. Desktop web only. */
@@ -35,6 +35,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
     <ModalBottomSheet
       detents={[0, 'content']}
       index={open ? 1 : 0}
+      onCloseRequest={onClose}
       // Fires only when a *user* drag commits a detent change…
       onIndexChange={(index) => {
         if (index === 0) onClose();
