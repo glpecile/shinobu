@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { PosterFace } from '@/components/poster-face';
 import { PresstableScale } from '@/components/presstable';
+import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -52,11 +53,11 @@ export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
       <Section.Header>
         <Section.Title>Variants</Section.Title>
       </Section.Header>
-      <View className="flex-row flex-wrap gap-3">
+      <Rail contentContainerClassName="gap-3">
         {variants.map((variant) => (
           <VariantPoster item={item} key={variant.id} variant={variant} />
         ))}
-      </View>
+      </Rail>
     </Section>
   );
 }

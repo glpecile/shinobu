@@ -16,18 +16,17 @@ import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
-import {
-  SeasonAccordion,
-  type PendingLog,
-} from '@/features/show-seasons/season-accordion';
+import type { PendingLog } from '@/features/show-seasons/season-accordion';
 import {
   formatRuntime,
   seasonRuntimeMinutes,
 } from '@/features/show-seasons/runtime';
 import {
+  useAniListEpisodesQuery,
   useAniListEntryStateQuery,
   useSuspenseAniListEpisodesQuery,
 } from '@/state/queries/anilist';
+import { DetailsList, type DetailsListProps } from '@/features/show-seasons/details-list';
 import {
   EpisodeActionsSheet,
   type EpisodePointer,
@@ -68,9 +67,25 @@ function watchedKeys(progress: number): ReadonlySet<string> {
   return keys;
 }
 
-function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
-  const mediaId = item.externalIds.anilist!;
+function AnimeSeasonsHeading({ mediaId }: { mediaId: number }) {
   const { data: season } = useSuspenseAniListEpisodesQuery({ mediaId });
+  const runtime = seasonRuntimeMinutes(season);
+  return (
+    <Section>
+      <Section.Header>
+        <Section.Title>Seasons</Section.Title>
+        {runtime > 0 && <Section.Subtitle>{`${formatRuntime(runtime)} total runtime`}</Section.Subtitle>}
+      </Section.Header>
+    </Section>
+  );
+}
+
+function AnimeDetailsList({ item, resetKey, ...page }: {
+  item: NormalizedMediaItem;
+  resetKey?: unknown;
+} & DetailsListProps) {
+  const mediaId = item.externalIds.anilist!;
+  const { data: season } = useAniListEpisodesQuery({ mediaId });
   const connected = useConnectedProviders();
   const { data: entryState } = useAniListEntryStateQuery({
     mediaId,
@@ -101,7 +116,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const { data: episodeMap } = useAniZipEpisodeMapQuery(mediaId);
   const canonicalTitle = canonicalSeasonTitle(episodeMap);
   const labelled =
-    canonicalTitle == null ? season : { ...season, title: canonicalTitle };
+    canonicalTitle == null || season == null ? season : { ...season, title: canonicalTitle };
 
   // Episode screen + sheet for an anime row: the row is entry-relative, the
   // episode surfaces are TMDB-numbered, so each tap places the row's ani.zip
@@ -175,66 +190,60 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     );
   }
 
-  const runtime = seasonRuntimeMinutes(season);
-
   return (
-    <Section>
-      <Section.Header>
-        <Section.Title>Seasons</Section.Title>
-        {runtime > 0 && (
-          <Section.Subtitle>{`${formatRuntime(runtime)} total runtime`}</Section.Subtitle>
-        )}
-      </Section.Header>
-      <SeasonAccordion
-        season={labelled}
-        watched={watched}
-        onEpisodeActions={
-          tmdbId == null
-            ? undefined
-            : (_s, episode) => {
-                const pointer = placeRow(episode);
-                if (pointer == null) return;
-                haptics.selection();
-                setPressed({ entryNumber: episode.number, pointer });
-                setActionsOpen(true);
-              }
-        }
-        onOpenEpisode={
-          tmdbId == null
-            ? undefined
-            : (_s, episode) => {
-                const pointer = placeRow(episode);
-                if (pointer != null) {
-                  pushRoute(routes.episode(item.id, pointer.season, pointer.number));
-                }
-              }
-        }
-        onMarkEpisode={(_s, episode) =>
-          openLog({
-            title: `Log episode ${episode.number}`,
-            // The entry title already names the season ("… Season 2"), so the
-            // episode line doesn't repeat it — and can't claim one when the
-            // mapping is unknown.
-            description: `“${item.title}” — episode ${episode.number}: ${episode.title}`,
-            // Entry-relative (plan 0027): the number the AniList entry itself
-            // uses. The header may read "Season 2", but what gets logged is
-            // episode N *of this entry* — the fan-out maps it to a canonical
-            // season, and a mapping miss becomes an honest skip.
-            entryEpisodes: [episode.number],
-          })
-        }
-        onMarkSeason={(s) => {
-          // Same unaired guard as the Trakt season picker.
-          const aired = s.episodes.filter((e) => hasAired(e.firstAired));
-          if (aired.length === 0) return;
-          const label = canonicalTitle ?? 'all episodes';
-          openLog({
-            title: `Log ${label}`,
-            description: `“${item.title}” — ${aired.length} aired ${
-              aired.length === 1 ? 'episode' : 'episodes'
-            }.`,
-            entryEpisodes: aired.map((episode) => episode.number),
-          });
+    <>
+      <DetailsList
+        {...page}
+        episodeSection={{
+          seasons: labelled == null ? [] : [labelled],
+          watched,
+          heading: (
+            <SuspenseSection
+              errorToast={{ title: 'Episodes unavailable', message: 'AniList didn’t respond — pull to refresh to try again.' }}
+              fallback={<SeasonsSkeleton />}
+              resetKey={resetKey}
+            >
+              <AnimeSeasonsHeading mediaId={mediaId} />
+            </SuspenseSection>
+          ),
+          onEpisodeActions:
+            tmdbId == null
+              ? undefined
+              : (_s, episode) => {
+                  const pointer = placeRow(episode);
+                  if (pointer == null) return;
+                  haptics.selection();
+                  setPressed({ entryNumber: episode.number, pointer });
+                  setActionsOpen(true);
+                },
+          onOpenEpisode:
+            tmdbId == null
+              ? undefined
+              : (_s, episode) => {
+                  const pointer = placeRow(episode);
+                  if (pointer != null) {
+                    pushRoute(routes.episode(item.id, pointer.season, pointer.number));
+                  }
+                },
+          onMarkEpisode: (_s, episode) =>
+            openLog({
+              title: `Log episode ${episode.number}`,
+              // Entry-relative: the log fan-out handles canonical provider numbering.
+              description: `“${item.title}” — episode ${episode.number}: ${episode.title}`,
+              entryEpisodes: [episode.number],
+            }),
+          onMarkSeason: (s) => {
+            const aired = s.episodes.filter((e) => hasAired(e.firstAired));
+            if (aired.length === 0) return;
+            const label = canonicalTitle ?? 'all episodes';
+            openLog({
+              title: `Log ${label}`,
+              description: `“${item.title}” — ${aired.length} aired ${
+                aired.length === 1 ? 'episode' : 'episodes'
+              }.`,
+              entryEpisodes: aired.map((episode) => episode.number),
+            });
+          },
         }}
       />
 
@@ -277,38 +286,27 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         title={pending?.title ?? ''}
         watchedAt={watchedAt}
       />
-    </Section>
+    </>
   );
 }
 
 /**
- * Anime-series-only section for the detail screen. Mirrors the TV
- * `SeasonsSection` layout (plan 0010) so anime details don't feel like a
- * separate, stripped-down page. Episodes come from AniList's airing schedule
- * + streaming metadata; watched checkmarks come from the live entry progress.
+ * Anime details use the same flat episode list as TV. Rows stay entry-relative;
+ * only navigation and logging translate them to canonical provider numbering.
  */
 export function AnimeSeasonsSection({
   item,
   resetKey,
+  ...layout
 }: {
   item: NormalizedMediaItem;
   resetKey?: unknown;
-}) {
-  if (item.type !== 'ANIME' || item.isFilm === true) return null;
-  if (item.externalIds.anilist == null) return null;
+} & DetailsListProps) {
+  if (item.type !== 'ANIME' || item.isFilm === true || item.externalIds.anilist == null) {
+    return <DetailsList {...layout} />;
+  }
 
   return (
-    <SuspenseSection
-      // AniList has stability wobbles; a silently missing episode list reads
-      // as "this anime has no episodes", so the outage gets named.
-      errorToast={{
-        title: 'Episodes unavailable',
-        message: 'AniList didn’t respond — pull to refresh to try again.',
-      }}
-      fallback={<SeasonsSkeleton />}
-      resetKey={resetKey}
-    >
-      <AnimeSeasonAccordionList item={item} />
-    </SuspenseSection>
+    <AnimeDetailsList {...layout} item={item} resetKey={resetKey} />
   );
 }
