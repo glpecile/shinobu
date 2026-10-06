@@ -23,7 +23,7 @@ import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 export type OutcomeLinkTone = 'accent' | 'neutral';
 
 const TONE: Record<OutcomeLinkTone, { token: ThemeColorToken; label: string }> = {
-  accent: { token: '--color-accent', label: 'text-accent' },
+  accent: { token: '--color-accent-on-tonal', label: 'text-accent-on-tonal' },
   neutral: { token: '--color-foreground', label: 'text-foreground' },
 };
 
@@ -51,14 +51,21 @@ export function OutcomeLink({
   const color = useThemeColor(TONE[tone].token);
 
   return (
-    <PresstableOpacity onPress={() => openExternalUrl(url)}>
-      <View className="flex-row items-center gap-1 mt-0.5">
+    <PresstableOpacity
+      accessibilityLabel={`${verb} ${PROVIDERS[provider].label}`}
+      accessibilityRole="button"
+      className="min-h-11 justify-center"
+      onPress={() => openExternalUrl(url)}
+    >
+      <View className="flex-row items-center gap-2">
         <Ionicons
+          accessibilityElementsHidden
+          importantForAccessibility="no"
           color={color}
           name="open-outline"
-          size={14}
+          size={16}
         />
-        <Text className={cn('font-sans text-xs', TONE[tone].label)}>
+        <Text className={cn('font-sans-semibold text-sm', TONE[tone].label)}>
           {verb} {PROVIDERS[provider].label}
         </Text>
       </View>

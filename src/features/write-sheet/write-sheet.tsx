@@ -1,13 +1,16 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { FadeIn } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
+import { ProviderIcon } from '@/components/provider-icon';
 import { SectionEnter } from '@/components/section-enter';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { DURATION } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 
 import {
   WriteResultReport,
@@ -58,13 +61,30 @@ function Report({
     | undefined;
   succeededLine: (succeeded: readonly ProviderId[]) => string;
 }) {
+  const success = useThemeColor('--color-success');
   if (result == null) return null;
   return (
     <SectionEnter>
       {result.succeeded.length > 0 && (
-        <Text className="text-muted font-sans text-sm mt-3">
-          {succeededLine(result.succeeded)}
-        </Text>
+        <View className="mt-3 gap-2">
+          <View className="flex-row items-start gap-2">
+            <Ionicons
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              color={success}
+              name="checkmark-circle"
+              size={20}
+            />
+            <Text className="text-foreground font-sans text-sm flex-1">
+              {succeededLine(result.succeeded)}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            {result.succeeded.map((id) => (
+              <ProviderIcon id={id} key={id} size={18} />
+            ))}
+          </View>
+        </View>
       )}
       <WriteResultReport outcomes={result.outcomes} {...report} />
     </SectionEnter>
@@ -73,9 +93,21 @@ function Report({
 
 /** The thrown-write error, under the report. */
 function WriteError({ children }: { children: ReactNode }) {
+  const accent = useThemeColor('--color-accent-on-tonal');
   return (
     <SectionEnter>
-      <Text className="text-accent font-sans text-sm mt-3">{children}</Text>
+      <View className="flex-row items-start gap-2 mt-3 rounded-lg bg-accent-tonal p-3">
+        <Ionicons
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          color={accent}
+          name="alert-circle"
+          size={20}
+        />
+        <Text className="text-accent-on-tonal font-sans text-sm flex-1">
+          {children}
+        </Text>
+      </View>
     </SectionEnter>
   );
 }
