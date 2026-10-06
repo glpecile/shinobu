@@ -136,7 +136,8 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const currentProgress =
     anilistProgress ?? simklAnimeEntry.data?.item.currentProgress ?? item.currentProgress;
   // A finished entry wraps to episode 1 and says so, like the series path.
-  const animeRewatch = isAnimeSeries && total != null && currentProgress >= total;
+  const animeRewatch =
+    isAnimeSeries && total != null && total > 0 && currentProgress >= total;
   const nextEpisode = animeRewatch ? 1 : currentProgress + 1;
 
   // Never offer to log an episode that hasn't aired yet (todos/006).
@@ -311,11 +312,13 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
       />
       {/* The finished-show state earns a line of its own: the button below
           reads "Log rewatch", and this is what makes that make sense. */}
-      {((seriesNext?.rewatch === true && upcoming == null) || animeRewatch) && result == null && (
-        <Text className="text-muted font-sans text-sm mt-2 text-center">
-          🎉 You’ve watched every aired episode.
-        </Text>
-      )}
+      {canLog &&
+        ((seriesNext?.rewatch === true && upcoming == null) || animeRewatch) &&
+        result == null && (
+          <Text className="text-muted font-sans text-sm mt-2 text-center">
+            🎉 You’ve watched every aired episode.
+          </Text>
+        )}
       {/* The inline result blocks are gone (plan 0032 R9/U4): a clean report
           is a toast, and anything left to read renders inside the sheet, which
           stays open until the report settles. */}
