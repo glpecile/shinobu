@@ -11,9 +11,9 @@ import type {
  * write must run in-session — the only channel carrying the real session is the
  * WebView itself (proven empirically, docs/solutions/letterboxd-no-api-fallback.md).
  *
- * `evaluateJavaScript` resolves with `String(describing:)` of the *expression*,
- * NOT the eventual value of a promise (nitro-webview spec), so a `fetch` result
- * can't come back through its return value. Instead the injected script relays
+ * Each write mounts a film page with a document-end script. Nitro's imperative
+ * `evaluateJavaScript` runs off the main thread and crashes WebKit on iOS.
+ * The injected script relays
  * the outcome over `window.ReactNativeWebView.postMessage(...)` → the WebView's
  * `onMessage` event → `handleLetterboxdMessage` here, matched by a request id.
  *
@@ -21,9 +21,9 @@ import type {
  * which wraps `letterboxdWebFetch` in `Effect.tryPromise` (AGENTS.md boundary).
  */
 
-/** The subset of the WebView ref this bridge drives. */
+/** Page-load transport exposed by the mounted React bridge. */
 export interface LetterboxdWebViewHandle {
-  evaluateJavaScript(code: string): Promise<string>;
+  loadFilmPage(filmPath: string, script: string): void;
 }
 
 interface Pending {
@@ -35,31 +35,19 @@ interface Pending {
 const WRITE_TIMEOUT_MS = 20_000;
 
 let webView: LetterboxdWebViewHandle | null = null;
-let loaded = false;
 let counter = 0;
 const pending = new Map<string, Pending>();
-const loadWaiters = new Set<() => void>();
 
-/** Called by the bridge component's `hybridRef`; `null` on unmount. */
+/** Registered by the mounted bridge component; `null` on disconnect/unmount. */
 export function registerLetterboxdWebView(ref: LetterboxdWebViewHandle | null): void {
   webView = ref;
   if (ref == null) {
-    loaded = false;
     // Fail any in-flight writes rather than let them hang to timeout.
     for (const [id, p] of pending) {
       clearTimeout(p.timer);
       p.reject(new Error('Letterboxd WebView unmounted'));
       pending.delete(id);
     }
-  }
-}
-
-/** Wired to `onLoadEnd`/`onLoadStart` — writes wait for a loaded page. */
-export function setLetterboxdWebViewLoaded(value: boolean): void {
-  loaded = value;
-  if (value) {
-    for (const waiter of loadWaiters) waiter();
-    loadWaiters.clear();
   }
 }
 
@@ -80,22 +68,6 @@ export function handleLetterboxdMessage(data: string): void {
   const status = typeof message.status === 'number' ? message.status : 0;
   const body = typeof message.body === 'string' ? message.body : '';
   entry.resolve({ status, body });
-}
-
-function waitForLoaded(signal: { cancelled: boolean }): Promise<void> {
-  if (loaded) return Promise.resolve();
-  return new Promise((resolve) => {
-    const waiter = () => {
-      if (!signal.cancelled) resolve();
-    };
-    loadWaiters.add(waiter);
-  });
-}
-
-/** Navigate the WebView to `path` (relative to the letterboxd.com origin it is
- * already on). `String()` return keeps `evaluateJavaScript`'s promise happy. */
-function buildNavigateScript(path: string): string {
-  return `(function(){ window.location.assign(${JSON.stringify(path)}); return 'nav'; })();`;
 }
 
 /**
@@ -193,9 +165,8 @@ function buildWatchlistScript(
 }
 
 /**
- * The navigate→wait→inject runner both write transports share (plan 0033
- * KTD-4): render `filmPath` so the page-derived values (LID meta, live session)
- * are in place, then inject the verb's own script, whose outcome arrives via
+ * Both native write transports load `filmPath` with a document-end script so
+ * the page-derived values (LID meta, live session) are in place. Outcome arrives via
  * postMessage → `handleLetterboxdMessage`. Rejects if no WebView is mounted
  * (web / not connected) so the adapter surfaces a dead-session error rather
  * than hanging.
@@ -209,10 +180,8 @@ function runInFilmPage(
     return Promise.reject(new Error('Letterboxd WebView is not mounted'));
   }
   const id = `lb-${(counter += 1)}-${Date.now()}`;
-  const signal = { cancelled: false };
   return new Promise<LetterboxdWebResponse>((resolve, reject) => {
     const timer = setTimeout(() => {
-      signal.cancelled = true;
       pending.delete(id);
       reject(new Error('Letterboxd WebView write timed out'));
     }, WRITE_TIMEOUT_MS);
@@ -226,24 +195,24 @@ function runInFilmPage(
       reject(error);
     };
 
-    void (async () => {
-      // Render the film page so the page-derived values are in-session.
-      loaded = false;
-      await ref.evaluateJavaScript(buildNavigateScript(filmPath));
-      await waitForLoaded(signal);
-      if (signal.cancelled) return;
-      const current = webView;
-      if (current == null) return; // registerLetterboxdWebView already rejected it
-      await current.evaluateJavaScript(buildScript(id));
-      // Result arrives via postMessage → handleLetterboxdMessage.
-    })().catch(fail);
+    try {
+      // Document-end injection runs again on navigation/reload. Consume the
+      // request in tab-local storage before writing so it can never log twice.
+      ref.loadFilmPage(filmPath, `(function(){
+        if (window.location.origin !== 'https://letterboxd.com') return;
+        var key = ${JSON.stringify(id)};
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, 'sent');
+        ${buildScript(id)}
+      })();`);
+    } catch (error) {
+      fail(error);
+    }
   });
 }
 
 /**
- * Run a diary write inside the authenticated WebView: navigate to the film page
- * (so the live CSRF token and the film-LID meta are in the session), wait for it
- * to load, then POST the diary entry to the JSON API.
+ * Load the authenticated film page and POST the diary entry at document end.
  */
 export function letterboxdWebFetch(
   request: LetterboxdWebRequest,
@@ -277,9 +246,7 @@ export function getLetterboxdWatchlistWebFetch():
 /** Test seam: reset the module singleton between cases. */
 export function resetLetterboxdWebViewBridge(): void {
   webView = null;
-  loaded = false;
   counter = 0;
   for (const p of pending.values()) clearTimeout(p.timer);
   pending.clear();
-  loadWaiters.clear();
 }
