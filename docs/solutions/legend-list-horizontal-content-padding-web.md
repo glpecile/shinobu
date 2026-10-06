@@ -41,3 +41,16 @@ spacer components. `contentContainerStyle` padding is only trustworthy on the
 cross axis, and `className` isn't an option either — uniwind drops it on
 third-party components on native
 (`docs/solutions/uniwind-classname-third-party-components.md`).
+
+## Up Next regression (2026-10-06)
+
+PR #187's Continue Watching and This Week virtualization repeated the same
+padding-only layout. Both rows now use 16px header and 4px footer spacers,
+accounting for `CardSlot`'s 12px trailing margin, just like `MediaCarousel`.
+This Week keeps its cross-axis stack headroom. The fix applies equally to
+expanded and icon-only sidebars; neither sidebar needs a compensating inset.
+
+Browser verification reproduced 0px card insets against 16px heading insets
+before the fix. Afterward, both cards, both headings, and the day strip were
+16px from the content edge with 240px and 64px sidebars. Scrolling to the end
+confirmed the last card also stopped 16px from the trailing edge.

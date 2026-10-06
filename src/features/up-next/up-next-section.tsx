@@ -167,7 +167,11 @@ export function UpNextSection({
             title="Continue Watching"
           >
             <VirtualizedRail
-              contentContainerStyle={{ paddingHorizontal: 16 }}
+              // Horizontal Legend List padding does not offset items on web.
+              // Spacers match the header's px-4; CardSlot already adds mr-3.
+              // See docs/solutions/legend-list-horizontal-content-padding-web.md.
+              ListHeaderComponent={<View className="w-4" />}
+              ListFooterComponent={<View className="w-1" />}
               data={continueWatching}
               estimatedItemSize={268}
               // Show keys keep the visible card mounted when quick-log advances it.
@@ -324,9 +328,10 @@ export function UpNextSection({
                 // sit above its face card, and a horizontal scroll view clips at
                 // its own frame.
                 contentContainerStyle={{
-                  paddingHorizontal: 16,
                   paddingTop: STACK_HEADROOM,
                 }}
+                ListHeaderComponent={<View className="w-4" />}
+                ListFooterComponent={<View className="w-1" />}
                 data={selected.groups}
                 estimatedItemSize={268}
                 keyExtractor={(group) => group.id}

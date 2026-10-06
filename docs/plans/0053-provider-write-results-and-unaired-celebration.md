@@ -9,6 +9,8 @@
 - An anime with zero known episodes is not complete. Only celebrate a rewatch
   when the episode is aired; an upcoming premiere keeps its countdown without
   the “watched every aired episode” copy.
+- Restore Continue Watching and This Week rail gutters lost in PR #187, using
+  the existing horizontal-list spacer pattern rather than CSS padding.
 
 ## Validation
 
