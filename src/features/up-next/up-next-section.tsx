@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import {
   FadeIn,
   Keyframe,
@@ -9,7 +9,7 @@ import {
 
 import { AnimatedText, AnimatedView } from '@/components/animated-view';
 import { PresstableScale } from '@/components/presstable';
-import { Rail } from '@/components/rail';
+import { Rail, VirtualizedRail } from '@/components/rail';
 import {
   calendarBadges,
   continueWatchingBadges,
@@ -49,14 +49,6 @@ export interface UpNextSectionProps {
 // the row. Applied whether or not the day holds a stack: paying it only
 // sometimes would move every card down by 10px the moment a season dropped.
 const STACK_HEADROOM = STACK_OFFSET * 2;
-
-// A landscape card row's height (art h-36 = 144, + mt-2 gap and two text
-// lines), plus the stack headroom above it. Only the pre-measurement floor:
-// Android's real text line boxes come out a few px taller than this estimate,
-// so the reserved height tracks the tallest day content actually laid out (see
-// `onLayout` below) — reserving the estimate alone let a day with cards run
-// taller than an empty day and shift the feed beneath on every switch.
-const DAY_CONTENT_MIN_HEIGHT = 188 + STACK_HEADROOM;
 
 // Beyond this the dots would overflow the ~56px cell; several shows sharing a
 // day is already the busy case, so an exact tally past it earns nothing.
@@ -139,17 +131,14 @@ export function UpNextSection({
   const [selectedOffset, setSelectedOffset] = useState(0);
   /** 0 until the first switch, then +1 for a later day and -1 for an earlier. */
   const [direction, setDirection] = useState(0);
-  // Tallest day content laid out so far — what empty days must reserve so the
-  // feed below never moves when tapping between days. Monotonic max, so the
-  // measurement can never feed back into itself.
-  const [dayContentHeight, setDayContentHeight] = useState(
-    DAY_CONTENT_MIN_HEIGHT,
-  );
   const reduceMotion = useReducedMotion();
   const accent = useThemeColor('--color-accent');
   const accentForeground = useThemeColor('--color-accent-foreground');
   const foreground = useThemeColor('--color-foreground');
   const muted = useThemeColor('--color-muted');
+  const { fontScale } = useWindowDimensions();
+  // 144px art + 8px gap + scaled text or the 36px quick-log button, whichever is taller.
+  const cardRailHeight = 152 + Math.max(36, 44 * fontScale);
 
   if (continueWatching.length === 0 && calendar.length === 0) return null;
 
@@ -177,16 +166,15 @@ export function UpNextSection({
             collapseKey="up-next-continue"
             title="Continue Watching"
           >
-            <Rail
-              className="px-4"
-            >
-              {/* Keyed on the *show*, not the entry: a quick-log advances the
-                  entry (its id carries the episode), and the card has to stay
-                  mounted for the line to morph and the art to hold still. One
-                  entry per show here by construction, so the item id is unique. */}
-              {continueWatching.map((entry) => (
+            <VirtualizedRail
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+              data={continueWatching}
+              estimatedItemSize={268}
+              // Show keys keep the visible card mounted when quick-log advances it.
+              keyExtractor={(entry) => entry.item.id}
+              style={{ height: cardRailHeight }}
+              renderItem={({ item: entry }) => (
                 <CardSlot
-                  key={entry.item.id}
                   // Continue Watching is aired episodes by construction; the
                   // narrowing is what the union buys — no release row can slip
                   // in here and render a quick-log for something with no episode.
@@ -203,8 +191,8 @@ export function UpNextSection({
                   onActionsPress={onItemActions}
                   onPress={onItemPress}
                 />
-              ))}
-            </Rail>
+              )}
+            />
           </CollapsibleSection>
         </AnimatedView>
       )}
@@ -303,17 +291,10 @@ export function UpNextSection({
           })}
         </Rail>
 
-        {/* Reserved height so switching to an empty day never collapses the row
-            and shifts the feed beneath it — the empty line sits in the space a
-            card row would occupy, measured from the real card row rather than
-            estimated (font metrics differ per platform). */}
+        {/* Empty and populated days reserve the same bounded list height. */}
         <View
           className="mt-3"
-          onLayout={(event) => {
-            const measured = Math.ceil(event.nativeEvent.layout.height);
-            setDayContentHeight((current) => Math.max(current, measured));
-          }}
-          style={{ minHeight: dayContentHeight }}
+          style={{ minHeight: cardRailHeight + STACK_HEADROOM }}
         >
           {/* Keyed on the day so a switch remounts and replays the enter. No exit
               on the block: an exiting copy would sit in flow beside the
@@ -338,18 +319,20 @@ export function UpNextSection({
                 </Text>
               </View>
             ) : (
-              <Rail
+              <VirtualizedRail
                 // The top padding is the stack headroom: a grouped card's backs
                 // sit above its face card, and a horizontal scroll view clips at
                 // its own frame.
-                className="px-4"
-                contentContainerStyle={{ paddingTop: STACK_HEADROOM }}
-              >
-                {/* The group id is per show (per release row for films), for
-                    the same reason as Continue Watching above. */}
-                {selected.groups.map((group) => (
+                contentContainerStyle={{
+                  paddingHorizontal: 16,
+                  paddingTop: STACK_HEADROOM,
+                }}
+                data={selected.groups}
+                estimatedItemSize={268}
+                keyExtractor={(group) => group.id}
+                style={{ height: cardRailHeight + STACK_HEADROOM }}
+                renderItem={({ item: group }) => (
                   <CardSlot
-                    key={group.id}
                     // Aired-today episodes are watchable right now, so they
                     // keep the quick-log checkmark here too; still-upcoming
                     // ones — and release rows, which are never loggable —
@@ -372,8 +355,8 @@ export function UpNextSection({
                     onActionsPress={onItemActions}
                     onPress={onItemPress}
                   />
-                ))}
-              </Rail>
+                )}
+              />
             )}
           </AnimatedView>
         </View>

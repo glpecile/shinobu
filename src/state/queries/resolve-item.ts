@@ -124,17 +124,19 @@ export function useResolvedMediaItem(id: string): {
   // screen runs for the resolved item — same key, one request. Only for
   // TMDB ids, the only kind a signed-out viewer can reach: tracker-keyed ids
   // still need a session to fetch by.
-  const deepLink = resolvedItem == null && !feed.isLoading ? parseTmdbItemId(id) : null;
+  // Public ID reads are independent of Home. Cached personal data still wins
+  // above when it arrives, without making a cold detail wait for every feed row.
+  const deepLink = resolvedItem == null ? parseTmdbItemId(id) : null;
   const deepLinkDetails = useMediaDetailsQuery(
     deepLink != null ? tmdbStub(id, deepLink) : undefined,
   );
   // The AniList twin: an AniList-minted id is public data too, and the seasons
   // explorer is reachable signed out, so its links must survive a refresh.
   const anilistDeepLink =
-    resolvedItem == null && !feed.isLoading ? parseAniListItemId(id) : null;
+    resolvedItem == null ? parseAniListItemId(id) : null;
   const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink);
   // And the Simkl one: a variant poster or a shared link to a Simkl-minted id.
-  const simklDeepLink = resolvedItem == null && !feed.isLoading ? parseSimklItemId(id) : null;
+  const simklDeepLink = resolvedItem == null ? parseSimklItemId(id) : null;
   const simklDeepLinkItem = useSimklLookupQuery(
     simklDeepLink != null ? { simkl: simklDeepLink } : null,
   );

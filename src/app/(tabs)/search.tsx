@@ -627,6 +627,8 @@ export default function SearchScreen() {
                       process.env.EXPO_OS === 'web' ? undefined : { paddingBottom: 96 }
                     }
                     data={rows}
+                    estimatedItemSize={92}
+                    getItemType={(row) => row.kind}
                     keyExtractor={(row) => row.key}
                     keyboardShouldPersistTaps="handled"
                     renderItem={({ item: row }) =>
