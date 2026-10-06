@@ -10,11 +10,11 @@ export type { LegendListRef } from '@legendapp/list/react-native';
 
 /**
  * Web variant: Legend List forwards unrecognized ScrollView props onto a DOM
- * element, so native-only keyboard props must be stripped here or React warns
- * about unknown DOM attributes. Keyboard behavior is a native concern anyway —
- * callers keep passing these props and native picks them up via index.tsx.
+ * element, so keyboard and Android-only nested-scrolling props must be stripped
+ * here or React warns about unknown DOM attributes. Callers keep passing these
+ * props and native picks them up via index.tsx.
  *
- * Verified 2026-07-26 (docs/solutions/web-list-strips-keyboard-persist-taps.md):
+ * See docs/solutions/web-list-strips-native-scroll-props.md:
  * `keyboardShouldPersistTaps` looks like it should be forwarded, because
  * react-native-web's ScrollView *does* implement it (it blurs the focused
  * TextInput on any touch it claims when the prop is absent). But Legend List's
@@ -27,12 +27,14 @@ export type { LegendListRef } from '@legendapp/list/react-native';
 export function List<T>({
   keyboardShouldPersistTaps,
   keyboardDismissMode,
+  nestedScrollEnabled,
   recycleItems = false,
   onStartReachedThreshold = 0,
   ...props
 }: ListProps<T>): ReactElement {
   void keyboardShouldPersistTaps;
   void keyboardDismissMode;
+  void nestedScrollEnabled;
   // Both defaulted, not omitted — see index.tsx for why.
   return (
     <LegendList
