@@ -27,9 +27,13 @@ Lint, typecheck, class-name/router/link checks and all 1,257 tests pass. The
 limited Android check encountered a stale bundle (runtime sheet props lacked
 `nativeOverlay`). Reloading then left the runtime unresponsive; both the restart
 and relaunch failed. No passing gesture or warning-free expansion check is
-claimed. Leave the merge pending Android Back verification on the updated bundle.
+claimed by the agent.
 
 After the owner's October 6 report, APK inspection confirmed the emulator's
 installed binary predates the dependency upgrade and contains no native
 close-request handler or controllers. A clean Android rebuild is required
 before another Back check; no additional source fix is established yet.
+
+The owner subsequently confirmed everything is working and authorized the
+merge. This clears the Android validation hold through owner confirmation,
+not a new agent-run device check.

@@ -22,8 +22,8 @@ version; no BackHandler or per-screen navigation guard is added.
 
 The dependency is pinned to that exact prerelease. This needs a clean native
 rebuild (`bun android.clean`, or `bun ios.clean` for iOS), not just Fast Refresh.
-Lint and TypeScript checks pass; device behavior remains to be checked after
-rebuilding.
+Lint and TypeScript checks pass. The owner confirmed working behavior after
+the rebuild guidance; the agent did not complete a passing runtime check.
 
 On October 6, the emulator's installed APK had last been updated on October 4,
 before the October 5 dependency upgrade. Its DEX contained `BottomSheetView`
