@@ -24,6 +24,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
+import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -649,10 +650,7 @@ export function DiaryList({
   // Whether the list is far enough down that "back to top" earns its pixels.
   // Flipped only on threshold crossings, so scrolling doesn't re-render.
   const [showScrollTop, setShowScrollTop] = useState(false);
-  // Which episode clusters are open. Expansion is ephemeral view state that
-  // lives here in the list (not in a recycled row), keyed by the cluster's
-  // stable anchor id — unlike day-minimize, which persists across restarts.
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const { expanded, toggle: toggleCluster } = useListDisclosure();
   const collapsedDays = useCollapsedDiaryDays();
   const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
   const items = flattenDays(
@@ -663,15 +661,6 @@ export function DiaryList({
     collapsedDays,
     hiddenIds,
   );
-
-  function toggleCluster(key: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
 
   async function refresh() {
     setRefreshing(true);
@@ -762,9 +751,9 @@ export function DiaryList({
         // child). `getItemType` lets the virtualizer keep a running average per
         // kind instead of one blended number, so a screenful of day heads
         // doesn't mis-estimate the scroll extent of the entries below them.
-        // Deliberately hints, not `getFixedItemSize`: the geometry lives in the
-        // rows' class names and must not be duplicated here.
-        estimatedItemSize={66}
+        // Size the initial pool for a viewport of expanded children, the
+        // shortest rows. These remain estimates so larger fonts can remeasure.
+        estimatedItemSize={36}
         getItemType={(item) => item.kind}
         onEndReached={hasNextPage ? onEndReached : undefined}
         onEndReachedThreshold={0.6}

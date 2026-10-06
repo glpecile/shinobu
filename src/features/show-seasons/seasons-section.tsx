@@ -9,6 +9,7 @@ import { toast } from '@/lib/toast';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useShowSeasonsSource,
+  useShowSeasonsQuery,
   useSuspenseShowSeasonsQuery,
   type ShowSeasonsSource,
 } from '@/state/queries/show-seasons';
@@ -35,7 +36,8 @@ import {
 import { episodeCode } from '@/features/episode-details/episode-label';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
-import { SeasonAccordion, type PendingLog } from './season-accordion';
+import { DetailsList, type DetailsListProps } from './details-list';
+import type { PendingLog } from './season-accordion';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
 
 function SeasonsSkeleton() {
@@ -49,22 +51,33 @@ function SeasonsSkeleton() {
   );
 }
 
-/**
- * The accordion list itself — a separate component so the suspense boundary
- * (fired by the seasons query) wraps only the part that needs the data; the
- * detail screen renders `<SeasonsSection item={item} />` which carries the
- * boundary + skeleton.
- */
-function SeasonAccordionList({
+/** This boundary owns catalogue loading/errors while the list subscribes to its cached rows. */
+function SeasonsHeading({ source }: { source: ShowSeasonsSource }) {
+  const { data: seasons } = useSuspenseShowSeasonsQuery(source);
+  const total = seriesRuntimeMinutes(seasons);
+  return (
+    <Section>
+      <Section.Header>
+        <Section.Title>Seasons</Section.Title>
+        {total > 0 && <Section.Subtitle>{`${formatRuntime(total)} total runtime`}</Section.Subtitle>}
+      </Section.Header>
+    </Section>
+  );
+}
+
+function ShowDetailsList({
   item,
   source,
+  resetKey,
+  ...layout
 }: {
   item: NormalizedMediaItem;
   source: ShowSeasonsSource;
-}) {
+  resetKey?: unknown;
+} & DetailsListProps) {
   const traktId = item.externalIds.trakt;
   const connected = useConnectedProviders();
-  const { data: seasons } = useSuspenseShowSeasonsQuery(source);
+  const seasons = useShowSeasonsQuery(source).data ?? [];
   // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   // A manual-only target still needs the sheet openable (plan 0022 R3) —
@@ -151,8 +164,6 @@ function SeasonAccordionList({
     );
   }
 
-  const total = seriesRuntimeMinutes(seasons);
-
   function markEpisode(s: NormalizedSeason, episode: NormalizedEpisode) {
     openLog({
       title: `Log ${episodeCode(s.number, episode.number)}`,
@@ -162,26 +173,30 @@ function SeasonAccordionList({
   }
 
   return (
-    <Section>
-      <Section.Header>
-        <Section.Title>Seasons</Section.Title>
-        {total > 0 && (
-          <Section.Subtitle>{`${formatRuntime(total)} total runtime`}</Section.Subtitle>
-        )}
-      </Section.Header>
-      {seasons.map((season) => (
-        <SeasonAccordion
-          key={season.number}
-          onEpisodeActions={(s, episode) => {
+    <>
+      <DetailsList
+        {...layout}
+        episodeSection={{
+          seasons,
+          watched: watchedKeys,
+          heading: (
+            <SuspenseSection
+              errorToast={{ title: 'Episodes unavailable', message: 'The season list didn’t load — pull to refresh to try again.' }}
+              fallback={<SeasonsSkeleton />}
+              resetKey={resetKey}
+            >
+              <SeasonsHeading source={source} />
+            </SuspenseSection>
+          ),
+          onEpisodeActions: (s, episode) => {
             haptics.selection();
             setPressed({ season: s, episode });
             setActionsOpen(true);
-          }}
-          onMarkEpisode={markEpisode}
-          onOpenEpisode={(s, episode) =>
-            pushRoute(routes.episode(item.id, s.number, episode.number))
-          }
-          onMarkSeason={(s) => {
+          },
+          onMarkEpisode: markEpisode,
+          onOpenEpisode: (s, episode) =>
+            pushRoute(routes.episode(item.id, s.number, episode.number)),
+          onMarkSeason: (s) => {
             // Never include unaired episodes in a season-wide mark — the
             // confirm sheet must not promise to log episodes the user couldn't
             // have watched yet (has-aired.ts timezone-correct comparison).
@@ -200,11 +215,9 @@ function SeasonAccordionList({
                 number: episode.number,
               })),
             });
-          }}
-          season={season}
-          watched={watchedKeys}
-        />
-      ))}
+          },
+        }}
+      />
 
       <EpisodeActionsSheet
         item={item}
@@ -243,39 +256,22 @@ function SeasonAccordionList({
         title={pending?.title ?? ''}
         watchedAt={watchedAt}
       />
-    </Section>
+    </>
   );
 }
 
-/**
- * TV-only section for the detail screen (plan 0010). Wraps the season list in
- * a `SuspenseSection` so the seasons fetch never blocks the hero/poster/
- * overview above it; the rest of the screen lands first, the accordions drop
- * in once the catalogue answers. Source-routed (plan 0034): Trakt when its
- * BYO credentials exist, TMDB otherwise — so a Simkl-sourced show still gets
- * its episode list; hidden only when no catalogue can answer.
- */
+/** TV detail list, source-routed to Trakt with BYO credentials or TMDB otherwise. */
 export function SeasonsSection({
   item,
   resetKey,
+  ...layout
 }: {
   item: NormalizedMediaItem;
   resetKey?: unknown;
-}) {
+} & DetailsListProps) {
   const source = useShowSeasonsSource(item);
-  if (source == null) return null;
+  if (source == null) return <DetailsList {...layout} />;
   return (
-    <SuspenseSection
-      // Same rationale as AnimeSeasonsSection: a vanished season list reads
-      // as "no episodes", so the failure gets named with its recourse.
-      errorToast={{
-        title: 'Episodes unavailable',
-        message: 'The season list didn’t load — pull to refresh to try again.',
-      }}
-      fallback={<SeasonsSkeleton />}
-      resetKey={resetKey}
-    >
-      <SeasonAccordionList item={item} source={source} />
-    </SuspenseSection>
+    <ShowDetailsList {...layout} item={item} resetKey={resetKey} source={source} />
   );
 }

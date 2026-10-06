@@ -16,8 +16,7 @@ import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
 import { MorphText } from '@/components/morph-text';
-import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
-import { ScrolledTitle, useScrolledTitle } from '@/components/scrolled-title';
+import { ScrolledTitle } from '@/components/scrolled-title';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
@@ -43,6 +42,7 @@ import { ReleaseTimeline } from '@/features/release-timeline/release-timeline';
 import { StudioSheet } from '@/features/studio/studio-sheet';
 import {
   formatRuntime,
+  DetailsList,
   SeasonsSection,
   SeriesRuntimeTile,
 } from '@/features/show-seasons';
@@ -501,7 +501,6 @@ function DetailsScreen() {
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
-  const scrolledTitle = useScrolledTitle();
 
   const { item, isLoading, refetchFeed } = useResolvedMediaItem(id);
   // TMDB is the metadata source of truth (plan 0014): the same composed
@@ -637,175 +636,171 @@ function DetailsScreen() {
     ]);
   }
 
+  const header = (
+    <>
+      <View className="h-80 relative">
+        <Image
+          source={{
+            uri:
+              shown.backdropImage ||
+              artwork.backdropImage ||
+              shown.coverImage ||
+              artwork.coverImage,
+          }}
+          className="w-full h-full"
+          contentFit="cover"
+        />
+        {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
+            fading from transparent-black to white passes through gray. */}
+        <LinearGradient
+          colors={[`${background}00`, background]}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 220,
+          }}
+        />
+      </View>
+
+      {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
+      <View className="w-full max-w-4xl self-center px-6">
+        <View className="flex-row items-end -mt-24 mb-6">
+          <ZoomableImage
+            alt={shown.title}
+            uri={shown.coverImage || artwork.coverImage}
+            type="image"
+            className="w-28 h-40 rounded-lg border border-border bg-surface"
+            contentFit="cover"
+          />
+          <View className="flex-1 ml-4 pb-1">
+            <View className="flex-row items-center gap-3">
+              <Eyebrow tone="accent">{shown.type}</Eyebrow>
+              {shown.rating != null && (
+                <View className="flex-row items-center gap-1">
+                  <Ionicons
+                    color={accent}
+                    name="star"
+                    size={12}
+                  />
+                  <Text className="text-foreground text-xs font-sans-semibold">
+                    {shown.rating.toFixed(1)}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <ScrolledTitle.Anchor className="mt-1">
+              <CopyTitle
+                alternates={alternates}
+                title={shown.title}
+                tmdbId={shown.externalIds.tmdb}
+                year={shown.year}
+              />
+            </ScrolledTitle.Anchor>
+            {alternates.length > 0 && (
+              <Text className="text-muted font-sans text-sm mt-0.5">
+                {alternates.join(' · ')}
+              </Text>
+            )}
+            {meta !== '' && (
+              <Text className="text-muted font-sans text-sm mt-1.5">
+                {meta}
+              </Text>
+            )}
+            <WatchedLine item={shown} />
+          </View>
+        </View>
+
+        {shown.overview != null && <ExpandableText text={shown.overview} />}
+
+        {/* Placement only, film-like only (plan 0031 R11): a film that isn't
+            out yet can't be logged, so the want-to-watch CTA is the primary
+            control and the disabled log button doesn't render. Everything
+            else — including an airing series with no release date — keeps the
+            log button and gets the CTA beneath it. */}
+        {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
+        <WatchlistMediaButton item={shown} />
+
+        {showProgress && (
+          <View className="flex-row gap-4">
+            <StatTile
+              label="Progress"
+              value={
+                shown.totalEpisodes == null ? (
+                  displayedProgress
+                ) : (
+                  <ProgressOfTotal
+                    progress={displayedProgress}
+                    total={shown.totalEpisodes}
+                  />
+                )
+              }
+              // Manga counts chapters here (AniList's `chapters` lands in
+              // the same field) — the label must follow the unit.
+              caption={
+                shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
+              }
+            />
+            {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
+            {shown.type === 'ANIME' && shown.isFilm !== true &&
+              shown.totalEpisodes != null &&
+              shown.runtime != null && (
+                <StatTile
+                  label="Total time"
+                  value={formatRuntime(shown.totalEpisodes * shown.runtime)}
+                  caption={`${shown.runtime}m each`}
+                />
+              )}
+          </View>
+        )}
+      </View>
+    </>
+  );
+  const footer = (
+    <View className="w-full max-w-4xl self-center px-6 pb-12">
+      <RelationsSection item={shown} resetKey={refreshCount} />
+
+      <SuspenseSection
+        fallback={
+          <>
+            <PeopleSectionsSkeleton />
+            <StudiosSkeleton />
+          </>
+        }
+        resetKey={refreshCount}
+      >
+        {shown.type === 'MANGA' && anilistId != null ? (
+          <MangaCreditsSections mediaId={anilistId} />
+        ) : (
+          <CreditsSections item={item} />
+        )}
+      </SuspenseSection>
+
+      <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
+
+      <ReleaseTimeline item={shown} />
+
+      <DetailVariantsSection item={shown} />
+
+      <ProviderLinksSection item={shown} />
+    </View>
+  );
+  const layout = { header, footer, onRefresh: refresh };
+
   return (
     <>
       <Head>
         <title>{`${shown.title} — Shinobu`}</title>
-        {shown.overview != null && (
-          <meta content={shown.overview} name="description" />
-        )}
+        {shown.overview != null && <meta content={shown.overview} name="description" />}
       </Head>
-      {/* Full-bleed backdrop starts at y=0, so the Android spinner would
-          otherwise land inside the notch. */}
-      <RefreshableScrollView
-        className="flex-1"
-        onRefresh={refresh}
-        onScroll={scrolledTitle.onScroll}
-        scrollEventThrottle={scrolledTitle.scrollEventThrottle}
-        spinnerBelowStatusBar
-      >
-        <View className="h-80 relative">
-          <Image
-            source={{
-              uri:
-                shown.backdropImage ||
-                artwork.backdropImage ||
-                shown.coverImage ||
-                artwork.coverImage,
-            }}
-            className="w-full h-full"
-            contentFit="cover"
-          />
-          {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
-              fading from transparent-black to white passes through gray. */}
-          <LinearGradient
-            colors={[`${background}00`, background]}
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: 220,
-            }}
-          />
-        </View>
-
-        {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
-        <View className="w-full max-w-4xl self-center px-6 pb-12">
-          <View className="flex-row items-end -mt-24 mb-6">
-            <ZoomableImage
-              alt={shown.title}
-              uri={shown.coverImage || artwork.coverImage}
-              type="image"
-              className="w-28 h-40 rounded-lg border border-border bg-surface"
-              contentFit="cover"
-            />
-            <View className="flex-1 ml-4 pb-1">
-              <View className="flex-row items-center gap-3">
-                <Eyebrow tone="accent">{shown.type}</Eyebrow>
-                {shown.rating != null && (
-                  <View className="flex-row items-center gap-1">
-                    <Ionicons
-                      color={accent}
-                      name="star"
-                      size={12}
-                    />
-                    <Text className="text-foreground text-xs font-sans-semibold">
-                      {shown.rating.toFixed(1)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <ScrolledTitle.Anchor className="mt-1">
-                <CopyTitle
-                  alternates={alternates}
-                  title={shown.title}
-                  tmdbId={shown.externalIds.tmdb}
-                  year={shown.year}
-                />
-              </ScrolledTitle.Anchor>
-              {alternates.length > 0 && (
-                <Text className="text-muted font-sans text-sm mt-0.5">
-                  {alternates.join(' · ')}
-                </Text>
-              )}
-              {meta !== '' && (
-                <Text className="text-muted font-sans text-sm mt-1.5">
-                  {meta}
-                </Text>
-              )}
-              <WatchedLine item={shown} />
-            </View>
-          </View>
-
-          {shown.overview != null && <ExpandableText text={shown.overview} />}
-
-          {/* Placement only, film-like only (plan 0031 R11): a film that isn't
-              out yet can't be logged, so the want-to-watch CTA is the primary
-              control and the disabled log button doesn't render. Everything
-              else — including an airing series with no release date — keeps the
-              log button and gets the CTA beneath it. */}
-          {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
-          <WatchlistMediaButton item={shown} />
-
-          {showProgress && (
-            <View className="flex-row gap-4">
-              <StatTile
-                label="Progress"
-                value={
-                  shown.totalEpisodes == null ? (
-                    displayedProgress
-                  ) : (
-                    <ProgressOfTotal
-                      progress={displayedProgress}
-                      total={shown.totalEpisodes}
-                    />
-                  )
-                }
-                // Manga counts chapters here (AniList's `chapters` lands in
-                // the same field) — the label must follow the unit.
-                caption={
-                  shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
-                }
-              />
-              {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
-              {shown.type === 'ANIME' && shown.isFilm !== true &&
-                shown.totalEpisodes != null &&
-                shown.runtime != null && (
-                  <StatTile
-                    label="Total time"
-                    value={formatRuntime(shown.totalEpisodes * shown.runtime)}
-                    caption={`${shown.runtime}m each`}
-                  />
-                )}
-            </View>
-          )}
-
-          {shown.type === 'TV' && (
-            <SeasonsSection item={shown} resetKey={refreshCount} />
-          )}
-          {shown.type === 'ANIME' && shown.isFilm !== true && (
-            <AnimeSeasonsSection item={shown} resetKey={refreshCount} />
-          )}
-
-          <RelationsSection item={shown} resetKey={refreshCount} />
-
-          <SuspenseSection
-            fallback={
-              <>
-                <PeopleSectionsSkeleton />
-                <StudiosSkeleton />
-              </>
-            }
-            resetKey={refreshCount}
-          >
-            {shown.type === 'MANGA' && anilistId != null ? (
-              <MangaCreditsSections mediaId={anilistId} />
-            ) : (
-              <CreditsSections item={item} />
-            )}
-          </SuspenseSection>
-
-          <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
-
-          <ReleaseTimeline item={shown} />
-
-          <DetailVariantsSection item={shown} />
-
-          <ProviderLinksSection item={shown} />
-        </View>
-      </RefreshableScrollView>
-
+      {shown.type === 'TV' ? (
+        <SeasonsSection {...layout} item={shown} key={shown.id} resetKey={refreshCount} />
+      ) : shown.type === 'ANIME' && shown.isFilm !== true ? (
+        <AnimeSeasonsSection {...layout} item={shown} key={shown.id} resetKey={refreshCount} />
+      ) : (
+        <DetailsList {...layout} key={shown.id} />
+      )}
       <ScrolledTitle.Bar title={shown.title} />
       <FloatingBackButton onPress={goBack} />
     </>

@@ -1,16 +1,14 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { LayoutAnimation, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { Collapse } from '@/components/collapse';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { formatAirDate } from '@/features/episode-details/episode-label';
-import { DISCLOSURE_LAYOUT } from '@/lib/motion';
+import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useThemeColor } from '@/lib/theme-color';
 import { hasAired } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
@@ -36,23 +34,21 @@ export interface PendingLog {
   entryEpisodes?: number[];
 }
 
-export interface SeasonAccordionProps {
-  season: NormalizedSeason;
-  /** `"${season}-${number}"` watched keys, or null when Trakt isn't connected. */
+export interface SeasonActions {
+  /** `"${season}-${number}"` watched keys; anime uses entry-relative season 1. */
   watched: ReadonlySet<string> | null;
   onMarkSeason: (season: NormalizedSeason) => void;
   onMarkEpisode: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
   /**
-   * Row tap: the episode screen. Optional because the anime accordion's rows
-   * are AniList-entry-relative with no canonical season to route to — its
-   * rows stay plain.
+   * Row tap opens episode details. Without a canonical mapping, anime rows
+   * remain display-only while their logging buttons still work.
    */
   onOpenEpisode?: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
   /** Row long-press (web: the hover ⋯): the episode actions sheet. */
   onEpisodeActions?: (season: NormalizedSeason, episode: NormalizedEpisode) => void;
 }
 
-function EpisodeRow({
+export function EpisodeRow({
   season,
   episode,
   isWatched,
@@ -163,45 +159,25 @@ function EpisodeRow({
   );
 }
 
-/**
- * One expandable season on the TV detail screen (plan 0010). Tapping the
- * header toggles open; "Mark season as watched" and the per-episode buttons
- * route through the shared confirm sheet (the parent owns the mutation). A
- * row tap opens the episode screen and a long-press its actions sheet — the
- * row clamps the title to two lines, the sheet and screen never do.
- * Watched episodes render an eye — the parent can pass `null` for the set
- * when Trakt is disconnected, in which case no marks show. Episodes whose
- * `firstAired` is still in the future (parsed as an instant, compared in the
- * user's local timezone — `lib/time/has-aired.ts`) render distinct, say when
- * they land, and can't be logged: you can't mark an episode you couldn't have
- * watched yet.
- */
-export function SeasonAccordion({
+/** Controlled header: the screen's flat list owns expansion, not this cell. */
+export function SeasonHeader({
   season,
-  watched,
-  onMarkSeason,
-  onMarkEpisode,
-  onOpenEpisode,
-  onEpisodeActions,
-}: SeasonAccordionProps) {
-  const [open, setOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
-  const accent = useThemeColor('--color-accent');
+  open,
+  onToggle,
+}: {
+  season: NormalizedSeason;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const toggle = useDisclosureToggle(onToggle);
   const runtime = seasonRuntimeMinutes(season);
-
-  function toggle() {
-    if (!reduceMotion) LayoutAnimation.configureNext(DISCLOSURE_LAYOUT);
-    setOpen(!open);
-  }
-
-  const airedCount = season.episodes.filter((e) => hasAired(e.firstAired)).length;
-  const seasonMarkable = airedCount > 0;
+  const hasBody = open && season.episodes.length > 0;
 
   return (
-    <View className="mb-3">
+    <View className={cn(!hasBody && 'mb-3')}>
       <PressableCard
         accessibilityState={{ expanded: open }}
-        cardClassName={cn('flex-row items-center', open && 'rounded-b-none')}
+        cardClassName={cn('flex-row items-center', hasBody && 'rounded-b-none')}
         onPress={toggle}
       >
         <DisclosureChevron from="forward" open={open} size={16} />
@@ -216,39 +192,22 @@ export function SeasonAccordion({
           </Text>
         </View>
       </PressableCard>
+    </View>
+  );
+}
 
-      <Collapse open={open}>
-        <View className="border border-border border-t-0 rounded-b-lg overflow-hidden">
-          {seasonMarkable && (
-            <PresstableOpacity
-              className="flex-row items-center px-4 py-3 border-b border-border bg-accent/5"
-              onPress={() => onMarkSeason(season)}
-            >
-              <Ionicons color={accent} name="eye-outline" size={16} />
-              <Text className="text-accent font-sans-semibold text-sm ml-2">
-                Mark season as watched
-              </Text>
-            </PresstableOpacity>
-          )}
-          {season.episodes.map((episode) => (
-            <EpisodeRow
-              episode={episode}
-              isWatched={watched?.has(`${season.number}-${episode.number}`) === true}
-              key={episode.number}
-              onActions={
-                onEpisodeActions == null
-                  ? undefined
-                  : () => onEpisodeActions(season, episode)
-              }
-              onMark={() => onMarkEpisode(season, episode)}
-              onOpen={
-                onOpenEpisode == null ? undefined : () => onOpenEpisode(season, episode)
-              }
-              season={season}
-            />
-          ))}
-        </View>
-      </Collapse>
+/** A separate list row, so opening a season never mounts its whole body. */
+export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
+  return (
+    <View className="px-4 py-3 border-b border-border bg-accent/5">
+      <Button
+        align="start"
+        icon={<Button.Icon name="eye-outline" />}
+        label="Mark season as watched"
+        onPress={onPress}
+        size="sm"
+        variant="quiet"
+      />
     </View>
   );
 }

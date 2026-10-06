@@ -35,6 +35,9 @@ export function Sheet({ open, onClose, children }: SheetProps) {
     <ModalBottomSheet
       detents={[0, 'content']}
       index={open ? 1 : 0}
+      // A dialog owns Android Back ahead of native-stack fragments; the
+      // activity-level portal callback can lose priority on pushed screens.
+      nativeOverlay={process.env.EXPO_OS === 'android'}
       onCloseRequest={onClose}
       // Fires only when a *user* drag commits a detent change…
       onIndexChange={(index) => {
