@@ -1,6 +1,6 @@
 steps:
-  - await: { visible: { text: Collapse Continue Watching } }
-  - await: { idle: true }
+  - await: { visible: { text: Collapse Continue Watching }, timeout: 120000 }
+  - await: { idle: true, timeout: 60000 }
   - echo: Measure three vertical Home flings down, then three up. Raw gestures
       deliberately preserve the same velocity and screen geometry for profiling
       (Pixel 9 portrait); they do not seek an element.
@@ -55,7 +55,7 @@ steps:
             toY: 0.8
             durationMs: 300
           delayMs: 800
-  - await: { visible: { text: Collapse Continue Watching } }
-  - await: { idle: true }
+  - await: { visible: { text: Collapse Continue Watching }, timeout: 120000 }
+  - await: { idle: true, timeout: 60000 }
 executionPrerequisite: Android app on Home at the top; signed-in feed restored
   and loaded. Start and end at the top, without opening or logging media.

@@ -1,0 +1,43 @@
+executionPrerequisite: Pixel 9 portrait; Home at top, signed-in feed and TMDB configured, no details routes. No tracker writes.
+steps:
+  - echo: Initial Inception deep link is the user-authorized Search fallback; subsequent navigation uses visible cards.
+  - tool: open-url
+    args: { url: 'shinobu://details/tmdb-movie-27205' }
+  - await: { visible: { text: Leonardo DiCaprio / Dom Cobb }, timeout: 120000 }
+  - await: { idle: true, timeout: 60000 }
+  - echo: Fixed Pixel 9 cast-rail gestures preserve the measured 300ms velocity and geometry; reveal Ariadne, then return to Cobb.
+  - tool: gesture-swipe
+    args: { fromX: 0.8, fromY: 0.88, toX: 0.2, toY: 0.88, durationMs: 300, momentum: false }
+  - await: { visible: { text: Elliot Page / Ariadne }, timeout: 120000 }
+  - tool: gesture-swipe
+    args: { fromX: 0.2, fromY: 0.88, toX: 0.8, toY: 0.88, durationMs: 300, momentum: false }
+  - await: { visible: { text: Leonardo DiCaprio / Dom Cobb }, timeout: 120000 }
+  - tap: { text: Dom Cobb }
+  - await: { visible: { text: Filmography }, timeout: 120000 }
+  - await: { idle: true, timeout: 60000 }
+  - tap: { text: 'Learning, Studying… Always Perfecting: The Making of One Battle After Another' }
+  # The live Button projection did not match the runner projection; preserve
+  # the executed raw check rather than weakening its destination identity.
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector: { text: 'Learning, Studying', role: Button }
+      timeoutMs: 120000
+  - await: { idle: true, timeout: 60000 }
+  - tool: button
+    args: { button: back }
+  - await: { visible: { text: Filmography }, timeout: 120000 }
+  - await: { idle: true, timeout: 60000 }
+  - tool: button
+    args: { button: back }
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector: { text: Inception, role: Button }
+      timeoutMs: 120000
+  - await: { idle: true, timeout: 60000 }
+  - tool: button
+    args: { button: back }
+  - await: { visible: { text: Collapse Continue Watching }, timeout: 120000 }
+  - await: { idle: true, timeout: 60000 }
+  - run: android-home-scroll.yaml

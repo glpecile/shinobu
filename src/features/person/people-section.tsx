@@ -1,9 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
+import { List } from '@/components/List';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
-import { Rail } from '@/components/rail';
+import { useRailFade } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
@@ -70,6 +71,7 @@ function PersonCard({
         // No TMDB token means no person page to open, but the credit sheet
         // still has the full role to show, so the card stays pressable.
         <PresstableScale
+          accessibilityLabel={`${credit.name} / ${credit.role}`}
           className="items-center"
           onPress={() => onActions(credit)}
         >
@@ -77,6 +79,7 @@ function PersonCard({
         </PresstableScale>
       ) : (
         <PresstableScale
+          accessibilityLabel={`${credit.name} / ${credit.role}`}
           className="items-center"
           onLongPress={() => onActions(credit)}
           onPress={onPress}
@@ -118,6 +121,8 @@ export function PeopleSection({
   onCreditActions?: (credit: PersonCredit) => void;
 }) {
   const pushRoute = usePushRoute();
+  const { scrollProps, fade } = useRailFade();
+  const { fontScale } = useWindowDimensions();
   // No TMDB token, no TMDB person pages — AniList people still open theirs.
   const hasTmdb = useTmdbToken() !== '';
 
@@ -128,24 +133,35 @@ export function PeopleSection({
       <Section.Header>
         <Section.Title>{title}</Section.Title>
       </Section.Header>
-      <Rail>
-        {people.map((credit) =>
-          onCreditActions == null ? (
-            <View className="w-24 mr-4 items-center" key={credit.id}>
-              <PersonCardContent credit={credit} />
-            </View>
-          ) : (
-            <PersonCard
-              credit={credit}
-              key={credit.id}
-              onActions={onCreditActions}
-              {...(hasTmdb || credit.anilistId != null
-                ? { onPress: () => pushRoute(creditRoute(credit)) }
-                : {})}
-            />
-          ),
-        )}
-      </Rail>
+      <View>
+        <List
+          data={people}
+          estimatedItemSize={112}
+          horizontal
+          keyExtractor={(credit) => credit.id}
+          nestedScrollEnabled
+          renderItem={({ item: credit }) =>
+            onCreditActions == null ? (
+              <View className="w-24 mr-4 items-center">
+                <PersonCardContent credit={credit} />
+              </View>
+            ) : (
+              <PersonCard
+                credit={credit}
+                onActions={onCreditActions}
+                {...(hasTmdb || credit.anilistId != null
+                  ? { onPress: () => pushRoute(creditRoute(credit)) }
+                  : {})}
+              />
+            )
+          }
+          showsHorizontalScrollIndicator={false}
+          // 80px avatar + 10px gaps + three 16px text lines (name, two role lines).
+          style={{ height: 90 + 48 * fontScale }}
+          {...scrollProps}
+        />
+        {fade}
+      </View>
     </Section>
   );
 }

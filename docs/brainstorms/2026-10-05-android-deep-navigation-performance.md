@@ -1,7 +1,8 @@
 # Android deep-navigation performance study
 
-Status: findings-only checkpoint, stopped at the owner's request due to usage
-budget. No production fix validated; deep-stack/Home comparison unfinished.
+Status: resumed at the owner's request. Credit virtualization validated on the
+Android emulator; original physical-device Home slowdown is not yet attributed.
+The findings-only checkpoint below is retained as historical evidence.
 
 ## Question and measurement target
 
@@ -225,7 +226,8 @@ Home runs is not a claimed speedup.
 ## Checks and artifacts
 
 - `bun lint`: passed before any changes.
-- No app source/config/dependency changes so far; no native rebuild required.
+- At the initial checkpoint there were no app changes. The resumed experiment
+  changes only `PeopleSection` JavaScript; hot reload, no native rebuild required.
 - Raw profiles remain in local Argent artifact storage, not git. They may
   contain app/user data and are not attached publicly without sanitization.
 - The replayable Home flow uses fixed Pixel 9 portrait geometry and requires
@@ -243,3 +245,93 @@ The flow can trigger pull-to-refresh and network reads; it never logs media or
 changes tracker state. Failed deep-navigation takes are not committed as
 passing flows. Next session should record a fresh complete path rather than
 reconstructing those failed takes.
+
+## Resumed experiment: virtualize credit rails (October 6 UTC)
+
+The complete live route now reached both movies and returned through three
+Back presses to Home. Before the change it held 14,116 fibers and 56 credit
+cards at the second movie. After popping, Home returned to 6,464 fibers with
+**no** details, person, or credit-card instances. This disproves the retained-
+screens-on-Home hypothesis for this Back path; do not add freezing on that basis.
+
+The initial resume encountered a separate Expo dev-launcher crash (`App react
+context shouldn't be created before`) and Android UiAutomation registration
+errors. Scoped helper cleanup, an app restart, and a data-preserving emulator
+reboot recovered the environment. The previous 6 GiB emulator boot log also
+explicitly reported software GLES fallback under **host** memory pressure.
+The resumed reboot reported host GLES. Comparisons across those boots are not
+an app-performance A/B control.
+
+### Implemented change
+
+`src/features/person/people-section.tsx` now uses the existing horizontal `List`
+and `useRailFade`, like `MediaCarousel`, instead of eager `Rail` + `map`. All
+credits remain in the data; only the visible/draw window mounts cards. Recycling
+stays off, actions/navigation are unchanged, and row height accounts for font
+scale. Explicit credit labels preserve a target when the image is otherwise
+the smallest unlabeled accessible child. No cache, provider, dependency, or
+navigation policy changed. Plan: [0049](../plans/0049-virtualized-credit-rails.md).
+
+| Loaded state | Eager rail | Virtualized rail | Change |
+| --- | ---: | ---: | ---: |
+| Inception mounted credit cards | 35 | 14 | −60% |
+| Two movies mounted credit cards (after cast swipe out/back) | 56 | 30 | −46% |
+| Two movies mounted fibers | 14,116 | 13,483 | −4.5% |
+
+The same two titles still supplied Cast/Crew counts of 15/20 and 13/8. The
+smaller mounted tree is not a smaller provider response or hidden credit data.
+
+### Warm-cache A/B, same saved flow
+
+After a fresh runtime, replayed `.argent/flows/android-virtualized-credits.yaml`
+unchanged with dual profiling: variant B, temporarily restored eager rail for
+two A runs, restored B, and ran again. The accessibility labels remained in both
+variants to isolate list implementation. Both implementations ran against the
+same warmed title cache and viewport. Every replay passed all 28 scored steps;
+flow times were 46.8/47.8/47.0/47.6 seconds and are dominated by explicit checks,
+not navigation latency.
+
+| Variant / React session | Worst React commit | React commits | Native jank intervals / worst |
+| --- | ---: | ---: | ---: |
+| B `20261006-001134` | 470.15 ms | 66 | 33 / 84 ms |
+| A `20261006-001336` | 580.67 ms | 75 | 26 / 87 ms |
+| A `20261006-001512` | 531.42 ms | 56 | 23 / 94 ms |
+| B `20261006-001649` | 413.31 ms | 68 | 37 / 74 ms |
+
+Median of per-run worst React commits: **556.04 → 441.73 ms (−20.6%)**.
+All worst commits were during initial Inception mounting. Virtualization splits
+that work into smaller commits; it does not remove every bit of render work.
+The selected hot/margin-commit duration sum fell only ~6%, below the study's
+signal threshold, and is not a sum of every commit. Render/commit counts varied
+with Home refresh and live provider activity; they do not show a global win.
+
+**Tradeoff/limit:** native jank interval counts were higher with B, although the
+worst interval was shorter in both B runs. Intervals can overlap and the traces
+are dominated by emulator/kernel scheduling/GPU work; this is not evidence of
+improved FPS. Combined-report offsets were ~0.1 seconds in all four warm runs.
+The much earlier stalled 529.6-second profile and the first after-change profile
+whose `Profiler.stop` timed out are excluded from this A/B result. Do not claim
+their recovery as a speedup. Raw profiles stay local and are not attached publicly.
+
+### Validation and conclusion
+
+- Saved replay verifies cast swipe/reappearance, person filmography, the second
+  movie, every Back destination, and Home scroll/refresh. Destination checks
+  retain raw `await-ui-element` where Android's Button projection differs from
+  the runner; two exact-geometry cast gestures and Home gestures are documented.
+- `bun run test` (`bun test --isolate`): 1,250 passed. Bare `bun test` failed 13
+  existing cross-file mock-isolation cases; it is not the repository test command.
+- Lint, typecheck, class-name, guarded-navigation, and external-link checks passed.
+- One-off long press opened the correct credit sheet with the full role and
+  filmography action; debugger log registry recorded no JS errors. Hardware
+  Back while that sheet is open popped its underlying detail route rather than
+  only closing the sheet. `components/sheet/index.tsx` has no Android Back
+  subscription; this is outside the unchanged card actions and needs a separate
+  sheet-navigation fix. The subsequent extra Back exited the app, so that
+  one-off return check failed; it is not included among the saved replay passes.
+
+The validated benefit is fewer eagerly mounted cards/images and smaller worst
+JS render batches while browsing. **This does not establish that Home scrolling
+or physical-device FPS improved, or solve the owner's original report.** Retain
+the bounded change, not speculative cache/observer/skeleton optimizations. Next
+measurement is the same route on a physical Android release/profileable build.
