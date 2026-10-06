@@ -5,7 +5,6 @@ import { FadeIn } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
-import { ProviderIcon } from '@/components/provider-icon';
 import { SectionEnter } from '@/components/section-enter';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { DURATION } from '@/lib/motion';
@@ -66,24 +65,17 @@ function Report({
   return (
     <SectionEnter>
       {result.succeeded.length > 0 && (
-        <View className="mt-3 gap-2">
-          <View className="flex-row items-start gap-2">
-            <Ionicons
-              accessibilityElementsHidden
-              importantForAccessibility="no"
-              color={success}
-              name="checkmark-circle"
-              size={20}
-            />
-            <Text className="text-foreground font-sans text-sm flex-1">
-              {succeededLine(result.succeeded)}
-            </Text>
-          </View>
-          <View className="flex-row items-center gap-2">
-            {result.succeeded.map((id) => (
-              <ProviderIcon id={id} key={id} size={18} />
-            ))}
-          </View>
+        <View className="mt-3 flex-row items-start gap-2 rounded-lg border border-border bg-background p-3">
+          <Ionicons
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            color={success}
+            name="checkmark-circle"
+            size={20}
+          />
+          <Text className="text-foreground font-sans text-sm leading-relaxed flex-1">
+            {succeededLine(result.succeeded)}
+          </Text>
         </View>
       )}
       <WriteResultReport outcomes={result.outcomes} {...report} />

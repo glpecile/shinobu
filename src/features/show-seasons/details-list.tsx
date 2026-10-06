@@ -39,7 +39,8 @@ export function DetailsList({
       data={rows}
       // Watched state and mapping callbacks can change without changing the catalogue rows.
       extraData={episodeSection}
-      estimatedItemSize={72}
+      // Episode rows can be shorter than collapsed season headers.
+      estimatedItemSize={56}
       getItemType={(row) => row.kind}
       keyExtractor={(row) => row.key}
       ListHeaderComponent={

@@ -751,9 +751,9 @@ export function DiaryList({
         // child). `getItemType` lets the virtualizer keep a running average per
         // kind instead of one blended number, so a screenful of day heads
         // doesn't mis-estimate the scroll extent of the entries below them.
-        // Deliberately hints, not `getFixedItemSize`: the geometry lives in the
-        // rows' class names and must not be duplicated here.
-        estimatedItemSize={66}
+        // Size the initial pool for a viewport of expanded children, the
+        // shortest rows. These remain estimates so larger fonts can remeasure.
+        estimatedItemSize={36}
         getItemType={(item) => item.kind}
         onEndReached={hasNextPage ? onEndReached : undefined}
         onEndReachedThreshold={0.6}
