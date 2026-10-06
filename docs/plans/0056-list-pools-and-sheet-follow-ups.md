@@ -8,6 +8,9 @@ Fold the owner's follow-ups into PR #190:
   episode-row estimate in the details list too; retain measured row heights.
 - Give the shared write report one success card. Its headline already names
   providers, so remove the detached, redundant row of provider icons.
+- Join adjacent selected provider rows into one tinted block. Round only the
+  ends of each selected run; keep isolated selections rounded and each toggle
+  independently pressable. Apply this in the shared log/watchlist picker.
 - Use the installed sheet library's Android `nativeOverlay` presentation. Its
   dialog owns system Back independently of the activity's native-stack callback
   order. Keep the existing controlled close request and leave iOS/web unchanged.

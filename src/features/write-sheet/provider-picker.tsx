@@ -30,13 +30,18 @@ const SELECTION_FADE = {
 interface ProviderToggleProps {
   id: ProviderId;
   selected: boolean;
+  joinedAbove: boolean;
+  joinedBelow: boolean;
   onToggle: () => void;
 }
 
-function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
+function ProviderToggle({
+  id, selected, joinedAbove, joinedBelow, onToggle,
+}: ProviderToggleProps) {
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
   const descriptor = PROVIDERS[id];
+  const corners = cn(!joinedAbove && 'rounded-t-md', !joinedBelow && 'rounded-b-md');
 
   return (
     <PresstableOpacity
@@ -46,14 +51,14 @@ function ProviderToggle({ id, selected, onToggle }: ProviderToggleProps) {
       // role on a pressto pressable silently kills onPress on web
       // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
       accessibilityState={{ checked: selected }}
-      className="flex-row items-center justify-between px-3 py-2.5 rounded-md bg-surface"
+      className={cn('flex-row items-center justify-between px-3 py-2.5 bg-surface', corners)}
       onPress={onToggle}
     >
       {/* Selection crossfades over the resting state, the tag chips' recipe
           (log-media/tag-picker.tsx): an animated backgroundColor would lose
           the accent's /10 alpha. */}
       <AnimatedView
-        className="absolute inset-0 rounded-md bg-accent/10"
+        className={cn('absolute inset-0 bg-accent/10', corners)}
         style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
       />
       <View className="flex-row items-center gap-3">
@@ -143,9 +148,17 @@ export function ProviderToggleList({
           </PresstableOpacity>
         </View>
       )}
-      {targets.map((id) => (
+      {targets.map((id, index) => (
         <ProviderToggle
           id={id}
+          joinedAbove={
+            selectedProviders.includes(id) && index > 0 &&
+            selectedProviders.includes(targets[index - 1])
+          }
+          joinedBelow={
+            selectedProviders.includes(id) && index < targets.length - 1 &&
+            selectedProviders.includes(targets[index + 1])
+          }
           key={id}
           onToggle={() => onToggle(id)}
           selected={selectedProviders.includes(id)}
