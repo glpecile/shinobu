@@ -24,3 +24,10 @@ The dependency is pinned to that exact prerelease. This needs a clean native
 rebuild (`bun android.clean`, or `bun ios.clean` for iOS), not just Fast Refresh.
 Lint and TypeScript checks pass; device behavior remains to be checked after
 rebuilding.
+
+On October 6, the emulator's installed APK had last been updated on October 4,
+before the October 5 dependency upgrade. Its DEX contained `BottomSheetView`
+but neither close-request controller, `hasCloseRequestHandler`, nor
+`onCloseRequest`. Updating the JS bundle alone cannot enable Back handling in
+that binary. Run `bun android.clean` before verifying the fix; the overlay prop
+is hot-reloadable only after that native prerequisite is installed.

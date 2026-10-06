@@ -16,7 +16,9 @@ Fold the owner's follow-ups into PR #190:
   order. Keep the existing controlled close request and leave iOS/web unchanged.
 
 Run lint, typecheck, existing tests and repository checks. No new dependency,
-native edit or dependency patch. JS-only: hot reload on the existing dev client.
+native edit or dependency patch. JS-only: hot reload on a dev client rebuilt
+with `@swmansion/react-native-bottom-sheet` 0.17.0-next.2. An older client needs
+`bun android.clean` for the native Back handler added in PR #185.
 Keep device checks limited; no profiling or speedup claim.
 
 ## Validation
@@ -26,3 +28,8 @@ limited Android check encountered a stale bundle (runtime sheet props lacked
 `nativeOverlay`). Reloading then left the runtime unresponsive; both the restart
 and relaunch failed. No passing gesture or warning-free expansion check is
 claimed. Leave the merge pending Android Back verification on the updated bundle.
+
+After the owner's October 6 report, APK inspection confirmed the emulator's
+installed binary predates the dependency upgrade and contains no native
+close-request handler or controllers. A clean Android rebuild is required
+before another Back check; no additional source fix is established yet.
