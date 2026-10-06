@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shinobu Letterboxd bridge
 // @namespace    https://shinobu.glpecile.xyz/
-// @version      0.5.1
+// @version      0.6.0
 // @description  Send Shinobu film logs and watchlist changes through your signed-in Letterboxd tab.
 // @match        https://shinobu.glpecile.xyz/*
 // @match        http://localhost/*
@@ -55,7 +55,7 @@
           throw new Error('Invalid Shinobu film request. Nothing was sent.');
         }
         if (watchlist ? typeof request.inWatchlist !== 'boolean' : !/^\d{4}-\d{2}-\d{2}$/.test(request.viewingDateStr) ||
-            typeof request.rewatch !== 'boolean' || !Array.isArray(request.tags) || request.tags.length > 100 ||
+            typeof request.rewatch !== 'boolean' || (request.liked !== undefined && typeof request.liked !== 'boolean') || !Array.isArray(request.tags) || request.tags.length > 100 ||
             request.tags.some(tag => typeof tag !== 'string' || tag.length > 200)) {
           throw new Error('Invalid Shinobu write request. Nothing was sent.');
         }
@@ -76,7 +76,7 @@
         await finish({ status: 0, body: JSON.stringify({ message: error.message }) });
       }
     });
-    page.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '5');
+    page.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '6');
     return;
   }
 
@@ -106,7 +106,7 @@
     const result = await page.fetch(request.watchlist ? `/api/v0/me/watchlist/${film.lid}` : '/api/v0/production-log-entries', {
       method: request.watchlist ? 'PATCH' : 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-CSRF-TOKEN': csrf },
-      body: JSON.stringify(request.watchlist ? { inWatchlist: request.inWatchlist } : { productionId: film.lid, diaryDetails: { diaryDate: request.viewingDateStr, rewatch: request.rewatch }, tags: request.tags, like: false }),
+      body: JSON.stringify(request.watchlist ? { inWatchlist: request.inWatchlist } : { productionId: film.lid, diaryDetails: { diaryDate: request.viewingDateStr, rewatch: request.rewatch }, tags: request.tags, like: request.liked === true }),
     });
     const text = await result.text();
     if (!result.ok) {

@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { Window } from 'happy-dom';
-import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge/index.web';
+import { getLetterboxdUserscriptFetch, hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge/index.web';
 
 const script = await Bun.file(new URL('../public/letterboxd.user.js', import.meta.url)).text();
 const run = new Function('GM', 'unsafeWindow', `return ${script.slice(script.indexOf('(async ()'))}`);
 const id = '12345678-1234-1234-1234-123456789abc';
 
-test('keeps removal manual for old scripts, but detects removal support from the installed script', async () => {
+test('keeps unsupported old-script writes blocked and detects installed-script capabilities', async () => {
   const app = new Window({ url: 'http://localhost:8081/' });
   const original = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis, 'document', { configurable: true, value: app.document });
@@ -17,8 +17,16 @@ test('keeps removal manual for old scripts, but detects removal support from the
     app.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '4');
     expect(hasLetterboxdUserscript('watchlist')).toBe(true);
     expect(hasLetterboxdUserscript('watchlist-remove')).toBe(false);
+    app.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '5');
+    expect(hasLetterboxdUserscript('log')).toBe(true);
+    expect(hasLetterboxdUserscript('like')).toBe(false);
+    await expect(getLetterboxdUserscriptFetch('gian')!({
+      filmPath: '/film/alien/', filmLid: '2awY', viewingDateStr: '2026-09-30',
+      rewatch: false, tags: [], liked: true,
+    })).rejects.toThrow('Update the Letterboxd script');
     await run({}, { location: app.location, document: app.document, addEventListener() {} });
     expect(hasLetterboxdUserscript('watchlist-remove')).toBe(true);
+    expect(hasLetterboxdUserscript('like')).toBe(true);
   } finally {
     if (original) Object.defineProperty(globalThis, 'document', original);
     else Reflect.deleteProperty(globalThis, 'document');
@@ -27,7 +35,8 @@ test('keeps removal manual for old scripts, but detects removal support from the
 });
 
 test.each([
-  { name: 'hands a Shinobu log to the Letterboxd tab and returns its receipt', username: 'gian', path: '/film/alien/', status: 200, body: '{"logEntry":{"id":"abc"}}', sent: true, message: 'abc' },
+  { name: 'hands a liked Shinobu log to the Letterboxd tab and returns its receipt', username: 'gian', path: '/film/alien/', status: 200, body: '{"logEntry":{"id":"abc"}}', sent: true, message: 'abc', liked: true },
+  { name: 'refuses a non-boolean like before opening a tab', username: 'gian', path: '/film/alien/', status: 200, body: '{}', sent: false, message: 'Invalid Shinobu write request', liked: 'yes' },
   { name: 'resolves a TMDB redirect in the browser', username: 'gian', path: '/tmdb/348/', status: 200, body: '{"logEntry":{"id":"abc"}}', sent: true, message: 'abc' },
   { name: 'refuses to log to a different account', username: 'other', path: '/film/alien/', status: 200, body: '{}', sent: false, message: 'signed in as other' },
   { name: 'refuses a different film', username: 'gian', path: '/film/wrong-film/', status: 200, body: '{}', sent: false, message: 'different film' },
@@ -87,7 +96,7 @@ test.each([
   await run(gm, appPage);
   const event = { source: appPage, origin: app.location.origin, data: {
     type: watchlist ? 'shinobu-letterboxd-watchlist' : 'shinobu-letterboxd-log', id,
-    request: { username: 'gian', filmPath: path, ...(watchlist ? { inWatchlist: options.watchlist } : { viewingDateStr: '2026-09-30', rewatch: false, tags: ['spike'] }) },
+    request: { username: 'gian', filmPath: path, ...(watchlist ? { inWatchlist: options.watchlist } : { viewingDateStr: '2026-09-30', rewatch: false, tags: ['spike'], ...('liked' in options ? { liked: options.liked } : {}) }) },
   } };
   await appListener!(event);
   const response = await result;
@@ -99,7 +108,7 @@ test.each([
     expect(requests[0].credentials).toBe('include');
     expect(requests[0].method).toBe(watchlist ? 'PATCH' : 'POST');
     expect(JSON.parse(String(requests[0].body))).toEqual(watchlist ? { inWatchlist: options.watchlist } : {
-      productionId: '2awY', diaryDetails: { diaryDate: '2026-09-30', rewatch: false }, tags: ['spike'], like: false,
+      productionId: '2awY', diaryDetails: { diaryDate: '2026-09-30', rewatch: false }, tags: ['spike'], like: 'liked' in options && options.liked === true,
     });
   }
   await run(gm, filmPage);

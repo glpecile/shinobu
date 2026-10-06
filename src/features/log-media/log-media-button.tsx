@@ -73,6 +73,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   const [tags, setTags] = useState(DEFAULT_TAGS);
+  const [liked, setLiked] = useState(false);
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [selectedProviders, setSelectedProviders] = useState(targets);
 
@@ -202,6 +203,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
+        liked,
       },
       {
         onSuccess: (outcome) => {
@@ -302,6 +304,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
           logMedia.reset();
           setWatchedAt(null);
           setTags(DEFAULT_TAGS);
+          setLiked(false);
           setSelectedProviders(targets);
           setOpen(true);
         }}
@@ -327,6 +330,8 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}
+        liked={liked}
+        onLikedChange={setLiked}
         onWatchedAtChange={setWatchedAt}
         open={open}
         tags={tags}

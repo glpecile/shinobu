@@ -28,8 +28,32 @@ Android keeps its existing imperative `evaluateJavaScript` user-agent capture;
 it receives neither the injected script nor the message handler.
 
 This is an app-level JS change and hot reloads. No dependency patch or library
-replacement is required. The Letterboxd write bridge still calls the imperative
-evaluator and needs separate follow-up for the same iOS threading issue.
+replacement is required.
+
+## Write bridge fix (2026-10-06)
+
+The `Shinobu-2026-10-06-135506.ips` simulator report confirms the same trap
+when logging: `NitroWebViewEvaluateJavaScriptHandler.evaluate` calls WebKit on
+`com.facebook.react.runtime.JavaScript`. `nitro-webview` remains at 0.1.0.
+The Legend List container-pool warning is unrelated to this native crash.
+
+The shared diary/watchlist runner now hands the film path and submission script
+to the mounted React bridge. Each request remounts the hidden WebView with
+`source` and `injectedJavaScript` together, so the script is installed before
+the film loads and runs at document end. No imperative evaluator or load-wait
+handshake is used. WKWebView's shared cookie store preserves the signed-in
+session across remounts.
+
+Because document-end scripts run again on reload, each request is consumed in
+tab-local `sessionStorage` before issuing its write. A reload cannot duplicate
+the diary entry. The runner still returns receipts through `onMessage`, times
+out ambiguous writes without retrying, and rejects pending writes on disconnect.
+Executable bridge tests cover diary and watchlist payloads plus reload safety.
+On the booted iOS 26.5 simulator, both native page-load paths returned HTTP 200
+probe receipts through `onMessage` without crashing. Their injected scripts
+used a local fetch stub, so no diary or watchlist write reached Letterboxd.
+Real provider write verification remains a human check.
+This fix also hot reloads; no native rebuild is required.
 
 ## Alternatives checked on 2026-09-29
 
@@ -38,8 +62,8 @@ evaluator without a main-thread dispatch. Upgrading does not currently fix it.
 
 The supported `injectedJavaScript` prop installs a document-end user script,
 which can send the user agent through `onMessage` without the unsafe imperative
-call. It does not execute when changed on an already-loaded page, so it cannot
-directly replace the write bridge's runtime navigation and submission commands.
+call. It does not execute when changed on an already-loaded page, so the write
+bridge remounts with the script installed before loading the film.
 
 `react-native-webview` supports Fabric and runtime `injectJavaScript` commands.
 Migrating both sign-in and the write bridge would avoid maintaining a library

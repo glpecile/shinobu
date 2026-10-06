@@ -24,6 +24,13 @@ separate close race: a receipt can arrive before `GM.openInTab` resolves its
 handle. The success path now awaits that handle before closing and reporting.
 Offline checks cover both fixes; live close/focus verification is pending.
 
+Version 0.6.0 carries the log form's heart choice as `like` in the existing
+diary POST and advertises bridge revision 6. Older scripts still log without
+likes; Shinobu disables their heart toggle and rejects liked requests before
+handoff rather than allowing those scripts to silently send `like: false`.
+The userscript round-trip tests cover true, omitted/default-false and invalid
+like values. Live provider verification is pending.
+
 ## Working path
 
 1. The script marks its availability on Shinobu's page. Routing makes Letterboxd

@@ -1,4 +1,5 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { haptics } from '@/lib/haptics';
 
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
 import { emitTabPress } from '@/lib/navigation/tab-double-tap';
@@ -56,6 +57,7 @@ export default function TabsLayout() {
       indicatorColor="rgba(220, 38, 38, 0.18)"
       minimizeBehavior="onScrollDown"
       rippleColor="rgba(220, 38, 38, 0.24)"
+      screenListeners={{ tabPress: () => haptics.selection() }}
       tintColor={accent}
       {...android}
     >

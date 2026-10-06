@@ -1,5 +1,5 @@
 import DateTimePicker from '@expo/ui/community/datetime-picker';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
@@ -11,6 +11,7 @@ export interface WatchedAtFieldProps {
   /** null = "just now" — the mutation omits watchedAt and Trakt records now. */
   value: Date | null;
   onChange: (value: Date | null) => void;
+  children?: ReactNode;
 }
 
 function formatDate(date: Date): string {
@@ -27,38 +28,41 @@ function formatDate(date: Date): string {
  * Android presents its dialog). Backdating only — future watches make no
  * sense, so `maximumDate` is now.
  */
-export function WatchedAtField({ value, onChange }: WatchedAtFieldProps) {
+export function WatchedAtField({ value, onChange, children }: WatchedAtFieldProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <View className="mt-4">
-      <View className="flex-row items-center justify-between border border-border rounded-full px-4 py-3">
-        <Text className="text-muted font-sans text-sm">Watched on</Text>
-        <View className="flex-row items-center gap-3">
-          {value != null && (
+      <View className="flex-row items-center gap-2">
+        <View className="flex-1 flex-row items-center justify-between border border-border rounded-full px-4 py-3">
+          <Text className="text-muted font-sans text-sm">Watched on</Text>
+          <View className="flex-row items-center gap-2">
+            {value != null && (
+              <PresstableOpacity
+                onPress={() => {
+                  haptics.selection();
+                  onChange(null);
+                  setOpen(false);
+                }}
+              >
+                <Text className="text-accent font-sans-semibold text-sm">
+                  Now
+                </Text>
+              </PresstableOpacity>
+            )}
             <PresstableOpacity
               onPress={() => {
                 haptics.selection();
-                onChange(null);
-                setOpen(false);
+                setOpen(!open);
               }}
             >
-              <Text className="text-accent font-sans-semibold text-sm">
-                Now
+              <Text className="text-foreground font-sans-semibold text-sm">
+                {value != null ? formatDate(value) : 'Just now'}
               </Text>
             </PresstableOpacity>
-          )}
-          <PresstableOpacity
-            onPress={() => {
-              haptics.selection();
-              setOpen(!open);
-            }}
-          >
-            <Text className="text-foreground font-sans-semibold text-sm">
-              {value != null ? formatDate(value) : 'Just now'}
-            </Text>
-          </PresstableOpacity>
+          </View>
         </View>
+        {children}
       </View>
       {open && (
         <DateTimePicker

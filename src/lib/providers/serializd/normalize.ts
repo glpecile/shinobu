@@ -20,6 +20,7 @@ export interface SerializdDiaryReview {
   /** ISO instant the user watched (may be backdated) — the display instant. */
   backdate?: string;
   rating?: number;
+  like?: boolean;
   reviewText?: string;
   isRewatched?: boolean;
   isLogged?: boolean;
@@ -68,6 +69,7 @@ export function normalizeDiaryReview(
     // KTD8: order/group by the server's page field, not the (possibly
     // backdated, non-monotone) watch instant.
     watchedAt: raw.dateAdded,
+    liked: raw.like === true,
     ...(raw.episodeNumber != null ? { episodes: [raw.episodeNumber] } : {}),
     ...(season != null ? { season } : {}),
     item: {

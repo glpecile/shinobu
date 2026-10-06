@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -21,6 +22,7 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
+import { useThemeColor } from '@/lib/theme-color';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -104,6 +106,7 @@ type DiaryListItem =
  * once, so it is the honest home for this.
  */
 interface ClusterView {
+  liked: boolean;
   item: NormalizedMediaItem;
   providers: ProviderId[];
   /** "S1E12–14", or the spelled-out count when the run has no range. */
@@ -123,6 +126,7 @@ function clusterView(cluster: DiaryCluster): ClusterView {
   });
   const spelled = formatClusterCount(summary.item.type, summary.count);
   return {
+    liked: cluster.entries.some((entry) => entry.liked === true),
     item: summary.item,
     providers: summary.providers,
     detail: range !== '' ? range : spelled,
@@ -287,23 +291,31 @@ function PosterFan({ item }: { item: NormalizedMediaItem }) {
 }
 
 /**
- * The right edge of every row: the time of day (or, for a collapsed run, its
- * episode-count pill), then the provider dots. One component rather than two
+ * The right edge of every row: a heart for liked logs, the time of day (or, for
+ * a collapsed run, its episode-count pill), then the provider dots. One component rather than two
  * siblings because the gap between the time and the first dot has to come from
  * somewhere — as separate children of `ActionableRow`'s trailing slot they sit
  * flush against each other and the time reads as if the dot were punctuation.
  */
 function RowTrailing({
+  liked,
   providers,
   time,
   runCount,
 }: {
+  liked?: boolean;
   providers: ProviderId[];
   time?: string;
   runCount?: string;
 }) {
+  const accent = useThemeColor('--color-accent');
   return (
     <View className="flex-row items-center gap-2.5 pl-3">
+      {liked && (
+        <View accessible accessibilityLabel="Liked">
+          <Ionicons name="heart" size={14} color={accent} />
+        </View>
+      )}
       {runCount != null ? (
         <Text className="text-foreground font-sans-semibold text-[10px] rounded-full border border-accent/40 bg-accent/15 px-1.5 py-px">
           {runCount}
@@ -380,6 +392,7 @@ function DiaryRow({
         onPress={() => onOpen(href)}
         trailing={
           <RowTrailing
+            liked={entry.liked}
             providers={entry.providers}
             time={formatLogTime(entry, timeZone)}
           />
@@ -443,7 +456,7 @@ function DiaryClusterRow({
         onActions={onActions}
         onPress={() => onToggle(clusterKey)}
         trailing={
-          <RowTrailing providers={view.providers} runCount={view.runCount} />
+          <RowTrailing liked={view.liked} providers={view.providers} runCount={view.runCount} />
         }
       />
     </View>
@@ -487,6 +500,7 @@ function DiaryChildRow({
         onPress={() => onOpen(href)}
         trailing={
           <RowTrailing
+            liked={entry.liked}
             providers={entry.providers}
             time={formatLogTime(entry, timeZone)}
           />

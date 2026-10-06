@@ -78,6 +78,8 @@ export interface LetterboxdWebRequest {
   tags: string[];
   /** Whether to mark the entry a rewatch. */
   rewatch: boolean;
+  /** Like the film with this diary entry; omitted = false. */
+  liked?: boolean;
 }
 
 /** The status + text body the WebView `fetch` observed, relayed back over the

@@ -18,6 +18,7 @@ export interface SerializdLogOptions {
   watchedAt?: string;
   /** Diary tags (R10). */
   tags?: string[];
+  liked?: boolean;
   /** Parity rewatch from the fan-out's reconcile step (R10). */
   rewatch?: boolean;
 }
@@ -49,6 +50,7 @@ function addDiaryEntry(
     backdate: string;
     tags: string[];
     rewatch: boolean;
+    liked: boolean;
   },
 ): Effect.Effect<unknown, ProviderError> {
   return serializdHttp(deps, '/show/reviews/add', {
@@ -66,7 +68,7 @@ function addDiaryEntry(
       is_rewatch: params.rewatch,
       tags: params.tags,
       allows_comments: true,
-      like: false,
+      like: params.liked,
     },
   });
 }
@@ -156,6 +158,7 @@ export function logToSerializd(
         backdate,
         tags,
         rewatch,
+        liked: options.liked === true,
       });
       wroteAny = true;
     }

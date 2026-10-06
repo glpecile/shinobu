@@ -26,15 +26,16 @@ const review = (over: Partial<SerializdDiaryReview> = {}): SerializdDiaryReview 
 });
 
 describe('getSerializdDiary', () => {
-  test('maps reviews[] to diary entries with a tmdb id and a stable review-based id', async () => {
+  test.each([true, false, undefined])('maps reviews[] including like=%s to diary entries with a stable id', async (like) => {
     const page = await Effect.runPromise(
-      getSerializdDiary(deps({ reviews: [review()], totalPages: 3 }), { page: 1 }),
+      getSerializdDiary(deps({ reviews: [review({ like })], totalPages: 3 }), { page: 1 }),
     );
     expect(page.totalPages).toBe(3);
     expect(page.entries).toHaveLength(1);
     const [entry] = page.entries;
     expect(entry.id).toBe('serializd-1');
     expect(entry.provider).toBe('serializd');
+    expect(entry.liked).toBe(like === true);
     expect(entry.item.externalIds.tmdb).toBe(1396);
     expect(entry.item.type).toBe('TV');
     // KTD8: ordering/grouping keys on dateAdded, so watchedAt carries it.

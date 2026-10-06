@@ -18,6 +18,7 @@ export interface LetterboxdLogOptions {
   watchedAt?: string;
   /** Diary tags (the app's Letterboxd-only log field, plan 0012). */
   tags?: string[];
+  liked?: boolean;
   /** Parity rewatch, set by the fan-out's reconcile step (plan 0011). */
   rewatch?: boolean;
 }
@@ -265,6 +266,7 @@ export function logToLetterboxd(
               filmLid,
               viewingDateStr: localDateStr(options.watchedAt),
               tags: tagList(options),
+              liked: options.liked === true,
               rewatch: options.rewatch === true,
             }),
           catch: (cause) => new ProviderNetworkError({ provider, cause }),

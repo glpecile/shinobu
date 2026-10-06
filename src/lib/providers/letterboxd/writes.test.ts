@@ -71,9 +71,10 @@ describe('logToLetterboxd', () => {
         return { status: 200, body: '{"logEntry":{"id":"abc"}}' };
       },
     };
-    await Effect.runPromise(logToLetterboxd(deps, movie({ tmdb: 999 }), { tags: ['spike'] }));
+    await Effect.runPromise(logToLetterboxd(deps, movie({ tmdb: 999 }), { tags: ['spike'], liked: true }));
     expect(captured?.filmPath).toBe('/tmdb/999/');
     expect(captured?.tags).toEqual(['spike']);
+    expect(captured?.liked).toBe(true);
   });
   test('navigates to the film page and drives the diary write in the WebView', async () => {
     let captured: LetterboxdWebRequest | undefined;
@@ -83,6 +84,7 @@ describe('logToLetterboxd', () => {
       logToLetterboxd(deps, movie({ letterboxd: 'tuner' }), {
         watchedAt: '2026-07-15T20:00:00.000Z',
         tags: ['rewatch-night', ' imax '],
+        liked: true,
       }),
     );
 
@@ -92,6 +94,7 @@ describe('logToLetterboxd', () => {
     expect(captured?.viewingDateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     // Tags are trimmed into a string array.
     expect(captured?.tags).toEqual(['rewatch-night', 'imax']);
+    expect(captured?.liked).toBe(true);
   });
 
   test('resolves via the /tmdb/ redirect when there is no Letterboxd slug', async () => {
@@ -122,6 +125,7 @@ describe('logToLetterboxd', () => {
     await Effect.runPromise(logToLetterboxd(deps, movie({ letterboxd: 'tuner' })));
 
     expect(captured?.rewatch).toBe(false);
+    expect(captured?.liked).toBe(false);
   });
 
   test('fails as a dead session when the WebView write transport is absent (web)', async () => {

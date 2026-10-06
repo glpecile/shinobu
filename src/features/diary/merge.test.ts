@@ -164,6 +164,7 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
       state('letterboxd', [
         entry('letterboxd', 'g1', '2026-07-20', {
           dateOnly: true,
+          liked: true,
           item: item({ id: 'letterboxd-fight-club', title: 'Fight Club', externalIds: { tmdb: 603, letterboxd: 'fight-club' } }),
         }),
       ]),
@@ -173,6 +174,7 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     expect(days[0].entries).toHaveLength(1);
     const row = days[0].entries[0];
     expect(row.providers).toEqual(['trakt', 'letterboxd']);
+    expect(row.liked).toBe(true);
     expect(row.episodes).toEqual([]);
     // The merged item cross-links both providers' ids; Trakt (richer) is primary.
     expect(row.id).toBe('trakt-100');
@@ -190,6 +192,7 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     ]);
     const days = groupDiaryEntries(merged, TZ_MINUS_5);
     expect(days[0].entries).toHaveLength(2);
+    expect(days[0].entries.every((row) => !row.liked)).toBe(true);
   });
 
   test('a rewatch on a later day is its own row — the merge keys on the log, not the item', () => {

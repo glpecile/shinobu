@@ -1,9 +1,14 @@
 import { Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
+import { haptics } from '@/lib/haptics';
+import { DURATION, EASE_OUT } from '@/lib/motion';
+import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
@@ -18,15 +23,21 @@ import { useLogMedia } from './use-log-media';
 import { WatchedAtField } from './watched-at-field';
 
 /**
- * The providers whose diary payload actually carries tags — Letterboxd's diary
+ * The providers whose diary payload carries tags and likes — Letterboxd's diary
  * entry (plan 0012) and Serializd's `show/reviews/add` body (plan 0017). Both
  * gate the field *and* name it, so the label can never drift from the gate the
  * way a hardcoded "(Letterboxd)" did on a TV log.
  */
-const TAG_PROVIDERS = [
+const DIARY_PROVIDERS = [
   'letterboxd',
   'serializd',
 ] as const satisfies readonly ProviderId[];
+
+const HEART_POP = {
+  from: { transform: [{ scale: 1 }] },
+  '45%': { transform: [{ scale: 1.18 }] },
+  to: { transform: [{ scale: 1 }] },
+};
 
 /** Joins provider labels for "Writes to ..." and outcome copy in both sheets. */
 export function labels(ids: readonly ProviderId[]): string {
@@ -67,6 +78,8 @@ export interface LogConfirmSheetProps {
   logMedia: ReturnType<typeof useLogMedia>;
   watchedAt: Date | null;
   onWatchedAtChange: (value: Date | null) => void;
+  liked: boolean;
+  onLikedChange: (value: boolean) => void;
   /**
    * Raw comma-separated diary tags — accepted by Letterboxd's and Serializd's
    * diary payloads (plan 0012/0017), so the field renders only when the parent
@@ -96,6 +109,8 @@ export type LogFormFieldsProps = Pick<
   | 'onSelectedProvidersChange'
   | 'watchedAt'
   | 'onWatchedAtChange'
+  | 'liked'
+  | 'onLikedChange'
   | 'tags'
   | 'onTagsChange'
 > & { pending: boolean };
@@ -109,17 +124,21 @@ export function LogFormFields({
   onSelectedProvidersChange,
   watchedAt,
   onWatchedAtChange,
+  liked,
+  onLikedChange,
   tags,
   onTagsChange,
   pending,
 }: LogFormFieldsProps) {
   const pushRoute = usePushRoute();
-  // Same gate as before — every provider in TAG_PROVIDERS genuinely consumes
-  // tags, so narrowing this would silently drop working Serializd functionality.
-  const tagProviders = TAG_PROVIDERS.filter((id) =>
+  const userscriptLikes = useLetterboxdUserscript('like');
+  const reduceMotion = useReducedMotion();
+  const diaryProviders = DIARY_PROVIDERS.filter((id) =>
     selectedProviders.includes(id),
   );
-  const showTagsField = onTagsChange != null && tagProviders.length > 0;
+  const showTagsField = onTagsChange != null && diaryProviders.length > 0;
+  const needsScriptUpdate = process.env.EXPO_OS === 'web' &&
+    diaryProviders.includes('letterboxd') && !userscriptLikes;
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(
@@ -167,13 +186,43 @@ export function LogFormFields({
           </Text>
         )}
 
-        <WatchedAtField onChange={onWatchedAtChange} value={watchedAt} />
+        <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
+          {diaryProviders.length > 0 && (
+            <Button
+              disabled={pending || needsScriptUpdate}
+              icon={
+                <AnimatedView
+                  style={{
+                    animationName: liked && !reduceMotion ? HEART_POP : undefined,
+                    animationDuration: DURATION.swap,
+                    animationTimingFunction: EASE_OUT,
+                  }}
+                >
+                  <Button.Icon name={liked ? 'heart' : 'heart-outline'} />
+                </AnimatedView>
+              }
+              iconOnly
+              label={`Like on ${labels(diaryProviders)}`}
+              onPress={() => {
+                haptics.selection();
+                onLikedChange(!liked);
+              }}
+              pressed={liked}
+              variant={liked ? 'outline' : 'quiet'}
+            />
+          )}
+        </WatchedAtField>
+        {needsScriptUpdate && (
+          <Text className="text-muted font-sans text-xs mt-2">
+            Update the Letterboxd userscript in Advanced setup to enable likes.
+          </Text>
+        )}
         {showTagsField && (
           <View className="mt-4">
             <Text className="text-foreground font-sans-semibold text-sm mb-2">
               Tags{' '}
               <Text className="text-muted font-sans text-xs">
-                ({labels(tagProviders)})
+                ({labels(diaryProviders)})
               </Text>
             </Text>
             <TextField
@@ -203,6 +252,8 @@ export function LogConfirmSheet({
   logMedia,
   watchedAt,
   onWatchedAtChange,
+  liked,
+  onLikedChange,
   tags,
   onTagsChange,
   confirmLabel,
@@ -276,6 +327,8 @@ export function LogConfirmSheet({
               onClose={onClose}
               onSelectedProvidersChange={onSelectedProvidersChange}
               onWatchedAtChange={onWatchedAtChange}
+              liked={liked}
+              onLikedChange={onLikedChange}
               pending={pending}
               selectedProviders={selectedProviders}
               targets={targets}
