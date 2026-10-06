@@ -284,6 +284,8 @@ export interface NormalizedDiaryEntry {
   watchedAt: string;
   /** True when `watchedAt` is a bare date (Letterboxd), not a full instant. */
   dateOnly?: boolean;
+  /** Provider-reported like; absent when the provider does not expose one. */
+  liked?: boolean;
   /** The logged media — the *show* for an episode log, the film for a movie. */
   item: NormalizedMediaItem;
   /**
@@ -318,6 +320,8 @@ export interface MergedDiaryEntry {
   watchedAt: string;
   /** True when every contributor is date-only (Letterboxd-only merge). */
   dateOnly: boolean;
+  /** True when any contributing log is liked. */
+  liked?: boolean;
 }
 
 /** One day bucket in the diary, newest-first, under a `YYYY-MM-DD` local key. */

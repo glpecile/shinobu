@@ -228,6 +228,7 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
     ...(season != null ? { season } : {}),
     watchedAt: newest.watchedAt,
     dateOnly: contributors.every((entry) => entry.dateOnly === true),
+    ...(contributors.some((entry) => entry.liked === true) ? { liked: true } : {}),
   };
 }
 

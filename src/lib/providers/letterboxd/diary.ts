@@ -29,6 +29,8 @@ export interface LetterboxdDiaryItem {
   watchedDate: string;
   /** `letterboxd:rewatch` = Yes. */
   rewatch: boolean;
+  /** RSS `letterboxd:memberLike` = Yes. */
+  liked?: boolean;
   /** `tmdb:movieId` — the cross-provider identity that lets a fanned-out log collapse. */
   tmdbId?: number;
   /** Poster URL lifted from the entry's CDATA `<img>`; '' when absent. */
@@ -91,6 +93,7 @@ export function parseDiaryFeed(xml: string): LetterboxdDiaryItem[] {
       ...(Number.isFinite(year) ? { year } : {}),
       watchedDate,
       rewatch: tagText(block, 'letterboxd:rewatch')?.toLowerCase() === 'yes',
+      liked: tagText(block, 'letterboxd:memberLike')?.toLowerCase() === 'yes',
       ...(Number.isFinite(tmdbId) ? { tmdbId } : {}),
       ...(posterUrl != null ? { posterUrl } : {}),
     });
@@ -114,6 +117,7 @@ export function normalizeDiaryItem(
     provider: 'letterboxd',
     watchedAt: raw.watchedDate,
     dateOnly: true,
+    liked: raw.liked === true,
     item: {
       id: `letterboxd-${raw.slug}`,
       title: raw.title,

@@ -21,6 +21,7 @@ const RSS = `<?xml version="1.0" encoding="UTF-8"?>
   <letterboxd:filmTitle>The Dink</letterboxd:filmTitle>
   <letterboxd:filmYear>2026</letterboxd:filmYear>
   <letterboxd:memberRating>3.0</letterboxd:memberRating>
+  <letterboxd:memberLike>Yes</letterboxd:memberLike>
   <tmdb:movieId>1361774</tmdb:movieId>
   <description><![CDATA[ <p><img src="https://a.ltrbxd.com/resized/film-poster/1/2/4/9/4/7/5/1249475-the-dink-0-600-0-900-crop.jpg?v=0f00f70cf0"/></p> <p>Fun.</p> ]]></description>
 </item>
@@ -51,6 +52,7 @@ describe('parseDiaryFeed', () => {
       year: 2026,
       watchedDate: '2026-07-21',
       rewatch: false,
+      liked: true,
       tmdbId: 1361774,
       posterUrl:
         'https://a.ltrbxd.com/resized/film-poster/1/2/4/9/4/7/5/1249475-the-dink-0-600-0-900-crop.jpg?v=0f00f70cf0',
@@ -64,6 +66,7 @@ describe('parseDiaryFeed', () => {
       title: 'Obscure Short',
       year: 2019,
       rewatch: true,
+      liked: false,
     });
     expect(items[1].tmdbId).toBeUndefined();
   });
@@ -80,6 +83,7 @@ describe('normalizeDiaryItem', () => {
       provider: 'letterboxd',
       watchedAt: '2026-07-21',
       dateOnly: true,
+      liked: true,
     });
     expect(entry.item).toMatchObject({
       id: 'letterboxd-the-dink',
@@ -93,6 +97,7 @@ describe('normalizeDiaryItem', () => {
   test('an item without a tmdb id keeps title+year identity, no tmdb', () => {
     const item = parseDiaryFeed(RSS)[1];
     const entry = normalizeDiaryItem(item, FETCHED);
+    expect(entry.liked).toBe(false);
     expect(entry.item.externalIds.tmdb).toBeUndefined();
     expect(entry.item.externalIds.letterboxd).toBe('obscure-short');
     expect(entry.item.year).toBe(2019);
@@ -114,6 +119,14 @@ describe('getDiary', () => {
     expect(requested).toEqual(['https://letterboxd.com/davidehrlich/rss/']);
     expect(entries).toHaveLength(2);
     expect(entries[0].provider).toBe('letterboxd');
+  });
+
+  test('an explicit No in RSS is not a like', async () => {
+    const entries = await Effect.runPromise(getDiary(
+      deps(async () => new Response(RSS.replace('<letterboxd:memberLike>Yes', '<letterboxd:memberLike>No'))),
+      { page: 1 },
+    ));
+    expect(entries[0].liked).toBe(false);
   });
 
   test('page 2+ returns [] without a request (RSS is one window)', async () => {

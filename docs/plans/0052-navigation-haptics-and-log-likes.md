@@ -8,6 +8,7 @@
 - Pass the choice through the existing diary payloads on Serializd, native Letterboxd, and the web userscript. No new endpoints or proxy writes.
 - A brief transform-only heart pop on liking, using Reanimated CSS keyframes, disabled for reduced motion; existing button press feedback remains.
 - Userscript 0.6.0 advertises like support; old scripts keep logging but cannot silently accept a liked log.
+- Diary rows show a small filled accent heart before the time/provider marks when a contributor reports a like. Read Letterboxd RSS `memberLike` and Serializd diary `like` during the existing refresh, never blocking the write. Collapsed episode runs indicate that at least one log is liked; expanded rows keep their individual state.
 
 ## Validation
 
