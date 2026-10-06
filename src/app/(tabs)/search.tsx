@@ -527,7 +527,8 @@ export default function SearchScreen() {
             // shrink past on Firefox, so the clear button beside it was pushed
             // out of the field and off the viewport
             // (docs/solutions/firefox-flex-input-wont-shrink.md).
-            className="flex-1 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
+            // Match the clear target even when empty so typing cannot grow the row.
+            className="flex-1 min-h-11 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}
