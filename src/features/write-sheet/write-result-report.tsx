@@ -8,7 +8,7 @@ import {
   splitSkippedOutcomes,
 } from '@/features/log-media/manual-write-links';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
-import { OutcomeLink, type OutcomeLinkTone } from '@/features/log-media/outcome-link';
+import { OutcomeLink } from '@/features/log-media/outcome-link';
 import { cn } from '@/lib/cn';
 import type { UrlItem } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -25,13 +25,11 @@ function OutcomeMessage({
   message,
   item,
   verb,
-  tone = 'accent',
 }: {
   outcome: ProviderWriteOutcome;
   message: string;
   item: UrlItem;
   verb?: string;
-  tone?: OutcomeLinkTone;
 }) {
   const link = manualLinkForOutcome(outcome, item);
   const accent = useThemeColor('--color-accent-on-tonal');
@@ -78,7 +76,7 @@ function OutcomeMessage({
       {link != null && (
         <OutcomeLink
           provider={outcome.provider}
-          tone={tone}
+          tone={failed ? 'accent' : 'neutral'}
           url={link}
           {...(verb != null ? { verb } : {})}
         />
@@ -170,7 +168,6 @@ export function WriteResultReport({
               item={item}
               key={`ok-${outcome.provider}`}
               message={outcome.reason}
-              tone="neutral"
               outcome={outcome}
               {...(verb != null ? { verb } : {})}
             />
@@ -180,7 +177,6 @@ export function WriteResultReport({
               item={item}
               key={outcome.provider}
               message={outcome.reason}
-              tone="neutral"
               outcome={outcome}
               {...(verb != null ? { verb } : {})}
             />
