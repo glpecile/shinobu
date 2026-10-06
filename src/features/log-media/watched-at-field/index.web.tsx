@@ -1,9 +1,11 @@
 import { Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 
 /** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface WatchedAtFieldProps {
   value: Date | null;
   onChange: (value: Date | null) => void;
+  children?: ReactNode;
 }
 
 /** Local YYYY-MM-DD (toISOString would shift the day across timezones). */
@@ -22,34 +24,38 @@ function toInputValue(date: Date): string {
  * current time-of-day so the stored instant lands inside the chosen local
  * date, not on a midnight boundary that can shift a day when converted to UTC.
  */
-export function WatchedAtField({ value, onChange }: WatchedAtFieldProps) {
+export function WatchedAtField({ value, onChange, children }: WatchedAtFieldProps) {
   const today = toInputValue(new Date());
   return (
-    <View className="mt-4 flex-row items-center justify-between border border-border rounded-full px-4 py-3">
-      <Text className="text-muted font-sans text-sm">Watched on</Text>
-      <input
-        className="bg-surface text-foreground font-sans text-sm border border-border rounded-full px-2 py-1"
-        max={today}
-        // The browser paints the calendar-picker glyph from `color-scheme`, not
-        // from `color`: without this it stays the light-scheme black on the
-        // dark surface. `light dark` follows the OS preference, the same
-        // signal the app's theme follows (`app/+html.tsx`).
-        style={{ colorScheme: 'light dark' }}
-        onChange={(event) => {
-          const raw = event.target.value;
-          if (raw === '' || raw === today) {
-            onChange(null);
-            return;
-          }
-          const [year, month, day] = raw.split('-').map(Number);
-          const now = new Date();
-          onChange(
-            new Date(year, month - 1, day, now.getHours(), now.getMinutes()),
-          );
-        }}
-        type="date"
-        value={value != null ? toInputValue(value) : today}
-      />
+    <View className="mt-4 flex-row items-center gap-2">
+      <View className="flex-1 flex-row items-center justify-between border border-border rounded-full px-4 py-3">
+        <Text className="text-muted font-sans text-sm">Watched on</Text>
+        <input
+          aria-label="Watched on"
+          className="bg-surface text-foreground font-sans text-sm border border-border rounded-full px-2 py-1"
+          max={today}
+          // The browser paints the calendar-picker glyph from `color-scheme`, not
+          // from `color`: without this it stays the light-scheme black on the
+          // dark surface. `light dark` follows the OS preference, the same
+          // signal the app's theme follows (`app/+html.tsx`).
+          style={{ colorScheme: 'light dark' }}
+          onChange={(event) => {
+            const raw = event.target.value;
+            if (raw === '' || raw === today) {
+              onChange(null);
+              return;
+            }
+            const [year, month, day] = raw.split('-').map(Number);
+            const now = new Date();
+            onChange(
+              new Date(year, month - 1, day, now.getHours(), now.getMinutes()),
+            );
+          }}
+          type="date"
+          value={value != null ? toInputValue(value) : today}
+        />
+      </View>
+      {children}
     </View>
   );
 }

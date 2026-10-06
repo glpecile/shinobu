@@ -72,6 +72,7 @@ describe('logToSerializd', () => {
         watchedAt: '2026-07-15T20:00:00.000Z',
         tags: ['binge', ' late-night '],
         rewatch: true,
+        liked: true,
       }),
     );
     expect(result).toEqual({ status: 'ok' });
@@ -99,6 +100,7 @@ describe('logToSerializd', () => {
       backdate: '2026-07-15T20:00:00.000Z',
       is_log: true,
       is_rewatch: true,
+      like: true,
       // Tags are trimmed of surrounding whitespace (R10).
       tags: ['binge', 'late-night'],
     });
@@ -110,7 +112,7 @@ describe('logToSerializd', () => {
     await Effect.runPromise(
       logToSerializd(deps, tvShow({ tmdb: 1396 }), { episode: { season: 1, number: 1 } }),
     );
-    expect(requests[2].body).toMatchObject({ is_rewatch: false });
+    expect(requests[2].body).toMatchObject({ is_rewatch: false, like: false });
   });
 
   test('a null seasonId is a skipped value — not a throw, not ok — and skips the writes', async () => {

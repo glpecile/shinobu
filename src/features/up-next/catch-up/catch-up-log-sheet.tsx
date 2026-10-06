@@ -179,6 +179,7 @@ function CatchUpSession({
 
   const [selectedProviders, setSelectedProviders] = useState(targets);
   const [tags, setTags] = useState(DEFAULT_TAGS);
+  const [liked, setLiked] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   /** The chain, frozen at the first confirm (see the component docblock). */
   const [frozen, setFrozen] = useState<CatchUpEpisode[] | null>(null);
@@ -265,6 +266,7 @@ function CatchUpSession({
     return {
       ...episodeVariables(entry.item, episode),
       providers: selectedProviders,
+      liked,
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
     };
@@ -429,6 +431,8 @@ function CatchUpSession({
               onClose={closeCatchUp}
               onSelectedProvidersChange={setSelectedProviders}
               onTagsChange={setTags}
+              liked={liked}
+              onLikedChange={setLiked}
               onWatchedAtChange={setWatchedAt}
               pending={awaiting}
               selectedProviders={selectedProviders}

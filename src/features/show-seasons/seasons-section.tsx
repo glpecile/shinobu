@@ -106,6 +106,7 @@ function SeasonAccordionList({
   // Diary tags — accepted by Serializd's TV diary payload (plan 0017 R10). The
   // confirm sheet only surfaces the field when Serializd is a selected target.
   const [tags, setTags] = useState('');
+  const [liked, setLiked] = useState(false);
   const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>(targets);
 
   function openLog(next: PendingLog) {
@@ -114,6 +115,7 @@ function SeasonAccordionList({
     logMedia.reset();
     setWatchedAt(null);
     setTags('');
+    setLiked(false);
     setSelectedProviders(targets);
     setPending(next);
   }
@@ -130,6 +132,7 @@ function SeasonAccordionList({
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
+        liked,
       },
       {
         onSuccess: (outcome) => {
@@ -229,6 +232,8 @@ function SeasonAccordionList({
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}
+        liked={liked}
+        onLikedChange={setLiked}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
         pendingLabel="Logging…"

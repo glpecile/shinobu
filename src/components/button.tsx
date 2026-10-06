@@ -104,6 +104,7 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `link-outline` / `unlink-outline` | connect / disconnect a tracker |
  * | `chevron-back` / `chevron-forward` | step to the previous / next sibling in place |
  * | `copy-outline` | copy text to the clipboard |
+ * | `heart-outline` / `heart` | like — filled when selected |
  *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more
@@ -188,6 +189,10 @@ export interface ButtonProps {
   /** Truncate a label when the button has a constrained width. */
   numberOfLines?: number;
   accessibilityLabel?: string;
+  /** Hide the visible label while keeping it as the accessible name. */
+  iconOnly?: boolean;
+  /** Toggle state, announced on native and web. */
+  pressed?: boolean;
   /**
    * Layout only — `shrink-0`, `self-start`, `self-stretch`, `mt-2`.
    * Deliberately last in the `cn` chain so it wins, but appearance belongs to
@@ -235,6 +240,8 @@ export function Button({
   morphLabel = false,
   numberOfLines,
   accessibilityLabel,
+  iconOnly = false,
+  pressed,
   className,
 }: ButtonProps) {
   const spinnerToken = useThemeColor(SPINNER_TOKEN[variant]);
@@ -250,9 +257,9 @@ export function Button({
 
   return (
     <PresstableOpacity
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={accessibilityLabel ?? (iconOnly ? label : undefined)}
       accessibilityRole="button"
-      accessibilityState={{ busy: loading, disabled: unavailable }}
+      accessibilityState={{ busy: loading, disabled: unavailable, selected: pressed }}
       // Layout only out here. The *box* is the inner View, because a border on
       // a pressto pressable is never drawn on Android — RNGH's native button
       // supplies its own background drawable, and that's the same drawable
@@ -268,6 +275,7 @@ export function Button({
       // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
       aria-busy={loading}
       aria-disabled={unavailable}
+      aria-pressed={pressed}
       disabled={unavailable}
       onPress={onPress}
     >
@@ -276,7 +284,7 @@ export function Button({
           'flex-row items-center',
           align === 'start' ? 'justify-start' : 'justify-center',
           SHAPE[shape],
-          SIZE[size].container,
+          iconOnly ? 'size-11 shrink-0' : SIZE[size].container,
           unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
         )}
         layout={BOX_LAYOUT}
@@ -326,29 +334,31 @@ export function Button({
             </AnimatedView>
           </AnimatedView>
         )}
-        <AnimatedView
-          // A row's label takes the free space so a trailing glyph is pushed
-          // to the far edge rather than sitting against the label's last word.
-          className={cn(
-            overlay && 'opacity-0',
-            align === 'start' && 'flex-1',
-            numberOfLines != null && 'min-w-0 shrink',
-          )}
-          layout={BOX_LAYOUT}
-          style={COLOR_TRANSITION}
-        >
-          <LabelText
-            numberOfLines={numberOfLines}
+        {!iconOnly && (
+          <AnimatedView
+            // A row's label takes the free space so a trailing glyph is pushed
+            // to the far edge rather than sitting against the label's last word.
             className={cn(
-              'font-sans-semibold',
-              morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
-              SIZE[size].label,
-              unavailable ? LABEL[variant].off : LABEL[variant].on,
+              overlay && 'opacity-0',
+              align === 'start' && 'flex-1',
+              numberOfLines != null && 'min-w-0 shrink',
             )}
+            layout={BOX_LAYOUT}
+            style={COLOR_TRANSITION}
           >
-            {shownLabel}
-          </LabelText>
-        </AnimatedView>
+            <LabelText
+              numberOfLines={numberOfLines}
+              className={cn(
+                'font-sans-semibold',
+                morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
+                SIZE[size].label,
+                unavailable ? LABEL[variant].off : LABEL[variant].on,
+              )}
+            >
+              {shownLabel}
+            </LabelText>
+          </AnimatedView>
+        )}
         {trailingIcon != null && (
           // No enter/exit and no `loading` gate — see `trailingIcon`'s
           // docblock. Muted, because it marks where the press *goes* rather

@@ -120,7 +120,7 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
   const body = {
     diaryDetails: { diaryDate: request.viewingDateStr, rewatch: request.rewatch },
     tags: request.tags,
-    like: false,
+    like: request.liked === true,
   };
   return `(function(){
     var id = ${JSON.stringify(id)};

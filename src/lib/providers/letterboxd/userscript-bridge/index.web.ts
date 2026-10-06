@@ -3,9 +3,10 @@ import type { LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, Letter
 
 const READY_ATTRIBUTE = 'data-shinobu-letterboxd-bridge';
 
-export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' = 'log'): boolean {
+export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' = 'log'): boolean {
   const version = typeof document !== 'undefined' ? document.documentElement.getAttribute(READY_ATTRIBUTE) : null;
-  return version === '5' || (capability !== 'watchlist-remove' && version === '4') || (capability === 'log' && version === '3');
+  if (capability === 'like') return version === '6';
+  return version === '6' || version === '5' || (capability !== 'watchlist-remove' && version === '4') || (capability === 'log' && version === '3');
 }
 
 function subscribe(listener: () => void) {
@@ -16,14 +17,19 @@ function subscribe(listener: () => void) {
 
 function serverSnapshot() { return false; }
 
-export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' = 'log'): boolean {
+export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' = 'log'): boolean {
   return useSyncExternalStore(subscribe, () => hasLetterboxdUserscript(capability), serverSnapshot);
 }
 
 /** The userscript owns the cross-tab handoff. Cookies never enter Shinobu. */
 export function getLetterboxdUserscriptFetch(username: string | null): LetterboxdWebFetch | undefined {
   if (!username || !hasLetterboxdUserscript()) return undefined;
-  return (request) => sendRequest(username, 'log', request);
+  return (request) => {
+    if (request.liked && !hasLetterboxdUserscript('like')) {
+      return Promise.reject(new Error('Update the Letterboxd script to support likes. Nothing was sent.'));
+    }
+    return sendRequest(username, 'log', request);
+  };
 }
 
 export function getLetterboxdUserscriptWatchlistFetch(username: string | null): LetterboxdWatchlistWebFetch | undefined {

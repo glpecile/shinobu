@@ -49,6 +49,7 @@ export function EpisodeLogButton({
   const [open, setOpen] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   const [tags, setTags] = useState('');
+  const [liked, setLiked] = useState(false);
   const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>(targets);
   // Provider reads lag a write (AniList/Serializd never feed `watched`); keyed
   // by code so it can't carry over between episodes.
@@ -71,6 +72,7 @@ export function EpisodeLogButton({
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
+        liked,
       },
       {
         onSuccess: (outcome) => {
@@ -109,6 +111,7 @@ export function EpisodeLogButton({
           logMedia.reset();
           setWatchedAt(null);
           setTags('');
+          setLiked(false);
           setSelectedProviders(targets);
           setOpen(true);
         }}
@@ -123,6 +126,8 @@ export function EpisodeLogButton({
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}
+        liked={liked}
+        onLikedChange={setLiked}
         onWatchedAtChange={setWatchedAt}
         open={open}
         pendingLabel="Logging…"

@@ -30,6 +30,7 @@ const REQUEST: LetterboxdWebRequest = {
   viewingDateStr: '2026-07-17',
   tags: ['rewatch-night', 'imax'],
   rewatch: false,
+  liked: true,
 };
 
 /** Pull the request id the submit script tags its postMessage with. */
@@ -80,6 +81,7 @@ describe('letterboxdWebFetch', () => {
     expect(submit).toContain('2026-07-17'); // the diary date
     expect(submit).toContain('rewatch-night'); // tags
     expect(submit).toContain('"rewatch":false'); // not a rewatch
+    expect(submit).toContain('"like":true');
 
     handleLetterboxdMessage(
       JSON.stringify({ id: idFromScript(submit), status: 200, body: '{"logEntry":{}}' }),

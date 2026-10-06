@@ -138,9 +138,10 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
   // the reconcile step. Registered now but only
   // reached once registry canWrite flips true (after the sign-in WebView lands)
   // — a missing session fails as ProviderAuthError, surfaced per-provider.
-  letterboxd: ({ item, watchedAt, tags, rewatch }) =>
+  letterboxd: ({ item, watchedAt, tags, rewatch, liked }) =>
     Effect.runPromise(
       logToLetterboxd(letterboxdDeps(), item, {
+        liked,
         ...(watchedAt != null ? { watchedAt } : {}),
         ...(tags != null && tags.length > 0 ? { tags } : {}),
         ...(rewatch === true ? { rewatch: true } : {}),
@@ -151,9 +152,10 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
   // that can't be resolved or an item with no tmdb becomes a `skipped` outcome
   // (R9), not a thrown error. A partial write (episode watched, diary failed)
   // fails loudly so reconcile re-attempts the diary entry (R12).
-  serializd: ({ item, episode, episodes, watchedAt, tags, rewatch }) =>
+  serializd: ({ item, episode, episodes, watchedAt, tags, rewatch, liked }) =>
     Effect.runPromise(
       logToSerializd(serializdDeps(), item, {
+        liked,
         ...(episode != null ? { episode } : {}),
         ...(episodes != null ? { episodes } : {}),
         ...(watchedAt != null ? { watchedAt } : {}),

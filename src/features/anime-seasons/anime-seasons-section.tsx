@@ -86,6 +86,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   // Diary tags — Serializd accepts them on a mapped anime-series log (plan 0017 R10).
   const [tags, setTags] = useState('');
+  const [liked, setLiked] = useState(false);
   const [selectedProviders, setSelectedProviders] =
     useState<ProviderId[]>(targets);
 
@@ -136,6 +137,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
     logMedia.reset();
     setWatchedAt(null);
     setTags('');
+    setLiked(false);
     setSelectedProviders(targets);
     setPending(next);
   }
@@ -154,6 +156,7 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
         ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
         providers: selectedProviders,
+        liked,
       },
       {
         onSuccess: (outcome) => {
@@ -263,6 +266,8 @@ function AnimeSeasonAccordionList({ item }: { item: NormalizedMediaItem }) {
         onConfirm={confirmLog}
         onSelectedProvidersChange={setSelectedProviders}
         onTagsChange={setTags}
+        liked={liked}
+        onLikedChange={setLiked}
         onWatchedAtChange={setWatchedAt}
         open={pending != null}
         pendingLabel="Logging…"
