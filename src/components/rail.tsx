@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { List, type ListProps } from '@/components/List';
 import { type ThemeColorToken, useThemeColor } from '@/lib/theme-color';
 
 /**
@@ -76,6 +77,23 @@ export function Rail({ onScroll, ...rest }: ScrollViewProps) {
         nestedScrollEnabled
         showsHorizontalScrollIndicator={false}
         {...rest}
+        {...scrollProps}
+      />
+      {fade}
+    </View>
+  );
+}
+
+/** A data-backed rail. The caller supplies its bounded cross-axis height. */
+export function VirtualizedRail<T>({ onScroll, ...props }: ListProps<T>) {
+  const { scrollProps, fade } = useRailFade(onScroll);
+  return (
+    <View>
+      <List
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator={false}
+        {...props}
         {...scrollProps}
       />
       {fade}
