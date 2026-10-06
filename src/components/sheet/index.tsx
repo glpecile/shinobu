@@ -31,6 +31,12 @@ export interface SheetProps {
  * sizes to content. The only allowed import of the lib (oxlint-enforced).
  */
 export function Sheet({ open, onClose, children }: SheetProps) {
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  // Keep opened sheets mounted for closing animations and draft state, but
+  // don't build every unused form/portal when its trigger first appears.
+  if (!mounted) return null;
+
   return (
     <ModalBottomSheet
       detents={[0, 'content']}
