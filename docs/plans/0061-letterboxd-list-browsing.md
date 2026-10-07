@@ -56,3 +56,22 @@ Transport findings: `docs/solutions/letterboxd-public-list-pages.md`.
 
 JS-only changes hot reload; no clean native rebuild is required. Web needs
 the updated existing Worker alongside the app.
+
+### Design correction
+
+- Hide empty created/liked sections on Home, like the existing media rails.
+- Keep list previews at one fixed card height with single-line truncated
+  titles; don't reserve an empty second title line for short names.
+- Reuse the Home rails' accent View all link, not a bordered external-link pill.
+- Share the existing round arrow Back control across detail and browse headers.
+- Use the actual list title as the header; keep count and external access in a
+  compact toolbar with the existing poster/list toggle.
+- Reuse the watchlist's poster wall, rows and persisted layout preference.
+
+Follow-up browser validation measured all 16 mounted created/liked Home previews
+at 240 × 192, including long titles. Created-list View all, a public film list,
+and switching from posters to the existing film rows worked. The shared detail
+list's web header/footer now have flex parents, restoring centered content
+(`docs/solutions/detail-list-web-header-centering.md`). Further Argent checks
+and replay were stopped at the user's request. Local checks and all 1,264 tests
+pass; these corrections remain JS-only.

@@ -31,7 +31,7 @@ export function RoundIconButton({
     <PresstableOpacity
       accessibilityLabel={label}
       accessibilityRole="button"
-      className={cn('rounded-full', className)}
+      className={cn('min-w-11 min-h-11 items-center justify-center rounded-full', className)}
       onPress={onPress}
       style={style}
     >

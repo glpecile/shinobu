@@ -1,10 +1,8 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RoundIconButton } from '@/components/round-icon-button';
-import { useThemeColor } from '@/lib/theme-color';
+import { BackButton } from '@/components/back-button';
 
-export const FLOATING_BACK_BUTTON_SIZE = 40;
+export const FLOATING_BACK_BUTTON_SIZE = 44;
 export const FLOATING_BACK_BUTTON_GAP = 8;
 const WEB_BACK_BUTTON_TOP = 16;
 
@@ -25,14 +23,11 @@ export function useFloatingBackButtonClearance() {
 
 /** The round back button floating over detail-style screens. */
 export function FloatingBackButton({ onPress }: { onPress: () => void }) {
-  const foreground = useThemeColor('--color-foreground');
   const top = useFloatingBackButtonTop();
 
   return (
-    <RoundIconButton
+    <BackButton
       className="absolute left-4"
-      icon={<Ionicons color={foreground} name="arrow-back" size={20} />}
-      label="Back"
       onPress={onPress}
       style={{ top }}
     />

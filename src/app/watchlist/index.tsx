@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useLocalSearchParams,
@@ -9,6 +8,7 @@ import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { BackButton } from '@/components/back-button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
 import Head from '@/components/head';
@@ -30,7 +30,6 @@ import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
 import type { ProviderFailure } from '@/state/queries/settle';
@@ -264,7 +263,6 @@ function WatchlistGrid({
 
 export default function WatchlistScreen() {
   const router = useRouter();
-  const foreground = useThemeColor('--color-foreground');
   // The filter lives in the URL, not in state: it is what makes
   // `routes.watchlist('letterboxd')` a real destination for the Letterboxd feed
   // row (the reason `/watchlist/letterboxd` could be deleted rather than
@@ -296,17 +294,7 @@ export default function WatchlistScreen() {
           'pb-4',
         )}
       >
-        <PresstableOpacity
-          accessibilityLabel="Back"
-          className="w-9 h-9 -ml-2 items-center justify-center rounded-full"
-          onPress={goBack}
-        >
-          <Ionicons
-            color={foreground}
-            name="arrow-back"
-            size={22}
-          />
-        </PresstableOpacity>
+        <BackButton className="-ml-2" onPress={goBack} />
         {/* No `ProviderIcon` — see the file docblock. */}
         <Text className="text-2xl font-display text-foreground">Watchlist</Text>
       </View>

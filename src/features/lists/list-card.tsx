@@ -16,7 +16,7 @@ export function ListCard({ list, onPress }: { list: LetterboxdList; onPress: () 
       <PressableCard
         accessibilityLabel={`${list.title}. ${count}by ${list.owner}`}
         accessibilityRole="button"
-        cardClassName="h-56"
+        cardClassName="h-48"
         onPress={() => { if (!newTab.opened()) onPress(); }}
       >
         <View className="flex-row gap-1 h-28 overflow-hidden rounded-md mb-3">
@@ -28,7 +28,7 @@ export function ListCard({ list, onPress }: { list: LetterboxdList; onPress: () 
             </View>
           ))}
         </View>
-        <Text className="font-sans-semibold text-foreground text-sm h-10" numberOfLines={2}>{list.title}</Text>
+        <Text className="font-sans-semibold text-foreground text-sm" numberOfLines={1}>{list.title}</Text>
         <Text className="font-sans text-muted text-xs mt-1" numberOfLines={1}>{`${count}by ${list.owner}`}</Text>
       </PressableCard>
     </View>

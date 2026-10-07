@@ -144,9 +144,10 @@ export function useSuspenseLetterboxdListsQuery(username: string, kind: Letterbo
 export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string) {
   return useSuspenseInfiniteQuery({
     queryKey: letterboxdQueryKeys.listFilms(owner, slug),
-    queryFn: ({ pageParam, signal }) => Effect.runPromise(
-      getListFilmsPage(letterboxdDeps(), { owner, slug, page: pageParam }), { signal },
-    ),
+    queryFn: ({ pageParam, signal }) =>
+      Effect.runPromise(
+        getListFilmsPage(letterboxdDeps(), { owner, slug, page: pageParam }), { signal },
+      ),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,

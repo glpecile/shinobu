@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryErrorResetBoundary } from '@tanstack/react-query';
 import {
   useLocalSearchParams,
@@ -11,6 +10,7 @@ import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
 
 import { Button } from '@/components/button';
+import { BackButton } from '@/components/back-button';
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { LoadMoreFooter } from '@/components/load-more-footer';
@@ -44,7 +44,6 @@ import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { anilistQueryKeys, useSuspenseSeasonalAnimePagesQuery } from '@/state/queries/anilist';
 import { useWarmPosters } from '@/features/anime-seasons/warm-posters';
-import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 function uniqueById<T extends { id: string }>(items: readonly T[]): T[] {
@@ -243,7 +242,6 @@ function useTrailingFormat(format: AnimeFormatFilter): AnimeFormatFilter {
 
 export default function AnimeSeasonsScreen() {
   const router = useRouter();
-  const foreground = useThemeColor('--color-foreground');
   const params = useLocalSearchParams<{ season?: string; year?: string; format?: string }>();
   const now = animeSeasonAt(new Date());
   const window = parseAnimeSeasonWindow(params, now);
@@ -290,17 +288,7 @@ export default function AnimeSeasonsScreen() {
           'pb-4',
         )}
       >
-        <PresstableOpacity
-          accessibilityLabel="Back"
-          className="w-9 h-9 -ml-2 items-center justify-center rounded-full"
-          onPress={goBack}
-        >
-          <Ionicons
-            color={foreground}
-            name="arrow-back"
-            size={22}
-          />
-        </PresstableOpacity>
+        <BackButton className="-ml-2" onPress={goBack} />
         <Text className="text-2xl font-display text-foreground">Anime Seasons</Text>
       </View>
       <SeasonPicker onChange={setWindow} progress={progress} window={window} />

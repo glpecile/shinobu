@@ -1,15 +1,11 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
-import { AnimatedView } from '@/components/animated-view';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { List } from '@/components/List';
-import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useRailFade } from '@/components/rail';
+import { ViewAllLink } from '@/components/view-all-link';
 import type { ProviderId } from '@/lib/providers/types';
-import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { MediaCard } from './media-card';
@@ -61,11 +57,6 @@ export function MediaCarousel({
   onViewAll,
 }: MediaCarouselProps) {
   const { scrollProps, fade } = useRailFade();
-  const accent = useThemeColor('--color-accent');
-  // JS hover state, not CSS: uniwind has no `group-hover:`, so the pointer
-  // events drive a Reanimated CSS transition instead (same approach as
-  // `MediaCard`'s web-only ⋯ reveal).
-  const [viewAllHovered, setViewAllHovered] = useState(false);
 
   if (items.length === 0) return null;
 
@@ -74,45 +65,7 @@ export function MediaCarousel({
       collapseKey={collapseKey}
       leading={provider != null ? <ProviderIcon id={provider} size={16} /> : undefined}
       title={title}
-      action={onViewAll != null && (
-          // Hover lives on a plain wrapper: pressto's pressables take
-          // gesture-handler props, not RN-web pointer ones.
-          <View
-            className="shrink-0"
-            onPointerEnter={() => setViewAllHovered(true)}
-            onPointerLeave={() => setViewAllHovered(false)}
-          >
-            <PresstableOpacity
-              accessibilityLabel={`View all in ${title}`}
-              className="flex-row items-center gap-1"
-              onPress={onViewAll}
-            >
-              <Text className="text-accent font-sans-semibold text-sm">
-                View all
-              </Text>
-              {/* Only the chevron travels — the label stays anchored, so the
-                  arrow reads as pointing onward rather than the whole control
-                  drifting. Accent, not muted: a grey arrow after red text read
-                  as two separate things. The nudge is a Reanimated CSS
-                  transition (the same declarative style the floating tiles
-                  use), so native simply never triggers it. */}
-              <AnimatedView
-                style={{
-                  transform: [{ translateX: viewAllHovered ? 3 : 0 }],
-                  transitionProperty: 'transform',
-                  transitionDuration: 160,
-                  transitionTimingFunction: 'ease-out',
-                }}
-              >
-                <Ionicons
-                  color={accent}
-                  name="chevron-forward"
-                  size={14}
-                />
-              </AnimatedView>
-            </PresstableOpacity>
-          </View>
-      )}
+      action={onViewAll != null && <ViewAllLink onPress={onViewAll} title={title} />}
     >
       <View>
         {/* Virtualized, not `ScrollView` + `map` (AGENTS.md "Long Lists"): a

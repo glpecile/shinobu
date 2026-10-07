@@ -44,14 +44,14 @@ export function DetailsList({
       getItemType={(row) => row.kind}
       keyExtractor={(row) => row.key}
       ListHeaderComponent={
-        <>
+        <View>
           {header}
           {episodeSection != null && (
             <View className="w-full max-w-4xl self-center px-6">{episodeSection.heading}</View>
           )}
-        </>
+        </View>
       }
-      ListFooterComponent={<>{footer}</>}
+      ListFooterComponent={<View>{footer}</View>}
       onScroll={(event) => scrollY.set(event.nativeEvent.contentOffset.y)}
       scrollEventThrottle={16}
       renderScrollComponent={(props) => (
