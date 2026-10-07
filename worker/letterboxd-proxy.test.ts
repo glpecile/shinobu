@@ -56,12 +56,18 @@ describe('isLetterboxdProxyRequest', () => {
 });
 
 describe('allowlist', () => {
-  test('passes the three read shapes through to upstream', async () => {
+  test('passes the public read shapes through to upstream', async () => {
     for (const path of [
       '/api/letterboxd/gian/watchlist/',
       '/api/letterboxd/gian/rss/',
       '/api/letterboxd/gian/tags/',
       '/api/letterboxd/User_Name-9/watchlist/',
+      '/api/letterboxd/gian/lists/',
+      '/api/letterboxd/gian/lists/page/2/',
+      '/api/letterboxd/gian/likes/lists/page/1/',
+      '/api/letterboxd/gian/likes/lists/page/9999/',
+      '/api/letterboxd/other/list/250-classics/',
+      '/api/letterboxd/other/list/250-classics/page/2/',
     ]) {
       const upstream = capturingUpstream(htmlResponse());
       const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);
@@ -139,10 +145,15 @@ describe('allowlist', () => {
   });
 
   test('any non-GET method on an allowlisted path is 405', async () => {
-    for (const method of ['POST', 'PUT', 'DELETE']) {
+    for (const [method, path] of [
+      ['POST', '/api/letterboxd/gian/rss/'],
+      ['PUT', '/api/letterboxd/gian/lists/'],
+      ['DELETE', '/api/letterboxd/gian/likes/lists/page/1/'],
+      ['POST', '/api/letterboxd/gian/list/classics/page/2/'],
+    ]) {
       const upstream = capturingUpstream(htmlResponse());
       const res = await handleLetterboxdProxy(
-        proxyRequest('/api/letterboxd/gian/rss/', { method, body: '{}' }),
+        proxyRequest(path, { method, body: '{}' }),
         upstream.fetch,
       );
       expect(res.status).toBe(405);
@@ -157,6 +168,18 @@ describe('allowlist', () => {
       '/api/letterboxd/film/tuner/',
       '/api/letterboxd/api/v0/production-log-entries',
       '/api/letterboxd/gian/watchlist/extra/',
+      '/api/letterboxd/gian/likes/lists/',
+      '/api/letterboxd/gian/lists/page/0/',
+      '/api/letterboxd/gian/likes/lists/page/01/',
+      '/api/letterboxd/gian/list/classics/page/99999/',
+      '/api/letterboxd/gian/list/classics/edit/',
+      '/api/letterboxd/gian/list/classics/likes/',
+      '/api/letterboxd/gian/list/classics/detail/',
+      '/api/letterboxd/gian/list/classics/by/name/',
+      '/api/letterboxd/gian/list/classics/page/2',
+      '/api/letterboxd/gian/list/',
+      '/api/letterboxd/gian/list/evil%2Fslug/',
+      `/api/letterboxd/gian/list/${'a'.repeat(201)}/`,
       '/api/letterboxd/gi an/watchlist/',
       '/api/letterboxd/../secret',
       '/api/letterboxd/gian/../../etc',

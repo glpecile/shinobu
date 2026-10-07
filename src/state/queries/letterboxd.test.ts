@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 
 import type { TmdbMediaCatalogue } from '@/lib/providers/tmdb/normalize';
@@ -45,7 +45,7 @@ afterAll(() => {
   delete globals.window;
 });
 
-const { fetchLetterboxdReleaseInputs, letterboxdQueryKeys } = await import(
+const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys } = await import(
   './letterboxd'
 );
 // Written through the session layer's own setters rather than into the map
@@ -84,6 +84,19 @@ function film(
     externalIds: { letterboxd: slug, ...(tmdb != null ? { tmdb } : {}) },
   };
 }
+
+test('a film on a later list page resolves for details without fetching any lists', () => {
+  const client = new QueryClient();
+  client.setQueryData(letterboxdQueryKeys.listFilms('jack', 'classics'), {
+    pages: [
+      { title: 'Classics', items: [film('heat', 'Heat')], hasNextPage: true },
+      { title: 'Classics', items: [film('21-grams', '21 Grams')], hasNextPage: false },
+    ],
+    pageParams: [1, 2],
+  });
+  expect(findInLetterboxdListsCache(client, 'letterboxd-21-grams')?.title).toBe('21 Grams');
+  expect(findInLetterboxdListsCache(client, 'letterboxd-missing')).toBeUndefined();
+});
 
 interface Scenario {
   watchlist?: NormalizedMediaItem[];

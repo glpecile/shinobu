@@ -36,6 +36,7 @@ import {
   LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
 import { UpNextSection } from '@/features/up-next/up-next-section';
+import { LetterboxdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
@@ -235,6 +236,16 @@ function FeedScreen() {
               username={letterboxdUsername}
             />
           </SuspenseSection>
+        )}
+        {letterboxdUsername != null && (
+          <>
+            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <LetterboxdListsRow kind="created" username={letterboxdUsername} />
+            </SuspenseSection>
+            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <LetterboxdListsRow kind="liked" username={letterboxdUsername} />
+            </SuspenseSection>
+          </>
         )}
         {/* "Your Shows" and "Your Anime" used to sit here — flat dumps of
             every show/anime the trackers had ever seen you watch. Removed

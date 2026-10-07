@@ -9,7 +9,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
-import { useLetterboxdFilmTmdbQuery } from './letterboxd';
+import { findInLetterboxdListsCache, useLetterboxdFilmTmdbQuery } from './letterboxd';
 import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
@@ -116,6 +116,7 @@ export function useResolvedMediaItem(id: string): {
     // hit "Not found" without this step. Cache-only: opening a details screen
     // never triggers the gather.
     findInWatchlistCache(queryClient, id) ??
+    findInLetterboxdListsCache(queryClient, id) ??
     findInTmdbCache(queryClient, id) ??
     findInSeasonalPagesCache(queryClient, id);
   // Cold deep link (a refreshed browser tab, a shared URL): nothing above
