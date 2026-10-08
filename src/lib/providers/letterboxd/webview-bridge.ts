@@ -1,4 +1,5 @@
 import type {
+  LetterboxdListLikeWebRequest,
   LetterboxdWatchlistWebRequest,
   LetterboxdWebRequest,
   LetterboxdWebResponse,
@@ -11,7 +12,7 @@ import type {
  * write must run in-session — the only channel carrying the real session is the
  * WebView itself (proven empirically, docs/solutions/letterboxd-no-api-fallback.md).
  *
- * Each write mounts a film page with a document-end script. Nitro's imperative
+ * Each write mounts its film or list page with a document-end script. Nitro's imperative
  * `evaluateJavaScript` runs off the main thread and crashes WebKit on iOS.
  * The injected script relays
  * the outcome over `window.ReactNativeWebView.postMessage(...)` → the WebView's
@@ -23,7 +24,7 @@ import type {
 
 /** Page-load transport exposed by the mounted React bridge. */
 export interface LetterboxdWebViewHandle {
-  loadFilmPage(filmPath: string, script: string): void;
+  loadPage(path: string, script: string): void;
 }
 
 interface Pending {
@@ -32,7 +33,8 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>;
 }
 
-const WRITE_TIMEOUT_MS = 20_000;
+// The budget includes loading the full Letterboxd page before sending the write.
+const WRITE_TIMEOUT_MS = 60_000;
 
 let webView: LetterboxdWebViewHandle | null = null;
 let counter = 0;
@@ -165,14 +167,14 @@ function buildWatchlistScript(
 }
 
 /**
- * Both native write transports load `filmPath` with a document-end script so
- * the page-derived values (LID meta, live session) are in place. Outcome arrives via
+ * Native writes load the target page with a document-end script so
+ * the page-derived values (identifier, live session) are in place. Outcome arrives via
  * postMessage → `handleLetterboxdMessage`. Rejects if no WebView is mounted
  * (web / not connected) so the adapter surfaces a dead-session error rather
  * than hanging.
  */
-function runInFilmPage(
-  filmPath: string,
+function runInPage(
+  path: string,
   buildScript: (id: string) => string,
 ): Promise<LetterboxdWebResponse> {
   const ref = webView;
@@ -198,7 +200,7 @@ function runInFilmPage(
     try {
       // Document-end injection runs again on navigation/reload. Consume the
       // request in tab-local storage before writing so it can never log twice.
-      ref.loadFilmPage(filmPath, `(function(){
+      ref.loadPage(path, `(function(){
         if (window.location.origin !== 'https://letterboxd.com') return;
         var key = ${JSON.stringify(id)};
         if (sessionStorage.getItem(key)) return;
@@ -217,7 +219,7 @@ function runInFilmPage(
 export function letterboxdWebFetch(
   request: LetterboxdWebRequest,
 ): Promise<LetterboxdWebResponse> {
-  return runInFilmPage(request.filmPath, (id) => buildSubmitScript(id, request));
+  return runInPage(request.filmPath, (id) => buildSubmitScript(id, request));
 }
 
 /**
@@ -227,7 +229,32 @@ export function letterboxdWebFetch(
 export function letterboxdWatchlistWebFetch(
   request: LetterboxdWatchlistWebRequest,
 ): Promise<LetterboxdWebResponse> {
-  return runInFilmPage(request.filmPath, (id) => buildWatchlistScript(id, request));
+  return runInPage(request.filmPath, (id) => buildWatchlistScript(id, request));
+}
+
+/** Uses the site's declarative like form; captcha-required likes stay on Letterboxd. */
+export function letterboxdListLikeWebFetch(request: LetterboxdListLikeWebRequest): Promise<LetterboxdWebResponse> {
+  return runInPage(request.listPath, (id) => `(function(){
+    function post(status, body){ window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
+    try {
+      if (!window.person || !window.person.loggedIn || window.person.username.toLowerCase() !== ${JSON.stringify(request.username.toLowerCase())}) throw new Error('Reconnect Letterboxd. Nothing was sent.');
+      if (window.location.pathname !== ${JSON.stringify(request.listPath)}) throw new Error('Letterboxd opened a different list. Nothing was sent.');
+      var panel = document.querySelector('#userpanel[data-list-identifier]');
+      var list = JSON.parse(panel && panel.getAttribute('data-list-identifier') || 'null');
+      if (!list || list.type !== 'list' || !/^filmlist:[1-9][0-9]*$/.test(list.uid)) throw new Error('No Letterboxd list ID found. Nothing was sent.');
+      if (panel.getAttribute('data-owner').toLowerCase() === window.person.username.toLowerCase()) throw new Error('You cannot like your own list. Nothing was sent.');
+      if (${JSON.stringify(request.liked)} && !window.person.trusted) throw new Error('Like this list on Letterboxd to complete its verification. Nothing was sent.');
+      if (!window.supermodelCSRF) throw new Error('Missing page CSRF token. Nothing was sent.');
+      var body = new URLSearchParams({ liked: ${JSON.stringify(String(request.liked))}, __csrf: window.supermodelCSRF });
+      fetch('/s/' + list.uid + '/like/', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() })
+        .then(function(r){ return r.text().then(function(t){ post(r.status, t); }); })
+        .catch(function(e){ post(0, String(e)); });
+    } catch(e) { post(0, e.message); }
+  })();`);
+}
+
+export function getLetterboxdListLikeWebFetch(): typeof letterboxdListLikeWebFetch | undefined {
+  return webView != null ? letterboxdListLikeWebFetch : undefined;
 }
 
 /** The transport for `letterboxdDeps`, or `undefined` when no WebView is

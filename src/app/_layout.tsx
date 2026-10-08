@@ -149,6 +149,7 @@ export default function Layout() {
                   <Stack.Screen name="studio/[id]" />
                   <Stack.Screen name="studio/lookup" />
                   <Stack.Screen name="watchlist/index" />
+                  <Stack.Screen name="lists/index" />
                   <Stack.Screen name="anime-seasons/index" />
                 </Stack>
                 {/* Hidden authenticated WebView that runs Letterboxd writes

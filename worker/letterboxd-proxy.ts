@@ -6,9 +6,8 @@ import {
 /**
  * The Letterboxd same-origin reads proxy (plan 0018) — the repo's second
  * bounded exception to the AGENTS.md "never proxied" policy, modeled on
- * worker/serializd-proxy.ts. It forwards ONLY three public, unauthenticated
- * GET path shapes (`/{user}/watchlist/` with an optional `page/N/` suffix,
- * `/{user}/rss/`, and `/{user}/tags/` — the entire Letterboxd read surface),
+ * worker/serializd-proxy.ts. It forwards ONLY allowlisted public, unauthenticated
+ * GET paths: watchlists, RSS, tags, created/liked list indices and list films,
  * attaches no client headers, caps upstream latency, relays only
  * HTML/XML bodies under a script-killing CSP + `nosniff`, maps the Cloudflare
  * challenge page to a clean 502, emits no `Access-Control-Allow-Origin`, and
@@ -57,6 +56,11 @@ const RULES: Array<{ match: (path: string) => boolean }> = [
   // is required, so the deeper filtered shapes (`/tags/films/by/name/`) stay
   // 404s — this rule never widens into the tag *browse* surface.
   { match: (p) => /^[A-Za-z0-9_-]{1,39}\/tags\/$/.test(p) },
+  // Public list reads (plan 0061); the explicit liked page-1 URL avoids the
+  // challenged bare URL. No filtered/detail/edit/likes or API subpaths.
+  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/lists\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
+  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/likes\/lists\/page\/[1-9][0-9]{0,3}\/$/.test(p) },
+  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/list\/[a-z0-9-]{1,200}\/(page\/[1-9][0-9]{0,3}\/)?$/.test(p) },
 ];
 
 /** Reject traversal, protocol-relative, and absolute-URL sub-paths outright. */

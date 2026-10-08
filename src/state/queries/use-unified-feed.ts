@@ -235,6 +235,9 @@ function activeSectionKeys(
   // above for the same unit: a Letterboxd-only user — the one user who has this
   // row today — must still reach their own watchlist through refresh.
   keys.push({ slot: 'watchlist', queryKey: watchlistQueryKeys.inputs() });
+  if (feedProviders.includes('letterboxd')) {
+    keys.push({ slot: 'letterboxdLists', queryKey: letterboxdQueryKeys.listsRoot() });
+  }
   if (feedProviders.includes('anilist')) {
     // The network read behind the "Your Anime" row: refetching only the
     // derived items key would re-derive from this cached entry (plan 0019 U2).

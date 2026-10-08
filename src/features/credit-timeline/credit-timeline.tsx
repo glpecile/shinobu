@@ -145,17 +145,7 @@ function TimelineHead({
   );
 }
 
-/**
- * The accent eye at a row's edge once a connected tracker records the title
- * as watched — Letterboxd's "seen" glyph, at the diary's dot size; a check
- * here reads as done, not seen. Always
- * mounted at a fixed width and faded by state rather than conditionally
- * rendered: the answer arrives after the row does (a library snapshot
- * resolving), and a mark that pops in reads as a glitch where one that
- * settles in reads as the page catching up. `withTiming` inside the worklet
- * re-targets whenever `watched` flips, which covers the resolve and a recycled
- * row's new item alike with no shared value to own.
- */
+/** Fades in when a tracker snapshot resolves; keeps the row's trailing space stable. */
 function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; poster?: boolean }) {
   const accent = useThemeColor('--color-accent');
   const watched = useWatchedInfo(item) != null;
@@ -170,10 +160,7 @@ function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; post
     <AnimatedView
       accessibilityLabel="Watched"
       aria-hidden={!watched}
-      className={cn(
-        'w-4 items-end',
-        poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95',
-      )}
+      className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95')}
       style={[style, { pointerEvents: 'none' }]}
     >
       <Ionicons color={accent} name="eye" size={14} />

@@ -1,6 +1,10 @@
 import {
+  skipToken,
   useInfiniteQuery,
+  useMutation,
   useQuery,
+  useQueryClient,
+  useSuspenseInfiniteQuery,
   type QueryClient,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
@@ -20,11 +24,20 @@ import {
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
 import { getFilmTmdbId } from '@/lib/providers/letterboxd/film';
-import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch } from '@/lib/providers/letterboxd/userscript-bridge';
+import {
+  getListsPage,
+  getListFilmsPage,
+  setListLiked,
+  type LetterboxdListKind,
+  type LetterboxdListFilmsPage,
+  type LetterboxdListsPage,
+} from '@/lib/providers/letterboxd/lists';
+import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
   getLetterboxdWebFetch,
+  getLetterboxdListLikeWebFetch,
 } from '@/lib/providers/letterboxd/webview-bridge';
 import {
   checkUsernameExists,
@@ -46,7 +59,7 @@ import { tmdbDeps, tmdbQueryKeys } from './tmdb';
 /**
  * The web read transport (plan 0018): letterboxd.com sends no CORS headers, so
  * the browser can't call it directly — web reads hit the same-origin Worker
- * proxy (`/api/letterboxd/*`), which relays the two public GET shapes
+ * proxy (`/api/letterboxd/*`), which relays allowlisted public GET pages
  * server-side. The provider lib keeps building upstream URLs; the rewrite to
  * the proxy prefix lives entirely behind this injected fetch, so native
  * (nitro-fetch direct) and the lib code are untouched.
@@ -83,6 +96,8 @@ export function letterboxdDeps(): LetterboxdDeps {
     userscriptFetch: getLetterboxdUserscriptFetch(getLetterboxdUsername()),
     userscriptWatchlistFetch: getLetterboxdUserscriptWatchlistFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
+    listLikeWebFetch: getLetterboxdListLikeWebFetch(),
+    userscriptListLikeFetch: getLetterboxdUserscriptListLikeFetch(getLetterboxdUsername()),
   };
 }
 
@@ -112,7 +127,64 @@ export const letterboxdQueryKeys = {
    * suggests the prior account's tags.
    */
   tags: (username: string) => [...letterboxdQueryKeys.all, 'tags', username] as const,
+  listsRoot: () => [...letterboxdQueryKeys.all, 'lists'] as const,
+  lists: (username: string, kind: LetterboxdListKind) =>
+    [...letterboxdQueryKeys.listsRoot(), username, kind] as const,
+  listFilmsRoot: () => [...letterboxdQueryKeys.all, 'list-films'] as const,
+  listFilms: (owner: string, slug: string) =>
+    [...letterboxdQueryKeys.listFilmsRoot(), owner, slug] as const,
 };
+
+/** Rails and View all share pages; only the full screen requests successors. */
+export function useSuspenseLetterboxdListsQuery(username: string, kind: LetterboxdListKind) {
+  return useSuspenseInfiniteQuery({
+    queryKey: letterboxdQueryKeys.lists(username, kind),
+    queryFn: ({ pageParam, signal }) => Effect.runPromise(
+      getListsPage({ ...letterboxdDeps(), username }, { kind, page: pageParam }), { signal },
+    ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
+    staleTime: 15 * 60_000,
+  });
+}
+
+export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string) {
+  return useSuspenseInfiniteQuery({
+    queryKey: letterboxdQueryKeys.listFilms(owner, slug),
+    queryFn: ({ pageParam, signal }) =>
+      Effect.runPromise(
+        getListFilmsPage(letterboxdDeps(), { owner, slug, page: pageParam }), { signal },
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) =>
+      lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
+    staleTime: 15 * 60_000,
+  });
+}
+
+/** Loaded membership is positive evidence only; an incomplete index cannot prove absence. */
+export function useLetterboxdListLike(username: string, owner: string, slug: string) {
+  const queryClient = useQueryClient();
+  const lists = useQuery<{ pages: LetterboxdListsPage[] }>({
+    queryKey: letterboxdQueryKeys.lists(username, 'liked'), queryFn: skipToken,
+  });
+  const mutation = useMutation({
+    mutationFn: (liked: boolean) => Effect.runPromise(setListLiked(letterboxdDeps(), { owner, slug, liked })),
+    onMutate: (liked: boolean) => !liked,
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }); },
+    retry: false,
+  });
+  return { ...mutation, liked: mutation.data ?? mutation.context ?? lists.data?.pages.some((page) => page.lists.some((list) => list.owner === owner && list.slug === slug)) ?? false };
+}
+
+/** List-only films aren't in the home/watchlist feed; details must reuse their source pages. */
+export function findInLetterboxdListsCache(queryClient: QueryClient, id: string) {
+  return queryClient.getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({
+    queryKey: letterboxdQueryKeys.listFilmsRoot(),
+  }).flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? [])
+    .find((item) => item.id === id);
+}
 
 /** Native incoming film links only. The web proxy does not allow film pages. */
 export function useLetterboxdFilmTmdbQuery(slug: string | null) {
