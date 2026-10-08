@@ -8,7 +8,24 @@ immediately below the watchlist rows. Each card shows a poster preview, title,
 creator and film count. View all paginates the list index; tapping a list opens
 its films in Shinobu and tapping a film opens existing media details/actions.
 
-No list editing, liking, private-list access, or speculative provider adapters.
+No list editing, private-list access, or speculative provider adapters.
+
+### Like / unlike extension (2026-10-08)
+
+- Add explicit like/unlike actions to list details, excluding the member's own lists.
+- Reuse the native authenticated WebView and optional browser userscript. The
+  Worker stays public GET-only. Unsupported sessions and failures link to the list.
+- Set `liked=true/false` through the site's current `/s/filmlist:<id>/like/`
+  form endpoint, using the loaded list identifier and page CSRF. Validate the
+  receipt before updating UI or invalidating the member's liked-list pages.
+- Keep captcha-required likes on Letterboxd rather than bypassing its challenge.
+- Extend existing provider/bridge tests for both target states, rejected receipts,
+  account/page guards and replay prevention; run all repository checks.
+
+The iOS test session completed a live like/unlike round trip and removed the
+temporary like. The new bridge tests and browser userscript handoff tests pass.
+The loading Back control now navigates instead of doing nothing. JS-only;
+web list writes require userscript 0.7.0 or use the external Letterboxd action.
 
 ## Implementation
 

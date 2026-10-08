@@ -53,6 +53,8 @@ export interface LetterboxdDeps {
    * documented endpoint — never a generic "run any script" surface.
    */
   watchlistWebFetch?: LetterboxdWatchlistWebFetch;
+  listLikeWebFetch?: LetterboxdListLikeWebFetch;
+  userscriptListLikeFetch?: LetterboxdListLikeWebFetch;
 }
 
 /**
@@ -116,4 +118,14 @@ export interface LetterboxdWatchlistWebRequest {
 
 export type LetterboxdWatchlistWebFetch = (
   request: LetterboxdWatchlistWebRequest,
+) => Promise<LetterboxdWebResponse>;
+
+export interface LetterboxdListLikeWebRequest {
+  listPath: string;
+  username: string;
+  liked: boolean;
+}
+
+export type LetterboxdListLikeWebFetch = (
+  request: LetterboxdListLikeWebRequest,
 ) => Promise<LetterboxdWebResponse>;

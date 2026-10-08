@@ -32,13 +32,13 @@ import { Section } from '@/components/section';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { ViewToggle } from '@/components/view-toggle';
-import { WatchedMark } from '@/components/watched-mark';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
+import { useWatchedInfo } from '@/state/queries/watched-info';
 import { setWatchlistView, useWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -142,6 +142,29 @@ function TimelineHead({
       <RailHead.Title muted={upcoming}>{upcoming ? 'TBA' : year}</RailHead.Title>
       <RailHead.Count>{label}</RailHead.Count>
     </RailHead>
+  );
+}
+
+/** Fades in when a tracker snapshot resolves; keeps the row's trailing space stable. */
+function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; poster?: boolean }) {
+  const accent = useThemeColor('--color-accent');
+  const watched = useWatchedInfo(item) != null;
+  const style = useAnimatedStyle(() => {
+    const timing = { duration: DURATION.swap, easing: KEYFRAME_EASE_OUT };
+    return {
+      opacity: withTiming(watched ? 1 : 0, timing),
+      transform: [{ scale: withTiming(watched ? 1 : 0.8, timing) }],
+    };
+  }, [watched]);
+  return (
+    <AnimatedView
+      accessibilityLabel="Watched"
+      aria-hidden={!watched}
+      className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95')}
+      style={[style, { pointerEvents: 'none' }]}
+    >
+      <Ionicons color={accent} name="eye" size={14} />
+    </AnimatedView>
   );
 }
 

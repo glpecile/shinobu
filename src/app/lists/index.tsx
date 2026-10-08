@@ -16,6 +16,7 @@ import { ViewToggle } from '@/components/view-toggle';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { ListCard } from '@/features/lists/list-card';
+import { ListLikeButton } from '@/features/lists/list-like-button';
 import { listsTitle, ListFilmsSkeleton, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { PosterWall } from '@/features/watchlist/poster-wall';
 import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
@@ -78,7 +79,7 @@ function ListsIndex({ username, kind, url }: { username: string; kind: Letterbox
   );
 }
 
-function ListFilms({ owner, slug, url, onBack }: { owner: string; slug: string; url: string; onBack: () => void }) {
+function ListFilms({ username, owner, slug, url, onBack }: { username: string | null; owner: string; slug: string; url: string; onBack: () => void }) {
   const pages = useSuspenseLetterboxdListFilmsQuery(owner, slug);
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
@@ -95,6 +96,7 @@ function ListFilms({ owner, slug, url, onBack }: { owner: string; slug: string; 
         <LetterboxdLink iconOnly url={url} />
         <ViewToggle onChange={setWatchlistView} view={view} />
       </View>
+      {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
       {items.length === 0 ? (
         <CenteredNotice>
           <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
@@ -161,8 +163,8 @@ export default function ListsScreen() {
             </>
           )}
         >
-          <Suspense fallback={detail ? <ListFilmsSkeleton /> : <ListsRowSkeleton />}>
-            {detail ? <ListFilms onBack={back} owner={params.owner ?? ''} slug={params.slug ?? ''} url={url} /> : <ListsIndex kind={kind} username={username ?? ''} url={url} />}
+          <Suspense fallback={detail ? <ListFilmsSkeleton onBack={back} /> : <ListsRowSkeleton />}>
+            {detail ? <ListFilms onBack={back} owner={params.owner ?? ''} slug={params.slug ?? ''} url={url} username={username} /> : <ListsIndex kind={kind} username={username ?? ''} url={url} />}
           </Suspense>
         </ErrorBoundary>
       )}

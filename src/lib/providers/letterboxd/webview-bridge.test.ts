@@ -7,6 +7,7 @@ import {
   handleLetterboxdMessage,
   letterboxdWebFetch,
   letterboxdWatchlistWebFetch,
+  letterboxdListLikeWebFetch,
   registerLetterboxdWebView,
   resetLetterboxdWebViewBridge,
 } from './webview-bridge';
@@ -16,7 +17,7 @@ function fakeWebView() {
   return {
     pages,
     ref: {
-      loadFilmPage: (filmPath: string, script: string) => {
+      loadPage: (filmPath: string, script: string) => {
         pages.push({ filmPath, script });
       },
     },
@@ -39,22 +40,27 @@ describe('Letterboxd page-load write bridge', () => {
     await expect(letterboxdWebFetch(REQUEST)).rejects.toThrow(/not mounted/);
   });
 
-  test.each(['diary', 'watchlist'] as const)('%s writes from the loaded page once, even on reload', async (verb) => {
+  test.each(['diary', 'watchlist', 'list-like', 'list-unlike'] as const)('%s writes from the loaded page once, even on reload', async (verb) => {
     const webView = fakeWebView();
     registerLetterboxdWebView(webView.ref);
-    const pending = verb === 'diary'
+    const isList = verb === 'list-like' || verb === 'list-unlike';
+    const pending = isList
+      ? letterboxdListLikeWebFetch({ listPath: '/jack/list/classics/', username: 'gian', liked: verb === 'list-like' })
+      : verb === 'diary'
       ? letterboxdWebFetch(REQUEST)
       : letterboxdWatchlistWebFetch({ filmPath: REQUEST.filmPath, filmLid: REQUEST.filmLid, inWatchlist: false });
     const page = webView.pages[0];
-    expect(page.filmPath).toBe(REQUEST.filmPath);
+    expect(page.filmPath).toBe(isList ? '/jack/list/classics/' : REQUEST.filmPath);
 
     const dom = new Window({ url: `https://letterboxd.com${page.filmPath}` });
     dom.document.head.innerHTML = '<meta name="production:identifier" content=\'{"lid":"pageLid"}\'>';
+    dom.document.body.innerHTML = '<section id="userpanel" data-owner="jack" data-list-identifier=\'{"type":"list","uid":"filmlist:79356687"}\'></section>';
     const storage = new Map<string, string>();
     const requests: Array<{ url: string; init: RequestInit }> = [];
     const window = {
       location: dom.location,
       supermodelCSRF: 'page-csrf',
+      person: { loggedIn: true, username: 'gian', trusted: true },
       ReactNativeWebView: { postMessage: handleLetterboxdMessage },
     };
     const fetch = async (url: string, init: RequestInit) => {
@@ -69,20 +75,39 @@ describe('Letterboxd page-load write bridge', () => {
     // A different document models a reload, not just another call in one page.
     const reloaded = new Window({ url: dom.location.href });
     reloaded.document.head.innerHTML = dom.document.head.innerHTML;
+    reloaded.document.body.innerHTML = dom.document.body.innerHTML;
     run(window, reloaded.document, sessionStorage, fetch);
-    expect(requests).toHaveLength(verb === 'diary' ? 1 : 2);
+    expect(requests).toHaveLength(verb === 'watchlist' ? 2 : 1);
     const write = requests[requests.length - 1];
-    expect(write.url).toBe(verb === 'diary' ? '/api/v0/production-log-entries' : '/api/v0/me/watchlist/pageLid');
+    expect(write.url).toBe(isList ? '/s/filmlist:79356687/like/' : verb === 'diary' ? '/api/v0/production-log-entries' : '/api/v0/me/watchlist/pageLid');
     expect(write.init).toMatchObject({
-      method: verb === 'diary' ? 'POST' : 'PATCH',
+      method: verb === 'watchlist' ? 'PATCH' : 'POST',
       credentials: 'include',
     });
-    expect(new Headers(write.init.headers).get('x-csrf-token')).toBe('page-csrf');
-    expect(JSON.parse(String(write.init.body))).toEqual(verb === 'diary' ? {
+    if (isList) expect(Object.fromEntries(new URLSearchParams(String(write.init.body)))).toEqual({ liked: String(verb === 'list-like'), __csrf: 'page-csrf' });
+    else {
+      expect(new Headers(write.init.headers).get('x-csrf-token')).toBe('page-csrf');
+      expect(JSON.parse(String(write.init.body))).toEqual(verb === 'diary' ? {
       productionId: 'pageLid', diaryDetails: { diaryDate: '2026-07-17', rewatch: false }, tags: REQUEST.tags, like: true,
     } : { inWatchlist: false });
+    }
     dom.close();
     reloaded.close();
+  });
+
+  test.each(['account', 'path', 'identifier', 'captcha', 'csrf', 'own-list'] as const)('list likes refuse %s failures without writing', async (failure) => {
+    const webView = fakeWebView();
+    registerLetterboxdWebView(webView.ref);
+    const pending = letterboxdListLikeWebFetch({ listPath: '/jack/list/classics/', username: 'gian', liked: true });
+    const dom = new Window({ url: `https://letterboxd.com/${failure === 'path' ? 'jack/list/other' : 'jack/list/classics'}/` });
+    dom.document.body.innerHTML = `<section id="userpanel" data-owner="${failure === 'own-list' ? 'gian' : 'jack'}" data-list-identifier='{"type":"list","uid":"${failure === 'identifier' ? 'film:123' : 'filmlist:123'}"}'></section>`;
+    const window = { location: dom.location, supermodelCSRF: failure === 'csrf' ? '' : 'csrf', person: { loggedIn: true, username: failure === 'account' ? 'other' : 'gian', trusted: failure !== 'captcha' }, ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
+    const run = new Function('window', 'document', 'sessionStorage', 'fetch', webView.pages[0].script);
+    let writes = 0;
+    run(window, dom.document, { getItem() {}, setItem() {} }, async () => { writes += 1; return Response.json({ result: true, liked: true }); });
+    expect((await pending).status).toBe(0);
+    expect(writes).toBe(0);
+    dom.close();
   });
 
   test('ignores messages that are not ours', async () => {

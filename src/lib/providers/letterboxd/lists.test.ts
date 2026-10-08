@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { getListFilmsPage, getListsPage } from './lists';
+import { getListFilmsPage, getListsPage, setListLiked } from './lists';
 
 // Public page markup captured 2026-10-06, reduced to the read contract.
 const POSTER = `<div data-component-class="LazyPoster" data-item-name="21 Grams (2003)" data-item-slug="21-grams" data-postered-identifier='{&quot;uid&quot;:&quot;film:51632&quot;}'></div>`;
@@ -80,4 +80,40 @@ test('malformed list addresses and page numbers never reach the network', async 
     { owner: 'jack', slug: 'classics', page: 10000 },
   ]) expect((await Effect.runPromise(Effect.flip(getListFilmsPage(deps, params))))._tag).toBe('ProviderDecodeError');
   expect((await Effect.runPromise(Effect.flip(getListsPage({ ...deps, username: null }, { kind: 'created', page: 1 }))))._tag).toBe('ProviderAuthError');
+  for (const [owner, username, session, tag] of [
+    ['../settings', 'gian', { cookie: 'session', csrf: 'csrf' }, 'ProviderDecodeError'],
+    ['gian', 'gian', { cookie: 'session', csrf: 'csrf' }, 'ProviderDecodeError'],
+    ['jack', 'gian', null, 'ProviderAuthError'],
+    ['jack', null, { cookie: 'session', csrf: 'csrf' }, 'ProviderAuthError'],
+  ] as const) {
+    let writes = 0;
+    const effect = setListLiked({ ...deps, username, session, listLikeWebFetch: async () => { writes += 1; return { status: 200, body: '{"result":true,"liked":true}' }; } }, { owner, slug: 'classics', liked: true });
+    expect((await Effect.runPromise(Effect.flip(effect)))._tag).toBe(tag);
+    expect(writes).toBe(0);
+  }
+});
+
+test('list likes acknowledge only the requested state, through either authenticated transport', async () => {
+  for (const liked of [true, false]) {
+    for (const userscript of [true, false]) {
+      const transport = async (request: { listPath: string; username: string; liked: boolean }) => {
+        expect(request).toEqual({ listPath: '/jack/list/classics/', username: 'gian', liked });
+        return { status: 200, body: JSON.stringify({ result: true, liked }) };
+      };
+      expect(await Effect.runPromise(setListLiked({ fetch: async () => { throw new Error('must not use public fetch'); }, username: 'gian', ...(userscript ? { userscriptListLikeFetch: transport } : { session: { cookie: 'session', csrf: 'csrf' }, listLikeWebFetch: transport }) }, { owner: 'jack', slug: 'classics', liked }))).toBe(liked);
+    }
+  }
+});
+
+test.each([
+  [200, '{"result":false,"liked":true}', 'ProviderDecodeError'],
+  [200, '{"result":true,"liked":false}', 'ProviderDecodeError'],
+  [200, '<html>Sign in</html>', 'ProviderDecodeError'],
+  [401, '', 'ProviderAuthError'],
+  [429, '', 'ProviderRateLimitError'],
+  [0, 'Verification required', 'ProviderDecodeError'],
+  [500, '', 'ProviderDecodeError'],
+] as const)('list likes reject unconfirmed receipts (%s %s)', async (status, body, tag) => {
+  const effect = setListLiked({ fetch: async () => new Response(), username: 'gian', userscriptListLikeFetch: async () => ({ status, body }) }, { owner: 'jack', slug: 'classics', liked: true });
+  expect((await Effect.runPromise(Effect.flip(effect)))._tag).toBe(tag);
 });

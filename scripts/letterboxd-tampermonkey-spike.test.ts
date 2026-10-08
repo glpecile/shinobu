@@ -20,6 +20,7 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
     app.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '5');
     expect(hasLetterboxdUserscript('log')).toBe(true);
     expect(hasLetterboxdUserscript('like')).toBe(false);
+    expect(hasLetterboxdUserscript('list-like')).toBe(false);
     await expect(getLetterboxdUserscriptFetch('gian')!({
       filmPath: '/film/alien/', filmLid: '2awY', viewingDateStr: '2026-09-30',
       rewatch: false, tags: [], liked: true,
@@ -27,6 +28,7 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
     await run({}, { location: app.location, document: app.document, addEventListener() {} });
     expect(hasLetterboxdUserscript('watchlist-remove')).toBe(true);
     expect(hasLetterboxdUserscript('like')).toBe(true);
+    expect(hasLetterboxdUserscript('list-like')).toBe(true);
   } finally {
     if (original) Object.defineProperty(globalThis, 'document', original);
     else Reflect.deleteProperty(globalThis, 'document');
@@ -50,11 +52,18 @@ test.each([
   { name: 'rejects a watchlist failure marker', username: 'gian', path: '/film/alien/', status: 200, body: '{"result":false}', sent: true, message: 'Watchlist rejected', watchlist: false },
   { name: 'does not acknowledge an HTML watchlist response', username: 'gian', path: '/film/alien/', status: 200, body: '<html>Sign in</html>', sent: true, message: 'Non-JSON response', watchlist: false },
   { name: 'removes from the watchlist and returns the empty 204 receipt', username: 'gian', path: '/film/alien/', status: 204, body: '', sent: true, message: '', watchlist: false },
+  { name: 'likes a list through the signed-in tab and confirms its receipt', username: 'gian', path: '/jack/list/classics/', status: 200, body: '{"result":true,"liked":true}', sent: true, message: '', listLike: true },
+  { name: 'unlikes a list without captcha for an untrusted member', username: 'gian', path: '/jack/list/classics/', status: 200, body: '{"result":true,"liked":false}', sent: true, message: '', listLike: false, trusted: false },
+  { name: 'leaves captcha-required likes on Letterboxd', username: 'gian', path: '/jack/list/classics/', status: 200, body: '{}', sent: false, message: 'complete its verification', listLike: true, trusted: false },
+  { name: 'rejects a different list before writing', username: 'gian', path: '/jack/list/wrong-list/', status: 200, body: '{}', sent: false, message: 'different list', listLike: true },
+  { name: 'rejects a list traversal before opening a tab', username: 'gian', path: '/jack/list/../settings/', status: 200, body: '{}', sent: false, message: 'Invalid Shinobu', listLike: true },
+  { name: 'does not acknowledge a rejected list like', username: 'gian', path: '/jack/list/classics/', status: 200, body: '{"result":false,"liked":true}', sent: true, message: 'No confirmed like receipt', listLike: true },
 ])('$name', async ({ username, path, status, body, sent, message, ...options }) => {
   const watchlist = 'watchlist' in options;
+  const listLike = 'listLike' in options;
   const app = new Window({ url: 'http://localhost:8081/' });
-  const film = new Window({ url: `https://letterboxd.com/film/alien/#shinobu-log=${id}` });
-  film.document.body.innerHTML = `<meta name="production:identifier" content='{"lid":"2awY","type":"film"}'>`;
+  const film = new Window({ url: `https://letterboxd.com${listLike ? '/jack/list/classics/' : '/film/alien/'}#shinobu-log=${id}` });
+  film.document.body.innerHTML = `<meta name="production:identifier" content='{"lid":"2awY","type":"film"}'><section id="userpanel" data-owner="jack" data-list-identifier='{"type":"list","uid":"filmlist:79356687"}'></section>`;
   film.document.body.dataset.tmdbType = 'movie';
   film.document.body.dataset.tmdbId = '348';
   const storage = new Map<string, unknown>();
@@ -71,9 +80,9 @@ test.each([
   };
   const filmPage = {
     location: film.location, document: film.document,
-    person: { loggedIn: true, username }, supermodelCSRF: 'test-csrf',
+    person: { loggedIn: true, username, trusted: !('trusted' in options) || options.trusted }, supermodelCSRF: 'test-csrf',
     fetch: async (url: string, init: RequestInit) => {
-      expect(url).toBe(watchlist ? '/api/v0/me/watchlist/2awY' : '/api/v0/production-log-entries');
+      expect(url).toBe(listLike ? '/s/filmlist:79356687/like/' : watchlist ? '/api/v0/me/watchlist/2awY' : '/api/v0/production-log-entries');
       requests.push(init);
       return new Response(status === 204 ? null : body, { status });
     },
@@ -95,8 +104,8 @@ test.each([
   };
   await run(gm, appPage);
   const event = { source: appPage, origin: app.location.origin, data: {
-    type: watchlist ? 'shinobu-letterboxd-watchlist' : 'shinobu-letterboxd-log', id,
-    request: { username: 'gian', filmPath: path, ...(watchlist ? { inWatchlist: options.watchlist } : { viewingDateStr: '2026-09-30', rewatch: false, tags: ['spike'], ...('liked' in options ? { liked: options.liked } : {}) }) },
+    type: listLike ? 'shinobu-letterboxd-list-like' : watchlist ? 'shinobu-letterboxd-watchlist' : 'shinobu-letterboxd-log', id,
+    request: { username: 'gian', ...(listLike ? { listPath: path, liked: options.listLike } : { filmPath: path, ...(watchlist ? { inWatchlist: options.watchlist } : { viewingDateStr: '2026-09-30', rewatch: false, tags: ['spike'], ...('liked' in options ? { liked: options.liked } : {}) }) }) },
   } };
   await appListener!(event);
   const response = await result;
@@ -107,7 +116,8 @@ test.each([
   if (sent) {
     expect(requests[0].credentials).toBe('include');
     expect(requests[0].method).toBe(watchlist ? 'PATCH' : 'POST');
-    expect(JSON.parse(String(requests[0].body))).toEqual(watchlist ? { inWatchlist: options.watchlist } : {
+    if (listLike) expect(Object.fromEntries(new URLSearchParams(String(requests[0].body)))).toEqual({ liked: String(options.listLike), __csrf: 'test-csrf' });
+    else expect(JSON.parse(String(requests[0].body))).toEqual(watchlist ? { inWatchlist: options.watchlist } : {
       productionId: '2awY', diaryDetails: { diaryDate: '2026-09-30', rewatch: false }, tags: ['spike'], like: 'liked' in options && options.liked === true,
     });
   }

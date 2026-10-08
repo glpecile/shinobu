@@ -1,6 +1,9 @@
 import {
+  skipToken,
   useInfiniteQuery,
+  useMutation,
   useQuery,
+  useQueryClient,
   useSuspenseInfiniteQuery,
   type QueryClient,
 } from '@tanstack/react-query';
@@ -24,14 +27,17 @@ import { getFilmTmdbId } from '@/lib/providers/letterboxd/film';
 import {
   getListsPage,
   getListFilmsPage,
+  setListLiked,
   type LetterboxdListKind,
   type LetterboxdListFilmsPage,
+  type LetterboxdListsPage,
 } from '@/lib/providers/letterboxd/lists';
-import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch } from '@/lib/providers/letterboxd/userscript-bridge';
+import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
   getLetterboxdWebFetch,
+  getLetterboxdListLikeWebFetch,
 } from '@/lib/providers/letterboxd/webview-bridge';
 import {
   checkUsernameExists,
@@ -90,6 +96,8 @@ export function letterboxdDeps(): LetterboxdDeps {
     userscriptFetch: getLetterboxdUserscriptFetch(getLetterboxdUsername()),
     userscriptWatchlistFetch: getLetterboxdUserscriptWatchlistFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
+    listLikeWebFetch: getLetterboxdListLikeWebFetch(),
+    userscriptListLikeFetch: getLetterboxdUserscriptListLikeFetch(getLetterboxdUsername()),
   };
 }
 
@@ -153,6 +161,21 @@ export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string)
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
     staleTime: 15 * 60_000,
   });
+}
+
+/** Loaded membership is positive evidence only; an incomplete index cannot prove absence. */
+export function useLetterboxdListLike(username: string, owner: string, slug: string) {
+  const queryClient = useQueryClient();
+  const lists = useQuery<{ pages: LetterboxdListsPage[] }>({
+    queryKey: letterboxdQueryKeys.lists(username, 'liked'), queryFn: skipToken,
+  });
+  const mutation = useMutation({
+    mutationFn: (liked: boolean) => Effect.runPromise(setListLiked(letterboxdDeps(), { owner, slug, liked })),
+    onMutate: (liked: boolean) => !liked,
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }); },
+    retry: false,
+  });
+  return { ...mutation, liked: mutation.data ?? mutation.context ?? lists.data?.pages.some((page) => page.lists.some((list) => list.owner === owner && list.slug === slug)) ?? false };
 }
 
 /** List-only films aren't in the home/watchlist feed; details must reuse their source pages. */

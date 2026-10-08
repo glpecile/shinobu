@@ -10,8 +10,8 @@ import {
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 
 /**
- * A hidden bridge that mounts a fresh film WebView for each write so diary
- * writes can run *inside* it (plan 0012). It shares the same WKWebView /
+ * A hidden bridge that mounts a fresh page WebView for each write so film and
+ * list writes can run *inside* it (plan 0012). It shares the same WKWebView /
  * Android cookie store the login flow populated, so it is authenticated without
  * any cookie replay — the one thing that works, since replayed cookies land as
  * signed-out at the origin (docs/solutions/letterboxd-no-api-fallback.md).
@@ -26,11 +26,11 @@ export function LetterboxdWriteBridge() {
 }
 
 function ConnectedWriteBridge() {
-  const [page, setPage] = useState<{ filmPath: string; script: string } | null>(null);
+  const [page, setPage] = useState<{ path: string; script: string } | null>(null);
 
   useEffect(() => {
     registerLetterboxdWebView({
-      loadFilmPage: (filmPath, script) => setPage({ filmPath, script }),
+      loadPage: (path, script) => setPage({ path, script }),
     });
     return () => registerLetterboxdWebView(null);
   }, []);
@@ -56,7 +56,7 @@ function ConnectedWriteBridge() {
         key={page?.script ?? 'idle'}
         injectedJavaScript={page?.script}
         onMessage={callback((event) => handleLetterboxdMessage(event.nativeEvent.data))}
-        source={{ uri: `${LETTERBOXD_BASE_URL}${page?.filmPath ?? '/'}` }}
+        source={{ uri: `${LETTERBOXD_BASE_URL}${page?.path ?? '/'}` }}
         style={{ width: 1, height: 1 }}
       />
     </View>

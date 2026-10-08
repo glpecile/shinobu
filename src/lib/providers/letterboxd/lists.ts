@@ -135,3 +135,27 @@ export const getListFilmsPage = Effect.fn('letterboxd.getListFilmsPage')(functio
   if (result.title === '') return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'unrecognized list page' });
   return result;
 });
+
+/** A confirmed state set, never a toggle; unknown receipts cannot update the UI. */
+export const setListLiked = Effect.fn('letterboxd.setListLiked')(function* (
+  deps: LetterboxdDeps,
+  params: { owner: string; slug: string; liked: boolean },
+) {
+  const url = letterboxdListUrl(params.owner, params.slug);
+  if (url == null || !Schema.is(Schema.Boolean)(params.liked)) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'invalid list like request' });
+  const transport = deps.userscriptListLikeFetch ?? deps.listLikeWebFetch;
+  if (transport == null || !deps.username || (!deps.userscriptListLikeFetch && !deps.session?.cookie)) return yield* new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true });
+  if (deps.username.toLowerCase() === params.owner.toLowerCase()) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'You cannot like your own list.' });
+  const response = yield* Effect.tryPromise({
+    try: () => transport({ listPath: url.slice(LETTERBOXD_BASE_URL.length), username: deps.username!, liked: params.liked }),
+    catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
+  });
+  if (response.status === 401 || response.status === 403) return yield* new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true });
+  if (response.status === 429) return yield* new ProviderRateLimitError({ provider: 'letterboxd' });
+  if (response.status < 200 || response.status >= 300) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: response.status === 0 ? response.body : `Letterboxd responded ${response.status}. Check the list before retrying.` });
+  const receipt = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Struct({ result: Schema.Boolean, liked: Schema.Boolean })))(response.body).pipe(
+    Effect.mapError(() => new ProviderDecodeError({ provider: 'letterboxd', detail: 'No confirmed like receipt. Check Letterboxd before retrying.' })),
+  );
+  if (!receipt.result || receipt.liked !== params.liked) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'Letterboxd did not confirm the requested like state.' });
+  return receipt.liked;
+});

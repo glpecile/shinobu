@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react';
-import type { LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, LetterboxdWebFetch, LetterboxdWebRequest, LetterboxdWebResponse } from '@/lib/providers/letterboxd/deps';
+import type { LetterboxdListLikeWebFetch, LetterboxdListLikeWebRequest, LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, LetterboxdWebFetch, LetterboxdWebRequest, LetterboxdWebResponse } from '@/lib/providers/letterboxd/deps';
 
 const READY_ATTRIBUTE = 'data-shinobu-letterboxd-bridge';
 
-export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' = 'log'): boolean {
+export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' = 'log'): boolean {
   const version = typeof document !== 'undefined' ? document.documentElement.getAttribute(READY_ATTRIBUTE) : null;
+  if (version === '7') return true;
+  if (capability === 'list-like') return false;
   if (capability === 'like') return version === '6';
   return version === '6' || version === '5' || (capability !== 'watchlist-remove' && version === '4') || (capability === 'log' && version === '3');
 }
@@ -17,7 +19,7 @@ function subscribe(listener: () => void) {
 
 function serverSnapshot() { return false; }
 
-export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' = 'log'): boolean {
+export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' = 'log'): boolean {
   return useSyncExternalStore(subscribe, () => hasLetterboxdUserscript(capability), serverSnapshot);
 }
 
@@ -42,7 +44,11 @@ export function getLetterboxdUserscriptWatchlistFetch(username: string | null): 
   };
 }
 
-function sendRequest(username: string, capability: 'log' | 'watchlist', request: LetterboxdWebRequest | LetterboxdWatchlistWebRequest): Promise<LetterboxdWebResponse> {
+export function getLetterboxdUserscriptListLikeFetch(username: string | null): LetterboxdListLikeWebFetch | undefined {
+  return username && hasLetterboxdUserscript('list-like') ? (request) => sendRequest(username, 'list-like', request) : undefined;
+}
+
+function sendRequest(username: string, capability: 'log' | 'watchlist' | 'list-like', request: LetterboxdWebRequest | LetterboxdWatchlistWebRequest | LetterboxdListLikeWebRequest): Promise<LetterboxdWebResponse> {
   return new Promise((resolve, reject) => {
     const id = crypto.randomUUID();
     const cleanup = () => {

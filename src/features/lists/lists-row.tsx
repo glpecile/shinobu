@@ -39,12 +39,12 @@ export function ListsRowSkeleton() {
  * grid/list preference and lays out to match — the load reads as that layout
  * materializing, not as one shape that then swaps into another.
  */
-export function ListFilmsSkeleton() {
+export function ListFilmsSkeleton({ onBack }: { onBack: () => void }) {
   return (
     <View className="flex-1">
       {/* Mirrors ListsHeader: back, provider icon, title — same paddings. */}
       <View className={cn('flex-row items-center gap-3 px-6 pb-4', screenHeaderTopPadding)}>
-        <BackButton className="-ml-2" onPress={() => {}} />
+        <BackButton className="-ml-2" onPress={onBack} />
         <ProviderIcon id="letterboxd" size={20} />
         <Skeleton className="h-8 w-56 rounded" />
       </View>

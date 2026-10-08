@@ -10,7 +10,7 @@ normalizes to a `NormalizedMediaItem` whose `externalIds` is `{ letterboxd:
 <slug> }` and nothing else — no `tmdb`, `trakt`, `imdb`, `simkl`. The scrape
 exposes no cross-provider ids. This is stated in `normalize.ts`'s own comment.
 
-`WatchedMark` (src/components/watched-mark.tsx) resolves watched state through
+`WatchedMark` (src/features/credit-timeline/credit-timeline.tsx) resolves watched state through
 `useWatchedInfo` (src/state/queries/watched-info.ts), which asks Trakt first
 (`useTraktWatchedInfo`) then Simkl (`useSimklWatchedInfo`). Both legs match the
 item against a provider snapshot by cross-provider id:
