@@ -15,7 +15,7 @@ export default function LetterboxdListsScreen() {
   const validKind = kind === 'created' || kind === 'liked';
   const url = validKind ? letterboxdListsUrl(username ?? '', kind) : null;
   return (
-    <ListsPage fallback={<ListsGridSkeleton />} index key={`${username}/${kind}`} provider="letterboxd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
+    <ListsPage contentKey={`${username}/${kind}`} fallback={<ListsGridSkeleton />} index provider="letterboxd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
       {url != null && username != null && validKind && <LetterboxdListsIndex kind={kind} url={url} username={username} />}
     </ListsPage>
   );
