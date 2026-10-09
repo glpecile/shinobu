@@ -23,6 +23,7 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { anilistQueryKeys, fetchSeasonalAnime } from './anilist';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { simklDeps, simklQueryKeys } from './simkl';
+import { serializdQueryKeys } from './serializd';
 import { upNextQueryKeys } from './up-next';
 import { watchlistQueryKeys } from './watchlist';
 
@@ -237,6 +238,9 @@ function activeSectionKeys(
   keys.push({ slot: 'watchlist', queryKey: watchlistQueryKeys.inputs() });
   if (feedProviders.includes('letterboxd')) {
     keys.push({ slot: 'letterboxdLists', queryKey: letterboxdQueryKeys.listsRoot() });
+  }
+  if (feedProviders.includes('serializd')) {
+    keys.push({ slot: 'serializdLists', queryKey: serializdQueryKeys.listsRoot() });
   }
   if (feedProviders.includes('anilist')) {
     // The network read behind the "Your Anime" row: refetching only the

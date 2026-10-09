@@ -16,8 +16,8 @@
 </details>
 
 <p align="center">
-  <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen with its backdrop, poster, native title, overview card, progress, seasons, and related entries" />
-  <img src="./docs/images/screenshot-person.png" width="49%" alt="A person's page with headshot, biography card, format and role filters, and the locally saved filmography poster view" /><br />
+  <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen with progress, seasons, and related posters with muted captions and AniList source badges" />
+  <img src="./docs/images/screenshot-person.png" width="49%" alt="A person's page with biography, filmography filters, and posters with muted role captions and TMDB source badges" /><br />
   <sub>A detail page and a person page, with no tracker connected. Filmographies remember your poster or list preference locally.</sub>
 </p>
 

@@ -3,12 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
+import { sourceProviderOf } from '@/lib/providers/provider-links';
+import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useTraktMediaImages } from '@/state/queries/trakt';
@@ -36,6 +38,8 @@ function progressLabel(item: NormalizedMediaItem): string | null {
 
 export function MediaCard({ item, className, subtitle, onPress, onActionsPress }: MediaCardProps) {
   const progress = progressLabel(item);
+  const source = sourceProviderOf(item) ?? (item.id.startsWith('tmdb-') ? 'tmdb' : null);
+  const sourceLabel = source == null ? null : source === 'tmdb' ? 'TMDB' : PROVIDERS[source].label;
   // Trakt's watched feed omits artwork; fetch it for visible cards.
   const { coverImage } = useTraktMediaImages(item);
   const accentForeground = useThemeColor('--color-accent-foreground');
@@ -60,6 +64,8 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
       onPointerLeave={() => setHovered(false)}
     >
       <PresstableScale
+        accessibilityLabel={[item.title, item.type, progress, subtitle, sourceLabel].filter(Boolean).join(' · ')}
+        accessibilityRole="button"
         className="w-full h-full"
         onLongPress={
           onActionsPress == null ? undefined : () => onActionsPress(item)
@@ -88,13 +94,11 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
             >
               {item.title}
             </Text>
-            <View className="flex-row justify-between items-center mt-1.5">
-              <Eyebrow tone="accent">{item.type}</Eyebrow>
-              {progress != null && (
-                <Text className="text-accent-foreground/70 text-xs font-sans">
-                  {progress}
-                </Text>
-              )}
+            <View className="flex-row items-center mt-1.5">
+              <Text className="text-accent-foreground/70 text-xs font-sans flex-1" numberOfLines={1}>
+                {item.type}{progress != null ? ` · ${progress}` : ''}
+              </Text>
+              {source != null && <View className="ml-2"><ProviderIcon id={source} size={12} /></View>}
             </View>
             {subtitle != null && subtitle !== '' && (
               <Text

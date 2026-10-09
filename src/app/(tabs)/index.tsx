@@ -36,7 +36,7 @@ import {
   LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
 import { UpNextSection } from '@/features/up-next/up-next-section';
-import { LetterboxdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
+import { LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
@@ -49,6 +49,7 @@ import {
 } from '@/state/queries/use-unified-feed';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
+import { getSerializdUsername } from '@/state/session/serializd';
 import { useConnectedProviders } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -156,6 +157,7 @@ function FeedScreen() {
   const letterboxdUsername = feedProviders.includes('letterboxd')
     ? getLetterboxdUsername()
     : null;
+  const serializdUsername = feedProviders.includes('serializd') ? getSerializdUsername() : null;
   const animeSeason = animeSeasonAt(new Date());
   // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
   // with none connected there is nothing to compute, so the sections never
@@ -244,6 +246,16 @@ function FeedScreen() {
             </SuspenseSection>
             <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
               <LetterboxdListsRow kind="liked" username={letterboxdUsername} />
+            </SuspenseSection>
+          </>
+        )}
+        {serializdUsername != null && (
+          <>
+            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <SerializdListsRow kind="created" username={serializdUsername} />
+            </SuspenseSection>
+            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <SerializdListsRow kind="liked" username={serializdUsername} />
             </SuspenseSection>
           </>
         )}

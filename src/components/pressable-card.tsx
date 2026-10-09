@@ -14,6 +14,7 @@ export function PressableCard({
   children,
   className,
   cardClassName,
+  padded = true,
   ...rest
 }: Omit<ComponentProps<typeof PresstableScale>, 'minScale' | 'children'> & {
   children: ReactNode;
@@ -21,12 +22,18 @@ export function PressableCard({
   className?: string;
   /** The card's own box — its content direction, a corner squared off. */
   cardClassName?: string;
+  /**
+   * False for a media card whose art owns the face edge to edge: the padding
+   * drops so a poster strip or grid can bleed to the border (list cards).
+   */
+  padded?: boolean;
 }) {
   return (
     <PresstableScale className={cn('rounded-lg', className)} minScale={0.99} {...rest}>
       <View
         className={cn(
-          'bg-surface border border-border rounded-lg px-4 py-3',
+          'bg-surface border border-border rounded-lg',
+          padded && 'px-4 py-3',
           cardClassName,
         )}
       >

@@ -20,6 +20,9 @@ a follow-up in your summary.
 
 PR titles follow Conventional Commits, e.g. `fix(person): make biography links tappable`.
 
+Use `switch` when dispatching several cases of the same value (such as a
+provider), not a chain of `if`s, so the alternatives stay together.
+
 ## Tests
 
 Write as few tests as cover the change. Add tests only where the repo already
@@ -102,6 +105,10 @@ docs say it owns that class. `bun check:classnames`, `bun check:router-push`,
 and `bun check:links` cover the rest. Reviewers enforce the Suspense, no-dead-end, and proxy rules.
 
 ## Navigation
+
+Define app destinations only in `src/lib/routes.ts`; callers use `routes.*`,
+including links, redirects, and pathname objects. `shinobu/no-hardcoded-routes`
+rejects inline navigation paths in `bun lint` and CI.
 
 Navigate with `usePushRoute()` from `@/lib/navigation`, never
 `useRouter().push`, which double-pushes when two instances of one item are

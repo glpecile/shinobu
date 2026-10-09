@@ -76,7 +76,7 @@ export function parseListsPage(html: string, fetchedAt: string): LetterboxdLists
       slug,
       title,
       ...(count != null ? { filmCount: Number(count.replaceAll(',', '')) } : {}),
-      previews: parseWatchlistPage(article).slice(0, 3).map((film) => normalizeWatchlistFilm(film, fetchedAt)),
+      previews: parseWatchlistPage(article).slice(0, 4).map((film) => normalizeWatchlistFilm(film, fetchedAt)),
     });
   }
   return { lists, hasNextPage: hasNextPage(html) };

@@ -1,35 +1,67 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PressableCard } from '@/components/pressable-card';
+import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
-import type { LetterboxdList } from '@/lib/providers/letterboxd/lists';
-import { routes } from '@/lib/routes';
+import { formatCount } from '@/lib/format-count';
+import type { ProviderId } from '@/lib/providers/types';
 
-/** A list is a collection, not a film: a strip of posters keeps the two distinct. */
-export function ListCard({ list, onPress }: { list: LetterboxdList; onPress: () => void }) {
-  const newTab = useNewTabPress(routes.letterboxdList(list.owner, list.slug));
-  const count = list.filmCount == null ? '' : `${list.filmCount.toLocaleString()} ${list.filmCount === 1 ? 'film' : 'films'} · `;
+/** A four-poster filmstrip with compact count/author metadata and a provider mark. */
+export function ListCard({ list, count: itemCount, noun = 'film', provider, href, onPress }: {
+  list: { title: string; owner: string; previews: { id: string; coverImage: string }[] };
+  count?: number;
+  noun?: 'film' | 'item';
+  provider?: ProviderId;
+  href: string;
+  onPress: () => void;
+}) {
+  const newTab = useNewTabPress(href);
+  const count = itemCount == null ? '' : `${formatCount(itemCount)} ${noun}${itemCount === 1 ? '' : 's'}`;
+  const meta = count === '' ? `by ${list.owner}` : `${count} · by ${list.owner}`;
+  const strip = list.previews.slice(0, 4);
   return (
     <View onPointerDown={newTab.onPointerDown}>
       <PressableCard
-        accessibilityLabel={`${list.title}. ${count}by ${list.owner}`}
+        accessibilityLabel={`${list.title}. ${meta}`}
         accessibilityRole="button"
-        cardClassName="h-48"
         onPress={() => { if (!newTab.opened()) onPress(); }}
+        padded={false}
       >
-        <View className="flex-row gap-1 h-28 overflow-hidden rounded-md mb-3">
-          {list.previews.length === 0 ? <PosterPlaceholder className="flex-1 border-0" /> : list.previews.map((film) => (
-            <View className="flex-1 bg-background" key={film.id}>
-              {film.coverImage === '' ? <PosterPlaceholder className="w-full h-full border-0" /> : (
-                <Image className="w-full h-full" contentFit="cover" source={{ uri: film.coverImage }} />
+        <View className="h-44 rounded-lg overflow-hidden bg-surface">
+          <View className="h-full flex-row">
+            {strip.length === 0 ? (
+              <PosterPlaceholder className="w-full h-full" />
+            ) : (
+              strip.map((film, index) => (
+                <View className="flex-1" key={`${film.id}/${index}`}>
+                  {film.coverImage === '' ? <PosterPlaceholder className="w-full h-full border-0" /> : (
+                    <Image className="w-full h-full" contentFit="cover" source={{ uri: film.coverImage }} />
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.92)']}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 124 }}
+          />
+          <View className="absolute inset-x-0 bottom-0 p-3">
+            <Text className="text-accent-foreground font-sans-semibold text-sm leading-tight" numberOfLines={2}>{list.title}</Text>
+            <View className="flex-row items-center mt-1.5">
+              <Text className="text-accent-foreground/70 font-sans text-xs flex-1" numberOfLines={1}>
+                {count}
+                {count === '' ? 'by ' : ' · by '}
+                <Text className="font-sans-semibold">{list.owner}</Text>
+              </Text>
+              {provider != null && (
+                <View className="ml-2"><ProviderIcon id={provider} size={12} /></View>
               )}
             </View>
-          ))}
+          </View>
         </View>
-        <Text className="font-sans-semibold text-foreground text-sm" numberOfLines={1}>{list.title}</Text>
-        <Text className="font-sans text-muted text-xs mt-1" numberOfLines={1}>{`${count}by ${list.owner}`}</Text>
       </PressableCard>
     </View>
   );
