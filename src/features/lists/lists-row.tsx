@@ -1,14 +1,11 @@
 import { View } from 'react-native';
 
-import { BackButton } from '@/components/back-button';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Rail, VirtualizedRail } from '@/components/rail';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
-import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { ViewAllLink } from '@/components/view-all-link';
 import { usePushRoute } from '@/lib/navigation';
-import { cn } from '@/lib/cn';
 import type { LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
 import type { SerializdListKind } from '@/lib/providers/serializd/lists';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -17,6 +14,7 @@ import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { ListCard } from './list-card';
+import { ListsHeaderSkeleton } from './list-header';
 
 export function listsTitle(kind: LetterboxdListKind) {
   return kind === 'liked' ? 'Liked Lists' : 'Your Lists';
@@ -36,21 +34,15 @@ export function ListsRowSkeleton() {
 /**
  * The list-detail loading state, laid out like the loaded screen so nothing
  * shifts when the data lands: the round-arrow + provider-dot + title header
- * row, then the count/toolbar row, then the films in the persisted view's
- * geometry. Heights match `ListsHeader` (text-2xl ≈ 32px) and the toolbar
- * (icon buttons are 44px) exactly. The body is `WallSkeleton`, which reads the
- * saved grid/list preference and lays out to match — the load reads as that layout
- * materializing, not as one shape that then swaps into another.
+ * row (`ListsHeaderSkeleton`), then the count/toolbar row, then the films in
+ * the persisted view's geometry. The body is `WallSkeleton`, which reads the
+ * saved grid/list preference and lays out to match — the load reads as that
+ * layout materializing, not as one shape that then swaps into another.
  */
 export function ListFilmsSkeleton({ onBack }: { onBack: () => void }) {
   return (
     <View className="flex-1">
-      {/* Mirrors ListsHeader: back, provider icon, title — same paddings. */}
-      <View className={cn('flex-row items-center gap-3 px-6 pb-4', screenHeaderTopPadding)}>
-        <BackButton className="-ml-2" onPress={onBack} />
-        <ProviderIcon id="letterboxd" size={20} />
-        <Skeleton className="h-8 w-56 rounded" />
-      </View>
+      <ListsHeaderSkeleton onBack={onBack} provider="letterboxd" />
       {/* Mirrors the `N films · by owner` + buttons toolbar row. */}
       <View className="flex-row items-center gap-3 px-6 pb-3">
         <Skeleton className="h-4 w-24 shrink rounded" />

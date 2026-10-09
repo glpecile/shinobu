@@ -11,45 +11,81 @@ import { LoadMoreFooter } from '@/components/load-more-footer';
 import { ViewToggle } from '@/components/view-toggle';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import { ListsGrid } from '@/features/lists/lists-grid';
 import { ListsHeader, ProviderListLink } from '@/features/lists/list-header';
-import { SerializdListsScreen } from '@/features/lists/serializd-lists-screen';
+import { ListsIndex } from '@/features/lists/lists-grid';
 import { ListLikeButton } from '@/features/lists/list-like-button';
+import { SerializdListItems, SerializdListSkeleton } from '@/features/lists/serializd-list-detail';
 import { listsTitle, ListFilmsSkeleton, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { PosterWall } from '@/features/watchlist/poster-wall';
 import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
 import { usePushRoute } from '@/lib/navigation';
 import { letterboxdListsUrl, letterboxdListUrl, type LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
+import { PROVIDERS } from '@/lib/providers/registry';
+import { serializdListsUrl, serializdListUrl, type SerializdListKind } from '@/lib/providers/serializd/lists';
+import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useSuspenseLetterboxdListFilmsQuery, useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
+import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
+import { getSerializdUsername } from '@/state/session/serializd';
 
-function ListsIndex({ username, kind, url }: { username: string; kind: LetterboxdListKind; url: string }) {
+type ListsProvider = Extract<ProviderId, 'letterboxd' | 'serializd'>;
+
+/** Copy that differs between the two providers' indexes and detail screens. */
+const copy: Record<ListsProvider, { connect: string; invalid: string; error: string }> = {
+  letterboxd: {
+    connect: 'Connect your Letterboxd username to browse your created and liked lists.',
+    invalid: 'This link doesn’t identify a Letterboxd list.',
+    error: 'Letterboxd may be blocking this page, or it may be private or no longer available.',
+  },
+  serializd: {
+    connect: 'Connect Serializd to browse your created and liked lists.',
+    invalid: 'This link doesn’t identify a Serializd list.',
+    error: 'The list may be private, unavailable, or your Serializd session may need reconnecting.',
+  },
+};
+
+function LetterboxdIndex({ username, kind, url }: { username: string; kind: LetterboxdListKind; url: string }) {
   const pages = useSuspenseLetterboxdListsQuery(username, kind);
-  const lists = [...new Map(pages.data.pages.flatMap((page) => page.lists).map((list) => [list.id, list])).values()];
-  if (lists.length === 0) return (
-    <CenteredNotice>
-      <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
-      <CenteredNotice.Body>{kind === 'liked' ? 'Like a list on Letterboxd to see it here.' : 'Create a public list on Letterboxd to see it here. Private lists aren’t available in Shinobu.'}</CenteredNotice.Body>
-      <ProviderListLink provider="letterboxd" url={url} />
-    </CenteredNotice>
-  );
   return (
-    <ListsGrid
+    <ListsIndex
       count={(list) => list.filmCount}
+      emptyBody={kind === 'liked' ? 'Like a list on Letterboxd to see it here.' : 'Create a public list on Letterboxd to see it here. Private lists aren’t available in Shinobu.'}
+      emptyTitle="No lists yet"
+      fetchNextPage={() => void pages.fetchNextPage()}
+      hasNextPage={pages.hasNextPage}
       href={(list) => routes.letterboxdList(list.owner, list.slug)}
-      lists={lists}
-      onEndReached={pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError ? () => void pages.fetchNextPage() : undefined}
-      onRefresh={() => void pages.refetch()}
-      refreshing={pages.isRefetching}
-      footer={
-        <View className="items-center gap-3 pb-6">
-          <LoadMoreFooter failed={pages.isFetchNextPageError} loading={pages.isFetchingNextPage} noun="lists" onRetry={() => void pages.fetchNextPage()} />
-          <ProviderListLink provider="letterboxd" url={url} />
-        </View>
-      }
+      isFetchNextPageError={pages.isFetchNextPageError}
+      isFetchingNextPage={pages.isFetchingNextPage}
+      isRefetching={pages.isRefetching}
+      lists={pages.data.pages.flatMap((page) => page.lists)}
+      provider="letterboxd"
+      refetch={() => void pages.refetch()}
+      url={url}
+    />
+  );
+}
+
+function SerializdIndex({ username, kind, url }: { username: string; kind: SerializdListKind; url: string }) {
+  const pages = useSuspenseSerializdListsQuery(username, kind);
+  return (
+    <ListsIndex
+      count={(list) => list.itemCount}
+      emptyBody={kind === 'liked' ? 'Like a list on Serializd to see it here.' : 'Create a list on Serializd to see it here.'}
+      emptyTitle="No lists yet"
+      fetchNextPage={() => void pages.fetchNextPage()}
+      hasNextPage={pages.hasNextPage}
+      href={(list) => routes.serializdList(list.id)}
+      isFetchNextPageError={pages.isFetchNextPageError}
+      isFetchingNextPage={pages.isFetchingNextPage}
+      isRefetching={pages.isRefetching}
+      lists={pages.data.pages.flatMap((page) => page.lists)}
+      noun="item"
+      provider="serializd"
+      refetch={() => void pages.refetch()}
+      url={url}
     />
   );
 }
@@ -93,16 +129,19 @@ function ListFilms({ username, owner, slug, url, onBack }: { username: string | 
   );
 }
 
-/** One browsing route: either a personal index or an owner-specific list of films. */
-function LetterboxdListsScreen() {
+/** One browsing route shared by Letterboxd and Serializd: the personal index or a provider list detail. */
+function ListsScreen() {
   const router = useRouter();
   const pushRoute = usePushRoute();
-  const params = useLocalSearchParams<{ kind?: string; owner?: string; slug?: string }>();
+  const params = useLocalSearchParams<{ provider?: string; kind?: string; owner?: string; slug?: string; id?: string }>();
   const connected = useConnectedProviders();
-  const username = connected.includes('letterboxd') ? getLetterboxdUsername() : null;
+  const provider: ListsProvider = params.provider === 'serializd' ? 'serializd' : 'letterboxd';
+  const username = connected.includes(provider) ? (provider === 'serializd' ? getSerializdUsername() : getLetterboxdUsername()) : null;
   const kind = params.kind === 'liked' ? 'liked' : 'created';
-  const detail = params.owner != null || params.slug != null;
-  const url = detail ? letterboxdListUrl(params.owner ?? '', params.slug ?? '') : letterboxdListsUrl(username ?? '', kind);
+  const detail = provider === 'serializd' ? params.id != null : params.owner != null || params.slug != null;
+  const url = provider === 'serializd'
+    ? (detail ? serializdListUrl(params.id ?? '') : serializdListsUrl(username ?? ''))
+    : (detail ? letterboxdListUrl(params.owner ?? '', params.slug ?? '') : letterboxdListsUrl(username ?? '', kind));
   const { reset } = useQueryErrorResetBoundary();
   const title = detail ? 'List' : listsTitle(kind);
   function back() {
@@ -112,34 +151,32 @@ function LetterboxdListsScreen() {
   return (
     <View className="flex-1 bg-background">
       <Head><title>{`${title} — Shinobu`}</title></Head>
-      {!detail && <ListsHeader onBack={back} provider="letterboxd" title={title} />}
+      {!detail && <ListsHeader onBack={back} provider={provider} title={title} />}
       {url == null ? (
         <>
-          {detail && <ListsHeader onBack={back} provider="letterboxd" title={title} />}
+          {detail && <ListsHeader onBack={back} provider={provider} title={title} />}
           <CenteredNotice>
-            <CenteredNotice.Title>{detail ? 'Invalid list link' : 'Connect Letterboxd'}</CenteredNotice.Title>
-            <CenteredNotice.Body>{detail ? 'This link doesn’t identify a Letterboxd list.' : 'Connect your Letterboxd username to browse your created and liked lists.'}</CenteredNotice.Body>
-            {!detail && <CenteredNotice.Action icon={<Button.Icon name="link-outline" />} label="Connect Letterboxd" onPress={() => pushRoute(routes.settings)} />}
+            <CenteredNotice.Title>{detail ? 'Invalid list link' : `Connect ${PROVIDERS[provider].label}`}</CenteredNotice.Title>
+            <CenteredNotice.Body>{detail ? copy[provider].invalid : copy[provider].connect}</CenteredNotice.Body>
+            {!detail && <CenteredNotice.Action icon={<Button.Icon name="link-outline" />} label={`Connect ${PROVIDERS[provider].label}`} onPress={() => pushRoute(routes.settings)} />}
           </CenteredNotice>
         </>
       ) : (
-        <ErrorBoundary
-          key={url}
-          onReset={reset}
-          fallbackRender={({ resetErrorBoundary }) => (
-            <>
-              {detail && <ListsHeader onBack={back} provider="letterboxd" title={title} />}
-              <CenteredNotice>
-                <CenteredNotice.Title>Couldn’t load {detail ? 'this list' : 'your lists'}</CenteredNotice.Title>
-                <CenteredNotice.Body>Letterboxd may be blocking this page, or it may be private or no longer available.</CenteredNotice.Body>
-                <CenteredNotice.Action icon={<Button.Icon name="refresh" />} label="Try again" onPress={resetErrorBoundary} />
-                <ProviderListLink provider="letterboxd" url={url} />
-              </CenteredNotice>
-            </>
-          )}
-        >
-          <Suspense fallback={detail ? <ListFilmsSkeleton onBack={back} /> : <ListsRowSkeleton />}>
-            {detail ? <ListFilms onBack={back} owner={params.owner ?? ''} slug={params.slug ?? ''} url={url} username={username} /> : <ListsIndex kind={kind} username={username ?? ''} url={url} />}
+        <ErrorBoundary key={`${provider}/${username}/${url}`} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (
+          <>
+            {detail && <ListsHeader onBack={back} provider={provider} title={title} />}
+            <CenteredNotice>
+              <CenteredNotice.Title>Couldn’t load {detail ? 'this list' : 'your lists'}</CenteredNotice.Title>
+              <CenteredNotice.Body>{copy[provider].error}</CenteredNotice.Body>
+              <CenteredNotice.Action icon={<Button.Icon name="refresh" />} label="Try again" onPress={resetErrorBoundary} />
+              <ProviderListLink provider={provider} url={url} />
+            </CenteredNotice>
+          </>
+        )}>
+          <Suspense fallback={detail ? (provider === 'serializd' ? <SerializdListSkeleton onBack={back} /> : <ListFilmsSkeleton onBack={back} />) : <ListsRowSkeleton />}>
+            {provider === 'serializd'
+              ? (detail ? <SerializdListItems id={params.id ?? ''} onBack={back} url={url} username={username} /> : <SerializdIndex kind={kind} url={url} username={username ?? ''} />)
+              : (detail ? <ListFilms onBack={back} owner={params.owner ?? ''} slug={params.slug ?? ''} url={url} username={username} /> : <LetterboxdIndex kind={kind} url={url} username={username ?? ''} />)}
           </Suspense>
         </ErrorBoundary>
       )}
@@ -147,7 +184,4 @@ function LetterboxdListsScreen() {
   );
 }
 
-export default function ListsScreen() {
-  const { provider } = useLocalSearchParams<{ provider?: string }>();
-  return provider === 'serializd' ? <SerializdListsScreen /> : <LetterboxdListsScreen />;
-}
+export default ListsScreen;

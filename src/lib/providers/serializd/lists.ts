@@ -9,7 +9,9 @@ export type SerializdListKind = 'created' | 'liked';
 
 const Id = Schema.Int.check(Schema.isGreaterThan(0));
 const Page = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 9999 }));
-const Username = Schema.String.check(Schema.isPattern(/^(?!\.{1,2}$)[A-Za-z0-9_.-]{1,100}$/));
+// `..` inside a username would be rejected by the web proxy's path check, so a
+// valid-looking account would read on native and 404 on web — exclude it here.
+const Username = Schema.String.check(Schema.isPattern(/^(?!.*\.\.)[A-Za-z0-9_.-]{1,100}$/));
 const ListId = Schema.String.check(Schema.isPattern(/^[1-9][0-9]{0,14}$/));
 const RawItem = Schema.Struct({
   showId: Id,
@@ -22,7 +24,10 @@ const RawItem = Schema.Struct({
     posterPath: Schema.optional(Schema.NullOr(Schema.String)),
   }))),
   episode: Schema.optional(Schema.NullOr(Schema.Struct({
-    episode_number: Id,
+    // Episode 0 is real (specials, pilots, anime specials); rejecting it would
+    // fail the whole list decode. The episode route redirects episode 0 to the
+    // show's details, so it degrades instead of breaking the list.
+    episode_number: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
     name: Schema.optional(Schema.String),
   }))),
 });
@@ -56,6 +61,8 @@ export interface SerializdList {
 
 export function serializdListsUrl(username: string): string | null {
   if (!Schema.is(Username)(username)) return null;
+  // The web client shows created and liked as tabs on one page; `/liked_lists`
+  // is an API path only, so a liked index can't deep-link its tab.
   return `https://www.serializd.com/user/${encodeURIComponent(username)}/lists`;
 }
 
@@ -68,8 +75,12 @@ function normalizeEntry(raw: typeof RawItem.Type, fetchedAt: string): SerializdL
   const season = raw.season?.seasonNumber;
   const episode = raw.episode?.episode_number;
   const poster = raw.season?.posterPath || raw.bannerImage;
+  // Identity must never collapse onto the show entry: a season whose payload
+  // omits `seasonId` falls back to its season number so `1396/1/` stays
+  // distinct from the show's `1396//` (and an episode's `1396/1/2`).
+  const seasonKey = raw.seasonId ?? raw.season?.seasonNumber ?? '';
   return {
-    id: `${raw.showId}/${raw.seasonId ?? ''}/${episode ?? ''}`,
+    id: `${raw.showId}/${seasonKey}/${episode ?? ''}`,
     subtitle: [raw.season?.name, episode != null ? `Episode ${episode}` : null, raw.episode?.name].filter(Boolean).join(' · ') || 'Series',
     ...(season != null ? { season } : {}),
     ...(episode != null ? { episode } : {}),

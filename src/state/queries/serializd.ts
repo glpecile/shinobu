@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';
 import type { SerializdDeps } from '@/lib/providers/serializd/deps';
-import { getSerializdSession } from '@/state/session/serializd';
+import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 
 /**
  * Real dependency wiring for Serializd effects — same state → lib/providers
@@ -64,6 +64,8 @@ export function useSuspenseSerializdListQuery(username: string | null, id: strin
 
 /** Cache-only resolution keeps list entries usable even without a TMDB token. */
 export function findInSerializdListsCache(queryClient: QueryClient, id: string) {
-  return queryClient.getQueriesData<{ entries: SerializdListEntry[] }>({ queryKey: [...serializdQueryKeys.listRoot(), getSerializdSession()?.username ?? null] })
+  // Same username source as the detail query's key (`getSerializdUsername()`),
+  // so a connected-but-invalid session never hides a cached hit.
+  return queryClient.getQueriesData<{ entries: SerializdListEntry[] }>({ queryKey: [...serializdQueryKeys.listRoot(), getSerializdUsername() ?? null] })
     .flatMap(([, data]) => data?.entries ?? []).find((entry) => entry.item.id === id)?.item;
 }

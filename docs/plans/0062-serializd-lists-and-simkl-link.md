@@ -33,8 +33,15 @@ GET allowlist requires deploying/restarting the Worker, not a native rebuild.
 - iOS verified detail loading, posters, a long two-line title, the disconnected
   index prompt, and Breaking Bad's list episode → S1E1 detail navigation.
   Letterboxd's liked-list empty state still has its external recovery action.
-- 1,294 tests, typecheck, lint, class-name/navigation/link checks,
+- 1,296 tests, typecheck, lint, class-name/navigation/link checks,
   `git diff --check`, and production web export passed.
+- Post-merge review passes (ponytail + code review) found and fixed: episode-0
+  entries no longer fail a whole list decode; a season entry without `seasonId`
+  no longer collapses onto the show entry's id; usernames containing `..` are
+  rejected up front (they would 404 through the web proxy); the cache lookup
+  sources its username exactly like the write key; and the two /lists screens
+  merged into one provider-aware screen, sharing the index grid/empty/footer
+  and the detail header skeleton.
 - No signed-in Serializd account was available on the simulator: private lists,
   Home's populated Serializd rails, and browser/Android runtime interactions
   were not verified live. Provider parsing/paging and the exact web proxy grant

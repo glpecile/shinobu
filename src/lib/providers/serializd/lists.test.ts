@@ -38,6 +38,19 @@ test('show, season, and episode entries of the same show retain separate identit
   expect(result.complete).toBe(true);
 });
 
+test('a season entry without seasonId never collapses onto the show entry', async () => {
+  const bareSeason = { ...show, season: { seasonNumber: 1, name: 'Season 1' } };
+  const result = await Effect.runPromise(getSerializdList(deps({ ...list, numberOfItems: 3, listItems: [show, bareSeason] }), '42'));
+  expect(result.entries.map((entry) => entry.id)).toEqual(['1396//', '1396/1/']);
+  expect(result.entries[1]).toMatchObject({ season: 1 });
+});
+
+test('episode 0 entries decode instead of failing the whole list', async () => {
+  const special = { ...show, season: { seasonNumber: 0, name: 'Specials' }, episode: { episode_number: 0, name: 'OVA' } };
+  const result = await Effect.runPromise(getSerializdList(deps({ ...list, numberOfItems: 1, listItems: [special] }), '42'));
+  expect(result.entries).toEqual([expect.objectContaining({ id: '1396/0/0', season: 0, episode: 0 })]);
+});
+
 test.each([0, 2])('an empty or partial list is distinguished from a complete list (count=%s)', async (count) => {
   const result = await Effect.runPromise(getSerializdList(deps({ ...list, numberOfItems: count, listItems: [] }), '42'));
   expect(result.complete).toBe(count === 0);
@@ -58,6 +71,7 @@ test('invalid addresses and paging never reach the transport', async () => {
   const reads: Effect.Effect<unknown, ProviderError>[] = [
     getSerializdList(d, '42/likes/add'),
     getSerializdListsPage(d, { username: '../login', kind: 'created', page: 1 }),
+    getSerializdListsPage(d, { username: 'john..doe', kind: 'created', page: 1 }),
     getSerializdListsPage(d, { username: 'gian', kind: 'created', page: 0 }),
   ];
   for (const read of reads) {
