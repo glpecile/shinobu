@@ -72,7 +72,7 @@ function VariantPoster({ item, variant }: { item: NormalizedMediaItem; variant: 
       <PresstableScale
         accessibilityLabel={`${preview?.title ?? item.title} on ${LABELS[variant.source]}`}
         className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
-        onPress={() => pushRoute(routes.details(variant.id))}
+        onPress={() => pushRoute(routes.details(variant.id, item.type))}
       >
         {/* The page's own poster stands in until the variant's lands. */}
         <PosterFace marks={[variant.source]} uri={preview?.coverImage || item.coverImage} />

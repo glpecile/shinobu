@@ -48,7 +48,7 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
   const showActionsButton =
     onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
 
-  const newTab = useNewTabPress(routes.details(item.id));
+  const newTab = useNewTabPress(routes.details(item.id, item.type));
 
   function onCardPress() {
     if (newTab.opened()) return;

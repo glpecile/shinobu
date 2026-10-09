@@ -156,7 +156,7 @@ function SeasonWall({
             : undefined
         }
         onItemActions={onItemActions}
-        onItemPress={(item) => pushRoute(routes.details(item.id))}
+        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
         onRefresh={() => void refresh()}
         refreshing={refreshing}
       />

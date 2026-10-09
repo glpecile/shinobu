@@ -94,7 +94,7 @@ function EpisodePager({
   const [settled, setSettled] = useState(index);
 
   function commit(target: EpisodeRef) {
-    router.setParams({ season: String(target.season), number: String(target.number) });
+    router.setParams({ episode: [String(target.season), String(target.number)] });
   }
 
   function settleAt(x: number) {

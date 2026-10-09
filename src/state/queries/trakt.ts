@@ -13,6 +13,7 @@ import {
   getWatchedMovies,
   getWatchedShows,
   searchMedia,
+  lookupByExternalId,
 } from '@/lib/providers/trakt/reads';
 import type { NormalizedMediaImages } from '@/lib/providers/trakt/normalize';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
@@ -85,6 +86,8 @@ export const traktQueryKeys = {
   /** Lazy poster/backdrop recovery for artless watched items. */
   images: (type: MediaType, traktId: number) =>
     [...traktQueryKeys.all, 'images', type, traktId] as const,
+  item: (type: 'MOVIE' | 'TV' | undefined, traktId: number | null) =>
+    [...traktQueryKeys.all, 'item', type, traktId] as const,
   /**
    * One `/calendars/my/*` window (plan 0030). The start date is part of the
    * key on purpose: it is the user's *local* today, so the cache rolls over at
@@ -118,6 +121,20 @@ export const traktQueryKeys = {
     sortHow: 'asc' | 'desc',
   ) => [...traktQueryKeys.watchlistRoot(), type, sortBy, sortHow] as const,
 };
+
+/** Cold Trakt links need a type: movie and show ID spaces overlap. Public, BYO client ID. */
+export function useTraktItemQuery(traktId: number | null, type?: MediaType) {
+  const kind = type === 'MOVIE' || type === 'TV' ? type : undefined;
+  const enabled = traktId != null && kind != null && getClientIdForProvider('trakt') !== '';
+  return useQuery({
+    queryKey: traktQueryKeys.item(kind, traktId),
+    queryFn: ({ signal }) => Effect.runPromise(lookupByExternalId(traktDeps(), {
+      source: 'trakt', id: traktId ?? 0, kind: kind === 'MOVIE' ? 'movie' : 'show',
+    }), { signal }),
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
 
 /**
  * Poster/backdrop for one item, recovered lazily: Trakt's 2026-06-30 API

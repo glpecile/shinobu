@@ -69,7 +69,7 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
           </View>
         }
         onItemActions={(credit) => openActions(credit.item)}
-        onItemPress={(item) => pushRoute(routes.details(item.id))}
+        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
       />
       <ScrolledTitle.Bar title={company.name} />
       <CardActionsSheet {...sheetProps} />

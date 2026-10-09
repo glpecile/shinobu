@@ -113,7 +113,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
             kind: credit.roles.every((entry) => entry.role === ACTING_ROLE) ? 'cast' : 'crew',
           })
         }
-        onItemPress={(item) => pushRoute(routes.details(item.id))}
+        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
       />
       <ScrolledTitle.Bar title={person.name} />
       <CardActionsSheet {...sheetProps} />

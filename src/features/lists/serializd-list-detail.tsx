@@ -18,7 +18,7 @@ import { ListsHeader, ProviderListLink } from './list-header';
 function entryRoute(entry: SerializdListEntry) {
   return entry.season != null && entry.episode != null
     ? routes.episode(entry.item.id, entry.season, entry.episode)
-    : routes.details(entry.item.id);
+    : routes.details(entry.item.id, entry.item.type);
 }
 
 export function SerializdListItems({ username, id, url }: { username: string | null; id: string; url: string }) {

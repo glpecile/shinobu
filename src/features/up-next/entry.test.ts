@@ -76,13 +76,13 @@ describe('entryLabel', () => {
 
 describe('episodeHref', () => {
   test('a tracker episode opens the episode by season and number', () => {
-    expect(episodeHref(episodeEntry())).toBe('/episode/trakt-1?season=1&number=4');
+    expect(episodeHref(episodeEntry())).toBe('/episode/trakt/1/1/4');
   });
 
   test('an AniList entry opens the anime episode by its own number', () => {
     expect(
       episodeHref({ ...episodeEntry({ season: undefined, number: 7 }), source: 'anilist' }),
-    ).toBe('/episode/trakt-1?number=7');
+    ).toBe('/episode/trakt/1/7');
   });
 
   test('a seasonless tracker entry and a release have no episode to open', () => {

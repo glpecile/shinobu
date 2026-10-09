@@ -103,7 +103,7 @@ function SearchResultRow({
         accessibilityRole: 'button',
       }}
       className="px-6 py-2.5"
-      href={routes.details(item.id)}
+      href={routes.details(item.id, item.type)}
       item={item}
       leading={
         <>
@@ -463,7 +463,7 @@ export default function SearchScreen() {
           : 'results';
 
   function openDetails(item: NormalizedMediaItem) {
-    pushRoute(routes.details(item.id));
+    pushRoute(routes.details(item.id, item.type));
   }
 
   // Resets all three representations of the query at once. Leaving `query`

@@ -95,7 +95,7 @@ function WatchlistRow({
   return (
     <ActionableRow
       className="px-6 py-2.5"
-      href={routes.details(entry.item.id)}
+      href={routes.details(entry.item.id, entry.item.type)}
       item={entry.item}
       leading={
         <>

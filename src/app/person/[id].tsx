@@ -1,81 +1,14 @@
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
-import { Suspense } from 'react';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { FloatingBackButton } from '@/components/floating-back-button';
-import { ScrolledTitle } from '@/components/scrolled-title';
-import {
-  PersonDetailsView,
-  PersonNotFound,
-  PersonSkeleton,
-} from '@/features/person';
 import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
 import { routes } from '@/lib/routes';
-import { useSuspenseAniListStaffQuery } from '@/state/queries/person-details';
-import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
 
-function PersonContent({ tmdbId }: { tmdbId: number }) {
-  const { data } = useSuspenseTmdbPersonQuery({ tmdbId });
-  return <PersonDetailsView {...data} />;
-}
-
-function AniListPersonContent({ anilistId }: { anilistId: number }) {
-  const { data } = useSuspenseAniListStaffQuery({ id: anilistId });
-  return <PersonDetailsView {...data} />;
-}
-
-export default function PersonScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  // `anilist-<id>` is an AniList staff id (`routes.anilistPerson`); a bare number is TMDB's.
+/** Bare IDs were TMDB people; anilist-<id> identified AniList staff. */
+export default function LegacyPersonRoute() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  if (typeof id !== 'string') return <Redirect href={routes.home} />;
   const anilistId = parseAniListItemId(id);
+  if (anilistId != null) return <Redirect href={routes.anilistPerson(anilistId)} />;
   const tmdbId = Number(id);
-
-  function goBack() {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace(routes.home);
-    }
-  }
-
-  if (anilistId == null && (!Number.isFinite(tmdbId) || tmdbId <= 0)) {
-    return (
-      <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />
-    );
-  }
-
-  return (
-    <ScrolledTitle>
-      <Suspense fallback={<PersonSkeleton />}>
-        {anilistId != null ? (
-          <AniListPersonContent anilistId={anilistId} />
-        ) : (
-          <PersonContent tmdbId={tmdbId} />
-        )}
-      </Suspense>
-      <FloatingBackButton onPress={goBack} />
-    </ScrolledTitle>
-  );
-}
-
-/**
- * Route-level containment: a failed TMDB fetch (no token, 404, rate limit)
- * surfaces as this screen's not-found view with a retry — not the root
- * boundary unmounting the whole app (plan 0013 §5).
- */
-export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
-  const router = useRouter();
-  return (
-    <PersonNotFound
-      detail="This person couldn't be loaded."
-      onGoBack={() =>
-        router.canGoBack() ? router.back() : router.replace(routes.home)
-      }
-      onRetry={retry}
-    />
-  );
+  return <Redirect href={Number.isSafeInteger(tmdbId) && tmdbId > 0 ? routes.person(tmdbId) : routes.home} />;
 }

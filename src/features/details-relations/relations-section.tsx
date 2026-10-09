@@ -21,7 +21,7 @@ function RelationsRow({ mediaId, type }: { mediaId: number; type: MediaType }) {
       <MediaCarousel
         collapseKey="details-relations"
         items={data.relations.map((relation) => relation.item)}
-        onItemPress={(item) => pushRoute(routes.details(item.id))}
+        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
         provider="anilist"
         subtitles={Object.fromEntries(
           data.relations.map((relation) => [relation.item.id, relation.relation]),
@@ -42,7 +42,7 @@ function RecommendationsAndTags({ mediaId, type }: { mediaId: number; type: Medi
           <MediaCarousel
             collapseKey="details-recommendations"
             items={data.recommendations}
-            onItemPress={(item) => pushRoute(routes.details(item.id))}
+            onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
             provider="anilist"
             title="Recommendations"
           />
