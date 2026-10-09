@@ -12,7 +12,7 @@ import { routes } from '@/lib/routes';
 import { ListsHeader, ProviderListLink } from './list-header';
 
 /** Shared recovery and loading frame; resource pages own their query and identity. */
-export function ListsPage({ provider, title = 'List', url, index = false, unavailable = 'invalid', children, fallback }: {
+export function ListsPage({ provider, title = 'List', url, index = false, unavailable = 'invalid', children, fallback, contentKey }: {
   provider: 'letterboxd' | 'serializd';
   title?: string;
   url: string | null;
@@ -20,6 +20,12 @@ export function ListsPage({ provider, title = 'List', url, index = false, unavai
   unavailable?: 'invalid' | 'connect';
   children?: ReactNode;
   fallback?: ReactNode;
+  /**
+   * Remounts the content (boundary + suspense) without the header, so the
+   * index title morphs across kind switches instead of popping with a full
+   * page remount.
+   */
+  contentKey?: string;
 }) {
   const { reset } = useQueryErrorResetBoundary();
   const pushRoute = usePushRoute();
@@ -27,7 +33,7 @@ export function ListsPage({ provider, title = 'List', url, index = false, unavai
   return (
     <View className="flex-1 bg-background">
       <Head><title>{`${title} — Shinobu`}</title></Head>
-      {index && <ListsHeader provider={provider} title={title} />}
+      {index && <ListsHeader morphTitle provider={provider} title={title} />}
       {url == null ? (
         <>
           {!index && <ListsHeader provider={provider} title={title} />}
@@ -38,7 +44,7 @@ export function ListsPage({ provider, title = 'List', url, index = false, unavai
           </CenteredNotice>
         </>
       ) : (
-        <ErrorBoundary key={url} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (
+        <ErrorBoundary key={contentKey ?? url} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (
           <>
             {!index && <ListsHeader provider={provider} title={title} />}
             <CenteredNotice>

@@ -15,7 +15,7 @@ export default function SerializdListsScreen() {
   const validKind = kind === 'created' || kind === 'liked';
   const url = validKind ? serializdListsUrl(username ?? '') : null;
   return (
-    <ListsPage fallback={<ListsGridSkeleton />} index key={`${username}/${kind}`} provider="serializd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
+    <ListsPage contentKey={`${username}/${kind}`} fallback={<ListsGridSkeleton />} index provider="serializd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
       {url != null && username != null && validKind && <SerializdListsIndex kind={kind} url={url} username={username} />}
     </ListsPage>
   );
