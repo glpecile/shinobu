@@ -10,6 +10,7 @@ import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
 import { findInLetterboxdListsCache, useLetterboxdFilmTmdbQuery } from './letterboxd';
+import { findInSerializdListsCache } from './serializd';
 import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
@@ -117,6 +118,7 @@ export function useResolvedMediaItem(id: string): {
     // never triggers the gather.
     findInWatchlistCache(queryClient, id) ??
     findInLetterboxdListsCache(queryClient, id) ??
+    findInSerializdListsCache(queryClient, id) ??
     findInTmdbCache(queryClient, id) ??
     findInSeasonalPagesCache(queryClient, id);
   // Cold deep link (a refreshed browser tab, a shared URL): nothing above

@@ -43,6 +43,9 @@ describe('allowlist', () => {
   test('passes allowlisted path+method pairs through to upstream', async () => {
     for (const [path, method] of [
       ['/api/serializd/user/gian/diary', 'GET'],
+      ['/api/serializd/user/gian/lists?sort_by=date_created_desc&page=2', 'GET'],
+      ['/api/serializd/user/gian/liked_lists?sort_by=date_created_desc&page=1', 'GET'],
+      ['/api/serializd/list/42', 'GET'],
       ['/api/serializd/login', 'POST'],
       ['/api/serializd/episode_log/add', 'POST'],
       ['/api/serializd/show/reviews/add', 'POST'],
@@ -76,12 +79,12 @@ describe('allowlist', () => {
   });
 
   test('a POST to a GET-only path is 405', async () => {
-    const upstream = capturingUpstream(Response.json({}));
-    const res = await handleSerializdProxy(
-      proxyRequest('/api/serializd/user/gian/diary', { method: 'POST', body: '{}' }),
-      upstream.fetch,
-    );
-    expect(res.status).toBe(405);
+    for (const path of ['/api/serializd/user/gian/diary', '/api/serializd/list/42']) {
+      const upstream = capturingUpstream(Response.json({}));
+      const res = await handleSerializdProxy(proxyRequest(path, { method: 'POST', body: '{}' }), upstream.fetch);
+      expect(res.status).toBe(405);
+      expect(upstream.captured).toHaveLength(0);
+    }
   });
 
   /**
@@ -115,6 +118,11 @@ describe('allowlist', () => {
       '/api/serializd/watchlist/add',
       '/api/serializd/watchlist_v2/extra',
       '/api/serializd/watchlist_v2%2F..%2Flogin',
+      '/api/serializd/list/create',
+      '/api/serializd/list/likes/add',
+      '/api/serializd/list/42/items',
+      '/api/serializd/list/42%2F..%2Flogin',
+      '/api/serializd/list/0',
     ]) {
       for (const method of ['GET', 'POST'] as const) {
         const upstream = capturingUpstream(Response.json({}));

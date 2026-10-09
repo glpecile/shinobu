@@ -1,3 +1,7 @@
+import { useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
+import { Effect } from 'effect';
+
+import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';
 import type { SerializdDeps } from '@/lib/providers/serializd/deps';
 import { getSerializdSession } from '@/state/session/serializd';
@@ -31,6 +35,35 @@ export function serializdDeps(): SerializdDeps {
  */
 export const serializdQueryKeys = {
   all: ['serializd'] as const,
+  listsRoot: () => [...serializdQueryKeys.all, 'lists'] as const,
+  lists: (username: string, kind: SerializdListKind) => [...serializdQueryKeys.listsRoot(), username, kind] as const,
+  listRoot: () => [...serializdQueryKeys.all, 'list'] as const,
+  list: (username: string | null, id: string) => [...serializdQueryKeys.listRoot(), username, id] as const,
   progress: (username: string, tmdbId: number) =>
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
 };
+
+/** Home and View all share pages; only View all fetches successors. */
+export function useSuspenseSerializdListsQuery(username: string, kind: SerializdListKind) {
+  return useSuspenseInfiniteQuery({
+    queryKey: serializdQueryKeys.lists(username, kind),
+    queryFn: ({ pageParam, signal }) => Effect.runPromise(getSerializdListsPage(serializdDeps(), { username, kind, page: pageParam }), { signal }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, page) => lastPage.hasNextPage && page < 9999 ? page + 1 : undefined,
+    staleTime: 15 * 60_000,
+  });
+}
+
+export function useSuspenseSerializdListQuery(username: string | null, id: string) {
+  return useSuspenseQuery({
+    queryKey: serializdQueryKeys.list(username, id),
+    queryFn: ({ signal }) => Effect.runPromise(getSerializdList(serializdDeps(), id), { signal }),
+    staleTime: 15 * 60_000,
+  });
+}
+
+/** Cache-only resolution keeps list entries usable even without a TMDB token. */
+export function findInSerializdListsCache(queryClient: QueryClient, id: string) {
+  return queryClient.getQueriesData<{ entries: SerializdListEntry[] }>({ queryKey: [...serializdQueryKeys.listRoot(), getSerializdSession()?.username ?? null] })
+    .flatMap(([, data]) => data?.entries ?? []).find((entry) => entry.item.id === id)?.item;
+}

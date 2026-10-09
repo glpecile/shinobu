@@ -10,8 +10,11 @@ import { ViewAllLink } from '@/components/view-all-link';
 import { usePushRoute } from '@/lib/navigation';
 import { cn } from '@/lib/cn';
 import type { LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
+import type { SerializdListKind } from '@/lib/providers/serializd/lists';
+import type { NormalizedMediaItem } from '@/types/media';
 import { routes } from '@/lib/routes';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
+import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { ListCard } from './list-card';
 
@@ -63,15 +66,33 @@ export function ListFilmsSkeleton({ onBack }: { onBack: () => void }) {
 
 export function LetterboxdListsRow({ username, kind }: { username: string; kind: LetterboxdListKind }) {
   const pages = useSuspenseLetterboxdListsQuery(username, kind);
+  return <ListsRail count={(list) => list.filmCount} href={(list) => routes.letterboxdList(list.owner, list.slug)} indexHref={routes.letterboxdLists(kind)} kind={kind} lists={pages.data.pages[0].lists} provider="letterboxd" />;
+}
+
+export function SerializdListsRow({ username, kind }: { username: string; kind: SerializdListKind }) {
+  const pages = useSuspenseSerializdListsQuery(username, kind);
+  return <ListsRail count={(list) => list.itemCount} href={(list) => routes.serializdList(list.id)} indexHref={routes.serializdLists(kind)} kind={kind} lists={pages.data.pages[0].lists} noun="item" provider="serializd" />;
+}
+
+function ListsRail<T extends { id: string; title: string; owner: string; previews: NormalizedMediaItem[] }>({
+  lists, provider, kind, indexHref, href, count, noun = 'film',
+}: {
+  lists: T[];
+  provider: 'letterboxd' | 'serializd';
+  kind: 'created' | 'liked';
+  indexHref: string;
+  href: (list: T) => string;
+  count: (list: T) => number | undefined;
+  noun?: 'film' | 'item';
+}) {
   const pushRoute = usePushRoute();
-  const lists = pages.data.pages[0].lists;
   const title = listsTitle(kind);
   if (lists.length === 0) return null;
   return (
     <CollapsibleSection
-      action={<ViewAllLink onPress={() => pushRoute(routes.letterboxdLists(kind))} title={title} />}
-      collapseKey={`letterboxd-${kind}-lists`}
-      leading={<ProviderIcon id="letterboxd" size={16} />}
+      action={<ViewAllLink onPress={() => pushRoute(indexHref)} title={title} />}
+      collapseKey={`${provider}-${kind}-lists`}
+      leading={<ProviderIcon id={provider} size={16} />}
       title={title}
     >
       <VirtualizedRail
@@ -82,7 +103,7 @@ export function LetterboxdListsRow({ username, kind }: { username: string; kind:
         ListFooterComponent={<View className="w-1" />}
         renderItem={({ item }) => (
           <View className="w-60 mr-3">
-            <ListCard list={item} onPress={() => pushRoute(routes.letterboxdList(item.owner, item.slug))} />
+            <ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} />
           </View>
         )}
         style={{ height: 192 }}

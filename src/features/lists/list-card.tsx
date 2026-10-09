@@ -4,13 +4,18 @@ import { Image } from '@/components/image';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PressableCard } from '@/components/pressable-card';
 import { useNewTabPress } from '@/components/use-new-tab-press';
-import type { LetterboxdList } from '@/lib/providers/letterboxd/lists';
-import { routes } from '@/lib/routes';
+import type { NormalizedMediaItem } from '@/types/media';
 
 /** A list is a collection, not a film: a strip of posters keeps the two distinct. */
-export function ListCard({ list, onPress }: { list: LetterboxdList; onPress: () => void }) {
-  const newTab = useNewTabPress(routes.letterboxdList(list.owner, list.slug));
-  const count = list.filmCount == null ? '' : `${list.filmCount.toLocaleString()} ${list.filmCount === 1 ? 'film' : 'films'} · `;
+export function ListCard({ list, count: itemCount, noun = 'film', href, onPress }: {
+  list: { title: string; owner: string; previews: NormalizedMediaItem[] };
+  count?: number;
+  noun?: 'film' | 'item';
+  href: string;
+  onPress: () => void;
+}) {
+  const newTab = useNewTabPress(href);
+  const count = itemCount == null ? '' : `${itemCount.toLocaleString()} ${noun}${itemCount === 1 ? '' : 's'} · `;
   return (
     <View onPointerDown={newTab.onPointerDown}>
       <PressableCard
@@ -20,8 +25,8 @@ export function ListCard({ list, onPress }: { list: LetterboxdList; onPress: () 
         onPress={() => { if (!newTab.opened()) onPress(); }}
       >
         <View className="flex-row gap-1 h-28 overflow-hidden rounded-md mb-3">
-          {list.previews.length === 0 ? <PosterPlaceholder className="flex-1 border-0" /> : list.previews.map((film) => (
-            <View className="flex-1 bg-background" key={film.id}>
+          {list.previews.length === 0 ? <PosterPlaceholder className="flex-1 border-0" /> : list.previews.map((film, index) => (
+            <View className="flex-1 bg-background" key={`${film.id}/${index}`}>
               {film.coverImage === '' ? <PosterPlaceholder className="w-full h-full border-0" /> : (
                 <Image className="w-full h-full" contentFit="cover" source={{ uri: film.coverImage }} />
               )}

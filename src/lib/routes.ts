@@ -42,6 +42,8 @@ export const routes = {
   letterboxdLists: (kind: 'created' | 'liked') => `/lists?kind=${kind}` as const,
   letterboxdList: (owner: string, slug: string) =>
     `/lists?owner=${encodeURIComponent(owner)}&slug=${encodeURIComponent(slug)}` as const,
+  serializdLists: (kind: 'created' | 'liked') => `/lists?provider=serializd&kind=${kind}` as const,
+  serializdList: (id: string) => `/lists?provider=serializd&id=${encodeURIComponent(id)}` as const,
   /**
    * The AniList seasons explorer behind the home feed's seasonal row. The
    * window lives in the URL, like `/watchlist`'s filter, so a season is
