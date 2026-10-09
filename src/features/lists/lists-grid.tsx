@@ -4,6 +4,7 @@ import { RefreshControl, useWindowDimensions, View } from 'react-native';
 import { CenteredNotice } from '@/components/centered-notice';
 import { List } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -11,12 +12,13 @@ import { ListCard } from './list-card';
 import { ProviderListLink } from './list-header';
 
 export function ListsGrid<T extends { id: string; title: string; owner: string; previews: NormalizedMediaItem[] }>({
-  lists, href, count, noun = 'film', refreshing, onRefresh, onEndReached, footer,
+  lists, href, count, noun = 'film', provider, refreshing, onRefresh, onEndReached, footer,
 }: {
   lists: T[];
   href: (list: T) => string;
   count: (list: T) => number | undefined;
   noun?: 'film' | 'item';
+  provider: ProviderId;
   refreshing: boolean;
   onRefresh: () => void;
   onEndReached?: () => void;
@@ -31,16 +33,37 @@ export function ListsGrid<T extends { id: string; title: string; owner: string; 
       className="flex-1"
       contentContainerStyle={{ padding: 10 }}
       data={lists}
-      estimatedItemSize={204}
+      estimatedItemSize={176}
       keyExtractor={(list) => list.id}
       numColumns={columns}
       onEndReached={onEndReached}
       refreshControl={<RefreshControl onRefresh={onRefresh} refreshing={refreshing} />}
       renderItem={({ item }) => (
-        <View className="px-1.5 mb-3"><ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} /></View>
+        <View className="px-1.5 mb-3"><ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} provider={provider} /></View>
       )}
       ListFooterComponent={footer}
     />
+  );
+}
+
+/**
+ * The `/lists` index's loading state in its loaded geometry: `ListsGrid`'s
+ * own column count, one card-shaped block per cell. The new card is
+ * fixed-height art-only, so the cells carry the height rather than an aspect
+ * ratio (the `WallSkeleton` precedent — the load reads as that layout
+ * materializing, not as a rail that swaps into a grid).
+ */
+export function ListsGridSkeleton() {
+  const { width } = useWindowDimensions();
+  const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
+  return (
+    <View className="flex-row flex-wrap px-2.5 pt-1.5">
+      {Array.from({ length: columns * 2 }).map((_, index) => (
+        <View className="p-1.5" key={index} style={{ width: `${100 / columns}%` }}>
+          <Skeleton className="w-full h-44 rounded-lg" delay={staggerDelay(index)} />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -85,6 +108,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
       noun={noun}
       onEndReached={hasNextPage && !isFetchingNextPage && !isFetchNextPageError ? () => void fetchNextPage() : undefined}
       onRefresh={() => void refetch()}
+      provider={provider}
       refreshing={isRefetching}
       footer={
         <View className="items-center gap-3 pb-6">

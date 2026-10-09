@@ -12,10 +12,10 @@ import { ViewToggle } from '@/components/view-toggle';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { ListsHeader, ProviderListLink } from '@/features/lists/list-header';
-import { ListsIndex } from '@/features/lists/lists-grid';
+import { ListsGridSkeleton, ListsIndex } from '@/features/lists/lists-grid';
 import { ListLikeButton } from '@/features/lists/list-like-button';
 import { SerializdListItems, SerializdListSkeleton } from '@/features/lists/serializd-list-detail';
-import { listsTitle, ListFilmsSkeleton, ListsRowSkeleton } from '@/features/lists/lists-row';
+import { listsTitle, ListFilmsSkeleton } from '@/features/lists/lists-row';
 import { PosterWall } from '@/features/watchlist/poster-wall';
 import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
 import { usePushRoute } from '@/lib/navigation';
@@ -173,7 +173,7 @@ function ListsScreen() {
             </CenteredNotice>
           </>
         )}>
-          <Suspense fallback={detail ? (provider === 'serializd' ? <SerializdListSkeleton onBack={back} /> : <ListFilmsSkeleton onBack={back} />) : <ListsRowSkeleton />}>
+          <Suspense fallback={detail ? (provider === 'serializd' ? <SerializdListSkeleton onBack={back} /> : <ListFilmsSkeleton onBack={back} />) : <ListsGridSkeleton />}>
             {provider === 'serializd'
               ? (detail ? <SerializdListItems id={params.id ?? ''} onBack={back} url={url} username={username} /> : <SerializdIndex kind={kind} url={url} username={username ?? ''} />)
               : (detail ? <ListFilms onBack={back} owner={params.owner ?? ''} slug={params.slug ?? ''} url={url} username={username} /> : <LetterboxdIndex kind={kind} url={url} username={username ?? ''} />)}
