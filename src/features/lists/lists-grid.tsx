@@ -39,7 +39,7 @@ export function ListsGridSkeleton() {
 export function ListsIndex<T extends { id: string; title: string; owner: string; previews: NormalizedMediaItem[] }>({
   provider, url, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
   isRefetching, refetch, fetchNextPage, count, href, noun = 'film', emptyBody,
-  kind, onKindChange,
+  kind,
 }: {
   provider: ProviderId;
   url: string;
@@ -55,7 +55,6 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   noun?: 'film' | 'item';
   emptyBody: string;
   kind: ListsKind;
-  onKindChange: (kind: ListsKind) => void;
 }) {
   const pushRoute = usePushRoute();
   const { width } = useWindowDimensions();
@@ -63,7 +62,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   const pages = [...new Map(lists.map((list) => [list.id, list])).values()];
   return (
     <>
-      <ListsKindFilter kind={kind} onChange={onKindChange} />
+      <ListsKindFilter kind={kind} />
       {pages.length === 0 ? (
         <CenteredNotice>
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
@@ -72,9 +71,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
         </CenteredNotice>
       ) : (
         <List
-          // The column count and the tab both shape the rows — remount when
-          // either changes so a kind switch starts at the top like a fresh visit.
-          key={`${kind}-${columns}`}
+          key={columns}
           className="flex-1"
           contentContainerStyle={{ padding: 10 }}
           data={pages}
