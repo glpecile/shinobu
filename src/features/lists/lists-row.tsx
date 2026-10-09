@@ -25,7 +25,7 @@ export function ListsRowSkeleton() {
     <View className="mb-6">
       <Skeleton className="h-7 w-40 rounded mx-4 mb-3" />
       <Rail className="px-4">
-        {[0, 1, 2].map((index) => <Skeleton className="w-60 h-48 rounded-lg mr-3" delay={staggerDelay(index)} key={index} />)}
+        {[0, 1, 2].map((index) => <Skeleton className="w-60 h-44 rounded-lg mr-3" delay={staggerDelay(index)} key={index} />)}
       </Rail>
     </View>
   );
@@ -95,10 +95,10 @@ function ListsRail<T extends { id: string; title: string; owner: string; preview
         ListFooterComponent={<View className="w-1" />}
         renderItem={({ item }) => (
           <View className="w-60 mr-3">
-            <ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} />
+            <ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} provider={provider} />
           </View>
         )}
-        style={{ height: 192 }}
+        style={{ height: 178 }}
       />
     </CollapsibleSection>
   );

@@ -101,7 +101,7 @@ function normalizeList(raw: typeof RawList.Type, fetchedAt: string): SerializdLi
   return {
     id: String(raw.listId), title: raw.listName, owner: raw.owner.username,
     itemCount: raw.numberOfItems,
-    previews: raw.listItems.slice(0, 3).map((entry) => normalizeEntry(entry, fetchedAt).item),
+    previews: raw.listItems.slice(0, 4).map((entry) => normalizeEntry(entry, fetchedAt).item),
   };
 }
 
