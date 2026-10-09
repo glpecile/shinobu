@@ -92,11 +92,11 @@ function ListFilms({ username, owner, slug, url, onBack }: { username: string | 
       <Head><title>{`${title} — Shinobu`}</title></Head>
       <ListsHeader onBack={onBack} title={title} />
       <View className="flex-row items-center gap-3 px-6 pb-3">
-        <Text className="font-sans text-muted text-sm flex-1">{`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'} · by ${owner}`}</Text>
+        <Text className="font-sans text-muted text-sm flex-1 shrink" numberOfLines={2}>{`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'} · by ${owner}`}</Text>
         <LetterboxdLink iconOnly url={url} />
+        {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
         <ViewToggle onChange={setWatchlistView} view={view} />
       </View>
-      {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
       {items.length === 0 ? (
         <CenteredNotice>
           <CenteredNotice.Title>This list is empty</CenteredNotice.Title>

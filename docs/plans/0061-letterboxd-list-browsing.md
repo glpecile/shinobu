@@ -27,6 +27,17 @@ temporary like. The new bridge tests and browser userscript handoff tests pass.
 The loading Back control now navigates instead of doing nothing. JS-only;
 web list writes require userscript 0.7.0 or use the external Letterboxd action.
 
+### Toolbar hotfix (2026-10-08)
+
+Place the like control beside external access and the layout toggle, using
+`Button`'s existing icon-only/pressed appearance. Remove the separate labeled
+row. A failed write announces the recovery through the existing toast wrapper;
+the adjacent Letterboxd button remains available. No provider behavior changes.
+
+Validated the icon-only heart beside the external link and native layout toggle
+on iOS. Typecheck, lint, all 1,286 tests, class-name/navigation/link checks, and
+the production web export pass. JS-only; no native rebuild required.
+
 ## Implementation
 
 - Scrape public list-summary articles; reuse the watchlist LazyPoster parser

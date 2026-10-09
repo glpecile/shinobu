@@ -35,8 +35,8 @@ export function ListsRowSkeleton() {
  * shifts when the data lands: the round-arrow + provider-dot + title header
  * row, then the count/toolbar row, then the films in the persisted view's
  * geometry. Heights match `ListsHeader` (text-2xl ≈ 32px) and the toolbar
- * (buttons are h-8) exactly. The body is `WallSkeleton`, which reads the saved
- * grid/list preference and lays out to match — the load reads as that layout
+ * (icon buttons are 44px) exactly. The body is `WallSkeleton`, which reads the
+ * saved grid/list preference and lays out to match — the load reads as that layout
  * materializing, not as one shape that then swaps into another.
  */
 export function ListFilmsSkeleton({ onBack }: { onBack: () => void }) {
@@ -50,9 +50,10 @@ export function ListFilmsSkeleton({ onBack }: { onBack: () => void }) {
       </View>
       {/* Mirrors the `N films · by owner` + buttons toolbar row. */}
       <View className="flex-row items-center gap-3 px-6 pb-3">
-        <Skeleton className="h-4 w-28 rounded" />
+        <Skeleton className="h-4 w-24 shrink rounded" />
         <View className="flex-1" />
-        <Skeleton className="h-8 w-8 rounded-full" />
+        <Skeleton className="size-11 rounded-full" />
+        <Skeleton className="size-11 rounded-full" />
         <Skeleton className="h-8 w-16 rounded" />
       </View>
       <WallSkeleton />
