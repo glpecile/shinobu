@@ -255,7 +255,7 @@ export function EpisodeSeriesLink({
       className={cn('mt-8', className)}
       icon={<Button.Icon name="tv-outline" />}
       label="View series"
-      onPress={() => pushRoute(routes.details(id))}
+      onPress={() => pushRoute(routes.details(id, 'TV'))}
       variant="quiet"
     />
   );

@@ -172,7 +172,7 @@ function FeedScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   function openDetails(item: NormalizedMediaItem) {
-    pushRoute(routes.details(item.id));
+    pushRoute(routes.details(item.id, item.type));
   }
 
   async function refresh() {

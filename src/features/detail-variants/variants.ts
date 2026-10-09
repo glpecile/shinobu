@@ -2,7 +2,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 export interface DetailVariant {
   source: 'tmdb' | 'anilist' | 'simkl' | 'letterboxd';
-  /** A `/details/[id]` id. */
+  /** A normalized item ID accepted by `routes.details`. */
   id: string;
 }
 

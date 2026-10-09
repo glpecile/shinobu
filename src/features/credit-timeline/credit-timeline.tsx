@@ -199,7 +199,7 @@ function TimelineEntry({
       <RailLine stop={last} />
       <ActionableRow
         className={ROW_BODY}
-        href={routes.details(item.id)}
+        href={routes.details(item.id, item.type)}
         item={item}
         leading={
           <>

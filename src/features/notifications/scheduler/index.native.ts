@@ -66,7 +66,7 @@ async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
     content: {
       title: candidate.title,
       body: notificationBody(candidate),
-      data: { itemId: candidate.itemId },
+      data: { itemId: candidate.itemId, mediaType: candidate.kind === 'episode' ? 'TV' : 'MOVIE' },
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -84,7 +84,8 @@ async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
 export async function replaceScheduledNotifications(
   candidates: readonly NotificationCandidate[],
 ): Promise<ScheduleResult> {
-  const hash = hashSchedule(candidates);
+  // Replace existing payloads once so cold Trakt taps carry their ID namespace.
+  const hash = `typed-links:${hashSchedule(candidates)}`;
   if (checkAndStoreHash(hash) === 'skipped') return 'skipped';
 
   await ensureChannel();

@@ -143,11 +143,18 @@ export default function Layout() {
                       sit at the root so they push over the tab bar. */}
                   <Stack.Screen name="(tabs)" options={{ title: "Shinobu" }} />
                   <Stack.Screen name="details/[id]" />
+                  <Stack.Screen name="details/[provider]/[id]/index" />
+                  <Stack.Screen name="details/[provider]/[id]/[media-type]" />
                   <Stack.Screen name="episode/[id]" />
+                  <Stack.Screen name="episode/[provider]/[id]/[...episode]" />
                   <Stack.Screen name="person/[id]" />
+                  <Stack.Screen name="person/[provider]/[id]" />
                   <Stack.Screen name="person/lookup" />
+                  <Stack.Screen name="person/lookup/[name]" />
                   <Stack.Screen name="studio/[id]" />
+                  <Stack.Screen name="studio/tmdb/[id]" />
                   <Stack.Screen name="studio/lookup" />
+                  <Stack.Screen name="studio/lookup/[name]" />
                   <Stack.Screen name="watchlist/index" />
                   <Stack.Screen name="lists/index" />
                   <Stack.Screen name="lists/letterboxd/index" />

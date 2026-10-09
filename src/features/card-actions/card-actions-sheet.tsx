@@ -314,7 +314,7 @@ export function CardActionsSheet({
             label="View details"
             onPress={() => {
               onClose();
-              pushRoute(routes.details(item.id));
+              pushRoute(routes.details(item.id, item.type));
             }}
             variant="quiet"
           />

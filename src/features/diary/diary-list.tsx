@@ -340,10 +340,10 @@ function RowTrailing({
 function entryHref(entry: MergedDiaryEntry): string {
   const { item, season, episodes } = entry;
   const number = episodes[0];
-  if (number == null || episodes.length !== 1) return routes.details(item.id);
+  if (number == null || episodes.length !== 1) return routes.details(item.id, item.type);
   if (season != null) return routes.episode(item.id, season, number);
   if (item.type === 'ANIME' && !item.isFilm) return routes.animeEpisode(item.id, number);
-  return routes.details(item.id);
+  return routes.details(item.id, item.type);
 }
 
 function DiaryRow({
@@ -436,7 +436,7 @@ function DiaryClusterRow({
         className={ROW_BODY}
         // ⌘/Ctrl+click opens the show in a new tab even though a plain press
         // toggles the run — the modifier means the same thing on every row.
-        href={routes.details(view.item.id)}
+        href={routes.details(view.item.id, view.item.type)}
         item={view.item}
         leading={
           <>

@@ -93,7 +93,7 @@ export function searchMedia(
 export function lookupByExternalId(
   deps: TraktDeps,
   params: {
-    source: 'tvdb' | 'tmdb' | 'imdb';
+    source: 'trakt' | 'tvdb' | 'tmdb' | 'imdb';
     id: number | string;
     kind: 'movie' | 'show';
   },

@@ -22,8 +22,7 @@ export function mediaLinkRoute(path: string): string | null {
     if (host === 'anilist.co') {
       const id = /^\/(?:anime|manga)\/([1-9][0-9]*)(?:\/[^/]+)?\/?$/.exec(url.pathname)?.[1];
       if (id == null || !Number.isSafeInteger(Number(id))) return null;
-      const route = routes.details(`anilist-${id}`);
-      return url.pathname.startsWith('/manga/') ? `${route}?mediaType=MANGA` : route;
+      return routes.details(`anilist-${id}`, url.pathname.startsWith('/manga/') ? 'MANGA' : undefined);
     }
     return null;
   } catch {
@@ -37,6 +36,8 @@ export function mediaLinkUrl(id: string, mediaType?: string): string | null {
   if (slug != null) return `https://letterboxd.com/film/${slug}/`;
   const imdb = /^imdb-(tt[0-9]+)$/.exec(id)?.[1];
   if (imdb != null) return `https://www.imdb.com/title/${imdb}/`;
+  const serializd = /^serializd-([1-9][0-9]*)$/.exec(id)?.[1];
+  if (serializd != null) return `https://serializd.com/show/${serializd}`;
   const anilist = /^anilist-([1-9][0-9]*)$/.exec(id)?.[1];
   return anilist == null ? null : `https://anilist.co/${mediaType === 'MANGA' ? 'manga' : 'anime'}/${anilist}`;
 }

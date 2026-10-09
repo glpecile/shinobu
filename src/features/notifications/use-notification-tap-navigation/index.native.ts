@@ -18,12 +18,13 @@ export function useNotificationTapNavigation(): void {
   useEffect(() => {
     if (response == null) return;
     const itemId = response.notification.request.content.data?.itemId;
-    if (typeof itemId !== 'string' || itemId === '') return;
+    const mediaType = response.notification.request.content.data?.mediaType;
+    if (typeof itemId !== 'string' || itemId.indexOf('-') < 1) return;
 
     Notifications.clearLastNotificationResponse();
     // push-guard-exempt: a notification tap, not a press. Tapping the same
     // show's notification again after backing out is a real second intent, and
     // `clearLastNotificationResponse` above is what stops this one repeating.
-    router.push(routes.details(itemId));
+    router.push(routes.details(itemId, mediaType === 'MOVIE' || mediaType === 'TV' ? mediaType : undefined));
   }, [response, router]);
 }

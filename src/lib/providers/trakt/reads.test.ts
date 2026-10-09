@@ -11,6 +11,7 @@ import {
   getWatchedShows,
   getWatchlist,
   searchMedia,
+  lookupByExternalId,
   traktCalendarRange,
 } from './reads';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -134,6 +135,17 @@ describe('searchMedia response decoding', () => {
     expect(items[1]?.genres).toBeUndefined();
     expect(items[1]?.coverImage).toBe('');
   });
+});
+
+test('cold Trakt IDs look up the specified media type instead of guessing an ID namespace', async () => {
+  const requested: string[] = [];
+  const deps = historyDeps(() => json([
+    { type: 'show', show: { title: 'Show', ids: { trakt: 1, tmdb: 1396 } } },
+  ]), requested);
+  const item = await Effect.runPromise(lookupByExternalId(deps, { source: 'trakt', id: 1, kind: 'show' }));
+  expect(requested).toEqual(['/search/trakt/1?type=show&extended=full,images']);
+  expect(item?.type).toBe('TV');
+  expect(item?.externalIds).toMatchObject({ trakt: 1, tmdb: 1396 });
 });
 
 describe('getHistory (diary source, plan 0016)', () => {

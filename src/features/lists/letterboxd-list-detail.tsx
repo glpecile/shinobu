@@ -47,7 +47,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
           footer={<LoadMoreFooter failed={pages.isFetchNextPageError} loading={pages.isFetchingNextPage} noun="films" onRetry={() => void pages.fetchNextPage()} />}
           onEndReached={pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError ? () => void pages.fetchNextPage() : undefined}
           onItemActions={openActions}
-          onItemPress={(item) => pushRoute(routes.details(item.id))}
+          onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
           onRefresh={() => void pages.refetch()}
           refreshing={pages.isRefetching}
         />

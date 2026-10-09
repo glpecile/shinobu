@@ -223,7 +223,7 @@ function WatchlistGrid({
           setActiveEntry(entries.find((entry) => entry.item.id === item.id) ?? null);
           openActions(item);
         }}
-        onItemPress={(item) => pushRoute(routes.details(item.id))}
+        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
         onRefresh={() => void refresh()}
         refreshing={refreshing}
       />

@@ -1,0 +1,845 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { useQueryClient } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+
+import { Eyebrow } from '@/components/eyebrow';
+import Head from '@/components/head';
+import { Text, View } from 'react-native';
+// oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
+import { useCSSVariable } from 'uniwind';
+
+import { Button } from '@/components/button';
+import { ExpandableText } from '@/components/expandable-text';
+import { FloatingBackButton } from '@/components/floating-back-button';
+import { Image } from '@/components/image';
+import { LinkPill } from '@/components/link-pill';
+import { MorphText } from '@/components/morph-text';
+import { ScrolledTitle } from '@/components/scrolled-title';
+import { Section } from '@/components/section';
+import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { StatTile } from '@/components/stat-tile';
+import { ZoomableImage } from '@/components/zoomable-image';
+import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
+import { CopyTitle } from '@/features/copy-title/copy-title';
+import { DetailVariantsSection } from '@/features/detail-variants/detail-variants-section';
+import {
+  RecommendationsAndTagsSection,
+  RelationsSection,
+} from '@/features/details-relations/relations-section';
+import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
+import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import {
+  PeopleSection,
+  PeopleSectionsSkeleton,
+  PersonCreditSheet,
+  type PersonCredit,
+} from '@/features/person';
+import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
+import { ReleaseTimeline } from '@/features/release-timeline/release-timeline';
+import { StudioSheet } from '@/features/studio/studio-sheet';
+import {
+  formatRuntime,
+  DetailsList,
+  SeasonsSection,
+  SeriesRuntimeTile,
+} from '@/features/show-seasons';
+import { SuspenseSection } from '@/components/suspense-section';
+import { localDayKey } from '@/features/diary/merge';
+import { haptics } from '@/lib/haptics';
+import { parseLocalInstant } from '@/lib/time/has-aired';
+import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
+import { PROVIDERS } from '@/lib/providers/registry';
+import { useTmdbToken } from '@/state/session/tmdb-token';
+import { usePushRoute } from '@/lib/navigation';
+import { mediaItemId, routes } from '@/lib/routes';
+import { mediaLinkUrl } from '@/lib/media-link';
+import { openExternalUrl } from '@/lib/open-external-url';
+import { useThemeColor } from '@/lib/theme-color';
+import {
+  anilistQueryKeys,
+  useAniListEntryStateQuery,
+  useSuspenseAniListRelationsQuery,
+} from '@/state/queries/anilist';
+import {
+  mediaDetailsQueryKeys,
+  useMediaDetailsQuery,
+  useSuspenseMediaDetailsQuery,
+} from '@/state/queries/media-details';
+import {
+  simklQueryKeys,
+  useSimklLibraryEntryQuery,
+  useSimklProgressQuery,
+} from '@/state/queries/simkl';
+import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
+import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
+import { useWatchedInfo } from '@/state/queries/watched-info';
+import { useResolvedMediaItem } from '@/state/queries/resolve-item';
+import { tmdbQueryKeys } from '@/state/queries/tmdb';
+import { useConnectedProviders } from '@/state/session';
+import type {
+  NormalizedCastMember,
+  NormalizedCharacter,
+  NormalizedCrewMember,
+  NormalizedMediaItem,
+  NormalizedStudio,
+  MediaType,
+} from '@/types/media';
+
+/** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
+function metaLine(item: NormalizedMediaItem): string {
+  return [
+    item.year != null ? String(item.year) : null,
+    item.runtime != null ? `${item.runtime} min` : null,
+    item.genres != null && item.genres.length > 0
+      ? item.genres.slice(0, 3).join(', ')
+      : null,
+  ]
+    .filter((part) => part != null)
+    .join(' · ');
+}
+
+/** The item's other names, minus the one already shown and any repeat (case-insensitive). */
+function alternateTitles(item: NormalizedMediaItem): string[] {
+  const seen = new Set([item.title.toLowerCase()]);
+  const shown: string[] = [];
+  for (const candidate of [item.titles?.english, item.titles?.romaji, item.titles?.native]) {
+    if (candidate == null || candidate === '' || seen.has(candidate.toLowerCase())) continue;
+    seen.add(candidate.toLowerCase());
+    shown.push(candidate);
+  }
+  return shown;
+}
+
+/**
+ * Turns an AniList list entry into the same "Watched/Watching …" phrasing the
+ * Trakt line uses, so both providers' detail pages read identically. Null for
+ * plan-to-watch (nothing watched yet to report).
+ */
+function anilistWatchedLabel(
+  entry: {
+    status: string | null;
+    progress: number;
+    repeat: number;
+  },
+  item: NormalizedMediaItem,
+): string | null {
+  const read = item.progressUnit === 'chapter';
+  const unit = read ? 'chapter' : 'episode';
+  const episodes = `${entry.progress} ${entry.progress === 1 ? unit : `${unit}s`} logged`;
+  switch (entry.status) {
+    case 'CURRENT':
+      return `${read ? 'Reading' : 'Watching'} · ${episodes}`;
+    case 'REPEATING':
+      return `${read ? 'Rereading' : 'Rewatching'} · ${episodes}`;
+    case 'COMPLETED': {
+      const done = read ? 'Read' : 'Watched';
+      return entry.repeat > 0 ? `${done} (${entry.repeat + 1})` : done;
+    }
+    case 'PAUSED':
+      return `Paused · ${episodes}`;
+    case 'DROPPED':
+      return `Dropped · ${episodes}`;
+    default:
+      return null;
+  }
+}
+
+/**
+ * "3 / 12" as a single stat value, replacing the old side-by-side
+ * Progress + Total tiles. Only the progress half goes through MorphText:
+ * AGENTS.md reserves the morph for text that changes in place from user
+ * state, and the total is static catalogue data that would just churn the
+ * animation. Caller renders the bare number instead when no total is known,
+ * so a dangling "3 / " is impossible.
+ */
+function ProgressOfTotal({
+  progress,
+  total,
+}: {
+  progress: number;
+  total: number;
+}) {
+  return (
+    <View className="flex-row items-baseline mt-0.5">
+      {/* Clamped: AniList counts a manga's extra chapters past its total (62 of 59). */}
+      <MorphText className="text-foreground text-2xl font-sans-semibold">
+        {Math.min(progress, total)}
+      </MorphText>
+      <Text className="text-muted text-2xl font-sans-semibold">{` / ${total}`}</Text>
+    </View>
+  );
+}
+
+/**
+ * "Watched (2) · Sep 15, 2026 · Mar 3, 2024" under the meta line. A film lists
+ * every dated play across providers (`useFilmPlaysQuery`); otherwise it reads
+ * whichever connected provider records the item: Trakt/Simkl (shows count
+ * logged episodes), then the AniList list entry for anime, so
+ * Trakt-sourced and AniList-sourced pages carry the same line. Lives as its
+ * own element so the hooks only run once the screen has a resolved item.
+ *
+ * The first leg is `useWatchedInfo`, not Trakt alone: a film logged to Simkl
+ * and not Trakt is watched too, and used to render no line at all.
+ */
+function WatchedLine({ item }: { item: NormalizedMediaItem }) {
+  const connected = useConnectedProviders();
+  const watched = useWatchedInfo(item);
+  const anilistEntry = useAniListEntryStateQuery({
+    mediaId: item.externalIds.anilist,
+    enabled: PROVIDERS.anilist.mediaTypes.includes(item.type) && connected.includes('anilist'),
+  });
+  // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
+  // same line Trakt-sourced pages carry.
+  const simklEntry = useSimklLibraryEntryQuery({
+    item,
+    enabled:
+      (item.type === 'TV' ||
+        (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
+      connected.includes('simkl'),
+  });
+  const simklProgress = useSimklProgressQuery({
+    item,
+    enabled: connected.includes('simkl'),
+  }).data;
+  const accent = useThemeColor('--color-accent');
+
+  const plays = useFilmPlaysQuery(item).data ?? [];
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // One date per local day: a fan-out logs the same play to every provider.
+  const days = [
+    ...new Set(
+      [...plays, ...(watched != null ? [{ watchedAt: watched.lastWatchedAt }] : [])].map(
+        (play) => localDayKey(play, timeZone),
+      ),
+    ),
+  ].sort((a, b) => b.localeCompare(a));
+
+  let label: string | null = null;
+  if ((item.type === 'MOVIE' || item.isFilm === true) && days.length > 0) {
+    const entry = anilistEntry.data?.entry;
+    const count = Math.max(
+      days.length,
+      watched?.plays ?? 0,
+      entry?.status === 'COMPLETED' ? entry.repeat + 1 : 0,
+    );
+    const dates = days.map((day) =>
+      parseLocalInstant(day)?.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    );
+    label = `Watched${count > 1 ? ` (${count})` : ''} · ${dates.join(' · ')}`;
+  } else if (item.type === 'ANIME' && anilistEntry.data?.entry != null) {
+    label = anilistWatchedLabel(anilistEntry.data.entry, item);
+  } else if (
+    (item.type === 'TV' ||
+      (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
+    simklEntry.data != null &&
+    (simklProgress ?? 0) > 0
+  ) {
+    // Completed entries can omit episode rows; the shared count uses provider
+    // totals and combines anime cours for a TV-shaped detail page.
+    const count = simklProgress ?? 0;
+    const episodes = `${count} ${count === 1 ? 'episode' : 'episodes'} logged`;
+    label =
+      simklEntry.data.status === 'completed'
+        ? `Watched · ${episodes}`
+        : simklEntry.data.status === 'dropped'
+          ? `Dropped · ${episodes}`
+          : simklEntry.data.status === 'hold'
+            ? `Paused · ${episodes}`
+            : `Watching · ${episodes}`;
+  } else if (watched != null) {
+    label = `Watching · ${watched.plays} ${watched.plays === 1 ? 'episode' : 'episodes'} logged`;
+  } else if (anilistEntry.data?.entry != null) {
+    label = anilistWatchedLabel(anilistEntry.data.entry, item);
+  }
+  if (label == null) return null;
+
+  return (
+    <View className="flex-row items-center gap-1.5 mt-1.5">
+      <Ionicons
+        color={accent}
+        name="eye"
+        size={13}
+      />
+      <MorphText className="text-muted font-sans text-sm">{label}</MorphText>
+    </View>
+  );
+}
+
+/** One "Studios" pill list — every metadata source renders through this. */
+/**
+ * Studio pills. Plain press navigates, as it always has; **long-press opens the
+ * studio sheet** (plan 0035 R8) — the affordance credit cards have had since
+ * plan 0028, which reversed that plan's "studio pills: nothing to expand"
+ * boundary once the provider links turned out to be the thing to expand.
+ *
+ * One pressable per pill, with both handlers on it: nesting a second
+ * gesture-handler button inside would let its press bubble into the pill's
+ * (0028 KTD1). Without a TMDB token there is no route to navigate to, so the
+ * pill's only job is the sheet and a plain press opens it.
+ */
+function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
+  const pushRoute = usePushRoute();
+  // No TMDB token, no studio pages — a pill then opens the sheet on press.
+  const canOpenStudios = useTmdbToken() !== '';
+  const [studio, setStudio] = useState<NormalizedStudio | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  function openStudio(next: NormalizedStudio) {
+    haptics.selection();
+    setStudio(next);
+    setSheetOpen(true);
+  }
+
+  if (studios.length === 0) return null;
+
+  return (
+    <Section>
+      <Section.Header>
+        <Section.Title>Studios</Section.Title>
+      </Section.Header>
+      <LinkPill.Rail>
+        {studios.map((entry) => (
+          <LinkPill
+            key={entry.id}
+            label={entry.name}
+            onLongPress={canOpenStudios ? () => openStudio(entry) : undefined}
+            onPress={
+              canOpenStudios
+                ? () =>
+                    pushRoute(
+                      entry.tmdbId != null
+                        ? routes.studio(entry.tmdbId)
+                        : routes.studioLookup(entry.name),
+                    )
+                : () => openStudio(entry)
+            }
+          />
+        ))}
+      </LinkPill.Rail>
+      {/* Kept (not nulled) while closing so the sheet's content doesn't vanish
+          mid-animation — same contract as the credit sheet above. */}
+      <StudioSheet
+        onClose={() => setSheetOpen(false)}
+        open={sheetOpen}
+        studio={studio}
+      />
+    </Section>
+  );
+}
+
+/**
+ * Characters + Cast + Crew + Studios rails, with the long-press credit sheet
+ * they share. Source-agnostic: the two wrappers below decide where credits
+ * come from.
+ */
+function CreditRails({
+  characters = [],
+  cast = [],
+  crew,
+  crewTitle,
+  studios = [],
+}: {
+  characters?: NormalizedCharacter[];
+  cast?: NormalizedCastMember[];
+  crew: NormalizedCrewMember[];
+  crewTitle: string;
+  studios?: NormalizedStudio[];
+}) {
+  // Long-press (web: the hover ⋯) on a credit card opens this instead of
+  // navigating — the role text a 96px card had to clip is the whole point.
+  const [credit, setCredit] = useState<PersonCredit | null>(null);
+  const [creditOpen, setCreditOpen] = useState(false);
+
+  function openCredit(next: PersonCredit) {
+    haptics.selection();
+    setCredit(next);
+    setCreditOpen(true);
+  }
+
+  return (
+    <>
+      {/* No `onCreditActions`: a character isn't a person, so its card opens nothing. */}
+      <PeopleSection
+        title="Characters"
+        people={characters.map((character) => ({
+          id: `anilist-character-${character.anilistId}`,
+          name: character.name,
+          role: character.role,
+          kind: 'cast' as const,
+          headshot: character.image,
+        }))}
+      />
+      <PeopleSection
+        onCreditActions={openCredit}
+        title="Cast"
+        people={cast.map((member) => ({
+          id: member.id,
+          name: member.name,
+          role: member.character,
+          kind: 'cast' as const,
+          headshot: member.headshot,
+          ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
+          ...(member.anilistId != null ? { anilistId: member.anilistId } : {}),
+        }))}
+      />
+      <PeopleSection
+        onCreditActions={openCredit}
+        title={crewTitle}
+        people={crew.map((member) => ({
+          id: member.id,
+          name: member.name,
+          role: member.job,
+          kind: 'crew' as const,
+          headshot: member.headshot,
+          ...(member.tmdbId != null ? { tmdbId: member.tmdbId } : {}),
+          ...(member.anilistId != null ? { anilistId: member.anilistId } : {}),
+        }))}
+      />
+      <StudiosList studios={studios} />
+      {/* `credit` is kept (not nulled) while closing so the sheet's content
+          doesn't vanish mid-animation — same contract as the card actions. */}
+      <PersonCreditSheet
+        credit={credit}
+        onClose={() => setCreditOpen(false)}
+        open={creditOpen}
+      />
+    </>
+  );
+}
+
+/**
+ * Credits from the one TMDB-first metadata query (plan 0014) — the same
+ * composed read regardless of the item's origin provider, with the
+ * Trakt/AniList fallback handled inside the query, not by this boundary.
+ */
+function CreditsSections({ item }: { item: NormalizedMediaItem }) {
+  const { data } = useSuspenseMediaDetailsQuery(item);
+  return (
+    <CreditRails cast={data.cast} crew={data.crew} crewTitle="Crew" studios={data.studios} />
+  );
+}
+
+/**
+ * Manga credits ride the AniList relations request the page already makes
+ * (TMDB has no manga to credit), so they cost no request of their own.
+ */
+function MangaCreditsSections({ mediaId }: { mediaId: number }) {
+  const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
+  return (
+    <CreditRails characters={data.characters} crew={data.staff} crewTitle="Staff" />
+  );
+}
+
+function StudiosSkeleton() {
+  return (
+    <View className="mt-8">
+      <Skeleton className="h-6 w-24 rounded mb-4" />
+      <View className="flex-row gap-2">
+        <Skeleton className="h-9 w-28 rounded-full" delay={staggerDelay(1)} />
+        <Skeleton className="h-9 w-36 rounded-full" delay={staggerDelay(2)} />
+        <Skeleton className="h-9 w-24 rounded-full" delay={staggerDelay(3)} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Mirrors the loaded layout so content lands without a shift. The delays run
+ * top-down (backdrop → poster → title → overview), so the screen reads as
+ * filling in from the hero rather than flashing as one rectangle.
+ */
+function DetailsSkeleton() {
+  return (
+    <>
+      <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
+      <View className="w-full max-w-4xl self-center px-6">
+        <View className="flex-row items-end -mt-24 mb-6">
+          <Skeleton className="w-28 h-40 rounded-lg" delay={staggerDelay(1)} />
+          <View className="flex-1 ml-4 pb-1">
+            <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
+            <Skeleton className="h-8 w-56 rounded mt-2" delay={staggerDelay(2)} />
+            <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(2)} />
+          </View>
+        </View>
+        <ExpandableText.Skeleton />
+      </View>
+    </>
+  );
+}
+
+export default function DetailsRoute() {
+  return (
+    <ScrolledTitle>
+      <DetailsScreen />
+    </ScrolledTitle>
+  );
+}
+
+function DetailsScreen() {
+  const { provider, id: resourceId, 'media-type': resourceType } = useLocalSearchParams<{
+    provider: string; id: string; 'media-type'?: string;
+  }>();
+  let mediaType: MediaType | undefined;
+  switch (resourceType) {
+    case 'movie': mediaType = 'MOVIE'; break;
+    case 'tv': mediaType = 'TV'; break;
+    case 'manga': mediaType = 'MANGA'; break;
+  }
+  const validType = resourceType == null ||
+    (provider === 'trakt' && (mediaType === 'MOVIE' || mediaType === 'TV')) ||
+    (provider === 'anilist' && mediaType === 'MANGA');
+  const id = validType ? mediaItemId(provider, resourceId) ?? '' : '';
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const accent = useThemeColor('--color-accent');
+  // The hero scrim fades to the *page background*, not black: the title
+  // straddles the image/page boundary and `text-foreground` is near-black in
+  // the light theme, so a black scrim swallowed it there. Dark theme looks
+  // the same as before (its background token is near-black).
+  // `useCSSVariable`, not `useThemeColor`: this colour is *composed* into the
+  // gradient's transparent stop (`${background}00`), and web's `var(--token)`
+  // cannot be concatenated. The prerender has no DOM to read, so the first
+  // page a visitor loads fades to this dark fallback even in the light theme
+  // — the scrim sits under a hero image, and it corrects on the next
+  // navigation. docs/solutions/web-prerender-bakes-js-resolved-colors.md
+  const backgroundVariable = useCSSVariable('--color-background');
+  const background =
+    typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
+  // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
+  const [refreshCount, setRefreshCount] = useState(0);
+
+  const { item, isLoading, refetchFeed } = useResolvedMediaItem(id, mediaType);
+  // TMDB is the metadata source of truth (plan 0014): the same composed
+  // query that feeds the credit sections hands the header a catalogue
+  // record, and its display fields override whatever the origin provider
+  // carried. Non-suspending — the header renders instantly from the item
+  // and sharpens when TMDB answers.
+  const mediaDetails = useMediaDetailsQuery(item);
+  const traktId = item?.externalIds.trakt;
+  const anilistId = item?.externalIds.anilist;
+  const connected = useConnectedProviders();
+  const onAniList = item != null && PROVIDERS.anilist.mediaTypes.includes(item.type);
+  // Items resolved from trending/search carry 0 progress even when the viewer
+  // has already watched episodes. The live entry state corrects the stat tile.
+  const anilistEntry = useAniListEntryStateQuery({
+    mediaId: anilistId,
+    enabled: onAniList && connected.includes('anilist'),
+  });
+  // TV progress spans anime cours; anime progress stays entry-relative.
+  // Shares `WatchedLine`'s library cache, so it costs no extra request.
+  const onSimkl =
+    item?.type === 'TV' ||
+    (item?.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null);
+  const simklProgress = useSimklProgressQuery({
+    item: onSimkl ? item : null,
+    enabled: connected.includes('simkl'),
+  });
+  // Items resolved from the watched feed arrive artless (Trakt dropped images
+  // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
+  const artwork = useTraktMediaImages(item);
+
+  function goBack() {
+    if (process.env.EXPO_OS === 'web') {
+      router.replace(routes.home);
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(routes.home);
+    }
+  }
+
+  if (isLoading && item == null) {
+    return <DetailsSkeleton />;
+  }
+
+  if (item == null) {
+    // Old Trakt URLs omitted the type; movie and show IDs can overlap.
+    // Let the viewer disambiguate instead of fetching an arbitrary namesake.
+    if (id.startsWith('trakt-') && mediaType == null) {
+      return (
+        <View className="flex-1 bg-background items-center justify-center px-8 gap-3">
+          <Head><title>Select media type — Shinobu</title></Head>
+          <Text className="text-2xl font-display text-foreground">Movie or TV show?</Text>
+          <Text className="text-muted font-sans text-center">This older Trakt link doesn’t specify its media type.</Text>
+          <Button icon={<Button.Icon name="open-outline" />} label="Open movie" onPress={() => router.replace(routes.details(id, 'MOVIE'))} />
+          <Button icon={<Button.Icon name="open-outline" />} label="Open TV show" onPress={() => router.replace(routes.details(id, 'TV'))} />
+          <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} />
+        </View>
+      );
+    }
+    const externalUrl = mediaLinkUrl(id, mediaType);
+    return (
+      <View className="flex-1 bg-background items-center justify-center px-8">
+        <Head>
+          <title>Not found — Shinobu</title>
+        </Head>
+        <Text className="text-2xl font-display text-foreground mb-2">
+          Not found
+        </Text>
+        <Text className="text-muted font-sans text-center mb-6">
+          {provider === 'trakt'
+            ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'
+            : 'This linked item could not be loaded.'}
+        </Text>
+        {externalUrl != null && (
+          <Button
+            icon={<Button.Icon name="open-outline" />}
+            label="Open original page"
+            className="mb-3"
+            onPress={() => openExternalUrl(externalUrl)}
+          />
+        )}
+        {provider === 'trakt' && (
+          <Button
+            icon={<Button.Icon name="link-outline" />}
+            label="Open Settings"
+            className="mb-3"
+            onPress={() => router.replace(routes.settings)}
+          />
+        )}
+        <Button icon={<Button.Icon name="arrow-back" />} label="Go back" onPress={goBack} />
+      </View>
+    );
+  }
+
+  const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
+  const meta = metaLine(shown);
+  const alternates = alternateTitles(shown);
+  // "0 / 1 episodes" on a film (anime films included) is noise — only show
+  // progress where it means something (series, manga, or a film already logged).
+  const showProgress =
+    (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
+  // AniList progress belongs to this cour, not the whole TMDB series.
+  const displayedProgress =
+    shown.type === 'ANIME' && shown.isFilm !== true
+      ? anilistEntry.data?.entry?.progress ?? simklProgress.data ?? shown.currentProgress
+      : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
+        simklProgress.data ??
+        shown.currentProgress;
+
+  function refresh() {
+    // Sections that failed are unmounted, leaving their queries inactive and
+    // stuck in error state — remove those so the resetKey remount refetches
+    // from scratch. Healthy (active) ones refetch in the background instead,
+    // without re-suspending into a skeleton.
+    queryClient.removeQueries({
+      queryKey: mediaDetailsQueryKeys.all,
+      type: 'inactive',
+    });
+    if (traktId != null && item?.type === 'TV') {
+      for (const key of [
+        traktQueryKeys.seasons(traktId),
+        traktQueryKeys.showProgress(traktId),
+      ]) {
+        queryClient.removeQueries({ queryKey: key, type: 'inactive' });
+      }
+    }
+    // The TMDB seasons leg (plan 0034) fails the same way a Trakt one can.
+    if (item?.externalIds.tmdb != null && item?.type === 'TV') {
+      queryClient.removeQueries({
+        queryKey: tmdbQueryKeys.seasons(item.externalIds.tmdb),
+        type: 'inactive',
+      });
+    }
+    if (anilistId != null && onAniList) {
+      for (const key of [
+        anilistQueryKeys.entryState(anilistId),
+        anilistQueryKeys.episodes(anilistId),
+        anilistQueryKeys.relations(anilistId),
+      ]) {
+        queryClient.removeQueries({ queryKey: key, type: 'inactive' });
+      }
+    }
+    setRefreshCount((count) => count + 1);
+    return Promise.allSettled([
+      refetchFeed(),
+      queryClient.refetchQueries({
+        queryKey: mediaDetailsQueryKeys.all,
+        type: 'active',
+      }),
+      queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
+    ]);
+  }
+
+  const header = (
+    <>
+      <View className="h-80 relative">
+        <Image
+          source={{
+            uri:
+              shown.backdropImage ||
+              artwork.backdropImage ||
+              shown.coverImage ||
+              artwork.coverImage,
+          }}
+          className="w-full h-full"
+          contentFit="cover"
+        />
+        {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
+            fading from transparent-black to white passes through gray. */}
+        <LinearGradient
+          colors={[`${background}00`, background]}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 220,
+          }}
+        />
+      </View>
+
+      {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
+      <View className="w-full max-w-4xl self-center px-6">
+        <View className="flex-row items-end -mt-24 mb-6">
+          <ZoomableImage
+            alt={shown.title}
+            uri={shown.coverImage || artwork.coverImage}
+            type="image"
+            className="w-28 h-40 rounded-lg border border-border bg-surface"
+            contentFit="cover"
+          />
+          <View className="flex-1 ml-4 pb-1">
+            <View className="flex-row items-center gap-3">
+              <Eyebrow tone="accent">{shown.type}</Eyebrow>
+              {shown.rating != null && (
+                <View className="flex-row items-center gap-1">
+                  <Ionicons
+                    color={accent}
+                    name="star"
+                    size={12}
+                  />
+                  <Text className="text-foreground text-xs font-sans-semibold">
+                    {shown.rating.toFixed(1)}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <ScrolledTitle.Anchor className="mt-1">
+              <CopyTitle
+                alternates={alternates}
+                title={shown.title}
+                tmdbId={shown.externalIds.tmdb}
+                year={shown.year}
+              />
+            </ScrolledTitle.Anchor>
+            {alternates.length > 0 && (
+              <Text className="text-muted font-sans text-sm mt-0.5">
+                {alternates.join(' · ')}
+              </Text>
+            )}
+            {meta !== '' && (
+              <Text className="text-muted font-sans text-sm mt-1.5">
+                {meta}
+              </Text>
+            )}
+            <WatchedLine item={shown} />
+          </View>
+        </View>
+
+        {shown.overview != null && <ExpandableText text={shown.overview} />}
+
+        {/* Placement only, film-like only (plan 0031 R11): a film that isn't
+            out yet can't be logged, so the want-to-watch CTA is the primary
+            control and the disabled log button doesn't render. Everything
+            else — including an airing series with no release date — keeps the
+            log button and gets the CTA beneath it. */}
+        {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
+        <WatchlistMediaButton item={shown} />
+
+        {showProgress && (
+          <View className="flex-row gap-4">
+            <StatTile
+              label="Progress"
+              value={
+                shown.totalEpisodes == null ? (
+                  displayedProgress
+                ) : (
+                  <ProgressOfTotal
+                    progress={displayedProgress}
+                    total={shown.totalEpisodes}
+                  />
+                )
+              }
+              // Manga counts chapters here (AniList's `chapters` lands in
+              // the same field) — the label must follow the unit.
+              caption={
+                shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
+              }
+            />
+            {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
+            {shown.type === 'ANIME' && shown.isFilm !== true &&
+              shown.totalEpisodes != null &&
+              shown.runtime != null && (
+                <StatTile
+                  label="Total time"
+                  value={formatRuntime(shown.totalEpisodes * shown.runtime)}
+                  caption={`${shown.runtime}m each`}
+                />
+              )}
+          </View>
+        )}
+      </View>
+    </>
+  );
+  const footer = (
+    <View className="w-full max-w-4xl self-center px-6 pb-12">
+      <RelationsSection item={shown} resetKey={refreshCount} />
+
+      <SuspenseSection
+        fallback={
+          <>
+            <PeopleSectionsSkeleton />
+            <StudiosSkeleton />
+          </>
+        }
+        resetKey={refreshCount}
+      >
+        {shown.type === 'MANGA' && anilistId != null ? (
+          <MangaCreditsSections mediaId={anilistId} />
+        ) : (
+          <CreditsSections item={item} />
+        )}
+      </SuspenseSection>
+
+      <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
+
+      <ReleaseTimeline item={shown} />
+
+      <DetailVariantsSection item={shown} />
+
+      <ProviderLinksSection item={shown} />
+    </View>
+  );
+  const layout = { header, footer, onRefresh: refresh };
+
+  return (
+    <>
+      <Head>
+        <title>{`${shown.title} — Shinobu`}</title>
+        {shown.overview != null && <meta content={shown.overview} name="description" />}
+      </Head>
+      {shown.type === 'TV' ? (
+        <SeasonsSection {...layout} item={shown} key={shown.id} resetKey={refreshCount} />
+      ) : shown.type === 'ANIME' && shown.isFilm !== true ? (
+        <AnimeSeasonsSection {...layout} item={shown} key={shown.id} resetKey={refreshCount} />
+      ) : (
+        <DetailsList {...layout} key={shown.id} />
+      )}
+      <ScrolledTitle.Bar title={shown.title} />
+      <FloatingBackButton onPress={goBack} />
+    </>
+  );
+}

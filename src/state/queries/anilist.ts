@@ -119,7 +119,7 @@ export const anilistQueryKeys = {
   /** Public anime + manga text search (search screen's AniList section). */
   search: (query: string, limit: number) =>
     [...anilistQueryKeys.searchRoot(), query, limit] as const,
-  /** One staff member's profile and credits, by AniList id (`/person/anilist-<id>`). */
+  /** One staff member's profile and credits, by AniList id (`/person/anilist/<id>`). */
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
   staffSearch: (query: string) =>
     [...anilistQueryKeys.all, 'staff-search', query] as const,
@@ -252,7 +252,7 @@ export function useSuspenseSeasonalAnimePagesQuery(
 const SEASONAL_STALE_MS = 15 * 60_000;
 
 /**
- * One anime by AniList id, for a `/details/anilist-<id>` reached cold (nothing
+ * One anime by AniList id, for a `/details/anilist/<id>` reached cold (nothing
  * cached holds it). `null` id: nothing to fetch, the query stays idle.
  */
 export function useAnimeByIdQuery(mediaId: number | null) {

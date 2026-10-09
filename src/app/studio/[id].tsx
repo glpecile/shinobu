@@ -1,68 +1,9 @@
-import {
-  useLocalSearchParams,
-  useRouter,
-  type ErrorBoundaryProps,
-} from 'expo-router';
-import { Suspense } from 'react';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { FloatingBackButton } from '@/components/floating-back-button';
-import { ScrolledTitle } from '@/components/scrolled-title';
-// Layout-generic despite the name — the studio page shares the person
-// page's header-plus-rows shape, so its skeleton and miss state fit as-is.
-import { PersonNotFound } from '@/features/person';
-import { StudioSkeleton } from '@/features/studio/studio-skeleton';
-import { StudioDetailsView } from '@/features/studio/studio-details-view';
 import { routes } from '@/lib/routes';
-import { useSuspenseTmdbStudioQuery } from '@/state/queries/tmdb';
 
-function StudioContent({ tmdbId }: { tmdbId: number }) {
-  const { data } = useSuspenseTmdbStudioQuery({ tmdbId });
-  return <StudioDetailsView {...data} />;
-}
-
-export default function StudioScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const tmdbId = Number(id);
-
-  function goBack() {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace(routes.home);
-    }
-  }
-
-  if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
-    return (
-      <PersonNotFound detail="This studio page doesn't exist." onGoBack={goBack} />
-    );
-  }
-
-  return (
-    <ScrolledTitle>
-      <Suspense fallback={<StudioSkeleton />}>
-        <StudioContent tmdbId={tmdbId} />
-      </Suspense>
-      <FloatingBackButton onPress={goBack} />
-    </ScrolledTitle>
-  );
-}
-
-/**
- * Route-level containment: a failed TMDB fetch (no token, 404, rate limit)
- * surfaces as this screen's not-found view with a retry — not the root
- * boundary unmounting the whole app.
- */
-export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
-  const router = useRouter();
-  return (
-    <PersonNotFound
-      detail="This studio couldn't be loaded."
-      onGoBack={() =>
-        router.canGoBack() ? router.back() : router.replace(routes.home)
-      }
-      onRetry={retry}
-    />
-  );
+export default function LegacyStudioRoute() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const tmdbId = typeof id === 'string' ? Number(id) : Number.NaN;
+  return <Redirect href={Number.isSafeInteger(tmdbId) && tmdbId > 0 ? routes.studio(tmdbId) : routes.home} />;
 }

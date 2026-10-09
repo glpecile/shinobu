@@ -83,7 +83,7 @@ describe('the remove row routes off gathered evidence (plan 0031 R35)', () => {
 
   test('no other surface hand-rolls the removal', async () => {
     for (const path of [
-      'src/app/details/[id].tsx',
+      'src/app/details/[provider]/[id]/index.tsx',
       'src/app/(tabs)/search.tsx',
       'src/app/(tabs)/index.tsx',
       'src/app/(tabs)/diary.tsx',

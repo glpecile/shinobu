@@ -1,0 +1,116 @@
+import {
+  Redirect,
+  useLocalSearchParams,
+  useRouter,
+  type ErrorBoundaryProps,
+} from 'expo-router';
+
+import { EpisodeScreen, EpisodeScreenSkeleton } from '@/features/episode-details';
+import { PersonNotFound } from '@/features/person';
+import { placeInLayout } from '@/lib/providers/mapping/season-layout';
+import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
+import { mediaItemId, routes } from '@/lib/routes';
+import { useAniZipEpisodeMapQuery, useSeasonLayoutQuery } from '@/state/queries/mapping';
+import { useMediaDetailsQuery } from '@/state/queries/media-details';
+import { useResolvedMediaItem } from '@/state/queries/resolve-item';
+
+/**
+ * `/episode/[provider]/[id]/[season]/[number]` resolves the same show as
+ * `/details/[provider]/[id]`. With only one episode segment
+ * (`routes.animeEpisode`), `number` is an anime
+ * entry's own numbering and this route places it on the trackers' layout the
+ * way the seasons accordion does — the ani.zip read belongs to a details
+ * screen, not to every diary row (plan 0027 R7). The screen itself is platform-split
+ * (`features/episode-details/screen`): a full-bleed page on native, a page
+ * inside the sidebar shell on web.
+ */
+export default function EpisodeRoute() {
+  const { provider, id: resourceId, episode } = useLocalSearchParams<{
+    provider: string;
+    id: string;
+    episode: string[];
+  }>();
+  const id = mediaItemId(provider, resourceId);
+  const parts = Array.isArray(episode) ? episode : [];
+  const [season, number] = parts.length === 1 ? [undefined, parts[0]] : parts;
+  const detailsHref = id == null ? routes.home : routes.details(id, 'TV');
+  const router = useRouter();
+  const { item: resolved, isLoading } = useResolvedMediaItem(id ?? '', provider === 'trakt' ? 'TV' : undefined);
+  // The same TMDB-over-provider merge the details screen applies: an anime
+  // item has no TMDB id of its own, the catalogue read discovers it, and the
+  // episode surfaces are TMDB-keyed. Cached from the details screen that
+  // linked here, so this costs no request.
+  const mediaDetails = useMediaDetailsQuery(resolved);
+  const item =
+    resolved == null ? undefined : applyPrimaryMetadata(resolved, mediaDetails.data?.catalogue);
+  const episodeNumber = Number(number);
+  const placing = season == null && item?.type === 'ANIME';
+  const anilistId = placing ? (item?.externalIds.anilist ?? undefined) : undefined;
+  const tmdbId = placing ? (item?.externalIds.tmdb ?? undefined) : undefined;
+  const episodeMap = useAniZipEpisodeMapQuery(anilistId);
+  const layout = useSeasonLayoutQuery({ tmdb: tmdbId });
+  const row = episodeMap.data?.get(episodeNumber);
+  const pointer = placing
+    ? row == null
+      ? null
+      : placeInLayout(layout.data, row)
+    : { season: Number(season), number: episodeNumber };
+  const placingPending =
+    placing &&
+    (mediaDetails.isPending ||
+      (anilistId != null && episodeMap.isPending) ||
+      (tmdbId != null && layout.isPending));
+  const pointerValid =
+    parts.length > 0 && parts.length <= 2 &&
+    pointer != null &&
+    Number.isInteger(pointer.season) &&
+    pointer.season >= 0 &&
+    Number.isInteger(pointer.number) &&
+    pointer.number > 0;
+
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(detailsHref);
+    }
+  }
+
+  if ((isLoading && item == null) || placingPending) {
+    return <EpisodeScreenSkeleton onBack={goBack} />;
+  }
+
+  // An episode we can't place — no resolvable show, or an entry number ani.zip
+  // hasn't mapped onto TMDB's layout — is still a link to a show we *can*
+  // open. A dead end that names an internal mapping gap is worse than the
+  // show's own screen, so it lands there instead.
+  if (item == null || !pointerValid) {
+    return <Redirect href={detailsHref} />;
+  }
+
+  return (
+    <EpisodeScreen
+      item={item}
+      number={pointer.number}
+      onBack={goBack}
+      season={pointer.season}
+    />
+  );
+}
+
+/**
+ * Route-level containment (plan 0013 §5): a failed seasons/TMDB read lands on
+ * this screen's not-found view with a retry, not the root boundary.
+ */
+export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
+  const router = useRouter();
+  return (
+    <PersonNotFound
+      detail="This episode couldn’t be loaded."
+      onGoBack={() =>
+        router.canGoBack() ? router.back() : router.replace(routes.home)
+      }
+      onRetry={retry}
+    />
+  );
+}
