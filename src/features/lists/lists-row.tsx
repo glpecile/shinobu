@@ -12,9 +12,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { routes } from '@/lib/routes';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
-import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { ListCard } from './list-card';
-import { ListsHeaderSkeleton } from './list-header';
 
 export function listsTitle(kind: LetterboxdListKind) {
   return kind === 'liked' ? 'Liked Lists' : 'Your Lists';
@@ -27,31 +25,6 @@ export function ListsRowSkeleton() {
       <Rail className="px-4">
         {[0, 1, 2].map((index) => <Skeleton className="w-60 h-44 rounded-lg mr-3" delay={staggerDelay(index)} key={index} />)}
       </Rail>
-    </View>
-  );
-}
-
-/**
- * The list-detail loading state, laid out like the loaded screen so nothing
- * shifts when the data lands: the round-arrow + provider-dot + title header
- * row (`ListsHeaderSkeleton`), then the count/toolbar row, then the films in
- * the persisted view's geometry. The body is `WallSkeleton`, which reads the
- * saved grid/list preference and lays out to match — the load reads as that
- * layout materializing, not as one shape that then swaps into another.
- */
-export function ListFilmsSkeleton({ onBack }: { onBack: () => void }) {
-  return (
-    <View className="flex-1">
-      <ListsHeaderSkeleton onBack={onBack} provider="letterboxd" />
-      {/* Mirrors the `N films · by owner` + buttons toolbar row. */}
-      <View className="flex-row items-center gap-3 px-6 pb-3">
-        <Skeleton className="h-4 w-24 shrink rounded" />
-        <View className="flex-1" />
-        <Skeleton className="size-11 rounded-full" />
-        <Skeleton className="size-11 rounded-full" />
-        <Skeleton className="h-8 w-16 rounded" />
-      </View>
-      <WallSkeleton />
     </View>
   );
 }

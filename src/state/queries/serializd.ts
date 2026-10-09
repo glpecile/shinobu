@@ -11,13 +11,15 @@ import { getSerializdSession, getSerializdUsername } from '@/state/session/seria
  * arrow as `traktDeps()`/`letterboxdDeps()`. The transport (`fetch` + `baseUrl`)
  * is the platform seam (KTD4): native reaches the upstream host with app
  * headers, web the same-origin proxy. Works on every platform (R13) — no
- * `EXPO_OS` gate.
+ * `EXPO_OS` gate. List reads pass their cache-key username so anonymous or
+ * stale-account queries never authenticate as a different stored account.
  */
-export function serializdDeps(): SerializdDeps {
+export function serializdDeps(username?: string | null): SerializdDeps {
+  const session = getSerializdSession();
   return {
     fetch: serializdFetch,
     baseUrl: serializdBaseUrl,
-    session: getSerializdSession(),
+    session: username === undefined || session?.username === username ? session : null,
   };
 }
 
@@ -47,7 +49,7 @@ export const serializdQueryKeys = {
 export function useSuspenseSerializdListsQuery(username: string, kind: SerializdListKind) {
   return useSuspenseInfiniteQuery({
     queryKey: serializdQueryKeys.lists(username, kind),
-    queryFn: ({ pageParam, signal }) => Effect.runPromise(getSerializdListsPage(serializdDeps(), { username, kind, page: pageParam }), { signal }),
+    queryFn: ({ pageParam, signal }) => Effect.runPromise(getSerializdListsPage(serializdDeps(username), { username, kind, page: pageParam }), { signal }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, page) => lastPage.hasNextPage && page < 9999 ? page + 1 : undefined,
     staleTime: 15 * 60_000,
@@ -57,7 +59,7 @@ export function useSuspenseSerializdListsQuery(username: string, kind: Serializd
 export function useSuspenseSerializdListQuery(username: string | null, id: string) {
   return useSuspenseQuery({
     queryKey: serializdQueryKeys.list(username, id),
-    queryFn: ({ signal }) => Effect.runPromise(getSerializdList(serializdDeps(), id), { signal }),
+    queryFn: ({ signal }) => Effect.runPromise(getSerializdList(serializdDeps(username), id), { signal }),
     staleTime: 15 * 60_000,
   });
 }

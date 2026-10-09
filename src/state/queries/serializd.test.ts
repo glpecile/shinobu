@@ -1,5 +1,8 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, mock, test } from 'bun:test';
+import { createElement, Suspense } from 'react';
+// @ts-expect-error -- The installed react-dom package has no server-renderer declarations.
+import { renderToString } from 'react-dom/server';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -13,10 +16,48 @@ mock.module('react-native-mmkv', () => ({
     addOnValueChangedListener: () => ({ remove() {} }),
   }),
 }));
-mock.module('@/lib/http/client', () => ({ httpFetch: async () => Response.json({}) }));
+const authorization: (string | null)[] = [];
+const list = { listId: 42, listName: 'Pilots', owner: { username: 'gian' }, numberOfItems: 0, listItems: [] };
+mock.module('@/lib/http/client', () => ({ httpFetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+  authorization.push(new Headers(init?.headers).get('Authorization'));
+  return Response.json(String(input).includes('/user/') ? { lists: [list], totalPages: 1 } : list);
+} }));
 
-const { findInSerializdListsCache, serializdQueryKeys } = await import('./serializd');
+const { findInSerializdListsCache, serializdQueryKeys, useSuspenseSerializdListQuery, useSuspenseSerializdListsQuery } = await import('./serializd');
 const { setProviderSession, clearProviderSession } = await import('@/state/session/tokens');
+
+function Detail({ username }: { username: string | null }) {
+  useSuspenseSerializdListQuery(username, '42');
+  return null;
+}
+
+function Index({ username }: { username: string | null }) {
+  useSuspenseSerializdListsQuery(username ?? '', 'created');
+  return null;
+}
+
+test.each([
+  ['detail', null, null],
+  ['detail', 'other', null],
+  ['index', 'other', null],
+  ['detail', 'gian', 'Bearer tok'],
+  ['index', 'gian', 'Bearer tok'],
+] as const)('%s query for %s authenticates only its keyed account', async (kind, username, expected) => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  setProviderSession('serializd', { accessToken: 'tok', username: 'gian' });
+  authorization.length = 0;
+  try {
+    renderToString(createElement(QueryClientProvider, { client },
+      createElement(Suspense, { fallback: null }, createElement(kind === 'detail' ? Detail : Index, { username })),
+    ));
+    await Promise.all(client.getQueryCache().getAll().map((query) => query.promise));
+    expect(authorization).toEqual([expected]);
+    expect(client.getQueryCache().getAll()[0].state.status).toBe('success');
+  } finally {
+    client.clear();
+    clearProviderSession('serializd');
+  }
+});
 
 test('details resolve cached list media only from the current Serializd account', () => {
   const client = new QueryClient();

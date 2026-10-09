@@ -19,6 +19,7 @@
     "./scripts/lint-rules.mjs"
   ],
   "rules": {
+    "shinobu/no-hardcoded-routes": "error",
     "shinobu/no-pointer-events-prop": "error",
     "no-underscore-dangle": [
       "warn",

@@ -13,7 +13,7 @@ import { usePushRoute } from '@/lib/navigation';
 import { type SerializdListEntry } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
-import { ListsHeader, ListsHeaderSkeleton, ProviderListLink } from './list-header';
+import { ListsHeader, ProviderListLink } from './list-header';
 
 function entryRoute(entry: SerializdListEntry) {
   return entry.season != null && entry.episode != null
@@ -21,7 +21,7 @@ function entryRoute(entry: SerializdListEntry) {
     : routes.details(entry.item.id);
 }
 
-export function SerializdListItems({ username, id, url, onBack }: { username: string | null; id: string; url: string; onBack: () => void }) {
+export function SerializdListItems({ username, id, url }: { username: string | null; id: string; url: string }) {
   const query = useSuspenseSerializdListQuery(username, id);
   const list = query.data;
   const pushRoute = usePushRoute();
@@ -29,7 +29,7 @@ export function SerializdListItems({ username, id, url, onBack }: { username: st
   return (
     <>
       <Head><title>{`${list.title} — Shinobu`}</title></Head>
-      <ListsHeader onBack={onBack} provider="serializd" title={list.title} />
+      <ListsHeader provider="serializd" title={list.title} />
       <View className="flex-row items-center gap-3 px-6 pb-3">
         <Text className="font-sans text-muted text-sm flex-1 shrink" numberOfLines={2}>{`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'} · by ${list.owner}`}</Text>
         <ProviderListLink iconOnly provider="serializd" url={url} />
@@ -79,10 +79,10 @@ export function SerializdListItems({ username, id, url, onBack }: { username: st
   );
 }
 
-export function SerializdListSkeleton({ onBack }: { onBack: () => void }) {
+export function SerializdListSkeleton() {
   return (
     <>
-      <ListsHeaderSkeleton onBack={onBack} provider="serializd" />
+      <ListsHeader provider="serializd" />
       <Skeleton className="h-4 w-40 mx-6 mb-6 rounded" />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>

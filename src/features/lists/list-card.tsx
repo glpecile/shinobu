@@ -9,15 +9,7 @@ import { useNewTabPress } from '@/components/use-new-tab-press';
 import { formatCount } from '@/lib/format-count';
 import type { ProviderId } from '@/lib/providers/types';
 
-/**
- * A list is a collection, not a film: a filmstrip of up to four posters under
- * a scrim keeps the two distinct, with the title riding in the art and the
- * author inlined in the meta row — "1.3K films · by noirboy" — the author
- * ellipsizing once the row runs long, the provider dot pinned to the far edge
- * (the B4 pick from `dev/lists-card-variants`). Counts compact like YouTube
- * views so a 34-item and a 12,431-item list share a row height. Likes stay
- * out until a lists payload exposes a count.
- */
+/** A four-poster filmstrip with compact count/author metadata and a provider mark. */
 export function ListCard({ list, count: itemCount, noun = 'film', provider, href, onPress }: {
   list: { title: string; owner: string; previews: { id: string; coverImage: string }[] };
   count?: number;
