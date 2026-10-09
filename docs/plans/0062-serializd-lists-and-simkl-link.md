@@ -11,8 +11,9 @@
   disconnect root. Empty/error/incomplete responses retain external recovery.
 - Add only a numeric `list/{id}` GET grant to the existing Serializd Worker.
   No mobile-prefix proxy or mutation grants.
-- Add a Simkl lists link with clear external-only copy. The owner explicitly
-  deferred AUTH V2 migration and in-app Simkl custom lists.
+- Add a Simkl lists link with clear external-only copy, shown only when there
+  are lists to display in-app. The owner explicitly deferred AUTH V2 migration
+  and in-app Simkl custom lists, so the link is dormant until those land.
 - No list creation/editing/like writes, new dependencies, or native changes.
 
 ## Validation
@@ -24,9 +25,13 @@ GET allowlist requires deploying/restarting the Worker, not a native rebuild.
 
 ## Result
 
-- Implemented created/liked Serializd rails, paged indexes, list detail rows,
-  and the external Simkl entry. Cards, grid, header, and external-link button
-  are shared with Letterboxd. List-detail cache resolution is account-scoped.
+- Implemented created/liked Serializd rails, paged indexes, and list detail
+  rows. Cards, grid, header, and external-link button are shared with
+  Letterboxd. List-detail cache resolution is account-scoped.
+- The Simkl lists entry follows the same rule as the list sections — it only
+  renders when there are lists to display — so with in-app Simkl lists deferred
+  there is no Simkl block on Home today. The scope note above records that the
+  entry returns when in-app Simkl lists exist.
 - Live provider reads passed for Maurizio82's created index, openminded03's
   four liked lists, list 732170 (33 show entries), and list 730655 (five episode
   entries). These probes were public and changed no provider data.
