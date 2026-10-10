@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { FadeOut, useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
@@ -20,14 +21,14 @@ import { ProviderLinksSection } from '@/features/provider-links/provider-links-s
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { EpisodeLogButton } from '@/features/episode-details/episode-log-button';
+import { DiscussionSection } from '@/features/discussions/discussion-section';
 import {
   EpisodeCreditsSection,
   EpisodeHeaderSkeleton,
   EpisodeHeading,
   EpisodeLogs,
-  EpisodeNav,
+  EpisodeNavigation,
   EpisodeOverview,
-  EpisodeSeriesLink,
   EpisodeStep,
 } from '@/features/episode-details/episode-sections';
 import type { EpisodeRef } from '@/features/episode-details/episode-neighbours';
@@ -144,6 +145,7 @@ function EpisodePager({
           ))}
           <View style={{ width: (order.length - 1 - last) * width }} />
         </ScrollView>
+        <EpisodeNavigation id={item.id} next={order[index + 1]} number={number} prev={order[index - 1]} season={season} />
       </EpisodeStep>
       <FloatingBackButton onPress={onBack} />
     </View>
@@ -165,6 +167,7 @@ function EpisodePage({
 }) {
   const view = useEpisode(item, season, number);
   const logs = useEpisodeLogs(item, season, number, view.episode?.firstAired);
+  const insets = useSafeAreaInsets();
   // `useCSSVariable`, not `useThemeColor`: this colour is *composed* into the
   // gradient's transparent stop (`${background}00`), and web's `var(--token)`
   // cannot be concatenated. The prerender has no DOM to read, so the first
@@ -177,7 +180,7 @@ function EpisodePage({
   const hero = view.still || item.backdropImage || '';
 
   return (
-    <ScrollView className="flex-1">
+    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom }}>
       <BlurEnter>
         <View className="h-64 relative">
           {hero === '' ? (
@@ -191,7 +194,7 @@ function EpisodePage({
           />
         </View>
 
-        <View className="px-6 -mt-10 pb-12">
+        <View className="px-6 -mt-10 pb-44">
           {view.episode == null ? (
             <Text className="text-muted font-sans">This episode isn’t listed.</Text>
           ) : (
@@ -217,8 +220,7 @@ function EpisodePage({
             </>
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <EpisodeNav className="mt-8" id={item.id} next={view.next} prev={view.prev} />
-          <EpisodeSeriesLink className="mt-3" id={item.id} />
+          <DiscussionSection episode={{ season, number }} item={item} />
           <ProviderLinksSection episode={{ season, number }} item={item} />
         </View>
       </BlurEnter>
@@ -243,11 +245,6 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
         <Skeleton className="h-12 w-full rounded-full mt-5" delay={staggerDelay(1)} />
         <ExpandableText.Skeleton className="mt-6" lines={4} />
         <PeopleSectionsSkeleton />
-        <View className="flex-row gap-3 mt-8">
-          <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />
-          <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />
-        </View>
-        <Skeleton className="h-12 w-full rounded-full mt-3" delay={staggerDelay(4)} />
       </View>
       <FloatingBackButton onPress={onBack} />
     </AnimatedView>

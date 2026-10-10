@@ -10,7 +10,7 @@ import type { LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
 import type { SerializdListKind } from '@/lib/providers/serializd/lists';
 import type { NormalizedMediaItem } from '@/types/media';
 import { routes } from '@/lib/routes';
-import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
+import { useLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { ListCard } from './list-card';
 
@@ -30,8 +30,8 @@ export function ListsRowSkeleton() {
 }
 
 export function LetterboxdListsRow({ username, kind }: { username: string; kind: LetterboxdListKind }) {
-  const pages = useSuspenseLetterboxdListsQuery(username, kind);
-  return <ListsRail count={(list) => list.filmCount} href={(list) => routes.letterboxdList(list.owner, list.slug)} indexHref={routes.letterboxdLists(kind)} kind={kind} lists={pages.data.pages[0].lists} provider="letterboxd" />;
+  const pages = useLetterboxdListsQuery(username, kind);
+  return <ListsRail count={(list) => list.filmCount} href={(list) => routes.letterboxdList(list.owner, list.slug)} indexHref={routes.letterboxdLists(kind)} kind={kind} lists={pages.data?.pages[0]?.lists ?? []} provider="letterboxd" />;
 }
 
 export function SerializdListsRow({ username, kind }: { username: string; kind: SerializdListKind }) {

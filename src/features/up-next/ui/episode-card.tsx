@@ -16,6 +16,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import { Badge } from './badge';
 import { useCardArt } from './use-card-art';
+import { STACK_OFFSET } from './metrics';
 
 /**
  * The landscape Up Next card (plan 0019 U5) — art (see `useCardArt`), title,
@@ -42,13 +43,6 @@ interface EpisodeCardProps {
   /** Card width class; the agenda row overrides the carousel default. */
   className?: string;
 }
-
-/**
- * How far each card back peeks out, in px. Deliberately smaller than the row's
- * 12px inter-card gap so the far back never reaches into the neighbouring card;
- * the row reserves the matching space above itself so the stack isn't clipped.
- */
-export const STACK_OFFSET = 5;
 
 export function EpisodeCard({
   group,

@@ -17,6 +17,7 @@ export interface AniListMedia {
   /** TV, TV_SHORT, MOVIE, SPECIAL, OVA, ONA, MUSIC, MANGA, NOVEL, ONE_SHOT. */
   format?: string | null;
   title?: AniListMediaTitle | null;
+  synonyms?: Array<string | null> | null;
   /** HTML-ish (<br>, <i>…) even with asHtml: false. */
   description?: string | null;
   coverImage?: { extraLarge?: string | null; large?: string | null } | null;
@@ -118,6 +119,7 @@ export function normalizeAniListMedia(
   const total = type === 'MANGA' ? media.chapters : media.episodes;
   const year = media.seasonYear ?? media.startDate?.year;
   const genres = media.genres?.filter((genre): genre is string => genre != null);
+  const aliases = media.synonyms?.filter((alias): alias is string => alias != null && alias.trim() !== '');
   const titles = {
     ...(media.title?.romaji != null ? { romaji: media.title.romaji } : {}),
     ...(media.title?.english != null ? { english: media.title.english } : {}),
@@ -128,6 +130,7 @@ export function normalizeAniListMedia(
     id: `anilist-${media.id}`,
     title: anilistTitle(media),
     ...(Object.keys(titles).length > 0 ? { titles } : {}),
+    ...(aliases != null && aliases.length > 0 ? { titleAliases: aliases } : {}),
     coverImage: media.coverImage?.extraLarge ?? media.coverImage?.large ?? '',
     ...(media.bannerImage != null ? { backdropImage: media.bannerImage } : {}),
     ...(media.description != null ? { overview: stripHtml(media.description) } : {}),

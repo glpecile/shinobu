@@ -24,7 +24,7 @@ interface MediaCardProps {
   subtitle?: string;
   onPress?: (item: NormalizedMediaItem) => void;
   /** Opens quick log/hide via long-press or the web hover button. */
-  onActionsPress?: (item: NormalizedMediaItem) => void;
+  onActionsPress: (item: NormalizedMediaItem) => void;
 }
 
 function progressLabel(item: NormalizedMediaItem): string | null {
@@ -45,8 +45,7 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
   const accentForeground = useThemeColor('--color-accent-foreground');
   // Uniwind has no group-hover support.
   const [hovered, setHovered] = useState(false);
-  const showActionsButton =
-    onActionsPress != null && process.env.EXPO_OS === 'web' && hovered;
+  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
 
   const newTab = useNewTabPress(routes.details(item.id, item.type));
 
@@ -67,9 +66,7 @@ export function MediaCard({ item, className, subtitle, onPress, onActionsPress }
         accessibilityLabel={[item.title, item.type, progress, subtitle, sourceLabel].filter(Boolean).join(' · ')}
         accessibilityRole="button"
         className="w-full h-full"
-        onLongPress={
-          onActionsPress == null ? undefined : () => onActionsPress(item)
-        }
+        onLongPress={() => onActionsPress(item)}
         onPress={onCardPress}
       >
         <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">

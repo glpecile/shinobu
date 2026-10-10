@@ -33,6 +33,7 @@ export const MEDIA_FIELDS = `
   type
   format
   title { english romaji native }
+  synonyms
   description(asHtml: false)
   coverImage { extraLarge large }
   bannerImage

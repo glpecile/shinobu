@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
 import { ActivityIndicator, Platform, Text } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import {
   type CSSTransitionProperties,
   FadeIn,
@@ -15,7 +16,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant = 'primary' | 'outline' | 'quiet';
+export type ButtonVariant = 'primary' | 'outline' | 'quiet' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /** Container classes per variant — `off` covers both disabled and loading. */
@@ -23,12 +24,14 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   primary: { on: 'bg-accent', off: 'bg-accent/40' },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border', off: 'border border-border opacity-60' },
+  ghost: { on: '', off: 'opacity-60' },
 };
 
 const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   primary: { on: 'text-accent-foreground', off: 'text-accent-foreground' },
   outline: { on: 'text-accent', off: 'text-accent/60' },
   quiet: { on: 'text-foreground', off: 'text-muted' },
+  ghost: { on: 'text-foreground', off: 'text-muted' },
 };
 
 /** The theme token the spinner borrows so it matches its own label exactly. */
@@ -36,6 +39,7 @@ const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   primary: '--color-accent-foreground',
   outline: '--color-accent',
   quiet: '--color-foreground',
+  ghost: '--color-foreground',
 };
 
 const BOX_LAYOUT =
@@ -114,6 +118,19 @@ function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['nam
   const context = useContext(ButtonIconContext);
   const color = useThemeColor(context?.token ?? '--color-foreground');
   if (context == null) return null;
+  let path: string | undefined;
+  switch (name) {
+    case 'chevron-back': path = 'm15 6-6 6 6 6'; break;
+    case 'chevron-forward': path = 'm9 6 6 6-6 6'; break;
+    case 'tv-outline': path = 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z M8 20h8'; break;
+  }
+  if (path != null) {
+    return (
+      <Svg height={context.size} viewBox="0 0 24 24" width={context.size}>
+        <Path d={path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} />
+      </Svg>
+    );
+  }
   return (
     <Ionicons
       color={color}
@@ -213,9 +230,9 @@ export interface ButtonProps {
  * Every call site used to hand-roll `PresstableOpacity` + `Text` with its own
  * padding, radius and disabled treatment, which is how `rounded` (4px, reads as
  * an accident) ended up next to `rounded-md`, and how "Connecting…" shipped as
- * a text swap with no spinner. Three variants cover what the app actually
+ * a text swap with no spinner. The variants cover what the app actually
  * needs: `primary` (the one action), `outline` (destructive/secondary, accent
- * on transparent) and `quiet` (neutral, bordered).
+ * on transparent), `quiet` (neutral, bordered), and `ghost` (inside a shared surface).
  *
  * Width is inherited, not owned: in a stretch container (a sheet, a form
  * column) it fills; in a row it hugs. That's the same behaviour the

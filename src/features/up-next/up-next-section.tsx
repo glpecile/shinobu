@@ -18,7 +18,7 @@ import { calendarWeek, nextSplitChange } from '@/features/up-next/compute';
 import { groupDayEntries, soloGroup } from '@/features/up-next/group';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { CARD_EXIT, CardSlot } from '@/features/up-next/ui/card-slot';
-import { STACK_OFFSET } from '@/features/up-next/ui/episode-card';
+import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
@@ -137,8 +137,7 @@ export function UpNextSection({
   const foreground = useThemeColor('--color-foreground');
   const muted = useThemeColor('--color-muted');
   const { fontScale } = useWindowDimensions();
-  // 144px art + 8px gap + scaled text or the 36px quick-log button, whichever is taller.
-  const cardRailHeight = 152 + Math.max(36, 44 * fontScale);
+  const cardRailHeight = episodeCardRailHeight(fontScale);
 
   if (continueWatching.length === 0 && calendar.length === 0) return null;
 
