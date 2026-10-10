@@ -33,4 +33,6 @@ During iOS validation, some constructed Letterboxd poster CDN URLs returned
 403 (including `51632-21-grams-0-600-0-900-crop.jpg`), while others rendered.
 This also affects the existing watchlist/film-detail poster path; list HTML
 and TMDB detail metadata still load. Don't proxy artwork or widen the public
-GET allowlist to work around an image CDN challenge.
+GET allowlist to work around an image CDN challenge. Exact public film-page
+poster recovery is documented in `letterboxd-constructed-poster-403.md`;
+these 403s are not sufficient evidence of a client-wide CDN challenge.

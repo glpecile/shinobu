@@ -6,10 +6,9 @@ import type { LetterboxdWatchlistFilm } from './watchlist';
  * Constructed poster CDN URL — the pattern RSS poster URLs follow, verified
  * to also work from watchlist-page data: the numeric film id split into
  * per-digit path segments, then `{id}-{slug}-…-crop.jpg`. The CDN validates
- * the slug and 403s on films whose poster filename uses a variant slug
- * (alternate-poster editions) — callers treat a failed load as "no art", the
- * same contract as an empty `coverImage`
- * (docs/solutions/letterboxd-no-api-fallback.md).
+ * filename: some films use alternate slugs or unrelated upload paths. The
+ * shared Image wrapper recovers failures from film-page JSON-LD instead
+ * (docs/solutions/letterboxd-constructed-poster-403.md).
  */
 export function posterUrl(
   filmId: number,

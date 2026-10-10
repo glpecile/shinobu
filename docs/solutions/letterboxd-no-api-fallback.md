@@ -43,7 +43,8 @@ e.g. film id `1234878`, slug `tuner` →
 - The CDN **validates the slug**: a wrong slug 403s. Some films' poster
   filenames use a *variant* slug (e.g. poster `obsession-2025-2` for film slug
   `obsession-2025`, an alternate-poster edition) — those constructed URLs 403.
-  Treat a poster 403 as "no art" and render the placeholder; do not retry.
+  Recover a failed constructed URL from public film-page Movie JSON-LD;
+  see `letterboxd-constructed-poster-403.md`. Do not retry the guessed URL.
 
 ## Surfaces that do NOT work — never build on these
 

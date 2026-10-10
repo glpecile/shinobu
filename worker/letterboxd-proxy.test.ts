@@ -68,6 +68,7 @@ describe('allowlist', () => {
       '/api/letterboxd/gian/likes/lists/page/9999/',
       '/api/letterboxd/other/list/250-classics/',
       '/api/letterboxd/other/list/250-classics/page/2/',
+      '/api/letterboxd/film/onibaba/',
     ]) {
       const upstream = capturingUpstream(htmlResponse());
       const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);
@@ -150,6 +151,7 @@ describe('allowlist', () => {
       ['PUT', '/api/letterboxd/gian/lists/'],
       ['DELETE', '/api/letterboxd/gian/likes/lists/page/1/'],
       ['POST', '/api/letterboxd/gian/list/classics/page/2/'],
+      ['POST', '/api/letterboxd/film/onibaba/'],
     ]) {
       const upstream = capturingUpstream(htmlResponse());
       const res = await handleLetterboxdProxy(
@@ -165,7 +167,11 @@ describe('allowlist', () => {
     for (const path of [
       '/api/letterboxd/gian/films/',
       '/api/letterboxd/gian/watchlist',
-      '/api/letterboxd/film/tuner/',
+      '/api/letterboxd/film/tuner/json/',
+      '/api/letterboxd/film/tuner/image-150/',
+      '/api/letterboxd/film/tuner/extra/',
+      '/api/letterboxd/film/-tuner/',
+      `/api/letterboxd/film/${'a'.repeat(201)}/`,
       '/api/letterboxd/api/v0/production-log-entries',
       '/api/letterboxd/gian/watchlist/extra/',
       '/api/letterboxd/gian/likes/lists/',

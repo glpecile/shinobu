@@ -24,7 +24,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
-import { getFilmTmdbId } from '@/lib/providers/letterboxd/film';
+import { getFilmPoster, getFilmTmdbId } from '@/lib/providers/letterboxd/film';
 import {
   getListsPage,
   getListFilmsPage,
@@ -117,6 +117,7 @@ export function validateLetterboxdUsername(username: string): Promise<boolean> {
 export const letterboxdQueryKeys = {
   all: ['letterboxd'] as const,
   film: (slug: string) => [...letterboxdQueryKeys.all, 'film', slug] as const,
+  poster: (slug: string) => [...letterboxdQueryKeys.all, 'poster', slug] as const,
   watchlist: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist', username] as const,
   /** The paginated "View all" grid — a separate entry from the feed row's
@@ -136,6 +137,21 @@ export const letterboxdQueryKeys = {
   listFilms: (owner: string, slug: string) =>
     [...letterboxdQueryKeys.listFilmsRoot(), owner, slug] as const,
 };
+
+/** Only failed constructed CDN URLs need a film-page lookup; never retry artwork. */
+export function useLetterboxdPosterQuery(uri: string | null, failed: boolean) {
+  const slug = uri?.match(/^https:\/\/a\.ltrbxd\.com\/resized\/film-poster\/(?:\d\/)+\d+-([a-z0-9]+(?:-[a-z0-9]+)*)-0-\d+-0-\d+-crop\.jpg(?:\?[^#]*)?$/)?.[1];
+  return useQuery({
+    queryKey: letterboxdQueryKeys.poster(slug ?? ''),
+    queryFn: slug == null ? skipToken : ({ signal }) =>
+      Effect.runPromise(getFilmPoster(letterboxdDeps(), slug), { signal }),
+    enabled: failed && slug != null,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    retryOnMount: false,
+    throwOnError: false,
+  });
+}
 
 /** Rails and View all share pages; only the full screen requests successors. */
 function letterboxdListsOptions(username: string, kind: LetterboxdListKind) {

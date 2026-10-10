@@ -7,7 +7,7 @@ import {
  * The Letterboxd same-origin reads proxy (plan 0018) — the repo's second
  * bounded exception to the AGENTS.md "never proxied" policy, modeled on
  * worker/serializd-proxy.ts. It forwards ONLY allowlisted public, unauthenticated
- * GET paths: watchlists, RSS, tags, created/liked list indices and list films,
+ * GET paths: watchlists, RSS, tags, created/liked list indices, list films and public film pages,
  * attaches no client headers, caps upstream latency, relays only
  * HTML/XML bodies under a script-killing CSP + `nosniff`, maps the Cloudflare
  * challenge page to a clean 502, emits no `Access-Control-Allow-Origin`, and
@@ -40,6 +40,8 @@ const RELAY_USER_AGENT =
  * on a matched path is a 405, anything unmatched is a 404 (KTD3 pattern).
  */
 const RULES: Array<{ match: (path: string) => boolean }> = [
+  // Exact poster recovery from Movie JSON-LD (plan 0066), never AJAX or artwork.
+  { match: (p) => /^film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p) },
   // The optional `page/N/` suffix (plan 0024 U9) is the ONE widening this rule
   // has taken: the watchlist grid pages past the first 28 films. Still one
   // username, still the watchlist path, still GET-only and unauthenticated —

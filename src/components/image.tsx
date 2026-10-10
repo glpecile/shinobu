@@ -1,6 +1,7 @@
 import { Image as ExpoImage, type ImageProps } from 'expo-image';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { withUniwind } from '@/lib/with-uniwind';
+import { useLetterboxdPosterQuery } from '@/state/queries/letterboxd';
 
 import { DURATION } from '@/lib/motion';
 
@@ -35,8 +36,22 @@ const DEFAULT_TRANSITION: ImageProps['transition'] = {
 const DEFAULT_CACHE_POLICY: ImageProps['cachePolicy'] = 'memory-disk';
 
 export function Image(props: ComponentProps<typeof StyledImage>) {
+  const { source, onError } = props;
+  const uri = typeof source === 'string' ? source
+    : source != null && typeof source === 'object' && 'uri' in source ? source.uri : undefined;
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  const { data: poster } = useLetterboxdPosterQuery(uri ?? null, failedUri === uri);
   return (
-    <StyledImage cachePolicy={DEFAULT_CACHE_POLICY} transition={DEFAULT_TRANSITION} {...props} />
+    <StyledImage
+      cachePolicy={DEFAULT_CACHE_POLICY}
+      transition={DEFAULT_TRANSITION}
+      {...props}
+      source={poster != null ? (typeof source === 'object' ? { ...source, uri: poster } : poster) : source}
+      onError={(event) => {
+        if (uri?.startsWith('https://a.ltrbxd.com/resized/film-poster/')) setFailedUri(uri);
+        onError?.(event);
+      }}
+    />
   );
 }
 
