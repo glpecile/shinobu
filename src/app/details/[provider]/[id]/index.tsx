@@ -22,8 +22,11 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
+import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { CopyTitle } from '@/features/copy-title/copy-title';
 import { DetailVariantsSection } from '@/features/detail-variants/detail-variants-section';
+import { DiscussionSection } from '@/features/discussions/discussion-section';
 import {
   RecommendationsAndTagsSection,
   RelationsSection,
@@ -498,6 +501,7 @@ function DetailsScreen() {
   const id = validType ? mediaItemId(provider, resourceId) ?? '' : '';
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { openActions, sheetProps } = useCardActions();
   const accent = useThemeColor('--color-accent');
   // The hero scrim fades to the *page background*, not black: the title
   // straddles the image/page boundary and `text-foreground` is near-black in
@@ -796,7 +800,7 @@ function DetailsScreen() {
   );
   const footer = (
     <View className="w-full max-w-4xl self-center px-6 pb-12">
-      <RelationsSection item={shown} resetKey={refreshCount} />
+      <RelationsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
 
       <SuspenseSection
         fallback={
@@ -814,11 +818,13 @@ function DetailsScreen() {
         )}
       </SuspenseSection>
 
-      <RecommendationsAndTagsSection item={shown} resetKey={refreshCount} />
+      <RecommendationsAndTagsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
 
       <ReleaseTimeline item={shown} />
 
       <DetailVariantsSection item={shown} />
+
+      {shown.type !== 'MANGA' && <DiscussionSection item={shown} />}
 
       <ProviderLinksSection item={shown} />
     </View>
@@ -839,6 +845,7 @@ function DetailsScreen() {
         <DetailsList {...layout} key={shown.id} />
       )}
       <ScrolledTitle.Bar title={shown.title} />
+      <CardActionsSheet canHide={false} {...sheetProps} />
       <FloatingBackButton onPress={goBack} />
     </>
   );

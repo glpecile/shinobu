@@ -43,7 +43,7 @@ export function EpisodeLogButton({
   next: EpisodeRef | undefined;
   className?: string;
 }) {
-  const go = useGoToEpisode(item.id);
+  const go = useGoToEpisode();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const [open, setOpen] = useState(false);
@@ -81,7 +81,7 @@ export function EpisodeLogButton({
             toast.success(copy.title, copy.message);
             setOpen(false);
             setLoggedCode(code);
-            // Steps like `EpisodeNav`: back still returns to the show.
+            // Steps like `EpisodeNavigation`: back still returns to the show.
             if (next != null) go(next);
           } else if (outcome.failed.length > 0) {
             haptics.error();

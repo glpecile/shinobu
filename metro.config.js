@@ -16,7 +16,7 @@ const uniwindConfig = withUniwindConfig(config, {
 
 // --- Local worker proxy (web dev only) --------------------------------------
 // `bun web` (Metro) has no Worker, so the same-origin proxy paths the web app
-// depends on in production (`/api/serializd/*`, `/api/letterboxd/*`) 404 there
+// depends on in production (`/api/serializd/*`, `/api/letterboxd/*`, `/api/fourchan/*`) 404 there
 // — and the Letterboxd connect flow misreads that 404 as "username not found".
 // In dev, forward those prefixes to a locally running `wrangler dev`
 // (`bun run dev:worker`), which executes worker/index.ts exactly like
@@ -25,7 +25,7 @@ const uniwindConfig = withUniwindConfig(config, {
 // (docs/solutions/local-web-dev-proxy-middleware.md)
 const WORKER_DEV_ORIGIN =
   process.env.SHINOBU_WORKER_DEV_ORIGIN ?? "http://localhost:8787";
-const WORKER_PROXY_PREFIXES = ["/api/serializd/", "/api/letterboxd/"];
+const WORKER_PROXY_PREFIXES = ["/api/serializd/", "/api/letterboxd/", "/api/fourchan/"];
 
 /** Connect-style middleware: relay proxy prefixes to `wrangler dev`, else next(). */
 function workerDevProxy(req, res, next) {

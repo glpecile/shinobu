@@ -202,6 +202,7 @@ export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
     <View className="px-4 py-3 border-b border-border bg-accent/5">
       <Button
         align="start"
+        className="self-start"
         icon={<Button.Icon name="eye-outline" />}
         label="Mark season as watched"
         onPress={onPress}

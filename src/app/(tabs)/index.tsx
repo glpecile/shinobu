@@ -215,7 +215,7 @@ function FeedScreen() {
             boundary: one provider failing hides just that row, never the feed. */}
         {watchlistConnected && (
           <SuspenseSection
-            fallback={<FeedRowSkeleton />}
+            fallback={<FeedRowSkeleton hasAction />}
             resetKey={refreshCount}
           >
             <YourWatchlistRow
@@ -229,7 +229,7 @@ function FeedScreen() {
             must not take the merged row down with it, and vice versa. */}
         {letterboxdUsername != null && (
           <SuspenseSection
-            fallback={<FeedRowSkeleton />}
+            fallback={<FeedRowSkeleton hasAction />}
             resetKey={refreshCount}
           >
             <LetterboxdWatchlistRow
@@ -268,14 +268,14 @@ function FeedScreen() {
             answer nobody was asking. Their feed slots went with them; Up Next
             cards now resolve through `findInUpNextCache`, not through the
             `yourShows` copy they used to ride. */}
-        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+        <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
           <SeasonalAnimeRow
             onItemActions={openActions}
             onItemPress={openDetails}
             season={animeSeason}
           />
         </SuspenseSection>
-        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+        <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
           <AnimeMoviesRow
             onItemActions={openActions}
             onItemPress={openDetails}

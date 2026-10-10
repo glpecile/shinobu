@@ -16,14 +16,14 @@ import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { EpisodeLogButton } from '@/features/episode-details/episode-log-button';
+import { DiscussionSection } from '@/features/discussions/discussion-section';
 import {
   EpisodeCreditsSection,
   EpisodeHeaderSkeleton,
   EpisodeHeading,
   EpisodeLogs,
-  EpisodeNav,
+  EpisodeNavigation,
   EpisodeOverview,
-  EpisodeSeriesLink,
   EpisodeStill,
   useGoToEpisode,
 } from '@/features/episode-details/episode-sections';
@@ -53,7 +53,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   const { width } = useWindowDimensions();
   const wide = width >= TWO_COLUMN_MIN_WIDTH;
   const title = view.episode?.title ?? '';
-  const go = useGoToEpisode(item.id);
+  const go = useGoToEpisode();
   const { prev, next } = view;
   // Web stacks keep covered screens mounted, so a screen pushed on top (the
   // series via "View series") would otherwise still hear the arrows.
@@ -83,10 +83,6 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isFocused, go, next, prev]);
 
-  if (view.episode == null && view.isLoading) {
-    return <EpisodeScreenSkeleton onBack={onBack} />;
-  }
-
   return (
     <View className="flex-1 bg-background">
       <Head>
@@ -95,8 +91,8 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
           <meta content={view.episode.overview} name="description" />
         )}
       </Head>
-      <ScrollView className="flex-1">
-        <BlurEnter className="w-full max-w-4xl self-center px-6 pt-24 pb-12">
+      {view.episode == null && view.isLoading ? <EpisodeScreenSkeleton onBack={onBack} /> : <ScrollView className="flex-1">
+        <BlurEnter className="w-full max-w-4xl self-center px-6 pt-24 pb-44">
           <View className={cn(wide && 'flex-row gap-8 items-start')}>
             <EpisodeStill
               className={cn('rounded-lg border border-border', wide ? 'flex-1' : 'w-full')}
@@ -133,18 +129,13 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
             <EpisodeOverview className="mt-6" episode={view.episode} />
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
-          <EpisodeNav
-            className="mt-8"
-            id={item.id}
-            next={view.next}
-            prev={view.prev}
-          />
-          <EpisodeSeriesLink className="mt-3" id={item.id} />
+          <DiscussionSection episode={{ season, number }} item={item} />
           <ProviderLinksSection episode={{ season, number }} item={item} />
         </BlurEnter>
-      </ScrollView>
+      </ScrollView>}
 
-      <FloatingBackButton onPress={onBack} />
+      {!(view.episode == null && view.isLoading) && <FloatingBackButton onPress={onBack} />}
+      <EpisodeNavigation id={item.id} next={view.next} number={number} prev={view.prev} season={season} />
     </View>
   );
 }
@@ -168,11 +159,6 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
         </View>
         <ExpandableText.Skeleton className="mt-6" lines={4} />
         <PeopleSectionsSkeleton />
-        <View className="flex-row gap-3 mt-8">
-          <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />
-          <Skeleton className="flex-1 h-9 rounded-full" delay={staggerDelay(3)} />
-        </View>
-        <Skeleton className="h-12 w-full rounded-full mt-3" delay={staggerDelay(4)} />
       </View>
       <FloatingBackButton onPress={onBack} />
     </AnimatedView>

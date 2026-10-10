@@ -37,7 +37,7 @@ interface MediaCarouselProps {
   subtitles?: Record<string, string>;
   onItemPress?: (item: NormalizedMediaItem) => void;
   /** Opens the card actions dialog — see MediaCard's `onActionsPress`. */
-  onItemActions?: (item: NormalizedMediaItem) => void;
+  onItemActions: (item: NormalizedMediaItem) => void;
   /**
    * Opt-in "View all" link beside the title, for rows whose source has more
    * than the row shows (the Letterboxd watchlist's paginated grid). Hidden

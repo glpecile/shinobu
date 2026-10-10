@@ -2,11 +2,13 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRouter } from 'expo-router';
 import { createContext, use, useState } from 'react';
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
 import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
+import { MorphText } from '@/components/morph-text';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton } from '@/components/skeleton';
@@ -237,33 +239,8 @@ export function EpisodeCreditsSection({
 }
 
 /**
- * The way back up to the show. An episode is reachable from surfaces that
- * never pass through the show — a diary row, a notification tap — so the
- * eyebrow's "S1E10 · Show" is the only mention of the series and it isn't a
- * link. Same shape as the credit and studio sheets' route buttons.
- */
-export function EpisodeSeriesLink({
-  id,
-  className,
-}: {
-  id: string;
-  className?: string;
-}) {
-  const pushRoute = usePushRoute();
-  return (
-    <Button
-      className={cn('mt-8', className)}
-      icon={<Button.Icon name="tv-outline" />}
-      label="View series"
-      onPress={() => pushRoute(routes.details(id, 'TV'))}
-      variant="quiet"
-    />
-  );
-}
-
-/**
  * How the screen steps to a sibling episode. The native pager provides it and
- * scrolls there; without a provider (web) a step is a `replace`.
+ * scrolls there; without a provider (web) a step updates the route parameters.
  */
 export const EpisodeStep = createContext<((target: EpisodeRef) => void) | null>(null);
 
@@ -272,11 +249,10 @@ export const EpisodeStep = createContext<((target: EpisodeRef) => void) | null>(
  * the web arrow keys all call this. Never a push: stepping through episodes
  * must not stack one screen per step, so back still returns to the show.
  */
-export function useGoToEpisode(id: string) {
+export function useGoToEpisode() {
   const router = useRouter();
   const step = use(EpisodeStep);
-  // push-guard-exempt: `replace`, see above.
-  return step ?? ((target: EpisodeRef) => router.replace(routes.episode(id, target.season, target.number)));
+  return step ?? ((target: EpisodeRef) => router.setParams({ episode: [String(target.season), String(target.number)] }));
 }
 
 /**
@@ -284,38 +260,70 @@ export function useGoToEpisode(id: string) {
  * (`useEpisode` → `episodeNeighbours`). Always the tracker's explicit
  * `season`+`number`, which is what the route places without ani.zip.
  */
-export function EpisodeNav({
+export function EpisodeNavigation({
   id,
   prev,
   next,
-  className,
+  season,
+  number,
 }: {
   id: string;
   prev: EpisodeRef | undefined;
   next: EpisodeRef | undefined;
-  className?: string;
+  season: number;
+  number: number;
 }) {
-  const go = useGoToEpisode(id);
+  const go = useGoToEpisode();
+  const pushRoute = usePushRoute();
+  const insets = useSafeAreaInsets();
+  const [showSeriesHint, setShowSeriesHint] = useState(false);
   return (
-    <View className={cn('flex-row gap-3', className)}>
-      <Button
-        className="flex-1"
-        disabled={prev == null}
-        icon={<Button.Icon name="chevron-back" />}
-        label="Previous"
-        onPress={() => prev != null && go(prev)}
-        size="sm"
-        variant="quiet"
-      />
-      <Button
-        className="flex-1"
-        disabled={next == null}
-        icon={<Button.Icon name="chevron-forward" />}
-        label="Next"
-        onPress={() => next != null && go(next)}
-        size="sm"
-        variant="quiet"
-      />
+    <View className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2" style={{ bottom: insets.bottom + 12 }}>
+      <View className="flex-row items-center w-52 p-1 rounded-full border border-border bg-surface shadow-md">
+        <Button
+          disabled={prev == null}
+          icon={<Button.Icon name="chevron-back" />}
+          iconOnly
+          label="Previous"
+          onPress={() => prev != null && go(prev)}
+          variant="ghost"
+        />
+        <View className="flex-1 items-center">
+          <MorphText className="font-sans-semibold text-lg text-foreground self-center">{episodeCode(season, number)}</MorphText>
+        </View>
+        <Button
+          disabled={next == null}
+          icon={<Button.Icon name="chevron-forward" />}
+          iconOnly
+          label="Next"
+          onPress={() => next != null && go(next)}
+          variant="ghost"
+        />
+      </View>
+      <View
+        className="relative"
+        onPointerEnter={() => setShowSeriesHint(true)}
+        onPointerLeave={() => setShowSeriesHint(false)}
+        {...(process.env.EXPO_OS === 'web' ? {
+          onFocus: () => setShowSeriesHint(true),
+          onBlur: () => setShowSeriesHint(false),
+        } : {})}
+      >
+        {process.env.EXPO_OS === 'web' && showSeriesHint && (
+          <View className="absolute bottom-full right-0 mb-2 px-3 py-2 rounded-md border border-border bg-surface shadow-sm" style={{ pointerEvents: 'none' }}>
+            <Text className="font-sans text-xs text-foreground whitespace-nowrap">View series</Text>
+          </View>
+        )}
+        <View className="p-1 rounded-full border border-border bg-surface shadow-md">
+          <Button
+            icon={<Button.Icon name="tv-outline" />}
+            iconOnly
+            label="View series"
+            onPress={() => pushRoute(routes.details(id, 'TV'))}
+            variant="ghost"
+          />
+        </View>
+      </View>
     </View>
   );
 }

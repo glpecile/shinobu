@@ -174,11 +174,13 @@ origin before building a web read path, and record it in
 `docs/solutions/web-cors-*.md`. Follow
 `docs/solutions/simkl-rate-limits-and-write-lock.md` for Simkl.
 
-There are two Cloudflare Worker exceptions. Don't add a third, and read the
+There are three explicitly approved Cloudflare Worker exceptions. Don't add another, and read the
 invariants in each file's header before editing it.
 `worker/serializd-proxy.ts` allowlists exact paths and methods.
 `worker/letterboxd-proxy.ts` is GET only. Never add a POST rule without a new
 spike showing the Cloudflare wall changed (`docs/solutions/letterboxd-web-proxy.md`).
+`worker/fourchan-proxy.ts` is GET only for the `/a/`, `/tv/`, and `/co/`
+catalogs. No thread, archive, image, arbitrary board, or write endpoints.
 
 Local web dev needs `bun run dev:worker` next to `bun web`. Restart `bun web`
 after editing `metro.config.js`.

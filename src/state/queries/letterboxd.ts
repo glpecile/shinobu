@@ -1,4 +1,5 @@
 import {
+  infiniteQueryOptions,
   skipToken,
   useInfiniteQuery,
   useMutation,
@@ -55,6 +56,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 import { cachedTmdbMovieIdByTitle } from './mapping';
 import { tmdbDeps, tmdbQueryKeys } from './tmdb';
+import { isRetryable } from './query-client';
 
 /**
  * The web read transport (plan 0018): letterboxd.com sends no CORS headers, so
@@ -136,8 +138,8 @@ export const letterboxdQueryKeys = {
 };
 
 /** Rails and View all share pages; only the full screen requests successors. */
-export function useSuspenseLetterboxdListsQuery(username: string, kind: LetterboxdListKind) {
-  return useSuspenseInfiniteQuery({
+function letterboxdListsOptions(username: string, kind: LetterboxdListKind) {
+  return infiniteQueryOptions({
     queryKey: letterboxdQueryKeys.lists(username, kind),
     queryFn: ({ pageParam, signal }) => Effect.runPromise(
       getListsPage({ ...letterboxdDeps(), username }, { kind, page: pageParam }), { signal },
@@ -146,7 +148,17 @@ export function useSuspenseLetterboxdListsQuery(username: string, kind: Letterbo
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
     staleTime: 15 * 60_000,
+    retry: (failureCount, error) => failureCount < 1 && isRetryable(error),
   });
+}
+
+/** Optional home rows never throw expected transport errors into React/LogBox. */
+export function useLetterboxdListsQuery(username: string, kind: LetterboxdListKind) {
+  return useInfiniteQuery({ ...letterboxdListsOptions(username, kind), throwOnError: false });
+}
+
+export function useSuspenseLetterboxdListsQuery(username: string, kind: LetterboxdListKind) {
+  return useSuspenseInfiniteQuery(letterboxdListsOptions(username, kind));
 }
 
 export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string) {

@@ -46,6 +46,8 @@ export interface NormalizedMediaItem {
    * may repeat `title`; the details header dedupes.
    */
   titles?: { romaji?: string; english?: string; native?: string };
+  /** Provider-supplied alternate names and abbreviations, used for discussion lookup. */
+  titleAliases?: string[];
   coverImage: string;
   /** Wide hero/fanart image for detail views; '' when the provider has none. */
   backdropImage?: string;

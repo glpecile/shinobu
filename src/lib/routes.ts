@@ -29,6 +29,7 @@ export const routes = {
   settings: '/settings',
   search: '/search',
   diary: '/diary',
+  discussionDemo: '/discussion-demo',
   details: (id: string, mediaType?: MediaType) => {
     let suffix = '';
     switch (id.slice(0, id.indexOf('-'))) {
