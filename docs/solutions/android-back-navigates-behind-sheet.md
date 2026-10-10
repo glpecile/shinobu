@@ -25,6 +25,14 @@ rebuild (`bun android.clean`, or `bun ios.clean` for iOS), not just Fast Refresh
 Lint and TypeScript checks pass. The owner confirmed working behavior after
 the rebuild guidance; the agent did not complete a passing runtime check.
 
+## Hotfix 0.6.1: overlay reverted
+
+`nativeOverlay` reparented sheet content into a window-level dialog outside
+the gesture-handler root, so every pressto press inside any sheet died on
+Android — including the log sheet's Write-to picker, date field, like button
+and confirm actions. Reverted to the portal: Back on pushed routes can pop
+behind an open sheet again until a press-safe overlay exists.
+
 On October 6, the emulator's installed APK had last been updated on October 4,
 before the October 5 dependency upgrade. Its DEX contained `BottomSheetView`
 but neither close-request controller, `hasCloseRequestHandler`, nor
