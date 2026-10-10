@@ -35,9 +35,11 @@ export function Sheet({ open, onClose, children }: SheetProps) {
     <ModalBottomSheet
       detents={[0, 'content']}
       index={open ? 1 : 0}
-      // A dialog owns Android Back ahead of native-stack fragments; the
-      // activity-level portal callback can lose priority on pushed screens.
-      nativeOverlay={process.env.EXPO_OS === 'android'}
+      // `nativeOverlay` stays off: it reparents the sheet into a window-level
+      // dialog outside the gesture-handler root, which kills every pressto
+      // press inside it on Android (hotfix 0.6.1 — the log sheet went dead).
+      // Back on pushed screens can pop behind an open sheet again; that is the
+      // cheaper bug until a press-safe overlay exists.
       onCloseRequest={onClose}
       // Fires only when a *user* drag commits a detent change…
       onIndexChange={(index) => {
