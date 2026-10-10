@@ -1,5 +1,8 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { createElement, Suspense } from 'react';
+// @ts-expect-error -- The installed react-dom package has no server-renderer declarations.
+import { renderToString } from 'react-dom/server';
 
 import type { TmdbMediaCatalogue } from '@/lib/providers/tmdb/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -16,9 +19,8 @@ mock.module('react-native-mmkv', () => ({
     addOnValueChangedListener: () => ({ remove() {} }),
   }),
 }));
-mock.module('@/lib/http/client', () => ({
-  httpFetch: async () => new Response('{}'),
-}));
+let readResponse = () => new Response('{}');
+mock.module('@/lib/http/client', () => ({ httpFetch: async () => readResponse() }));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
@@ -45,7 +47,7 @@ afterAll(() => {
   delete globals.window;
 });
 
-const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys } = await import(
+const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
   './letterboxd'
 );
 // Written through the session layer's own setters rather than into the map
@@ -57,6 +59,45 @@ const { setProviderSession, setStoredTmdbToken } = await import(
 );
 
 const NOW = new Date('2026-07-27T12:00:00.000Z');
+
+test('blocked list reads settle inline without retrying on remount, and an explicit retry can recover', async () => {
+  let retry: (() => Promise<unknown>) | undefined;
+  function IndexRead() {
+    const pages = useSuspenseLetterboxdListsQuery('jack', 'liked');
+    retry = () => pages.refetch();
+    return createElement('div', null, pages.data == null ? 'blocked' : 'loaded');
+  }
+  function FilmsRead() {
+    const pages = useSuspenseLetterboxdListFilmsQuery('jack', 'classics');
+    retry = () => pages.refetch();
+    return createElement('div', null, pages.data == null ? 'blocked' : 'loaded');
+  }
+  for (const [Read, html] of [
+    [IndexRead, '<div class="list-summary-list"></div>'],
+    [FilmsRead, '<h1 class="title-1">Classics</h1>'],
+  ] as const) {
+    const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
+    let requests = 0;
+    readResponse = () => { requests += 1; return Response.json({ error: 'upstream challenged' }, { status: 502 }); };
+    const render = () => renderToString(createElement(QueryClientProvider, { client },
+      createElement(Suspense, { fallback: 'loading' }, createElement(Read)),
+    ));
+    try {
+      expect(render()).toContain('loading');
+      await Promise.all(client.getQueryCache().getAll().map((query) => query.promise?.catch(() => {})));
+      expect(render()).toContain('<div>blocked</div>');
+      expect(render()).toContain('<div>blocked</div>');
+      expect(requests).toBe(1);
+      expect(client.getQueryCache().getAll()[0].state).toMatchObject({ status: 'error', data: undefined });
+      readResponse = () => new Response(html);
+      await retry!();
+      expect(render()).toContain('<div>loaded</div>');
+    } finally {
+      client.clear();
+      readResponse = () => new Response('{}');
+    }
+  }
+});
 
 /**
  * A watchlist row. `tmdb` is the one liberty these fixtures take: a real scrape

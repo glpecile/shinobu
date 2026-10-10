@@ -16,6 +16,7 @@ import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view
 import { useSuspenseLetterboxdListFilmsQuery } from '@/state/queries/letterboxd';
 import { ListsHeader, ProviderListLink } from './list-header';
 import { ListLikeButton } from './list-like-button';
+import { ListsLoadError } from './lists-page';
 
 export function LetterboxdListFilms({ username, owner, slug, url }: { username: string | null; owner: string; slug: string; url: string }) {
   const pages = useSuspenseLetterboxdListFilmsQuery(owner, slug);
@@ -23,6 +24,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   const { openActions, sheetProps } = useCardActions();
   const view = useWatchlistView();
   const Layout = view === 'grid' ? PosterWall : WatchlistRows;
+  if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider="letterboxd" url={url} />;
   const items = [...new Map(pages.data.pages.flatMap((page) => page.items).map((item) => [item.id, item])).values()];
   const title = pages.data.pages[0].title;
   return (
