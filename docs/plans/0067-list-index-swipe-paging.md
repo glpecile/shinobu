@@ -3,7 +3,9 @@
 Enable native left/right paging between Your Lists and Liked Lists for
 Letterboxd and Serializd by extracting and reusing the anime seasons pager. Keep the
 filter outside the pages, synchronize `?kind=` without pushing a route, and
-keep both pages mounted so vertical positions survive a switch. Each page
+render only the active tab — Letterboxd challenges datacenter reads, so
+mounting both tabs would double every visit into two concurrent upstream
+fetches. A swipe settles onto a skeleton that fills in. Each page
 retains its own skeleton, retry, and provider link. Web keeps tap-only switching
 so trackpad gestures still belong to browser navigation, like the season pager.
 

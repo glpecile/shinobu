@@ -19,7 +19,12 @@ export function ListsPager({ kind, renderKind }: {
   return (
     <View className="flex-1">
       <ListsKindFilter kind={kind} onChange={select} progress={progress} />
-      <Pager onSettle={select} options={KINDS} progress={progress} renderPage={renderKind} value={kind} />
+      {/* Only the active tab renders: Letterboxd challenges datacenter reads
+          (docs/solutions/letterboxd-public-list-pages.md), so mounting both
+          tabs would double every visit into two concurrent upstream fetches
+          and double the chance one lands challenged. A swipe settles onto a
+          skeleton that fills in, instead of a preloaded wall. */}
+      <Pager onSettle={select} options={KINDS} progress={progress} renderPage={(pageKind) => pageKind === kind ? renderKind(pageKind) : null} value={kind} />
     </View>
   );
 }
