@@ -101,7 +101,8 @@ const readPage = Effect.fn('letterboxd.readListPage')(function* (deps: Pick<Lett
   if (response.status === 429) return yield* new ProviderRateLimitError({ provider: 'letterboxd' });
   if (!response.ok) return yield* new ProviderNetworkError({
     provider: 'letterboxd',
-    cause: new Error(`Letterboxd responded ${response.status} loading this list. It may be private or no longer available.`),
+    status: response.status,
+    cause: new Error(`Letterboxd responded ${response.status} loading this list page. Open it on Letterboxd or try again later.`),
   });
   return yield* Effect.tryPromise({
     try: () => response.text(),

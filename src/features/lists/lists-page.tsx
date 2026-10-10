@@ -11,6 +11,25 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
 import { ListsHeader, ProviderListLink } from './list-header';
 
+/** Request failures and render failures share the same retry and provider escape hatch. */
+export function ListsLoadError({ provider, url, index = false, title = 'List', onRetry }: {
+  provider: 'letterboxd' | 'serializd';
+  url: string;
+  index?: boolean;
+  title?: string;
+  onRetry: () => unknown;
+}) {
+  return <>
+    {!index && <ListsHeader provider={provider} title={title} />}
+    <CenteredNotice>
+      <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
+      <CenteredNotice.Body>{provider === 'letterboxd' ? 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
+      <CenteredNotice.Action icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
+      <ProviderListLink provider={provider} url={url} />
+    </CenteredNotice>
+  </>;
+}
+
 /** Shared recovery and loading frame; resource pages own their query and identity. */
 export function ListsPage({ provider, title = 'List', url, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
   provider: 'letterboxd' | 'serializd';
@@ -46,15 +65,7 @@ export function ListsPage({ provider, title = 'List', url, index = false, embedd
         </>
       ) : (
         <ErrorBoundary key={contentKey ?? url} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (
-          <>
-            {!index && <ListsHeader provider={provider} title={title} />}
-            <CenteredNotice>
-              <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
-              <CenteredNotice.Body>{provider === 'letterboxd' ? 'Letterboxd may be blocking this page, or it may be private or no longer available.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
-              <CenteredNotice.Action icon={<Button.Icon name="refresh" />} label="Try again" onPress={resetErrorBoundary} />
-              <ProviderListLink provider={provider} url={url} />
-            </CenteredNotice>
-          </>
+          <ListsLoadError index={index} onRetry={resetErrorBoundary} provider={provider} title={title} url={url} />
         )}>
           <Suspense fallback={fallback}>{children}</Suspense>
         </ErrorBoundary>

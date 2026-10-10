@@ -5,7 +5,6 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  useSuspenseInfiniteQuery,
   type QueryClient,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
@@ -17,6 +16,7 @@ import {
 import type { ReleaseUpNextInput } from '@/features/up-next/types';
 import { httpFetch } from '@/lib/http/client';
 import type { HttpFetch } from '@/lib/http/types';
+import { ProviderNetworkError } from '@/lib/providers/errors';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { getMediaCatalogue } from '@/lib/providers/tmdb/reads';
 import {
@@ -153,6 +153,11 @@ export function useLetterboxdPosterQuery(uri: string | null, failed: boolean) {
   });
 }
 
+function retryListRead(failureCount: number, error: Error) {
+  return failureCount < 1 && isRetryable(error)
+    && !(error instanceof ProviderNetworkError && [403, 404, 502].includes(error.status ?? 0));
+}
+
 /** Rails and View all share pages; only the full screen requests successors. */
 function letterboxdListsOptions(username: string, kind: LetterboxdListKind) {
   return infiniteQueryOptions({
@@ -164,7 +169,8 @@ function letterboxdListsOptions(username: string, kind: LetterboxdListKind) {
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
     staleTime: 15 * 60_000,
-    retry: (failureCount, error) => failureCount < 1 && isRetryable(error),
+    retry: retryListRead,
+    retryOnMount: false,
   });
 }
 
@@ -173,12 +179,17 @@ export function useLetterboxdListsQuery(username: string, kind: LetterboxdListKi
   return useInfiniteQuery({ ...letterboxdListsOptions(username, kind), throwOnError: false });
 }
 
+/** Suspend only loading; request failures stay in the cache for inline recovery, not LogBox. */
 export function useSuspenseLetterboxdListsQuery(username: string, kind: LetterboxdListKind) {
-  return useSuspenseInfiniteQuery(letterboxdListsOptions(username, kind));
+  const client = useQueryClient();
+  const query = useLetterboxdListsQuery(username, kind);
+  if (query.isPending) throw client.prefetchInfiniteQuery(letterboxdListsOptions(username, kind));
+  return query;
 }
 
 export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string) {
-  return useSuspenseInfiniteQuery({
+  const client = useQueryClient();
+  const options = infiniteQueryOptions({
     queryKey: letterboxdQueryKeys.listFilms(owner, slug),
     queryFn: ({ pageParam, signal }) =>
       Effect.runPromise(
@@ -188,7 +199,13 @@ export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string)
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.hasNextPage && lastPageParam < 9999 ? lastPageParam + 1 : undefined,
     staleTime: 15 * 60_000,
+    retry: retryListRead,
+    retryOnMount: false,
+    throwOnError: false,
   });
+  const query = useInfiniteQuery(options);
+  if (query.isPending) throw client.prefetchInfiniteQuery(options);
+  return query;
 }
 
 /** Loaded membership is positive evidence only; an incomplete index cannot prove absence. */

@@ -20,6 +20,23 @@ Letterboxd link, rather than treating a failed page as an empty/end page.
 Native iOS reads later loaded 12 summaries from page 2 of both created and
 liked indices. Challenge behavior varies by transport and request.
 
+## Recheck (2026-10-10)
+
+Direct Bun requests with the Worker's fixed browser User-Agent and the deployed
+same-origin relay both returned Cloudflare challenges for
+`/jack/likes/lists/page/1/`, `/glptest/likes/lists/page/1/`, and created-list
+explicit page-1 URLs. The relay correctly returned
+`502 {"error":"upstream challenged"}`. Direct requests to the bare liked-list
+URL and liked pages 1–2 also returned 403; adding query parameters did not
+recover page 1. Bare `/jack/lists/` and `/glptest/lists/` still returned 200
+through both transports, and a direct public list-film page returned 200.
+
+The previously working explicit liked page-1 URL is no longer a reliable
+challenge workaround. Do not rotate URLs, widen the relay, replay cookies, or
+retry that 502 automatically. Show inline recovery without throwing an
+expected blocked read into React/Expo LogBox; see
+`letterboxd-optional-list-row-errors.md`.
+
 The index's `article.list-summary` contains an owner-specific list link,
 title, film count and LazyPoster previews. List films use the same LazyPoster
 attributes as watchlists. Parse only `ul.poster-list`, excluding unrelated

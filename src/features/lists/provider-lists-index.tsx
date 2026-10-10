@@ -4,9 +4,11 @@ import { routes } from '@/lib/routes';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { ListsIndex } from './lists-grid';
+import { ListsLoadError } from './lists-page';
 
 export function LetterboxdListsIndex({ username, kind, url }: { username: string; kind: LetterboxdListKind; url: string }) {
   const pages = useSuspenseLetterboxdListsQuery(username, kind);
+  if (pages.data == null) return <ListsLoadError index onRetry={() => pages.refetch()} provider="letterboxd" url={url} />;
   return (
     <ListsIndex
       count={(list) => list.filmCount}
