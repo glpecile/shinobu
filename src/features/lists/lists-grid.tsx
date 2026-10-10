@@ -8,16 +8,14 @@ import { usePushRoute } from '@/lib/navigation';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { ListCard } from './list-card';
-import { ListsKindFilter, ListsKindFilterSkeleton, type ListsKind } from './lists-kind-filter';
 import { ProviderListLink } from './list-header';
 
-/** Mirrors the index's filter, column count, and fixed-height cards. */
+/** Mirrors one index page's column count and fixed-height cards. */
 export function ListsGridSkeleton() {
   const { width } = useWindowDimensions();
   const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
   return (
     <View className="flex-1">
-      <ListsKindFilterSkeleton />
       <View className="flex-row flex-wrap px-2.5 pt-1.5">
         {/* Three rows: one index page holds 12 lists, so this is the first paint on desktop. */}
         {Array.from({ length: columns * 3 }).map((_, index) => (
@@ -32,14 +30,13 @@ export function ListsGridSkeleton() {
 
 /**
  * One paginated list index (created or liked) shared by Letterboxd and
- * Serializd: the kind filter, the empty state, the dedupe across pages, and
+ * Serializd: the empty state, the dedupe across pages, and
  * the grid + load-more + external-link footer. Only the query, provider copy,
  * count, and per-list href differ at the call sites.
  */
 export function ListsIndex<T extends { id: string; title: string; owner: string; previews: NormalizedMediaItem[] }>({
   provider, url, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
   isRefetching, refetch, fetchNextPage, count, href, noun = 'film', emptyBody,
-  kind,
 }: {
   provider: ProviderId;
   url: string;
@@ -54,7 +51,6 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   href: (list: T) => string;
   noun?: 'film' | 'item';
   emptyBody: string;
-  kind: ListsKind;
 }) {
   const pushRoute = usePushRoute();
   const { width } = useWindowDimensions();
@@ -62,7 +58,6 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   const pages = [...new Map(lists.map((list) => [list.id, list])).values()];
   return (
     <>
-      <ListsKindFilter kind={kind} />
       {pages.length === 0 ? (
         <CenteredNotice>
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>

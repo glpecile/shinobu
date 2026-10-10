@@ -1,8 +1,7 @@
-import { useRouter } from 'expo-router';
 import { View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
-import { Skeleton } from '@/components/skeleton';
 import { listsTitle } from './lists-row';
 
 /** Both providers split their index into created and liked; one union covers both. */
@@ -16,20 +15,10 @@ const KIND_OPTIONS = (['created', 'liked'] as const).map((value) => ({ value, la
  * provider filter, so it stays shareable and `setParams` swaps it without
  * pushing a new route.
  */
-export function ListsKindFilter({ kind }: { kind: ListsKind }) {
-  const router = useRouter();
+export function ListsKindFilter({ kind, onChange, progress }: { kind: ListsKind; onChange: (kind: ListsKind) => void; progress: SharedValue<number> }) {
   return (
     <View className="px-6 pb-3">
-      <NativeSegmentedControl accessibilityLabel="List type" className="w-full max-w-64" onChange={(value) => router.setParams({ kind: value })} options={KIND_OPTIONS} size="sm" value={kind} />
-    </View>
-  );
-}
-
-/** Mirrors the filter's capped pill geometry while the index loads. */
-export function ListsKindFilterSkeleton() {
-  return (
-    <View className="px-6 pb-3">
-      <Skeleton className="h-9 w-full max-w-64 rounded-full" />
+      <NativeSegmentedControl accessibilityLabel="List type" className="w-full max-w-64" onChange={onChange} options={KIND_OPTIONS} progress={progress} size="sm" value={kind} />
     </View>
   );
 }

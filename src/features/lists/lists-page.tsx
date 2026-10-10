@@ -12,18 +12,19 @@ import { routes } from '@/lib/routes';
 import { ListsHeader, ProviderListLink } from './list-header';
 
 /** Shared recovery and loading frame; resource pages own their query and identity. */
-export function ListsPage({ provider, title = 'List', url, index = false, unavailable = 'invalid', children, fallback, contentKey }: {
+export function ListsPage({ provider, title = 'List', url, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
   provider: 'letterboxd' | 'serializd';
   title?: string;
   url: string | null;
   index?: boolean;
+  /** A pager owns the shared header and document title; this page owns recovery. */
+  embedded?: boolean;
   unavailable?: 'invalid' | 'connect';
   children?: ReactNode;
   fallback?: ReactNode;
   /**
-   * Remounts the content (boundary + suspense) without the header, so the
-   * index title morphs across kind switches instead of popping with a full
-   * page remount.
+   * Remounts the content (boundary + suspense) when its resource owner changes,
+   * without remounting the shared header.
    */
   contentKey?: string;
 }) {
@@ -32,8 +33,8 @@ export function ListsPage({ provider, title = 'List', url, index = false, unavai
   const label = PROVIDERS[provider].label;
   return (
     <View className="flex-1 bg-background">
-      <Head><title>{`${title} — Shinobu`}</title></Head>
-      {index && <ListsHeader morphTitle provider={provider} title={title} />}
+      {!embedded && <Head><title>{`${title} — Shinobu`}</title></Head>}
+      {index && !embedded && <ListsHeader morphTitle provider={provider} title={title} />}
       {url == null ? (
         <>
           {!index && <ListsHeader provider={provider} title={title} />}

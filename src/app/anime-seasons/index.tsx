@@ -19,7 +19,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import { SeasonPager } from '@/features/anime-seasons/season-pager';
+import { Pager } from '@/components/pager';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { SeasonPicker } from '@/features/anime-seasons/season-picker';
 import { wallEntering } from '@/features/anime-seasons/wall-entrance';
@@ -306,10 +306,11 @@ export default function AnimeSeasonsScreen() {
       {/* Every format is cour-scoped, films included: the pager is the only
           wall host. The controls stay outside the boundaries — an AniList
           outage on one season must not take them with it. */}
-      <SeasonPager
+      <Pager
         onSettle={(season) => router.setParams({ season })}
+        options={ANIME_SEASONS}
         progress={progress}
-        renderSeason={(season) => {
+        renderPage={(season) => {
           // Keyed by the format this page is actually showing, not by the URL's:
           // an off-screen cour trails, and a key that ran ahead of its prop
           // would remount it onto the format it already had.
@@ -323,7 +324,7 @@ export default function AnimeSeasonsScreen() {
             />
           );
         }}
-        season={window.season}
+        value={window.season}
       />
       <CardActionsSheet {...sheetProps} />
     </View>

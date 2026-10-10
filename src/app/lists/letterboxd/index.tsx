@@ -1,9 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { ListsGridSkeleton } from '@/features/lists/lists-grid';
 import { ListsPage } from '@/features/lists/lists-page';
 import { listsTitle } from '@/features/lists/lists-row';
-import { LetterboxdListsIndex } from '@/features/lists/provider-lists-index';
+import { ProviderListsPager } from '@/features/lists/provider-lists-pager';
 import { letterboxdListsUrl } from '@/lib/providers/letterboxd/lists';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -15,8 +14,8 @@ export default function LetterboxdListsScreen() {
   const validKind = kind === 'created' || kind === 'liked';
   const url = validKind ? letterboxdListsUrl(username ?? '', kind) : null;
   return (
-    <ListsPage contentKey={`${username}/${kind}`} fallback={<ListsGridSkeleton />} index provider="letterboxd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
-      {url != null && username != null && validKind && <LetterboxdListsIndex kind={kind} url={url} username={username} />}
+    <ListsPage contentKey={username ?? ''} index provider="letterboxd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
+      {url != null && username != null && validKind && <ProviderListsPager kind={kind} provider="letterboxd" username={username} />}
     </ListsPage>
   );
 }
