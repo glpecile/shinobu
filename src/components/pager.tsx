@@ -19,15 +19,14 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { AnimatedScrollView } from '@/components/animated-view';
 import { haptics } from '@/lib/haptics';
 import { DURATION, TIMING_EASE_IN_OUT } from '@/lib/motion';
-import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season';
 
 /**
- * The four cours of a year as horizontal pages: a swipe moves to the
- * neighbouring cour, a tab tap scrolls there. A plain paging scroll view — a
+ * Horizontal pages: a swipe moves to the neighbour, a tab tap scrolls there.
+ * A plain paging scroll view — a
  * native UIScrollView / HorizontalScrollView, CSS scroll snap on web — so the
  * gesture is the platform's and no pager library is needed.
  *
- * This is what makes a season switch smooth on native: the selected cour and
+ * This is what makes a switch smooth on native: the selected page and
  * its two neighbours stay mounted, so a swipe reveals a wall that already
  * exists instead of unmounting one Legend List and mounting another on the
  * gesture frame (docs/solutions/season-switch-jank-remount-and-blur-on-native.md).
@@ -38,9 +37,9 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * scroll waits on. Farther pages stay empty: they are only ever glimpsed
  * while a tab tap scrolls past them, and they fill in once selected.
  *
- * Controlled: `season` comes from the URL, `onSettle` reports where a swipe
- * landed, and `progress` is the offset as a continuous cour index, written on
- * the UI thread every scroll frame for the web season indicator. Native
+ * Controlled: `value` comes from the URL, `onSettle` reports where a swipe
+ * landed, and `progress` is the offset as a continuous page index, written on
+ * the UI thread every scroll frame for an animated tab indicator. Native
  * controls update their selection after the swipe settles via the
  * momentum-end event. react-native-web never fires it, but web only moves by tap, so there
  * the tap's own animation reports where it came to rest. Pages get explicit
@@ -57,7 +56,7 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
  * re-snaps every mid-page write straight back to the page it started on.
  * Reanimated's `scrollTo` is a no-op on web, hence the DOM write.
  *
- * Web switches cours by tap only, so there the pager is not a horizontal
+ * Web switches pages by tap only, so there the pager is not a horizontal
  * scroller at all (`overflow-x: hidden`, which a `scrollLeft` write still
  * moves). A trackpad swipe over the wall belongs to the page, not to us: it
  * is what the browser's back gesture is made of. Paging on it was worse
@@ -70,34 +69,36 @@ import { ANIME_SEASONS, type AnimeSeason } from '@/lib/providers/anilist/season'
 /** How far off a page boundary a resting offset may sit (fractional zoom rounds `scrollLeft`). */
 const BOUNDARY_TOLERANCE = 2;
 const isWeb = Platform.OS === 'web';
-/** Web pages by tap: `scrollLeft` still moves, a trackpad swipe reaches the page. */
+/** Web pages by tap: `scrollLeft` still moves, a trackpad swipe reaches the browser. */
 const webScrollLock = { overflowX: 'hidden' } as unknown as ViewStyle;
 /**
  * The first position has to land before the first paint — after it, the pager
- * paints one frame of the first cour, whose page is not even mounted, and
+ * paints one frame of the first page, whose content is not even mounted, and
  * then jumps. Static web rendering has no layout to correct, and
  * `useLayoutEffect` is a no-op there anyway.
  */
 const useBeforePaint = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-export function SeasonPager({
-  season,
+export function Pager<T extends string>({
+  value,
+  options,
   onSettle,
   progress,
-  renderSeason,
+  renderPage,
 }: {
-  season: AnimeSeason;
-  onSettle: (season: AnimeSeason) => void;
+  value: T;
+  options: readonly T[];
+  onSettle: (value: T) => void;
   progress: SharedValue<number>;
-  renderSeason: (season: AnimeSeason) => ReactNode;
+  renderPage: (value: T) => ReactNode;
 }) {
   const scroller = useRef<ScrollView>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   // The page last scrolled into place. Null until the first layout, so the
-  // initial position is a jump, not a slide in from the first cour.
+  // initial position is a jump, not a slide in from the first page.
   const shown = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
-  const index = ANIME_SEASONS.indexOf(season);
+  const index = options.indexOf(value);
   // The page the scroll last came to rest on: what the mounted window is
   // centred on, so a tab tap mounts nothing beyond its target.
   const [settled, setSettled] = useState(index);
@@ -162,16 +163,16 @@ export function SeasonPager({
     if (size.width === 0) return;
     const page = Math.round(x / size.width);
     if (Math.abs(x - page * size.width) > BOUNDARY_TOLERANCE) return;
-    const landed = ANIME_SEASONS[page];
+    const landed = options[page];
     if (landed == null) return;
     // A swipe moves one page at most, so a rest further out is the scroll
-    // view sitting somewhere we never put it — not a cour the user chose.
+    // view sitting somewhere we never put it — not a page the user chose.
     if (Math.abs(page - index) > 1) {
       scroller.current?.scrollTo({ x: index * size.width, animated: false });
       return;
     }
     setSettled(page);
-    if (landed === season) return;
+    if (landed === value) return;
     haptics.selection();
     onSettle(landed);
   }
@@ -204,9 +205,14 @@ export function SeasonPager({
           showsHorizontalScrollIndicator={false}
           style={isWeb ? webScrollLock : undefined}
         >
-          {ANIME_SEASONS.map((cour, i) => (
-            <View key={cour} style={{ width: size.width, height: size.height }}>
-              {Math.abs(i - settled) <= 1 || i === index ? renderSeason(cour) : null}
+          {options.map((page, i) => (
+            <View
+              accessibilityElementsHidden={i !== index}
+              importantForAccessibility={i === index ? 'auto' : 'no-hide-descendants'}
+              key={page}
+              style={{ width: size.width, height: size.height }}
+            >
+              {Math.abs(i - settled) <= 1 || i === index ? renderPage(page) : null}
             </View>
           ))}
         </AnimatedScrollView>

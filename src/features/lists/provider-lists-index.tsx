@@ -17,7 +17,6 @@ export function LetterboxdListsIndex({ username, kind, url }: { username: string
       isFetchNextPageError={pages.isFetchNextPageError}
       isFetchingNextPage={pages.isFetchingNextPage}
       isRefetching={pages.isRefetching}
-      kind={kind}
       lists={pages.data.pages.flatMap((page) => page.lists)}
       provider="letterboxd"
       refetch={() => void pages.refetch()}
@@ -38,7 +37,6 @@ export function SerializdListsIndex({ username, kind, url }: { username: string;
       isFetchNextPageError={pages.isFetchNextPageError}
       isFetchingNextPage={pages.isFetchingNextPage}
       isRefetching={pages.isRefetching}
-      kind={kind}
       lists={pages.data.pages.flatMap((page) => page.lists)}
       noun="item"
       provider="serializd"

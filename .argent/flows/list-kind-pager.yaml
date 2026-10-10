@@ -1,0 +1,25 @@
+steps:
+  - echo: Swipe left across the index; expect the Liked Lists header.
+  - swipe: left
+  - await:
+      visible:
+        text: Liked Lists
+        role: AXGroup
+  - await: { idle: true }
+  - echo: Swipe right across the index; expect the Your Lists header.
+  - swipe: right
+  - await:
+      visible:
+        text: Your Lists
+        role: AXGroup
+  - await: { idle: true }
+  - echo: Tap Liked Lists; expect the same neighbouring page as a swipe.
+  - tap:
+      text: Liked Lists
+  - await:
+      visible:
+        text: Liked Lists
+        role: AXGroup
+  - await: { idle: true }
+executionPrerequisite: iOS Shinobu is open on Letterboxd Your Lists with a
+  connected account and the index loaded.
