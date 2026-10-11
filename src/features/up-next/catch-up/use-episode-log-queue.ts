@@ -67,28 +67,29 @@ export function useEpisodeLogQueue(request: LogRequest): CatchUpEpisode[] | null
         }
       }
     }
-  } else {
-    const progress = connected.includes('anilist') && anilist.data != null
-      ? anilist.data.entry?.progress ?? 0
-      : connected.includes('simkl') && simklAnime.data != null
-        ? simklAnime.data.item.currentProgress
-        : item.currentProgress;
-    const entry = connected.includes('simkl') ? simklAnime.data : null;
-    const total = entry?.item.totalEpisodes;
-    const airedCount = total != null && entry?.notAiredEpisodes != null
-      ? total - entry.notAiredEpisodes : null;
-    // Simkl-only anime has no AniList schedule. Its own aired count and watched
-    // keys are the same evidence the Continue Watching chain already trusts.
-    if (item.externalIds.anilist == null && airedCount != null) {
-      for (let number = first.number + 1; number <= Math.min(airedCount, first.number + 200); number++) {
-        if (number <= progress || entry?.watchedKeys.has(`1-${number}`)) continue;
-        candidates.push({ number });
-      }
+    return catalogueCatchUpQueue(first, candidates);
+  }
+
+  const progress = connected.includes('anilist') && anilist.data != null
+    ? anilist.data.entry?.progress ?? 0
+    : connected.includes('simkl') && simklAnime.data != null
+      ? simklAnime.data.item.currentProgress
+      : item.currentProgress;
+  const entry = connected.includes('simkl') ? simklAnime.data : null;
+  const total = entry?.item.totalEpisodes;
+  const airedCount = total != null && entry?.notAiredEpisodes != null
+    ? total - entry.notAiredEpisodes : null;
+  // Simkl-only anime has no AniList schedule. Its own aired count and watched
+  // keys are the same evidence the Continue Watching chain already trusts.
+  if (item.externalIds.anilist == null && airedCount != null) {
+    for (let number = first.number + 1; number <= Math.min(airedCount, first.number + 200); number++) {
+      if (number <= progress || entry?.watchedKeys.has(`1-${number}`)) continue;
+      candidates.push({ number });
     }
-    for (const episode of airedAnimeEpisodes(item, anime.data?.episodes ?? [], airedCount)) {
-      if (episode.number > progress && !entry?.watchedKeys.has(`1-${episode.number}`)) {
-        candidates.push({ number: episode.number, title: episode.title });
-      }
+  }
+  for (const episode of airedAnimeEpisodes(item, anime.data?.episodes ?? [], airedCount)) {
+    if (episode.number > progress && !entry?.watchedKeys.has(`1-${episode.number}`)) {
+      candidates.push({ number: episode.number, title: episode.title });
     }
   }
   return catalogueCatchUpQueue(first, candidates);
