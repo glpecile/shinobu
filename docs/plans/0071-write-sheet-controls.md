@@ -8,6 +8,8 @@
 - Show the empty-selection guidance inside the summary row in regular-weight,
   softer red text using the theme's accent-on-tonal token,
   rather than as a red error below the picker.
+- Morph the summary as selection changes through the existing `MorphText`,
+  keeping its reduced-motion fallback and clipping long labels inside the row.
 - Keep selection checkmarks, All/None, provider labels and the standalone
   watchlist picker. Do not change write routing or submit any provider writes
   during verification.

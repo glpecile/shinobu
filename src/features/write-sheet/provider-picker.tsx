@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
@@ -196,17 +197,18 @@ export function ProviderPicker({
               ))}
             </View>
           )}
-          <Text
-            className={cn(
-              'text-sm flex-1',
-              selected.length === 0
-                ? 'font-sans text-accent-on-tonal'
-                : 'font-sans-semibold text-foreground',
-            )}
-            numberOfLines={1}
-          >
-            {selectionLabel}
-          </Text>
+          <View className="flex-1 min-w-0 flex-row overflow-hidden">
+            <MorphText
+              className={cn(
+                'text-sm',
+                selected.length === 0
+                  ? 'font-sans text-accent-on-tonal'
+                  : 'font-sans-semibold text-foreground',
+              )}
+            >
+              {selectionLabel}
+            </MorphText>
+          </View>
         </View>
         <DisclosureChevron open={expanded} size={18} />
       </PresstableOpacity>
