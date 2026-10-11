@@ -6,6 +6,7 @@ import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
+import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -35,7 +36,7 @@ interface ProviderToggleProps {
 function ProviderToggle({
   id, selected, onToggle,
 }: ProviderToggleProps) {
-  const foreground = useThemeColor('--color-foreground');
+  const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
   const descriptor = PROVIDERS[id];
 
@@ -52,6 +53,10 @@ function ProviderToggle({
       className="min-h-11 flex-row items-center justify-between px-4 py-3"
       onPress={onToggle}
     >
+      <AnimatedView
+        className="absolute inset-0 bg-accent/10"
+        style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
+      />
       <View className="flex-row items-center gap-3">
         <ProviderIcon id={id} size={18} />
         <Text className="text-foreground font-sans-semibold text-sm">
@@ -64,7 +69,7 @@ function ProviderToggle({
           className="absolute inset-0"
           style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
         >
-          <Ionicons color={foreground} name="checkmark-circle" size={20} />
+          <Ionicons color={accent} name="checkmark-circle" size={20} />
         </AnimatedView>
       </View>
     </PresstableOpacity>
@@ -171,7 +176,7 @@ export function ProviderPicker({
   const selected = targets.filter((id) => selectedProviders.includes(id));
   const selectionLabel =
     selected.length === 0
-      ? 'Choose providers'
+      ? 'Select at least one provider to log.'
       : selected.map((id) => PROVIDERS[id].label).join(', ');
 
   return (
@@ -192,7 +197,12 @@ export function ProviderPicker({
             </View>
           )}
           <Text
-            className="text-foreground font-sans-semibold text-sm flex-1"
+            className={cn(
+              'text-sm flex-1',
+              selected.length === 0
+                ? 'font-sans text-accent-on-tonal'
+                : 'font-sans-semibold text-foreground',
+            )}
             numberOfLines={1}
           >
             {selectionLabel}
