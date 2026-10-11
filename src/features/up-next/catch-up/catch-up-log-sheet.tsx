@@ -13,10 +13,7 @@ import { DEFAULT_LOG_TAGS, LogConfirmSheet, LogFormFields, labels } from '@/feat
 import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
-import {
-  prefetchLogReconcile,
-  useLogMedia,
-} from '@/features/log-media/use-log-media';
+import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
@@ -27,8 +24,8 @@ import { haptics } from '@/lib/haptics';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
+import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import { upNextQueryKeys } from '@/state/queries/up-next';
-import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { chainFailure, chainLabel } from './chain-copy';
@@ -193,7 +190,6 @@ function CatchUpSession({
   open: boolean;
 }) {
   const queryClient = useQueryClient();
-  const connected = useConnectedProviders();
   const logMedia = useLogMedia();
   const { closeCatchUp, trackBusy } = useCatchUpControls();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
@@ -239,14 +235,10 @@ function CatchUpSession({
       (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
     );
 
-  // Warm the reconcile reads while the user reads the sheet (plan 0019), so
-  // the first confirm doesn't wait on cold fetches.
-  useEffect(() => {
-    void prefetchLogReconcile(queryClient, connected, {
-      ...episodeVariables(item, first),
-    });
-    // Once, on open — later episodes are warmed as the chain advances.
-  }, []);
+  useLogReconcileQuery({
+    ...episodeVariables(item, current),
+    providers: selectedProviders,
+  }, open);
 
   // The write handlers read the ledger as of the latest landing, not their
   // render's snapshot.
@@ -364,10 +356,6 @@ function CatchUpSession({
 
     if (index >= plan.length - 1) return;
     setIndex(index + 1);
-    const next = plan[index + 1];
-    if (next != null) {
-      void prefetchLogReconcile(queryClient, connected, variablesFor(next));
-    }
   }
 
   // Every failed row re-fires at once: the Simkl legs coalesce into one POST
@@ -405,7 +393,7 @@ function CatchUpSession({
   // until the chain has settled with something still needing a hand — a clean
   // chain closes itself and becomes a toast. Latched, because a retry
   // un-settles the ledger and must not throw the user back to the form; the
-  // clean-close effect above is what ends the report.
+  // finishIfSettled ends the report when every retry lands clean.
   const [reported, setReported] = useState(false);
   if (allSettled && !allClean && !reported) setReported(true);
 
