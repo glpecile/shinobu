@@ -6,7 +6,6 @@ import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
-import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -30,37 +29,29 @@ const SELECTION_FADE = {
 interface ProviderToggleProps {
   id: ProviderId;
   selected: boolean;
-  joinedAbove: boolean;
-  joinedBelow: boolean;
   onToggle: () => void;
 }
 
 function ProviderToggle({
-  id, selected, joinedAbove, joinedBelow, onToggle,
+  id, selected, onToggle,
 }: ProviderToggleProps) {
-  const accent = useThemeColor('--color-accent');
+  const foreground = useThemeColor('--color-foreground');
   const muted = useThemeColor('--color-muted');
   const descriptor = PROVIDERS[id];
-  const corners = cn(!joinedAbove && 'rounded-t-md', !joinedBelow && 'rounded-b-md');
 
   return (
     <PresstableOpacity
       accessibilityLabel={`Write to ${descriptor.label}`}
+      accessibilityRole="button"
       // No accessibilityRole="checkbox" here: RNGH's web NativeViewGestureHandler
       // only fires presses on elements whose DOM role is "button", so any other
       // role on a pressto pressable silently kills onPress on web
       // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
       accessibilityState={{ checked: selected }}
-      className={cn('flex-row items-center justify-between px-3 py-2.5 bg-surface', corners)}
+      aria-pressed={selected}
+      className="min-h-11 flex-row items-center justify-between px-4 py-3"
       onPress={onToggle}
     >
-      {/* Selection crossfades over the resting state, the tag chips' recipe
-          (log-media/tag-picker.tsx): an animated backgroundColor would lose
-          the accent's /10 alpha. */}
-      <AnimatedView
-        className={cn('absolute inset-0 bg-accent/10', corners)}
-        style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
-      />
       <View className="flex-row items-center gap-3">
         <ProviderIcon id={id} size={18} />
         <Text className="text-foreground font-sans-semibold text-sm">
@@ -73,7 +64,7 @@ function ProviderToggle({
           className="absolute inset-0"
           style={[SELECTION_FADE, { opacity: selected ? 1 : 0 }]}
         >
-          <Ionicons color={accent} name="checkmark-circle" size={20} />
+          <Ionicons color={foreground} name="checkmark-circle" size={20} />
         </AnimatedView>
       </View>
     </PresstableOpacity>
@@ -119,14 +110,10 @@ function NoTargets({ onConnect }: { onConnect?: () => void }) {
 }
 
 /**
- * The expanded toggle list — All/None header plus one toggle per writable
- * target. `ProviderPicker` below wraps it in the log sheet's collapsible
- * summary chrome; the watchlist picker sheet renders it directly, because
- * choosing targets *is* that sheet's whole content and a collapsed dropdown
- * would hide it (plan 0032 R1: "a sheet listing its applicable connected
- * providers").
+ * All/None and writable targets, shared by the collapsible log picker and
+ * the standalone watchlist surface (plan 0032 R1).
  */
-export function ProviderToggleList({
+function ProviderOptions({
   targets,
   selectedProviders,
   onSelectAll,
@@ -134,11 +121,11 @@ export function ProviderToggleList({
   onToggle,
 }: ProviderPickerProps) {
   return (
-    <View className="rounded-lg border border-border bg-background p-1">
+    <View>
       {targets.length > 1 && (
-        <View className="flex-row justify-end gap-3 px-3 py-2 border-b border-border">
+        <View className="flex-row justify-end gap-3 px-4 py-2 border-b border-border">
           <PresstableOpacity onPress={onSelectAll}>
-            <Text className="text-accent font-sans-semibold text-xs">All</Text>
+            <Text className="text-foreground font-sans-semibold text-xs">All</Text>
           </PresstableOpacity>
           <PresstableOpacity
             accessibilityLabel="Select no providers"
@@ -148,17 +135,9 @@ export function ProviderToggleList({
           </PresstableOpacity>
         </View>
       )}
-      {targets.map((id, index) => (
+      {targets.map((id) => (
         <ProviderToggle
           id={id}
-          joinedAbove={
-            selectedProviders.includes(id) && index > 0 &&
-            selectedProviders.includes(targets[index - 1])
-          }
-          joinedBelow={
-            selectedProviders.includes(id) && index < targets.length - 1 &&
-            selectedProviders.includes(targets[index + 1])
-          }
           key={id}
           onToggle={() => onToggle(id)}
           selected={selectedProviders.includes(id)}
@@ -168,11 +147,19 @@ export function ProviderToggleList({
   );
 }
 
+/** Standalone selection surface for the watchlist sheet. */
+export function ProviderToggleList(props: ProviderPickerProps) {
+  return (
+    <View className="rounded-3xl border border-border bg-surface overflow-hidden">
+      <ProviderOptions {...props} />
+    </View>
+  );
+}
+
 /**
  * The collapsible form of the picker — a summary row (selected providers'
- * icons + labels) that expands into `ProviderToggleList`. This is the
- * log sheet's shape, unchanged: that sheet also carries a backdate field and
- * tags, so the picker earns its keep collapsed.
+ * icons + labels) sharing one clipped surface with its options. The log sheet
+ * also carries a backdate field and tags, so the picker earns its keep collapsed.
  */
 export function ProviderPicker({
   onConnect,
@@ -188,14 +175,12 @@ export function ProviderPicker({
       : selected.map((id) => PROVIDERS[id].label).join(', ');
 
   return (
-    <View>
+    <View className="rounded-3xl border border-border bg-surface overflow-hidden">
       <PresstableOpacity
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        className={cn(
-          'flex-row items-center justify-between rounded-full border px-4 py-3',
-          expanded ? 'border-accent bg-accent/5' : 'border-border bg-surface',
-        )}
+        aria-expanded={expanded}
+        className="flex-row items-center justify-between px-4 py-3"
         onPress={() => setExpanded(!expanded)}
       >
         <View className="flex-row items-center gap-2 flex-1 mr-3">
@@ -216,8 +201,8 @@ export function ProviderPicker({
         <DisclosureChevron open={expanded} size={18} />
       </PresstableOpacity>
       {expanded && (
-        <View className="mt-2">
-          <ProviderToggleList {...props} />
+        <View className="border-t border-border">
+          <ProviderOptions {...props} />
         </View>
       )}
     </View>

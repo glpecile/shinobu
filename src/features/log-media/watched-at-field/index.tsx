@@ -34,7 +34,7 @@ export function WatchedAtField({ value, onChange, children }: WatchedAtFieldProp
   return (
     <View className="mt-4">
       <View className="flex-row items-center gap-2">
-        <View className="flex-1 flex-row items-center justify-between border border-border rounded-full px-4 py-3">
+        <View className="h-11 flex-1 flex-row items-center justify-between border border-border rounded-full px-4">
           <Text className="text-muted font-sans text-sm">Watched on</Text>
           <View className="flex-row items-center gap-2">
             {value != null && (
