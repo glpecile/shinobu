@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -104,6 +105,7 @@ export function LogFormFields({
   onTagsChange,
   pending,
 }: LogFormFieldsProps) {
+  const tagsInput = useRef<TextInput>(null);
   const pushRoute = usePushRoute();
   const userscriptLikes = useLetterboxdUserscript('like');
   const reduceMotion = useReducedMotion();
@@ -193,13 +195,18 @@ export function LogFormFields({
         )}
         {showTagsField && (
           <View className="mt-4">
-            <Text className="text-foreground font-sans-semibold text-sm mb-2">
+            <Text
+              className="text-foreground font-sans-semibold text-sm mb-2"
+              onPress={() => tagsInput.current?.focus()}
+            >
               Tags{' '}
               <Text className="text-muted font-sans text-xs">
                 ({labels(diaryProviders)})
               </Text>
             </Text>
             <TextField
+              ref={tagsInput}
+              accessibilityLabel={`Tags (${labels(diaryProviders)})`}
               editable={!pending}
               onChangeText={onTagsChange}
               placeholder="tags, comma separated"
@@ -270,7 +277,9 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
   return (
     <Sheet onClose={onClose} open={open}>
       <WriteSheet.Step key={reported ? 'report' : 'form'}>
-        <WriteSheet.Title>{title}</WriteSheet.Title>
+        <WriteSheet.Header done={reported} onClose={onClose}>
+          <WriteSheet.Title>{title}</WriteSheet.Title>
+        </WriteSheet.Header>
         {reported ? (
           <>
             <WriteSheet.Report
@@ -291,21 +300,15 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
             {logMedia.isError && (
               <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>
             )}
-            <WriteSheet.Actions>
-              {retryable && (
+            {retryable && (
+              <WriteSheet.Actions>
                 <Button
                   icon={<Button.Icon name="refresh" />}
                   label="Try again"
                   onPress={retry}
                 />
-              )}
-              <Button
-                icon={<Button.Icon name="checkmark" />}
-                label="Done"
-                onPress={onClose}
-                variant="quiet"
-              />
-            </WriteSheet.Actions>
+              </WriteSheet.Actions>
+            )}
           </>
         ) : (
           <>
@@ -334,7 +337,6 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
                 loadingLabel="Logging…"
                 onPress={confirm}
               />
-              <WriteSheet.Cancel onPress={onClose} />
             </WriteSheet.Actions>
           </>
         )}

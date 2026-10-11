@@ -13,5 +13,10 @@ Failed reads degrade to the requested episode, never guessed episodes. Wait for
 queue evidence before confirming. Episode-page logging no longer navigates away
 while the sheet is walking the chain.
 
+Logging views put their Cancel/Done dismissal in an icon-only circular button
+at the header's upper-right, with the same accessible label and handler. The
+bottom actions contain only confirmation or retry.
+Pressing the Tags label focuses its field in either logging mode.
+
 Verify queue boundaries, watched gaps, movie/batch dispatch, types, lint, and the
 existing catch-up/fan-out tests. No native changes.

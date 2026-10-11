@@ -414,7 +414,7 @@ function CatchUpSession({
       <WriteSheet.Step key={reported ? 'report' : 'form'}>
         {reported ? (
           <ChainReport
-             item={item}
+            item={item}
             landed={landed}
             ledger={ledger}
             onDone={closeCatchUp}
@@ -425,26 +425,28 @@ function CatchUpSession({
           />
         ) : (
           <>
-            <AnimatedView
-              // Native: each episode's header slides in. Web: the same element
-              // stays mounted and the title morphs (see `headerEntering`).
-              key={Platform.OS === 'web' ? 'header' : code}
-              entering={index > 0 ? headerEntering : undefined}
-            >
-              <MorphText className="text-2xl font-display text-foreground self-start">
-                {`Log ${code}`}
-              </MorphText>
-              <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-                <Text className="text-muted font-sans text-sm leading-relaxed">
-                  “{item.title}”
-                </Text>
-                {remainingCopy != null && (
-                  <MorphText className="text-muted font-sans text-sm leading-relaxed">
-                    {`· ${remainingCopy}`}
-                  </MorphText>
-                )}
-              </View>
-            </AnimatedView>
+            <WriteSheet.Header done={ledger.length > 0} onClose={closeCatchUp}>
+              <AnimatedView
+                // Native: each episode's header slides in. Web: the same element
+                // stays mounted and the title morphs (see `headerEntering`).
+                key={Platform.OS === 'web' ? 'header' : code}
+                entering={index > 0 ? headerEntering : undefined}
+              >
+                <MorphText className="text-2xl font-display text-foreground self-start">
+                  {`Log ${code}`}
+                </MorphText>
+                <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
+                  <Text className="text-muted font-sans text-sm leading-relaxed">
+                    “{item.title}”
+                  </Text>
+                  {remainingCopy != null && (
+                    <MorphText className="text-muted font-sans text-sm leading-relaxed">
+                      {`· ${remainingCopy}`}
+                    </MorphText>
+                  )}
+                </View>
+              </AnimatedView>
+            </WriteSheet.Header>
 
             <LogFormFields
               item={item}
@@ -475,8 +477,8 @@ function CatchUpSession({
                 (`chainLabel`). It used to be a row per fired write above the
                 button — a scrolling receipt — and then a status line, which is
                 still a second thing to read about what the button does. */}
-            <WriteSheet.Actions>
-              {!currentLanded && (
+            {!currentLanded && (
+              <WriteSheet.Actions>
                 <Button
                   disabled={selectedProviders.length === 0 || queue == null}
                   icon={<Button.Icon name="eye" />}
@@ -486,17 +488,8 @@ function CatchUpSession({
                   morphLabel
                   onPress={confirm}
                 />
-              )}
-              <Button
-                // Nothing written yet, so leaving is a dismissal; once a row has
-                // landed the same button is the end of the chain.
-                icon={<Button.Icon name={ledger.length > 0 ? 'checkmark' : 'close'} />}
-                label={ledger.length > 0 ? 'Done' : 'Cancel'}
-                morphLabel
-                onPress={closeCatchUp}
-                variant="quiet"
-              />
-            </WriteSheet.Actions>
+              </WriteSheet.Actions>
+            )}
           </>
         )}
       </WriteSheet.Step>
@@ -548,12 +541,14 @@ function ChainReport({
 
   return (
     <>
-      <WriteSheet.Title>
-        {chainFailure(
-          problems.map((row) => catchUpEpisodeCode(row.episode)),
-          failedProviders,
-        )}
-      </WriteSheet.Title>
+      <WriteSheet.Header done onClose={onDone}>
+        <WriteSheet.Title>
+          {chainFailure(
+            problems.map((row) => catchUpEpisodeCode(row.episode)),
+            failedProviders,
+          )}
+        </WriteSheet.Title>
+      </WriteSheet.Header>
       {landed > 0 && succeededProviders.length > 0 && (
         <WriteSheet.Description>
           {`${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(succeededProviders)}.`}
@@ -577,8 +572,8 @@ function ChainReport({
         />
       </View>
 
-      <WriteSheet.Actions>
-        {retryable.length > 0 && (
+      {retryable.length > 0 && (
+        <WriteSheet.Actions>
           <Button
             icon={<Button.Icon name="refresh" />}
             label={
@@ -590,14 +585,8 @@ function ChainReport({
             loadingLabel="Retrying…"
             onPress={onRetry}
           />
-        )}
-        <Button
-          icon={<Button.Icon name="checkmark" />}
-          label="Done"
-          onPress={onDone}
-          variant="quiet"
-        />
-      </WriteSheet.Actions>
+        </WriteSheet.Actions>
+      )}
     </>
   );
 }

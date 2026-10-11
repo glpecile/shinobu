@@ -38,6 +38,28 @@ function Title({ children }: { children: ReactNode }) {
   return <Text className="text-2xl font-display text-foreground">{children}</Text>;
 }
 
+/** Logging views keep dismissal beside the heading, separate from the primary action. */
+function Header({ children, onClose, done = false }: {
+  children: ReactNode;
+  onClose: () => void;
+  done?: boolean;
+}) {
+  return (
+    <View className="flex-row items-start gap-3">
+      <View className="flex-1 min-w-0">{children}</View>
+      <Button
+        className="shrink-0"
+        icon={<Button.Icon name={done ? 'checkmark' : 'close'} />}
+        iconOnly
+        label={done ? 'Done' : 'Cancel'}
+        onPress={onClose}
+        shape="pill"
+        variant="quiet"
+      />
+    </View>
+  );
+}
+
 function Description({ children }: { children: ReactNode }) {
   return (
     <Text className="text-muted font-sans text-sm mt-2 leading-relaxed">
@@ -124,4 +146,4 @@ function Cancel({ onPress }: { onPress: () => void }) {
  * The write verbs' sheet body (log, watchlist add/remove, catch-up), composed
  * around each verb's own fields and confirm button.
  */
-export const WriteSheet = { Step, Title, Description, Report, Error: WriteError, Actions, Cancel };
+export const WriteSheet = { Step, Header, Title, Description, Report, Error: WriteError, Actions, Cancel };
