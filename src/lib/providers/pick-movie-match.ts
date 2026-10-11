@@ -6,7 +6,7 @@ import type { NormalizedMediaItem } from '@/types/media';
  * genuinely different titles ("The Odyssey" vs "2001: A Space Odyssey") stay
  * apart.
  */
-function titleKey(title: string): string {
+export function titleKey(title: string): string {
   return title
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')

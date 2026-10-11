@@ -56,6 +56,7 @@ export interface MediaDetailsParams {
   type: MediaType;
   isFilm?: boolean;
   tmdbId?: number;
+  tmdbTvVariant?: number;
   traktId?: number;
   anilistId?: number;
 }
@@ -122,16 +123,23 @@ export function getMediaDetails(
   deps: MediaDetailsDeps,
   params: MediaDetailsParams,
 ): Effect.Effect<MediaDetails, ProviderError> {
-  const kind = tmdbKindFor(params.type, params.isFilm);
-  if (deps.tmdb == null || params.tmdbId == null || kind == null) {
+  const kind = params.tmdbTvVariant != null ? 'tv' : tmdbKindFor(params.type, params.isFilm);
+  const tmdbId = params.tmdbTvVariant ?? params.tmdbId;
+  if (deps.tmdb == null || tmdbId == null || kind == null) {
     return providerFallback(deps, params);
   }
-  const tmdbId = params.tmdbId;
   const tmdb = deps.tmdb;
   return getMediaCatalogue(tmdb, { kind, tmdbId }).pipe(
     Effect.map(
       (result): MediaDetails => ({
-        catalogue: result.catalogue,
+        // A related series supplies display fields, not movie write IDs or episode progress.
+        catalogue: params.tmdbTvVariant == null ? result.catalogue : {
+          ...result.catalogue,
+          externalIds: {},
+          totalEpisodes: undefined,
+          runtime: undefined,
+          releaseCalendar: undefined,
+        },
         cast: result.cast,
         crew: result.crew,
         studios: result.studios,

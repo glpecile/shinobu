@@ -24,7 +24,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
-import { getFilmPoster, getFilmTmdbId } from '@/lib/providers/letterboxd/film';
+import { getFilmPoster, getFilmItem } from '@/lib/providers/letterboxd/film';
 import {
   getListsPage,
   getListFilmsPage,
@@ -51,7 +51,7 @@ import {
   getLetterboxdUsername,
 } from '@/state/session/letterboxd';
 import { useConnectedProviders } from '@/state/session';
-import { tmdbToken } from '@/state/session/tmdb-token';
+import { tmdbToken, useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { cachedTmdbMovieIdByTitle } from './mapping';
@@ -231,13 +231,16 @@ export function findInLetterboxdListsCache(queryClient: QueryClient, id: string)
     .find((item) => item.id === id);
 }
 
-/** Native incoming film links only. The web proxy does not allow film pages. */
-export function useLetterboxdFilmTmdbQuery(slug: string | null) {
+/** Public film pages resolve cold links and cached entries on every platform. */
+export function useLetterboxdFilmQuery(slug: string | null) {
+  const hasTmdb = useTmdbToken() !== '';
   return useQuery({
-    queryKey: letterboxdQueryKeys.film(slug ?? ''),
-    queryFn: ({ signal }) => Effect.runPromise(getFilmTmdbId({ fetch: httpFetch }, slug ?? ''), { signal }),
-    enabled: slug != null && process.env.EXPO_OS !== 'web',
-    staleTime: Number.POSITIVE_INFINITY,
+    queryKey: [...letterboxdQueryKeys.film(slug ?? ''), hasTmdb],
+    queryFn: ({ signal }) => Effect.runPromise(getFilmItem({ fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null }, slug ?? ''), { signal }),
+    enabled: slug != null,
+    staleTime: 60 * 60_000,
+    retry: false,
+    throwOnError: false,
   });
 }
 

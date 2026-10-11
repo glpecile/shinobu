@@ -96,6 +96,16 @@ describe('tmdbKindFor', () => {
 });
 
 describe('getMediaDetails', () => {
+  test('a Letterboxd TV variant supplies credits without movie write IDs or episode totals', async () => {
+    const result = await Effect.runPromise(getMediaDetails(deps([
+      ['/tv/228880', { id: 228880, name: 'Beast Boy: Lone Wolf', overview: 'Solo adventures', number_of_episodes: 10,
+        external_ids: { imdb_id: 'tt123' }, aggregate_credits: { cast: [{ id: 1, name: 'Greg Cipes', roles: [{ character: 'Beast Boy' }] }] } }],
+    ]), { type: 'MOVIE', tmdbTvVariant: 228880 }));
+    expect(result.catalogue?.overview).toBe('Solo adventures');
+    expect(result.catalogue?.externalIds).toEqual({});
+    expect(result.catalogue?.totalEpisodes).toBeUndefined();
+    expect(result.cast[0]?.name).toBe('Greg Cipes');
+  });
   test('serves from TMDB when a token and id are present', async () => {
     const result = await Effect.runPromise(
       getMediaDetails(deps([TMDB_MOVIE]), { type: 'MOVIE', tmdbId: 603, traktId: 1 }),

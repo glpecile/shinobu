@@ -59,6 +59,10 @@ export interface NormalizedMediaItem {
   /** Provider community rating on a 0–10 scale. */
   rating?: number;
   type: MediaType;
+  /** Display-only TMDB TV relationship for a whole-entry Letterboxd film log. */
+  tmdbTvVariant?: number;
+  /** TMDB's ended/canceled status; absent when the catalogue cannot establish it. */
+  seriesEnded?: boolean;
   /**
    * Anime films (AniList `format: MOVIE`) are `ANIME` here but count as a
    * `MOVIE` for Trakt/Letterboxd routing (`plan.md` 1.3). This flag — not a

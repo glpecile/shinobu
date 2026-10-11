@@ -2,7 +2,7 @@ import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { LogMediaVariables } from './fan-out';
 
 /** The trigger supplies intent; the app-level session owns the form and write. */
-export type LogRequest = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpisodes'> & {
+export type LogRequest = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpisodes' | 'watchedAt' | 'tags' | 'liked'> & {
   title: string;
   description: string;
   entry?: UpNextEpisodeEntry;

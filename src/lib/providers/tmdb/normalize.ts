@@ -487,6 +487,7 @@ export function earliestReleaseDates(
 }
 
 export interface TmdbTvResponse extends TmdbCreditBase {
+  status?: string | null;
   genres?: TmdbGenre[];
   /** TMDB has no showrunner job; the creators stand in for it. */
   created_by?: TmdbPersonRef[];
@@ -703,6 +704,7 @@ export function normalizeTvCatalogue(
   return {
     catalogue: {
       ...item,
+      ...(raw.status != null ? { seriesEnded: raw.status === 'Ended' || raw.status === 'Canceled' } : {}),
       ...catalogueExtras(
         raw,
         raw.episode_run_time?.[0],
