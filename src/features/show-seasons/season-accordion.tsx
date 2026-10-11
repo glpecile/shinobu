@@ -73,18 +73,15 @@ export function EpisodeRow({
   const showActionsButton =
     process.env.EXPO_OS === 'web' && hovered && onActions != null;
   const aired = hasAired(episode.firstAired);
-  // The row asks "when?" twice — meta line and mark-button slot — so it
-  // answers with the date in one and the countdown in the other. No date at
+  // Every known air date stays in the meta line; upcoming episodes also show
+  // a countdown in the mark-button slot. No date at
   // all means a synthesized AniList row for an announced season, where the
   // bare word is all anyone knows.
-  const airsOn =
-    aired || episode.firstAired == null
-      ? null
-      : formatAirDate(episode.firstAired);
+  const airsOn = episode.firstAired == null ? null : formatAirDate(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
   const meta = [
     episode.runtime != null ? `${episode.runtime} min` : null,
-    aired ? null : (airsOn ?? 'Unaired'),
+    airsOn ?? (aired ? null : 'Unaired'),
   ]
     .filter((part) => part != null)
     .join(' · ');

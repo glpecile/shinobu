@@ -353,11 +353,12 @@ export function Button({
         )}
         {!iconOnly && (
           <AnimatedView
-            // A row's label takes the free space so a trailing glyph is pushed
-            // to the far edge rather than sitting against the label's last word.
+            // Grow from the label's intrinsic width: flex-1's zero basis hides
+            // it in content-sized native buttons. Stretch rows still push the
+            // trailing glyph to the far edge.
             className={cn(
               overlay && 'opacity-0',
-              align === 'start' && 'flex-1',
+              align === 'start' && 'grow',
               numberOfLines != null && 'min-w-0 shrink',
             )}
             layout={BOX_LAYOUT}

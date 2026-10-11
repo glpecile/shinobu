@@ -14,13 +14,17 @@
  * unexpected should surface as an odd-looking date, not a crash or an empty
  * slot.
  */
-export function formatCalendarDate(date: string): string {
+export function formatCalendarDate(
+  date: string,
+  options: Intl.DateTimeFormatOptions = {},
+): string {
   const [year, month, day] = date.split('-').map(Number);
   if (!year || !month || !day) return date;
   return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    ...options,
     timeZone: 'UTC',
   });
 }
