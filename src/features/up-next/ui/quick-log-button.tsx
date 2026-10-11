@@ -7,7 +7,6 @@ import {
   useQuickLogBusy,
 } from '@/features/up-next/catch-up/state';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
-import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
 /**
@@ -37,7 +36,6 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
 
   function openConfirm() {
     if (pending) return;
-    haptics.selection();
     openCatchUp(entry);
   }
 

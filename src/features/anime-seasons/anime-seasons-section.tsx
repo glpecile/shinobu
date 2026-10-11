@@ -4,18 +4,11 @@ import { useState } from 'react';
 import { Section } from '@/components/section';
 import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
-import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
-import type { ProviderId } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
-import {
-  LogConfirmSheet,
-} from '@/features/log-media/log-confirm-sheet';
-import { useLogMedia } from '@/features/log-media/use-log-media';
+import { useCatchUpControls } from '@/features/up-next/catch-up/state';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import { parseTags } from '@/features/log-media/parse-tags';
-import { logToastCopy } from '@/features/log-media/toast-copy';
 import type { PendingLog } from '@/features/show-seasons/season-accordion';
 import {
   formatRuntime,
@@ -96,14 +89,7 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
   // matches LogMediaButton's gate.
   const canLog = targets.length > 0 || manualTargets.length > 0;
 
-  const logMedia = useLogMedia();
-  const [pending, setPending] = useState<PendingLog | null>(null);
-  const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  // Diary tags — Serializd accepts them on a mapped anime-series log (plan 0017 R10).
-  const [tags, setTags] = useState('');
-  const [liked, setLiked] = useState(false);
-  const [selectedProviders, setSelectedProviders] =
-    useState<ProviderId[]>(targets);
+  const { openLog: openLogSession } = useCatchUpControls();
 
   const progress = entryState?.entry?.progress ?? item.currentProgress;
   const watched = watchedKeys(progress);
@@ -148,46 +134,7 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
 
   function openLog(next: PendingLog) {
     if (!canLog) return;
-    haptics.selection();
-    logMedia.reset();
-    setWatchedAt(null);
-    setTags('');
-    setLiked(false);
-    setSelectedProviders(targets);
-    setPending(next);
-  }
-
-  function confirmLog() {
-    if (pending == null || logMedia.isPending || selectedProviders.length === 0)
-      return;
-    haptics.confirm();
-    const parsedTags = parseTags(tags);
-    logMedia.mutate(
-      {
-        item,
-        ...(pending.entryEpisodes != null
-          ? { entryEpisodes: pending.entryEpisodes }
-          : {}),
-        ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
-        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
-        providers: selectedProviders,
-        liked,
-      },
-      {
-        onSuccess: (outcome) => {
-          // Clean → toast + close; post-write news keeps the sheet open (plan
-          // 0032 R4/KTD-3, plan 0033 R1). The toast wrapper owns the haptic.
-          if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome);
-            toast.success(copy.title, copy.message);
-            setPending(null);
-          } else if (outcome.failed.length > 0) {
-            haptics.error();
-          }
-        },
-        onError: () => haptics.error(),
-      },
-    );
+    openLogSession({ item, ...next });
   }
 
   return (
@@ -238,6 +185,7 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
             const label = canonicalTitle ?? 'all episodes';
             openLog({
               title: `Log ${label}`,
+              batch: true,
               description: `“${item.title}” — ${aired.length} aired ${
                 aired.length === 1 ? 'episode' : 'episodes'
               }.`,
@@ -265,27 +213,6 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
         watched={pressed != null && watched.has(`1-${pressed.entryNumber}`)}
       />
 
-      <LogConfirmSheet
-        confirmLabel={pending?.title ?? ''}
-        description={pending?.description ?? ''}
-        item={item}
-        logMedia={logMedia}
-        manualTargets={manualTargets}
-        onClose={() => setPending(null)}
-        onConfirm={confirmLog}
-        onSelectedProvidersChange={setSelectedProviders}
-        onTagsChange={setTags}
-        liked={liked}
-        onLikedChange={setLiked}
-        onWatchedAtChange={setWatchedAt}
-        open={pending != null}
-        pendingLabel="Logging…"
-        selectedProviders={selectedProviders}
-        tags={tags}
-        targets={targets}
-        title={pending?.title ?? ''}
-        watchedAt={watchedAt}
-      />
     </>
   );
 }

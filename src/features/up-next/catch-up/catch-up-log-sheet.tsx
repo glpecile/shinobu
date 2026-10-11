@@ -9,13 +9,11 @@ import { MorphText } from '@/components/morph-text';
 import { Sheet } from '@/components/sheet';
 import type { LogMediaResult, LogMediaVariables } from '@/features/log-media/fan-out';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
-import { LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
+import { DEFAULT_LOG_TAGS, LogConfirmSheet, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
+import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
-import {
-  prefetchLogReconcile,
-  useLogMedia,
-} from '@/features/log-media/use-log-media';
+import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
@@ -26,16 +24,15 @@ import { haptics } from '@/lib/haptics';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
+import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import { upNextQueryKeys } from '@/state/queries/up-next';
-import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { chainFailure, chainLabel } from './chain-copy';
 import { catchUpEpisodeCode, catchUpQueue, type CatchUpEpisode } from './queue';
 import { useCatchUpControls, useCatchUpLog } from './state';
 import { useCatchUpEvidence } from './use-catch-up-evidence';
-
-const DEFAULT_TAGS = 'shinobu, ';
+import { useEpisodeLogQueue } from './use-episode-log-queue';
 
 /**
  * The header's native entrance when the chain advances: a short slide in from
@@ -126,7 +123,7 @@ function entryEpisode(entry: UpNextEpisodeEntry): CatchUpEpisode {
 }
 
 /**
- * The app-level host, mounted once in `app/_layout.tsx` beside the lightbox.
+ * Every logging trigger opens this app-level host, mounted in `app/_layout.tsx`.
  * Keyed on the session id so every opening starts a fresh chain; the retired
  * session stays mounted (hidden) until the next open so its late write
  * results can still report.
@@ -134,12 +131,30 @@ function entryEpisode(entry: UpNextEpisodeEntry): CatchUpEpisode {
 export function CatchUpLogSheet() {
   const { session, open } = useCatchUpLog();
   if (session == null) return null;
-  return <CatchUpSession key={session.id} entry={session.entry} open={open} />;
+  const { request } = session;
+  if (!isEpisodeLog(request)) {
+    return <LogConfirmSheet key={session.id} request={request} open={open} />;
+  }
+  return request.entry != null
+    ? <QuickCatchUpSession key={session.id} entry={request.entry} open={open} />
+    : <EpisodeCatchUpSession key={session.id} request={request} open={open} />;
+}
+
+function QuickCatchUpSession({ entry, open }: { entry: UpNextEpisodeEntry; open: boolean }) {
+  const evidence = useCatchUpEvidence(entry);
+  const queue = evidence.status === 'ready' ? catchUpQueue(entry, evidence.evidence) : null;
+  return <CatchUpSession item={entry.item} first={entryEpisode(entry)} queue={queue} source={entry.source} open={open} />;
+}
+
+function EpisodeCatchUpSession({ request, open }: { request: LogRequest; open: boolean }) {
+  const queue = useEpisodeLogQueue(request);
+  const first = request.episodes?.[0] ?? { number: request.entryEpisodes![0] };
+  return <CatchUpSession item={request.item} first={first} queue={queue} open={open} />;
 }
 
 /**
- * One opening of the quick-log sheet (plan 0037): the confirm modal every
- * log entry point uses, which — instead of closing after one write — steps to
+ * One opening of the episode-log sheet (plan 0037): the confirm modal every
+ * single-episode entry point uses, which — instead of closing after one write — steps to
  * the show's next aired-but-unwatched episode with the same providers, date
  * and tags, until the backlog is done.
  *
@@ -162,23 +177,27 @@ export function CatchUpLogSheet() {
  * from recomputed data. The sheet is the plan; the feed is the truth.
  */
 function CatchUpSession({
-  entry,
+  item,
+  first,
+  queue: live,
+  source,
   open,
 }: {
-  entry: UpNextEpisodeEntry;
+  item: NormalizedMediaItem;
+  first: CatchUpEpisode;
+  queue: CatchUpEpisode[] | null;
+  source?: ProviderId;
   open: boolean;
 }) {
   const queryClient = useQueryClient();
-  const connected = useConnectedProviders();
   const logMedia = useLogMedia();
   const { closeCatchUp, trackBusy } = useCatchUpControls();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
-    entry.item,
+    item,
   );
-  const evidence = useCatchUpEvidence(entry);
 
   const [selectedProviders, setSelectedProviders] = useState(targets);
-  const [tags, setTags] = useState(DEFAULT_TAGS);
+  const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
   /** The chain, frozen at the first confirm (see the component docblock). */
@@ -193,10 +212,8 @@ function CatchUpSession({
     openRef.current = open;
   }, [open]);
 
-  const live =
-    evidence.status === 'ready' ? catchUpQueue(entry, evidence.evidence) : null;
   const queue = frozen ?? live;
-  const current = queue?.[index] ?? entryEpisode(entry);
+  const current = queue?.[index] ?? first;
   const code = catchUpEpisodeCode(current);
   const remaining = queue == null ? null : queue.length - index - 1;
   const lastConfirmed =
@@ -218,14 +235,10 @@ function CatchUpSession({
       (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
     );
 
-  // Warm the reconcile reads while the user reads the sheet (plan 0019), so
-  // the first confirm doesn't wait on cold fetches.
-  useEffect(() => {
-    void prefetchLogReconcile(queryClient, connected, {
-      ...episodeVariables(entry.item, entryEpisode(entry)),
-    });
-    // Once, on open — later episodes are warmed as the chain advances.
-  }, []);
+  useLogReconcileQuery({
+    ...episodeVariables(item, current),
+    providers: selectedProviders,
+  }, open);
 
   // The write handlers read the ledger as of the latest landing, not their
   // render's snapshot.
@@ -264,7 +277,7 @@ function CatchUpSession({
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {
     const parsedTags = parseTags(tags);
     return {
-      ...episodeVariables(entry.item, episode),
+      ...episodeVariables(item, episode),
       providers: selectedProviders,
       liked,
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
@@ -293,9 +306,9 @@ function CatchUpSession({
     // once the source provider landed (or already had it), await the slot's
     // own refetch; resolving *is* "the recomputed data is in".
     trackBusy(
-      entry.item.id,
+      item.id,
       write.then((result) =>
-        resolveQuickLog(result, entry.source).phase === 'settling'
+        (source == null || resolveQuickLog(result, source).phase === 'settling')
           ? queryClient.invalidateQueries(
               { queryKey: upNextQueryKeys.inputs() },
               { cancelRefetch: false },
@@ -333,7 +346,7 @@ function CatchUpSession({
   }
 
   function confirm() {
-    if (awaiting || selectedProviders.length === 0) return;
+    if (awaiting || queue == null || selectedProviders.length === 0) return;
     haptics.confirm();
     const plan = queue ?? [current];
     if (frozen == null) setFrozen(plan);
@@ -343,10 +356,6 @@ function CatchUpSession({
 
     if (index >= plan.length - 1) return;
     setIndex(index + 1);
-    const next = plan[index + 1];
-    if (next != null) {
-      void prefetchLogReconcile(queryClient, connected, variablesFor(next));
-    }
   }
 
   // Every failed row re-fires at once: the Simkl legs coalesce into one POST
@@ -384,7 +393,7 @@ function CatchUpSession({
   // until the chain has settled with something still needing a hand — a clean
   // chain closes itself and becomes a toast. Latched, because a retry
   // un-settles the ledger and must not throw the user back to the form; the
-  // clean-close effect above is what ends the report.
+  // finishIfSettled ends the report when every retry lands clean.
   const [reported, setReported] = useState(false);
   if (allSettled && !allClean && !reported) setReported(true);
 
@@ -393,7 +402,7 @@ function CatchUpSession({
       <WriteSheet.Step key={reported ? 'report' : 'form'}>
         {reported ? (
           <ChainReport
-            item={entry.item}
+            item={item}
             landed={landed}
             ledger={ledger}
             onDone={closeCatchUp}
@@ -404,29 +413,31 @@ function CatchUpSession({
           />
         ) : (
           <>
-            <AnimatedView
-              // Native: each episode's header slides in. Web: the same element
-              // stays mounted and the title morphs (see `headerEntering`).
-              key={Platform.OS === 'web' ? 'header' : code}
-              entering={index > 0 ? headerEntering : undefined}
-            >
-              <MorphText className="text-2xl font-display text-foreground self-start">
-                {`Log ${code}`}
-              </MorphText>
-              <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-                <Text className="text-muted font-sans text-sm leading-relaxed">
-                  “{entry.item.title}”
-                </Text>
-                {remainingCopy != null && (
-                  <MorphText className="text-muted font-sans text-sm leading-relaxed">
-                    {`· ${remainingCopy}`}
-                  </MorphText>
-                )}
-              </View>
-            </AnimatedView>
+            <WriteSheet.Header done={ledger.length > 0} onClose={closeCatchUp}>
+              <AnimatedView
+                // Native: each episode's header slides in. Web: the same element
+                // stays mounted and the title morphs (see `headerEntering`).
+                key={Platform.OS === 'web' ? 'header' : code}
+                entering={index > 0 ? headerEntering : undefined}
+              >
+                <MorphText className="text-2xl font-display text-foreground self-start">
+                  {`Log ${code}`}
+                </MorphText>
+                <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
+                  <Text className="text-muted font-sans text-sm leading-relaxed">
+                    “{item.title}”
+                  </Text>
+                  {remainingCopy != null && (
+                    <MorphText className="text-muted font-sans text-sm leading-relaxed">
+                      {`· ${remainingCopy}`}
+                    </MorphText>
+                  )}
+                </View>
+              </AnimatedView>
+            </WriteSheet.Header>
 
             <LogFormFields
-              item={entry.item}
+              item={item}
               manualTargets={manualTargets}
               onClose={closeCatchUp}
               onSelectedProvidersChange={setSelectedProviders}
@@ -454,28 +465,19 @@ function CatchUpSession({
                 (`chainLabel`). It used to be a row per fired write above the
                 button — a scrolling receipt — and then a status line, which is
                 still a second thing to read about what the button does. */}
-            <WriteSheet.Actions>
-              {!currentLanded && (
+            {!currentLanded && (
+              <WriteSheet.Actions>
                 <Button
-                  disabled={selectedProviders.length === 0}
+                  disabled={selectedProviders.length === 0 || queue == null}
                   icon={<Button.Icon name="eye" />}
                   label={chainLabel(code, { landed, failed: problems.length })}
-                  loading={awaiting}
+                  loading={awaiting || queue == null}
                   loadingLabel="Logging…"
                   morphLabel
                   onPress={confirm}
                 />
-              )}
-              <Button
-                // Nothing written yet, so leaving is a dismissal; once a row has
-                // landed the same button is the end of the chain.
-                icon={<Button.Icon name={ledger.length > 0 ? 'checkmark' : 'close'} />}
-                label={ledger.length > 0 ? 'Done' : 'Cancel'}
-                morphLabel
-                onPress={closeCatchUp}
-                variant="quiet"
-              />
-            </WriteSheet.Actions>
+              </WriteSheet.Actions>
+            )}
           </>
         )}
       </WriteSheet.Step>
@@ -527,12 +529,14 @@ function ChainReport({
 
   return (
     <>
-      <WriteSheet.Title>
-        {chainFailure(
-          problems.map((row) => catchUpEpisodeCode(row.episode)),
-          failedProviders,
-        )}
-      </WriteSheet.Title>
+      <WriteSheet.Header done onClose={onDone}>
+        <WriteSheet.Title>
+          {chainFailure(
+            problems.map((row) => catchUpEpisodeCode(row.episode)),
+            failedProviders,
+          )}
+        </WriteSheet.Title>
+      </WriteSheet.Header>
       {landed > 0 && succeededProviders.length > 0 && (
         <WriteSheet.Description>
           {`${landed} ${landed === 1 ? 'episode' : 'episodes'} reached ${labels(succeededProviders)}.`}
@@ -556,8 +560,8 @@ function ChainReport({
         />
       </View>
 
-      <WriteSheet.Actions>
-        {retryable.length > 0 && (
+      {retryable.length > 0 && (
+        <WriteSheet.Actions>
           <Button
             icon={<Button.Icon name="refresh" />}
             label={
@@ -569,14 +573,8 @@ function ChainReport({
             loadingLabel="Retrying…"
             onPress={onRetry}
           />
-        )}
-        <Button
-          icon={<Button.Icon name="checkmark" />}
-          label="Done"
-          onPress={onDone}
-          variant="quiet"
-        />
-      </WriteSheet.Actions>
+        </WriteSheet.Actions>
+      )}
     </>
   );
 }

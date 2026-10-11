@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { catchUpEpisodeCode, catchUpQueue } from './queue';
+import { airedAnimeEpisodes, catchUpEpisodeCode, catchUpQueue, catalogueCatchUpQueue } from './queue';
 
 const item = (extra: Partial<NormalizedMediaItem> = {}): NormalizedMediaItem => ({
   id: 'x-1',
@@ -31,6 +31,40 @@ function entry(
 }
 
 describe('catchUpQueue', () => {
+  test('a partial anime schedule does not infer that undated future episodes have aired', () => {
+    const episodes = [
+      { number: 1, title: 'One', firstAired: '2020-01-01T00:00:00Z' },
+      { number: 2, title: 'Two' },
+      { number: 3, title: 'Three', firstAired: '2099-01-01T00:00:00Z' },
+    ];
+    const anime = item({ type: 'ANIME', year: 2020 });
+    expect(airedAnimeEpisodes(anime, episodes, null).map((episode) => episode.number)).toEqual([1]);
+    expect(airedAnimeEpisodes(anime, episodes, 2).map((episode) => episode.number)).toEqual([1, 2]);
+    const undated = episodes.map(({ number, title }) => ({ number, title }));
+    expect(airedAnimeEpisodes(anime, undated, null)).toEqual(undated);
+    expect(airedAnimeEpisodes(item(), undated, null)).toEqual([]);
+  });
+
+  test('detail-page queues stay after the requested episode, ordered across seasons without specials', () => {
+    expect(catalogueCatchUpQueue({ season: 1, number: 3 }, [
+      { season: 2, number: 2 }, { season: 0, number: 4 },
+      { season: 1, number: 1 }, { season: 2, number: 1 },
+      { season: 1, number: 3 },
+    ])).toEqual([
+      { season: 1, number: 3 }, { season: 2, number: 1 }, { season: 2, number: 2 },
+    ]);
+    expect(catalogueCatchUpQueue({ season: 0, number: 1 }, [
+      { season: 1, number: 1 },
+    ])).toEqual([{ season: 0, number: 1 }]);
+  });
+
+  test('entry-relative detail queues preserve gaps and never fabricate a canonical season', () => {
+    expect(catalogueCatchUpQueue({ number: 3 }, [
+      { number: 6 }, { number: 2 }, { number: 3 }, { number: 4 },
+    ])).toEqual([{ number: 3 }, { number: 4 }, { number: 6 }]);
+    expect(catalogueCatchUpQueue({ number: 3 }, [])).toEqual([{ number: 3 }]);
+  });
+
   test('one behind (or unknown) is the entry alone', () => {
     const one = entry({ episode: { number: 3, title: 'T' }, episodesBehind: 1 });
     expect(catchUpQueue(one, {})).toEqual([{ number: 3, title: 'T' }]);

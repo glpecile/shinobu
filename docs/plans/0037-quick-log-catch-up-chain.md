@@ -70,8 +70,10 @@ whole intent from the first tap.
 
 ### Scope Boundaries
 
-- Deferred: the details screen's "Log episode N" button (`log-media-button`)
-  and the season pickers keep their one-write sheets; routing Simkl
+- Extended by `0068-shared-log-session.md`: details, episode screens, and
+  season-row single-episode actions now share the catch-up session. Movie
+  and season-batch confirmations remain one-shot in the same app-level host.
+- Deferred: routing Simkl
   *watchlist* writes through the same lock gate; a "Reconnect" shortcut on an
   auth failure (the outcome carries the message, not the error tag).
 - Out of scope: batching a chain into one Serializd write (would drop its

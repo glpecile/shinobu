@@ -7,11 +7,13 @@ import {
 } from 'react';
 
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
+import type { LogRequest } from '@/features/log-media/log-request';
+import { haptics } from '@/lib/haptics';
 
 export interface CatchUpSession {
   /** Fresh per opening, so the sheet's chain state never survives a re-open. */
   id: number;
-  entry: UpNextEpisodeEntry;
+  request: LogRequest;
 }
 
 /**
@@ -34,18 +36,21 @@ const StateContext = createContext<{
 
 const ControlContext = createContext<{
   openCatchUp: (entry: UpNextEpisodeEntry) => void;
+  openLog: (request: LogRequest) => void;
   closeCatchUp: () => void;
   /** Hold `itemId` busy until `work` settles (never rejects the caller). */
   trackBusy: (itemId: string, work: Promise<unknown>) => void;
 }>({
   openCatchUp: () => {},
+  openLog: () => {},
   closeCatchUp: () => {},
   trackBusy: () => {},
 });
 
 export function CatchUpLogProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<CatchUpSession | null>(null);
-  const [open, setOpen] = useState(false);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const open = session != null && openId === session.id;
   const [busy, setBusy] = useState<ReadonlyMap<string, number>>(new Map());
   const idRef = useRef(0);
 
@@ -59,11 +64,23 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
     });
 
   // React Compiler memoizes these — no manual useCallback (oxlint-banned).
-  const openCatchUp = (entry: UpNextEpisodeEntry) => {
-    setSession({ id: (idRef.current += 1), entry });
-    setOpen(true);
+  const openLog = (request: LogRequest) => {
+    haptics.selection();
+    const id = (idRef.current += 1);
+    setSession({ id, request });
+    setOpenId(id);
   };
-  const closeCatchUp = () => setOpen(false);
+  const openCatchUp = (entry: UpNextEpisodeEntry) => openLog({
+    item: entry.item,
+    title: `Log episode ${entry.episode.number}`,
+    description: `“${entry.item.title}”`,
+    ...(entry.episode.season != null
+      ? { episodes: [{ season: entry.episode.season, number: entry.episode.number }] }
+      : { entryEpisodes: [entry.episode.number] }),
+    entry,
+  });
+  // A late result belongs to its opening, never a newer sheet.
+  const closeCatchUp = () => setOpenId((current) => current === session?.id ? null : current);
   const trackBusy = (itemId: string, work: Promise<unknown>) => {
     bump(itemId, 1);
     void work.then(
@@ -74,7 +91,7 @@ export function CatchUpLogProvider({ children }: { children: ReactNode }) {
 
   return (
     <StateContext.Provider value={{ session, open, busy }}>
-      <ControlContext.Provider value={{ openCatchUp, closeCatchUp, trackBusy }}>
+      <ControlContext.Provider value={{ openLog, openCatchUp, closeCatchUp, trackBusy }}>
         {children}
       </ControlContext.Provider>
     </StateContext.Provider>

@@ -13,26 +13,11 @@ import { useThemeColor } from '@/lib/theme-color';
 import { hasAired } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
 import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
+import type { LogRequest } from '@/features/log-media/log-request';
 import { formatRuntime, seasonRuntimeMinutes } from './runtime';
 
 /** Pointer into a season/episode that the confirm sheet will mark watched. */
-export interface PendingLog {
-  /** Sheet title, e.g. "Mark season 1 as watched". */
-  title: string;
-  /** Sheet description, e.g. the episode/season label. */
-  description: string;
-  /**
-   * Canonical `{season, number}` watches fanned out in a single request — the
-   * TV/Trakt domain. Mutually exclusive with `entryEpisodes` (plan 0027 KTD2).
-   */
-  episodes?: Array<{ season: number; number: number }>;
-  /**
-   * AniList-entry-relative episode numbers, for the anime accordion: the entry
-   * numbers its own episodes 1..n and carries no canonical season, so the log
-   * fan-out translates them via ani.zip rather than the caller guessing.
-   */
-  entryEpisodes?: number[];
-}
+export type PendingLog = Omit<LogRequest, 'item' | 'entry'>;
 
 export interface SeasonActions {
   /** `"${season}-${number}"` watched keys; anime uses entry-relative season 1. */
