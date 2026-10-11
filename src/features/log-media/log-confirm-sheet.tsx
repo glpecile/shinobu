@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -11,16 +12,25 @@ import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
+import { useCatchUpControls } from '@/features/up-next/catch-up/state';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { toast } from '@/lib/toast';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
+import type { LogRequest } from './log-request';
+import { parseTags } from './parse-tags';
+import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
+import { useLogTargetsSplit } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
+
+/** Editable diary tag shared by one-shot and chained logging sessions. */
+export const DEFAULT_LOG_TAGS = 'shinobu, ';
 
 /**
  * The providers whose diary payload carries tags and likes — Letterboxd's diary
@@ -44,24 +54,9 @@ export function labels(ids: readonly ProviderId[]): string {
   return ids.map((id) => PROVIDERS[id].label).join(', ');
 }
 
-/**
- * The shared confirm/backdate sheet behind every log action (plan 0010
- * extracts this from the movie `LogMediaButton`). It shows the write targets,
- * a backdate field and the confirm/cancel pair, then swaps to a report step
- * for per-provider partial failure (kept in context rather than flashed after
- * close). The parent owns the
- * `useLogMedia` mutation (so the season picker and the sheet share one), the
- * `watchedAt` state, and the confirm handler that fills `LogMediaVariables`.
- *
- * The picker, the manual rows and the result families are the shared
- * `features/write-sheet` components (plan 0032 U2, KTD-1) — this sheet keeps
- * only its verb-specific fields: `WatchedAtField` and the tags input.
- */
-export interface LogConfirmSheetProps {
-  open: boolean;
+export interface LogFormFieldsProps {
+  pending: boolean;
   onClose: () => void;
-  title: string;
-  description: string;
   /** The item being logged — needed to build manual/outcome provider links (plan 0022). */
   item: NormalizedMediaItem;
   targets: readonly ProviderId[];
@@ -74,8 +69,6 @@ export interface LogConfirmSheetProps {
   /** Which of `targets` are actually selected — defaults to all targets. */
   selectedProviders: ProviderId[];
   onSelectedProvidersChange: (ids: ProviderId[]) => void;
-  /** The single shared `useLogMedia` mutation — sheet reads state, parent fires it. */
-  logMedia: ReturnType<typeof useLogMedia>;
   watchedAt: Date | null;
   onWatchedAtChange: (value: Date | null) => void;
   liked: boolean;
@@ -87,34 +80,15 @@ export interface LogConfirmSheetProps {
    */
   tags?: string;
   onTagsChange?: (value: string) => void;
-  confirmLabel: string;
-  pendingLabel: string;
-  onConfirm: () => void;
 }
 
 /**
  * The log verb's fields — write targets, manual rows, the backdate field and
  * the tags input — without the sheet, header, result or buttons around them.
- * `LogConfirmSheet` composes it for every single log; the quick-log catch-up
+ * `LogConfirmSheet` composes it for movies and season batches; the episode catch-up
  * chain (plan 0037, `features/up-next/catch-up`) composes it under its own
  * header and above its own ledger, keeping one form for both.
  */
-export type LogFormFieldsProps = Pick<
-  LogConfirmSheetProps,
-  | 'item'
-  | 'onClose'
-  | 'targets'
-  | 'manualTargets'
-  | 'selectedProviders'
-  | 'onSelectedProvidersChange'
-  | 'watchedAt'
-  | 'onWatchedAtChange'
-  | 'liked'
-  | 'onLikedChange'
-  | 'tags'
-  | 'onTagsChange'
-> & { pending: boolean };
-
 export function LogFormFields({
   item,
   onClose,
@@ -239,27 +213,42 @@ export function LogFormFields({
   );
 }
 
-export function LogConfirmSheet({
-  open,
-  onClose,
-  title,
-  description,
-  item,
-  targets,
-  manualTargets = [],
-  selectedProviders,
-  onSelectedProvidersChange,
-  logMedia,
-  watchedAt,
-  onWatchedAtChange,
-  liked,
-  onLikedChange,
-  tags,
-  onTagsChange,
-  confirmLabel,
-  pendingLabel,
-  onConfirm,
-}: LogConfirmSheetProps) {
+/** One-shot movie/season-batch session: owns the form, confirmation, and partial-failure report. */
+export function LogConfirmSheet({ request, open }: { request: LogRequest; open: boolean }) {
+  const { item, title, description } = request;
+  const { closeCatchUp: onClose, trackBusy } = useCatchUpControls();
+  const logMedia = useLogMedia();
+  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
+  const [selectedProviders, setSelectedProviders] = useState(targets);
+  const [watchedAt, setWatchedAt] = useState<Date | null>(null);
+  const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
+  const [liked, setLiked] = useState(false);
+
+  function confirm() {
+    if (logMedia.isPending || selectedProviders.length === 0) return;
+    haptics.confirm();
+    const parsedTags = parseTags(tags);
+    const write = logMedia.mutateAsync({
+      item,
+      episodes: request.episodes,
+      entryEpisodes: request.entryEpisodes,
+      providers: selectedProviders,
+      liked,
+      ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
+      ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
+    });
+    trackBusy(item.id, write);
+    void write.then(
+      (outcome) => {
+        if (isCleanWriteReport(outcome)) {
+          const copy = logToastCopy(outcome);
+          toast.success(copy.title, copy.message);
+          onClose();
+        } else if (outcome.failed.length > 0) haptics.error();
+      },
+      () => haptics.error(),
+    );
+  }
   const result = logMedia.data;
   const pending = logMedia.isPending;
   // A clean report closes the sheet into a toast, so anything else settled is
@@ -273,7 +262,7 @@ export function LogConfirmSheet({
   // that already landed would log the watch twice.
   function retry() {
     if (result != null && result.failed.length > 0) {
-      onSelectedProvidersChange([...result.failed]);
+      setSelectedProviders([...result.failed]);
     }
     logMedia.reset();
   }
@@ -325,25 +314,25 @@ export function LogConfirmSheet({
               item={item}
               manualTargets={manualTargets}
               onClose={onClose}
-              onSelectedProvidersChange={onSelectedProvidersChange}
-              onWatchedAtChange={onWatchedAtChange}
+              onSelectedProvidersChange={setSelectedProviders}
+              onWatchedAtChange={setWatchedAt}
               liked={liked}
-              onLikedChange={onLikedChange}
+              onLikedChange={setLiked}
               pending={pending}
               selectedProviders={selectedProviders}
               targets={targets}
               watchedAt={watchedAt}
-              {...(tags != null ? { tags } : {})}
-              {...(onTagsChange != null ? { onTagsChange } : {})}
+              tags={tags}
+              onTagsChange={setTags}
             />
             <WriteSheet.Actions>
               <Button
                 disabled={selectedProviders.length === 0}
                 icon={<Button.Icon name="eye" />}
-                label={confirmLabel}
+                label={title}
                 loading={pending}
-                loadingLabel={pendingLabel}
-                onPress={onConfirm}
+                loadingLabel="Logging…"
+                onPress={confirm}
               />
               <WriteSheet.Cancel onPress={onClose} />
             </WriteSheet.Actions>

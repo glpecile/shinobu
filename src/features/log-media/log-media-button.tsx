@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { haptics } from '@/lib/haptics';
+import { useCatchUpControls, useQuickLogBusy } from '@/features/up-next/catch-up/state';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useAniListEntryStateQuery,
@@ -16,12 +15,7 @@ import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
-import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
-import { toast } from '@/lib/toast';
 import { filmReleaseStatus, hasStartedAiring } from './release-gate';
-import { parseTags } from './parse-tags';
-import { logToastCopy } from './toast-copy';
-import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit } from './use-log-targets';
 import {
   firstUnairedEpisode,
@@ -30,29 +24,16 @@ import {
   unairedEpisodeLabel,
 } from './series-next-episode';
 import { useSeriesNextEpisode } from './use-series-next-episode';
-import { LogConfirmSheet } from './log-confirm-sheet';
 
 /**
- * The movie/anime log trigger (plans 0008 + 0011). A write to external
- * trackers shouldn't ride on one stray tap, so the button only *opens* a
- * confirmation sheet (`LogConfirmSheet` — shared with the TV season picker,
- * plan 0010); the actual mutation fires from the sheet's confirm action, with
- * haptic feedback on commit/success/failure. Renders for every item with a
- * single obvious next log: movies, anime films, anime *series* (whose natural
- * log unit is "next episode": AniList entries are per-season, plan 0011) and
- * TV series, whose next episode comes from Trakt's watched-progress read.
- * A TV show whose next episode can't be named (Trakt disconnected, no Trakt
- * id, failed read) falls back to the details page's season picker.
+ * Resolves the next log and its release gate, then opens the app-level logging
+ * session. Films confirm once; series share the Continue Watching catch-up
+ * chain. When no next episode can be named, the season picker takes over.
  */
-// Letterboxd diary tag stamped on every log by default, so Shinobu-made
-// entries are filterable on Letterboxd. Prefilled, not forced — the field
-// stays editable per log. The trailing separator leaves the cursor ready
-// for the next tag; the parse filters the empty segment it creates.
-const DEFAULT_TAGS = 'shinobu, ';
-
 export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
   const connected = useConnectedProviders();
-  const logMedia = useLogMedia();
+  const { openLog } = useCatchUpControls();
+  const busy = useQuickLogBusy(item.id);
   const watchedInfo = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
@@ -70,12 +51,7 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     item: isAnimeSeries && item.externalIds.simkl != null ? item : null,
     enabled: connected.includes('simkl'),
   });
-  const [open, setOpen] = useState(false);
-  const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  const [tags, setTags] = useState(DEFAULT_TAGS);
-  const [liked, setLiked] = useState(false);
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
-  const [selectedProviders, setSelectedProviders] = useState(targets);
 
   const isFilmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
@@ -182,49 +158,6 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
     !isSeries || (seriesNext?.aired === true && upcoming == null);
   const canLog = nextEpisodeAired && released && seriesEpisodeAired;
 
-  const result = logMedia.data;
-
-  function confirmLog() {
-    if (logMedia.isPending || selectedProviders.length === 0) return;
-    if (isSeries && seriesNext == null) return;
-    haptics.confirm();
-    const parsedTags = parseTags(tags);
-    logMedia.mutate(
-      {
-        item,
-        // Entry-relative, no season (plan 0027 KTD2): `nextEpisode` counts the
-        // AniList entry's own episodes, and the fan-out resolves the canonical
-        // season from ani.zip before Trakt/Serializd see it.
-        ...(isAnimeSeries ? { entryEpisodes: [nextEpisode] } : {}),
-        // Canonical domain, exactly like the season picker: Trakt's own
-        // season/episode numbering, which is where this episode came from.
-        ...(isSeries && seriesNext != null
-          ? { episodes: [{ season: seriesNext.season, number: seriesNext.number }] }
-          : {}),
-        ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
-        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
-        providers: selectedProviders,
-        liked,
-      },
-      {
-        onSuccess: (outcome) => {
-          // Clean → toast + close; post-write news (a failure, a reasoned
-          // skip) keeps the sheet open rendering it (plan 0032 R4/KTD-3).
-          // Upfront manual rows don't block — they were on the sheet before
-          // confirm (plan 0033 R1). The toast wrapper owns the success haptic.
-          if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome);
-            toast.success(copy.title, copy.message);
-            setOpen(false);
-          } else if (outcome.failed.length > 0) {
-            haptics.error();
-          }
-        },
-        onError: () => haptics.error(),
-      },
-    );
-  }
-
   // The one string this whole flow speaks: the CTA's label, the confirm
   // sheet's title, and its confirm button. These were three ternary chains
   // that had already drifted — the movie CTA read "Mark as watched" and
@@ -297,53 +230,28 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         loading={
           seriesNextState.status === 'loading' ||
           (upcomingNeeded && seasons.isLoading) ||
-          simklAnimeEntry.isLoading
+          simklAnimeEntry.isLoading || busy
         }
         morphLabel
         onPress={() => {
-          haptics.selection();
-          logMedia.reset();
-          setWatchedAt(null);
-          setTags(DEFAULT_TAGS);
-          setLiked(false);
-          setSelectedProviders(targets);
-          setOpen(true);
+          openLog({
+            item, title: action, description,
+            ...(isAnimeSeries ? { entryEpisodes: [nextEpisode] } : {}),
+            ...(isSeries && seriesNext != null
+              ? { episodes: [{ season: seriesNext.season, number: seriesNext.number }] }
+              : {}),
+          });
         }}
       />
       {/* The finished-show state earns a line of its own: the button below
           reads "Log rewatch", and this is what makes that make sense. */}
       {canLog &&
         ((seriesNext?.rewatch === true && upcoming == null) || animeRewatch) &&
-        result == null && (
+        !busy && (
           <Text className="text-muted font-sans text-sm mt-2 text-center">
             🎉 You’ve watched every aired episode.
           </Text>
         )}
-      {/* The inline result blocks are gone (plan 0032 R9/U4): a clean report
-          is a toast, and anything left to read renders inside the sheet, which
-          stays open until the report settles. */}
-
-      <LogConfirmSheet
-        onClose={() => setOpen(false)}
-        confirmLabel={action}
-        description={description}
-        item={item}
-        logMedia={logMedia}
-        manualTargets={manualTargets}
-        onConfirm={confirmLog}
-        onSelectedProvidersChange={setSelectedProviders}
-        onTagsChange={setTags}
-        liked={liked}
-        onLikedChange={setLiked}
-        onWatchedAtChange={setWatchedAt}
-        open={open}
-        tags={tags}
-        pendingLabel="Logging…"
-        selectedProviders={selectedProviders}
-        targets={targets}
-        title={action}
-        watchedAt={watchedAt}
-      />
     </View>
   );
 }

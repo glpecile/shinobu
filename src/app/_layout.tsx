@@ -175,9 +175,8 @@ export default function Layout() {
                 {/* Fullscreen image viewer overlay (web); null on native,
                     where galeria renders the zoom inline. */}
                 <Lightbox />
-                {/* The quick-log catch-up sheet (plan 0037): opened by a
-                    Continue Watching checkmark, hosted here so a card that
-                    re-keys after its episode logs can't unmount it. */}
+                {/* Every logging trigger uses this host so a card or episode
+                    row that re-keys after a write can't unmount its session. */}
                 <CatchUpLogSheet />
                 {/* The toast Toaster host — sonner-native on native, sonner
                     on web (plan 0032 U1). */}

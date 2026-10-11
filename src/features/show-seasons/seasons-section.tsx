@@ -3,9 +3,7 @@ import { View } from 'react-native';
 import { SuspenseSection } from '@/components/suspense-section';
 import { Section } from '@/components/section';
 import { Skeleton } from '@/components/skeleton';
-import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { haptics } from '@/lib/haptics';
-import { toast } from '@/lib/toast';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useShowSeasonsSource,
@@ -18,17 +16,13 @@ import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
-import type { ProviderId } from '@/lib/providers/types';
 import type {
   NormalizedEpisode,
   NormalizedMediaItem,
   NormalizedSeason,
 } from '@/types/media';
-import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import { LogConfirmSheet } from '@/features/log-media/log-confirm-sheet';
-import { parseTags } from '@/features/log-media/parse-tags';
-import { logToastCopy } from '@/features/log-media/toast-copy';
+import { useCatchUpControls } from '@/features/up-next/catch-up/state';
 import {
   EpisodeActionsSheet,
   type EpisodePointer,
@@ -102,7 +96,7 @@ function ShowDetailsList({
         .map((episode) => `${season.number}-${episode.number}`),
     ));
 
-  const logMedia = useLogMedia();
+  const { openLog: openLogSession } = useCatchUpControls();
   const pushRoute = usePushRoute();
   // The long-pressed row — kept (not nulled) while its sheet closes.
   const [pressed, setPressed] = useState<{
@@ -114,54 +108,9 @@ function ShowDetailsList({
       ? null
       : { season: pressed.season.number, number: pressed.episode.number, episode: pressed.episode };
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [pending, setPending] = useState<PendingLog | null>(null);
-  const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  // Diary tags — accepted by Serializd's TV diary payload (plan 0017 R10). The
-  // confirm sheet only surfaces the field when Serializd is a selected target.
-  const [tags, setTags] = useState('');
-  const [liked, setLiked] = useState(false);
-  const [selectedProviders, setSelectedProviders] = useState<ProviderId[]>(targets);
-
   function openLog(next: PendingLog) {
     if (!canLog) return;
-    haptics.selection();
-    logMedia.reset();
-    setWatchedAt(null);
-    setTags('');
-    setLiked(false);
-    setSelectedProviders(targets);
-    setPending(next);
-  }
-
-  function confirmLog() {
-    if (pending == null || logMedia.isPending) return;
-    haptics.confirm();
-    const parsedTags = parseTags(tags);
-    logMedia.mutate(
-      {
-        item,
-        // Canonical domain: this screen is Trakt's own season numbering.
-        ...(pending.episodes != null ? { episodes: pending.episodes } : {}),
-        ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
-        ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
-        providers: selectedProviders,
-        liked,
-      },
-      {
-        onSuccess: (outcome) => {
-          // Clean → toast + close; post-write news keeps the sheet open (plan
-          // 0032 R4/KTD-3, plan 0033 R1). The toast wrapper owns the haptic.
-          if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome);
-            toast.success(copy.title, copy.message);
-            setPending(null);
-          } else if (outcome.failed.length > 0) {
-            haptics.error();
-          }
-        },
-        onError: () => haptics.error(),
-      },
-    );
+    openLogSession({ item, ...next });
   }
 
   function markEpisode(s: NormalizedSeason, episode: NormalizedEpisode) {
@@ -204,6 +153,7 @@ function ShowDetailsList({
             if (aired.length === 0) return;
             openLog({
               title: `Log ${s.title}`,
+              batch: true,
               // The subject and the size of it — the title already carried the
               // verb, and the count is the fact the sheet couldn't otherwise
               // give: how many writes this one press is about to make.
@@ -235,27 +185,6 @@ function ShowDetailsList({
         }
       />
 
-      <LogConfirmSheet
-        confirmLabel={pending?.title ?? ''}
-        description={pending?.description ?? ''}
-        item={item}
-        logMedia={logMedia}
-        manualTargets={manualTargets}
-        onClose={() => setPending(null)}
-        onConfirm={confirmLog}
-        onSelectedProvidersChange={setSelectedProviders}
-        onTagsChange={setTags}
-        liked={liked}
-        onLikedChange={setLiked}
-        onWatchedAtChange={setWatchedAt}
-        open={pending != null}
-        pendingLabel="Logging…"
-        selectedProviders={selectedProviders}
-        tags={tags}
-        targets={targets}
-        title={pending?.title ?? ''}
-        watchedAt={watchedAt}
-      />
     </>
   );
 }

@@ -1,8 +1,11 @@
 import { episodeCode } from '@/features/episode-details/episode-label';
+import { hasStartedAiring } from '@/features/log-media/release-gate';
+import { hasAired } from '@/lib/time/has-aired';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import type { SimklLibraryEntry } from '@/lib/providers/simkl/normalize';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 import type { UpNextEpisode, UpNextEpisodeEntry } from '@/features/up-next/types';
+import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 /**
  * One episode the catch-up chain will offer, in the entry's own numbering
@@ -33,6 +36,38 @@ const MAX_CHAIN = 200;
 
 const key = (episode: { season: number; number: number }) =>
   `${episode.season}-${episode.number}`;
+
+/** A partial airing schedule must not turn its undated future episodes into a backlog. */
+export function airedAnimeEpisodes(
+  item: NormalizedMediaItem,
+  episodes: readonly NormalizedEpisode[],
+  airedCount: number | null,
+): readonly NormalizedEpisode[] {
+  const scheduled = episodes.filter((episode) => episode.firstAired != null);
+  const knownAired = Math.max(0, ...scheduled.filter((episode) => hasAired(episode.firstAired)).map((episode) => episode.number));
+  return episodes.filter((episode) => episode.firstAired != null
+    ? hasAired(episode.firstAired)
+    : airedCount != null
+      ? episode.number <= airedCount
+      : scheduled.length > 0
+        ? episode.number <= knownAired
+        : hasStartedAiring(item, episodes));
+}
+
+/** Catalogue candidates are already aired and unwatched; never wrap before the requested episode. */
+export function catalogueCatchUpQueue(
+  first: CatchUpEpisode,
+  candidates: readonly CatchUpEpisode[],
+): CatchUpEpisode[] {
+  return [first, ...candidates.filter((episode) =>
+    first.season == null
+      ? episode.season == null && episode.number > first.number
+      : first.season > 0 && episode.season != null &&
+        (episode.season > first.season ||
+          (episode.season === first.season && episode.number > first.number)),
+  ).sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || a.number - b.number)]
+    .slice(0, MAX_CHAIN);
+}
 
 /**
  * The aired-but-unwatched episodes of `entry`'s show, the entry's own first —

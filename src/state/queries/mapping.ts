@@ -365,7 +365,7 @@ export function useSeasonLayoutQuery(ids: { tmdb?: number | undefined; trakt?: n
   });
 }
 
-/** Share the anime accordion's progress in the episode screen's canonical coordinates. */
+/** Share anime progress in canonical coordinates; wait for placement before treating any row as unwatched. */
 export function useAniListEpisodeWatchedQuery(params: {
   item: NormalizedMediaItem;
   enabled: boolean;
@@ -380,6 +380,7 @@ export function useAniListEpisodeWatchedQuery(params: {
   const progress = entry.data?.entry?.progress ?? (item.type === 'ANIME' ? item.currentProgress : 0);
   return {
     ...entry,
+    isLoading: entry.isLoading || episodes.isLoading || layout.isLoading,
     data: watchedKeysInLayout(layout.data, episodes.data, enabled ? progress : 0),
   };
 }
