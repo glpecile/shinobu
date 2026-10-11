@@ -173,6 +173,7 @@ export function ProviderPicker({
 }: ProviderPickerProps & { onConnect?: () => void }) {
   const { targets, selectedProviders } = props;
   const [expanded, setExpanded] = useState(false);
+  const guidanceColor = useThemeColor('--color-accent-on-tonal');
   if (targets.length === 0) return <NoTargets onConnect={onConnect} />;
   const selected = targets.filter((id) => selectedProviders.includes(id));
   const selectionLabel =
@@ -183,6 +184,7 @@ export function ProviderPicker({
   return (
     <View className="rounded-3xl border border-border bg-surface overflow-hidden">
       <PresstableOpacity
+        accessibilityLabel={selectionLabel}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         aria-expanded={expanded}
@@ -190,6 +192,15 @@ export function ProviderPicker({
         onPress={() => setExpanded(!expanded)}
       >
         <View className="flex-row items-center gap-2 flex-1 mr-3">
+          {selected.length === 0 && (
+            <Ionicons
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              color={guidanceColor}
+              name="alert-circle-outline"
+              size={16}
+            />
+          )}
           {selected.length > 0 && (
             <View className="flex-row items-center gap-1">
               {selected.map((id) => (
