@@ -32,6 +32,7 @@ import {
   RelationsSection,
 } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
+import { LetterboxdCompletionButton } from '@/features/log-media/letterboxd-completion-button';
 import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import {
@@ -761,6 +762,7 @@ function DetailsScreen() {
             else — including an airing series with no release date — keeps the
             log button and gets the CTA beneath it. */}
         {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
+        <LetterboxdCompletionButton item={shown} />
         <WatchlistMediaButton item={shown} />
 
         {showProgress && (

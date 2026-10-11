@@ -1,21 +1,25 @@
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { getFilmPoster, getFilmTmdbId } from './film';
+import { getFilmPoster, getFilmItem } from './film';
+
+const metadata = '<script type="application/ld+json">{"@type":"Movie","name":"Beast Boy: Lone Wolf","dateCreated":"2024-10-28"}</script>';
 
 describe('incoming Letterboxd film lookup', () => {
   test('reads the film identity from the body, not a recommendation elsewhere', async () => {
-    const id = await Effect.runPromise(getFilmTmdbId({
+    const item = await Effect.runPromise(getFilmItem({
+      tmdb: null,
       fetch: async (url) => {
         expect(String(url)).toBe('https://letterboxd.com/film/alien/');
-        return new Response('<body class="film backdropped" data-type="film" data-tmdb-type="movie" data-tmdb-id="348"><div data-tmdb-id="999"></div></body>');
+        return new Response(`<body class="film backdropped" data-type="film" data-tmdb-type="movie" data-tmdb-id="348"><div data-tmdb-id="999"></div>${metadata}</body>`);
       },
     }, 'alien'));
-    expect(id).toBe(348);
+    expect(item?.id).toBe('letterboxd-alien');
+    expect(item?.externalIds).toEqual({ letterboxd: 'alien', tmdb: 348 });
   });
 
   test('a missing film returns a lookup miss without invalidating a session', async () => {
-    expect(await Effect.runPromise(getFilmTmdbId({ fetch: async () => new Response('', { status: 404 }) }, 'missing'))).toBeNull();
+    expect(await Effect.runPromise(getFilmItem({ tmdb: null, fetch: async () => new Response('', { status: 404 }) }, 'missing'))).toBeNull();
   });
 
   test.each([
@@ -23,13 +27,40 @@ describe('incoming Letterboxd film lookup', () => {
     [429, '', 'ProviderRateLimitError'],
     [500, '', 'ProviderNetworkError'],
   ] as const)('contains a failed film page with status %s', async (status, html, tag) => {
-    const error = await Effect.runPromise(Effect.flip(getFilmTmdbId({ fetch: async () => new Response(html, { status }) }, 'alien')));
+    const error = await Effect.runPromise(Effect.flip(getFilmItem({ tmdb: null, fetch: async () => new Response(html, { status }) }, 'alien')));
     expect(error._tag).toBe(tag);
   });
 
   test('rejects unsafe slugs before any request', async () => {
-    const error = await Effect.runPromise(Effect.flip(getFilmTmdbId({ fetch: async () => { throw new Error('must not fetch'); } }, '../sign-in')));
+    const error = await Effect.runPromise(Effect.flip(getFilmItem({ tmdb: null, fetch: async () => { throw new Error('must not fetch'); } }, '../sign-in')));
     expect(error._tag).toBe('ProviderDecodeError');
+  });
+
+  test.each([
+    [[{ id: 228880, media_type: 'tv', name: 'Beast Boy: Lone Wolf', first_air_date: '2024-10-28' }], 228880],
+    [[{ id: 1, media_type: 'tv', name: 'Beast Boy: Lone Wolf', first_air_date: '2023-10-28' }], undefined],
+    [[{ id: 1, media_type: 'tv', name: 'Other Show', first_air_date: '2024-10-28' }], undefined],
+    [[{ id: 1, media_type: 'tv', name: 'Beast Boy: Lone Wolf', first_air_date: '2024-10-28' }, { id: 2, media_type: 'tv', name: 'Beast Boy: Lone Wolf', first_air_date: '2024-01-01' }], undefined],
+  ])('TV matches require unique exact title and year: %j', async (results, expected) => {
+    const item = await Effect.runPromise(getFilmItem({
+      fetch: async () => new Response(`<body data-tmdb-type="movie" data-tmdb-id="">${metadata}</body>`),
+      tmdb: { token: 'test', fetch: async (url) => new Response(JSON.stringify({ results: String(url).includes('/search/movie') ? [] : results })) },
+    }, 'beast-boy-lone-wolf'));
+    expect(item?.tmdbTvVariant).toBe(expected);
+    expect(item?.externalIds).toEqual({ letterboxd: 'beast-boy-lone-wolf' });
+    expect(item?.type).toBe('MOVIE');
+  });
+
+  test('an exact movie match wins without searching TV', async () => {
+    const item = await Effect.runPromise(getFilmItem({
+      fetch: async () => new Response(metadata),
+      tmdb: { token: 'test', fetch: async (url) => {
+        expect(String(url)).toContain('/search/movie');
+        return new Response(JSON.stringify({ results: [{ id: 7, title: 'Beast Boy: Lone Wolf', release_date: '2024-10-28' }] }));
+      } },
+    }, 'beast-boy-lone-wolf'));
+    expect(item?.externalIds.tmdb).toBe(7);
+    expect(item?.tmdbTvVariant).toBeUndefined();
   });
 });
 

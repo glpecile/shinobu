@@ -29,6 +29,8 @@ import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
+import { useLetterboxdCompletion } from './use-letterboxd-completion';
+import { LetterboxdCompletionOffer } from './letterboxd-completion-offer';
 
 /** Editable diary tag shared by one-shot and chained logging sessions. */
 export const DEFAULT_LOG_TAGS = 'shinobu, ';
@@ -226,10 +228,12 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
   const { closeCatchUp: onClose, trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
+  const completion = useLetterboxdCompletion(item);
+  const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   const [selectedProviders, setSelectedProviders] = useState(targets);
-  const [watchedAt, setWatchedAt] = useState<Date | null>(null);
-  const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
-  const [liked, setLiked] = useState(false);
+  const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
+  const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
+  const [liked, setLiked] = useState(request.liked ?? false);
 
   function confirm() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
@@ -248,6 +252,11 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
     void write.then(
       (outcome) => {
         if (isCleanWriteReport(outcome)) {
+          const followUp = request.episodes?.length ? completion(request.episodes) : null;
+          if (followUp != null) {
+            setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parsedTags, liked });
+            return;
+          }
           const copy = logToastCopy(outcome);
           toast.success(copy.title, copy.message);
           onClose();
@@ -273,6 +282,14 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
     }
     logMedia.reset();
   }
+
+  if (completionOffer != null) return (
+    <Sheet onClose={onClose} open={open}>
+      <WriteSheet.Step key="completion">
+        <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} />
+      </WriteSheet.Step>
+    </Sheet>
+  );
 
   return (
     <Sheet onClose={onClose} open={open}>

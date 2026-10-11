@@ -32,7 +32,7 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const letterboxdUserscript = useLetterboxdUserscript();
 
   const { data } = useQuery({
-    queryKey: ['log-targets', item.id, ...connected, platform, letterboxdUserscript],
+    queryKey: ['log-targets', item.id, item.tmdbTvVariant ?? null, ...connected, platform, letterboxdUserscript],
     queryFn: async () =>
       splitWriteTargets(
         await enrichExternalIds(queryClient, item, connected),

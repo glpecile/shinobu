@@ -2,7 +2,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import type { ProviderDescriptor, ProviderId, WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -80,6 +80,8 @@ export function providersForWrite(
 ): ProviderId[] {
   const types = effectiveTypes(item);
   return connected.filter((id) => {
+    // A whole-entry Letterboxd TV log has no movie identity on other providers.
+    if (item.tmdbTvVariant != null && id !== 'letterboxd') return false;
     const provider = PROVIDERS[id];
     return (
       writeSupport(provider, capability) !== 'none' &&

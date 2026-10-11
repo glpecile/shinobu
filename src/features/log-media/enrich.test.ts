@@ -151,6 +151,11 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
     calls.length = 0;
   });
 
+  test('a Letterboxd TV relationship never searches for movie write identities', async () => {
+    await enrichExternalIds(client, { ...idlessFilm(), tmdbTvVariant: 228880 }, [...ALL, 'simkl']);
+    expect(calls).toEqual([]);
+  });
+
   test('a Simkl-only user resolves an id-less film by text search', async () => {
     await enrichExternalIds(client, idlessFilm(), ['simkl', 'letterboxd']);
     expect(calls).toContain('trakt-search');

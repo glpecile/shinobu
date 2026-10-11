@@ -24,6 +24,8 @@ export async function enrichExternalIds(
   item: NormalizedMediaItem,
   connected: readonly ProviderId[],
 ): Promise<NormalizedMediaItem> {
+  // A TV metadata variant cannot supply identities for a whole-entry movie log.
+  if (item.tmdbTvVariant != null) return item;
   let externalIds = { ...item.externalIds };
 
   const isAnime = item.type === 'ANIME';

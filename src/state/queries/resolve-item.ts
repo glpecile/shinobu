@@ -9,7 +9,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
-import { findInLetterboxdListsCache, useLetterboxdFilmTmdbQuery } from './letterboxd';
+import { findInLetterboxdListsCache, useLetterboxdFilmQuery } from './letterboxd';
 import { findInSerializdListsCache } from './serializd';
 import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
@@ -79,7 +79,7 @@ function findInSeasonalPagesCache(
  *
  * Cold TMDB, AniList, Simkl and typed Trakt links fetch public records by ID. Incoming
  * IMDb links use Simkl's ID lookup; Letterboxd film links first resolve their
- * exact TMDB movie ID from the native public film page. Serializd IDs resolve
+ * public film metadata without changing their log identity. Serializd IDs resolve
  * as TMDB TV IDs through Simkl's public lookup.
  *
  * `undefined` while the feed or that fetch is still loading — the caller
@@ -149,12 +149,12 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   const traktDeepLink = resolvedItem == null ? /^trakt-([1-9][0-9]*)$/.exec(id)?.[1] : undefined;
   const traktDeepLinkItem = useTraktItemQuery(traktDeepLink == null ? null : Number(traktDeepLink), mediaType);
   const imdb = resolvedItem == null ? /^imdb-(tt[0-9]+)$/.exec(id)?.[1] : undefined;
-  const letterboxd = resolvedItem == null ? /^letterboxd-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1] : undefined;
+  const letterboxd = /^letterboxd-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1];
   // Serializd media IDs are TMDB TV IDs, not private tracker identities.
   const serializd = resolvedItem == null ? /^serializd-([1-9][0-9]*)$/.exec(id)?.[1] : undefined;
-  const filmTmdb = useLetterboxdFilmTmdbQuery(letterboxd ?? null);
+  const film = useLetterboxdFilmQuery(letterboxd ?? null);
   const externalItem = useSimklLookupQuery(
-    imdb != null ? { imdb } : filmTmdb.data != null ? { tmdb: filmTmdb.data, type: 'movie' }
+    imdb != null ? { imdb }
       : serializd != null ? { tmdb: Number(serializd), type: 'show' } : null,
   );
   const external = externalItem.data == null ? undefined : {
@@ -162,13 +162,14 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     externalIds: {
       ...externalItem.data.externalIds,
       ...(imdb != null ? { imdb } : {}),
-      ...(filmTmdb.data != null ? { tmdb: filmTmdb.data } : {}),
       ...(serializd != null ? { tmdb: Number(serializd) } : {}),
-      ...(letterboxd != null ? { letterboxd } : {}),
     },
   };
   const cachedOrFetched =
-    resolvedItem ??
+    (resolvedItem != null && film.data != null
+      ? { ...mergeCatalogueMetadata(resolvedItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
+      : resolvedItem) ??
+    film.data ??
     deepLinkDetails.data?.catalogue ??
     anilistDeepLinkItem.data ??
     simklDeepLinkItem.data ??
@@ -187,8 +188,8 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
       feed.isLoading ||
       (deepLink != null && deepLinkDetails.isPending) ||
       (anilistDeepLink != null && anilistDeepLinkItem.isPending) ||
-      (letterboxd != null && process.env.EXPO_OS !== 'web' && filmTmdb.isPending) ||
-      ((imdb != null || filmTmdb.data != null || serializd != null) && externalItem.isPending) ||
+      (letterboxd != null && resolvedItem == null && film.isPending) ||
+      ((imdb != null || serializd != null) && externalItem.isPending) ||
       (traktDeepLinkItem.isEnabled && traktDeepLinkItem.isPending) ||
       (simklDeepLink != null && simklDeepLinkItem.isPending),
     refetchFeed: feed.refetch,

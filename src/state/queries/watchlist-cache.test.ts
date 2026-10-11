@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { findInWatchlistCache, WATCHLIST_QUERY_ROOT } from './watchlist-cache';
+import { findInWatchlistCache, findLetterboxdTwinInCache, WATCHLIST_QUERY_ROOT } from './watchlist-cache';
 
 function film(id: string, title: string): NormalizedMediaItem {
   return {
@@ -36,6 +36,22 @@ function seed(): QueryClient {
 }
 
 describe('findInWatchlistCache (plan 0031 U14)', () => {
+  test('TV variants use unique cached Letterboxd entries without weakening watchlist identity', () => {
+    const client = new QueryClient();
+    const show = { ...film('tmdb-tv-228880', 'Beast Boy: Lone Wolf'), type: 'TV' as const, year: 2024, externalIds: { tmdb: 228880 } };
+    const entry = { ...film('letterboxd-beast-boy-lone-wolf', show.title), year: 2024, externalIds: { letterboxd: 'beast-boy-lone-wolf' } };
+    client.setQueryData(['letterboxd', 'list-films', 'user', 'animation'], { pages: [{ items: [entry] }] });
+    expect(findLetterboxdTwinInCache(client, show)?.id).toBe(entry.id);
+    expect(findLetterboxdTwinInCache(client, { ...show, year: 2023 })).toBeUndefined();
+    client.setQueryData(['letterboxd', 'list-films', 'user', 'animation'], { pages: [{ items: [{ ...entry, externalIds: { ...entry.externalIds, tmdb: 8 } }] }] });
+    expect(findLetterboxdTwinInCache(client, show)).toBeUndefined();
+    client.setQueryData(['letterboxd', 'list-films', 'user', 'animation'], { pages: [{ items: [entry] }] });
+    client.setQueryData(['letterboxd', 'film', 'beast-boy-lone-wolf', true], { ...entry, externalIds: { ...entry.externalIds, tmdb: 8 } });
+    expect(findLetterboxdTwinInCache(client, show)).toBeUndefined();
+    client.removeQueries({ queryKey: ['letterboxd', 'film'] });
+    client.setQueryData(['letterboxd', 'watchlist', 'user'], [{ ...entry, id: 'letterboxd-other', externalIds: { letterboxd: 'other' } }]);
+    expect(findLetterboxdTwinInCache(client, show)).toBeUndefined();
+  });
   test('resolves a Trakt-sourced watchlist item that belongs to no feed slot', () => {
     // The regression it exists for: after R25 the merged row carries Trakt and
     // AniList items, and anything the details chain cannot resolve renders

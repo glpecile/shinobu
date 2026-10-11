@@ -69,19 +69,19 @@ describe('getMediaCatalogue', () => {
     expect(urls[0]).toContain('append_to_response=credits,release_dates');
   });
 
-  test('leaves the tv document alone — release_dates is movie-only', async () => {
+  test.each([['Ended', true], ['Canceled', true], ['Returning Series', false], [undefined, undefined]] as const)('TV catalogue carries completion status %s without movie release dates', async (status, ended) => {
     const urls: string[] = [];
     const fetch = (input: RequestInfo | URL): Promise<Response> => {
       urls.push(String(input));
       return Promise.resolve(
-        new Response(JSON.stringify({ id: 94605, name: 'Arcane' }), {
+        new Response(JSON.stringify({ id: 94605, name: 'Arcane', status }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
       );
     };
 
-    await Effect.runPromise(
+    const result = await Effect.runPromise(
       getMediaCatalogue(
         { fetch, token: 'test-token' },
         { kind: 'tv', tmdbId: 94605 },
@@ -90,6 +90,7 @@ describe('getMediaCatalogue', () => {
 
     expect(urls[0]).toContain('append_to_response=aggregate_credits');
     expect(urls[0]).not.toContain('release_dates');
+    expect(result.catalogue.seriesEnded).toBe(ended);
   });
 });
 

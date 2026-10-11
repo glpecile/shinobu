@@ -15,6 +15,8 @@ import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
+import { useLetterboxdCompletion } from '@/features/log-media/use-letterboxd-completion';
+import { LetterboxdCompletionOffer } from '@/features/log-media/letterboxd-completion-offer';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { resolveQuickLog } from '@/features/up-next/ui/quick-log-state';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
@@ -191,6 +193,8 @@ function CatchUpSession({
 }) {
   const queryClient = useQueryClient();
   const logMedia = useLogMedia();
+  const completion = useLetterboxdCompletion(item);
+  const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   const { closeCatchUp, trackBusy } = useCatchUpControls();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
     item,
@@ -258,6 +262,11 @@ function CatchUpSession({
       (row) => row.status === 'done' && row.result != null && isCleanWriteReport(row.result),
     );
     if (!clean) return;
+    const followUp = completion(rows.map((row) => row.episode));
+    if (followUp != null) {
+      setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parseTags(tags), liked });
+      return;
+    }
     if (rows.length > 1) {
       const succeeded = new Set(rows.flatMap((row) => row.result?.succeeded ?? []));
       toast.success(
@@ -399,8 +408,8 @@ function CatchUpSession({
 
   return (
     <Sheet onClose={closeCatchUp} open={open}>
-      <WriteSheet.Step key={reported ? 'report' : 'form'}>
-        {reported ? (
+      <WriteSheet.Step key={completionOffer != null ? 'completion' : reported ? 'report' : 'form'}>
+        {completionOffer != null ? <LetterboxdCompletionOffer request={completionOffer} onClose={closeCatchUp} /> : reported ? (
           <ChainReport
             item={item}
             landed={landed}

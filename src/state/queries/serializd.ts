@@ -1,10 +1,11 @@
-import { useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
+import { useQuery, useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';
 import type { SerializdDeps } from '@/lib/providers/serializd/deps';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
+import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
 
 /**
  * Real dependency wiring for Serializd effects — same state → lib/providers
@@ -44,6 +45,16 @@ export const serializdQueryKeys = {
   progress: (username: string, tmdbId: number) =>
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
 };
+
+/** Shares the episode-granular progress cache used by log reconciliation. */
+export function useSerializdProgressQuery(tmdbId: number | undefined, username: string | null) {
+  return useQuery({
+    queryKey: serializdQueryKeys.progress(username ?? '', tmdbId ?? -1),
+    queryFn: ({ signal }) => Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(username), { tmdbId: tmdbId! }), { signal }),
+    enabled: username != null && tmdbId != null,
+    staleTime: 5 * 60_000,
+  });
+}
 
 /** Home and View all share pages; only View all fetches successors. */
 export function useSuspenseSerializdListsQuery(username: string, kind: SerializdListKind) {

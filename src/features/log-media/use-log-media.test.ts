@@ -79,6 +79,23 @@ const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
 const { traktQueryKeys } = await import('@/state/queries/trakt');
 const { anilistQueryKeys } = await import('@/state/queries/anilist');
 
+test('a whole-series Letterboxd confirmation reaches only its diary adapter, with no episode payload', async () => {
+  const item: NormalizedMediaItem = {
+    id: 'letterboxd-beast-boy-lone-wolf', title: 'Beast Boy: Lone Wolf', coverImage: '',
+    type: 'MOVIE', tmdbTvVariant: 228880, currentProgress: 0, progressUnit: 'episode',
+    lastUpdated: '', externalIds: { letterboxd: 'beast-boy-lone-wolf' },
+  };
+  const plan = await planLogWrite(client(), { item }, ['simkl', 'trakt', 'anilist', 'serializd', 'letterboxd']);
+  const deliveries: LogMediaVariables[] = [];
+  const result = await fanOutLog({ letterboxd: async (variables) => { deliveries.push(variables); return { status: 'ok' }; } }, plan.writeTargets, plan.variables);
+  expect(result.succeeded).toEqual(['letterboxd']);
+  expect(result.outcomes).toEqual([{ provider: 'letterboxd', status: 'ok' }]);
+  expect(deliveries).toHaveLength(1);
+  expect(deliveries[0].item.externalIds).toEqual({ letterboxd: 'beast-boy-lone-wolf' });
+  expect(deliveries[0].episodes).toBeUndefined();
+  expect(deliveries[0].entryEpisodes).toBeUndefined();
+});
+
 /**
  * Real Dan Da Dan S2 data: ani.zip maps the entry's 1..12 to TVDB S02E01..12,
  * absolute 13..24 — while Trakt *and* TMDB both hold one continuous

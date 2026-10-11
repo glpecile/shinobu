@@ -22,6 +22,9 @@ const ids = (externalIds: Record<string, number | string> = {}) => ({ externalId
 // 0012 session-capture path), so it is a log target for movies and anime films
 // alongside Trakt.
 describe("providersForWrite('log')", () => {
+  it('a Letterboxd TV entry cannot become a movie write on another provider', () => {
+    expect(providersForWrite({ type: 'MOVIE', tmdbTvVariant: 228880, ...ids({ letterboxd: 'beast-boy-lone-wolf' }) }, ALL5, 'log')).toEqual(['letterboxd']);
+  });
   it('an unmapped anime film stays AniList-only (no movie-side id)', () => {
     expect(
       providersForWrite({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL, 'log'),

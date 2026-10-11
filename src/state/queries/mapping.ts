@@ -591,9 +591,8 @@ export function cachedAniListFilmId(
 }
 
 /**
- * Catalogue record backing a movie that arrived without one — today that's
- * Letterboxd items, whose origin carries no overview/runtime/genres/rating
- * and no cross-provider ids. Disabled once the item already has a Trakt id
+ * Catalogue record backing a movie that arrived without one. Letterboxd uses
+ * its public film page's typed movie/TV resolution instead. Disabled once the item already has a Trakt id
  * (it *is* a catalogue record then), or a TMDB id — those take the exact
  * `useTraktIdentityQuery` id lookup instead of this fuzzy title+year text
  * search (wrong-match risk: docs/solutions/trakt-text-search-wrong-movie-match.md).
@@ -607,6 +606,7 @@ export function useMovieCatalogueQuery(item: NormalizedMediaItem | undefined) {
     enabled:
       item != null &&
       item.type === 'MOVIE' &&
+      item.externalIds.letterboxd == null &&
       item.externalIds.trakt == null &&
       item.externalIds.tmdb == null &&
       title !== '',

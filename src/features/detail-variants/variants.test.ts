@@ -3,6 +3,12 @@ import { describe, expect, it } from 'bun:test';
 import { detailVariants } from './variants';
 
 describe('detailVariants', () => {
+  it('links the TV and whole-entry logging variants with their own route types', () => {
+    expect(detailVariants({ id: 'letterboxd-beast-boy-lone-wolf', type: 'MOVIE', tmdbTvVariant: 228880, externalIds: { letterboxd: 'beast-boy-lone-wolf' } }))
+      .toEqual([{ source: 'tmdb', id: 'tmdb-tv-228880', type: 'TV' }]);
+    expect(detailVariants({ id: 'tmdb-tv-228880', type: 'TV', externalIds: { tmdb: 228880 } }, 'beast-boy-lone-wolf'))
+      .toEqual([{ source: 'letterboxd', id: 'letterboxd-beast-boy-lone-wolf', type: 'MOVIE' }]);
+  });
   it('lists the TMDB and AniList pages of a Trakt-sourced anime show', () => {
     expect(
       detailVariants({ id: 'trakt-1', type: 'TV', externalIds: { trakt: 1, tmdb: 209867, anilist: 154587 } }),

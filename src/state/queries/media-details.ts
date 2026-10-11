@@ -42,6 +42,7 @@ export const mediaDetailsQueryKeys = {
       item?.id ?? 'none',
       item?.type ?? 'none',
       item?.isFilm === true,
+      item?.tmdbTvVariant ?? null,
       // All three ids key the entry: enrichment that discovers a new id
       // (catalogue/identity merges) refetches naturally instead of serving
       // the pre-enrichment result forever.
@@ -64,15 +65,14 @@ async function resolveTmdbId(
   item: NormalizedMediaItem,
 ): Promise<number | undefined> {
   if (item.externalIds.tmdb != null) return item.externalIds.tmdb;
+  if (item.tmdbTvVariant != null) return undefined;
   if (tmdbToken() === '') return undefined;
 
-  // A movie with no cross-provider id at all (a Letterboxd watchlist film is
-  // slug + title + year) resolves its TMDB id by title+year directly — no
-  // tracker connection required, unlike the Trakt text-search enrichment. Only
-  // when there's no Trakt id either, whose exact lookup is preferred over this
-  // fuzzy search (same guard as mapping.ts's useMovieCatalogueQuery).
+  // Letterboxd film pages resolve their own typed relationship. Other id-less
+  // movies use title/year only when no exact tracker identity is available.
   if (
     item.type === 'MOVIE' &&
+    item.externalIds.letterboxd == null &&
     item.externalIds.trakt == null &&
     item.title !== ''
   ) {
@@ -125,6 +125,7 @@ function mediaDetailsQuery(
           buildMediaDetailsDeps(),
           {
             type: item.type,
+            ...(item.tmdbTvVariant != null ? { tmdbTvVariant: item.tmdbTvVariant } : {}),
             ...(item.isFilm != null ? { isFilm: item.isFilm } : {}),
             ...(tmdbId != null ? { tmdbId } : {}),
             ...(item.externalIds.trakt != null

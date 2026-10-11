@@ -2,6 +2,8 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { watchlistMergeKeys } from '@/features/watchlist/compute';
 import type { NormalizedMediaItem } from '@/types/media';
+import { titleKey } from '@/lib/providers/pick-movie-match';
+import type { LetterboxdListFilmsPage } from '@/lib/providers/letterboxd/lists';
 
 import { cachedDiaryEntries } from './diary-pages';
 
@@ -57,18 +59,15 @@ export function findInWatchlistCache(
 /**
  * The Letterboxd-sourced twin of `item` (a `letterboxd-<slug>` item) from the
  * cached watchlist gather or diary pages, for the details variants row.
- * Cache-only by necessity, not choice: Letterboxd film pages sit behind the
- * Cloudflare wall and the web relay is username-locked, so a slug can't be
- * looked up — it is known only where the user's own Letterboxd surfaces
- * already carried it. Matched by the watchlist merge's own keys (tmdb, imdb,
- * title|year), so it pairs exactly what the merged grid pairs.
+ * Slugs come from the user's cached surfaces, never from a guessed title slug.
+ * TV links are display-only: a unique exact title/year or resolved TV relation
+ * can offer a variant without changing watchlist deduplication or log routing.
  */
 export function findLetterboxdTwinInCache(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
 ): NormalizedMediaItem | undefined {
   const keys = new Set(watchlistMergeKeys(item));
-  if (keys.size === 0) return undefined;
   const candidates = [
     ...queryClient
       .getQueriesData<{ inputs?: Array<{ item: NormalizedMediaItem; source?: string }> }>({
@@ -80,7 +79,26 @@ export function findLetterboxdTwinInCache(
     ...cachedDiaryEntries(queryClient)
       .filter((entry) => entry?.provider === 'letterboxd')
       .map((entry) => entry.item),
+    ...queryClient.getQueriesData<NormalizedMediaItem[]>({ queryKey: ['letterboxd', 'watchlist'] })
+      .flatMap(([, data]) => data ?? []),
+    ...queryClient.getQueriesData<{ pages: NormalizedMediaItem[][] }>({ queryKey: ['letterboxd', 'watchlist-pages'] })
+      .flatMap(([, data]) => data?.pages.flat() ?? []),
+    ...queryClient.getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({ queryKey: ['letterboxd', 'list-films'] })
+      .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? []),
+    ...queryClient.getQueriesData<NormalizedMediaItem | null>({ queryKey: ['letterboxd', 'film'] })
+      .flatMap(([, data]) => data == null ? [] : [data]),
   ];
+  if (item.type === 'TV') {
+    // The film-page result comes last and supersedes its id-less list copies.
+    const twins = new Map(candidates.filter((twin) => twin?.externalIds?.letterboxd != null)
+      .map((twin) => [twin.externalIds.letterboxd, twin]));
+    const matches = [...twins.values()].filter((twin) => {
+      if (twin.tmdbTvVariant != null) return twin.tmdbTvVariant === item.externalIds.tmdb;
+      if (twin.externalIds.tmdb != null) return false;
+      return item.year != null && twin.year === item.year && titleKey(twin.title) === titleKey(item.title);
+    });
+    return matches.length === 1 ? matches[0] : undefined;
+  }
   return candidates.find(
     (twin) => twin?.externalIds?.letterboxd != null && watchlistMergeKeys(twin).some((key) => keys.has(key)),
   );
