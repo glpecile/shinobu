@@ -201,6 +201,7 @@ function EpisodePage({
             <>
               <EpisodeHeading
                 episode={view.episode}
+                id={item.id}
                 number={number}
                 rating={view.rating}
                 season={season}

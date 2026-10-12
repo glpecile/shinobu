@@ -68,6 +68,7 @@ export function EpisodeStill({
 
 /** "S2E10 · Show title" eyebrow, the episode title, air date · runtime, rating. */
 export function EpisodeHeading({
+  id,
   showTitle,
   season,
   number,
@@ -75,6 +76,7 @@ export function EpisodeHeading({
   rating,
   align = 'left',
 }: {
+  id: string;
   showTitle: string;
   season: number;
   number: number;
@@ -83,15 +85,24 @@ export function EpisodeHeading({
   align?: 'left' | 'center';
 }) {
   const accent = useThemeColor('--color-accent');
+  const pushRoute = usePushRoute();
   const meta = episodeMetaLine(episode);
   const centered = align === 'center';
+  function goToSeries() {
+    pushRoute(routes.details(id, 'TV'));
+  }
   return (
     <View className={cn(centered && 'items-center')}>
-      <Eyebrow className={cn(centered && 'text-center')} numberOfLines={1} tone="accent">
-        {episodeCode(season, number)} · {showTitle}
+      <Eyebrow className={cn(centered && 'text-center')} numberOfLines={1}>
+        {episodeCode(season, number)} ·{' '}
+        <Text accessibilityRole="link" onPress={goToSeries}>
+          {showTitle}
+        </Text>
       </Eyebrow>
       <Text
+        accessibilityRole="link"
         className={cn('text-3xl font-display text-foreground mt-1', centered && 'text-center')}
+        onPress={goToSeries}
       >
         {episode.title}
       </Text>

@@ -106,6 +106,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                 <>
                   <EpisodeHeading
                     episode={view.episode}
+                    id={item.id}
                     number={number}
                     rating={view.rating}
                     season={season}
