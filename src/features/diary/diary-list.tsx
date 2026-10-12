@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
-  ActivityIndicator,
   RefreshControl,
   Text,
   View,
@@ -23,6 +22,7 @@ import {
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import { DURATION, EASE_IN_OUT, TIMING_EASE_IN_OUT } from '@/lib/motion';
@@ -559,10 +559,9 @@ function DiaryFailureBanner({
  * spacer instead, and nothing moves.
  */
 function DiaryFooter({ loading }: { loading: boolean }) {
-  const muted = useThemeColor('--color-muted');
   return (
     <View accessibilityLabel={loading ? 'Loading more entries' : undefined} className="h-24 items-center justify-center">
-      {loading && <ActivityIndicator color={muted} size="small" />}
+      {loading && <Spinner />}
     </View>
   );
 }

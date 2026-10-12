@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Spinner } from '@/components/spinner';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { Rail } from '@/components/rail';
@@ -40,7 +41,7 @@ export function LinkPill({
         {icon}
         <Text className="text-foreground font-sans text-sm">{label}</Text>
         {external && <View className="size-5 items-center justify-center">
-          {loading ? <ActivityIndicator color={muted} size="small" /> : <Ionicons color={muted} name="open-outline" size={12} />}
+          {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={12} />}
         </View>}
       </View>
     </PresstableOpacity>

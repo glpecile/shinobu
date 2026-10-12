@@ -118,6 +118,11 @@
         ],
         "paths": [
           {
+            "name": "react-native",
+            "importNames": ["ActivityIndicator"],
+            "message": "Import Spinner from @/components/spinner instead of using ActivityIndicator directly."
+          },
+          {
             "name": "cn",
             "message": "Import { cn } from @/lib/cn \u2014 the wrapper is the one swap point for the class-name composer (AGENTS.md: Class Names)."
           },
@@ -279,6 +284,7 @@
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/keyboard-aware-scroll-view.tsx",
         "src/components/presstable.tsx",
+        "src/components/spinner.tsx",
         "src/components/zoomable-image/index.tsx",
         "src/lib/cn.ts",
         "src/lib/open-external-url/index.ts"

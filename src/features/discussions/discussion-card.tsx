@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { ActivityIndicator, Text, View, useWindowDimensions } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
+import { Spinner } from '@/components/spinner';
 
 import { Image } from '@/components/image';
 import { PresstableOpacity } from '@/components/presstable';
@@ -67,7 +68,7 @@ export function DiscussionCard({ thread, board }: {
           <View className="flex-row items-center justify-between gap-2">
             <Text className="text-muted font-sans text-xs flex-1 min-w-0">/{board}/ · #{thread.id}</Text>
             <View className="size-5 shrink-0 items-center justify-center">
-              {loading ? <ActivityIndicator color={muted} size="small" /> : <Ionicons color={muted} name="open-outline" size={14} />}
+              {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={14} />}
             </View>
           </View>
         </View>
