@@ -7,12 +7,10 @@ import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 export type OverlayActionsButtonSize = 'sm' | 'md';
 export type OverlayActionsButtonTone = 'overlay' | 'surface';
 
-const BOX: Record<OverlayActionsButtonSize, string> = {
-  sm: 'w-7 h-7',
-  md: 'w-8 h-8',
+const SIZE: Record<OverlayActionsButtonSize, { box: string; icon: number }> = {
+  sm: { box: 'w-7 h-7', icon: 14 },
+  md: { box: 'w-8 h-8', icon: 16 },
 };
-
-const ICON_SIZE: Record<OverlayActionsButtonSize, number> = { sm: 14, md: 16 };
 
 const SURFACE: Record<OverlayActionsButtonTone, string> = {
   overlay: 'bg-black/60',
@@ -51,24 +49,23 @@ export function OverlayActionsButton({
   /** Positioning only. */
   className?: string;
 }) {
-  const overlayIcon = useThemeColor(ICON_TOKEN.overlay);
-  const surfaceIcon = useThemeColor(ICON_TOKEN.surface);
+  const icon = useThemeColor(ICON_TOKEN[tone]);
   return (
     <PresstableOpacity
       accessibilityLabel={label}
       accessibilityRole="button"
       className={cn(
         'items-center justify-center rounded-full',
-        BOX[size],
+        SIZE[size].box,
         SURFACE[tone],
         className,
       )}
       onPress={onPress}
     >
       <Ionicons
-        color={tone === 'overlay' ? overlayIcon : surfaceIcon}
+        color={icon}
         name="ellipsis-horizontal"
-        size={ICON_SIZE[size]}
+        size={SIZE[size].icon}
       />
     </PresstableOpacity>
   );

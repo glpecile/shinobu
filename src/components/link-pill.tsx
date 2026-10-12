@@ -13,10 +13,10 @@ import { useThemeColor } from '@/lib/theme-color';
 /**
  * A bordered pill that opens something; `external` marks a link that leaves the app.
  *
- * `onActions` is the long-press action, surfaced on web as a hover ⋯ (an
- * `OverlayActionsButton` straddling the pill's top-right corner, like the
- * person card's): web has no long-press, so without it the sheet behind a
- * studio pill would be unreachable there.
+ * `onLongPress` doubles as the web hover ⋯ (an `OverlayActionsButton`
+ * straddling the pill's top-right corner, like the person card's): web has no
+ * long-press, so without it the sheet behind a studio pill would be
+ * unreachable there.
  */
 export function LinkPill({
   icon,
@@ -24,24 +24,20 @@ export function LinkPill({
   external = false,
   onPress,
   onLongPress,
-  onActions,
-  actionsLabel,
 }: {
   icon?: ReactNode;
   label: string;
   external?: boolean;
   onPress: () => void | Promise<void>;
   onLongPress?: () => void;
-  onActions?: () => void;
-  actionsLabel?: string;
 }) {
   const muted = useThemeColor('--color-muted');
   const { loading, open } = useLinkHandoff(onPress);
   // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
   // web-only ⋯ reveal rides on RN-web's pointer events instead.
   const [hovered, setHovered] = useState(false);
-  const showActionsButton =
-    process.env.EXPO_OS === 'web' && onActions != null && hovered;
+  const webActions =
+    process.env.EXPO_OS === 'web' && hovered ? onLongPress : undefined;
 
   return (
     <View
@@ -69,11 +65,11 @@ export function LinkPill({
           </View>}
         </View>
       </PresstableOpacity>
-      {showActionsButton && (
+      {webActions != null && (
         <OverlayActionsButton
           className="absolute -top-3 -right-3"
-          label={actionsLabel ?? `More options for ${label}`}
-          onPress={onActions}
+          label={`More options for ${label}`}
+          onPress={webActions}
           size="sm"
         />
       )}
@@ -83,11 +79,10 @@ export function LinkPill({
 
 /**
  * One scrolling row of `LinkPill`s, so a section of them stays one line tall
- * however many there are. The web-only ⋯ straddles each pill's top corner, so
- * the rail carries top padding on web to keep it from clipping.
+ * however many there are.
  */
 function LinkPillRail({ children }: { children: ReactNode }) {
-  return <Rail contentContainerClassName="gap-2 web:pt-3">{children}</Rail>;
+  return <Rail contentContainerClassName="gap-2">{children}</Rail>;
 }
 
 LinkPill.Rail = LinkPillRail;

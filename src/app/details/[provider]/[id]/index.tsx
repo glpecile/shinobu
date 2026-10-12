@@ -16,6 +16,7 @@ import { FloatingBackButton } from '@/components/floating-back-button';
 import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
 import { MorphText } from '@/components/morph-text';
+import { Rail } from '@/components/rail';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
@@ -309,12 +310,13 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
       <Section.Header>
         <Section.Title>Studios</Section.Title>
       </Section.Header>
-      <LinkPill.Rail>
+      {/* The web-only ⋯ straddles each pill's top corner, so this rail
+          carries web top padding to keep it from clipping. */}
+      <Rail contentContainerClassName="gap-2 web:pt-3">
         {studios.map((entry) => (
           <LinkPill
             key={entry.id}
             label={entry.name}
-            onActions={() => openStudio(entry)}
             onLongPress={canOpenStudios ? () => openStudio(entry) : undefined}
             onPress={
               canOpenStudios
@@ -328,7 +330,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
             }
           />
         ))}
-      </LinkPill.Rail>
+      </Rail>
       {/* Kept (not nulled) while closing so the sheet's content doesn't vanish
           mid-animation — same contract as the credit sheet above. */}
       <StudioSheet
