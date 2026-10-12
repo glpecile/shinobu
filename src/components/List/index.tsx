@@ -3,6 +3,7 @@ import {
   type LegendListProps,
   type LegendListRef,
 } from '@legendapp/list/react-native';
+import { AnimatedLegendList, type AnimatedLegendListProps } from '@legendapp/list/reanimated';
 import type { ReactElement, Ref } from 'react';
 
 /**
@@ -13,7 +14,10 @@ import type { ReactElement, Ref } from 'react';
  * already forwards it) — it reaches Legend List's imperative handle
  * (`scrollToOffset` and friends).
  */
-export type ListProps<T> = LegendListProps<T> & { ref?: Ref<LegendListRef> };
+export type ListProps<T> = Omit<LegendListProps<T>, 'refScrollView'> & {
+  ref?: Ref<LegendListRef>;
+  itemLayoutAnimation?: AnimatedLegendListProps<T>['itemLayoutAnimation'];
+};
 export type { LegendListRef } from '@legendapp/list/react-native';
 
 /**
@@ -37,11 +41,14 @@ export type { LegendListRef } from '@legendapp/list/react-native';
 export function List<T>({
   recycleItems = false,
   onStartReachedThreshold = 0,
+  itemLayoutAnimation,
   ...props
 }: ListProps<T>): ReactElement {
+  const ListComponent = itemLayoutAnimation == null ? LegendList : AnimatedLegendList;
   return (
-    <LegendList
+    <ListComponent
       {...props}
+      {...(itemLayoutAnimation != null ? { itemLayoutAnimation } : {})}
       onStartReachedThreshold={onStartReachedThreshold}
       recycleItems={recycleItems}
     />

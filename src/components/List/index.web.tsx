@@ -3,9 +3,14 @@ import {
   type LegendListProps,
   type LegendListRef,
 } from '@legendapp/list/react-native';
-import type { ReactElement, Ref } from 'react';
+import { AnimatedLegendList, type AnimatedLegendListProps } from '@legendapp/list/reanimated';
+import { Activity, type ReactElement, type Ref } from 'react';
+import { useIsFocused } from 'expo-router';
 
-export type ListProps<T> = LegendListProps<T> & { ref?: Ref<LegendListRef> };
+export type ListProps<T> = Omit<LegendListProps<T>, 'refScrollView'> & {
+  ref?: Ref<LegendListRef>;
+  itemLayoutAnimation?: AnimatedLegendListProps<T>['itemLayoutAnimation'];
+};
 export type { LegendListRef } from '@legendapp/list/react-native';
 
 /**
@@ -30,17 +35,23 @@ export function List<T>({
   nestedScrollEnabled,
   recycleItems = false,
   onStartReachedThreshold = 0,
+  itemLayoutAnimation,
   ...props
 }: ListProps<T>): ReactElement {
+  const focused = useIsFocused();
   void keyboardShouldPersistTaps;
   void keyboardDismissMode;
   void nestedScrollEnabled;
+  const ListComponent = itemLayoutAnimation == null ? LegendList : AnimatedLegendList;
   // Both defaulted, not omitted — see index.tsx for why.
   return (
-    <LegendList
-      {...props}
-      onStartReachedThreshold={onStartReachedThreshold}
-      recycleItems={recycleItems}
-    />
+    <Activity mode={focused ? 'visible' : 'hidden'}>
+      <ListComponent
+        {...props}
+        {...(itemLayoutAnimation != null ? { itemLayoutAnimation } : {})}
+        onStartReachedThreshold={onStartReachedThreshold}
+        recycleItems={recycleItems}
+      />
+    </Activity>
   );
 }

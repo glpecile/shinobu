@@ -28,7 +28,15 @@ const review = (over: Partial<SerializdDiaryReview> = {}): SerializdDiaryReview 
 describe('getSerializdDiary', () => {
   test.each([true, false, undefined])('maps reviews[] including like=%s to diary entries with a stable id', async (like) => {
     const page = await Effect.runPromise(
-      getSerializdDiary(deps({ reviews: [review({ like })], totalPages: 3 }), { page: 1 }),
+      getSerializdDiary(deps({ reviews: [review({
+        like,
+        seasonName: undefined,
+        showBannerImage: '/show.jpg',
+        showSeasons: [
+          { id: 999, seasonNumber: 9, posterPath: '/wrong.jpg' },
+          { id: 555, seasonNumber: 1, name: 'First season', posterPath: '/season.jpg' },
+        ],
+      })], totalPages: 3 }), { page: 1 }),
     );
     expect(page.totalPages).toBe(3);
     expect(page.entries).toHaveLength(1);
@@ -38,6 +46,7 @@ describe('getSerializdDiary', () => {
     expect(entry.liked).toBe(like === true);
     expect(entry.item.externalIds.tmdb).toBe(1396);
     expect(entry.item.type).toBe('TV');
+    expect(entry.item.coverImage).toBe('https://image.tmdb.org/t/p/w342/season.jpg');
     // KTD8: ordering/grouping keys on dateAdded, so watchedAt carries it.
     expect(entry.watchedAt).toBe('2026-07-15T20:00:00.000Z');
     expect(entry.episodes).toEqual([5]);
@@ -69,15 +78,28 @@ describe('normalizeDiaryReview', () => {
       'now',
     );
     expect(entry.id).toBe('serializd:1396:555:5:2026-07-15T20:00:00.000Z');
+    expect(entry.item.coverImage).toBe('');
   });
 
   test('a season-level entry normalizes without episode detail', () => {
     const entry = normalizeDiaryReview(
-      review({ episodeNumber: undefined, seasonName: 'Season 2' }),
+      review({ episodeNumber: undefined, seasonName: undefined, showSeasons: [{ id: 555, seasonNumber: 2 }] }),
       'now',
     );
     expect(entry.episodes).toBeUndefined();
     expect(entry.season).toBe(2);
+  });
+
+  test.each([
+    { seasonId: 555, seasonName: undefined, showSeasons: [{ id: 555, seasonNumber: 0 }], season: 0, poster: '/show.jpg' },
+    { seasonId: 888, seasonName: undefined, showSeasons: [{ id: 555, seasonNumber: 1, posterPath: '/wrong.jpg' }], season: undefined, poster: '/show.jpg' },
+    { seasonName: 'Season 3', posterPath: '/legacy.jpg', showSeasons: null, season: 3, poster: '/legacy.jpg' },
+    { seasonName: undefined, showSeasons: [{ id: 555, name: 'Season 2' }], season: 2, poster: '/show.jpg' },
+  ])('preserves season identity and poster fallback: $season', ({ season, poster, ...raw }) => {
+    const entry = normalizeDiaryReview(review({ ...raw, showBannerImage: '/show.jpg' }), 'now');
+    expect(entry.season).toBe(season);
+    expect(entry.item.coverImage).toBe(`https://image.tmdb.org/t/p/w342${poster}`);
+    expect(entry.episodes).toEqual([5]);
   });
 });
 

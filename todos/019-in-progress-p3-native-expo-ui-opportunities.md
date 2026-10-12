@@ -8,38 +8,38 @@ priority: P3
 A source-only audit against the installed `@expo/ui` 57.0.19, following
 `018-done-p3-animation-opportunities.md`. Items are ordered by usefulness and
 confidence. Item 4 was tried on iOS and rejected after device validation.
-The watchlist tracker and anime year menus are implemented (2026-10-12);
-remaining opportunities are tracked below. Paths start at `src/` unless otherwise
-stated.
+The watchlist tracker and anime year menus, filmography Format control and Role
+menu are implemented (rechecked against source on 2026-10-12). Search scope stays
+as a FAB opening a sheet by user decision. Native provider toggles were tried
+previously and rejected by the user. Remaining validation is tracked below.
+Paths start at `src/` unless otherwise stated.
 
-## 1. Reuse native segmented controls for filmography
+## 1. Native segmented controls for filmography — implemented
 
-- [ ] Move the existing native `SeasonTabs` implementations into the shared
-  `components/segmented-control/` directory and use them for filmography's
-  Format control in `features/credit-timeline/credit-timeline.tsx:347`.
+- [x] Use shared native segmented controls for filmography's Format control in
+  `features/credit-timeline/credit-timeline.tsx`.
 
-Filmography still uses `components/segmented-control.tsx`, a shared custom
-control with a sliding selection mask and optional pager `progress`. Seasons
-already use Expo's community segmented control on iOS and a themed Compose
-`SingleChoiceSegmentedButtonRow` on Android. Reuse those implementations rather
-than add another native wrapper. Move the current custom implementation to
-`index.web.tsx`, where the season pager needs continuous `progress`.
+Filmography uses `components/native-segmented-control/`: a SwiftUI segmented
+`Picker` on iOS and a themed Compose `SingleChoiceSegmentedButtonRow` on Android.
+The shared fallback retains `components/segmented-control.tsx` on web, including
+its sliding selection mask and optional pager `progress`.
 
 Preserve `size="sm"`, per-option spoken labels, controlled selection and the
-single selection haptic. Verify the three Format labels fit the existing
-`w-52` container at larger text sizes. Native season selection already updates
-when a swipe settles, so this extraction should preserve that behavior.
+single selection haptic. Verify the three Format labels fit the current
+`flex-1 min-w-0 max-w-64` container at larger text sizes.
 
 ## 2. Use anchored native menus for short filter pickers
 
 - [x] Migrate the watchlist tracker filter to the shared native menu wrapper.
-- [ ] Migrate filmography's Role picker and the search scope picker.
+- [x] Migrate filmography's Role picker to the shared native menu wrapper.
 
-The remaining controls open `components/picker-sheet.tsx` for a single choice:
+Filmography's Role trigger uses `NativePickerMenu` in
+`features/credit-timeline/credit-timeline.tsx`, with counts in its menu titles.
+`features/credit-timeline/role-sheet.tsx` remains the web-only fallback.
 
-- `features/credit-timeline/role-sheet.tsx:23` and its trigger in
-  `features/credit-timeline/credit-timeline.tsx:360`.
-- `app/(tabs)/search.tsx:655-687`.
+**Search scope — keep existing:** `app/(tabs)/search.tsx` uses a FAB that dismisses
+the keyboard and opens `PickerSheet`. The user explicitly prefers this interaction;
+do not migrate it to an anchored menu.
 
 Use `MenuView` from `@expo/ui/community/menu`, with stable action IDs and
 `state: 'on'` for the selected entry. It provides a SwiftUI menu on iOS and a
@@ -49,8 +49,7 @@ Compose dropdown on Android. There is no `Menu` export from the installed
 The native wrapper must own the trigger. This is not a swap inside the existing
 `open`/`onClose` sheet API: iOS cannot open this menu programmatically and does
 not fire `onOpenMenu` or `onCloseMenu`. Check interaction with the existing
-pressable before sharing the wrapper. In search, verify opening while the
-keyboard is visible, since the current trigger dismisses it before opening.
+pressable before sharing the wrapper.
 
 Include role counts and watchlist counts in menu titles. Preserve `46+` as a
 lower bound and its spoken "46 or more" meaning. Preserve the watchlist's
@@ -68,24 +67,14 @@ more)`). Native menus show the selected option; the separate clear-filter
 action and web sheet are unchanged. See
 `docs/plans/0074-native-filter-and-year-menus.md`.
 
-## 3. Replace hand-drawn provider checkboxes
+## 3. Native write-provider checkboxes/toggles — rejected
 
-- [ ] Replace `ProviderToggle` in `features/write-sheet/provider-picker.tsx:36`
-  with an Expo UI `Checkbox` under a `Host`, keeping the existing selected set
-  and callbacks.
+Keep `ProviderToggle` in `features/write-sheet/provider-picker.tsx`. The user
+reported that the initial version used native checkboxes/toggles and did not
+work well. Do not repeat that migration without a specific proposal addressing
+the earlier problems; their exact cause was not established in this audit.
 
-Each row currently implements a checkbox with a pressable, two stacked glyphs
-and an animated selection background. `Checkbox` already exposes `value`,
-`onValueChange`, `label` and `disabled`. On iOS it renders a SwiftUI `Toggle`;
-on Android it renders a checkbox. Accept that platform-specific appearance.
-
-Keep provider identity visible and announce "Write to [provider]". Use
-`RNHostView` if retaining the RN provider icon inside the native layout. Make
-one control own each toggle, so tapping its label or indicator changes selection
-exactly once. All/None must update every control. The shared list is used by
-both logging and watchlist writes; its selection must not initiate a write.
-
-Keep the web implementation initially. Its role workaround is documented in
+Keep the web implementation too. Its role workaround is documented in
 `docs/solutions/web-pressto-accessibility-role-kills-onpress.md`; adding
 `role="checkbox"` to its existing pressable would break it.
 
@@ -121,6 +110,19 @@ not a wheel or a native sheet. Years are newest first, retain the existing
 min/max bounds, and show the current selection. Previous/next arrows are
 unchanged. The web sheet still builds its grid of years. Distant-year usability
 remains to be checked; restore the native grid if the long menu makes it worse.
+
+## 6. Title-copy options — proposed
+
+- [ ] Evaluate an anchored native action menu for `features/copy-title/copy-title.tsx`.
+
+The title currently opens a sheet containing only copy actions: title, title
+with year, alternate names and TMDB ID. A native action menu could anchor these
+choices to the heading without losing artwork, metadata or a write flow. Keep
+direct copy when there is only one choice and the existing sheet on web.
+
+This is a proposal, not an approved migration. Check long alternate titles,
+larger text and screen-reader usability before deciding to implement it. Do not
+show selection checkmarks: these are actions, not a single-choice filter.
 
 ## Considered and rejected
 
