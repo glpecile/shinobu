@@ -1,7 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import { Eyebrow } from '@/components/eyebrow';
@@ -459,13 +459,21 @@ function StudiosSkeleton() {
  * top-down (backdrop → poster → title → overview), so the screen reads as
  * filling in from the hero rather than flashing as one rectangle.
  */
-function DetailsSkeleton() {
+function DetailsSkeleton({ zoomPoster }: { zoomPoster?: string }) {
   return (
     <>
       <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end -mt-24 mb-6">
-          <Skeleton className="w-28 h-40 rounded-lg" delay={staggerDelay(1)} />
+          <Link.AppleZoomTarget>
+            <View className="w-28 h-40 rounded-lg overflow-hidden bg-surface">
+              {zoomPoster != null ? (
+                <Image source={{ uri: zoomPoster }} className="w-full h-full" transition={0} />
+              ) : (
+                <Skeleton className="w-full h-full rounded-lg" delay={staggerDelay(1)} />
+              )}
+            </View>
+          </Link.AppleZoomTarget>
           <View className="flex-1 ml-4 pb-1">
             <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-8 w-56 rounded mt-2" delay={staggerDelay(2)} />
@@ -487,9 +495,11 @@ export default function DetailsRoute() {
 }
 
 function DetailsScreen() {
-  const { provider, id: resourceId, 'media-type': resourceType } = useLocalSearchParams<{
-    provider: string; id: string; 'media-type'?: string;
+  const { provider, id: resourceId, 'media-type': resourceType, zoomPoster: posterParam } = useLocalSearchParams<{
+    provider: string; id: string; 'media-type'?: string; zoomPoster?: string;
   }>();
+  const zoomPoster = process.env.EXPO_OS === 'ios' && typeof posterParam === 'string' && posterParam.startsWith('https://')
+    ? posterParam : undefined;
   let mediaType: MediaType | undefined;
   switch (resourceType) {
     case 'movie': mediaType = 'MOVIE'; break;
@@ -563,7 +573,7 @@ function DetailsScreen() {
   }
 
   if (isLoading && item == null) {
-    return <DetailsSkeleton />;
+    return <DetailsSkeleton zoomPoster={zoomPoster} />;
   }
 
   if (item == null) {
@@ -709,13 +719,18 @@ function DetailsScreen() {
       {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end -mt-24 mb-6">
-          <ZoomableImage
-            alt={shown.title}
-            uri={shown.coverImage || artwork.coverImage}
-            type="image"
-            className="w-28 h-40 rounded-lg border border-border bg-surface"
-            contentFit="cover"
-          />
+          <Link.AppleZoomTarget>
+            <View className="w-28 h-40">
+              <ZoomableImage
+                alt={shown.title}
+                uri={zoomPoster ?? (shown.coverImage || artwork.coverImage)}
+                type="image"
+                className="w-28 h-40 rounded-lg border border-border bg-surface"
+                contentFit="cover"
+                {...(zoomPoster != null ? { transition: 0 } : {})}
+              />
+            </View>
+          </Link.AppleZoomTarget>
           <View className="flex-1 ml-4 pb-1">
             <View className="flex-row items-center gap-3">
               <Eyebrow tone="accent">{shown.type}</Eyebrow>

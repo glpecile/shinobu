@@ -12,6 +12,11 @@ export { PUSH_GUARD_MS, createPushGuard, type PushGuard } from './push-guard';
  */
 const pushGuard = createPushGuard();
 
+/** Link navigation shares the imperative push guard, keyed by its public route. */
+export function allowRoutePush(href: string): boolean {
+  return pushGuard.allow(href);
+}
+
 /**
  * `router.push`, minus the duplicate. Use this instead of `useRouter().push`
  * for anything a press can reach; `useRouter` stays the way to `back()`,
@@ -22,7 +27,7 @@ export function usePushRoute(): (href: string) => void {
   return (href: string) => {
     // Web only; a no-op elsewhere.
     if (openedInNewTab(href)) return;
-    if (!pushGuard.allow(href)) return;
+    if (!allowRoutePush(href)) return;
     // Cast: `routes.*` produces the literal template strings Expo Router's
     // `Href` union is built from, but they widen to `string` crossing this
     // boundary. Keeping the parameter `string` is what lets every call site

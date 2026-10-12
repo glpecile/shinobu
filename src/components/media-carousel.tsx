@@ -35,7 +35,6 @@ interface MediaCarouselProps {
   items: readonly NormalizedMediaItem[];
   /** Per-item context line under the type label (see MediaCard's `subtitle`). */
   subtitles?: Record<string, string>;
-  onItemPress?: (item: NormalizedMediaItem) => void;
   /** Opens the card actions dialog — see MediaCard's `onActionsPress`. */
   onItemActions: (item: NormalizedMediaItem) => void;
   /**
@@ -52,7 +51,6 @@ export function MediaCarousel({
   provider,
   items,
   subtitles,
-  onItemPress,
   onItemActions,
   onViewAll,
 }: MediaCarouselProps) {
@@ -92,7 +90,6 @@ export function MediaCarousel({
               <MediaCard
                 item={item}
                 onActionsPress={onItemActions}
-                onPress={onItemPress}
                 subtitle={subtitles?.[item.id]}
               />
             </View>

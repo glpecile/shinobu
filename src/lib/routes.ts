@@ -30,7 +30,7 @@ export const routes = {
   search: '/search',
   diary: '/diary',
   discussionDemo: '/discussion-demo',
-  details: (id: string, mediaType?: MediaType) => {
+  details: (id: string, mediaType?: MediaType, zoomPoster?: string) => {
     let suffix = '';
     switch (id.slice(0, id.indexOf('-'))) {
       case 'trakt':
@@ -40,7 +40,8 @@ export const routes = {
         if (mediaType === 'MANGA') suffix = '/manga';
         break;
     }
-    return `/details/${mediaPath(id)}${suffix}` as const;
+    const query = zoomPoster == null ? '' : `?zoomPoster=${encodeURIComponent(zoomPoster)}`;
+    return `/details/${mediaPath(id)}${suffix}${query}` as const;
   },
   /**
    * One episode of the show `id` (the show's own item id, resolved the same
