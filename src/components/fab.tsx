@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
+import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
 const SIZE = {
@@ -45,7 +46,10 @@ export function Fab({
         'rounded-full bg-accent items-center justify-center',
         className,
       )}
-      onPress={onPress}
+      onPress={() => {
+        haptics.selection();
+        onPress();
+      }}
       // 3D is 24% alpha, the tab bar's ripple strength. Android only.
       rippleColor={`${accentForeground}3D`}
     >
