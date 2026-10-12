@@ -367,7 +367,7 @@ export function CreditTimeline({
                       setFormat(next);
                     }}
                     options={FORMAT_OPTIONS}
-                    size="sm"
+                    size="md"
                     value={format}
                   />
                   {/* One role needs no picker. */}
@@ -514,7 +514,7 @@ export function CreditTimelineSkeleton({
             className="flex-1 min-w-0 max-w-64"
             onChange={() => {}}
             options={FORMAT_OPTIONS}
-            size="sm"
+            size="md"
             value="ALL"
           />
           {roles && (
