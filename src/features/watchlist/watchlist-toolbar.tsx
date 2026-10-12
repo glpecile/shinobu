@@ -1,8 +1,9 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Platform, Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { NativePickerMenu } from '@/components/native-picker-menu';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -24,46 +25,51 @@ function FilterPill({
   active,
   onOpen,
   onClear,
+  options,
+  onSelect,
 }: {
   active: ProviderId | null;
   onOpen: () => void;
   onClear: () => void;
+  options: readonly { value: ProviderId | null; label: string; icon?: ReactNode }[];
+  onSelect: (value: ProviderId | null) => void;
 }) {
   const foreground = useThemeColor('--color-foreground');
 
   if (active == null) {
     return (
-      <Button
-        accessibilityLabel="Filter: all trackers"
-        icon={<Button.Icon name="filter-outline" />}
-        label="All trackers"
-        onPress={onOpen}
-        shape="pill"
-        size="sm"
-        trailingIcon={<Button.Icon name="chevron-down" />}
-        variant="quiet"
-      />
+      <NativePickerMenu onSelect={onSelect} options={options} title="Show titles from" value={active}>
+        <Button
+          accessibilityLabel="Filter: all trackers"
+          icon={<Button.Icon name="filter-outline" />}
+          label="All trackers"
+          onPress={onOpen}
+          shape="pill"
+          size="sm"
+          trailingIcon={<Button.Icon name="chevron-down" />}
+          variant="quiet"
+        />
+      </NativePickerMenu>
     );
   }
 
-  // Two sibling pressables inside one bordered shell, never nested: a
-  // gesture-handler button inside another lets the ✕ press bubble into the
-  // one that opens the sheet (the same rule the poster wall's ⋯ follows).
-  // The border matches the idle `Button`'s height.
+  // Clearing stays outside the menu trigger so it never opens the picker.
   return (
     <View className="flex-row items-center rounded-full bg-surface border border-border">
-      <PresstableOpacity
-        accessibilityHint="Choose a different tracker"
-        accessibilityLabel={`Filter: ${PROVIDERS[active].label}`}
-        accessibilityRole="button"
-        className="flex-row items-center gap-2 pl-3 pr-2 py-2"
-        onPress={onOpen}
-      >
-        <ProviderIcon id={active} size={14} />
-        <Text className="text-foreground font-sans-semibold text-sm">
-          {PROVIDERS[active].label}
-        </Text>
-      </PresstableOpacity>
+      <NativePickerMenu onSelect={onSelect} options={options} title="Show titles from" value={active}>
+        <PresstableOpacity
+          accessibilityHint="Choose a different tracker"
+          accessibilityLabel={`Filter: ${PROVIDERS[active].label}`}
+          accessibilityRole="button"
+          className="flex-row items-center gap-2 pl-3 pr-2 py-2"
+          onPress={onOpen}
+        >
+          <ProviderIcon id={active} size={14} />
+          <Text className="text-foreground font-sans-semibold text-sm">
+            {PROVIDERS[active].label}
+          </Text>
+        </PresstableOpacity>
+      </NativePickerMenu>
       <PresstableOpacity
         accessibilityLabel="Show all trackers"
         accessibilityRole="button"
@@ -130,6 +136,11 @@ export function WatchlistToolbar({
   const [pickerOpen, setPickerOpen] = useState(false);
   const options = watchlistFilterOptions(entries, provider, incomplete);
   const total = watchlistTotal(entries, incomplete);
+  const menuOptions = [{ provider: null, ...total }, ...options].map((option) => ({
+    value: option.provider,
+    icon: option.provider == null ? undefined : <ProviderIcon id={option.provider} size={16} />,
+    label: `${option.provider == null ? 'All trackers' : PROVIDERS[option.provider].label} (${option.count}${option.partial ? ' or more' : ''})`,
+  }));
 
   return (
     <View className="flex-row items-center gap-3 px-6 pb-3">
@@ -137,21 +148,25 @@ export function WatchlistToolbar({
         active={provider}
         onClear={() => onProviderChange(null)}
         onOpen={() => setPickerOpen(true)}
+        onSelect={onProviderChange}
+        options={menuOptions}
       />
       <View className="flex-1" />
       <ViewToggle onChange={setWatchlistView} view={view} />
-      <PickerSheet
-        onClose={() => setPickerOpen(false)}
-        onSelect={onProviderChange}
-        open={pickerOpen}
-        title="Show titles from"
-        value={provider}
-      >
-        <FilterOption {...total} provider={null} />
-        {options.map((option) => (
-          <FilterOption {...option} key={option.provider} />
-        ))}
-      </PickerSheet>
+      {Platform.OS === 'web' && (
+        <PickerSheet
+          onClose={() => setPickerOpen(false)}
+          onSelect={onProviderChange}
+          open={pickerOpen}
+          title="Show titles from"
+          value={provider}
+        >
+          <FilterOption {...total} provider={null} />
+          {options.map((option) => (
+            <FilterOption {...option} key={option.provider} />
+          ))}
+        </PickerSheet>
+      )}
     </View>
   );
 }
