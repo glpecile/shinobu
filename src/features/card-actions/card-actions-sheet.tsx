@@ -8,7 +8,7 @@ import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import type { LogRequest } from '@/features/log-media/log-request';
-import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
+import { needsReleaseEnrichment, watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
 import { LogSheetContent } from '@/features/up-next/catch-up/catch-up-log-sheet';
@@ -152,12 +152,20 @@ export function CardActionsSheet({
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   // List cards carry only a year; resolve the same release date and identity
-  // as details before deciding whether logging is available.
+  // as details before deciding whether logging is available. Letterboxd rows
+  // resolve identity first (slug → film record); any other film-like row the
+  // gate can't judge yet (Simkl library rows never carry a release date)
+  // reads straight through — otherwise a released current-year film hides
+  // its log button as `unknown`.
   const film = useLetterboxdFilmQuery(open ? sourceItem?.externalIds.letterboxd ?? null : null);
   const resolved = sourceItem != null && film.data != null
     ? { ...mergeCatalogueMetadata(sourceItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
     : sourceItem;
-  const details = useMediaDetailsQuery(open && film.data != null ? resolved ?? undefined : undefined);
+  const details = useMediaDetailsQuery(
+    open && (film.data != null || (sourceItem != null && needsReleaseEnrichment(sourceItem)))
+      ? (resolved ?? undefined)
+      : undefined,
+  );
   const item = resolved == null ? null : applyPrimaryMetadata(resolved, details.data?.catalogue);
   /**
    * Which content the one sheet shows (plan 0032 U3): the action rows, a
@@ -296,9 +304,10 @@ export function CardActionsSheet({
           <View className="mt-5">
             {/* key: the button's sheet/result state must not leak between items. */}
             {/* Same placement predicate the details screen uses (plan 0031
-                R11) — this sheet renders `LogMediaButton` wholesale, so an
-                unreleased film would otherwise show a permanently disabled
-                "Not yet released" above the CTA that actually applies. */}
+                R11) — this sheet renders `LogMediaButton` wholesale. Only an
+                undatable film hides it; an unreleased one keeps its disabled
+                "Not yet released" beside the CTA that actually applies, the
+                anime shape. */}
             {!watchlistCtaIsPrimary(item) && (
               <LogMediaButton
                 item={item}

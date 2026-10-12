@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   filmReleaseStatus,
   hasStartedAiring,
+  needsReleaseEnrichment,
   watchlistCtaIsPrimary,
 } from './release-gate';
 
@@ -58,8 +59,20 @@ describe('filmReleaseStatus', () => {
 });
 
 describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
-  test('a film with no date at all counts too — "unknown" is not "released"', () => {
+  test('a film with no date at all hides the button — "unknown" is not "released"', () => {
     expect(watchlistCtaIsPrimary({ type: 'MOVIE' }, NOW)).toBe(true);
+  });
+
+  test('an unreleased film keeps its disabled log CTA beside the watchlist one', () => {
+    // Anime parity (owner override 2026-10-12): "Episode 1 airs in 8 days"
+    // stays visible and disabled rather than vanishing — movies do the same
+    // with "Not yet released".
+    expect(
+      watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW),
+    ).toBe(false);
+    expect(
+      watchlistCtaIsPrimary({ type: 'ANIME', isFilm: true, releaseDate: '2026-12-25' }, NOW),
+    ).toBe(false);
   });
 
   test('an anime film is film-like; an anime series is not', () => {
@@ -82,6 +95,31 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
       watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '1997-01-01' }, NOW),
     ).toBe(false);
     expect(watchlistCtaIsPrimary({ type: 'MOVIE', year: 2019 }, NOW)).toBe(false);
+  });
+});
+
+describe('needsReleaseEnrichment', () => {
+  test('only `unknown` film rows need the details read', () => {
+    // The reported Simkl case: library rows carry year only.
+    expect(needsReleaseEnrichment({ type: 'MOVIE', year: 2026 }, NOW)).toBe(true);
+    expect(needsReleaseEnrichment({ type: 'MOVIE' }, NOW)).toBe(true);
+    expect(
+      needsReleaseEnrichment({ type: 'ANIME', isFilm: true, year: 2026 }, NOW),
+    ).toBe(true);
+  });
+
+  test('judgeable rows and series never pay for the fetch', () => {
+    // Resolved by the read above: TMDB backfills 2026-08-28, so the row
+    // stops needing enrichment and the gate sees `released`.
+    expect(
+      needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-08-28' }, NOW),
+    ).toBe(false);
+    expect(
+      needsReleaseEnrichment({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW),
+    ).toBe(false);
+    expect(needsReleaseEnrichment({ type: 'MOVIE', year: 2019 }, NOW)).toBe(false);
+    expect(needsReleaseEnrichment({ type: 'TV' }, NOW)).toBe(false);
+    expect(needsReleaseEnrichment({ type: 'ANIME', year: 2026 }, NOW)).toBe(false);
   });
 });
 
