@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedSeason } from '@/types/media';
+import { airedAnimeEpisodes } from '@/features/up-next/catch-up/queue';
 
 import { seasonRows } from './season-rows';
 
@@ -41,5 +42,21 @@ describe('seasonRows', () => {
       { number: 2, title: 'Empty', episodes: [] },
     ], new Set([1, 2]));
     expect(rows.map((row) => row.kind)).toEqual(['season', 'episode', 'season']);
+  });
+
+  test('released anime with no schedule keeps its season logging action without inventing dates', () => {
+    const season: NormalizedSeason = {
+      number: 1,
+      title: 'Episodes',
+      episodes: [{ number: 1, title: 'I Picked Up a Prince' }],
+    };
+    const aired = airedAnimeEpisodes({
+      id: 'anilist-5630', title: 'Eden of the East', type: 'ANIME', year: 2009,
+      coverImage: '', currentProgress: 0, progressUnit: 'episode',
+      lastUpdated: '', externalIds: { anilist: 5630 },
+    }, season.episodes, null);
+    const rows = seasonRows([season], new Set([1]), (episode) => aired.includes(episode));
+    expect(rows.map((row) => row.kind)).toEqual(['season', 'mark', 'episode']);
+    expect(season.episodes[0].firstAired).toBeUndefined();
   });
 });

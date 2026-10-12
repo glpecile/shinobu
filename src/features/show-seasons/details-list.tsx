@@ -31,7 +31,7 @@ export function DetailsList({
 }: DetailsListProps & { episodeSection?: EpisodeSection }) {
   const { expanded, toggle } = useListDisclosure<number>();
   const { scrollY } = useScrolledTitle();
-  const rows = episodeSection == null ? [] : seasonRows(episodeSection.seasons, expanded);
+  const rows = episodeSection == null ? [] : seasonRows(episodeSection.seasons, expanded, episodeSection.isEpisodeAired);
 
   return (
     <List
@@ -83,6 +83,7 @@ export function DetailsList({
                 className={cn('border-x border-border', row.last && 'rounded-b-lg overflow-hidden mb-3')}
               >
                 <EpisodeRow
+                  aired={episodeSection.isEpisodeAired?.(row.episode)}
                   season={row.season}
                   episode={row.episode}
                   isWatched={episodeSection.watched?.has(`${row.season.number}-${row.episode.number}`) === true}

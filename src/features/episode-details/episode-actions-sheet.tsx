@@ -27,6 +27,8 @@ export interface EpisodePointer {
 }
 
 interface EpisodeActionsSheetProps {
+  /** Entry-relative airing evidence when the anime row has no date. */
+  aired?: boolean;
   item: NormalizedMediaItem;
   pointer: EpisodePointer | null;
   watched: boolean;
@@ -42,6 +44,7 @@ function SheetBody({
   watched,
   onClose,
   onMark,
+  aired: entryAired,
 }: Omit<EpisodeActionsSheetProps, 'open' | 'pointer'> & { pointer: EpisodePointer }) {
   const pushRoute = usePushRoute();
   const { season, number } = pointer;
@@ -50,7 +53,7 @@ function SheetBody({
   const view = useEpisode(item, season, number);
   const episode = view.episode ?? pointer.episode;
   const logs = useEpisodeLogs(item, season, number, episode.firstAired);
-  const aired = hasAired(episode.firstAired);
+  const aired = episode.firstAired == null ? entryAired ?? false : hasAired(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
 
   const metaLine = episodeMetaLine(episode);
@@ -115,6 +118,7 @@ function SheetBody({
  * offers, and the route to the full episode screen one row away.
  */
 export function EpisodeActionsSheet({
+  aired,
   item,
   pointer,
   watched,
@@ -126,6 +130,7 @@ export function EpisodeActionsSheet({
     <Sheet onClose={onClose} open={open && pointer != null}>
       {pointer != null && (
         <SheetBody
+          aired={aired}
           item={item}
           key={`${pointer.season}-${pointer.number}`}
           onClose={onClose}

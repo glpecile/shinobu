@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
-import { hasAired } from '@/lib/time/has-aired';
+import { airedAnimeEpisodes } from '@/features/up-next/catch-up/queue';
 import { useCatchUpControls } from '@/features/up-next/catch-up/state';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { PendingLog } from '@/features/show-seasons/season-accordion';
@@ -93,6 +93,8 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
 
   const progress = entryState?.entry?.progress ?? item.currentProgress;
   const watched = watchedKeys(progress);
+  const aired = new Set(airedAnimeEpisodes(item, season?.episodes ?? [], null).map((episode) => episode.number));
+  const isEpisodeAired = (episode: NormalizedEpisode) => aired.has(episode.number);
 
   // R8, display only: show the entry's *true* canonical season in the header
   // ("Season 2" for a sequel entry) instead of the synthesized label. Mounting
@@ -142,6 +144,7 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
       <DetailsList
         {...page}
         episodeSection={{
+          isEpisodeAired,
           seasons: labelled == null ? [] : [labelled],
           watched,
           heading: (
@@ -180,22 +183,23 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
               entryEpisodes: [episode.number],
             }),
           onMarkSeason: (s) => {
-            const aired = s.episodes.filter((e) => hasAired(e.firstAired));
-            if (aired.length === 0) return;
+            const airedEpisodes = s.episodes.filter(isEpisodeAired);
+            if (airedEpisodes.length === 0) return;
             const label = canonicalTitle ?? 'all episodes';
             openLog({
               title: `Log ${label}`,
               batch: true,
-              description: `“${item.title}” — ${aired.length} aired ${
-                aired.length === 1 ? 'episode' : 'episodes'
+              description: `“${item.title}” — ${airedEpisodes.length} aired ${
+                airedEpisodes.length === 1 ? 'episode' : 'episodes'
               }.`,
-              entryEpisodes: aired.map((episode) => episode.number),
+              entryEpisodes: airedEpisodes.map((episode) => episode.number),
             });
           },
         }}
       />
 
       <EpisodeActionsSheet
+        aired={pressed == null ? undefined : aired.has(pressed.entryNumber)}
         item={item}
         onClose={() => setActionsOpen(false)}
         onMark={() => {

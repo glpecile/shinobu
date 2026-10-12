@@ -20,6 +20,8 @@ import { formatRuntime, seasonRuntimeMinutes } from './runtime';
 export type PendingLog = Omit<LogRequest, 'item' | 'entry'>;
 
 export interface SeasonActions {
+  /** Anime can prove an undated episode aired from its catalogue evidence. */
+  isEpisodeAired?: (episode: NormalizedEpisode) => boolean;
   /** `"${season}-${number}"` watched keys; anime uses entry-relative season 1. */
   watched: ReadonlySet<string> | null;
   onMarkSeason: (season: NormalizedSeason) => void;
@@ -40,6 +42,7 @@ export function EpisodeRow({
   onMark,
   onOpen,
   onActions,
+  aired = hasAired(episode.firstAired),
 }: {
   season: NormalizedSeason;
   episode: NormalizedEpisode;
@@ -47,6 +50,7 @@ export function EpisodeRow({
   onMark: () => void;
   onOpen?: (() => void) | undefined;
   onActions?: (() => void) | undefined;
+  aired?: boolean;
 }) {
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
@@ -57,11 +61,10 @@ export function EpisodeRow({
   const [hovered, setHovered] = useState(false);
   const showActionsButton =
     process.env.EXPO_OS === 'web' && hovered && onActions != null;
-  const aired = hasAired(episode.firstAired);
   // Every known air date stays in the meta line; upcoming episodes also show
   // a countdown in the mark-button slot. No date at
-  // all means a synthesized AniList row for an announced season, where the
-  // bare word is all anyone knows.
+  // all on an unstarted season leaves only the bare word; released catalogue
+  // gaps stay loggable without displaying a fabricated date.
   const airsOn = episode.firstAired == null ? null : formatAirDate(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
   const meta = [
