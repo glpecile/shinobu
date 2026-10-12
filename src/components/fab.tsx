@@ -7,16 +7,16 @@ import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
 
 const SIZE = {
-  sm: { box: 'w-11 h-11', icon: 20 },
-  md: { box: 'w-14 h-14', icon: 24 },
+  sm: { box: 'w-11 h-11 rounded-xl', icon: 20 },
+  md: { box: 'w-14 h-14 rounded-[20px]', icon: 24 },
 };
 
 /**
- * The accent circle floating in a screen's corner. The caller positions it
+ * The accent rounded square floating in a screen's corner. The caller positions it
  * through `className`. Not a `Button`: that is a labelled pill, like
  * `RoundIconButton`'s reason for being its own pressable.
  *
- * Keeps a ripple so Android's keyboard focus draws a circle
+ * Keeps a ripple so Android's keyboard focus follows the button's shape
  * (docs/solutions/android-ripple-ignores-child-radius.md).
  */
 export function Fab({
@@ -43,7 +43,7 @@ export function Fab({
       accessibilityRole="button"
       className={cn(
         SIZE[size].box,
-        'rounded-full bg-accent items-center justify-center',
+        'bg-accent items-center justify-center',
         className,
       )}
       onPress={() => {

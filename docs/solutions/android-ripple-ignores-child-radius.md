@@ -62,4 +62,4 @@ before concluding a fix didn't work.
 `state_focused`, so Android draws its default focus highlight. That highlight is
 a rectangle over the view's bounds, whatever radius the view has. `components/fab`
 keeps a ripple for this reason: a `RippleDrawable` draws its own focused state,
-masked by the pressable's `rounded-full`, so a Tab-focused FAB draws a circle.
+masked by the pressable's border radius, so a Tab-focused FAB follows its rounded-square shape.
