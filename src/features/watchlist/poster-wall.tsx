@@ -1,14 +1,13 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 
 import { List } from '@/components/List';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterFace } from '@/components/poster-face';
-import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
 import { WatchedMark } from '@/components/watched-mark';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { WatchlistEntry, WatchlistLayoutProps } from './types';
@@ -70,7 +69,6 @@ function PosterCell({
   showWatched?: boolean;
 }) {
   const item = entry.item;
-  const foreground = useThemeColor('--color-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
@@ -153,17 +151,13 @@ function PosterCell({
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
         {showChrome && (
-          <PresstableOpacity
-            accessibilityLabel={`More options for ${item.title}`}
-            className="absolute top-1.5 right-1.5 w-7 h-7 items-center justify-center rounded-full bg-surface/95 border border-border/40"
+          <OverlayActionsButton
+            className="absolute top-1.5 right-1.5"
+            label={`More options for ${item.title}`}
             onPress={() => onActions(item)}
-          >
-            <Ionicons
-              color={foreground}
-              name="ellipsis-horizontal"
-              size={14}
-            />
-          </PresstableOpacity>
+            size="sm"
+            tone="surface"
+          />
         )}
       </View>
     </View>
