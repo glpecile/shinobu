@@ -15,6 +15,7 @@ import { type SerializdListEntry } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
 import { ListsHeader, ProviderListLink } from './list-header';
+import { ListProgress } from './list-progress';
 
 function entryRoute(entry: SerializdListEntry) {
   return entry.season != null && entry.episode != null
@@ -30,9 +31,11 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   return (
     <>
       <Head><title>{`${list.title} — Shinobu`}</title></Head>
-      <ListsHeader provider="serializd" title={list.title} />
+      <ListsHeader provider="serializd" subtitle={`by ${list.owner}`} title={list.title} />
       <View className="flex-row items-center gap-3 px-6 pb-3">
-        <Text className="font-sans text-muted text-sm flex-1 shrink" numberOfLines={2}>{`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'} · by ${list.owner}`}</Text>
+        <View className="flex-1 min-w-0 flex-row items-center gap-2">
+            <ListProgress countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`} items={[...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]} partial={!list.complete} />
+        </View>
         <ProviderListLink iconOnly provider="serializd" url={url} />
       </View>
       <List
@@ -58,7 +61,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             }
             onActions={openActions}
             onPress={() => pushRoute(entryRoute(entry))}
-            trailing={<WatchedMark item={entry.item} />}
+            trailing={<View className="flex-row items-center gap-2"><WatchedMark item={entry.item} showProgress /></View>}
           />
         )}
         ListFooterComponent={!list.complete ? (
@@ -84,8 +87,14 @@ export function SerializdListItems({ username, id, url }: { username: string | n
 export function SerializdListSkeleton() {
   return (
     <>
-      <ListsHeader provider="serializd" />
-      <Skeleton className="h-4 w-40 mx-6 mb-6 rounded" />
+      <ListsHeader provider="serializd" subtitle="" />
+      <View className="flex-row items-center gap-3 px-6 pb-3">
+        <View className="flex-1 flex-row items-center gap-2">
+          <Skeleton className="size-4 rounded-full" />
+          <Skeleton className="h-4 w-20 rounded" />
+        </View>
+        <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
+      </View>
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

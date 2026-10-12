@@ -16,7 +16,7 @@ import {
 } from '@/lib/providers/serializd/progress';
 import { recordRecentTags } from '@/state/prefs/recent-tags';
 import { DIARY_QUERY_ROOT, cachedDiaryEntries } from '@/state/queries/diary-pages';
-import { letterboxdDeps } from '@/state/queries/letterboxd';
+import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
 import { getSerializdUsername } from '@/state/session/serializd';
@@ -561,6 +561,7 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('anilist')) {
+    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
     // Up Next and the watchlist both select off this one read.
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentAnimeEntries(),
@@ -594,6 +595,9 @@ export function invalidateAfterLog(
         });
       }
     }
+  }
+  if (succeeded.includes('letterboxd')) {
+    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.filmWatchesRoot() });
   }
   // Every diary provider's write lands a new log — the unified diary must
   // show it on its next visit (plan 0016 KTD9). One query, one invalidation.

@@ -42,6 +42,9 @@ const RELAY_USER_AGENT =
 const RULES: Array<{ match: (path: string) => boolean }> = [
   // Exact poster recovery from Movie JSON-LD (plan 0066), never AJAX or artwork.
   { match: (p) => /^film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p) },
+  // Exact public identities and member watch records, never authenticated AJAX.
+  { match: (p) => /^tmdb\/[1-9][0-9]{0,14}\/$/.test(p) },
+  { match: (p) => /^[A-Za-z0-9_-]{1,39}\/film\/(?=.{1,200}\/$)[a-z0-9]+(?:-[a-z0-9]+)*\/$/.test(p) },
   // The optional `page/N/` suffix (plan 0024 U9) is the ONE widening this rule
   // has taken: the watchlist grid pages past the first 28 films. Still one
   // username, still the watchlist path, still GET-only and unauthenticated —

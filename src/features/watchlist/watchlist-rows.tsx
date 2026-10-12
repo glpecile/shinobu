@@ -120,7 +120,7 @@ function WatchlistRow({
       onPress={() => onPress(entry.item)}
       trailing={
         <View className="flex-row items-center gap-2">
-          {showWatched && <WatchedMark item={entry.item} />}
+          {showWatched && <WatchedMark item={entry.item} showProgress />}
           <ProviderCluster providers={entry.sources} />
         </View>
       }

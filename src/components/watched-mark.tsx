@@ -1,31 +1,22 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { Text, View } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
+import { ProgressRing } from '@/components/progress-ring';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
-import { useLetterboxdFilmQuery } from '@/state/queries/letterboxd';
-import { useSerializdWatchedShowsQuery } from '@/state/queries/serializd';
-import { useWatchedInfo } from '@/state/queries/watched-info';
-import { useConnectedProviders } from '@/state/session';
-import { getSerializdUsername } from '@/state/session/serializd';
+import { useMediaProgress } from '@/state/queries/media-progress';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /** Shares details' film-page identity read for slug-only posters, never a title guess. */
-export function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; poster?: boolean }) {
-  const connected = useConnectedProviders();
-  const canReadWatched = connected.includes('trakt') || connected.includes('simkl');
-  const film = useLetterboxdFilmQuery(
-    canReadWatched && item.externalIds.tmdb == null && item.externalIds.trakt == null && item.externalIds.simkl == null
-      ? item.externalIds.letterboxd ?? null : null,
-  );
+export function WatchedMark({ item, poster = false, showProgress = false }: { item: NormalizedMediaItem; poster?: boolean; showProgress?: boolean }) {
+  const state = useMediaProgress([item]).progress[0];
   const accent = useThemeColor('--color-accent');
-  const username = connected.includes('serializd') && item.type === 'TV' && item.externalIds.tmdb != null
-    ? getSerializdUsername() : null;
-  const serializd = useSerializdWatchedShowsQuery(username);
-  const watched = useWatchedInfo(film.data ?? item) != null ||
-    (username != null && serializd.data?.some((show) => show.externalIds.tmdb === item.externalIds.tmdb) === true);
+  const watched = state.watched;
+  const unit = state.unit === 'chapter' ? 'ch' : state.unit === 'season' ? 'seasons' : 'ep';
+  const label = `${state.current}${state.total != null && state.total > 0 ? ` / ${state.total}` : ''} ${unit}`;
   const style = useAnimatedStyle(() => {
     const timing = { duration: DURATION.swap, easing: KEYFRAME_EASE_OUT };
     return {
@@ -34,6 +25,7 @@ export function WatchedMark({ item, poster = false }: { item: NormalizedMediaIte
     };
   }, [watched]);
   return (
+    <>
     <AnimatedView
       accessibilityLabel={item.type === 'TV' ? 'Series watch history' : 'Watched'}
       aria-hidden={!watched}
@@ -42,5 +34,12 @@ export function WatchedMark({ item, poster = false }: { item: NormalizedMediaIte
     >
       <Ionicons color={accent} name="eye" size={14} />
     </AnimatedView>
+    {showProgress && state.current > 0 && !state.completed && (
+      <View className={cn('flex-row items-center gap-1.5', poster && 'absolute bottom-2 left-2 rounded bg-surface/95 p-1.5')} style={{ pointerEvents: 'none' }}>
+        {state.total != null && state.total > 0 && <ProgressRing label={label} max={state.total} value={state.current} />}
+        <Text className="font-sans text-xs text-foreground">{label}</Text>
+      </View>
+    )}
+    </>
   );
 }

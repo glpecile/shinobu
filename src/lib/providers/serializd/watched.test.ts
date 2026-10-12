@@ -19,11 +19,11 @@ test('series history includes later pages and preserves TMDB identity without in
   };
   const items = await Effect.runPromise(getSerializdWatchedShows(deps));
   expect(calls).toEqual([1, 2].map((page) => `https://api.test/user/gian/watchedpage_v2/${page}?sort_by=date_added_desc`));
-  expect(items).toEqual([{
+  expect(items).toEqual([{ watchedSeasons: 1, totalSeasons: undefined, item: {
     id: 'serializd-1396', title: 'Breaking Bad', type: 'TV', externalIds: { tmdb: 1396 },
     coverImage: 'https://image.tmdb.org/t/p/w342/show.jpg', currentProgress: 0,
     progressUnit: 'episode', lastUpdated: show.dateAdded,
-  }]);
+  } }]);
 });
 
 test('an empty watched library stops after its first page', async () => {

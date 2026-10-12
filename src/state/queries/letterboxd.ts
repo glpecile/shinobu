@@ -25,6 +25,7 @@ import {
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
 import { getFilmPoster, getFilmItem } from '@/lib/providers/letterboxd/film';
+import { getLetterboxdFilmWatch } from '@/lib/providers/letterboxd/watched';
 import {
   getListsPage,
   getListFilmsPage,
@@ -117,6 +118,8 @@ export function validateLetterboxdUsername(username: string): Promise<boolean> {
 export const letterboxdQueryKeys = {
   all: ['letterboxd'] as const,
   film: (slug: string) => [...letterboxdQueryKeys.all, 'film', slug] as const,
+  filmWatchesRoot: () => [...letterboxdQueryKeys.all, 'film-watch'] as const,
+  filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? null : null] as const,
   poster: (slug: string) => [...letterboxdQueryKeys.all, 'poster', slug] as const,
   watchlist: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist', username] as const,
@@ -232,16 +235,32 @@ export function findInLetterboxdListsCache(queryClient: QueryClient, id: string)
 }
 
 /** Public film pages resolve cold links and cached entries on every platform. */
-export function useLetterboxdFilmQuery(slug: string | null) {
-  const hasTmdb = useTmdbToken() !== '';
-  return useQuery({
+export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
+  return {
     queryKey: [...letterboxdQueryKeys.film(slug ?? ''), hasTmdb],
-    queryFn: ({ signal }) => Effect.runPromise(getFilmItem({ fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null }, slug ?? ''), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getFilmItem({ fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null }, slug ?? ''), { signal }),
     enabled: slug != null,
     staleTime: 60 * 60_000,
     retry: false,
     throwOnError: false,
-  });
+  };
+}
+
+export function useLetterboxdFilmQuery(slug: string | null) {
+  return useQuery(letterboxdFilmQuery(slug, useTmdbToken() !== ''));
+}
+
+/** Account-keyed watches are independent of the public film identity cache. */
+export function letterboxdFilmWatchQuery(username: string | null, item: NormalizedMediaItem) {
+  const filmLike = item.type === 'MOVIE' || item.isFilm === true;
+  return {
+    queryKey: letterboxdQueryKeys.filmWatch(username ?? '', item),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getLetterboxdFilmWatch({ ...letterboxdDeps(), username }, item), { signal }),
+    enabled: username != null && filmLike && (item.externalIds.letterboxd != null || item.externalIds.tmdb != null),
+    staleTime: 5 * 60_000,
+    retry: false,
+    throwOnError: false,
+  };
 }
 
 /**

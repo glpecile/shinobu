@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
@@ -16,6 +16,7 @@ import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view
 import { useSuspenseLetterboxdListFilmsQuery } from '@/state/queries/letterboxd';
 import { ListsHeader, ProviderListLink } from './list-header';
 import { ListLikeButton } from './list-like-button';
+import { ListProgress } from './list-progress';
 import { ListsLoadError } from './lists-page';
 
 export function LetterboxdListFilms({ username, owner, slug, url }: { username: string | null; owner: string; slug: string; url: string }) {
@@ -30,12 +31,16 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   return (
     <>
       <Head><title>{`${title} — Shinobu`}</title></Head>
-      <ListsHeader provider="letterboxd" title={title} />
+      <ListsHeader provider="letterboxd" subtitle={`by ${owner}`} title={title} />
       <View className="flex-row items-center gap-3 px-6 pb-3">
-        <Text className="font-sans text-muted text-sm flex-1 shrink" numberOfLines={2}>{`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'} · by ${owner}`}</Text>
-        <ProviderListLink iconOnly provider="letterboxd" url={url} />
-        {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
-        <ViewToggle onChange={setWatchlistView} view={view} />
+        <View className="flex-1 min-w-0 flex-row items-center gap-2">
+            <ListProgress countLabel={`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'}`} items={items} partial={pages.hasNextPage} />
+        </View>
+        <View className="flex-row shrink-0 items-center gap-1">
+          <ProviderListLink iconOnly provider="letterboxd" url={url} />
+          {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
+          <ViewToggle onChange={setWatchlistView} view={view} />
+        </View>
       </View>
       {items.length === 0 ? (
         <CenteredNotice>
@@ -64,13 +69,17 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
 export function ListFilmsSkeleton() {
   return (
     <View className="flex-1">
-      <ListsHeader provider="letterboxd" />
+      <ListsHeader provider="letterboxd" subtitle="" />
       <View className="flex-row items-center gap-3 px-6 pb-3">
-        <Skeleton className="h-4 w-24 shrink rounded" />
-        <View className="flex-1" />
-        <Skeleton className="size-11 rounded-full" />
-        <Skeleton className="size-11 rounded-full" />
-        <Skeleton className="h-8 w-16 rounded" />
+        <View className="flex-1 flex-row items-center gap-2">
+          <Skeleton className="size-4 rounded-full" />
+          <Skeleton className="h-4 w-20 rounded" />
+        </View>
+        <View className="flex-row items-center gap-1">
+          <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
+          <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
+          <Skeleton className="h-8 w-20 rounded-full" />
+        </View>
       </View>
       <WallSkeleton />
     </View>

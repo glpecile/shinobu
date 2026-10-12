@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRef, useState, type ReactNode } from 'react';
 import {
+  Platform,
   Text,
   View,
   type NativeScrollEvent,
@@ -24,6 +25,7 @@ import { EmptyStateTile } from '@/components/empty-state-tile';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
 import { MediaCard } from '@/components/media-card';
+import { NativePickerMenu } from '@/components/native-picker-menu';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { useScrolledTitle } from '@/components/scrolled-title';
@@ -288,6 +290,11 @@ export function CreditTimeline({
   // A role the new format emptied falls back to every role, rather than
   // showing nothing under a chip that is no longer there.
   const activeRole = counts.some((entry) => entry.role === role) ? role : null;
+  function selectRole(next: string | null) {
+    if (next === activeRole) return;
+    refocus();
+    setRole(next);
+  }
   const rows = timelineRows(filmography.credits, {
     format,
     role: activeRole,
@@ -363,18 +370,29 @@ export function CreditTimeline({
                   />
                   {/* One role needs no picker. */}
                   {counts.length > 1 && (
-                    <Button
-                      accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
-                      className="max-w-28 sm:max-w-36 shrink"
-                      icon={<Button.Icon name="filter-outline" />}
-                      label={activeRole ?? 'All roles'}
-                      morphLabel
-                      numberOfLines={1}
-                      onPress={() => setRoleSheetOpen(true)}
-                      shape="pill"
-                      size="sm"
-                      variant="quiet"
-                    />
+                    <NativePickerMenu
+                      onSelect={selectRole}
+                      options={[
+                        { value: null, label: `All roles (${counts.reduce((sum, entry) => sum + entry.count, 0)})` },
+                        ...counts.map((entry) => ({ value: entry.role, label: `${entry.role} (${entry.count})` })),
+                      ]}
+                      title="Role"
+                      value={activeRole}
+                    >
+                      <Button
+                        accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
+                        className="max-w-28 sm:max-w-36 shrink"
+                        icon={<Button.Icon name="filter-outline" />}
+                        label={activeRole ?? 'All roles'}
+                        morphLabel
+                        numberOfLines={1}
+                        onPress={() => setRoleSheetOpen(true)}
+                        shape="pill"
+                        size="sm"
+                        trailingIcon={<Button.Icon name="chevron-down" />}
+                        variant="quiet"
+                      />
+                    </NativePickerMenu>
                   )}
                 </TimelineControls>
               </Section>
@@ -427,17 +445,13 @@ export function CreditTimeline({
         onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
         visible={showScrollTop}
       />
-      <RoleSheet
+      {Platform.OS === 'web' && <RoleSheet
         onClose={() => setRoleSheetOpen(false)}
-        onSelect={(next) => {
-          if (next === activeRole) return;
-          refocus();
-          setRole(next);
-        }}
+        onSelect={selectRole}
         open={roleSheetOpen}
         roles={counts}
         value={activeRole}
-      />
+      />}
     </View>
   );
 }

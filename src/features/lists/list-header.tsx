@@ -14,7 +14,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 
 export function ProviderListLink({ provider, url, iconOnly = false }: { provider: ProviderId; url: string; iconOnly?: boolean }) {
-  return <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={`View on ${PROVIDERS[provider].label}`} onPress={() => void openExternalUrl(url)} variant="quiet" />;
+  return <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={`View on ${PROVIDERS[provider].label}`} onPress={() => void openExternalUrl(url)} variant={iconOnly ? 'ghost' : 'quiet'} />;
 }
 
 /**
@@ -22,17 +22,22 @@ export function ProviderListLink({ provider, url, iconOnly = false }: { provider
  * Index titles ("Your Lists"/"Liked Lists") morph instead: they are short,
  * single-line, and change from the kind filter's user state.
  */
-export function ListsHeader({ provider, title, morphTitle = false }: { provider: ProviderId; title?: string; morphTitle?: boolean }) {
+export function ListsHeader({ provider, title, subtitle, morphTitle = false }: { provider: ProviderId; title?: string; subtitle?: string; morphTitle?: boolean }) {
   const router = useRouter();
   return (
     <View className={cn('flex-row items-center gap-3 px-6 pb-4', screenHeaderTopPadding)}>
       <BackButton className="-ml-2" onPress={() => router.canGoBack() ? router.back() : router.replace(routes.home)} />
-      <ProviderIcon id={provider} size={20} />
-      {title == null ? <Skeleton className="h-8 w-56 rounded" /> : morphTitle ? (
-        <MorphText className="font-display text-foreground text-2xl">{title}</MorphText>
-      ) : (
-        <Text className="font-display text-foreground text-2xl flex-1" numberOfLines={2}>{title}</Text>
-      )}
+      <View className="flex-1 min-w-0 gap-1">
+        <View className="flex-row items-center gap-2">
+          <ProviderIcon id={provider} size={16} />
+          {title == null ? <Skeleton className="h-7 w-56 shrink rounded" /> : morphTitle ? (
+            <MorphText className="font-display text-foreground text-2xl">{title}</MorphText>
+          ) : (
+            <Text className="font-display text-foreground text-xl flex-1 min-w-0" ellipsizeMode="tail" numberOfLines={1}>{title}</Text>
+          )}
+        </View>
+        {subtitle != null && (title == null ? <Skeleton className="h-4 w-24 rounded" /> : <Text className="font-sans text-muted text-xs" numberOfLines={1}>{subtitle}</Text>)}
+      </View>
     </View>
   );
 }

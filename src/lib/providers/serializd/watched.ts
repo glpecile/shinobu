@@ -14,15 +14,22 @@ const WatchedPage = Schema.Struct({
     seasonIds: Schema.Array(Id),
     dateAdded: Schema.String,
     bannerImage: Schema.optional(Schema.NullOr(Schema.String)),
+    numSeasons: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
   })),
   totalPages: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 9999 })),
 });
+
+export interface SerializdWatchedShow {
+  item: NormalizedMediaItem;
+  watchedSeasons: number;
+  totalSeasons?: number;
+}
 
 /** One shared snapshot: Serializd retired per-show progress, so membership needs every page. */
 export const getSerializdWatchedShows = Effect.fn('serializd.getWatchedShows')(function* (deps: SerializdDeps) {
   const username = deps.session?.username;
   if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider: 'serializd', refreshFailed: true });
-  const items: NormalizedMediaItem[] = [];
+  const items: SerializdWatchedShow[] = [];
   let totalPages = 1;
   for (let page = 1; page <= totalPages; page++) {
     const raw = yield* serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/watchedpage_v2/${page}?sort_by=date_added_desc`, { auth: true });
@@ -33,6 +40,9 @@ export const getSerializdWatchedShows = Effect.fn('serializd.getWatchedShows')(f
     for (const show of result.items) {
       if (show.seasonIds.length === 0) continue;
       items.push({
+        watchedSeasons: new Set(show.seasonIds).size,
+        totalSeasons: show.numSeasons,
+        item: {
         id: `serializd-${show.showId}`,
         title: show.showName,
         coverImage: show.bannerImage ? `https://image.tmdb.org/t/p/w342${show.bannerImage}` : '',
@@ -42,6 +52,7 @@ export const getSerializdWatchedShows = Effect.fn('serializd.getWatchedShows')(f
         progressUnit: 'episode',
         lastUpdated: show.dateAdded,
         externalIds: { tmdb: show.showId },
+        },
       });
     }
   }

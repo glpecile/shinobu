@@ -149,7 +149,7 @@ function PosterCell({
             uri={item.coverImage}
           />
         </PresstableScale>
-        {showWatched && <WatchedMark item={item} poster />}
+        {showWatched && <WatchedMark item={item} poster showProgress />}
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
         {showChrome && (
