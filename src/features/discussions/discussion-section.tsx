@@ -9,6 +9,7 @@ import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
 import { discussionBoards, discussionSearchUrl, type DiscussionBoard } from '@/lib/http/fourchan';
 import { openExternalUrl } from '@/lib/open-external-url';
+import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useDiscussionsQuery } from '@/state/queries/discussions';
 import { useAnimeByIdQuery } from '@/state/queries/anilist';
@@ -31,16 +32,34 @@ export function DiscussionSection({ item, episode }: {
     externalIds: { ...item.externalIds, ...(animeId != null ? { anilist: animeId } : {}) },
   };
   const boards = discussionBoards(searchItem);
-  const threads = useDiscussionsQuery(boards, searchItem, episode?.season, episode?.number);
+  const { threads, isFetching, refetch } = useDiscussionsQuery(boards, searchItem, episode?.season, episode?.number);
   const searchTitles = [...new Set([searchItem.titles.english ?? item.title, searchItem.titles.romaji])]
     .filter((title): title is string => title != null && title.trim() !== '');
-  return <DiscussionResults searchTitles={searchTitles} threads={threads} />;
+  return <DiscussionResults isFetching={isFetching} onRefresh={refetch} searchTitles={searchTitles} threads={threads} />;
+}
+
+function DiscussionSearchLink({ board, title, label }: { board: DiscussionBoard; title: string; label: string }) {
+  const { loading, open } = useLinkHandoff(() => openExternalUrl(discussionSearchUrl(board, title), { inApp: false }));
+  return (
+    <Button
+      accessibilityLabel={`Search 4chan /${board}/ for ${title}`}
+      align="start"
+      icon={<Button.Icon name="open-outline" />}
+      label={label}
+      loading={loading}
+      loadingLabel={label}
+      onPress={open}
+      variant="quiet"
+    />
+  );
 }
 
 /** Shared by details and the dev preview, including the hidden empty state. */
-export function DiscussionResults({ threads, searchTitles = [] }: {
+export function DiscussionResults({ threads, searchTitles = [], isFetching = false, onRefresh }: {
   threads: { board: DiscussionBoard; thread: DiscussionPreview }[];
   searchTitles?: string[];
+  isFetching?: boolean;
+  onRefresh?: () => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
   const reducedMotion = useReducedMotion();
@@ -57,11 +76,11 @@ export function DiscussionResults({ threads, searchTitles = [] }: {
       <Section.Header>
         <Section.Title>Discussion</Section.Title>
         <View className="flex-1" />
-        {threads.length > 0 && searchTitles.length > 0 && (
+        {(onRefresh != null || searchTitles.length > 0) && (
           <Button
             icon={<Button.Icon name="ellipsis-horizontal" />}
             iconOnly
-            label="Discussion search options"
+            label="Discussion options"
             onPress={() => setOpen(true)}
             size="sm"
             variant="quiet"
@@ -72,23 +91,31 @@ export function DiscussionResults({ threads, searchTitles = [] }: {
         {threads.map(({ board, thread }) => <DiscussionCard board={board} key={`${board}-${thread.id}`} thread={thread} />)}
       </Rail>
       <Sheet onClose={() => setOpen(false)} open={open}>
-        <Sheet.Header>
-          <Text className="font-display text-xl text-foreground mb-4">Search discussions</Text>
+        <Sheet.Header className="items-center">
+          <Text className="font-display text-xl text-foreground">Discussion options</Text>
         </Sheet.Header>
-        {searchTitles.length > 0 && <View className="gap-2">
+        <View className="mt-5 gap-2">
+          {onRefresh != null && <Button
+            align="start"
+            icon={<Button.Icon name="refresh" />}
+            label="Refresh discussions"
+            loading={isFetching}
+            loadingLabel="Refreshing discussions"
+            onPress={() => {
+              setOpen(false);
+              void onRefresh();
+            }}
+            variant="quiet"
+          />}
           {boards.flatMap((board) => searchTitles.map((title, index) => (
-            <Button
-              accessibilityLabel={`Search 4chan /${board}/ for ${title}`}
-              align="start"
-              icon={<Button.Icon name="search-outline" />}
+            <DiscussionSearchLink
+              board={board}
               key={`${board}-${title}`}
               label={`Search on /${board}/${searchTitles.length > 1 ? ` · ${index === 0 ? 'Title' : 'Romaji'}` : ''}`}
-              onPress={() => openExternalUrl(discussionSearchUrl(board, title))}
-              trailingIcon={<Button.Icon name="open-outline" />}
-              variant="quiet"
+              title={title}
             />
           )))}
-        </View>}
+        </View>
       </Sheet>
     </Section>
     </AnimatedView>
