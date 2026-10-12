@@ -7,13 +7,17 @@ export type SeasonRow =
   | { kind: 'episode'; key: string; season: NormalizedSeason; episode: NormalizedEpisode; last: boolean };
 
 /** Closed seasons contribute only their header; expanded episodes remain individual list cells. */
-export function seasonRows(seasons: readonly NormalizedSeason[], expanded: ReadonlySet<number>): SeasonRow[] {
+export function seasonRows(
+  seasons: readonly NormalizedSeason[],
+  expanded: ReadonlySet<number>,
+  isEpisodeAired = (episode: NormalizedEpisode) => hasAired(episode.firstAired),
+): SeasonRow[] {
   const rows: SeasonRow[] = [];
   for (const season of seasons) {
     const open = expanded.has(season.number);
     rows.push({ kind: 'season', key: `season-${season.number}`, season, open });
     if (!open) continue;
-    if (season.episodes.some((episode) => hasAired(episode.firstAired))) {
+    if (season.episodes.some(isEpisodeAired)) {
       rows.push({ kind: 'mark', key: `mark-${season.number}`, season });
     }
     season.episodes.forEach((episode, index) => {
