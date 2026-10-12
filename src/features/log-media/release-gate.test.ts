@@ -4,12 +4,25 @@ import {
   filmReleaseStatus,
   hasStartedAiring,
   needsReleaseEnrichment,
+  unreleasedFilmLabel,
   watchlistCtaIsPrimary,
 } from './release-gate';
 
 // Local noon: a bare release date parses as local midnight, so a UTC-anchored
 // "now" would flip these assertions in far-east/far-west timezones.
 const NOW = new Date(2026, 6, 27, 12, 0, 0);
+
+describe('unreleasedFilmLabel', () => {
+  test.each([
+    ['2026-08-19', 'In theaters in 23 days'],
+    ['2026-07-28', 'In theaters tomorrow'],
+    [new Date(2026, 6, 27, 23).toISOString(), 'In theaters today'],
+    [undefined, 'Not yet released'],
+    ['2026-07-26', 'Not yet released'],
+  ])('%s → %s', (releaseDate, label) => {
+    expect(unreleasedFilmLabel(releaseDate, NOW)).toBe(label);
+  });
+});
 
 describe('filmReleaseStatus', () => {
   test('a film already out is released', () => {
@@ -66,7 +79,7 @@ describe('watchlistCtaIsPrimary (plan 0031 R11 — placement only)', () => {
   test('an unreleased film keeps its disabled log CTA beside the watchlist one', () => {
     // Anime parity (owner override 2026-10-12): "Episode 1 airs in 8 days"
     // stays visible and disabled rather than vanishing — movies do the same
-    // with "Not yet released".
+    // with a release countdown.
     expect(
       watchlistCtaIsPrimary({ type: 'MOVIE', releaseDate: '2026-12-25' }, NOW),
     ).toBe(false);

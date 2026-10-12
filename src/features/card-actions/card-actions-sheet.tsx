@@ -182,6 +182,9 @@ export function CardActionsSheet({
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
+  if (chosen.open !== open || chosen.itemId !== itemId) {
+    setChosen({ mode: 'actions', open, itemId });
+  }
   const mode = chosen.open === open && chosen.itemId === itemId ? chosen.mode : 'actions';
   const setMode = (next: typeof chosen.mode) => setChosen({ mode: next, open, itemId });
   // The log request the `log` mode renders (see `LogMediaButton`'s
@@ -253,10 +256,11 @@ export function CardActionsSheet({
             onCleanClose={onClose}
           />
         )}
-      {item != null && mode === 'log' && logRequest != null && logRequest.item.id === item.id && (
+      {item != null && mode === 'log' && logRequest != null && (
         <LogSheetContent
           key={`log-${item.id}-${logRequest.title}`}
           onClose={() => setMode('actions')}
+          onDismiss={onClose}
           onOpenRequest={setLogRequest}
           open={open}
           request={logRequest}
@@ -306,7 +310,7 @@ export function CardActionsSheet({
             {/* Same placement predicate the details screen uses (plan 0031
                 R11) — this sheet renders `LogMediaButton` wholesale. Only an
                 undatable film hides it; an unreleased one keeps its disabled
-                "Not yet released" beside the CTA that actually applies, the
+                release countdown beside the CTA that actually applies, the
                 anime shape. */}
             {!watchlistCtaIsPrimary(item) && (
               <LogMediaButton

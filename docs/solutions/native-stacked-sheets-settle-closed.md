@@ -27,3 +27,18 @@ grew a `log` mode rendering `LogSheetContent`, fed by `LogMediaButton`'s
 `onOpenRequest` interception (and the completion offer's, one step deeper).
 Cancel returns to the rows; a clean report toasts and returns to the rows,
 matching the pre-0068 nested-sheet UX.
+
+## Inline session lifetime
+
+The host resets its chosen mode when visibility or item identity changes, so
+reopening the same card starts at the action rows. A Letterboxd completion
+request can name a different film ID from its originating series; the host's
+mode owns the session, not equality with that follow-up ID.
+
+Unmounting the episode form marks its visibility ref false in effect cleanup.
+Outstanding writes then report through dismissed-session toasts rather than
+an invisible ledger. The one-shot form uses the same visibility/unmount guard,
+so a late movie result reports without invoking a retired host callback that
+could reset a newly opened picker. `onDismiss` is separate from the form's `onClose`: the
+"Connect one" navigation dismisses the entire host, while cancel and completion
+return to its action rows.

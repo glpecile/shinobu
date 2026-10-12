@@ -15,7 +15,7 @@ import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
-import { filmReleaseStatus, hasStartedAiring } from './release-gate';
+import { filmReleaseStatus, hasStartedAiring, unreleasedFilmLabel } from './release-gate';
 import type { LogRequest } from './log-request';
 import { useLogTargetsSplit } from './use-log-targets';
 import {
@@ -199,7 +199,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
       : releaseStatus === 'unknown'
         ? 'No release date yet'
         : releaseStatus === 'unreleased'
-          ? 'Not yet released'
+          ? unreleasedFilmLabel(item.releaseDate)
           : null;
 
   // The subject, never the verb a second time: the title above already says

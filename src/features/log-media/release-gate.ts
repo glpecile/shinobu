@@ -1,4 +1,5 @@
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
+import { localDayOffset } from '@/lib/time/relative-day';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -7,6 +8,17 @@ import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
  * different sentence from "it isn't out yet".
  */
 export type FilmReleaseStatus = 'released' | 'unreleased' | 'unknown';
+
+/** Disabled film CTA, counting down in the user's local calendar days. */
+export function unreleasedFilmLabel(
+  releaseDate: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  const offset = localDayOffset(releaseDate, now);
+  if (offset == null || offset < 0) return 'Not yet released';
+  if (offset > 1) return `In theaters in ${offset} days`;
+  return `In theaters ${offset === 0 ? 'today' : 'tomorrow'}`;
+}
 
 /** Movies and anime films — the rows a release date can gate. Series never. */
 function isFilmLike(item: Pick<NormalizedMediaItem, 'type' | 'isFilm'>): boolean {
@@ -54,7 +66,7 @@ export function filmReleaseStatus(
  *
  * Only `'unknown'` hides the button: a film with no date anywhere can't name
  * its reason, so the watchlist CTA stands alone. An *unreleased* film keeps
- * its (disabled) log CTA beside it — "Not yet released", the anime shape
+ * its (disabled) log CTA beside it — "In theaters in 23 days", the anime shape
  * ("Episode 1 airs in 8 days") — rather than a silent absence.
  *
  * Exported as one predicate — never re-derived at a call site — because the

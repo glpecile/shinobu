@@ -152,31 +152,32 @@ function LogSessionSheet({ request, open }: { request: LogRequest; open: boolean
  * picker's plan 0032 U3 shape): a second native drawer can't co-present over
  * the first, so the form swaps in instead.
  */
-export function LogSheetContent({ request, open, onClose, onOpenRequest }: {
+export function LogSheetContent({ request, open, onClose, onDismiss, onOpenRequest }: {
   request: LogRequest;
   open: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   /** Renders a follow-up request inline, like `onClose`'s host does. */
   onOpenRequest?: (request: LogRequest) => void;
 }) {
   if (!isEpisodeLog(request)) {
-    return <LogConfirmForm onClose={onClose} onOpenRequest={onOpenRequest} request={request} />;
+    return <LogConfirmForm onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} open={open} request={request} />;
   }
   return request.entry != null
-    ? <QuickCatchUpForm entry={request.entry} onClose={onClose} onOpenRequest={onOpenRequest} open={open} />
-    : <EpisodeCatchUpForm onClose={onClose} onOpenRequest={onOpenRequest} open={open} request={request} />;
+    ? <QuickCatchUpForm entry={request.entry} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} open={open} />
+    : <EpisodeCatchUpForm onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} open={open} request={request} />;
 }
 
-function QuickCatchUpForm({ entry, open, onClose, onOpenRequest }: { entry: UpNextEpisodeEntry; open: boolean; onClose: () => void; onOpenRequest?: (request: LogRequest) => void }) {
+function QuickCatchUpForm({ entry, open, onClose, onDismiss, onOpenRequest }: { entry: UpNextEpisodeEntry; open: boolean; onClose: () => void; onDismiss?: () => void; onOpenRequest?: (request: LogRequest) => void }) {
   const evidence = useCatchUpEvidence(entry);
   const queue = evidence.status === 'ready' ? catchUpQueue(entry, evidence.evidence) : null;
-  return <CatchUpForm item={entry.item} first={entryEpisode(entry)} queue={queue} source={entry.source} open={open} onClose={onClose} onOpenRequest={onOpenRequest} />;
+  return <CatchUpForm item={entry.item} first={entryEpisode(entry)} queue={queue} source={entry.source} open={open} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} />;
 }
 
-function EpisodeCatchUpForm({ request, open, onClose, onOpenRequest }: { request: LogRequest; open: boolean; onClose: () => void; onOpenRequest?: (request: LogRequest) => void }) {
+function EpisodeCatchUpForm({ request, open, onClose, onDismiss, onOpenRequest }: { request: LogRequest; open: boolean; onClose: () => void; onDismiss?: () => void; onOpenRequest?: (request: LogRequest) => void }) {
   const queue = useEpisodeLogQueue(request);
   const first = request.episodes?.[0] ?? { number: request.entryEpisodes![0] };
-  return <CatchUpForm item={request.item} first={first} queue={queue} open={open} onClose={onClose} onOpenRequest={onOpenRequest} />;
+  return <CatchUpForm item={request.item} first={first} queue={queue} open={open} onClose={onClose} onDismiss={onDismiss} onOpenRequest={onOpenRequest} />;
 }
 
 /**
@@ -210,6 +211,7 @@ function CatchUpForm({
   source,
   open,
   onClose,
+  onDismiss,
   onOpenRequest,
 }: {
   item: NormalizedMediaItem;
@@ -218,6 +220,7 @@ function CatchUpForm({
   source?: ProviderId;
   open: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   onOpenRequest?: (request: LogRequest) => void;
 }) {
   const queryClient = useQueryClient();
@@ -243,6 +246,8 @@ function CatchUpForm({
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
+    // Inline hosts unmount the form on dismissal; outstanding writes still report.
+    return () => { openRef.current = false; };
   }, [open]);
 
   const queue = frozen ?? live;
@@ -477,6 +482,7 @@ function CatchUpForm({
               item={item}
               manualTargets={manualTargets}
               onClose={onClose}
+              onDismiss={onDismiss}
               onSelectedProvidersChange={setSelectedProviders}
               onTagsChange={setTags}
               liked={liked}

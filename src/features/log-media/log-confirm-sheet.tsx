@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -59,6 +59,8 @@ export function labels(ids: readonly ProviderId[]): string {
 export interface LogFormFieldsProps {
   pending: boolean;
   onClose: () => void;
+  /** Dismiss the host before navigating away, rather than returning to its rows. */
+  onDismiss?: () => void;
   /** The item being logged — needed to build manual/outcome provider links (plan 0022). */
   item: NormalizedMediaItem;
   targets: readonly ProviderId[];
@@ -94,6 +96,7 @@ export interface LogFormFieldsProps {
 export function LogFormFields({
   item,
   onClose,
+  onDismiss,
   targets,
   manualTargets = [],
   selectedProviders,
@@ -147,7 +150,7 @@ export function LogFormFields({
         </Text>
         <ProviderPicker
           onConnect={() => {
-            onClose();
+            (onDismiss ?? onClose)();
             pushRoute(routes.settings);
           }}
           onSelectAll={selectAllProviders}
@@ -222,9 +225,11 @@ export function LogFormFields({
  * of its rows (the watchlist picker's plan 0032 U3 shape): a second native
  * drawer can't co-present over the first, so the form swaps in instead.
  */
-export function LogConfirmForm({ request, onClose, onOpenRequest }: {
+export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenRequest }: {
   request: LogRequest;
+  open: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   /** Renders a Letterboxd series-completion follow-up inline, like `onClose`'s host does. */
   onOpenRequest?: (request: LogRequest) => void;
 }) {
@@ -238,6 +243,11 @@ export function LogConfirmForm({ request, onClose, onOpenRequest }: {
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+    return () => { openRef.current = false; };
+  }, [open]);
 
   function confirm() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
@@ -255,6 +265,19 @@ export function LogConfirmForm({ request, onClose, onOpenRequest }: {
     trackBusy(item.id, write);
     void write.then(
       (outcome) => {
+        // A retired inline session must not close a newer host flow.
+        if (!openRef.current) {
+          if (isCleanWriteReport(outcome)) {
+            const copy = logToastCopy(outcome);
+            toast.success(copy.title, copy.message);
+          } else {
+            toast.error(
+              `Not logged on ${labels([...outcome.failed, ...outcome.skipped])}`,
+              outcome.succeeded.length > 0 ? `${labels(outcome.succeeded)} was logged.` : undefined,
+            );
+          }
+          return;
+        }
         if (isCleanWriteReport(outcome)) {
           const followUp = request.episodes?.length ? completion(request.episodes) : null;
           if (followUp != null) {
@@ -266,7 +289,10 @@ export function LogConfirmForm({ request, onClose, onOpenRequest }: {
           onClose();
         } else if (outcome.failed.length > 0) haptics.error();
       },
-      () => haptics.error(),
+      (error: unknown) => {
+        if (openRef.current) haptics.error();
+        else toast.error('Could not log', error instanceof Error ? error.message : undefined);
+      },
     );
   }
   const result = logMedia.data;
@@ -335,6 +361,7 @@ export function LogConfirmForm({ request, onClose, onOpenRequest }: {
             item={item}
             manualTargets={manualTargets}
             onClose={onClose}
+            onDismiss={onDismiss}
             onSelectedProvidersChange={setSelectedProviders}
             onWatchedAtChange={setWatchedAt}
             liked={liked}
