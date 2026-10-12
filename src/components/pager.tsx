@@ -156,6 +156,12 @@ export function Pager<T extends string>({
 
   function onLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
+    // A covered screen reports a zero layout on web (its stack entry is
+    // `display: none`) — unmounting the pages on it would forget every
+    // wall's scroll position, so Back would always land at the top. Keep
+    // the last measured size instead; the pages stay mounted while covered
+    // and the wall is where the user left it on return.
+    if (width === 0 || height === 0) return;
     if (width !== size.width || height !== size.height) setSize({ width, height });
   }
 
