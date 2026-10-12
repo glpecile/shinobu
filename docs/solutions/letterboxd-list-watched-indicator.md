@@ -1,4 +1,4 @@
-# Why the watched eye can't light on a Letterboxd list row
+# Letterboxd list watched indicators need film-page identity
 
 Attempted 2026-10-06, reverted same day. Recorded so the next attempt starts
 from what is actually true, not from the assumption that was wrong first.
@@ -10,7 +10,7 @@ normalizes to a `NormalizedMediaItem` whose `externalIds` is `{ letterboxd:
 <slug> }` and nothing else — no `tmdb`, `trakt`, `imdb`, `simkl`. The scrape
 exposes no cross-provider ids. This is stated in `normalize.ts`'s own comment.
 
-`WatchedMark` (src/features/credit-timeline/credit-timeline.tsx) resolves watched state through
+`WatchedMark` (`src/components/watched-mark.tsx`) resolves watched state through
 `useWatchedInfo` (src/state/queries/watched-info.ts), which asks Trakt first
 (`useTraktWatchedInfo`) then Simkl (`useSimklWatchedInfo`). Both legs match the
 item against a provider snapshot by cross-provider id:
@@ -60,3 +60,17 @@ through the full catalogue path is the cost
 `docs/solutions/letterboxd-watchlist-release-resolve-cost.md` already documents
 for Up Next — per-row on a paginated list it is heavier and was the reason this
 was scoped out of plan 0061. Not a small change.
+
+## Current approach (2026-10-12)
+
+Since the original attempt, the details path gained `useLetterboxdFilmQuery`.
+It reads the exact film page's typed TMDB relationship from the body, rather
+than relying on the list's title/year. The shared watched mark now uses that
+same query for slug-only films, then asks the existing watched snapshots.
+No catalogue/credits fetch is needed just to establish that identity.
+
+Letterboxd lists opt into the mark in both poster and row views. Reads start
+only for mounted cells and only with a usable Trakt or Simkl session, sharing
+the details query's hour-long cache. Other poster-wall callers are unchanged.
+An unavailable identity leaves the mark hidden and the film navigable; TV
+relationships stay display-only, never becoming movie watched matches.

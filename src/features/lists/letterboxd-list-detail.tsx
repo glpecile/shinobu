@@ -45,6 +45,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
         </CenteredNotice>
       ) : (
         <Layout
+          showWatched
           entries={items.map((item) => ({ id: item.id, item, sources: [], sourceIds: [item.id] }))}
           footer={<LoadMoreFooter failed={pages.isFetchNextPageError} loading={pages.isFetchingNextPage} noun="films" onRetry={() => void pages.fetchNextPage()} />}
           onEndReached={pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError ? () => void pages.fetchNextPage() : undefined}

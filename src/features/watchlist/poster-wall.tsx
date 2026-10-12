@@ -6,6 +6,7 @@ import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 import { List } from '@/components/List';
 import { PosterFace } from '@/components/poster-face';
 import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { WatchedMark } from '@/components/watched-mark';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -61,10 +62,12 @@ function PosterCell({
   entry,
   onPress,
   onActions,
+  showWatched,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
+  showWatched?: boolean;
 }) {
   const item = entry.item;
   const foreground = useThemeColor('--color-foreground');
@@ -146,6 +149,7 @@ function PosterCell({
             uri={item.coverImage}
           />
         </PresstableScale>
+        {showWatched && <WatchedMark item={item} poster />}
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
         {showChrome && (
@@ -181,6 +185,7 @@ export function PosterWall({
   onRefresh,
   onEndReached,
   footer,
+  showWatched,
 }: WatchlistLayoutProps) {
   const { columns, rowHeight } = useWallMetrics();
 
@@ -221,6 +226,7 @@ export function PosterWall({
           entry={entry}
           onActions={onItemActions}
           onPress={onItemPress}
+          showWatched={showWatched}
         />
       )}
       ListFooterComponent={footer}

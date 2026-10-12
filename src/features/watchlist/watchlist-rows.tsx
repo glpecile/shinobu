@@ -5,6 +5,7 @@ import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
+import { WatchedMark } from '@/components/watched-mark';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -87,10 +88,12 @@ function WatchlistRow({
   entry,
   onPress,
   onActions,
+  showWatched,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
+  showWatched?: boolean;
 }) {
   return (
     <ActionableRow
@@ -115,7 +118,12 @@ function WatchlistRow({
       }
       onActions={onActions}
       onPress={() => onPress(entry.item)}
-      trailing={<ProviderCluster providers={entry.sources} />}
+      trailing={
+        <View className="flex-row items-center gap-2">
+          {showWatched && <WatchedMark item={entry.item} />}
+          <ProviderCluster providers={entry.sources} />
+        </View>
+      }
     />
   );
 }
@@ -131,6 +139,7 @@ export function WatchlistRows({
   onRefresh,
   onEndReached,
   footer,
+  showWatched,
 }: WatchlistLayoutProps) {
   return (
     <List
@@ -153,7 +162,7 @@ export function WatchlistRows({
       }
       // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (
-        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} />
+        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} showWatched={showWatched} />
       )}
       ListFooterComponent={footer}
     />
