@@ -23,6 +23,7 @@ import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useCachedWatchlistRemoval } from '@/features/watchlist/use-cached-watchlist-removal';
 import { ProviderLinkRow } from '@/features/provider-links/provider-link-row';
 import { haptics } from '@/lib/haptics';
+import { applyPrimaryMetadata, mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import type { ProviderId } from '@/lib/providers/types';
 import {
   providerLinksFor,
@@ -34,6 +35,8 @@ import { hideItem } from '@/state/prefs/hidden-items';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
 import { useTraktMediaImages } from '@/state/queries/trakt';
+import { useLetterboxdFilmQuery } from '@/state/queries/letterboxd';
+import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface CardActionsSheetProps {
@@ -133,7 +136,7 @@ function SheetPoster({ item }: { item: NormalizedMediaItem }) {
  * default, off on the diary.
  */
 export function CardActionsSheet({
-  item,
+  item: sourceItem,
   open,
   onClose,
   hideLabel = 'Hide from feed',
@@ -145,6 +148,14 @@ export function CardActionsSheet({
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
+  // List cards carry only a year; resolve the same release date and identity
+  // as details before deciding whether logging is available.
+  const film = useLetterboxdFilmQuery(open ? sourceItem?.externalIds.letterboxd ?? null : null);
+  const resolved = sourceItem != null && film.data != null
+    ? { ...mergeCatalogueMetadata(sourceItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
+    : sourceItem;
+  const details = useMediaDetailsQuery(open && film.data != null ? resolved ?? undefined : undefined);
+  const item = resolved == null ? null : applyPrimaryMetadata(resolved, details.data?.catalogue);
   /**
    * Which content the one sheet shows (plan 0032 U3): the action rows, or a
    * watchlist picker rendered **in place of** them — never a second sheet

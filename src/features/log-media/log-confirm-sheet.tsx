@@ -158,12 +158,6 @@ export function LogFormFields({
           targets={targets}
         />
         <ManualWriteRows item={item} manual={manualTargets} />
-        {targets.length > 0 && selectedProviders.length === 0 && (
-          <Text className="text-accent font-sans text-sm mt-2">
-            Select at least one provider to log.
-          </Text>
-        )}
-
         <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
           {diaryProviders.length > 0 && (
             <Button
