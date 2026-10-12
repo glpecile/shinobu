@@ -565,9 +565,9 @@ function DetailsScreen() {
   function goBack() {
     if (router.canGoBack()) {
       router.back();
-    } else {
-      router.replace(routes.home);
+      return;
     }
+    router.replace(routes.home);
   }
 
   if (isLoading && item == null) {
