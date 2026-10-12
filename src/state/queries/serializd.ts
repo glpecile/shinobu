@@ -6,6 +6,7 @@ import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/tran
 import type { SerializdDeps } from '@/lib/providers/serializd/deps';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
+import { getSerializdWatchedShows } from '@/lib/providers/serializd/watched';
 
 /**
  * Real dependency wiring for Serializd effects — same state → lib/providers
@@ -38,6 +39,7 @@ export function serializdDeps(username?: string | null): SerializdDeps {
  */
 export const serializdQueryKeys = {
   all: ['serializd'] as const,
+  watchedShows: (username: string) => [...serializdQueryKeys.all, 'watched-shows', username] as const,
   listsRoot: () => [...serializdQueryKeys.all, 'lists'] as const,
   lists: (username: string, kind: SerializdListKind) => [...serializdQueryKeys.listsRoot(), username, kind] as const,
   listRoot: () => [...serializdQueryKeys.all, 'list'] as const,
@@ -45,6 +47,18 @@ export const serializdQueryKeys = {
   progress: (username: string, tmdbId: number) =>
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
 };
+
+/** Mounted TV marks share one account-wide read, not a request chain per poster. */
+export function useSerializdWatchedShowsQuery(username: string | null) {
+  return useQuery({
+    queryKey: serializdQueryKeys.watchedShows(username ?? ''),
+    queryFn: ({ signal }) => Effect.runPromise(getSerializdWatchedShows(serializdDeps(username)), { signal }),
+    enabled: username != null,
+    staleTime: 5 * 60_000,
+    retry: false,
+    throwOnError: false,
+  });
+}
 
 /** Shares the episode-granular progress cache used by log reconciliation. */
 export function useSerializdProgressQuery(tmdbId: number | undefined, username: string | null) {

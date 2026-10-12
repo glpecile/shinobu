@@ -135,6 +135,8 @@ export interface WatchlistEntry {
  * merged `WatchlistEntry` knows.
  */
 export interface WatchlistLayoutProps {
+  /** Catalogue lists can include films the viewer has already watched. */
+  showWatched?: boolean;
   entries: readonly WatchlistEntry[];
   onItemPress: (item: NormalizedMediaItem) => void;
   onItemActions: (item: NormalizedMediaItem) => void;

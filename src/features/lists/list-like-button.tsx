@@ -24,7 +24,7 @@ export function ListLikeButton({ username, owner, slug, url }: { username: strin
         });
       }}
       pressed={mutation.liked}
-      variant={mutation.liked ? 'outline' : 'quiet'}
+      variant="ghost"
     />
   );
 }

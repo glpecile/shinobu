@@ -69,6 +69,8 @@ describe('allowlist', () => {
       '/api/letterboxd/other/list/250-classics/',
       '/api/letterboxd/other/list/250-classics/page/2/',
       '/api/letterboxd/film/onibaba/',
+      '/api/letterboxd/tmdb/9463/',
+      '/api/letterboxd/glp/film/vampire-hunter-d/',
     ]) {
       const upstream = capturingUpstream(htmlResponse());
       const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);
@@ -103,6 +105,10 @@ describe('allowlist', () => {
       // The suffix is watchlist-only — it must not unlock other paths.
       '/api/letterboxd/gian/rss/page/2/',
       '/api/letterboxd/gian/films/page/2/',
+      '/api/letterboxd/tmdb/0/',
+      '/api/letterboxd/tmdb/9463/edit/',
+      '/api/letterboxd/glp/film/vampire-hunter-d/edit/',
+      '/api/letterboxd/glp/film/vampire-hunter-d/2/',
     ]) {
       const upstream = capturingUpstream(htmlResponse());
       const res = await handleLetterboxdProxy(proxyRequest(path), upstream.fetch);

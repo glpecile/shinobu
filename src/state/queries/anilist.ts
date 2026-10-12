@@ -14,6 +14,7 @@ import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
+import { getAniListLibrary } from '@/lib/providers/anilist/library';
 import {
   getCurrentAnime,
   getAnimeById,
@@ -79,6 +80,7 @@ const EPISODES_STALE_MS = 5 * 60_000;
 export const anilistQueryKeys = {
   all: ['anilist'] as const,
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
+  library: () => [...anilistQueryKeys.all, 'library'] as const,
   /**
    * The same list read, cached with its airing info and list status intact
    * (plan 0019 U2). `currentAnime` is derived from *this* entry, so the feed
@@ -146,6 +148,28 @@ const NAME_RESOLUTION_STALE_MS = 24 * 60 * 60_000;
  * wire without letting either go visibly stale (a log invalidates both).
  */
 const CURRENT_ANIME_STALE_MS = 60_000;
+
+/** Shared personal library for watched marks and progress, without per-title GraphQL reads. */
+export function useAniListLibraryQuery(enabled: boolean) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: anilistQueryKeys.library(),
+    queryFn: async ({ signal }) => {
+      const deps = anilistDeps();
+      const viewer = await queryClient.fetchQuery({
+        queryKey: anilistQueryKeys.viewer(),
+        queryFn: ({ signal: viewerSignal }) => Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
+        staleTime: Number.POSITIVE_INFINITY,
+        gcTime: Number.POSITIVE_INFINITY,
+      });
+      return Effect.runPromise(getAniListLibrary(deps, viewer.id), { signal });
+    },
+    enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+    throwOnError: false,
+  });
+}
 
 /**
  * The viewer's currently-watching list with airing info (plan 0019 U2). The

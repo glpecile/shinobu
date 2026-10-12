@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRef, useState, type ReactNode } from 'react';
 import {
+  Platform,
   Text,
   View,
   type NativeScrollEvent,
@@ -24,6 +25,7 @@ import { EmptyStateTile } from '@/components/empty-state-tile';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
 import { MediaCard } from '@/components/media-card';
+import { NativePickerMenu } from '@/components/native-picker-menu';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import { useScrolledTitle } from '@/components/scrolled-title';
@@ -32,13 +34,13 @@ import { Section } from '@/components/section';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { ViewToggle } from '@/components/view-toggle';
+import { WatchedMark } from '@/components/watched-mark';
 import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
-import { useWatchedInfo } from '@/state/queries/watched-info';
 import { setWatchlistView, useWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -142,29 +144,6 @@ function TimelineHead({
       <RailHead.Title muted={upcoming}>{upcoming ? 'TBA' : year}</RailHead.Title>
       <RailHead.Count>{label}</RailHead.Count>
     </RailHead>
-  );
-}
-
-/** Fades in when a tracker snapshot resolves; keeps the row's trailing space stable. */
-function WatchedMark({ item, poster = false }: { item: NormalizedMediaItem; poster?: boolean }) {
-  const accent = useThemeColor('--color-accent');
-  const watched = useWatchedInfo(item) != null;
-  const style = useAnimatedStyle(() => {
-    const timing = { duration: DURATION.swap, easing: KEYFRAME_EASE_OUT };
-    return {
-      opacity: withTiming(watched ? 1 : 0, timing),
-      transform: [{ scale: withTiming(watched ? 1 : 0.8, timing) }],
-    };
-  }, [watched]);
-  return (
-    <AnimatedView
-      accessibilityLabel="Watched"
-      aria-hidden={!watched}
-      className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95')}
-      style={[style, { pointerEvents: 'none' }]}
-    >
-      <Ionicons color={accent} name="eye" size={14} />
-    </AnimatedView>
   );
 }
 
@@ -311,6 +290,11 @@ export function CreditTimeline({
   // A role the new format emptied falls back to every role, rather than
   // showing nothing under a chip that is no longer there.
   const activeRole = counts.some((entry) => entry.role === role) ? role : null;
+  function selectRole(next: string | null) {
+    if (next === activeRole) return;
+    refocus();
+    setRole(next);
+  }
   const rows = timelineRows(filmography.credits, {
     format,
     role: activeRole,
@@ -386,18 +370,29 @@ export function CreditTimeline({
                   />
                   {/* One role needs no picker. */}
                   {counts.length > 1 && (
-                    <Button
-                      accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
-                      className="max-w-28 sm:max-w-36 shrink"
-                      icon={<Button.Icon name="filter-outline" />}
-                      label={activeRole ?? 'All roles'}
-                      morphLabel
-                      numberOfLines={1}
-                      onPress={() => setRoleSheetOpen(true)}
-                      shape="pill"
-                      size="sm"
-                      variant="quiet"
-                    />
+                    <NativePickerMenu
+                      onSelect={selectRole}
+                      options={[
+                        { value: null, label: `All roles (${counts.reduce((sum, entry) => sum + entry.count, 0)})` },
+                        ...counts.map((entry) => ({ value: entry.role, label: `${entry.role} (${entry.count})` })),
+                      ]}
+                      title="Role"
+                      value={activeRole}
+                    >
+                      <Button
+                        accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
+                        className="max-w-28 sm:max-w-36 shrink"
+                        icon={<Button.Icon name="filter-outline" />}
+                        label={activeRole ?? 'All roles'}
+                        morphLabel
+                        numberOfLines={1}
+                        onPress={() => setRoleSheetOpen(true)}
+                        shape="pill"
+                        size="sm"
+                        trailingIcon={<Button.Icon name="chevron-down" />}
+                        variant="quiet"
+                      />
+                    </NativePickerMenu>
                   )}
                 </TimelineControls>
               </Section>
@@ -450,17 +445,13 @@ export function CreditTimeline({
         onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
         visible={showScrollTop}
       />
-      <RoleSheet
+      {Platform.OS === 'web' && <RoleSheet
         onClose={() => setRoleSheetOpen(false)}
-        onSelect={(next) => {
-          if (next === activeRole) return;
-          refocus();
-          setRole(next);
-        }}
+        onSelect={selectRole}
         open={roleSheetOpen}
         roles={counts}
         value={activeRole}
-      />
+      />}
     </View>
   );
 }

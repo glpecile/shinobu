@@ -60,6 +60,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
     <>
       {pages.length === 0 ? (
         <CenteredNotice>
+          <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
           <CenteredNotice.Body>{emptyBody}</CenteredNotice.Body>
           <ProviderListLink provider={provider} url={url} />
