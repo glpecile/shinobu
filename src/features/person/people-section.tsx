@@ -1,14 +1,13 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
 
 import { List } from '@/components/List';
-import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
+import { PresstableScale } from '@/components/presstable';
 import { useRailFade } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
-import { useThemeColor } from '@/lib/theme-color';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 
 import { PersonAvatar } from './person-avatar';
@@ -50,7 +49,6 @@ function PersonCard({
   onPress?: () => void;
   onActions: (credit: PersonCredit) => void;
 }) {
-  const accentForeground = useThemeColor('--color-accent-foreground');
   // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
   // web-only ⋯ reveal rides on RN-web's pointer events instead (same shape as
   // the media card's).
@@ -88,20 +86,12 @@ function PersonCard({
         </PresstableScale>
       )}
       {showActionsButton && (
-        <PresstableOpacity
-          accessibilityLabel={`More about ${credit.name}`}
-          accessibilityRole="button"
-          className="absolute top-0 right-0 w-7 h-7 items-center justify-center rounded-full bg-black/70"
+        <OverlayActionsButton
+          className="absolute top-0 right-0"
+          label={`More about ${credit.name}`}
           onPress={() => onActions(credit)}
-        >
-          <Ionicons
-            color={
-              accentForeground
-            }
-            name="ellipsis-horizontal"
-            size={14}
-          />
-        </PresstableOpacity>
+          size="sm"
+        />
       )}
     </View>
   );

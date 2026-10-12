@@ -1,17 +1,16 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
 import { MorphText } from '@/components/morph-text';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
 import type { CardBadge } from '@/features/up-next/badges';
 import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
 import { usePushRoute } from '@/lib/navigation';
-import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { Badge } from './badge';
@@ -58,7 +57,6 @@ export function EpisodeCard({
   const label = groupLabel(group);
   const stacked = entries.length > 1;
   const href = stacked ? undefined : episodeHref(lead);
-  const accentForeground = useThemeColor('--color-accent-foreground');
   // Web-only hover ⋯, as on the media card; it takes the stack count's corner.
   const [hovered, setHovered] = useState(false);
   const showActionsButton =
@@ -149,13 +147,12 @@ export function EpisodeCard({
           )}
         </PresstableScale>
         {showActionsButton && (
-          <PresstableOpacity
-            accessibilityLabel={`More options for ${lead.item.title}`}
-            className="absolute top-2 right-2 w-8 h-8 items-center justify-center rounded-full bg-black/60"
+          <OverlayActionsButton
+            className="absolute top-2 right-2"
+            label={`More options for ${lead.item.title}`}
             onPress={() => onActionsPress(lead.item)}
-          >
-            <Ionicons color={accentForeground} name="ellipsis-horizontal" size={16} />
-          </PresstableOpacity>
+            size="md"
+          />
         )}
       </View>
 

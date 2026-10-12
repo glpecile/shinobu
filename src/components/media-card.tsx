@@ -1,4 +1,3 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, type Href } from 'expo-router';
 import { useState } from 'react';
@@ -8,8 +7,9 @@ import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { Image } from '@/components/image';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
@@ -17,7 +17,6 @@ import { allowRoutePush, usePushRoute } from '@/lib/navigation';
 import { sourceProviderOf } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -46,7 +45,6 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   const sourceLabel = source == null ? null : source === 'tmdb' ? 'TMDB' : PROVIDERS[source].label;
   // Trakt's watched feed omits artwork; fetch it for visible cards.
   const { coverImage } = useTraktMediaImages(item);
-  const accentForeground = useThemeColor('--color-accent-foreground');
   // Uniwind has no group-hover support.
   const [hovered, setHovered] = useState(false);
   const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
@@ -145,19 +143,12 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
         </PresstableScale>
       )}
       {showActionsButton && (
-        <PresstableOpacity
-          accessibilityLabel={`More options for ${item.title}`}
-          className="absolute top-2 right-2 w-8 h-8 items-center justify-center rounded-full bg-black/60"
+        <OverlayActionsButton
+          className="absolute top-2 right-2"
+          label={`More options for ${item.title}`}
           onPress={() => onActionsPress(item)}
-        >
-          <Ionicons
-            color={
-              accentForeground
-            }
-            name="ellipsis-horizontal"
-            size={16}
-          />
-        </PresstableOpacity>
+          size="md"
+        />
       )}
     </View>
   );

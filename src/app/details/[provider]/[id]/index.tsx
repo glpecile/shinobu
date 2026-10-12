@@ -314,6 +314,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
           <LinkPill
             key={entry.id}
             label={entry.name}
+            onActions={() => openStudio(entry)}
             onLongPress={canOpenStudios ? () => openStudio(entry) : undefined}
             onPress={
               canOpenStudios
