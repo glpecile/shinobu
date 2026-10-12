@@ -24,7 +24,8 @@ export function DiscussionSection({ item, episode }: {
 }) {
   const { data: anilistId } = useAniListIdByTmdbQuery(item);
   const animeId = item.externalIds.anilist ?? anilistId ?? null;
-  const { data: anime } = useAnimeByIdQuery(animeId);
+  // AniList-origin items already carry the titles and aliases this read supplies.
+  const { data: anime } = useAnimeByIdQuery(item.id.startsWith('anilist-') ? null : animeId);
   const searchItem = {
     ...item,
     titles: { ...item.titles, ...anime?.titles },

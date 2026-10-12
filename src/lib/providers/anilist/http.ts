@@ -1,10 +1,9 @@
-import { Duration, Effect, Schema } from 'effect';
+import { Clock, Duration, Effect, Schema } from 'effect';
 
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { optionalNullable } from '@/lib/providers/schema';
 
 import {
-  RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
   RATE_LIMIT_MAX_RETRY_DELAY_MS,
 } from '@/lib/providers/rate-limits';
 import {
@@ -19,6 +18,9 @@ import type { AniListDeps } from './deps';
 // Lives here (not config.ts) so the Effect layer stays free of react-native
 // imports — config.ts branches on Platform, which bun:test cannot load.
 export const ANILIST_GRAPHQL_URL = 'https://graphql.anilist.co';
+
+// All AniList deps use the same transport; public and personal reads share its budget.
+const cooldowns = new WeakMap<AniListDeps['fetch'], number>();
 
 /**
  * Sent on every request. AniList's edge answers any request *without* a
@@ -43,6 +45,9 @@ const graphQLResponse = Schema.Struct({
     message: optionalNullable(Schema.String),
     status: optionalNullable(Schema.Number),
   }))),
+  error: optionalNullable(Schema.Struct({
+    messages: optionalNullable(Schema.Array(Schema.String)),
+  })),
 });
 
 /**
@@ -59,6 +64,9 @@ export function anilistGraphQL<A>(
   options: AniListGraphQLOptions = {},
 ): Effect.Effect<A, ProviderError> {
   return Effect.gen(function* () {
+    const now = yield* Clock.currentTimeMillis;
+    const remaining = (cooldowns.get(deps.fetch) ?? 0) - now;
+    if (remaining > 0) return yield* new ProviderRateLimitError({ provider: 'anilist', retryAfterMs: remaining });
     const response = yield* Effect.tryPromise({
       try: (signal) =>
         deps.fetch(ANILIST_GRAPHQL_URL, {
@@ -85,11 +93,15 @@ export function anilistGraphQL<A>(
     }
     const rateLimitError = () => {
       const retryAfterSeconds = Number(response.headers.get('Retry-After'));
+      const reset = Number(response.headers.get('X-RateLimit-Reset')) * 1000;
+      const retryAfterMs = Math.max(
+        Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : 0,
+        Number.isFinite(reset) && reset > now ? reset - now : 0,
+      ) || 60_000;
+      cooldowns.set(deps.fetch, Math.max(cooldowns.get(deps.fetch) ?? 0, now + retryAfterMs));
       return new ProviderRateLimitError({
         provider: 'anilist',
-        ...(Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
-          ? { retryAfterMs: retryAfterSeconds * 1000 }
-          : {}),
+        retryAfterMs,
       });
     };
 
@@ -120,6 +132,17 @@ export function anilistGraphQL<A>(
     ) === true;
     if (response.status === 429 && !apiDisabled) {
       return yield* rateLimitError();
+    }
+
+    // AniList's parser rejects some valid GraphQL syntax with a 500 envelope.
+    // Replaying the same rejected operation only spends more of the rate budget.
+    if (body.error?.messages?.some((message) => /^Bad request[.!]?$/i.test(message)) === true) {
+      return yield* new ProviderNetworkError({
+        provider: 'anilist',
+        status: response.status,
+        retryable: false,
+        cause: new Error(`AniList rejected the query (HTTP ${response.status}): ${body.error.messages.join('; ')}`),
+      });
     }
 
     if (body.errors != null && body.errors.length > 0) {
@@ -161,7 +184,7 @@ function withRateLimitRetry<A>(
 ): Effect.Effect<A, ProviderError> {
   return effect.pipe(
     Effect.catchTag('ProviderRateLimitError', (error) => {
-      const delay = error.retryAfterMs ?? RATE_LIMIT_DEFAULT_RETRY_AFTER_MS;
+      const delay = error.retryAfterMs ?? 60_000;
       if (delay > RATE_LIMIT_MAX_RETRY_DELAY_MS) return Effect.fail(error);
       return Effect.sleep(Duration.millis(delay)).pipe(Effect.andThen(effect));
     }),

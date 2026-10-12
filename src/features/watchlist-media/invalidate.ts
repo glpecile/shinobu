@@ -44,6 +44,7 @@ export function invalidateAfterWatchlist(
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
   }
   if (succeeded.includes('anilist')) {
+    if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnimeEntries() });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {

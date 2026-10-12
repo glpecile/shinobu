@@ -44,6 +44,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const busy = useQuickLogBusy(item.id);
   const watchedInfo = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
+    type: item.type,
     mediaId: item.externalIds.anilist,
     enabled: connected.includes('anilist'),
   });

@@ -5,6 +5,7 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
+import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 
 import { providersForFeed } from '@/lib/providers/routing';
 import { getTrending } from '@/lib/providers/simkl/reads';
@@ -54,11 +55,14 @@ export interface UnifiedFeedResult {
   refetch: () => Promise<unknown>;
 }
 
+type FeedData = NormalizedMediaItem[] | SeasonalAnimePage;
+
 interface FeedQueryConfig {
   slot: FeedSlot;
   provider: ProviderId;
   queryKey: readonly unknown[];
-  queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedMediaItem[]>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<FeedData>;
+  select?: (data: FeedData) => NormalizedMediaItem[];
   staleTime?: number;
 }
 
@@ -102,6 +106,7 @@ export const feedOptions = {
   seasonalAnime: (season: AnimeSeasonWindow, format: AnimeFormatFilter = 'TV') => ({
     queryKey: anilistQueryKeys.seasonalAnime(season, format),
     queryFn: ({ signal }: { signal: AbortSignal }) => fetchSeasonalAnime(season, format, 1, signal),
+    select: (data: FeedData) => Array.isArray(data) ? data : data.items,
     staleTime: CATALOGUE_STALE_MS,
   }),
   // Personal rows — only fetched while their provider is connected.
@@ -280,12 +285,9 @@ export function useRefetchUnifiedFeed() {
 }
 
 /**
- * Aggregates every connected, read-capable provider into one normalized feed
- * (plan.md 2.1). Home no longer consumes this — it renders per-row suspense
- * hooks under boundaries; this aggregate remains for consumers that resolve
- * an item by id across every row (the details screen, which must find an item
- * wherever it came from). Results are keyed by named slot, not array
- * position — the query list is conditional in two dimensions.
+ * Observes cached feed rows for item resolution without fetching Home's
+ * catalogues on detail or episode navigation. Cold links have their own ID
+ * queries; explicit refresh can still refetch these observers.
  *
  * `includeHidden` skips the hidden-items filter — for consumers that resolve
  * an item by id rather than display rows (the details screen must render
@@ -299,7 +301,7 @@ export function useUnifiedFeed(
   const animeSeason = animeSeasonAt(new Date());
   const queries = activeFeedConfigs(connected, queryClient, animeSeason);
 
-  const results = useQueries({ queries });
+  const results = useQueries({ queries: queries.map((query) => ({ ...query, enabled: false })) });
 
   // Items the user hid (card actions dialog) drop out of every row here, at
   // the aggregation boundary — screens never re-filter. Query caches keep the

@@ -1,5 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
+import { ProviderNetworkError } from '@/lib/providers/errors';
+
 /**
  * Failures a blind retry can never fix — and would make worse. The provider
  * layer owns whether a 429's Retry-After permits a retry,
@@ -27,6 +29,7 @@ function errorLabel(error: unknown): string {
 }
 
 export function isRetryable(error: unknown): boolean {
+  if (error instanceof ProviderNetworkError && error.retryable === false) return false;
   return !NEVER_RETRY.test(errorLabel(error));
 }
 

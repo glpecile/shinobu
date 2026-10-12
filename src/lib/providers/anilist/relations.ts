@@ -5,6 +5,7 @@ import type {
   NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedMediaItem,
+  NormalizedSeason,
 } from '@/types/media';
 
 import {
@@ -14,9 +15,22 @@ import {
   type AniListStaffEdge,
 } from './credits';
 import type { AniListDeps } from './deps';
-import { anilistRequest } from './http';
+import {
+  completeAiringSchedule,
+  EPISODE_FIELDS,
+  normalizeAnimeEpisodes,
+  type AnimeEpisodesResponse,
+} from './episodes';
+import { anilistAuthedRequest, anilistRequest } from './http';
 import { humanizeEnum, normalizeAniListMedia, type AniListMedia } from './normalize';
-import { MEDIA_FIELDS } from './reads';
+import {
+  CARD_FIELDS,
+  ENTRY_FIELDS,
+  MEDIA_FIELDS,
+  normalizeEntryState,
+  type AniListEntryState,
+  type MediaEntryResponse,
+} from './reads';
 
 interface RelationsResponse {
   Media: {
@@ -33,7 +47,7 @@ interface RelationsResponse {
     } | null;
     characters?: { edges: AniListCharacterRoleEdge[] | null } | null;
     staff?: { edges: AniListStaffEdge[] | null } | null;
-  } | null;
+  } & AniListMedia & Partial<NonNullable<MediaEntryResponse['Media']>> & Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null;
 }
 
 export interface AnimeRelation {
@@ -43,6 +57,11 @@ export interface AnimeRelation {
 }
 
 export interface AnimeRelations {
+  item: NormalizedMediaItem | null;
+  /** Null for public reads, not a claim that the viewer has no entry. */
+  entryState: AniListEntryState | null;
+  /** Anime episodes share this round-trip; manga has no season. */
+  season: NormalizedSeason | null;
   relations: AnimeRelation[];
   /** Community recommendations, best-rated first. */
   recommendations: NormalizedMediaItem[];
@@ -55,23 +74,26 @@ export interface AnimeRelations {
 }
 
 /**
- * Everything AniList links from one media (anime and manga): relations,
- * recommendations and tags, plus characters and staff with `withCredits`. One
- * request for all of it — the 30 req/min budget
- * (docs/solutions/anilist-rate-limit-retry-storm.md). Public data.
+ * Details and connections share one operation, including entry state when
+ * connected. Long airing schedules continue through their remaining pages.
  *
- * `withCredits` is for manga, which TMDB can't credit: anime credits come from
- * `getMediaDetails`, and asking here too would fetch them twice.
+ * `withCredits` is for manga, which TMDB can't credit. Anime asks for its
+ * episodes instead, so opening a title doesn't spend a separate request on
+ * each detail section. Anime credits still come from `getMediaDetails`.
  */
 export function getAnimeRelations(
   deps: AniListDeps,
   params: { mediaId: number; withCredits: boolean },
 ): Effect.Effect<AnimeRelations, ProviderError> {
   return Effect.gen(function* () {
-    const data = yield* anilistRequest<RelationsResponse>(
+    const withEntry = deps.tokens.get() != null;
+    const request = (authenticated: boolean) => (authenticated ? anilistAuthedRequest : anilistRequest)<RelationsResponse>(
       deps,
-      `query ($id: Int, $withCredits: Boolean!) {
+      `query ($id: Int, $withCredits: Boolean!, $withEntry: Boolean!) {
         Media(id: $id) {
+          ${MEDIA_FIELDS}
+          mediaListEntry @include(if: $withEntry) { ${ENTRY_FIELDS} }
+          ${params.withCredits ? '' : EPISODE_FIELDS}
           characters(sort: [ROLE, RELEVANCE, ID], perPage: 15) @include(if: $withCredits) {
             edges { role node { id name { full } image { large } } }
           }
@@ -79,17 +101,26 @@ export function getAnimeRelations(
             edges { role node { id name { full } image { large } } }
           }
           tags { name isMediaSpoiler }
-          relations { edges { relationType node { ${MEDIA_FIELDS} } } }
+          relations { edges { relationType node { ${CARD_FIELDS} } } }
           recommendations(sort: [RATING_DESC, ID], perPage: 15) {
-            nodes { mediaRecommendation { ${MEDIA_FIELDS} } }
+            nodes { mediaRecommendation { ${CARD_FIELDS} } }
           }
         }
       }`,
-      { variables: { id: params.mediaId, withCredits: params.withCredits } },
+      { variables: { id: params.mediaId, withCredits: params.withCredits, withEntry: authenticated } },
     );
+    let authenticated = withEntry;
+    const data = yield* request(withEntry).pipe(Effect.catchTag('ProviderAuthError', () => {
+      authenticated = false;
+      return request(false);
+    }));
+    if (!params.withCredits) yield* completeAiringSchedule(deps, params.mediaId, data.Media);
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return {
+      item: data.Media == null ? null : normalizeAniListMedia(data.Media, nowIso),
+      entryState: authenticated ? normalizeEntryState(data.Media) : null,
+      season: params.withCredits ? null : normalizeAnimeEpisodes(data.Media),
       relations: (data.Media?.relations?.edges ?? []).flatMap((edge) =>
         edge?.node == null
           ? []

@@ -95,7 +95,8 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     invalidateAfterWatchlist(client, SHOW, ['anilist']);
     expect(keys).toContain('anilist/current-anime-entries');
     // KTD-2's guard reads this before the next write.
-    expect(keys).toContain('anilist/entry-state/9');
+    expect(keys.some((key) => key.startsWith('anilist/entry-state/9/'))).toBe(true);
+    expect(keys).toContain('anilist/relations/9');
   });
 
   test('Letterboxd invalidates both separately-keyed reads of one list', () => {

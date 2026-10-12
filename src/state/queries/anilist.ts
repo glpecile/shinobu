@@ -7,24 +7,22 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
+import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
-import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
 import { getAniListLibrary } from '@/lib/providers/anilist/library';
 import {
   getCurrentAnime,
-  getAnimeById,
-  getEntryState,
   getSeasonalAnime,
   getViewer,
   searchAniListStaff,
   searchAniListStudio,
   searchMedia,
-  type AniListEntryState,
+  type SeasonalAnimePage,
 } from '@/lib/providers/anilist/reads';
 import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
@@ -32,13 +30,13 @@ import type {
   AnimeFormatFilter,
   AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
-import type { NormalizedSeason } from '@/types/media';
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import {
   clearProviderSession,
   getProviderSession,
   setProviderSession,
+  onSessionChange,
 } from '@/state/session/tokens';
 import { SEARCH_MIN_QUERY_LENGTH } from './trakt';
 
@@ -77,6 +75,23 @@ export function connectAniListFromRedirect(url: string): boolean {
 // (docs/solutions/anilist-rate-limit-retry-storm.md).
 const EPISODES_STALE_MS = 5 * 60_000;
 
+// Personal detail keys change with the session without exposing tokens in devtools.
+let lastAniListToken: string | undefined;
+let sessionRevision = 0;
+function aniListSessionRevision() {
+  if (typeof window === 'undefined') return 0;
+  const token = getProviderSession('anilist')?.accessToken;
+  if (token !== lastAniListToken) {
+    lastAniListToken = token;
+    sessionRevision++;
+  }
+  return sessionRevision;
+}
+
+function useAniListSessionRevision() {
+  return useSyncExternalStore(onSessionChange, aniListSessionRevision, () => 0);
+}
+
 export const anilistQueryKeys = {
   all: ['anilist'] as const,
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
@@ -107,10 +122,7 @@ export const anilistQueryKeys = {
   anime: (mediaId: number) => [...anilistQueryKeys.all, 'anime', mediaId] as const,
   /** The viewer's recorded state for one media — reconcile reads this (plan 0011). */
   entryState: (mediaId: number) =>
-    [...anilistQueryKeys.all, 'entry-state', mediaId] as const,
-  /** Per-episode air dates + titles for one anime series (detail screen). */
-  episodes: (mediaId: number) =>
-    [...anilistQueryKeys.all, 'episodes', mediaId] as const,
+    [...anilistQueryKeys.all, 'entry-state', mediaId, aniListSessionRevision()] as const,
   /** Prequels, sequels, adaptations… plus recommendations and tags of one media. */
   relations: (mediaId: number) =>
     [...anilistQueryKeys.all, 'relations', mediaId] as const,
@@ -229,7 +241,7 @@ export function fetchSeasonalAnime(
   format: AnimeFormatFilter = 'TV',
   page = 1,
   signal?: AbortSignal,
-): Promise<NormalizedMediaItem[]> {
+): Promise<SeasonalAnimePage> {
   return Effect.runPromise(
     getSeasonalAnime(anilistDeps(), {
       season: window.season,
@@ -242,7 +254,7 @@ export function fetchSeasonalAnime(
   );
 }
 
-/** AniList's `perPage` ceiling; a page shorter than this is the last one. */
+/** AniList's catalogue `perPage` ceiling. */
 export const SEASONAL_PAGE_SIZE = 50;
 
 /**
@@ -262,9 +274,9 @@ export function useSuspenseSeasonalAnimePagesQuery(
     queryFn: ({ pageParam, signal }) => fetchSeasonalAnime(window, format, pageParam, signal),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
-      lastPage.length < SEASONAL_PAGE_SIZE ? undefined : lastPageParam + 1,
+      lastPage.hasNextPage ? lastPageParam + 1 : undefined,
     initialData: () => {
-      const rowPage = queryClient.getQueryData<NormalizedMediaItem[]>(rowKey);
+      const rowPage = queryClient.getQueryData<SeasonalAnimePage>(rowKey);
       return rowPage == null ? undefined : { pages: [rowPage], pageParams: [1] };
     },
     initialDataUpdatedAt: () => queryClient.getQueryState(rowKey)?.dataUpdatedAt,
@@ -276,53 +288,58 @@ export function useSuspenseSeasonalAnimePagesQuery(
 const SEASONAL_STALE_MS = 15 * 60_000;
 
 /**
- * One anime by AniList id, for a `/details/anilist/<id>` reached cold (nothing
- * cached holds it). `null` id: nothing to fetch, the query stays idle.
+ * Complete metadata for an AniList card or cold link, sharing the section read.
+ * `null` id: nothing to fetch, the query stays idle.
  */
-export function useAnimeByIdQuery(mediaId: number | null) {
+export function useAnimeByIdQuery(mediaId: number | null, type: MediaType = 'ANIME') {
+  const queryClient = useQueryClient();
+  useAniListSessionRevision();
   return useQuery({
-    queryKey: anilistQueryKeys.anime(mediaId ?? 0),
-    queryFn: ({ signal }) => Effect.runPromise(getAnimeById(anilistDeps(), mediaId ?? 0), { signal }),
+    ...anilistRelationsQuery(queryClient, { mediaId: mediaId ?? 0, type }),
+    select: (result) => result.item,
     enabled: mediaId != null,
-    staleTime: SEASONAL_STALE_MS,
   });
 }
 
 /**
- * The related, recommended and tag sections of a details screen. Each item is also seeded
- * under `anime(id)`, the key the cold deep-link resolver reads, so tapping a
- * card opens it from cache instead of spending a second request of the
- * 30 req/min budget — and a manga relation resolves at all, since no feed row
- * or search cache holds it.
+ * Related, recommended and tag sections share the metadata, progress and
+ * episode read. Related cards are not cached as complete detail records.
  */
 export function useSuspenseAniListRelationsQuery(params: {
   mediaId: number;
   type: MediaType;
 }) {
-  const { mediaId } = params;
-  // Only manga takes its credits from here (anime's come from media-details);
-  // an id's type never changes, so the key needs no flag of its own.
-  const withCredits = params.type === 'MANGA';
   const queryClient = useQueryClient();
-  return useSuspenseQuery({
-    queryKey: anilistQueryKeys.relations(mediaId),
-    queryFn: async ({ signal }) => {
+  useAniListSessionRevision();
+  return useSuspenseQuery(anilistRelationsQuery(queryClient, params));
+}
+
+function anilistRelationsQuery(queryClient: QueryClient, params: { mediaId: number; type: MediaType }) {
+  const { mediaId } = params;
+  const withCredits = params.type === 'MANGA';
+  const revision = aniListSessionRevision();
+  const session = typeof window === 'undefined' ? null : getProviderSession('anilist');
+  return {
+    queryKey: [...anilistQueryKeys.relations(mediaId), revision, withCredits],
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
       const result = await Effect.runPromise(
-        getAnimeRelations(anilistDeps(), { mediaId, withCredits }),
+        getAnimeRelations({ ...anilistDeps(), tokens: {
+          ...tokenStore,
+          get: () => session,
+          clear: () => {
+            if (getProviderSession('anilist')?.accessToken === session?.accessToken) tokenStore.clear();
+          },
+        } }, { mediaId, withCredits }),
         { signal },
       );
-      for (const item of [
-        ...result.relations.map((relation) => relation.item),
-        ...result.recommendations,
-      ]) {
-        if (item.externalIds.anilist != null) {
-          queryClient.setQueryData(anilistQueryKeys.anime(item.externalIds.anilist), item);
-        }
+      if (result.item != null) queryClient.setQueryData(anilistQueryKeys.anime(mediaId), result.item);
+      if (result.entryState != null && revision === aniListSessionRevision()) {
+        queryClient.setQueryData(anilistQueryKeys.entryState(mediaId), result.entryState);
       }
       return result;
     },
-    staleTime: SEASONAL_STALE_MS,
-  });
+    staleTime: EPISODES_STALE_MS,
+  };
 }
 
 /**
@@ -397,12 +414,17 @@ export function useAniListStaffSearchQuery(params: {
 export function useAniListEntryStateQuery(params: {
   mediaId: number | undefined;
   enabled?: boolean;
+  type?: MediaType;
 }) {
   const { mediaId, enabled = true } = params;
+  const queryClient = useQueryClient();
+  useAniListSessionRevision();
   return useQuery({
-    queryKey: anilistQueryKeys.entryState(mediaId ?? -1),
-    queryFn: ({ signal }): Promise<AniListEntryState> =>
-      Effect.runPromise(getEntryState(anilistDeps(), { mediaId: mediaId ?? -1 }), { signal }),
+    ...anilistRelationsQuery(queryClient, {
+      mediaId: mediaId ?? -1,
+      type: params.type ?? queryClient.getQueryData<NormalizedMediaItem>(anilistQueryKeys.anime(mediaId ?? -1))?.type ?? 'ANIME',
+    }),
+    select: (result) => result.entryState,
     enabled: enabled && mediaId != null,
     // Episode navigation shares this read with the accordion. Logs invalidate
     // it immediately; browsing need not recheck unchanged progress every minute.
@@ -421,10 +443,11 @@ export function useAniListEpisodesQuery(params: {
   enabled?: boolean;
 }) {
   const { mediaId, enabled = true } = params;
+  const queryClient = useQueryClient();
+  useAniListSessionRevision();
   return useQuery({
-    queryKey: anilistQueryKeys.episodes(mediaId ?? -1),
-    queryFn: ({ signal }): Promise<NormalizedSeason> =>
-      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId: mediaId ?? -1 }), { signal }),
+    ...anilistRelationsQuery(queryClient, { mediaId: mediaId ?? -1, type: 'ANIME' }),
+    select: (result) => result.season!,
     enabled: enabled && mediaId != null,
     staleTime: EPISODES_STALE_MS,
   });
@@ -509,10 +532,10 @@ function exactNameMatchId(
  */
 export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
   const { mediaId } = params;
+  const queryClient = useQueryClient();
+  useAniListSessionRevision();
   return useSuspenseQuery({
-    queryKey: anilistQueryKeys.episodes(mediaId),
-    queryFn: ({ signal }): Promise<NormalizedSeason> =>
-      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId }), { signal }),
-    staleTime: EPISODES_STALE_MS,
+    ...anilistRelationsQuery(queryClient, { mediaId, type: 'ANIME' }),
+    select: (result) => result.season!,
   });
 }

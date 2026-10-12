@@ -85,14 +85,14 @@ function SeasonWall({
   // before it may paint, so a phone must not queue a desktop's worth.
   useWarmPosters(
     anilistQueryKeys.seasonalAnimePages(window, format),
-    pages.data.pages[0] ?? [],
+    pages.data.pages[0]?.items ?? [],
     columns * 3,
   );
   const [refreshing, setRefreshing] = useState(false);
   // AniList's popularity sort is not stable across pages, so a title can sit
   // on the tail of one page and the head of the next; the list needs unique
   // keys, so the first occurrence wins.
-  const items = useVisibleItems(uniqueById(pages.data.pages.flat()));
+  const items = useVisibleItems(uniqueById(pages.data.pages.flatMap((page) => page.items)));
   const view = useWatchlistView();
   const reduceMotion = useReducedMotion();
   const Layout = view === 'grid' ? PosterWall : WatchlistRows;

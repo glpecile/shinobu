@@ -26,24 +26,27 @@ import {
   type AniListMedia,
 } from './normalize';
 
-/** Media fields every read asks for — one fragment so normalization never misses a field. */
-export const MEDIA_FIELDS = `
+/** Fields used by cards, search hits and related titles. */
+export const CARD_FIELDS = `
   id
   idMal
   type
   format
   title { english romaji native }
-  synonyms
-  description(asHtml: false)
   coverImage { extraLarge large }
-  bannerImage
   seasonYear
   startDate { year }
   duration
-  genres
   averageScore
   episodes
   chapters
+`;
+
+export const MEDIA_FIELDS = `${CARD_FIELDS}
+  synonyms
+  description(asHtml: false)
+  bannerImage
+  genres
 `;
 
 /** The authenticated account: its id, and the handle to show for it. */
@@ -117,7 +120,7 @@ export function getCurrentAnime(
               repeat
               updatedAt
               media {
-                ${MEDIA_FIELDS}
+                ${CARD_FIELDS}
                 nextAiringEpisode { episode airingAt }
                 airingSchedule(perPage: 1) { nodes { episode airingAt } }
                 relations { edges { relationType node { type mediaListEntry { status } } } }
@@ -179,7 +182,7 @@ export function getListActivity(
             status
             progress
             createdAt
-            media { ${MEDIA_FIELDS} }
+          media { ${CARD_FIELDS} }
           }
         }
       }
@@ -203,7 +206,12 @@ export function getListActivity(
 }
 
 interface TrendingResponse {
-  Page: { media: Array<AniListMedia | null> | null } | null;
+  Page: { media: Array<AniListMedia | null> | null; pageInfo?: { hasNextPage: boolean } } | null;
+}
+
+export interface SeasonalAnimePage {
+  items: NormalizedMediaItem[];
+  hasNextPage: boolean;
 }
 
 /**
@@ -227,17 +235,18 @@ export function getSeasonalAnime(
     year: number;
     format?: AnimeFormatFilter;
     limit?: number;
-    /** 1-based; a page shorter than `limit` is the last one. */
+    /** 1-based. */
     page?: number;
   },
-): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+): Effect.Effect<SeasonalAnimePage, ProviderError> {
   const limit = params.limit ?? 30;
   return Effect.gen(function* () {
     const data = yield* anilistRequest<TrendingResponse>(
       deps,
       `query ($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $formatNot: MediaFormat) {
         Page(page: $page, perPage: $perPage) {
-          media(type: ANIME, isAdult: false, season: $season, seasonYear: $seasonYear, format: $format, format_not: $formatNot, sort: POPULARITY_DESC) { ${MEDIA_FIELDS} }
+          pageInfo { hasNextPage }
+          media(type: ANIME, isAdult: false, season: $season, seasonYear: $seasonYear, format: $format, format_not: $formatNot, sort: POPULARITY_DESC) { ${CARD_FIELDS} }
         }
       }`,
       {
@@ -253,32 +262,11 @@ export function getSeasonalAnime(
     );
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
-    return (data.Page?.media ?? [])
+    return { items: (data.Page?.media ?? [])
       .filter((media): media is AniListMedia => media != null)
-      .map((media) => normalizeAniListMedia(media, nowIso));
-  });
-}
-
-/**
- * One anime or manga by AniList id — the cold deep link (`/details/anilist-190143`
- * refreshed in a tab, or shared) when no cached surface holds it. Public data,
- * so no token; an unknown id is a GraphQL "Not Found" that surfaces as a
- * provider error, which the caller reads as not found. No `type` filter: a
- * manga reached from a relations card must open the same way.
- */
-export function getAnimeById(
-  deps: AniListDeps,
-  mediaId: number,
-): Effect.Effect<NormalizedMediaItem | null, ProviderError> {
-  return Effect.gen(function* () {
-    const data = yield* anilistRequest<{ Media: AniListMedia | null }>(
-      deps,
-      `query ($id: Int) { Media(id: $id) { ${MEDIA_FIELDS} } }`,
-      { variables: { id: mediaId } },
-    );
-    if (data.Media == null) return null;
-    const now = yield* Clock.currentTimeMillis;
-    return normalizeAniListMedia(data.Media, new Date(now).toISOString());
+      .map((media) => normalizeAniListMedia(media, nowIso)),
+      hasNextPage: data.Page?.pageInfo?.hasNextPage === true,
+    };
   });
 }
 
@@ -478,10 +466,10 @@ export function getAniListStaff(
           homeTown
           primaryOccupations
           characterMedia(sort: START_DATE_DESC, perPage: $perPage) {
-            edges { characters { name { full } } node { ${MEDIA_FIELDS} } }
+            edges { characters { name { full } } node { ${CARD_FIELDS} } }
           }
           staffMedia(sort: START_DATE_DESC, perPage: $perPage) {
-            edges { staffRole node { ${MEDIA_FIELDS} } }
+            edges { staffRole node { ${CARD_FIELDS} } }
           }
         }
       }`,
@@ -566,7 +554,7 @@ export function searchMedia(
       deps,
       `query ($search: String, $perPage: Int) {
         Page(page: 1, perPage: $perPage) {
-          media(search: $search, sort: SEARCH_MATCH) { ${MEDIA_FIELDS} }
+          media(search: $search, sort: SEARCH_MATCH) { ${CARD_FIELDS} }
         }
       }`,
       { variables: { search: params.query, perPage: limit } },
@@ -598,7 +586,7 @@ export function searchAnimeFilms(
       deps,
       `query ($search: String, $perPage: Int) {
         Page(page: 1, perPage: $perPage) {
-          media(search: $search, type: ANIME, format: MOVIE, sort: SEARCH_MATCH) { ${MEDIA_FIELDS} }
+          media(search: $search, type: ANIME, format: MOVIE, sort: SEARCH_MATCH) { ${CARD_FIELDS} }
         }
       }`,
       { variables: { search: params.query, perPage: limit } },
@@ -652,7 +640,7 @@ export interface AniListEntryState {
   episodes: number | null;
 }
 
-interface MediaEntryResponse {
+export interface MediaEntryResponse {
   Media: {
     episodes: number | null;
     mediaListEntry: {
@@ -676,6 +664,25 @@ interface MediaEntryResponse {
       customLists: unknown;
     } | null;
   } | null;
+}
+
+export const ENTRY_FIELDS = 'id status progress repeat score notes startedAt { year month day } customLists';
+
+export function normalizeEntryState(media: Partial<NonNullable<MediaEntryResponse['Media']>> | null): AniListEntryState {
+  const raw = media?.mediaListEntry ?? null;
+  return {
+    episodes: media?.episodes ?? null,
+    entry: raw == null ? null : {
+      id: raw.id ?? null,
+      status: raw.status,
+      progress: raw.progress ?? 0,
+      repeat: raw.repeat ?? 0,
+      score: raw.score ?? 0,
+      notes: raw.notes ?? null,
+      startedAt: raw.startedAt ?? null,
+      customLists: readCustomLists(raw.customLists),
+    },
+  };
 }
 
 /**
@@ -713,29 +720,11 @@ export function getEntryState(
     `query ($mediaId: Int) {
       Media(id: $mediaId) {
         episodes
-        mediaListEntry { id status progress repeat score notes startedAt { year month day } customLists }
+        mediaListEntry { ${ENTRY_FIELDS} }
       }
     }`,
     { variables: { mediaId: params.mediaId } },
   ).pipe(
-    Effect.map((data) => {
-      const raw = data.Media?.mediaListEntry ?? null;
-      return {
-        episodes: data.Media?.episodes ?? null,
-        entry:
-          raw == null
-            ? null
-            : {
-                id: raw.id ?? null,
-                status: raw.status,
-                progress: raw.progress ?? 0,
-                repeat: raw.repeat ?? 0,
-                score: raw.score ?? 0,
-                notes: raw.notes ?? null,
-                startedAt: raw.startedAt ?? null,
-                customLists: readCustomLists(raw.customLists),
-              },
-      };
-    }),
+    Effect.map((data) => normalizeEntryState(data.Media)),
   );
 }

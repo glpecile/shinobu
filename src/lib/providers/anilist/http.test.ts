@@ -19,6 +19,19 @@ function depsReplying(response: () => Response, tokens = fakeTokens()): AniListD
 }
 
 describe('anilistGraphQL error mapping', () => {
+  test('AniList’s HTTP 500 bad-request envelope is a permanent query rejection', async () => {
+    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(
+      depsReplying(() => Response.json({ error: { status: 500, messages: ['Bad request'] } }, { status: 500 })),
+      'query { X }',
+    )));
+    expect(error._tag).toBe('ProviderNetworkError');
+    if (error._tag === 'ProviderNetworkError') {
+      expect(error.retryable).toBe(false);
+      expect(error.status).toBe(500);
+      expect(error.message).toContain('Bad request');
+    }
+  });
+
   test('an API-disabled response is not a rate limit even with HTTP 429', async () => {
     let calls = 0;
     let cleared = false;
@@ -112,6 +125,20 @@ describe('anilistGraphQL error mapping', () => {
     }
   }, 10_000);
 
+  test.each([
+    { headers: { 'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000) + 60) } },
+    { headers: {} as Record<string, string> },
+  ])('a cooldown blocks subsequent public and authenticated calls without spending requests: $headers', async ({ headers }) => {
+    let calls = 0;
+    const deps = depsReplying(() => { calls++; return new Response('', { status: 429, headers }); });
+    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(deps, '{ X }')));
+    expect(error._tag).toBe('ProviderRateLimitError');
+    if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBeGreaterThan(55_000);
+    await Effect.runPromise(Effect.flip(anilistGraphQL(deps, '{ Y }')));
+    await Effect.runPromise(Effect.flip(anilistAuthedRequest(deps, '{ Viewer { id } }')));
+    expect(calls).toBe(1);
+  });
+
   test('every request carries the app Referer (AniList 403s referer-less clients)', async () => {
     let sent: RequestInit | undefined;
     const deps: AniListDeps = {
@@ -204,7 +231,7 @@ describe('anilistAuthedRequest', () => {
     const deps = depsReplying(() => {
       calls += 1;
       return calls === 1
-        ? new Response('', { status: 429, headers: { 'Retry-After': '0' } })
+        ? new Response('', { status: 429, headers: { 'Retry-After': '0.01' } })
         : Response.json({ data: { ok: true } });
     });
     const result = await Effect.runPromise(

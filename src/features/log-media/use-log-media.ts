@@ -561,6 +561,7 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('anilist')) {
+    if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
     // Up Next and the watchlist both select off this one read.
     queryClient.invalidateQueries({

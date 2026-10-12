@@ -77,3 +77,112 @@ The reported `CreditsSections` stack identifies the consumer that encountered
 the limit, not the requests that exhausted it. No live request trace was
 available for this report; these changes address the verified cache policy
 and retry behavior, not a measured attribution of the entire request budget.
+
+## Seasonal explorer browsing follow-up, 2026-10-12
+
+Opening distinct titles still spent separate requests on episodes and
+relations/recommendations/tags. A stale time only helps revisits, not four or
+five different anime. Both query hooks now join the same relations query,
+whose GraphQL response includes the episode fields for anime (not manga).
+It primes the existing episode cache and keeps the five-minute airing-data
+freshness window. The episode-only provider read remains available to write
+and reconciliation paths.
+
+The query regression mounts both sections together: **one request**, then
+**zero additional requests** when remounted with the same QueryClient.
+Credits and authenticated entry state remain separate reads, so this is one
+fewer request per uncached anime, not a claim that the whole screen costs one.
+
+The detail/episode resolver's feed observers are now cache-only. Resolving a
+poster from the seasonal wall no longer starts or refreshes unrelated Home
+catalogues. Cold links fetch their own record by ID; explicit refresh still
+works. This also prevents errored Home rows from being retried every time a
+different title opens.
+
+### Live regression found during validation
+
+The combined request above used a type-less inline fragment with `@skip`.
+A Chromium trace from Winter 2027 → MASHLE observed the combined request
+returning HTTP 500 with `{"error":{"status":500,"messages":["Bad request"]}}`,
+while the seasonal catalogue and other detail requests succeeded. The failed
+query was sent repeatedly. The mock-backed query test proved cache sharing,
+but did not prove that AniList accepted the GraphQL operation. Live provider
+validation is required before claiming a request-budget fix works.
+
+The fragment is now replaced by directly interpolated episode fields for
+anime, and no episode fields for manga. The corrected combined operation
+returned HTTP 200 in the live Winter 2027 → MASHLE trace.
+
+There was also a nested retry budget: the episode query called `fetchQuery`
+for relations, and both queries retried. A simulated 503 through the real
+hooks reproduced **16 requests** for one failed read. Episode observers now
+leave retries to the relations query: the same regression makes **4 requests**
+(one attempt plus three transient-error retries). AniList's explicit HTTP
+500 `Bad request` envelope is marked non-retryable, preserving its real
+status and diagnostic message instead of presenting a generic network error.
+
+The live trace also found a separate `getAnimeById` request from Discussion.
+AniList-origin records already contain the titles and aliases it supplies,
+so that section now uses its existing item rather than fetching it again.
+
+Scope of live proof: the corrected combined operation succeeded, and the
+Related section appeared. A full five-title replay was not completed: the
+graphical Chromium target disappeared during replay, and a fresh headless
+profile's provider calls failed with `net::ERR_FAILED`. Those runs are not
+counted as passes; signed-in browsing still needs a live follow-up.
+
+### Manual browsing baseline: four titles + two load-more scrolls
+
+On 2026-10-12, the owner reported opening **four anime titles** from the
+seasonal explorer and triggering **two load-more scrolls**. Preserve this
+as the repeatable workload for future request-budget comparisons:
+
+- Starting route: `/anime-seasons?season=WINTER&year=2027&format=TV`.
+- Actions: open four distinct details pages and load two additional wall pages.
+- Source: owner-run manual check, not an instrumented network benchmark.
+- Not recorded: exact titles, authentication state, cache warmth, elapsed
+  time, number of HTTP attempts, or remaining rate-limit budget. Do not turn
+  this report into an invented request count or throughput measurement.
+
+For a measured comparison, record AniList POST attempts (including retries),
+statuses, elapsed time, and `X-RateLimit-Remaining` for this same workload.
+Separate catalogue pagination, public detail reads, and authenticated entry
+reads; exclude poster CDN images, CORS preflights, TMDB, and other providers.
+
+### Otraku-style query consolidation
+
+Plan `0080-anilist-query-budget.md` records the documentation and pinned Otraku
+source used for this follow-up. Metadata, relations, first-page episode data,
+and authenticated `mediaListEntry` now have one TanStack Query owner; hooks
+select their own section instead of nesting a retried query inside another.
+The unused standalone metadata read and episode-cache copy were removed;
+episode observers select the season directly from the shared result.
+Progress is scoped to an in-memory session revision (no token in query keys),
+and successful logs/watchlist writes invalidate the shared read.
+
+Cards request display fields only, while the shared detail read requests the
+full description, synonyms, banner and genres. Seasonal pages retain the
+server's `hasNextPage`, including Home's reusable page-one cache. The persisted
+cache buster is bumped because seasonal pages changed shape.
+
+A live probe found `airingSchedule(perPage:100)` silently clamped to 25.
+Episode reads now follow `hasNextPage` in 25-row pages. **Long-running shows
+can therefore cost more than one request**; this is required to avoid treating
+missing dates after episode 25 as unaired. Do not count every detail open as
+exactly one POST. Further paging shares the public transport's cooldown.
+
+AniList 429s now block subsequent public and authenticated calls on the same
+transport until the advertised cooldown expires. `X-RateLimit-Reset` backs up
+`Retry-After`; when neither is available, wait a minute rather than replaying
+after one second. This suppresses new attempts, not already-in-flight requests.
+
+Live **public API**, not browser-flow, validation on 2026-10-12:
+
+- Composed Cowboy Bebop detail, Berserk detail with manga credits, and Winter
+  2027 TV page one each returned HTTP 200: three POSTs, not a signed-in workload.
+- A separate same-page payload comparison returned the same 50 seasonal IDs:
+  **29,009 UTF-8 bytes** with card fields versus **59,853 bytes** with the former
+  full fields (about **52% smaller**). Both operations cost one POST; payload
+  reduction does not itself increase AniList's request allowance.
+- The four-title/two-scroll owner workload remains uninstrumented. These
+  probes do not prove a signed-in browsing budget or native/browser CORS success.
