@@ -77,3 +77,24 @@ The reported `CreditsSections` stack identifies the consumer that encountered
 the limit, not the requests that exhausted it. No live request trace was
 available for this report; these changes address the verified cache policy
 and retry behavior, not a measured attribution of the entire request budget.
+
+## Seasonal explorer browsing follow-up, 2026-10-12
+
+Opening distinct titles still spent separate requests on episodes and
+relations/recommendations/tags. A stale time only helps revisits, not four or
+five different anime. Both query hooks now join the same relations query,
+whose GraphQL response includes the episode fields for anime (not manga).
+It primes the existing episode cache and keeps the five-minute airing-data
+freshness window. The episode-only provider read remains available to write
+and reconciliation paths.
+
+The query regression mounts both sections together: **one request**, then
+**zero additional requests** when remounted with the same QueryClient.
+Credits and authenticated entry state remain separate reads, so this is one
+fewer request per uncached anime, not a claim that the whole screen costs one.
+
+The detail/episode resolver's feed observers are now cache-only. Resolving a
+poster from the seasonal wall no longer starts or refreshes unrelated Home
+catalogues. Cold links fetch their own record by ID; explicit refresh still
+works. This also prevents errored Home rows from being retried every time a
+different title opens. No live browser trace was available for this report.

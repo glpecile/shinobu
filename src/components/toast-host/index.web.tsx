@@ -18,6 +18,7 @@ export function ToastHost() {
     colorScheme === 'dark' || colorScheme === 'light' ? colorScheme : 'system';
   return (
     <Toaster
+      expand
       position="bottom-right"
       theme={theme}
       style={{

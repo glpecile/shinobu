@@ -1,13 +1,17 @@
-import { QueryClient } from '@tanstack/react-query';
+import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { describe, expect, mock, test } from 'bun:test';
+import { createElement, Suspense, type ReactNode } from 'react';
 
 import { computeUpNext } from '@/features/up-next/compute';
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
 
+GlobalRegistrator.register();
+const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+const { renderHook, waitFor } = await import('@testing-library/react');
+
 // Import-time stubs only: MMKV, the native fetch client and react-native's
-// entry point don't load under bun. Nothing this suite asserts goes near the
-// network — the widened list read is seeded into the query cache directly, so
-// the selector is exercised on its own.
+// entry point don't load under bun. Provider reads use the stub transport;
+// the watchlist selector reads seeded query data.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -18,14 +22,46 @@ mock.module('react-native-mmkv', () => ({
     addOnValueChangedListener: () => ({ remove() {} }),
   }),
 }));
+let requests = 0;
 mock.module('@/lib/http/client', () => ({
-  httpFetch: async () => new Response('{}'),
+  httpFetch: async () => {
+    requests++;
+    return new Response(JSON.stringify({ data: { Media: {
+      episodes: 1,
+      duration: 24,
+      airingSchedule: { edges: [] },
+      streamingEpisodes: [],
+      relations: { edges: [{ relationType: 'SEQUEL', node: { id: 2, type: 'ANIME', title: { romaji: 'Sequel' } } }] },
+    } } }));
+  },
 }));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const { anilistQueryKeys, fetchWatchlistAnime } = await import('./anilist');
+const { anilistQueryKeys, fetchWatchlistAnime, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery } = await import('./anilist');
+
+test('opening episodes and relations together spends one request, and revisiting spends none', async () => {
+  requests = 0;
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const wrapper = ({ children }: { children: ReactNode }) => createElement(
+    QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children),
+  );
+  const readEpisodes = () => useAniListEpisodesQuery({ mediaId: 1 }).data;
+  const readRelations = () => useSuspenseAniListRelationsQuery({ mediaId: 1, type: 'ANIME' }).data;
+  const episodes = renderHook(readEpisodes, { wrapper });
+  const relations = renderHook(readRelations, { wrapper });
+  await waitFor(() => expect(episodes.result.current?.episodes).toHaveLength(1));
+  await waitFor(() => expect(relations.result.current?.relations[0].item.id).toBe('anilist-2'));
+  expect(requests).toBe(1);
+  episodes.unmount();
+  relations.unmount();
+  const revisit = renderHook(readEpisodes, { wrapper });
+  await waitFor(() => expect(revisit.result.current?.episodes).toHaveLength(1));
+  expect(requests).toBe(1);
+  revisit.unmount();
+  client.clear();
+});
 
 function entry(
   anilistId: number,

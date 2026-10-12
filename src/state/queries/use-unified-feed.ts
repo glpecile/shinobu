@@ -280,12 +280,9 @@ export function useRefetchUnifiedFeed() {
 }
 
 /**
- * Aggregates every connected, read-capable provider into one normalized feed
- * (plan.md 2.1). Home no longer consumes this — it renders per-row suspense
- * hooks under boundaries; this aggregate remains for consumers that resolve
- * an item by id across every row (the details screen, which must find an item
- * wherever it came from). Results are keyed by named slot, not array
- * position — the query list is conditional in two dimensions.
+ * Observes cached feed rows for item resolution without fetching Home's
+ * catalogues on detail or episode navigation. Cold links have their own ID
+ * queries; explicit refresh can still refetch these observers.
  *
  * `includeHidden` skips the hidden-items filter — for consumers that resolve
  * an item by id rather than display rows (the details screen must render
@@ -299,7 +296,7 @@ export function useUnifiedFeed(
   const animeSeason = animeSeasonAt(new Date());
   const queries = activeFeedConfigs(connected, queryClient, animeSeason);
 
-  const results = useQueries({ queries });
+  const results = useQueries({ queries: queries.map((query) => ({ ...query, enabled: false })) });
 
   // Items the user hid (card actions dialog) drop out of every row here, at
   // the aggregation boundary — screens never re-filter. Query caches keep the

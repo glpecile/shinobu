@@ -5,6 +5,7 @@ import type {
   NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedMediaItem,
+  NormalizedSeason,
 } from '@/types/media';
 
 import {
@@ -14,6 +15,7 @@ import {
   type AniListStaffEdge,
 } from './credits';
 import type { AniListDeps } from './deps';
+import { EPISODE_FIELDS, normalizeAnimeEpisodes, type AnimeEpisodesResponse } from './episodes';
 import { anilistRequest } from './http';
 import { humanizeEnum, normalizeAniListMedia, type AniListMedia } from './normalize';
 import { MEDIA_FIELDS } from './reads';
@@ -33,7 +35,7 @@ interface RelationsResponse {
     } | null;
     characters?: { edges: AniListCharacterRoleEdge[] | null } | null;
     staff?: { edges: AniListStaffEdge[] | null } | null;
-  } | null;
+  } & Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null;
 }
 
 export interface AnimeRelation {
@@ -43,6 +45,8 @@ export interface AnimeRelation {
 }
 
 export interface AnimeRelations {
+  /** Anime episodes share this round-trip; manga has no season. */
+  season: NormalizedSeason | null;
   relations: AnimeRelation[];
   /** Community recommendations, best-rated first. */
   recommendations: NormalizedMediaItem[];
@@ -60,8 +64,9 @@ export interface AnimeRelations {
  * request for all of it — the 30 req/min budget
  * (docs/solutions/anilist-rate-limit-retry-storm.md). Public data.
  *
- * `withCredits` is for manga, which TMDB can't credit: anime credits come from
- * `getMediaDetails`, and asking here too would fetch them twice.
+ * `withCredits` is for manga, which TMDB can't credit. Anime asks for its
+ * episodes instead, so opening a title doesn't spend a separate request on
+ * each detail section. Anime credits still come from `getMediaDetails`.
  */
 export function getAnimeRelations(
   deps: AniListDeps,
@@ -72,6 +77,7 @@ export function getAnimeRelations(
       deps,
       `query ($id: Int, $withCredits: Boolean!) {
         Media(id: $id) {
+          ... @skip(if: $withCredits) { ${EPISODE_FIELDS} }
           characters(sort: [ROLE, RELEVANCE, ID], perPage: 15) @include(if: $withCredits) {
             edges { role node { id name { full } image { large } } }
           }
@@ -90,6 +96,7 @@ export function getAnimeRelations(
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
     return {
+      season: params.withCredits ? null : normalizeAnimeEpisodes(data.Media),
       relations: (data.Media?.relations?.edges ?? []).flatMap((edge) =>
         edge?.node == null
           ? []

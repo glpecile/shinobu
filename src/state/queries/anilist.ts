@@ -12,7 +12,6 @@ import { httpFetch } from '@/lib/http/client';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
-import { getAnimeEpisodes } from '@/lib/providers/anilist/episodes';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
 import { getAniListLibrary } from '@/lib/providers/anilist/library';
 import {
@@ -299,14 +298,16 @@ export function useSuspenseAniListRelationsQuery(params: {
   mediaId: number;
   type: MediaType;
 }) {
-  const { mediaId } = params;
-  // Only manga takes its credits from here (anime's come from media-details);
-  // an id's type never changes, so the key needs no flag of its own.
-  const withCredits = params.type === 'MANGA';
   const queryClient = useQueryClient();
-  return useSuspenseQuery({
+  return useSuspenseQuery(anilistRelationsQuery(queryClient, params));
+}
+
+function anilistRelationsQuery(queryClient: QueryClient, params: { mediaId: number; type: MediaType }) {
+  const { mediaId } = params;
+  const withCredits = params.type === 'MANGA';
+  return {
     queryKey: anilistQueryKeys.relations(mediaId),
-    queryFn: async ({ signal }) => {
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
       const result = await Effect.runPromise(
         getAnimeRelations(anilistDeps(), { mediaId, withCredits }),
         { signal },
@@ -319,10 +320,19 @@ export function useSuspenseAniListRelationsQuery(params: {
           queryClient.setQueryData(anilistQueryKeys.anime(item.externalIds.anilist), item);
         }
       }
+      if (result.season != null) {
+        queryClient.setQueryData(anilistQueryKeys.episodes(mediaId), result.season);
+      }
       return result;
     },
-    staleTime: SEASONAL_STALE_MS,
-  });
+    staleTime: withCredits ? SEASONAL_STALE_MS : EPISODES_STALE_MS,
+  };
+}
+
+/** Both detail sections join the same in-flight query, regardless of mount order. */
+async function fetchAniListEpisodes(queryClient: QueryClient, mediaId: number): Promise<NormalizedSeason> {
+  const result = await queryClient.fetchQuery(anilistRelationsQuery(queryClient, { mediaId, type: 'ANIME' }));
+  return result.season!;
 }
 
 /**
@@ -421,10 +431,10 @@ export function useAniListEpisodesQuery(params: {
   enabled?: boolean;
 }) {
   const { mediaId, enabled = true } = params;
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: anilistQueryKeys.episodes(mediaId ?? -1),
-    queryFn: ({ signal }): Promise<NormalizedSeason> =>
-      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId: mediaId ?? -1 }), { signal }),
+    queryFn: () => fetchAniListEpisodes(queryClient, mediaId ?? -1),
     enabled: enabled && mediaId != null,
     staleTime: EPISODES_STALE_MS,
   });
@@ -509,10 +519,10 @@ function exactNameMatchId(
  */
 export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
   const { mediaId } = params;
+  const queryClient = useQueryClient();
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.episodes(mediaId),
-    queryFn: ({ signal }): Promise<NormalizedSeason> =>
-      Effect.runPromise(getAnimeEpisodes(anilistDeps(), { mediaId }), { signal }),
+    queryFn: () => fetchAniListEpisodes(queryClient, mediaId),
     staleTime: EPISODES_STALE_MS,
   });
 }
