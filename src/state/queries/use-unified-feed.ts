@@ -5,6 +5,7 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
+import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 
 import { providersForFeed } from '@/lib/providers/routing';
 import { getTrending } from '@/lib/providers/simkl/reads';
@@ -54,11 +55,14 @@ export interface UnifiedFeedResult {
   refetch: () => Promise<unknown>;
 }
 
+type FeedData = NormalizedMediaItem[] | SeasonalAnimePage;
+
 interface FeedQueryConfig {
   slot: FeedSlot;
   provider: ProviderId;
   queryKey: readonly unknown[];
-  queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedMediaItem[]>;
+  queryFn: (context: { signal: AbortSignal }) => Promise<FeedData>;
+  select?: (data: FeedData) => NormalizedMediaItem[];
   staleTime?: number;
 }
 
@@ -102,6 +106,7 @@ export const feedOptions = {
   seasonalAnime: (season: AnimeSeasonWindow, format: AnimeFormatFilter = 'TV') => ({
     queryKey: anilistQueryKeys.seasonalAnime(season, format),
     queryFn: ({ signal }: { signal: AbortSignal }) => fetchSeasonalAnime(season, format, 1, signal),
+    select: (data: FeedData) => Array.isArray(data) ? data : data.items,
     staleTime: CATALOGUE_STALE_MS,
   }),
   // Personal rows — only fetched while their provider is connected.

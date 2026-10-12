@@ -1,6 +1,7 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
+import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { parseSimklItemId } from '@/lib/providers/simkl/normalize';
 import { parseTmdbItemId } from '@/lib/providers/tmdb/normalize';
@@ -61,10 +62,10 @@ function findInSeasonalPagesCache(
   id: string,
 ): NormalizedMediaItem | undefined {
   return queryClient
-    .getQueriesData<{ pages?: NormalizedMediaItem[][] }>({
+    .getQueriesData<{ pages?: SeasonalAnimePage[] }>({
       queryKey: anilistQueryKeys.seasonalAnimePagesRoot(),
     })
-    .flatMap(([, data]) => data?.pages?.flat() ?? [])
+    .flatMap(([, data]) => data?.pages?.flatMap((page) => page.items) ?? [])
     .find((item) => item?.id === id);
 }
 
@@ -138,9 +139,8 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   );
   // The AniList twin: an AniList-minted id is public data too, and the seasons
   // explorer is reachable signed out, so its links must survive a refresh.
-  const anilistDeepLink =
-    resolvedItem == null ? parseAniListItemId(id) : null;
-  const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink);
+  const anilistDeepLink = parseAniListItemId(id);
+  const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink, mediaType ?? resolvedItem?.type);
   // And the Simkl one: a variant poster or a shared link to a Simkl-minted id.
   const simklDeepLink = resolvedItem == null ? parseSimklItemId(id) : null;
   const simklDeepLinkItem = useSimklLookupQuery(
@@ -168,7 +168,9 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   const cachedOrFetched =
     (resolvedItem != null && film.data != null
       ? { ...mergeCatalogueMetadata(resolvedItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
-      : resolvedItem) ??
+      : resolvedItem != null && anilistDeepLinkItem.data != null
+        ? mergeCatalogueMetadata({ ...anilistDeepLinkItem.data, ...resolvedItem }, anilistDeepLinkItem.data)
+        : resolvedItem) ??
     film.data ??
     deepLinkDetails.data?.catalogue ??
     anilistDeepLinkItem.data ??
@@ -187,7 +189,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     isLoading:
       feed.isLoading ||
       (deepLink != null && deepLinkDetails.isPending) ||
-      (anilistDeepLink != null && anilistDeepLinkItem.isPending) ||
+      (anilistDeepLink != null && resolvedItem == null && anilistDeepLinkItem.isPending) ||
       (letterboxd != null && resolvedItem == null && film.isPending) ||
       ((imdb != null || serializd != null) && externalItem.isPending) ||
       (traktDeepLinkItem.isEnabled && traktDeepLinkItem.isPending) ||

@@ -21,6 +21,7 @@ export interface AnimeEpisodesResponse {
     episodes: number | null;
     duration: number | null;
     airingSchedule: {
+      pageInfo?: { hasNextPage: boolean };
       edges: Array<{ node: AniListAiringNode } | null> | null;
     } | null;
     streamingEpisodes: Array<AniListStreamingEpisode | null> | null;
@@ -31,7 +32,8 @@ export interface AnimeEpisodesResponse {
 export const EPISODE_FIELDS = `
   episodes
   duration
-  airingSchedule(page: 1, perPage: 100) {
+  airingSchedule(page: 1, perPage: 25) {
+    pageInfo { hasNextPage }
     edges { node { episode airingAt } }
   }
   streamingEpisodes { title thumbnail }
@@ -63,9 +65,32 @@ export function getAnimeEpisodes(
       { variables: { mediaId: params.mediaId } },
     );
 
+    yield* completeAiringSchedule(deps, params.mediaId, data.Media);
     return normalizeAnimeEpisodes(data.Media);
   });
 }
+
+/** AniList caps airing connections at 25 even when perPage asks for more. */
+export const completeAiringSchedule = Effect.fnUntraced(function*(
+  deps: AniListDeps,
+  mediaId: number,
+  media: Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null,
+): Effect.fn.Return<void, ProviderError> {
+  let schedule = media?.airingSchedule;
+  for (let page = 2; schedule?.pageInfo?.hasNextPage === true; page++) {
+    const data = yield* anilistRequest<AnimeEpisodesResponse>(deps,
+      `query ($id: Int, $page: Int) { Media(id: $id) {
+        airingSchedule(page: $page, perPage: 25) {
+          pageInfo { hasNextPage } edges { node { episode airingAt } }
+        }
+      } }`, { variables: { id: mediaId, page } });
+    schedule = data.Media?.airingSchedule;
+    if (media?.airingSchedule != null) {
+      media.airingSchedule.edges = [...(media.airingSchedule.edges ?? []), ...(schedule?.edges ?? [])];
+      media.airingSchedule.pageInfo = schedule?.pageInfo;
+    }
+  }
+});
 
 export function normalizeAnimeEpisodes(media: Partial<NonNullable<AnimeEpisodesResponse['Media']>> | null): NormalizedSeason {
   if (media == null) {

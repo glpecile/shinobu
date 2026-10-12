@@ -17,6 +17,24 @@ function mockFetch(response: unknown): HttpFetch {
 const DEPS = { fetch: mockFetch({}), tokens: { get: () => null, set: () => {}, clear: () => {} } };
 
 describe('getAnimeEpisodes', () => {
+  test('follows airing pageInfo so episodes beyond the connection cap retain their dates', async () => {
+    let calls = 0;
+    const fetch: HttpFetch = async (_url, init) => {
+      calls++;
+      const page = JSON.parse(String(init?.body)).variables.page ?? 1;
+      return Response.json({ data: { Media: {
+        episodes: 26, duration: 24, streamingEpisodes: [],
+        airingSchedule: {
+          pageInfo: { hasNextPage: page === 1 },
+          edges: page === 1 ? [{ node: { episode: 1, airingAt: 1_000_000_000 } }] : [{ node: { episode: 26, airingAt: 1_000_086_400 } }],
+        },
+      } } });
+    };
+    const season = await Effect.runPromise(getAnimeEpisodes({ ...DEPS, fetch }, { mediaId: 1 }));
+    expect(calls).toBe(2);
+    expect(season.episodes[0].firstAired).toBe(new Date(1_000_000_000 * 1000).toISOString());
+    expect(season.episodes[25].firstAired).toBe(new Date(1_000_086_400 * 1000).toISOString());
+  });
   test('joins airing dates to numbered streaming titles even when newest-first with duplicates', async () => {
     const fetch = mockFetch({
       data: {

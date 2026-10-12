@@ -153,7 +153,6 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(anilistQueryKeys.search('bebop', 20))).toBe(false);
     expect(isPersistedQueryKey(traktQueryKeys.images('TV', 1))).toBe(false);
     expect(isPersistedQueryKey(traktQueryKeys.seasons(1))).toBe(false);
-    expect(isPersistedQueryKey(anilistQueryKeys.episodes(1))).toBe(false);
     expect(isPersistedQueryKey(['media-details', 'trakt-1'])).toBe(false);
     expect(isPersistedQueryKey(['tmdb', 'person', 1])).toBe(false);
     expect(isPersistedQueryKey(['mapping', 'trakt-search', 'bebop', 1998])).toBe(false);

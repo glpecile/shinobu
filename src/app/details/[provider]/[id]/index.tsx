@@ -193,6 +193,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const watched = useWatchedInfo(item);
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
+    type: item.type,
     enabled: PROVIDERS.anilist.mediaTypes.includes(item.type) && connected.includes('anilist'),
   });
   // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
@@ -545,6 +546,7 @@ function DetailsScreen() {
   // has already watched episodes. The live entry state corrects the stat tile.
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
+    type: item?.type,
     enabled: onAniList && connected.includes('anilist'),
   });
   // TV progress spans anime cours; anime progress stays entry-relative.
@@ -668,7 +670,6 @@ function DetailsScreen() {
     if (anilistId != null && onAniList) {
       for (const key of [
         anilistQueryKeys.entryState(anilistId),
-        anilistQueryKeys.episodes(anilistId),
         anilistQueryKeys.relations(anilistId),
       ]) {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });

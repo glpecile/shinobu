@@ -20,6 +20,22 @@ const DEPS = {
 };
 
 describe('getAnimeRelations', () => {
+  test('an expired session falls back to public details without caching an absent personal entry', async () => {
+    let session: { accessToken: string } | null = { accessToken: 'expired' };
+    let calls = 0;
+    const fetch: HttpFetch = async (_url, init) => {
+      calls++;
+      if (new Headers(init?.headers).has('Authorization')) return new Response('', { status: 401 });
+      return Response.json({ data: { Media: { id: 1, title: { romaji: 'Public title' }, episodes: 1 } } });
+    };
+    const result = await Effect.runPromise(getAnimeRelations({ fetch, tokens: {
+      get: () => session, set: (value) => { session = value; }, clear: () => { session = null; },
+    } }, { mediaId: 1, withCredits: false }));
+    expect(result.item?.title).toBe('Public title');
+    expect(result.entryState).toBeNull();
+    expect(session).toBeNull();
+    expect(calls).toBe(2);
+  });
   test('normalizes relations, recommendations, non-spoiler tags and credits', async () => {
     const fetch = mockFetch({
       data: {
