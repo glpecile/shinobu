@@ -24,7 +24,7 @@ async function reject(effect: Effect.Effect<never, unknown>): Promise<unknown> {
 }
 
 describe('retry classification', () => {
-  test('rate-limit and auth failures are never retried', async () => {
+  test('rate-limit, auth and permanent request failures are never retried', async () => {
     const rl = await reject(
       Effect.fail(new ProviderRateLimitError({ provider: 'trakt' })),
     );
@@ -37,6 +37,11 @@ describe('retry classification', () => {
     expect(retryCountFor(rl)).toBe(0);
     expect(isRetryable(auth)).toBe(false);
     expect(retryCountFor(auth)).toBe(0);
+    const rejection = await reject(Effect.fail(new ProviderNetworkError({
+      provider: 'anilist', status: 500, retryable: false, cause: new Error('Bad request'),
+    })));
+    expect(isRetryable(rejection)).toBe(false);
+    expect(retryCountFor(rejection)).toBe(0);
   });
 
   test('transient network errors get an extra retry over other failures', async () => {

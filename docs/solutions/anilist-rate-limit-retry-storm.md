@@ -97,4 +97,36 @@ The detail/episode resolver's feed observers are now cache-only. Resolving a
 poster from the seasonal wall no longer starts or refreshes unrelated Home
 catalogues. Cold links fetch their own record by ID; explicit refresh still
 works. This also prevents errored Home rows from being retried every time a
-different title opens. No live browser trace was available for this report.
+different title opens.
+
+### Live regression found during validation
+
+The combined request above used a type-less inline fragment with `@skip`.
+A Chromium trace from Winter 2027 → MASHLE observed the combined request
+returning HTTP 500 with `{"error":{"status":500,"messages":["Bad request"]}}`,
+while the seasonal catalogue and other detail requests succeeded. The failed
+query was sent repeatedly. The mock-backed query test proved cache sharing,
+but did not prove that AniList accepted the GraphQL operation. Live provider
+validation is required before claiming a request-budget fix works.
+
+The fragment is now replaced by directly interpolated episode fields for
+anime, and no episode fields for manga. The corrected combined operation
+returned HTTP 200 in the live Winter 2027 → MASHLE trace.
+
+There was also a nested retry budget: the episode query called `fetchQuery`
+for relations, and both queries retried. A simulated 503 through the real
+hooks reproduced **16 requests** for one failed read. Episode observers now
+leave retries to the relations query: the same regression makes **4 requests**
+(one attempt plus three transient-error retries). AniList's explicit HTTP
+500 `Bad request` envelope is marked non-retryable, preserving its real
+status and diagnostic message instead of presenting a generic network error.
+
+The live trace also found a separate `getAnimeById` request from Discussion.
+AniList-origin records already contain the titles and aliases it supplies,
+so that section now uses its existing item rather than fetching it again.
+
+Scope of live proof: the corrected combined operation succeeded, and the
+Related section appeared. A full five-title replay was not completed: the
+graphical Chromium target disappeared during replay, and a fresh headless
+profile's provider calls failed with `net::ERR_FAILED`. Those runs are not
+counted as passes; signed-in browsing still needs a live follow-up.

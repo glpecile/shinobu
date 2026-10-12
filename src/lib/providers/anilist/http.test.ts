@@ -19,6 +19,19 @@ function depsReplying(response: () => Response, tokens = fakeTokens()): AniListD
 }
 
 describe('anilistGraphQL error mapping', () => {
+  test('AniList’s HTTP 500 bad-request envelope is a permanent query rejection', async () => {
+    const error = await Effect.runPromise(Effect.flip(anilistGraphQL(
+      depsReplying(() => Response.json({ error: { status: 500, messages: ['Bad request'] } }, { status: 500 })),
+      'query { X }',
+    )));
+    expect(error._tag).toBe('ProviderNetworkError');
+    if (error._tag === 'ProviderNetworkError') {
+      expect(error.retryable).toBe(false);
+      expect(error.status).toBe(500);
+      expect(error.message).toContain('Bad request');
+    }
+  });
+
   test('an API-disabled response is not a rate limit even with HTTP 429', async () => {
     let calls = 0;
     let cleared = false;

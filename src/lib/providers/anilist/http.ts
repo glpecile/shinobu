@@ -43,6 +43,9 @@ const graphQLResponse = Schema.Struct({
     message: optionalNullable(Schema.String),
     status: optionalNullable(Schema.Number),
   }))),
+  error: optionalNullable(Schema.Struct({
+    messages: optionalNullable(Schema.Array(Schema.String)),
+  })),
 });
 
 /**
@@ -120,6 +123,17 @@ export function anilistGraphQL<A>(
     ) === true;
     if (response.status === 429 && !apiDisabled) {
       return yield* rateLimitError();
+    }
+
+    // AniList's parser rejects some valid GraphQL syntax with a 500 envelope.
+    // Replaying the same rejected operation only spends more of the rate budget.
+    if (body.error?.messages?.some((message) => /^Bad request[.!]?$/i.test(message)) === true) {
+      return yield* new ProviderNetworkError({
+        provider: 'anilist',
+        status: response.status,
+        retryable: false,
+        cause: new Error(`AniList rejected the query (HTTP ${response.status}): ${body.error.messages.join('; ')}`),
+      });
     }
 
     if (body.errors != null && body.errors.length > 0) {

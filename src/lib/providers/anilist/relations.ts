@@ -77,7 +77,7 @@ export function getAnimeRelations(
       deps,
       `query ($id: Int, $withCredits: Boolean!) {
         Media(id: $id) {
-          ... @skip(if: $withCredits) { ${EPISODE_FIELDS} }
+          ${params.withCredits ? '' : EPISODE_FIELDS}
           characters(sort: [ROLE, RELEVANCE, ID], perPage: 15) @include(if: $withCredits) {
             edges { role node { id name { full } image { large } } }
           }

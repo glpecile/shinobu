@@ -23,9 +23,11 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 let requests = 0;
+let failureStatus: number | undefined;
 mock.module('@/lib/http/client', () => ({
   httpFetch: async () => {
     requests++;
+    if (failureStatus != null) return new Response('{}', { status: failureStatus });
     return new Response(JSON.stringify({ data: { Media: {
       episodes: 1,
       duration: 24,
@@ -40,6 +42,24 @@ mock.module('react-native', () => ({
 }));
 
 const { anilistQueryKeys, fetchWatchlistAnime, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery } = await import('./anilist');
+const { createQueryClient } = await import('./query-client');
+
+test('the episode read does not multiply the combined query’s retry budget', async () => {
+  requests = 0;
+  failureStatus = 503;
+  const client = createQueryClient();
+  client.setDefaultOptions({ queries: { ...client.getDefaultOptions().queries, retryDelay: 0 } });
+  const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
+  const read = renderHook(() => useAniListEpisodesQuery({ mediaId: 1 }), { wrapper });
+  try {
+    await waitFor(() => expect(read.result.current.isError).toBe(true));
+    expect(requests).toBe(4);
+  } finally {
+    read.unmount();
+    client.clear();
+    failureStatus = undefined;
+  }
+});
 
 test('opening episodes and relations together spends one request, and revisiting spends none', async () => {
   requests = 0;

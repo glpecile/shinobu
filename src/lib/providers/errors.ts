@@ -48,6 +48,8 @@ export class ProviderNetworkError extends Data.TaggedError(
    * (plan 0031 KTD-10) — from an outage, without parsing the message string.
    */
   readonly status?: number;
+  /** A provider can report a permanent request rejection with a 5xx status. */
+  readonly retryable?: boolean;
 }> {
   get message() {
     const detail =

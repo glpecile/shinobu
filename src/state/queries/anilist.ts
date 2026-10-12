@@ -329,7 +329,7 @@ function anilistRelationsQuery(queryClient: QueryClient, params: { mediaId: numb
   };
 }
 
-/** Both detail sections join the same in-flight query, regardless of mount order. */
+/** Both sections join one in-flight query; the relations query owns retries. */
 async function fetchAniListEpisodes(queryClient: QueryClient, mediaId: number): Promise<NormalizedSeason> {
   const result = await queryClient.fetchQuery(anilistRelationsQuery(queryClient, { mediaId, type: 'ANIME' }));
   return result.season!;
@@ -435,6 +435,7 @@ export function useAniListEpisodesQuery(params: {
   return useQuery({
     queryKey: anilistQueryKeys.episodes(mediaId ?? -1),
     queryFn: () => fetchAniListEpisodes(queryClient, mediaId ?? -1),
+    retry: false,
     enabled: enabled && mediaId != null,
     staleTime: EPISODES_STALE_MS,
   });
@@ -523,6 +524,7 @@ export function useSuspenseAniListEpisodesQuery(params: { mediaId: number }) {
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.episodes(mediaId),
     queryFn: () => fetchAniListEpisodes(queryClient, mediaId),
+    retry: false,
     staleTime: EPISODES_STALE_MS,
   });
 }
