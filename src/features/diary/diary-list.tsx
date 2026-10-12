@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
   ActivityIndicator,
@@ -10,6 +11,7 @@ import {
 } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
+import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
@@ -23,7 +25,7 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
-import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
+import { DURATION, EASE_IN_OUT, TIMING_EASE_IN_OUT } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -74,6 +76,7 @@ import {
  */
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
+const DIARY_REFLOW = LinearTransition.duration(DURATION.toggle).easing(TIMING_EASE_IN_OUT);
 
 /** Flattened list rows: a day's gutter head, then that day's entries. */
 type DiaryListItem =
@@ -202,14 +205,17 @@ function flattenDays(
  * rather than running into the next one's date.
  */
 function RailLine({ stop = false }: { stop?: boolean }) {
+  const reduceMotion = useReducedMotion();
   return (
     <View className={cn(RAIL_W, 'relative')}>
-      <View
-        className={cn(
-          'absolute w-px bg-border top-0',
-          RAIL_LINE,
-          stop ? 'h-1/2' : 'bottom-0',
-        )}
+      <AnimatedView
+        className={cn('absolute w-px bg-border top-0', RAIL_LINE)}
+        style={{
+          height: stop ? '50%' : '100%',
+          transitionProperty: 'height',
+          transitionDuration: reduceMotion ? 0 : DURATION.toggle,
+          transitionTimingFunction: EASE_IN_OUT,
+        }}
       />
     </View>
   );
@@ -231,9 +237,8 @@ function DiaryDayHead({
   onToggle: () => void;
 }) {
   const label = `${count} ${count === 1 ? 'entry' : 'entries'}`;
-  const toggle = useDisclosureToggle(onToggle);
   return (
-    <RailHead label={`${parts.label} ${parts.day}, ${label}`} onToggle={toggle} open={!collapsed}>
+    <RailHead label={`${parts.label} ${parts.day}, ${label}`} onToggle={onToggle} open={!collapsed}>
       <RailHead.Date day={parts.day} label={parts.label} today={parts.isToday} />
       <RailHead.Count>{label}</RailHead.Count>
     </RailHead>
@@ -373,7 +378,7 @@ function DiaryRow({
 
   return (
     <View className="flex-row">
-      <RailLine stop={last} />
+      <RailLine key={entry.id} stop={last} />
       <ActionableRow
         className={ROW_BODY}
         href={href}
@@ -430,7 +435,7 @@ function DiaryClusterRow({
 }) {
   return (
     <View className="flex-row">
-      <RailLine stop={last && !expanded} />
+      <RailLine key={clusterKey} stop={last && !expanded} />
       <ActionableRow
         accessibility={{
           accessibilityHint: expanded ? 'Collapses this run' : 'Expands this run',
@@ -492,7 +497,7 @@ function DiaryChildRow({
 
   return (
     <View className="flex-row">
-      <RailLine stop={last} />
+      <RailLine key={entry.id} stop={last} />
       <ActionableRow
         className="flex-1 h-9 pr-6 pl-3"
         href={href}
@@ -652,6 +657,7 @@ export function DiaryList({
   onItemActions,
 }: DiaryListProps) {
   const [refreshing, setRefreshing] = useState(false);
+  const reduceMotion = useReducedMotion();
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
   // Flipped only on threshold crossings, so scrolling doesn't re-render.
@@ -698,6 +704,7 @@ export function DiaryList({
     <View className="flex-1">
       <List
         ref={listRef}
+        itemLayoutAnimation={reduceMotion ? undefined : DIARY_REFLOW}
         onScroll={handleScroll}
         data={items}
         keyExtractor={(item) => item.key}
