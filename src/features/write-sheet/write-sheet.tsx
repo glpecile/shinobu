@@ -4,8 +4,8 @@ import { Text, View } from 'react-native';
 import { FadeIn } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
-import { Button } from '@/components/button';
 import { SectionEnter } from '@/components/section-enter';
+import { Sheet } from '@/components/sheet';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { DURATION } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
@@ -36,28 +36,6 @@ function Step({ children }: { children: ReactNode }) {
 
 function Title({ children }: { children: ReactNode }) {
   return <Text className="text-2xl font-display text-foreground">{children}</Text>;
-}
-
-/** Logging views keep dismissal beside the heading, separate from the primary action. */
-function Header({ children, onClose, done = false }: {
-  children: ReactNode;
-  onClose: () => void;
-  done?: boolean;
-}) {
-  return (
-    <View className="flex-row items-start gap-3">
-      <View className="flex-1 min-w-0">{children}</View>
-      <Button
-        className="shrink-0"
-        icon={<Button.Icon name={done ? 'checkmark' : 'close'} />}
-        iconOnly
-        label={done ? 'Done' : 'Cancel'}
-        onPress={onClose}
-        shape="pill"
-        variant="quiet"
-      />
-    </View>
-  );
 }
 
 function Description({ children }: { children: ReactNode }) {
@@ -131,19 +109,8 @@ function Actions({ children }: { children: ReactNode }) {
   return <View className="mt-6 gap-2">{children}</View>;
 }
 
-function Cancel({ onPress }: { onPress: () => void }) {
-  return (
-    <Button
-      icon={<Button.Icon name="close" />}
-      label="Cancel"
-      onPress={onPress}
-      variant="quiet"
-    />
-  );
-}
-
 /**
  * The write verbs' sheet body (log, watchlist add/remove, catch-up), composed
  * around each verb's own fields and confirm button.
  */
-export const WriteSheet = { Step, Header, Title, Description, Report, Error: WriteError, Actions, Cancel };
+export const WriteSheet = { Step, Header: Sheet.Header, Title, Description, Report, Error: WriteError, Actions };

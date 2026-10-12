@@ -14,6 +14,8 @@ import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view
 import { RailFadeColor } from '@/components/rail';
 
 import { sheetScrollMetrics } from './metrics';
+import { SheetCloseContext } from './context';
+import { SheetDismissHeader } from './header';
 
 export interface SheetProps {
   open: boolean;
@@ -56,11 +58,15 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       }
     >
       <SheetContent>
-        <RailFadeColor value="--color-surface">{children}</RailFadeColor>
+        <SheetCloseContext.Provider value={onClose}>
+          <RailFadeColor value="--color-surface">{children}</RailFadeColor>
+        </SheetCloseContext.Provider>
       </SheetContent>
     </ModalBottomSheet>
   );
 }
+
+Sheet.Header = SheetDismissHeader;
 
 /** Padding lives on the scroll content, not the scroller, so the indicator
  * tracks the sheet's edge rather than floating inside the padding. */

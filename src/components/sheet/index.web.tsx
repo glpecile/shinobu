@@ -19,6 +19,8 @@ import {
 } from '@/lib/motion';
 
 import { sheetScrollMetrics } from './metrics';
+import { SheetCloseContext } from './context';
+import { SheetDismissHeader } from './header';
 
 /** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface SheetProps {
@@ -240,7 +242,9 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
                 className="absolute inset-0"
                 onPress={onClose}
               />
-              <SheetPanel reduceMotion={reduceMotion}>{children}</SheetPanel>
+              <SheetCloseContext.Provider value={onClose}>
+                <SheetPanel reduceMotion={reduceMotion}>{children}</SheetPanel>
+              </SheetCloseContext.Provider>
             </AnimatedView>
           </>
         )}
@@ -248,6 +252,8 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
     </Modal>
   );
 }
+
+Sheet.Header = SheetDismissHeader;
 
 /** Web needs no portal host — pass-through. */
 export function SheetProvider({ children }: { children: ReactNode }) {
