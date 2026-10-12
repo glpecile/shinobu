@@ -356,10 +356,10 @@ export function Button({
             // Grow from the label's intrinsic width: flex-1's zero basis hides
             // it in content-sized native buttons. Stretch rows still push the
             // trailing glyph to the far edge.
-            className={cn(
+             className={cn(
+              'min-w-0 shrink',
               overlay && 'opacity-0',
               align === 'start' && 'grow',
-              numberOfLines != null && 'min-w-0 shrink',
             )}
             layout={BOX_LAYOUT}
             style={COLOR_TRANSITION}

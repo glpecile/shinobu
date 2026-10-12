@@ -7,9 +7,11 @@ import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
-import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
+import type { LogRequest } from '@/features/log-media/log-request';
+import { needsReleaseEnrichment, watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
+import { LogSheetContent } from '@/features/up-next/catch-up/catch-up-log-sheet';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { creditRoleLine, type PersonCredit } from '@/features/person/person-credit-sheet';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
@@ -129,9 +131,10 @@ function SheetPoster({ item }: { item: NormalizedMediaItem }) {
  * details, view on the relevant provider(s), hide. Opened by long-press on a
  * card or row everywhere, plus the hover ⋯ button on web (long-press is not a
  * discoverable web gesture). Quick log reuses
- * `LogMediaButton` wholesale — its confirm sheet (provider picker, backdate,
- * tags, partial-failure report) stacks above this one, and its outcome copy
- * lands here, so feed logging and details-page logging are one code path. The
+ * `LogMediaButton` wholesale — its form renders here in place of the rows
+ * (the watchlist picker's plan 0032 U3 shape, never a second sheet stacked
+ * over this one), and clean reports become toasts, so feed logging and
+ * details-page logging are one code path. The
  * want-to-watch CTA sits beside it under the same rules (plan 0031 U8) — on by
  * default, off on the diary.
  */
@@ -149,29 +152,45 @@ export function CardActionsSheet({
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   // List cards carry only a year; resolve the same release date and identity
-  // as details before deciding whether logging is available.
+  // as details before deciding whether logging is available. Letterboxd rows
+  // resolve identity first (slug → film record); any other film-like row the
+  // gate can't judge yet (Simkl library rows never carry a release date)
+  // reads straight through — otherwise a released current-year film hides
+  // its log button as `unknown`.
   const film = useLetterboxdFilmQuery(open ? sourceItem?.externalIds.letterboxd ?? null : null);
   const resolved = sourceItem != null && film.data != null
     ? { ...mergeCatalogueMetadata(sourceItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
     : sourceItem;
-  const details = useMediaDetailsQuery(open && film.data != null ? resolved ?? undefined : undefined);
+  const details = useMediaDetailsQuery(
+    open && (film.data != null || (sourceItem != null && needsReleaseEnrichment(sourceItem)))
+      ? (resolved ?? undefined)
+      : undefined,
+  );
   const item = resolved == null ? null : applyPrimaryMetadata(resolved, details.data?.catalogue);
   /**
-   * Which content the one sheet shows (plan 0032 U3): the action rows, or a
-   * watchlist picker rendered **in place of** them — never a second sheet
-   * stacked over this one. Cancel returns to the rows; a clean report closes
-   * the whole sheet (the picker fires the toast first).
+   * Which content the one sheet shows (plan 0032 U3): the action rows, a
+   * watchlist picker, or the log form — each rendered **in place of** the
+   * rows, never a second sheet stacked over this one. Cancel returns to the
+   * rows; a clean report fires its toast first, then closes the whole sheet
+   * (watchlist) or returns to the rows (log).
    */
   const itemId = item?.id;
   // Remembers which opening chose the mode, so reopening or a new item falls
   // back to the rows.
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'watchlist-add' | 'watchlist-remove';
+    mode: 'actions' | 'watchlist-add' | 'watchlist-remove' | 'log';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
+  if (chosen.open !== open || chosen.itemId !== itemId) {
+    setChosen({ mode: 'actions', open, itemId });
+  }
   const mode = chosen.open === open && chosen.itemId === itemId ? chosen.mode : 'actions';
   const setMode = (next: typeof chosen.mode) => setChosen({ mode: next, open, itemId });
+  // The log request the `log` mode renders (see `LogMediaButton`'s
+  // `onOpenRequest`): set in the same press that enters the mode, so it is
+  // never read stale — reopening or a new item falls back to the rows above.
+  const [logRequest, setLogRequest] = useState<LogRequest | null>(null);
   // Same read `LogMediaButton` uses (one cache entry, one request): a series
   // whose next episode Trakt can name gets the button, so the pointer to the
   // season picker below is only for the shows that don't.
@@ -237,6 +256,16 @@ export function CardActionsSheet({
             onCleanClose={onClose}
           />
         )}
+      {item != null && mode === 'log' && logRequest != null && (
+        <LogSheetContent
+          key={`log-${item.id}-${logRequest.title}`}
+          onClose={() => setMode('actions')}
+          onDismiss={onClose}
+          onOpenRequest={setLogRequest}
+          open={open}
+          request={logRequest}
+        />
+      )}
       {item != null && mode === 'actions' && (
         <>
           {/* Opened by a long-press with no page transition, so the artwork
@@ -279,11 +308,19 @@ export function CardActionsSheet({
           <View className="mt-5">
             {/* key: the button's sheet/result state must not leak between items. */}
             {/* Same placement predicate the details screen uses (plan 0031
-                R11) — this sheet renders `LogMediaButton` wholesale, so an
-                unreleased film would otherwise show a permanently disabled
-                "Not yet released" above the CTA that actually applies. */}
+                R11) — this sheet renders `LogMediaButton` wholesale. Only an
+                undatable film hides it; an unreleased one keeps its disabled
+                release countdown beside the CTA that actually applies, the
+                anime shape. */}
             {!watchlistCtaIsPrimary(item) && (
-              <LogMediaButton item={item} key={item.id} />
+              <LogMediaButton
+                item={item}
+                key={item.id}
+                onOpenRequest={(request) => {
+                  setLogRequest(request);
+                  setMode('log');
+                }}
+              />
             )}
             {/* Opens the target picker in place of this sheet's rows (plan
                 0032 U3). The picker stays mounted through the write — a toast

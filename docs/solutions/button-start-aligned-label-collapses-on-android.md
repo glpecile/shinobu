@@ -11,3 +11,9 @@ the icon, gap, and padding.
 Use `grow` instead: the label keeps its intrinsic basis and can still occupy
 spare width in stretched sheet rows, pushing trailing icons to the far edge.
 The fix belongs in the shared button, not a platform-specific season action.
+
+The label wrapper also needs `min-w-0 shrink` whether or not `numberOfLines`
+is set. Otherwise long copy-title labels keep their intrinsic width and spill
+outside the sheet's buttons on web. Shrinking with an automatic basis keeps
+content-sized native buttons intact and lets unrestricted labels wrap inside
+constrained rows; `numberOfLines` remains an opt-in truncation limit.

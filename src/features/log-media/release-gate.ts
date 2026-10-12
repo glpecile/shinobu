@@ -1,4 +1,5 @@
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
+import { localDayOffset } from '@/lib/time/relative-day';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -8,6 +9,21 @@ import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
  */
 export type FilmReleaseStatus = 'released' | 'unreleased' | 'unknown';
 
+/** Disabled film CTA, counting down in the user's local calendar days. */
+export function unreleasedFilmLabel(
+  releaseDate: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  const offset = localDayOffset(releaseDate, now);
+  if (offset == null || offset < 0) return 'Not yet released';
+  if (offset > 1) return `In theaters in ${offset} days`;
+  return `In theaters ${offset === 0 ? 'today' : 'tomorrow'}`;
+}
+
+/** Movies and anime films — the rows a release date can gate. Series never. */
+function isFilmLike(item: Pick<NormalizedMediaItem, 'type' | 'isFilm'>): boolean {
+  return item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
+}
 /**
  * Whether a film can be logged as watched (owner decision, 2026-07-27:
  * an undated film — an announced project with no release date anywhere, e.g.
@@ -48,6 +64,11 @@ export function filmReleaseStatus(
  * CTA be the *primary* control on this item, with `LogMediaButton` not rendered
  * at all?
  *
+ * Only `'unknown'` hides the button: a film with no date anywhere can't name
+ * its reason, so the watchlist CTA stands alone. An *unreleased* film keeps
+ * its (disabled) log CTA beside it — "In theaters in 23 days", the anime shape
+ * ("Episode 1 airs in 8 days") — rather than a silent absence.
+ *
  * Exported as one predicate — never re-derived at a call site — because the
  * film-like guard is the whole safety of it. `filmReleaseStatus` reads only
  * `releaseDate`/`year`, so an airing series with neither answers `'unknown'`;
@@ -62,10 +83,31 @@ export function watchlistCtaIsPrimary(
   item: Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'releaseDate' | 'year'>,
   now: Date = new Date(),
 ): boolean {
-  const isFilmLike =
-    item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
-  if (!isFilmLike) return false;
-  return filmReleaseStatus(item, now) !== 'released';
+  if (!isFilmLike(item)) return false;
+  return filmReleaseStatus(item, now) === 'unknown';
+}
+
+/**
+ * Film-like rows the logging gate can't judge yet: `filmReleaseStatus`
+ * answers `'unknown'` for them, which hides the log button — even when the
+ * film is out and the row's provider simply never sends dates (Simkl library
+ * rows carry year only). The card-actions sheet reads these through the same
+ * TMDB-backed details query as the details screen before deciding, so the two
+ * agree in every configuration. Rows the gate already judges (`released`,
+ * `unreleased`) never pay for the fetch.
+ *
+ * Film-like only, for the same reason as `watchlistCtaIsPrimary`'s guard: an
+ * airing series is dateless by nature and must never pay for a fetch it
+ * doesn't need.
+ *
+ * `now` is injectable for tests; callers let it default.
+ */
+export function needsReleaseEnrichment(
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'releaseDate' | 'year'>,
+  now: Date = new Date(),
+): boolean {
+  if (!isFilmLike(item)) return false;
+  return filmReleaseStatus(item, now) === 'unknown';
 }
 
 /**
