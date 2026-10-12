@@ -23,6 +23,13 @@ poster box, including in the loading skeleton, rather than Galeria's internal
 view hierarchy. Shared/deep links without the parameter retain normal artwork
 selection. Android/web ignore it.
 
+Keep explicit `w-28 h-40` dimensions on ZoomableImage inside the target box.
+Its web implementation inserts an unsized PresstableOpacity button between
+the box and the image; `w-full h-full` resolves against that button, not the
+target box, collapsing the poster to its 2px border. Verified on
+`/details/simkl/2799393`: percentage sizing reproduced a 2px height; explicit
+sizing restored a loaded 112 × 160px poster and clicking opened the lightbox.
+
 ## Verification
 
 On an iPhone 17 Pro simulator running iOS 26.5, runtime inspection confirmed

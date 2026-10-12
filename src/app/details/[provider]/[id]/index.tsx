@@ -725,7 +725,7 @@ function DetailsScreen() {
                 alt={shown.title}
                 uri={zoomPoster ?? (shown.coverImage || artwork.coverImage)}
                 type="image"
-                className="w-full h-full rounded-lg border border-border bg-surface"
+                className="w-28 h-40 rounded-lg border border-border bg-surface"
                 contentFit="cover"
                 {...(zoomPoster != null ? { transition: 0 } : {})}
               />
