@@ -10,7 +10,7 @@ import {
   type WebViewNavigationState,
 } from 'nitro-webview';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { Sheet } from '@/components/sheet';
 
 // Page-load injection avoids Nitro's off-main-thread iOS evaluateJavaScript call.
 const CAPTURE_USER_AGENT_SCRIPT = `
@@ -30,7 +30,7 @@ interface ProviderSigninWebViewProps<T> {
   /** Controlled visibility — the parent owns the trigger button + open state. */
   visible: boolean;
   onClose: () => void;
-  /** Modal header + cancel a11y label. */
+  /** Modal heading. */
   title: string;
   /** The sign-in page to load (e.g. serializd.com/login). */
   uri: string;
@@ -135,12 +135,8 @@ export function ProviderSigninWebView<T>({
       presentationStyle="pageSheet"
       visible={visible}
     >
-      {/* React Native's `Modal` hosts its children in a *separate* native view
-          hierarchy, which the app-level `GestureHandlerRootView` in
-          `app/_layout.tsx` does not reach — so every gesture-handler pressable
-          inside a Modal is dead until its own root wraps it. That is why the
-          Cancel button did nothing: it's a pressto (RNGH) pressable, and there
-          was no handler root above it. */}
+      {/* Modal has a separate native hierarchy: its close button needs its own
+          gesture root. */}
       {/* Plain `style`, no className — uniwind drops className on third-party
           components on native
           (docs/solutions/uniwind-classname-third-party-components.md). */}
@@ -149,15 +145,10 @@ export function ProviderSigninWebView<T>({
           className="flex-1 bg-background"
           style={{ paddingTop: insets.top }}
         >
-          <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-            <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
-            <PresstableOpacity
-              accessibilityLabel={`Cancel ${title}`}
-              className="px-3 py-1.5"
-              onPress={onClose}
-            >
-              <Text className="text-accent font-sans-semibold text-sm">Cancel</Text>
-            </PresstableOpacity>
+          <View className="px-4 py-3 border-b border-border">
+            <Sheet.Header onClose={onClose}>
+              <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
+            </Sheet.Header>
           </View>
           {visible && (
             <NitroWebView

@@ -145,7 +145,9 @@ function PickerReport({
   const retryable = step.thrown || (step.report?.failed.length ?? 0) > 0;
   return (
     <>
-      <WriteSheet.Title>{item.title}</WriteSheet.Title>
+      <WriteSheet.Header done onClose={onDone}>
+        <WriteSheet.Title>{item.title}</WriteSheet.Title>
+      </WriteSheet.Header>
       <WriteSheet.Report
         failedHeadline={failedOnSentence}
         item={item}
@@ -258,7 +260,9 @@ export function WatchlistAddPicker({
 
   return (
     <WriteSheet.Step key="form">
-      <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
+      <WriteSheet.Header onClose={onCancel}>
+        <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
+      </WriteSheet.Header>
       <WriteSheet.Description>Choose where “{item.title}” is added.</WriteSheet.Description>
 
       {/* Frozen while the fan-out runs, like `LogFormFields`: a target toggled
@@ -326,7 +330,6 @@ export function WatchlistAddPicker({
           loadingLabel={copy.pending}
           onPress={() => write(selected)}
         />
-        <WriteSheet.Cancel onPress={onCancel} />
       </WriteSheet.Actions>
     </WriteSheet.Step>
   );
@@ -438,7 +441,9 @@ export function WatchlistRemovePicker({
 
   return (
     <WriteSheet.Step key="form">
-      <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
+      <WriteSheet.Header onClose={onCancel}>
+        <WriteSheet.Title>{copy.idle}</WriteSheet.Title>
+      </WriteSheet.Header>
       <WriteSheet.Description>
         Choose where “{entry.item.title}” is removed.
       </WriteSheet.Description>
@@ -510,7 +515,6 @@ export function WatchlistRemovePicker({
           morphLabel
           onPress={confirm}
         />
-        <WriteSheet.Cancel onPress={onCancel} />
       </WriteSheet.Actions>
     </WriteSheet.Step>
   );

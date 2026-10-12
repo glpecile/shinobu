@@ -72,7 +72,9 @@ export function DiscussionResults({ threads, searchTitles = [] }: {
         {threads.map(({ board, thread }) => <DiscussionCard board={board} key={`${board}-${thread.id}`} thread={thread} />)}
       </Rail>
       <Sheet onClose={() => setOpen(false)} open={open}>
-        <Text className="font-display text-xl text-foreground mb-4">Search discussions</Text>
+        <Sheet.Header>
+          <Text className="font-display text-xl text-foreground mb-4">Search discussions</Text>
+        </Sheet.Header>
         {searchTitles.length > 0 && <View className="gap-2">
           {boards.flatMap((board) => searchTitles.map((title, index) => (
             <Button

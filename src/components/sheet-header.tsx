@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { Eyebrow } from '@/components/eyebrow';
+import { Sheet } from '@/components/sheet';
 
 /**
  * What a long-press sheet is about: artwork beside `SheetHeader.Content`. The
@@ -19,7 +20,11 @@ import { Eyebrow } from '@/components/eyebrow';
  * ```
  */
 export function SheetHeader({ children }: { children: ReactNode }) {
-  return <View className="flex-row items-center gap-4">{children}</View>;
+  return (
+    <Sheet.Header>
+      <View className="flex-row items-center gap-4">{children}</View>
+    </Sheet.Header>
+  );
 }
 
 function Content({ children }: { children: ReactNode }) {

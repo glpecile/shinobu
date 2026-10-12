@@ -30,7 +30,9 @@ export function YearSheet({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Eyebrow className="mb-3">Jump to year</Eyebrow>
+      <Sheet.Header>
+        <Eyebrow className="mb-3">Jump to year</Eyebrow>
+      </Sheet.Header>
       <View className="flex-row flex-wrap gap-2">
         {years.map((year) => {
           const selected = year === value;

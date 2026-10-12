@@ -91,12 +91,6 @@ function ProviderSheetContent({
               onDone();
             }}
           />
-          <Button
-            icon={<Button.Icon name="close" />}
-            label="Cancel"
-            onPress={onDone}
-            variant="quiet"
-          />
         </View>
       ) : (
         <View className="mt-5">

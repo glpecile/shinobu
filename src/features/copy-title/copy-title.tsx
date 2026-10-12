@@ -28,7 +28,7 @@ export function CopyTitle({
 }) {
   const [open, setOpen] = useState(false);
   const choices = [
-    ...[title, ...(year != null ? [`${title} (${year})`] : []), ...alternates].map(
+    ...[title, ...(year != null ? [`${title} (${year})`, `${title} ${year}`] : []), ...alternates].map(
       (text) => ({ label: `Copy “${text}”`, text }),
     ),
     ...(tmdbId != null
@@ -53,9 +53,11 @@ export function CopyTitle({
         <Text className="text-3xl font-display text-foreground">{title}</Text>
       </PresstableOpacity>
       <Sheet onClose={() => setOpen(false)} open={open}>
-        <Text className="text-2xl font-display text-foreground" numberOfLines={2}>
-          {title}
-        </Text>
+        <Sheet.Header>
+          <Text className="text-2xl font-display text-foreground" numberOfLines={2}>
+            {title}
+          </Text>
+        </Sheet.Header>
         <View className="mt-5 gap-2">
           {choices.map((choice) => (
             <Button
