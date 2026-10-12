@@ -27,8 +27,9 @@ export function CopyTitle({
   year?: number | null;
 }) {
   const [open, setOpen] = useState(false);
+  const plainTitle = title.replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
   const choices = [
-    ...[title, ...(year != null ? [`${title} (${year})`, `${title} ${year}`] : []), ...alternates].map(
+    ...[title, ...(year != null ? [`${title} (${year})`, `${plainTitle} ${year}`] : []), ...alternates].map(
       (text) => ({ label: `Copy “${text}”`, text }),
     ),
     ...(tmdbId != null
