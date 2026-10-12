@@ -21,7 +21,6 @@ import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-en
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface FeedRowCallbacks {
-  onItemPress: (item: NormalizedMediaItem) => void;
   onItemActions: (item: NormalizedMediaItem) => void;
 }
 
@@ -55,7 +54,6 @@ interface FeedRowCallbacks {
  * of it and reads as "[mark] Watchlist".
  */
 export function YourWatchlistRow({
-  onItemPress,
   onItemActions,
 }: FeedRowCallbacks) {
   const { entries } = useSuspenseWatchlistQuery();
@@ -69,7 +67,6 @@ export function YourWatchlistRow({
       collapseKey="your-watchlist"
       items={items}
       onItemActions={onItemActions}
-      onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.watchlist())}
       title="Your Watchlist"
     />
@@ -102,7 +99,6 @@ export function YourWatchlistRow({
  */
 export function LetterboxdWatchlistRow({
   username,
-  onItemPress,
   onItemActions,
 }: FeedRowCallbacks & { username: string }) {
   const { data } = useSuspenseYourWatchlistQuery(username);
@@ -113,7 +109,6 @@ export function LetterboxdWatchlistRow({
       collapseKey="letterboxd-watchlist"
       items={items}
       onItemActions={onItemActions}
-      onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.watchlist('letterboxd'))}
       provider="letterboxd"
       title="Watchlist"
@@ -122,7 +117,6 @@ export function LetterboxdWatchlistRow({
 }
 
 export function TrendingMoviesRow({
-  onItemPress,
   onItemActions,
 }: FeedRowCallbacks) {
   const { data } = useSuspenseTrendingMoviesQuery();
@@ -132,7 +126,6 @@ export function TrendingMoviesRow({
       collapseKey="trending-movies"
       items={items}
       onItemActions={onItemActions}
-      onItemPress={onItemPress}
       provider="simkl"
       title="Trending Movies"
     />
@@ -140,7 +133,6 @@ export function TrendingMoviesRow({
 }
 
 export function TrendingShowsRow({
-  onItemPress,
   onItemActions,
 }: FeedRowCallbacks) {
   const { data } = useSuspenseTrendingShowsQuery();
@@ -150,7 +142,6 @@ export function TrendingShowsRow({
       collapseKey="trending-shows"
       items={items}
       onItemActions={onItemActions}
-      onItemPress={onItemPress}
       provider="simkl"
       title="Trending TV Shows"
     />
@@ -159,7 +150,6 @@ export function TrendingShowsRow({
 
 export function SeasonalAnimeRow({
   season,
-  onItemPress,
   onItemActions,
 }: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
   const { data } = useSuspenseSeasonalAnimeQuery(season);
@@ -172,7 +162,6 @@ export function SeasonalAnimeRow({
       collapseKey="seasonal-anime"
       items={items}
       onItemActions={onItemActions}
-      onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
       provider="anilist"
       title={`Anime of ${animeSeasonLabel(season)}`}
@@ -190,7 +179,6 @@ export function SeasonalAnimeRow({
  */
 export function AnimeMoviesRow({
   season,
-  onItemPress,
   onItemActions,
 }: FeedRowCallbacks & { season: AnimeSeasonWindow }) {
   const { data } = useSuspenseAnimeMoviesQuery(season);
@@ -201,7 +189,6 @@ export function AnimeMoviesRow({
       collapseKey="anime-movies"
       items={items}
       onItemActions={onItemActions}
-      onItemPress={onItemPress}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
       provider="anilist"
       title={`Films of ${animeSeasonLabel(season)}`}

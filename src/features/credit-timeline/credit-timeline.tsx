@@ -424,7 +424,6 @@ export function CreditTimeline({
                         className="w-full h-auto aspect-2/3"
                         item={credit.item}
                         onActionsPress={() => onItemActions(credit, roles)}
-                        onPress={onItemPress}
                         subtitle={roles}
                       />
                       <WatchedMark item={credit.item} poster />

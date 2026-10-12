@@ -220,7 +220,6 @@ function FeedScreen() {
           >
             <YourWatchlistRow
               onItemActions={openActions}
-              onItemPress={openDetails}
             />
           </SuspenseSection>
         )}
@@ -234,7 +233,6 @@ function FeedScreen() {
           >
             <LetterboxdWatchlistRow
               onItemActions={openActions}
-              onItemPress={openDetails}
               username={letterboxdUsername}
             />
           </SuspenseSection>
@@ -271,27 +269,23 @@ function FeedScreen() {
         <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
           <SeasonalAnimeRow
             onItemActions={openActions}
-            onItemPress={openDetails}
             season={animeSeason}
           />
         </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
           <AnimeMoviesRow
             onItemActions={openActions}
-            onItemPress={openDetails}
             season={animeSeason}
           />
         </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
           <TrendingMoviesRow
             onItemActions={openActions}
-            onItemPress={openDetails}
           />
         </SuspenseSection>
         <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
           <TrendingShowsRow
             onItemActions={openActions}
-            onItemPress={openDetails}
           />
           <FeedEnd
             onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}

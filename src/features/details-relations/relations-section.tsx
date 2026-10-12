@@ -4,8 +4,6 @@ import { MediaCarousel } from '@/components/media-carousel';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
-import { usePushRoute } from '@/lib/navigation';
-import { routes } from '@/lib/routes';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
@@ -14,7 +12,6 @@ const ALIGN_TO_COLUMN = '-mx-4 -mb-6 mt-8';
 
 function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type: MediaType; onItemActions: (item: NormalizedMediaItem) => void }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
-  const pushRoute = usePushRoute();
   if (data.relations.length === 0) return null;
   return (
     <View className={ALIGN_TO_COLUMN}>
@@ -22,7 +19,6 @@ function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type:
         collapseKey="details-relations"
         items={data.relations.map((relation) => relation.item)}
         onItemActions={onItemActions}
-        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
         provider="anilist"
         subtitles={Object.fromEntries(
           data.relations.map((relation) => [relation.item.id, relation.relation]),
@@ -35,7 +31,6 @@ function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type:
 
 function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: number; type: MediaType; onItemActions: (item: NormalizedMediaItem) => void }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type });
-  const pushRoute = usePushRoute();
   return (
     <>
       {data.recommendations.length > 0 && (
@@ -44,7 +39,6 @@ function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: num
             collapseKey="details-recommendations"
             items={data.recommendations}
             onItemActions={onItemActions}
-            onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
             provider="anilist"
             title="Recommendations"
           />
