@@ -9,7 +9,7 @@ import { MorphText } from '@/components/morph-text';
 import { Sheet } from '@/components/sheet';
 import type { LogMediaResult, LogMediaVariables } from '@/features/log-media/fan-out';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
-import { DEFAULT_LOG_TAGS, LogConfirmSheet, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
+import { DEFAULT_LOG_TAGS, LogConfirmForm, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
 import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { logToastCopy } from '@/features/log-media/toast-copy';
@@ -133,25 +133,50 @@ function entryEpisode(entry: UpNextEpisodeEntry): CatchUpEpisode {
 export function CatchUpLogSheet() {
   const { session, open } = useCatchUpLog();
   if (session == null) return null;
-  const { request } = session;
+  return <LogSessionSheet key={session.id} open={open} request={session.request} />;
+}
+
+/** One app-level logging drawer around the session's sheet-agnostic content. */
+function LogSessionSheet({ request, open }: { request: LogRequest; open: boolean }) {
+  const { closeCatchUp } = useCatchUpControls();
+  return (
+    <Sheet onClose={closeCatchUp} open={open}>
+      <LogSheetContent onClose={closeCatchUp} open={open} request={request} />
+    </Sheet>
+  );
+}
+
+/**
+ * A logging session's content without the drawer around it — the app-level
+ * sheet above, or the card-actions sheet in place of its rows (the watchlist
+ * picker's plan 0032 U3 shape): a second native drawer can't co-present over
+ * the first, so the form swaps in instead.
+ */
+export function LogSheetContent({ request, open, onClose, onOpenRequest }: {
+  request: LogRequest;
+  open: boolean;
+  onClose: () => void;
+  /** Renders a follow-up request inline, like `onClose`'s host does. */
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   if (!isEpisodeLog(request)) {
-    return <LogConfirmSheet key={session.id} request={request} open={open} />;
+    return <LogConfirmForm onClose={onClose} onOpenRequest={onOpenRequest} request={request} />;
   }
   return request.entry != null
-    ? <QuickCatchUpSession key={session.id} entry={request.entry} open={open} />
-    : <EpisodeCatchUpSession key={session.id} request={request} open={open} />;
+    ? <QuickCatchUpForm entry={request.entry} onClose={onClose} onOpenRequest={onOpenRequest} open={open} />
+    : <EpisodeCatchUpForm onClose={onClose} onOpenRequest={onOpenRequest} open={open} request={request} />;
 }
 
-function QuickCatchUpSession({ entry, open }: { entry: UpNextEpisodeEntry; open: boolean }) {
+function QuickCatchUpForm({ entry, open, onClose, onOpenRequest }: { entry: UpNextEpisodeEntry; open: boolean; onClose: () => void; onOpenRequest?: (request: LogRequest) => void }) {
   const evidence = useCatchUpEvidence(entry);
   const queue = evidence.status === 'ready' ? catchUpQueue(entry, evidence.evidence) : null;
-  return <CatchUpSession item={entry.item} first={entryEpisode(entry)} queue={queue} source={entry.source} open={open} />;
+  return <CatchUpForm item={entry.item} first={entryEpisode(entry)} queue={queue} source={entry.source} open={open} onClose={onClose} onOpenRequest={onOpenRequest} />;
 }
 
-function EpisodeCatchUpSession({ request, open }: { request: LogRequest; open: boolean }) {
+function EpisodeCatchUpForm({ request, open, onClose, onOpenRequest }: { request: LogRequest; open: boolean; onClose: () => void; onOpenRequest?: (request: LogRequest) => void }) {
   const queue = useEpisodeLogQueue(request);
   const first = request.episodes?.[0] ?? { number: request.entryEpisodes![0] };
-  return <CatchUpSession item={request.item} first={first} queue={queue} open={open} />;
+  return <CatchUpForm item={request.item} first={first} queue={queue} open={open} onClose={onClose} onOpenRequest={onOpenRequest} />;
 }
 
 /**
@@ -178,24 +203,28 @@ function EpisodeCatchUpSession({ request, open }: { request: LogRequest; open: b
  * sheet spins until its slot's awaited invalidation resolves, and moves only
  * from recomputed data. The sheet is the plan; the feed is the truth.
  */
-function CatchUpSession({
+function CatchUpForm({
   item,
   first,
   queue: live,
   source,
   open,
+  onClose,
+  onOpenRequest,
 }: {
   item: NormalizedMediaItem;
   first: CatchUpEpisode;
   queue: CatchUpEpisode[] | null;
   source?: ProviderId;
   open: boolean;
+  onClose: () => void;
+  onOpenRequest?: (request: LogRequest) => void;
 }) {
   const queryClient = useQueryClient();
   const logMedia = useLogMedia();
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const { closeCatchUp, trackBusy } = useCatchUpControls();
+  const { trackBusy } = useCatchUpControls();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
     item,
   );
@@ -280,7 +309,7 @@ function CatchUpSession({
         toast.success(copy.title, copy.message);
       }
     }
-    closeCatchUp();
+    onClose();
   }
 
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {
@@ -407,48 +436,47 @@ function CatchUpSession({
   if (allSettled && !allClean && !reported) setReported(true);
 
   return (
-    <Sheet onClose={closeCatchUp} open={open}>
-      <WriteSheet.Step key={completionOffer != null ? 'completion' : reported ? 'report' : 'form'}>
-        {completionOffer != null ? <LetterboxdCompletionOffer request={completionOffer} onClose={closeCatchUp} /> : reported ? (
-          <ChainReport
-            item={item}
-            landed={landed}
-            ledger={ledger}
-            onDone={closeCatchUp}
-            onRetry={retry}
-            problems={problems}
-            selectedProviders={selectedProviders}
-            sending={sending}
-          />
-        ) : (
-          <>
-            <WriteSheet.Header done={ledger.length > 0} onClose={closeCatchUp}>
-              <AnimatedView
-                // Native: each episode's header slides in. Web: the same element
-                // stays mounted and the title morphs (see `headerEntering`).
-                key={Platform.OS === 'web' ? 'header' : code}
-                entering={index > 0 ? headerEntering : undefined}
-              >
-                <MorphText className="text-2xl font-display text-foreground self-start">
-                  {`Log ${code}`}
-                </MorphText>
-                <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-                  <Text className="text-muted font-sans text-sm leading-relaxed">
-                    “{item.title}”
-                  </Text>
-                  {remainingCopy != null && (
-                    <MorphText className="text-muted font-sans text-sm leading-relaxed">
-                      {`· ${remainingCopy}`}
-                    </MorphText>
-                  )}
-                </View>
-              </AnimatedView>
-            </WriteSheet.Header>
+    <WriteSheet.Step key={completionOffer != null ? 'completion' : reported ? 'report' : 'form'}>
+      {completionOffer != null ? <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} onOpenRequest={onOpenRequest} /> : reported ? (
+        <ChainReport
+          item={item}
+          landed={landed}
+          ledger={ledger}
+          onDone={onClose}
+          onRetry={retry}
+          problems={problems}
+          selectedProviders={selectedProviders}
+          sending={sending}
+        />
+      ) : (
+        <>
+          <WriteSheet.Header done={ledger.length > 0} onClose={onClose}>
+            <AnimatedView
+              // Native: each episode's header slides in. Web: the same element
+              // stays mounted and the title morphs (see `headerEntering`).
+              key={Platform.OS === 'web' ? 'header' : code}
+              entering={index > 0 ? headerEntering : undefined}
+            >
+              <MorphText className="text-2xl font-display text-foreground self-start">
+                {`Log ${code}`}
+              </MorphText>
+              <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
+                <Text className="text-muted font-sans text-sm leading-relaxed">
+                  “{item.title}”
+                </Text>
+                {remainingCopy != null && (
+                  <MorphText className="text-muted font-sans text-sm leading-relaxed">
+                    {`· ${remainingCopy}`}
+                  </MorphText>
+                )}
+              </View>
+            </AnimatedView>
+          </WriteSheet.Header>
 
             <LogFormFields
               item={item}
               manualTargets={manualTargets}
-              onClose={closeCatchUp}
+              onClose={onClose}
               onSelectedProvidersChange={setSelectedProviders}
               onTagsChange={setTags}
               liked={liked}
@@ -489,8 +517,7 @@ function CatchUpSession({
             )}
           </>
         )}
-      </WriteSheet.Step>
-    </Sheet>
+    </WriteSheet.Step>
   );
 }
 

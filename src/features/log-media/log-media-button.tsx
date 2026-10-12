@@ -16,6 +16,7 @@ import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { filmReleaseStatus, hasStartedAiring } from './release-gate';
+import type { LogRequest } from './log-request';
 import { useLogTargetsSplit } from './use-log-targets';
 import {
   firstUnairedEpisode,
@@ -29,8 +30,15 @@ import { useSeriesNextEpisode } from './use-series-next-episode';
  * Resolves the next log and its release gate, then opens the app-level logging
  * session. Films confirm once; series share the Continue Watching catch-up
  * chain. When no next episode can be named, the season picker takes over.
+ *
+ * `onOpenRequest` intercepts the built request before it opens the app-level
+ * session, so a host that is already a sheet (the card-actions sheet) can
+ * render the log form in place of its own rows instead: a second native
+ * sheet can't co-present over the first — it settles closed and its `onSettle`
+ * immediately closes the session again, so the tap reads as dead — while web
+ * Modals stack.
  */
-export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
+export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
   const connected = useConnectedProviders();
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);
@@ -234,13 +242,18 @@ export function LogMediaButton({ item }: { item: NormalizedMediaItem }) {
         }
         morphLabel
         onPress={() => {
-          openLog({
+          const request: LogRequest = {
             item, title: action, description,
             ...(isAnimeSeries ? { entryEpisodes: [nextEpisode] } : {}),
             ...(isSeries && seriesNext != null
               ? { episodes: [{ season: seriesNext.season, number: seriesNext.number }] }
               : {}),
-          });
+          };
+          if (onOpenRequest != null) {
+            onOpenRequest(request);
+            return;
+          }
+          openLog(request);
         }}
       />
       {/* The finished-show state earns a line of its own: the button below

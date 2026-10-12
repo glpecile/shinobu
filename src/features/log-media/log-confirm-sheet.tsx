@@ -5,7 +5,6 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
-import { Sheet } from '@/components/sheet';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
@@ -88,7 +87,7 @@ export interface LogFormFieldsProps {
 /**
  * The log verb's fields — write targets, manual rows, the backdate field and
  * the tags input — without the sheet, header, result or buttons around them.
- * `LogConfirmSheet` composes it for movies and season batches; the episode catch-up
+ * `LogConfirmForm` composes it for movies and season batches; the episode catch-up
  * chain (plan 0037, `features/up-next/catch-up`) composes it under its own
  * header and above its own ledger, keeping one form for both.
  */
@@ -216,10 +215,21 @@ export function LogFormFields({
   );
 }
 
-/** One-shot movie/season-batch session: owns the form, confirmation, and partial-failure report. */
-export function LogConfirmSheet({ request, open }: { request: LogRequest; open: boolean }) {
+/**
+ * One-shot movie/season-batch session: owns the form, confirmation, and
+ * partial-failure report. Sheet-agnostic — the app-level `CatchUpLogSheet`
+ * wraps it in its own drawer, and the card-actions sheet renders it in place
+ * of its rows (the watchlist picker's plan 0032 U3 shape): a second native
+ * drawer can't co-present over the first, so the form swaps in instead.
+ */
+export function LogConfirmForm({ request, onClose, onOpenRequest }: {
+  request: LogRequest;
+  onClose: () => void;
+  /** Renders a Letterboxd series-completion follow-up inline, like `onClose`'s host does. */
+  onOpenRequest?: (request: LogRequest) => void;
+}) {
   const { item, title, description } = request;
-  const { closeCatchUp: onClose, trackBusy } = useCatchUpControls();
+  const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
@@ -278,80 +288,76 @@ export function LogConfirmSheet({ request, open }: { request: LogRequest; open: 
   }
 
   if (completionOffer != null) return (
-    <Sheet onClose={onClose} open={open}>
-      <WriteSheet.Step key="completion">
-        <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} />
-      </WriteSheet.Step>
-    </Sheet>
+    <WriteSheet.Step key="completion">
+      <LetterboxdCompletionOffer request={completionOffer} onClose={onClose} onOpenRequest={onOpenRequest} />
+    </WriteSheet.Step>
   );
 
   return (
-    <Sheet onClose={onClose} open={open}>
-      <WriteSheet.Step key={reported ? 'report' : 'form'}>
-        <WriteSheet.Header done={reported} onClose={onClose}>
-          <WriteSheet.Title>{title}</WriteSheet.Title>
-        </WriteSheet.Header>
-        {reported ? (
-          <>
-            <WriteSheet.Report
-              failedHeadline={(failed, succeeded) =>
-                `Failed on ${labels(failed)}${
-                  succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
-                }`
-              }
-              item={item}
-              reconcileLine={(skipped) =>
-                `${labels(skipped)} already had this logged — skipped to keep both in sync.`
-              }
-              result={result}
-              succeededLine={(succeeded) =>
-                `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
-              }
-            />
-            {logMedia.isError && (
-              <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>
-            )}
-            {retryable && (
-              <WriteSheet.Actions>
-                <Button
-                  icon={<Button.Icon name="refresh" />}
-                  label="Try again"
-                  onPress={retry}
-                />
-              </WriteSheet.Actions>
-            )}
-          </>
-        ) : (
-          <>
-            <WriteSheet.Description>{description}</WriteSheet.Description>
-            <LogFormFields
-              item={item}
-              manualTargets={manualTargets}
-              onClose={onClose}
-              onSelectedProvidersChange={setSelectedProviders}
-              onWatchedAtChange={setWatchedAt}
-              liked={liked}
-              onLikedChange={setLiked}
-              pending={pending}
-              selectedProviders={selectedProviders}
-              targets={targets}
-              watchedAt={watchedAt}
-              tags={tags}
-              onTagsChange={setTags}
-            />
+    <WriteSheet.Step key={reported ? 'report' : 'form'}>
+      <WriteSheet.Header done={reported} onClose={onClose}>
+        <WriteSheet.Title>{title}</WriteSheet.Title>
+      </WriteSheet.Header>
+      {reported ? (
+        <>
+          <WriteSheet.Report
+            failedHeadline={(failed, succeeded) =>
+              `Failed on ${labels(failed)}${
+                succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
+              }`
+            }
+            item={item}
+            reconcileLine={(skipped) =>
+              `${labels(skipped)} already had this logged — skipped to keep both in sync.`
+            }
+            result={result}
+            succeededLine={(succeeded) =>
+              `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
+            }
+          />
+          {logMedia.isError && (
+            <WriteSheet.Error>Could not log. Try again.</WriteSheet.Error>
+          )}
+          {retryable && (
             <WriteSheet.Actions>
               <Button
-                disabled={selectedProviders.length === 0}
-                icon={<Button.Icon name="eye" />}
-                label={title}
-                loading={pending}
-                loadingLabel="Logging…"
-                onPress={confirm}
+                icon={<Button.Icon name="refresh" />}
+                label="Try again"
+                onPress={retry}
               />
             </WriteSheet.Actions>
-          </>
-        )}
-      </WriteSheet.Step>
-    </Sheet>
+          )}
+        </>
+      ) : (
+        <>
+          <WriteSheet.Description>{description}</WriteSheet.Description>
+          <LogFormFields
+            item={item}
+            manualTargets={manualTargets}
+            onClose={onClose}
+            onSelectedProvidersChange={setSelectedProviders}
+            onWatchedAtChange={setWatchedAt}
+            liked={liked}
+            onLikedChange={setLiked}
+            pending={pending}
+            selectedProviders={selectedProviders}
+            targets={targets}
+            watchedAt={watchedAt}
+            tags={tags}
+            onTagsChange={setTags}
+          />
+          <WriteSheet.Actions>
+            <Button
+              disabled={selectedProviders.length === 0}
+              icon={<Button.Icon name="eye" />}
+              label={title}
+              loading={pending}
+              loadingLabel="Logging…"
+              onPress={confirm}
+            />
+          </WriteSheet.Actions>
+        </>
+      )}
+    </WriteSheet.Step>
   );
 }
