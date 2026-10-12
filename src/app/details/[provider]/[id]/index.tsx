@@ -563,15 +563,11 @@ function DetailsScreen() {
   const artwork = useTraktMediaImages(item);
 
   function goBack() {
-    if (process.env.EXPO_OS === 'web') {
-      router.replace(routes.home);
-      return;
-    }
     if (router.canGoBack()) {
       router.back();
-    } else {
-      router.replace(routes.home);
+      return;
     }
+    router.replace(routes.home);
   }
 
   if (isLoading && item == null) {
