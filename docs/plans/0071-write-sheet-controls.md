@@ -13,6 +13,10 @@
 - Keep selection checkmarks, All/None, provider labels and the standalone
   watchlist picker. Do not change write routing or submit any provider writes
   during verification.
+- Resolve Letterboxd film metadata when the card-actions sheet opens, then
+  apply the details query's catalogue metadata before checking release status.
+  Released current-year list films must offer logging; unknown or future
+  releases keep the existing gate. Reuse cached queries, not a list-wide fetch.
 - Validate lint, typecheck, class names and simulator interactions. Attach
   collapsed and expanded before/after screenshots to the PR.
 - JS-only: hot reload; no native rebuild.
