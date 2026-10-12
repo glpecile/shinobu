@@ -1,5 +1,5 @@
 ---
-status: pending
+status: in-progress
 priority: P3
 ---
 
@@ -7,9 +7,10 @@ priority: P3
 
 A source-only audit against the installed `@expo/ui` 57.0.19, following
 `018-done-p3-animation-opportunities.md`. Items are ordered by usefulness and
-confidence. Item 4 was tried on iOS and rejected after device validation;
-the other items remain unimplemented. Paths below start at `src/` unless
-otherwise stated.
+confidence. Item 4 was tried on iOS and rejected after device validation.
+The watchlist tracker and anime year menus are implemented (2026-10-12);
+remaining opportunities are tracked below. Paths start at `src/` unless otherwise
+stated.
 
 ## 1. Reuse native segmented controls for filmography
 
@@ -31,14 +32,13 @@ when a swipe settles, so this extraction should preserve that behavior.
 
 ## 2. Use anchored native menus for short filter pickers
 
-- [ ] Start with filmography's Role picker, then migrate the watchlist tracker
-  filter and search scope picker through the same shared menu wrapper.
+- [x] Migrate the watchlist tracker filter to the shared native menu wrapper.
+- [ ] Migrate filmography's Role picker and the search scope picker.
 
-Today these open `components/picker-sheet.tsx` for a single choice:
+The remaining controls open `components/picker-sheet.tsx` for a single choice:
 
 - `features/credit-timeline/role-sheet.tsx:23` and its trigger in
   `features/credit-timeline/credit-timeline.tsx:360`.
-- `features/watchlist/watchlist-toolbar.tsx:159`.
 - `app/(tabs)/search.tsx:655-687`.
 
 Use `MenuView` from `@expo/ui/community/menu`, with stable action IDs and
@@ -57,6 +57,16 @@ lower bound and its spoken "46 or more" meaning. Preserve the watchlist's
 separate one-tap clear action. Menu icons accept SF Symbols on iOS and image
 sources on Android, not arbitrary `ProviderIcon` children. Provider names must
 remain sufficient to identify an option.
+
+**Implemented:** `components/native-picker-menu/` uses the community `MenuView`
+on iOS and Compose `DropdownMenu` on Android. The Android leading icon slot
+hosts `ProviderIcon` through `RNHostView`, keeping the full-color logos at 16
+points without raster conversions or adapter tinting. iOS shows provider names
+without logos because the adapter accepts only SF Symbols. Counts are
+parenthesized (`AniList (2)`), with partial counts spelled out (`Simkl (46 or
+more)`). Native menus show the selected option; the separate clear-filter
+action and web sheet are unchanged. See
+`docs/plans/0074-native-filter-and-year-menus.md`.
 
 ## 3. Replace hand-drawn provider checkboxes
 
@@ -98,21 +108,19 @@ both native platforms, as well as existing web behavior.
 Do not extend this change to season accordions or virtualized diary groups;
 those headers carry progress, actions and list-specific behavior.
 
-## 5. Try a native year picker before replacing the grid
+## 5. Native year selection — implemented
 
-- [ ] Prototype Expo UI `Picker` for
-  `features/anime-seasons/year-sheet.tsx:14` and compare distant-year selection
-  on iOS and Android before committing to it.
+- [x] Use an anchored native year menu in
+  `features/anime-seasons/season-picker.tsx`, sharing `NativePickerMenu` with
+  the watchlist filter. Preserve the year grid on web.
+- [ ] Compare distant-year selection, larger text and screen-reader interaction
+  on iOS and Android.
 
-The current sheet builds a pressable for every year. `Picker.Item` supports
-numeric values, so `selectedValue` and `onValueChange` can use the existing
-year directly. An iOS wheel can live inside the existing `Sheet`; Android's
-universal picker is a dropdown even when `appearance="wheel"` is requested.
-
-This is lower confidence than the short menus. The grid was chosen to make a
-decade jump quick, and a long dropdown or wheel might be slower. Preserve the
-min/max bounds, previous/next arrows and current selection on reopening. Keep
-the grid if the native control makes distant years harder to reach.
+The chosen implementation uses the same native menus as the tracker filter,
+not a wheel or a native sheet. Years are newest first, retain the existing
+min/max bounds, and show the current selection. Previous/next arrows are
+unchanged. The web sheet still builds its grid of years. Distant-year usability
+remains to be checked; restore the native grid if the long menu makes it worse.
 
 ## Considered and rejected
 
@@ -143,6 +151,13 @@ For each item, check iOS, Android and the existing web behavior, including
 light/dark mode, larger text and spoken selection state. Run `bun typecheck`,
 `bun lint`, `bun check:classnames`, `bun check:router-push` and `bun check:links`
 after implementation.
+
+User screenshots confirm the tracker menus render on iOS and Android,
+including Android logos. The user also reported Android's native-stack warning
+that `(tabs)` was removed natively but remained in JS state. No app
+`beforeRemove` listener was found, and the warning has not been reproduced or
+attributed to the menus. Track its reproduction separately rather than adding
+`usePreventRemove` without a removal-prevention requirement.
 
 The package is already installed. These JS/TS changes should hot reload in a
 dev client built with the current dependencies. A package or native config
