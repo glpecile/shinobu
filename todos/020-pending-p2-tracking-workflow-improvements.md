@@ -26,7 +26,13 @@ The shared providers are AniList and Simkl. MyAnimeList is currently an identity
 bridge in Shinobu, not a connected tracking provider. The useful comparison is
 what users can change in their provider entries, not how many UI features exist.
 
-### A. P2 — Pause, drop and resume tracking without deleting history
+### A. P2 — Pause and drop tracking without deleting history
+
+Tracked in [#227](https://github.com/glpecile/shinobu/issues/227).
+Owner decision: no Resume or Restart action. Logging another episode of either
+a paused or dropped series resumes tracking on each selected provider whose
+log succeeds, or completes the entry when appropriate. Failed writes must not
+appear resumed.
 
 **Observed gap:** `src/lib/providers/anilist/writes.ts` exposes logging and
 planning/removal, not an explicit PAUSED/DROPPED/resume action. Simkl normalizes
@@ -35,7 +41,7 @@ write workflow is history + watchlist, not a user-facing status editor.
 
 - [ ] Spike status-only edits: AniList PAUSED/DROPPED/CURRENT and Simkl
   hold/dropped/watching. Confirm the API behavior preserves progress and history.
-- [ ] Offer Pause tracking, Drop and Resume in the existing item actions. Show
+- [ ] Offer Pause tracking and Drop in the existing item actions. Show
   which connected providers support the chosen action and their current status.
 - [ ] Route by a declared operation capability in the registry/routing boundary;
   `canWrite` for logging does not establish status-edit support. Keep other
@@ -43,7 +49,10 @@ write workflow is history + watchlist, not a user-facing status editor.
 - [ ] Reuse the existing per-provider write report and failure/retry machinery.
   Do not implement pause as hide, watchlist removal or history deletion.
 - [ ] Invalidate existing feed/Up Next reads so paused/dropped items stop being
-  offered there. Resuming must not log an episode or increment a rewatch count.
+  offered there. Keep logging available from details/search; reuse the existing
+  log adapters' status transitions where possible. A new episode log resumes
+  paused/dropped tracking without introducing another control or unnecessary
+  status request. Preserve existing catch-up, completion and rewatch semantics.
 
 **Why this fits:** it closes a tracking lifecycle gap across the two shared
 providers while preserving Shinobu's one-action/multiple-provider purpose.
