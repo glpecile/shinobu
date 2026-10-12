@@ -7,6 +7,7 @@ import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { usePushRoute } from '@/lib/navigation';
@@ -57,6 +58,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             }
             onActions={openActions}
             onPress={() => pushRoute(entryRoute(entry))}
+            trailing={<WatchedMark item={entry.item} />}
           />
         )}
         ListFooterComponent={!list.complete ? (

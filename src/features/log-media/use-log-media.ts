@@ -586,6 +586,7 @@ export function invalidateAfterLog(
     // The write moved progress — refresh it so the next reconcile sees it.
     const username = getSerializdUsername();
     if (username != null) {
+      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.watchedShows(username) });
       const tmdbId = item.externalIds.tmdb;
       if (tmdbId != null) {
         queryClient.invalidateQueries({

@@ -6,8 +6,10 @@ import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 import { useLetterboxdFilmQuery } from '@/state/queries/letterboxd';
+import { useSerializdWatchedShowsQuery } from '@/state/queries/serializd';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
+import { getSerializdUsername } from '@/state/session/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /** Shares details' film-page identity read for slug-only posters, never a title guess. */
@@ -19,7 +21,11 @@ export function WatchedMark({ item, poster = false }: { item: NormalizedMediaIte
       ? item.externalIds.letterboxd ?? null : null,
   );
   const accent = useThemeColor('--color-accent');
-  const watched = useWatchedInfo(film.data ?? item) != null;
+  const username = connected.includes('serializd') && item.type === 'TV' && item.externalIds.tmdb != null
+    ? getSerializdUsername() : null;
+  const serializd = useSerializdWatchedShowsQuery(username);
+  const watched = useWatchedInfo(film.data ?? item) != null ||
+    (username != null && serializd.data?.some((show) => show.externalIds.tmdb === item.externalIds.tmdb) === true);
   const style = useAnimatedStyle(() => {
     const timing = { duration: DURATION.swap, easing: KEYFRAME_EASE_OUT };
     return {
@@ -29,7 +35,7 @@ export function WatchedMark({ item, poster = false }: { item: NormalizedMediaIte
   }, [watched]);
   return (
     <AnimatedView
-      accessibilityLabel="Watched"
+      accessibilityLabel={item.type === 'TV' ? 'Series watch history' : 'Watched'}
       aria-hidden={!watched}
       className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95')}
       style={[style, { pointerEvents: 'none' }]}
