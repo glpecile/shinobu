@@ -1,7 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { usePathname, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
@@ -74,22 +74,30 @@ const COLOR = {
  * A label that fades as the sidebar collapses. It never shrinks (`flexShrink 0`)
  * so it slides out under the sidebar's `overflow-hidden` instead of ellipsing.
  * Below `md` it's `display: none`, not faded — the bottom bar is icons only, and
- * an invisible label would still hold its width in that row.
+ * an invisible label would still hold its width in that row. `animate` is armed
+ * only by a user toggle (see AppShell), so a reload with a persisted collapsed
+ * pref paints shut instead of sliding shut.
  */
 function RevealLabel({
   children,
   collapsed,
+  animate,
   className,
 }: {
   children: ReactNode;
   collapsed: boolean;
+  animate: boolean;
   className: string;
 }) {
   return (
     <Text
       className={cn('hidden md:flex', className)}
       numberOfLines={1}
-      style={{ flexShrink: 0, opacity: collapsed ? 0 : 1, ...opacityTransition }}
+      style={{
+        flexShrink: 0,
+        opacity: collapsed ? 0 : 1,
+        ...(animate ? opacityTransition : null),
+      }}
     >
       {children}
     </Text>
@@ -100,7 +108,15 @@ function RevealLabel({
  * The sidebar control uses opposite divider positions to show which edge the
  * panel will move toward when pressed.
  */
-function PanelIcon({ color, collapsed }: { color: string; collapsed: boolean }) {
+function PanelIcon({
+  color,
+  collapsed,
+  animate,
+}: {
+  color: string;
+  collapsed: boolean;
+  animate: boolean;
+}) {
   return (
     <View
       style={{
@@ -112,7 +128,10 @@ function PanelIcon({ color, collapsed }: { color: string; collapsed: boolean }) 
       }}
     >
       <View
-        className="transition-transform duration-200 ease-in-out motion-reduce:transition-none"
+        className={cn(
+          animate &&
+            'transition-transform duration-200 ease-in-out motion-reduce:transition-none',
+        )}
         style={{
           backgroundColor: color,
           bottom: 0,
@@ -130,16 +149,24 @@ function PanelIcon({ color, collapsed }: { color: string; collapsed: boolean }) 
 /**
  * The collapse control sits in the sidebar footer in both states.
  */
-function SidebarToggle({ collapsed }: { collapsed: boolean }) {
+function SidebarToggle({
+  collapsed,
+  animate,
+  onToggle,
+}: {
+  collapsed: boolean;
+  animate: boolean;
+  onToggle: () => void;
+}) {
   return (
     <PresstableOpacity
       accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       accessibilityRole="button"
       className="h-14 items-center justify-center"
-      onPress={toggleSidebarCollapsed}
+      onPress={onToggle}
       style={{ width: ICON_COL }}
     >
-      <PanelIcon color={COLOR.foreground} collapsed={collapsed} />
+      <PanelIcon color={COLOR.foreground} collapsed={collapsed} animate={animate} />
     </PresstableOpacity>
   );
 }
@@ -148,11 +175,13 @@ function SidebarItem({
   item,
   active,
   collapsed,
+  animate,
   onPress,
 }: {
   item: NavItem;
   active: boolean;
   collapsed: boolean;
+  animate: boolean;
   onPress: () => void;
 }) {
   const color = active ? COLOR.accentOnTonal : COLOR.foreground;
@@ -169,6 +198,7 @@ function SidebarItem({
       <RevealLabel
         className="font-sans-semibold text-base text-foreground"
         collapsed={collapsed}
+        animate={animate}
       >
         {item.label}
       </RevealLabel>
@@ -200,6 +230,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pushRoute = usePushRoute();
   const collapsed = useSidebarCollapsed();
 
+  // The static prerender bakes the expanded rail while the collapsed pref
+  // lives in localStorage, so the post-hydration sync to a stored collapsed
+  // value lands one commit after the hydrated paint. Transitions arm only on
+  // a user toggle — never on mount — so that boot sync snaps shut instead of
+  // visibly sliding shut on every reload, while presses still animate. (A
+  // mount flag can't do this: the sync update batches with the mount effect's
+  // own update, re-arming transitions in the collapsing commit.)
+  const [animated, setAnimated] = useState(false);
+  function userToggleSidebar(): void {
+    setAnimated(true);
+    toggleSidebarCollapsed();
+  }
+
   // ⌘/Ctrl+B toggles the sidebar — the shadcn keyboard shortcut. Below `md`
   // the pref still flips; it just has nothing to widen until the viewport does.
   useEffect(() => {
@@ -207,7 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'b' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        toggleSidebarCollapsed();
+        userToggleSidebar();
       }
     }
     document.addEventListener('keydown', onKeyDown);
@@ -248,8 +291,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           // crossing `md` snaps. From `100%` it slid down to 240px, squeezing
           // the page to ~0px wide and latching Legend List's width
           // (docs/solutions/web-breakpoint-cross-blanks-list.md).
+          // Unarmed until a user toggle (see above): the boot sync to a
+          // stored collapsed pref must snap, not slide.
           // oxlint-disable-next-line shadcn/no-arbitrary-values -- Tailwind has no width-only transition
-          'md:transition-[width] md:duration-220',
+          animated && 'md:transition-[width] md:duration-220',
           collapsed && 'md:w-16',
         )}
       >
@@ -266,6 +311,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <RevealLabel
             className="text-2xl font-display text-foreground tracking-tight"
             collapsed={collapsed}
+            animate={animated}
           >
             Shinobu
           </RevealLabel>
@@ -306,6 +352,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SidebarItem
                 active={active}
                 collapsed={collapsed}
+                animate={animated}
                 item={item}
                 key={item.href}
                 // Pressing the tab you're on is a no-op: the tabs Navigator is
@@ -319,7 +366,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </View>
         <View className="hidden md:flex mt-auto border-t border-border">
-          <SidebarToggle collapsed={collapsed} />
+          <SidebarToggle
+            collapsed={collapsed}
+            animate={animated}
+            onToggle={userToggleSidebar}
+          />
         </View>
       </View>
       <View className="flex-1">{children}</View>
