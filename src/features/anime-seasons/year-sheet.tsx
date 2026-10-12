@@ -30,8 +30,8 @@ export function YearSheet({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Sheet.Header>
-        <Eyebrow className="mb-3">Jump to year</Eyebrow>
+      <Sheet.Header className="items-center mb-3">
+        <Eyebrow>Jump to year</Eyebrow>
       </Sheet.Header>
       <View className="flex-row flex-wrap gap-2">
         {years.map((year) => {

@@ -49,8 +49,8 @@ export function PickerSheet<T extends PickerValue>({
 
   return (
     <Sheet onClose={onClose} open={open}>
-      <Sheet.Header>
-        <Eyebrow className="mb-3">{title}</Eyebrow>
+      <Sheet.Header className="items-center mb-3">
+        <Eyebrow>{title}</Eyebrow>
       </Sheet.Header>
       <PickerContext.Provider value={{ value, select }}>
         <View className="gap-1">{children}</View>

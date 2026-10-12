@@ -1,13 +1,16 @@
-import { createContext, type ReactNode, useContext } from 'react';
+import { type ReactNode, useContext } from 'react';
 import { View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { cn } from '@/lib/cn';
 
-export const SheetCloseContext = createContext<(() => void) | null>(null);
+import { SheetCloseContext } from './context';
 
 /** Dismissal beside a sheet heading; inline steps can override what close means. */
-export function SheetDismissHeader({ children, onClose, done = false }: {
+export function SheetDismissHeader({ children, className, onClose, done = false }: {
   children: ReactNode;
+  /** Layout only: alignment and spacing around the header. */
+  className?: string;
   onClose?: () => void;
   done?: boolean;
 }) {
@@ -16,7 +19,7 @@ export function SheetDismissHeader({ children, onClose, done = false }: {
   if (close == null) throw new Error('Sheet.Header needs a Sheet or onClose.');
 
   return (
-    <View className="flex-row items-start gap-3">
+    <View className={cn('flex-row items-start gap-3', className)}>
       <View className="flex-1 min-w-0">{children}</View>
       <Button
         className="shrink-0"

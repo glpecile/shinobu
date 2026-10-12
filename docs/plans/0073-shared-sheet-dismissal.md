@@ -10,4 +10,6 @@
   behavior, including returning to the previous inline watchlist step.
 - Preserve backdrop, Back, and write behavior.
 - Add a title/year copy option without parentheses alongside the existing one.
+- Center compact picker labels beside their close button and space the whole
+  header above the options, rather than putting the gap inside the label.
 - Validate lint, types, class names, and existing tests. JS-only; hot reload.

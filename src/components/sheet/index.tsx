@@ -14,7 +14,8 @@ import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view
 import { RailFadeColor } from '@/components/rail';
 
 import { sheetScrollMetrics } from './metrics';
-import { SheetCloseContext, SheetDismissHeader } from './header';
+import { SheetCloseContext } from './context';
+import { SheetDismissHeader } from './header';
 
 export interface SheetProps {
   open: boolean;

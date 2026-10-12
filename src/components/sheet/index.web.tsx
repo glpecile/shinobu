@@ -19,7 +19,8 @@ import {
 } from '@/lib/motion';
 
 import { sheetScrollMetrics } from './metrics';
-import { SheetCloseContext, SheetDismissHeader } from './header';
+import { SheetCloseContext } from './context';
+import { SheetDismissHeader } from './header';
 
 /** Mirrors index.tsx — keep both platform variants' props identical. */
 export interface SheetProps {
