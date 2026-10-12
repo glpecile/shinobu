@@ -34,6 +34,7 @@ import {
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
 import { useHiddenItems } from '@/state/prefs/hidden-items';
+import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
@@ -259,9 +260,13 @@ function ProviderMarks({ providers }: { providers: ProviderId[] }) {
 
 /** The 36×54 rail poster, lazily recovered when the log arrives artless. */
 function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
-  // Trakt history rows arrive artless (2026 API dropped images from sync
-  // endpoints) — recover the poster lazily per rendered row, like the cards.
-  const { coverImage } = useTraktMediaImages(item);
+  const { coverImage: providerCover } = useTraktMediaImages(item);
+  // Serializd's sparse logs carry a TMDB TV ID; reuse detail metadata only
+  // when provider recovery has no art, without delaying the diary page.
+  const { data: details } = useMediaDetailsQuery(
+    providerCover === '' && item.externalIds.tmdb != null ? item : undefined,
+  );
+  const coverImage = providerCover || details?.catalogue?.coverImage || '';
   if (coverImage === '') return <PosterPlaceholder className={POSTER} />;
   return (
     <Image
@@ -549,9 +554,10 @@ function DiaryFailureBanner({
  * spacer instead, and nothing moves.
  */
 function DiaryFooter({ loading }: { loading: boolean }) {
+  const muted = useThemeColor('--color-muted');
   return (
-    <View className="h-24 items-center justify-center">
-      {loading && <ActivityIndicator />}
+    <View accessibilityLabel={loading ? 'Loading more entries' : undefined} className="h-24 items-center justify-center">
+      {loading && <ActivityIndicator color={muted} size="small" />}
     </View>
   );
 }

@@ -25,12 +25,20 @@ export interface SerializdDiaryReview {
   isRewatched?: boolean;
   isLogged?: boolean;
   showName?: string;
-  /** TMDB poster path (`/abc.jpg`) when present; metadata merges TMDB-first anyway. */
+  showBannerImage?: string | null;
+  /** Match seasonId; the first entry need not be the logged season. */
+  showSeasons?: ReadonlyArray<{
+    id: number;
+    seasonNumber?: number | null;
+    name?: string | null;
+    posterPath?: string | null;
+  }> | null;
+  /** Legacy top-level TMDB poster path (`/abc.jpg`). */
   posterPath?: string;
 }
 
-/** TMDB poster path → a CDN url; '' when absent (details screen resolves it). */
-function posterUrl(path?: string): string {
+/** TMDB poster path → a CDN url; '' when absent so metadata can recover it. */
+function posterUrl(path?: string | null): string {
   if (path == null || path === '') return '';
   return `https://image.tmdb.org/t/p/w342${path}`;
 }
@@ -61,7 +69,9 @@ export function normalizeDiaryReview(
     reviewId != null
       ? `serializd-${reviewId}`
       : `serializd:${raw.showId}:${raw.seasonId ?? ''}:${raw.episodeNumber ?? ''}:${raw.dateAdded}`;
-  const season = parseSeasonNumber(raw.seasonName);
+  const loggedSeason = raw.showSeasons?.find((season) => season.id === raw.seasonId);
+  const season = loggedSeason?.seasonNumber ??
+    parseSeasonNumber(raw.seasonName ?? loggedSeason?.name ?? undefined);
 
   return {
     id,
@@ -75,7 +85,7 @@ export function normalizeDiaryReview(
     item: {
       id: `serializd-${raw.showId}`,
       title: raw.showName ?? '',
-      coverImage: posterUrl(raw.posterPath),
+      coverImage: posterUrl(loggedSeason?.posterPath || raw.posterPath || raw.showBannerImage),
       type: 'TV',
       currentProgress: 0,
       progressUnit: 'episode',
