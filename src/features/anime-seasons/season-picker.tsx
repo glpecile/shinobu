@@ -1,9 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { NativePickerMenu } from '@/components/native-picker-menu';
 import { useThemeColor } from '@/lib/theme-color';
 import {
   ANIME_SEASONS,
@@ -28,7 +29,7 @@ const SEASON_OPTIONS = ANIME_SEASONS.map((season) => ({
 
 /**
  * The seasons explorer's inputs: a year row (‹ › steps one year, the year
- * itself opens the jump sheet) over the four cours as a segmented control.
+ * itself opens the year picker) over the four cours as a segmented control.
  * Every format is cour-scoped, films included, so the strip is unconditional.
  */
 export function SeasonPicker({
@@ -62,16 +63,26 @@ export function SeasonPicker({
         >
           <Ionicons color={tint(canGoBack)} name="chevron-back" size={20} />
         </PresstableOpacity>
-        <PresstableOpacity
-          accessibilityHint="Opens a list of years"
-          accessibilityLabel={`Year: ${window.year}`}
-          accessibilityRole="button"
-          className="flex-row items-center gap-1 px-3 py-1 rounded-full"
-          onPress={() => setSheetOpen(true)}
+        <NativePickerMenu
+          onSelect={(year) => onChange({ ...window, year })}
+          options={Array.from({ length: maxYear - MIN_ANIME_YEAR + 1 }, (_, index) => ({
+            value: maxYear - index,
+            label: String(maxYear - index),
+          }))}
+          title="Jump to year"
+          value={window.year}
         >
-          <Text className="text-xl font-display text-foreground">{window.year}</Text>
-          <Ionicons color={tint(false)} name="chevron-down" size={14} />
-        </PresstableOpacity>
+          <PresstableOpacity
+            accessibilityHint="Opens a list of years"
+            accessibilityLabel={`Year: ${window.year}`}
+            accessibilityRole="button"
+            className="flex-row items-center gap-1 px-3 py-1 rounded-full"
+            onPress={() => setSheetOpen(true)}
+          >
+            <Text className="text-xl font-display text-foreground">{window.year}</Text>
+            <Ionicons color={tint(false)} name="chevron-down" size={14} />
+          </PresstableOpacity>
+        </NativePickerMenu>
         <PresstableOpacity
           accessibilityLabel="Next year"
           accessibilityRole="button"
@@ -90,17 +101,19 @@ export function SeasonPicker({
         progress={progress}
         value={window.season}
       />
-      <YearSheet
-        max={maxYear}
-        min={MIN_ANIME_YEAR}
-        onClose={() => setSheetOpen(false)}
-        onSelect={(year) => {
-          setSheetOpen(false);
-          onChange({ ...window, year });
-        }}
-        open={sheetOpen}
-        value={window.year}
-      />
+      {Platform.OS === 'web' && (
+        <YearSheet
+          max={maxYear}
+          min={MIN_ANIME_YEAR}
+          onClose={() => setSheetOpen(false)}
+          onSelect={(year) => {
+            setSheetOpen(false);
+            onChange({ ...window, year });
+          }}
+          open={sheetOpen}
+          value={window.year}
+        />
+      )}
     </View>
   );
 }
