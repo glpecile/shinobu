@@ -25,6 +25,10 @@ export function useDiscussionsQuery(
       select: (catalog: Parameters<typeof matchDiscussionThreads>[0]) =>
         matchDiscussionThreads(catalog, item, season, number).map((thread) => ({ board, thread })),
     })),
-    combine: (results) => results.flatMap((result) => result.data ?? []),
+    combine: (results) => ({
+      threads: results.flatMap((result) => result.data ?? []),
+      isFetching: results.some((result) => result.isFetching),
+      refetch: () => Promise.all(results.map((result) => result.refetch())),
+    }),
   });
 }

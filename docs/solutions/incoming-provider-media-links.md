@@ -37,6 +37,11 @@ package from `getCustomTabsSupportingBrowsersAsync`. Expo's `openBrowserAsync`
 otherwise creates an unscoped VIEW intent, even for a Custom Tab. Sending an outbound provider link to
 the OS would allow it to reopen Shinobu when the user enabled its domain.
 
+List-header links and 4chan discussion links opt out with `{ inApp: false }`:
+their paths do not match Shinobu's media intent filters, so `Linking.openURL`
+can hand them straight to a browser or destination app. Their loading state
+ends when the OS handoff resolves, not when the destination page finishes loading.
+
 The Android filters need `bun android.clean`, not hot reload. After installing,
 test both a cold and a warm launch with a supported HTTPS link and the explicit
 scheme. Check View on still opens the external page and OAuth still returns to

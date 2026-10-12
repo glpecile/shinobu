@@ -9,12 +9,14 @@ import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { openExternalUrl } from '@/lib/open-external-url';
+import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 
 export function ProviderListLink({ provider, url, iconOnly = false }: { provider: ProviderId; url: string; iconOnly?: boolean }) {
-  return <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={`View on ${PROVIDERS[provider].label}`} onPress={() => void openExternalUrl(url)} variant={iconOnly ? 'ghost' : 'quiet'} />;
+  const { loading, open } = useLinkHandoff(() => openExternalUrl(url, { inApp: false }));
+  return <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={`View on ${PROVIDERS[provider].label}`} loading={loading} onPress={open} variant={iconOnly ? 'ghost' : 'quiet'} />;
 }
 
 /**
