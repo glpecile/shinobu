@@ -96,7 +96,7 @@ function RailHeadDate({
  * A title on the page gutter (`px-6`), the rail resuming under its first
  * letters. `pb-3` matches the trailing block, so the count centres on the title.
  */
-function RailHeadTitle({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
+function RailHeadTitle({ children, muted = false, showRail = true }: { children: ReactNode; muted?: boolean; showRail?: boolean }) {
   const open = useContext(OpenContext);
   return (
     <View className="relative pl-6 pr-2 pb-3">
@@ -108,7 +108,7 @@ function RailHeadTitle({ children, muted = false }: { children: ReactNode; muted
       >
         {children}
       </Text>
-      {open && <View className={cn(LEAD_LINE, 'top-5')} />}
+      {open && showRail && <View className={cn(LEAD_LINE, 'top-5')} />}
     </View>
   );
 }
@@ -126,7 +126,7 @@ function RailHeadCount({ children }: { children: ReactNode }) {
 }
 
 /** The head's bars on the head's geometry, so the resolve moves nothing. */
-function RailHeadSkeleton({ lead }: { lead: 'date' | 'title' }) {
+function RailHeadSkeleton({ lead, showRail = true }: { lead: 'date' | 'title'; showRail?: boolean }) {
   return (
     <View className={ROW}>
       {lead === 'date' ? (
@@ -134,13 +134,13 @@ function RailHeadSkeleton({ lead }: { lead: 'date' | 'title' }) {
           {/* 24px tall: `font-display text-2xl leading-none`. */}
           <Skeleton className="w-7 h-6 rounded" />
           <Skeleton className="w-6 h-3 rounded mt-1" />
-          <View className={cn(LEAD_LINE, 'top-11')} />
+          {showRail && <View className={cn(LEAD_LINE, 'top-11')} />}
         </View>
       ) : (
         <View className="relative pl-6 pr-2 pb-3">
           {/* 20px tall: `font-display text-xl leading-none`. */}
           <Skeleton className="w-10 h-5 rounded" />
-          <View className={cn(LEAD_LINE, 'top-5')} />
+          {showRail && <View className={cn(LEAD_LINE, 'top-5')} />}
         </View>
       )}
       <View className={TRAILING}>

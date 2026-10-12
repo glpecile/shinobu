@@ -21,6 +21,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { SectionEnter } from '@/components/section-enter';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { Spinner } from '@/components/spinner';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -449,6 +450,7 @@ export default function SearchScreen() {
             },
           ];
   const rows = sections.flatMap((section) => section.rows);
+  const fetching = searchable && sections.some((section) => section.search.isFetching);
 
   // The screen below the field is one of five mutually exclusive states; the
   // name is the key that makes a change of state remount — and so re-enter.
@@ -506,7 +508,9 @@ export default function SearchScreen() {
           {/* Field chrome, like the clear chip opposite it: muted, so it
               names the field without competing with what's typed in it. */}
           <View className="pl-4">
-            <Ionicons color={muted} name="search-outline" size={18} />
+            <View className="size-5 items-center justify-center">
+              {fetching ? <Spinner accessibilityLabel="Searching" /> : <Ionicons color={muted} name="search-outline" size={18} />}
+            </View>
           </View>
           <TextInput
             autoCapitalize="none"

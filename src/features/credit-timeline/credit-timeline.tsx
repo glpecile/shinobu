@@ -131,17 +131,19 @@ function TimelineHead({
   count,
   open,
   onToggle,
+  showRail,
 }: {
   year: number | null;
   count: number;
   open: boolean;
   onToggle: () => void;
+  showRail: boolean;
 }) {
   const upcoming = year == null;
   const label = `${count} ${upcoming ? 'upcoming' : count === 1 ? 'title' : 'titles'}`;
   return (
     <RailHead label={`${upcoming ? 'Upcoming' : year}, ${label}`} onToggle={onToggle} open={open}>
-      <RailHead.Title muted={upcoming}>{upcoming ? 'TBA' : year}</RailHead.Title>
+      <RailHead.Title muted={upcoming} showRail={showRail}>{upcoming ? 'TBA' : year}</RailHead.Title>
       <RailHead.Count>{label}</RailHead.Count>
     </RailHead>
   );
@@ -409,6 +411,7 @@ export function CreditTimeline({
                   count={row.count}
                   onToggle={() => toggleFold(row.key)}
                   open={row.open}
+                  showRail={view === 'list'}
                   year={row.year}
                 />
               ) : row.kind === 'posters' ? (
@@ -531,7 +534,7 @@ export function CreditTimelineSkeleton({
       </Section>
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>
-          <RailHead.Skeleton lead="title" />
+          <RailHead.Skeleton lead="title" showRail={view === 'list'} />
           {Array.from({ length: rows }, (_entry, row) => (
             view === 'grid' ? (
               <View className="flex-row gap-3 mx-6 pb-3" key={row}>

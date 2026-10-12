@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
-import { ActivityIndicator, Platform, Text } from 'react-native';
+import { Platform, Text } from 'react-native';
+import { Spinner } from '@/components/spinner';
 import Svg, { Path } from 'react-native-svg';
 import {
   type CSSTransitionProperties,
@@ -319,7 +320,7 @@ export function Button({
             exiting={SLOT_EXIT}
             layout={BOX_LAYOUT}
           >
-            <ActivityIndicator color={spinnerColor} size="small" />
+            <Spinner color={spinnerColor} />
           </AnimatedView>
         )}
         {icon != null && (overlay || !loading) && (

@@ -1,5 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
+import { Spinner } from '@/components/spinner';
 
 import { PresstableScale } from '@/components/presstable';
 import {
@@ -49,7 +50,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
         onPress={openConfirm}
       >
         {pending ? (
-          <ActivityIndicator color={iconColor} size="small" />
+          <Spinner color={iconColor} />
         ) : (
           <Ionicons color={iconColor} name="eye-outline" size={18} />
         )}
