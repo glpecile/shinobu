@@ -4,12 +4,12 @@ import { Fab } from '@/components/fab';
 import {
   useCatchUpControls,
   useQuickLogBusy,
-} from '@/features/up-next/catch-up/state';
+} from '@/features/log-media/session/state';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 
 /**
  * The Continue Watching log button. Tapping it opens the app-level catch-up
- * sheet (`features/up-next/catch-up`, plan 0037) on this entry: the same
+ * sheet (`features/log-media/session`, plan 0037) on this entry: the same
  * confirm modal every log entry point uses, which then walks the show's
  * aired-but-unwatched backlog one confirm at a time. The write itself is the
  * shared `useLogMedia` fan-out — never a single-provider write (plan 0019 R7).

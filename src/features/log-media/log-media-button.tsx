@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { useCatchUpControls, useQuickLogBusy } from '@/features/up-next/catch-up/state';
+import { useCatchUpControls, useQuickLogBusy } from '@/features/log-media/session/state';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useAniListEntryStateQuery,

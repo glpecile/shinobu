@@ -20,10 +20,10 @@ import {
   filterWatchlistEntries,
   parseWatchlistProvider,
 } from '@/features/watchlist/filter';
-import { PosterWall } from '@/features/watchlist/poster-wall';
+import { PosterWall } from '@/features/media-layout/poster-wall';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
-import { WatchlistRows } from '@/features/watchlist/watchlist-rows';
+import { WatchlistRows } from '@/features/media-layout/watchlist-rows';
 import { WatchlistToolbar } from '@/features/watchlist/watchlist-toolbar';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
@@ -128,7 +128,7 @@ function WatchlistGrid({
   // rendering as a duplicate of a row already on screen.
   const pages = useLetterboxdWatchlistPagesQuery();
   const view = useWatchlistView();
-  // Both layouts take `WatchlistLayoutProps`, so the swap is one binding and
+  // Both layouts take `MediaLayoutProps`, so the swap is one binding and
   // nothing below branches on the view. Swapping the component *does* remount
   // the list — correct here: they are different geometries, and a preserved
   // scroll offset from a poster wall means nothing in a row list.

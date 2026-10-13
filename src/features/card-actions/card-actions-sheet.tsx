@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { Image } from '@/components/image';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { SmallPoster } from '@/components/small-poster';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
@@ -11,7 +10,7 @@ import type { LogRequest } from '@/features/log-media/log-request';
 import { needsReleaseEnrichment, watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episode';
-import { LogSheetContent } from '@/features/up-next/catch-up/catch-up-log-sheet';
+import { LogSheetContent } from '@/features/log-media/session/catch-up-log-sheet';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { creditRoleLine, type PersonCredit } from '@/features/person/person-credit-sheet';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
@@ -114,16 +113,7 @@ interface CardActionsSheetProps {
 /** The item's artwork, recovered lazily when the log it came from is artless. */
 function SheetPoster({ item }: { item: NormalizedMediaItem }) {
   const { coverImage } = useTraktMediaImages(item);
-  if (coverImage === '')
-    return <PosterPlaceholder className="w-14 h-21 rounded" />;
-  return (
-    <Image
-      source={{ uri: coverImage }}
-      className="w-14 h-21 rounded bg-surface border border-border/50"
-      contentFit="cover"
-      recyclingKey={item.id}
-    />
-  );
+  return <SmallPoster uri={coverImage} recyclingKey={item.id} size="lg" />;
 }
 
 /**

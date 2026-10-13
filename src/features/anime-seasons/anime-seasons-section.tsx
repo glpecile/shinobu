@@ -6,8 +6,8 @@ import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
 import { toast } from '@/lib/toast';
-import { airedAnimeEpisodes } from '@/features/up-next/catch-up/queue';
-import { useCatchUpControls } from '@/features/up-next/catch-up/state';
+import { airedAnimeEpisodes } from '@/features/log-media/session/queue';
+import { useCatchUpControls } from '@/features/log-media/session/state';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import type { PendingLog } from '@/features/show-seasons/season-accordion';
 import {

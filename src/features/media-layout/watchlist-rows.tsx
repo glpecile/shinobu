@@ -1,34 +1,24 @@
 import { RefreshControl, Text, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
-import { Image } from '@/components/image';
 import { List } from '@/components/List';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
+import { SmallPoster } from '@/components/small-poster';
 import { WatchedMark } from '@/components/watched-mark';
+import type { WatchlistEntry } from '@/features/watchlist/types';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import type { WatchlistEntry, WatchlistLayoutProps } from './types';
+import type { MediaLayoutProps } from './types';
 
 /**
- * `/watchlist`'s list layout (owner, 2026-08-01) — the alternative to the
- * poster wall, persisted per device by `state/prefs/watchlist-view`.
- *
- * Deliberately the **diary's** row, not a new one: same 48×72 poster, same
- * title-over-detail block, same provider marks pushed to the right edge, same
- * `ActionableRow` shell (press → details, long-press or the web hover ⋯ →
- * actions). Two surfaces that list the same kind of thing should not have two
- * row designs — a user who reads the diary as a list already knows how to read
- * this one.
- *
- * What it does *not* borrow is the diary's day grouping. A watchlist has no
- * meaningful date to group on: `addedAt` is absent for the Letterboxd leg
- * entirely (its scrape carries none) and would produce a "Sometime" bucket
- * holding most of the list.
+ * List layout for watchlists and catalogues, with 48×72 posters, type labels,
+ * and optional provider/watched marks. Shares ActionableRow's interaction
+ * shell with the diary, not its smaller posters, log details, or day grouping.
+ * Screens own data, paging, filtering, and failure states.
  */
 
 const TYPE_LABEL: Record<NormalizedMediaItem['type'], string> = {
@@ -56,17 +46,9 @@ export function watchlistRowDetail(item: NormalizedMediaItem): string {
 /** The 48×72 poster, lazily recovered when the provider row arrives artless. */
 function RowPoster({ item }: { item: NormalizedMediaItem }) {
   // Trakt sync endpoints dropped images in 2026, so a Trakt-sourced watchlist
-  // row has no art until this resolves it — same treatment as the diary's.
+  // row has no art until this resolves it.
   const { coverImage } = useTraktMediaImages(item);
-  if (coverImage === '') return <PosterPlaceholder className="w-12 h-18 rounded" />;
-  return (
-    <Image
-      source={{ uri: coverImage }}
-      className="w-12 h-18 rounded bg-surface border border-border/50"
-      contentFit="cover"
-      recyclingKey={item.id}
-    />
-  );
+  return <SmallPoster uri={coverImage} recyclingKey={item.id} size="md" />;
 }
 
 /** The provider marks holding this row, with a wrapping a11y label — like the
@@ -140,7 +122,7 @@ export function WatchlistRows({
   onEndReached,
   footer,
   showWatched,
-}: WatchlistLayoutProps) {
+}: MediaLayoutProps) {
   return (
     <List
       className="flex-1"
@@ -153,7 +135,7 @@ export function WatchlistRows({
       keyExtractor={(entry) => entry.id}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
-      // The diary's row, recycled for the diary's reason
+      // Recycle to avoid row mount cost, as in the diary
       // (docs/solutions/diary-scroll-jank-is-row-mount-cost.md); the same
       // stale-hover residual applies.
       recycleItems
