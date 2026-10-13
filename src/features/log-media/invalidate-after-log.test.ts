@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, mock, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
@@ -38,6 +38,7 @@ mock.module('expo-crypto', () => ({
 }));
 
 const { invalidateAfterLog } = await import('./use-log-media');
+const { watchlistQueryKeys } = await import('@/state/queries/watchlist');
 
 const ITEM: NormalizedMediaItem = {
   id: 'trakt-1',
@@ -73,6 +74,7 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // gets named, because this path can't know the type/sort the surface used
     // (plan 0031 U11/KTD-5).
     expect(keys).toContain('trakt/watchlist');
+    expect(keys).toContain('watchlist/inputs');
   });
 
   test('a successful AniList log recomputes them, and the entries read behind them', () => {
@@ -82,27 +84,32 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // The derived slices re-derive from the entries key — invalidating only
     // them would read a stale cache (U2).
     expect(keys).toContain('anilist/current-anime-entries');
+    expect(keys).toContain('watchlist/inputs');
   });
 
   test('a log that reached neither provider leaves the slot alone', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['letterboxd']);
     expect(keys).not.toContain('up-next/inputs');
+    expect(keys).not.toContain('watchlist/inputs');
   });
 
-  test('a successful Simkl log refreshes the simkl library scope and recomputes Up Next (plan 0034 U6/U8)', () => {
-    const { client, keys } = recordingClient();
-    invalidateAfterLog(client, ITEM, ['simkl']);
-    // The all-items *prefix* (every type/status filter) plus the activities
-    // delta that gates their refetch (KTD-5) — both under the ['simkl'] root
-    // so disconnect's purge still reaches them.
-    expect(keys).toContain('simkl/all-items');
-    expect(keys).toContain('simkl/activities');
-    // Simkl became an Up Next input in U8, so a Simkl-only log must recompute
-    // the sections — this invalidation is also the quick-log settle signal;
-    // without it a Simkl-only user's card sits stale for the full settle
-    // window.
-    expect(keys).toContain('up-next/inputs');
+  test('a Simkl-only film log makes provider and gathered caches stale without a derived removal', () => {
+    const client = new QueryClient();
+    const keys = [
+      ['simkl', 'all-items', 'all', 'plantowatch'],
+      ['simkl', 'activities'],
+      ['up-next', 'inputs'],
+      watchlistQueryKeys.inputs(),
+    ];
+    for (const queryKey of keys) client.setQueryData(queryKey, {});
+
+    invalidateAfterLog(client, { ...ITEM, type: 'MOVIE' }, ['simkl']);
+
+    for (const queryKey of keys) {
+      expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
+    }
+    client.clear();
   });
 
   test('recomputes Up Next last, after every provider cache it reads', () => {
@@ -115,6 +122,10 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // That is what stranded Simkl-sourced cards until a manual pull-to-refresh
     // (owner report 2026-08-18) while Trakt/AniList cards advanced fine.
     invalidateAfterLog(client, ITEM, ['trakt', 'anilist', 'simkl', 'serializd']);
+    const watchlistIndex = keys.indexOf('watchlist/inputs');
+    expect(watchlistIndex).toBeGreaterThan(keys.indexOf('trakt/watchlist'));
+    expect(watchlistIndex).toBeGreaterThan(keys.indexOf('anilist/current-anime-entries'));
+    expect(watchlistIndex).toBeGreaterThan(keys.indexOf('simkl/all-items'));
     expect(keys.indexOf('up-next/inputs')).toBe(keys.length - 1);
   });
 
@@ -129,5 +140,6 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).toContain('up-next/inputs');
     // Per-provider caches stay untouched: reconcile just read them fresh.
     expect(keys).not.toContain('trakt/show-progress/1');
+    expect(keys).not.toContain('watchlist/inputs');
   });
 });
