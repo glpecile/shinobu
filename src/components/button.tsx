@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant = 'primary' | 'outline' | 'quiet' | 'ghost';
+export type ButtonVariant = 'primary' | 'outline' | 'quiet' | 'ghost' | 'accent-ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /** Container classes per variant — `off` covers both disabled and loading. */
@@ -26,6 +26,7 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border', off: 'border border-border opacity-60' },
   ghost: { on: '', off: 'opacity-60' },
+  'accent-ghost': { on: '', off: 'opacity-60' },
 };
 
 const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
@@ -33,6 +34,7 @@ const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   outline: { on: 'text-accent', off: 'text-accent/60' },
   quiet: { on: 'text-foreground', off: 'text-muted' },
   ghost: { on: 'text-foreground', off: 'text-muted' },
+  'accent-ghost': { on: 'text-accent', off: 'text-accent/60' },
 };
 
 /** The theme token the spinner borrows so it matches its own label exactly. */
@@ -41,6 +43,7 @@ const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   outline: '--color-accent',
   quiet: '--color-foreground',
   ghost: '--color-foreground',
+  'accent-ghost': '--color-accent',
 };
 
 const BOX_LAYOUT =

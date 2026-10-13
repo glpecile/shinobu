@@ -19,6 +19,7 @@ export function LikeButton({
   loading = false,
   disabled = false,
   size = 'md',
+  variant = 'outline',
 }: {
   liked: boolean;
   onChange: (liked: boolean) => void;
@@ -26,6 +27,7 @@ export function LikeButton({
   loading?: boolean;
   disabled?: boolean;
   size?: ButtonSize;
+  variant?: 'outline' | 'ghost';
 }) {
   const reduceMotion = useReducedMotion();
   return (
@@ -49,7 +51,7 @@ export function LikeButton({
       }}
       pressed={liked}
       size={size}
-      variant={liked ? 'outline' : 'quiet'}
+      variant={variant === 'ghost' ? liked ? 'accent-ghost' : 'ghost' : liked ? 'outline' : 'quiet'}
     />
   );
 }

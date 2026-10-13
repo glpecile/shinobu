@@ -16,7 +16,7 @@ export function ListLikeButton({ username, owner, slug, url }: { username: strin
       liked={mutation.liked}
       label={canWrite ? mutation.liked ? 'Unlike list' : 'Like list' : 'Like / unlike on Letterboxd'}
       loading={mutation.isPending}
-      size="sm"
+      variant="ghost"
       onChange={(liked) => {
         if (!canWrite) { void openExternalUrl(url); return; }
         mutation.mutate(liked, {
