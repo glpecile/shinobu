@@ -49,7 +49,8 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 | [Effect](https://effect.website) | Typed errors, retries, and rate-limit backoff. Effect stays inside the provider service layer and never reaches a component. |
 | [Nitro Modules](https://nitro.margelo.com) | [`react-native-mmkv`](https://github.com/mrousavy/react-native-mmkv) stores tokens encrypted. [`react-native-nitro-fetch`](https://github.com/margelo/react-native-nitro-fetch) sends requests through Cronet or URLSession on native. [`nitro-webview`](https://github.com/l2hyunwoo/nitro-webview) runs the tracker sign-in and write WebViews. |
 | [Legend List](https://github.com/LegendApp/legend-list) | Virtualized lists everywhere. It is pure TypeScript, runs on web, and sits behind one `components/List` wrapper. |
-| [expo-image](https://docs.expo.dev/versions/latest/sdk/image/) + [galeria](https://github.com/nandorojo/galeria) | Posters cached in memory and on disk, so long grids don't exhaust memory. Tap a poster or headshot to zoom. |
+| [expo-image](https://docs.expo.dev/versions/latest/sdk/image/) + [galeria](https://github.com/nandorojo/galeria) | Posters cached in memory and on disk, so long grids don't exhaust memory. Tap a poster or headshot to zoom through Galeria on native and a separate lightbox on web. |
+| [Ionicons](https://github.com/oblador/react-native-vector-icons/tree/master/packages/ionicons) | Bundled, font-rendered UI icons on all platforms. [Nano Icons](https://github.com/software-mansion-labs/react-native-nano-icons) generates fonts from custom SVGs; the existing icon pack needs no extra generation pipeline. |
 | [pressto](https://github.com/enzomanuelmangano/pressto) | Every pressable, with debounced, animated presses built on gesture-handler and Reanimated. |
 | [pulsar](https://github.com/software-mansion/pulsar) | Haptics on press and when a log finishes. Native only, since iOS Safari has no haptics API. |
 | [@expo/ui](https://docs.expo.dev/versions/latest/sdk/ui/) + [bottom sheet](https://github.com/software-mansion-labs/react-native-bottom-sheet) | Native SwiftUI and Compose controls such as date pickers and switches, plus the sheets for card actions and log confirmation. |
@@ -58,7 +59,7 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 | [react-native-keyboard-controller](https://github.com/kirillzyusko/react-native-keyboard-controller) | Keyboard avoidance that behaves the same on every platform. |
 | [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) + [expo-background-task](https://docs.expo.dev/versions/latest/sdk/background-task/) | Release reminders scheduled on the device and refreshed in the background. |
 | [TMDB](https://www.themoviedb.org) | The metadata source, never a tracker. It feeds detail pages, cast and crew, and the person and studio pages. |
-| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | Hosts the web build, plus two relays with path allowlists for the requests browsers block. |
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | Hosts the web build, plus three relays with path allowlists for Serializd, Letterboxd reads, and the Fourchan catalogs. |
 | [React Compiler](https://react.dev/learn/react-compiler) | Memoizes automatically. `useMemo` and `useCallback` are banned by lint. |
 | [bun](https://bun.sh) | Package manager, script runner, and test runner through `bun:test`. There is no Jest. |
 | [oxlint](https://oxc.rs) | Enforces the repo's conventions as lint rules. |
@@ -82,7 +83,7 @@ bun android.clean  # app.json, config plugin, or native dependency changes
 Web development also needs the Worker running, because Metro doesn't serve `/api/*`:
 
 ```sh
-bun run dev:worker  # wrangler dev on :8787, the Serializd and Letterboxd read proxies
+bun run dev:worker  # wrangler dev on :8787, the Serializd, Letterboxd, and Fourchan proxies
 ```
 
 ### Checks
