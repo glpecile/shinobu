@@ -33,7 +33,6 @@ import {
   setListLiked,
   type LetterboxdListKind,
   type LetterboxdListFilmsPage,
-  type LetterboxdListsPage,
 } from '@/lib/providers/letterboxd/lists';
 import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
@@ -217,8 +216,8 @@ export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string)
 export function useLetterboxdListLike(username: string, owner: string, slug: string) {
   const queryClient = useQueryClient();
   const queryKey = letterboxdQueryKeys.listLike(username, owner, slug);
-  const lists = useQuery<{ pages: LetterboxdListsPage[] }>({
-    queryKey: letterboxdQueryKeys.lists(username, 'liked'), queryFn: skipToken,
+  const lists = useInfiniteQuery({
+    ...letterboxdListsOptions(username, 'liked'), enabled: false,
   });
   const likeState = useQuery<boolean>({ queryKey, queryFn: skipToken, staleTime: Infinity });
   const currentLiked = likeState.data ?? lists.data?.pages.some((page) => page.lists.some((list) => list.owner.toLowerCase() === owner.toLowerCase() && list.slug === slug)) ?? false;

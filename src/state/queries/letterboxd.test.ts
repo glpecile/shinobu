@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { InfiniteQueryObserver, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { createElement, Suspense } from 'react';
 // @ts-expect-error -- The installed react-dom package has no server-renderer declarations.
@@ -47,7 +47,7 @@ afterAll(() => {
   delete globals.window;
 });
 
-const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, useLetterboxdListLike, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
+const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, useLetterboxdListLike, useLetterboxdListsQuery, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
   './letterboxd'
 );
 // Written through the session layer's own setters rather than into the map
@@ -64,8 +64,17 @@ test('list likes share optimistic state across buttons and remounts, and roll ba
   const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
   setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });
   const client = new QueryClient();
+  const listsKey = letterboxdQueryKeys.lists('gian', 'liked');
+  client.setQueryData(listsKey, { pages: [{ lists: [], hasNextPage: false }], pageParams: [1] });
+  const index = new InfiniteQueryObserver(client, {
+    queryKey: listsKey, initialPageParam: 1, getNextPageParam: () => undefined, staleTime: Infinity, retry: false,
+  });
+  const unsubscribe = index.subscribe(() => {});
+  let reads = 0;
+  readResponse = () => { reads += 1; return new Response('<div class="list-summary-list"></div>'); };
   let mutation!: ReturnType<typeof useLetterboxdListLike>;
   function LikeRead() {
+    useLetterboxdListsQuery('gian', 'liked');
     mutation = useLetterboxdListLike('gian', 'jack', 'classics');
     return createElement('button', { 'aria-pressed': mutation.liked, disabled: mutation.isPending }, mutation.liked ? 'Unlike' : 'Like');
   }
@@ -83,6 +92,8 @@ test('list likes share optimistic state across buttons and remounts, and roll ba
     expect(render()).toContain('aria-pressed="true" disabled=""');
     handleLetterboxdMessage(JSON.stringify({ id: likeId, status: 200, body: '{"result":true,"liked":true}' }));
     await like;
+    expect(reads).toBe(1);
+    expect(index.getCurrentResult().isError).toBe(false);
     expect(render()).toContain('aria-pressed="true"');
 
     loaded = Promise.withResolvers<string>();
@@ -91,9 +102,12 @@ test('list likes share optimistic state across buttons and remounts, and roll ba
     expect(render()).toContain('aria-pressed="false" disabled=""');
     handleLetterboxdMessage(JSON.stringify({ id: unlikeId, status: 429, body: '' }));
     expect(await unlike).toMatchObject({ _tag: 'ProviderRateLimitError' });
+    expect(reads).toBe(2);
     expect(render()).toContain('aria-pressed="true"');
   } finally {
     registerLetterboxdWebView(null);
+    unsubscribe();
+    readResponse = () => new Response('{}');
     client.clear();
     clearProviderSession('letterboxd');
   }
