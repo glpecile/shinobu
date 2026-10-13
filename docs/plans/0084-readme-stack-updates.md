@@ -56,6 +56,11 @@ the actual icon library in the README.
 
 ## Results
 
+- Refreshed all four README screenshots from the current web build at
+  1600×1150 in dark mode, with no tracker connected. The person page is
+  NISIOISIN (`/person/anilist/100254`), replacing Brad Pitt; the detail page
+  remains MONOGATARI Series: OFF & MONSTER Season. Both sidebar states were
+  captured, and visible artwork was checked after loading.
 - Lint, class-name, guarded-navigation, typecheck, and 1,415 isolated tests pass.
   oxlint now reports five non-blocking function-scoping warnings in existing
   tests; no unrelated test refactor is included.

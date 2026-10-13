@@ -17,8 +17,8 @@
 
 <p align="center">
   <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen with progress, seasons, and related posters with muted captions and AniList source badges" />
-  <img src="./docs/images/screenshot-person.png" width="49%" alt="A person's page with biography, filmography filters, and posters with muted role captions and TMDB source badges" /><br />
-  <sub>A detail page and a person page, with no tracker connected. Filmographies remember your poster or list preference locally.</sub>
+  <img src="./docs/images/screenshot-person.png" width="49%" alt="NISIOISIN's page with biography, works filters, and anime and manga posters with role captions and AniList source badges" /><br />
+  <sub>A detail page and NISIOISIN's works, with no tracker connected. Person pages remember your poster or list preference locally.</sub>
 </p>
 
 ## What it does
