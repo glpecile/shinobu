@@ -32,7 +32,7 @@ interface NavItem {
   icon: IoniconName;
 }
 
-// Outline icons only — active state is the tonal red pill, never a heavy
+// Outline icons only — active state is the tonal red squircle, never a heavy
 // filled glyph (the solid variants read poorly when selected).
 // Diary uses `reader-outline` (a lined page), not `book-outline`: the open-book
 // glyph is much wider and optically heavier than its home/search/settings
@@ -189,7 +189,7 @@ function SidebarItem({
   return (
     <PresstableOpacity
       accessibilityLabel={item.label}
-      className={cn('h-11 flex-row items-center rounded-full', active && 'bg-accent-tonal')}
+      className={cn('h-11 flex-row items-center rounded-xl', active && 'bg-accent-tonal')}
       onPress={onPress}
     >
       <View className="items-center justify-center" style={{ width: ICON_COL }}>
@@ -331,7 +331,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 <View
                   className={cn(
-                    'h-12 w-12 items-center justify-center rounded-full',
+                    'h-12 w-12 items-center justify-center rounded-xl',
                     active && 'bg-accent-tonal',
                   )}
                 >
