@@ -59,7 +59,7 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 | [react-native-keyboard-controller](https://github.com/kirillzyusko/react-native-keyboard-controller) | Keyboard avoidance that behaves the same on every platform. |
 | [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) + [expo-background-task](https://docs.expo.dev/versions/latest/sdk/background-task/) | Release reminders scheduled on the device and refreshed in the background. |
 | [TMDB](https://www.themoviedb.org) | The metadata source, never a tracker. It feeds detail pages, cast and crew, and the person and studio pages. |
-| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | Hosts the web build, plus three relays with path allowlists for Serializd, Letterboxd reads, and the Fourchan catalogs. |
+| [Cloudflare Workers](https://developers.cloudflare.com/workers/) | Hosts the web build, plus three relays with path allowlists for Serializd, Letterboxd reads, and the 4chan catalogs. |
 | [React Compiler](https://react.dev/learn/react-compiler) | Memoizes automatically. `useMemo` and `useCallback` are banned by lint. |
 | [bun](https://bun.sh) | Package manager, script runner, and test runner through `bun:test`. There is no Jest. |
 | [oxlint](https://oxc.rs) | Enforces the repo's conventions as lint rules. |
@@ -83,7 +83,7 @@ bun android.clean  # app.json, config plugin, or native dependency changes
 Web development also needs the Worker running, because Metro doesn't serve `/api/*`:
 
 ```sh
-bun run dev:worker  # wrangler dev on :8787, the Serializd, Letterboxd, and Fourchan proxies
+bun run dev:worker  # wrangler dev on :8787, the Serializd, Letterboxd, and 4chan proxies
 ```
 
 ### Checks
