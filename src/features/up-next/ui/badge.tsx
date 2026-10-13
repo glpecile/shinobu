@@ -19,7 +19,7 @@ export function Badge({
   return (
     <View
       className={cn(
-        'rounded-sm px-1.5 py-0.5',
+        'shrink-0 max-w-full rounded-sm px-1.5 py-0.5',
         accent ? 'bg-accent' : 'bg-black/60 border border-border/60',
       )}
     >

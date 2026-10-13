@@ -14,7 +14,7 @@ export function ViewToggle({
   view: WatchlistView;
   onChange: (view: WatchlistView) => void;
 }) {
-  const foreground = useThemeColor('--color-foreground');
+  const selected = useThemeColor('--color-accent-on-tonal');
   const muted = useThemeColor('--color-muted');
 
   return (
@@ -29,11 +29,11 @@ export function ViewToggle({
           accessibilityLabel={label}
           accessibilityRole="button"
           accessibilityState={{ selected: view === id }}
-          className={cn('w-9 h-7 items-center justify-center', view === id && 'bg-surface')}
+          className={cn('w-9 h-7 items-center justify-center', view === id && 'bg-accent-tonal')}
           key={id}
           onPress={() => onChange(id)}
         >
-          <Ionicons color={view === id ? foreground : muted} name={icon} size={15} />
+          <Ionicons color={view === id ? selected : muted} name={icon} size={15} />
         </PresstableOpacity>
       ))}
     </View>

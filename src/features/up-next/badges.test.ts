@@ -101,8 +101,8 @@ describe('calendarBadges', () => {
 describe('continueWatchingBadges — behind count', () => {
   test('two or more aired-unwatched episodes get a behind pill', () => {
     expect(
-      continueWatchingBadges({ ...entry(), episodesBehind: 3 }, NOW),
-    ).toContainEqual({ label: '3 behind' });
+      continueWatchingBadges({ ...entry(), episodesBehind: 1284 }, NOW),
+    ).toContainEqual({ label: '1,284 behind' });
   });
 
   test('one behind is what the card already says by existing — no pill', () => {
@@ -110,5 +110,6 @@ describe('continueWatchingBadges — behind count', () => {
       [],
     );
     expect(continueWatchingBadges(entry(), NOW)).toEqual([]);
+    expect(continueWatchingBadges({ ...entry({ runtime: Infinity }), episodesBehind: Infinity }, NOW)).toEqual([]);
   });
 });

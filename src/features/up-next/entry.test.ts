@@ -64,6 +64,7 @@ describe('entryLabel', () => {
 
   test('an untitled episode is just its code', () => {
     expect(entryLabel(episodeEntry())).toBe('S1E4');
+    expect(entryLabel(episodeEntry({ title: '   ' }))).toBe('S1E4');
   });
 
   test('a seasonless AniList entry reads E7, never a fabricated S1E7', () => {

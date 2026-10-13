@@ -351,13 +351,13 @@ describe('unairedEpisodeLabel', () => {
 
   test('falls back to the plain line without a usable date', () => {
     expect(unairedEpisodeLabel('Episode 11', undefined, now)).toBe(
-      'Episode 11 not yet aired',
+      "Episode 11 hasn't aired yet",
     );
     expect(unairedEpisodeLabel('Episode 11', 'not a date', now)).toBe(
-      'Episode 11 not yet aired',
+      "Episode 11 hasn't aired yet",
     );
     expect(unairedEpisodeLabel('S1E5', '2026-09-01', now)).toBe(
-      'S1E5 not yet aired',
+      "S1E5 hasn't aired yet",
     );
   });
 });

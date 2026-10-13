@@ -1,14 +1,11 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { View } from 'react-native';
-import { Spinner } from '@/components/spinner';
 
-import { PresstableScale } from '@/components/presstable';
+import { Fab } from '@/components/fab';
 import {
   useCatchUpControls,
   useQuickLogBusy,
 } from '@/features/up-next/catch-up/state';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
-import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * The Continue Watching log button. Tapping it opens the app-level catch-up
@@ -31,9 +28,6 @@ import { useThemeColor } from '@/lib/theme-color';
 export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
   const { openCatchUp } = useCatchUpControls();
   const pending = useQuickLogBusy(entry.item.id);
-  const accentForeground = useThemeColor('--color-accent-foreground');
-  const iconColor =
-    accentForeground;
 
   function openConfirm() {
     if (pending) return;
@@ -42,19 +36,13 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
 
   return (
     <View className="items-end">
-      <PresstableScale
-        accessibilityLabel={`Log episode ${entry.episode.number} of ${entry.item.title}`}
-        accessibilityRole="button"
-        accessibilityState={{ busy: pending, disabled: pending }}
-        className="w-9 h-9 items-center justify-center rounded-full bg-accent"
+      <Fab
+        icon="eye-outline"
+        label={`Log episode ${entry.episode.number} of ${entry.item.title.trim() || 'Untitled'}`}
+        loading={pending}
         onPress={openConfirm}
-      >
-        {pending ? (
-          <Spinner color={iconColor} />
-        ) : (
-          <Ionicons color={iconColor} name="eye-outline" size={18} />
-        )}
-      </PresstableScale>
+        size="sm"
+      />
     </View>
   );
 }

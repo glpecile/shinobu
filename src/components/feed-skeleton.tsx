@@ -54,13 +54,18 @@ export function FeedRowSkeleton({ hasAction = false }: { hasAction?: boolean }) 
 const LANDSCAPE_WIDTH = 256;
 
 /** Art plus two text lines below it, unlike the poster cards. */
-function SkeletonLandscapeCard({ index }: { index: number }) {
+function SkeletonLandscapeCard({ index, hasAction = false }: { index: number; hasAction?: boolean }) {
   const delay = staggerDelay(index);
   return (
     <View className="w-64 mr-3">
       <Skeleton className="w-full h-36 rounded-lg" delay={delay} />
-      <Skeleton className="h-4 w-2/3 rounded mt-2" delay={delay} />
-      <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={delay} />
+      <View className="flex-row items-start gap-2 mt-2">
+        <View className="flex-1 min-w-0">
+          <Skeleton className="h-4 w-2/3 rounded" delay={delay} />
+          <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={delay} />
+        </View>
+        {hasAction && <Skeleton className="size-11 shrink-0 rounded-xl" delay={delay} />}
+      </View>
     </View>
   );
 }
@@ -71,9 +76,9 @@ function SkeletonDayCell({ index }: { index: number }) {
   const delay = staggerDelay(index);
   return (
     <View className="w-14 py-2 mr-2 items-center rounded-md bg-surface">
-      <Skeleton className="h-4 w-7 rounded" delay={delay} />
-      <Skeleton className="h-6 w-6 rounded" delay={delay} />
-      <View className="h-1.5 mt-1" />
+      <Skeleton className="h-3 w-7 rounded" delay={delay} />
+      <Skeleton className="h-6 w-6 rounded mt-1" delay={delay} />
+      <Skeleton className="size-1.5 rounded-full mt-1" delay={delay} />
     </View>
   );
 }
@@ -111,7 +116,7 @@ export function UpNextSectionSkeleton() {
         <View style={{ height: cardRailHeight }}>
           <Rail className="px-4">
             {Array.from({ length: cardCount }).map((_, index) => (
-              <SkeletonLandscapeCard index={index} key={index} />
+              <SkeletonLandscapeCard hasAction index={index} key={index} />
             ))}
           </Rail>
         </View>
@@ -126,7 +131,7 @@ export function UpNextSectionSkeleton() {
             <SkeletonDayCell index={index} key={index} />
           ))}
         </Rail>
-        <View className="mt-3" style={{ height: cardRailHeight + STACK_OFFSET * 2, paddingTop: STACK_OFFSET * 2 }}>
+        <View className="mt-3" style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2), paddingTop: STACK_OFFSET * 2 }}>
           <Rail
             className="px-4"
           >

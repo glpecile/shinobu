@@ -525,7 +525,7 @@ function DetailsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
   // The hero scrim fades to the *page background*, not black: the title
   // straddles the image/page boundary and `text-foreground` is near-black in
   // the light theme, so a black scrim swallowed it there. Dark theme looks
@@ -764,11 +764,11 @@ function DetailsScreen() {
           </Link.AppleZoomTarget>
           <View className="flex-1 ml-4 pb-1">
             <View className="flex-row items-center gap-3">
-              <Eyebrow tone="accent">{shown.type}</Eyebrow>
+               <Eyebrow>{shown.type}</Eyebrow>
               {shown.rating != null && (
                 <View className="flex-row items-center gap-1">
                   <Ionicons
-                    color={accent}
+                    color={muted}
                     name="star"
                     size={12}
                   />

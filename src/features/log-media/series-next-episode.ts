@@ -244,7 +244,7 @@ export function firstUnairedEpisode(
 
 /**
  * What the CTA says about an episode that can't be logged yet: "S1E5 airs in
- * 3 days", or "S1E5 not yet aired" with no date to count down to. Local
+ * 3 days", or "S1E5 hasn't aired yet" with no date to count down to. Local
  * calendar days, so an episode airing tonight reads "today" wherever the user
  * is; a date already behind us means the caller's air gate should have passed
  * it, so it gets the plain line.
@@ -255,7 +255,7 @@ export function unairedEpisodeLabel(
   now: Date = new Date(),
 ): string {
   const offset = localDayOffset(firstAired, now);
-  if (offset == null || offset < 0) return `${label} not yet aired`;
+  if (offset == null || offset < 0) return `${label} hasn't aired yet`;
   if (offset > 1) return `${label} airs in ${offset} days`;
   return `${label} airs ${offset === 0 ? 'today' : 'tomorrow'}`;
 }

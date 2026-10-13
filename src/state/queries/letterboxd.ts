@@ -2,6 +2,7 @@ import {
   infiniteQueryOptions,
   skipToken,
   useInfiniteQuery,
+  useIsMutating,
   useMutation,
   useQuery,
   useQueryClient,
@@ -32,7 +33,6 @@ import {
   setListLiked,
   type LetterboxdListKind,
   type LetterboxdListFilmsPage,
-  type LetterboxdListsPage,
 } from '@/lib/providers/letterboxd/lists';
 import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
@@ -133,6 +133,7 @@ export const letterboxdQueryKeys = {
    * suggests the prior account's tags.
    */
   tags: (username: string) => [...letterboxdQueryKeys.all, 'tags', username] as const,
+  listLike: (username: string, owner: string, slug: string) => [...letterboxdQueryKeys.all, 'list-like', username.toLowerCase(), owner.toLowerCase(), slug] as const,
   listsRoot: () => [...letterboxdQueryKeys.all, 'lists'] as const,
   lists: (username: string, kind: LetterboxdListKind) =>
     [...letterboxdQueryKeys.listsRoot(), username, kind] as const,
@@ -214,16 +215,30 @@ export function useSuspenseLetterboxdListFilmsQuery(owner: string, slug: string)
 /** Loaded membership is positive evidence only; an incomplete index cannot prove absence. */
 export function useLetterboxdListLike(username: string, owner: string, slug: string) {
   const queryClient = useQueryClient();
-  const lists = useQuery<{ pages: LetterboxdListsPage[] }>({
-    queryKey: letterboxdQueryKeys.lists(username, 'liked'), queryFn: skipToken,
+  const queryKey = letterboxdQueryKeys.listLike(username, owner, slug);
+  const lists = useInfiniteQuery({
+    ...letterboxdListsOptions(username, 'liked'), enabled: false,
   });
+  const likeState = useQuery<boolean>({ queryKey, queryFn: skipToken, staleTime: Infinity });
+  const currentLiked = likeState.data ?? lists.data?.pages.some((page) => page.lists.some((list) => list.owner.toLowerCase() === owner.toLowerCase() && list.slug === slug)) ?? false;
+  const pending = useIsMutating({ mutationKey: queryKey }) > 0;
   const mutation = useMutation({
+    mutationKey: queryKey,
+    scope: { id: queryKey.join('/') },
     mutationFn: (liked: boolean) => Effect.runPromise(setListLiked(letterboxdDeps(), { owner, slug, liked })),
-    onMutate: (liked: boolean) => !liked,
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }); },
+    onMutate: (next: boolean) => {
+      const previous = queryClient.getQueryData<boolean>(queryKey) ?? currentLiked;
+      queryClient.setQueryData(queryKey, next);
+      return previous;
+    },
+    onError: (_error, _next, previous) => {
+      if (previous != null) queryClient.setQueryData(queryKey, previous);
+    },
+    onSuccess: (confirmed: boolean) => { queryClient.setQueryData(queryKey, confirmed); },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }),
     retry: false,
   });
-  return { ...mutation, liked: mutation.data ?? mutation.context ?? lists.data?.pages.some((page) => page.lists.some((list) => list.owner === owner && list.slug === slug)) ?? false };
+  return { ...mutation, liked: currentLiked, isPending: mutation.isPending || pending };
 }
 
 /** List-only films aren't in the home/watchlist feed; details must reuse their source pages. */
