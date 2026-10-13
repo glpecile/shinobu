@@ -19,11 +19,11 @@ export interface CatchUpSession {
 /**
  * App-level quick-log state, mirroring `components/lightbox/state.tsx`: the
  * card's checkmark and the sheet are decoupled. The sheet **must** outlive
- * the card that opened it — a logged episode re-keys the Continue Watching
- * row (its entry id carries the episode number), which unmounts the card and
- * would take a card-owned sheet with it mid-chain (plan 0037 KTD-1). The
- * session is retained after close so late write results still have a home,
- * and replaced wholesale on the next open.
+ * the card that opened it, even if that trigger disappears or unmounts.
+ * Continue Watching uses stable media keys when an episode advances; the
+ * root host protects the session independently of any trigger's lifetime.
+ * The session is retained after close so late write results still have a
+ * home, and replaced wholesale on the next open.
  *
  * `busy` is what the checkmark spins on: any log write or post-write settle
  * still in flight for that item, whichever session started it.

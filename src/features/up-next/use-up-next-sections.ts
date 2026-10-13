@@ -23,8 +23,9 @@ export function useUpNextSections(now: Date): UpNextResult {
 
 /**
  * `entries` minus the ones whose item the user hid. Hiding is keyed by *media*
- * id while an entry's own id carries its episode or release kind (so a card
- * re-keys when it advances), so the filter runs over the items and maps back
+ * id while an entry's own id carries its episode or release kind. Continue
+ * Watching keys cards by item id, so advancing an episode doesn't re-key them.
+ * The filter runs over the items and maps back
  * rather than over entry ids. A film therefore loses **both** of its release
  * rows when hidden — they share one item id, and hiding a film means hiding the
  * film, not one of its dates (plan 0030 R8).
