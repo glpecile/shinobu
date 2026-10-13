@@ -22,7 +22,7 @@ import type {
   NormalizedSeason,
 } from '@/types/media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import { useCatchUpControls } from '@/features/up-next/catch-up/state';
+import { useCatchUpControls } from '@/features/log-media/session/state';
 import {
   EpisodeActionsSheet,
   type EpisodePointer,

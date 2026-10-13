@@ -1,5 +1,5 @@
 import { Button } from '@/components/button';
-import { useCatchUpControls } from '@/features/up-next/catch-up/state';
+import { useCatchUpControls } from '@/features/log-media/session/state';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 

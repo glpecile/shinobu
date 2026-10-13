@@ -35,7 +35,7 @@ import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { ViewToggle } from '@/components/view-toggle';
 import { WatchedMark } from '@/components/watched-mark';
-import { mediaKindLabel } from '@/features/watchlist/watchlist-rows';
+import { mediaKindLabel } from '@/features/media-layout/watchlist-rows';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePageEnterStyle } from '@/lib/page-transition';

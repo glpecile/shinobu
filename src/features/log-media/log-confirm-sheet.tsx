@@ -10,7 +10,7 @@ import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
-import { useCatchUpControls } from '@/features/up-next/catch-up/state';
+import { useCatchUpControls } from '@/features/log-media/session/state';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
@@ -82,7 +82,7 @@ export interface LogFormFieldsProps {
  * The log verb's fields — write targets, manual rows, the backdate field and
  * the tags input — without the sheet, header, result or buttons around them.
  * `LogConfirmForm` composes it for movies and season batches; the episode catch-up
- * chain (plan 0037, `features/up-next/catch-up`) composes it under its own
+ * chain (plan 0037, `features/log-media/session`) composes it under its own
  * header and above its own ledger, keeping one form for both.
  */
 export function LogFormFields({

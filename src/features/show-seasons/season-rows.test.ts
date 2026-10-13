@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedSeason } from '@/types/media';
-import { airedAnimeEpisodes } from '@/features/up-next/catch-up/queue';
+import { airedAnimeEpisodes } from '@/features/log-media/session/queue';
 
 import { seasonRows } from './season-rows';
 

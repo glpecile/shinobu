@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Button } from '@/components/button';
 import { unairedEpisodeLabel } from '@/features/log-media/series-next-episode';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
-import { useCatchUpControls, useQuickLogBusy } from '@/features/up-next/catch-up/state';
+import { useCatchUpControls, useQuickLogBusy } from '@/features/log-media/session/state';
 import { hasAired } from '@/lib/time/has-aired';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 import { episodeCode } from './episode-label';

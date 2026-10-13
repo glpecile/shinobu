@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { Skeleton, staggerDelay } from '@/components/skeleton';
-import { useWallMetrics } from '@/features/watchlist/poster-wall';
+import { useWallMetrics } from '@/features/media-layout/poster-wall';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 
 /** Two rows of pulsing posters in the wall's own column count. */

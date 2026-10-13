@@ -10,7 +10,9 @@ import { WatchedMark } from '@/components/watched-mark';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import type { WatchlistEntry, WatchlistLayoutProps } from './types';
+import type { WatchlistEntry } from '@/features/watchlist/types';
+
+import type { MediaLayoutProps } from './types';
 
 /**
  * The screen owns data, paging and failure states; this owns only how the
@@ -180,7 +182,7 @@ export function PosterWall({
   onEndReached,
   footer,
   showWatched,
-}: WatchlistLayoutProps) {
+}: MediaLayoutProps) {
   const { columns, rowHeight } = useWallMetrics();
 
   return (

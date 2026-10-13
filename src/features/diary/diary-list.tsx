@@ -13,14 +13,13 @@ import {
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
-import { Image } from '@/components/image';
 import { List, type LegendListRef } from '@/components/List';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import {
   SCROLL_TO_TOP_THRESHOLD,
   ScrollToTopFab,
 } from '@/components/scroll-to-top-fab';
-import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { SmallPoster } from '@/components/small-poster';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
@@ -275,15 +274,7 @@ function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
     providerCover === '' && item.externalIds.tmdb != null ? item : undefined,
   );
   const coverImage = providerCover || details?.catalogue?.coverImage || '';
-  if (coverImage === '') return <PosterPlaceholder className={POSTER} />;
-  return (
-    <Image
-      source={{ uri: coverImage }}
-      className={cn(POSTER, 'bg-surface border border-border/50')}
-      contentFit="cover"
-      recyclingKey={item.id}
-    />
-  );
+  return <SmallPoster uri={coverImage} recyclingKey={item.id} size="sm" />;
 }
 
 /**
