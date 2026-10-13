@@ -33,6 +33,7 @@ import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { getEntryState } from '@/lib/providers/anilist/reads';
 import { traktDeps, traktQueryKeys } from '@/state/queries/trakt';
 import { upNextQueryKeys } from '@/state/queries/up-next';
+import { watchlistQueryKeys } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { enrichExternalIds } from './enrich';
@@ -604,6 +605,15 @@ export function invalidateAfterLog(
   // show it on its next visit (plan 0016 KTD9). One query, one invalidation.
   if (succeeded.length > 0) {
     queryClient.invalidateQueries({ queryKey: DIARY_QUERY_ROOT });
+  }
+  // Logs can change membership or status without a separate watchlist write.
+  // Refresh the gather only after the provider entries it reads are stale.
+  if (
+    succeeded.includes('trakt') ||
+    succeeded.includes('anilist') ||
+    succeeded.includes('simkl')
+  ) {
+    queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
   }
   // **Last on purpose.** `invalidateQueries` starts the refetch of the active
   // Up Next query *synchronously*, and `fetchUpNextInputs` reaches its
