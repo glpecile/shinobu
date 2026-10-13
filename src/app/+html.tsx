@@ -68,10 +68,24 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 background-color: #0a0a0a;
                 color: #0a0a0a;
               }
+              #boot-loader {
+                background-color: #0a0a0a;
+                color: #ffffff;
+              }
+              #boot-loader [data-boot-mark] {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+              }
               @media (prefers-color-scheme: light) {
                 html, body {
                   background-color: #ffffff;
                   color: #ffffff;
+                }
+                #boot-loader {
+                  background-color: #ffffff;
+                  color: #0a0a0a;
                 }
               }
             `,
@@ -105,14 +119,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
           div just covers the whole viewport with the real dark background
           and the wordmark until the app confirms it's ready to be shown.
 
-          Fixed dark background (not theme-reactive) is intentional here:
-          dark is Shinobu's primary/designed-for mode (AGENTS.md), and
-          picking the right background is what all of this exists to
-          avoid getting wrong — a hardcoded value can't race anything.
+           Inline media queries select the same system theme as the app
+           before its external stylesheet loads, without a hydration race.
           System font stack only — no custom font (Space Grotesk) load to
           wait on here, that's the whole point.
 
-          Removed by `_layout.tsx` once fonts are loaded (the same signal
+           Revealed by `_layout.tsx` once fonts are loaded (the same signal
           that already gates first paint of the real tree). The inline
           script below is a safety net only, in case that never fires
           (e.g. a font load error) — this must never be the thing a user
@@ -120,6 +132,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         */}
         <div
           id="boot-loader"
+          aria-hidden="true"
           style={{
             position: "fixed",
             inset: 0,
@@ -129,24 +142,24 @@ export default function Root({ children }: { children: React.ReactNode }) {
             alignItems: "center",
             justifyContent: "center",
             gap: 12,
-            backgroundColor: "#0a0a0a",
             fontFamily:
               "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           }}
         >
-          <span style={{ fontSize: 40, color: "#dc2626", lineHeight: 1 }}>
-            忍
-          </span>
-          <span
-            style={{
-              fontSize: 18,
-              fontWeight: 600,
-              color: "#ffffff",
-              letterSpacing: "0.02em",
-            }}
-          >
-            Shinobu
-          </span>
+          <div data-boot-mark="">
+            <span style={{ fontSize: 40, color: "#dc2626", lineHeight: 1 }}>
+              忍
+            </span>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 600,
+                letterSpacing: "0.02em",
+              }}
+            >
+              Shinobu
+            </span>
+          </div>
         </div>
         <script
           dangerouslySetInnerHTML={{

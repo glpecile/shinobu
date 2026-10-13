@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { AppShell } from "@/components/app-shell";
+import { BootSplash, dismissBootSplash } from "@/components/boot-splash";
 import { ErrorFallback } from "@/components/error-fallback";
 import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
@@ -46,7 +47,7 @@ SplashScreen.preventAutoHideAsync();
 onProviderConnected((id) => toast.success(`Connected to ${PROVIDERS[id].label}`));
 
 export default function Layout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_700Bold,
     Inter_400Regular,
     Inter_600SemiBold,
@@ -103,18 +104,12 @@ export default function Layout() {
   useNotificationTapNavigation();
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-      // `#boot-loader` is static markup from `+html.tsx`, not part of this
-      // React tree — see the comment there for why it exists. Only web
-      // renders it (`document` doesn't exist on native).
-      if (typeof document !== "undefined") {
-        document.getElementById("boot-loader")?.remove();
-      }
+    if (fontsLoaded || fontError) {
+      dismissBootSplash();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
@@ -189,6 +184,7 @@ export default function Layout() {
         </PersistQueryClientProvider>
         </KeyboardProvider>
       </ErrorBoundary>
+      <BootSplash />
     </GestureHandlerRootView>
   );
 }

@@ -1,5 +1,26 @@
 # Web boot flash of unstyled content (FOUC)
 
+## Theme-aware reveal (2026-10-13)
+
+The original fixed-dark overlay described below is now theme-aware. Its inline
+CSS uses `prefers-color-scheme`, with background/foreground values matching
+`src/global.css`, so light users see the light splash even before the external
+stylesheet arrives. Keep those critical colors synchronized with the tokens.
+
+`components/boot-splash/index.web.tsx` releases the static overlay when fonts
+load (or fail): a 300ms fade with a 1 → 1.5 wordmark scale, adapted from
+Bluesky's `src/Splash.web.tsx`. Reduced motion uses a 120ms fade without scale.
+Completion removes the overlay; the existing four-second startup watchdog
+remains independent. The native counterpart hands off from the OS splash on
+layout and runs the same reveal with Reanimated, without changing native assets.
+
+Verified against the exported app in Chromium with startup JavaScript held:
+dark and light backgrounds/text are correct before hydration, both normal
+animations complete and remove the overlay, and reduced motion has only the
+short fade. Native feel still needs a real-device check.
+
+## Original diagnosis and fix
+
 **Fixed 2026-07-20.** On web only, booting the app showed a persistent,
 reliably-reproducible flash before the real dark-themed landing screen
 appeared: a light gray background with plain black unstyled text, no icons,
