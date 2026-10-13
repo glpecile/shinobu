@@ -139,7 +139,12 @@ function EpisodePager({
         >
           <View style={{ width: first * width }} />
           {order.slice(first, last + 1).map((entry) => (
-            <View key={`${entry.season}-${entry.number}`} style={{ width, height }}>
+            <View
+              accessibilityElementsHidden={entry.season !== season || entry.number !== number}
+              importantForAccessibility={entry.season === season && entry.number === number ? 'auto' : 'no-hide-descendants'}
+              key={`${entry.season}-${entry.number}`}
+              style={{ width, height }}
+            >
               <EpisodePage item={item} number={entry.number} season={entry.season} />
             </View>
           ))}

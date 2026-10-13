@@ -172,10 +172,12 @@ function SeasonWall({
 function WallBoundary({
   window,
   format,
+  active,
   onItemActions,
 }: {
   window: AnimeSeasonWindow;
   format: AnimeFormatFilter;
+  active: boolean;
   onItemActions: (item: NormalizedMediaItem) => void;
 }) {
   const { reset } = useQueryErrorResetBoundary();
@@ -197,7 +199,7 @@ function WallBoundary({
       onReset={reset}
       resetKeys={[window.season, window.year, format]}
     >
-      <Suspense fallback={<WallSkeleton />}>
+      <Suspense fallback={<WallSkeleton animated={active} />}>
         <SeasonWall format={format} onItemActions={onItemActions} window={window} />
       </Suspense>
     </QueryErrorBoundary>
@@ -317,6 +319,7 @@ export default function AnimeSeasonsScreen() {
           const pageFormat = season === window.season ? format : trailingFormat;
           return (
             <WallBoundary
+              active={season === window.season}
               format={pageFormat}
               key={`${window.year}-${pageFormat}`}
               onItemActions={openActions}

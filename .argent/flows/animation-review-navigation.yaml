@@ -1,0 +1,30 @@
+steps:
+  - echo: "Home: expand Continue Watching."
+  - tap:
+      text: Expand Continue Watching
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Collapse Continue Watching
+  - echo: "Home: collapse Continue Watching, restoring the start state."
+  - tap:
+      text: Collapse Continue Watching
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Expand Continue Watching
+  - echo: Open Diary; expect the Diary heading.
+  - tap:
+      id: book.fill
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Diary
+        role: StaticText
+  - await: { idle: true }
+executionPrerequisite: Shinobu on iOS Home tab at top with Continue Watching
+  collapsed; connected provider data. Read-only path, no logs or account
+  changes.
