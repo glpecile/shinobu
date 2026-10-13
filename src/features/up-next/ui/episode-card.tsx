@@ -52,6 +52,7 @@ export function EpisodeCard({
   className = 'w-64',
 }: EpisodeCardProps) {
   const { lead, entries } = group;
+  const title = lead.item.title.trim() || 'Untitled';
   const pushRoute = usePushRoute();
   const art = useCardArt(lead.item);
   const label = groupLabel(group);
@@ -75,7 +76,7 @@ export function EpisodeCard({
           // The badges carry information that exists nowhere else on the card —
           // the air time above all — so they belong in the spoken label too.
           accessibilityLabel={[
-            lead.item.title,
+            title,
             label,
             ...badges.map((badge) => badge.label),
           ].join(', ')}
@@ -116,17 +117,16 @@ export function EpisodeCard({
           )}
 
           <View className="w-full h-full rounded-lg overflow-hidden border border-border/50">
-            {art !== '' ? (
-              <Image className="w-full h-full" contentFit="cover" source={{ uri: art }} />
-            ) : (
-              <PosterPlaceholder className="w-full h-full border-0" />
+            <PosterPlaceholder className="w-full h-full border-0" />
+            {art !== '' && (
+              <Image className="absolute inset-0 w-full h-full" contentFit="cover" source={{ uri: art }} />
             )}
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.85)']}
               style={{ bottom: 0, height: 72, left: 0, position: 'absolute', right: 0 }}
             />
             {badges.length > 0 && (
-              <View className="absolute bottom-2 left-2 flex-row gap-1.5">
+              <View className="absolute bottom-2 left-2 right-2 flex-row flex-wrap gap-1.5">
                 {badges.map((badge) => (
                   <Badge key={badge.label} label={badge.label} tone={badge.tone} />
                 ))}
@@ -149,7 +149,7 @@ export function EpisodeCard({
         {showActionsButton && (
           <OverlayActionsButton
             className="absolute top-2 right-2"
-            label={`More options for ${lead.item.title}`}
+            label={`More options for ${title}`}
             onPress={() => onActionsPress(lead.item)}
             size="md"
           />
@@ -157,12 +157,12 @@ export function EpisodeCard({
       </View>
 
       <View className="flex-row items-start justify-between gap-2 mt-2">
-        <View className="flex-1">
+        <View className="flex-1 min-w-0">
           <Text
             className="text-foreground font-sans-semibold text-sm leading-tight"
             numberOfLines={1}
           >
-            {lead.item.title}
+            {title}
           </Text>
           {/* Morphs in place when a quick-log advances the card. One line, like
               the title: an episode title can be a paragraph and the card's

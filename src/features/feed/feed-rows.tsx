@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { MediaCarousel } from '@/components/media-carousel';
+import { haptics } from '@/lib/haptics';
 import {
   animeSeasonLabel,
   type AnimeSeasonWindow,
@@ -208,7 +209,10 @@ export function FeedEnd({ onPress }: { onPress: () => void }) {
       <Button
         icon={<Button.Icon name="arrow-up" />}
         label="Back to top"
-        onPress={onPress}
+        onPress={() => {
+          haptics.selection();
+          onPress();
+        }}
         size="sm"
         variant="quiet"
       />

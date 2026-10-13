@@ -47,18 +47,57 @@ afterAll(() => {
   delete globals.window;
 });
 
-const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
+const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, useLetterboxdListLike, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
   './letterboxd'
 );
 // Written through the session layer's own setters rather than into the map
 // above: `mock.module` is process-wide and the last registration wins, so
 // `tokens.ts` may well have captured another suite's fake MMKV. Going through
 // the real writers lands the session in whichever store is actually live.
-const { setProviderSession, setStoredTmdbToken } = await import(
+const { setProviderSession, clearProviderSession, setStoredTmdbToken } = await import(
   '@/state/session/tokens'
 );
 
 const NOW = new Date('2026-07-27T12:00:00.000Z');
+
+test('list likes share optimistic state across buttons and remounts, and roll back failed unlikes', async () => {
+  const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
+  setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });
+  const client = new QueryClient();
+  let mutation!: ReturnType<typeof useLetterboxdListLike>;
+  function LikeRead() {
+    mutation = useLetterboxdListLike('gian', 'jack', 'classics');
+    return createElement('button', { 'aria-pressed': mutation.liked, disabled: mutation.isPending }, mutation.liked ? 'Unlike' : 'Like');
+  }
+  const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(LikeRead)));
+  let loaded = Promise.withResolvers<string>();
+  registerLetterboxdWebView({ loadPage: (_path, script) => {
+    const id = /id:\s*("lb-[^"]+")/.exec(script)?.[1];
+    if (id == null) throw new Error('Missing bridge request ID');
+    loaded.resolve(JSON.parse(id));
+  } });
+  try {
+    expect(render()).toContain('aria-pressed="false"');
+    const like = mutation.mutateAsync(true);
+    const likeId = await loaded.promise;
+    expect(render()).toContain('aria-pressed="true" disabled=""');
+    handleLetterboxdMessage(JSON.stringify({ id: likeId, status: 200, body: '{"result":true,"liked":true}' }));
+    await like;
+    expect(render()).toContain('aria-pressed="true"');
+
+    loaded = Promise.withResolvers<string>();
+    const unlike = mutation.mutateAsync(false).catch((error: unknown) => error);
+    const unlikeId = await loaded.promise;
+    expect(render()).toContain('aria-pressed="false" disabled=""');
+    handleLetterboxdMessage(JSON.stringify({ id: unlikeId, status: 429, body: '' }));
+    expect(await unlike).toMatchObject({ _tag: 'ProviderRateLimitError' });
+    expect(render()).toContain('aria-pressed="true"');
+  } finally {
+    registerLetterboxdWebView(null);
+    client.clear();
+    clearProviderSession('letterboxd');
+  }
+});
 
 test('blocked list reads settle inline without retrying on remount, and an explicit retry can recover', async () => {
   let retry: (() => Promise<unknown>) | undefined;

@@ -41,7 +41,8 @@ export function entryLabel(entry: UpNextEntry): string {
   // "E7" rather than a made-up "S1E7" — the entry itself *is* the season.
   const { season, number, title } = entry.episode;
   const code = season == null ? `E${number}` : `S${season}E${number}`;
-  return title == null ? code : `${code} · ${title}`;
+  const name = title?.trim();
+  return name ? `${code} · ${name}` : code;
 }
 
 /**

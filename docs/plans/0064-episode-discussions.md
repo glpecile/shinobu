@@ -3,9 +3,7 @@
 - Add a Discussion section to native and web episode detail pages.
 - Movies and series show the same section below Variants, without episode filtering.
   Anime films search `/a/`, `/tv/` and `/co/`.
-- Use compact cards only. `/discussion-demo` is a dev-only stress preview with
-  Demo data / Worst case, Empty / One / Many (12), and Loading / Loaded controls,
-  persisted in its URL. Inline catalog results do not use section-rise animation.
+- Use compact cards only. Inline catalog results do not use section-rise animation.
   Cards fit 320px screens, grow for enlarged text, and fall back for failed images.
 - Catalog loading is invisible: no header, skeleton cards, or reserved space
   before matches exist. Reveal results with a 180ms opacity-only ease-out fade

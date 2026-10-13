@@ -14,8 +14,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 export function useCardArt(item: NormalizedMediaItem): string {
   const recovered = useTraktMediaImages(item);
   return (
-    item.backdropImage ??
-    recovered.backdropImage ??
+    item.backdropImage ||
+    recovered.backdropImage ||
     (recovered.coverImage !== '' ? recovered.coverImage : item.coverImage)
   );
 }

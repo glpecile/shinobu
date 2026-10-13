@@ -7,9 +7,8 @@ import {
   type EntryOrExitLayoutType,
 } from 'react-native-reanimated';
 
-import { AnimatedText, AnimatedView } from '@/components/animated-view';
-import { PresstableScale } from '@/components/presstable';
-import { Rail, VirtualizedRail } from '@/components/rail';
+import { AnimatedView } from '@/components/animated-view';
+import { VirtualizedRail } from '@/components/rail';
 import {
   calendarBadges,
   continueWatchingBadges,
@@ -20,10 +19,9 @@ import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
 import { CARD_EXIT, CardSlot } from '@/features/up-next/ui/card-slot';
 import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
+import { WeekStrip } from '@/features/up-next/ui/week-strip';
 import { CollapsibleSection } from '@/components/collapsible-section';
-import { DURATION, EASE_OUT, KEYFRAME_EASE_OUT } from '@/lib/motion';
-import { useThemeColor } from '@/lib/theme-color';
-import { shortWeekdayName } from '@/lib/time/relative-day';
+import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useWakeAt } from '@/lib/time/use-wake-at';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -49,10 +47,6 @@ export interface UpNextSectionProps {
 // the row. Applied whether or not the day holds a stack: paying it only
 // sometimes would move every card down by 10px the moment a season dropped.
 const STACK_HEADROOM = STACK_OFFSET * 2;
-
-// Beyond this the dots would overflow the ~56px cell; several shows sharing a
-// day is already the busy case, so an exact tally past it earns nothing.
-const MAX_DAY_DOTS = 5;
 
 /**
  * The day's cards settle in when the user picks a different day. Signed travel,
@@ -89,20 +83,6 @@ function dayContentAnimation(
   return direction > 0 ? dayContentForward : dayContentBackward;
 }
 
-/** Label, date and dots ride the same curve as the fill under them, instead
- * of flipping instantly against a fading background. */
-const LABEL_TRANSITION = {
-  transitionProperty: 'color',
-  transitionDuration: DURATION.color,
-  transitionTimingFunction: EASE_OUT,
-} as const;
-
-const DOT_TRANSITION = {
-  transitionProperty: 'backgroundColor',
-  transitionDuration: DURATION.color,
-  transitionTimingFunction: EASE_OUT,
-} as const;
-
 /**
  * The empty-day line. "Today" is special: its episodes have already aired (and
  * live in Continue Watching), so it reads as done rather than as if nothing
@@ -132,10 +112,6 @@ export function UpNextSection({
   /** 0 until the first switch, then +1 for a later day and -1 for an earlier. */
   const [direction, setDirection] = useState(0);
   const reduceMotion = useReducedMotion();
-  const accent = useThemeColor('--color-accent');
-  const accentForeground = useThemeColor('--color-accent-foreground');
-  const foreground = useThemeColor('--color-foreground');
-  const muted = useThemeColor('--color-muted');
   const { fontScale } = useWindowDimensions();
   const cardRailHeight = episodeCardRailHeight(fontScale);
 
@@ -204,100 +180,19 @@ export function UpNextSection({
         collapseKey="up-next-calendar"
         title="This week"
       >
-        <Rail
-          className="px-4"
-        >
-          {week.map((day) => {
-            const isSelected = day.offset === selected.offset;
-            return (
-              <PresstableScale
-                key={day.offset}
-                accessibilityLabel={`${day.label}, ${day.groups.length} airing`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isSelected }}
-                className="mr-2"
-                onPress={() => {
-                  if (day.offset === selectedOffset) return;
-                  setDirection(day.offset > selectedOffset ? 1 : -1);
-                  setSelectedOffset(day.offset);
-                }}
-              >
-                <View className="w-14 py-2 items-center">
-                  {/* Selection crossfades instead of hard-flipping classNames.
-                      Two stacked full-bleed layers rather than an animated
-                      colour: opacity is the one property that's free on the
-                      GPU, and it keeps both states expressed as theme tokens
-                      (an animated `backgroundColor` would need the hex resolved
-                      out of the token and would lose the unselected border's
-                      /60 alpha). The resting layer sits underneath, so a
-                      dropped/unresolved animation still renders a correct
-                      tile. */}
-                  <View className="absolute inset-0 rounded-md border border-border/60 bg-surface" />
-                  <AnimatedView
-                    className="absolute inset-0 rounded-md border border-accent bg-accent"
-                    style={{
-                      opacity: isSelected ? 1 : 0,
-                      transitionProperty: 'opacity',
-                      // Strong ease-out, not `ease`: the fill is >60% of the
-                      // way there within ~40ms, so the label and dots — which
-                      // flip colour instantly, there being no animated Text
-                      // wrapper in the app — are never stranded on the wrong
-                      // background long enough to read as a flash.
-                      transitionDuration: DURATION.color,
-                      transitionTimingFunction: EASE_OUT,
-                    }}
-                  />
-                  {/* Colour as a style, not a class — a className swap is a
-                      hard cut. `useThemeColor` per AGENTS.md. */}
-                  <AnimatedText
-                    className="font-sans text-xs"
-                    style={{
-                      color: isSelected ? accentForeground : muted,
-                      ...LABEL_TRANSITION,
-                    }}
-                  >
-                    {shortWeekdayName(day.date)}
-                  </AnimatedText>
-                  <AnimatedText
-                    className="font-sans-semibold text-base"
-                    style={{
-                      color: isSelected ? accentForeground : foreground,
-                      ...LABEL_TRANSITION,
-                    }}
-                  >
-                    {day.date.getDate()}
-                  </AnimatedText>
-                  {/* One dot per *card* airing that day (capped), so the strip
-                      conveys *how much* at a glance, not just whether. Cards,
-                      not episodes: a season drop is one thing happening that
-                      day, and counting its ten episodes would peg the cap and
-                      make it indistinguishable from a five-show day. The row is
-                      a fixed height whether it holds dots or not, so cells never
-                      change size across days. */}
-                  <View className="flex-row items-center gap-0.5 mt-1 h-1.5">
-                    {Array.from({
-                      length: Math.min(day.groups.length, MAX_DAY_DOTS),
-                    }).map((_, index) => (
-                      <AnimatedView
-                        key={index}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{
-                          backgroundColor: isSelected ? accentForeground : accent,
-                          ...DOT_TRANSITION,
-                        }}
-                      />
-                    ))}
-                  </View>
-                </View>
-              </PresstableScale>
-            );
-          })}
-        </Rail>
+        <WeekStrip
+          days={week}
+          selectedOffset={selected.offset}
+          onChange={(offset) => {
+            setDirection(offset > selectedOffset ? 1 : -1);
+            setSelectedOffset(offset);
+          }}
+        />
 
         {/* Empty and populated days reserve the same bounded list height. */}
         <View
           className="mt-3"
-          style={{ minHeight: cardRailHeight + STACK_HEADROOM }}
+          style={{ minHeight: episodeCardRailHeight(fontScale, STACK_HEADROOM) }}
         >
           {/* Keyed on the day so a switch remounts and replays the enter. No exit
               on the block: an exiting copy would sit in flow beside the
@@ -334,7 +229,7 @@ export function UpNextSection({
                 data={selected.groups}
                 estimatedItemSize={268}
                 keyExtractor={(group) => group.id}
-                style={{ height: cardRailHeight + STACK_HEADROOM }}
+                style={{ height: episodeCardRailHeight(fontScale, STACK_HEADROOM) }}
                 renderItem={({ item: group }) => (
                   <CardSlot
                     // Aired-today episodes are watchable right now, so they

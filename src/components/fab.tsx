@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
 
 import { PresstableOpacity } from '@/components/presstable';
+import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useThemeColor } from '@/lib/theme-color';
@@ -25,6 +26,7 @@ export function Fab({
   hint,
   onPress,
   size = 'md',
+  loading = false,
   className,
 }: {
   icon: ComponentProps<typeof Ionicons>['name'];
@@ -32,6 +34,7 @@ export function Fab({
   hint?: string;
   onPress: () => void;
   size?: keyof typeof SIZE;
+  loading?: boolean;
   /** Layout only. */
   className?: string;
 }) {
@@ -41,9 +44,13 @@ export function Fab({
       accessibilityHint={hint}
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ busy: loading, disabled: loading }}
+      aria-busy={loading}
+      aria-disabled={loading}
+      disabled={loading}
       className={cn(
         SIZE[size].box,
-        'bg-accent items-center justify-center',
+        'shrink-0 bg-accent items-center justify-center',
         className,
       )}
       onPress={() => {
@@ -53,7 +60,11 @@ export function Fab({
       // 3D is 24% alpha, the tab bar's ripple strength. Android only.
       rippleColor={`${accentForeground}3D`}
     >
-      <Ionicons color={accentForeground} name={icon} size={SIZE[size].icon} />
+      {loading ? (
+        <Spinner color={accentForeground} />
+      ) : (
+        <Ionicons color={accentForeground} name={icon} size={SIZE[size].icon} />
+      )}
     </PresstableOpacity>
   );
 }

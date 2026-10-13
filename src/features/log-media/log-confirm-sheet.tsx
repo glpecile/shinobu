@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TextInput } from 'react-native';
 import { Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 
-import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
+import { LikeButton } from '@/components/like-button';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
@@ -44,12 +42,6 @@ const DIARY_PROVIDERS = [
   'letterboxd',
   'serializd',
 ] as const satisfies readonly ProviderId[];
-
-const HEART_POP = {
-  from: { transform: [{ scale: 1 }] },
-  '45%': { transform: [{ scale: 1.18 }] },
-  to: { transform: [{ scale: 1 }] },
-};
 
 /** Joins provider labels for "Writes to ..." and outcome copy in both sheets. */
 export function labels(ids: readonly ProviderId[]): string {
@@ -112,7 +104,6 @@ export function LogFormFields({
   const tagsInput = useRef<TextInput>(null);
   const pushRoute = usePushRoute();
   const userscriptLikes = useLetterboxdUserscript('like');
-  const reduceMotion = useReducedMotion();
   const diaryProviders = DIARY_PROVIDERS.filter((id) =>
     selectedProviders.includes(id),
   );
@@ -162,27 +153,11 @@ export function LogFormFields({
         <ManualWriteRows item={item} manual={manualTargets} />
         <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
           {diaryProviders.length > 0 && (
-            <Button
+            <LikeButton
               disabled={pending || needsScriptUpdate}
-              icon={
-                <AnimatedView
-                  style={{
-                    animationName: liked && !reduceMotion ? HEART_POP : undefined,
-                    animationDuration: DURATION.swap,
-                    animationTimingFunction: EASE_OUT,
-                  }}
-                >
-                  <Button.Icon name={liked ? 'heart' : 'heart-outline'} />
-                </AnimatedView>
-              }
-              iconOnly
               label={`Like on ${labels(diaryProviders)}`}
-              onPress={() => {
-                haptics.selection();
-                onLikedChange(!liked);
-              }}
-              pressed={liked}
-              variant={liked ? 'outline' : 'quiet'}
+              liked={liked}
+              onChange={onLikedChange}
             />
           )}
         </WatchedAtField>

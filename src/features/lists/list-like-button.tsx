@@ -1,4 +1,4 @@
-import { Button } from '@/components/button';
+import { LikeButton } from '@/components/like-button';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { toast } from '@/lib/toast';
@@ -12,19 +12,17 @@ export function ListLikeButton({ username, owner, slug, url }: { username: strin
   const canWrite = process.env.EXPO_OS === 'web' ? hasScript : hasSession;
   if (username.toLowerCase() === owner.toLowerCase()) return null;
   return (
-    <Button
-      icon={<Button.Icon name={mutation.liked ? 'heart' : 'heart-outline'} />}
-      iconOnly
+    <LikeButton
+      liked={mutation.liked}
       label={canWrite ? mutation.liked ? 'Unlike list' : 'Like list' : 'Like / unlike on Letterboxd'}
       loading={mutation.isPending}
-      onPress={() => {
+      size="sm"
+      onChange={(liked) => {
         if (!canWrite) { void openExternalUrl(url); return; }
-        mutation.mutate(!mutation.liked, {
+        mutation.mutate(liked, {
           onError: () => toast.error('Couldn’t confirm the change', 'Open this list with the Letterboxd button beside the heart before retrying.'),
         });
       }}
-      pressed={mutation.liked}
-      variant="ghost"
     />
   );
 }

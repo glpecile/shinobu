@@ -36,10 +36,10 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
         <View className="flex-1 min-w-0 flex-row items-center gap-2">
             <ListProgress countLabel={`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'}`} items={items} partial={pages.hasNextPage} />
         </View>
-        <View className="flex-row shrink-0 items-center gap-1">
+        <View className="flex-row shrink-0 items-center">
           <ProviderListLink iconOnly provider="letterboxd" url={url} />
           {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
-          <ViewToggle onChange={setWatchlistView} view={view} />
+          <View className="ml-2"><ViewToggle onChange={setWatchlistView} view={view} /></View>
         </View>
       </View>
       {items.length === 0 ? (

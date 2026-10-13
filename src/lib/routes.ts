@@ -29,7 +29,7 @@ export const routes = {
   settings: '/settings',
   search: '/search',
   diary: '/diary',
-  discussionDemo: '/discussion-demo',
+  upNextDemo: '/up-next-demo',
   details: (id: string, mediaType?: MediaType, zoomPoster?: string) => {
     let suffix = '';
     switch (id.slice(0, id.indexOf('-'))) {
