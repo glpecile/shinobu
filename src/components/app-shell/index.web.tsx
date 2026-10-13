@@ -53,6 +53,24 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 /**
+ * One press handler for both nav surfaces (mobile bar, sidebar). The search
+ * destination also asks for the field: the tab's tap is the only user gesture
+ * in the flow, and touch browsers only raise the keyboard on the back of one
+ * — so the request rides along with the press. It lands live on a re-tap, or
+ * holds pending until the screen mounts after a navigation (see
+ * `features/search/focus-signal`). Every other destination navigates, or
+ * no-ops on a re-press.
+ */
+function onNavItemPress(
+  item: NavItem,
+  active: boolean,
+  pushRoute: (href: string) => void,
+): void {
+  if (!active) pushRoute(item.href);
+  if (item.href === routes.search) emitSearchFocusRequest();
+}
+
+/**
  * Theme colors for the props that take a color *string* — an icon-font glyph,
  * the toggle's drawn strokes — rather than a class.
  *
@@ -74,8 +92,8 @@ const COLOR = {
 /**
  * A label that fades as the sidebar collapses. It never shrinks (`flexShrink 0`)
  * so it slides out under the sidebar's `overflow-hidden` instead of ellipsing.
- * Below `md` it's `display: none`, not faded — the bottom bar is icons only, and
- * an invisible label would still hold its width in that row. `animate` is armed
+ * Below `md` it's `display: none`, not faded — the bottom bar carries its own
+ * labels, and an invisible one would still hold its width in that row. `animate` is armed
  * only by a user toggle (see AppShell), so a reload with a persisted collapsed
  * pref paints shut instead of sliding shut.
  */
@@ -326,9 +344,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 accessibilityRole="button"
                 className="flex-1 items-center justify-center gap-1"
                 key={item.href}
-                onPress={() => {
-                  if (!active) pushRoute(item.href);
-                }}
+                onPress={() => onNavItemPress(item, active, pushRoute)}
               >
                 {/* Mirrors the native Android bar (`(tabs)/_layout.tsx`): a wide
                     tonal stadium behind the glyph with the label below, labels
@@ -360,12 +376,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 animate={animated}
                 item={item}
                 key={item.href}
-                // Pressing the tab you're on is a no-op: the tabs Navigator is
-                // a stack, so pushing the same href again would stack a second
-                // copy of the page and replay its enter fade over itself.
-                onPress={() => {
-                  if (!active) pushRoute(item.href);
-                }}
+                // Pressing the tab you're on pushes nothing (the tabs Navigator
+                // is a stack, so pushing the same href again would stack a
+                // second copy of the page and replay its enter fade over
+                // itself) — search still asks for the field (see
+                // `onNavItemPress`).
+                onPress={() => onNavItemPress(item, active, pushRoute)}
               />
             );
           })}

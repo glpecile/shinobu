@@ -296,9 +296,9 @@ export default function SearchScreen() {
   // The native "search" tab role only auto-focuses the field on iOS (its
   // dedicated search-tab UIKit affordance) — Android has no equivalent, so
   // tapping an already-active search tab did nothing. `onSearchFocusRequest`
-  // fires on every tap of that tab (see app/(tabs)/_layout.tsx) — and on web's
-  // ⌘K while search is already open — so this opens the keyboard the same way
-  // on every platform.
+  // fires on every tap of that tab (see app/(tabs)/_layout.tsx) — and on web
+  // for every search tab press and ⌘K (see components/app-shell) — so this
+  // opens the keyboard the same way on every platform.
   useEffect(() => {
     let handle: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = onSearchFocusRequest(() => {
@@ -320,6 +320,14 @@ export default function SearchScreen() {
       if (process.env.EXPO_OS === 'android' && field.isFocused()) {
         if (Keyboard.isVisible()) return;
         field.blur();
+      }
+      // Web focuses synchronously: a re-tap or ⌘K arrives inside the user
+      // gesture, and touch browsers only raise the keyboard for an in-gesture
+      // focus. A navigating tab press holds pending until this screen mounts
+      // (see focus-signal) and lands here on the back of that same tap.
+      if (process.env.EXPO_OS === 'web') {
+        field.focus();
+        return;
       }
       // Deferred past the tab-press frame: focusing synchronously inside the
       // native tab transition gets swallowed (and the blur above needs a tick
@@ -520,7 +528,9 @@ export default function SearchScreen() {
             // than through a re-mount. Off on touch browsers: they refuse to
             // open the keyboard for a focus with no user gesture behind it,
             // and Firefox Android answers with a flash-open-then-close that
-            // makes the field unusable (src/lib/pointer.ts).
+            // makes the field unusable (src/lib/pointer.ts). A tap on the
+            // search tab carries its own request instead (see focus-signal),
+            // which lands on the back of that gesture.
             autoFocus={!hasCoarsePointer()}
             // `outline-none`: the browser's focus ring would now draw around
             // the inner input, inside the wrapper that carries the field's
