@@ -27,13 +27,16 @@ export function staggerDelay(index: number): number {
  *
  * Pass `delay` (from `staggerDelay`) in a row or grid; blocks belonging to one
  * card share a delay so it breathes as a unit.
+ * Set `animated={false}` for mounted placeholders outside the visible page.
  */
 export function Skeleton({
   className,
   delay = 0,
+  animated = true,
 }: {
   className?: string;
   delay?: number;
+  animated?: boolean;
 }) {
   // Dropped entirely, not softened: this loop runs until the network answers.
   const reduceMotion = useReducedMotion();
@@ -42,7 +45,7 @@ export function Skeleton({
     <AnimatedView
       className={cn('bg-muted/20', className)}
       style={
-        reduceMotion
+        reduceMotion || !animated
           ? { opacity: 0.75 }
           : {
               // The keyframe's 0%, so a delayed block waits dim rather than

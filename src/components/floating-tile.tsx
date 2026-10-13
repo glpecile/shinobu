@@ -1,5 +1,5 @@
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { css } from 'react-native-reanimated';
+import { css, useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 
@@ -36,6 +36,7 @@ export function FloatingTile({
   rotate: string;
   style?: StyleProp<ViewStyle>;
 }) {
+  const reduceMotion = useReducedMotion();
   return (
     <View
       className={floating ? 'absolute' : 'relative'}
@@ -44,7 +45,7 @@ export function FloatingTile({
       <AnimatedView
         className="flex-1 bg-surface border border-border rounded-2xl items-center justify-center"
         style={{
-          animationName: bobKeyframes,
+          animationName: reduceMotion ? undefined : bobKeyframes,
           animationDuration: 2600,
           animationTimingFunction: 'ease-in-out',
           animationIterationCount: 'infinite',

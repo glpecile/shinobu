@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
+  Platform,
   RefreshControl,
   Text,
   View,
@@ -211,8 +212,10 @@ function RailLine({ stop = false }: { stop?: boolean }) {
       <AnimatedView
         className={cn('absolute w-px bg-border top-0', RAIL_LINE)}
         style={{
-          height: stop ? '50%' : '100%',
-          transitionProperty: 'height',
+          height: '100%',
+          transformOrigin: 'top',
+          transform: [{ scaleY: stop ? 0.5 : 1 }],
+          transitionProperty: 'transform',
           transitionDuration: reduceMotion ? 0 : DURATION.toggle,
           transitionTimingFunction: EASE_IN_OUT,
         }}
@@ -703,7 +706,9 @@ export function DiaryList({
     <View className="flex-1">
       <List
         ref={listRef}
-        itemLayoutAnimation={reduceMotion ? undefined : DIARY_REFLOW}
+        // Web position measurements animate on mount and scale recycled text.
+        // docs/solutions/diary-disclosure-keeps-flat-virtualization.md
+        itemLayoutAnimation={reduceMotion || Platform.OS === 'web' ? undefined : DIARY_REFLOW}
         onScroll={handleScroll}
         data={items}
         keyExtractor={(item) => item.key}
