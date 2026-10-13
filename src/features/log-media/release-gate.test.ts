@@ -4,6 +4,8 @@ import {
   filmReleaseStatus,
   hasStartedAiring,
   needsReleaseEnrichment,
+  preAiringDisplay,
+  seriesPremiere,
   unreleasedFilmLabel,
   watchlistCtaIsPrimary,
 } from './release-gate';
@@ -161,5 +163,79 @@ describe('hasStartedAiring', () => {
     expect(
       hasStartedAiring({ releaseDate: '2026-04-05' }, [{}], NOW_2026),
     ).toBe(true);
+  });
+});
+
+describe('preAiringDisplay', () => {
+  test('films and manga keep production behavior', () => {
+    expect(preAiringDisplay({ type: 'MOVIE' }, [], 0, NOW)).toBe('progress');
+    expect(preAiringDisplay({ type: 'ANIME', isFilm: true }, [], 0, NOW)).toBe('progress');
+    expect(preAiringDisplay({ type: 'MANGA' }, [], 0, NOW)).toBe('progress');
+  });
+
+  test('a log is proof something aired, even with no date anywhere', () => {
+    expect(preAiringDisplay({ type: 'TV' }, [{}, {}], 1, NOW)).toBe('progress');
+  });
+
+  test('released series render normally', () => {
+    expect(
+      preAiringDisplay({ type: 'TV', releaseDate: '2026-07-01' }, [{}], 0, NOW),
+    ).toBe('progress');
+    expect(preAiringDisplay({ type: 'ANIME', year: 2019 }, [{}, {}], 0, NOW)).toBe('progress');
+  });
+
+  test('a dated future premiere counts down, even while episodes load', () => {
+    expect(
+      preAiringDisplay({ type: 'TV', releaseDate: '2026-08-19' }, undefined, 0, NOW),
+    ).toBe('countdown');
+    expect(
+      preAiringDisplay({ type: 'TV', releaseDate: '2026-08-19' }, [{}], 0, NOW),
+    ).toBe('countdown');
+  });
+
+  test('loading stays permissive when nothing dates the series', () => {
+    // A dateless airing show keeps its tile until its episodes prove otherwise.
+    expect(preAiringDisplay({ type: 'TV' }, undefined, 0, NOW)).toBe('progress');
+    expect(preAiringDisplay({ type: 'ANIME', year: 2026 }, undefined, 0, NOW)).toBe('progress');
+  });
+
+  test('an anime premiere comes from episode 1, not the item', () => {
+    // AniList items carry no releaseDate, only a year.
+    expect(
+      preAiringDisplay(
+        { type: 'ANIME', year: 2026 },
+        [{ firstAired: '2026-08-19' }, {}],
+        0,
+        NOW,
+      ),
+    ).toBe('countdown');
+  });
+
+  test('announced with no date anywhere collapses', () => {
+    expect(preAiringDisplay({ type: 'ANIME', year: 2026 }, [{}, {}], 0, NOW)).toBe('hidden');
+    expect(preAiringDisplay({ type: 'TV' }, [], 0, NOW)).toBe('hidden');
+  });
+
+  test('an aired episode flips the countdown off', () => {
+    expect(
+      preAiringDisplay(
+        { type: 'TV', releaseDate: '2026-08-19' },
+        [{ firstAired: '2026-07-20' }],
+        0,
+        NOW,
+      ),
+    ).toBe('progress');
+  });
+});
+
+describe('seriesPremiere', () => {
+  test('the series date wins; otherwise the earliest dated episode', () => {
+    expect(seriesPremiere({ releaseDate: '2026-08-19' }, [{ firstAired: '2026-08-01' }])).toBe(
+      '2026-08-19',
+    );
+    expect(
+      seriesPremiere({}, [{ firstAired: '2026-08-19' }, { firstAired: '2026-08-01' }, {}]),
+    ).toBe('2026-08-01');
+    expect(seriesPremiere({}, [{}, {}])).toBeUndefined();
   });
 });

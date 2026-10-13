@@ -30,6 +30,7 @@ import {
 import { episodeCode } from '@/features/episode-details/episode-label';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { preAiringDisplay } from '@/features/log-media/release-gate';
 import { DetailsList, type DetailsListProps } from './details-list';
 import type { PendingLog } from './season-accordion';
 import { formatRuntime, seriesRuntimeMinutes } from './runtime';
@@ -71,7 +72,10 @@ function ShowDetailsList({
 } & DetailsListProps) {
   const traktId = item.externalIds.trakt;
   const connected = useConnectedProviders();
-  const seasons = useShowSeasonsQuery(source).data ?? [];
+  // Undefined while loading: the guard stays permissive, so the skeleton
+  // heading renders exactly as before and only settled data can collapse.
+  const seasonsData = useShowSeasonsQuery(source).data;
+  const seasons = seasonsData ?? [];
   // Enrichment-aware: a reverse-mapped anime TV show shows AniList too.
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   // A manual-only target still needs the sheet openable (plan 0022 R3) —
@@ -119,6 +123,18 @@ function ShowDetailsList({
       description: `“${item.title}” — ${episodeCode(s.number, episode.number)}: ${episode.title}`,
       episodes: [{ season: s.number, number: episode.number }],
     });
+  }
+
+  // Pre-airing series drop the whole block: every row would read "Unaired"
+  // next to a 0/total tile that says the same thing twice.
+  if (
+    preAiringDisplay(
+      item,
+      seasonsData?.flatMap((season) => season.episodes),
+      Math.max(watchedKeys.size, item.currentProgress),
+    ) !== 'progress'
+  ) {
+    return <DetailsList {...layout} />;
   }
 
   return (

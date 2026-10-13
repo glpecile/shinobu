@@ -26,7 +26,7 @@ export type ShowSeasonsSource =
   | { source: 'tmdb'; tmdbId: number };
 
 function seasonsSourceFor(
-  item: NormalizedMediaItem,
+  item: Pick<NormalizedMediaItem, 'externalIds'>,
   traktUsable: boolean,
   tmdbUsable: boolean,
 ): ShowSeasonsSource | null {
@@ -42,9 +42,13 @@ function seasonsSourceFor(
  * token mid-session re-routes an already-mounted details screen (the
  * `mapping.ts` via-hook pattern). SSR snapshots never touch MMKV — only the
  * builder TMDB token can be known on the server.
+ *
+ * Accepts `null` (renders nothing there) so callers can hook unconditionally;
+ * the details header passes merged catalogue ids to subscribe to the same
+ * cache entry its seasons section reads.
  */
 export function useShowSeasonsSource(
-  item: NormalizedMediaItem,
+  item: Pick<NormalizedMediaItem, 'externalIds'> | null | undefined,
 ): ShowSeasonsSource | null {
   const traktUsable = useSyncExternalStore(
     onSessionChange,
@@ -56,6 +60,7 @@ export function useShowSeasonsSource(
     () => tmdbToken() !== '',
     hasBuilderTmdbToken,
   );
+  if (item == null) return null;
   return seasonsSourceFor(item, traktUsable, tmdbUsable);
 }
 

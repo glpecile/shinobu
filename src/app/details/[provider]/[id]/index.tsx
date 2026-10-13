@@ -34,7 +34,11 @@ import {
 } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import { LetterboxdCompletionButton } from '@/features/log-media/letterboxd-completion-button';
-import { watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
+import {
+  preAiringDisplay,
+  seriesPremiere,
+  watchlistCtaIsPrimary,
+} from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import {
   PeopleSection,
@@ -52,9 +56,11 @@ import {
   SeriesRuntimeTile,
 } from '@/features/show-seasons';
 import { SuspenseSection } from '@/components/suspense-section';
+import { formatAirDate } from '@/features/episode-details/episode-label';
 import { localDayKey } from '@/features/diary/merge';
 import { haptics } from '@/lib/haptics';
 import { parseLocalInstant } from '@/lib/time/has-aired';
+import { formatRelativeDay } from '@/lib/time/relative-day';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { useTmdbToken } from '@/state/session/tmdb-token';
@@ -66,6 +72,7 @@ import { useThemeColor } from '@/lib/theme-color';
 import {
   anilistQueryKeys,
   useAniListEntryStateQuery,
+  useAniListEpisodesQuery,
   useSuspenseAniListRelationsQuery,
 } from '@/state/queries/anilist';
 import {
@@ -79,6 +86,7 @@ import {
   useSimklProgressQuery,
 } from '@/state/queries/simkl';
 import { traktQueryKeys, useTraktMediaImages } from '@/state/queries/trakt';
+import { useShowSeasonsQuery, useShowSeasonsSource } from '@/state/queries/show-seasons';
 import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
@@ -564,6 +572,19 @@ function DetailsScreen() {
   // Items resolved from the watched feed arrive artless (Trakt dropped images
   // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
   const artwork = useTraktMediaImages(item);
+  // Shared-cache reads for the pre-airing guard: the seasons sections mount
+  // the same queries, so these subscribe without fetching twice. Catalogue ids
+  // are merged in — a tokenless row's ids can arrive only via the catalogue,
+  // and the sections read them from the merged value too.
+  const catalogueIds = mediaDetails.data?.catalogue?.externalIds;
+  const tvSeasonsSource = useShowSeasonsSource(
+    item?.type === 'TV' ? { externalIds: { ...catalogueIds, ...item.externalIds } } : null,
+  );
+  const tvSeasonsCache = useShowSeasonsQuery(tvSeasonsSource).data;
+  const animeSeasonCache = useAniListEpisodesQuery({
+    mediaId: item?.externalIds.anilist,
+    enabled: item?.type === 'ANIME' && item.isFilm !== true,
+  }).data;
 
   function goBack() {
     if (router.canGoBack()) {
@@ -641,6 +662,16 @@ function DetailsScreen() {
       : (onAniList ? anilistEntry.data?.entry?.progress : undefined) ??
         simklProgress.data ??
         shown.currentProgress;
+  // Only one cache is ever populated — the reads enable by type, so the
+  // anime query is dead on a TV item and vice versa — no type branch needed.
+  const headerEpisodes =
+    tvSeasonsCache?.flatMap((season) => season.episodes) ?? animeSeasonCache?.episodes;
+  // Variant D: before anything airs, the 0/total tile becomes a premiere
+  // countdown (or collapses with no date); the sections drop their rows
+  // through the same guard. Premiere is defined whenever display is
+  // 'countdown' — the guard only returns it with a parseable premiere.
+  const display = preAiringDisplay(shown, headerEpisodes, displayedProgress);
+  const premiere = seriesPremiere(shown, headerEpisodes ?? []);
 
   function refresh() {
     // Sections that failed are unmounted, leaving their queries inactive and
@@ -780,37 +811,47 @@ function DetailsScreen() {
         <LetterboxdCompletionButton item={shown} />
         <WatchlistMediaButton item={shown} />
 
-        {showProgress && (
+        {display === 'hidden' ? null : display === 'countdown' ? (
           <View className="flex-row gap-4">
             <StatTile
-              label="Progress"
-              value={
-                shown.totalEpisodes == null ? (
-                  displayedProgress
-                ) : (
-                  <ProgressOfTotal
-                    progress={displayedProgress}
-                    total={shown.totalEpisodes}
-                  />
-                )
-              }
-              // Manga counts chapters here (AniList's `chapters` lands in
-              // the same field) — the label must follow the unit.
-              caption={
-                shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
-              }
+              caption={`First episode · ${formatAirDate(premiere!)}`}
+              label="Premieres"
+              value={formatRelativeDay(premiere!) ?? '—'}
             />
-            {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
-            {shown.type === 'ANIME' && shown.isFilm !== true &&
-              shown.totalEpisodes != null &&
-              shown.runtime != null && (
-                <StatTile
-                  label="Total time"
-                  value={formatRuntime(shown.totalEpisodes * shown.runtime)}
-                  caption={`${shown.runtime}m each`}
-                />
-              )}
           </View>
+        ) : (
+          showProgress && (
+            <View className="flex-row gap-4">
+              <StatTile
+                label="Progress"
+                value={
+                  shown.totalEpisodes == null ? (
+                    displayedProgress
+                  ) : (
+                    <ProgressOfTotal
+                      progress={displayedProgress}
+                      total={shown.totalEpisodes}
+                    />
+                  )
+                }
+                // Manga counts chapters here (AniList's `chapters` lands in
+                // the same field) — the label must follow the unit.
+                caption={
+                  shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
+                }
+              />
+              {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
+              {shown.type === 'ANIME' && shown.isFilm !== true &&
+                shown.totalEpisodes != null &&
+                shown.runtime != null && (
+                  <StatTile
+                    label="Total time"
+                    value={formatRuntime(shown.totalEpisodes * shown.runtime)}
+                    caption={`${shown.runtime}m each`}
+                  />
+                )}
+            </View>
+          )
         )}
       </View>
     </>
