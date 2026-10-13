@@ -32,8 +32,9 @@ interface NavItem {
   icon: IoniconName;
 }
 
-// Outline icons only — active state is the tonal red pill, never a heavy
-// filled glyph (the solid variants read poorly when selected).
+// Outline icons only — the sidebar's active state is the tonal red squircle,
+// never a heavy filled glyph (the solid variants read poorly when selected).
+// The mobile bottom bar mirrors Android's wide stadium instead (see below).
 // Diary uses `reader-outline` (a lined page), not `book-outline`: the open-book
 // glyph is much wider and optically heavier than its home/search/settings
 // siblings at size 22, and `journal-outline` collapsed into a featureless slab
@@ -189,7 +190,7 @@ function SidebarItem({
   return (
     <PresstableOpacity
       accessibilityLabel={item.label}
-      className={cn('h-11 flex-row items-center rounded-full', active && 'bg-accent-tonal')}
+      className={cn('h-11 flex-row items-center rounded-xl', active && 'bg-accent-tonal')}
       onPress={onPress}
     >
       <View className="items-center justify-center" style={{ width: ICON_COL }}>
@@ -323,15 +324,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               <PresstableOpacity
                 accessibilityLabel={item.label}
                 accessibilityRole="button"
-                className="flex-1 items-center justify-center"
+                className="flex-1 items-center justify-center gap-1"
                 key={item.href}
                 onPress={() => {
                   if (!active) pushRoute(item.href);
                 }}
               >
+                {/* Mirrors the native Android bar (`(tabs)/_layout.tsx`): a wide
+                    tonal stadium behind the glyph with the label below, labels
+                    always in the foreground colour. */}
                 <View
                   className={cn(
-                    'h-12 w-12 items-center justify-center rounded-full',
+                    'h-8 w-16 items-center justify-center rounded-full',
                     active && 'bg-accent-tonal',
                   )}
                 >
@@ -341,6 +345,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     size={23}
                   />
                 </View>
+                <Text className="text-xs font-sans text-foreground">{item.label}</Text>
               </PresstableOpacity>
             );
           })}
