@@ -125,3 +125,66 @@ export function hasStartedAiring(
   if (episodes.some((episode) => hasAired(episode.firstAired, now))) return true;
   return filmReleaseStatus(item, now) === 'released';
 }
+
+/**
+ * What the details screen renders for a series' progress/seasons block.
+ * `'progress'` is production as usual; `'countdown'` swaps the 0/total tile
+ * for a premiere countdown with seasons hidden; `'hidden'` collapses both.
+ */
+export type PreAiringDisplay = 'progress' | 'countdown' | 'hidden';
+
+/**
+ * The premiere a countdown tile counts to: the series' own first-air date,
+ * falling back to its earliest dated episode. The fallback is what makes this
+ * work for anime — an AniList item carries no `releaseDate` (only a year), so
+ * episode 1's air instant is the only premiere date that exists.
+ */
+export function seriesPremiere(
+  item: Pick<NormalizedMediaItem, 'releaseDate'>,
+  episodes: readonly Pick<NormalizedEpisode, 'firstAired'>[],
+): string | undefined {
+  if (item.releaseDate != null && item.releaseDate !== '') return item.releaseDate;
+  let earliest: string | undefined;
+  for (const episode of episodes) {
+    const date = episode.firstAired;
+    if (date == null || date === '') continue;
+    // ISO instants and bare dates both sort lexicographically.
+    if (earliest == null || date < earliest) earliest = date;
+  }
+  return earliest;
+}
+
+/**
+ * The D treatment (variant playground, PR #236): before anything airs, the
+ * progress tile becomes a premiere countdown and seasons with nothing aired
+ * stay hidden; with no date anywhere both collapse.
+ *
+ * Series only — films keep their rule (unlogged progress already hidden, the
+ * release timeline owns its dates) and manga is untouched. A log forces
+ * `'progress'`: the log gates refuse unaired episodes, so logged progress is
+ * proof something aired even when every date is missing. `episodes` undefined
+ * is still loading, and loading stays permissive like the episode rule
+ * (`firstAired == null → aired`): a dateless airing show keeps its tile until
+ * its episodes prove otherwise — only a dated future premiere counts down
+ * from first paint, since nothing can have aired before it.
+ *
+ * `now` is injectable for tests; callers let it default.
+ */
+export function preAiringDisplay(
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'releaseDate' | 'year'>,
+  episodes: readonly Pick<NormalizedEpisode, 'firstAired'>[] | undefined,
+  logged: number,
+  now: Date = new Date(),
+): PreAiringDisplay {
+  if (item.type !== 'TV' && !(item.type === 'ANIME' && item.isFilm !== true)) {
+    return 'progress';
+  }
+  if (logged > 0) return 'progress';
+  if (episodes !== undefined && hasStartedAiring(item, episodes, now)) return 'progress';
+  const status = filmReleaseStatus(item, now);
+  if (status === 'released') return 'progress';
+  if (status === 'unreleased') return 'countdown';
+  if (episodes === undefined) return 'progress';
+  const premiere = seriesPremiere(item, episodes);
+  return premiere != null && localDayOffset(premiere, now) != null ? 'countdown' : 'hidden';
+}

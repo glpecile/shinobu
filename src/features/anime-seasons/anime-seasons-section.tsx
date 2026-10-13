@@ -32,6 +32,7 @@ import {
   useSeasonLayoutQuery,
 } from '@/state/queries/mapping';
 import { useConnectedProviders } from '@/state/session';
+import { preAiringDisplay } from '@/features/log-media/release-gate';
 import { canonicalSeasonTitle } from './season-label';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
@@ -137,6 +138,12 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
   function openLog(next: PendingLog) {
     if (!canLog) return;
     openLogSession({ item, ...next });
+  }
+
+  // Pre-airing series drop the whole block: every row would read "Unaired"
+  // next to a 0/total tile that says the same thing twice.
+  if (preAiringDisplay(item, season?.episodes, progress) !== 'progress') {
+    return <DetailsList {...page} />;
   }
 
   return (
