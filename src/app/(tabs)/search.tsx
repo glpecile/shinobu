@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
@@ -299,7 +299,7 @@ export default function SearchScreen() {
   // fires on every tap of that tab (see app/(tabs)/_layout.tsx) — and on web
   // for every search tab press and ⌘K (see components/app-shell) — so this
   // opens the keyboard the same way on every platform.
-  useEffect(() => {
+  useLayoutEffect(() => {
     let handle: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = onSearchFocusRequest(() => {
       const field = inputRef.current;
@@ -321,11 +321,11 @@ export default function SearchScreen() {
         if (Keyboard.isVisible()) return;
         field.blur();
       }
-      // Web focuses synchronously: a re-tap or ⌘K arrives inside the user
-      // gesture, and touch browsers only raise the keyboard for an in-gesture
-      // focus. A navigating tab press holds pending until this screen mounts
-      // (see focus-signal) and lands here on the back of that same tap.
+      // The shell commits web navigation synchronously; the layout subscription
+      // is ready before its gesture handler requests focus. Firefox can retain
+      // DOM focus after dismissing the keyboard, so force a fresh transition.
       if (process.env.EXPO_OS === 'web') {
+        if (field.isFocused()) field.blur();
         field.focus();
         return;
       }
@@ -529,8 +529,8 @@ export default function SearchScreen() {
             // open the keyboard for a focus with no user gesture behind it,
             // and Firefox Android answers with a flash-open-then-close that
             // makes the field unusable (src/lib/pointer.ts). A tap on the
-            // search tab carries its own request instead (see focus-signal),
-            // which lands on the back of that gesture.
+            // search tab commits the screen before requesting focus, inside
+            // that gesture (see components/app-shell).
             autoFocus={!hasCoarsePointer()}
             // `outline-none`: the browser's focus ring would now draw around
             // the inner input, inside the wrapper that carries the field's

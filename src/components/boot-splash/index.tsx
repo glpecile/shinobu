@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { Text } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnimatedView } from '@/components/animated-view';
+import { Image } from '@/components/image';
 import { KEYFRAME_EASE_OUT } from '@/lib/motion';
 
 export function dismissBootSplash() {}
@@ -13,6 +13,8 @@ export function dismissBootSplash() {}
 export function BootSplash() {
   const [finished, setFinished] = useState(false);
   const started = useRef(false);
+  const laidOut = useRef(false);
+  const imageLoaded = useRef(false);
   const opacity = useSharedValue(1);
   const reduced = useReducedMotion();
   const backdrop = useAnimatedStyle(() => ({ opacity: opacity.get() }));
@@ -35,6 +37,12 @@ export function BootSplash() {
     }));
   }
 
+  function handOff() {
+    if (started.current || !laidOut.current || !imageLoaded.current) return;
+    started.current = true;
+    void SplashScreen.hideAsync().then(reveal, reveal);
+  }
+
   if (finished) return null;
 
   return (
@@ -44,14 +52,22 @@ export function BootSplash() {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       onLayout={() => {
-        if (started.current) return;
-        started.current = true;
-        void SplashScreen.hideAsync().then(reveal, reveal);
+        laidOut.current = true;
+        handOff();
       }}
     >
-      <AnimatedView className="items-center gap-3" style={mark}>
-        <Text className="text-4xl text-accent">忍</Text>
-        <Text className="font-display text-lg text-foreground">Shinobu</Text>
+      <AnimatedView style={mark}>
+        <Image
+          source={require('../../../assets/images/splash-icon.png')}
+          // Match expo-splash-screen's imageWidth for a seamless OS handoff.
+          style={{ width: 200, height: 200 }}
+          contentFit="contain"
+          transition={0}
+          onLoadEnd={() => {
+            imageLoaded.current = true;
+            handOff();
+          }}
+        />
       </AnimatedView>
     </AnimatedView>
   );

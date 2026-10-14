@@ -28,19 +28,29 @@ one:
   pending and fires once on the next subscribe (StrictMode's remount doesn't
   replay it). Emissions with a mounted subscriber land live, as before.
 - `app/(tabs)/search.tsx` — web focuses synchronously in the handler. A
-  re-tap/⌘K is inside the gesture, so the keyboard opens; a navigating press
-  is consumed on mount, still on the back of the tab's tap. The 50 ms deferral
-  stays native-only (the native tab transition swallows a sync focus).
+  re-tap/⌘K is inside the gesture. The original navigating-press delivery still
+  happened from a mount effect, outside that gesture. The 50 ms deferral stays
+  native-only (the native tab transition swallows a sync focus).
 
-**Per-browser expectations.** Chrome Android should now raise the keyboard on
-a search tap (transient activation covers the mount). Firefox Android's
-commit-time flash was a no-activation focus; this one follows a real tap, but
-re-verify on device — if the flash reproduces, the arrival focus needs a
-rethink, not the re-tap path. iPad Safari cannot raise the keyboard from a
-post-navigation focus (WebKit requires the `focus()` call inside the gesture
-handler, and the input mounts after it); first tap focuses the field at most,
-re-tap while open raises the keyboard. That is OS policy, not a bug in this
-code — verify before "fixing" it.
+## Follow-up: commit navigation inside the gesture
+
+The owner's 2026-10-13 recording still shows Firefox Android flashing its
+keyboard open and closed. Holding a request until `useEffect` runs does not
+preserve the tap's call stack; the original fix could not promise in-gesture
+focus on first navigation.
+
+- The shell uses React DOM's `flushSync` for search navigation only, then emits
+  focus from the original press handler. ⌘K uses the same ordering.
+- Search subscribes in a layout effect, so the listener exists when the commit
+  returns. Native keeps its existing deferred focus behavior.
+- Web blurs an already-focused field before refocusing it in the same handler:
+  a browser may retain DOM focus after the user closes the keyboard, making a
+  plain `focus()` a no-op.
+
+Local iPhone simulator Safari verification: the first Home → Search tap opens
+the keyboard and leaves the field focused after navigation. Firefox Android
+and physical-device keyboard behavior still need verification; a desktop DOM
+focus check is not proof of their on-screen keyboard behavior.
 
 ## Related
 

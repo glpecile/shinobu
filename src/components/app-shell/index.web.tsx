@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { usePathname, useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Text, View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
@@ -56,18 +57,21 @@ function isActive(pathname: string, href: string): boolean {
  * One press handler for both nav surfaces (mobile bar, sidebar). The search
  * destination also asks for the field: the tab's tap is the only user gesture
  * in the flow, and touch browsers only raise the keyboard on the back of one
- * — so the request rides along with the press. It lands live on a re-tap, or
- * holds pending until the screen mounts after a navigation (see
- * `features/search/focus-signal`). Every other destination navigates, or
- * no-ops on a re-press.
+ * — so search navigation must commit before requesting focus, inside that
+ * same gesture. A pending request delivered by a mount effect is too late.
+ * Every other destination navigates, or no-ops on a re-press.
  */
 function onNavItemPress(
   item: NavItem,
   active: boolean,
   pushRoute: (href: string) => void,
 ): void {
+  if (item.href === routes.search) {
+    if (!active) flushSync(() => pushRoute(item.href));
+    emitSearchFocusRequest();
+    return;
+  }
   if (!active) pushRoute(item.href);
-  if (item.href === routes.search) emitSearchFocusRequest();
 }
 
 /**
@@ -286,10 +290,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== 'k' || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
-      if (onSearch) emitSearchFocusRequest();
-      // push-guard-exempt: a ⌘K keypress, not a press — and it already can't
-      // repeat, since a second ⌘K on /search takes the focus branch above.
-      else router.push(routes.search);
+      // push-guard-exempt: a ⌘K keypress, not a press.
+      if (!onSearch) flushSync(() => router.push(routes.search));
+      emitSearchFocusRequest();
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);

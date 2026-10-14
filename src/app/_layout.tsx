@@ -115,12 +115,12 @@ export default function Layout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister, ...persistOptions }}
+      >
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <KeyboardProvider>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister, ...persistOptions }}
-        >
           <SheetProvider>
            <LightboxProvider>
            <CatchUpLogProvider>
@@ -181,10 +181,10 @@ export default function Layout() {
            </CatchUpLogProvider>
            </LightboxProvider>
           </SheetProvider>
-        </PersistQueryClientProvider>
         </KeyboardProvider>
       </ErrorBoundary>
       <BootSplash />
+      </PersistQueryClientProvider>
     </GestureHandlerRootView>
   );
 }

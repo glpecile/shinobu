@@ -1,7 +1,6 @@
 import { InfiniteQueryObserver, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { createElement, Suspense } from 'react';
-// @ts-expect-error -- The installed react-dom package has no server-renderer declarations.
 import { renderToString } from 'react-dom/server';
 
 import type { TmdbMediaCatalogue } from '@/lib/providers/tmdb/normalize';
