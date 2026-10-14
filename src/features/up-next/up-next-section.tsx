@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Text, useWindowDimensions, View } from 'react-native';
 import {
   FadeIn,
   Keyframe,
@@ -69,7 +69,7 @@ const slideFrom = (from: number) =>
 const dayContentForward = slideFrom(DAY_CONTENT_SLIDE);
 const dayContentBackward = slideFrom(-DAY_CONTENT_SLIDE);
 
-/** Reduced motion keeps the fade and drops the travel (matches the lightbox). */
+/** Web avoids Keyframe's scroll-stale position snapshot; reduced motion drops travel. */
 const dayContentFading = FadeIn.duration(DURATION.swap);
 
 /** `undefined` until a day is actually switched: the motion belongs to the
@@ -79,7 +79,7 @@ function dayContentAnimation(
   reduceMotion: boolean,
 ): EntryOrExitLayoutType | undefined {
   if (direction === 0) return undefined;
-  if (reduceMotion) return dayContentFading;
+  if (reduceMotion || Platform.OS === 'web') return dayContentFading;
   return direction > 0 ? dayContentForward : dayContentBackward;
 }
 

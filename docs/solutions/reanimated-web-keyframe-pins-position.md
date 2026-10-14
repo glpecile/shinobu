@@ -39,15 +39,14 @@ auto-height parent either, so they painted over the buttons below.
 preset never reaches this branch. **The behaviour is specific to custom
 `Keyframe`s, and to web** — native honours the keyframe and leaves layout alone.
 
-The two pre-existing custom-`Keyframe` entrances in the app are unaffected *by
-accident*, not by design, and both would break the same way if their container
-stopped absorbing the loss:
+Other custom-`Keyframe` entrances need the same scrutiny:
 
 - `components/sheet/index.web.tsx` — the panel is inside a fixed overlay, so
   being pinned to its own snapshot changes nothing.
-- `features/up-next/up-next-section.tsx` — the day's content sits in a wrapper
-  with `minHeight: DAY_CONTENT_MIN_HEIGHT`, which holds the space the pinned
-  child stops contributing.
+- `features/up-next/up-next-section.tsx` — the day's content formerly used a
+  reserved-height wrapper. That preserved the feed's height but did not make
+  the snapshot safe while scrolling; it now uses `FadeIn` on web. See
+  `firefox-calendar-cards-displaced-after-scroll.md`.
 
 ## Fix
 
@@ -67,8 +66,9 @@ through the delay instead of flashing in and out.
 
 ## Rule
 
-**Custom `Keyframe` only for elements whose position is already fixed or whose
-space is reserved by the parent** — an overlay panel, a min-height slot. Anything
+**Custom `Keyframe` on web only for elements whose position is already fixed**,
+such as an overlay panel. Reserved space does not protect a scrolling element
+from a stale viewport snapshot. Anything
 that must contribute its own height to a flow parent (list items, chips, rows)
 uses a preset. If a rise or a scale is genuinely needed there, animate it with
 the declarative CSS-transition style (`transitionProperty` on an `AnimatedView`
