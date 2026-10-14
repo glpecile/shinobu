@@ -9,17 +9,12 @@
  *   `role="search"` tab auto-focuses the field on its own; Android has no such
  *   affordance, so re-tapping an already-active search tab did nothing — this
  *   makes it open the keyboard like Twitter/Instagram's search tab does.
- * - web's ⌘/Ctrl+K shortcut in `components/app-shell/index.web.tsx`, when the
- *   search route is already the active one (navigating there instead focuses
- *   via the field's `autoFocus` on mount).
- * - web's search tab press, also in the app shell — live when search is
- *   already open (a re-tap), or held pending until the screen mounts when the
- *   press also navigates. Touch browsers only raise the keyboard for a focus
- *   on the back of a user gesture, and the tab's tap is the only gesture in
- *   this flow, so the request rides along with it instead of the mount.
+ * - web's ⌘/Ctrl+K shortcut and search tab press in the app shell. Navigation
+ *   commits synchronously before the request, so the mounted field receives
+ *   focus inside the user gesture, as required by touch browsers.
  *
  * A request emitted with no subscriber yet is held as pending and delivered
- * to the next subscriber, once: that is the navigating tab press, whose
+ * to the next subscriber, once: that is the navigating native tab press, whose
  * screen does not exist at emit time. Every other emission has a mounted
  * subscriber and lands live, as before.
  *

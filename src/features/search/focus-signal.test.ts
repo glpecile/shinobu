@@ -20,7 +20,7 @@ describe('search focus signal', () => {
   });
 
   test('an emission before subscribing fires once, on the first subscribe', () => {
-    // The web tab press navigates before the search screen exists, so the
+    // The native tab press navigates before the search screen exists, so the
     // request waits for it — but StrictMode's remount must not replay it.
     emitSearchFocusRequest();
 

@@ -10,3 +10,12 @@
   new dependencies, or native configuration changes.
 - Retain the web watchdog for failed startup; font errors also release the splash.
 - Validate lint, types, web export, and light/dark + reduced-motion boot behavior.
+
+## Native logo handoff (2026-10-13)
+
+- Keep the same bundled 200pt splash image centered while handing off from the
+  OS splash; wait for both its image load and overlay layout before hiding it.
+- Adapt Bluesky's logo zoom reveal, without its long intro or artificial delay:
+  scale the logo to 1.5 while fading the themed overlay over 300ms on the UI thread.
+- Reduced motion retains only the 120ms fade. The overlay is inaccessible and
+  blocks touches until removed. No new dependency or native config change.
