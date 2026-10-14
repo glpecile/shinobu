@@ -61,8 +61,10 @@ as a JS plugin, enforces this.
   and `lib/http/`. `state/queries/*` calls `Effect.runPromise` in
   `queryFn`/`mutationFn`, and no component, screen, or hook signature sees an
   `Effect` (`docs/brainstorms/2026-07-07-effect-for-provider-layer.md`).
-- `react-native-mmkv` for tokens and local state, encrypted on native, with
-  `localStorage` on web.
+- `react-native-mmkv` for tokens and local state, with `localStorage` on web.
+  The session store currently has no native `encryptionKey`; encryption at rest
+  is deferred to `todos/003-pending-p2-secure-token-storage.md`, including key
+  custody, migration of existing sessions, and review of web storage risk.
 - `react-native-nitro-fetch` on native and `fetch` on web, both behind
   `lib/http/client.ts`.
 - TMDB for metadata only. It is never a session, registry entry, or write target.
