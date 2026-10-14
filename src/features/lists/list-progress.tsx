@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { MorphText } from '@/components/morph-text';
@@ -19,12 +19,7 @@ export function ListProgress({ state, countLabel, partial = false }: { state: Re
         {connected && items.length > 0 && <ProgressRing label={loading ? 'Checking watch history' : label} max={items.length} value={completed} />}
         <MorphText className="font-sans text-sm text-muted tabular-nums">{ready ? `${completed}${incomplete ? '+' : ''}/${countLabel}` : countLabel}</MorphText>
       </View>
-      {(failed || incomplete) && (
-        <View className="flex-row items-center gap-1.5">
-          <Text className="font-sans text-xs text-muted">Incomplete history</Text>
-          {failed && <Button icon={<Button.Icon name="refresh" />} label="Retry" loading={loading} onPress={() => void retry()} size="sm" variant="quiet" />}
-        </View>
-      )}
+      {failed && <Button className="self-start" icon={<Button.Icon name="refresh" />} label="Retry" loading={loading} onPress={() => void retry()} size="sm" variant="quiet" />}
     </View>
   );
 }
