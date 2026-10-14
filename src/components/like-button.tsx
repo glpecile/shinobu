@@ -45,7 +45,7 @@ export function LikeButton({
           animationDuration: DURATION.swap,
           animationTimingFunction: EASE_OUT,
         }}>
-          <Button.Icon name={liked == null ? 'help-circle-outline' : liked ? 'heart' : 'heart-outline'} />
+          <Button.Icon name={liked ? 'heart' : 'heart-outline'} />
         </AnimatedView>
       }
       iconOnly

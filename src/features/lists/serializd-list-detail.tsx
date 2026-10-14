@@ -11,7 +11,7 @@ import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
-import { MediaToolbar } from '@/features/media-layout/media-toolbar';
+import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import { sortMediaEntries } from '@/lib/media-sort';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
@@ -83,6 +83,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         ) : undefined}
         ListEmptyComponent={list.complete ? (
           <CenteredNotice>
+            <CenteredNotice.Icon name="list-outline" />
             <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
             <CenteredNotice.Body>Items added on Serializd will appear here.</CenteredNotice.Body>
             <ProviderListLink provider="serializd" url={url} />
@@ -97,14 +98,8 @@ export function SerializdListItems({ username, id, url }: { username: string | n
 export function SerializdListSkeleton() {
   return (
     <>
-      <ListsHeader provider="serializd" subtitle="" />
-      <View className="flex-row items-center gap-3 px-6 pb-3">
-        <View className="flex-1 flex-row items-center gap-2">
-          <Skeleton className="size-4 rounded-full" />
-          <Skeleton className="h-4 w-20 rounded" />
-        </View>
-        <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
-      </View>
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" subtitle="" />
+      <MediaToolbarSkeleton actions={1} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

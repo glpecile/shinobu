@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Rail } from '@/components/rail';
+import { Skeleton } from '@/components/skeleton';
 import { ViewToggle } from '@/components/view-toggle';
 import { setWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
 
@@ -22,6 +23,26 @@ export function MediaToolbar({ children, view, notice }: {
         {view != null && <View className="shrink-0"><ViewToggle onChange={setWatchlistView} view={view} /></View>}
       </View>
       {notice}
+    </View>
+  );
+}
+
+/** Pill-sized placeholders with the same fixed layout-control slot. */
+export function MediaToolbarSkeleton({ filter = false, actions = 0, layout = false }: { filter?: boolean; actions?: number; layout?: boolean }) {
+  return (
+    <View className="flex-row items-center gap-3 px-6 pb-3">
+      <View className="flex-1 min-w-0 flex-row items-center gap-3 overflow-hidden">
+        {filter && <Skeleton className="h-9.5 w-36 shrink-0 rounded-full" />}
+        <Skeleton className="h-9.5 w-40 shrink-0 rounded-full" />
+        {actions > 0 && <View className="flex-row items-center gap-1">
+          {Array.from({ length: actions }).map((_, index) => (
+            <View className="size-11 items-center justify-center" key={index}><Skeleton className="size-9.5 rounded-full" /></View>
+          ))}
+        </View>}
+      </View>
+      {layout && <View className="h-11 shrink-0 items-center justify-center android:size-12">
+        <Skeleton className="h-8 w-20 rounded-md android:size-9.5 android:rounded-full" />
+      </View>}
     </View>
   );
 }

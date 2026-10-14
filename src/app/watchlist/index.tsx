@@ -21,6 +21,8 @@ import {
   parseWatchlistProvider,
 } from '@/features/watchlist/filter';
 import { PosterWall } from '@/features/media-layout/poster-wall';
+import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
+import { MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
 import { WatchlistRows } from '@/features/media-layout/watchlist-rows';
@@ -307,10 +309,10 @@ export default function WatchlistScreen() {
       </View>
       <Suspense
         fallback={
-          <CenteredNotice>
-            <CenteredNotice.Title>Watchlist</CenteredNotice.Title>
-            <CenteredNotice.Body>Loading your watchlist…</CenteredNotice.Body>
-          </CenteredNotice>
+          <View className="flex-1">
+            <MediaToolbarSkeleton filter layout />
+            <WallSkeleton />
+          </View>
         }
       >
         <WatchlistGrid onProviderChange={setProvider} provider={provider} />

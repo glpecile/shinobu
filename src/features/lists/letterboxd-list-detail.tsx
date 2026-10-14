@@ -10,7 +10,7 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { PosterWall } from '@/features/media-layout/poster-wall';
 import { WatchlistRows } from '@/features/media-layout/watchlist-rows';
 import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
-import { MediaToolbar } from '@/features/media-layout/media-toolbar';
+import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import { sortMediaEntries } from '@/lib/media-sort';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
@@ -46,11 +46,14 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
       />
       <MediaToolbar notice={sort !== 'default' && pages.hasNextPage ? <SortingLoadedNotice /> : undefined} view={view}>
         <MediaSortControl scope="lists" sort={sort} />
-        <ProviderListLink iconOnly provider="letterboxd" url={url} />
-        {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
+        <View className="flex-row items-center gap-1">
+          <ProviderListLink iconOnly provider="letterboxd" url={url} />
+          {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
+        </View>
       </MediaToolbar>
       {items.length === 0 ? (
         <CenteredNotice>
+          <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
           <CenteredNotice.Body>Films added to this list on Letterboxd will appear here.</CenteredNotice.Body>
           <ProviderListLink provider="letterboxd" url={url} />
@@ -76,18 +79,8 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
 export function ListFilmsSkeleton() {
   return (
     <View className="flex-1">
-      <ListsHeader provider="letterboxd" subtitle="" />
-      <View className="flex-row items-center gap-3 px-6 pb-3">
-        <View className="flex-1 flex-row items-center gap-2">
-          <Skeleton className="size-4 rounded-full" />
-          <Skeleton className="h-4 w-20 rounded" />
-        </View>
-        <View className="flex-row items-center gap-1">
-          <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
-          <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
-          <Skeleton className="h-8 w-20 rounded-full" />
-        </View>
-      </View>
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="letterboxd" subtitle="" />
+      <MediaToolbarSkeleton actions={2} layout />
       <WallSkeleton />
     </View>
   );
