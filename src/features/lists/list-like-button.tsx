@@ -1,4 +1,5 @@
 import { LikeButton } from '@/components/like-button';
+import { Tooltip } from '@/components/tooltip';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { toast } from '@/lib/toast';
@@ -11,18 +12,22 @@ export function ListLikeButton({ username, owner, slug, url }: { username: strin
   const hasScript = useLetterboxdUserscript('list-like');
   const canWrite = process.env.EXPO_OS === 'web' ? hasScript : hasSession;
   if (username.toLowerCase() === owner.toLowerCase()) return null;
+  const label = mutation.liked == null ? 'Check like status on Letterboxd' : canWrite ? mutation.liked ? 'Unlike list' : 'Like list' : 'Like / unlike on Letterboxd';
   return (
-    <LikeButton
-      liked={mutation.liked}
-      label={canWrite ? mutation.liked ? 'Unlike list' : 'Like list' : 'Like / unlike on Letterboxd'}
-      loading={mutation.isPending}
-      variant="ghost"
-      onChange={(liked) => {
-        if (!canWrite) { void openExternalUrl(url); return; }
-        mutation.mutate(liked, {
-          onError: () => toast.error('Couldn’t confirm the change', 'Open this list with the Letterboxd button beside the heart before retrying.'),
-        });
-      }}
-    />
+    <Tooltip label={label}>
+      <LikeButton
+        liked={mutation.liked}
+        label={label}
+        loading={mutation.isPending}
+        size="sm"
+        variant="quiet"
+        onChange={(liked) => {
+          if (!canWrite || mutation.liked == null) { void openExternalUrl(url); return; }
+          mutation.mutate(liked, {
+            onError: () => toast.error('Couldn’t confirm the change', 'Open this list with the Letterboxd button beside the heart before retrying.'),
+          });
+        }}
+      />
+    </Tooltip>
   );
 }

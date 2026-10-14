@@ -4,10 +4,10 @@ import { findAniListProgress, mergeMediaProgress, sameProgressItem, type MediaPr
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 import { useAniListLibraryQuery } from './anilist';
-import { letterboxdFilmQuery, letterboxdFilmWatchQuery } from './letterboxd';
+import { letterboxdFilmWatchQuery } from './letterboxd';
+import { useMediaMetadata } from './media-metadata';
 import { useSerializdWatchedShowsQuery } from './serializd';
 import { findLibraryEntry, findLibraryProgress, simklLibraryQuery } from './simkl';
 import { useWatchedMoviesQuery, useWatchedShowsQuery } from './trakt';
@@ -17,12 +17,7 @@ const filmLike = (item: NormalizedMediaItem) => item.type === 'MOVIE' || item.is
 /** One selector for poster eyes, numeric progress and whole-list counts; caches are provider-owned. */
 export function useMediaProgress(items: readonly NormalizedMediaItem[]) {
   const connected = useConnectedProviders();
-  const hasTmdb = useTmdbToken() !== '';
-  const films = useQueries({ queries: items.map((item) => letterboxdFilmQuery(
-    connected.length > 0 && item.externalIds.tmdb == null && item.externalIds.letterboxd != null
-      ? item.externalIds.letterboxd : null, hasTmdb,
-  )) });
-  const resolved = items.map((item, index) => films[index].data ?? item);
+  const { items: resolved, queries: films } = useMediaMetadata(items, connected.length > 0);
   const letterboxdUsername = connected.includes('letterboxd') ? getLetterboxdUsername() : null;
   const watches = useQueries({ queries: resolved.map((item) => letterboxdFilmWatchQuery(letterboxdUsername, item)) });
   const movies = useWatchedMoviesQuery({ enabled: connected.includes('trakt') && items.some(filmLike) });
@@ -55,11 +50,15 @@ export function useMediaProgress(items: readonly NormalizedMediaItem[]) {
     return mergeMediaProgress(item, sources);
   });
   const queries = [...films, ...watches, movies, shows, simkl, anilist, serializd].filter((query) => query.isEnabled);
+  // A member-film 404 can be an undated watch, not evidence of non-membership.
+  const incomplete = watches.some((query, index) => query.isEnabled && query.isSuccess && query.data == null && !progress[index].completed);
   return {
+    items: resolved,
     progress,
     connected: connected.length > 0,
     loading: queries.some((query) => query.isPending),
     failed: queries.some((query) => query.isError),
+    incomplete,
     retry: () => Promise.all(queries.map((query) => query.refetch())),
   };
 }

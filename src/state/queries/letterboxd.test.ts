@@ -59,6 +59,66 @@ const { setProviderSession, clearProviderSession, setStoredTmdbToken } = await i
 
 const NOW = new Date('2026-07-27T12:00:00.000Z');
 
+test('a cold or partial liked-list index stays unknown instead of claiming unliked', () => {
+  const client = new QueryClient();
+  let liked: boolean | undefined;
+  function Read() {
+    liked = useLetterboxdListLike('gian', 'melis_', 'black-mirror').liked;
+    return null;
+  }
+  const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+  const key = letterboxdQueryKeys.lists('gian', 'liked');
+  try {
+    render();
+    expect(liked).toBeUndefined();
+    client.setQueryData(key, { pages: [{ lists: [], hasNextPage: true }], pageParams: [1] });
+    render();
+    expect(liked).toBeUndefined();
+    client.setQueryData(key, { pages: [{ lists: [{ owner: 'MELIS_', slug: 'black-mirror' }], hasNextPage: true }], pageParams: [1] });
+    render();
+    expect(liked).toBe(true);
+    client.setQueryData(key, { pages: [{ lists: [], hasNextPage: false }], pageParams: [1] });
+    render();
+    expect(liked).toBe(false);
+  } finally {
+    client.clear();
+  }
+});
+
+test('list runtime sorting reuses resolved film metadata and subsequent cache updates without fetching', async () => {
+  const { useMediaProgress } = await import('./media-progress');
+  const { mediaDetailsQueryKeys } = await import('./media-details');
+  const { sortMediaEntries } = await import('@/lib/media-sort');
+  const client = new QueryClient();
+  const amnesia = film('a-wind-named-amnesia', 'A Wind Named Amnesia', 1990);
+  const baby = film('baby-love', 'Baby Love', 1997);
+  const items = [amnesia, baby];
+  const babyKey = mediaDetailsQueryKeys.details(baby);
+  client.setQueryData([...letterboxdQueryKeys.film('a-wind-named-amnesia'), false], { ...amnesia, runtime: 80, currentProgress: 999 });
+  client.setQueryData(babyKey, { catalogue: { ...baby, runtime: 30 } });
+  let sorted: NormalizedMediaItem[] = [];
+  let requests = 0;
+  readResponse = () => { requests++; throw new Error('Cache-only sorting must not fetch'); };
+  function Read() {
+    sorted = sortMediaEntries(useMediaProgress(items).items.map(item => ({ id: item.id, item })), 'runtime-asc').map(entry => entry.item);
+    return null;
+  }
+  const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+  try {
+    render();
+    expect(sorted.map(item => item.title)).toEqual(['Baby Love', 'A Wind Named Amnesia']);
+    expect(sorted[1].currentProgress).toBe(0);
+    expect(amnesia.runtime).toBeUndefined();
+    client.setQueryData(babyKey, { catalogue: { ...baby, runtime: 100 } });
+    render();
+    expect(sorted.map(item => item.title)).toEqual(['A Wind Named Amnesia', 'Baby Love']);
+    expect(requests).toBe(0);
+  } finally {
+    readResponse = () => new Response('{}');
+    client.clear();
+  }
+});
+
 test('list likes share optimistic state across buttons and remounts, and roll back failed unlikes', async () => {
   const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
   setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });

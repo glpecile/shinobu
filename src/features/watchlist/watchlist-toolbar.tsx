@@ -7,7 +7,9 @@ import { NativePickerMenu } from '@/components/native-picker-menu';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
-import { ViewToggle } from '@/components/view-toggle';
+import { MediaToolbar } from '@/features/media-layout/media-toolbar';
+import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
+import type { MediaSort } from '@/lib/media-sort';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
@@ -18,7 +20,7 @@ import {
   watchlistTotal,
 } from './filter';
 import type { WatchlistEntry } from './types';
-import { setWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
+import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
 /** Filtered → the control carries its own way out, so clearing is one tap. */
 function FilterPill({
@@ -124,6 +126,7 @@ export interface WatchlistToolbarProps {
   provider: ProviderId | null;
   onProviderChange: (provider: ProviderId | null) => void;
   view: WatchlistView;
+  sort: MediaSort;
 }
 
 export function WatchlistToolbar({
@@ -132,6 +135,7 @@ export function WatchlistToolbar({
   provider,
   onProviderChange,
   view,
+  sort,
 }: WatchlistToolbarProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const options = watchlistFilterOptions(entries, provider, incomplete);
@@ -143,16 +147,17 @@ export function WatchlistToolbar({
   }));
 
   return (
-    <View className="flex-row items-center gap-3 px-6 pb-3">
-      <FilterPill
-        active={provider}
-        onClear={() => onProviderChange(null)}
-        onOpen={() => setPickerOpen(true)}
-        onSelect={onProviderChange}
-        options={menuOptions}
-      />
-      <View className="flex-1" />
-      <ViewToggle onChange={setWatchlistView} view={view} />
+    <>
+      <MediaToolbar notice={sort !== 'default' && incomplete.length > 0 ? <SortingLoadedNotice /> : undefined} view={view}>
+        <FilterPill
+          active={provider}
+          onClear={() => onProviderChange(null)}
+          onOpen={() => setPickerOpen(true)}
+          onSelect={onProviderChange}
+          options={menuOptions}
+        />
+        <MediaSortControl scope="watchlist" sort={sort} />
+      </MediaToolbar>
       {Platform.OS === 'web' && (
         <PickerSheet
           onClose={() => setPickerOpen(false)}
@@ -167,6 +172,6 @@ export function WatchlistToolbar({
           ))}
         </PickerSheet>
       )}
-    </View>
+    </>
   );
 }

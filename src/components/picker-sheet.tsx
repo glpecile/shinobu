@@ -80,6 +80,7 @@ function PickerOption({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      aria-pressed={selected}
       // The negative margin lets the pill bleed past the text, so labels stay
       // aligned with the title. It bleeds half the sheet's padding, which
       // leaves the pill as far from the sheet's edge as its text is from its own.

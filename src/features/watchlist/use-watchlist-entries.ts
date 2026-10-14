@@ -28,9 +28,8 @@ export interface WatchlistResult {
    */
   errors: WatchlistInputs['errors'];
   /**
-   * Legs that read only part of the list (Letterboxd behind `onEndReached`).
-   * Deliberately **not** rendered — it drives R35's unknown-membership rows on
-   * the removal path and nothing else. See `WatchlistInputs['incomplete']`.
+   * Legs with unread pages. The toolbar marks their counts and sorting partial;
+   * the removal path treats their unobserved membership as unknown.
    */
   incomplete: WatchlistInputs['incomplete'];
 }

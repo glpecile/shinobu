@@ -24,6 +24,7 @@ import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useCachedWatchlistRemoval } from '@/features/watchlist/use-cached-watchlist-removal';
 import { ProviderLinkRow } from '@/features/provider-links/provider-link-row';
 import { haptics } from '@/lib/haptics';
+import { mediaRuntimeMinutes } from '@/lib/media-sort';
 import { applyPrimaryMetadata, mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import type { ProviderId } from '@/lib/providers/types';
 import {
@@ -157,6 +158,8 @@ export function CardActionsSheet({
       : undefined,
   );
   const item = resolved == null ? null : applyPrimaryMetadata(resolved, details.data?.catalogue);
+  const runtime = item == null ? undefined : mediaRuntimeMinutes(item);
+  const runtimeLabel = runtime == null ? null : `${Math.round(runtime)} min${item?.type === 'TV' || (item?.type === 'ANIME' && !item.isFilm) ? ' total (est.)' : ''}`;
   /**
    * Which content the one sheet shows (plan 0032 U3): the action rows, a
    * watchlist picker, or the log form — each rendered **in place of** the
@@ -265,7 +268,7 @@ export function CardActionsSheet({
             <SheetHeader.Content>
               <SheetHeader.Title>{item.title}</SheetHeader.Title>
               <SheetHeader.Subtitle>
-                {[item.type, item.year != null ? String(item.year) : null]
+                {[item.type, item.year != null ? String(item.year) : null, runtimeLabel]
                   .filter((part) => part != null)
                   .join(' · ')}
               </SheetHeader.Subtitle>

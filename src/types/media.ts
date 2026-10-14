@@ -53,7 +53,7 @@ export interface NormalizedMediaItem {
   backdropImage?: string;
   overview?: string;
   year?: number;
-  /** Minutes (per entry for TV — a typical episode, not the whole run). */
+  /** Minutes: whole film for MOVIE/anime films; typical episode for series. Not total/remaining series time; absent for manga. */
   runtime?: number;
   genres?: string[];
   /** Provider community rating on a 0–10 scale. */
