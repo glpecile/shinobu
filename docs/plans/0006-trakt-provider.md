@@ -35,8 +35,11 @@ be optional in the shared session type).
    key `session.<providerId>`, JSON `ProviderSession { accessToken,
    refreshToken?, expiresAt? }`. `refreshToken`/`expiresAt` optional (AniList
    implicit grant, above). Reactivity via `useMMKVListener` — no bespoke context
-   state to keep in sync with storage. Encryption is explicitly deferred to
-   `todos/003`.
+   state to keep in sync with storage. The current store in
+   `src/state/session/tokens.ts` has no native `encryptionKey`; web uses
+   unencrypted `localStorage`. Native encryption, key custody, migration of
+   existing sessions, and web storage risk review remain deferred to
+   [`todos/003`](../../todos/003-pending-p2-secure-token-storage.md).
 4. **Dependency injection without Layers** (per the brainstorm's "keep surface
    area small"): every Trakt effect takes a `TraktDeps { fetch: HttpFetch;
    tokens: TokenStore }` first argument. Tests inject fakes; `state/queries/`
