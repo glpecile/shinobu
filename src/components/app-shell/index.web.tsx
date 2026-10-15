@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { usePathname, useRouter } from 'expo-router';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Text, View } from 'react-native';
@@ -72,6 +72,12 @@ function onNavItemPress(
     return;
   }
   if (!active) pushRoute(item.href);
+}
+
+/** RNGH presses on pointerup, before a touch's compatibility mousedown. That
+ * default would focus the search button and blur the just-focused field. */
+function preventMouseFocus(event: MouseEvent<HTMLElement>): void {
+  event.preventDefault();
 }
 
 /**
@@ -213,6 +219,7 @@ function SidebarItem({
     <PresstableOpacity
       accessibilityLabel={item.label}
       className={cn('h-11 flex-row items-center rounded-xl', active && 'bg-accent-tonal')}
+      onMouseDown={item.href === routes.search ? preventMouseFocus : undefined}
       onPress={onPress}
     >
       <View className="items-center justify-center" style={{ width: ICON_COL }}>
@@ -347,6 +354,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 accessibilityRole="button"
                 className="flex-1 items-center justify-center gap-1"
                 key={item.href}
+                onMouseDown={item.href === routes.search ? preventMouseFocus : undefined}
                 onPress={() => onNavItemPress(item, active, pushRoute)}
               >
                 {/* Mirrors the native Android bar (`(tabs)/_layout.tsx`): a wide

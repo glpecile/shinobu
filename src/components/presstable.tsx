@@ -1,5 +1,5 @@
 import { createAnimatedPressable, PressableOpacity } from 'pressto';
-import { useRef, type ComponentProps } from 'react';
+import { useRef, type ComponentProps, type MouseEventHandler } from 'react';
 import { interpolate } from 'react-native-reanimated';
 import { withUniwind } from '@/lib/with-uniwind';
 
@@ -96,7 +96,10 @@ export function PresstableScale({
 export function PresstableOpacity({
   onPress,
   ...rest
-}: ComponentProps<typeof UniwindPressableOpacity>) {
+}: ComponentProps<typeof UniwindPressableOpacity> & {
+  /** Web-only DOM handler, forwarded by pressto but omitted from its prop types. */
+  onMouseDown?: MouseEventHandler<HTMLElement>;
+}) {
   const debouncedPress = useDebouncedPress(onPress);
   return (
     <UniwindPressableOpacity
