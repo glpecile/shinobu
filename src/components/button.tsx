@@ -293,7 +293,12 @@ export function Button({
       // `backgroundColor` survives (a filled button looked fine; every outlined
       // one rendered as bare text).
       // docs/solutions/pressto-border-not-drawn-on-android.md
-      className={cn(SHAPE[shape], iconOnly && 'min-w-11 min-h-11 items-center justify-center', className)}
+      className={cn(
+        SHAPE[shape],
+        'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
+        iconOnly && 'min-w-11 min-h-11 items-center justify-center',
+        className,
+      )}
       // `disabled` really does gate the press (pressto → RNGH `enabled`,
       // verified on web), but it reaches the DOM as nothing at all: neither it
       // nor `accessibilityState` becomes an ARIA attribute, so a screen reader
