@@ -10,10 +10,15 @@ import { mediaDetailsQuery } from './media-details';
 export function useMediaMetadata(items: readonly NormalizedMediaItem[], resolveLetterboxd = false) {
   const queryClient = useQueryClient();
   const hasTmdb = useTmdbToken() !== '';
-  const slugs = [...new Set(items.flatMap((item) => item.externalIds.letterboxd == null ? [] : [item.externalIds.letterboxd]))];
+  const needsIdentity = new Map<string, boolean>();
+  for (const item of items) {
+    const slug = item.externalIds.letterboxd;
+    if (slug != null) needsIdentity.set(slug, needsIdentity.get(slug) === true || item.externalIds.tmdb == null);
+  }
+  const slugs = [...needsIdentity.keys()];
   const films = useQueries({ queries: slugs.map((slug) => ({
     ...letterboxdFilmQuery(slug, hasTmdb),
-    enabled: resolveLetterboxd && items.some((item) => item.externalIds.letterboxd === slug && item.externalIds.tmdb == null),
+    enabled: resolveLetterboxd && needsIdentity.get(slug) === true,
   })) });
   const bySlug = new Map(slugs.map((slug, index) => [slug, films[index].data]));
   const identified = items.map((item) => {

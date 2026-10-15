@@ -15,6 +15,7 @@ import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/medi
 import { sortMediaEntries } from '@/lib/media-sort';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
+import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { type SerializdListEntry } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
@@ -34,7 +35,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   const sort = useMediaSort('lists');
   const progress = useMediaProgress([...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]);
   const byId = new Map(progress.items.map((item) => [item.id, item]));
-  const entries = list.entries.map((entry) => ({ ...entry, item: byId.get(entry.item.id) ?? entry.item }));
+  const entries = list.entries.map((entry) => ({ ...entry, item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)) }));
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
   return (

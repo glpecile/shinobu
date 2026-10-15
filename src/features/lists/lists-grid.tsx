@@ -71,7 +71,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
         <List
           key={columns}
           className="flex-1"
-           contentContainerStyle={{ padding: 10, paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : 10 }}
+          contentContainerStyle={{ padding: 10, paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : 10 }}
           data={pages}
           // One row, not one card: the card is h-44 with mb-3. An estimate the
           // library calls too large starves its container pool (the web

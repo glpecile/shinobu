@@ -104,3 +104,24 @@ actually completed. Temporary fixture routes are removed before shipping.
   Native final-state and end-to-end pagination sign-off remain with the owner.
 - All changes hot reload; no native rebuild, dependencies or generated native
   files. No persisted credentials were inspected and no live provider writes ran.
+
+## Final review follow-up
+
+- Preserve each Serializd entry's own poster/identity/state when merging the
+  show-level cached metadata; replacing the item by show id made different
+  seasons share the last entry's poster. Reuse `applyPrimaryMetadata`, whose
+  artwork/state precedence already has coverage.
+- Scope the partial-sorting notice to the selected tracker and replace repeated
+  full-list slug scans with a single identity map.
+- Replace the SSR-only cached-runtime test with a mounted metadata-hook test.
+  Seed stale caches, update duration while mounted, and assert no query fetch
+  starts or transport calls. Removing the cache-only enable guard demonstrably
+  fails it with two attempted fetches.
+- The owner requested plain “Runtime” in the sort picker and pill. Full-series
+  calculation is unchanged; the modal still identifies estimated series totals.
+- `bun run test` passes all 1,427 tests across 146 files. Typecheck, lint,
+  classnames, router-push, links and diff checks pass (five existing lint warnings).
+- At the owner's request, checked Android startup only, not visual QA: Pixel 9
+  runs API 36, and opening the dev-client URL against local Metro reaches the
+  restored sign-in screen. An earlier native Reanimated commit assertion is
+  recorded separately in `todos/021-pending-p1-android-shadow-tree-abort.md`.

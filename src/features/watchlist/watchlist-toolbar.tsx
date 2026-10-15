@@ -140,6 +140,7 @@ export function WatchlistToolbar({
   const [pickerOpen, setPickerOpen] = useState(false);
   const options = watchlistFilterOptions(entries, provider, incomplete);
   const total = watchlistTotal(entries, incomplete);
+  const partial = provider == null ? total.partial : incomplete.includes(provider);
   const menuOptions = [{ provider: null, ...total }, ...options].map((option) => ({
     value: option.provider,
     icon: option.provider == null ? undefined : <ProviderIcon id={option.provider} size={16} />,
@@ -148,7 +149,7 @@ export function WatchlistToolbar({
 
   return (
     <>
-      <MediaToolbar notice={sort !== 'default' && incomplete.length > 0 ? <SortingLoadedNotice /> : undefined} view={view}>
+      <MediaToolbar notice={sort !== 'default' && partial ? <SortingLoadedNotice /> : undefined} view={view}>
         <FilterPill
           active={provider}
           onClear={() => onProviderChange(null)}

@@ -26,16 +26,16 @@ export function MediaSortControl({ scope, sort }: {
   const [open, setOpen] = useState(false);
   const options: { value: MediaSort; label: string }[] = [
     { value: 'default', label: scope === 'watchlist' ? 'Recently added' : 'List order' },
-    { value: 'runtime-asc', label: 'Est. runtime: shortest first' },
-    { value: 'runtime-desc', label: 'Est. runtime: longest first' },
+    { value: 'runtime-asc', label: 'Runtime: shortest first' },
+    { value: 'runtime-desc', label: 'Runtime: longest first' },
     { value: 'year-desc', label: 'Release year: newest first' },
     { value: 'year-asc', label: 'Release year: oldest first' },
   ];
   const label = options.find((option) => option.value === sort)!.label;
   const compactLabel: Record<MediaSort, string> = {
     default: scope === 'watchlist' ? 'Recently added' : 'List order',
-    'runtime-asc': 'Est. runtime ↑',
-    'runtime-desc': 'Est. runtime ↓',
+    'runtime-asc': 'Runtime ↑',
+    'runtime-desc': 'Runtime ↓',
     'year-desc': 'Release year ↓',
     'year-asc': 'Release year ↑',
   };
