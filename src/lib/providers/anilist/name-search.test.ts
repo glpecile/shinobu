@@ -19,25 +19,37 @@ const DEPS = {
   tokens: { get: () => null, set: () => {}, clear: () => {} },
 };
 
-test('staff biographies retain link targets for display and plain text for metadata', async () => {
-  const fetch = mockFetch({
-    data: {
-      Staff: {
-        id: 19,
-        name: { full: 'Baku Kinoshita' },
-        description: '[Website](https://example.com) | [Twitter](https://x.com/baku)<br><br>An animator.',
+test.each([
+  {
+    description: '[Website](https://example.com) | [Twitter](https://x.com/baku)<br><br>An animator.',
+    biography: 'Website | Twitter\n\nAn animator.',
+    markdown: '[Website](https://example.com) | [Twitter](https://x.com/baku)\n\nAn animator.',
+  },
+  {
+    description: "__Agency:__ I'm Enterprise<br>*Voice actor.*",
+    biography: "__Agency:__ I'm Enterprise\n*Voice actor.*",
+    markdown: "__Agency:__ I'm Enterprise\n*Voice actor.*",
+  },
+])(
+  'staff biographies preserve Markdown with and without links: $description',
+  async ({ description, biography, markdown }) => {
+    const fetch = mockFetch({
+      data: {
+        Staff: {
+          id: 19,
+          name: { full: 'Baku Kinoshita' },
+          description,
+        },
       },
-    },
-  });
+    });
 
-  const { person } = await Effect.runPromise(
-    getAniListStaff({ ...DEPS, fetch }, { id: 19 }),
-  );
-  expect(person.biography).toBe('Website | Twitter\n\nAn animator.');
-  expect(person.biographyMarkdown).toBe(
-    '[Website](https://example.com) | [Twitter](https://x.com/baku)\n\nAn animator.',
-  );
-});
+    const { person } = await Effect.runPromise(
+      getAniListStaff({ ...DEPS, fetch }, { id: 19 }),
+    );
+    expect(person.biography).toBe(biography);
+    expect(person.biographyMarkdown).toBe(markdown);
+  },
+);
 
 describe('searchAniListStaff', () => {
   test('normalizes a page of hits to { id, name }', async () => {

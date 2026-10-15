@@ -4,12 +4,12 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { MarkdownText } from '@/components/markdown-text';
 import { PressableCard } from '@/components/pressable-card';
 import { cn } from '@/lib/cn';
 import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 
 import { ExpandableTextSkeleton } from './skeleton';
-import { LinkedText } from './linked-text';
 
 /** `text-base` (16) × `leading-relaxed` (1.625) — keep in sync with the class. */
 const LINE_HEIGHT = 26;
@@ -22,13 +22,13 @@ const LINE_HEIGHT = 26;
  */
 export function ExpandableText({
   text,
-  linkedText,
+  markdown,
   title = 'Overview',
   lines = 2,
   className,
 }: {
   text: string;
-  linkedText?: string;
+  markdown?: string;
   title?: string;
   lines?: number;
   /** Layout only. */
@@ -69,12 +69,15 @@ export function ExpandableText({
               }),
         }}
       >
-        <Text
-          className="text-foreground/90 font-sans text-base leading-relaxed"
-          onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}
-        >
-          {linkedText == null ? text : <LinkedText text={linkedText} />}
-        </Text>
+        <View onLayout={(event) => setFullHeight(event.nativeEvent.layout.height)}>
+          {markdown == null ? (
+            <Text className="text-foreground/90 font-sans text-base leading-relaxed">
+              {text}
+            </Text>
+          ) : (
+            <MarkdownText text={markdown} />
+          )}
+        </View>
       </AnimatedView>
     </PressableCard>
   );

@@ -2,6 +2,7 @@ import "@/global.css";
 
 import {
   Inter_400Regular,
+  Inter_400Regular_Italic,
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
@@ -50,6 +51,7 @@ export default function Layout() {
   const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_700Bold,
     Inter_400Regular,
+    Inter_400Regular_Italic,
     Inter_600SemiBold,
     // Icon fonts are only populated on web — native bundles them via the
     // config plugins (see lib/icon-fonts).
