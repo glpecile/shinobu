@@ -86,7 +86,7 @@ export function humanizeEnum(value: string): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-/** Retain AniList's Markdown links while removing its HTML-like formatting. */
+/** Retain AniList's Markdown while removing its HTML-like formatting. */
 export function stripHtmlMarkup(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')

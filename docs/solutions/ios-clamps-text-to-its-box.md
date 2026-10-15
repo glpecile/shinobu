@@ -18,6 +18,10 @@ Two follow-on traps found while fixing it (RN 0.86, Fabric, iOS 26):
 **Fix:** native clamps with `numberOfLines` (which also restores the ellipsis)
 and measures the real length from a second, unconstrained copy — absolutely
 positioned, `opacity-0`, `pointerEvents="none"`, hidden from VoiceOver. It
-wraps at the same width as the visible copy, so `lines.length` from its
-`onTextLayout` is the true count. Web keeps the height transition in
-`expandable-text/index.web.tsx`.
+wraps at the same width as the visible copy. Compare the hidden copy's full
+height against the collapsed copy's height using `onLayout` on their wrapping
+Views. This also works for `EnrichedMarkdownText`, which has a native line
+clamp but no `onTextLayout`. Keep the collapsed measurement while expanded so
+the disclosure stays available to collapse it again. Web keeps the height
+transition in `expandable-text/index.web.tsx` and measures a wrapping View,
+which resizes after the Markdown renderer's asynchronous WASM parse.

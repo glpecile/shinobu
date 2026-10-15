@@ -43,6 +43,7 @@
     "react-error-boundary": "^6.1.6",
     "react-hook-form": "^7.90.0",
     "react-native": "0.86.3",
+    "react-native-enriched-markdown": "^1.1.1",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-keyboard-controller": "1.22.7",
     "react-native-mmkv": "^4.3.2",
@@ -79,6 +80,10 @@
     "react-native-screens": "~4.26.2"
   },
   "private": true,
+  "enriched-markdown": {
+    "enableCodeHighlight": false,
+    "enableMath": false
+  },
   "scripts": {
     "postinstall": "uniwind generate-artifacts --css src/global.css --dts src/uniwind-types.d.ts",
     "start": "expo start",

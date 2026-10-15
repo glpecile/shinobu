@@ -93,7 +93,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                   // Four 26px lines plus the title, gap, padding and border reserve 160px.
                   className="min-h-40"
                   lines={4}
-                  linkedText={person.biographyMarkdown}
+                  markdown={person.biographyMarkdown}
                   text={person.biography}
                   title="Biography"
                 />

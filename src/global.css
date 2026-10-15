@@ -11,6 +11,7 @@
 @theme {
   --font-display: "SpaceGrotesk_700Bold";
   --font-sans: "Inter_400Regular";
+  --font-sans-italic: "Inter_400Regular_Italic";
   --font-sans-semibold: "Inter_600SemiBold";
 
   /* Radius tokens — use these instead of Tailwind's default rounded values. */

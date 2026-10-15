@@ -523,7 +523,7 @@ export function getAniListStaff(
         headshot: image,
         headshotFull: image,
         ...(biography !== '' ? { biography } : {}),
-        ...(biographyMarkdown !== biography ? { biographyMarkdown } : {}),
+        ...(biographyMarkdown !== '' ? { biographyMarkdown } : {}),
         ...(birthday != null ? { birthday } : {}),
         ...(deathday != null ? { deathday } : {}),
         ...(staff.homeTown != null ? { birthplace: staff.homeTown } : {}),

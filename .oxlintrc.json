@@ -72,6 +72,13 @@
           },
           {
             "group": [
+              "react-native-enriched-markdown",
+              "react-native-enriched-markdown/*"
+            ],
+            "message": "Import MarkdownText from @/components/markdown-text — the wrapper owns provider text styling and HTTP(S)-only link handling."
+          },
+          {
+            "group": [
               "@react-native-community/datetimepicker",
               "@react-native-community/datetimepicker/*"
             ],
