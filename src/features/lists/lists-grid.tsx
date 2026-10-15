@@ -16,15 +16,13 @@ export function ListsGridSkeleton() {
   const { width } = useWindowDimensions();
   const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
   return (
-    <View className="flex-1">
-      <View className="flex-row flex-wrap px-2.5 pt-1.5">
-        {/* Three rows: one index page holds 12 lists, so this is the first paint on desktop. */}
-        {Array.from({ length: columns * 3 }).map((_, index) => (
-          <View className="p-1.5" key={index} style={{ width: `${100 / columns}%` }}>
-            <Skeleton className="w-full h-44 rounded-lg" delay={staggerDelay(index)} />
-          </View>
-        ))}
-      </View>
+    <View className="flex-row flex-wrap px-2.5 pt-1.5">
+      {/* Three rows: one index page holds 12 lists, so this is the first paint on desktop. */}
+      {Array.from({ length: columns * 3 }).map((_, index) => (
+        <View className="p-1.5" key={index} style={{ width: `${100 / columns}%` }}>
+          <Skeleton className="w-full h-44 rounded-lg" delay={staggerDelay(index)} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -91,10 +89,13 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
             <View className="px-1.5 mb-3"><ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} provider={provider} /></View>
           )}
           ListFooterComponent={
-            <View className="items-center gap-3 pb-6">
-              <LoadMoreFooter failed={isFetchNextPageError} loading={isFetchingNextPage} noun="lists" onRetry={() => void fetchNextPage()} />
-              <ProviderListLink provider={provider} url={url} />
-            </View>
+            <>
+              {isFetchingNextPage && <View accessibilityLabel="Loading more lists" className="-mx-2.5"><ListsGridSkeleton /></View>}
+              <View className="items-center gap-3 pt-5 pb-6">
+                {!isFetchingNextPage && isFetchNextPageError && <LoadMoreFooter failed loading={false} noun="lists" onRetry={() => void fetchNextPage()} />}
+                <ProviderListLink provider={provider} url={url} />
+              </View>
+            </>
           }
         />
       )}
