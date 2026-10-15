@@ -33,15 +33,15 @@ import { SCROLL_TO_TOP_THRESHOLD, ScrollToTopFab } from '@/components/scroll-to-
 import { Section } from '@/components/section';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
-import { ViewToggle } from '@/components/view-toggle';
 import { WatchedMark } from '@/components/watched-mark';
 import { mediaKindLabel } from '@/features/media-layout/watchlist-rows';
+import { MediaToolbar } from '@/features/media-layout/media-toolbar';
 import { cn } from '@/lib/cn';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
-import { setWatchlistView, useWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
+import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -70,22 +70,6 @@ function usePosterColumns() {
     columns: Math.max(2, Math.floor((Math.min(width, 896) - 48 + 12) / 172)),
     onLayout: (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width),
   };
-}
-
-/** The format control takes the space left by the role picker. */
-function TimelineControls({ children, view, onViewChange }: {
-  children: ReactNode;
-  view: WatchlistView;
-  onViewChange: (view: WatchlistView) => void;
-}) {
-  return (
-    <View className="flex-row flex-wrap items-center gap-2 pb-3">
-      <View className="flex-1 min-w-64 min-h-10 flex-row items-center gap-2">{children}</View>
-      <View className="ml-auto">
-        <ViewToggle onChange={onViewChange} view={view} />
-      </View>
-    </View>
-  );
 }
 
 /**
@@ -358,46 +342,45 @@ export function CreditTimeline({
                     {`${filmography.credits.length} ${filmography.credits.length === 1 ? 'title' : 'titles'}`}
                   </Section.Count>
                 </Section.Header>
-                <TimelineControls onViewChange={setWatchlistView} view={view}>
-                  <NativeSegmentedControl
-                    accessibilityLabel="Format"
-                    className="flex-1 min-w-0 max-w-64"
-                    onChange={(next) => {
-                      refocus();
-                      setFormat(next);
-                    }}
-                    options={FORMAT_OPTIONS}
-                    size="md"
-                    value={format}
-                  />
-                  {/* One role needs no picker. */}
-                  {counts.length > 1 && (
-                    <NativePickerMenu
-                      onSelect={selectRole}
-                      options={[
-                        { value: null, label: `All roles (${counts.reduce((sum, entry) => sum + entry.count, 0)})` },
-                        ...counts.map((entry) => ({ value: entry.role, label: `${entry.role} (${entry.count})` })),
-                      ]}
-                      title="Role"
-                      value={activeRole}
-                    >
-                      <Button
-                        accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
-                        className="max-w-28 sm:max-w-36 shrink"
-                        icon={<Button.Icon name="filter-outline" />}
-                        label={activeRole ?? 'All roles'}
-                        morphLabel
-                        numberOfLines={1}
-                        onPress={() => setRoleSheetOpen(true)}
-                        shape="pill"
-                        size="sm"
-                        trailingIcon={<Button.Icon name="chevron-down" />}
-                        variant="quiet"
-                      />
-                    </NativePickerMenu>
-                  )}
-                </TimelineControls>
               </Section>
+              <MediaToolbar view={view}>
+                <NativeSegmentedControl
+                  accessibilityLabel="Format"
+                  className="w-64 shrink-0"
+                  onChange={(next) => {
+                    refocus();
+                    setFormat(next);
+                  }}
+                  options={FORMAT_OPTIONS}
+                  size="md"
+                  value={format}
+                />
+                {/* One role needs no picker. */}
+                {counts.length > 1 && (
+                  <NativePickerMenu
+                    onSelect={selectRole}
+                    options={[
+                      { value: null, label: `All roles (${counts.reduce((sum, entry) => sum + entry.count, 0)})` },
+                      ...counts.map((entry) => ({ value: entry.role, label: `${entry.role} (${entry.count})` })),
+                    ]}
+                    title="Role"
+                    value={activeRole}
+                  >
+                    <Button
+                      accessibilityLabel={`Role: ${activeRole ?? 'All roles'}`}
+                      className="shrink-0"
+                      icon={<Button.Icon name="filter-outline" />}
+                      label={activeRole ?? 'All roles'}
+                      morphLabel
+                      onPress={() => setRoleSheetOpen(true)}
+                      shape="pill"
+                      size="sm"
+                      trailingIcon={<Button.Icon name="chevron-down" />}
+                      variant="quiet"
+                    />
+                  </NativePickerMenu>
+                )}
+              </MediaToolbar>
             </AnimatedView>
           </Column>
         }
@@ -508,30 +491,30 @@ export function CreditTimelineSkeleton({
           <Section.Title>Filmography</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
         </Section.Header>
-        <TimelineControls onViewChange={setWatchlistView} view={view}>
-          <NativeSegmentedControl
-            accessibilityLabel="Format"
-            className="flex-1 min-w-0 max-w-64"
-            onChange={() => {}}
-            options={FORMAT_OPTIONS}
-            size="md"
-            value="ALL"
-          />
-          {roles && (
-            <Button
-              className="max-w-28 sm:max-w-36 shrink"
-              disabled
-              icon={<Button.Icon name="filter-outline" />}
-              label="All roles"
-              numberOfLines={1}
-              onPress={() => {}}
-              shape="pill"
-              size="sm"
-              variant="quiet"
-            />
-          )}
-        </TimelineControls>
       </Section>
+      <MediaToolbar view={view}>
+        <NativeSegmentedControl
+          accessibilityLabel="Format"
+          className="w-64 shrink-0"
+          onChange={() => {}}
+          options={FORMAT_OPTIONS}
+          size="md"
+          value="ALL"
+        />
+        {roles && (
+          <Button
+            className="shrink-0"
+            disabled
+            icon={<Button.Icon name="filter-outline" />}
+            label="All roles"
+            onPress={() => {}}
+            shape="pill"
+            size="sm"
+            trailingIcon={<Button.Icon name="chevron-down" />}
+            variant="quiet"
+          />
+        )}
+      </MediaToolbar>
       {SKELETON_RUNS.map((rows, run) => (
         <View key={run}>
           <RailHead.Skeleton lead="title" showRail={view === 'list'} />

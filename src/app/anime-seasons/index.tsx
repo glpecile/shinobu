@@ -26,7 +26,7 @@ import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { PosterWall, useWallMetrics } from '@/features/media-layout/poster-wall';
 import { WatchlistRows } from '@/features/media-layout/watchlist-rows';
-import { ViewToggle } from '@/components/view-toggle';
+import { MediaToolbar } from '@/features/media-layout/media-toolbar';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import {
@@ -40,7 +40,7 @@ import {
 } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
-import { setWatchlistView, useWatchlistView } from '@/state/prefs/watchlist-view';
+import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { anilistQueryKeys, useSuspenseSeasonalAnimePagesQuery } from '@/state/queries/anilist';
 import { useWarmPosters } from '@/features/anime-seasons/warm-posters';
@@ -294,17 +294,16 @@ export default function AnimeSeasonsScreen() {
         <Text className="text-2xl font-display text-foreground">Anime Seasons</Text>
       </View>
       <SeasonPicker onChange={setWindow} progress={progress} window={window} />
-      <View className="flex-row flex-wrap items-center justify-between gap-2 px-4 pb-3">
+      <MediaToolbar view={view}>
         <NativeSegmentedControl
           accessibilityLabel="Format"
-          className="w-52 android:w-64"
+          className="w-64 shrink-0"
           onChange={setFormat}
           options={FORMAT_OPTIONS}
-          size="sm"
+          size="md"
           value={format}
         />
-        <ViewToggle onChange={setWatchlistView} view={view} />
-      </View>
+      </MediaToolbar>
       {/* Every format is cour-scoped, films included: the pager is the only
           wall host. The controls stay outside the boundaries — an AniList
           outage on one season must not take them with it. */}

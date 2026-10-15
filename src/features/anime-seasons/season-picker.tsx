@@ -51,7 +51,7 @@ export function SeasonPicker({
   const canGoForward = window.year < maxYear;
 
   return (
-    <View className="px-4 pb-3 gap-3">
+    <View className="px-6 pb-3 gap-3">
       <View className="flex-row items-center justify-center gap-1">
         <PresstableOpacity
           accessibilityLabel="Previous year"
