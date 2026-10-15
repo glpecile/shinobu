@@ -1,0 +1,27 @@
+steps:
+  - echo: Swipe the title-control rail left to reveal the complete role picker;
+      layout toggle stays fixed.
+  - swipe:
+      from: { text: Title controls }
+      direction: left
+      momentum: false
+  - await: { visible: { text: 'Role: All roles', role: Button } }
+  - echo: Open the fully revealed role picker; expect native role options.
+  - tap:
+      text: 'Role: All roles'
+      role: Button
+  # Android's live tree exposes the menu option as View, unlike the flow tree.
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Production
+        role: View
+  - await: { idle: true }
+  - echo: Choose Production; expect the complete Production label in the rail.
+  - tap:
+      text: Production
+  - await: { visible: { text: 'Role: Production', role: Button } }
+  - await: { idle: true }
+executionPrerequisite: Android Pixel 9 portrait, Leonardo DiCaprio person detail
+  loaded at top, Format All, role All roles, list view. No tracker writes.
