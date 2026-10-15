@@ -1,0 +1,23 @@
+steps:
+  - echo: Switch the loaded list to poster grid; expect the reverse action.
+  - tap:
+      text: Switch to poster grid
+  - await:
+      visible:
+        text: Switch to list
+        role: Button
+      timeout: 10000
+  - await: { idle: true }
+  - echo: Switch the poster grid back to list; expect the original action and
+      preference.
+  - tap:
+      text: Switch to list
+  - await:
+      visible:
+        text: Switch to poster grid
+        role: Button
+      timeout: 10000
+  - await: { idle: true }
+executionPrerequisite: Android app open on a loaded media list (watchlist,
+  provider list detail, or seasons), in list view with Switch to poster grid
+  visible. Toggling twice restores the persisted view preference.

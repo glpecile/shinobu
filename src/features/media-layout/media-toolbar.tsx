@@ -40,7 +40,7 @@ export function MediaToolbarSkeleton({ filter = false, actions = 0, layout = fal
           ))}
         </View>}
       </View>
-      {layout && <View className="h-11 shrink-0 items-center justify-center android:size-12">
+      {layout && <View className="h-11 shrink-0 items-center justify-center android:size-11">
         <Skeleton className="h-8 w-20 rounded-md android:size-9.5 android:rounded-full" />
       </View>}
     </View>
