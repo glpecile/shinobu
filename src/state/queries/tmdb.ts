@@ -8,13 +8,13 @@ import { Effect } from 'effect';
 import { httpFetch } from '@/lib/http/client';
 import { tmdbToken } from '@/state/session/tmdb-token';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
+import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import {
   getPerson,
   getStudio,
   getTvEpisode,
   searchCompany,
   searchPerson,
-  searchTitles,
 } from '@/lib/providers/tmdb/reads';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { SEARCH_MIN_QUERY_LENGTH } from '@/state/queries/trakt';
@@ -137,7 +137,7 @@ export function useTmdbEpisodeQuery(params: {
 }
 
 /**
- * Movie+TV text search for the search tab (`/search/multi`), the section's
+ * Movie+TV fuzzy search for the search tab, the section's
  * primary source — same debounce/keepPreviousData contract as the Trakt
  * search it replaces. Disabled without a TMDB token; the screen falls back
  * to Trakt search only when a Trakt client key is active.
@@ -149,7 +149,7 @@ export function useTmdbSearchQuery(params: {
   const query = params.query.trim();
   return useQuery({
     queryKey: tmdbQueryKeys.search(query),
-    queryFn: ({ signal }) => Effect.runPromise(searchTitles(tmdbDeps(), { query }), { signal }),
+    queryFn: ({ signal }) => Effect.runPromise(searchTitlesFuzzy(tmdbDeps(), { query }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     placeholderData: keepPreviousData,
