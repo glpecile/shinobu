@@ -52,6 +52,42 @@ the keyboard and leaves the field focused after navigation. Firefox Android
 and physical-device keyboard behavior still need verification; a desktop DOM
 focus check is not proof of their on-screen keyboard behavior.
 
+## Follow-up: the touch's mouse-down steals focus back
+
+The owner's 2026-10-14 Firefox Android recording still shows the keyboard
+flashing open and closed after PRs #241 and #251. Synchronous navigation was
+not enough: focus was delivered, then taken away by the same tap.
+
+Reproduced on 2026-10-15 in Firefox with Playwright's `hasTouch: true`:
+
+```text
+pointerup → RNGH onPress → input focusin
+touchend → compatibility mousedown → input focusout → Search button focusin
+mouseup → click
+```
+
+Pressto uses RNGH's `BaseButton`, which calls `onPress` from `pointerup`.
+The subsequent compatibility mouse-down defaults to focusing the underlying
+HTML button. That blurs the input even though it was focused synchronously
+inside the user gesture. Both first navigation and active-tab re-taps fail;
+waiting until focus is initially observed would miss the regression.
+
+The Search button on both web navigation surfaces now prevents the mouse-down
+default. `PresstableOpacity` exposes the DOM handler already forwarded by
+pressto but missing from its types. Other navigation buttons retain normal
+mouse focus, keyboard activation remains available, and native focus timing
+is unchanged. No delayed refocus or dependency patch is needed.
+
+Validation: before the change, Firefox touch input ends the tap with the Search
+button focused; afterward, it ends with the input focused. First navigation,
+re-tap after blur, and Ctrl+K pass in Firefox, Chromium, and WebKit touch and
+desktop contexts; desktop Enter/Space activation also passes. Checks observe
+the settled focus after the full gesture, outside the press debounce window.
+These are browser DOM-focus checks, not Android keyboard evidence. The Android
+emulator's package/window services returned `Broken pipe`, preventing Firefox
+installation and on-screen keyboard verification. Firefox Android keyboard
+persistence still needs a functioning emulator or physical-device check.
+
 ## Related
 
 - `web-mobile-search-autofocus-keyboard-flash.md` — why `autoFocus` stays off
