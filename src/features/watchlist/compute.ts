@@ -1,4 +1,5 @@
 import { PROVIDERS } from '@/lib/providers/registry';
+import { mediaSortValue } from '@/lib/media-sort';
 import { animeEffectiveMovieTvType } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -103,9 +104,21 @@ interface MergedEntry {
 
 function absorb(entry: MergedEntry, input: WatchlistInput): void {
   const precedence = ITEM_PRECEDENCE[input.source];
+  const previous = entry.item;
   if (precedence < entry.precedence) {
     entry.item = input.item;
     entry.precedence = precedence;
+  }
+  const fallback = entry.item === input.item ? previous : input.item;
+  // An IMDb match can cross film/series boundaries; their release years and
+  // duration units are not interchangeable.
+  for (const field of ['year', 'runtime'] as const) {
+    if (isFilmLike(entry.item) !== isFilmLike(fallback) ||
+      (entry.item.type === 'MANGA') !== (fallback.type === 'MANGA')) continue;
+    const value = mediaSortValue(fallback, field);
+    if (mediaSortValue(entry.item, field) == null && value != null) {
+      entry.item = { ...entry.item, [field]: value };
+    }
   }
   entry.sources.add(input.source);
   if (!entry.sourceIds.includes(input.item.id)) entry.sourceIds.push(input.item.id);

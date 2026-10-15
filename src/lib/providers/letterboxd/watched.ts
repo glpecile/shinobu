@@ -22,7 +22,7 @@ const readPage = Effect.fnUntraced(function* (deps: LetterboxdDeps, path: string
   });
 });
 
-/** Public member-film pages include undated watches outside the RSS diary window. */
+/** Public viewings supply positive evidence; a missing page does not prove unwatched. */
 export const getLetterboxdFilmWatch = Effect.fn('letterboxd.getFilmWatch')(function* (deps: LetterboxdDeps, item: NormalizedMediaItem) {
   if (!Schema.is(Username)(deps.username)) return yield* new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true });
   let slug = item.externalIds.letterboxd;

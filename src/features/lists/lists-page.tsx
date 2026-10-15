@@ -22,10 +22,13 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', o
   return <>
     {!index && <ListsHeader provider={provider} title={title} />}
     <CenteredNotice>
+      <CenteredNotice.Icon name="list-outline" />
       <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
       <CenteredNotice.Body>{provider === 'letterboxd' ? 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
-      <CenteredNotice.Action icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
-      <ProviderListLink provider={provider} url={url} />
+      <View className="mt-6 items-center gap-3">
+        <Button icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
+        <ProviderListLink provider={provider} url={url} />
+      </View>
     </CenteredNotice>
   </>;
 }
@@ -58,6 +61,7 @@ export function ListsPage({ provider, title = 'List', url, index = false, embedd
         <>
           {!index && <ListsHeader provider={provider} title={title} />}
           <CenteredNotice>
+            <CenteredNotice.Icon name="list-outline" />
             <CenteredNotice.Title>{unavailable === 'connect' ? `Connect ${label}` : 'Invalid list link'}</CenteredNotice.Title>
             <CenteredNotice.Body>{unavailable === 'connect' ? `Connect ${label} to browse your created and liked lists.` : `This link doesn’t identify a ${label} list page.`}</CenteredNotice.Body>
             <CenteredNotice.Action icon={<Button.Icon name={unavailable === 'connect' ? 'link-outline' : 'home-outline'} />} label={unavailable === 'connect' ? `Connect ${label}` : 'Go home'} onPress={() => pushRoute(unavailable === 'connect' ? routes.settings : routes.home)} />

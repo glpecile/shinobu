@@ -1,7 +1,7 @@
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
-import { Button, type ButtonSize } from '@/components/button';
+import { Button, type ButtonSize, type ButtonVariant } from '@/components/button';
 import { haptics } from '@/lib/haptics';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 
@@ -21,15 +21,21 @@ export function LikeButton({
   size = 'md',
   variant = 'outline',
 }: {
-  liked: boolean;
+  liked: boolean | undefined;
   onChange: (liked: boolean) => void;
   label: string;
   loading?: boolean;
   disabled?: boolean;
   size?: ButtonSize;
-  variant?: 'outline' | 'ghost';
+  variant?: 'outline' | 'ghost' | 'quiet';
 }) {
   const reduceMotion = useReducedMotion();
+  let buttonVariant: ButtonVariant;
+  switch (variant) {
+    case 'quiet': buttonVariant = liked ? 'quiet-accent' : 'quiet'; break;
+    case 'ghost': buttonVariant = liked ? 'accent-ghost' : 'ghost'; break;
+    case 'outline': buttonVariant = liked ? 'outline' : 'quiet'; break;
+  }
   return (
     <Button
       disabled={disabled}
@@ -51,7 +57,7 @@ export function LikeButton({
       }}
       pressed={liked}
       size={size}
-      variant={variant === 'ghost' ? liked ? 'accent-ghost' : 'ghost' : liked ? 'outline' : 'quiet'}
+      variant={buttonVariant}
     />
   );
 }

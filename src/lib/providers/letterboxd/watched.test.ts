@@ -24,7 +24,7 @@ test('TMDB films use the exact redirect before the member viewing, not a title s
   expect(calls).toEqual(['https://letterboxd.com/tmdb/9463/', 'https://letterboxd.com/glp/film/vampire-hunter-d/']);
 });
 
-test('an absent public viewing is not a watch', async () => {
+test('an absent public viewing supplies no positive watch evidence', async () => {
   expect(await Effect.runPromise(getLetterboxdFilmWatch(deps('', 404), item))).toBeNull();
 });
 

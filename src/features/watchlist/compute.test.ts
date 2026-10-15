@@ -39,6 +39,33 @@ function letterboxdRow(
 }
 
 describe('computeWatchlist', () => {
+  test('backfills valid metadata in either gather order without changing provider identity or state', () => {
+    const preferred: WatchlistInput = {
+      source: 'simkl', simklWatchedCount: 3,
+      item: Object.freeze(item({ id: 'simkl-1', runtime: 0, currentProgress: 3, externalIds: { tmdb: 1, simkl: 1 } })),
+    };
+    const fallback = traktRow({ id: 'trakt-1', runtime: 90, year: 2001, externalIds: { tmdb: 1, trakt: 1 } });
+    for (const inputs of [[preferred, fallback], [fallback, preferred]]) {
+      const [merged] = computeWatchlist(inputs);
+      expect(merged.item).toEqual({ ...preferred.item, runtime: 90, year: 2001 });
+      expect(merged.sources).toEqual(['trakt', 'simkl']);
+      expect(merged.sourceIds.slice().sort()).toEqual(['simkl-1', 'trakt-1']);
+      expect(merged.simklWatchedCount).toBe(3);
+    }
+  });
+
+  test('keeps known preferred metadata, rejects invalid fallback values and incompatible runtime units', () => {
+    const preferred: WatchlistInput = { source: 'anilist', item: item({ id: 'anilist-1', type: 'ANIME', runtime: 24, year: 2024, externalIds: { imdb: 'same' } }) };
+    const fallback = traktRow({ id: 'trakt-1', runtime: 100, year: 2001, externalIds: { imdb: 'same' } });
+    expect(computeWatchlist([preferred, fallback])[0].item).toEqual(preferred.item);
+    const missing = { ...preferred, item: { ...preferred.item, runtime: undefined, year: undefined } };
+    expect(computeWatchlist([missing, fallback])[0].item).toEqual(missing.item);
+    const invalid = { ...fallback, item: { ...fallback.item, type: 'TV' as const, runtime: NaN, year: -1 } };
+    expect(computeWatchlist([missing, invalid])[0].item).toEqual(missing.item);
+    const manga = { ...missing, item: { ...missing.item, type: 'MANGA' as const } };
+    expect(computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item.runtime).toBeUndefined();
+  });
+
   test('the same film from Trakt and Letterboxd merges into one entry', () => {
     const entries = computeWatchlist([
       traktRow({ id: 'trakt-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949 } }),

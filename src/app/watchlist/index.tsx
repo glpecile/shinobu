@@ -21,10 +21,14 @@ import {
   parseWatchlistProvider,
 } from '@/features/watchlist/filter';
 import { PosterWall } from '@/features/media-layout/poster-wall';
+import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
+import { MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useSuspenseWatchlistQuery } from '@/features/watchlist/use-watchlist-entries';
 import { WatchlistRows } from '@/features/media-layout/watchlist-rows';
 import { WatchlistToolbar } from '@/features/watchlist/watchlist-toolbar';
+import { sortMediaEntries } from '@/lib/media-sort';
+import { useMediaSort } from '@/state/prefs/media-sort';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -32,6 +36,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
+import { useMediaMetadata } from '@/state/queries/media-metadata';
 import type { ProviderFailure } from '@/state/queries/settle';
 import {
   refreshWatchlistInputs,
@@ -120,6 +125,7 @@ function WatchlistGrid({
   // matter. Cleared with the sheet, never mid-write.
   const [activeEntry, setActiveEntry] = useState<WatchlistEntry | null>(null);
   const { entries, errors, incomplete } = useSuspenseWatchlistQuery();
+  const metadata = useMediaMetadata(entries.map((entry) => entry.item));
   // Letterboxd is the only paginated leg, and it stays behind `onEndReached` —
   // **never** auto-paged to complete dedupe (22 sequential scrapes per gather
   // is exactly what plan 0031's scope boundary rules out). This observer is the
@@ -128,6 +134,7 @@ function WatchlistGrid({
   // rendering as a duplicate of a row already on screen.
   const pages = useLetterboxdWatchlistPagesQuery();
   const view = useWatchlistView();
+  const sort = useMediaSort('watchlist');
   // Both layouts take `MediaLayoutProps`, so the swap is one binding and
   // nothing below branches on the view. Swapping the component *does* remount
   // the list — correct here: they are different geometries, and a preserved
@@ -136,7 +143,8 @@ function WatchlistGrid({
   // The toolbar's counts describe the **whole** list, so it takes `entries`
   // while the layout takes the narrowed set — a filter that renumbered its own
   // options as you used it could never be widened back on evidence.
-  const shown = filterWatchlistEntries(entries, provider);
+  const enriched = entries.map((entry, index) => ({ ...entry, item: metadata.items[index] }));
+  const shown = sortMediaEntries(filterWatchlistEntries(enriched, provider), sort);
 
   async function refresh() {
     setRefreshing(true);
@@ -215,7 +223,7 @@ function WatchlistGrid({
           />
         }
         onEndReached={
-          pages.hasNextPage && !pages.isFetchingNextPage
+          pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError
             ? () => void loadMore()
             : undefined
         }
@@ -239,6 +247,7 @@ function WatchlistGrid({
         incomplete={incomplete}
         onProviderChange={onProviderChange}
         provider={provider}
+        sort={sort}
         view={view}
       />
       <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
@@ -300,10 +309,10 @@ export default function WatchlistScreen() {
       </View>
       <Suspense
         fallback={
-          <CenteredNotice>
-            <CenteredNotice.Title>Watchlist</CenteredNotice.Title>
-            <CenteredNotice.Body>Loading your watchlist…</CenteredNotice.Body>
-          </CenteredNotice>
+          <View className="flex-1">
+            <MediaToolbarSkeleton filter layout />
+            <WallSkeleton />
+          </View>
         }
       >
         <WatchlistGrid onProviderChange={setProvider} provider={provider} />

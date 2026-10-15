@@ -220,7 +220,9 @@ export function useLetterboxdListLike(username: string, owner: string, slug: str
     ...letterboxdListsOptions(username, 'liked'), enabled: false,
   });
   const likeState = useQuery<boolean>({ queryKey, queryFn: skipToken, staleTime: Infinity });
-  const currentLiked = likeState.data ?? lists.data?.pages.some((page) => page.lists.some((list) => list.owner.toLowerCase() === owner.toLowerCase() && list.slug === slug)) ?? false;
+  const listed = lists.data?.pages.some((page) => page.lists.some((list) => list.owner.toLowerCase() === owner.toLowerCase() && list.slug === slug));
+  const complete = lists.data?.pages.at(-1)?.hasNextPage === false;
+  const currentLiked = likeState.data ?? (listed ? true : complete ? false : undefined);
   const pending = useIsMutating({ mutationKey: queryKey }) > 0;
   const mutation = useMutation({
     mutationKey: queryKey,
@@ -232,7 +234,8 @@ export function useLetterboxdListLike(username: string, owner: string, slug: str
       return previous;
     },
     onError: (_error, _next, previous) => {
-      if (previous != null) queryClient.setQueryData(queryKey, previous);
+      if (previous == null) queryClient.removeQueries({ queryKey, exact: true });
+      else queryClient.setQueryData(queryKey, previous);
     },
     onSuccess: (confirmed: boolean) => { queryClient.setQueryData(queryKey, confirmed); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.lists(username, 'liked') }),

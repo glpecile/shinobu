@@ -10,10 +10,16 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
+import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
+import { sortMediaEntries } from '@/lib/media-sort';
+import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
+import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { type SerializdListEntry } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
+import { useMediaProgress } from '@/state/queries/media-progress';
 import { ListsHeader, ProviderListLink } from './list-header';
 import { ListProgress } from './list-progress';
 
@@ -26,21 +32,26 @@ function entryRoute(entry: SerializdListEntry) {
 export function SerializdListItems({ username, id, url }: { username: string | null; id: string; url: string }) {
   const query = useSuspenseSerializdListQuery(username, id);
   const list = query.data;
+  const sort = useMediaSort('lists');
+  const progress = useMediaProgress([...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]);
+  const byId = new Map(progress.items.map((item) => [item.id, item]));
+  const entries = list.entries.map((entry) => ({ ...entry, item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)) }));
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
   return (
     <>
       <Head><title>{`${list.title} — Shinobu`}</title></Head>
-      <ListsHeader provider="serializd" subtitle={`by ${list.owner}`} title={list.title} />
-      <View className="flex-row items-center gap-3 px-6 pb-3">
-        <View className="flex-1 min-w-0 flex-row items-center gap-2">
-            <ListProgress countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`} items={[...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]} partial={!list.complete} />
-        </View>
+      <ListsHeader
+        metadata={<ListProgress countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`} partial={!list.complete} state={progress} />}
+        provider="serializd" subtitle={`by ${list.owner}`} title={list.title}
+      />
+      <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
+        <MediaSortControl scope="lists" sort={sort} />
         <ProviderListLink iconOnly provider="serializd" url={url} />
-      </View>
+      </MediaToolbar>
       <List
         className="flex-1"
-        data={list.entries}
+        data={sortMediaEntries(entries, sort)}
         estimatedItemSize={92}
         keyExtractor={(entry) => entry.id}
         refreshControl={<RefreshControl onRefresh={() => void query.refetch()} refreshing={query.isRefetching} />}
@@ -73,6 +84,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         ) : undefined}
         ListEmptyComponent={list.complete ? (
           <CenteredNotice>
+            <CenteredNotice.Icon name="list-outline" />
             <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
             <CenteredNotice.Body>Items added on Serializd will appear here.</CenteredNotice.Body>
             <ProviderListLink provider="serializd" url={url} />
@@ -87,14 +99,8 @@ export function SerializdListItems({ username, id, url }: { username: string | n
 export function SerializdListSkeleton() {
   return (
     <>
-      <ListsHeader provider="serializd" subtitle="" />
-      <View className="flex-row items-center gap-3 px-6 pb-3">
-        <View className="flex-1 flex-row items-center gap-2">
-          <Skeleton className="size-4 rounded-full" />
-          <Skeleton className="h-4 w-20 rounded" />
-        </View>
-        <View className="size-11 items-center justify-center"><Skeleton className="size-5 rounded" /></View>
-      </View>
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" subtitle="" />
+      <MediaToolbarSkeleton actions={1} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

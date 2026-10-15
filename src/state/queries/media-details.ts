@@ -111,7 +111,8 @@ export function buildMediaDetailsDeps(): MediaDetailsDeps {
   };
 }
 
-function mediaDetailsQuery(
+/** Shared with cache-only observers so they retain the real query fetcher. */
+export function mediaDetailsQuery(
   queryClient: QueryClient,
   item: NormalizedMediaItem | undefined,
 ) {

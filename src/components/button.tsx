@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant = 'primary' | 'outline' | 'quiet' | 'ghost' | 'accent-ghost';
+export type ButtonVariant = 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /** Container classes per variant — `off` covers both disabled and loading. */
@@ -25,6 +25,7 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   primary: { on: 'bg-accent', off: 'bg-accent/40' },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border', off: 'border border-border opacity-60' },
+  'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
   ghost: { on: '', off: 'opacity-60' },
   'accent-ghost': { on: '', off: 'opacity-60' },
 };
@@ -33,6 +34,7 @@ const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
   primary: { on: 'text-accent-foreground', off: 'text-accent-foreground' },
   outline: { on: 'text-accent', off: 'text-accent/60' },
   quiet: { on: 'text-foreground', off: 'text-muted' },
+  'quiet-accent': { on: 'text-accent', off: 'text-accent/60' },
   ghost: { on: 'text-foreground', off: 'text-muted' },
   'accent-ghost': { on: 'text-accent', off: 'text-accent/60' },
 };
@@ -42,6 +44,7 @@ const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
   primary: '--color-accent-foreground',
   outline: '--color-accent',
   quiet: '--color-foreground',
+  'quiet-accent': '--color-accent',
   ghost: '--color-foreground',
   'accent-ghost': '--color-accent',
 };
@@ -113,6 +116,8 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `chevron-back` / `chevron-forward` | step to the previous / next sibling in place |
  * | `copy-outline` | copy text to the clipboard |
  * | `heart-outline` / `heart` | like — filled when selected |
+ * | `swap-vertical-outline` | sort titles |
+ * | `chevron-down` | show options or load more |
  *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more
@@ -288,7 +293,12 @@ export function Button({
       // `backgroundColor` survives (a filled button looked fine; every outlined
       // one rendered as bare text).
       // docs/solutions/pressto-border-not-drawn-on-android.md
-      className={cn(SHAPE[shape], iconOnly && 'min-w-11 min-h-11 items-center justify-center', className)}
+      className={cn(
+        SHAPE[shape],
+        'web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
+        iconOnly && 'min-w-11 min-h-11 items-center justify-center',
+        className,
+      )}
       // `disabled` really does gate the press (pressto → RNGH `enabled`,
       // verified on web), but it reaches the DOM as nothing at all: neither it
       // nor `accessibilityState` becomes an ARIA attribute, so a screen reader
@@ -305,7 +315,7 @@ export function Button({
           'flex-row items-center',
           align === 'start' ? 'justify-start' : 'justify-center',
           SHAPE[shape],
-          iconOnly ? cn(size === 'sm' ? 'size-7' : 'size-11', 'shrink-0') : SIZE[size].container,
+          iconOnly ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0') : SIZE[size].container,
           unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
         )}
         layout={BOX_LAYOUT}

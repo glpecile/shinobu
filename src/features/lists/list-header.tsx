@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { BackButton } from '@/components/back-button';
@@ -7,6 +8,7 @@ import { MorphText } from '@/components/morph-text';
 import { ProviderIcon } from '@/components/provider-icon';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { Skeleton } from '@/components/skeleton';
+import { Tooltip } from '@/components/tooltip';
 import { cn } from '@/lib/cn';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
@@ -16,7 +18,9 @@ import { routes } from '@/lib/routes';
 
 export function ProviderListLink({ provider, url, iconOnly = false }: { provider: ProviderId; url: string; iconOnly?: boolean }) {
   const { loading, open } = useLinkHandoff(() => openExternalUrl(url, { inApp: false }));
-  return <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={`View on ${PROVIDERS[provider].label}`} loading={loading} onPress={open} variant={iconOnly ? 'ghost' : 'quiet'} />;
+  const label = `View on ${PROVIDERS[provider].label}`;
+  const button = <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={label} loading={loading} onPress={open} size={iconOnly ? 'sm' : 'md'} variant="quiet" />;
+  return iconOnly ? <Tooltip label={label}>{button}</Tooltip> : button;
 }
 
 /**
@@ -24,7 +28,7 @@ export function ProviderListLink({ provider, url, iconOnly = false }: { provider
  * Index titles ("Your Lists"/"Liked Lists") morph instead: they are short,
  * single-line, and change from the kind filter's user state.
  */
-export function ListsHeader({ provider, title, subtitle, morphTitle = false }: { provider: ProviderId; title?: string; subtitle?: string; morphTitle?: boolean }) {
+export function ListsHeader({ provider, title, subtitle, metadata, morphTitle = false }: { provider: ProviderId; title?: string; subtitle?: string; metadata?: ReactNode; morphTitle?: boolean }) {
   const router = useRouter();
   return (
     <View className={cn('flex-row items-center gap-3 px-6 pb-4', screenHeaderTopPadding)}>
@@ -38,7 +42,10 @@ export function ListsHeader({ provider, title, subtitle, morphTitle = false }: {
             <Text className="font-display text-foreground text-xl flex-1 min-w-0" ellipsizeMode="tail" numberOfLines={1}>{title}</Text>
           )}
         </View>
-        {subtitle != null && (title == null ? <Skeleton className="h-4 w-24 rounded" /> : <Text className="font-sans text-muted text-xs" numberOfLines={1}>{subtitle}</Text>)}
+        {(subtitle != null || metadata != null) && <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+          {subtitle != null && (title == null ? <Skeleton className="h-4 w-24 rounded" /> : <Text className="font-sans text-muted text-xs" numberOfLines={1}>{subtitle}</Text>)}
+          {metadata}
+        </View>}
       </View>
     </View>
   );

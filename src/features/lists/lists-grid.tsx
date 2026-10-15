@@ -1,4 +1,5 @@
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CenteredNotice } from '@/components/centered-notice';
 import { List } from '@/components/List';
@@ -53,6 +54,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   emptyBody: string;
 }) {
   const pushRoute = usePushRoute();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
   const pages = [...new Map(lists.map((list) => [list.id, list])).values()];
@@ -69,7 +71,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
         <List
           key={columns}
           className="flex-1"
-          contentContainerStyle={{ padding: 10 }}
+          contentContainerStyle={{ padding: 10, paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : 10 }}
           data={pages}
           // One row, not one card: the card is h-44 with mb-3. An estimate the
           // library calls too large starves its container pool (the web

@@ -59,6 +59,32 @@ const { setProviderSession, clearProviderSession, setStoredTmdbToken } = await i
 
 const NOW = new Date('2026-07-27T12:00:00.000Z');
 
+test('a cold or partial liked-list index stays unknown instead of claiming unliked', () => {
+  const client = new QueryClient();
+  let liked: boolean | undefined;
+  function Read() {
+    liked = useLetterboxdListLike('gian', 'melis_', 'black-mirror').liked;
+    return null;
+  }
+  const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+  const key = letterboxdQueryKeys.lists('gian', 'liked');
+  try {
+    render();
+    expect(liked).toBeUndefined();
+    client.setQueryData(key, { pages: [{ lists: [], hasNextPage: true }], pageParams: [1] });
+    render();
+    expect(liked).toBeUndefined();
+    client.setQueryData(key, { pages: [{ lists: [{ owner: 'MELIS_', slug: 'black-mirror' }], hasNextPage: true }], pageParams: [1] });
+    render();
+    expect(liked).toBe(true);
+    client.setQueryData(key, { pages: [{ lists: [], hasNextPage: false }], pageParams: [1] });
+    render();
+    expect(liked).toBe(false);
+  } finally {
+    client.clear();
+  }
+});
+
 test('list likes share optimistic state across buttons and remounts, and roll back failed unlikes', async () => {
   const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
   setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });
