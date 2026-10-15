@@ -85,7 +85,7 @@ build step. See `docs/solutions/web-cors-serializd.md` for the proxy contract.
 ```sh
 bun run deploy:web
 # = bun run build:web && wrangler deploy
-# build:web = expo export --platform web && cp dist/+not-found.html dist/404.html
+# build:web = expo export --platform web --clear --max-workers 2 && cp 'dist/+not-found.html' dist/404.html
 ```
 
 Auth is `wrangler login`'s OAuth token (already set up locally); no secrets
@@ -101,9 +101,10 @@ live in the Cloudflare dashboard. Push to `main` → production deploy to
 `shinobu.glpecile.xyz`; pushes to non-production branches → preview versions
 (`wrangler versions upload`), not the production domain.
 
-Dashboard build configuration:
+Dashboard build configuration (set the build command in Settings → Build; repo
+changes do not update this dashboard setting):
 
-- **Build command:** `bunx expo export --platform web && cp 'dist/+not-found.html' dist/404.html`
+- **Build command:** `bun run build:web`
 - **Deploy command:** `npx wrangler deploy`
 - **Version command** (non-prod branches): `npx wrangler versions upload`
 - **Root directory:** `/`, **Production branch:** `main`
@@ -130,12 +131,38 @@ re-runs against the same commit — no repo push needed for a build-command
 change.
 
 Durable fix now in the repo (2026-07-20): `package.json` has a
-`"build:web": "expo export --platform web && cp 'dist/+not-found.html' dist/404.html"`
-script (and `deploy:web` chains it: `bun run build:web && wrangler deploy`).
+`build:web` script (and `deploy:web` chains it:
+`bun run build:web && wrangler deploy`).
 Point the dashboard **Build command** at `bun run build:web` instead of the
 inline `bunx expo …` — inside a bun/npm script `node_modules/.bin` *is* on
 `PATH`, so bare `expo` resolves, and the build recipe stays version-controlled
 in one place rather than duplicated in the dashboard.
+
+### Free-plan build performance
+
+Cloudflare's [free Workers Builds runner has 2 vCPUs and 8 GB RAM](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/).
+The installed Metro worker heuristic selects one worker on two cores.
+`build:web` explicitly uses `--max-workers 2` to allow parallel transforms on
+that runner. Production minification, React Compiler, and static HTML export
+remain enabled. Compare Cloudflare build-stage durations before and after;
+two workers do not guarantee a particular speedup.
+
+A single local comparison on 2026-10-15, using separate temporary Metro caches,
+exported successfully in 92 seconds with one worker and 63 seconds with two.
+These are local observations, not free-runner benchmarks or hosted timing
+guarantees.
+
+Keep `--clear`: it guards against stale inlined `EXPO_PUBLIC_*` values in reused
+local transform caches. A previous export without it left production AniList
+auth redirecting to localhost; see `anilist-web-prod-redirects-to-localhost.md`.
+
+Enable **Settings → Build → Build cache** for dependency download reuse if it
+is disabled. Cloudflare's [documented build cache](https://developers.cloudflare.com/workers/ci-cd/builds/build-caching/)
+includes Bun's package cache but does not list Expo/Metro build outputs.
+Expo's default transform cache lives in the runner's temporary directory;
+clearing it does not sacrifice cross-build reuse on fresh Cloudflare runners.
+This keeps the existing free-plan pipeline without claiming cross-build Metro
+caching or migrating deployment to another CI service.
 
 ### Env vars must be added in the dashboard, not just `.env.local`
 
