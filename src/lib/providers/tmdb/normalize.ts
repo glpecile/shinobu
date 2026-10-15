@@ -938,7 +938,13 @@ export function normalizeMultiSearch(
   nowIso: string,
 ): NormalizedMediaItem[] {
   return (raw.results ?? [])
-    .map((entry) => normalizeCredit(entry, nowIso))
+    .map((entry) => {
+      const item = normalizeCredit(entry, nowIso);
+      const original = entry.original_title ?? entry.original_name;
+      return item != null && original != null && original !== '' && original !== item.title
+        ? { ...item, titles: { native: original } }
+        : item;
+    })
     .filter((item) => item != null);
 }
 
