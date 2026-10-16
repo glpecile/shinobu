@@ -58,7 +58,7 @@ const SCOPES = [
     value: 'titles',
     label: 'Titles',
     icon: 'film-outline',
-    placeholder: 'Search movies, shows, anime & manga',
+    placeholder: 'Search titles',
   },
   {
     value: 'people',
@@ -542,7 +542,8 @@ export default function SearchScreen() {
             // out of the field and off the viewport
             // (docs/solutions/firefox-flex-input-wont-shrink.md).
             // Match the clear target even when empty so typing cannot grow the row.
-            className="flex-1 min-h-11 min-w-0 text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
+            accessibilityLabel={`Search ${scope.label.toLowerCase()}`}
+            className="flex-1 min-h-11 min-w-0 text-base text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
             onBlur={() => setFocused(false)}
             onChangeText={setInput}
             onFocus={() => setFocused(true)}

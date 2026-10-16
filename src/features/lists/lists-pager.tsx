@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useSharedValue } from 'react-native-reanimated';
 import { View } from 'react-native';
 
@@ -15,16 +15,15 @@ export function ListsPager({ kind, renderKind }: {
 }) {
   const router = useRouter();
   const progress = useSharedValue(KINDS.indexOf(kind));
+  const [visited, setVisited] = useState([kind]);
+  if (!visited.includes(kind)) setVisited([...visited, kind]);
   const select = (next: ListsKind) => router.setParams({ kind: next });
   return (
     <View className="flex-1">
       <ListsKindFilter kind={kind} onChange={select} progress={progress} />
-      {/* Only the active tab renders: Letterboxd challenges datacenter reads
-          (docs/solutions/letterboxd-public-list-pages.md), so mounting both
-          tabs would double every visit into two concurrent upstream fetches
-          and double the chance one lands challenged. A swipe settles onto a
-          skeleton that fills in, instead of a preloaded wall. */}
-      <Pager onSettle={select} options={KINDS} progress={progress} renderPage={(pageKind) => pageKind === kind ? renderKind(pageKind) : null} value={kind} />
+      {/* Defer untouched tabs to avoid concurrent Letterboxd reads, but retain
+          visited walls so a swipe back preserves artwork and scroll position. */}
+      <Pager onSettle={select} options={KINDS} progress={progress} renderPage={(pageKind) => pageKind === kind || visited.includes(pageKind) ? renderKind(pageKind) : null} value={kind} />
     </View>
   );
 }
