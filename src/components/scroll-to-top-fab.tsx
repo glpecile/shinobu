@@ -69,7 +69,7 @@ export function ScrollToTopFab({
       entering={reduceMotion ? fabFadingIn : fabEntering}
       exiting={reduceMotion ? fabFadingOut : fabExiting}
     >
-      <Fab icon="arrow-up" label="Scroll to top" onPress={onPress} size="sm" />
+      <Fab icon="arrow-up" label="Scroll to top" onPress={onPress} />
     </AnimatedView>
   );
 }

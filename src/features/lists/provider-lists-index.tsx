@@ -18,10 +18,9 @@ export function LetterboxdListsIndex({ username, kind, url }: { username: string
       href={(list) => routes.letterboxdList(list.owner, list.slug)}
       isFetchNextPageError={pages.isFetchNextPageError}
       isFetchingNextPage={pages.isFetchingNextPage}
-      isRefetching={pages.isRefetching}
       lists={pages.data.pages.flatMap((page) => page.lists)}
       provider="letterboxd"
-      refetch={() => void pages.refetch()}
+      refetch={() => pages.refetch()}
       url={url}
     />
   );
@@ -38,11 +37,10 @@ export function SerializdListsIndex({ username, kind, url }: { username: string;
       href={(list) => routes.serializdList(list.id)}
       isFetchNextPageError={pages.isFetchNextPageError}
       isFetchingNextPage={pages.isFetchingNextPage}
-      isRefetching={pages.isRefetching}
       lists={pages.data.pages.flatMap((page) => page.lists)}
       noun="item"
       provider="serializd"
-      refetch={() => void pages.refetch()}
+      refetch={() => pages.refetch()}
       url={url}
     />
   );

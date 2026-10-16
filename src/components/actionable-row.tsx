@@ -26,7 +26,7 @@ function RowActionsButton({
 }) {
   const muted = useThemeColor('--color-muted');
   return (
-    <View className="w-10 items-center">
+    <View className="w-10 shrink-0 items-center">
       {visible && (
         <PresstableOpacity
           accessibilityLabel={`More options for ${item.title}`}
@@ -123,7 +123,7 @@ export function ActionableRow({
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      <PresstableScale className="flex-row items-center shrink" {...pressProps}>
+      <PresstableScale className="flex-row items-center shrink min-w-0" {...pressProps}>
         {leading}
       </PresstableScale>
       <RowActionsButton item={item} onActions={onActions} visible={hovered} />
@@ -131,7 +131,7 @@ export function ActionableRow({
           anywhere on the row still opens the item. No a11y props here: the
           leading half already announces the row. */}
       <PresstableScale
-        className="flex-1 flex-row items-center justify-end self-stretch"
+        className="grow shrink-0 flex-row items-center justify-end self-stretch"
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}
       >

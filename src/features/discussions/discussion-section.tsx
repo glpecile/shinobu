@@ -82,6 +82,7 @@ export function DiscussionResults({ threads, searchTitles = [], isFetching = fal
             icon={<Button.Icon name="ellipsis-horizontal" />}
             iconOnly
             label="Discussion options"
+            loading={isFetching}
             onPress={() => setOpen(true)}
             size="sm"
             variant="quiet"

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
+import { AnimatedText } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { SmallPoster } from '@/components/small-poster';
 import { Sheet } from '@/components/sheet';
@@ -24,7 +26,8 @@ import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useCachedWatchlistRemoval } from '@/features/watchlist/use-cached-watchlist-removal';
 import { ProviderLinkRow } from '@/features/provider-links/provider-link-row';
 import { haptics } from '@/lib/haptics';
-import { mediaRuntimeMinutes } from '@/lib/media-sort';
+import { mediaRuntimeMinutes, mediaSortValue } from '@/lib/media-sort';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { applyPrimaryMetadata, mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import type { ProviderId } from '@/lib/providers/types';
 import {
@@ -111,6 +114,8 @@ interface CardActionsSheetProps {
   } | null;
 }
 
+const runtimeFade = { from: { opacity: 0 }, to: { opacity: 1 } };
+
 /** The item's artwork, recovered lazily when the log it came from is artless. */
 function SheetPoster({ item }: { item: NormalizedMediaItem }) {
   const { coverImage } = useTraktMediaImages(item);
@@ -142,6 +147,7 @@ export function CardActionsSheet({
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
+  const reducedMotion = useReducedMotion();
   // List cards carry only a year; resolve the same release date and identity
   // as details before deciding whether logging is available. Letterboxd rows
   // resolve identity first (slug → film record); any other film-like row the
@@ -159,7 +165,11 @@ export function CardActionsSheet({
   );
   const item = resolved == null ? null : applyPrimaryMetadata(resolved, details.data?.catalogue);
   const runtime = item == null ? undefined : mediaRuntimeMinutes(item);
-  const runtimeLabel = runtime == null ? null : `${Math.round(runtime)} min${item?.type === 'TV' || (item?.type === 'ANIME' && !item.isFilm) ? ' total (est.)' : ''}`;
+  const episodeRuntime = item == null ? undefined : mediaSortValue(item, 'runtime');
+  const isSeries = item?.type === 'TV' || (item?.type === 'ANIME' && !item.isFilm);
+  const runtimeLabel = isSeries
+    ? [episodeRuntime == null ? null : `${Math.round(episodeRuntime)} min/episode`, runtime == null ? null : `${Math.round(runtime)} min total`].filter(Boolean).join(' · ')
+    : runtime == null ? '' : `${Math.round(runtime)} min`;
   /**
    * Which content the one sheet shows (plan 0032 U3): the action rows, a
    * watchlist picker, or the log form — each rendered **in place of** the
@@ -268,10 +278,19 @@ export function CardActionsSheet({
             <SheetHeader.Content>
               <SheetHeader.Title>{item.title}</SheetHeader.Title>
               <SheetHeader.Subtitle>
-                {[item.type, item.year != null ? String(item.year) : null, runtimeLabel]
+                {[item.type, item.year != null ? String(item.year) : null]
                   .filter((part) => part != null)
                   .join(' · ')}
               </SheetHeader.Subtitle>
+              {item.type !== 'MANGA' && <AnimatedText
+                key={`${item.id}-${runtimeLabel}`}
+                className="min-h-5 text-muted font-sans text-sm mt-1"
+                style={{
+                  animationName: runtimeFade,
+                  animationDuration: reducedMotion ? 0 : DURATION.swap,
+                  animationTimingFunction: EASE_OUT,
+                }}
+              >{runtimeLabel}</AnimatedText>}
             </SheetHeader.Content>
           </SheetHeader>
 

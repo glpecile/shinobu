@@ -1,4 +1,5 @@
 import { RefreshControl, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CenteredNotice } from '@/components/centered-notice';
@@ -35,7 +36,7 @@ export function ListsGridSkeleton() {
  */
 export function ListsIndex<T extends { id: string; title: string; owner: string; previews: NormalizedMediaItem[] }>({
   provider, url, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
-  isRefetching, refetch, fetchNextPage, count, href, noun = 'film', emptyBody,
+  refetch, fetchNextPage, count, href, noun = 'film', emptyBody,
 }: {
   provider: ProviderId;
   url: string;
@@ -43,8 +44,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   isFetchNextPageError: boolean;
-  isRefetching: boolean;
-  refetch: () => unknown;
+  refetch: () => Promise<unknown>;
   fetchNextPage: () => unknown;
   count: (list: T) => number | undefined;
   href: (list: T) => string;
@@ -52,10 +52,19 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
   emptyBody: string;
 }) {
   const pushRoute = usePushRoute();
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
   const pages = [...new Map(lists.map((list) => [list.id, list])).values()];
+  async function refresh() {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }
   return (
     <>
       {pages.length === 0 ? (
@@ -84,7 +93,7 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
           // page costs an exit-and-re-enter scroll; 0.3 re-arms on the landed
           // page itself (docs/solutions/legend-list-threshold-vs-short-pages.md).
           onEndReachedThreshold={0.3}
-          refreshControl={<RefreshControl onRefresh={() => void refetch()} refreshing={isRefetching} />}
+          refreshControl={<RefreshControl onRefresh={() => void refresh()} refreshing={refreshing} />}
           renderItem={({ item }) => (
             <View className="px-1.5 mb-3"><ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} provider={provider} /></View>
           )}
