@@ -11,9 +11,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 /**
  * Web-only ⋯ that opens the row's actions dialog, sitting just past the row's
  * text and revealed while the pointer is over the row — long-press is the
- * native gesture and isn't discoverable with a mouse (same reasoning as the
- * media card's hover ⋯). The slot keeps its width whether or not the button
- * shows, so hovering never nudges the title.
+ * touch gesture and isn't discoverable with a mouse. Only fine pointers reserve
+ * its slot, so hovering never nudges the title and phones don't lose title space.
  */
 function RowActionsButton({
   item,
@@ -26,7 +25,7 @@ function RowActionsButton({
 }) {
   const muted = useThemeColor('--color-muted');
   return (
-    <View className="w-10 shrink-0 items-center">
+    <View className="hidden pointer-fine:flex w-10 shrink-0 items-center">
       {visible && (
         <PresstableOpacity
           accessibilityLabel={`More options for ${item.title}`}

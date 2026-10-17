@@ -13,6 +13,7 @@ import { useCSSVariable } from 'uniwind';
 import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingShareButton } from '@/components/floating-share-button';
 import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
 import { MorphText } from '@/components/morph-text';
@@ -902,9 +903,10 @@ function DetailsScreen() {
       ) : (
         <DetailsList {...layout} key={shown.id} />
       )}
-      <ScrolledTitle.Bar title={shown.title} />
+      <ScrolledTitle.Bar title={shown.title} trailingAction />
       <CardActionsSheet canHide={false} {...sheetProps} />
       <FloatingBackButton onPress={goBack} />
+      <FloatingShareButton href={routes.details(shown.id, shown.type)} />
     </>
   );
 }

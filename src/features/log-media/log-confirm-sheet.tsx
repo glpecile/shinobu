@@ -261,7 +261,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           }
           const copy = logToastCopy(outcome);
           toast.success(copy.title, copy.message);
-          onClose();
+          (onDismiss ?? onClose)();
         } else if (outcome.failed.length > 0) haptics.error();
       },
       (error: unknown) => {

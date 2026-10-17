@@ -25,8 +25,9 @@ split into sheet-agnostic forms (`LogConfirmForm`, `CatchUpForm`,
 `LogSheetContent`) plus thin app-level drawer hosts; the card-actions sheet
 grew a `log` mode rendering `LogSheetContent`, fed by `LogMediaButton`'s
 `onOpenRequest` interception (and the completion offer's, one step deeper).
-Cancel returns to the rows; a clean report toasts and returns to the rows,
-matching the pre-0068 nested-sheet UX.
+Cancel returns to the rows; a clean report toasts and dismisses the whole host
+through `onDismiss ?? onClose`. Returning to the rows on success left the drawer
+open after the success toast, especially confusing with expanded tags.
 
 ## Inline session lifetime
 
@@ -40,5 +41,5 @@ Outstanding writes then report through dismissed-session toasts rather than
 an invisible ledger. The one-shot form uses the same visibility/unmount guard,
 so a late movie result reports without invoking a retired host callback that
 could reset a newly opened picker. `onDismiss` is separate from the form's `onClose`: the
-"Connect one" navigation dismisses the entire host, while cancel and completion
-return to its action rows.
+"Connect one" navigation and clean completion dismiss the entire host, while
+cancel returns to its action rows.
