@@ -24,6 +24,7 @@ import {
   useFloatingBackButtonTop,
 } from '@/components/floating-back-button';
 import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
+import { cn } from '@/lib/cn';
 
 /** Where the anchored title sits in the scroll content; zero until measured. */
 interface AnchorFrame {
@@ -169,7 +170,7 @@ function useCovered(
  * The bar. Never interactive, so it must never catch a scroll's first touch,
  * and hidden from screen readers: the anchored title already says it.
  */
-function Bar({ title }: { title: string }) {
+function Bar({ title, trailingAction = false }: { title: string; trailingAction?: boolean }) {
   const reduceMotion = useReducedMotion();
   // The title row's top is the button's: slid that far down, the row is fully
   // under the bar's edge.
@@ -187,7 +188,7 @@ function Bar({ title }: { title: string }) {
   return (
     <AnimatedView
       aria-hidden
-      className="absolute top-0 left-0 right-0 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border overflow-hidden"
+      className={cn('absolute top-0 left-0 right-0 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border overflow-hidden', trailingAction && 'pr-16')}
       style={[{ pointerEvents: 'none', height: barHeight }, barStyle]}
     >
       <AnimatedView className="h-10 justify-center" style={titleStyle}>

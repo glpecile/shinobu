@@ -9,6 +9,7 @@ import type {
   ReleaseCalendar,
 } from '@/types/media';
 import { isDateOnly } from '@/lib/time/has-aired';
+import { movieCrewRank } from '@/lib/providers/movie-crew-rank';
 
 /** Raw Trakt payload shapes — these never escape lib/providers (AGENTS.md Data Contract). */
 
@@ -360,7 +361,9 @@ export function normalizeCrew(
     }
   }
 
-  return [...byPerson.values()].map(({ member, jobs }) => ({
+  const people = [...byPerson.values()];
+  if (type === 'MOVIE') people.sort((a, b) => movieCrewRank(a.jobs) - movieCrewRank(b.jobs));
+  return people.map(({ member, jobs }) => ({
     ...member,
     job: [...new Set(jobs)].join(', '),
   }));

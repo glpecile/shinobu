@@ -371,6 +371,16 @@ describe('normalizeMovieCatalogue', () => {
             { id: 6384, name: 'Keanu Reeves', character: 'Neo', order: 0, profile_path: '/keanu.jpg' },
           ],
           crew: [
+            { id: 2, name: 'Producer', department: 'Production', job: 'Producer' },
+            { id: 3, name: 'Assistant', department: 'Directing', job: 'First Assistant Director' },
+            { id: 4, name: 'Story', department: 'Writing', job: 'Story' },
+            { id: 5, name: 'Screenwriter', department: 'Writing', job: 'Screenplay' },
+            { id: 6, name: 'Makeup', department: 'Costume & Make-Up', job: 'Makeup Artist' },
+            { id: 7, name: 'Costume', department: 'Costume & Make-Up', job: 'Costume Design' },
+            { id: 8, name: 'Stunts', department: 'Crew', job: 'Stunt Coordinator' },
+            { id: 9, name: 'Music', department: 'Sound', job: 'Original Music Composer' },
+            { id: 10, name: 'Editor', department: 'Editing', job: 'Editor' },
+            { id: 11, name: 'DP', department: 'Camera', job: 'Director of Photography' },
             { id: 9339, name: 'Lana Wachowski', department: 'Directing', job: 'Director' },
             { id: 9339, name: 'Lana Wachowski', department: 'Writing', job: 'Writer' },
             { id: 1, name: 'Grip Person', department: 'Crew', job: 'Grip' },
@@ -411,6 +421,16 @@ describe('normalizeMovieCatalogue', () => {
     // One entry per person, jobs merged across departments, billing order.
     expect(result?.crew.map((member) => [member.name, member.job])).toEqual([
       ['Lana Wachowski', 'Director, Writer'],
+      ['Screenwriter', 'Screenplay'],
+      ['Story', 'Story'],
+      ['DP', 'Director of Photography'],
+      ['Editor', 'Editor'],
+      ['Music', 'Original Music Composer'],
+      ['Stunts', 'Stunt Coordinator'],
+      ['Costume', 'Costume Design'],
+      ['Makeup', 'Makeup Artist'],
+      ['Producer', 'Producer'],
+      ['Assistant', 'First Assistant Director'],
       ['Grip Person', 'Grip'],
     ]);
     expect(result?.studios).toEqual([

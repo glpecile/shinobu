@@ -174,8 +174,7 @@ export function CardActionsSheet({
    * Which content the one sheet shows (plan 0032 U3): the action rows, a
    * watchlist picker, or the log form — each rendered **in place of** the
    * rows, never a second sheet stacked over this one. Cancel returns to the
-   * rows; a clean report fires its toast first, then closes the whole sheet
-   * (watchlist) or returns to the rows (log).
+   * rows; a clean report fires its toast first, then closes the whole sheet.
    */
   const itemId = item?.id;
   // Remembers which opening chose the mode, so reopening or a new item falls

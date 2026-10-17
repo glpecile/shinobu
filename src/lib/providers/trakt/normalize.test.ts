@@ -65,18 +65,22 @@ describe('normalizeCrew', () => {
     person: person(1, 'Harry Bradbeer'),
   };
 
-  test('orders departments by billing, unknown departments last', () => {
+  test('bills movie jobs ahead of supporting departments', () => {
     const crew = normalizeCrew({
       'made-up-department': [
         { jobs: ['Wrangler'], person: person(3, 'Zed Last') },
       ],
       editing: [{ jobs: ['Editor'], person: person(2, 'Adam Bosman') }],
+      production: [{ jobs: ['Producer'], person: person(4, 'Producer') }],
+      camera: [{ jobs: ['Director of Photography'], person: person(5, 'DP') }],
       directing: [director],
     }, 'MOVIE');
 
     expect(crew.map((member) => member.name)).toEqual([
       'Harry Bradbeer',
+      'DP',
       'Adam Bosman',
+      'Producer',
       'Zed Last',
     ]);
   });

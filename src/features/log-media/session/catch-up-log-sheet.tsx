@@ -314,7 +314,7 @@ function CatchUpForm({
         toast.success(copy.title, copy.message);
       }
     }
-    onClose();
+    (onDismiss ?? onClose)();
   }
 
   function variablesFor(episode: CatchUpEpisode): LogMediaVariables {

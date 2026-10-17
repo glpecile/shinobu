@@ -523,15 +523,11 @@ export default function SearchScreen() {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            // First mount only — every later focus request (tab re-press,
-            // ⌘K, the clear button) goes through the handlers above rather
-            // than through a re-mount. Off on touch browsers: they refuse to
-            // open the keyboard for a focus with no user gesture behind it,
-            // and Firefox Android answers with a flash-open-then-close that
-            // makes the field unusable (src/lib/pointer.ts). A tap on the
-            // search tab commits the screen before requesting focus, inside
-            // that gesture (see components/app-shell).
-            autoFocus={!hasCoarsePointer()}
+            // Android's first tab press is already queued by focus-signal.
+            // Autofocus races that request before keyboardDidShow, so the
+            // handler sees a focused field with a hidden keyboard and blurs it.
+            // Touch browsers also require focus inside the tab's user gesture.
+            autoFocus={process.env.EXPO_OS !== 'android' && !hasCoarsePointer()}
             // `outline-none`: the browser's focus ring would now draw around
             // the inner input, inside the wrapper that carries the field's
             // border — the accent border below is the focus affordance instead,

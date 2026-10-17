@@ -1,3 +1,4 @@
+import { movieCrewRank } from '@/lib/providers/movie-crew-rank';
 import type {
   NormalizedCastMember,
   NormalizedCompany,
@@ -586,11 +587,12 @@ function normalizeCastEntries(
  */
 function normalizeCrewEntries(
   entries: Array<TmdbPersonRef & { department: string; jobs: string[] }>,
-  departmentOrder: string[],
+  order: string[] | 'movie',
 ): NormalizedCrewMember[] {
-  const departmentRank = (department: string): number => {
-    const index = departmentOrder.indexOf(department);
-    return index === -1 ? departmentOrder.length : index;
+  const creditRank = (entry: (typeof entries)[number]): number => {
+    if (order === 'movie') return movieCrewRank(entry.jobs);
+    const index = order.indexOf(entry.department);
+    return index === -1 ? order.length : index;
   };
   const byPerson = new Map<string, { member: NormalizedCrewMember; jobs: string[]; rank: number }>();
 
@@ -603,7 +605,7 @@ function normalizeCrewEntries(
       for (const job of jobs) {
         if (!existing.jobs.includes(job)) existing.jobs.push(job);
       }
-      existing.rank = Math.min(existing.rank, departmentRank(entry.department));
+      existing.rank = Math.min(existing.rank, creditRank(entry));
     } else {
       byPerson.set(id, {
         member: {
@@ -614,7 +616,7 @@ function normalizeCrewEntries(
           tmdbId: entry.id,
         },
         jobs: [...jobs],
-        rank: departmentRank(entry.department),
+        rank: creditRank(entry),
       });
     }
   }
@@ -689,7 +691,7 @@ export function normalizeMovieCatalogue(
         department: entry.department ?? '',
         jobs: [entry.job ?? ''],
       })),
-      TMDB_CREW_ORDER,
+      'movie',
     ),
     studios: normalizeCompanies(raw.production_companies),
   };
