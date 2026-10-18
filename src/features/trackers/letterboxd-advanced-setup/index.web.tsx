@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
 import { Steps } from '@/components/steps';
+import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { TAMPERMONKEY_URL } from '@/lib/providers/external-urls';
 import { LETTERBOXD_SIGN_IN_URL } from '@/lib/providers/letterboxd/config';
@@ -48,7 +49,7 @@ export function LetterboxdAdvancedSetup() {
               <Button
                 icon={<Button.Icon name="open-outline" />}
                 label="Install Letterboxd script"
-                onPress={() => void openExternalUrl(new URL('/letterboxd.user.js', window.location.origin).href)}
+                onPress={installLetterboxdScript}
                 size="sm"
                 variant="quiet"
               />

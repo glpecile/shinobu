@@ -1,4 +1,6 @@
+import { listMembershipScript } from './list-membership-script';
 import type {
+  LetterboxdListMembershipRequest,
   LetterboxdListLikeWebRequest,
   LetterboxdWatchlistWebRequest,
   LetterboxdWebRequest,
@@ -276,4 +278,15 @@ export function resetLetterboxdWebViewBridge(): void {
   counter = 0;
   for (const p of pending.values()) clearTimeout(p.timer);
   pending.clear();
+}
+
+export function letterboxdListMembershipFetch(request: LetterboxdListMembershipRequest): Promise<LetterboxdWebResponse> {
+  return runInPage(request.listPath + 'edit/', (id) => `
+    function finish(status, body) { window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
+    ${listMembershipScript(request)}.then(function(receipt){ finish(200, JSON.stringify(receipt)); }, function(error){ finish(0, error.message); });
+  `);
+}
+
+export function getLetterboxdListMembershipFetch(): typeof letterboxdListMembershipFetch | undefined {
+  return webView != null ? letterboxdListMembershipFetch : undefined;
 }

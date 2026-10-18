@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import type { ProviderError } from '@/lib/providers/errors';
 
 import type { SerializdDeps } from './deps';
-import { getSerializdList, getSerializdListsPage } from './lists';
+import { getSerializdList, getSerializdListsPage, setSerializdListMembership } from './lists';
 
 const show = { showId: 1396, showName: 'Breaking Bad', bannerImage: '/show.jpg' };
 const list = { listId: 42, listName: 'Pilots', owner: { username: 'gian' }, numberOfItems: 2, listItems: [show] };
@@ -76,5 +76,61 @@ test('invalid addresses and paging never reach the transport', async () => {
   ];
   for (const read of reads) {
     expect((await Effect.runPromise(Effect.flip(read)))._tag).toBe('ProviderDecodeError');
+  }
+});
+
+test('membership removal preserves editor settings and the other entries of the same show', async () => {
+  const season = { ...show, seasonId: 3572, season: { name: 'Season 1', seasonNumber: 1 }, description: 'Keep this note' };
+  const episode = { ...season, episode: { episode_number: 1, name: 'Pilot' } };
+  const original = { ...list, numberOfItems: 3, listItems: [show, season, episode], listDescription: 'My favourites', listCollaborators: [{ username: 'friend' }], isPrivate: true, isRanked: false, allowsComments: true, bannerImagePath: '/banner.jpg' };
+  let current = original;
+  const d = deps(current);
+  d.fetch = async (url, init) => {
+    if (init?.method === 'POST') {
+      expect(String(url)).toBe('https://api.test/list/edit');
+      expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, list_name: 'Pilots', list_description: 'My favourites', list_items: [show, season], list_collaborators: [{ username: 'friend' }], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: '/banner.jpg' });
+      current = { ...original, numberOfItems: 2, listItems: [show, season] };
+      return Response.json({});
+    }
+    return Response.json(current);
+  };
+  const item = (await Effect.runPromise(getSerializdList(d, '42'))).entries[0].item;
+  const result = await Effect.runPromise(setSerializdListMembership(d, { id: '42', username: 'gian', item, entryId: '1396/3572/1', present: false }));
+  expect(result.entries.map((entry) => entry.id)).toEqual(['1396//', '1396/3572/']);
+});
+
+test('membership refuses other owners and uncertain membership before submitting', async () => {
+  for (const [payload, present] of [[{ ...list, owner: { username: 'someone-else' } }, false], [list, false], [list, true]] as const) {
+    const d = deps(payload);
+    let writes = 0;
+    d.fetch = async (_url, init) => { if (init?.method === 'POST') writes += 1; return Response.json(payload); };
+    const item = (await Effect.runPromise(getSerializdList(d, '42'))).entries[0].item;
+    expect((await Effect.runPromise(Effect.flip(setSerializdListMembership(d, { id: '42', username: 'gian', item: present ? { ...item, externalIds: { tmdb: 1438 } } : item, present }))))._tag).toBe('ProviderDecodeError');
+    expect(writes).toBe(0);
+  }
+});
+
+test('membership adds once and requires read-back evidence rather than trusting a successful POST', async () => {
+  for (const persisted of [true, false]) {
+    let current = { ...list, numberOfItems: 0, listItems: [] as typeof list.listItems };
+    let writes = 0;
+    const d = deps(current);
+    d.fetch = async (url, init) => {
+      if (init?.method === 'POST') {
+        writes += 1;
+        expect(String(url)).toBe('https://api.test/list/add_item');
+        expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, show_id: 1396 });
+        if (persisted) current = { ...list, numberOfItems: 1 };
+        return Response.json({});
+      }
+      return Response.json(current);
+    };
+    const item = (await Effect.runPromise(getSerializdList(deps(list), '42'))).entries[0].item;
+    const write = () => setSerializdListMembership(d, { id: '42', username: 'gian', item, present: true });
+    if (persisted) {
+      expect((await Effect.runPromise(write())).entries).toHaveLength(1);
+      await Effect.runPromise(write());
+    } else expect((await Effect.runPromise(Effect.flip(write())))._tag).toBe('ProviderDecodeError');
+    expect(writes).toBe(1);
   }
 });

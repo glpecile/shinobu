@@ -34,12 +34,13 @@ import {
   type LetterboxdListKind,
   type LetterboxdListFilmsPage,
 } from '@/lib/providers/letterboxd/lists';
-import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch } from '@/lib/providers/letterboxd/userscript-bridge';
+import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch, getLetterboxdUserscriptListMembershipFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
   getLetterboxdWebFetch,
   getLetterboxdListLikeWebFetch,
+  getLetterboxdListMembershipFetch,
 } from '@/lib/providers/letterboxd/webview-bridge';
 import {
   checkUsernameExists,
@@ -99,6 +100,7 @@ export function letterboxdDeps(): LetterboxdDeps {
     userscriptFetch: getLetterboxdUserscriptFetch(getLetterboxdUsername()),
     userscriptWatchlistFetch: getLetterboxdUserscriptWatchlistFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
+    listMembershipFetch: getLetterboxdUserscriptListMembershipFetch(getLetterboxdUsername()) ?? getLetterboxdListMembershipFetch(),
     listLikeWebFetch: getLetterboxdListLikeWebFetch(),
     userscriptListLikeFetch: getLetterboxdUserscriptListLikeFetch(getLetterboxdUsername()),
   };

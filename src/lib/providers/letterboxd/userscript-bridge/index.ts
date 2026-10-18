@@ -1,10 +1,10 @@
-import type { LetterboxdListLikeWebFetch, LetterboxdWatchlistWebFetch, LetterboxdWebFetch } from '@/lib/providers/letterboxd/deps';
+import type { LetterboxdListMembershipFetch, LetterboxdListLikeWebFetch, LetterboxdWatchlistWebFetch, LetterboxdWebFetch } from '@/lib/providers/letterboxd/deps';
 
-export function hasLetterboxdUserscript(_capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' = 'log'): boolean {
+export function hasLetterboxdUserscript(_capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' = 'log'): boolean {
   return false;
 }
 
-export function useLetterboxdUserscript(_capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' = 'log'): boolean {
+export function useLetterboxdUserscript(_capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' = 'log'): boolean {
   return false;
 }
 
@@ -17,5 +17,9 @@ export function getLetterboxdUserscriptWatchlistFetch(_username: string | null):
 }
 
 export function getLetterboxdUserscriptListLikeFetch(_username: string | null): LetterboxdListLikeWebFetch | undefined {
+  return undefined;
+}
+
+export function getLetterboxdUserscriptListMembershipFetch(_username: string | null): LetterboxdListMembershipFetch | undefined {
   return undefined;
 }

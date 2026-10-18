@@ -10,6 +10,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { LETTERBOXD_BASE_URL } from './config';
 import type { LetterboxdDeps } from './deps';
 import { normalizeWatchlistFilm } from './normalize';
+import { filmPathFor } from './writes';
 import { parseWatchlistPage } from './watchlist';
 
 export type LetterboxdListKind = 'created' | 'liked';
@@ -159,4 +160,34 @@ export const setListLiked = Effect.fn('letterboxd.setListLiked')(function* (
   );
   if (!receipt.result || receipt.liked !== params.liked) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'Letterboxd did not confirm the requested like state.' });
   return receipt.liked;
+});
+
+/** Membership changes are confirmed in-session; public GETs never write. */
+export const setListMembership = Effect.fn('letterboxd.setListMembership')(function* (
+  deps: LetterboxdDeps,
+  params: { owner: string; slug: string; item: NormalizedMediaItem; present: boolean },
+) {
+  const url = letterboxdListUrl(params.owner, params.slug);
+  const filmPath = filmPathFor(params.item);
+  if (url == null || filmPath == null || !(params.item.type === 'MOVIE' || (params.item.type === 'ANIME' && params.item.isFilm))) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'Choose a film to edit this list.' });
+  if (!deps.username || deps.username.toLowerCase() !== params.owner.toLowerCase() || !deps.listMembershipFetch) return yield* new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true });
+  const username = deps.username;
+  const response = yield* Effect.tryPromise({
+    try: () => deps.listMembershipFetch!({ listPath: url.slice(LETTERBOXD_BASE_URL.length), username, filmPath, present: params.present }),
+    catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
+  });
+  if (response.status < 200 || response.status >= 300) {
+    const detail = response.status === 0
+      ? yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Struct({ message: Schema.String })))(response.body).pipe(
+          Effect.match({ onFailure: () => response.body, onSuccess: (error) => error.message }),
+        )
+      : 'Could not confirm the change. Open Letterboxd before retrying.';
+    return yield* new ProviderDecodeError({ provider: 'letterboxd', detail });
+  }
+  const receipt = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Struct({
+    result: Schema.Literal(true), present: Schema.Boolean,
+    filmSlug: Schema.String.check(Schema.isPattern(/^[a-z0-9-]+$/)),
+  })))(response.body).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: 'letterboxd', detail: 'No confirmed list receipt. Open Letterboxd before retrying.' })));
+  if (receipt.present !== params.present) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'Letterboxd did not confirm the requested membership.' });
+  return receipt;
 });

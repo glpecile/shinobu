@@ -1,3 +1,5 @@
+import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import { useState } from 'react';
 import { RefreshControl, Text, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
@@ -13,6 +15,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/media-sort-control';
 import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
+import { DURATION } from '@/lib/motion';
 import { sortMediaEntries } from '@/lib/media-sort';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
@@ -21,6 +24,7 @@ import { type SerializdListEntry } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
 import { useMediaProgress } from '@/state/queries/media-progress';
+import { AddToList } from './list-membership-form';
 import { ListsHeader, ProviderListLink } from './list-header';
 import { ListProgress } from './list-progress';
 
@@ -30,10 +34,16 @@ function entryRoute(entry: SerializdListEntry) {
     : routes.details(entry.item.id, entry.item.type);
 }
 
+const membershipLayout = LinearTransition.duration(DURATION.swap);
+
 export function SerializdListItems({ username, id, url }: { username: string | null; id: string; url: string }) {
   const query = useSuspenseSerializdListQuery(username, id);
   const list = query.data;
+  const [actionEntry, setActionEntry] = useState<SerializdListEntry | null>(null);
+  const target = username != null && username.toLowerCase() === list.owner.toLowerCase()
+    ? { provider: 'serializd' as const, username, id, title: list.title, url } : null;
   const sort = useMediaSort('lists');
+  const reducedMotion = useReducedMotion();
   const progress = useMediaProgress([...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]);
   const byId = new Map(progress.items.map((item) => [item.id, item]));
   const entries = list.entries.map((entry) => ({ ...entry, item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)) }));
@@ -57,6 +67,8 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         className="flex-1"
         data={sortMediaEntries(entries, sort)}
         estimatedItemSize={92}
+        itemLayoutAnimation={reducedMotion ? undefined : membershipLayout}
+        contentContainerStyle={{ paddingBottom: target != null ? 96 : undefined }}
         keyExtractor={(entry) => entry.id}
         refreshControl={<RefreshControl onRefresh={() => void query.refetch()} refreshing={query.isRefetching} />}
         renderItem={({ item: entry }) => (
@@ -65,6 +77,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             className="px-6 py-2.5"
             href={entryRoute(entry)}
             item={entry.item}
+            showActions={target != null}
             leading={
               <>
                 {entry.item.coverImage === '' ? <PosterPlaceholder className="w-12 h-18 rounded" /> : <Image className="w-12 h-18 rounded" contentFit="cover" source={{ uri: entry.item.coverImage }} />}
@@ -74,7 +87,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
                 </View>
               </>
             }
-            onActions={openActions}
+            onActions={(item) => { setActionEntry(entry); openActions(item); }}
             onPress={() => pushRoute(entryRoute(entry))}
             trailing={<View className="flex-row items-center gap-2"><WatchedMark item={entry.item} showProgress /></View>}
           />
@@ -90,12 +103,13 @@ export function SerializdListItems({ username, id, url }: { username: string | n
           <CenteredNotice>
             <CenteredNotice.Icon name="list-outline" />
             <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
-            <CenteredNotice.Body>Items added on Serializd will appear here.</CenteredNotice.Body>
+            <CenteredNotice.Body>{target != null ? 'Use the + button to add your first show.' : 'Items added on Serializd will appear here.'}</CenteredNotice.Body>
             <ProviderListLink provider="serializd" url={url} />
           </CenteredNotice>
         ) : undefined}
       />
-      <CardActionsSheet {...sheetProps} />
+      <CardActionsSheet {...sheetProps} canHide={false} listRemoval={target == null || actionEntry == null ? null : { target, entryId: actionEntry.id, subtitle: actionEntry.subtitle }} />
+      {target != null && <AddToList items={entries.filter((entry) => entry.season == null && entry.episode == null).map((entry) => entry.item)} target={target} />}
     </>
   );
 }

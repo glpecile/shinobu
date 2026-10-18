@@ -25,10 +25,13 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
       filmPath: '/film/alien/', filmLid: '2awY', viewingDateStr: '2026-09-30',
       rewatch: false, tags: [], liked: true,
     })).rejects.toThrow('Update the Letterboxd script');
+    app.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '8');
+    expect(hasLetterboxdUserscript('list-membership')).toBe(false);
     await run({}, { location: app.location, document: app.document, addEventListener() {} });
     expect(hasLetterboxdUserscript('watchlist-remove')).toBe(true);
     expect(hasLetterboxdUserscript('like')).toBe(true);
     expect(hasLetterboxdUserscript('list-like')).toBe(true);
+    expect(hasLetterboxdUserscript('list-membership')).toBe(true);
   } finally {
     if (original) Object.defineProperty(globalThis, 'document', original);
     else Reflect.deleteProperty(globalThis, 'document');
@@ -37,6 +40,9 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
 });
 
 test.each([
+  { name: 'adds a list entry through the browser session and returns a receipt', username: 'gian', path: '/gian/list/classics/', status: 200, body: '{"messages":[],"data":{"id":"listLid","version":5}}', sent: true, message: '', present: true },
+  { name: 'removes a list entry through the browser session', username: 'gian', path: '/gian/list/classics/', status: 200, body: '{"messages":[],"data":{"id":"listLid","version":5}}', sent: true, message: '', present: false },
+  { name: 'refuses browser membership writes to another owner', username: 'gian', path: '/jack/list/classics/', status: 200, body: '{}', sent: false, message: 'own lists', present: false, owner: 'jack' },
   { name: 'hands a liked Shinobu log to the Letterboxd tab and returns its receipt', username: 'gian', path: '/film/alien/', status: 200, body: '{"logEntry":{"id":"abc"}}', sent: true, message: 'abc', liked: true },
   { name: 'refuses a non-boolean like before opening a tab', username: 'gian', path: '/film/alien/', status: 200, body: '{}', sent: false, message: 'Invalid Shinobu write request', liked: 'yes' },
   { name: 'resolves a TMDB redirect in the browser', username: 'gian', path: '/tmdb/348/', status: 200, body: '{"logEntry":{"id":"abc"}}', sent: true, message: 'abc' },
@@ -61,9 +67,11 @@ test.each([
 ])('$name', async ({ username, path, status, body, sent, message, ...options }) => {
   const watchlist = 'watchlist' in options;
   const listLike = 'listLike' in options;
+  const listMembership = 'present' in options;
   const app = new Window({ url: 'http://localhost:8081/' });
-  const film = new Window({ url: `https://letterboxd.com${listLike ? '/jack/list/classics/' : '/film/alien/'}#shinobu-log=${id}` });
-  film.document.body.innerHTML = `<meta name="production:identifier" content='{"lid":"2awY","type":"film"}'><section id="userpanel" data-owner="jack" data-list-identifier='{"type":"list","uid":"filmlist:79356687"}'></section>`;
+  const film = new Window({ url: `https://letterboxd.com${listMembership ? path + 'edit/' : listLike ? '/jack/list/classics/' : '/film/alien/'}#shinobu-log=${id}` });
+  film.document.body.innerHTML = `<meta name="production:identifier" content='{"lid":"2awY","type":"film"}'><section id="userpanel" data-owner="${listMembership ? ('owner' in options ? options.owner : 'gian') : 'jack'}" data-list-identifier='{"type":"list","lid":"listLid","uid":"filmlist:79356687"}'></section>`;
+  if (listMembership) film.document.body.innerHTML += `<div data-component-class="ListEditor" data-list-lid="listLid" data-list-version="4" data-list-url="${path}"></div>`;
   film.document.body.dataset.tmdbType = 'movie';
   film.document.body.dataset.tmdbId = '348';
   const storage = new Map<string, unknown>();
@@ -79,11 +87,16 @@ test.each([
     postMessage: (data: { response: { status: number; body: string } }) => receive(data.response),
   };
   const filmPage = {
-    location: film.location, document: film.document,
+    location: film.location, document: film.document, DOMParser: film.DOMParser,
     person: { loggedIn: true, username, trusted: !('trusted' in options) || options.trusted }, supermodelCSRF: 'test-csrf',
-    fetch: async (url: string, init: RequestInit) => {
-      expect(url).toBe(listLike ? '/s/filmlist:79356687/like/' : watchlist ? '/api/v0/me/watchlist/2awY' : '/api/v0/production-log-entries');
-      requests.push(init);
+    fetch: async (url: string, init?: RequestInit) => {
+      if (listMembership) {
+        if (url === '/film/alien/') return new Response(`<meta name="production:identifier" content='{"type":"film","lid":"2awY"}'>`);
+        if (url === '/s/load-list-entries') return new Response((options.present ? '' : '{"listable":{"lid":"2awY"}}\n') + '{"success":true}');
+        if (init?.method !== 'PATCH') return new Response('Forbidden', { status: 403 });
+      }
+      expect(url).toBe(listMembership ? '/api/v0/list/listLid' : listLike ? '/s/filmlist:79356687/like/' : watchlist ? '/api/v0/me/watchlist/2awY' : '/api/v0/production-log-entries');
+      requests.push(init!);
       return new Response(status === 204 ? null : body, { status });
     },
   };
@@ -97,15 +110,15 @@ test.each([
     addValueChangeListener: async (_key: string, callback: typeof storageListener) => { storageListener = callback; return 1; },
     removeValueChangeListener: async () => { storageListener = undefined; },
     openInTab: async (url: string) => {
-      expect(url).toBe(`https://letterboxd.com${path}#shinobu-log=${id}`);
+      expect(url).toBe(`https://letterboxd.com${path}${listMembership ? 'edit/' : ''}#shinobu-log=${id}`);
       await run(gm, filmPage);
       return { close() { closed = true; } };
     },
   };
   await run(gm, appPage);
   const event = { source: appPage, origin: app.location.origin, data: {
-    type: listLike ? 'shinobu-letterboxd-list-like' : watchlist ? 'shinobu-letterboxd-watchlist' : 'shinobu-letterboxd-log', id,
-    request: { username: 'gian', ...(listLike ? { listPath: path, liked: options.listLike } : { filmPath: path, ...(watchlist ? { inWatchlist: options.watchlist } : { viewingDateStr: '2026-09-30', rewatch: false, tags: ['spike'], ...('liked' in options ? { liked: options.liked } : {}) }) }) },
+    type: listMembership ? 'shinobu-letterboxd-list-membership' : listLike ? 'shinobu-letterboxd-list-like' : watchlist ? 'shinobu-letterboxd-watchlist' : 'shinobu-letterboxd-log', id,
+    request: { username: 'gian', ...(listMembership ? { listPath: path, filmPath: '/film/alien/', present: options.present } : listLike ? { listPath: path, liked: options.listLike } : { filmPath: path, ...(watchlist ? { inWatchlist: options.watchlist } : { viewingDateStr: '2026-09-30', rewatch: false, tags: ['spike'], ...('liked' in options ? { liked: options.liked } : {}) }) }) },
   } };
   await appListener!(event);
   const response = await result;
@@ -115,8 +128,9 @@ test.each([
   expect(requests).toHaveLength(sent ? 1 : 0);
   if (sent) {
     expect(requests[0].credentials).toBe('include');
-    expect(requests[0].method).toBe(watchlist ? 'PATCH' : 'POST');
-    if (listLike) expect(Object.fromEntries(new URLSearchParams(String(requests[0].body)))).toEqual({ liked: String(options.listLike), __csrf: 'test-csrf' });
+    expect(requests[0].method).toBe(watchlist || listMembership ? 'PATCH' : 'POST');
+    if (listMembership) expect(JSON.parse(String(requests[0].body))).toEqual({ version: 4, entries: [options.present ? { action: 'ADD', listable: '2awY' } : { action: 'DELETE', position: 0 }] });
+    else if (listLike) expect(Object.fromEntries(new URLSearchParams(String(requests[0].body)))).toEqual({ liked: String(options.listLike), __csrf: 'test-csrf' });
     else expect(JSON.parse(String(requests[0].body))).toEqual(watchlist ? { inWatchlist: options.watchlist } : {
       productionId: '2awY', diaryDetails: { diaryDate: '2026-09-30', rewatch: false }, tags: ['spike'], like: 'liked' in options && options.liked === true,
     });

@@ -366,3 +366,49 @@ describe('fetchLetterboxdReleaseInputs', () => {
     ]);
   });
 });
+
+
+test('confirmed membership additions stay visible in a partially loaded list until an explicit refresh', async () => {
+  const { useListMembership } = await import('./list-membership');
+  const { registerLetterboxdWebView, handleLetterboxdMessage } = await import('@/lib/providers/letterboxd/webview-bridge');
+  setProviderSession('letterboxd', { accessToken: '', username: 'gian', cookie: 'session', csrf: 'csrf' });
+  const client = new QueryClient();
+  const key = letterboxdQueryKeys.listFilms('gian', 'classics');
+  const original = { pages: [{ title: 'Classics', items: [], hasNextPage: true }], pageParams: [1] };
+  client.setQueryData(key, original);
+  let reads = 0;
+  const observer = new InfiniteQueryObserver(client, {
+    queryKey: key, initialPageParam: 1, getNextPageParam: () => 2, staleTime: Infinity,
+    queryFn: async () => { reads += 1; return original.pages[0]; },
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  let mutation!: ReturnType<typeof useListMembership>;
+  function Read() {
+    mutation = useListMembership({ provider: 'letterboxd', username: 'gian', owner: 'gian', slug: 'classics', title: 'Classics', url: 'https://letterboxd.com/gian/list/classics/' });
+    return null;
+  }
+  const loaded = Promise.withResolvers<string>();
+  registerLetterboxdWebView({ loadPage: (_path, script) => {
+    const id = /id:\s*("lb-[^"]+")/.exec(script)?.[1];
+    if (id == null) throw new Error('Missing bridge request ID');
+    loaded.resolve(JSON.parse(id));
+  } });
+  try {
+    renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+    const item: NormalizedMediaItem = { id: 'tmdb-movie-348', title: 'Alien', type: 'MOVIE', coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 348 } };
+    const added = mutation.mutateAsync({ item, present: true });
+    handleLetterboxdMessage(JSON.stringify({ id: await loaded.promise, status: 200, body: '{"result":true,"present":true,"filmSlug":"alien"}' }));
+    await added;
+    expect(client.getQueryData<{ pages: { items: NormalizedMediaItem[] }[] }>(key)?.pages.flatMap((page) => page.items).map((entry) => entry.id)).toContain('letterboxd-alien');
+    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+    expect(reads).toBe(0);
+    await observer.refetch();
+    expect(reads).toBe(1);
+    expect(observer.getCurrentResult().data?.pages[0].items).toEqual([]);
+  } finally {
+    registerLetterboxdWebView(null);
+    unsubscribe();
+    client.clear();
+    clearProviderSession('letterboxd');
+  }
+});

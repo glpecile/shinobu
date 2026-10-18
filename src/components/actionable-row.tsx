@@ -9,28 +9,37 @@ import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
- * Web-only ⋯ that opens the row's actions dialog, sitting just past the row's
- * text and revealed while the pointer is over the row — long-press is the
- * touch gesture and isn't discoverable with a mouse. Only fine pointers reserve
- * its slot, so hovering never nudges the title and phones don't lose title space.
+ * The ⋯ that opens the row's actions dialog, sitting just past the row's
+ * text. Editable lists keep it visible on touch devices; other rows reveal it
+ * on hover and use long-press on touch. Fine pointers reserve the hover slot
+ * so revealing the control never nudges the title.
  */
 function RowActionsButton({
   item,
   visible,
+  alwaysVisible = false,
   onActions,
 }: {
   item: NormalizedMediaItem;
   visible: boolean;
+  alwaysVisible?: boolean;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
   const muted = useThemeColor('--color-muted');
+  const [focused, setFocused] = useState(false);
+  const shown = visible || alwaysVisible || focused;
   return (
-    <View className="hidden pointer-fine:flex w-10 shrink-0 items-center">
-      {visible && (
+    <View
+      className={cn(alwaysVisible ? 'flex w-11' : 'hidden pointer-fine:flex w-10', 'shrink-0 items-center')}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? 'auto' : 'none' }}
+    >
+      {(process.env.EXPO_OS === 'web' || shown) && (
         <PresstableOpacity
           accessibilityLabel={`More options for ${item.title}`}
           accessibilityRole="button"
-          className="w-8 h-8 items-center justify-center rounded-full bg-surface border border-border/60"
+          className={cn(alwaysVisible ? 'w-11 h-11' : 'w-8 h-8', 'items-center justify-center rounded-full bg-surface border border-border/60 web:focus-visible:outline-2 web:focus-visible:outline-accent web:focus-visible:outline-offset-2')}
           onPress={() => onActions(item)}
         >
           <Ionicons
@@ -52,6 +61,7 @@ export type RowAccessibility = Pick<
 
 export interface ActionableRowProps {
   item: NormalizedMediaItem;
+  showActions?: boolean;
   /** ⌘/Ctrl+click target on web. */
   href: string;
   onPress: () => void;
@@ -75,10 +85,8 @@ export interface ActionableRowProps {
  * pressable — nesting two gesture-handler buttons would let a ⋯ press bubble
  * into the row press. So on web the row is split into two sibling pressables,
  * leading (poster + title) and trailing (provider marks), with the ⋯ between
- * them: the button sits exactly where the title ends, and both halves carry the
- * same press/long-press, so the whole row stays one target. Native has no ⋯ —
- * long-press is its gesture — so it stays a single pressable and keeps a
- * whole-row press-scale.
+ * them. Both halves carry the same press/long-press. Native rows use this split
+ * when `showActions` exposes the control; otherwise they stay one pressable.
  */
 export function ActionableRow({
   item,
@@ -89,6 +97,7 @@ export function ActionableRow({
   trailing,
   className,
   accessibility,
+  showActions = false,
 }: ActionableRowProps) {
   const [hovered, setHovered] = useState(false);
   const newTab = useNewTabPress(href);
@@ -102,7 +111,7 @@ export function ActionableRow({
     },
   };
 
-  if (process.env.EXPO_OS !== 'web') {
+  if (process.env.EXPO_OS !== 'web' && !showActions) {
     return (
       <PresstableScale
         className={cn('flex-row items-center', className)}
@@ -125,7 +134,7 @@ export function ActionableRow({
       <PresstableScale className="flex-row items-center shrink min-w-0" {...pressProps}>
         {leading}
       </PresstableScale>
-      <RowActionsButton item={item} onActions={onActions} visible={hovered} />
+      <RowActionsButton item={item} onActions={onActions} visible={hovered} alwaysVisible={showActions && process.env.EXPO_OS !== 'web'} />
       {/* The empty stretch past the ⋯ is the same target as the title — a click
           anywhere on the row still opens the item. No a11y props here: the
           leading half already announces the row. */}

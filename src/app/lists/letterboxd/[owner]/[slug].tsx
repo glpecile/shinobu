@@ -14,7 +14,7 @@ export default function LetterboxdListScreen() {
   const likeButton = typeof owner === 'string' && canLikeList(username, owner);
   return (
     <ListsPage fallback={<ListFilmsSkeleton likeButton={likeButton} />} key={username} provider="letterboxd" url={url}>
-      {url != null && typeof owner === 'string' && typeof slug === 'string' && <LetterboxdListFilms owner={owner} slug={slug} url={url} username={username} />}
+      {url != null && typeof owner === 'string' && typeof slug === 'string' && <LetterboxdListFilms key={url} owner={owner} slug={slug} url={url} username={username} />}
     </ListsPage>
   );
 }

@@ -33,6 +33,7 @@ export function List<T>({
   keyboardShouldPersistTaps,
   keyboardDismissMode,
   nestedScrollEnabled,
+  scrollEnabled,
   recycleItems = false,
   onStartReachedThreshold = 0,
   itemLayoutAnimation,
@@ -42,6 +43,7 @@ export function List<T>({
   void keyboardShouldPersistTaps;
   void keyboardDismissMode;
   void nestedScrollEnabled;
+  void scrollEnabled;
   const ListComponent = itemLayoutAnimation == null ? LegendList : AnimatedLegendList;
   // Both defaulted, not omitted — see index.tsx for why.
   return (
