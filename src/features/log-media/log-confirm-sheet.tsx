@@ -302,11 +302,6 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       {reported ? (
         <>
           <WriteSheet.Report
-            failedHeadline={(failed, succeeded) =>
-              `Failed on ${labels(failed)}${
-                succeeded.length > 0 ? ` — ${labels(succeeded)} was logged.` : '.'
-              }`
-            }
             item={item}
             reconcileLine={(skipped) =>
               `${labels(skipped)} already had this logged — skipped to keep both in sync.`
