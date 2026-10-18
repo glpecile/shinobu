@@ -19,6 +19,8 @@ import {
 
 const PROXY_PREFIX = `${SERIALIZD_WEB_PROXY_BASE_URL}/`;
 const MAX_BODY_BYTES = 64 * 1024;
+// The full editor retains up to 500 rich entries, including their notes.
+const MAX_LIST_EDIT_BYTES = 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = 30_000;
 
 type Method = 'GET' | 'POST';
@@ -42,6 +44,7 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method }> = [
   // single-method rule mirrors upstream rather than narrowing it.
   { match: (p) => p === 'watchlist_v2', method: 'POST' },
   { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
+  { match: (p) => p === 'list/add_item' || p === 'list/edit', method: 'POST' },
   { match: (p) => /^list\/[1-9][0-9]{0,14}$/.test(p), method: 'GET' },
   { match: (p) => p.startsWith('show/'), method: 'GET' },
   { match: (p) => p.startsWith('user/'), method: 'GET' },
@@ -101,7 +104,7 @@ export async function handleSerializdProxy(
   let body: ArrayBuffer | undefined;
   if (method === 'POST') {
     body = await request.arrayBuffer();
-    if (body.byteLength > MAX_BODY_BYTES) return jsonError(413, 'request too large');
+    if (body.byteLength > (subPath === 'list/edit' ? MAX_LIST_EDIT_BYTES : MAX_BODY_BYTES)) return jsonError(413, 'request too large');
   }
 
   // Forward ONLY Authorization — never the incoming Cookie or any other client

@@ -1,7 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
 import Head from '@/components/head';
@@ -21,7 +20,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { SectionEnter } from '@/components/section-enter';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
-import { Spinner } from '@/components/spinner';
+import { SearchField } from '@/components/search-field';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -278,16 +277,11 @@ export default function SearchScreen() {
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
-  const [focused, setFocused] = useState(false);
   const [scopeOpen, setScopeOpen] = useState(false);
   // Seeded from `?scope=`, like `input` from `?q=`: a tab tap wipes route
   // params (docs/solutions/native-tab-press-wipes-route-params.md).
   const [selectedScope, setSelectedScope] = useState(params.scope);
   const muted = useThemeColor('--color-muted');
-  // Colour as a style, not a class: a className swap between the two border
-  // tokens is a hard cut on the one moment the field is responding to a tap.
-  const accent = useThemeColor('--color-accent');
-  const border = useThemeColor('--color-border');
   const inputRef = useRef<TextInput>(null);
   // The same actions dialog the feed and diary open — quick log, details, and
   // the provider links, from a result row.
@@ -479,12 +473,11 @@ export default function SearchScreen() {
   // Resets all three representations of the query at once. Leaving `query`
   // behind would keep the stale results mounted until the debounce catches up
   // (and re-push the old `?q=`), so the button clears input, debounced query,
-  // and route param together, then hands focus back for the next search.
+  // and route param together. SearchField restores focus for the next search.
   function clearSearch() {
     setInput('');
     setQuery('');
     router.setParams({ q: undefined });
-    inputRef.current?.focus();
   }
 
   return (
@@ -499,84 +492,18 @@ export default function SearchScreen() {
           'pb-4',
         )}
       >
-        {/* The field's chrome lives on this row, not on the TextInput, so the
-            clear button can sit *beside* the input instead of on top of it.
-            An absolutely-positioned pressable overlapping the input looked
-            identical but never fired on Android — the EditText claims the
-            touch first (docs/solutions/android-pressable-over-textinput.md). */}
-        <AnimatedView
-          className="flex-1 flex-row items-center border bg-surface rounded-full"
-          style={{
-            borderColor: focused ? accent : border,
-            transitionProperty: 'borderColor',
-            transitionDuration: DURATION.color,
-            transitionTimingFunction: EASE_OUT,
-          }}
-        >
-          {/* Field chrome, like the clear chip opposite it: muted, so it
-              names the field without competing with what's typed in it. */}
-          <View className="pl-4">
-            <View className="size-5 items-center justify-center">
-              {fetching ? <Spinner accessibilityLabel="Searching" /> : <Ionicons color={muted} name="search-outline" size={18} />}
-            </View>
-          </View>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            // Android's first tab press is already queued by focus-signal.
-            // Autofocus races that request before keyboardDidShow, so the
-            // handler sees a focused field with a hidden keyboard and blurs it.
-            // Touch browsers also require focus inside the tab's user gesture.
-            autoFocus={process.env.EXPO_OS !== 'android' && !hasCoarsePointer()}
-            // `outline-none`: the browser's focus ring would now draw around
-            // the inner input, inside the wrapper that carries the field's
-            // border — the accent border below is the focus affordance instead,
-            // and it works on native too.
-            // `min-w-0`: an `<input>` carries an intrinsic min-content width
-            // (its `size` default, ~20 characters) that `flex-1` alone can't
-            // shrink past on Firefox, so the clear button beside it was pushed
-            // out of the field and off the viewport
-            // (docs/solutions/firefox-flex-input-wont-shrink.md).
-            // Match the clear target even when empty so typing cannot grow the row.
-            accessibilityLabel={`Search ${scope.label.toLowerCase()}`}
-            className="flex-1 min-h-11 min-w-0 text-base text-foreground pl-3 pr-4 py-3 font-sans outline-none caret-accent"
-            onBlur={() => setFocused(false)}
-            onChangeText={setInput}
-            onFocus={() => setFocused(true)}
-            placeholder={scope.placeholder}
-            placeholderTextColor={muted}
-            ref={inputRef}
-            returnKeyType="search"
-            selectionColor={accent}
-            value={input}
-          />
-          {input !== '' && (
-            <AnimatedView entering={FadeIn.duration(DURATION.color)}>
-              <PresstableOpacity
-                accessibilityLabel="Clear search"
-                accessibilityRole="button"
-                // The pressable is the 44pt touch target; the *drawn* chip inside
-                // is smaller. `close-circle` (one solid 20px glyph) painted a
-                // light-grey blob the size of the text next to it — heaviest
-                // thing in the header, and on Firefox Android the font's circle
-                // rasterised with a ragged edge on top of that. A hairline chip
-                // around a thin `close` stroke reads as field chrome instead, and
-                // its circle is drawn by the layout engine rather than the icon
-                // font, so no browser gets a say in how round it is.
-                className="w-11 h-11 items-center justify-center"
-                onPress={clearSearch}
-              >
-                <View className="w-6 h-6 items-center justify-center rounded-full bg-border">
-                  <Ionicons
-                    color={muted}
-                    name="close"
-                    size={14}
-                  />
-                </View>
-              </PresstableOpacity>
-            </AnimatedView>
-          )}
-        </AnimatedView>
+        <SearchField
+          accessibilityLabel={`Search ${scope.label.toLowerCase()}`}
+          // Android's tab-focus request owns the keyboard; autofocus races it.
+          autoFocus={process.env.EXPO_OS !== 'android' && !hasCoarsePointer()}
+          className="flex-1"
+          loading={fetching}
+          onChangeText={setInput}
+          onClear={clearSearch}
+          placeholder={scope.placeholder}
+          ref={inputRef}
+          value={input}
+        />
       </View>
 
       {/* Keyed per state, so results arriving fade and settle in over the

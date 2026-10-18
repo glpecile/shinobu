@@ -1,3 +1,4 @@
+import type { ListProps } from '@/components/List';
 import type { ReactElement } from 'react';
 
 import type { WatchlistEntry } from '@/features/watchlist/types';
@@ -7,6 +8,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 export interface MediaLayoutProps {
   /** Catalogue lists can include films the viewer has already watched. */
   showWatched?: boolean;
+  showActions?: boolean;
+  itemLayoutAnimation?: ListProps<WatchlistEntry>['itemLayoutAnimation'];
   entries: readonly WatchlistEntry[];
   onItemPress: (item: NormalizedMediaItem) => void;
   onItemActions: (item: NormalizedMediaItem) => void;

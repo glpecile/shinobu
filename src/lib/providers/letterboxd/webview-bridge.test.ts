@@ -8,6 +8,7 @@ import {
   letterboxdWebFetch,
   letterboxdWatchlistWebFetch,
   letterboxdListLikeWebFetch,
+  letterboxdListMembershipFetch,
   registerLetterboxdWebView,
   resetLetterboxdWebViewBridge,
 } from './webview-bridge';
@@ -134,4 +135,65 @@ test('the transport is unavailable until the bridge mounts', () => {
   expect(getLetterboxdWebFetch()).toBeUndefined();
   registerLetterboxdWebView(fakeWebView().ref);
   expect(getLetterboxdWebFetch()).toBe(letterboxdWebFetch);
+});
+
+test.each([
+  { present: true, existing: false, action: { action: 'ADD', listable: 'filmLid' } },
+  { present: false, existing: true, action: { action: 'DELETE', position: 1 } },
+  { present: true, existing: true, action: null },
+  { present: false, existing: false, action: null },
+])('list membership sets $present from fresh entries, without replay', async ({ present, existing, action }) => {
+  const webView = fakeWebView();
+  registerLetterboxdWebView(webView.ref);
+  const pending = letterboxdListMembershipFetch({ listPath: '/gian/list/classics/', username: 'gian', filmPath: '/film/alien/', present });
+  expect(webView.pages[0].filmPath).toContain('/gian/list/classics/edit/');
+  const dom = new Window({ url: 'https://letterboxd.com/gian/list/classics/edit/' });
+  dom.document.body.innerHTML = '<div data-component-class="ListEditor" data-list-lid="listLid" data-list-version="4" data-list-url="/gian/list/classics/"></div>';
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const fetch = async (url: string, init?: RequestInit) => {
+    requests.push({ url, init });
+    switch (url) {
+      case '/film/alien/': return new Response('<meta name="production:identifier" content=\'{"type":"film","lid":"filmLid"}\'>');
+      case '/s/load-list-entries': return new Response([{ listable: { lid: 'other' } }, ...(existing ? [{ listable: { lid: 'filmLid' } }] : []), { success: true }].map((entry) => JSON.stringify(entry)).join('\n'));
+      case '/api/v0/list/listLid':
+        if (init?.method === 'PATCH') return Response.json({ messages: [], data: { id: 'listLid', version: 5 } });
+        return new Response('Forbidden', { status: 403 });
+      default: throw new Error(`Unexpected URL ${url}`);
+    }
+  };
+  const window = { location: dom.location, person: { loggedIn: true, username: 'gian' }, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
+  const storage = new Map();
+  const sessionStorage = { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value) };
+  const run = new Function('window', 'document', 'sessionStorage', 'fetch', 'DOMParser', webView.pages[0].script);
+  run(window, dom.document, sessionStorage, fetch, dom.DOMParser);
+  expect(await pending).toEqual({ status: 200, body: JSON.stringify({ result: true, present, filmSlug: 'alien' }) });
+  const writes = requests.filter((request) => request.init?.method === 'PATCH');
+  expect(writes).toHaveLength(action == null ? 0 : 1);
+  if (action != null) expect(JSON.parse(String(writes[0].init?.body))).toEqual({ version: 4, entries: [action] });
+  const count = requests.length;
+  run(window, dom.document, sessionStorage, fetch, dom.DOMParser);
+  expect(requests).toHaveLength(count);
+  dom.close();
+});
+
+test.each(['owner', 'account', 'path', 'version', 'incomplete', 'conflict', 'challenge', 'receipt'] as const)('list membership refuses %s failures', async (failure) => {
+  const webView = fakeWebView();
+  registerLetterboxdWebView(webView.ref);
+  const pending = letterboxdListMembershipFetch({ listPath: '/gian/list/classics/', username: 'gian', filmPath: '/film/alien/', present: false });
+  const dom = new Window({ url: `https://letterboxd.com/gian/list/${failure === 'path' ? 'other' : 'classics'}/edit/` });
+  dom.document.body.innerHTML = `<div data-component-class="ListEditor" data-list-lid="listLid" data-list-version="${failure === 'version' ? '' : '4'}" data-list-url="/${failure === 'owner' ? 'other' : 'gian'}/list/classics/"></div>`;
+  let writes = 0;
+  const fetch = async (url: string, init?: RequestInit) => {
+    if (url === '/film/alien/') return new Response('<meta name="production:identifier" content=\'{"type":"film","lid":"filmLid"}\'>');
+    if (url === '/s/load-list-entries') return new Response('{"listable":{"lid":"filmLid"}}\n' + (failure === 'incomplete' ? '' : '{"success":true}'));
+    if (init?.method === 'PATCH') { writes += 1; return failure === 'conflict' ? new Response('{}', { status: 409 }) : failure === 'challenge' ? new Response('Verify', { status: 403, headers: { 'cf-mitigated': 'challenge' } }) : Response.json({ messages: [], data: { id: 'wrong-list', version: 5 } }); }
+    return new Response('Forbidden', { status: 403 });
+  };
+  const run = new Function('window', 'document', 'sessionStorage', 'fetch', 'DOMParser', webView.pages[0].script);
+  run({ location: dom.location, person: { loggedIn: true, username: failure === 'account' ? 'other' : 'gian' }, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } }, dom.document, { getItem() {}, setItem() {} }, fetch, dom.DOMParser);
+  const result = await pending;
+  expect(result.status).toBe(0);
+  if (failure === 'challenge') expect(result.body).toContain('verification');
+  expect(writes).toBe(['conflict', 'challenge', 'receipt'].includes(failure) ? 1 : 0);
+  dom.close();
 });

@@ -8,6 +8,8 @@ import { Button } from '@/components/button';
 import { SmallPoster } from '@/components/small-poster';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
+import { ListMembershipForm } from '@/features/lists/list-membership-form';
+import type { ListEditTarget } from '@/state/queries/list-membership';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
 import type { LogRequest } from '@/features/log-media/log-request';
 import { needsReleaseEnrichment, watchlistCtaIsPrimary } from '@/features/log-media/release-gate';
@@ -47,6 +49,7 @@ import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
 interface CardActionsSheetProps {
+  listRemoval?: { target: ListEditTarget; entryId?: string; subtitle?: string } | null;
   /** Kept (not nulled) while closing so content doesn't vanish mid-animation. */
   item: NormalizedMediaItem | null;
   open: boolean;
@@ -146,6 +149,7 @@ export function CardActionsSheet({
   canWatchlist = true,
   credit = null,
   watchlistRemoval = null,
+  listRemoval = null,
 }: CardActionsSheetProps) {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
@@ -183,7 +187,7 @@ export function CardActionsSheet({
   // Remembers which opening chose the mode, so reopening or a new item falls
   // back to the rows.
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'watchlist-add' | 'watchlist-remove' | 'log';
+    mode: 'actions' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
@@ -243,6 +247,9 @@ export function CardActionsSheet({
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
+      {item != null && mode === 'list-remove' && listRemoval != null && (
+        <ListMembershipForm entryId={listRemoval.entryId} item={sourceItem ?? item} key={`list-remove-${listRemoval.entryId ?? item.id}`} onBack={() => setMode('actions')} onDone={onClose} present={false} subtitle={listRemoval.subtitle} target={listRemoval.target} />
+      )}
       {item != null && mode === 'watchlist-add' && (
         <WatchlistAddPicker
           item={item}
@@ -393,6 +400,14 @@ export function CardActionsSheet({
               onOpened={onClose}
             />
           ))}
+          {listRemoval != null && <Button
+            align="start"
+            className="mt-2"
+            icon={<Button.Icon name="trash-outline" />}
+            label="Remove from list"
+            onPress={() => setMode('list-remove')}
+            variant="quiet-accent"
+          />}
           {canHide && (
             <Button
               align="start"

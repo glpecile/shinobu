@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { getListFilmsPage, getListsPage, setListLiked } from './lists';
+import { getListFilmsPage, getListsPage, setListLiked, setListMembership } from './lists';
 
 // Public page markup captured 2026-10-06, reduced to the read contract.
 const POSTER = `<div data-component-class="LazyPoster" data-item-name="21 Grams (2003)" data-item-slug="21-grams" data-postered-identifier='{&quot;uid&quot;:&quot;film:51632&quot;}'></div>`;
@@ -116,4 +116,26 @@ test.each([
 ] as const)('list likes reject unconfirmed receipts (%s %s)', async (status, body, tag) => {
   const effect = setListLiked({ fetch: async () => new Response(), username: 'gian', userscriptListLikeFetch: async () => ({ status, body }) }, { owner: 'jack', slug: 'classics', liked: true });
   expect((await Effect.runPromise(Effect.flip(effect)))._tag).toBe(tag);
+});
+
+test('membership changes require ownership and acknowledge only the requested state', async () => {
+  const item = { id: 'tmdb-movie-550', title: 'Fight Club', coverImage: '', type: 'MOVIE' as const, currentProgress: 0, progressUnit: 'episode' as const, lastUpdated: '', externalIds: { tmdb: 550 } };
+  for (const present of [true, false]) {
+    let writes = 0;
+    const deps = { username: 'Gian', fetch: async () => new Response(), listMembershipFetch: async (request: { username: string; listPath: string; filmPath: string; present: boolean }) => {
+      writes += 1;
+      expect(request).toEqual({ username: 'Gian', listPath: '/gian/list/classics/', filmPath: '/tmdb/550/', present });
+      return { status: 200, body: JSON.stringify({ result: true, present, filmSlug: 'fight-club' }) };
+    } };
+    const params = { owner: 'gian', slug: 'classics', item, present };
+    expect(await Effect.runPromise(setListMembership(deps, params))).toMatchObject({ present, filmSlug: 'fight-club' });
+    expect((await Effect.runPromise(Effect.flip(setListMembership(deps, { ...params, owner: 'jack' }))))._tag).toBe('ProviderAuthError');
+    expect(writes).toBe(1);
+    const rejected = { ...deps, listMembershipFetch: async () => ({ status: 200, body: JSON.stringify({ result: true, present: !present, filmSlug: 'fight-club' }) }) };
+    expect((await Effect.runPromise(Effect.flip(setListMembership(rejected, params))))._tag).toBe('ProviderDecodeError');
+    for (const body of ['Letterboxd needs verification.', '{"message":"Letterboxd needs verification."}']) {
+      const failure = await Effect.runPromise(Effect.flip(setListMembership({ ...deps, listMembershipFetch: async () => ({ status: 0, body }) }, params)));
+      expect(failure).toMatchObject({ _tag: 'ProviderDecodeError', detail: 'Letterboxd needs verification.' });
+    }
+  }
 });

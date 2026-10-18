@@ -46,6 +46,8 @@ describe('allowlist', () => {
       ['/api/serializd/user/gian/lists?sort_by=date_created_desc&page=2', 'GET'],
       ['/api/serializd/user/gian/liked_lists?sort_by=date_created_desc&page=1', 'GET'],
       ['/api/serializd/list/42', 'GET'],
+      ['/api/serializd/list/add_item', 'POST'],
+      ['/api/serializd/list/edit', 'POST'],
       ['/api/serializd/login', 'POST'],
       ['/api/serializd/episode_log/add', 'POST'],
       ['/api/serializd/show/reviews/add', 'POST'],
@@ -66,6 +68,8 @@ describe('allowlist', () => {
   test('a wrong method on an allowlisted path is 405', async () => {
     for (const path of [
       '/api/serializd/login',
+      '/api/serializd/list/add_item',
+      '/api/serializd/list/edit',
       // The watchlist grant is POST-only; upstream answers 405 to GET on it too
       // (plan 0031 KTD-9 evidence (C)), so the rule mirrors upstream.
       '/api/serializd/watchlist_v2',
@@ -119,6 +123,8 @@ describe('allowlist', () => {
       '/api/serializd/watchlist_v2/extra',
       '/api/serializd/watchlist_v2%2F..%2Flogin',
       '/api/serializd/list/create',
+      '/api/serializd/list/edit/42',
+      '/api/serializd/list/add_item/extra',
       '/api/serializd/list/likes/add',
       '/api/serializd/list/42/items',
       '/api/serializd/list/42%2F..%2Flogin',
@@ -150,6 +156,19 @@ describe('request hardening', () => {
       );
       expect(res.status).toBe(413);
       expect(upstream.captured).toHaveLength(0);
+    }
+  });
+
+  test('accepts a complete list editor payload while bounding only that endpoint at 1 MiB', async () => {
+    const body = JSON.stringify({ list_id: 42, list_items: Array.from({ length: 499 }, (_, index) => ({ showId: index + 1, showName: 'A show title', description: 'Keep this entry note. '.repeat(20) })) });
+    const upstream = capturingUpstream(Response.json({}));
+    const response = await handleSerializdProxy(proxyRequest('/api/serializd/list/edit', { method: 'POST', body }), upstream.fetch);
+    expect(response.status).toBe(200);
+    expect(new TextDecoder().decode(upstream.captured[0].init?.body as ArrayBuffer)).toBe(body);
+    for (const [path, oversizedBody] of [['list/add_item', 'x'.repeat(64 * 1024 + 1)], ['list/edit', 'x'.repeat(1024 * 1024 + 1)]]) {
+      const blocked = capturingUpstream(Response.json({}));
+      expect((await handleSerializdProxy(proxyRequest(`/api/serializd/${path}`, { method: 'POST', body: oversizedBody }), blocked.fetch)).status).toBe(413);
+      expect(blocked.captured).toHaveLength(0);
     }
   });
 

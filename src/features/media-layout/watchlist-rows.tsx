@@ -71,11 +71,13 @@ function WatchlistRow({
   onPress,
   onActions,
   showWatched,
+  showActions,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   showWatched?: boolean;
+  showActions?: boolean;
 }) {
   return (
     <ActionableRow
@@ -99,6 +101,7 @@ function WatchlistRow({
         </>
       }
       onActions={onActions}
+      showActions={showActions}
       onPress={() => onPress(entry.item)}
       trailing={
         <View className="flex-row items-center gap-2">
@@ -122,12 +125,15 @@ export function WatchlistRows({
   onEndReached,
   footer,
   showWatched,
+  showActions,
+  itemLayoutAnimation,
 }: MediaLayoutProps) {
   return (
     <List
       className="flex-1"
-      contentContainerStyle={{ paddingTop: 4 }}
+      contentContainerStyle={{ paddingTop: 4, paddingBottom: showActions ? 96 : undefined }}
       data={entries}
+      itemLayoutAnimation={itemLayoutAnimation}
       // Four rows ahead so a fast fling doesn't outrun the mounts — see
       // poster-wall.tsx.
       drawDistance={ROW_HEIGHT * 4}
@@ -144,7 +150,7 @@ export function WatchlistRows({
       }
       // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (
-        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} showWatched={showWatched} />
+        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} showActions={showActions} showWatched={showWatched} />
       )}
       ListFooterComponent={footer}
     />

@@ -64,11 +64,13 @@ function PosterCell({
   onPress,
   onActions,
   showWatched,
+  showActions,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   showWatched?: boolean;
+  showActions?: boolean;
 }) {
   const item = entry.item;
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
@@ -152,13 +154,14 @@ function PosterCell({
         {showWatched && <WatchedMark item={item} poster showProgress />}
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
-        {showChrome && (
+        {(process.env.EXPO_OS === 'web' || showActions) && (
           <OverlayActionsButton
             className="absolute top-1.5 right-1.5"
             label={`More options for ${item.title}`}
             onPress={() => onActions(item)}
-            size="sm"
+            size={showActions && process.env.EXPO_OS !== 'web' ? 'lg' : 'sm'}
             tone="surface"
+            visible={process.env.EXPO_OS !== 'web' || showChrome}
           />
         )}
       </View>
@@ -182,6 +185,8 @@ export function PosterWall({
   onEndReached,
   footer,
   showWatched,
+  showActions,
+  itemLayoutAnimation,
 }: MediaLayoutProps) {
   const { columns, rowHeight } = useWallMetrics();
 
@@ -194,8 +199,10 @@ export function PosterWall({
       contentContainerStyle={{
         paddingHorizontal: EDGE_PAD - GAP / 2,
         paddingTop: GAP / 2,
+        paddingBottom: showActions ? 96 : undefined,
       }}
       data={entries}
+      itemLayoutAnimation={itemLayoutAnimation}
       // Two rows ahead rather than the 250px default, which is barely one
       // poster row: a fast fling outran it and revealed rows filling in
       // late. Cheap now that the cells recycle.
@@ -223,6 +230,7 @@ export function PosterWall({
           onActions={onItemActions}
           onPress={onItemPress}
           showWatched={showWatched}
+          showActions={showActions}
         />
       )}
       ListFooterComponent={footer}

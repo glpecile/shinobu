@@ -12,7 +12,7 @@ export default function SerializdListScreen() {
   const url = typeof id === 'string' ? serializdListUrl(id) : null;
   return (
     <ListsPage fallback={<SerializdListSkeleton />} key={username} provider="serializd" url={url}>
-      {url != null && typeof id === 'string' && <SerializdListItems id={id} url={url} username={username} />}
+      {url != null && typeof id === 'string' && <SerializdListItems key={url} id={id} url={url} username={username} />}
     </ListsPage>
   );
 }
