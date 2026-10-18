@@ -2,7 +2,6 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { expect, mock, test } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 
-import { sortMediaEntries } from '@/lib/media-sort';
 import type { NormalizedMediaItem } from '@/types/media';
 
 GlobalRegistrator.register();
@@ -20,7 +19,7 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 let requests = 0;
-mock.module('@/lib/http/client', () => ({ httpFetch: async () => { requests++; throw new Error('Cache-only sorting must not fetch'); } }));
+mock.module('@/lib/http/client', () => ({ httpFetch: async () => { requests++; throw new Error('Cache-only metadata must not fetch'); } }));
 mock.module('react-native', () => ({ Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web } }));
 mock.module('expo-crypto', () => ({
   getRandomBytes: (count: number) => crypto.getRandomValues(new Uint8Array(count)),
@@ -38,7 +37,7 @@ function film(slug: string, title: string): NormalizedMediaItem {
     progressUnit: 'episode', lastUpdated: '', externalIds: { letterboxd: slug } };
 }
 
-test('mounted runtime sorting observes stale film/detail caches and later updates without starting reads', async () => {
+test('mounted metadata observes stale film/detail caches and later updates without starting reads', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const amnesia = Object.freeze(film('a-wind-named-amnesia', 'A Wind Named Amnesia'));
   const baby = Object.freeze(film('baby-love', 'Baby Love'));
@@ -52,13 +51,13 @@ test('mounted runtime sorting observes stale film/detail caches and later update
     if (event.type === 'updated' && event.action.type === 'fetch') fetches++;
   });
   const wrapper = ({ children }: { children: ReactNode }) => createElement(QueryClientProvider, { client }, children);
-  const read = renderHook(() => sortMediaEntries(useMediaMetadata(items).items.map(item => ({ id: item.id, item })), 'runtime-asc'), { wrapper });
+  const read = renderHook(() => useMediaMetadata(items).items, { wrapper });
   try {
-    expect(read.result.current.map(entry => entry.item.title)).toEqual(['Baby Love', 'A Wind Named Amnesia']);
-    expect(read.result.current[1].item.currentProgress).toBe(0);
+    expect(read.result.current.map(item => item.runtime)).toEqual([80, 30]);
+    expect(read.result.current[0].currentProgress).toBe(0);
     expect(amnesia.runtime).toBeUndefined();
     await act(async () => { client.setQueryData(babyKey, { catalogue: { ...baby, runtime: 100 } }); });
-    await waitFor(() => expect(read.result.current.map(entry => entry.item.title)).toEqual(['A Wind Named Amnesia', 'Baby Love']));
+    await waitFor(() => expect(read.result.current.map(item => item.runtime)).toEqual([80, 100]));
     expect(fetches).toBe(0);
     expect(requests).toBe(0);
   } finally {

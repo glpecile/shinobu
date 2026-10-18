@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Button } from '@/components/button';
 import { MorphText } from '@/components/morph-text';
 import { ProgressRing } from '@/components/progress-ring';
+import { Tooltip } from '@/components/tooltip';
 import type { useMediaProgress } from '@/state/queries/media-progress';
 
 /** Loaded titles only: an unrequested next page is never silently counted as unwatched. */
@@ -15,10 +16,12 @@ export function ListProgress({ state, countLabel, partial = false }: { state: Re
   const ready = connected && items.length > 0 && !loading && !failed;
   return (
     <View className="gap-1">
-      <View className="flex-row items-center gap-2" accessibilityLabel={`${ready ? label : countLabel}${started > 0 ? ` · ${started} started` : ''}`}>
-        {connected && items.length > 0 && <ProgressRing label={loading ? 'Checking watch history' : label} max={items.length} value={completed} />}
-        <MorphText className="font-sans text-sm text-muted tabular-nums">{ready ? `${completed}${incomplete ? '+' : ''}/${countLabel}` : countLabel}</MorphText>
-      </View>
+      <Tooltip label={ready ? label : countLabel}>
+        <View accessible className="flex-row items-center gap-2" accessibilityLabel={`${ready ? label : countLabel}${started > 0 ? ` · ${started} started` : ''}`}>
+          {connected && items.length > 0 && <ProgressRing label={loading ? 'Checking watch history' : label} max={items.length} value={completed} />}
+          <MorphText className="font-sans text-sm text-muted tabular-nums">{ready ? `${completed}/${countLabel}` : countLabel}</MorphText>
+        </View>
+      </Tooltip>
       {failed && <Button className="self-start" icon={<Button.Icon name="refresh" />} label="Retry" loading={loading} onPress={() => void retry()} size="sm" variant="quiet" />}
     </View>
   );

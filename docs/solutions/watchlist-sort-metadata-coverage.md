@@ -1,5 +1,12 @@
 # Watchlist sorting: metadata loss and runtime coverage
 
+Runtime sorting was removed in plan 0092. Unknown durations made it silently
+fall back to title order on Letterboxd lists, and a few cached durations could
+not establish a useful ordering for the rest. Alphabetical sorting is explicit
+instead. Runtime metadata and full-series estimates remain for display; the
+cache-observer regression still protects metadata updates without extra reads.
+The notes below record why runtime coverage cannot support a shared sort.
+
 The watchlist merge selected a whole provider item by precedence. A Simkl or
 AniList winner without runtime/year could discard valid values already fetched
 from its Trakt twin. `computeWatchlist` now backfills only valid missing

@@ -21,3 +21,9 @@ paths, or authenticated read transport is introduced. Matching the website's
 exact personal state remains a provider-read limitation, not a CSS issue.
 
 These checks used public GETs only, without persisted credentials or writes.
+
+Plan 0092 removes the confusing `+` on the watched numerator. The count's
+accessible description and browser tooltip retain "At least" for incomplete
+history. A denominator `+` still means more list entries can be loaded. These
+are independent uncertainties; loading every film cannot make personal history
+complete, even when the observed count matches Letterboxd's website.
