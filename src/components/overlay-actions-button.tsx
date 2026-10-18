@@ -11,7 +11,7 @@ export type OverlayActionsButtonTone = 'overlay' | 'surface';
 
 const SIZE: Record<OverlayActionsButtonSize, { box: string; icon: number }> = {
   sm: { box: 'w-7 h-7', icon: 14 },
-  lg: { box: 'w-11 h-11', icon: 20 },
+  lg: { box: 'w-7 h-7', icon: 14 },
   md: { box: 'w-8 h-8', icon: 16 },
 };
 
@@ -27,7 +27,7 @@ const ICON_TOKEN: Record<OverlayActionsButtonTone, ThemeColorToken> = {
 
 /**
  * The ⋯ over a poster's corner. Callers reveal it on web hover, or keep it
- * visible on editable lists, using `lg` for a touch-sized target. Render it
+ * visible on editable lists, using `lg` for a 44-point target around a compact mark. Render it
  * beside the poster pressable: nesting gesture-handler buttons lets a press
  * bubble into the poster underneath.
  *
@@ -66,17 +66,18 @@ export function OverlayActionsButton({
         accessibilityRole="button"
         className={cn(
           'items-center justify-center rounded-full',
-          SIZE[size].box,
-          SURFACE[tone],
+          size === 'lg' ? 'w-11 h-11' : SIZE[size].box,
           'web:focus-visible:outline-2 web:focus-visible:outline-accent web:focus-visible:outline-offset-2',
         )}
         onPress={onPress}
       >
-        <Ionicons
-          color={icon}
-          name="ellipsis-horizontal"
-          size={SIZE[size].icon}
-        />
+        <View className={cn('items-center justify-center rounded-full', SIZE[size].box, SURFACE[tone])}>
+          <Ionicons
+            color={icon}
+            name="ellipsis-horizontal"
+            size={SIZE[size].icon}
+          />
+        </View>
       </PresstableOpacity>
     </View>
   );
