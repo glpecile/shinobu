@@ -156,10 +156,10 @@ function PosterCell({
             ⋯ press bubble into the poster press. Long-press covers native. */}
         {(process.env.EXPO_OS === 'web' || showActions) && (
           <OverlayActionsButton
-            className="absolute top-1.5 right-1.5"
+            className="absolute top-0 right-0"
             label={`More options for ${item.title}`}
             onPress={() => onActions(item)}
-            size={showActions && process.env.EXPO_OS !== 'web' ? 'lg' : 'sm'}
+            size="lg"
             tone="surface"
             visible={process.env.EXPO_OS !== 'web' || showChrome}
           />

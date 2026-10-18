@@ -29,7 +29,7 @@ export function WatchedMark({ item, poster = false, showProgress = false }: { it
     <AnimatedView
       accessibilityLabel={item.type === 'TV' ? 'Series watch history' : 'Watched'}
       aria-hidden={!watched}
-      className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-8 h-8 items-center justify-center rounded-full bg-surface/95')}
+      className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-7 h-7 items-center justify-center rounded-full bg-surface/95')}
       style={[style, { pointerEvents: 'none' }]}
     >
       <Ionicons color={accent} name="eye" size={14} />
