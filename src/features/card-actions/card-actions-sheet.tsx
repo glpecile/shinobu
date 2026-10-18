@@ -1,8 +1,9 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { AnimatedText } from '@/components/animated-view';
+import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { SmallPoster } from '@/components/small-poster';
 import { Sheet } from '@/components/sheet';
@@ -36,6 +37,7 @@ import {
 } from '@/lib/providers/provider-links';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { hideItem } from '@/state/prefs/hidden-items';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
@@ -148,6 +150,7 @@ export function CardActionsSheet({
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   const reducedMotion = useReducedMotion();
+  const muted = useThemeColor('--color-muted');
   // List cards carry only a year; resolve the same release date and identity
   // as details before deciding whether logging is available. Letterboxd rows
   // resolve identity first (slug → film record); any other film-like row the
@@ -281,15 +284,20 @@ export function CardActionsSheet({
                   .filter((part) => part != null)
                   .join(' · ')}
               </SheetHeader.Subtitle>
-              {item.type !== 'MANGA' && <AnimatedText
+              {item.type !== 'MANGA' && <AnimatedView
+                accessible={runtimeLabel !== ''}
+                accessibilityLabel={runtimeLabel}
                 key={`${item.id}-${runtimeLabel}`}
-                className="min-h-5 text-muted font-sans text-sm mt-1"
+                className="min-h-5 flex-row items-center gap-1.5 mt-1"
                 style={{
                   animationName: runtimeFade,
                   animationDuration: reducedMotion ? 0 : DURATION.swap,
                   animationTimingFunction: EASE_OUT,
                 }}
-              >{runtimeLabel}</AnimatedText>}
+              >
+                {runtimeLabel !== '' && <Ionicons accessible={false} color={muted} name="time-outline" size={14} />}
+                <Text className="flex-1 text-muted font-sans text-sm">{runtimeLabel}</Text>
+              </AnimatedView>}
             </SheetHeader.Content>
           </SheetHeader>
 

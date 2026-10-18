@@ -12,8 +12,8 @@ export function setMediaSort(scope: MediaSortScope, sort: MediaSort): void {
 function readSort(scope: MediaSortScope): MediaSort {
   const value = isServer() ? undefined : prefsStorage.getString(`${scope}Sort`);
   switch (value) {
-    case 'runtime-asc':
-    case 'runtime-desc':
+    case 'title-asc':
+    case 'title-desc':
     case 'year-desc':
     case 'year-asc':
       return value;

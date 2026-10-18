@@ -1,6 +1,6 @@
 import type { NormalizedMediaItem } from '@/types/media';
 
-export type MediaSort = 'default' | 'runtime-asc' | 'runtime-desc' | 'year-desc' | 'year-asc';
+export type MediaSort = 'default' | 'title-asc' | 'title-desc' | 'year-desc' | 'year-asc';
 
 /** Valid raw metadata, also used when backfilling a merged provider copy. */
 export function mediaSortValue(item: NormalizedMediaItem, field: 'runtime' | 'year'): number | undefined {
@@ -28,14 +28,15 @@ export function sortMediaEntries<T extends { id: string; item: NormalizedMediaIt
 ): T[] {
   const sorted = [...entries];
   if (sort === 'default') return sorted;
-  const field = sort.startsWith('runtime') ? 'runtime' : 'year';
   const direction = sort.endsWith('asc') ? 1 : -1;
   return sorted.sort((a, b) => {
-    const av = field === 'runtime' ? mediaRuntimeMinutes(a.item) : mediaSortValue(a.item, field);
-    const bv = field === 'runtime' ? mediaRuntimeMinutes(b.item) : mediaSortValue(b.item, field);
+    const titleOrder = a.item.title.localeCompare(b.item.title, undefined, { numeric: true, sensitivity: 'base' });
+    if (sort === 'title-asc' || sort === 'title-desc') return titleOrder * direction || a.id.localeCompare(b.id);
+    const av = mediaSortValue(a.item, 'year');
+    const bv = mediaSortValue(b.item, 'year');
     if (av == null && bv != null) return 1;
     if (bv == null && av != null) return -1;
     const difference = av != null && bv != null ? (av - bv) * direction : 0;
-    return difference || a.item.title.localeCompare(b.item.title) || a.id.localeCompare(b.id);
+    return difference || titleOrder || a.id.localeCompare(b.id);
   });
 }

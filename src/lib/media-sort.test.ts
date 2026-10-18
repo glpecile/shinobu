@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { filterWatchlistEntries } from '@/features/watchlist/filter';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import type { NormalizedMediaItem } from '@/types/media';
-import { sortMediaEntries, type MediaSort } from './media-sort';
+import { mediaRuntimeMinutes, sortMediaEntries, type MediaSort } from './media-sort';
 
 function entry(id: string, overrides: Partial<NormalizedMediaItem> = {}): WatchlistEntry {
   return {
@@ -23,8 +23,8 @@ describe('sortMediaEntries', () => {
   ]);
 
   test.each([
-    ['runtime-asc', ['anime-film', 'film', 'anime', 'series', 'missing']],
-    ['runtime-desc', ['series', 'anime', 'film', 'anime-film', 'missing']],
+    ['title-asc', ['anime', 'anime-film', 'film', 'missing', 'series']],
+    ['title-desc', ['series', 'missing', 'film', 'anime-film', 'anime']],
     ['year-asc', ['film', 'anime-film', 'series', 'anime', 'missing']],
     ['year-desc', ['anime', 'series', 'anime-film', 'film', 'missing']],
     ['default', ['film', 'series', 'anime-film', 'anime', 'missing']],
@@ -32,29 +32,32 @@ describe('sortMediaEntries', () => {
     expect(sortMediaEntries(entries, sort).map((row) => row.id)).toEqual(expected);
   });
 
-  test('invalid values and manga runtime stay last in either direction; ties use title then entry identity', () => {
+  test('invalid years stay last in either direction; ties use title then entry identity', () => {
     const unknowns = [undefined, 0, -1, NaN, Infinity].map((value, index) =>
-      entry(`unknown-${index}`, { runtime: value, year: value }));
-    const tied = [entry('b', { title: 'Same', runtime: 24, year: 2001 }), entry('a', { title: 'Same', runtime: 24, year: 2001 })];
-    const rows = [entry('manga', { type: 'MANGA', runtime: 1, year: 2000 }), ...unknowns, ...tied];
-    for (const sort of ['runtime-asc', 'runtime-desc'] as const) {
-      expect(sortMediaEntries(rows, sort).map((row) => row.id)).toEqual(['a', 'b', 'manga', ...unknowns.map((row) => row.id)]);
-    }
+      entry(`unknown-${index}`, { year: value }));
+    const tied = [entry('b', { title: 'Same', year: 2001 }), entry('a', { title: 'Same', year: 2001 })];
+    const rows = [...unknowns, ...tied, entry('fraction', { year: 2000.5 })];
     for (const sort of ['year-asc', 'year-desc'] as const) {
-      const sorted = sortMediaEntries([...unknowns, ...tied, entry('fraction', { year: 2000.5 })], sort);
+      const sorted = sortMediaEntries(rows, sort);
       expect(sorted.map((row) => row.id)).toEqual(['a', 'b', 'fraction', ...unknowns.map((row) => row.id)]);
     }
-    expect(sortMediaEntries(rows.toReversed(), 'runtime-asc')).toEqual(sortMediaEntries(rows, 'runtime-asc'));
+    expect(sortMediaEntries(rows.toReversed(), 'year-asc')).toEqual(sortMediaEntries(rows, 'year-asc'));
+  });
+
+  test('alphabetical sorting ignores case, orders numbers naturally and breaks equal-title ties by identity', () => {
+    const rows = [entry('b', { title: 'alien 2' }), entry('ten', { title: 'Alien 10' }), entry('a', { title: 'Alien 2' })];
+    expect(sortMediaEntries(rows, 'title-asc').map(row => row.id)).toEqual(['a', 'b', 'ten']);
+    expect(sortMediaEntries(rows, 'title-desc').map(row => row.id)).toEqual(['ten', 'a', 'b']);
   });
 
   test('composes with tracker filtering and sorts newly loaded entries without changing the reset order', () => {
-    const hidden: WatchlistEntry = { ...entry('other', { runtime: 1 }), sources: ['letterboxd'] };
+    const hidden: WatchlistEntry = { ...entry('other'), sources: ['letterboxd'] };
     const loaded = [...entries, hidden];
     const filtered = filterWatchlistEntries(loaded, 'trakt');
-    expect(sortMediaEntries(filtered, 'runtime-asc').map((row) => row.id)).toEqual(['anime-film', 'film', 'anime', 'series', 'missing']);
-    const nextPage = [...filtered, entry('short', { runtime: 10 })];
-    expect(sortMediaEntries(nextPage, 'runtime-asc')[0].id).toBe('short');
-    expect(sortMediaEntries(nextPage, 'default').map((row) => row.id)).toEqual(['film', 'series', 'anime-film', 'anime', 'missing', 'short']);
+    expect(sortMediaEntries(filtered, 'title-desc').map((row) => row.id)).toEqual(['series', 'missing', 'film', 'anime-film', 'anime']);
+    const nextPage = [...filtered, entry('zebra')];
+    expect(sortMediaEntries(nextPage, 'title-desc')[0].id).toBe('zebra');
+    expect(sortMediaEntries(nextPage, 'default').map((row) => row.id)).toEqual(['film', 'series', 'anime-film', 'anime', 'missing', 'zebra']);
   });
 
   test('series need a valid episode count for an estimated total, independent of watched progress', () => {
@@ -62,9 +65,10 @@ describe('sortMediaEntries', () => {
       entry(`unknown-${index}`, { type: 'TV', runtime: 24, totalEpisodes }));
     const series = entry('series', { type: 'TV', runtime: 24, totalEpisodes: 10, currentProgress: 9 });
     const film = entry('film', { runtime: 100, totalEpisodes: 99 });
-    expect(sortMediaEntries([...unknowns, series, film], 'runtime-asc').map(row => row.id))
-      .toEqual(['film', 'series', ...unknowns.map(row => row.id)]);
-    expect(sortMediaEntries([...unknowns, series, film], 'runtime-desc').map(row => row.id))
-      .toEqual(['series', 'film', ...unknowns.map(row => row.id)]);
+    expect(unknowns.map(row => mediaRuntimeMinutes(row.item))).toEqual(unknowns.map(() => undefined));
+    expect(mediaRuntimeMinutes(series.item)).toBe(240);
+    expect(mediaRuntimeMinutes(film.item)).toBe(100);
+    expect(mediaRuntimeMinutes(entry('manga', { type: 'MANGA', runtime: 24 }).item)).toBeUndefined();
+    expect(mediaRuntimeMinutes(entry('invalid', { runtime: Infinity }).item)).toBeUndefined();
   });
 });
