@@ -6,6 +6,7 @@ import Head from '@/components/head';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { ShareButton } from '@/components/share-button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -47,7 +48,10 @@ export function SerializdListItems({ username, id, url }: { username: string | n
       />
       <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
         <MediaSortControl scope="lists" sort={sort} />
-        <ProviderListLink iconOnly provider="serializd" url={url} />
+        <View className="flex-row items-center gap-1">
+          <ShareButton href={routes.serializdList(id)} />
+          <ProviderListLink iconOnly provider="serializd" url={url} />
+        </View>
       </MediaToolbar>
       <List
         className="flex-1"
@@ -100,7 +104,7 @@ export function SerializdListSkeleton() {
   return (
     <>
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" subtitle="" />
-      <MediaToolbarSkeleton actions={1} />
+      <MediaToolbarSkeleton actions={2} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

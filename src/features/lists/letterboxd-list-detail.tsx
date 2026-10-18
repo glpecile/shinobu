@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
 import { LoadMoreFooter } from '@/components/load-more-footer';
+import { ShareButton } from '@/components/share-button';
 import { Skeleton } from '@/components/skeleton';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -47,6 +48,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
       <MediaToolbar notice={sort !== 'default' && pages.hasNextPage ? <SortingLoadedNotice /> : undefined} view={view}>
         <MediaSortControl scope="lists" sort={sort} />
         <View className="flex-row items-center gap-1">
+          <ShareButton href={routes.letterboxdList(owner, slug)} />
           <ProviderListLink iconOnly provider="letterboxd" url={url} />
           {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
         </View>
@@ -76,11 +78,11 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
 }
 
 /** Mirrors the header, toolbar, and persisted grid/row view without a layout jump. */
-export function ListFilmsSkeleton() {
+export function ListFilmsSkeleton({ likeButton }: { likeButton: boolean }) {
   return (
     <View className="flex-1">
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="letterboxd" subtitle="" />
-      <MediaToolbarSkeleton actions={2} layout />
+      <MediaToolbarSkeleton actions={likeButton ? 3 : 2} layout />
       <WallSkeleton />
     </View>
   );
