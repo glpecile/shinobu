@@ -47,8 +47,11 @@ export function catalogueFilmography(items: readonly NormalizedMediaItem[]): Fil
   return { credits: items.map((item) => ({ item, roles: [] })), roles: [] };
 }
 
+/** AniList's ANIME type includes films; print credits belong only in All. */
 export function matchesFormat(item: NormalizedMediaItem, format: FormatFilter): boolean {
-  return format === 'ALL' || item.type === format;
+  if (format === 'ALL') return true;
+  const type = item.type === 'ANIME' ? (item.isFilm === true ? 'MOVIE' : 'TV') : item.type;
+  return type === format;
 }
 
 /** Each role with how many titles it holds under `format`; empty roles drop out. */

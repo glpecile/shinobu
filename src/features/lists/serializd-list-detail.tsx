@@ -8,7 +8,6 @@ import Head from '@/components/head';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { ShareButton } from '@/components/share-button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -53,13 +52,13 @@ export function SerializdListItems({ username, id, url }: { username: string | n
     <>
       <Head><title>{`${list.title} — Shinobu`}</title></Head>
       <ListsHeader
+        shareHref={routes.serializdList(id)}
         metadata={<ListProgress countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`} partial={!list.complete} state={progress} />}
         provider="serializd" subtitle={`by ${list.owner}`} title={list.title}
       />
       <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
         <MediaSortControl scope="lists" sort={sort} />
         <View className="flex-row items-center gap-1">
-          <ShareButton href={routes.serializdList(id)} />
           <ProviderListLink iconOnly provider="serializd" url={url} />
         </View>
       </MediaToolbar>

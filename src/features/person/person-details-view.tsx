@@ -5,6 +5,7 @@ import { AnimatedView } from '@/components/animated-view';
 import { ExpandableText } from '@/components/expandable-text';
 import Head from '@/components/head';
 import { useFloatingBackButtonClearance } from '@/components/floating-back-button';
+import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -78,7 +79,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
                   </Text>
                 </View>
               )}
-              <View className="flex-1">
+              <View className="flex-1 min-w-0">
                 <ScrolledTitle.Anchor>
                   <CopyTitle title={person.name} tmdbId={person.tmdbId} />
                 </ScrolledTitle.Anchor>
@@ -115,7 +116,10 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
         }
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
       />
-      <ScrolledTitle.Bar title={person.name} />
+      <ScrolledTitle.Bar title={person.name} trailingAction />
+      <FloatingShareButton href={person.anilistId != null
+        ? routes.anilistPerson(person.anilistId)
+        : person.tmdbId != null ? routes.person(person.tmdbId) : routes.personLookup(person.name)} />
       <CardActionsSheet {...sheetProps} />
     </>
   );

@@ -8,6 +8,7 @@ import { MorphText } from '@/components/morph-text';
 import { ProviderIcon } from '@/components/provider-icon';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
 import { Skeleton } from '@/components/skeleton';
+import { ShareButton } from '@/components/share-button';
 import { Tooltip } from '@/components/tooltip';
 import { cn } from '@/lib/cn';
 import { openExternalUrl } from '@/lib/open-external-url';
@@ -28,7 +29,7 @@ export function ProviderListLink({ provider, url, iconOnly = false }: { provider
  * Index titles ("Your Lists"/"Liked Lists") morph instead: they are short,
  * single-line, and change from the kind filter's user state.
  */
-export function ListsHeader({ provider, title, subtitle, metadata, morphTitle = false }: { provider: ProviderId; title?: string; subtitle?: string; metadata?: ReactNode; morphTitle?: boolean }) {
+export function ListsHeader({ provider, title, subtitle, metadata, shareHref, morphTitle = false }: { provider: ProviderId; title?: string; subtitle?: string; metadata?: ReactNode; shareHref?: string; morphTitle?: boolean }) {
   const router = useRouter();
   return (
     <View className={cn('flex-row items-center gap-3 px-6 pb-4', screenHeaderTopPadding)}>
@@ -47,6 +48,7 @@ export function ListsHeader({ provider, title, subtitle, metadata, morphTitle = 
           {metadata}
         </View>}
       </View>
+      {shareHref != null && <View className="shrink-0"><ShareButton href={shareHref} /></View>}
     </View>
   );
 }

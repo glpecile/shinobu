@@ -4,7 +4,6 @@ import { View } from 'react-native';
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
 import { LoadMoreFooter } from '@/components/load-more-footer';
-import { ShareButton } from '@/components/share-button';
 import { Skeleton } from '@/components/skeleton';
 import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -50,13 +49,13 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
     <>
       <Head><title>{`${title} — Shinobu`}</title></Head>
       <ListsHeader
+        shareHref={routes.letterboxdList(owner, slug)}
         metadata={<ListProgress countLabel={`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'}`} partial={pages.hasNextPage} state={progress} />}
         provider="letterboxd" subtitle={`by ${owner}`} title={title}
       />
       <MediaToolbar notice={sort !== 'default' && pages.hasNextPage ? <SortingLoadedNotice /> : undefined} view={view}>
         <MediaSortControl scope="lists" sort={sort} />
         <View className="flex-row items-center gap-1">
-          <ShareButton href={routes.letterboxdList(owner, slug)} />
           <ProviderListLink iconOnly provider="letterboxd" url={url} />
           {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
         </View>

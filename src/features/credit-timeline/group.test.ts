@@ -74,6 +74,30 @@ describe('roleCounts', () => {
       { role: 'Writing', count: 1 },
     ]);
   });
+
+  test('includes anime films and series in format filters while keeping manga in All', () => {
+    const filmography = mergeCreditRows([{
+      role: 'Directing',
+      items: [
+        { ...heron, id: 'anilist-film', type: 'ANIME', isFilm: true },
+        { ...hound, id: 'anilist-series', type: 'ANIME' },
+        { ...wind, id: 'anilist-manga', type: 'MANGA' },
+      ],
+      details: {},
+      roles: {},
+    }]);
+    for (const [format, ids] of [
+      ['ALL', ['anilist-film', 'anilist-manga', 'anilist-series']],
+      ['MOVIE', ['anilist-film']],
+      ['TV', ['anilist-series']],
+    ] as const) {
+      const result = timelineRows(filmography.credits, {
+        format, role: null, folded: new Set(), now: NOW,
+      });
+      expect(result.flatMap((row) => row.kind === 'entry' ? [row.credit.item.id] : [])).toEqual([...ids]);
+      expect(roleCounts(filmography, format)).toEqual([{ role: 'Directing', count: ids.length }]);
+    }
+  });
 });
 
 describe('timelineRows', () => {
