@@ -109,6 +109,7 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `trash-outline` | deletes stored data |
  * | `refresh` | retry |
  * | `open-outline` | leaves this screen (a route, an external page) |
+ * | `share-outline` | share this screen's link |
  * | `close` | dismiss without writing |
  * | `search-outline` | search |
  * | `checkmark` | done, nothing left to do |
