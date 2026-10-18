@@ -35,7 +35,7 @@ All changes hot reload; no native rebuild is required.
   existing warnings in untouched tests.
 - iPhone 17 Pro: the saved runtime preference falls back to List order; the
   native menu offers alphabetical and year choices with no runtime choices;
-  A to Z changes the actual poster order. The complete 12-film list has no
+  A to Z and Z to A change the actual poster order. The complete 12-film list has no
   numerator or denominator `+`. This simulator's connected account differs
   from the owner's Letterboxd account, so its watched count is not a parity
   check against the supplied screenshot.
@@ -46,3 +46,6 @@ All changes hot reload; no native rebuild is required.
   and runtime text shrink constraint; both fixes were re-reviewed and approved.
   The delegated complexity review found nothing to remove.
 - No browser surface is available to the UI tool for web interaction checks.
+- Android smoke validation is unavailable: launching the installed app and
+  opening its local Metro dev-client link returned to the launcher. This did
+  not reach the changed UI; no cause or connection to this change is established.
