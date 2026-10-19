@@ -7,7 +7,9 @@
 - The filter narrows the rows, the calendar shading, and the month stats, so
   the streaks and "logged in" count match the visible list.
 - A filter with no matches over the full history says so instead of showing
-  an empty list.
+  an empty list. While older pages remain, the empty state names the loaded
+  history and offers Load more, since the list cannot scroll to fetch it.
+  All uses a book icon and "No visible logs" when every loaded title is hidden.
 - In the 640–1024px range, show the month stats one per line beside the
   calendar. On phones, keep each label below its icon and number.
 - While a month's stats are still lower bounds ("23+"), a quiet Load more
@@ -44,5 +46,8 @@ Rejected candidates:
   and the busy control is announced as in progress. This used a temporary
   render fixture because the signed-in history was complete; the fixture was
   removed afterward. No provider write or stored data change was used.
+- Review fixes were checked with an iOS render fixture: an empty TV filter
+  retains Load more and invokes its callback; All shows its book icon and
+  "No visible logs". The fixture was removed without stored data changes.
 - Web, reduced-motion behavior, and release-device animation timing were not
   visually verified.

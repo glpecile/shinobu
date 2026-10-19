@@ -734,6 +734,22 @@ export function DiaryList({
   const collapsedDays = useCollapsedDiaryDays();
   const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
   const muted = useThemeColor('--color-muted');
+  let emptyIcon: React.ComponentProps<typeof Ionicons>['name'];
+  let emptyTitle: string;
+  switch (format) {
+    case 'ALL':
+      emptyIcon = 'book-outline';
+      emptyTitle = 'No visible logs';
+      break;
+    case 'MOVIE':
+      emptyIcon = 'film-outline';
+      emptyTitle = hasNextPage ? 'No movies in loaded history' : 'No movies logged yet';
+      break;
+    case 'TV':
+      emptyIcon = 'tv-outline';
+      emptyTitle = hasNextPage ? 'No TV shows in loaded history' : 'No TV shows logged yet';
+      break;
+  }
   const now = new Date();
   const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
   const { items, activity } = flattenDays(
@@ -880,14 +896,23 @@ export function DiaryList({
             ) : undefined
           }
           ListEmptyComponent={
-            hasNextPage ? undefined : (
-              <SectionEnter className="py-8" key={format}>
-                <EmptyStateTile
-                  icon={<Ionicons accessible={false} color={muted} name={format === 'MOVIE' ? 'film-outline' : 'tv-outline'} size={44} />}
-                  title={format === 'MOVIE' ? 'No movies logged yet' : 'No TV shows logged yet'}
-                />
-              </SectionEnter>
-            )
+            <SectionEnter className="py-8" key={format}>
+              <EmptyStateTile
+                icon={<Ionicons accessible={false} color={muted} name={emptyIcon} size={44} />}
+                title={emptyTitle}
+              >
+                {hasNextPage && (
+                  <Button
+                    className="mt-6"
+                    icon={<Button.Icon name="chevron-down" />}
+                    label="Load more"
+                    loading={isFetchingNextPage}
+                    onPress={onEndReached}
+                    variant="quiet"
+                  />
+                )}
+              </EmptyStateTile>
+            </SectionEnter>
           }
           ListFooterComponent={
             <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
