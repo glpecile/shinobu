@@ -1,54 +1,41 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { PresstableOpacity, PresstableScale } from '@/components/presstable';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
+import { PresstableScale } from '@/components/presstable';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
-import { useThemeColor } from '@/lib/theme-color';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
- * The ⋯ that opens the row's actions dialog, sitting just past the row's
- * text. Editable lists keep it visible on touch devices; other rows reveal it
- * on hover and use long-press on touch. Fine pointers reserve the hover slot
+ * The ⋯ that opens the row's actions dialog. Editable lists keep it visible
+ * on touch devices; other rows reveal it on hover and use long-press on touch.
+ * Fine pointers reserve the hover slot
  * so revealing the control never nudges the title.
  */
 function RowActionsButton({
   item,
   visible,
-  alwaysVisible = false,
+  showActions,
   onActions,
 }: {
   item: NormalizedMediaItem;
   visible: boolean;
-  alwaysVisible?: boolean;
+  showActions: boolean;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const muted = useThemeColor('--color-muted');
-  const [focused, setFocused] = useState(false);
-  const shown = visible || alwaysVisible || focused;
+  const alwaysVisible = showActions && process.env.EXPO_OS !== 'web';
   return (
     <View
-      className={cn(alwaysVisible ? 'flex w-11' : 'hidden pointer-fine:flex w-10', 'shrink-0 items-center')}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? 'auto' : 'none' }}
+      className={cn(alwaysVisible ? 'flex' : 'hidden pointer-fine:flex', showActions ? 'w-11' : 'w-10', 'shrink-0 items-center')}
     >
-      {(process.env.EXPO_OS === 'web' || shown) && (
-        <PresstableOpacity
-          accessibilityLabel={`More options for ${item.title}`}
-          accessibilityRole="button"
-          className={cn(alwaysVisible ? 'w-11 h-11' : 'w-8 h-8', 'items-center justify-center rounded-full bg-surface border border-border/60 web:focus-visible:outline-2 web:focus-visible:outline-accent web:focus-visible:outline-offset-2')}
-          onPress={() => onActions(item)}
-        >
-          <Ionicons
-            color={muted}
-            name="ellipsis-horizontal"
-            size={16}
-          />
-        </PresstableOpacity>
-      )}
+      <OverlayActionsButton
+        label={`More options for ${item.title}`}
+        onPress={() => onActions(item)}
+        size={showActions ? 'lg' : 'sm'}
+        tone="surface"
+        visible={visible || alwaysVisible}
+      />
     </View>
   );
 }
@@ -66,7 +53,7 @@ export interface ActionableRowProps {
   href: string;
   onPress: () => void;
   onActions: (item: NormalizedMediaItem) => void;
-  /** Poster + text, up to where the ⋯ sits. Shrinks; never `flex-1`. */
+  /** Poster and text; fills the available width when actions stay visible. */
   leading: ReactNode;
   /** Provider marks, chevrons — pushed to the row's right edge. */
   trailing?: ReactNode;
@@ -81,11 +68,12 @@ export interface ActionableRowProps {
  * opens details (⌘/Ctrl+click opens them in a new tab on web), long-press opens
  * the actions dialog, and hovering reveals the ⋯ that opens that same dialog.
  *
- * The ⋯ belongs beside the title, but it can't be a *child* of the row's
- * pressable — nesting two gesture-handler buttons would let a ⋯ press bubble
+ * The ⋯ can't be a *child* of the row's pressable — nesting two
+ * gesture-handler buttons would let a ⋯ press bubble
  * into the row press. So on web the row is split into two sibling pressables,
- * leading (poster + title) and trailing (provider marks), with the ⋯ between
- * them. Both halves carry the same press/long-press. Native rows use this split
+ * leading (poster + title) and trailing (provider marks). Editable lists put
+ * the ⋯ at the far edge; hover-only rows keep it beside the title.
+ * Both halves carry the same press/long-press. Native rows use this split
  * when `showActions` exposes the control; otherwise they stay one pressable.
  */
 export function ActionableRow({
@@ -124,6 +112,10 @@ export function ActionableRow({
     );
   }
 
+  const actionsButton = (
+    <RowActionsButton item={item} onActions={onActions} visible={hovered} showActions={showActions} />
+  );
+
   return (
     <View
       className={cn('flex-row items-center', className)}
@@ -131,20 +123,20 @@ export function ActionableRow({
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      <PresstableScale className="flex-row items-center shrink min-w-0" {...pressProps}>
+      <PresstableScale className={cn('flex-row items-center shrink min-w-0', showActions && 'flex-1')} {...pressProps}>
         {leading}
       </PresstableScale>
-      <RowActionsButton item={item} onActions={onActions} visible={hovered} alwaysVisible={showActions && process.env.EXPO_OS !== 'web'} />
-      {/* The empty stretch past the ⋯ is the same target as the title — a click
-          anywhere on the row still opens the item. No a11y props here: the
-          leading half already announces the row. */}
+      {!showActions && actionsButton}
+      {/* Trailing marks and the space around them also open the item. No a11y
+          props here: the leading half already announces the row. */}
       <PresstableScale
-        className="grow shrink-0 flex-row items-center justify-end self-stretch"
+        className={cn('shrink-0 flex-row items-center justify-end self-stretch', showActions ? 'ml-2' : 'grow')}
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}
       >
         {trailing}
       </PresstableScale>
+      {showActions && actionsButton}
     </View>
   );
 }
