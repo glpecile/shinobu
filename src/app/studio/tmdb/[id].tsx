@@ -6,6 +6,7 @@ import {
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 // Layout-generic despite the name — the studio page shares the person
 // page's header-plus-rows shape, so its skeleton and miss state fit as-is.
@@ -41,7 +42,7 @@ export default function StudioScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<StudioSkeleton />}>
+      <Suspense fallback={<><StudioSkeleton /><FloatingShareButton href={routes.studio(tmdbId)} /></>}>
         <StudioContent tmdbId={tmdbId} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />

@@ -596,7 +596,13 @@ function DetailsScreen() {
   }
 
   if (isLoading && item == null) {
-    return <DetailsSkeleton zoomPoster={zoomPoster} />;
+    return (
+      <>
+        <DetailsSkeleton zoomPoster={zoomPoster} />
+        <FloatingBackButton onPress={goBack} />
+        {id !== '' && <FloatingShareButton href={routes.details(id, mediaType)} />}
+      </>
+    );
   }
 
   if (item == null) {

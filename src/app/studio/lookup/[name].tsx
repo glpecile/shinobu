@@ -6,6 +6,7 @@ import {
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import { PersonNotFound } from '@/features/person';
 import { StudioSkeleton } from '@/features/studio/studio-skeleton';
@@ -62,7 +63,7 @@ export default function StudioLookupScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<StudioSkeleton />}>
+      <Suspense fallback={<><StudioSkeleton /><FloatingShareButton href={routes.studioLookup(name)} /></>}>
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />

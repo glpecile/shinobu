@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Modal, Platform, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   NitroWebView,
   callback,
@@ -71,7 +71,6 @@ export function ProviderSigninWebView<T>({
   // race after login. Reset when each open mounts a fresh WebView.
   const capturedRef = useRef(false);
   const userAgentRef = useRef<string | undefined>(undefined);
-  const insets = useSafeAreaInsets();
   const injectUserAgent = captureUserAgent && Platform.OS === 'ios';
 
   const tryCapture = async () => {
@@ -141,15 +140,17 @@ export function ProviderSigninWebView<T>({
           components on native
           (docs/solutions/uniwind-classname-third-party-components.md). */}
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View
-          className="flex-1 bg-background"
-          style={{ paddingTop: insets.top }}
-        >
-          <View className="px-4 py-3 border-b border-border">
-            <Sheet.Header onClose={onClose}>
-              <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
-            </Sheet.Header>
-          </View>
+        <View className="flex-1 bg-background">
+          {/* Insets come from the modal's own window, not the app root's: an
+              iOS pageSheet card already starts below the status bar, but iPad
+              Slide Over presents it full screen. */}
+          <SafeAreaView edges={['top']}>
+            <View className="px-4 py-3 border-b border-border">
+              <Sheet.Header className="items-center" onClose={onClose}>
+                <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
+              </Sheet.Header>
+            </View>
+          </SafeAreaView>
           {visible && (
             <NitroWebView
               injectedJavaScript={injectUserAgent ? CAPTURE_USER_AGENT_SCRIPT : undefined}

@@ -12,15 +12,16 @@ import { routes } from '@/lib/routes';
 import { ListsHeader, ProviderListLink } from './list-header';
 
 /** Request failures and render failures share the same retry and provider escape hatch. */
-export function ListsLoadError({ provider, url, index = false, title = 'List', onRetry }: {
+export function ListsLoadError({ provider, url, index = false, title = 'List', shareHref, onRetry }: {
   provider: 'letterboxd' | 'serializd';
   url: string;
   index?: boolean;
   title?: string;
+  shareHref?: string;
   onRetry: () => unknown;
 }) {
   return <>
-    {!index && <ListsHeader provider={provider} title={title} />}
+    {!index && <ListsHeader provider={provider} shareHref={shareHref} title={title} />}
     <CenteredNotice>
       <CenteredNotice.Icon name="list-outline" />
       <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
@@ -34,10 +35,12 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', o
 }
 
 /** Shared recovery and loading frame; resource pages own their query and identity. */
-export function ListsPage({ provider, title = 'List', url, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
+export function ListsPage({ provider, title = 'List', url, shareHref, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
   provider: 'letterboxd' | 'serializd';
   title?: string;
   url: string | null;
+  /** Keeps a detail page's Share in its header when the list fails to load. */
+  shareHref?: string;
   index?: boolean;
   /** A pager owns the shared header and document title; this page owns recovery. */
   embedded?: boolean;
@@ -69,7 +72,7 @@ export function ListsPage({ provider, title = 'List', url, index = false, embedd
         </>
       ) : (
         <ErrorBoundary key={contentKey ?? url} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (
-          <ListsLoadError index={index} onRetry={resetErrorBoundary} provider={provider} title={title} url={url} />
+          <ListsLoadError index={index} onRetry={resetErrorBoundary} provider={provider} shareHref={shareHref} title={title} url={url} />
         )}>
           <Suspense fallback={fallback}>{children}</Suspense>
         </ErrorBoundary>
