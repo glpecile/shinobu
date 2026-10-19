@@ -8,6 +8,7 @@ import {
   FadeIn,
   FadeOut,
   LinearTransition,
+  useReducedMotion,
 } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -24,7 +25,7 @@ export type ButtonSize = 'sm' | 'md';
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   primary: { on: 'bg-accent', off: 'bg-accent/40' },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
-  quiet: { on: 'border border-border', off: 'border border-border opacity-60' },
+  quiet: { on: 'border border-border web:hover:bg-border/40', off: 'border border-border opacity-60' },
   'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
   ghost: { on: '', off: 'opacity-60' },
   'accent-ghost': { on: '', off: 'opacity-60' },
@@ -63,6 +64,11 @@ const COLOR_TRANSITION: CSSTransitionProperties = {
   transitionProperty: ['backgroundColor', 'borderColor', 'opacity'],
   transitionDuration: DURATION.color,
   transitionTimingFunction: EASE_OUT,
+};
+
+const LOADING_ENTER = {
+  from: { transform: [{ translateY: 3 }, { scale: 0.9 }] },
+  to: { transform: [{ translateY: 0 }, { scale: 1 }] },
 };
 
 const SIZE: Record<ButtonSize, { container: string; label: string; icon: number }> = {
@@ -271,6 +277,7 @@ export function Button({
   pressed,
   className,
 }: ButtonProps) {
+  const reduceMotion = useReducedMotion();
   const spinnerToken = useThemeColor(SPINNER_TOKEN[variant]);
   const spinnerColor =
     spinnerToken;
@@ -281,6 +288,12 @@ export function Button({
   const LabelText = morphLabel ? MorphText : Text;
   const shownLabel = loading ? (loadingLabel ?? label) : label;
   const overlay = loading && loadingLabel == null;
+  const contentTransition: CSSTransitionProperties & { transform: { translateY: number }[] } = {
+    ...COLOR_TRANSITION,
+    transitionProperty: ['opacity', 'transform'],
+    transitionDuration: DURATION.swap,
+    transform: [{ translateY: overlay && !reduceMotion ? -3 : 0 }],
+  };
 
   return (
     <PresstableOpacity
@@ -334,7 +347,17 @@ export function Button({
             exiting={SLOT_EXIT}
             layout={BOX_LAYOUT}
           >
-            <Spinner color={spinnerColor} />
+            <AnimatedView
+              style={reduceMotion ? undefined : {
+                transform: LOADING_ENTER.from.transform,
+                animationName: LOADING_ENTER,
+                animationDuration: DURATION.swap,
+                animationTimingFunction: EASE_OUT,
+                animationFillMode: 'both',
+              }}
+            >
+              <Spinner color={spinnerColor} />
+            </AnimatedView>
           </AnimatedView>
         )}
         {icon != null && (overlay || !loading) && (
@@ -356,7 +379,7 @@ export function Button({
                 that. docs/solutions/reanimated-fade-overwrites-static-opacity.md */}
             <AnimatedView
               className={cn(overlay ? 'opacity-0' : unavailable && 'opacity-60')}
-              style={COLOR_TRANSITION}
+              style={contentTransition}
             >
               <ButtonIconContext.Provider
                 value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
@@ -377,7 +400,7 @@ export function Button({
               align === 'start' && 'grow',
             )}
             layout={BOX_LAYOUT}
-            style={COLOR_TRANSITION}
+            style={contentTransition}
           >
             <LabelText
               numberOfLines={numberOfLines}

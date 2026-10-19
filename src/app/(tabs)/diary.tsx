@@ -1,16 +1,19 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ErrorBoundaryProps } from 'expo-router';
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
 import { EmptyStateTile } from '@/components/empty-state-tile';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
 import { SectionEnter } from '@/components/section-enter';
+import { FORMAT_OPTIONS, type FormatFilter } from '@/features/credit-timeline/group';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
@@ -40,7 +43,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   );
 }
 
-function DiaryHeader() {
+function DiaryHeader({ children }: { children?: React.ReactNode }) {
   // Same brand-header treatment as Home (spacing + title size) so top-level
   // destinations share one header rhythm.
   return (
@@ -53,6 +56,7 @@ function DiaryHeader() {
       >
         Diary
       </Text>
+      {children}
     </View>
   );
 }
@@ -83,6 +87,18 @@ export default function DiaryScreen() {
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
+  const [format, setFormat] = useState<FormatFilter>('ALL');
+  const formatControl = (
+    <NativeSegmentedControl
+      accessibilityLabel="Format"
+      className="w-52"
+      onChange={setFormat}
+      options={FORMAT_OPTIONS}
+      size="sm"
+      value={format}
+    />
+  );
+  let filter: React.ReactNode = null;
 
   let content: React.ReactNode;
   if (connected.length === 0) {
@@ -118,6 +134,7 @@ export default function DiaryScreen() {
     // rows between the ones on screen and re-keys collapsed rows to the
     // higher-priority contributor. Rendering that stream reads as flicker.
     // (docs/solutions/diary-reshuffles-while-providers-land.md)
+    filter = formatControl;
     content = <DiaryListSkeleton />;
   } else if (diary.allFailed && diary.entryCount === 0) {
     // R9 (3): every capable provider failed on load — never "no logs yet" (AE5).
@@ -147,9 +164,11 @@ export default function DiaryScreen() {
       </View>
     );
   } else {
+    filter = formatControl;
     content = (
       <DiaryList
         days={diary.days}
+        format={format}
         failedProviders={diary.errors.map((entry) => entry.provider)}
         hasNextPage={diary.hasNextPage}
         isFetchingNextPage={diary.isFetchingNextPage}
@@ -171,7 +190,7 @@ export default function DiaryScreen() {
       <Head>
         <title>Diary — Shinobu</title>
       </Head>
-      <DiaryHeader />
+      <DiaryHeader>{filter}</DiaryHeader>
       {/* Keyed so the list fades and settles in over the skeleton instead of
           cutting; the wrapper sits outside the list, never on its recycled rows. */}
       <SectionEnter className="flex-1" key={diary.isLoading ? 'skeleton' : 'content'}>

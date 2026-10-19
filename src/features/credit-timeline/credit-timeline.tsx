@@ -45,6 +45,7 @@ import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
+  FORMAT_OPTIONS,
   roleCounts,
   timelineRows,
   UPCOMING_HEAD,
@@ -79,17 +80,6 @@ function usePosterColumns() {
 const SETTLE_FROM = 0.35;
 /** Blur is web-only: native re-rasterizes a filtered subtree every frame. */
 const SETTLE_BLUR = process.env.EXPO_OS === 'web' ? 4 : 0;
-
-/** "All" first, as on the seasons explorer — it is the shape the page opens in. */
-const FORMAT_OPTIONS = [
-  { value: 'ALL', label: 'All' },
-  { value: 'MOVIE', label: 'Movies' },
-  { value: 'TV', label: 'TV', accessibilityLabel: 'TV series' },
-] as const satisfies readonly {
-  value: FormatFilter;
-  label: string;
-  accessibilityLabel?: string;
-}[];
 
 /**
  * Wide screens read the page as one centred column. Centred from the outer

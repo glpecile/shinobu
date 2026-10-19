@@ -48,3 +48,14 @@ step): before, page 1 only; after, one new page per jump.
 
 Upstream: the gate should only be marked for an edge whose handler is set;
 worth an issue on `LegendApp/legend-list`.
+
+## Empty filtered history
+
+Legend List 3.6.0 also returns from its end check when `data.length === 0`,
+before invoking `onEndReached`, on native and web. A Diary format filter can
+empty the visible rows while older provider pages still exist, so neither a
+scroll nor the zero start threshold can load those pages.
+
+The Diary empty state offers a loading-aware Load more button whenever
+`hasNextPage` is true, calling the same pagination handler as the list. It
+describes the loaded history rather than claiming no matching logs exist.

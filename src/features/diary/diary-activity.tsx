@@ -1,13 +1,19 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
+import type { CSSTransitionProperties } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
+import { Button } from '@/components/button';
+import { Collapse } from '@/components/collapse';
 import { Eyebrow } from '@/components/eyebrow';
+import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { Tooltip } from '@/components/tooltip';
 import { cn } from '@/lib/cn';
 import { formatCount } from '@/lib/format-count';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 import type { DaySummary } from './merge';
@@ -31,6 +37,9 @@ export interface DiaryMonthProps {
   stacked?: boolean;
   /** Pressing a day with logs; the list scrolls to it. */
   onSelectDay?: (dayKey: string) => void;
+  /** Fetches the next older page, offered while a stat is still a lower bound. */
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
 const DAY_DATE = new Intl.DateTimeFormat('en-US', {
@@ -131,6 +140,7 @@ function Stat({
   atLeast = false,
   label,
   tooltip,
+  stacked,
 }: {
   icon: ComponentProps<typeof Ionicons>['name'];
   accent?: boolean;
@@ -141,19 +151,21 @@ function Stat({
   label: string;
   /** Web hover: the context behind the number. */
   tooltip: string;
+  /** One line per stat, for a column of them; otherwise the label sits below. */
+  stacked: boolean;
 }) {
   const color = useThemeColor(accent && value != null && value > 0 ? '--color-accent' : '--color-muted');
   const stat = (
-    <View accessible accessibilityLabel={value == null ? label : `${atLeast ? 'at least ' : ''}${value} ${label}`} className="flex-row items-center gap-2">
-      <Ionicons color={color} name={icon} size={18} />
-      <View className="shrink">
+    <View accessible accessibilityLabel={value == null ? label : `${atLeast ? 'at least ' : ''}${value} ${label}`} className={cn('gap-1', stacked ? 'flex-row items-center gap-2' : 'sm:flex-row sm:items-center sm:gap-2')}>
+      <View className="flex-row items-center gap-2">
+        <Ionicons color={color} name={icon} size={22} />
         {value == null ? (
-          <Skeleton className="h-5 w-8 rounded my-0.5" />
+          <Skeleton className="h-6 w-10 rounded my-0.5" />
         ) : (
-          <Text className="text-foreground font-sans-semibold text-base">{formatCount(value)}{atLeast && '+'}</Text>
+          <MorphText className="text-foreground font-sans-semibold text-xl">{`${formatCount(value)}${atLeast ? '+' : ''}`}</MorphText>
         )}
-        <Text className="text-muted font-sans text-[11px]" numberOfLines={2}>{label}</Text>
       </View>
+      <Text className="shrink text-muted font-sans text-xs" numberOfLines={2}>{label}</Text>
     </View>
   );
   return value == null ? stat : <Tooltip label={tooltip}>{stat}</Tooltip>;
@@ -181,13 +193,23 @@ function monthGrid(month: string) {
 }
 
 const CELL = 'flex-1 min-h-11 aspect-square rounded-md';
+/** Days shade in as older pages load rather than snapping. */
+const SHADE_TRANSITION: CSSTransitionProperties = {
+  transitionProperty: 'backgroundColor',
+  transitionDuration: DURATION.swap,
+  transitionTimingFunction: EASE_OUT,
+};
 
 /**
  * With `loading`, everything that doesn't come from the feed — the title,
  * weekdays, day numerals, and stat labels — renders as itself, and only the
  * past days' shading and the stat numbers pulse.
  */
-export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { loading?: boolean }) {
+export function DiaryMonth({
+  className,
+  loading = false,
+  ...props
+}: DiaryMonthProps & { className?: string; loading?: boolean }) {
   const stacked = props.stacked === true;
   // Seven 44px targets and six 4px gaps need 332px before the page gutters.
   const tight = useWindowDimensions().width < 380;
@@ -200,13 +222,15 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
   const { longest } = stats;
   const partial = !loading && keys[0] < props.oldest;
   const isCurrent = props.today.startsWith(props.month);
+  const incomplete = partial || (isCurrent && !loading && streak.partial);
   const name = MONTH_NAMES[first.getUTCMonth()];
   const title = props.today.startsWith(`${year}`) ? name : `${name} ${year}`;
 
   return (
-    <View className={cn('pt-6 pb-2', tight ? 'px-0' : 'px-6')}>
+    <View className={cn('pt-1 pb-2', tight ? 'px-0' : 'px-6', className)}>
       <Eyebrow className={cn('mb-3', tight && 'mx-6')}>{title}</Eyebrow>
-      <View className="gap-5">
+      {/* Inline at 640+, the stats stack beside the calendar instead of under it. */}
+      <View className={cn('gap-5', !stacked && 'sm:flex-row sm:gap-10')}>
         <View
           // Capped so a wide web window gets a calendar, not a row of pills.
           className={cn('w-full max-w-96', !tight && 'gap-1')}
@@ -226,7 +250,8 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
                 const units = loading ? null : dayUnits(key, props);
                 const shade = units == null ? null : level(units);
                 const cell = (
-                  <View
+                  <AnimatedView
+                    style={SHADE_TRANSITION}
                     className={cn(
                       'flex-1 rounded-md items-center justify-center',
                       shade != null && LEVELS[shade],
@@ -245,7 +270,7 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
                     >
                       {Number(key.slice(8))}
                     </Text>
-                  </View>
+                  </AnimatedView>
                 );
                 if (future || loading) return <View className={CELL} key={key}>{cell}</View>;
                 const label = dayTooltip(key, units, props);
@@ -272,35 +297,56 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
             </View>
           ))}
         </View>
-        <View className={cn(stacked ? 'gap-4' : 'flex-row flex-wrap gap-5', tight && 'px-6')}>
-          {isCurrent && (
+        <View className={cn(!stacked && 'sm:shrink sm:pt-4', tight && 'px-6')}>
+          <View className={cn(stacked ? 'gap-3' : 'flex-row flex-wrap gap-6 sm:flex-col sm:gap-3')}>
+            {isCurrent && (
+              <Stat
+                stacked={stacked}
+                accent
+                atLeast={!loading && streak.partial}
+                icon="flame"
+                label="day streak"
+                tooltip={streak.streak > 0 ? `Since ${date(streak.since)}` : 'Log something today to start one'}
+                value={loading ? null : streak.streak}
+              />
+            )}
             <Stat
-              accent
-              atLeast={!loading && streak.partial}
-              icon="flame"
-              label="day streak"
-              tooltip={streak.streak > 0 ? `Since ${date(streak.since)}` : 'Log something today to start one'}
-              value={loading ? null : streak.streak}
+              stacked={stacked}
+              atLeast={partial}
+              icon="trophy"
+              label="longest streak"
+              tooltip={
+                longest.length === 0 ? `Nothing logged in ${name}`
+                : longest.length === 1 ? date(longest.from)
+                : `${date(longest.from)} – ${date(longest.to)}`
+              }
+              value={loading ? null : longest.length}
             />
+            <Stat
+              stacked={stacked}
+              atLeast={partial}
+              icon="play-circle"
+              label={`logged in ${name}`}
+              tooltip={`Across ${stats.days} ${stats.days === 1 ? 'day' : 'days'}`}
+              value={loading ? null : stats.units}
+            />
+          </View>
+          {props.onLoadMore != null && (
+            // Web collapses the space once the month is complete. Keep the
+            // gap inside so a closed body leaves no space behind.
+            <Collapse open={incomplete}>
+              <View className="items-start pt-5">
+                <Button
+                  icon={<Button.Icon name="chevron-down" />}
+                  label="Load more"
+                  loading={props.loadingMore}
+                  onPress={props.onLoadMore}
+                  size="sm"
+                  variant="quiet"
+                />
+              </View>
+            </Collapse>
           )}
-          <Stat
-            atLeast={partial}
-            icon="trophy"
-            label="longest streak"
-            tooltip={
-              longest.length === 0 ? `Nothing logged in ${name}`
-              : longest.length === 1 ? date(longest.from)
-              : `${date(longest.from)} – ${date(longest.to)}`
-            }
-            value={loading ? null : longest.length}
-          />
-          <Stat
-            atLeast={partial}
-            icon="play-circle"
-            label={`logged in ${name}`}
-            tooltip={`Across ${stats.days} ${stats.days === 1 ? 'day' : 'days'}`}
-            value={loading ? null : stats.units}
-          />
         </View>
       </View>
     </View>
