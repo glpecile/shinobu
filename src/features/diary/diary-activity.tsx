@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Eyebrow } from '@/components/eyebrow';
 import { PresstableOpacity } from '@/components/presstable';
@@ -27,7 +27,7 @@ export interface DiaryMonthProps {
   /** Empty once the feed has no older page, so every day is known. */
   oldest: string;
   today: string;
-  /** Stats under the calendar instead of beside it, for a column with height to spare. */
+  /** Stack stats vertically for a side column with height to spare. */
   stacked?: boolean;
   /** Pressing a day with logs; the list scrolls to it. */
   onSelectDay?: (dayKey: string) => void;
@@ -180,7 +180,7 @@ function monthGrid(month: string) {
   return { keys, weeks };
 }
 
-const CELL = 'flex-1 aspect-square rounded-md';
+const CELL = 'flex-1 min-h-11 aspect-square rounded-md';
 
 /**
  * With `loading`, everything that doesn't come from the feed — the title,
@@ -189,6 +189,8 @@ const CELL = 'flex-1 aspect-square rounded-md';
  */
 export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { loading?: boolean }) {
   const stacked = props.stacked === true;
+  // Seven 44px targets and six 4px gaps need 332px before the page gutters.
+  const tight = useWindowDimensions().width < 380;
   const first = keyDate(props.month);
   const year = first.getUTCFullYear();
   const { keys, weeks } = monthGrid(props.month);
@@ -202,14 +204,14 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
   const title = props.today.startsWith(`${year}`) ? name : `${name} ${year}`;
 
   return (
-    <View className="px-6 pt-6 pb-2">
-      <Eyebrow className="mb-3">{title}</Eyebrow>
-      <View className={stacked ? 'gap-5' : 'flex-row gap-5'}>
+    <View className={cn('pt-6 pb-2', tight ? 'px-0' : 'px-6')}>
+      <Eyebrow className={cn('mb-3', tight && 'mx-6')}>{title}</Eyebrow>
+      <View className="gap-5">
         <View
           // Capped so a wide web window gets a calendar, not a row of pills.
-          className="flex-1 max-w-80 gap-1"
+          className={cn('w-full max-w-96', !tight && 'gap-1')}
         >
-          <View className="flex-row gap-1">
+          <View className={cn('flex-row', !tight && 'gap-1')}>
             {WEEKDAY_INITIALS.map((initial, index) => (
               <Text className="flex-1 text-center text-muted font-sans text-[10px] leading-3" key={index}>
                 {initial}
@@ -217,7 +219,7 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
             ))}
           </View>
           {weeks.map((week, row) => (
-            <View className="flex-row gap-1" key={row}>
+            <View className={cn('flex-row', !tight && 'gap-1')} key={row}>
               {week.map((key, column) => {
                 if (key == null) return <View className={CELL} key={column} />;
                 const future = key > props.today;
@@ -235,7 +237,9 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
                     <Text
                       className={cn(
                         'font-sans text-[11px]',
-                        shade != null && shade >= 3 ? 'text-accent-foreground' : 'text-muted',
+                        shade === 4 ? 'text-accent-foreground'
+                          : shade === 3 ? 'text-foreground dark:text-accent-foreground'
+                          : shade != null && shade > 0 ? 'text-foreground' : 'text-muted',
                         units == null && !loading && 'opacity-40',
                       )}
                     >
@@ -268,7 +272,7 @@ export function DiaryMonth({ loading = false, ...props }: DiaryMonthProps & { lo
             </View>
           ))}
         </View>
-        <View className={stacked ? 'gap-4' : 'w-24 justify-center gap-5'}>
+        <View className={cn(stacked ? 'gap-4' : 'flex-row flex-wrap gap-5', tight && 'px-6')}>
           {isCurrent && (
             <Stat
               accent

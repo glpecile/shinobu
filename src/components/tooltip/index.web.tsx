@@ -24,23 +24,32 @@ export function Tooltip({
   const id = useId();
   const bubble = useRef<HTMLDivElement>(null);
 
-  function show(event: React.PointerEvent<HTMLDivElement>) {
+  function show(target: HTMLDivElement) {
     const popover = bubble.current;
-    if (popover == null || event.pointerType === 'touch') return;
+    if (popover == null) return;
     popover.showPopover();
-    const target = event.currentTarget.getBoundingClientRect();
+    const bounds = target.getBoundingClientRect();
     const { offsetWidth: width, offsetHeight: height } = popover;
-    const left = target.left + target.width / 2 - width / 2;
-    const above = target.top - height - GAP;
+    const left = bounds.left + bounds.width / 2 - width / 2;
+    const above = bounds.top - height - GAP;
     popover.style.left = `${Math.min(Math.max(left, GAP), window.innerWidth - width - GAP)}px`;
-    popover.style.top = `${above >= GAP ? above : target.bottom + GAP}px`;
+    popover.style.top = `${above >= GAP ? above : bounds.bottom + GAP}px`;
   }
 
   return (
     <div
       aria-describedby={id}
-      onPointerEnter={show}
-      onPointerLeave={() => bubble.current?.hidePopover()}
+      onPointerEnter={(event) => { if (event.pointerType !== 'touch') show(event.currentTarget); }}
+      onPointerLeave={(event) => {
+        if (!event.currentTarget.contains(document.activeElement)) bubble.current?.hidePopover();
+      }}
+      onFocus={(event) => {
+        if (event.target instanceof HTMLElement && event.target.matches(':focus-visible')) show(event.currentTarget);
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) bubble.current?.hidePopover();
+      }}
+      onKeyDown={(event) => { if (event.key === 'Escape') bubble.current?.hidePopover(); }}
       // A column like RN's View: in a row, RN Web's unshrinkable child would
       // take its one-line width and spill past a narrow parent.
       style={{ display: fill ? 'flex' : 'inline-flex', flexDirection: 'column', flex: fill ? 1 : undefined }}

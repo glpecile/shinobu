@@ -755,6 +755,7 @@ export function DiaryList({
     day: null,
     visible: false,
   });
+  const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
   const stickyHeader = items.find(
     (item): item is Extract<DiaryListItem, { kind: 'header' }> =>
       item.kind === 'header' && item.dayKey === sticky.day,
@@ -802,6 +803,7 @@ export function DiaryList({
     let top = viewableItems[0];
     for (const token of viewableItems) if (token.index < top.index) top = token;
     const item = top?.item;
+    if (item != null) setVisibleMonth(item.kind === 'month' ? item.month : item.dayKey.slice(0, 7));
     const day = item == null || item.kind === 'month' || item.kind === 'header' ? null : item.dayKey;
     // Hiding keeps the last day so the bar fades out with its content.
     setSticky((previous) => {
@@ -815,9 +817,7 @@ export function DiaryList({
     if (past !== showScrollTop) setShowScrollTop(past);
   }
 
-  // The side calendar shows the month of the last day pinned at the top, which
-  // the sticky bar keeps through its fade-out, else the newest loaded day's.
-  const sideMonth = (sticky.day ?? days[0]?.key ?? activityProps.today).slice(0, 7);
+  const sideMonth = visibleMonth ?? (days[0]?.key ?? activityProps.today).slice(0, 7);
 
   return (
     <View className="flex-1 flex-row">
