@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react';
-import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import { useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
-  Platform,
   RefreshControl,
   Text,
   View,
@@ -25,7 +24,8 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
-import { DURATION, EASE_IN_OUT, TIMING_EASE_IN_OUT } from '@/lib/motion';
+import { DURATION, EASE_IN_OUT } from '@/lib/motion';
+import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -44,6 +44,7 @@ import {
   clusterDayEntries,
   formatClusterCount,
   formatDayParts,
+  formatDaySummary,
   formatEpisodeDetail,
   formatLogTime,
   shortClusterCount,
@@ -76,7 +77,6 @@ import {
  */
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
-const DIARY_REFLOW = LinearTransition.duration(DURATION.toggle).easing(TIMING_EASE_IN_OUT);
 
 /** Flattened list rows: a day's gutter head, then that day's entries. */
 type DiaryListItem =
@@ -85,7 +85,7 @@ type DiaryListItem =
       key: string;
       dayKey: string;
       parts: DiaryDayParts;
-      count: number;
+      summary: string;
       collapsed: boolean;
     }
   | { kind: 'entry'; key: string; entry: MergedDiaryEntry }
@@ -164,7 +164,7 @@ function flattenDays(
       key: `h-${day.key}`,
       dayKey: day.key,
       parts: formatDayParts(day.key, now, timeZone),
-      count: entries.length,
+      summary: formatDaySummary(entries),
       collapsed,
     });
     // A minimized day shows its gutter head alone — its rows are omitted.
@@ -229,20 +229,20 @@ function RailLine({ stop = false }: { stop?: boolean }) {
  */
 function DiaryDayHead({
   parts,
-  count,
+  summary,
   collapsed,
   onToggle,
 }: {
   parts: DiaryDayParts;
-  count: number;
+  summary: string;
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const label = `${count} ${count === 1 ? 'entry' : 'entries'}`;
+  const toggle = useDisclosureToggle(onToggle);
   return (
-    <RailHead label={`${parts.label} ${parts.day}, ${label}`} onToggle={onToggle} open={!collapsed}>
+    <RailHead label={`${parts.label} ${parts.day}, ${summary}`} onToggle={toggle} open={!collapsed}>
       <RailHead.Date day={parts.day} label={parts.label} today={parts.isToday} />
-      <RailHead.Count>{label}</RailHead.Count>
+      <RailHead.Count>{summary}</RailHead.Count>
     </RailHead>
   );
 }
@@ -427,6 +427,7 @@ function DiaryClusterRow({
   onToggle: (key: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
+  const toggle = useDisclosureToggle(() => onToggle(clusterKey));
   return (
     <View className="flex-row">
       <RailLine key={clusterKey} stop={last && !expanded} />
@@ -459,7 +460,7 @@ function DiaryClusterRow({
           </>
         }
         onActions={onActions}
-        onPress={() => onToggle(clusterKey)}
+        onPress={toggle}
         trailing={
           <RowTrailing liked={view.liked} providers={view.providers} runCount={view.runCount} />
         }
@@ -650,7 +651,6 @@ export function DiaryList({
   onItemActions,
 }: DiaryListProps) {
   const [refreshing, setRefreshing] = useState(false);
-  const reduceMotion = useReducedMotion();
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
   // Flipped only on threshold crossings, so scrolling doesn't re-render.
@@ -697,9 +697,6 @@ export function DiaryList({
     <View className="flex-1">
       <List
         ref={listRef}
-        // Web position measurements animate on mount and scale recycled text.
-        // docs/solutions/diary-disclosure-keeps-flat-virtualization.md
-        itemLayoutAnimation={reduceMotion || Platform.OS === 'web' ? undefined : DIARY_REFLOW}
         onScroll={handleScroll}
         data={items}
         keyExtractor={(item) => item.key}
@@ -709,7 +706,7 @@ export function DiaryList({
               return (
                 <DiaryDayHead
                   collapsed={item.collapsed}
-                  count={item.count}
+                  summary={item.summary}
                   onToggle={() => setDiaryDayCollapsed(item.dayKey, !collapsedDays.has(item.dayKey))}
                   parts={item.parts}
                 />
