@@ -4,6 +4,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
   RefreshControl,
   Text,
+  useWindowDimensions,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -18,13 +19,14 @@ import {
   SCROLL_TO_TOP_THRESHOLD,
   ScrollToTopFab,
 } from '@/components/scroll-to-top-fab';
+import { SectionEnter } from '@/components/section-enter';
 import { SmallPoster } from '@/components/small-poster';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
-import { DURATION, EASE_IN_OUT } from '@/lib/motion';
+import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
@@ -40,15 +42,18 @@ import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
+import { DiaryMonth, DiaryMonthSkeleton, formatDayDate } from './diary-activity';
 import {
   clusterDayEntries,
+  dayKeyForInstant,
   formatClusterCount,
   formatDayParts,
-  formatDaySummary,
   formatEpisodeDetail,
   formatLogTime,
   shortClusterCount,
   summarizeCluster,
+  summarizeDay,
+  type DaySummary,
   type DiaryCluster,
   type DiaryDayParts,
 } from './merge';
@@ -69,6 +74,53 @@ import {
  */
 
 /**
+ * The scrolled-past day pinned under the Diary header (beside its title on
+ * web), standing in for the day head once it leaves the top. It covers the list rather than sitting
+ * above it, so showing and hiding it never moves a row. It stays mounted and
+ * keeps its last day while hidden, so the fade out never shows an empty bar.
+ */
+function DiaryStickyDate({
+  label,
+  summary,
+  visible,
+}: {
+  label: string;
+  summary: string;
+  visible: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <AnimatedView
+      accessibilityElementsHidden={!visible}
+      accessibilityRole="header"
+      // Web's route header is a 64px row with only the title in it, so the
+      // bar rises into that row beside the title instead of adding a band;
+      // `left-19` puts the date ~20px past the 24px "Diary" title, and the bar
+      // stays transparent there since its box overlaps the title.
+      className={cn(
+        'absolute top-0 left-0 right-0 flex-row items-baseline px-6 py-2 bg-background border-b border-border',
+        'web:-top-16 web:left-19 web:h-16 web:py-0 web:items-center web:border-b-0 web:bg-transparent',
+      )}
+      importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
+      style={{
+        pointerEvents: 'none',
+        opacity: visible ? 1 : 0,
+        // Drops in from under the Diary header as the day head scrolls up into it.
+        transform: [{ translateY: visible ? 0 : -6 }],
+        transitionProperty: ['opacity', 'transform'],
+        transitionDuration: reduceMotion ? 0 : visible ? DURATION.enter : DURATION.exit,
+        transitionTimingFunction: EASE_OUT,
+      }}
+    >
+      <Text className="font-display text-base text-foreground">{label}</Text>
+      <Text className="ml-3 shrink text-muted font-sans text-xs" numberOfLines={1}>
+        {summary}
+      </Text>
+    </AnimatedView>
+  );
+}
+
+/**
  * The two class strings that set a row's height, named once because
  * `DiaryListSkeleton` has to reproduce it exactly — a skeleton whose rows are a
  * different height than the real ones *is* the layout shift. The poster is the
@@ -78,8 +130,9 @@ import {
 const ROW_BODY = 'flex-1 py-1.5 pr-6';
 const POSTER = 'w-9 h-13.5 rounded';
 
-/** Flattened list rows: a day's gutter head, then that day's entries. */
+/** Flattened list rows: a month's calendar, each day's gutter head, then that day's entries. */
 type DiaryListItem =
+  | { kind: 'month'; key: string; month: string }
   | {
       kind: 'header';
       key: string;
@@ -88,16 +141,17 @@ type DiaryListItem =
       summary: string;
       collapsed: boolean;
     }
-  | { kind: 'entry'; key: string; entry: MergedDiaryEntry }
+  | { kind: 'entry'; key: string; dayKey: string; entry: MergedDiaryEntry }
   | {
       kind: 'cluster';
       key: string;
+      dayKey: string;
       cluster: DiaryCluster;
       /** Precomputed at flatten time — see `clusterView`. */
       view: ClusterView;
       expanded: boolean;
     }
-  | { kind: 'child'; key: string; entry: MergedDiaryEntry; last: boolean };
+  | { kind: 'child'; key: string; dayKey: string; entry: MergedDiaryEntry; last: boolean };
 
 /**
  * Everything a collapsed run's row displays, derived once per cluster instead
@@ -147,8 +201,11 @@ function flattenDays(
   expanded: ReadonlySet<string>,
   collapsedDays: ReadonlySet<string>,
   hiddenIds: ReadonlySet<string>,
-): DiaryListItem[] {
+  inlineMonths: boolean,
+): { items: DiaryListItem[]; activity: Map<string, DaySummary> } {
   const items: DiaryListItem[] = [];
+  const activity = new Map<string, DaySummary>();
+  let month = '';
   for (const day of days) {
     // Hiding is one global set (feed, watchlist, Up Next, diary), so a hidden
     // item's logs drop out here too — and a day left with nothing loses its
@@ -159,12 +216,18 @@ function flattenDays(
         : day.entries.filter((entry) => !hiddenIds.has(entry.item.id));
     if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
+    const summary = summarizeDay(entries);
+    activity.set(day.key, summary);
+    if (inlineMonths && day.key.slice(0, 7) !== month) {
+      month = day.key.slice(0, 7);
+      items.push({ kind: 'month', key: `m-${month}`, month });
+    }
     items.push({
       kind: 'header',
       key: `h-${day.key}`,
       dayKey: day.key,
       parts: formatDayParts(day.key, now, timeZone),
-      summary: formatDaySummary(entries),
+      summary: summary.label,
       collapsed,
     });
     // A minimized day shows its gutter head alone — its rows are omitted.
@@ -173,13 +236,14 @@ function flattenDays(
       // A lone log is an ordinary row; a run of same-show episodes collapses.
       if (cluster.entries.length === 1) {
         const entry = cluster.entries[0];
-        items.push({ kind: 'entry', key: entry.id, entry });
+        items.push({ kind: 'entry', key: entry.id, dayKey: day.key, entry });
         continue;
       }
       const isOpen = expanded.has(cluster.key);
       items.push({
         kind: 'cluster',
         key: `c-${cluster.key}`,
+        dayKey: day.key,
         cluster,
         view: clusterView(cluster),
         expanded: isOpen,
@@ -189,6 +253,7 @@ function flattenDays(
           items.push({
             kind: 'child',
             key: entry.id,
+            dayKey: day.key,
             entry,
             last: index === cluster.entries.length - 1,
           }),
@@ -196,7 +261,7 @@ function flattenDays(
       }
     }
   }
-  return items;
+  return { items, activity };
 }
 
 /**
@@ -603,17 +668,33 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
 /** Day sizes that read as a plausible diary rather than a uniform block. */
 const SKELETON_DAYS = [3, 4, 3];
 
+/**
+ * From here the month calendar moves out of the list into a column beside it:
+ * a wide web window has the room, and full-width rows only stretch.
+ */
+const SIDE_CALENDAR_MIN_WIDTH = 1024;
+const SIDE_CALENDAR = 'w-104 border-l border-border';
+
 export function DiaryListSkeleton() {
+  const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
   return (
-    <View>
-      {SKELETON_DAYS.map((rows, day) => (
-        <View key={day}>
-          <RailHead.Skeleton lead="date" />
-          {Array.from({ length: rows }).map((_, row) => (
-            <SkeletonRow index={day + row} key={row} last={row === rows - 1} />
-          ))}
+    <View className="flex-1 flex-row">
+      <View className="flex-1">
+        {SKELETON_DAYS.map((rows, day) => (
+          <View key={day}>
+            {day === 0 && !wide && <DiaryMonthSkeleton />}
+            <RailHead.Skeleton lead="date" />
+            {Array.from({ length: rows }).map((_, row) => (
+              <SkeletonRow index={day + row} key={row} last={row === rows - 1} />
+            ))}
+          </View>
+        ))}
+      </View>
+      {wide && (
+        <View className={SIDE_CALENDAR}>
+          <DiaryMonthSkeleton stacked />
         </View>
-      ))}
+      )}
     </View>
   );
 }
@@ -658,14 +739,39 @@ export function DiaryList({
   const { expanded, toggle: toggleCluster } = useListDisclosure();
   const collapsedDays = useCollapsedDiaryDays();
   const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
-  const items = flattenDays(
+  const now = new Date();
+  const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
+  const { items, activity } = flattenDays(
     days,
-    new Date(),
+    now,
     timeZone,
     expanded,
     collapsedDays,
     hiddenIds,
+    !wide,
   );
+
+  const [sticky, setSticky] = useState<{ day: string | null; visible: boolean }>({
+    day: null,
+    visible: false,
+  });
+  const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
+  const stickyHeader = items.find(
+    (item): item is Extract<DiaryListItem, { kind: 'header' }> =>
+      item.kind === 'header' && item.dayKey === sticky.day,
+  );
+
+  const activityProps = {
+    activity,
+    // Days arrive newest-first; the last is as far back as the feed has loaded.
+    // Once there's no next page, the history is complete and earlier days are empty.
+    oldest: hasNextPage ? (days.at(-1)?.key ?? '') : '',
+    today: dayKeyForInstant(now, timeZone),
+    onSelectDay: (dayKey: string) => {
+      const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
+      if (index !== -1) void listRef.current?.scrollToIndex({ index });
+    },
+  };
 
   async function refresh() {
     setRefreshing(true);
@@ -685,7 +791,25 @@ export function DiaryList({
   /** A row is a day's last when the next item starts a new day (or ends it). */
   function isLastOfDay(index: number) {
     const next = items[index + 1];
-    return next == null || next.kind === 'header';
+    return next == null || next.kind === 'header' || next.kind === 'month';
+  }
+
+  /** The topmost row's day, once its own head has scrolled away. */
+  function handleViewableItemsChanged({
+    viewableItems,
+  }: {
+    viewableItems: Array<{ index: number; item: DiaryListItem }>;
+  }) {
+    let top = viewableItems[0];
+    for (const token of viewableItems) if (token.index < top.index) top = token;
+    const item = top?.item;
+    if (item != null) setVisibleMonth(item.kind === 'month' ? item.month : item.dayKey.slice(0, 7));
+    const day = item == null || item.kind === 'month' || item.kind === 'header' ? null : item.dayKey;
+    // Hiding keeps the last day so the bar fades out with its content.
+    setSticky((previous) => {
+      if (day == null) return previous.visible ? { ...previous, visible: false } : previous;
+      return previous.visible && previous.day === day ? previous : { day, visible: true };
+    });
   }
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -693,96 +817,117 @@ export function DiaryList({
     if (past !== showScrollTop) setShowScrollTop(past);
   }
 
+  const sideMonth = visibleMonth ?? (days[0]?.key ?? activityProps.today).slice(0, 7);
+
   return (
-    <View className="flex-1">
-      <List
-        ref={listRef}
-        onScroll={handleScroll}
-        data={items}
-        keyExtractor={(item) => item.key}
-        renderItem={({ item, index }) => {
-          switch (item.kind) {
-            case 'header':
-              return (
-                <DiaryDayHead
-                  collapsed={item.collapsed}
-                  summary={item.summary}
-                  onToggle={() => setDiaryDayCollapsed(item.dayKey, !collapsedDays.has(item.dayKey))}
-                  parts={item.parts}
-                />
-              );
-            case 'cluster':
-              return (
-                <DiaryClusterRow
-                  clusterKey={item.cluster.key}
-                  expanded={item.expanded}
-                  last={isLastOfDay(index)}
-                  onActions={onItemActions}
-                  onToggle={toggleCluster}
-                  view={item.view}
-                />
-              );
-            case 'child':
-              return (
-                <DiaryChildRow
-                  entry={item.entry}
-                  last={isLastOfDay(index)}
-                  onActions={onItemActions}
-                  onOpen={onOpen}
-                  timeZone={timeZone}
-                />
-              );
-            default:
-              return (
-                <DiaryRow
-                  entry={item.entry}
-                  last={isLastOfDay(index)}
-                  onActions={onItemActions}
-                  onOpen={onOpen}
-                  timeZone={timeZone}
-                />
-              );
+    <View className="flex-1 flex-row">
+      <View className="flex-1">
+        <List
+          ref={listRef}
+          onScroll={handleScroll}
+          data={items}
+          keyExtractor={(item) => item.key}
+          renderItem={({ item, index }) => {
+            switch (item.kind) {
+              case 'month':
+                return <DiaryMonth month={item.month} {...activityProps} />;
+              case 'header':
+                return (
+                  <DiaryDayHead
+                    collapsed={item.collapsed}
+                    summary={item.summary}
+                    onToggle={() => setDiaryDayCollapsed(item.dayKey, !collapsedDays.has(item.dayKey))}
+                    parts={item.parts}
+                  />
+                );
+              case 'cluster':
+                return (
+                  <DiaryClusterRow
+                    clusterKey={item.cluster.key}
+                    expanded={item.expanded}
+                    last={isLastOfDay(index)}
+                    onActions={onItemActions}
+                    onToggle={toggleCluster}
+                    view={item.view}
+                  />
+                );
+              case 'child':
+                return (
+                  <DiaryChildRow
+                    entry={item.entry}
+                    last={isLastOfDay(index)}
+                    onActions={onItemActions}
+                    onOpen={onOpen}
+                    timeZone={timeZone}
+                  />
+                );
+              default:
+                return (
+                  <DiaryRow
+                    entry={item.entry}
+                    last={isLastOfDay(index)}
+                    onActions={onItemActions}
+                    onOpen={onOpen}
+                    timeZone={timeZone}
+                  />
+                );
+            }
+          }}
+          ListHeaderComponent={
+            failedProviders.length > 0 ? (
+              <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
+            ) : undefined
           }
-        }}
-        ListHeaderComponent={
-          failedProviders.length > 0 ? (
-            <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
-          ) : undefined
-        }
-        ListFooterComponent={
-          <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
-        }
-        // Rows come in three very different heights (~72 head, 66 entry, 36
-        // child). `getItemType` lets the virtualizer keep a running average per
-        // kind instead of one blended number, so a screenful of day heads
-        // doesn't mis-estimate the scroll extent of the entries below them.
-        // Size the initial pool for a viewport of expanded children, the
-        // shortest rows. These remain estimates so larger fonts can remeasure.
-        estimatedItemSize={36}
-        getItemType={(item) => item.kind}
-        onEndReached={hasNextPage ? onEndReached : undefined}
-        onEndReachedThreshold={0.6}
-        // The one list in the app that opts into recycling, and it is measured,
-        // not assumed: profiling a scroll over ~1,300 logs put a 332ms commit on
-        // the mount of a single screenful of rows — 45% of it in the
-        // gesture-handler pressable stack that every row re-creates from
-        // scratch. Recycling reuses those fibers instead. Safe here because
-        // every diary row derives from props: the poster resolves off the item
-        // id, day-collapse lives in MMKV and run-expansion in this component,
-        // never in a row. The one piece of row-local state is `ActionableRow`'s
-        // web hover flag, which can briefly show a stale ⋯ on a recycled row
-        // until the next pointer move.
-        // ponytail: revisit if hover ever drives anything but that button.
-        recycleItems
-        refreshControl={
-          <RefreshControl onRefresh={refresh} refreshing={refreshing} />
-        }
-      />
-      <ScrollToTopFab
-        className="ios:bottom-24"
-        onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
-        visible={showScrollTop}
-      />
+          ListFooterComponent={
+            <DiaryFooter loading={hasNextPage && isFetchingNextPage} />
+          }
+          // Rows come in four very different heights (~300 month, ~72 head, 66
+          // entry, 36 child). `getItemType` lets the virtualizer keep a running
+          // average per kind instead of one blended number, so a screenful of day heads
+          // doesn't mis-estimate the scroll extent of the entries below them.
+          // Size the initial pool for a viewport of expanded children, the
+          // shortest rows. These remain estimates so larger fonts can remeasure.
+          estimatedItemSize={36}
+          getItemType={(item) => item.kind}
+          onEndReached={hasNextPage ? onEndReached : undefined}
+          onEndReachedThreshold={0.6}
+          onViewableItemsChanged={handleViewableItemsChanged}
+          // The one list in the app that opts into recycling, and it is measured,
+          // not assumed: profiling a scroll over ~1,300 logs put a 332ms commit on
+          // the mount of a single screenful of rows — 45% of it in the
+          // gesture-handler pressable stack that every row re-creates from
+          // scratch. Recycling reuses those fibers instead. Safe here because
+          // every diary row derives from props: the poster resolves off the item
+          // id, day-collapse lives in MMKV and run-expansion in this component,
+          // never in a row. The one piece of row-local state is `ActionableRow`'s
+          // web hover flag, which can briefly show a stale ⋯ on a recycled row
+          // until the next pointer move.
+          // ponytail: revisit if hover ever drives anything but that button.
+          recycleItems
+          refreshControl={
+            <RefreshControl onRefresh={refresh} refreshing={refreshing} />
+          }
+        />
+        {stickyHeader != null && (
+          <DiaryStickyDate
+            label={formatDayDate(stickyHeader.dayKey, activityProps.today)}
+            summary={stickyHeader.summary}
+            visible={sticky.visible}
+          />
+        )}
+        <ScrollToTopFab
+          className="ios:bottom-24"
+          onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
+          visible={showScrollTop}
+        />
+      </View>
+      {wide && (
+        <View className={SIDE_CALENDAR}>
+          <SectionEnter key={sideMonth}>
+            <DiaryMonth month={sideMonth} stacked {...activityProps} />
+          </SectionEnter>
+        </View>
+      )}
     </View>
   );
 }
