@@ -8,6 +8,7 @@ import { MorphText } from '@/components/morph-text';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { cn } from '@/lib/cn';
+import { haptics } from '@/lib/haptics';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -130,12 +131,18 @@ function ProviderOptions({
     <View>
       {targets.length > 1 && (
         <View className="flex-row justify-end gap-3 px-4 py-2 border-b border-border">
-          <PresstableOpacity onPress={onSelectAll}>
+          <PresstableOpacity onPress={() => {
+            if (!targets.every((id) => selectedProviders.includes(id))) haptics.selection();
+            onSelectAll();
+          }}>
             <Text className="text-foreground font-sans-semibold text-xs">All</Text>
           </PresstableOpacity>
           <PresstableOpacity
             accessibilityLabel="Select no providers"
-            onPress={onSelectNone}
+            onPress={() => {
+              if (targets.some((id) => selectedProviders.includes(id))) haptics.selection();
+              onSelectNone();
+            }}
           >
             <Text className="text-muted font-sans-semibold text-xs">None</Text>
           </PresstableOpacity>
@@ -145,7 +152,10 @@ function ProviderOptions({
         <ProviderToggle
           id={id}
           key={id}
-          onToggle={() => onToggle(id)}
+          onToggle={() => {
+            haptics.selection();
+            onToggle(id);
+          }}
           selected={selectedProviders.includes(id)}
         />
       ))}

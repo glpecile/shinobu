@@ -89,7 +89,7 @@ export function EpisodeHeading({
   const meta = episodeMetaLine(episode);
   const centered = align === 'center';
   function goToSeries() {
-    pushRoute(routes.details(id, 'TV'));
+    if (pushRoute(routes.details(id, 'TV'))) haptics.selection();
   }
   return (
     <View className={cn(centered && 'items-center')}>
@@ -296,7 +296,11 @@ export function EpisodeNavigation({
           icon={<Button.Icon name="chevron-back" />}
           iconOnly
           label="Previous"
-          onPress={() => prev != null && go(prev)}
+          onPress={() => {
+            if (prev == null) return;
+            haptics.selection();
+            go(prev);
+          }}
           variant="ghost"
         />
         <View className="flex-1 items-center">
@@ -307,7 +311,11 @@ export function EpisodeNavigation({
           icon={<Button.Icon name="chevron-forward" />}
           iconOnly
           label="Next"
-          onPress={() => next != null && go(next)}
+          onPress={() => {
+            if (next == null) return;
+            haptics.selection();
+            go(next);
+          }}
           variant="ghost"
         />
       </View>
@@ -330,7 +338,9 @@ export function EpisodeNavigation({
             icon={<Button.Icon name="tv-outline" />}
             iconOnly
             label="View series"
-            onPress={() => pushRoute(routes.details(id, 'TV'))}
+            onPress={() => {
+              if (pushRoute(routes.details(id, 'TV'))) haptics.selection();
+            }}
             variant="ghost"
           />
         </View>

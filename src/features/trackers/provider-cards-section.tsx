@@ -12,6 +12,7 @@ import {
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import { TraktMigrationBanner } from '@/features/trackers/trakt-migration-banner';
 import type { ProviderId } from '@/lib/providers/types';
+import { haptics } from '@/lib/haptics';
 import {
   SERVER_CONNECTED_PROVIDERS,
   useConnectedProviders,
@@ -53,6 +54,7 @@ export function ProviderCardsSection() {
   const [sheetWasConnected, setSheetWasConnected] = useState(false);
 
   function openSheet(id: ProviderId) {
+    haptics.selection();
     setSheetId(id);
     setSheetWasConnected(connectedIds.includes(id));
     setSheetOpen(true);

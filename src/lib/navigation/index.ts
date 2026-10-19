@@ -20,18 +20,20 @@ export function allowRoutePush(href: string): boolean {
 /**
  * `router.push`, minus the duplicate. Use this instead of `useRouter().push`
  * for anything a press can reach; `useRouter` stays the way to `back()`,
- * `replace()` or read navigation state.
+ * `replace()` or read navigation state. Returns whether the push was accepted,
+ * so contextual press feedback stays quiet when a duplicate is blocked.
  */
-export function usePushRoute(): (href: string) => void {
+export function usePushRoute(): (href: string) => boolean {
   const router = useRouter();
   return (href: string) => {
     // Web only; a no-op elsewhere.
-    if (openedInNewTab(href)) return;
-    if (!allowRoutePush(href)) return;
+    if (openedInNewTab(href)) return false;
+    if (!allowRoutePush(href)) return false;
     // Cast: `routes.*` produces the literal template strings Expo Router's
     // `Href` union is built from, but they widen to `string` crossing this
     // boundary. Keeping the parameter `string` is what lets every call site
     // pass a `routes.*` result without restating its literal type.
     router.push(href as Parameters<typeof router.push>[0]);
+    return true;
   };
 }
