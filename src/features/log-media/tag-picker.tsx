@@ -12,6 +12,7 @@ import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
+import { haptics } from '@/lib/haptics';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import type { LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import { useThemeColor } from '@/lib/theme-color';
@@ -413,7 +414,10 @@ export function TagPicker({
                   entering={chipAnimation(index, reduceMotion)}
                   key={tag.toLowerCase()}
                   onMeasure={index === 0 ? measureRow : undefined}
-                  onToggle={() => onChange(toggleTag(value, tag))}
+                  onToggle={() => {
+                    haptics.selection();
+                    onChange(toggleTag(value, tag));
+                  }}
                   selected={isTagSelected(value, tag)}
                   tag={tag}
                 />

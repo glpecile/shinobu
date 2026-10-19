@@ -1,4 +1,5 @@
 import { Button } from '@/components/button';
+import { haptics } from '@/lib/haptics';
 
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
@@ -17,7 +18,10 @@ export function ViewToggle({
       icon={<Button.Icon name={next === 'grid' ? 'grid-outline' : 'list-outline'} />}
       iconOnly
       label={next === 'grid' ? 'Switch to poster grid' : 'Switch to list'}
-      onPress={() => onChange(next)}
+      onPress={() => {
+        haptics.selection();
+        onChange(next);
+      }}
       size="sm"
       variant="quiet"
     />

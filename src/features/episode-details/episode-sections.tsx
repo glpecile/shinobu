@@ -89,7 +89,7 @@ export function EpisodeHeading({
   const meta = episodeMetaLine(episode);
   const centered = align === 'center';
   function goToSeries() {
-    pushRoute(routes.details(id, 'TV'));
+    if (pushRoute(routes.details(id, 'TV'))) haptics.selection();
   }
   return (
     <View className={cn(centered && 'items-center')}>
@@ -288,6 +288,11 @@ export function EpisodeNavigation({
   const pushRoute = usePushRoute();
   const insets = useSafeAreaInsets();
   const [showSeriesHint, setShowSeriesHint] = useState(false);
+  function step(target: EpisodeRef | undefined) {
+    if (target == null) return;
+    haptics.selection();
+    go(target);
+  }
   return (
     <View className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2" style={{ bottom: insets.bottom + 12 }}>
       <View className="flex-row items-center w-52 p-1 rounded-full border border-border bg-surface shadow-md">
@@ -296,7 +301,7 @@ export function EpisodeNavigation({
           icon={<Button.Icon name="chevron-back" />}
           iconOnly
           label="Previous"
-          onPress={() => prev != null && go(prev)}
+          onPress={() => step(prev)}
           variant="ghost"
         />
         <View className="flex-1 items-center">
@@ -307,7 +312,7 @@ export function EpisodeNavigation({
           icon={<Button.Icon name="chevron-forward" />}
           iconOnly
           label="Next"
-          onPress={() => next != null && go(next)}
+          onPress={() => step(next)}
           variant="ghost"
         />
       </View>
@@ -330,7 +335,9 @@ export function EpisodeNavigation({
             icon={<Button.Icon name="tv-outline" />}
             iconOnly
             label="View series"
-            onPress={() => pushRoute(routes.details(id, 'TV'))}
+            onPress={() => {
+              if (pushRoute(routes.details(id, 'TV'))) haptics.selection();
+            }}
             variant="ghost"
           />
         </View>

@@ -11,6 +11,7 @@ import {
   statusLine,
 } from '@/features/trackers/provider-style';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
+import { haptics } from '@/lib/haptics';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useDisconnectProvider } from '@/state/session';
@@ -87,6 +88,7 @@ function ProviderSheetContent({
             icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
             onPress={() => {
+              haptics.confirm();
               disconnect(id);
               onDone();
             }}

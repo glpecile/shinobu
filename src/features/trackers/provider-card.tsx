@@ -5,6 +5,7 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { compactStatus } from '@/features/trackers/provider-style';
 import { useConnectAction } from '@/features/trackers/use-connect-action';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
+import { haptics } from '@/lib/haptics';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
@@ -74,7 +75,14 @@ export function ProviderCard({
           // The one-tap providers open a browser session, which takes long
           // enough on a cold start to look like a dead tap without this.
           loading={connecting}
-          onPress={needsSheet ? onOpenSheet : connect}
+          onPress={() => {
+            if (needsSheet) {
+              onOpenSheet();
+              return;
+            }
+            haptics.selection();
+            connect();
+          }}
           size="sm"
           variant="outline"
         />

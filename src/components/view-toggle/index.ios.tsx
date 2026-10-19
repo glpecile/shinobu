@@ -2,6 +2,7 @@ import { Host, Image, Picker } from '@expo/ui/swift-ui';
 import { accessibilityLabel, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { useColorScheme } from 'react-native';
 
+import { haptics } from '@/lib/haptics';
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
 /** Grid ⇄ list as SwiftUI's segmented `Picker`. */
@@ -20,7 +21,11 @@ export function ViewToggle({
     >
       <Picker
         modifiers={[pickerStyle('segmented')]}
-        onSelectionChange={(next: WatchlistView) => onChange(next)}
+        onSelectionChange={(next: WatchlistView) => {
+          if (next === view) return;
+          haptics.selection();
+          onChange(next);
+        }}
         selection={view}
       >
         <Image
