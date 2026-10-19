@@ -41,7 +41,8 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   // read instead of treating every scraped duration as unknown.
   const progress = useMediaProgress(loaded);
   const items = progress.items;
-  if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider="letterboxd" url={url} />;
+  const shareHref = routes.letterboxdList(owner, slug);
+  if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider="letterboxd" shareHref={shareHref} url={url} />;
   const title = pages.data.pages[0].title;
   const target = username != null && username.toLowerCase() === owner.toLowerCase()
     ? { provider: 'letterboxd' as const, username, owner, slug, title, url } : null;
@@ -49,7 +50,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
     <>
       <Head><title>{`${title} — Shinobu`}</title></Head>
       <ListsHeader
-        shareHref={routes.letterboxdList(owner, slug)}
+        shareHref={shareHref}
         metadata={<ListProgress countLabel={`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'}`} partial={pages.hasNextPage} state={progress} />}
         provider="letterboxd" subtitle={`by ${owner}`} title={title}
       />
@@ -88,10 +89,10 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
 }
 
 /** Mirrors the header, toolbar, and persisted grid/row view without a layout jump. */
-export function ListFilmsSkeleton({ likeButton }: { likeButton: boolean }) {
+export function ListFilmsSkeleton({ likeButton, shareHref }: { likeButton: boolean; shareHref?: string }) {
   return (
     <View className="flex-1">
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="letterboxd" subtitle="" />
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="letterboxd" shareHref={shareHref} subtitle="" />
       <MediaToolbarSkeleton actions={likeButton ? 3 : 2} layout />
       <WallSkeleton />
     </View>

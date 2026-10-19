@@ -48,7 +48,7 @@ export function ListsHeader({ provider, title, subtitle, metadata, shareHref, mo
           {metadata}
         </View>}
       </View>
-      {shareHref != null && <View className="shrink-0"><ShareButton href={shareHref} /></View>}
+      {shareHref != null && <View className="-mr-2 shrink-0"><Tooltip label="Share"><ShareButton href={shareHref} /></Tooltip></View>}
     </View>
   );
 }

@@ -113,10 +113,10 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   );
 }
 
-export function SerializdListSkeleton() {
+export function SerializdListSkeleton({ shareHref }: { shareHref?: string }) {
   return (
     <>
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" subtitle="" />
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" shareHref={shareHref} subtitle="" />
       <MediaToolbarSkeleton actions={2} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>

@@ -6,6 +6,7 @@ import {
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import {
   PersonDetailsView,
@@ -47,7 +48,7 @@ export default function PersonScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<PersonSkeleton />}>
+      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={provider === 'anilist' ? routes.anilistPerson(personId) : routes.person(personId)} /></>}>
         {provider === 'anilist' ? (
           <AniListPersonContent anilistId={personId} />
         ) : (

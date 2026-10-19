@@ -6,6 +6,7 @@ import {
 import { Suspense } from 'react';
 
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingShareButton } from '@/components/floating-share-button';
 import { ScrolledTitle } from '@/components/scrolled-title';
 import {
   PersonDetailsView,
@@ -56,7 +57,7 @@ export default function PersonLookupScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<PersonSkeleton />}>
+      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={routes.personLookup(name)} /></>}>
         <LookupContent name={name} onGoBack={goBack} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />
