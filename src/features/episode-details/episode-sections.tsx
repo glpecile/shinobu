@@ -288,6 +288,11 @@ export function EpisodeNavigation({
   const pushRoute = usePushRoute();
   const insets = useSafeAreaInsets();
   const [showSeriesHint, setShowSeriesHint] = useState(false);
+  function step(target: EpisodeRef | undefined) {
+    if (target == null) return;
+    haptics.selection();
+    go(target);
+  }
   return (
     <View className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2" style={{ bottom: insets.bottom + 12 }}>
       <View className="flex-row items-center w-52 p-1 rounded-full border border-border bg-surface shadow-md">
@@ -296,11 +301,7 @@ export function EpisodeNavigation({
           icon={<Button.Icon name="chevron-back" />}
           iconOnly
           label="Previous"
-          onPress={() => {
-            if (prev == null) return;
-            haptics.selection();
-            go(prev);
-          }}
+          onPress={() => step(prev)}
           variant="ghost"
         />
         <View className="flex-1 items-center">
@@ -311,11 +312,7 @@ export function EpisodeNavigation({
           icon={<Button.Icon name="chevron-forward" />}
           iconOnly
           label="Next"
-          onPress={() => {
-            if (next == null) return;
-            haptics.selection();
-            go(next);
-          }}
+          onPress={() => step(next)}
           variant="ghost"
         />
       </View>

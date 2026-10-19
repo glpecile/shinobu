@@ -127,20 +127,24 @@ function ProviderOptions({
   onSelectNone,
   onToggle,
 }: ProviderPickerProps) {
+  const allSelected = targets.every((id) => selectedProviders.includes(id));
+  const anySelected = targets.some((id) => selectedProviders.includes(id));
   return (
     <View>
       {targets.length > 1 && (
         <View className="flex-row justify-end gap-3 px-4 py-2 border-b border-border">
-          <PresstableOpacity onPress={() => {
-            if (!targets.every((id) => selectedProviders.includes(id))) haptics.selection();
-            onSelectAll();
-          }}>
+          <PresstableOpacity
+            onPress={() => {
+              if (!allSelected) haptics.selection();
+              onSelectAll();
+            }}
+          >
             <Text className="text-foreground font-sans-semibold text-xs">All</Text>
           </PresstableOpacity>
           <PresstableOpacity
             accessibilityLabel="Select no providers"
             onPress={() => {
-              if (targets.some((id) => selectedProviders.includes(id))) haptics.selection();
+              if (anySelected) haptics.selection();
               onSelectNone();
             }}
           >

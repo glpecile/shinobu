@@ -11,8 +11,8 @@ import {
   statusLine,
 } from '@/features/trackers/provider-style';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
-import { PROVIDERS } from '@/lib/providers/registry';
 import { haptics } from '@/lib/haptics';
+import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useDisconnectProvider } from '@/state/session';
 

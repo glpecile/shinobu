@@ -20,8 +20,9 @@ export function allowRoutePush(href: string): boolean {
 /**
  * `router.push`, minus the duplicate. Use this instead of `useRouter().push`
  * for anything a press can reach; `useRouter` stays the way to `back()`,
- * `replace()` or read navigation state. Returns whether the push was accepted,
- * so contextual press feedback stays quiet when a duplicate is blocked.
+ * `replace()` or read navigation state. Returns whether the push was accepted
+ * (false for a blocked duplicate or a web new-tab open), so contextual press
+ * feedback stays quiet when nothing happened in this tab.
  */
 export function usePushRoute(): (href: string) => boolean {
   const router = useRouter();

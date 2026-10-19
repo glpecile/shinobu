@@ -11,8 +11,8 @@ import {
 } from '@/features/trackers/provider-connections';
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import { TraktMigrationBanner } from '@/features/trackers/trakt-migration-banner';
-import type { ProviderId } from '@/lib/providers/types';
 import { haptics } from '@/lib/haptics';
+import type { ProviderId } from '@/lib/providers/types';
 import {
   SERVER_CONNECTED_PROVIDERS,
   useConnectedProviders,
