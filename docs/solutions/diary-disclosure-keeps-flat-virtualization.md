@@ -23,3 +23,10 @@ export can pass typecheck but crash with an undefined element type.
 Diary exports an Expo Router error boundary to contain render failures inside
 the route. The root boundary otherwise removes the app shell as well.
 Neither boundary navigates to `/redirect`; that route handles OAuth callbacks.
+
+A cold iOS mount also reproduced overlapping rows with `AnimatedLegendList`'s
+always-on `itemLayoutAnimation`: the list kept 36px estimates while entry bodies
+were 66px tall. Removing that prop immediately restored measured spacing. The
+Diary therefore uses the ordinary List on native too, scheduling the existing
+`useDisclosureToggle` animation only in day/run press handlers. Initial sizing
+and provider-data updates do not schedule a disclosure animation.

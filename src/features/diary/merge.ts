@@ -131,6 +131,89 @@ function identityKey(item: NormalizedDiaryEntry['item']): string {
   return titleYearKey(item);
 }
 
+function counted(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value.toLocaleString()} ${value === 1 ? singular : plural}`;
+}
+
+/** Counts visible logs, joining provider identities and overlapping episode ranges. */
+export function formatDaySummary(entries: readonly MergedDiaryEntry[]): string {
+  let films = 0;
+  const anilistByMal = new Map<string, number>();
+  for (const { item } of entries) {
+    const { anilist, mal } = item.externalIds;
+    if (anilist != null && mal != null) {
+      anilistByMal.set(`${item.type === 'MANGA' ? 'manga' : 'show'}:${mal}`, anilist);
+    }
+  }
+  type Series = { keys: Set<string>; units: Set<string>; manga: boolean };
+  const series = new Set<Series>();
+  const byIdentity = new Map<string, Series>();
+  for (const entry of entries) {
+    const { item } = entry;
+    if (item.type === 'MOVIE' || item.isFilm) {
+      films++;
+      continue;
+    }
+    // Anime and TV can describe the same show; manga IDs occupy a separate namespace.
+    const family = item.type === 'MANGA' ? 'manga' : 'show';
+    const keys = identityKeys(item).map((key) => `${family}:${key}`);
+    let group = byIdentity.get(keys[0]);
+    for (const key of keys) {
+      const match = byIdentity.get(key);
+      if (match == null) continue;
+      if (group == null) group = match;
+      else if (group !== match) {
+        for (const unit of match.units) group.units.add(unit);
+        for (const alias of match.keys) {
+          group.keys.add(alias);
+          byIdentity.set(alias, group);
+        }
+        series.delete(match);
+      }
+    }
+    if (group == null) {
+      group = { keys: new Set(), units: new Set(), manga: item.type === 'MANGA' };
+      series.add(group);
+    }
+    for (const key of keys) {
+      group.keys.add(key);
+      byIdentity.set(key, group);
+    }
+    // Unseasoned anime numbers belong to the AniList/MAL entry, not season 1
+    // of its TMDB show. Two cours can both contain episode 1.
+    const anilist = item.externalIds.anilist ?? anilistByMal.get(`${family}:${item.externalIds.mal}`);
+    const animeIdentity = anilist != null
+      ? `anilist:${anilist}`
+      : item.externalIds.mal != null ? `mal:${item.externalIds.mal}` : identityKey(item);
+    const numbering = entry.season != null ? `season:${entry.season}` : `entry:${animeIdentity}`;
+    for (const episode of entry.episodes) group.units.add(`${numbering}:${episode}`);
+  }
+  let shows = 0;
+  let episodes = 0;
+  let manga = 0;
+  let chapters = 0;
+  for (const group of series) {
+    if (group.manga) {
+      manga++;
+      chapters += group.units.size;
+    } else {
+      shows++;
+      episodes += group.units.size;
+    }
+  }
+  const parts: string[] = [];
+  if (films > 0) parts.push(counted(films, 'film'));
+  if (shows > 0) {
+    const titles = counted(shows, 'show');
+    parts.push(episodes > 0 ? `${counted(episodes, 'episode')} of ${titles}` : titles);
+  }
+  if (manga > 0) {
+    const titles = counted(manga, 'manga', 'manga');
+    parts.push(chapters > 0 ? `${counted(chapters, 'chapter')} of ${titles}` : titles);
+  }
+  return parts.join(' / ');
+}
+
 /**
  * Namespaced identity keys for the cross-provider *collapse* join. TMDB alone
  * is not enough (the up-next lesson, plan 0034 U9.5): an AniList log states

@@ -17,7 +17,7 @@ export const RAIL_LINE = 'left-7';
 
 const ROW = 'flex-row pt-5';
 /** `pb-3` so the count and rule centre on the lead's headline, not the block. */
-const TRAILING = 'flex-1 flex-row items-center pr-6 pb-3';
+const TRAILING = 'flex-1 min-w-0 flex-row items-center pr-6 pb-3';
 const RULE = 'flex-1 h-px bg-border';
 const LEAD_LINE = cn('absolute w-px bg-border bottom-0', RAIL_LINE);
 
@@ -75,7 +75,7 @@ function RailHeadDate({
 }) {
   const open = useContext(OpenContext);
   return (
-    <View className={cn(RAIL_W, 'items-center relative')}>
+    <View className={cn(RAIL_W, 'shrink-0 items-center relative')}>
       <Text
         className={cn(
           'font-display text-2xl leading-none',
@@ -118,7 +118,7 @@ function RailHeadCount({ children }: { children: ReactNode }) {
   const open = useContext(OpenContext);
   return (
     <View className={TRAILING}>
-      <Text className="text-muted/70 font-sans text-[11px] mr-3">{children}</Text>
+      <Text className="shrink text-muted/70 font-sans text-[11px] mr-3">{children}</Text>
       <View className={RULE} />
       <DisclosureChevron className="ml-2.5" open={open} size={14} />
     </View>
