@@ -135,8 +135,17 @@ function counted(value: number, singular: string, plural = `${singular}s`): stri
   return `${value.toLocaleString()} ${value === 1 ? singular : plural}`;
 }
 
-/** Counts visible logs, joining provider identities and overlapping episode ranges. */
-export function formatDaySummary(entries: readonly MergedDiaryEntry[]): string {
+/**
+ * Counts visible logs, joining provider identities and overlapping episode
+ * ranges. `label` is the day head's text; `units` (films + episodes + chapters,
+ * a title-only log counting once) is the day's weight in the activity graph.
+ */
+export interface DaySummary {
+  label: string;
+  units: number;
+}
+
+export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   let films = 0;
   const anilistByMal = new Map<string, number>();
   for (const { item } of entries) {
@@ -192,7 +201,9 @@ export function formatDaySummary(entries: readonly MergedDiaryEntry[]): string {
   let episodes = 0;
   let manga = 0;
   let chapters = 0;
+  let units = films;
   for (const group of series) {
+    units += Math.max(group.units.size, 1);
     if (group.manga) {
       manga++;
       chapters += group.units.size;
@@ -211,7 +222,7 @@ export function formatDaySummary(entries: readonly MergedDiaryEntry[]): string {
     const titles = counted(manga, 'manga', 'manga');
     parts.push(chapters > 0 ? `${counted(chapters, 'chapter')} of ${titles}` : titles);
   }
-  return parts.join(' / ');
+  return { label: parts.join(' · '), units };
 }
 
 /**
@@ -261,7 +272,7 @@ export function localDayKey(
  */
 const dayFormatters = new Map<string, Intl.DateTimeFormat>();
 
-function dayKeyForInstant(instant: Date, timeZone: string): string {
+export function dayKeyForInstant(instant: Date, timeZone: string): string {
   let formatter = dayFormatters.get(timeZone);
   if (formatter == null) {
     formatter = new Intl.DateTimeFormat('en-CA', {

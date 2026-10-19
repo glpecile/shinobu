@@ -10,13 +10,13 @@ import {
   clusterDayEntries,
   formatClusterCount,
   formatDayParts,
-  formatDaySummary,
   formatEpisodeDetail,
   formatLogTime,
   groupDiaryEntries,
   mergeDiaryEntries,
   shortClusterCount,
   summarizeCluster,
+  summarizeDay,
   watermarkProviders,
   type DiaryProviderState,
 } from './merge';
@@ -390,22 +390,22 @@ function ep(id: string, season: number, episode: number): MergedDiaryEntry {
   });
 }
 
-describe('formatDaySummary', () => {
+describe('summarizeDay', () => {
   test('counts films, anime films, ranges, and chapters in their own units', () => {
-    expect(formatDaySummary([
+    expect(summarizeDay([
       mergedEntry({ id: 'film', item: item({ id: 'movie' }) }),
       mergedEntry({ id: 'anime-film', item: item({ id: 'anime-film', type: 'ANIME', isFilm: true }), episodes: [1] }),
       ep('s1', 1, 1), ep('s2', 2, 1),
       mergedEntry({ id: 'manga', item: item({ id: 'manga', type: 'MANGA' }), episodes: [1, 2, 3] }),
-    ])).toBe('2 films / 2 episodes of 1 show / 3 chapters of 1 manga');
+    ])).toEqual({ label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga', units: 7 });
   });
 
   test('a shared-ID bridge joins translated shows and overlapping provider ranges', () => {
-    expect(formatDaySummary([
+    expect(summarizeDay([
       mergedEntry({ id: 'tv', item: item({ id: 'tv', type: 'TV', externalIds: { tmdb: 1 } }), season: 1, episodes: [2, 3] }),
       mergedEntry({ id: 'anime', item: item({ id: 'anime', title: '別の名前', type: 'ANIME', externalIds: { anilist: 2 } }), season: 1, episodes: [1, 2, 3] }),
       mergedEntry({ id: 'bridge', item: item({ id: 'bridge', type: 'ANIME', externalIds: { tmdb: 1, anilist: 2 } }), season: 1, episodes: [3, 4] }),
-    ])).toBe('4 episodes of 1 show');
+    ]).label).toBe('4 episodes of 1 show');
     const days = groupDiaryEntries([
       entry('simkl', 'single', '2026-07-20T12:00:00Z', {
         item: item({ id: 'simkl-anime', type: 'ANIME', externalIds: { mal: 813, tmdb: 12971 } }),
@@ -416,20 +416,20 @@ describe('formatDaySummary', () => {
         episodes: [40, 41],
       }),
     ], 'UTC');
-    expect(formatDaySummary(days[0].entries)).toBe('2 episodes of 1 show');
+    expect(summarizeDay(days[0].entries).label).toBe('2 episodes of 1 show');
   });
 
   test('episode 1 in two anime cours counts twice within the same show', () => {
-    expect(formatDaySummary([1, 2].map((id) => mergedEntry({
+    expect(summarizeDay([1, 2].map((id) => mergedEntry({
       id: `cour-${id}`,
       item: item({ id: `anime-${id}`, type: 'ANIME', externalIds: { anilist: id, tmdb: 555 } }),
       episodes: [1],
-    })))).toBe('2 episodes of 1 show');
+    }))).label).toBe('2 episodes of 1 show');
   });
 
   test('does not invent episode counts for title-only activity or empty days', () => {
-    expect(formatDaySummary([mergedEntry({ id: 'unknown' })])).toBe('1 show');
-    expect(formatDaySummary([])).toBe('');
+    expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toEqual({ label: '1 show', units: 1 });
+    expect(summarizeDay([])).toEqual({ label: '', units: 0 });
   });
 });
 
