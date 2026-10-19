@@ -13,6 +13,7 @@ import {
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
+import { EmptyStateTile } from '@/components/empty-state-tile';
 import { List, type LegendListRef } from '@/components/List';
 import { RAIL_LINE, RAIL_W, RailHead } from '@/components/rail-head';
 import {
@@ -37,6 +38,7 @@ import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
+import { matchesFormat, type FormatFilter } from '@/features/credit-timeline/group';
 import { useHiddenItems } from '@/state/prefs/hidden-items';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
@@ -93,14 +95,7 @@ function DiaryStickyDate({
     <AnimatedView
       accessibilityElementsHidden={!visible}
       accessibilityRole="header"
-      // Web's route header is a 64px row with only the title in it, so the
-      // bar rises into that row beside the title instead of adding a band;
-      // `left-19` puts the date ~20px past the 24px "Diary" title, and the bar
-      // stays transparent there since its box overlaps the title.
-      className={cn(
-        'absolute top-0 left-0 right-0 flex-row items-baseline px-6 py-2 bg-background border-b border-border',
-        'web:-top-16 web:left-19 web:h-16 web:py-0 web:items-center web:border-b-0 web:bg-transparent',
-      )}
+      className="absolute top-0 left-0 right-0 flex-row items-baseline px-6 py-2 bg-background border-b border-border"
       importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
       style={{
         pointerEvents: 'none',
@@ -200,20 +195,16 @@ function flattenDays(
   timeZone: string,
   expanded: ReadonlySet<string>,
   collapsedDays: ReadonlySet<string>,
-  hiddenIds: ReadonlySet<string>,
+  keep: (entry: MergedDiaryEntry) => boolean,
   inlineMonths: boolean,
 ): { items: DiaryListItem[]; activity: Map<string, DaySummary> } {
   const items: DiaryListItem[] = [];
   const activity = new Map<string, DaySummary>();
   let month = '';
   for (const day of days) {
-    // Hiding is one global set (feed, watchlist, Up Next, diary), so a hidden
-    // item's logs drop out here too — and a day left with nothing loses its
-    // header rather than standing empty.
-    const entries =
-      hiddenIds.size === 0
-        ? day.entries
-        : day.entries.filter((entry) => !hiddenIds.has(entry.item.id));
+    // A day left with nothing after hiding or the format filter loses its
+    // header rather than standing empty, and drops out of the calendar.
+    const entries = day.entries.filter(keep);
     if (entries.length === 0) continue;
     const collapsed = collapsedDays.has(day.key);
     const summary = summarizeDay(entries);
@@ -701,6 +692,8 @@ export function DiaryListSkeleton() {
 
 export interface DiaryListProps {
   days: DiaryDay[];
+  /** Narrows rows, the calendar, and its stats; manga shows only under All. */
+  format: FormatFilter;
   timeZone: string;
   failedProviders: ProviderId[];
   hasNextPage: boolean;
@@ -721,6 +714,7 @@ export interface DiaryListProps {
  */
 export function DiaryList({
   days,
+  format,
   timeZone,
   failedProviders,
   hasNextPage,
@@ -739,6 +733,7 @@ export function DiaryList({
   const { expanded, toggle: toggleCluster } = useListDisclosure();
   const collapsedDays = useCollapsedDiaryDays();
   const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
+  const muted = useThemeColor('--color-muted');
   const now = new Date();
   const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
   const { items, activity } = flattenDays(
@@ -747,7 +742,8 @@ export function DiaryList({
     timeZone,
     expanded,
     collapsedDays,
-    hiddenIds,
+    // Hiding is one global set (feed, watchlist, Up Next, diary).
+    (entry) => !hiddenIds.has(entry.item.id) && matchesFormat(entry.item, format),
     !wide,
   );
 
@@ -767,6 +763,8 @@ export function DiaryList({
     // Once there's no next page, the history is complete and earlier days are empty.
     oldest: hasNextPage ? (days.at(-1)?.key ?? '') : '',
     today: dayKeyForInstant(now, timeZone),
+    loadingMore: isFetchingNextPage,
+    onLoadMore: onEndReached,
     onSelectDay: (dayKey: string) => {
       const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
       if (index !== -1) void listRef.current?.scrollToIndex({ index });
@@ -830,7 +828,10 @@ export function DiaryList({
           renderItem={({ item, index }) => {
             switch (item.kind) {
               case 'month':
-                return <DiaryMonth month={item.month} {...activityProps} />;
+                // Older months sit under the previous day's rows, not the header.
+                // Keyed so a recycled slot remounts instead of animating from
+                // the previous month's shading and numbers.
+                return <DiaryMonth className={cn(index > 0 && 'pt-6')} key={item.month} month={item.month} {...activityProps} />;
               case 'header':
                 return (
                   <DiaryDayHead
@@ -877,6 +878,16 @@ export function DiaryList({
             failedProviders.length > 0 ? (
               <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
             ) : undefined
+          }
+          ListEmptyComponent={
+            hasNextPage ? undefined : (
+              <SectionEnter className="py-8" key={format}>
+                <EmptyStateTile
+                  icon={<Ionicons accessible={false} color={muted} name={format === 'MOVIE' ? 'film-outline' : 'tv-outline'} size={44} />}
+                  title={format === 'MOVIE' ? 'No movies logged yet' : 'No TV shows logged yet'}
+                />
+              </SectionEnter>
+            )
           }
           ListFooterComponent={
             <DiaryFooter loading={hasNextPage && isFetchingNextPage} />

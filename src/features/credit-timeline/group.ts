@@ -3,6 +3,17 @@ import type { NormalizedMediaItem, PersonCreditRow } from '@/types/media';
 
 export type FormatFilter = 'ALL' | 'MOVIE' | 'TV';
 
+/** "All" first, as on the seasons explorer — it is the shape a page opens in. */
+export const FORMAT_OPTIONS = [
+  { value: 'ALL', label: 'All' },
+  { value: 'MOVIE', label: 'Movies' },
+  { value: 'TV', label: 'TV', accessibilityLabel: 'TV series' },
+] as const satisfies readonly {
+  value: FormatFilter;
+  label: string;
+  accessibilityLabel?: string;
+}[];
+
 export interface CreditRole {
   /** The department row the credit came from ("Directing", "Acting"). */
   role: string;
