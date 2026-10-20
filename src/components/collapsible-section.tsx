@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { Collapse } from '@/components/collapse';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
+import { cn } from '@/lib/cn';
 import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import {
   setSectionCollapsed,
@@ -31,7 +32,9 @@ export function CollapsibleSection({
 
   return (
     <View className="mb-6">
-      <View className="flex-row items-center justify-between px-4 mb-3">
+      {/* Reserves the action's `min-h-11` while collapsed hides it, so the
+          header doesn't jump on toggle (matches `SkeletonSectionHeader`). */}
+      <View className={cn('flex-row items-center justify-between px-4 mb-3', action && 'min-h-11')}>
         <PresstableOpacity
           accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
           accessibilityRole="button"
