@@ -1,0 +1,8 @@
+/* `interactive-widget=resizes-content` lifts the bottom bar onto the Android
+   keyboard. On a touch phone a focused field means the keyboard is up, so
+   hide the bar and leave only the page's FABs above it. */
+@media (width < 768px) and (pointer: coarse) {
+  body:has(:is(input, textarea, [contenteditable='true']):focus) #app-bottom-bar {
+    display: none;
+  }
+}

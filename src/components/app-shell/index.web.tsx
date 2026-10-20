@@ -15,6 +15,8 @@ import {
   useSidebarCollapsed,
 } from '@/state/prefs/sidebar';
 
+import './bottom-bar.css';
+
 const RAIL_WIDTH = 64;
 /** Fixed icon column so icons never shift between expanded/collapsed — only the
  *  labels reveal and the width slides. `RAIL_WIDTH` minus the `px-2` gutters. */
@@ -311,6 +313,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // sibling, not an overlay, so nothing needs bottom padding to clear it.
     <View className="flex-1 flex-col-reverse md:flex-row">
       <View
+        id="app-bottom-bar"
         className={cn(
           'border-t border-border bg-background overflow-hidden md:px-2',
           // oxlint-disable-next-line shadcn/no-arbitrary-values -- the home indicator's inset has no scale value
