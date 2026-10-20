@@ -27,14 +27,19 @@ export function MediaToolbar({ children, view, notice }: {
   );
 }
 
-/** Pill-sized placeholders with the same fixed layout-control slot. */
-export function MediaToolbarSkeleton({ filter = false, actions = 0, layout = false }: { filter?: boolean; actions?: number; layout?: boolean }) {
+/**
+ * Pill-sized placeholders with the same fixed layout-control slot. `labelled`
+ * is a small labelled button (a list's Rename); `actions` are icon buttons,
+ * spaced as the lists' `ToolbarIcons`.
+ */
+export function MediaToolbarSkeleton({ filter = false, labelled = false, actions = 0, layout = false }: { filter?: boolean; labelled?: boolean; actions?: number; layout?: boolean }) {
   return (
     <View className="flex-row items-center gap-3 px-6 pb-3">
       <View className="flex-1 min-w-0 flex-row items-center gap-3 overflow-hidden">
         {filter && <Skeleton className="h-9.5 w-36 shrink-0 rounded-full" />}
         <Skeleton className="h-9.5 w-40 shrink-0 rounded-full" />
-        {actions > 0 && <View className="flex-row items-center gap-1">
+        {labelled && <Skeleton className="h-9.5 w-24 shrink-0 rounded-full" />}
+        {actions > 0 && <View className="flex-row items-center gap-1.5 -mx-0.75">
           {Array.from({ length: actions }).map((_, index) => (
             <View className="size-11 items-center justify-center" key={index}><Skeleton className="size-9.5 rounded-full" /></View>
           ))}

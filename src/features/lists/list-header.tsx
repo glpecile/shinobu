@@ -25,6 +25,15 @@ export function ProviderListLink({ provider, url, iconOnly = false, size = iconO
 }
 
 /**
+ * A list toolbar's icon-only buttons. Their 44px hit areas overhang the 38px
+ * circles by 3px a side, so the group pulls in by that much and spaces them
+ * 6px apart: every visible gap in the toolbar stays its 12px.
+ */
+export function ToolbarIcons({ children }: { children: ReactNode }) {
+  return <View className="flex-row items-center gap-1.5 -mx-0.75">{children}</View>;
+}
+
+/**
  * Omitting the title preserves the header's geometry while a detail loads.
  * Index titles ("Your Lists"/"Liked Lists") morph instead: they are short,
  * single-line, and change from the kind filter's user state.

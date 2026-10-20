@@ -11,7 +11,7 @@ export function canLikeList(username: string | null, owner: string) {
   return username != null && username.toLowerCase() !== owner.toLowerCase();
 }
 
-export function ListLikeButton({ username, owner, slug, url }: { username: string; owner: string; slug: string; url: string }) {
+export function ListLikeButton({ username, owner, slug, url, size = 'sm', variant = 'quiet' }: { username: string; owner: string; slug: string; url: string; size?: 'sm' | 'md'; variant?: 'quiet' | 'ghost' }) {
   const mutation = useLetterboxdListLike(username, owner, slug);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-like');
@@ -24,8 +24,8 @@ export function ListLikeButton({ username, owner, slug, url }: { username: strin
         liked={mutation.liked}
         label={label}
         loading={mutation.isPending}
-        size="sm"
-        variant="quiet"
+        size={size}
+        variant={variant}
         onChange={(liked) => {
           if (!canWrite || mutation.liked == null) { void openExternalUrl(url); return; }
           mutation.mutate(liked, {

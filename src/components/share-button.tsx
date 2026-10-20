@@ -9,7 +9,7 @@ import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 
 /** Share public website links, never a dev-client or app-scheme URL. */
-async function shareLink(href: string) {
+export async function shareLink(href: string) {
   const url = `${SHINOBU_WEB_DOMAIN}${href}`;
   try {
     if (process.env.EXPO_OS === 'web' && typeof navigator.share !== 'function') {

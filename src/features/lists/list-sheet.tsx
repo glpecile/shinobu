@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { ShareButton } from '@/components/share-button';
+import { ButtonCapsule } from '@/components/button-capsule';
+import { shareLink } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { Tooltip } from '@/components/tooltip';
@@ -48,10 +49,14 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
             <Button icon={<Button.Icon name="list-outline" />} label="Open list" onPress={() => { onClose(); pushRoute(list.href); }} variant="quiet" />
             <View className="flex-row items-center gap-2">
               <View className="flex-1"><ProviderListLink provider={list.provider} url={list.url} /></View>
-              {list.provider === 'letterboxd' && letterboxdUsername != null && (
-                <ListLikeButton owner={list.owner} slug={list.slug} url={list.url} username={letterboxdUsername} />
-              )}
-              <Tooltip label="Share"><ShareButton href={list.href} /></Tooltip>
+              <ButtonCapsule>
+                {list.provider === 'letterboxd' && letterboxdUsername != null && (
+                  <ListLikeButton owner={list.owner} size="md" slug={list.slug} url={list.url} username={letterboxdUsername} variant="ghost" />
+                )}
+                <Tooltip label="Share">
+                  <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => void shareLink(list.href)} variant="ghost" />
+                </Tooltip>
+              </ButtonCapsule>
             </View>
           </View>
         </>

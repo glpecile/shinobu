@@ -25,7 +25,7 @@ import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
 import { useMediaProgress } from '@/state/queries/media-progress';
 import { AddToList } from './list-membership-form';
 import { RenameList } from './rename-list';
-import { ListsHeader, ProviderListLink } from './list-header';
+import { ListsHeader, ProviderListLink, ToolbarIcons } from './list-header';
 import { ListProgress } from './list-progress';
 
 function entryRoute(entry: SerializdListEntry) {
@@ -59,10 +59,10 @@ export function SerializdListItems({ username, id, url }: { username: string | n
       />
       <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
         <MediaSortControl scope="lists" sort={sort} />
-        <View className="flex-row items-center gap-1">
+        {target != null && <RenameList key={list.title} target={target} />}
+        <ToolbarIcons>
           <ProviderListLink iconOnly provider="serializd" url={url} />
-          {target != null && <RenameList key={list.title} target={target} />}
-        </View>
+        </ToolbarIcons>
       </MediaToolbar>
       <List
         className="flex-1"
@@ -119,7 +119,7 @@ export function SerializdListSkeleton({ shareHref }: { shareHref?: string }) {
   return (
     <>
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" shareHref={shareHref} subtitle="" />
-      <MediaToolbarSkeleton actions={2} />
+      <MediaToolbarSkeleton actions={1} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />
