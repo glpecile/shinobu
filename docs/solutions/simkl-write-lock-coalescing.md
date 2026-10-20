@@ -37,6 +37,13 @@ say to retry the lock shortly, never back off for minutes, and to retry
 `429`/`500`/`502`/`503` with backoff, giving up after 5 attempts. The queue had
 retried exactly once, so a second bounce surfaced as a failure.
 
+The transport accepts both `RATE_LIMIT` and `rate_limit` for the 400 lock.
+For 429 responses, `rate_limit` is a short burst, while `user_limit_exceeded`
+and `app_limit_exceeded` are daily quotas. Simkl's `Retry-After` carries the
+daily reset even on a burst response, so only non-burst responses retain it.
+The queue fails those quota responses without replaying the write during its
+short retry window, leaving the caller a manual retry link.
+
 The chain's Simkl legs therefore resolve up to ~21s after their confirm, which
 is why the catch-up sheet does not await each write (plan 0037 KTD-3): the
 form advances immediately and a ledger reports each write as it lands, with a

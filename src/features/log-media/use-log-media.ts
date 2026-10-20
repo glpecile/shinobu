@@ -27,7 +27,9 @@ import {
 import {
   cachedAniListPrequel,
   cachedAniZipEpisodeMap,
+  cachedAniZipIds,
   cachedSeasonLayout,
+  cachedTmdbTvIdByTvdb,
 } from '@/state/queries/mapping';
 import { resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
@@ -316,13 +318,27 @@ interface LogPlan {
  */
 async function entryEpisodeMap(
   queryClient: QueryClient,
-  anilistId: number,
+  item: NormalizedMediaItem,
   entryNumbers: readonly number[],
 ): Promise<AniZipEpisodeMap | null> {
+  const anilistId = item.externalIds.anilist;
+  if (anilistId == null) return null;
   const own = await cachedAniZipEpisodeMap(queryClient, anilistId);
   if (own != null && own.size > 0) return own;
   const prequel = await cachedAniListPrequel(queryClient, anilistId);
   if (prequel == null) return own;
+  // AniList also links prequels that trackers keep as separate shows, such as
+  // Naruto and Shippuden. A relation cannot vouch for shared numbering.
+  const ids = await cachedAniZipIds(queryClient, { anilistId: prequel.id });
+  if (ids?.tvdb == null) return own;
+  if (item.externalIds.tvdb != null) {
+    if (ids.tvdb !== item.externalIds.tvdb) return own;
+  } else if (
+    item.externalIds.tmdb == null ||
+    (await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb)) !== item.externalIds.tmdb
+  ) {
+    return own;
+  }
   const prequelMap = await cachedAniZipEpisodeMap(queryClient, prequel.id);
   return continuePrequelTable(prequelMap, prequel.episodes, entryNumbers) ?? own;
 }
@@ -402,9 +418,7 @@ async function resolveLogPlan(
   // is not optional — TVDB's seasons frequently aren't the trackers'
   // (docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md).
   const [episodeMap, layout] = await Promise.all([
-    anilistId == null
-      ? Promise.resolve(null)
-      : entryEpisodeMap(queryClient, anilistId, entryInput),
+    entryEpisodeMap(queryClient, item, entryInput),
     cachedSeasonLayout(queryClient, {
       ...(item.externalIds.tmdb != null ? { tmdb: item.externalIds.tmdb } : {}),
       ...(item.externalIds.trakt != null ? { trakt: item.externalIds.trakt } : {}),

@@ -58,7 +58,7 @@ describe('simklHttp', () => {
 
   test('429 maps to ProviderRateLimitError, carrying Retry-After when sent', async () => {
     const { deps } = makeDeps(
-      () => new Response(null, { status: 429, headers: { 'Retry-After': '3' } }),
+      () => Response.json({ error: 'user_limit_exceeded' }, { status: 429, headers: { 'Retry-After': '3' } }),
     );
     const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
     expect(error._tag).toBe('ProviderRateLimitError');
@@ -67,9 +67,18 @@ describe('simklHttp', () => {
     }
   });
 
+  test('a burst 429 ignores the daily reset header so the queue can retry shortly', async () => {
+    const { deps } = makeDeps(() => Response.json({ error: 'rate_limit' }, {
+      status: 429, headers: { 'Retry-After': '45000' },
+    }));
+    const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
+    expect(error._tag).toBe('ProviderRateLimitError');
+    if (error._tag === 'ProviderRateLimitError') expect(error.retryAfterMs).toBeUndefined();
+  });
+
   test('400 with a rate_limit body maps to ProviderRateLimitError (write lock)', async () => {
     const { deps } = makeDeps(
-      () => Response.json({ error: 'rate_limit' }, { status: 400 }),
+      () => Response.json({ error: 'RATE_LIMIT' }, { status: 400 }),
     );
     const error = await Effect.runPromise(Effect.flip(simklHttp(deps, '/sync/history')));
     expect(error._tag).toBe('ProviderRateLimitError');

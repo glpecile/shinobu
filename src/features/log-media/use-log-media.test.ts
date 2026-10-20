@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
+import type { AniZipEpisodeMap, AniZipIds } from '@/lib/providers/mapping/anizip';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -48,11 +48,15 @@ mock.module('expo-crypto', () => ({
 
 let episodeMap: AniZipEpisodeMap | null = null;
 let seasonLayout: SeasonLayout | null = null;
+let prequel: { id: number; episodes: number } | null = null;
+let prequelIds: AniZipIds | null = null;
+let prequelMap: AniZipEpisodeMap | null = null;
+let prequelTmdb: number | null = null;
 const mappingCalls: string[] = [];
 
 mock.module('@/state/queries/mapping', () => ({
   // Enrichment already has every id it needs on these fixtures.
-  cachedAniZipIds: () => Promise.resolve(null),
+  cachedAniZipIds: () => Promise.resolve(prequelIds),
   cachedAniListFilmId: () => Promise.resolve(null),
   cachedTraktLookup: () => Promise.resolve(null),
   cachedTraktTextSearch: () => Promise.resolve(null),
@@ -61,14 +65,14 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
   cachedAniZipEpisodeMap: (_client: unknown, anilistId: number) => {
     mappingCalls.push(`episode-map:${anilistId}`);
-    return Promise.resolve(episodeMap);
+    return Promise.resolve(anilistId === prequel?.id ? prequelMap : episodeMap);
   },
   cachedSeasonLayout: (_client: unknown, ids: Record<string, number>) => {
     mappingCalls.push(`season-layout:${JSON.stringify(ids)}`);
     return Promise.resolve(seasonLayout);
   },
-  cachedAniListPrequel: () => Promise.resolve(null),
-  cachedTmdbTvIdByTvdb: () => Promise.resolve(null),
+  cachedAniListPrequel: () => Promise.resolve(prequel),
+  cachedTmdbTvIdByTvdb: () => Promise.resolve(prequelTmdb),
 }));
 
 const { planLogWrite, simklLogAdapter, withMappingSkips } = await import(
@@ -174,11 +178,34 @@ function recordingAdapters(seen: Map<ProviderId, LogMediaVariables>) {
 beforeEach(() => {
   episodeMap = sequelMap();
   seasonLayout = ONE_CONTINUOUS_SEASON;
+  prequel = null;
+  prequelIds = null;
+  prequelMap = null;
+  prequelTmdb = null;
   mappingCalls.length = 0;
   store.clear();
 });
 
 describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () => {
+  test.each([
+    { name: 'matching TVDB', tvdb: 432832, tmdb: null, targetTvdb: 432832, maps: true },
+    { name: 'matching TVDB-to-TMDB lookup', tvdb: 432832, tmdb: 240411, targetTvdb: undefined, maps: true },
+    { name: 'a different show', tvdb: 78857, tmdb: null, targetTvdb: 432832, maps: false },
+    { name: 'an unresolved identity', tvdb: undefined, tmdb: null, targetTvdb: undefined, maps: false },
+  ])('a missing sequel table borrows its prequel only with $name', async ({ tvdb, tmdb, targetTvdb, maps }) => {
+    episodeMap = null;
+    prequel = { id: 20, episodes: 12 };
+    prequelIds = { tvdb };
+    prequelTmdb = tmdb;
+    prequelMap = new Map(Array.from({ length: 12 }, (_, i) => [i + 1, {
+      season: 1, number: i + 1, absolute: i + 1,
+    }]));
+    const item = animeSeries({ externalIds: { anilist: 185660, tvdb: targetTvdb, tmdb: 240411 } });
+    const plan = await planLogWrite(client(), { item, entryEpisodes: [3] }, ['serializd']);
+    expect(plan.variables.episodes).toEqual(maps ? [{ season: 1, number: 15 }] : undefined);
+    expect(plan.mappingSkips.has('serializd')).toBe(!maps);
+  });
+
   test('a sequel entry writes the tracker’s own numbering while AniList keeps entry progress', async () => {
     const queryClient = client();
     const item = animeSeries();

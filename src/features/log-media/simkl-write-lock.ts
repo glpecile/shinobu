@@ -45,7 +45,9 @@ const MAX_ATTEMPTS = 5;
  * or never will, so it isn't replayed.
  */
 function isTransient(error: unknown): boolean {
-  if (error instanceof ProviderRateLimitError) return true;
+  // A reset delay identifies a quota response, which cannot recover during
+  // this short retry window. Leave the caller its manual retry link.
+  if (error instanceof ProviderRateLimitError) return error.retryAfterMs == null;
   return error instanceof ProviderNetworkError &&
     (error.status === 500 || error.status === 502 || error.status === 503);
 }

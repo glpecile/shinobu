@@ -158,4 +158,16 @@ describe('createSimklLogQueue', () => {
     await expect(second).resolves.toEqual(ok);
     expect(send).toHaveBeenCalledTimes(2);
   });
+
+  test('a quota response with a reset delay fails without replaying the write', async () => {
+    const quota = new ProviderRateLimitError({ provider: 'simkl', retryAfterMs: 45_000_000 });
+    const send = mock(async () => { throw quota; });
+    const { clock, advance } = fakeClock();
+    const queue = createSimklLogQueue(send, clock);
+    const outcome = queue.log(entry(1)).catch((error: unknown) => error);
+    await settle();
+    await advance(60_000);
+    expect(send).toHaveBeenCalledTimes(1);
+    await expect(outcome).resolves.toBe(quota);
+  });
 });

@@ -29,3 +29,15 @@ already took the TVDB route (`state/queries/media-details.ts`). The log's
   table when it is gap-free and reaches its final episode. Every row still goes
   through `placeInLayout`, so a continuation that doesn't fit the tracker's
   seasons still skips with a reason.
+
+AniList's `PREQUEL` relation does not prove a shared tracker show. Naruto and
+Shippuden, for example, have separate TVDB/TMDB identities. A failed episode-map
+read must not borrow Naruto's numbering for Shippuden. The fallback therefore
+requires the same TVDB id, or a prequel TVDB-to-TMDB lookup matching the target
+show when the target has no TVDB id. An unresolved or different identity skips.
+
+Borrowed rows stay within the prequel's season and carry no invented absolute
+number. Mushoku Tensei's prequel 166873 ends at S2E24, absolute 49, while sequel
+178789 starts at S3E1, absolute 50. Projecting absolute 50 into TMDB's differently
+sized seasons would write S3E3. Without the sequel's own table, that transition
+must skip instead.

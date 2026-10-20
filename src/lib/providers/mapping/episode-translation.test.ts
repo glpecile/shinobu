@@ -191,4 +191,16 @@ describe('continuePrequelTable', () => {
   test('a prequel table that stops short of its last episode continues nothing', () => {
     expect(continuePrequelTable(firstCour, 24, [3])).toBeNull();
   });
+
+  test('a sequel crossing a season boundary skips instead of projecting absolute numbering', () => {
+    const prequel = table(2, Array.from({ length: 12 }, (_, i) => i + 1), 13, 38);
+    const translated = translateEntryEpisodes(continuePrequelTable(prequel, 12, [1]), [1], {
+      layout: [
+        { season: 1, episodeCount: 23 },
+        { season: 2, episodeCount: 24 },
+        { season: 3, episodeCount: 5 },
+      ],
+    });
+    expect(translated.ok).toBe(false);
+  });
 });
