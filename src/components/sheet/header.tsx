@@ -1,5 +1,5 @@
 import { type ReactNode, useContext } from 'react';
-import { View } from 'react-native';
+import { Keyboard, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { cn } from '@/lib/cn';
@@ -26,7 +26,11 @@ export function SheetDismissHeader({ children, className, onClose, done = false 
         icon={<Button.Icon name={done ? 'checkmark' : 'close'} />}
         iconOnly
         label={done ? 'Done' : 'Close'}
-        onPress={close}
+        // A step's own `onClose` bypasses the sheet's close, so blur the field here too.
+        onPress={() => {
+          Keyboard.dismiss();
+          close();
+        }}
         shape="pill"
         variant="quiet"
       />

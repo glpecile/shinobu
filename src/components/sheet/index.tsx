@@ -4,6 +4,7 @@ import {
 } from '@swmansion/react-native-bottom-sheet';
 import { useState, type ReactNode } from 'react';
 import {
+  Keyboard,
   ScrollView,
   useWindowDimensions,
   View,
@@ -33,6 +34,12 @@ export interface SheetProps {
  * sizes to content. The only allowed import of the lib (oxlint-enforced).
  */
 export function Sheet({ open, onClose, children }: SheetProps) {
+  // A focused field outlives the sheet, which stays mounted while closed, so
+  // its keyboard would stay up over the screen beneath.
+  function close() {
+    Keyboard.dismiss();
+    onClose();
+  }
   return (
     <ModalBottomSheet
       detents={[0, 'content']}
@@ -42,15 +49,15 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       // press inside it on Android (hotfix 0.6.1 — the log sheet went dead).
       // Back on pushed screens can pop behind an open sheet again; that is the
       // cheaper bug until a press-safe overlay exists.
-      onCloseRequest={onClose}
+      onCloseRequest={close}
       // Fires only when a *user* drag commits a detent change…
       onIndexChange={(index) => {
-        if (index === 0) onClose();
+        if (index === 0) close();
       }}
       // …while scrim taps / programmatic moves only settle. Both must sync
       // the controlled `open`, or the sheet fights its own state.
       onSettle={(index) => {
-        if (index === 0 && open) onClose();
+        if (index === 0 && open) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
       surface={
@@ -58,7 +65,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       }
     >
       <SheetContent>
-        <SheetCloseContext.Provider value={onClose}>
+        <SheetCloseContext.Provider value={close}>
           <RailFadeColor value="--color-surface">{children}</RailFadeColor>
         </SheetCloseContext.Provider>
       </SheetContent>

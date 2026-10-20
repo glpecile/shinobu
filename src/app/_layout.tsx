@@ -6,7 +6,6 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack } from "expo-router";
 import { ThemeProvider } from "expo-router/react-navigation";
@@ -23,7 +22,8 @@ import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { Lightbox } from "@/components/lightbox";
 import { LightboxProvider } from "@/components/lightbox/state";
-import { createQueryPersister, persistOptions } from "@/state/queries/persist";
+import { createQueryPersister, retainPersistedQueries } from "@/state/queries/persist";
+import { PersistQueryClientProvider } from "@/state/queries/persist-provider";
 import { createQueryClient } from "@/state/queries/query-client";
 import { UpNextPrefetch } from "@/features/up-next/up-next-prefetch";
 import { CatchUpLogSheet } from "@/features/log-media/session/catch-up-log-sheet";
@@ -60,7 +60,7 @@ export default function Layout() {
 
   // One QueryClient per app lifetime. TanStack Query handles provider fetches,
   // token refresh retries, and feed invalidation on connect/disconnect.
-  const [queryClient] = useState(createQueryClient);
+  const [queryClient] = useState(() => retainPersistedQueries(createQueryClient()));
   // …and one persister, so the home feed's critical path restores from MMKV on
   // launch and revalidates behind the restored data (state/queries/persist.ts).
   const [persister] = useState(createQueryPersister);
@@ -119,7 +119,7 @@ export default function Layout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PersistQueryClientProvider
         client={queryClient}
-        persistOptions={{ persister, ...persistOptions }}
+        persister={persister}
       >
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <KeyboardProvider>

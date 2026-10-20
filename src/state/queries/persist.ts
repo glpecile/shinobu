@@ -1,6 +1,6 @@
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import type { PersistedClient, Persister } from '@tanstack/react-query-persist-client';
-import type { Query } from '@tanstack/react-query';
+import type { Query, QueryClient } from '@tanstack/react-query';
 import { createMMKV, type MMKV } from 'react-native-mmkv';
 
 import { anilistQueryKeys } from './anilist';
@@ -58,10 +58,7 @@ const BUSTER = 'v6';
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;
 
-/**
- * Writes are debounced: `persistQueryClient` re-dehydrates on every cache
- * event, and the Up Next fan alone fires ~20 of those in a burst.
- */
+/** Writes are debounced: the Up Next fan alone fires ~20 cache events in a burst. */
 const THROTTLE_MS = 2_000;
 
 let cache: MMKV | null = null;
@@ -194,6 +191,16 @@ function hasPrefix(key: readonly unknown[], prefix: readonly unknown[]): boolean
 /** The allowlist check on its own — the half worth unit-testing. */
 export function isPersistedQueryKey(key: readonly unknown[]): boolean {
   return PERSISTED_PREFIXES.some((prefix) => hasPrefix(key, prefix));
+}
+
+/**
+ * Persisted entries stay cached as long as a snapshot may be restored, so a
+ * mid-session eviction can't write them out of the next launch's snapshot.
+ * Everything else keeps TanStack's five-minute eviction.
+ */
+export function retainPersistedQueries(queryClient: QueryClient): QueryClient {
+  for (const prefix of PERSISTED_PREFIXES) queryClient.setQueryDefaults(prefix, { gcTime: MAX_AGE_MS });
+  return queryClient;
 }
 
 /** Errored and pending queries are never written: only settled data restores. */
