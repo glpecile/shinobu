@@ -1,6 +1,6 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import { useState } from 'react';
-import { RefreshControl, Text, View } from 'react-native';
+import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { CenteredNotice } from '@/components/centered-notice';
@@ -24,7 +24,8 @@ import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
 import { useMediaProgress } from '@/state/queries/media-progress';
 import { AddToList } from './list-membership-form';
-import { ListsHeader, ProviderListLink } from './list-header';
+import { RenameList } from './rename-list';
+import { ListsHeader, ProviderListLink, ToolbarIcon } from './list-header';
 import { ListProgress } from './list-progress';
 
 function entryRoute(entry: SerializdListEntry) {
@@ -58,9 +59,8 @@ export function SerializdListItems({ username, id, url }: { username: string | n
       />
       <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
         <MediaSortControl scope="lists" sort={sort} />
-        <View className="flex-row items-center gap-1">
-          <ProviderListLink iconOnly provider="serializd" url={url} />
-        </View>
+        {target != null && <RenameList key={list.title} target={target} />}
+        <ToolbarIcon><ProviderListLink iconOnly provider="serializd" url={url} /></ToolbarIcon>
       </MediaToolbar>
       <List
         className="flex-1"
@@ -113,11 +113,14 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   );
 }
 
-export function SerializdListSkeleton({ shareHref }: { shareHref?: string }) {
+/** `signedIn` reserves Rename's slot: ownership is unknown until the list loads, and most lists opened are one's own. */
+export function SerializdListSkeleton({ shareHref, signedIn }: { shareHref?: string; signedIn: boolean }) {
+  // Rename drops its label on a phone (`RenameList`).
+  const compact = useWindowDimensions().width < 640;
   return (
     <>
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" shareHref={shareHref} subtitle="" />
-      <MediaToolbarSkeleton actions={2} />
+      <MediaToolbarSkeleton actions={signedIn && compact ? 2 : 1} labelled={signedIn && !compact} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

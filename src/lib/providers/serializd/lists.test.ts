@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import type { ProviderError } from '@/lib/providers/errors';
 
 import type { SerializdDeps } from './deps';
-import { getSerializdList, getSerializdListsPage, setSerializdListMembership } from './lists';
+import { createSerializdList, getSerializdList, renameSerializdList, getSerializdListsPage, setSerializdListMembership } from './lists';
 
 const show = { showId: 1396, showName: 'Breaking Bad', bannerImage: '/show.jpg' };
 const list = { listId: 42, listName: 'Pilots', owner: { username: 'gian' }, numberOfItems: 2, listItems: [show] };
@@ -132,5 +132,48 @@ test('membership adds once and requires read-back evidence rather than trusting 
       await Effect.runPromise(write());
     } else expect((await Effect.runPromise(Effect.flip(write())))._tag).toBe('ProviderDecodeError');
     expect(writes).toBe(1);
+  }
+});
+
+test('creation posts the editor payload, then confirms the new list belongs to the account', async () => {
+  const item = (await Effect.runPromise(getSerializdList(deps(list), '42'))).entries[0].item;
+  const draft = { username: 'gian', name: ' Pilots ', description: 'Firsts', isPrivate: true, isRanked: false, allowsComments: true, items: [item] };
+  for (const owner of ['gian', 'someone-else']) {
+    const d = deps(list);
+    d.fetch = async (url, init) => {
+      if (init?.method !== 'POST') return Response.json({ ...list, owner: { username: owner }, numberOfItems: 1 });
+      expect(String(url)).toBe('https://api.test/list/create');
+      expect(JSON.parse(String(init.body))).toEqual({ list_name: 'Pilots', list_description: 'Firsts', list_items: [{ show_id: 1396, season_id: null, position: 0, description: '' }], list_collaborators: [], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: '' });
+      return Response.json({ listId: 42 });
+    };
+    if (owner === 'gian') expect((await Effect.runPromise(createSerializdList(d, draft))).id).toBe('42');
+    else expect((await Effect.runPromise(Effect.flip(createSerializdList(d, draft))))._tag).toBe('ProviderDecodeError');
+  }
+  const d = deps({});
+  d.fetch = async () => { throw new Error('unexpected request'); };
+  for (const invalid of [{ ...draft, items: [] }, { ...draft, name: ' ' }, { ...draft, items: [{ ...item, type: 'MOVIE' as const }] }]) {
+    expect((await Effect.runPromise(Effect.flip(createSerializdList(d, invalid))))._tag).toBe('ProviderDecodeError');
+  }
+});
+
+test('rename keeps every editor setting and entry, and refuses a partial list', async () => {
+  const season = { ...show, seasonId: 3572, season: { name: 'Season 1', seasonNumber: 1 }, description: 'Keep this note' };
+  const editor = { listDescription: 'My favourites', listCollaborators: [], isPrivate: true, isRanked: false, allowsComments: true, bannerImagePath: null };
+  for (const complete of [true, false]) {
+    let current = { ...list, ...editor, numberOfItems: complete ? 2 : 3, listItems: [show, season] };
+    let writes = 0;
+    const d = deps(current);
+    d.fetch = async (url, init) => {
+      if (init?.method !== 'POST') return Response.json(current);
+      writes += 1;
+      expect(String(url)).toBe('https://api.test/list/edit');
+      expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, list_name: 'Pilots, ranked', list_description: 'My favourites', list_items: [show, season], list_collaborators: [], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: null });
+      current = { ...current, listName: 'Pilots, ranked' };
+      return Response.json({});
+    };
+    const rename = renameSerializdList(d, { id: '42', username: 'gian', name: ' Pilots, ranked ' });
+    if (complete) expect((await Effect.runPromise(rename)).title).toBe('Pilots, ranked');
+    else expect((await Effect.runPromise(Effect.flip(rename)))._tag).toBe('ProviderDecodeError');
+    expect(writes).toBe(complete ? 1 : 0);
   }
 });

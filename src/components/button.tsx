@@ -125,6 +125,9 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `heart-outline` / `heart` | like — filled when selected |
  * | `swap-vertical-outline` | sort titles |
  * | `chevron-down` | show options or load more |
+ * | `add` | add a title, or create a list |
+ * | `list-outline` | open a list |
+ * | `create-outline` | rename or edit in place |
  *
  * Outside a `Button` it renders nothing rather than guessing a colour — a
  * mis-coloured icon on an accent fill is invisible, and silence is the more

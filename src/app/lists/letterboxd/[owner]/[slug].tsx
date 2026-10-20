@@ -15,8 +15,9 @@ export default function LetterboxdListScreen() {
   const url = valid ? letterboxdListUrl(owner, slug) : null;
   const shareHref = valid ? routes.letterboxdList(owner, slug) : undefined;
   const likeButton = typeof owner === 'string' && canLikeList(username, owner);
+  const owned = typeof owner === 'string' && username != null && username.toLowerCase() === owner.toLowerCase();
   return (
-    <ListsPage fallback={<ListFilmsSkeleton likeButton={likeButton} shareHref={shareHref} />} key={username} provider="letterboxd" shareHref={shareHref} url={url}>
+    <ListsPage fallback={<ListFilmsSkeleton likeButton={likeButton} owned={owned} shareHref={shareHref} />} key={username} provider="letterboxd" shareHref={shareHref} url={url}>
       {valid && url != null && <LetterboxdListFilms key={url} owner={owner} slug={slug} url={url} username={username} />}
     </ListsPage>
   );

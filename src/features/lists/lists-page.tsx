@@ -28,7 +28,7 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
       <CenteredNotice.Body>{provider === 'letterboxd' ? 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
       <View className="mt-6 items-center gap-3">
         <Button icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
-        <ProviderListLink provider={provider} url={url} />
+        {!index && <ProviderListLink provider={provider} url={url} />}
       </View>
     </CenteredNotice>
   </>;

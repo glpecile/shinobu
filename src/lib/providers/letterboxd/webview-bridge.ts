@@ -1,6 +1,8 @@
-import { listMembershipScript } from './list-membership-script';
+import { listCreateScript, listMembershipScript, listRenameScript } from './list-editor-scripts';
 import type {
+  LetterboxdListCreateRequest,
   LetterboxdListMembershipRequest,
+  LetterboxdListRenameRequest,
   LetterboxdListLikeWebRequest,
   LetterboxdWatchlistWebRequest,
   LetterboxdWebRequest,
@@ -289,4 +291,26 @@ export function letterboxdListMembershipFetch(request: LetterboxdListMembershipR
 
 export function getLetterboxdListMembershipFetch(): typeof letterboxdListMembershipFetch | undefined {
   return webView != null ? letterboxdListMembershipFetch : undefined;
+}
+
+export function letterboxdListCreateFetch(request: LetterboxdListCreateRequest): Promise<LetterboxdWebResponse> {
+  return runInPage('/list/new/', (id) => `
+    function finish(status, body) { window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
+    ${listCreateScript(request)}.then(function(receipt){ finish(200, JSON.stringify(receipt)); }, function(error){ finish(0, error.message); });
+  `);
+}
+
+export function getLetterboxdListCreateFetch(): typeof letterboxdListCreateFetch | undefined {
+  return webView != null ? letterboxdListCreateFetch : undefined;
+}
+
+export function letterboxdListRenameFetch(request: LetterboxdListRenameRequest): Promise<LetterboxdWebResponse> {
+  return runInPage(request.listPath + 'edit/', (id) => `
+    function finish(status, body) { window.ReactNativeWebView.postMessage(JSON.stringify({ id: ${JSON.stringify(id)}, status: status, body: body })); }
+    ${listRenameScript(request)}.then(function(receipt){ finish(200, JSON.stringify(receipt)); }, function(error){ finish(0, error.message); });
+  `);
+}
+
+export function getLetterboxdListRenameFetch(): typeof letterboxdListRenameFetch | undefined {
+  return webView != null ? letterboxdListRenameFetch : undefined;
 }

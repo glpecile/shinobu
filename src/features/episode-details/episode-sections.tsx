@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { ButtonCapsule } from '@/components/button-capsule';
 import { ExpandableText } from '@/components/expandable-text';
 import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
@@ -295,7 +296,7 @@ export function EpisodeNavigation({
   }
   return (
     <View className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2" style={{ bottom: insets.bottom + 12 }}>
-      <View className="flex-row items-center w-52 p-1 rounded-full border border-border bg-surface shadow-md">
+      <ButtonCapsule className="w-52" floating>
         <Button
           disabled={prev == null}
           icon={<Button.Icon name="chevron-back" />}
@@ -315,7 +316,7 @@ export function EpisodeNavigation({
           onPress={() => step(next)}
           variant="ghost"
         />
-      </View>
+      </ButtonCapsule>
       <View
         className="relative"
         onPointerEnter={() => setShowSeriesHint(true)}
@@ -330,7 +331,7 @@ export function EpisodeNavigation({
             <Text className="font-sans text-xs text-foreground whitespace-nowrap">View series</Text>
           </View>
         )}
-        <View className="p-1 rounded-full border border-border bg-surface shadow-md">
+        <ButtonCapsule floating>
           <Button
             icon={<Button.Icon name="tv-outline" />}
             iconOnly
@@ -340,7 +341,7 @@ export function EpisodeNavigation({
             }}
             variant="ghost"
           />
-        </View>
+        </ButtonCapsule>
       </View>
     </View>
   );

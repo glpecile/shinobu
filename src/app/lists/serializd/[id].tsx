@@ -14,7 +14,7 @@ export default function SerializdListScreen() {
   const url = valid ? serializdListUrl(id) : null;
   const shareHref = valid ? routes.serializdList(id) : undefined;
   return (
-    <ListsPage fallback={<SerializdListSkeleton shareHref={shareHref} />} key={username} provider="serializd" shareHref={shareHref} url={url}>
+    <ListsPage fallback={<SerializdListSkeleton shareHref={shareHref} signedIn={username != null} />} key={username} provider="serializd" shareHref={shareHref} url={url}>
       {valid && url != null && <SerializdListItems key={url} id={id} url={url} username={username} />}
     </ListsPage>
   );

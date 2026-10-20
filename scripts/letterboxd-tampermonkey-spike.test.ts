@@ -32,6 +32,9 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
     expect(hasLetterboxdUserscript('like')).toBe(true);
     expect(hasLetterboxdUserscript('list-like')).toBe(true);
     expect(hasLetterboxdUserscript('list-membership')).toBe(true);
+    expect(hasLetterboxdUserscript('list-create')).toBe(true);
+    app.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '9');
+    expect(hasLetterboxdUserscript('list-create')).toBe(false);
   } finally {
     if (original) Object.defineProperty(globalThis, 'document', original);
     else Reflect.deleteProperty(globalThis, 'document');
@@ -141,4 +144,57 @@ test.each([
   expect(storage.size).toBe(0);
   app.close();
   film.close();
+});
+
+test.each([
+  { name: 'creates a list in the signed-in tab and returns its path', owner: 'gian', body: { messages: [] }, result: '/gian/list/rainy-day/' },
+  { name: 'reports Letterboxd validation errors', owner: 'gian', body: { messages: [{ type: 'Error', title: 'Duplicate film' }] }, result: 'Duplicate film' },
+  { name: 'refuses a receipt for another member', owner: 'jack', body: { messages: [] }, result: 'did not confirm' },
+])('list creation $name', async ({ owner, body, result: expected }) => {
+  const app = new Window({ url: 'http://localhost:8081/' });
+  const tab = new Window({ url: `https://letterboxd.com/list/new/#shinobu-log=${id}` });
+  const storage = new Map<string, unknown>();
+  let storageListener: ((key: string, old: unknown, value: unknown) => void) | undefined;
+  let appListener!: (event: unknown) => Promise<void>;
+  let receive!: (response: { status: number; body: string }) => void;
+  const response = new Promise<{ status: number; body: string }>(resolve => { receive = resolve; });
+  const saves: RequestInit[] = [];
+  const appPage = {
+    location: app.location, document: app.document,
+    addEventListener: (_name: string, callback: typeof appListener) => { appListener = callback; },
+    postMessage: (data: { response: { status: number; body: string } }) => receive(data.response),
+  };
+  const tabPage = {
+    location: tab.location, document: tab.document, DOMParser: tab.DOMParser,
+    person: { loggedIn: true, username: 'gian' }, supermodelCSRF: 'test-csrf',
+    fetch: async (url: string, init?: RequestInit) => {
+      if (url === '/film/alien/') return new Response(`<meta name="production:identifier" content='{"type":"film","lid":"2awY"}'>`);
+      expect(url).toBe('/api/v0/lists');
+      saves.push(init!);
+      return Response.json({ ...body, data: { id: 'newLid', links: [{ type: 'letterboxd', url: `https://letterboxd.com/${owner}/list/rainy-day/` }] } });
+    },
+  };
+  const gm = {
+    getValue: async (key: string) => storage.get(key),
+    setValue: async (key: string, value: unknown) => { storage.set(key, value); if (key.includes('response-')) storageListener?.(key, undefined, value); },
+    deleteValue: async (key: string) => { storage.delete(key); },
+    addValueChangeListener: async (_key: string, callback: typeof storageListener) => { storageListener = callback; return 1; },
+    removeValueChangeListener: async () => { storageListener = undefined; },
+    openInTab: async (url: string) => {
+      expect(url).toBe(`https://letterboxd.com/list/new/#shinobu-log=${id}`);
+      await run(gm, tabPage);
+      return { close() {} };
+    },
+  };
+  await run(gm, appPage);
+  await appListener({ source: appPage, origin: app.location.origin, data: { type: 'shinobu-letterboxd-list-create', id, request: {
+    username: 'gian', name: 'Rainy day', description: '', tags: ['cosy'], sharing: 'Friends', ranked: true, filmPaths: ['/film/alien/', '/film/alien/'],
+  } } });
+  const { status, body: received } = await response;
+  expect(saves).toHaveLength(1);
+  expect(JSON.parse(String(saves[0].body))).toEqual({ published: false, sharePolicy: 'Friends', name: 'Rainy day', description: '', ranked: true, tags: ['cosy'], entries: [{ action: 'ADD', listable: '2awY' }] });
+  expect(status).toBe(expected.startsWith('/') ? 200 : 0);
+  expect(received).toContain(expected);
+  app.close();
+  tab.close();
 });

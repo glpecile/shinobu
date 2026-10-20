@@ -17,11 +17,20 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 
-export function ProviderListLink({ provider, url, iconOnly = false }: { provider: ProviderId; url: string; iconOnly?: boolean }) {
+export function ProviderListLink({ provider, url, iconOnly = false, size = iconOnly ? 'sm' : 'md' }: { provider: ProviderId; url: string; iconOnly?: boolean; size?: 'sm' | 'md' }) {
   const { loading, open } = useLinkHandoff(() => openExternalUrl(url, { inApp: false }));
   const label = `View on ${PROVIDERS[provider].label}`;
-  const button = <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={label} loading={loading} onPress={open} size={iconOnly ? 'sm' : 'md'} variant="quiet" />;
+  const button = <Button icon={<Button.Icon name="open-outline" />} iconOnly={iconOnly} label={label} loading={loading} onPress={open} size={size} variant="quiet" />;
   return iconOnly ? <Tooltip label={label}>{button}</Tooltip> : button;
+}
+
+/**
+ * An icon-only button in a toolbar. Its 44px hit area overhangs the 38px
+ * circle by 3px a side; pulling in by that much keeps every visible gap the
+ * toolbar's own.
+ */
+export function ToolbarIcon({ children }: { children: ReactNode }) {
+  return <View className="-mx-0.75">{children}</View>;
 }
 
 /**

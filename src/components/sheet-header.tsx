@@ -31,13 +31,13 @@ function Content({ children }: { children: ReactNode }) {
   return <View className="flex-1">{children}</View>;
 }
 
-function SheetEyebrow({ children }: { children: ReactNode }) {
-  return <Eyebrow tone="accent">{children}</Eyebrow>;
+function SheetEyebrow({ tone = 'accent', children }: { tone?: 'muted' | 'accent'; children: ReactNode }) {
+  return <Eyebrow tone={tone}>{children}</Eyebrow>;
 }
 
-function Title({ children }: { children: ReactNode }) {
+function Title({ children, numberOfLines = 3 }: { children: ReactNode; numberOfLines?: number }) {
   return (
-    <Text className="text-2xl font-display text-foreground" numberOfLines={3}>
+    <Text className="text-2xl font-display text-foreground" numberOfLines={numberOfLines}>
       {children}
     </Text>
   );

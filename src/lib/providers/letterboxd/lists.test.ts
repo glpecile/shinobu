@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
-import { getListFilmsPage, getListsPage, setListLiked, setListMembership } from './lists';
+import { createList, getListFilmsPage, getListsPage, setListLiked, setListMembership } from './lists';
 
 // Public page markup captured 2026-10-06, reduced to the read contract.
 const POSTER = `<div data-component-class="LazyPoster" data-item-name="21 Grams (2003)" data-item-slug="21-grams" data-postered-identifier='{&quot;uid&quot;:&quot;film:51632&quot;}'></div>`;
@@ -138,4 +138,19 @@ test('membership changes require ownership and acknowledge only the requested st
       expect(failure).toMatchObject({ _tag: 'ProviderDecodeError', detail: 'Letterboxd needs verification.' });
     }
   }
+});
+
+test('creation sends films only and accepts a receipt for a list the account owns', async () => {
+  const film = { id: 'tmdb-movie-550', title: 'Fight Club', coverImage: '', type: 'MOVIE' as const, currentProgress: 0, progressUnit: 'episode' as const, lastUpdated: '', externalIds: { tmdb: 550 } };
+  const draft = { name: ' Classics ', description: '', tags: ['top 10'], sharing: 'Friends' as const, ranked: true, items: [film] };
+  for (const [listPath, created] of [['/gian/list/classics/', true], ['/jack/list/classics/', false]] as const) {
+    const deps = { username: 'Gian', fetch: async () => new Response(), listCreateFetch: async (request: unknown) => {
+      expect(request).toEqual({ username: 'Gian', name: 'Classics', description: '', tags: ['top 10'], sharing: 'Friends', ranked: true, filmPaths: ['/tmdb/550/'] });
+      return { status: 200, body: JSON.stringify({ result: true, listPath }) };
+    } };
+    if (created) expect(await Effect.runPromise(createList(deps, draft))).toEqual({ owner: 'gian', slug: 'classics' });
+    else expect((await Effect.runPromise(Effect.flip(createList(deps, draft))))._tag).toBe('ProviderDecodeError');
+  }
+  const unused = { username: 'gian', fetch: async () => new Response(), listCreateFetch: async () => { throw new Error('unexpected write'); } };
+  expect((await Effect.runPromise(Effect.flip(createList(unused, { ...draft, items: [{ ...film, type: 'TV' as const }] }))))._tag).toBe('ProviderDecodeError');
 });

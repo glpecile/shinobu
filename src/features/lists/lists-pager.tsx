@@ -9,8 +9,9 @@ import { ListsKindFilter, type ListsKind } from './lists-kind-filter';
 const KINDS = ['created', 'liked'] as const;
 
 /** The season pager's swipe/tap behavior, with shareable list-kind selection. */
-export function ListsPager({ kind, renderKind }: {
+export function ListsPager({ kind, renderKind, action }: {
   kind: ListsKind;
+  action?: ReactNode;
   renderKind: (kind: ListsKind) => ReactNode;
 }) {
   const router = useRouter();
@@ -20,7 +21,7 @@ export function ListsPager({ kind, renderKind }: {
   const select = (next: ListsKind) => router.setParams({ kind: next });
   return (
     <View className="flex-1">
-      <ListsKindFilter kind={kind} onChange={select} progress={progress} />
+      <ListsKindFilter action={action} kind={kind} onChange={select} progress={progress} />
       {/* Defer untouched tabs to avoid concurrent Letterboxd reads, but retain
           visited walls so a swipe back preserves artwork and scroll position. */}
       <Pager onSettle={select} options={KINDS} progress={progress} renderPage={(pageKind) => pageKind === kind || visited.includes(pageKind) ? renderKind(pageKind) : null} value={kind} />

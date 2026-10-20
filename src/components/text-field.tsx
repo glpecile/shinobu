@@ -2,12 +2,13 @@ import { useState, type Ref } from 'react';
 import type { TextInput, TextInputProps } from 'react-native';
 
 import { AnimatedTextInput } from '@/components/animated-view';
+import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * The app's pill text input, with the search field's accent border on focus.
- * Takes every `TextInput` prop but `className`.
+ * Takes every `TextInput` prop but `className`; `multiline` rounds it into a box.
  */
 export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref<TextInput> }) {
   const [focused, setFocused] = useState(false);
@@ -22,8 +23,9 @@ export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref
       selectionColor={accent}
       cursorColor={accent}
       selectionHandleColor={accent}
+      textAlignVertical={props.multiline ? 'top' : undefined}
       {...props}
-      className="border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent"
+      className={cn('border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent', props.multiline && 'rounded-2xl min-h-24')}
       onBlur={(event) => {
         setFocused(false);
         props.onBlur?.(event);

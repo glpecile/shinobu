@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -13,12 +14,14 @@ const KIND_OPTIONS = (['created', 'liked'] as const).map((value) => ({ value, la
  * The created/liked switch below the index header, so the other tab is one tap
  * away without going back. The choice lives in `?kind=`, like the watchlist's
  * provider filter, so it stays shareable and `setParams` swaps it without
- * pushing a new route.
+ * pushing a new route. `action` sits at the row's end, as the layout toggle
+ * does beside the anime seasons' format filter.
  */
-export function ListsKindFilter({ kind, onChange, progress }: { kind: ListsKind; onChange: (kind: ListsKind) => void; progress: SharedValue<number> }) {
+export function ListsKindFilter({ kind, onChange, progress, action }: { kind: ListsKind; onChange: (kind: ListsKind) => void; progress: SharedValue<number>; action?: ReactNode }) {
   return (
-    <View className="px-6 pb-3">
-      <NativeSegmentedControl accessibilityLabel="List type" className="w-full max-w-64" onChange={onChange} options={KIND_OPTIONS} progress={progress} size="sm" value={kind} />
+    <View className="flex-row items-center gap-3 px-6 pb-3">
+      <NativeSegmentedControl accessibilityLabel="List type" className="flex-1 max-w-64" onChange={onChange} options={KIND_OPTIONS} progress={progress} size="md" value={kind} />
+      {action != null && <View className="ms-auto shrink-0">{action}</View>}
     </View>
   );
 }
