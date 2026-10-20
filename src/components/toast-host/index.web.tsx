@@ -19,9 +19,8 @@ export function ToastHost() {
   return (
     <Toaster
       expand
-      // Phones clear the bottom nav bar (`components/app-shell`): 76px plus
-      // the home indicator, and sonner's 16px gap.
-      mobileOffset={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 92px)' }}
+      offset={{ bottom: 'var(--toast-bottom, 32px)' }}
+      mobileOffset={{ bottom: 'var(--toast-bottom, 32px)' }}
       position="bottom-right"
       theme={theme}
       style={{
