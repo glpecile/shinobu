@@ -66,3 +66,5 @@ yarn-error.*
 .kiro/
 .opencode/
 opencode.json
+# Screen-recording QA evidence; saved flows in `.argent/flows/` are committed.
+.argent/recordings/
