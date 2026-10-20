@@ -198,9 +198,8 @@ export function AnimeMoviesRow({
 }
 
 /**
- * The feed's sign-off, mounted inside the last row's `SuspenseSection` so it
- * lands with that row rather than under a skeleton. `arrow-up` is the FAB's
- * glyph for the same verb (`components/scroll-to-top-fab`).
+ * The feed's sign-off. `arrow-up` is the FAB's glyph for the same verb
+ * (`components/scroll-to-top-fab`).
  */
 export function FeedEnd({ onPress }: { onPress: () => void }) {
   return (

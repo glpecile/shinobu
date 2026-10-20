@@ -27,11 +27,7 @@ import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import {
-  AnimeMoviesRow,
   FeedEnd,
-  SeasonalAnimeRow,
-  TrendingMoviesRow,
-  TrendingShowsRow,
   YourWatchlistRow,
   LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
@@ -39,7 +35,6 @@ import { UpNextSection } from '@/features/up-next/up-next-section';
 import { LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
-import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -158,7 +153,6 @@ function FeedScreen() {
     ? getLetterboxdUsername()
     : null;
   const serializdUsername = feedProviders.includes('serializd') ? getSerializdUsername() : null;
-  const animeSeason = animeSeasonAt(new Date());
   // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
   // with none connected there is nothing to compute, so the sections never
   // mount. The predicate lives with the gather it gates (`use-unified-feed.ts`)
@@ -209,10 +203,8 @@ function FeedScreen() {
             />
           </SuspenseSection>
         )}
-        {/* Personal rows first (2026-07-14 re-prioritization), trending after.
-            Watchlist leads the personal block, seasonal leads the public one
-            (owner ordering, 2026-07-23). Every row is its own suspense + error
-            boundary: one provider failing hides just that row, never the feed. */}
+        {/* Each personal row has its own boundary so one failing source
+            doesn't hide the others. */}
         {watchlistConnected && (
           <SuspenseSection
             fallback={<FeedRowSkeleton hasAction />}
@@ -257,40 +249,9 @@ function FeedScreen() {
             </SuspenseSection>
           </>
         )}
-        {/* "Your Shows" and "Your Anime" used to sit here — flat dumps of
-            every show/anime the trackers had ever seen you watch. Removed
-            (owner, 2026-08-01: "these will be replaced with the watchlist
-            anyway"): Continue Watching answers "what am I mid-way through",
-            Up Next answers "what's ready", and the merged watchlist answers
-            "what do I mean to watch" — the rows added a third, unordered
-            answer nobody was asking. Their feed slots went with them; Up Next
-            cards now resolve through `findInUpNextCache`, not through the
-            `yourShows` copy they used to ride. */}
-        <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
-          <SeasonalAnimeRow
-            onItemActions={openActions}
-            season={animeSeason}
-          />
-        </SuspenseSection>
-        <SuspenseSection fallback={<FeedRowSkeleton hasAction />} resetKey={refreshCount}>
-          <AnimeMoviesRow
-            onItemActions={openActions}
-            season={animeSeason}
-          />
-        </SuspenseSection>
-        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
-          <TrendingMoviesRow
-            onItemActions={openActions}
-          />
-        </SuspenseSection>
-        <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
-          <TrendingShowsRow
-            onItemActions={openActions}
-          />
-          <FeedEnd
-            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-          />
-        </SuspenseSection>
+        <FeedEnd
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+        />
       </RefreshableScrollView>
       <CardActionsSheet {...sheetProps} />
     </View>

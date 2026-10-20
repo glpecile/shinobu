@@ -1,16 +1,18 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
 import Head from '@/components/head';
-import { Keyboard, Text, TextInput, View } from 'react-native';
+import { Keyboard, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { Eyebrow } from '@/components/eyebrow';
 import { Fab } from '@/components/fab';
+import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { Image } from '@/components/image';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
@@ -21,15 +23,21 @@ import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
 import { SectionEnter } from '@/components/section-enter';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SearchField } from '@/components/search-field';
-import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
+import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
+import {
+  AnimeMoviesRow,
+  SeasonalAnimeRow,
+  TrendingMoviesRow,
+  TrendingShowsRow,
+} from '@/features/feed/feed-rows';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
-import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
+import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import {
@@ -271,6 +279,7 @@ function sectionRows<Hit>(
 }
 
 export default function SearchScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const pushRoute = usePushRoute();
   const params = useLocalSearchParams<{ q?: string; scope?: string }>();
@@ -393,6 +402,7 @@ export default function SearchScreen() {
   });
 
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
+  const animeSeason = animeSeasonAt(new Date());
   const sections =
     scope.value === 'titles'
       ? [
@@ -486,11 +496,8 @@ export default function SearchScreen() {
         <title>Search — Shinobu</title>
       </Head>
       <View
-        className={cn(
-          'relative z-20 flex-row items-center gap-3 px-6',
-          screenHeaderTopPadding,
-          'pb-4',
-        )}
+        className="relative z-20 flex-row items-center px-2 pb-2 web:px-4"
+        style={{ paddingTop: insets.top + 8 }}
       >
         <SearchField
           accessibilityLabel={`Search ${scope.label.toLowerCase()}`}
@@ -519,14 +526,36 @@ export default function SearchScreen() {
           <View className="flex-1">
             <SectionEnter className="flex-1" key={state}>
               {state === 'idle' ? (
-                <CenteredNotice className="-mt-16">
-                  <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
-                  <CenteredNotice.Title>Search</CenteredNotice.Title>
-                  <CenteredNotice.Body>
-                    Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
-                    {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
-                  </CenteredNotice.Body>
-                </CenteredNotice>
+                scope.value === 'titles' ? (
+                  <ScrollView
+                    className="flex-1"
+                    contentContainerClassName="pb-28"
+                    keyboardDismissMode="on-drag"
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
+                      <SeasonalAnimeRow onItemActions={openActions} season={animeSeason} />
+                    </SuspenseSection>
+                    <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
+                      <AnimeMoviesRow onItemActions={openActions} season={animeSeason} />
+                    </SuspenseSection>
+                    <SuspenseSection fallback={<FeedRowSkeleton />}>
+                      <TrendingMoviesRow onItemActions={openActions} />
+                    </SuspenseSection>
+                    <SuspenseSection fallback={<FeedRowSkeleton />}>
+                      <TrendingShowsRow onItemActions={openActions} />
+                    </SuspenseSection>
+                  </ScrollView>
+                ) : (
+                  <CenteredNotice className="-mt-16">
+                    <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
+                    <CenteredNotice.Title>Search</CenteredNotice.Title>
+                    <CenteredNotice.Body>
+                      Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
+                      {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
+                    </CenteredNotice.Body>
+                  </CenteredNotice>
+                )
               ) : state === 'loading' ? (
                 <ResultsSkeleton />
               ) : state === 'error' ? (
@@ -594,7 +623,7 @@ export default function SearchScreen() {
               )}
             </SectionEnter>
             <Fab
-              className="absolute bottom-6 right-6"
+              className="absolute bottom-5 right-6"
               hint="Chooses what to search for"
               icon={scope.icon}
               label={`Searching ${scope.label}`}
