@@ -24,6 +24,7 @@ import { routes } from '@/lib/routes';
 import { useSuspenseSerializdListQuery } from '@/state/queries/serializd';
 import { useMediaProgress } from '@/state/queries/media-progress';
 import { AddToList } from './list-membership-form';
+import { RenameList } from './rename-list';
 import { ListsHeader, ProviderListLink } from './list-header';
 import { ListProgress } from './list-progress';
 
@@ -60,6 +61,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         <MediaSortControl scope="lists" sort={sort} />
         <View className="flex-row items-center gap-1">
           <ProviderListLink iconOnly provider="serializd" url={url} />
+          {target != null && <RenameList key={list.title} target={target} />}
         </View>
       </MediaToolbar>
       <List

@@ -44,7 +44,7 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method }> = [
   // single-method rule mirrors upstream rather than narrowing it.
   { match: (p) => p === 'watchlist_v2', method: 'POST' },
   { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
-  { match: (p) => p === 'list/add_item' || p === 'list/edit', method: 'POST' },
+  { match: (p) => p === 'list/add_item' || p === 'list/edit' || p === 'list/create', method: 'POST' },
   { match: (p) => /^list\/[1-9][0-9]{0,14}$/.test(p), method: 'GET' },
   { match: (p) => p.startsWith('show/'), method: 'GET' },
   { match: (p) => p.startsWith('user/'), method: 'GET' },

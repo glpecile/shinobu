@@ -2,61 +2,72 @@ import { RefreshControl, useWindowDimensions, View } from 'react-native';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { List } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
-import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
-import type { ProviderId } from '@/lib/providers/types';
-import type { NormalizedMediaItem } from '@/types/media';
-import { ListCard } from './list-card';
-import { ProviderListLink } from './list-header';
+import { routes } from '@/lib/routes';
+import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
+import { ListSheet, useListSheet } from './list-sheet';
+import type { ListSummary } from './list-summary';
+import { ListCardSkeleton } from './lists-row';
+import { POSTER_STACK_RATIO } from './poster-stack';
 
-/** Mirrors one index page's column count and fixed-height cards. */
-export function ListsGridSkeleton() {
-  const { width } = useWindowDimensions();
+const PADDING = 10;
+const GUTTER = 8;
+
+function useGrid() {
+  const { width, fontScale } = useWindowDimensions();
   const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
+  const cardWidth = (width - PADDING * 2) / columns - GUTTER * 2;
+  return { columns, rowHeight: cardWidth / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale + 24 };
+}
+
+/** Mirrors one index page's column count and card shape. */
+export function ListsGridSkeleton() {
+  const { columns } = useGrid();
   return (
     <View className="flex-row flex-wrap px-2.5 pt-1.5">
       {/* Three rows: one index page holds 12 lists, so this is the first paint on desktop. */}
       {Array.from({ length: columns * 3 }).map((_, index) => (
-        <View className="p-1.5" key={index} style={{ width: `${100 / columns}%` }}>
-          <Skeleton className="w-full h-44 rounded-lg" delay={staggerDelay(index)} />
+        <View className="px-2 pb-6" key={index} style={{ width: `${100 / columns}%` }}>
+          <ListCardSkeleton delay={staggerDelay(index)} />
         </View>
       ))}
     </View>
   );
 }
 
+type GridItem = ListSummary | { id: 'new' };
+
 /**
  * One paginated list index (created or liked) shared by Letterboxd and
- * Serializd: the empty state, the dedupe across pages, and
- * the grid + load-more + external-link footer. Only the query, provider copy,
- * count, and per-list href differ at the call sites.
+ * Serializd: the empty state, the dedupe across pages, the list sheet, and the
+ * grid + load-more + external-link footer. Created leads with New list.
  */
-export function ListsIndex<T extends { id: string; title: string; owner: string; previews: NormalizedMediaItem[] }>({
-  provider, url, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
-  refetch, fetchNextPage, count, href, noun = 'film', emptyBody,
+export function ListsIndex({
+  provider, kind, lists, hasNextPage, isFetchingNextPage, isFetchNextPageError,
+  refetch, fetchNextPage, emptyBody,
 }: {
-  provider: ProviderId;
-  url: string;
-  lists: T[];
+  provider: ListSummary['provider'];
+  kind: 'created' | 'liked';
+  lists: ListSummary[];
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   isFetchNextPageError: boolean;
   refetch: () => Promise<unknown>;
   fetchNextPage: () => unknown;
-  count: (list: T) => number | undefined;
-  href: (list: T) => string;
-  noun?: 'film' | 'item';
   emptyBody: string;
 }) {
   const pushRoute = usePushRoute();
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const columns = Math.max(1, Math.min(4, Math.floor(width / 264)));
+  const { columns, rowHeight } = useGrid();
+  const { openList, sheetProps } = useListSheet();
   const pages = [...new Map(lists.map((list) => [list.id, list])).values()];
+  const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
   async function refresh() {
     setRefreshing(true);
     try {
@@ -72,42 +83,44 @@ export function ListsIndex<T extends { id: string; title: string; owner: string;
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
           <CenteredNotice.Body>{emptyBody}</CenteredNotice.Body>
-          <ProviderListLink provider={provider} url={url} />
+          {kind === 'created' && <CenteredNotice.Action icon={<Button.Icon name="add" />} label="New list" onPress={() => pushRoute(routes.newList(provider))} />}
         </CenteredNotice>
       ) : (
         <List
           key={columns}
           className="flex-1"
-          contentContainerStyle={{ padding: 10, paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : 10 }}
-          data={pages}
-          // One row, not one card: the card is h-44 with mb-3. An estimate the
-          // library calls too large starves its container pool (the web
-          // "creating one on demand" warning) and skews the scroll extent.
-          estimatedItemSize={188}
-          keyExtractor={(list) => list.id}
+          contentContainerStyle={{ padding: PADDING, paddingBottom: process.env.EXPO_OS === 'android' ? 24 + insets.bottom : PADDING }}
+          data={items}
+          // One row, margin included: an estimate the library calls too large
+          // starves its container pool (the web "creating one on demand"
+          // warning) and skews the scroll extent.
+          estimatedItemSize={rowHeight}
+          keyExtractor={(item) => item.id}
           numColumns={columns}
           onEndReached={hasNextPage && !isFetchingNextPage && !isFetchNextPageError ? () => void fetchNextPage() : undefined}
           // 0.3, deliberately below the poster's 0.6: the end latch only
-          // re-arms past 1.3× the band, and one 12-list page is three rows
-          // (~564px). A wider band never clears on a landed page, so every
-          // page costs an exit-and-re-enter scroll; 0.3 re-arms on the landed
-          // page itself (docs/solutions/legend-list-threshold-vs-short-pages.md).
+          // re-arms past 1.3× the band, and one 12-list page is three rows.
+          // A wider band never clears on a landed page, so every page costs
+          // an exit-and-re-enter scroll; 0.3 re-arms on the landed page itself
+          // (docs/solutions/legend-list-threshold-vs-short-pages.md).
           onEndReachedThreshold={0.3}
           refreshControl={<RefreshControl onRefresh={() => void refresh()} refreshing={refreshing} />}
           renderItem={({ item }) => (
-            <View className="px-1.5 mb-3"><ListCard count={count(item)} href={href(item)} list={item} noun={noun} onPress={() => pushRoute(href(item))} provider={provider} /></View>
+            <View className="px-2 pb-6">
+              {'title' in item
+                ? <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
+                : <NewListCard onPress={() => pushRoute(routes.newList(provider))} provider={provider} />}
+            </View>
           )}
           ListFooterComponent={
             <>
               {isFetchingNextPage && <View accessibilityLabel="Loading more lists" className="-mx-2.5"><ListsGridSkeleton /></View>}
-              <View className="items-center gap-3 pt-5 pb-6">
-                {!isFetchingNextPage && isFetchNextPageError && <LoadMoreFooter failed loading={false} noun="lists" onRetry={() => void fetchNextPage()} />}
-                <ProviderListLink provider={provider} url={url} />
-              </View>
+              {!isFetchingNextPage && isFetchNextPageError && <View className="items-center pt-5 pb-6"><LoadMoreFooter failed loading={false} noun="lists" onRetry={() => void fetchNextPage()} /></View>}
             </>
           }
         />
       )}
+      <ListSheet {...sheetProps} />
     </>
   );
 }

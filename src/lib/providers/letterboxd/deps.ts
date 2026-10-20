@@ -54,6 +54,9 @@ export interface LetterboxdDeps {
    */
   watchlistWebFetch?: LetterboxdWatchlistWebFetch;
   listMembershipFetch?: LetterboxdListMembershipFetch;
+  /** The WebView on native, the userscript (bridge 10) on web. */
+  listCreateFetch?: LetterboxdListCreateFetch;
+  listRenameFetch?: LetterboxdListRenameFetch;
   listLikeWebFetch?: LetterboxdListLikeWebFetch;
   userscriptListLikeFetch?: LetterboxdListLikeWebFetch;
 }
@@ -140,4 +143,30 @@ export interface LetterboxdListMembershipRequest {
 
 export type LetterboxdListMembershipFetch = (
   request: LetterboxdListMembershipRequest,
+) => Promise<LetterboxdWebResponse>;
+
+export type LetterboxdListSharing = 'Public' | 'Anyone' | 'Friends' | 'You';
+
+export interface LetterboxdListCreateRequest {
+  username: string;
+  name: string;
+  description: string;
+  tags: string[];
+  sharing: LetterboxdListSharing;
+  ranked: boolean;
+  filmPaths: string[];
+}
+
+export type LetterboxdListCreateFetch = (
+  request: LetterboxdListCreateRequest,
+) => Promise<LetterboxdWebResponse>;
+
+export interface LetterboxdListRenameRequest {
+  listPath: string;
+  username: string;
+  name: string;
+}
+
+export type LetterboxdListRenameFetch = (
+  request: LetterboxdListRenameRequest,
 ) => Promise<LetterboxdWebResponse>;

@@ -34,12 +34,14 @@ import {
   type LetterboxdListKind,
   type LetterboxdListFilmsPage,
 } from '@/lib/providers/letterboxd/lists';
-import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch, getLetterboxdUserscriptListMembershipFetch } from '@/lib/providers/letterboxd/userscript-bridge';
+import { getLetterboxdUserscriptFetch, getLetterboxdUserscriptWatchlistFetch, getLetterboxdUserscriptListLikeFetch, getLetterboxdUserscriptListMembershipFetch, getLetterboxdUserscriptListCreateFetch, getLetterboxdUserscriptListRenameFetch } from '@/lib/providers/letterboxd/userscript-bridge';
 import { getUserTags, type LetterboxdTag } from '@/lib/providers/letterboxd/tags';
 import {
   getLetterboxdWatchlistWebFetch,
   getLetterboxdWebFetch,
   getLetterboxdListLikeWebFetch,
+  getLetterboxdListCreateFetch,
+  getLetterboxdListRenameFetch,
   getLetterboxdListMembershipFetch,
 } from '@/lib/providers/letterboxd/webview-bridge';
 import {
@@ -101,6 +103,8 @@ export function letterboxdDeps(): LetterboxdDeps {
     userscriptWatchlistFetch: getLetterboxdUserscriptWatchlistFetch(getLetterboxdUsername()),
     watchlistWebFetch: getLetterboxdWatchlistWebFetch(),
     listMembershipFetch: getLetterboxdUserscriptListMembershipFetch(getLetterboxdUsername()) ?? getLetterboxdListMembershipFetch(),
+    listCreateFetch: getLetterboxdUserscriptListCreateFetch(getLetterboxdUsername()) ?? getLetterboxdListCreateFetch(),
+    listRenameFetch: getLetterboxdUserscriptListRenameFetch(getLetterboxdUsername()) ?? getLetterboxdListRenameFetch(),
     listLikeWebFetch: getLetterboxdListLikeWebFetch(),
     userscriptListLikeFetch: getLetterboxdUserscriptListLikeFetch(getLetterboxdUsername()),
   };

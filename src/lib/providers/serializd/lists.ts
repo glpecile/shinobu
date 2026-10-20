@@ -101,7 +101,7 @@ function normalizeList(raw: typeof RawList.Type, fetchedAt: string): SerializdLi
   return {
     id: String(raw.listId), title: raw.listName, owner: raw.owner.username,
     itemCount: raw.numberOfItems,
-    previews: raw.listItems.slice(0, 4).map((entry) => normalizeEntry(entry, fetchedAt).item),
+    previews: raw.listItems.slice(0, 5).map((entry) => normalizeEntry(entry, fetchedAt).item),
   };
 }
 
@@ -139,6 +139,86 @@ export const getSerializdList = Effect.fn('serializd.getList')(function* (
   };
 });
 
+const Editor = Schema.Struct({
+  listName: Schema.String, listDescription: Schema.String,
+  listItems: Schema.Array(Schema.Unknown), listCollaborators: Schema.Array(Schema.Unknown),
+  isPrivate: Schema.Boolean, isRanked: Schema.Boolean, allowsComments: Schema.Boolean, bannerImagePath: Schema.NullOr(Schema.String),
+});
+
+/**
+ * Saves through `/list/edit`, which replaces the whole list: every setting and
+ * entry (with its note) comes from a fresh, complete read, overridden by `edit`.
+ */
+const saveSerializdEditor = Effect.fn('serializd.saveEditor')(function* (
+  deps: SerializdDeps,
+  listId: number,
+  raw: unknown,
+  edit: (editor: typeof Editor.Type) => Partial<Pick<typeof Editor.Type, 'listName' | 'listItems'>>,
+) {
+  const current = yield* Schema.decodeUnknownEffect(Editor)(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd did not return the full editor settings. Open the list on Serializd.' })));
+  const editor = { ...current, ...edit(current) };
+  yield* serializdHttp(deps, '/list/edit', { method: 'POST', auth: true, body: {
+    list_id: listId, list_name: editor.listName, list_description: editor.listDescription,
+    list_items: editor.listItems, list_collaborators: editor.listCollaborators, is_private: editor.isPrivate,
+    is_ranked: editor.isRanked, allows_comments: editor.allowsComments, banner_image_path: editor.bannerImagePath,
+  } });
+});
+
+/** Renames through the full editor, so it refuses a list Serializd returned only part of. */
+export const renameSerializdList = Effect.fn('serializd.renameList')(function* (
+  deps: SerializdDeps,
+  params: { id: string; username: string; name: string },
+) {
+  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderAuthError({ provider: 'serializd', refreshFailed: true });
+  const name = params.name.trim();
+  if (serializdListUrl(params.id) == null || name === '') return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Give the list a name.' });
+  const raw = yield* serializdHttp<unknown>(deps, `/list/${params.id}`, { auth: true });
+  const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'Could not read the list before editing.' })));
+  if (String(list.listId) !== params.id || list.owner.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'You can only edit your own lists.' });
+  if (list.listItems.length !== list.numberOfItems) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd returned only part of this list. Rename it on Serializd to keep the other entries safe.' });
+  yield* saveSerializdEditor(deps, list.listId, raw, () => ({ listName: name }));
+  const confirmed = yield* getSerializdList(deps, params.id);
+  if (confirmed.title !== name || !confirmed.complete) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Could not confirm the new name. Open Serializd before retrying.' });
+  return confirmed;
+});
+
+/** Serializd's editor refuses more entries than this. */
+export const MAX_SERIALIZD_LIST_ITEMS = 500;
+
+export interface SerializdListDraft {
+  name: string;
+  description: string;
+  isPrivate: boolean;
+  isRanked: boolean;
+  allowsComments: boolean;
+  items: readonly NormalizedMediaItem[];
+}
+
+/** Mirrors the web editor's rules: a name, 1–500 shows, and its defaults for the rest. */
+export const createSerializdList = Effect.fn('serializd.createList')(function* (
+  deps: SerializdDeps,
+  params: SerializdListDraft & { username: string },
+) {
+  if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderAuthError({ provider: 'serializd', refreshFailed: true });
+  const name = params.name.trim();
+  if (name === '') return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Give the list a name.' });
+  if (params.items.length === 0 || params.items.length > MAX_SERIALIZD_LIST_ITEMS) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd lists need between 1 and 500 shows.' });
+  const showIds = params.items.map((item) => item.type === 'TV' ? item.externalIds.tmdb : undefined);
+  if (!showIds.every((id) => Schema.is(Id)(id))) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Only shows can be added to a Serializd list.' });
+  const raw = yield* serializdHttp<unknown>(deps, '/list/create', { method: 'POST', auth: true, body: {
+    list_name: name, list_description: params.description.trim(),
+    list_items: showIds.map((show_id, position) => ({ show_id, season_id: null, position, description: '' })),
+    list_collaborators: [], is_private: params.isPrivate, is_ranked: params.isRanked,
+    allows_comments: params.allowsComments, banner_image_path: '',
+  } });
+  const receipt = yield* Schema.decodeUnknownEffect(Schema.Struct({ listId: Id }))(raw).pipe(
+    Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd did not confirm the new list. Check your lists before retrying.' })),
+  );
+  const created = yield* getSerializdList(deps, String(receipt.listId));
+  if (created.owner.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd returned a different list. Check your lists before retrying.' });
+  return created;
+});
+
 /** A removal uses Serializd's full editor, so no settings or unseen entries may be dropped. */
 export const setSerializdListMembership = Effect.fn('serializd.setListMembership')(function* (
   deps: SerializdDeps,
@@ -157,17 +237,7 @@ export const setSerializdListMembership = Effect.fn('serializd.setListMembership
     if (index < 0) yield* serializdHttp(deps, '/list/add_item', { method: 'POST', auth: true, body: { list_id: list.listId, show_id: params.item.externalIds.tmdb } });
   } else if (index >= 0) {
     if (list.listItems.length !== list.numberOfItems) return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd returned only part of this list. Remove this item on Serializd to keep the other entries safe.' });
-    const editor = yield* Schema.decodeUnknownEffect(Schema.Struct({
-      listName: Schema.String, listDescription: Schema.String,
-      listItems: Schema.Array(Schema.Unknown), listCollaborators: Schema.Array(Schema.Unknown),
-      isPrivate: Schema.Boolean, isRanked: Schema.Boolean, allowsComments: Schema.Boolean, bannerImagePath: Schema.NullOr(Schema.String),
-    }))(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'Serializd did not return the full editor settings. Open the list on Serializd.' })));
-    yield* serializdHttp(deps, '/list/edit', { method: 'POST', auth: true, body: {
-      list_id: list.listId, list_name: editor.listName, list_description: editor.listDescription,
-      list_items: editor.listItems.filter((_, position) => position !== index),
-      list_collaborators: editor.listCollaborators, is_private: editor.isPrivate,
-      is_ranked: editor.isRanked, allows_comments: editor.allowsComments, banner_image_path: editor.bannerImagePath,
-    } });
+    yield* saveSerializdEditor(deps, list.listId, raw, (editor) => ({ listItems: editor.listItems.filter((_, position) => position !== index) }));
   } else if (list.listItems.length < list.numberOfItems) {
     return yield* new ProviderDecodeError({ provider: 'serializd', detail: 'Could not locate this entry in the incomplete list. Open Serializd before retrying.' });
   }

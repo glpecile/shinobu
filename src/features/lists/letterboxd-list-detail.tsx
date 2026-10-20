@@ -22,6 +22,7 @@ import { useSuspenseLetterboxdListFilmsQuery } from '@/state/queries/letterboxd'
 import { useMediaProgress } from '@/state/queries/media-progress';
 import { ListsHeader, ProviderListLink } from './list-header';
 import { AddToList } from './list-membership-form';
+import { RenameList } from './rename-list';
 import { ListLikeButton } from './list-like-button';
 import { ListProgress } from './list-progress';
 import { ListsLoadError } from './lists-page';
@@ -58,6 +59,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
         <MediaSortControl scope="lists" sort={sort} />
         <View className="flex-row items-center gap-1">
           <ProviderListLink iconOnly provider="letterboxd" url={url} />
+          {target != null && <RenameList key={title} target={target} />}
           {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
         </View>
       </MediaToolbar>

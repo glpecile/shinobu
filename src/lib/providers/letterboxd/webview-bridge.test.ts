@@ -8,7 +8,9 @@ import {
   letterboxdWebFetch,
   letterboxdWatchlistWebFetch,
   letterboxdListLikeWebFetch,
+  letterboxdListCreateFetch,
   letterboxdListMembershipFetch,
+  letterboxdListRenameFetch,
   registerLetterboxdWebView,
   resetLetterboxdWebViewBridge,
 } from './webview-bridge';
@@ -195,5 +197,51 @@ test.each(['owner', 'account', 'path', 'version', 'incomplete', 'conflict', 'cha
   expect(result.status).toBe(0);
   if (failure === 'challenge') expect(result.body).toContain('verification');
   expect(writes).toBe(['conflict', 'challenge', 'receipt'].includes(failure) ? 1 : 0);
+  dom.close();
+});
+
+test.each(['created', 'rejected', 'elsewhere'] as const)('list creation resolves every film before one save (%s)', async (outcome) => {
+  const webView = fakeWebView();
+  registerLetterboxdWebView(webView.ref);
+  const pending = letterboxdListCreateFetch({ username: 'gian', name: 'Classics', description: 'Old', tags: ['top 10'], sharing: 'Public', ranked: false, filmPaths: ['/film/alien/', '/film/alien/'] });
+  expect(webView.pages[0].filmPath).toBe('/list/new/');
+  const dom = new Window({ url: 'https://letterboxd.com/list/new/' });
+  const saves: RequestInit[] = [];
+  const fetch = async (url: string, init?: RequestInit) => {
+    if (url === '/film/alien/') return new Response('<meta name="production:identifier" content=\'{"type":"film","lid":"filmLid"}\'>');
+    if (url !== '/api/v0/lists' || init?.method !== 'POST') throw new Error(`Unexpected URL ${url}`);
+    saves.push(init);
+    return Response.json(outcome === 'rejected'
+      ? { messages: [{ type: 'Error', code: 'DuplicateEntry', title: 'Duplicate film' }] }
+      : { messages: [], data: { id: 'newLid', links: [{ type: 'letterboxd', url: `https://letterboxd.com/${outcome === 'created' ? 'gian' : 'jack'}/list/classics/` }] } });
+  };
+  const window = { location: dom.location, person: { loggedIn: true, username: 'gian' }, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
+  new Function('window', 'document', 'sessionStorage', 'fetch', 'DOMParser', webView.pages[0].script)(window, dom.document, { getItem() {}, setItem() {} }, fetch, dom.DOMParser);
+  const result = await pending;
+  expect(saves).toHaveLength(1);
+  expect(new Headers(saves[0].headers).get('X-CSRF-TOKEN')).toBe('csrf');
+  expect(JSON.parse(String(saves[0].body))).toEqual({ published: true, sharePolicy: 'You', name: 'Classics', description: 'Old', ranked: false, tags: ['top 10'], entries: [{ action: 'ADD', listable: 'filmLid' }] });
+  if (outcome === 'created') expect(result).toEqual({ status: 200, body: JSON.stringify({ result: true, listPath: '/gian/list/classics/' }) });
+  else expect(result).toEqual({ status: 0, body: outcome === 'rejected' ? 'Duplicate film' : 'Letterboxd did not confirm the new list. Check your lists before retrying.' });
+  dom.close();
+});
+
+test('list rename resends the editor settings and follows a new slug', async () => {
+  const webView = fakeWebView();
+  registerLetterboxdWebView(webView.ref);
+  const pending = letterboxdListRenameFetch({ listPath: '/gian/list/classics/', username: 'gian', name: 'Old classics' });
+  expect(webView.pages[0].filmPath).toBe('/gian/list/classics/edit/');
+  const dom = new Window({ url: 'https://letterboxd.com/gian/list/classics/edit/' });
+  dom.document.body.innerHTML = `<div data-component-class="ListEditor" data-list-lid="listLid" data-list-version="4" data-list-url="/gian/list/classics/" data-list-type="private" data-list-share-policy="Friends" data-list-is-ranked="true" data-list-description="<b>Keep</b>" data-list-tags='["top 10"]'></div>`;
+  const saves: RequestInit[] = [];
+  const fetch = async (url: string, init?: RequestInit) => {
+    expect(url).toBe('/api/v0/list/listLid');
+    saves.push(init!);
+    return Response.json({ messages: [], data: { id: 'listLid', version: 5, links: [{ type: 'letterboxd', url: 'https://letterboxd.com/gian/list/old-classics/' }] } });
+  };
+  new Function('window', 'document', 'sessionStorage', 'fetch', 'DOMParser', webView.pages[0].script)({ location: dom.location, person: { loggedIn: true, username: 'gian' }, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } }, dom.document, { getItem() {}, setItem() {} }, fetch, dom.DOMParser);
+  expect(await pending).toEqual({ status: 200, body: JSON.stringify({ result: true, listPath: '/gian/list/old-classics/' }) });
+  expect(saves[0].method).toBe('PATCH');
+  expect(JSON.parse(String(saves[0].body))).toEqual({ version: 4, published: false, sharePolicy: 'Friends', name: 'Old classics', ranked: true, description: '<b>Keep</b>', tags: ['top 10'], entries: [] });
   dom.close();
 });

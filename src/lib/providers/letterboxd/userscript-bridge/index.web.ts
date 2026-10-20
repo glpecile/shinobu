@@ -1,10 +1,14 @@
 import { useSyncExternalStore } from 'react';
-import type { LetterboxdListMembershipFetch, LetterboxdListLikeWebFetch, LetterboxdListMembershipRequest, LetterboxdListLikeWebRequest, LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, LetterboxdWebFetch, LetterboxdWebRequest, LetterboxdWebResponse } from '@/lib/providers/letterboxd/deps';
+import type { LetterboxdListCreateFetch, LetterboxdListCreateRequest, LetterboxdListRenameFetch, LetterboxdListRenameRequest, LetterboxdListMembershipFetch, LetterboxdListLikeWebFetch, LetterboxdListMembershipRequest, LetterboxdListLikeWebRequest, LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, LetterboxdWebFetch, LetterboxdWebRequest, LetterboxdWebResponse } from '@/lib/providers/letterboxd/deps';
 
 const READY_ATTRIBUTE = 'data-shinobu-letterboxd-bridge';
 
-export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' = 'log'): boolean {
+export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename' = 'log'): boolean {
   const version = typeof document !== 'undefined' ? document.documentElement.getAttribute(READY_ATTRIBUTE) : null;
+  if (version === '11') return true;
+  if (capability === 'list-rename') return false;
+  if (version === '10') return true;
+  if (capability === 'list-create') return false;
   if (version === '9') return true;
   if (capability === 'list-membership') return false;
   if (version === '8' || version === '7') return true;
@@ -21,7 +25,7 @@ function subscribe(listener: () => void) {
 
 function serverSnapshot() { return false; }
 
-export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' = 'log'): boolean {
+export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename' = 'log'): boolean {
   return useSyncExternalStore(subscribe, () => hasLetterboxdUserscript(capability), serverSnapshot);
 }
 
@@ -50,7 +54,7 @@ export function getLetterboxdUserscriptListLikeFetch(username: string | null): L
   return username && hasLetterboxdUserscript('list-like') ? (request) => sendRequest(username, 'list-like', request) : undefined;
 }
 
-function sendRequest(username: string, capability: 'log' | 'watchlist' | 'list-like' | 'list-membership', request: LetterboxdListMembershipRequest | LetterboxdWebRequest | LetterboxdWatchlistWebRequest | LetterboxdListLikeWebRequest): Promise<LetterboxdWebResponse> {
+function sendRequest(username: string, capability: 'log' | 'watchlist' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename', request: LetterboxdListCreateRequest | LetterboxdListRenameRequest | LetterboxdListMembershipRequest | LetterboxdWebRequest | LetterboxdWatchlistWebRequest | LetterboxdListLikeWebRequest): Promise<LetterboxdWebResponse> {
   return new Promise((resolve, reject) => {
     const id = crypto.randomUUID();
     const cleanup = () => {
@@ -77,4 +81,12 @@ function sendRequest(username: string, capability: 'log' | 'watchlist' | 'list-l
 
 export function getLetterboxdUserscriptListMembershipFetch(username: string | null): LetterboxdListMembershipFetch | undefined {
   return username && hasLetterboxdUserscript('list-membership') ? (request) => sendRequest(username, 'list-membership', request) : undefined;
+}
+
+export function getLetterboxdUserscriptListCreateFetch(username: string | null): LetterboxdListCreateFetch | undefined {
+  return username && hasLetterboxdUserscript('list-create') ? (request) => sendRequest(username, 'list-create', request) : undefined;
+}
+
+export function getLetterboxdUserscriptListRenameFetch(username: string | null): LetterboxdListRenameFetch | undefined {
+  return username && hasLetterboxdUserscript('list-rename') ? (request) => sendRequest(username, 'list-rename', request) : undefined;
 }

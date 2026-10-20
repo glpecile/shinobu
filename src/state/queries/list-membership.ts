@@ -3,8 +3,8 @@ import { Effect } from 'effect';
 
 import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import { searchMedia } from '@/lib/providers/trakt/reads';
-import { setListMembership, type LetterboxdListFilmsPage } from '@/lib/providers/letterboxd/lists';
-import { setSerializdListMembership } from '@/lib/providers/serializd/lists';
+import { createList, renameList, setListMembership, type LetterboxdListDraft, type LetterboxdListFilmsPage } from '@/lib/providers/letterboxd/lists';
+import { createSerializdList, renameSerializdList, setSerializdListMembership, type SerializdListDraft } from '@/lib/providers/serializd/lists';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
@@ -70,6 +70,65 @@ export function useListMembership(target: ListEditTarget) {
         }
       }
     },
+  });
+}
+
+/** A Letterboxd rename can move the list to a new slug; callers follow `slug`. */
+export function useRenameList(target: ListEditTarget) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationKey: ['list-rename', target.provider, target.username, target.url],
+    retry: false,
+    mutationFn: async (name: string) => {
+      switch (target.provider) {
+        case 'letterboxd':
+          if (getLetterboxdUsername()?.toLowerCase() !== target.username.toLowerCase()) throw new Error('Your Letterboxd account changed. Reopen the list.');
+          return { provider: 'letterboxd' as const, ...await Effect.runPromise(renameList(letterboxdDeps(), { owner: target.owner, slug: target.slug, name })) };
+        case 'serializd': {
+          const list = await Effect.runPromise(renameSerializdList(serializdDeps(target.username), { id: target.id, username: target.username, name }));
+          client.setQueryData(serializdQueryKeys.list(target.username, target.id), list);
+          return { provider: 'serializd' as const, name: list.title };
+        }
+      }
+    },
+    onSuccess: async (result) => {
+      switch (result.provider) {
+        case 'letterboxd':
+          if (target.provider === 'letterboxd' && result.slug === target.slug) {
+            client.setQueryData<InfiniteData<LetterboxdListFilmsPage>>(letterboxdQueryKeys.listFilms(target.owner, target.slug), (data) => data == null ? data : { ...data, pages: data.pages.map((page) => ({ ...page, title: result.name })) });
+          }
+          await client.invalidateQueries({ queryKey: letterboxdQueryKeys.listsRoot() });
+          return;
+        case 'serializd':
+          await client.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() });
+      }
+    },
+  });
+}
+
+export type NewList =
+  | { provider: 'letterboxd'; draft: LetterboxdListDraft }
+  | { provider: 'serializd'; draft: SerializdListDraft };
+
+/** Never retried: an unconfirmed create may still have saved upstream. */
+export function useCreateList(username: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationKey: ['list-create', username],
+    retry: false,
+    mutationFn: async (list: NewList) => {
+      switch (list.provider) {
+        case 'letterboxd':
+          if (getLetterboxdUsername()?.toLowerCase() !== username.toLowerCase()) throw new Error('Your Letterboxd account changed. Reopen this screen.');
+          return { provider: 'letterboxd' as const, ...await Effect.runPromise(createList(letterboxdDeps(), list.draft)) };
+        case 'serializd': {
+          const created = await Effect.runPromise(createSerializdList(serializdDeps(username), { ...list.draft, username }));
+          client.setQueryData(serializdQueryKeys.list(username, created.id), created);
+          return { provider: 'serializd' as const, id: created.id };
+        }
+      }
+    },
+    onSuccess: (result) => client.invalidateQueries({ queryKey: result.provider === 'letterboxd' ? letterboxdQueryKeys.listsRoot() : serializdQueryKeys.listsRoot() }),
   });
 }
 

@@ -48,6 +48,7 @@ describe('allowlist', () => {
       ['/api/serializd/list/42', 'GET'],
       ['/api/serializd/list/add_item', 'POST'],
       ['/api/serializd/list/edit', 'POST'],
+      ['/api/serializd/list/create', 'POST'],
       ['/api/serializd/login', 'POST'],
       ['/api/serializd/episode_log/add', 'POST'],
       ['/api/serializd/show/reviews/add', 'POST'],
@@ -70,6 +71,7 @@ describe('allowlist', () => {
       '/api/serializd/login',
       '/api/serializd/list/add_item',
       '/api/serializd/list/edit',
+      '/api/serializd/list/create',
       // The watchlist grant is POST-only; upstream answers 405 to GET on it too
       // (plan 0031 KTD-9 evidence (C)), so the rule mirrors upstream.
       '/api/serializd/watchlist_v2',
@@ -122,7 +124,6 @@ describe('allowlist', () => {
       '/api/serializd/watchlist/add',
       '/api/serializd/watchlist_v2/extra',
       '/api/serializd/watchlist_v2%2F..%2Flogin',
-      '/api/serializd/list/create',
       '/api/serializd/list/edit/42',
       '/api/serializd/list/add_item/extra',
       '/api/serializd/list/likes/add',

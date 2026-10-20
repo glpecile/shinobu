@@ -28,7 +28,10 @@ import { traktQueryKeys } from '@/state/queries/trakt';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
-function ListRecovery({ target }: { target: ListEditTarget }) {
+/** What search and recovery need of a list, which a list being created also has. */
+type ListSearchTarget = Pick<ListEditTarget, 'provider' | 'title' | 'url'>;
+
+function ListRecovery({ target }: { target: ListSearchTarget }) {
   return <Button icon={<Button.Icon name="open-outline" />} label={`Open on ${PROVIDERS[target.provider].label}`} onPress={() => void openExternalUrl(target.url)} variant="quiet" />;
 }
 
@@ -86,7 +89,7 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
 function SearchResults({ query, source, target, items, onSelect }: {
   query: string;
   source: 'tmdb' | 'trakt';
-  target: ListEditTarget;
+  target: ListSearchTarget;
   items: readonly NormalizedMediaItem[];
   onSelect: (item: NormalizedMediaItem) => void;
 }) {
@@ -95,6 +98,8 @@ function SearchResults({ query, source, target, items, onSelect }: {
   return <List
     data={results}
     estimatedItemSize={76}
+    // The list editor keeps search open while picking, so rows follow `items`.
+    extraData={items}
     keyExtractor={(item) => item.id}
     keyboardShouldPersistTaps="handled"
     scrollEnabled={false}
@@ -125,8 +130,9 @@ function SearchResults({ query, source, target, items, onSelect }: {
   />;
 }
 
-function ListSearch({ target, items, onSelect, onClose }: {
-  target: ListEditTarget;
+/** Search films or shows for a list; `items` marks what it already holds. */
+export function ListSearch({ target, items, onSelect, onClose }: {
+  target: ListSearchTarget;
   items: readonly NormalizedMediaItem[];
   onSelect: (item: NormalizedMediaItem) => void;
   onClose: () => void;
