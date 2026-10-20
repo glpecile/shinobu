@@ -15,11 +15,21 @@ function deferred<T>() {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** Hand-driven settle window — the tests never wait out the real 900ms. */
+/** Hand-driven settle window — the tests never wait out the real one. */
 function testClock() {
   const timers: Array<() => void> = [];
+  let time = 0;
   return {
-    clock: { schedule: (run: () => void) => void timers.push(run) },
+    clock: { schedule: (run: () => void) => void timers.push(run), now: () => time },
+    /** Fires only the oldest pending timer. */
+    fireOldest: async () => {
+      await tick();
+      timers.shift()?.();
+      await tick();
+    },
+    setNow: (ms: number) => {
+      time = ms;
+    },
     /**
      * "The window elapsed" — repeatedly, because each write that goes out
      * schedules the next window when it lands.
@@ -133,8 +143,8 @@ describe('createAniListWriteQueue', () => {
     );
   });
 
-  test('the settle window is what a fast thumb folds into', async () => {
-    const { clock, advance } = testClock();
+  test('each press restarts the settle window until the hold cap', async () => {
+    const { clock, advance, fireOldest, setNow } = testClock();
     const queue = createAniListWriteQueue(clock);
     const ranks: number[] = [];
     const run = (rank: number) => () => {
@@ -142,16 +152,22 @@ describe('createAniListWriteQueue', () => {
       return Promise.resolve(`wrote ${rank}`);
     };
 
-    // Episode 3 lands before episode 4 is even pressed — mid-flight folding
-    // has nothing to fold. The window is what catches 4–6.
-    const head = queue.submit('1:false', 3, run(3));
-    await head;
-    const later = [4, 5, 6].map((rank) => queue.submit('1:false', rank, run(rank)));
-    await tick();
+    // Episode 3 lands before episode 4 is pressed, so only the window can
+    // fold 4 and 5 — and 5 arriving restarts it, outdating 3's timer.
+    await queue.submit('1:false', 3, run(3));
+    const four = queue.submit('1:false', 4, run(4));
+    await fireOldest();
     expect(ranks).toEqual([3]);
-
+    const five = queue.submit('1:false', 5, run(5));
     await advance();
-    expect(await Promise.all(later)).toEqual(['wrote 6', 'wrote 6', 'wrote 6']);
-    expect(ranks).toEqual([3, 6]);
+    expect(await Promise.all([four, five])).toEqual(['wrote 5', 'wrote 5']);
+    expect(ranks).toEqual([3, 5]);
+
+    // Past the cap an arrival no longer restarts it: 6's window drains 7.
+    await queue.submit('1:false', 6, run(6));
+    setNow(30_000);
+    const seven = queue.submit('1:false', 7, run(7));
+    await fireOldest();
+    expect(await seven).toBe('wrote 7');
   });
 });

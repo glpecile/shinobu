@@ -17,13 +17,13 @@
  * keeps its guarantee: never two AniList writes in flight at once, so a slow
  * episode-4 write can't land after episode 5's and *regress* the counter.
  *
- * A write also waits a **settle window** after the previous one lands before
- * going out. Folding only what arrives mid-flight barely folds anything when
- * the round-trip is quicker than the user's thumb — press, land, press, land —
- * which is how a ten-episode chain still cost ten writes. The window is what
- * makes the fold reliable, and it doubles as request spacing against the
- * 30/min budget. It costs the user nothing: the counter's end state is the
- * same, and the sheet stays open until its writes settle.
+ * A write also waits a **settle window** after the previous one lands, and
+ * every arrival restarts it. The window has to outlast the gap between two
+ * confirms (2–4s in the owner's 2026-10-20 recording), or a press-land-press
+ * chain folds nothing. So a chain costs its first write plus one at its last
+ * episode, once the user pauses. A single log never waits, since the queue is
+ * idle when it arrives, and the hold is capped so a long chain can't leave
+ * progress unsent for minutes.
  *
  * Deliberately not a retry or a backoff. `lib/providers/anilist/http.ts`
  * already sleeps once on a `Retry-After`; retrying harder inside the window is
@@ -33,22 +33,26 @@
  */
 
 /**
- * How long a landed write holds the queue before the next batch goes out —
- * the window arrivals fold into. Long enough to cover a fast thumb between
- * two confirms, short enough that a single log still reads as immediate (the
- * first write of a chain never waits: the queue is idle when it arrives).
+ * The quiet time after a landed write, or the latest arrival behind it, before
+ * the next batch goes out. Longer than the gap between two confirms, so a
+ * chain folds; a single log never waits for it.
  */
-const FOLD_WINDOW_MS = 900;
+const FOLD_WINDOW_MS = 5_000;
+
+/** Arrivals stop restarting the window this long after a write lands. */
+const MAX_HOLD_MS = 30_000;
 
 /** Test seam: real timers in the app, hand-driven ones in `bun test`. */
 export interface FoldClock {
   schedule: (run: () => void, ms: number) => void;
+  now: () => number;
 }
 
 const REAL_CLOCK: FoldClock = {
   schedule: (run, ms) => {
     setTimeout(run, ms);
   },
+  now: () => Date.now(),
 };
 
 interface Waiter<T> {
@@ -79,6 +83,9 @@ export function createAniListWriteQueue(
 ): AniListWriteQueue {
   let inFlight = false;
   let settling = false;
+  let holdStartedAt = 0;
+  // Only the newest window's timer may drain; a restart outdates the rest.
+  let window = 0;
   // Mixed element types by construction — one queue serves every write shape.
   const pending: Waiter<unknown>[] = [];
 
@@ -115,7 +122,14 @@ export function createAniListWriteQueue(
   function settle(): void {
     inFlight = false;
     settling = true;
+    holdStartedAt = clock.now();
+    restartWindow();
+  }
+
+  function restartWindow(): void {
+    const current = ++window;
     clock.schedule(() => {
+      if (current !== window) return;
       settling = false;
       drain();
     }, FOLD_WINDOW_MS);
@@ -125,6 +139,7 @@ export function createAniListWriteQueue(
     submit(key, rank, run) {
       return new Promise((resolve, reject) => {
         pending.push({ key, rank, run, resolve, reject } as unknown as Waiter<unknown>);
+        if (settling && clock.now() - holdStartedAt < MAX_HOLD_MS) restartWindow();
         drain();
       });
     },

@@ -33,8 +33,8 @@ progress**, and every folded caller resolves with that write's result.
 
 Folding only what arrives *mid-flight* barely folds anything: when the
 round-trip is quicker than the user's thumb the queue is idle at every press.
-So a landed write also holds the queue for a **900 ms settle window** that later
-arrivals fold into. It doubles as request spacing, and costs the user nothing —
+So a landed write also holds the queue for a **settle window** that later
+arrivals fold into, restarted by each arrival (see the follow-up below). It doubles as request spacing, and costs the user nothing —
 the counter's end state is identical and the sheet stays open until its writes
 settle.
 
@@ -59,3 +59,21 @@ on `Retry-After` once and no more, deliberately.
 `logToAniList` reads `getEntryState` through Effect while the log's reconcile
 leg has just read the same entry through the query cache — a duplicated request
 per write. Closing it means handing the adapter the cached state as a hint.
+
+## Follow-up, 2026-10-20: the window has to outlast a confirm
+
+An owner recording chained episodes 52→60 at one confirm every 2–4 s, and the
+tail still rate-limited. A fixed 900 ms window after each landing never caught
+the next press, so every episode cost its own reconcile read, entry read, save
+and the refetches each success invalidates (roughly five requests per episode
+against 30/min).
+
+AniList has no bulk progress mutation, and needs none: `UpdateMediaListEntries`
+applies one set of values to many *entries*, and this is one entry's counter.
+Otraku's `UpdateProgress` is the same single `SaveMediaListEntry`. The bulk call
+is the fold itself.
+
+The window is now 5 s and **every arrival restarts it**, capped at 30 s after a
+landing so a long chain can't leave progress unsent. A chain costs its first
+write plus one at its last episode. A lone log is still immediate. Folded
+writes also stop invalidating mid-chain, so the reconcile reads stay cached.
