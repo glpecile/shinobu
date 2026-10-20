@@ -16,9 +16,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        {/*
+          `interactive-widget=resizes-content`: Android browsers otherwise
+          overlay the keyboard on the layout viewport, so bottom-anchored UI
+          (FABs, sheets) sat behind it. iOS Safari ignores it.
+        */}
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, interactive-widget=resizes-content"
         />
 
         {/*

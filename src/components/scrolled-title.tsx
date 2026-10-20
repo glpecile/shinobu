@@ -188,10 +188,11 @@ function Bar({ title, trailingAction = false }: { title: string; trailingAction?
   return (
     <AnimatedView
       aria-hidden
-      className={cn('absolute top-0 left-0 right-0 justify-end pb-2 pl-16 pr-6 bg-background border-b border-border overflow-hidden', trailingAction && 'pr-16')}
-      style={[{ pointerEvents: 'none', height: barHeight }, barStyle]}
+      className={cn('absolute top-0 left-0 right-0 justify-end pl-16 pr-6 bg-background border-b border-border overflow-hidden', trailingAction && 'pr-16')}
+      style={[{ pointerEvents: 'none', height: barHeight, paddingBottom: FLOATING_BACK_BUTTON_GAP }, barStyle]}
     >
-      <AnimatedView className="h-10 justify-center" style={titleStyle}>
+      {/* The button's own box, so the title centers on the buttons beside it. */}
+      <AnimatedView className="justify-center" style={[{ height: FLOATING_BACK_BUTTON_SIZE }, titleStyle]}>
         <Text className="font-display text-lg text-foreground" numberOfLines={1}>
           {title}
         </Text>

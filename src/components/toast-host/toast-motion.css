@@ -1,3 +1,19 @@
+/* Match app-shell's bottom-nav breakpoint, independently of sonner's 600px
+   mobile sizing: 76px bar, home indicator, and a 16px gap. */
+@media (width < 768px) {
+  [data-sonner-toaster] {
+    --toast-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  }
+}
+
+/* An unstyled (custom) toast shrinks to its content; fill sonner's column.
+   Below 601px sonner's own mobile rule insets it from both edges instead. */
+@media (min-width: 601px) {
+  [data-sonner-toaster] [data-sonner-toast] {
+    width: var(--width);
+  }
+}
+
 [data-sonner-toaster] [data-sonner-toast][data-swiping='false'] {
   transition-property: transform, opacity;
   transition-duration: var(--toast-enter);

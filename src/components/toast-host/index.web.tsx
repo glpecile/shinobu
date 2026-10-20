@@ -19,6 +19,8 @@ export function ToastHost() {
   return (
     <Toaster
       expand
+      offset={{ bottom: 'var(--toast-bottom, 32px)' }}
+      mobileOffset={{ bottom: 'var(--toast-bottom, 32px)' }}
       position="bottom-right"
       theme={theme}
       style={{

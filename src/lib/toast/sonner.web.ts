@@ -12,6 +12,5 @@ export function showToast(
 ) {
   toast.custom(() => createElement(ToastCard, { kind, title, message }), {
     duration,
-    style: { width: '100%' },
   });
 }

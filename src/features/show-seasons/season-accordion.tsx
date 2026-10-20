@@ -8,7 +8,6 @@ import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { formatAirDate } from '@/features/episode-details/episode-label';
-import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useThemeColor } from '@/lib/theme-color';
 import { hasAired } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
@@ -154,7 +153,6 @@ export function SeasonHeader({
   open: boolean;
   onToggle: () => void;
 }) {
-  const toggle = useDisclosureToggle(onToggle);
   const runtime = seasonRuntimeMinutes(season);
   const hasBody = open && season.episodes.length > 0;
 
@@ -163,7 +161,7 @@ export function SeasonHeader({
       <PressableCard
         accessibilityState={{ expanded: open }}
         cardClassName={cn('flex-row items-center', hasBody && 'rounded-b-none')}
-        onPress={toggle}
+        onPress={onToggle}
       >
         <DisclosureChevron from="forward" open={open} size={16} />
         <View className="ml-3 flex-1">
