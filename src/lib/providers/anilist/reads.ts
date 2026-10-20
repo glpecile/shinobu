@@ -599,6 +599,46 @@ export function searchAnimeFilms(
   });
 }
 
+interface PrequelResponse {
+  Media: {
+    relations: {
+      edges: Array<{
+        relationType: string | null;
+        node: { id: number; type: string | null; format: string | null; episodes: number | null } | null;
+      } | null> | null;
+    } | null;
+  } | null;
+}
+
+/**
+ * The one series a split-cour sequel continues from: its single TV or ONA
+ * prequel with a known episode count. Null when there is none or more than one.
+ */
+export function getSeriesPrequel(
+  deps: AniListDeps,
+  params: { mediaId: number },
+): Effect.Effect<{ id: number; episodes: number } | null, ProviderError> {
+  return anilistRequest<PrequelResponse>(
+    deps,
+    `query ($id: Int) {
+      Media(id: $id) {
+        relations { edges { relationType node { id type format episodes } } }
+      }
+    }`,
+    { variables: { id: params.mediaId } },
+  ).pipe(
+    Effect.map((data) => {
+      const prequels = (data.Media?.relations?.edges ?? []).flatMap((edge) =>
+        edge?.relationType === 'PREQUEL' && edge.node?.type === 'ANIME' &&
+        (edge.node.format === 'TV' || edge.node.format === 'ONA') && edge.node.episodes != null
+          ? [{ id: edge.node.id, episodes: edge.node.episodes }]
+          : [],
+      );
+      return prequels.length === 1 ? prequels[0] : null;
+    }),
+  );
+}
+
 export interface AniListEntryState {
   /**
    * null when the viewer has no list entry for this media yet.

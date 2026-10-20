@@ -1,4 +1,5 @@
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
+import { ProviderNetworkError, ProviderRateLimitError } from '@/lib/providers/errors';
 import type { SimklLogEntry } from '@/lib/providers/simkl/writes';
 
 /**
@@ -13,8 +14,8 @@ interface Waiter {
   entry: SimklLogEntry;
   resolve: (result: ProviderWriteResult) => void;
   reject: (error: unknown) => void;
-  /** A batch bounced by the lock is re-queued exactly once. */
-  retried: boolean;
+  /** Failed POSTs this entry rode in, against `MAX_ATTEMPTS`. */
+  attempts: number;
 }
 
 export interface SimklLogQueue {
@@ -34,12 +35,26 @@ const REAL_CLOCK: QueueClock = {
   },
 };
 
-function isRateLimit(error: unknown): boolean {
-  // The runPromise rejection's name/message carries the provider error tag,
-  // as in state/queries/query-client.ts.
-  const label =
-    error instanceof Error ? `${error.name} ${error.message}` : String(error);
-  return /ProviderRateLimitError/.test(label);
+/** Simkl's own guidance: give up on a transient failure after 5 attempts. */
+const MAX_ATTEMPTS = 5;
+
+/**
+ * What Simkl's docs say to retry: its write lock (`400 RATE_LIMIT`, "your
+ * previous write is still running"), the per-second `429`, and `500`/`502`/
+ * `503` (api.simkl.org/resources/rate-limits). Anything else may have landed
+ * or never will, so it isn't replayed.
+ */
+function isTransient(error: unknown): boolean {
+  // A reset delay identifies a quota response, which cannot recover during
+  // this short retry window. Leave the caller its manual retry link.
+  if (error instanceof ProviderRateLimitError) return error.retryAfterMs == null;
+  return error instanceof ProviderNetworkError &&
+    (error.status === 500 || error.status === 502 || error.status === 503);
+}
+
+/** 2s, 4s, 8s, 16s: the lock clears when Simkl finishes the previous write. */
+function backoffMs(attempts: number): number {
+  return 1_000 * 2 ** attempts;
 }
 
 /**
@@ -55,9 +70,9 @@ function isRateLimit(error: unknown): boolean {
  * - No lock, nothing in flight → the entry POSTs immediately, alone.
  * - Otherwise it waits; when the lock lifts, everything waiting goes as ONE
  *   POST and every waiter resolves with that POST's result.
- * - A POST that still bounces off the lock (`ProviderRateLimitError`) is
- *   re-queued once behind a fresh window; a second bounce rejects its waiters,
- *   which the fan-out reports as a Simkl failure with the manual link.
+ * - A POST that fails transiently (`isTransient`) is re-queued after a short
+ *   backoff, up to `MAX_ATTEMPTS`; then its waiters reject, which the fan-out
+ *   reports as a Simkl failure with the manual link.
  * - Any other error rejects the waiters of that POST only.
  *
  * Module state is per app lifetime — the lock is Simkl's, and it outlives no
@@ -93,22 +108,27 @@ export function createSimklLogQueue(
 
   async function fire(batch: Waiter[]) {
     inFlight = true;
+    let wait = SIMKL_WRITE_LOCK_MS;
     try {
       const result = await send(batch.map((waiter) => waiter.entry));
       for (const waiter of batch) waiter.resolve(result);
     } catch (error) {
-      const bounced = isRateLimit(error);
-      const retry = bounced ? batch.filter((waiter) => !waiter.retried) : [];
+      for (const waiter of batch) waiter.attempts += 1;
+      const retry = isTransient(error)
+        ? batch.filter((waiter) => waiter.attempts < MAX_ATTEMPTS)
+        : [];
       for (const waiter of batch) {
-        if (retry.includes(waiter)) waiter.retried = true;
-        else waiter.reject(error);
+        if (!retry.includes(waiter)) waiter.reject(error);
       }
       // Re-queued waiters go to the front so a bounced batch lands before
       // anything that arrived while it was in flight.
       pending = [...retry, ...pending];
+      if (retry.length > 0) {
+        wait = backoffMs(Math.max(...retry.map((waiter) => waiter.attempts)));
+      }
     } finally {
       inFlight = false;
-      lockedUntil = clock.now() + SIMKL_WRITE_LOCK_MS;
+      lockedUntil = clock.now() + wait;
       scheduleFlush();
     }
   }
@@ -116,7 +136,7 @@ export function createSimklLogQueue(
   return {
     log(entry) {
       return new Promise<ProviderWriteResult>((resolve, reject) => {
-        const waiter: Waiter = { entry, resolve, reject, retried: false };
+        const waiter: Waiter = { entry, resolve, reject, attempts: 0 };
         if (!inFlight && clock.now() >= lockedUntil && pending.length === 0) {
           void fire([waiter]);
           return;

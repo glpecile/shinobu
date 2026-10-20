@@ -20,14 +20,21 @@ import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd'
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { translateEntryEpisodes } from '@/lib/providers/mapping/episode-translation';
 import {
+  continuePrequelTable,
+  translateEntryEpisodes,
+} from '@/lib/providers/mapping/episode-translation';
+import {
+  cachedAniListPrequel,
   cachedAniZipEpisodeMap,
+  cachedAniZipIds,
   cachedSeasonLayout,
+  cachedTmdbTvIdByTvdb,
 } from '@/state/queries/mapping';
 import { resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
+import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { getEntryState } from '@/lib/providers/anilist/reads';
@@ -306,6 +313,37 @@ interface LogPlan {
 }
 
 /**
+ * The entry's ani.zip table, or for a second cour ani.zip hasn't mapped yet,
+ * its prequel's table continued over `entryNumbers`.
+ */
+async function entryEpisodeMap(
+  queryClient: QueryClient,
+  item: NormalizedMediaItem,
+  entryNumbers: readonly number[],
+): Promise<AniZipEpisodeMap | null> {
+  const anilistId = item.externalIds.anilist;
+  if (anilistId == null) return null;
+  const own = await cachedAniZipEpisodeMap(queryClient, anilistId);
+  if (own != null && own.size > 0) return own;
+  const prequel = await cachedAniListPrequel(queryClient, anilistId);
+  if (prequel == null) return own;
+  // AniList also links prequels that trackers keep as separate shows, such as
+  // Naruto and Shippuden. A relation cannot vouch for shared numbering.
+  const ids = await cachedAniZipIds(queryClient, { anilistId: prequel.id });
+  if (ids?.tvdb == null) return own;
+  if (item.externalIds.tvdb != null) {
+    if (ids.tvdb !== item.externalIds.tvdb) return own;
+  } else if (
+    item.externalIds.tmdb == null ||
+    (await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb)) !== item.externalIds.tmdb
+  ) {
+    return own;
+  }
+  const prequelMap = await cachedAniZipEpisodeMap(queryClient, prequel.id);
+  return continuePrequelTable(prequelMap, prequel.episodes, entryNumbers) ?? own;
+}
+
+/**
  * Everything a log needs settled *before* reconcile: cross-provider ids, the
  * routed targets, and — the plan 0027 step — which canonical `{season, number}`
  * pairs an AniList-entry-relative batch actually means. Shared by the mutation
@@ -380,9 +418,7 @@ async function resolveLogPlan(
   // is not optional — TVDB's seasons frequently aren't the trackers'
   // (docs/solutions/anizip-tvdb-seasons-vs-tracker-seasons.md).
   const [episodeMap, layout] = await Promise.all([
-    anilistId == null
-      ? Promise.resolve(null)
-      : cachedAniZipEpisodeMap(queryClient, anilistId),
+    entryEpisodeMap(queryClient, item, entryInput),
     cachedSeasonLayout(queryClient, {
       ...(item.externalIds.tmdb != null ? { tmdb: item.externalIds.tmdb } : {}),
       ...(item.externalIds.trakt != null ? { trakt: item.externalIds.trakt } : {}),

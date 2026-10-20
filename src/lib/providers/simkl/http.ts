@@ -53,10 +53,10 @@ function isRateLimitBody(text: string): boolean {
   try {
     const parsed = JSON.parse(text) as { error?: unknown; message?: unknown };
     return [parsed.error, parsed.message].some(
-      (value) => typeof value === 'string' && value.includes('rate_limit'),
+      (value) => typeof value === 'string' && value.toLowerCase().includes('rate_limit'),
     );
   } catch {
-    return text.includes('rate_limit');
+    return text.toLowerCase().includes('rate_limit');
   }
 }
 
@@ -95,10 +95,16 @@ export function simklHttp<A>(
       return yield* new ProviderAuthError({ provider, refreshFailed: true });
     }
     if (response.status === 429) {
+      const text = yield* Effect.tryPromise({
+        try: () => response.text(),
+        catch: (cause) => new ProviderNetworkError({ provider, cause, status: 429 }),
+      });
+      // On a burst rate_limit, Retry-After still carries the daily reset.
+      // Only quota responses should make the queue stop retrying shortly.
       const retryAfterSeconds = Number(response.headers.get('Retry-After'));
       return yield* new ProviderRateLimitError({
         provider,
-        ...(Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+        ...(!isRateLimitBody(text) && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? { retryAfterMs: retryAfterSeconds * 1000 }
           : {}),
       });
