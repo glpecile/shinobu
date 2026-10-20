@@ -468,15 +468,6 @@ function CatchUpForm({
               watchedAt={watchedAt}
             />
 
-            {/* The one thing the 20s Simkl write lock needs said: the queued
-                legs look stalled otherwise (simkl-write-lock.ts). */}
-            {simklQueued && (
-              <Text className="text-muted font-sans text-xs mt-5">
-                Simkl takes one write every 20 seconds, so the rest wait their
-                turn — keep going.
-              </Text>
-            )}
-
             {/* The chain's state rides the label and morphs press to press
                 (`chainLabel`). It used to be a row per fired write above the
                 button — a scrolling receipt — and then a status line, which is
@@ -494,6 +485,15 @@ function CatchUpForm({
                   onPress={confirm}
                 />
               </WriteSheet.Actions>
+            )}
+
+            {/* The one thing the 20s Simkl write lock needs said: the queued
+                legs look stalled otherwise (simkl-write-lock.ts). */}
+            {simklQueued && (
+              <Text className="text-muted font-sans text-xs text-center mt-3">
+                Simkl takes one write every 20 seconds, so the rest wait their
+                turn — keep going.
+              </Text>
             )}
           </>
         )}
