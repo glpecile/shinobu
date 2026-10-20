@@ -54,7 +54,7 @@
     ],
     "name": "Shinobu",
     "slug": "shinobu",
-    "version": "0.7.2",
+    "version": "0.7.3",
     "ios": {
       "bundleIdentifier": "xyz.glpecile.shinobu",
       "icon": {
@@ -120,7 +120,7 @@
           ]
         }
       ],
-      "versionCode": 30,
+      "versionCode": 31,
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
