@@ -1,24 +1,45 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
+import { View } from 'react-native';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { useThemeColor } from '@/lib/theme-color';
+import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
+
+export type FabSize = 'sm' | 'md';
+export type FabShape = 'squircle' | 'circle';
+export type FabVariant = 'outline' | 'filled' | 'log';
 
 const SIZE = {
-  sm: { box: 'w-11 h-11 rounded-xl', icon: 20 },
-  md: { box: 'w-14 h-14 rounded-[20px]', icon: 24 },
+  sm: { box: 'size-11', squircle: 'rounded-xl', icon: 20 },
+  md: { box: 'size-14', squircle: 'rounded-[20px]', icon: 24 },
 };
 
+const VARIANT: Record<FabVariant, { color: ThemeColorToken; box: string }> = {
+  outline: { color: '--color-foreground', box: 'border border-border bg-surface shadow-md' },
+  filled: { color: '--color-background', box: 'bg-foreground' },
+  log: { color: '--color-log-foreground', box: 'bg-log' },
+};
+
+export interface FabProps {
+  icon: ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  hint?: string;
+  onPress: () => void | boolean;
+  /** Fixed dimensions on every platform: sm = 44, md = 56. */
+  size?: FabSize;
+  shape?: FabShape;
+  variant?: FabVariant;
+  loading?: boolean;
+  /** Positioning and margins only. Size and shape belong to their props. */
+  className?: string;
+}
+
 /**
- * The accent rounded square floating in a screen's corner. The caller positions it
- * through `className`. Not a `Button`: that is a labelled pill, like
- * `RoundIconButton`'s reason for being its own pressable.
- *
- * Keeps a ripple so Android's keyboard focus follows the button's shape
- * (docs/solutions/android-ripple-ignores-child-radius.md).
+ * A compact floating action with independent size, shape, and color variants.
+ * Borders live on the inner View because Android does not draw them on pressto.
  */
 export function Fab({
   icon,
@@ -26,19 +47,15 @@ export function Fab({
   hint,
   onPress,
   size = 'md',
+  shape = 'squircle',
+  variant = 'outline',
   loading = false,
   className,
-}: {
-  icon: ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  hint?: string;
-  onPress: () => void;
-  size?: keyof typeof SIZE;
-  loading?: boolean;
-  /** Layout only. */
-  className?: string;
-}) {
-  const accentForeground = useThemeColor('--color-accent-foreground');
+}: FabProps) {
+  const color = useThemeColor(VARIANT[variant].color);
+  const radius = shape === 'circle' ? 'rounded-full' : SIZE[size].squircle;
+  // Ionicons' film frame is shorter than its nominal glyph box.
+  const iconSize = SIZE[size].icon + (icon === 'film-outline' ? 4 : 0);
   return (
     <PresstableOpacity
       accessibilityHint={hint}
@@ -49,22 +66,25 @@ export function Fab({
       aria-disabled={loading}
       disabled={loading}
       className={cn(
-        SIZE[size].box,
-        'shrink-0 bg-accent items-center justify-center',
         className,
+        'self-start grow-0 shrink-0 items-center justify-center web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
+        SIZE[size].box,
+        radius,
       )}
       onPress={() => {
-        haptics.selection();
-        onPress();
+        if (onPress() !== false) haptics.selection();
       }}
       // 3D is 24% alpha, the tab bar's ripple strength. Android only.
-      rippleColor={`${accentForeground}3D`}
+      rippleColor={`${color}3D`}
     >
-      {loading ? (
-        <Spinner color={accentForeground} />
-      ) : (
-        <Ionicons color={accentForeground} name={icon} size={SIZE[size].icon} />
-      )}
+      <View className={cn(
+        'items-center justify-center',
+        SIZE[size].box,
+        radius,
+        VARIANT[variant].box,
+      )}>
+        {loading ? <Spinner color={color} /> : <Ionicons color={color} name={icon} size={iconSize} />}
+      </View>
     </PresstableOpacity>
   );
 }

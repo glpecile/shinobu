@@ -84,7 +84,7 @@ export function ProviderCard({
             connect();
           }}
           size="sm"
-          variant="outline"
+          variant="quiet"
         />
       )}
     </View>

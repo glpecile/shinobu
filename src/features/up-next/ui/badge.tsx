@@ -20,13 +20,11 @@ export function Badge({
     <View
       className={cn(
         'shrink-0 max-w-full rounded-sm px-1.5 py-0.5',
-        accent ? 'bg-accent' : 'bg-black/60 border border-border/60',
+        accent ? 'bg-accent-tonal' : 'bg-black/60 border border-border/60',
       )}
     >
-      {/* Both tones sit on artwork, so both take the on-accent (always light)
-          foreground — `text-foreground` would vanish into the scrim in the
-          light theme, where it is near-black. */}
-      <Text className="font-sans text-xs text-accent-foreground" numberOfLines={1}>
+      {/* The neutral badge sits on a dark artwork scrim in either theme. */}
+      <Text className={cn('font-sans text-xs', accent ? 'text-accent-on-tonal' : 'text-accent-foreground')} numberOfLines={1}>
         {label}
       </Text>
     </View>

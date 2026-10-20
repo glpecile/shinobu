@@ -13,7 +13,7 @@ export function LetterboxdCompletionOffer({ request, onClose, onOpenRequest }: {
       </WriteSheet.Header>
       <WriteSheet.Description>{request.description}</WriteSheet.Description>
       <WriteSheet.Actions>
-        <Button icon={<Button.Icon name="eye-outline" />} label={request.title} onPress={() => onOpenRequest != null ? onOpenRequest(request) : openLog(request)} />
+        <Button variant="log" icon={<Button.Icon name="eye-outline" />} label={request.title} onPress={() => onOpenRequest != null ? onOpenRequest(request) : openLog(request)} />
       </WriteSheet.Actions>
     </>
   );

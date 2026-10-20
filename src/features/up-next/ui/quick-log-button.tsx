@@ -42,6 +42,7 @@ export function QuickLogButton({ entry }: { entry: UpNextEpisodeEntry }) {
         loading={pending}
         onPress={openConfirm}
         size="sm"
+        variant="log"
       />
     </View>
   );

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { ButtonCapsule } from '@/components/button-capsule';
 import { ExpandableText } from '@/components/expandable-text';
+import { Fab } from '@/components/fab';
 import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
 import { MorphText } from '@/components/morph-text';
@@ -85,7 +86,7 @@ export function EpisodeHeading({
   rating?: number | undefined;
   align?: 'left' | 'center';
 }) {
-  const accent = useThemeColor('--color-accent');
+  const muted = useThemeColor('--color-muted');
   const pushRoute = usePushRoute();
   const meta = episodeMetaLine(episode);
   const centered = align === 'center';
@@ -114,7 +115,7 @@ export function EpisodeHeading({
         {rating != null && (
           <View className="flex-row items-center gap-1">
             <Ionicons
-              color={accent}
+              color={muted}
               name="star"
               size={12}
             />
@@ -331,17 +332,12 @@ export function EpisodeNavigation({
             <Text className="font-sans text-xs text-foreground whitespace-nowrap">View series</Text>
           </View>
         )}
-        <ButtonCapsule floating>
-          <Button
-            icon={<Button.Icon name="tv-outline" />}
-            iconOnly
-            label="View series"
-            onPress={() => {
-              if (pushRoute(routes.details(id, 'TV'))) haptics.selection();
-            }}
-            variant="ghost"
-          />
-        </ButtonCapsule>
+        <Fab
+          icon="tv-outline"
+          label="View series"
+          size="md"
+          onPress={() => pushRoute(routes.details(id, 'TV'))}
+        />
       </View>
     </View>
   );
