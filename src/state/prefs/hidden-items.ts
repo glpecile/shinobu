@@ -15,36 +15,46 @@ export interface HiddenItem {
 }
 
 const KEY_PREFIX = 'hiddenItem.';
-const keyFor = (id: string) => `${KEY_PREFIX}${id}`;
+/** Lists hidden from a list card's sheet, keyed by the list's in-app href. */
+const LIST_PREFIX = 'hiddenList.';
 
 export function hideItem(item: HiddenItem): void {
-  prefsStorage.set(keyFor(item.id), item.title);
+  prefsStorage.set(`${KEY_PREFIX}${item.id}`, item.title);
 }
 
 export function unhideItem(id: string): void {
-  prefsStorage.remove(keyFor(id));
+  prefsStorage.remove(`${KEY_PREFIX}${id}`);
 }
 
-function readHiddenItems(): HiddenItem[] {
+/** `list.id` is the list's href, which is unique across providers and opens it. */
+export function hideList(list: HiddenItem): void {
+  prefsStorage.set(`${LIST_PREFIX}${list.id}`, list.title);
+}
+
+export function unhideList(href: string): void {
+  prefsStorage.remove(`${LIST_PREFIX}${href}`);
+}
+
+function readHidden(prefix: string): HiddenItem[] {
   return prefsStorage
     .getAllKeys()
-    .filter((key) => key.startsWith(KEY_PREFIX))
+    .filter((key) => key.startsWith(prefix))
     .map((key) => ({
-      id: key.slice(KEY_PREFIX.length),
+      id: key.slice(prefix.length),
       title: prefsStorage.getString(key) ?? '',
     }));
 }
 
-let cachedHidden: HiddenItem[] | null = null;
+const cache = new Map<string, HiddenItem[]>();
 
-function getSnapshot(): HiddenItem[] {
+function snapshotOf(prefix: string): HiddenItem[] {
   // Same snapshot-caching + SSR-lazy contract as state/session/index.ts:
   // useSyncExternalStore compares by reference, and MMKV/localStorage must
   // not be touched during server rendering.
-  if (cachedHidden == null && !isServer()) {
-    cachedHidden = readHiddenItems();
+  if (!cache.has(prefix) && !isServer()) {
+    cache.set(prefix, readHidden(prefix));
   }
-  return cachedHidden ?? [];
+  return cache.get(prefix) ?? [];
 }
 
 function getServerSnapshot(): HiddenItem[] {
@@ -53,7 +63,7 @@ function getServerSnapshot(): HiddenItem[] {
 
 function subscribe(onStoreChange: () => void): () => void {
   const subscription = prefsStorage.addOnValueChangedListener(() => {
-    cachedHidden = readHiddenItems();
+    cache.clear();
     onStoreChange();
   });
   return () => subscription.remove();
@@ -61,7 +71,12 @@ function subscribe(onStoreChange: () => void): () => void {
 
 /** Every hidden feed item, for filtering and the unhide list — reactive. */
 export function useHiddenItems(): readonly HiddenItem[] {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(subscribe, () => snapshotOf(KEY_PREFIX), getServerSnapshot);
+}
+
+/** Every hidden list, `id` being its href — reactive. */
+export function useHiddenLists(): readonly HiddenItem[] {
+  return useSyncExternalStore(subscribe, () => snapshotOf(LIST_PREFIX), getServerSnapshot);
 }
 
 /**

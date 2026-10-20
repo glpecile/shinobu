@@ -9,6 +9,7 @@ import { LoadMoreFooter } from '@/components/load-more-footer';
 import { staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
 import { ListSheet, useListSheet } from './list-sheet';
 import type { ListSummary } from './list-summary';
@@ -66,7 +67,7 @@ export function ListsIndex({
   const insets = useSafeAreaInsets();
   const { columns, rowHeight } = useGrid();
   const { openList, sheetProps } = useListSheet();
-  const pages = [...new Map(lists.map((list) => [list.id, list])).values()];
+  const pages = visibleByIds([...new Map(lists.map((list) => [list.id, list])).values()], useHiddenLists(), (list) => [list.href]);
   const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
   async function refresh() {
     setRefreshing(true);

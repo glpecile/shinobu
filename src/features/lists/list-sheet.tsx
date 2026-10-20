@@ -7,8 +7,10 @@ import { shareLink } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { Tooltip } from '@/components/tooltip';
+import { haptics } from '@/lib/haptics';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { hideList } from '@/state/prefs/hidden-items';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { ProviderListLink } from './list-header';
@@ -21,7 +23,7 @@ export function useListSheet() {
   const [list, setList] = useState<ListSummary | null>(null);
   const [open, setOpen] = useState(false);
   return {
-    openList: (next: ListSummary) => { setList(next); setOpen(true); },
+    openList: (next: ListSummary) => { haptics.selection(); setList(next); setOpen(true); },
     sheetProps: { list, open, onClose: () => setOpen(false) },
   };
 }
@@ -29,6 +31,7 @@ export function useListSheet() {
 /**
  * A list card's long-press: what the clamped card cut off, then where to go.
  * Like appears only for another member's Letterboxd list, as on its page.
+ * Hide drops it from rails and grids until unhidden in Settings.
  */
 export function ListSheet({ list, open, onClose }: { list: ListSummary | null; open: boolean; onClose: () => void }) {
   const pushRoute = usePushRoute();
@@ -46,7 +49,7 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
           </SheetHeader>
           <PosterStack className="mt-5 max-w-md self-center" previews={list.previews} />
           <View className="mt-6 gap-3">
-            <Button icon={<Button.Icon name="list-outline" />} label="Open list" onPress={() => { onClose(); pushRoute(list.href); }} variant="quiet" />
+            <Button icon={<Button.Icon name="list-outline" />} label="Open list" onPress={() => { haptics.selection(); onClose(); pushRoute(list.href); }} variant="quiet" />
             <View className="flex-row items-center gap-2">
               <View className="flex-1"><ProviderListLink provider={list.provider} url={list.url} /></View>
               <ButtonCapsule>
@@ -54,10 +57,21 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
                   <ListLikeButton owner={list.owner} size="md" slug={list.slug} url={list.url} username={letterboxdUsername} variant="ghost" />
                 )}
                 <Tooltip label="Share">
-                  <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => void shareLink(list.href)} variant="ghost" />
+                  <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => { haptics.selection(); void shareLink(list.href); }} variant="ghost" />
                 </Tooltip>
               </ButtonCapsule>
             </View>
+            <Button
+              align="start"
+              icon={<Button.Icon name="eye-off-outline" />}
+              label="Hide list"
+              onPress={() => {
+                haptics.confirm();
+                hideList({ id: list.href, title: list.title });
+                onClose();
+              }}
+              variant="quiet"
+            />
           </View>
         </>
       )}

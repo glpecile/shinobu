@@ -21,7 +21,7 @@ import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
-import { unhideItem, useHiddenItems } from '@/state/prefs/hidden-items';
+import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
 
 /**
  * One column width and one gutter for the whole screen. Web's navigation rail
@@ -41,13 +41,17 @@ const HEADER_COLUMN =
   process.env.EXPO_OS === 'web' ? 'px-6' : cn(CONTENT_COLUMN, CONTENT_GUTTER);
 
 /**
- * Feed items hidden from a card's actions dialog. Listed here (the only
- * settings surface) so hiding is always reversible; the row itself opens the
- * item's details page (which resolves hidden items too — includeHidden).
+ * Feed items hidden from a card's actions dialog, and lists hidden from a list
+ * card's sheet. Listed here (the only settings surface) so hiding is always
+ * reversible; the row itself opens the item's details page (which resolves
+ * hidden items too — includeHidden) or the list.
  */
 function HiddenItemsSection() {
   const pushRoute = usePushRoute();
-  const hidden = useHiddenItems();
+  const hidden = [
+    ...useHiddenItems().map((item) => ({ ...item, href: routes.details(item.id), icon: 'eye-off-outline' as const, unhide: () => unhideItem(item.id) })),
+    ...useHiddenLists().map((list) => ({ ...list, href: list.id, icon: 'list-outline' as const, unhide: () => unhideList(list.id) })),
+  ];
   const muted = useThemeColor('--color-muted');
 
   if (hidden.length === 0) return null;
@@ -64,11 +68,11 @@ function HiddenItemsSection() {
             <PresstableOpacity
               accessibilityLabel={`Open ${item.title}`}
               className="flex-1 flex-row items-center gap-3 mr-3"
-              onPress={() => pushRoute(routes.details(item.id))}
+              onPress={() => pushRoute(item.href)}
             >
               <Ionicons
                 color={muted}
-                name="eye-off-outline"
+                name={item.icon}
                 size={18}
               />
               <Text
@@ -82,7 +86,7 @@ function HiddenItemsSection() {
               accessibilityLabel={`Show ${item.title} again`}
               icon={<Button.Icon name="eye-outline" />}
               label="Show"
-              onPress={() => unhideItem(item.id)}
+              onPress={item.unhide}
               size="sm"
               variant="quiet"
             />
