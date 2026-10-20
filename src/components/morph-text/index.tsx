@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { FadeIn, FadeOut, LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import { FadeIn, FadeOut, Keyframe, LinearTransition, useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedText } from '@/components/animated-view';
-import { DURATION } from '@/lib/motion';
+import { DURATION, KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 
 import { initialRun, morphRun } from './morph-keys';
 
@@ -20,10 +20,24 @@ const GLYPH_ENTER = FadeIn.duration(DURATION.swap);
 const GLYPH_EXIT = FadeOut.duration(DURATION.exit);
 const GLYPH_SLIDE = LinearTransition.duration(DURATION.swap);
 
+// Digits roll up like an odometer instead of crossfading in place, so a count
+// that moved reads as moved, not as a flicker in the same slot.
+const ROLL = 10;
+const DIGIT_ENTER = new Keyframe({
+  0: { opacity: 0, transform: [{ translateY: ROLL }] },
+  100: { opacity: 1, transform: [{ translateY: 0 }], easing: KEYFRAME_EASE_OUT },
+}).duration(DURATION.swap);
+const DIGIT_EXIT = new Keyframe({
+  0: { opacity: 1, transform: [{ translateY: 0 }] },
+  100: { opacity: 0, transform: [{ translateY: -ROLL }], easing: KEYFRAME_EASE_EXIT },
+}).duration(DURATION.exit);
+const isDigit = (char: string) => char >= '0' && char <= '9';
+
 /**
  * Native counterpart of torph: one `Text` per character, keyed by a diff
  * against the previous text, so a character that survives the change slides
- * to its new slot and the rest crossfade. The first render never animates.
+ * to its new slot, changed digits roll and the rest crossfade. The first
+ * render never animates.
  *
  * A row of glyphs can't wrap or ellipsize, so `numberOfLines` (and reduced
  * motion) renders a plain `Text` swap instead. Per-glyph nodes also drop
@@ -51,8 +65,8 @@ export function MorphText({ children, className, numberOfLines }: MorphTextProps
         <AnimatedText
           key={glyph.key}
           className={className}
-          entering={glyph.key >= mountedKeys ? GLYPH_ENTER : undefined}
-          exiting={GLYPH_EXIT}
+          entering={glyph.key >= mountedKeys ? (isDigit(glyph.char) ? DIGIT_ENTER : GLYPH_ENTER) : undefined}
+          exiting={isDigit(glyph.char) ? DIGIT_EXIT : GLYPH_EXIT}
           layout={GLYPH_SLIDE}
         >
           {glyph.char}

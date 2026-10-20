@@ -1,9 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
-import { Keyframe } from 'react-native-reanimated';
+import { Text, View } from 'react-native';
 
-import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { MorphText } from '@/components/morph-text';
 import { Sheet } from '@/components/sheet';
@@ -23,7 +21,6 @@ import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
-import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
@@ -35,23 +32,6 @@ import { catchUpEpisodeCode, catchUpQueue, type CatchUpEpisode } from './queue';
 import { useCatchUpControls, useCatchUpLog } from './state';
 import { useCatchUpEvidence } from './use-catch-up-evidence';
 import { useEpisodeLogQueue } from './use-episode-log-queue';
-
-/**
- * The header's native entrance when the chain advances: a short slide in from
- * the right, the direction "next" reads in. Native only — on web the title is
- * a `MorphText` that morphs in place (the digit slides, the rest stays), and a
- * remount there would throw that morph away. Module scope, per Reanimated's
- * animation-builder performance rule.
- */
-const HEADER_SLIDE = 12;
-const headerEntering = new Keyframe({
-  0: { opacity: 0, transform: [{ translateX: HEADER_SLIDE }] },
-  100: {
-    opacity: 1,
-    transform: [{ translateX: 0 }],
-    easing: KEYFRAME_EASE_OUT,
-  },
-}).duration(DURATION.swap);
 
 interface LedgerRow {
   episode: CatchUpEpisode;
@@ -456,26 +436,19 @@ function CatchUpForm({
       ) : (
         <>
           <WriteSheet.Header done={ledger.length > 0} onClose={onClose}>
-            <AnimatedView
-              // Native: each episode's header slides in. Web: the same element
-              // stays mounted and the title morphs (see `headerEntering`).
-              key={Platform.OS === 'web' ? 'header' : code}
-              entering={index > 0 ? headerEntering : undefined}
-            >
-              <MorphText className="text-2xl font-display text-foreground self-start">
-                {`Log ${code}`}
-              </MorphText>
-              <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-                <Text className="text-muted font-sans text-sm leading-relaxed">
-                  “{item.title}”
-                </Text>
-                {remainingCopy != null && (
-                  <MorphText className="text-muted font-sans text-sm leading-relaxed">
-                    {`· ${remainingCopy}`}
-                  </MorphText>
-                )}
-              </View>
-            </AnimatedView>
+            <MorphText className="text-2xl font-display text-foreground self-start">
+              {`Log ${code}`}
+            </MorphText>
+            <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
+              <Text className="text-muted font-sans text-sm leading-relaxed">
+                “{item.title}”
+              </Text>
+              {remainingCopy != null && (
+                <MorphText className="text-muted font-sans text-sm leading-relaxed">
+                  {`· ${remainingCopy}`}
+                </MorphText>
+              )}
+            </View>
           </WriteSheet.Header>
 
             <LogFormFields
@@ -495,15 +468,6 @@ function CatchUpForm({
               watchedAt={watchedAt}
             />
 
-            {/* The one thing the 20s Simkl write lock needs said: the queued
-                legs look stalled otherwise (simkl-write-lock.ts). */}
-            {simklQueued && (
-              <Text className="text-muted font-sans text-xs mt-5">
-                Simkl takes one write every 20 seconds, so the rest wait their
-                turn — keep going.
-              </Text>
-            )}
-
             {/* The chain's state rides the label and morphs press to press
                 (`chainLabel`). It used to be a row per fired write above the
                 button — a scrolling receipt — and then a status line, which is
@@ -521,6 +485,15 @@ function CatchUpForm({
                   onPress={confirm}
                 />
               </WriteSheet.Actions>
+            )}
+
+            {/* The one thing the 20s Simkl write lock needs said: the queued
+                legs look stalled otherwise (simkl-write-lock.ts). */}
+            {simklQueued && (
+              <Text className="text-muted font-sans text-xs text-center mt-3">
+                Simkl takes one write every 20 seconds, so the rest wait their
+                turn — keep going.
+              </Text>
             )}
           </>
         )}
