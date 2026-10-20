@@ -28,7 +28,6 @@ import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
-import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -294,9 +293,8 @@ function DiaryDayHead({
   collapsed: boolean;
   onToggle: () => void;
 }) {
-  const toggle = useDisclosureToggle(onToggle);
   return (
-    <RailHead label={`${parts.label} ${parts.day}, ${summary}`} onToggle={toggle} open={!collapsed}>
+    <RailHead label={`${parts.label} ${parts.day}, ${summary}`} onToggle={onToggle} open={!collapsed}>
       <RailHead.Date day={parts.day} label={parts.label} today={parts.isToday} />
       <RailHead.Count>{summary}</RailHead.Count>
     </RailHead>
@@ -483,7 +481,6 @@ function DiaryClusterRow({
   onToggle: (key: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const toggle = useDisclosureToggle(() => onToggle(clusterKey));
   return (
     <View className="flex-row">
       <RailLine key={clusterKey} stop={last && !expanded} />
@@ -516,7 +513,7 @@ function DiaryClusterRow({
           </>
         }
         onActions={onActions}
-        onPress={toggle}
+        onPress={() => onToggle(clusterKey)}
         trailing={
           <RowTrailing liked={view.liked} providers={view.providers} runCount={view.runCount} />
         }
