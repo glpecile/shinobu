@@ -115,11 +115,12 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   );
 }
 
-export function SerializdListSkeleton({ shareHref }: { shareHref?: string }) {
+/** `signedIn` reserves Rename's slot: ownership is unknown until the list loads, and most lists opened are one's own. */
+export function SerializdListSkeleton({ shareHref, signedIn }: { shareHref?: string; signedIn: boolean }) {
   return (
     <>
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" shareHref={shareHref} subtitle="" />
-      <MediaToolbarSkeleton actions={1} />
+      <MediaToolbarSkeleton actions={1} labelled={signedIn} />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />
