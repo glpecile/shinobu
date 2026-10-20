@@ -24,6 +24,15 @@ test('TMDB films use the exact redirect before the member viewing, not a title s
   expect(calls).toEqual(['https://letterboxd.com/tmdb/9463/', 'https://letterboxd.com/glp/film/vampire-hunter-d/']);
 });
 
+test('a followed TMDB redirect names the film without reading its page', async () => {
+  const redirect = new Response(null);
+  Object.defineProperty(redirect, 'url', { value: 'https://letterboxd.com/film/vampire-hunter-d/' });
+  redirect.text = async () => { throw new Error('must not read the redirected page'); };
+  const d = deps(viewing);
+  d.fetch = async (url) => String(url).includes('/tmdb/') ? redirect : new Response(viewing);
+  expect(await Effect.runPromise(getLetterboxdFilmWatch(d, { ...item, externalIds: { tmdb: 9463 } }))).toMatchObject({ externalIds: { letterboxd: 'vampire-hunter-d' } });
+});
+
 test('an absent public viewing supplies no positive watch evidence', async () => {
   expect(await Effect.runPromise(getLetterboxdFilmWatch(deps('', 404), item))).toBeNull();
 });

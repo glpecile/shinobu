@@ -11,12 +11,15 @@ import {
 } from 'react-native';
 import {
   interpolate,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withTiming,
   type EntryOrExitLayoutType,
+  type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
@@ -186,6 +189,18 @@ function TimelineEntry({
   );
 }
 
+/** Owns the FAB's visibility, so a threshold crossing re-renders the button, not the timeline. */
+function TimelineScrollToTop({ scrollY, onPress }: { scrollY: SharedValue<number>; onPress: () => void }) {
+  const [visible, setVisible] = useState(false);
+  useAnimatedReaction(
+    () => scrollY.value > SCROLL_TO_TOP_THRESHOLD,
+    (past, wasPast) => {
+      if (past !== wasPast) scheduleOnRN(setVisible, past);
+    },
+  );
+  return <ScrollToTopFab onPress={onPress} visible={visible} />;
+}
+
 export interface CreditTimelineProps {
   filmography: Filmography;
   /** The page's hero (name, portrait, biography) — scrolls with the list. */
@@ -247,8 +262,6 @@ export function CreditTimeline({
   }
   const listRef = useRef<LegendListRef>(null);
   const { scrollY } = useScrolledTitle();
-  // Flipped on threshold crossings only, so scrolling doesn't re-render (the diary's rule).
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [format, setFormat] = useState<FormatFilter>('ALL');
   const view = useWatchlistView();
   const { columns, onLayout } = usePosterColumns();
@@ -282,8 +295,6 @@ export function CreditTimeline({
     // Fed from here, on the JS thread: the title bar only moves while the
     // header is on screen, where nothing else is keeping this thread busy.
     scrollY.value = event.nativeEvent.contentOffset.y;
-    const past = event.nativeEvent.contentOffset.y > SCROLL_TO_TOP_THRESHOLD;
-    if (past !== showScrollTop) setShowScrollTop(past);
   }
 
   return (
@@ -417,9 +428,9 @@ export function CreditTimeline({
           </Column>
         )}
       />
-      <ScrollToTopFab
+      <TimelineScrollToTop
         onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
-        visible={showScrollTop}
+        scrollY={scrollY}
       />
       {Platform.OS === 'web' && <RoleSheet
         onClose={() => setRoleSheetOpen(false)}

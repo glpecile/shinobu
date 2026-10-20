@@ -1,9 +1,14 @@
+import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, spyOn, test } from 'bun:test';
+import { createElement, type ReactNode } from 'react';
 
-// Same edge stubs as the other query-layer suites: MMKV, react-native's entry
-// point and the native fetch client don't load under bun. Nothing under test
-// touches them — the persister's storage shim is never constructed here.
+GlobalRegistrator.register();
+const { QueryClient, useQuery } = await import('@tanstack/react-query');
+const { renderHook, waitFor } = await import('@testing-library/react');
+
+// Native modules do not load under bun; keep the real persister over an
+// in-memory MMKV substitute and stub the unused network edges.
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
@@ -33,7 +38,8 @@ mock.module('expo-crypto', () => ({
 
 const { anilistQueryKeys } = await import('./anilist');
 const { letterboxdQueryKeys } = await import('./letterboxd');
-const { deserialize, isPersistedQueryKey, serialize } = await import('./persist');
+const { createQueryPersister, deserialize, isPersistedQueryKey, serialize } = await import('./persist');
+const { PersistQueryClientProvider } = await import('./persist-provider');
 const { traktQueryKeys } = await import('./trakt');
 const { simklQueryKeys } = await import('./simkl');
 const { upNextQueryKeys } = await import('./up-next');
@@ -59,6 +65,27 @@ function clientWith(queryKey: readonly unknown[], data: unknown): PersistedClien
 function restoredData(client: PersistedClient): unknown {
   return deserialize(serialize(client)).clientState.queries[0]?.state.data;
 }
+
+test('a corrupt snapshot is discarded and queries resume without an unhandled rejection', async () => {
+  store.set('shinobu.query-cache', '{broken');
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const persister = createQueryPersister();
+  const error = spyOn(console, 'error').mockImplementation(() => {});
+  const warning = spyOn(console, 'warn').mockImplementation(() => {});
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(PersistQueryClientProvider, { client, persister, children });
+  const read = renderHook(() => useQuery({ queryKey: ['restore-recovery'], queryFn: async () => 'fresh' }), { wrapper });
+  try {
+    await waitFor(() => expect(read.result.current.data).toBe('fresh'));
+    expect(store.size).toBe(0);
+  } finally {
+    read.unmount();
+    client.clear();
+    error.mockRestore();
+    warning.mockRestore();
+    store.clear();
+  }
+});
 
 describe('serialize / deserialize', () => {
   // `show-progress` carries `watchedKeys: Set<string>`, and a plain
