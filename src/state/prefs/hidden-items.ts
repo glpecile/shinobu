@@ -3,8 +3,9 @@ import { useSyncExternalStore } from 'react';
 import { isServer, prefsStorage } from './storage';
 
 /**
- * Individual feed items the user hid (long-press on a card). Stored as
- * `hiddenItem.<NormalizedMediaItem.id>` → title, so the Manage Trackers
+ * Individual feed items the user hid (long-press on a card), plus hidden
+ * lists under their own prefix. Items are stored as
+ * `hiddenItem.<NormalizedMediaItem.id>` → title, so the Settings
  * unhide list can name each entry without refetching it. Ids are
  * provider-scoped (`trakt-123`, `letterboxd-slug`), so hiding a card hides
  * that provider's copy — which is also the only copy the feed shows.
@@ -15,7 +16,7 @@ export interface HiddenItem {
 }
 
 const KEY_PREFIX = 'hiddenItem.';
-/** Lists hidden from a list card's sheet, keyed by the list's in-app href. */
+/** Lists hidden from a list card's sheet, keyed by the list's in-app href (unique across providers, and where Settings opens it). */
 const LIST_PREFIX = 'hiddenList.';
 
 export function hideItem(item: HiddenItem): void {
@@ -26,7 +27,6 @@ export function unhideItem(id: string): void {
   prefsStorage.remove(`${KEY_PREFIX}${id}`);
 }
 
-/** `list.id` is the list's href, which is unique across providers and opens it. */
 export function hideList(list: HiddenItem): void {
   prefsStorage.set(`${LIST_PREFIX}${list.id}`, list.title);
 }
@@ -57,6 +57,9 @@ function snapshotOf(prefix: string): HiddenItem[] {
   return cache.get(prefix) ?? [];
 }
 
+const itemsSnapshot = () => snapshotOf(KEY_PREFIX);
+const listsSnapshot = () => snapshotOf(LIST_PREFIX);
+
 function getServerSnapshot(): HiddenItem[] {
   return [];
 }
@@ -71,12 +74,12 @@ function subscribe(onStoreChange: () => void): () => void {
 
 /** Every hidden feed item, for filtering and the unhide list — reactive. */
 export function useHiddenItems(): readonly HiddenItem[] {
-  return useSyncExternalStore(subscribe, () => snapshotOf(KEY_PREFIX), getServerSnapshot);
+  return useSyncExternalStore(subscribe, itemsSnapshot, getServerSnapshot);
 }
 
-/** Every hidden list, `id` being its href — reactive. */
+/** Every hidden list — reactive. */
 export function useHiddenLists(): readonly HiddenItem[] {
-  return useSyncExternalStore(subscribe, () => snapshotOf(LIST_PREFIX), getServerSnapshot);
+  return useSyncExternalStore(subscribe, listsSnapshot, getServerSnapshot);
 }
 
 /**

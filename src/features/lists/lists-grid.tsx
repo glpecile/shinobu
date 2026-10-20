@@ -67,7 +67,8 @@ export function ListsIndex({
   const insets = useSafeAreaInsets();
   const { columns, rowHeight } = useGrid();
   const { openList, sheetProps } = useListSheet();
-  const pages = visibleByIds([...new Map(lists.map((list) => [list.id, list])).values()], useHiddenLists(), (list) => [list.href]);
+  const loaded = [...new Map(lists.map((list) => [list.id, list])).values()];
+  const pages = visibleByIds(loaded, useHiddenLists(), (list) => [list.href]);
   const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
   async function refresh() {
     setRefreshing(true);
@@ -79,12 +80,21 @@ export function ListsIndex({
   }
   return (
     <>
-      {pages.length === 0 ? (
+      {loaded.length === 0 ? (
         <CenteredNotice>
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
           <CenteredNotice.Body>{emptyBody}</CenteredNotice.Body>
           {kind === 'created' && <CenteredNotice.Action icon={<Button.Icon name="add" />} label="New list" onPress={() => pushRoute(routes.newList(provider))} />}
+        </CenteredNotice>
+      ) : items.length === 0 ? (
+        <CenteredNotice>
+          <CenteredNotice.Icon name="eye-off-outline" />
+          <CenteredNotice.Title>Lists hidden</CenteredNotice.Title>
+          <CenteredNotice.Body>Every list loaded so far is hidden. Unhide them in Settings.</CenteredNotice.Body>
+          {hasNextPage
+            ? <CenteredNotice.Action icon={<Button.Icon name="chevron-down" />} label="Load more" loading={isFetchingNextPage} onPress={() => void fetchNextPage()} />
+            : <CenteredNotice.Action icon={<Button.Icon name="open-outline" />} label="Settings" onPress={() => pushRoute(routes.settings)} />}
         </CenteredNotice>
       ) : (
         <List

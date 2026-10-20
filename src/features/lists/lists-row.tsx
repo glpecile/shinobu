@@ -1,4 +1,4 @@
-import { useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -69,16 +69,19 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   const { openList, sheetProps } = useListSheet();
   const title = listsTitle(kind);
   const lists = visibleByIds(allLists, useHiddenLists(), (list) => [list.href]);
-  if (lists.length === 0 && kind === 'liked') return null;
+  // Gate on the unfiltered page: hiding page one must not cut off View all.
+  if (allLists.length === 0 && kind === 'liked') return null;
   const items: RailItem[] = kind === 'created' ? [{ id: 'new' }, ...lists] : lists;
   return (
     <CollapsibleSection
-      action={lists.length > 0 ? <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} /> : undefined}
+      action={allLists.length > 0 ? <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} /> : undefined}
       collapseKey={`${provider}-${kind}-lists`}
       leading={<ProviderIcon id={provider} size={16} />}
       title={title}
     >
-      <VirtualizedRail
+      {items.length === 0 ? (
+        <Text className="px-4 text-muted font-sans text-sm">All of these lists are hidden. Unhide them in Settings, or open View all.</Text>
+      ) : <VirtualizedRail
         data={items}
         estimatedItemSize={CARD_WIDTH + 16}
         keyExtractor={(item) => item.id}
@@ -92,7 +95,7 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
           </View>
         )}
         style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}
-      />
+      />}
       <ListSheet {...sheetProps} />
     </CollapsibleSection>
   );
