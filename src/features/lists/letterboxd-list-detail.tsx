@@ -1,5 +1,5 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
@@ -20,7 +20,7 @@ import { routes } from '@/lib/routes';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useSuspenseLetterboxdListFilmsQuery } from '@/state/queries/letterboxd';
 import { useMediaProgress } from '@/state/queries/media-progress';
-import { ListsHeader, ProviderListLink, ToolbarIcons } from './list-header';
+import { ListsHeader, ProviderListLink, ToolbarIcon } from './list-header';
 import { AddToList } from './list-membership-form';
 import { RenameList } from './rename-list';
 import { ListLikeButton } from './list-like-button';
@@ -58,10 +58,8 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
       <MediaToolbar notice={sort !== 'default' && pages.hasNextPage ? <SortingLoadedNotice /> : undefined} view={view}>
         <MediaSortControl scope="lists" sort={sort} />
         {target != null && <RenameList key={title} target={target} />}
-        <ToolbarIcons>
-          <ProviderListLink iconOnly provider="letterboxd" url={url} />
-          {username != null && <ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} />}
-        </ToolbarIcons>
+        <ToolbarIcon><ProviderListLink iconOnly provider="letterboxd" url={url} /></ToolbarIcon>
+        {username != null && <ToolbarIcon><ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} /></ToolbarIcon>}
       </MediaToolbar>
       {items.length === 0 ? (
         <CenteredNotice>
@@ -92,10 +90,12 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
 
 /** Mirrors the header, toolbar, and persisted grid/row view without a layout jump. */
 export function ListFilmsSkeleton({ likeButton, owned, shareHref }: { likeButton: boolean; owned: boolean; shareHref?: string }) {
+  // Rename drops its label on a phone (`RenameList`).
+  const compact = useWindowDimensions().width < 640;
   return (
     <View className="flex-1">
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="letterboxd" shareHref={shareHref} subtitle="" />
-      <MediaToolbarSkeleton actions={likeButton ? 2 : 1} labelled={owned} layout />
+      <MediaToolbarSkeleton actions={1 + (likeButton ? 1 : 0) + (owned && compact ? 1 : 0)} labelled={owned && !compact} layout />
       <WallSkeleton />
     </View>
   );

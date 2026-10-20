@@ -45,8 +45,8 @@ export function ListCard({ list, onPress, onActions }: {
         </View>
       </PresstableScale>
       {/* A sibling, not a child: a ⋯ press must not bubble into the card's. */}
-      {process.env.EXPO_OS === 'web' && hovered && (
-        <OverlayActionsButton className="absolute top-1.5 right-1.5" label={`More about ${list.title}`} onPress={() => onActions(list)} size="sm" />
+      {process.env.EXPO_OS === 'web' && (
+        <OverlayActionsButton className="absolute top-1.5 right-1.5" label={`More about ${list.title}`} onPress={() => onActions(list)} size="lg" visible={hovered} />
       )}
     </View>
   );

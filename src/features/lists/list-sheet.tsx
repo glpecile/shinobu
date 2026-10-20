@@ -40,7 +40,7 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
           <SheetHeader>
             <SheetHeader.Content>
               <SheetHeader.Eyebrow tone="muted">{`${PROVIDERS[list.provider].label} list`}</SheetHeader.Eyebrow>
-              <SheetHeader.Title>{list.title}</SheetHeader.Title>
+              <SheetHeader.Title numberOfLines={0}>{list.title}</SheetHeader.Title>
               <SheetHeader.Subtitle>{listMeta(list)}</SheetHeader.Subtitle>
             </SheetHeader.Content>
           </SheetHeader>

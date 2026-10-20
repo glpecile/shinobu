@@ -78,6 +78,7 @@ export function useRenameList(target: ListEditTarget) {
   const client = useQueryClient();
   return useMutation({
     mutationKey: ['list-rename', target.provider, target.username, target.url],
+    scope: { id: `list-membership/${target.provider}/${target.username}/${target.url}` },
     retry: false,
     mutationFn: async (name: string) => {
       switch (target.provider) {

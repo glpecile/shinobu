@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 import { TextField } from '@/components/text-field';
+import { Tooltip } from '@/components/tooltip';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
 import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
@@ -15,6 +16,7 @@ import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
 import { useRenameList, type ListEditTarget } from '@/state/queries/list-membership';
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
+import { ToolbarIcon } from './list-header';
 
 function RenameForm({ target, onDone }: { target: ListEditTarget; onDone: () => void }) {
   const router = useRouter();
@@ -54,13 +56,16 @@ function RenameForm({ target, onDone }: { target: ListEditTarget; onDone: () => 
   );
 }
 
-/** The owner's rename control for a list's toolbar, and the sheet it opens. */
+/** The owner's rename control for a list's toolbar, and the sheet it opens. Icon-only on a phone, where the toolbar can't fit its label. */
 export function RenameList({ target }: { target: ListEditTarget }) {
   const [open, setOpen] = useState(false);
+  const compact = useWindowDimensions().width < 640;
   return (
     <>
-      <Button icon={<Button.Icon name="create-outline" />} label="Rename" onPress={() => setOpen(true)} size="sm" variant="quiet" />
-      <Sheet onClose={() => setOpen(false)} open={open}>
+      {compact
+        ? <ToolbarIcon><Tooltip label="Rename list"><Button icon={<Button.Icon name="create-outline" />} iconOnly label="Rename list" onPress={() => setOpen(true)} size="sm" variant="quiet" /></Tooltip></ToolbarIcon>
+        : <Button icon={<Button.Icon name="create-outline" />} label="Rename" onPress={() => setOpen(true)} size="sm" variant="quiet" />}
+      <Sheet autoFocus onClose={() => setOpen(false)} open={open}>
         {open && <RenameForm onDone={() => setOpen(false)} target={target} />}
       </Sheet>
     </>

@@ -106,7 +106,7 @@ export function NewListForm({ providers, initialProvider }: {
   const router = useRouter();
   const { control, handleSubmit, getValues, setValue, formState: { errors, isSubmitted } } = useForm<NewListFormValues, unknown, NewList>({
     // Every pick stays across a provider switch; each provider takes what fits it.
-    defaultValues: { provider: initialProvider, name: '', description: '', tags: '', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: [] },
+    defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: [] },
     resolver: zodResolver(newListSchema),
   });
   const [provider, sharing, isPrivate, ranked, name, picked] = useWatch({ control, name: ['provider', 'sharing', 'isPrivate', 'ranked', 'name', 'items'] });
@@ -175,7 +175,7 @@ export function NewListForm({ providers, initialProvider }: {
             <NativeSegmentedControl
               accessibilityLabel="Save to"
               className="w-full max-w-72 self-center"
-              onChange={(next) => { field.onChange(next); router.setParams({ provider: next }); }}
+              onChange={(next) => { if (busy) return; field.onChange(next); router.setParams({ provider: next }); }}
               options={providers.map((entry) => ({ value: entry.provider, label: PROVIDERS[entry.provider].label }))}
               size="sm"
               value={field.value}

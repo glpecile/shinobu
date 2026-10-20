@@ -59,3 +59,16 @@ carries the new list's URL. Serializd's `POST /api/list/create` answers
 Web creation uses userscript 0.9.0 (bridge 10), which opens `/list/new/` in the
 signed-in tab and runs the same save. Bridge 9 reports no `list-create`
 capability, so the editor offers the script update instead.
+
+## Concurrent list edits
+
+Rename and membership mutations share one per-account, per-list TanStack
+mutation scope. Serializd's rename replaces the full editor, so a rename
+overlapping an addition can overwrite that confirmed addition with its older
+entries. Closing the rename sheet does not cancel its request. The shared
+scope keeps the next edit's read behind the previous save and confirmation.
+
+The creation form also refuses provider changes while saving. Changing to an
+account with a different username changes the create mutation's key, detaching
+its observer while the request continues. That loses the completion callback
+and makes the form appear ready to submit another list.
