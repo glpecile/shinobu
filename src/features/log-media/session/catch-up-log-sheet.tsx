@@ -436,20 +436,18 @@ function CatchUpForm({
       ) : (
         <>
           <WriteSheet.Header done={ledger.length > 0} onClose={onClose}>
-            <View>
-              <MorphText className="text-2xl font-display text-foreground self-start">
-                {`Log ${code}`}
-              </MorphText>
-              <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
-                <Text className="text-muted font-sans text-sm leading-relaxed">
-                  “{item.title}”
-                </Text>
-                {remainingCopy != null && (
-                  <MorphText className="text-muted font-sans text-sm leading-relaxed">
-                    {`· ${remainingCopy}`}
-                  </MorphText>
-                )}
-              </View>
+            <MorphText className="text-2xl font-display text-foreground self-start">
+              {`Log ${code}`}
+            </MorphText>
+            <View className="flex-row flex-wrap items-baseline gap-x-1 mt-2">
+              <Text className="text-muted font-sans text-sm leading-relaxed">
+                “{item.title}”
+              </Text>
+              {remainingCopy != null && (
+                <MorphText className="text-muted font-sans text-sm leading-relaxed">
+                  {`· ${remainingCopy}`}
+                </MorphText>
+              )}
             </View>
           </WriteSheet.Header>
 

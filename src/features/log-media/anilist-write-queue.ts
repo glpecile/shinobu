@@ -32,11 +32,7 @@
  * less, not to ask again.
  */
 
-/**
- * The quiet time after a landed write, or the latest arrival behind it, before
- * the next batch goes out. Longer than the gap between two confirms, so a
- * chain folds; a single log never waits for it.
- */
+/** Quiet time after a landing or the latest arrival before the next batch goes out. */
 const FOLD_WINDOW_MS = 5_000;
 
 /** Arrivals stop restarting the window this long after a write lands. */

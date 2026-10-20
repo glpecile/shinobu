@@ -75,5 +75,6 @@ is the fold itself.
 
 The window is now 5 s and **every arrival restarts it**, capped at 30 s after a
 landing so a long chain can't leave progress unsent. A chain costs its first
-write plus one at its last episode. A lone log is still immediate. Folded
-writes also stop invalidating mid-chain, so the reconcile reads stay cached.
+write plus one at its last episode. A lone log is still immediate. A log's mutation settles only when
+every leg has, so a held AniList leg also holds that log's invalidations, and
+the reconcile reads stay cached until the folded write lands.
