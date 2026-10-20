@@ -11,6 +11,7 @@ import type { SerializdListKind } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
 import { useLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
+import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
 import { ListSheet, useListSheet } from './list-sheet';
 import { letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
@@ -57,7 +58,7 @@ export function SerializdListsRow({ username, kind }: { username: string; kind: 
 type RailItem = ListSummary | { id: 'new' };
 
 /** Your Lists leads with New list, so a member without lists still has the editor one tap away. */
-function ListsRail({ lists, provider, kind, indexHref }: {
+function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   lists: ListSummary[];
   provider: ListSummary['provider'];
   kind: 'created' | 'liked';
@@ -67,6 +68,7 @@ function ListsRail({ lists, provider, kind, indexHref }: {
   const { fontScale } = useWindowDimensions();
   const { openList, sheetProps } = useListSheet();
   const title = listsTitle(kind);
+  const lists = visibleByIds(allLists, useHiddenLists(), (list) => [list.href]);
   if (lists.length === 0 && kind === 'liked') return null;
   const items: RailItem[] = kind === 'created' ? [{ id: 'new' }, ...lists] : lists;
   return (
