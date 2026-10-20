@@ -16,7 +16,7 @@ export function ButtonCapsule({ floating = false, className, children }: {
   children: ReactNode;
 }) {
   return (
-    <View className={cn('flex-row items-center rounded-full border border-border', floating ? 'p-1 bg-surface shadow-md' : 'p-0.5', className)}>
+    <View className={cn('flex-row items-center rounded-full border border-border', floating ? 'p-1.25 bg-surface shadow-md' : 'p-0.5', className)}>
       {children}
     </View>
   );

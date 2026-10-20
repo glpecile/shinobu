@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -46,6 +46,39 @@ test('lint rejects inline app destinations but accepts centralized and external 
     const violations = diagnostics.filter((diagnostic: { code: string }) => diagnostic.code === 'shinobu(no-hardcoded-routes)');
     expect(result.exitCode).toBe(1);
     expect(violations).toHaveLength(11);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test('lint reserves red tokens and variants for logging entry points', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shinobu-log-color-lint-'));
+  const logging = join(dir, 'src/features/log-media');
+  mkdirSync(logging, { recursive: true });
+  try {
+    writeFileSync(join(logging, 'confirm.tsx'), `
+      declare const Button: any;
+      export const allowed = <Button variant="log" className="bg-log text-log-foreground" />;
+      export const raw = <Button style={{ backgroundColor: '#DC2625' }} />;
+    `);
+    writeFileSync(join(dir, 'general.tsx'), `
+      declare const Button: any;
+      declare const selected: boolean;
+      export const neutral = <Button variant="primary" className="bg-foreground text-background" />;
+      export const token = '--color-log';
+      export const classes = <Button className="hover:bg-log/40" />;
+      export const variant = <Button variant={selected ? 'log' : 'quiet'} />;
+      export const template = <Button className={\`border-log \${selected ? 'px-2' : 'px-3'}\`} />;
+      export const raw = <Button style={{ backgroundColor: 'rgb(220, 38, 38)' }} />;
+      export const branding = <span style={{ color: '#DC2626' }}>忍</span>;
+      export const tint = <Button className="bg-accent/10 text-accent-on-tonal" />;
+      export const solid = <Button className="bg-accent" />;
+    `);
+    const result = Bun.spawnSync(['bun', 'x', '--no-install', 'oxlint', '--config', resolve('.oxlintrc.json'), '--format', 'json', dir]);
+    const diagnostics = JSON.parse(result.stdout.toString()).diagnostics;
+    const violations = diagnostics.filter((diagnostic: { code: string }) => diagnostic.code === 'shinobu(log-color-only)');
+    expect(result.exitCode).toBe(1);
+    expect(violations).toHaveLength(7);
   } finally {
     rmSync(dir, { recursive: true });
   }

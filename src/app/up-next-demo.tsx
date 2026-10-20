@@ -94,7 +94,7 @@ export default function UpNextDemo() {
               ListEmptyComponent={<Text className="text-muted font-sans mx-4">No episodes to continue</Text>}
               renderItem={({ item: entry }) => (
                 <CardSlot
-                  action={<Fab icon="eye-outline" label={`Log episode ${entry.episode.number} of ${entry.item.title.trim() || 'Untitled'}`} loading={state === 'loading'} onPress={() => setNotice(`Log pressed: ${entry.item.title}`)} size="sm" />}
+                  action={<Fab variant="log" icon="eye-outline" label={`Log episode ${entry.episode.number} of ${entry.item.title.trim() || 'Untitled'}`} loading={state === 'loading'} onPress={() => setNotice(`Log pressed: ${entry.item.title}`)} size="sm" />}
                   badges={continueWatchingBadges(entry, NOW)}
                   group={soloGroup(entry)}
                   onActionsPress={(item) => setNotice(`Options pressed: ${item.title}`)}

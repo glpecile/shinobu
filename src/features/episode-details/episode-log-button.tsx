@@ -25,6 +25,7 @@ export function EpisodeLogButton({ item, season, number, episode, watched, class
   const aired = hasAired(episode.firstAired);
   return <View className={className}>
     <Button
+      variant="log"
       disabled={!aired}
       icon={<Button.Icon name={watched ? 'eye' : 'eye-outline'} />}
       label={aired ? watched ? 'Rewatch' : 'Mark as watched' : unairedEpisodeLabel(code, episode.firstAired)}

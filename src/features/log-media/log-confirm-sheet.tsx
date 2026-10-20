@@ -317,6 +317,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           {retryable && (
             <WriteSheet.Actions>
               <Button
+                variant="log"
                 icon={<Button.Icon name="refresh" />}
                 label="Try again"
                 onPress={retry}
@@ -345,6 +346,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           />
           <WriteSheet.Actions>
             <Button
+              variant="log"
               disabled={selectedProviders.length === 0}
               icon={<Button.Icon name="eye" />}
               label={title}

@@ -228,6 +228,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
           watched" → "Log episode 4" → "Log rewatch" — which is exactly what
           MorphText is for. */}
       <Button
+        variant="log"
         disabled={!canLog}
         // `eye` once it's in your history, `eye-outline` before — the same
         // filled/outline pairing the watchlist CTA uses for its own settled

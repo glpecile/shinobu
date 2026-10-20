@@ -511,6 +511,7 @@ function CatchUpForm({
             {!currentLanded && (
               <WriteSheet.Actions>
                 <Button
+                  variant="log"
                   disabled={selectedProviders.length === 0 || queue == null}
                   icon={<Button.Icon name="eye" />}
                   label={chainLabel(code, { landed, failed: problems.length })}
@@ -605,6 +606,7 @@ function ChainReport({
       {retryable.length > 0 && (
         <WriteSheet.Actions>
           <Button
+            variant="log"
             icon={<Button.Icon name="refresh" />}
             label={
               retryable.length === 1

@@ -83,6 +83,7 @@ function SheetBody({
       <View className="mt-5">
         {aired ? (
           <Button
+            variant="log"
             icon={<Button.Icon name={watched ? 'eye' : 'eye-outline'} />}
             label={watched ? 'Rewatch' : 'Mark as watched'}
             onPress={onMark}

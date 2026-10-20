@@ -190,8 +190,12 @@ after editing `metro.config.js`.
 ## Theming and typography
 
 Colors are tokens in `src/global.css`, never hex in a component. Add a token to
-both the light and dark variants. `accent` is `#DC2626` in both. Dark is the
-designed mode, but light must render correctly.
+both the light and dark variants. `accent` is `#DC2626` in both. Reserve solid
+red action buttons for logging (`#DC2625`, `--color-log`, `variant="log"`),
+including its confirm/retry actions. Other primary actions are neutral.
+Keep the red loading logo and existing softer red tints. `shinobu/log-color-only`
+enforces the logging button variant and rejects solid red control fills outside
+logging. Dark is the designed mode, but light must render correctly.
 
 A color passed as a string, such as to an icon or spinner, goes through
 `useThemeColor` from `@/lib/theme-color`. The exception is a composed color like
@@ -211,6 +215,13 @@ so a caller's class replaces the default instead of competing with it.
 Prefer Uniwind's `ios:`, `android:`, and `web:` variants for platform-specific
 styling. Use platform files only when the implementation differs or a native-only
 import requires them; don't split a component just to vary its classes.
+
+FABs use `components/fab`. Size is a fixed `size="sm"` (44) or `"md"` (56,
+the default) on every platform. Shape is `shape="squircle"` by default, with
+`"circle"` available. Color is independent: `variant="outline"` (default),
+`"filled"` (neutral), or `"log"` (red logging action). Never size, stretch, or
+reshape a FAB through `className`; it takes positioning and margins only.
+Use the same component for floating episode actions.
 
 Buttons are `components/button`, never a hand-built pressable and `Text`. Use
 its `variant`, `size`, and `align`, and keep `className` to layout. An action

@@ -15,7 +15,7 @@ export function ViewAllLink({
   title: string;
   onPress: () => void;
 }) {
-  const accent = useThemeColor('--color-accent');
+  const foreground = useThemeColor('--color-foreground');
   const reduceMotion = useReducedMotion();
   const [hovered, setHovered] = useState(false);
   return (
@@ -30,7 +30,7 @@ export function ViewAllLink({
         className="flex-row items-center justify-end gap-1 min-h-11 min-w-11"
         onPress={onPress}
       >
-        <Text className="text-accent font-sans-semibold text-sm">View all</Text>
+        <Text className="text-foreground font-sans-semibold text-sm">View all</Text>
         <AnimatedView
           style={{
             transform: [{ translateX: hovered && !reduceMotion ? 3 : 0 }],
@@ -39,7 +39,7 @@ export function ViewAllLink({
             transitionTimingFunction: 'ease-out',
           }}
         >
-          <Ionicons color={accent} name="chevron-forward" size={14} />
+          <Ionicons color={foreground} name="chevron-forward" size={14} />
         </AnimatedView>
       </PresstableOpacity>
     </View>

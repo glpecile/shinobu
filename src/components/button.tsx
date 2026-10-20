@@ -18,12 +18,13 @@ import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
-export type ButtonVariant = 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
+export type ButtonVariant = 'log' | 'primary' | 'outline' | 'quiet' | 'quiet-accent' | 'ghost' | 'accent-ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /** Container classes per variant — `off` covers both disabled and loading. */
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
-  primary: { on: 'bg-accent', off: 'bg-accent/40' },
+  log: { on: 'bg-log', off: 'bg-log/40' },
+  primary: { on: 'bg-foreground', off: 'bg-foreground/40' },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border web:hover:bg-border/40', off: 'border border-border opacity-60' },
   'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
@@ -32,7 +33,8 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
 };
 
 const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
-  primary: { on: 'text-accent-foreground', off: 'text-accent-foreground' },
+  log: { on: 'text-log-foreground', off: 'text-log-foreground' },
+  primary: { on: 'text-background', off: 'text-background' },
   outline: { on: 'text-accent', off: 'text-accent/60' },
   quiet: { on: 'text-foreground', off: 'text-muted' },
   'quiet-accent': { on: 'text-accent', off: 'text-accent/60' },
@@ -42,7 +44,8 @@ const LABEL: Record<ButtonVariant, { on: string; off: string }> = {
 
 /** The theme token the spinner borrows so it matches its own label exactly. */
 const SPINNER_TOKEN: Record<ButtonVariant, ThemeColorToken> = {
-  primary: '--color-accent-foreground',
+  log: '--color-log-foreground',
+  primary: '--color-background',
   outline: '--color-accent',
   quiet: '--color-foreground',
   'quiet-accent': '--color-accent',
@@ -250,7 +253,7 @@ export interface ButtonProps {
  * padding, radius and disabled treatment, which is how `rounded` (4px, reads as
  * an accident) ended up next to `rounded-md`, and how "Connecting…" shipped as
  * a text swap with no spinner. The variants cover what the app actually
- * needs: `primary` (the one action), `outline` (destructive/secondary, accent
+ * needs: `log` (records a watch), `primary` (the main neutral action), `outline` (destructive/secondary, accent
  * on transparent), `quiet` (neutral, bordered), and `ghost` (inside a shared surface).
  *
  * Width is inherited, not owned: in a stretch container (a sheet, a form
