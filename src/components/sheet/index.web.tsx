@@ -2,7 +2,9 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { Modal, ScrollView, useWindowDimensions, View } from 'react-native';
 import {
   FadeIn,
+  FadeInDown,
   FadeOut,
+  FadeOutDown,
   Keyframe,
   useReducedMotion,
 } from 'react-native-reanimated';
@@ -59,39 +61,16 @@ function focusFirstFieldOnReveal(view: View | null) {
 const EXIT_MS = DURATION.exit;
 
 /**
- * How far the panel rises into place. Reanimated's `SlideInDown` preset
- * translates from the *window* height, so a bottom-anchored sheet travelled the
- * whole viewport to move a few hundred px of visible distance — the panel spent
- * most of the animation offscreen and the tail read as sluggish no matter how
- * short the duration. A short, fixed nudge plus opacity says "this rose into
- * place" in a fraction of the travel.
+ * The panel rises 25px into place rather than from the window height, as
+ * `SlideInDown` would. Presets, not a custom `Keyframe`: Reanimated's web
+ * cleanup pins a custom-Keyframe element to its open-time rect, so the wrapper
+ * kept the pre-keyboard height and the panel sank behind the Android keyboard
+ * (docs/solutions/reanimated-web-keyframe-pins-position.md).
  */
-const PANEL_RISE = 28;
-/** The exit nudge is smaller: a hint of direction, not a re-run of the enter. */
-const PANEL_FALL = 16;
-
-/**
- * Module scope, per Reanimated's animation-builder performance rule (same as
- * `components/lightbox/index.web.tsx`) — rebuilding these per render allocates
- * a new builder on every commit.
- */
-const panelEntering = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: PANEL_RISE }] },
-  100: {
-    opacity: 1,
-    transform: [{ translateY: 0 }],
-    easing: KEYFRAME_EASE_OUT,
-  },
-}).duration(DURATION.enter);
-
-const panelExiting = new Keyframe({
-  0: { opacity: 1, transform: [{ translateY: 0 }] },
-  100: {
-    opacity: 0,
-    transform: [{ translateY: PANEL_FALL }],
-    easing: KEYFRAME_EASE_EXIT,
-  },
-}).duration(EXIT_MS);
+const panelEntering = FadeInDown.duration(DURATION.enter).easing(
+  KEYFRAME_EASE_OUT,
+);
+const panelExiting = FadeOutDown.duration(EXIT_MS).easing(KEYFRAME_EASE_EXIT);
 
 /**
  * The backdrop is a *paired* element: it shares the panel's duration and curve
@@ -217,19 +196,13 @@ export function Sheet({ open, onClose, children, autoFocus }: SheetProps) {
               entering={backdropEntering}
               exiting={backdropExiting}
             />
-            {/* The rise/fade rides on a full-height wrapper, not the panel.
-                Reanimated's web cleanup pins a custom-Keyframe element to
-                its snapshot rect as `position: absolute; top: …`
-                (docs/solutions/reanimated-web-keyframe-pins-position.md);
-                pinning the *panel* froze its top edge, so a panel that grew
-                later — the catch-up ledger, a result line — grew downward
-                off-screen. Pinning this wrapper changes nothing: it already
-                fills the overlay, and `justify-end` keeps the panel bottom-
-                anchored however tall it gets. The wrapper covers the scrim,
-                and a `box-none` style doesn't survive the animated view on
-                web, so the close target is a layer filling the wrapper,
-                painted under the panel: above it *and* beside it on wide
-                viewports, where the panel is narrower than the window. */}
+            {/* The rise/fade rides on a full-height wrapper, not the panel,
+                so `justify-end` keeps the panel bottom-anchored however tall
+                it grows. The wrapper covers the scrim, and a `box-none` style
+                doesn't survive the animated view on web, so the close target
+                is a layer filling the wrapper, painted under the panel: above
+                it *and* beside it on wide viewports, where the panel is
+                narrower than the window. */}
             <AnimatedView
               className="flex-1 justify-end"
               entering={

@@ -71,7 +71,7 @@ export const DURATION = {
    * app's core action, so this sheet is a *many-times-a-day* surface, and the
    * frequency rule says to drastically reduce motion on those. Paired with the
    * strong ease-out below, 160ms reads as "already there" — the panel only
-   * travels 28px, so there is no distance that needs the extra time.
+   * travels 25px, so there is no distance that needs the extra time.
    */
   enter: 160,
   /** Its exit: faster still — the user has already decided to leave. */

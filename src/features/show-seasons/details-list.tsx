@@ -51,8 +51,9 @@ export function DetailsList({
     <List
       style={{ flex: 1 }}
       data={rows}
-      // Watched state and mapping callbacks can change without changing the catalogue rows.
-      extraData={episodeSection}
+      // Watched state, mapping callbacks and the footer (which sharpens once
+      // the item's TMDB id resolves) can change without changing the rows.
+      extraData={[episodeSection, footer]}
       // Episode rows can be shorter than collapsed season headers.
       estimatedItemSize={56}
       getItemType={(row) => row.kind}

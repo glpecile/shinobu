@@ -41,8 +41,13 @@ preset never reaches this branch. **The behaviour is specific to custom
 
 Other custom-`Keyframe` entrances need the same scrutiny:
 
-- `components/sheet/index.web.tsx` — the panel is inside a fixed overlay, so
-  being pinned to its own snapshot changes nothing.
+- `components/sheet/index.web.tsx` — the panel's wrapper fills a fixed
+  overlay, which looked safe until the overlay resized: with
+  `interactive-widget=resizes-content`, the Android keyboard shrank the overlay
+  but the wrapper kept its pinned open-time height, so the bottom-anchored
+  panel sat behind the keyboard (Firefox for Android, 2026-10-20). It now uses
+  `FadeInDown`/`FadeOutDown`. The backdrop's custom `Keyframe` is still pinned,
+  but an oversized scrim is harmless.
 - `features/up-next/up-next-section.tsx` — the day's content formerly used a
   reserved-height wrapper. That preserved the feed's height but did not make
   the snapshot safe while scrolling; it now uses `FadeIn` on web. See
@@ -66,8 +71,8 @@ through the delay instead of flashing in and out.
 
 ## Rule
 
-**Custom `Keyframe` on web only for elements whose position is already fixed**,
-such as an overlay panel. Reserved space does not protect a scrolling element
+**Custom `Keyframe` on web only for elements whose size never needs to change
+after they enter.** A fixed overlay is not enough: the viewport can resize under it. Reserved space does not protect a scrolling element
 from a stale viewport snapshot. Anything
 that must contribute its own height to a flow parent (list items, chips, rows)
 uses a preset. If a rise or a scale is genuinely needed there, animate it with
