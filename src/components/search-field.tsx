@@ -54,7 +54,7 @@ export function SearchField({ value, onChangeText, onClear, loading, placeholder
         autoCapitalize="none"
         autoCorrect={false}
         autoFocus={autoFocus}
-        className="flex-1 min-h-11 min-w-0 text-base leading-4.5 text-foreground ps-3 pe-4 py-3 font-sans outline-none caret-accent"
+        className="flex-1 h-11 min-w-0 text-[16px] text-foreground ps-3 pe-4 py-0 font-sans outline-none caret-accent"
         onBlur={() => setFocused(false)}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
