@@ -405,7 +405,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
         </View>
       </View>
-      <View className="flex-1">{children}</View>
+      {/* Clipped: a loading skeleton isn't in a scroller yet, and as the later
+          sibling it would paint over the bottom bar. */}
+      <View className="flex-1 overflow-hidden">{children}</View>
     </View>
   );
 }

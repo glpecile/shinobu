@@ -1,3 +1,11 @@
+/* An unstyled (custom) toast shrinks to its content; fill sonner's column.
+   Below 601px sonner's own mobile rule insets it from both edges instead. */
+@media (min-width: 601px) {
+  [data-sonner-toaster] [data-sonner-toast] {
+    width: var(--width);
+  }
+}
+
 [data-sonner-toaster] [data-sonner-toast][data-swiping='false'] {
   transition-property: transform, opacity;
   transition-duration: var(--toast-enter);

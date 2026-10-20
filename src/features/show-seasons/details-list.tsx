@@ -1,15 +1,17 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 
 import { List } from '@/components/List';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { useScrolledTitle } from '@/components/scrolled-title';
 import { cn } from '@/lib/cn';
+import { DURATION } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import type { NormalizedSeason } from '@/types/media';
 
 import { EpisodeRow, SeasonHeader, SeasonMarkRow, type SeasonActions } from './season-accordion';
-import { seasonRows } from './season-rows';
+import { seasonRows, type SeasonRow } from './season-rows';
 
 export interface DetailsListProps {
   header: ReactNode;
@@ -22,6 +24,14 @@ interface EpisodeSection extends SeasonActions {
   seasons: readonly NormalizedSeason[];
 }
 
+/**
+ * Opening a season shifts every row below it. Legend List positions rows over
+ * several commits, so `LayoutAnimation` caught only the first: rows faded while
+ * the content below jumped. The footer is a row so it slides with them.
+ */
+const seasonLayout = LinearTransition.duration(DURATION.toggle);
+const FOOTER_ROW = { kind: 'footer', key: 'footer' } as const;
+
 /** One vertical viewport, like the diary: no season owns a nested scroll view or mapped episode body. */
 export function DetailsList({
   header,
@@ -31,7 +41,11 @@ export function DetailsList({
 }: DetailsListProps & { episodeSection?: EpisodeSection }) {
   const { expanded, toggle } = useListDisclosure<number>();
   const { scrollY } = useScrolledTitle();
-  const rows = episodeSection == null ? [] : seasonRows(episodeSection.seasons, expanded, episodeSection.isEpisodeAired);
+  const reduceMotion = useReducedMotion();
+  const rows: (SeasonRow | typeof FOOTER_ROW)[] = [
+    ...(episodeSection == null ? [] : seasonRows(episodeSection.seasons, expanded, episodeSection.isEpisodeAired)),
+    FOOTER_ROW,
+  ];
 
   return (
     <List
@@ -42,6 +56,7 @@ export function DetailsList({
       // Episode rows can be shorter than collapsed season headers.
       estimatedItemSize={56}
       getItemType={(row) => row.kind}
+      itemLayoutAnimation={reduceMotion ? undefined : seasonLayout}
       keyExtractor={(row) => row.key}
       ListHeaderComponent={
         <View>
@@ -51,13 +66,13 @@ export function DetailsList({
           )}
         </View>
       }
-      ListFooterComponent={<View>{footer}</View>}
       onScroll={(event) => scrollY.set(event.nativeEvent.contentOffset.y)}
       scrollEventThrottle={16}
       renderScrollComponent={(props) => (
         <RefreshableScrollView {...props} onRefresh={onRefresh} spinnerBelowStatusBar />
       )}
       renderItem={({ item: row }) => {
+        if (row.kind === 'footer') return footer;
         if (episodeSection == null) return null;
         let content: ReactNode;
         switch (row.kind) {
