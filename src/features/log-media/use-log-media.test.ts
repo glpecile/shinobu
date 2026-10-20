@@ -67,6 +67,8 @@ mock.module('@/state/queries/mapping', () => ({
     mappingCalls.push(`season-layout:${JSON.stringify(ids)}`);
     return Promise.resolve(seasonLayout);
   },
+  cachedAniListPrequel: () => Promise.resolve(null),
+  cachedTmdbTvIdByTvdb: () => Promise.resolve(null),
 }));
 
 const { planLogWrite, simklLogAdapter, withMappingSkips } = await import(

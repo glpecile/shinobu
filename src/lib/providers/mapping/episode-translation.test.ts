@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { AniZipEpisodeMap } from './anizip';
-import { translateEntryEpisodes } from './episode-translation';
+import { continuePrequelTable, translateEntryEpisodes } from './episode-translation';
 import type { SeasonLayout } from './season-layout';
 
 /**
@@ -172,5 +172,23 @@ describe('translateEntryEpisodes', () => {
         layout: ONE_CONTINUOUS_SEASON,
       }).ok,
     ).toBe(false);
+  });
+});
+
+// Koori no Jouheki (2026): AniList splits the 28 episodes TMDB keeps in one
+// season into two entries, and ani.zip had no rows for the second one.
+describe('continuePrequelTable', () => {
+  const firstCour = table(1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+
+  test('a second cour continues where its prequel’s table ends', () => {
+    expect(
+      translateEntryEpisodes(continuePrequelTable(firstCour, 14, [3]), [3], {
+        layout: [{ season: 1, episodeCount: 28 }],
+      }),
+    ).toEqual({ ok: true, episodes: [{ season: 1, number: 17 }] });
+  });
+
+  test('a prequel table that stops short of its last episode continues nothing', () => {
+    expect(continuePrequelTable(firstCour, 24, [3])).toBeNull();
   });
 });

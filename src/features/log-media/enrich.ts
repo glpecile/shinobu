@@ -5,6 +5,7 @@ import type { ProviderId } from '@/lib/providers/types';
 import {
   cachedAniListFilmId,
   cachedAniZipIds,
+  cachedTmdbTvIdByTvdb,
   cachedTraktLookup,
   cachedTraktTextSearch,
 } from '@/state/queries/mapping';
@@ -83,10 +84,17 @@ export async function enrichExternalIds(
       anilistId: externalIds.anilist,
     });
     if (mapped != null) {
+      // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
+      // sequel cour's own id), so a series takes TVDB → TMDB like the details
+      // read does, and keeps ani.zip's only when that misses.
+      const tmdb =
+        item.isFilm !== true && mapped.tvdb != null
+          ? ((await cachedTmdbTvIdByTvdb(queryClient, mapped.tvdb)) ?? mapped.tmdb)
+          : mapped.tmdb;
       externalIds = {
         ...externalIds,
         ...(mapped.tvdb != null ? { tvdb: mapped.tvdb } : {}),
-        ...(mapped.tmdb != null ? { tmdb: mapped.tmdb } : {}),
+        ...(tmdb != null ? { tmdb } : {}),
         ...(mapped.imdb != null ? { imdb: mapped.imdb } : {}),
       };
     }

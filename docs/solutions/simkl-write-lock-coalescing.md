@@ -22,8 +22,20 @@ history write goes through (`simklLogAdapter`'s default `log`).
   *completed*), everything waiting goes as ONE POST and every waiter resolves
   with that POST's result. `logToSimkl` folds entries for the same item (same
   ids, same `watched_at`) into one `seasons[].episodes[]`.
-- A POST that still bounces is re-queued once behind a fresh window; a second
-  bounce rejects, which the fan-out reports as a Simkl failure with the link.
+- A POST that fails transiently is retried with a 2s → 4s → 8s → 16s backoff,
+  five attempts in all, before the fan-out reports it as a Simkl failure.
+
+## Long sessions still bounced (2026-10-20)
+
+Logging DBZ episodes 52–85 one after another failed scattered episodes on
+Simkl ("Episode 74 failed on Simkl") even though the queue waited 21s after
+every landed POST. Simkl's current docs
+(api.simkl.org/resources/rate-limits) say `400 RATE_LIMIT` means "your previous
+write for this user is still running": the lock lasts as long as Simkl is still
+processing the last write, so a large batch can hold it past our 21s. The docs
+say to retry the lock shortly, never back off for minutes, and to retry
+`429`/`500`/`502`/`503` with backoff, giving up after 5 attempts. The queue had
+retried exactly once, so a second bounce surfaced as a failure.
 
 The chain's Simkl legs therefore resolve up to ~21s after their confirm, which
 is why the catch-up sheet does not await each write (plan 0037 KTD-3): the

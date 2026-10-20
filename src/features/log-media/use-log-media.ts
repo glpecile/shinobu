@@ -20,14 +20,19 @@ import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd'
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { translateEntryEpisodes } from '@/lib/providers/mapping/episode-translation';
 import {
+  continuePrequelTable,
+  translateEntryEpisodes,
+} from '@/lib/providers/mapping/episode-translation';
+import {
+  cachedAniListPrequel,
   cachedAniZipEpisodeMap,
   cachedSeasonLayout,
 } from '@/state/queries/mapping';
 import { resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
+import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { getEntryState } from '@/lib/providers/anilist/reads';
@@ -306,6 +311,23 @@ interface LogPlan {
 }
 
 /**
+ * The entry's ani.zip table, or for a second cour ani.zip hasn't mapped yet,
+ * its prequel's table continued over `entryNumbers`.
+ */
+async function entryEpisodeMap(
+  queryClient: QueryClient,
+  anilistId: number,
+  entryNumbers: readonly number[],
+): Promise<AniZipEpisodeMap | null> {
+  const own = await cachedAniZipEpisodeMap(queryClient, anilistId);
+  if (own != null && own.size > 0) return own;
+  const prequel = await cachedAniListPrequel(queryClient, anilistId);
+  if (prequel == null) return own;
+  const prequelMap = await cachedAniZipEpisodeMap(queryClient, prequel.id);
+  return continuePrequelTable(prequelMap, prequel.episodes, entryNumbers) ?? own;
+}
+
+/**
  * Everything a log needs settled *before* reconcile: cross-provider ids, the
  * routed targets, and — the plan 0027 step — which canonical `{season, number}`
  * pairs an AniList-entry-relative batch actually means. Shared by the mutation
@@ -382,7 +404,7 @@ async function resolveLogPlan(
   const [episodeMap, layout] = await Promise.all([
     anilistId == null
       ? Promise.resolve(null)
-      : cachedAniZipEpisodeMap(queryClient, anilistId),
+      : entryEpisodeMap(queryClient, anilistId, entryInput),
     cachedSeasonLayout(queryClient, {
       ...(item.externalIds.tmdb != null ? { tmdb: item.externalIds.tmdb } : {}),
       ...(item.externalIds.trakt != null ? { trakt: item.externalIds.trakt } : {}),

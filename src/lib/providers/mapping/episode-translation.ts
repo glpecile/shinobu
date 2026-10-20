@@ -91,6 +91,34 @@ function describeTable(map: AniZipEpisodeMap): MappedTable | string {
   };
 }
 
+/**
+ * A split-cour sequel that ani.zip hasn't mapped yet continues its prequel's
+ * numbering, so entry episode n is the prequel's last row plus n. Only a
+ * gap-free prequel table that reaches the prequel's final episode qualifies.
+ * `placeInLayout` still checks every row against the tracker's seasons.
+ */
+export function continuePrequelTable(
+  prequel: AniZipEpisodeMap | null,
+  prequelEpisodes: number,
+  entryNumbers: readonly number[],
+): AniZipEpisodeMap | null {
+  if (prequel == null) return null;
+  const table = describeTable(prequel);
+  if (typeof table === 'string' || table.lastEntryNumber !== prequelEpisodes) return null;
+  const last = prequel.get(table.lastEntryNumber);
+  if (last == null) return null;
+  return new Map(
+    entryNumbers.map((entryNumber) => [
+      entryNumber,
+      {
+        season: last.season,
+        number: last.number + entryNumber,
+        ...(last.absolute != null ? { absolute: last.absolute + entryNumber } : {}),
+      },
+    ]),
+  );
+}
+
 export interface TranslationContext {
   /**
    * How the destination tracker splits this show into seasons. Required: an

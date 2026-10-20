@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 
+import { ProviderRateLimitError } from '@/lib/providers/errors';
 import type { SimklLogEntry } from '@/lib/providers/simkl/writes';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -110,10 +111,8 @@ describe('createSimklLogQueue', () => {
     await expect(second).resolves.toEqual(ok);
   });
 
-  test('a batch bounced by the lock is re-queued once, then fails', async () => {
-    const bounce = Object.assign(new Error('simkl: rate limited'), {
-      name: 'ProviderRateLimitError',
-    });
+  test('a batch bounced by the lock retries with backoff, then fails after five attempts', async () => {
+    const bounce = new ProviderRateLimitError({ provider: 'simkl' });
     let calls = 0;
     const send = mock(async () => {
       calls += 1;
@@ -122,17 +121,19 @@ describe('createSimklLogQueue', () => {
     const { clock, advance } = fakeClock();
     const queue = createSimklLogQueue(send, clock);
 
-    const result = queue.log(entry(1));
     // Attach the rejection handler now, before any timer can settle it.
-    const outcome = result.then(
+    const outcome = queue.log(entry(1)).then(
       () => 'resolved',
       (error: unknown) => error,
     );
     await settle();
     expect(calls).toBe(1);
-    await advance(SIMKL_WRITE_LOCK_MS);
-    await settle();
-    expect(calls).toBe(2);
+    // 2s, 4s, 8s, 16s: well inside the 21s window a landed write waits.
+    for (const wait of [2_000, 4_000, 8_000, 16_000]) {
+      await advance(wait);
+      await settle();
+    }
+    expect(calls).toBe(5);
     await expect(outcome).resolves.toBe(bounce);
   });
 

@@ -60,6 +60,8 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
   cachedAniZipEpisodeMap: () => Promise.resolve(null),
   cachedSeasonLayout: () => Promise.resolve(null),
+  cachedAniListPrequel: () => Promise.resolve(null),
+  cachedTmdbTvIdByTvdb: () => Promise.resolve(null),
 }));
 
 const { runWatchlistRemove, WATCHLIST_REMOVE_ADAPTERS } = await import(

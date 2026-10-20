@@ -13,14 +13,17 @@ import type { NormalizedMediaItem } from '@/types/media';
 const calls: string[] = [];
 let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
+let anizipBridge: { tvdb: number; tmdb: number } | null = null;
+let tmdbByTvdb: number | null = null;
 
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: (_client: unknown, lookup: unknown) => {
     calls.push(`anizip:${JSON.stringify(lookup)}`);
     return Promise.resolve(
-      anizipAnilistId == null ? null : { anilist: anizipAnilistId },
+      anizipBridge ?? (anizipAnilistId == null ? null : { anilist: anizipAnilistId }),
     );
   },
+  cachedTmdbTvIdByTvdb: () => Promise.resolve(tmdbByTvdb),
   cachedAniListFilmId: (_client: unknown, params: { title: string; year?: number }) => {
     calls.push(`anilist-film:${params.title}:${params.year ?? 'any'}`);
     return Promise.resolve(anilistFilmId);
@@ -173,5 +176,20 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
       ['simkl', 'anilist'],
     );
     expect(calls.some((call) => call.startsWith('anizip:'))).toBe(true);
+  });
+
+  // Cyberpunk: Edgerunners 2 (2026): ani.zip's themoviedb_id 326788 is a
+  // TMDB 404, while its TVDB id finds the real show, 105248.
+  test('a series anime takes its TMDB id from TVDB over ani.zip’s', async () => {
+    anizipBridge = { tvdb: 384541, tmdb: 326788 };
+    tmdbByTvdb = 105248;
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-195539', type: 'ANIME', isFilm: false, externalIds: { anilist: 195539 } }),
+      ['serializd'],
+    );
+    anizipBridge = null;
+    tmdbByTvdb = null;
+    expect(enriched.externalIds.tmdb).toBe(105248);
   });
 });

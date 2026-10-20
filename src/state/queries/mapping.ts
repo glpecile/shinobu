@@ -9,7 +9,7 @@ import {
   type AniZipEpisodeMap,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
-import { searchAnimeFilms } from '@/lib/providers/anilist/reads';
+import { getSeriesPrequel, searchAnimeFilms } from '@/lib/providers/anilist/reads';
 import {
   pickAnimeFilmMatch,
   pickMovieMatch,
@@ -161,6 +161,7 @@ export const mappingQueryKeys = {
   /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
+  anilistPrequel: (anilistId: number) => ['mapping', 'anilist-prequel', anilistId] as const,
 };
 
 const FOREVER = {
@@ -587,6 +588,25 @@ export function cachedAniListFilmId(
         )
         .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
+  });
+}
+
+/**
+ * A split-cour sequel's prequel, for continuing its ani.zip table when ani.zip
+ * hasn't mapped the sequel yet. Write actions only.
+ */
+export function cachedAniListPrequel(
+  queryClient: QueryClient,
+  anilistId: number,
+): Promise<{ id: number; episodes: number } | null> {
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.anilistPrequel(anilistId),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getSeriesPrequel(anilistDeps(), { mediaId: anilistId }), { signal })
+        .catch((error) => mappingMiss(error, signal)),
+    // Not forever: a miss can be AniList's rate limit, not an answer.
+    staleTime: EPISODE_MAP_STALE_MS,
+    gcTime: EPISODE_MAP_STALE_MS,
   });
 }
 
