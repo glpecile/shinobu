@@ -62,7 +62,6 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
               </ButtonCapsule>
             </View>
             <Button
-              align="start"
               icon={<Button.Icon name="eye-off-outline" />}
               label="Hide list"
               onPress={() => {

@@ -9,6 +9,8 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import { useAniListStudioIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
+import { ProviderLinkRows } from './provider-link-row';
+
 /**
  * The `PersonLinksSection` sibling for studios (plan 0035 R8/R10) — same pills,
  * same rules, different subject. Only Letterboxd and AniList have an addressable
@@ -24,9 +26,15 @@ import { useConnectedProviders } from '@/state/session';
 export function StudioLinksSection({
   studio,
   enabled = true,
+  variant = 'pills',
+  onOpened,
 }: {
   studio: UrlStudio;
   enabled?: boolean;
+  /** `'pills'` on a page, `'rows'` inside a sheet — see `ProviderLinkRow`. */
+  variant?: 'pills' | 'rows';
+  /** Forwarded to the rows variant (native-only sheet dismissal). */
+  onOpened?: () => void;
 }) {
   const connected = useConnectedProviders();
   // Skipped entirely for a studio that already knows its id, and for a user
@@ -47,6 +55,9 @@ export function StudioLinksSection({
   }
 
   if (links.length === 0) return null;
+
+  if (variant === 'rows')
+    return <ProviderLinkRows className="mt-2" links={links} onOpened={onOpened} />;
 
   return (
     <View className="mt-6">

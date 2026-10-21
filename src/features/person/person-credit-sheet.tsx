@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { WithShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { Skeleton } from '@/components/skeleton';
@@ -149,16 +150,17 @@ export function PersonCreditSheet({
           />
 
           {(hasTmdb || credit.anilistId != null) && (
-            <Button
-              className="mt-5"
-              icon={<Button.Icon name="person-outline" />}
-              label="View filmography"
-              onPress={() => {
-                onClose();
-                pushRoute(creditRoute(credit));
-              }}
-              variant="quiet"
-            />
+            <WithShareButton className="mt-5" href={creditRoute(credit)}>
+              <Button
+                icon={<Button.Icon name="person-outline" />}
+                label="View filmography"
+                onPress={() => {
+                  onClose();
+                  pushRoute(creditRoute(credit));
+                }}
+                variant="quiet"
+              />
+            </WithShareButton>
           )}
 
           {/* The person-page "View on" links as sheet rows — a person has no
