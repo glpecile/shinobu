@@ -64,5 +64,13 @@ real writes (Shinobu has no remove-from-history action):
 - Web (user): logging *Vision* S01E03 worked. Renaming a list created moments
   earlier showed "Install or update the Letterboxd script" until the page was
   reloaded.
-- Still open: Android TV log, Android list creation, a Letterboxd retry on a
-  healthy Android emulator, and fresh connection flows for AniList and Simkl.
+- Fonts: before the Metro fix, iOS and Android loaded no custom fonts (only
+  `Ionicons`) and fell back to system type. After it, Inter and Space Grotesk
+  load on both. Web was never affected.
+- Android TV, after a cold reboot of the emulator: *Fawlty Towers* S1E2 went to
+  Simkl and Serializd. The catch-up queue took about 2 minutes to load while
+  Serializd's progress read returned 404 and retried.
+- Still open: Android list creation and a Letterboxd retry on Android. The host
+  Mac (16 GB, about 11 GB of swap in use) starves the 2.5 GB emulator. The dev
+  build reaches about 750 MB RSS and ANRs on input, with no main-thread stack
+  captured. Fresh AniList and Simkl connection flows are also still open.
