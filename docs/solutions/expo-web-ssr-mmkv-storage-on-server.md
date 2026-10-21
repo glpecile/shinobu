@@ -66,3 +66,12 @@ server. Returning an empty token while `useTmdbToken` reports that the build has
 one caused Suspense lookup pages to send unauthenticated TMDB requests and abort
 the export with a 401. Its session-layer regression test verifies the server token
 without allowing a local-storage read.
+
+## Provider outage fails the static export
+
+During static export, Expo awaits every suspended query on prerendered routes.
+On 2026-10-21, AniList answered 403 while `/search` was prerendering its seasonal
+anime rail. The rejection was thrown on the server, where class error boundaries
+don't run, so `build:web` failed. `SuspenseSection` now renders its fallback until
+hydration, using a `useSyncExternalStore` server snapshot. Prerendering no longer
+fetches from providers, and the client renders the same skeleton before it fetches.
