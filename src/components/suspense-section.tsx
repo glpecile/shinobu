@@ -1,4 +1,4 @@
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, Suspense, useSyncExternalStore, type ReactNode } from 'react';
 
 import { SectionEnter } from '@/components/section-enter';
 import { toast } from '@/lib/toast';
@@ -46,6 +46,10 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   }
 }
 
+function subscribeNever() {
+  return () => {};
+}
+
 /**
  * Suspense boundary for a self-contained, suspense-query-backed screen
  * section: shows `fallback` (a skeleton) while the query loads, renders
@@ -57,6 +61,16 @@ export function SuspenseSection({
   resetKey,
   errorToast,
 }: BoundaryProps & { fallback: ReactNode }) {
+  // Static web export awaits every suspended query, so prerendering a section
+  // would fetch its provider at build time, and an outage there fails the
+  // build (error boundaries don't run on the server). The server snapshot also
+  // covers hydration, so the client renders the same skeleton first.
+  const hydrated = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+  if (!hydrated) return fallback;
   return (
     <SectionErrorBoundary resetKey={resetKey} errorToast={errorToast}>
       <Suspense fallback={fallback}>
