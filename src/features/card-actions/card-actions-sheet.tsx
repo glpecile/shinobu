@@ -6,6 +6,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
 import { SmallPoster } from '@/components/small-poster';
+import { ShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { ListMembershipForm } from '@/features/lists/list-membership-form';
@@ -382,16 +383,17 @@ export function CardActionsSheet({
             )}
           </View>
 
-          <Button
-            align="start"
-            icon={<Button.Icon name="open-outline" />}
-            label="View details"
-            onPress={() => {
-              onClose();
-              pushRoute(routes.details(item.id, item.type));
-            }}
-            variant="quiet"
-          />
+          <ShareButton.Capsule href={routes.details(item.id, item.type)}>
+            <Button
+              icon={<Button.Icon name="open-outline" />}
+              label="View details"
+              onPress={() => {
+                onClose();
+                pushRoute(routes.details(item.id, item.type));
+              }}
+              variant="quiet"
+            />
+          </ShareButton.Capsule>
           {links.map((link) => (
             <ProviderLinkRow
               className="mt-2"
@@ -401,7 +403,6 @@ export function CardActionsSheet({
             />
           ))}
           {listRemoval != null && <Button
-            align="start"
             className="mt-2"
             icon={<Button.Icon name="trash-outline" />}
             label="Remove from list"
@@ -410,7 +411,6 @@ export function CardActionsSheet({
           />}
           {canHide && (
             <Button
-              align="start"
               className="mt-2"
               icon={<Button.Icon name="eye-off-outline" />}
               label={hideLabel}

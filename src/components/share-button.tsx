@@ -1,9 +1,13 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { setStringAsync } from 'expo-clipboard';
-import type { ComponentProps } from 'react';
-import { Share } from 'react-native';
+import type { ComponentProps, ReactNode } from 'react';
+import { Share, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { RoundIconButton } from '@/components/round-icon-button';
+import { Tooltip } from '@/components/tooltip';
+import { haptics } from '@/lib/haptics';
+import { cn } from '@/lib/cn';
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
@@ -39,3 +43,19 @@ export function ShareButton({
     />
   );
 }
+
+/** A sheet's main action with Share capsuled beside it, as the list sheet lays it out. */
+function ShareCapsule({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+  return (
+    <View className={cn('flex-row items-center gap-2', className)}>
+      <View className="flex-1">{children}</View>
+      <Button.Capsule>
+        <Tooltip label="Share">
+          <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => { haptics.selection(); void shareLink(href); }} variant="ghost" />
+        </Tooltip>
+      </Button.Capsule>
+    </View>
+  );
+}
+
+ShareButton.Capsule = ShareCapsule;

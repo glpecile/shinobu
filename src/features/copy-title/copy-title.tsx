@@ -62,7 +62,6 @@ export function CopyTitle({
         <View className="mt-5 gap-2">
           {choices.map((choice) => (
             <Button
-              align="start"
               icon={<Button.Icon name="copy-outline" />}
               key={choice.label}
               label={choice.label}

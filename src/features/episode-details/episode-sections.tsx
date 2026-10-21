@@ -5,7 +5,6 @@ import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
-import { ButtonCapsule } from '@/components/button-capsule';
 import { ExpandableText } from '@/components/expandable-text';
 import { Fab } from '@/components/fab';
 import { Eyebrow } from '@/components/eyebrow';
@@ -297,7 +296,7 @@ export function EpisodeNavigation({
   }
   return (
     <View className="absolute self-center web:self-end web:mr-4 flex-row items-center gap-2" style={{ bottom: insets.bottom + 12 }}>
-      <ButtonCapsule className="w-52" floating>
+      <Button.Capsule className="w-52" floating>
         <Button
           disabled={prev == null}
           icon={<Button.Icon name="chevron-back" />}
@@ -317,7 +316,7 @@ export function EpisodeNavigation({
           onPress={() => step(next)}
           variant="ghost"
         />
-      </ButtonCapsule>
+      </Button.Capsule>
       <View
         className="relative"
         onPointerEnter={() => setShowSeriesHint(true)}
