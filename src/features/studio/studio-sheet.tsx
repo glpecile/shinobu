@@ -1,6 +1,6 @@
 import { Button } from '@/components/button';
 import { Eyebrow } from '@/components/eyebrow';
-import { WithShareButton } from '@/components/share-button';
+import { ShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { StudioLinksSection } from '@/features/provider-links/studio-links-section';
@@ -45,7 +45,7 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
           </SheetHeader>
 
           {canOpenStudio && (
-            <WithShareButton className="mt-6" href={href}>
+            <ShareButton.Capsule className="mt-6" href={href}>
               <Button
                 icon={<Button.Icon name="business-outline" />}
                 label="View studio"
@@ -55,7 +55,7 @@ export function StudioSheet({ studio, open, onClose }: StudioSheetProps) {
                 }}
                 variant="quiet"
               />
-            </WithShareButton>
+            </ShareButton.Capsule>
           )}
 
           <StudioLinksSection

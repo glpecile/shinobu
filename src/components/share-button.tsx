@@ -45,7 +45,7 @@ export function ShareButton({
 }
 
 /** A sheet's main action with Share capsuled beside it, as the list sheet lays it out. */
-export function WithShareButton({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+function ShareCapsule({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
   return (
     <View className={cn('flex-row items-center gap-2', className)}>
       <View className="flex-1">{children}</View>
@@ -57,3 +57,5 @@ export function WithShareButton({ href, className, children }: { href: string; c
     </View>
   );
 }
+
+ShareButton.Capsule = ShareCapsule;
