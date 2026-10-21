@@ -18,6 +18,7 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
+import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import type { LogRequest } from './log-request';
@@ -218,6 +219,13 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
+  // Warms the pre-write watch-state reads while the sheet is open, so Confirm starts writing at once.
+  useLogReconcileQuery({
+    item,
+    episodes: request.episodes,
+    entryEpisodes: request.entryEpisodes,
+    providers: selectedProviders,
+  }, open);
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;

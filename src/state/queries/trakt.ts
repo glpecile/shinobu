@@ -151,7 +151,9 @@ export function useTraktMediaImages(
   const type = item?.type ?? 'MOVIE';
   const missingArt = item != null && item.coverImage === '';
   const { data } = useQuery({
-    queryKey: traktQueryKeys.images(type, traktId ?? -1),
+    // Cards that already have art share one idle entry rather than adding one
+    // per title, which every cache-wide invalidation would then scan.
+    queryKey: traktQueryKeys.images(type, missingArt ? traktId ?? -1 : -1),
     queryFn: ({ signal }) =>
       Effect.runPromise(
         getMediaImages(traktDeps(), { type, traktId: traktId ?? -1 }),

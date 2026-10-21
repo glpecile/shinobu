@@ -21,13 +21,15 @@ export function formatAirDate(firstAired: string): string {
   if (isDateOnly(firstAired)) return formatCalendarDate(firstAired, { weekday: 'short' });
   const date = new Date(firstAired);
   if (Number.isNaN(date.getTime())) return firstAired;
-  return date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return airInstantFormatter.format(date);
 }
+
+const airInstantFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
 
 /** "Thu, Sep 3, 2026 · 28 min" from whichever fields exist; '' when neither. */
 export function episodeMetaLine(episode: Pick<NormalizedEpisode, 'firstAired' | 'runtime'>): string {

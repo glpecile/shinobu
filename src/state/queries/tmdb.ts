@@ -68,6 +68,7 @@ export function useSuspenseTmdbPersonQuery(params: { tmdbId: number }) {
     queryFn: ({ signal }) =>
       Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: params.tmdbId }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }
 
@@ -88,6 +89,7 @@ export function useTmdbPersonQuery(params: {
       Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: tmdbId as number }), { signal }),
     enabled: tmdbId != null && params.enabled !== false,
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }
 
@@ -102,6 +104,7 @@ function episodeQueryOptions(params: {
     // Credits and stills for an aired episode don't move — same budget as a
     // person page, so sheet → screen → back costs one request, not three.
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   };
 }
 
@@ -197,6 +200,7 @@ export function useSuspenseTmdbPersonSearchQuery(params: { name: string }) {
     queryFn: ({ signal }) =>
       Effect.runPromise(searchPerson(tmdbDeps(), { query: params.name }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }
 
@@ -207,6 +211,7 @@ export function useSuspenseTmdbStudioQuery(params: { tmdbId: number }) {
     queryFn: ({ signal }) =>
       Effect.runPromise(getStudio(tmdbDeps(), { tmdbId: params.tmdbId }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }
 
@@ -217,5 +222,6 @@ export function useSuspenseTmdbStudioSearchQuery(params: { name: string }) {
     queryFn: ({ signal }) =>
       Effect.runPromise(searchCompany(tmdbDeps(), { query: params.name }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }

@@ -6,5 +6,7 @@
  * same row height on lists cards.
  */
 export function formatCount(count: number): string {
-  return new Intl.NumberFormat('en', { maximumFractionDigits: 1, notation: 'compact' }).format(count);
+  return compact.format(count);
 }
+
+const compact = new Intl.NumberFormat('en', { maximumFractionDigits: 1, notation: 'compact' });
