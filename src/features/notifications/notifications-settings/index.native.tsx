@@ -55,7 +55,7 @@ function KindToggle({ kind, label }: { kind: NotificationKind; label: string }) 
 
   return (
     <GroupedList.Item className="flex-row items-center">
-      <Ionicons accessible={false} color={muted} name={KIND_ICONS[kind]} size={18} />
+      <Ionicons color={muted} name={KIND_ICONS[kind]} size={18} />
       <Text className="flex-1 mx-3 text-foreground font-sans text-base" numberOfLines={1}>
         {label}
       </Text>
