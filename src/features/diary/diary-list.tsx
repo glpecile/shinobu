@@ -574,7 +574,7 @@ function DiaryChildRow({
  * failed provider(s), tap-to-retry. Shown over the entries that did load,
  * never a blank screen (same contract as the feed and the log fan-out).
  *
- * It is a button, so it is `components/button` — a quiet pill that hugs its
+ * It is a button, so it is `components/button` — a quiet centred pill that hugs its
  * label rather than a full-bleed bar, which is what kept reading as an alert
  * the list couldn't get rid of. The glyph is the app's retry verb; the label
  * says what failed.
@@ -590,7 +590,7 @@ function DiaryFailureBanner({
   return (
     <Button
       accessibilityLabel={`Retry loading ${names}`}
-      className="self-start ml-6 mt-3"
+      className="self-center mt-3 mb-4"
       icon={<Button.Icon name="refresh" />}
       label={`Couldn\u2019t load ${names}`}
       onPress={onRetry}
