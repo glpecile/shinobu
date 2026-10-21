@@ -587,16 +587,19 @@ function DiaryFailureBanner({
   onRetry: () => void;
 }) {
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
+  // Centred by a wrapper, not `self-center`: on web Legend List puts the
+  // header in a non-flex div, where align-self does nothing.
   return (
-    <Button
-      accessibilityLabel={`Retry loading ${names}`}
-      className="self-center mt-3 mb-4"
-      icon={<Button.Icon name="refresh" />}
-      label={`Couldn\u2019t load ${names}`}
-      onPress={onRetry}
-      size="sm"
-      variant="quiet"
-    />
+    <View className="items-center mt-3 mb-4">
+      <Button
+        accessibilityLabel={`Retry loading ${names}`}
+        icon={<Button.Icon name="refresh" />}
+        label={`Couldn\u2019t load ${names}`}
+        onPress={onRetry}
+        size="sm"
+        variant="quiet"
+      />
+    </View>
   );
 }
 
