@@ -1,4 +1,5 @@
 const http = require("node:http");
+const path = require("node:path");
 
 const { getDefaultConfig } = require("expo/metro-config");
 const { withUniwindConfig } = require("uniwind/metro"); // make sure this import exists
@@ -13,6 +14,17 @@ const uniwindConfig = withUniwindConfig(config, {
   // optional: path to typings
   dtsFile: "./src/uniwind-types.d.ts",
 });
+
+// Uniwind 1.13 swaps `react-native` for a re-export that lacks RN 0.88's
+// `AssetRegistry`, so expo-asset (Android tab-icon fonts) gets undefined.
+// (docs/solutions/uniwind-rn-088-missing-asset-registry.md)
+const uniwindResolveRequest = uniwindConfig.resolver.resolveRequest;
+uniwindConfig.resolver.resolveRequest = (context, moduleName, platform) =>
+  platform !== "web" &&
+  moduleName === "react-native" &&
+  context.originModulePath.includes(`${path.sep}node_modules${path.sep}expo-asset${path.sep}`)
+    ? context.resolveRequest(context, moduleName, platform)
+    : uniwindResolveRequest(context, moduleName, platform);
 
 // --- Local worker proxy (web dev only) --------------------------------------
 // `bun web` (Metro) has no Worker, so the same-origin proxy paths the web app

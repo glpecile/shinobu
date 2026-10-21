@@ -38,3 +38,31 @@ Live QA:
 This is a draft checkpoint, not release approval. Complete the remaining live flows and review before marking the PR ready. Native dependency
 changes require `bun ios.clean` / `bun android.clean` for other checkouts; later
 source-only fixes hot reload.
+
+## Live QA checkpoint — 2026-10-20 (second pass)
+
+Metro on 8081 with the existing simulator sessions. Logs created during QA are
+real writes (Shinobu has no remove-from-history action):
+
+- Android: the SDK 58 APK installed over the old one without losing data. Every
+  launch logged `getAssetByID of undefined` from native-tab Material icons.
+  Uniwind's `react-native` re-export lacks RN 0.88's `AssetRegistry`, so
+  `metro.config.js` now routes expo-asset's `react-native` import to the real module
+  (`docs/solutions/uniwind-rn-088-missing-asset-registry.md`). After that, Android
+  launched without errors.
+- iOS movie: *Paddington in Peru* was logged to Simkl and Letterboxd.
+- Android movie: *Paddington 2* reached Simkl. The Letterboxd WebView write timed
+  out while the emulator was overloaded (load average about 42, 2.5 GB RAM,
+  `kcompactd` busy), and the failure showed a "Log on Letterboxd" link. Not
+  retried. The same write works on iOS, so the emulator is the likely cause,
+  not yet confirmed.
+- iOS TV: *Fawlty Towers* S1E1 was logged to Serializd and Simkl.
+  *Paddington* (1976) S1E1 and S1E2 were logged to Serializd. Simkl returned
+  `not_found` for that series (a gap in Simkl's catalog), and the app reported it
+  as skipped.
+- iOS list: the private Letterboxd list "Shinobu SDK58 QA" was created.
+- Web (user): logging *Vision* S01E03 worked. Renaming a list created moments
+  earlier showed "Install or update the Letterboxd script" until the page was
+  reloaded.
+- Still open: Android TV log, Android list creation, a Letterboxd retry on a
+  healthy Android emulator, and fresh connection flows for AniList and Simkl.
