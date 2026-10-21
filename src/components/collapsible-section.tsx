@@ -41,6 +41,7 @@ export function CollapsibleSection({
           accessibilityState={{ expanded: !collapsed }}
           className="flex-row items-center gap-2 shrink"
           onPress={toggle}
+          pressBehavior="immediate"
         >
           {leading}
           <Text className="text-xl font-display text-foreground shrink" numberOfLines={1}>

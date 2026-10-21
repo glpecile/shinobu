@@ -168,6 +168,7 @@ export function SeasonHeader({
         accessibilityState={{ expanded: open }}
         cardClassName={cn('flex-row items-center', hasBody && 'rounded-b-none')}
         onPress={onToggle}
+        pressBehavior="immediate"
       >
         <DisclosureChevron from="forward" open={open} size={16} />
         <View className="ml-3 flex-1">

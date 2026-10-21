@@ -52,6 +52,7 @@ export interface ActionableRowProps {
   /** ⌘/Ctrl+click target on web. */
   href: string;
   onPress: () => void;
+  pressBehavior?: ComponentProps<typeof PresstableScale>['pressBehavior'];
   onActions: (item: NormalizedMediaItem) => void;
   /** Poster and text; fills the available width when actions stay visible. */
   leading: ReactNode;
@@ -80,6 +81,7 @@ export function ActionableRow({
   item,
   href,
   onPress,
+  pressBehavior,
   onActions,
   leading,
   trailing,
@@ -92,6 +94,7 @@ export function ActionableRow({
 
   const pressProps = {
     ...accessibility,
+    pressBehavior,
     onLongPress: () => onActions(item),
     onPress: () => {
       if (newTab.opened()) return;
@@ -133,6 +136,7 @@ export function ActionableRow({
         className={cn('shrink-0 flex-row items-center justify-end self-stretch', showActions ? 'ml-2' : 'grow')}
         onLongPress={pressProps.onLongPress}
         onPress={pressProps.onPress}
+        pressBehavior={pressBehavior}
       >
         {trailing}
       </PresstableScale>

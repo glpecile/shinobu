@@ -191,8 +191,11 @@ function SidebarToggle({
     <PresstableOpacity
       accessibilityLabel={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       accessibilityRole="button"
+      accessibilityState={{ expanded: !collapsed }}
+      aria-expanded={!collapsed}
       className="h-14 items-center justify-center"
       onPress={onToggle}
+      pressBehavior="immediate"
       style={{ width: ICON_COL }}
     >
       <PanelIcon color={COLOR.foreground} collapsed={collapsed} animate={animate} />

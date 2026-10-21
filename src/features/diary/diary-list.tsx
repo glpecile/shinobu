@@ -514,6 +514,7 @@ function DiaryClusterRow({
         }
         onActions={onActions}
         onPress={() => onToggle(clusterKey)}
+        pressBehavior="immediate"
         trailing={
           <RowTrailing liked={view.liked} providers={view.providers} runCount={view.runCount} />
         }

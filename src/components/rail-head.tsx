@@ -57,6 +57,7 @@ export function RailHead({
       accessibilityState={{ expanded: open }}
       className={ROW}
       onPress={onToggle}
+      pressBehavior="immediate"
     >
       <OpenContext.Provider value={open}>{children}</OpenContext.Provider>
     </PresstableOpacity>

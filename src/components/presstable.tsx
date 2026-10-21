@@ -6,14 +6,21 @@ import { withUniwind } from '@/lib/with-uniwind';
 /**
  * The app's pressables — pressto (gesture-handler + reanimated, animated on
  * the UI thread) instead of react-native's core Pressable, with a built-in
- * leading-edge press debounce: the first press fires immediately, repeats
- * inside the window are dropped. This is what stops a quick double-tap on a
- * media card from pushing the details route twice. Both raw imports are
+ * repeat protection by default: the first press fires immediately, repeats
+ * within 500 ms are dropped. Disclosures use `pressBehavior="immediate"` so
+ * every press toggles, even during an animation. Both raw imports are
  * oxlint-banned; `withUniwind` because className on a raw third-party
  * component is silently dropped on native
  * (docs/solutions/uniwind-classname-third-party-components.md).
  */
 const PRESS_DEBOUNCE_MS = 500;
+
+export type PressBehavior = 'immediate' | 'prevent-repeat';
+
+type PressBehaviorProps = {
+  /** `immediate` accepts every press; `prevent-repeat` (default) drops repeats within 500 ms. */
+  pressBehavior?: PressBehavior;
+};
 
 /**
  * Android only, and the reason it's here rather than at a call site: pressto
@@ -56,10 +63,13 @@ const PressableScale = createAnimatedPressable<{ minScale?: number }>(
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
-function useDebouncedPress<Args extends unknown[]>(
+function usePressHandler<Args extends unknown[]>(
   onPress: ((...args: Args) => void) | undefined,
-): (...args: Args) => void {
+  pressBehavior: PressBehavior,
+): ((...args: Args) => void) | undefined {
   const lastPressAtRef = useRef(0);
+
+  if (pressBehavior === 'immediate') return onPress;
 
   return (...args: Args) => {
     const now = Date.now();
@@ -77,17 +87,18 @@ function useDebouncedPress<Args extends unknown[]>(
 export function PresstableScale({
   minScale,
   onPress,
+  pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> & {
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> & PressBehaviorProps & {
   minScale?: number;
 }) {
-  const debouncedPress = useDebouncedPress(onPress);
+  const handlePress = usePressHandler(onPress, pressBehavior);
   return (
     <UniwindPressableScale
       rippleColor={RIPPLE_COLOR}
       {...rest}
       metadata={{ minScale }}
-      onPress={debouncedPress}
+      onPress={handlePress}
     />
   );
 }
@@ -95,17 +106,18 @@ export function PresstableScale({
 /** Dims while pressed — buttons, icon taps, inline text actions. */
 export function PresstableOpacity({
   onPress,
+  pressBehavior = 'prevent-repeat',
   ...rest
-}: ComponentProps<typeof UniwindPressableOpacity> & {
+}: ComponentProps<typeof UniwindPressableOpacity> & PressBehaviorProps & {
   /** Web-only DOM handler, forwarded by pressto but omitted from its prop types. */
   onMouseDown?: MouseEventHandler<HTMLElement>;
 }) {
-  const debouncedPress = useDebouncedPress(onPress);
+  const handlePress = usePressHandler(onPress, pressBehavior);
   return (
     <UniwindPressableOpacity
       rippleColor={RIPPLE_COLOR}
       {...rest}
-      onPress={debouncedPress}
+      onPress={handlePress}
     />
   );
 }

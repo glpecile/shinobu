@@ -44,6 +44,7 @@ export function ExpandableText({
       className={cn('mb-6', className)}
       disabled={!expandable}
       onPress={toggle}
+      pressBehavior="immediate"
     >
       <View className="flex-row items-center justify-between mb-1.5">
         <Text className="text-foreground font-sans-semibold text-base">

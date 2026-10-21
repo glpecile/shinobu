@@ -22,6 +22,7 @@
     "shinobu/no-hardcoded-routes": "error",
     "shinobu/log-color-only": "error",
     "shinobu/no-pointer-events-prop": "error",
+    "shinobu/immediate-disclosures": "error",
     "no-underscore-dangle": [
       "warn",
       {
@@ -166,7 +167,7 @@
               "TouchableHighlight",
               "TouchableWithoutFeedback"
             ],
-            "message": "Use PresstableScale/PresstableOpacity from @/components/presstable (pressto) \u2014 presses are debounced there so a double-tap can't navigate twice."
+            "message": "Use PresstableScale/PresstableOpacity from @/components/presstable. Use pressBehavior=\"immediate\" for disclosures; other actions prevent repeat presses by default."
           },
           {
             "name": "react-native-keyboard-controller",
