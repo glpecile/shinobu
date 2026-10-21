@@ -1,17 +1,27 @@
-import { Host, Switch } from '@expo/ui';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useState } from 'react';
-import { Text, useColorScheme, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { CARD_SHELL } from '@/components/card-shell';
 import { Eyebrow } from '@/components/eyebrow';
-import { cn } from '@/lib/cn';
+import { GroupedList } from '@/components/grouped-list';
+import { NativeSwitch } from '@/components/native-switch';
+import { useThemeColor } from '@/lib/theme-color';
+import {
+  NOTIFICATION_KINDS,
+  type NotificationKind,
+} from '@/features/notifications/compute-schedule';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
 import { cancelAllScheduledNotifications, scheduleTestNotification } from '@/features/notifications/scheduler';
 import type { UpNextInputs } from '@/features/up-next/types';
-import { setNotificationsEnabled, useNotificationsEnabled } from '@/state/prefs/notifications';
+import {
+  setNotificationKindMuted,
+  setNotificationsEnabled,
+  useNotificationKindEnabled,
+  useNotificationsEnabled,
+} from '@/state/prefs/notifications';
 import { upNextQueryKeys } from '@/state/queries/up-next';
 
 /**
@@ -25,12 +35,40 @@ function sampleTrackedItemId(queryClient: QueryClient): string | undefined {
   return cached?.progress[0]?.item.id ?? cached?.anilist[0]?.item.id;
 }
 
+const KIND_ICONS = {
+  episode: 'tv-outline',
+  theatrical: 'film-outline',
+  digital: 'play-circle-outline',
+  physical: 'disc-outline',
+} as const satisfies Record<NotificationKind, string>;
+
+/** Mutes one kind and reschedules now, so the change applies before the next foreground. */
+function KindToggle({ kind, label }: { kind: NotificationKind; label: string }) {
+  const enabled = useNotificationKindEnabled(kind);
+  const queryClient = useQueryClient();
+  const muted = useThemeColor('--color-muted');
+
+  async function handleChange(next: boolean): Promise<void> {
+    setNotificationKindMuted(kind, !next);
+    await refreshNotifications(createRefreshDeps(queryClient), { throttle: false });
+  }
+
+  return (
+    <GroupedList.Item className="flex-row items-center">
+      <Ionicons color={muted} name={KIND_ICONS[kind]} size={18} />
+      <Text className="flex-1 mx-3 text-foreground font-sans text-base" numberOfLines={1}>
+        {label}
+      </Text>
+      <NativeSwitch accessibilityLabel={label} onValueChange={handleChange} value={enabled} />
+    </GroupedList.Item>
+  );
+}
+
 export function NotificationsSettingsSection() {
   const enabled = useNotificationsEnabled();
   const queryClient = useQueryClient();
   const [requesting, setRequesting] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const colorScheme = useColorScheme();
 
   async function handleToggle(next: boolean): Promise<void> {
     if (!next) {
@@ -58,45 +96,40 @@ export function NotificationsSettingsSection() {
   return (
     <View>
       <Eyebrow className="mb-3">Notifications</Eyebrow>
-      <View className={cn(CARD_SHELL, 'gap-3')}>
-        <View className="flex-row items-center justify-between">
+      <GroupedList>
+        <GroupedList.Item className="flex-row items-center">
           <View className="flex-1 mr-3">
-            <Text className="text-foreground font-sans-semibold text-base">
-              New episode alerts
-            </Text>
+            <Text className="text-foreground font-sans-semibold text-base">Release alerts</Text>
             <Text className="text-muted font-sans text-xs mt-0.5">
-              Local notifications when a tracked show's next episode airs.
+              {permissionDenied
+                ? "Notifications are blocked for Shinobu. Allow them in your device's settings."
+                : 'Local notifications when something you track airs or comes out.'}
             </Text>
           </View>
-          {/* Android's Jetpack Compose Switch must live under a Host — without
-              one it throws "SwitchView must be rendered as a direct child of
-              a <Host> component" the moment this section mounts (e.g. on tab
-              switch). iOS's SwiftUI Toggle self-hosts and doesn't need it.
-              `seedColor` themes the switch with the brand accent (matching
-              `--color-accent` / NativeTabs' tintColor) instead of the
-              platform's default Material blue; `colorScheme` follows the
-              device theme instead of Compose's own default (light). */}
-          <Host colorScheme={colorScheme ?? undefined} ignoreSafeArea="all" matchContents seedColor="#DC2626">
-            <Switch disabled={requesting} onValueChange={handleToggle} value={enabled} />
-          </Host>
-        </View>
-        {permissionDenied && (
-          <Text className="text-muted font-sans text-xs">
-            Notifications are blocked for Shinobu — enable them in your device's
-            system settings.
-          </Text>
-        )}
-        {__DEV__ && enabled && (
-          <Button
-            className="self-start"
-            icon={<Button.Icon name="notifications-outline" />}
-            label="Send test notification"
-            onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
-            size="sm"
-            variant="quiet"
+          <NativeSwitch
+            accessibilityLabel="Release alerts"
+            disabled={requesting}
+            onValueChange={handleToggle}
+            value={enabled}
           />
+        </GroupedList.Item>
+        {enabled &&
+          NOTIFICATION_KINDS.map(({ kind, label }) => (
+            <KindToggle key={kind} kind={kind} label={label} />
+          ))}
+        {__DEV__ && enabled && (
+          <GroupedList.Item>
+            <Button
+              className="self-start"
+              icon={<Button.Icon name="notifications-outline" />}
+              label="Send test notification"
+              onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
+              size="sm"
+              variant="quiet"
+            />
+          </GroupedList.Item>
         )}
-      </View>
+      </GroupedList>
     </View>
   );
 }

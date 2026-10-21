@@ -10,7 +10,7 @@ import type {
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { NotificationCandidate } from './compute-schedule';
-import { computeNotificationSchedule, hashSchedule } from './compute-schedule';
+import { computeNotificationSchedule, hashSchedule, notificationKind } from './compute-schedule';
 
 const NOW = new Date('2026-07-23T12:00:00.000Z');
 
@@ -258,6 +258,21 @@ describe('computeNotificationSchedule — release candidates', () => {
       'digital',
       'theatrical',
     ]);
+  });
+
+  test('a muted kind is left out of the batch', () => {
+    const now = localTime('2026-07-23', 12);
+    const date = localDay(now, 2);
+    const result = computeNotificationSchedule(
+      inputs(
+        [traktInput('e1', new Date(now.getTime() + 60 * 60 * 1000).toISOString())],
+        [],
+        [releaseInput('f1', date, 'theatrical'), releaseInput('f1', date, 'digital')],
+      ),
+      now,
+      new Set(['theatrical']),
+    );
+    expect(result.map(notificationKind).sort()).toEqual(['digital', 'episode']);
   });
 
   test('the 50-cap holds nearest-first across mixed kinds', () => {

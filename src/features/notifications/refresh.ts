@@ -3,12 +3,12 @@ import { Platform } from 'react-native';
 
 import type { UpNextInputs } from '@/features/up-next/types';
 import type { ProviderId } from '@/lib/providers/types';
-import { getNotificationsEnabled } from '@/state/prefs/notifications';
+import { getMutedNotificationKinds, getNotificationsEnabled } from '@/state/prefs/notifications';
 import { prefsStorage } from '@/state/prefs/storage';
 import { fetchUpNextInputs } from '@/state/queries/up-next';
 import { usableProviderIds } from '@/state/session/trakt-migration';
 
-import { computeNotificationSchedule } from './compute-schedule';
+import { computeNotificationSchedule, type NotificationKind } from './compute-schedule';
 import { replaceScheduledNotifications } from './scheduler';
 import type { ScheduleResult } from './scheduler/types';
 
@@ -29,6 +29,7 @@ const LAST_REFRESH_KEY = 'notifications.lastForegroundRefresh';
 
 export interface RefreshNotificationsDeps {
   isEnabled: () => boolean;
+  mutedKinds: () => ReadonlySet<NotificationKind>;
   isWeb: () => boolean;
   connectedProviders: () => readonly ProviderId[];
   gatherInputs: (connected: readonly ProviderId[]) => Promise<UpNextInputs>;
@@ -66,13 +67,15 @@ export async function refreshNotifications(
   // rejection, so the other provider's candidates still get scheduled (R4).
   const connected = deps.connectedProviders();
   const inputs = await deps.gatherInputs(connected);
-  const candidates = computeNotificationSchedule(inputs, deps.now());
+  if (!deps.isEnabled()) return;
+  const candidates = computeNotificationSchedule(inputs, deps.now(), deps.mutedKinds());
   await deps.schedule(candidates);
 }
 
 export function createRefreshDeps(queryClient: QueryClient): RefreshNotificationsDeps {
   return {
     isEnabled: getNotificationsEnabled,
+    mutedKinds: getMutedNotificationKinds,
     isWeb: () => Platform.OS === 'web',
     // Usable, not merely connected (plan 0034 U9): a MigrationNeeded Trakt
     // session must not schedule notification fetches that can only 401.

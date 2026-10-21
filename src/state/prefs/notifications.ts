@@ -1,5 +1,10 @@
 import { useSyncExternalStore } from 'react';
 
+import {
+  NOTIFICATION_KINDS,
+  type NotificationKind,
+} from '@/features/notifications/compute-schedule';
+
 import { isServer, prefsStorage } from './storage';
 
 /**
@@ -43,4 +48,39 @@ function subscribe(onStoreChange: () => void): () => void {
 /** Reactive read of the toggle, for the settings screen. */
 export function useNotificationsEnabled(): boolean {
   return useSyncExternalStore(subscribe, readEnabled, getServerSnapshot);
+}
+
+/**
+ * Per-kind mutes under the opt-in above. Absent means on, so a kind added
+ * later starts enabled.
+ */
+const MUTED_PREFIX = 'notifications.muted.';
+
+export function getMutedNotificationKinds(): Set<NotificationKind> {
+  return new Set(
+    NOTIFICATION_KINDS.map(({ kind }) => kind).filter(
+      (kind) => prefsStorage.getString(`${MUTED_PREFIX}${kind}`) === 'true',
+    ),
+  );
+}
+
+export function setNotificationKindMuted(kind: NotificationKind, muted: boolean): void {
+  if (muted) prefsStorage.set(`${MUTED_PREFIX}${kind}`, 'true');
+  else prefsStorage.remove(`${MUTED_PREFIX}${kind}`);
+}
+
+function subscribeMuted(onStoreChange: () => void): () => void {
+  const subscription = prefsStorage.addOnValueChangedListener((key) => {
+    if (key.startsWith(MUTED_PREFIX)) onStoreChange();
+  });
+  return () => subscription.remove();
+}
+
+/** Reactive read of one kind's toggle, for the settings screen. */
+export function useNotificationKindEnabled(kind: NotificationKind): boolean {
+  return useSyncExternalStore(
+    subscribeMuted,
+    () => isServer() || prefsStorage.getString(`${MUTED_PREFIX}${kind}`) !== 'true',
+    () => true,
+  );
 }

@@ -3,9 +3,14 @@ import * as Notifications from 'expo-notifications';
 import type {
   EpisodeNotificationCandidate,
   NotificationCandidate,
+  NotificationKind,
   ReleaseNotificationCandidate,
 } from '@/features/notifications/compute-schedule';
-import { hashSchedule } from '@/features/notifications/compute-schedule';
+import {
+  hashSchedule,
+  NOTIFICATION_KINDS,
+  notificationKind,
+} from '@/features/notifications/compute-schedule';
 
 import { checkAndStoreHash, clearStoredHash } from './hash-guard';
 import type { ScheduleResult } from './types';
@@ -16,18 +21,41 @@ import type { ScheduleResult } from './types';
  * diffing, so the only state that can drift is "did the batch change at all."
  */
 
-export const NEW_EPISODES_CHANNEL_ID = 'new-episodes';
+/**
+ * One Android channel per notification kind, matching the in-app toggles. The
+ * id doubles as the thread, which stacks each kind separately on Android and
+ * in iOS Notification Center. `new-episodes` predates the split; keeping it
+ * keeps users' channel settings.
+ */
+const CHANNEL_IDS: Record<NotificationKind, string> = {
+  episode: 'new-episodes',
+  theatrical: 'theatrical-releases',
+  digital: 'digital-releases',
+  physical: 'physical-releases',
+};
 
-let channelEnsured = false;
+let channelsEnsured = false;
+let pendingMutation: Promise<unknown> = Promise.resolve();
 
-async function ensureChannel(): Promise<void> {
-  if (channelEnsured) return;
-  await Notifications.setNotificationChannelAsync(NEW_EPISODES_CHANNEL_ID, {
-    name: 'New episodes',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    lightColor: '#DC2626',
-  });
-  channelEnsured = true;
+/** Keep rapid mute changes and master-off ordered across native async calls. */
+function mutateSchedule<T>(operation: () => Promise<T>): Promise<T> {
+  const result = pendingMutation.then(operation);
+  pendingMutation = result.catch(() => { clearStoredHash(); });
+  return result;
+}
+
+async function ensureChannels(): Promise<void> {
+  if (channelsEnsured) return;
+  await Promise.all(
+    NOTIFICATION_KINDS.map(({ kind, label }) =>
+      Notifications.setNotificationChannelAsync(CHANNEL_IDS[kind], {
+        name: label,
+        importance: Notifications.AndroidImportance.DEFAULT,
+        lightColor: '#DC2626',
+      }),
+    ),
+  );
+  channelsEnsured = true;
 }
 
 /** Which release just landed, in the words a schedule reader uses (plan 0030 R3). */
@@ -62,44 +90,49 @@ function notificationBody(candidate: NotificationCandidate): string {
 }
 
 async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
+  const channelId = CHANNEL_IDS[notificationKind(candidate)];
   await Notifications.scheduleNotificationAsync({
     content: {
       title: candidate.title,
       body: notificationBody(candidate),
       data: { itemId: candidate.itemId, mediaType: candidate.kind === 'episode' ? 'TV' : 'MOVIE' },
+      threadIdentifier: channelId,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(candidate.fireInstant),
-      channelId: NEW_EPISODES_CHANNEL_ID,
+      channelId,
     },
   });
 }
 
 /**
  * Replaces the entire scheduled batch with `candidates`, or does nothing if
- * the content hash is unchanged from the last replace (R7). Never partially
- * applies — cancel and reschedule both happen, or neither does.
+ * the content hash is unchanged from the last replace (R7).
  */
 export async function replaceScheduledNotifications(
   candidates: readonly NotificationCandidate[],
 ): Promise<ScheduleResult> {
-  // Replace existing payloads once so cold Trakt taps carry their ID namespace.
-  const hash = `typed-links:${hashSchedule(candidates)}`;
-  if (checkAndStoreHash(hash) === 'skipped') return 'skipped';
+  return mutateSchedule(async () => {
+    // A new prefix reschedules existing batches once, onto the per-kind channels.
+    const hash = `grouped:${hashSchedule(candidates)}`;
+    if (checkAndStoreHash(hash) === 'skipped') return 'skipped';
 
-  await ensureChannel();
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  for (const candidate of candidates) {
-    await scheduleOne(candidate);
-  }
-  return 'replaced';
+    await ensureChannels();
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    for (const candidate of candidates) {
+      await scheduleOne(candidate);
+    }
+    return 'replaced';
+  });
 }
 
 /** Cancels every scheduled notification and forgets the batch hash (toggle-off). */
 export async function cancelAllScheduledNotifications(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  clearStoredHash();
+  await mutateSchedule(async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    clearStoredHash();
+  });
 }
 
 /**
@@ -108,7 +141,7 @@ export async function cancelAllScheduledNotifications(): Promise<void> {
  * tap-through is verifiable end to end, not just permission + delivery.
  */
 export async function scheduleTestNotification(itemId?: string): Promise<void> {
-  await ensureChannel();
+  await ensureChannels();
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Shinobu',
@@ -118,7 +151,7 @@ export async function scheduleTestNotification(itemId?: string): Promise<void> {
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: 5,
-      channelId: NEW_EPISODES_CHANNEL_ID,
+      channelId: CHANNEL_IDS.episode,
     },
   });
 }

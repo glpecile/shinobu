@@ -48,6 +48,7 @@ function makeDeps(overrides: Partial<RefreshNotificationsDeps> = {}) {
   let throttled = false;
   const deps: RefreshNotificationsDeps = {
     isEnabled: () => true,
+    mutedKinds: () => new Set(),
     isWeb: () => false,
     connectedProviders: () => ['trakt'],
     gatherInputs: async () => {
@@ -81,6 +82,19 @@ describe('refreshNotifications', () => {
     const { deps, calls } = makeDeps({ isWeb: () => true });
     await refreshNotifications(deps);
     expect(calls.gather).toBe(0);
+  });
+
+  test('turning alerts off while inputs load prevents scheduling', async () => {
+    let enabled = true;
+    const { deps, calls } = makeDeps({
+      isEnabled: () => enabled,
+      gatherInputs: async () => {
+        enabled = false;
+        return EMPTY_INPUTS;
+      },
+    });
+    await refreshNotifications(deps, { throttle: false });
+    expect(calls.schedule).toBe(0);
   });
 
   test('two foreground triggers within the throttle window run once', async () => {
