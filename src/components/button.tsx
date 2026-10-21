@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, type ReactNode, useContext } from 'react';
-import { Platform, Text } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { Spinner } from '@/components/spinner';
 import Svg, { Path } from 'react-native-svg';
 import {
@@ -448,4 +448,24 @@ export function Button({
   );
 }
 
+/**
+ * An outlined pill around ghost `Button`s, so icon actions read as one control.
+ * Beside a labelled md `Button` it lines up as that button's extension: a 44px
+ * icon button, `p-0.5`, and the border make the same 50px. `floating` is the
+ * surfaced, shadowed version that hovers over content (the episode pager).
+ */
+function ButtonCapsule({ floating = false, className, children }: {
+  floating?: boolean;
+  /** Layout only. */
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <View className={cn('flex-row items-center rounded-full border border-border', floating ? 'p-1.25 bg-surface shadow-md' : 'p-0.5', className)}>
+      {children}
+    </View>
+  );
+}
+
 Button.Icon = ButtonIcon;
+Button.Capsule = ButtonCapsule;

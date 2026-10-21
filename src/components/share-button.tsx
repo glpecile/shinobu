@@ -4,7 +4,6 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Share, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { ButtonCapsule } from '@/components/button-capsule';
 import { RoundIconButton } from '@/components/round-icon-button';
 import { Tooltip } from '@/components/tooltip';
 import { haptics } from '@/lib/haptics';
@@ -50,11 +49,11 @@ export function WithShareButton({ href, className, children }: { href: string; c
   return (
     <View className={cn('flex-row items-center gap-2', className)}>
       <View className="flex-1">{children}</View>
-      <ButtonCapsule>
+      <Button.Capsule>
         <Tooltip label="Share">
           <Button icon={<Button.Icon name="share-outline" />} iconOnly label="Share" onPress={() => { haptics.selection(); void shareLink(href); }} variant="ghost" />
         </Tooltip>
-      </ButtonCapsule>
+      </Button.Capsule>
     </View>
   );
 }
