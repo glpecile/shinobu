@@ -75,13 +75,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
               }
               #boot-loader {
                 background-color: #0a0a0a;
-                color: #ffffff;
-              }
-              #boot-loader [data-boot-mark] {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 12px;
               }
               @media (prefers-color-scheme: light) {
                 html, body {
@@ -90,7 +83,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
                 }
                 #boot-loader {
                   background-color: #ffffff;
-                  color: #0a0a0a;
                 }
               }
             `,
@@ -122,12 +114,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
           real, reproducible flash of the wrong gray background with
           unstyled text on boot (docs/solutions/web-fouc-on-boot.md) — this
           div just covers the whole viewport with the real dark background
-          and the wordmark until the app confirms it's ready to be shown.
+          and the native splash mark until the app confirms it's ready to be shown.
 
            Inline media queries select the same system theme as the app
            before its external stylesheet loads, without a hydration race.
-          System font stack only — no custom font (Space Grotesk) load to
-          wait on here, that's the whole point.
 
            Revealed by `_layout.tsx` once fonts are loaded (the same signal
           that already gates first paint of the real tree). The inline
@@ -143,28 +133,20 @@ export default function Root({ children }: { children: React.ReactNode }) {
             inset: 0,
             zIndex: 9999,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 12,
-            fontFamily:
-              "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           }}
         >
-          <div data-boot-mark="">
-            <span style={{ fontSize: 40, color: "#dc2626", lineHeight: 1 }}>
-              忍
-            </span>
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 600,
-                letterSpacing: "0.02em",
-              }}
-            >
-              Shinobu
-            </span>
-          </div>
+          <img
+            data-boot-mark=""
+            // A copy of the native splash image at expo-splash-screen's
+            // imageWidth. It lives in public/ because +html.tsx assets
+            // never reach the client bundle.
+            src="/splash-icon.png"
+            width={200}
+            height={200}
+            alt=""
+          />
         </div>
         <script
           dangerouslySetInnerHTML={{
