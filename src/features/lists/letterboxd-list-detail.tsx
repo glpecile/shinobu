@@ -42,6 +42,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   // read instead of treating every scraped duration as unknown.
   const progress = useMediaProgress(loaded);
   const items = progress.items;
+  const progressById = new Map(items.map((item, index) => [item.id, progress.progress[index]]));
   const shareHref = routes.letterboxdList(owner, slug);
   if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider="letterboxd" shareHref={shareHref} url={url} />;
   const title = pages.data.pages[0].title;
@@ -72,7 +73,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
         <Layout
           showActions={target != null}
           itemLayoutAnimation={reducedMotion ? undefined : membershipLayout}
-          showWatched
+          watched={(item) => progressById.get(item.id)}
           entries={sortMediaEntries(items.map((item) => ({ id: item.id, item, sources: [], sourceIds: [item.id] })), sort)}
           footer={<LoadMoreFooter failed={pages.isFetchNextPageError} loading={pages.isFetchingNextPage} noun="films" onRetry={() => void pages.fetchNextPage()} />}
           onEndReached={pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError ? () => void pages.fetchNextPage() : undefined}

@@ -4,7 +4,7 @@ import type { NormalizedEpisode, NormalizedSeason } from '@/types/media';
 export type SeasonRow =
   | { kind: 'season'; key: string; season: NormalizedSeason; open: boolean }
   | { kind: 'mark'; key: string; season: NormalizedSeason }
-  | { kind: 'episode'; key: string; season: NormalizedSeason; episode: NormalizedEpisode; last: boolean };
+  | { kind: 'episode'; key: string; season: NormalizedSeason; episode: NormalizedEpisode; index: number; last: boolean };
 
 /** Closed seasons contribute only their header; expanded episodes remain individual list cells. */
 export function seasonRows(
@@ -26,6 +26,7 @@ export function seasonRows(
         key: `episode-${season.number}-${episode.number}`,
         season,
         episode,
+        index,
         last: index === season.episodes.length - 1,
       });
     });

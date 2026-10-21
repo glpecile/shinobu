@@ -45,8 +45,8 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   const sort = useMediaSort('lists');
   const reducedMotion = useReducedMotion();
   const progress = useMediaProgress([...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]);
-  const byId = new Map(progress.items.map((item) => [item.id, item]));
-  const entries = list.entries.map((entry) => ({ ...entry, item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)) }));
+  const byId = new Map(progress.items.map((item, index) => [item.id, { item, state: progress.progress[index] }]));
+  const entries = list.entries.map((entry) => ({ ...entry, item: applyPrimaryMetadata(entry.item, byId.get(entry.item.id)?.item), progress: byId.get(entry.item.id)?.state }));
   const pushRoute = usePushRoute();
   const { openActions, sheetProps } = useCardActions();
   return (
@@ -88,7 +88,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             }
             onActions={(item) => { setActionEntry(entry); openActions(item); }}
             onPress={() => pushRoute(entryRoute(entry))}
-            trailing={<View className="flex-row items-center gap-2"><WatchedMark item={entry.item} showProgress /></View>}
+            trailing={<View className="flex-row items-center gap-2">{entry.progress != null && <WatchedMark item={entry.item} showProgress state={entry.progress} />}</View>}
           />
         )}
         ListFooterComponent={!list.complete ? (

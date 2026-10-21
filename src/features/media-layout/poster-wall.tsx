@@ -7,6 +7,7 @@ import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterFace } from '@/components/poster-face';
 import { PresstableScale } from '@/components/presstable';
 import { WatchedMark } from '@/components/watched-mark';
+import type { MediaProgress } from '@/lib/media-progress';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -63,13 +64,13 @@ function PosterCell({
   entry,
   onPress,
   onActions,
-  showWatched,
+  watched,
   showActions,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
-  showWatched?: boolean;
+  watched?: MediaProgress;
   showActions?: boolean;
 }) {
   const item = entry.item;
@@ -151,7 +152,7 @@ function PosterCell({
             uri={item.coverImage}
           />
         </PresstableScale>
-        {showWatched && <WatchedMark item={item} poster showProgress />}
+        {watched != null && <WatchedMark item={item} poster showProgress state={watched} />}
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
         {(process.env.EXPO_OS === 'web' || showActions) && (
@@ -184,7 +185,7 @@ export function PosterWall({
   onRefresh,
   onEndReached,
   footer,
-  showWatched,
+  watched,
   showActions,
   itemLayoutAnimation,
 }: MediaLayoutProps) {
@@ -202,6 +203,7 @@ export function PosterWall({
         paddingBottom: showActions ? 96 : undefined,
       }}
       data={entries}
+      extraData={watched}
       itemLayoutAnimation={itemLayoutAnimation}
       // Two rows ahead rather than the 250px default, which is barely one
       // poster row: a fast fling outran it and revealed rows filling in
@@ -229,7 +231,7 @@ export function PosterWall({
           entry={entry}
           onActions={onItemActions}
           onPress={onItemPress}
-          showWatched={showWatched}
+          watched={watched?.(entry.item)}
           showActions={showActions}
         />
       )}
