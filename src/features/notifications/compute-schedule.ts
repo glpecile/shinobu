@@ -63,6 +63,21 @@ export type NotificationCandidate =
   | EpisodeNotificationCandidate
   | ReleaseNotificationCandidate;
 
+/** What a notification announces: the unit users mute and Android groups by channel. */
+export type NotificationKind = 'episode' | ReleaseNotificationCandidate['release'];
+
+/** Settings rows and Android channel names, in display order. */
+export const NOTIFICATION_KINDS: readonly { kind: NotificationKind; label: string }[] = [
+  { kind: 'episode', label: 'New episodes' },
+  { kind: 'theatrical', label: 'In theaters' },
+  { kind: 'digital', label: 'Streaming releases' },
+  { kind: 'physical', label: 'Disc releases' },
+];
+
+export function notificationKind(candidate: NotificationCandidate): NotificationKind {
+  return candidate.kind === 'release' ? candidate.release : 'episode';
+}
+
 /** Matches Up Next's Calendar window (plan 0019) — a constant, not a design choice. */
 const WINDOW_DAYS = 7;
 const WINDOW_MS = WINDOW_DAYS * 24 * 60 * 60 * 1000;
@@ -364,6 +379,7 @@ function stripInternalFields(raw: RawCandidate): NotificationCandidate {
 export function computeNotificationSchedule(
   inputs: UpNextInputs,
   now: Date,
+  muted: ReadonlySet<NotificationKind> = new Set(),
 ): NotificationCandidate[] {
   const anilistCandidates = inputs.anilist
     .map(anilistCandidate)
@@ -392,8 +408,11 @@ export function computeNotificationSchedule(
   // Collapse before the cap, not after: the whole point is that a season drop
   // costs one slot. Sorting last keeps a collapsed batch filed under the
   // instant it actually fires on.
+  // Muted kinds drop before the cap, so they never take another kind's slot.
   return collapseBatches(
-    deduped.filter((candidate) => inWindow(candidate, now)),
+    deduped.filter(
+      (candidate) => inWindow(candidate, now) && !muted.has(notificationKind(candidate)),
+    ),
     now,
   )
     .sort((a, b) => fireOrder(a) - fireOrder(b))

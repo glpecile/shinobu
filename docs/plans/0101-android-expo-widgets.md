@@ -74,7 +74,9 @@ a theatrical, digital, or physical release). Each kind now gets its own
 Android channel (`new-episodes`, `theatrical-releases`, `digital-releases`,
 `physical-releases`), so system settings can mute one kind without the others.
 The channel id is also the `threadIdentifier`, which stacks each kind on its
-own in the Android shade and in iOS Notification Center. `new-episodes` keeps
+own in the Android shade and in iOS Notification Center. Settings has an
+in-app switch per kind under the main toggle, on both platforms. A muted kind
+is dropped before the 50-notification cap, so it never uses a slot. `new-episodes` keeps
 its id, so existing channel settings survive. A new hash prefix reschedules
 the existing batch once, onto the new channels. This is a JS-only change, so
 no native rebuild is needed. Web is unchanged.

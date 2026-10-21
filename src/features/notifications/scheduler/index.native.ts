@@ -3,9 +3,14 @@ import * as Notifications from 'expo-notifications';
 import type {
   EpisodeNotificationCandidate,
   NotificationCandidate,
+  NotificationKind,
   ReleaseNotificationCandidate,
 } from '@/features/notifications/compute-schedule';
-import { hashSchedule } from '@/features/notifications/compute-schedule';
+import {
+  hashSchedule,
+  NOTIFICATION_KINDS,
+  notificationKind,
+} from '@/features/notifications/compute-schedule';
 
 import { checkAndStoreHash, clearStoredHash } from './hash-guard';
 import type { ScheduleResult } from './types';
@@ -16,33 +21,27 @@ import type { ScheduleResult } from './types';
  * diffing, so the only state that can drift is "did the batch change at all."
  */
 
-type NotificationGroup = 'episode' | ReleaseNotificationCandidate['release'];
-
 /**
- * One Android channel per kind of news, so system settings can mute theatrical
- * releases without muting episodes. The id doubles as the thread, which stacks
- * each kind separately on Android and in iOS Notification Center.
- * `new-episodes` predates the split; keeping it keeps users' channel settings.
+ * One Android channel per notification kind, matching the in-app toggles. The
+ * id doubles as the thread, which stacks each kind separately on Android and
+ * in iOS Notification Center. `new-episodes` predates the split; keeping it
+ * keeps users' channel settings.
  */
-const CHANNELS: Record<NotificationGroup, { id: string; name: string }> = {
-  episode: { id: 'new-episodes', name: 'New episodes' },
-  theatrical: { id: 'theatrical-releases', name: 'In theaters' },
-  digital: { id: 'digital-releases', name: 'Streaming releases' },
-  physical: { id: 'physical-releases', name: 'Disc releases' },
+const CHANNEL_IDS: Record<NotificationKind, string> = {
+  episode: 'new-episodes',
+  theatrical: 'theatrical-releases',
+  digital: 'digital-releases',
+  physical: 'physical-releases',
 };
-
-function channelFor(candidate: NotificationCandidate) {
-  return CHANNELS[candidate.kind === 'release' ? candidate.release : 'episode'];
-}
 
 let channelsEnsured = false;
 
 async function ensureChannels(): Promise<void> {
   if (channelsEnsured) return;
   await Promise.all(
-    Object.values(CHANNELS).map((channel) =>
-      Notifications.setNotificationChannelAsync(channel.id, {
-        name: channel.name,
+    NOTIFICATION_KINDS.map(({ kind, label }) =>
+      Notifications.setNotificationChannelAsync(CHANNEL_IDS[kind], {
+        name: label,
         importance: Notifications.AndroidImportance.DEFAULT,
         lightColor: '#DC2626',
       }),
@@ -83,18 +82,18 @@ function notificationBody(candidate: NotificationCandidate): string {
 }
 
 async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
-  const channel = channelFor(candidate);
+  const channelId = CHANNEL_IDS[notificationKind(candidate)];
   await Notifications.scheduleNotificationAsync({
     content: {
       title: candidate.title,
       body: notificationBody(candidate),
       data: { itemId: candidate.itemId, mediaType: candidate.kind === 'episode' ? 'TV' : 'MOVIE' },
-      threadIdentifier: channel.id,
+      threadIdentifier: channelId,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(candidate.fireInstant),
-      channelId: channel.id,
+      channelId,
     },
   });
 }
@@ -141,7 +140,7 @@ export async function scheduleTestNotification(itemId?: string): Promise<void> {
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: 5,
-      channelId: CHANNELS.episode.id,
+      channelId: CHANNEL_IDS.episode,
     },
   });
 }

@@ -48,6 +48,7 @@ function makeDeps(overrides: Partial<RefreshNotificationsDeps> = {}) {
   let throttled = false;
   const deps: RefreshNotificationsDeps = {
     isEnabled: () => true,
+    mutedKinds: () => new Set(),
     isWeb: () => false,
     connectedProviders: () => ['trakt'],
     gatherInputs: async () => {
