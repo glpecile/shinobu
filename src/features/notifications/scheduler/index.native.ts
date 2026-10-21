@@ -16,18 +16,39 @@ import type { ScheduleResult } from './types';
  * diffing, so the only state that can drift is "did the batch change at all."
  */
 
-export const NEW_EPISODES_CHANNEL_ID = 'new-episodes';
+type NotificationGroup = 'episode' | ReleaseNotificationCandidate['release'];
 
-let channelEnsured = false;
+/**
+ * One Android channel per kind of news, so system settings can mute theatrical
+ * releases without muting episodes. The id doubles as the thread, which stacks
+ * each kind separately on Android and in iOS Notification Center.
+ * `new-episodes` predates the split; keeping it keeps users' channel settings.
+ */
+const CHANNELS: Record<NotificationGroup, { id: string; name: string }> = {
+  episode: { id: 'new-episodes', name: 'New episodes' },
+  theatrical: { id: 'theatrical-releases', name: 'In theaters' },
+  digital: { id: 'digital-releases', name: 'Streaming releases' },
+  physical: { id: 'physical-releases', name: 'Disc releases' },
+};
 
-async function ensureChannel(): Promise<void> {
-  if (channelEnsured) return;
-  await Notifications.setNotificationChannelAsync(NEW_EPISODES_CHANNEL_ID, {
-    name: 'New episodes',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    lightColor: '#DC2626',
-  });
-  channelEnsured = true;
+function channelFor(candidate: NotificationCandidate) {
+  return CHANNELS[candidate.kind === 'release' ? candidate.release : 'episode'];
+}
+
+let channelsEnsured = false;
+
+async function ensureChannels(): Promise<void> {
+  if (channelsEnsured) return;
+  await Promise.all(
+    Object.values(CHANNELS).map((channel) =>
+      Notifications.setNotificationChannelAsync(channel.id, {
+        name: channel.name,
+        importance: Notifications.AndroidImportance.DEFAULT,
+        lightColor: '#DC2626',
+      }),
+    ),
+  );
+  channelsEnsured = true;
 }
 
 /** Which release just landed, in the words a schedule reader uses (plan 0030 R3). */
@@ -62,16 +83,18 @@ function notificationBody(candidate: NotificationCandidate): string {
 }
 
 async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
+  const channel = channelFor(candidate);
   await Notifications.scheduleNotificationAsync({
     content: {
       title: candidate.title,
       body: notificationBody(candidate),
       data: { itemId: candidate.itemId, mediaType: candidate.kind === 'episode' ? 'TV' : 'MOVIE' },
+      threadIdentifier: channel.id,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(candidate.fireInstant),
-      channelId: NEW_EPISODES_CHANNEL_ID,
+      channelId: channel.id,
     },
   });
 }
@@ -84,11 +107,11 @@ async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
 export async function replaceScheduledNotifications(
   candidates: readonly NotificationCandidate[],
 ): Promise<ScheduleResult> {
-  // Replace existing payloads once so cold Trakt taps carry their ID namespace.
-  const hash = `typed-links:${hashSchedule(candidates)}`;
+  // A new prefix reschedules existing batches once, onto the per-kind channels.
+  const hash = `grouped:${hashSchedule(candidates)}`;
   if (checkAndStoreHash(hash) === 'skipped') return 'skipped';
 
-  await ensureChannel();
+  await ensureChannels();
   await Notifications.cancelAllScheduledNotificationsAsync();
   for (const candidate of candidates) {
     await scheduleOne(candidate);
@@ -108,7 +131,7 @@ export async function cancelAllScheduledNotifications(): Promise<void> {
  * tap-through is verifiable end to end, not just permission + delivery.
  */
 export async function scheduleTestNotification(itemId?: string): Promise<void> {
-  await ensureChannel();
+  await ensureChannels();
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Shinobu',
@@ -118,7 +141,7 @@ export async function scheduleTestNotification(itemId?: string): Promise<void> {
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: 5,
-      channelId: NEW_EPISODES_CHANNEL_ID,
+      channelId: CHANNELS.episode.id,
     },
   });
 }

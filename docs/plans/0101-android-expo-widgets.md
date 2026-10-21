@@ -67,5 +67,14 @@ fix without patching the library.
 - The Android-only plugin entry becomes public API, so iOS can stay unchanged
   without deep imports.
 
-No dependency, config, or source change ships with this evaluation. iOS, web,
-and Android behavior are unchanged.
+## Shipped instead: notifications grouped by kind
+
+The scheduler already knows what each notification announces (an episode, or
+a theatrical, digital, or physical release). Each kind now gets its own
+Android channel (`new-episodes`, `theatrical-releases`, `digital-releases`,
+`physical-releases`), so system settings can mute one kind without the others.
+The channel id is also the `threadIdentifier`, which stacks each kind on its
+own in the Android shade and in iOS Notification Center. `new-episodes` keeps
+its id, so existing channel settings survive. A new hash prefix reschedules
+the existing batch once, onto the new channels. This is a JS-only change, so
+no native rebuild is needed. Web is unchanged.
