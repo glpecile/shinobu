@@ -67,6 +67,7 @@ export async function refreshNotifications(
   // rejection, so the other provider's candidates still get scheduled (R4).
   const connected = deps.connectedProviders();
   const inputs = await deps.gatherInputs(connected);
+  if (!deps.isEnabled()) return;
   const candidates = computeNotificationSchedule(inputs, deps.now(), deps.mutedKinds());
   await deps.schedule(candidates);
 }

@@ -1,5 +1,10 @@
 import { Host, Switch } from '@expo/ui';
-import { accessibilityLabel as nativeAccessibilityLabel } from '@expo/ui/swift-ui/modifiers';
+import {
+  accessibilityLabel as nativeAccessibilityLabel,
+  contentShape,
+  frame,
+  shapes,
+} from '@expo/ui/swift-ui/modifiers';
 import { useColorScheme } from 'react-native';
 
 import { useThemeColor } from '@/lib/theme-color';
@@ -14,7 +19,11 @@ export function NativeSwitch({ accessibilityLabel, disabled, onValueChange, valu
     <Host colorScheme={scheme ?? undefined} ignoreSafeArea="all" matchContents seedColor={accent}>
       <Switch
         disabled={disabled}
-        modifiers={[nativeAccessibilityLabel(accessibilityLabel)]}
+        modifiers={[
+          frame({ minHeight: 44 }),
+          contentShape(shapes.rectangle(), ['interaction', 'accessibility']),
+          nativeAccessibilityLabel(accessibilityLabel),
+        ]}
         onValueChange={onValueChange}
         value={value}
       />

@@ -35,6 +35,14 @@ const CHANNEL_IDS: Record<NotificationKind, string> = {
 };
 
 let channelsEnsured = false;
+let pendingMutation: Promise<unknown> = Promise.resolve();
+
+/** Keep rapid mute changes and master-off ordered across native async calls. */
+function mutateSchedule<T>(operation: () => Promise<T>): Promise<T> {
+  const result = pendingMutation.then(operation);
+  pendingMutation = result.catch(() => { clearStoredHash(); });
+  return result;
+}
 
 async function ensureChannels(): Promise<void> {
   if (channelsEnsured) return;
@@ -100,28 +108,31 @@ async function scheduleOne(candidate: NotificationCandidate): Promise<void> {
 
 /**
  * Replaces the entire scheduled batch with `candidates`, or does nothing if
- * the content hash is unchanged from the last replace (R7). Never partially
- * applies — cancel and reschedule both happen, or neither does.
+ * the content hash is unchanged from the last replace (R7).
  */
 export async function replaceScheduledNotifications(
   candidates: readonly NotificationCandidate[],
 ): Promise<ScheduleResult> {
-  // A new prefix reschedules existing batches once, onto the per-kind channels.
-  const hash = `grouped:${hashSchedule(candidates)}`;
-  if (checkAndStoreHash(hash) === 'skipped') return 'skipped';
+  return mutateSchedule(async () => {
+    // A new prefix reschedules existing batches once, onto the per-kind channels.
+    const hash = `grouped:${hashSchedule(candidates)}`;
+    if (checkAndStoreHash(hash) === 'skipped') return 'skipped';
 
-  await ensureChannels();
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  for (const candidate of candidates) {
-    await scheduleOne(candidate);
-  }
-  return 'replaced';
+    await ensureChannels();
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    for (const candidate of candidates) {
+      await scheduleOne(candidate);
+    }
+    return 'replaced';
+  });
 }
 
 /** Cancels every scheduled notification and forgets the batch hash (toggle-off). */
 export async function cancelAllScheduledNotifications(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  clearStoredHash();
+  await mutateSchedule(async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    clearStoredHash();
+  });
 }
 
 /**

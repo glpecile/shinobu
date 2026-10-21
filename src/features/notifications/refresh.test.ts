@@ -84,6 +84,19 @@ describe('refreshNotifications', () => {
     expect(calls.gather).toBe(0);
   });
 
+  test('turning alerts off while inputs load prevents scheduling', async () => {
+    let enabled = true;
+    const { deps, calls } = makeDeps({
+      isEnabled: () => enabled,
+      gatherInputs: async () => {
+        enabled = false;
+        return EMPTY_INPUTS;
+      },
+    });
+    await refreshNotifications(deps, { throttle: false });
+    expect(calls.schedule).toBe(0);
+  });
+
   test('two foreground triggers within the throttle window run once', async () => {
     const { deps, calls } = makeDeps();
     await refreshNotifications(deps);
