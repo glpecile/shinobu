@@ -14,18 +14,40 @@ import { useWatchedMoviesQuery, useWatchedShowsQuery } from './trakt';
 
 const filmLike = (item: NormalizedMediaItem) => item.type === 'MOVIE' || item.isFilm === true;
 
+/**
+ * The list-wide snapshots every progress read matches against. A list reads
+ * them once and hands them to each mounted row's `useItemProgress`, rather
+ * than every row subscribing to all six.
+ */
+export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
+  const connected = useConnectedProviders();
+  const anyTv = items.some((item) => item.type === 'TV');
+  const letterboxdUsername = connected.includes('letterboxd') ? getLetterboxdUsername() : null;
+  const serializdUsername = connected.includes('serializd') && anyTv ? getSerializdUsername() : null;
+  return {
+    connected,
+    letterboxdUsername,
+    serializdUsername,
+    movies: useWatchedMoviesQuery({ enabled: connected.includes('trakt') && items.some(filmLike) }),
+    shows: useWatchedShowsQuery({ enabled: connected.includes('trakt') && anyTv }),
+    simkl: useQuery({ ...simklLibraryQuery(), enabled: connected.includes('simkl') && items.length > 0, throwOnError: false }),
+    anilist: useAniListLibraryQuery(connected.includes('anilist') && items.length > 0),
+    serializd: useSerializdWatchedShowsQuery(serializdUsername),
+  };
+}
+
+export type ProgressLibraries = ReturnType<typeof useProgressLibraries>;
+
 /** One selector for poster eyes, numeric progress and whole-list counts; caches are provider-owned. */
 export function useMediaProgress(items: readonly NormalizedMediaItem[]) {
-  const connected = useConnectedProviders();
+  return useItemProgress(items, useProgressLibraries(items));
+}
+
+/** Per-item reads (film identity, Letterboxd viewing) matched against shared libraries. */
+export function useItemProgress(items: readonly NormalizedMediaItem[], libraries: ProgressLibraries) {
+  const { connected, letterboxdUsername, serializdUsername, movies, shows, simkl, anilist, serializd } = libraries;
   const { items: resolved, queries: films } = useMediaMetadata(items, connected.length > 0);
-  const letterboxdUsername = connected.includes('letterboxd') ? getLetterboxdUsername() : null;
   const watches = useQueries({ queries: resolved.map((item) => letterboxdFilmWatchQuery(letterboxdUsername, item)) });
-  const movies = useWatchedMoviesQuery({ enabled: connected.includes('trakt') && items.some(filmLike) });
-  const shows = useWatchedShowsQuery({ enabled: connected.includes('trakt') && items.some((item) => item.type === 'TV') });
-  const simkl = useQuery({ ...simklLibraryQuery(), enabled: connected.includes('simkl') && items.length > 0, throwOnError: false });
-  const anilist = useAniListLibraryQuery(connected.includes('anilist') && items.length > 0);
-  const serializdUsername = connected.includes('serializd') && items.some((item) => item.type === 'TV') ? getSerializdUsername() : null;
-  const serializd = useSerializdWatchedShowsQuery(serializdUsername);
   const progress = resolved.map((item, index) => {
     const sources: MediaProgress[] = [];
     const add = (current: number, total: number | undefined, completed = false) => sources.push({ watched: current > 0 || completed, current, total, completed, unit: item.progressUnit });

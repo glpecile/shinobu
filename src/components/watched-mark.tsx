@@ -5,14 +5,13 @@ import { Text, View } from 'react-native';
 import { AnimatedView } from '@/components/animated-view';
 import { ProgressRing } from '@/components/progress-ring';
 import { cn } from '@/lib/cn';
+import type { MediaProgress } from '@/lib/media-progress';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
-import { useMediaProgress } from '@/state/queries/media-progress';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** Shares details' film-page identity read for slug-only posters, never a title guess. */
-export function WatchedMark({ item, poster = false, showProgress = false }: { item: NormalizedMediaItem; poster?: boolean; showProgress?: boolean }) {
-  const state = useMediaProgress([item]).progress[0];
+/** Draws one row's progress; the list resolves `state` (`useMediaProgress` / `useItemProgress`). */
+export function WatchedMark({ item, state, poster = false, showProgress = false }: { item: NormalizedMediaItem; state: MediaProgress; poster?: boolean; showProgress?: boolean }) {
   const accent = useThemeColor('--color-accent');
   const watched = state.watched;
   const unit = state.unit === 'chapter' ? 'ch' : state.unit === 'season' ? 'seasons' : 'ep';
@@ -27,7 +26,8 @@ export function WatchedMark({ item, poster = false, showProgress = false }: { it
   return (
     <>
     <AnimatedView
-      accessibilityLabel={item.type === 'TV' ? 'Series watch history' : 'Watched'}
+      // A parent row reads its children's labels even through aria-hidden.
+      accessibilityLabel={!watched ? undefined : item.type === 'TV' ? 'Series watch history' : 'Watched'}
       aria-hidden={!watched}
       className={cn('w-4 items-end', poster && 'absolute top-2 left-2 w-7 h-7 items-center justify-center rounded-full bg-surface/95')}
       style={[style, { pointerEvents: 'none' }]}

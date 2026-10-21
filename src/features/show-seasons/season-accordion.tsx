@@ -143,21 +143,27 @@ export function EpisodeRow({
   );
 }
 
-/** Controlled header: the screen's flat list owns expansion, not this cell. */
+/**
+ * Controlled header: the screen's flat list owns expansion, not this cell.
+ * The gap above it is its own, so toggling never changes its height and the
+ * rows below never wait on a re-measure.
+ */
 export function SeasonHeader({
   season,
   open,
+  first,
   onToggle,
 }: {
   season: NormalizedSeason;
   open: boolean;
+  first: boolean;
   onToggle: () => void;
 }) {
   const runtime = seasonRuntimeMinutes(season);
   const hasBody = open && season.episodes.length > 0;
 
   return (
-    <View className={cn(!hasBody && 'mb-3')}>
+    <View className={cn(!first && 'mt-3')}>
       <PressableCard
         accessibilityState={{ expanded: open }}
         cardClassName={cn('flex-row items-center', hasBody && 'rounded-b-none')}

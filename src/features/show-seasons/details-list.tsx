@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
-import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import { css, useReducedMotion } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { List } from '@/components/List';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { useScrolledTitle } from '@/components/scrolled-title';
 import { cn } from '@/lib/cn';
-import { DURATION } from '@/lib/motion';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import type { NormalizedSeason } from '@/types/media';
 
@@ -25,11 +26,19 @@ interface EpisodeSection extends SeasonActions {
 }
 
 /**
- * Opening a season shifts every row below it. Legend List positions rows over
- * several commits, so `LayoutAnimation` caught only the first: rows faded while
- * the content below jumped. The footer is a row so it slides with them.
+ * Rows below a toggled season snap; only the opened season's rows unfold.
+ * Legend List positions rows over several commits, so any transition on the
+ * rows below (`LayoutAnimation`, `itemLayoutAnimation`) slid them from stale
+ * estimates and left a gap on close.
  */
-const seasonLayout = LinearTransition.duration(DURATION.toggle);
+const UNFOLD = css.keyframes({
+  from: { opacity: 0, transform: [{ translateY: -6 }] },
+  to: { opacity: 1, transform: [{ translateY: 0 }] },
+});
+const UNFOLD_FADE = css.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
+/** Rows past this are below the fold when a season opens. */
+const UNFOLD_ROWS = 10;
+const UNFOLD_STAGGER = 20;
 const FOOTER_ROW = { kind: 'footer', key: 'footer' } as const;
 
 /** One vertical viewport, like the diary: no season owns a nested scroll view or mapped episode body. */
@@ -42,6 +51,14 @@ export function DetailsList({
   const { expanded, toggle } = useListDisclosure<number>();
   const { scrollY } = useScrolledTitle();
   const reduceMotion = useReducedMotion();
+  // The season whose rows play the unfold. Cleared once the user scrolls, so
+  // rows re-mounting into view never replay it
+  // (docs/solutions/entering-animation-on-virtualized-cells-replays.md).
+  const [unfolding, setUnfolding] = useState<number | null>(null);
+  function toggleSeason(season: number) {
+    setUnfolding(expanded.has(season) ? null : season);
+    toggle(season);
+  }
   const rows: (SeasonRow | typeof FOOTER_ROW)[] = [
     ...(episodeSection == null ? [] : seasonRows(episodeSection.seasons, expanded, episodeSection.isEpisodeAired)),
     FOOTER_ROW,
@@ -53,11 +70,11 @@ export function DetailsList({
       data={rows}
       // Watched state, mapping callbacks and the footer (which sharpens once
       // the item's TMDB id resolves) can change without changing the rows.
-      extraData={[episodeSection, footer]}
-      // Episode rows can be shorter than collapsed season headers.
-      estimatedItemSize={56}
+      extraData={[episodeSection, footer, unfolding]}
+      // Between the mark row (~50) and a phone's wrapped episode rows (~80-100):
+      // until a season has opened once, every row lands at this guess first.
+      estimatedItemSize={72}
       getItemType={(row) => row.kind}
-      itemLayoutAnimation={reduceMotion ? undefined : seasonLayout}
       keyExtractor={(row) => row.key}
       ListHeaderComponent={
         <View>
@@ -68,6 +85,7 @@ export function DetailsList({
         </View>
       }
       onScroll={(event) => scrollY.set(event.nativeEvent.contentOffset.y)}
+      onScrollBeginDrag={() => setUnfolding(null)}
       scrollEventThrottle={16}
       renderScrollComponent={(props) => (
         <RefreshableScrollView {...props} onRefresh={onRefresh} spinnerBelowStatusBar />
@@ -82,7 +100,8 @@ export function DetailsList({
               <SeasonHeader
                 season={row.season}
                 open={row.open}
-                onToggle={() => toggle(row.season.number)}
+                first={row.season === episodeSection.seasons[0]}
+                onToggle={() => toggleSeason(row.season.number)}
               />
             );
             break;
@@ -96,7 +115,7 @@ export function DetailsList({
           case 'episode':
             content = (
               <View
-                className={cn('border-x border-border', row.last && 'rounded-b-lg overflow-hidden mb-3')}
+                className={cn('border-x border-border', row.last && 'rounded-b-lg overflow-hidden')}
               >
                 <EpisodeRow
                   aired={episodeSection.isEpisodeAired?.(row.episode)}
@@ -118,7 +137,21 @@ export function DetailsList({
               </View>
             );
         }
-        return <View className="w-full max-w-4xl self-center px-6">{content}</View>;
+        const order = row.kind === 'mark' ? 0 : row.kind === 'episode' ? row.index + 1 : UNFOLD_ROWS;
+        return (
+          <AnimatedView
+            className="w-full max-w-4xl self-center px-6"
+            style={row.season.number === unfolding && order < UNFOLD_ROWS ? {
+              animationName: reduceMotion ? UNFOLD_FADE : UNFOLD,
+              animationDuration: DURATION.swap,
+              animationDelay: order * UNFOLD_STAGGER,
+              animationFillMode: 'backwards',
+              animationTimingFunction: EASE_OUT,
+            } : undefined}
+          >
+            {content}
+          </AnimatedView>
+        );
       }}
     />
   );

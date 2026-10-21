@@ -7,6 +7,7 @@ import {
   type CSSTransitionProperties,
   FadeIn,
   FadeOut,
+  LayoutAnimationConfig,
   LinearTransition,
   useReducedMotion,
 } from 'react-native-reanimated';
@@ -330,114 +331,119 @@ export function Button({
       disabled={unavailable}
       onPress={onPress}
     >
-      <AnimatedView
-        className={cn(
-          'flex-row items-center',
-          align === 'start' ? 'justify-start' : 'justify-center',
-          SHAPE[shape],
-          iconOnly ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0') : SIZE[size].container,
-          unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
-        )}
-        layout={BOX_LAYOUT}
-        style={COLOR_TRANSITION}
-      >
-        {loading && (
-          // Wrapped so the spinner keeps its own box on native, where an
-          // ActivityIndicator dropped straight into a flex row can stretch.
-          <AnimatedView
-            className={cn(
-              'items-center justify-center',
-              overlay && 'absolute inset-0',
-            )}
-            entering={SLOT_ENTER}
-            exiting={SLOT_EXIT}
-            layout={BOX_LAYOUT}
-          >
+      {/* Slot fades are for swaps on a mounted button. Its own mount and
+          unmount skip them, or every row in a list that opens or closes
+          flashes its icon in and leaves a fading label behind. */}
+      <LayoutAnimationConfig skipEntering skipExiting>
+        <AnimatedView
+          className={cn(
+            'flex-row items-center',
+            align === 'start' ? 'justify-start' : 'justify-center',
+            SHAPE[shape],
+            iconOnly ? cn(size === 'sm' ? 'size-9.5' : 'size-11', 'shrink-0') : SIZE[size].container,
+            unavailable ? CONTAINER[variant].off : CONTAINER[variant].on,
+          )}
+          layout={BOX_LAYOUT}
+          style={COLOR_TRANSITION}
+        >
+          {loading && (
+            // Wrapped so the spinner keeps its own box on native, where an
+            // ActivityIndicator dropped straight into a flex row can stretch.
             <AnimatedView
-              style={reduceMotion ? undefined : {
-                transform: LOADING_ENTER.from.transform,
-                animationName: LOADING_ENTER,
-                animationDuration: DURATION.swap,
-                animationTimingFunction: EASE_OUT,
-                animationFillMode: 'both',
-              }}
+              className={cn(
+                'items-center justify-center',
+                overlay && 'absolute inset-0',
+              )}
+              entering={SLOT_ENTER}
+              exiting={SLOT_EXIT}
+              layout={BOX_LAYOUT}
             >
-              <Spinner color={spinnerColor} />
+              <AnimatedView
+                style={reduceMotion ? undefined : {
+                  transform: LOADING_ENTER.from.transform,
+                  animationName: LOADING_ENTER,
+                  animationDuration: DURATION.swap,
+                  animationTimingFunction: EASE_OUT,
+                  animationFillMode: 'both',
+                }}
+              >
+                <Spinner color={spinnerColor} />
+              </AnimatedView>
             </AnimatedView>
-          </AnimatedView>
-        )}
-        {icon != null && (overlay || !loading) && (
-          // Same own-box wrapper as the spinner, for the same native reason.
-          // The dimming rides here rather than on the icon so `Button.Icon`
-          // stays a pure "draw this glyph" leaf: the icon inherits one colour
-          // and the *button* decides how faded that colour reads, exactly as
-          // the container and label treatments already do.
-          <AnimatedView
-            className="items-center justify-center"
-            entering={SLOT_ENTER}
-            exiting={SLOT_EXIT}
-            layout={BOX_LAYOUT}
-          >
-            {/* The dim sits one level in, not on the node above: `SLOT_ENTER`
-                is a FadeIn, and an entering animation owns `opacity` on its
-                own node — a disabled icon mounted at 60% was faded back to
-                full by its own enter, and Reanimated warned about exactly
-                that. docs/solutions/reanimated-fade-overwrites-static-opacity.md */}
+          )}
+          {icon != null && (overlay || !loading) && (
+            // Same own-box wrapper as the spinner, for the same native reason.
+            // The dimming rides here rather than on the icon so `Button.Icon`
+            // stays a pure "draw this glyph" leaf: the icon inherits one colour
+            // and the *button* decides how faded that colour reads, exactly as
+            // the container and label treatments already do.
             <AnimatedView
-              className={cn(overlay ? 'opacity-0' : unavailable && 'opacity-60')}
+              className="items-center justify-center"
+              entering={SLOT_ENTER}
+              exiting={SLOT_EXIT}
+              layout={BOX_LAYOUT}
+            >
+              {/* The dim sits one level in, not on the node above: `SLOT_ENTER`
+                  is a FadeIn, and an entering animation owns `opacity` on its
+                  own node — a disabled icon mounted at 60% was faded back to
+                  full by its own enter, and Reanimated warned about exactly
+                  that. docs/solutions/reanimated-fade-overwrites-static-opacity.md */}
+              <AnimatedView
+                className={cn(overlay ? 'opacity-0' : unavailable && 'opacity-60')}
+                style={contentTransition}
+              >
+                <ButtonIconContext.Provider
+                  value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+                >
+                  {icon}
+                </ButtonIconContext.Provider>
+              </AnimatedView>
+            </AnimatedView>
+          )}
+          {!iconOnly && (
+            <AnimatedView
+              // Grow from the label's intrinsic width: flex-1's zero basis hides
+              // it in content-sized native buttons. Stretch rows still push the
+              // trailing glyph to the far edge.
+               className={cn(
+                'min-w-0 shrink',
+                overlay && 'opacity-0',
+                align === 'start' && 'grow',
+              )}
+              layout={BOX_LAYOUT}
               style={contentTransition}
             >
-              <ButtonIconContext.Provider
-                value={{ token: SPINNER_TOKEN[variant], size: SIZE[size].icon }}
+              <LabelText
+                numberOfLines={numberOfLines}
+                className={cn(
+                  'font-sans-semibold',
+                  morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
+                  SIZE[size].label,
+                  unavailable ? LABEL[variant].off : LABEL[variant].on,
+                )}
               >
-                {icon}
+                {shownLabel}
+              </LabelText>
+            </AnimatedView>
+          )}
+          {trailingIcon != null && (
+            // No enter/exit and no `loading` gate — see `trailingIcon`'s
+            // docblock. Muted, because it marks where the press *goes* rather
+            // than naming the action the way the leading glyph does.
+            <AnimatedView
+              className={cn('items-center justify-center opacity-60')}
+              layout={BOX_LAYOUT}
+              style={COLOR_TRANSITION}
+            >
+              <ButtonIconContext.Provider
+                value={{ token: SPINNER_TOKEN[variant], size: TRAILING_ICON[size] }}
+              >
+                {trailingIcon}
               </ButtonIconContext.Provider>
             </AnimatedView>
-          </AnimatedView>
-        )}
-        {!iconOnly && (
-          <AnimatedView
-            // Grow from the label's intrinsic width: flex-1's zero basis hides
-            // it in content-sized native buttons. Stretch rows still push the
-            // trailing glyph to the far edge.
-             className={cn(
-              'min-w-0 shrink',
-              overlay && 'opacity-0',
-              align === 'start' && 'grow',
-            )}
-            layout={BOX_LAYOUT}
-            style={contentTransition}
-          >
-            <LabelText
-              numberOfLines={numberOfLines}
-              className={cn(
-                'font-sans-semibold',
-                morphLabel ? 'self-center' : align === 'start' ? undefined : 'text-center',
-                SIZE[size].label,
-                unavailable ? LABEL[variant].off : LABEL[variant].on,
-              )}
-            >
-              {shownLabel}
-            </LabelText>
-          </AnimatedView>
-        )}
-        {trailingIcon != null && (
-          // No enter/exit and no `loading` gate — see `trailingIcon`'s
-          // docblock. Muted, because it marks where the press *goes* rather
-          // than naming the action the way the leading glyph does.
-          <AnimatedView
-            className={cn('items-center justify-center opacity-60')}
-            layout={BOX_LAYOUT}
-            style={COLOR_TRANSITION}
-          >
-            <ButtonIconContext.Provider
-              value={{ token: SPINNER_TOKEN[variant], size: TRAILING_ICON[size] }}
-            >
-              {trailingIcon}
-            </ButtonIconContext.Provider>
-          </AnimatedView>
-        )}
-      </AnimatedView>
+          )}
+        </AnimatedView>
+      </LayoutAnimationConfig>
     </PresstableOpacity>
   );
 }

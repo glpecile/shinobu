@@ -45,6 +45,7 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
+import { useItemProgress, useProgressLibraries, type ProgressLibraries } from '@/state/queries/media-progress';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -137,15 +138,22 @@ function RailLine({ stop }: { stop: boolean }) {
   );
 }
 
+/** Only mounted rows read a film's identity; the library snapshots are the timeline's. */
+function CreditWatchedMark({ item, libraries, poster }: { item: NormalizedMediaItem; libraries: ProgressLibraries; poster?: boolean }) {
+  return <WatchedMark item={item} poster={poster} state={useItemProgress([item], libraries).progress[0]} />;
+}
+
 function TimelineEntry({
   credit,
   roles,
   last,
+  libraries,
   onPress,
   onActions,
 }: {
   credit: Credit;
   roles: string;
+  libraries: ProgressLibraries;
   last: boolean;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (credit: Credit, roles: string) => void;
@@ -183,7 +191,7 @@ function TimelineEntry({
         }
         onActions={() => onActions(credit, roles)}
         onPress={() => onPress(item)}
-        trailing={<WatchedMark item={item} />}
+        trailing={<CreditWatchedMark item={item} libraries={libraries} />}
       />
     </View>
   );
@@ -284,6 +292,7 @@ export function CreditTimeline({
     refocus();
     setRole(next);
   }
+  const libraries = useProgressLibraries(filmography.credits.map((credit) => credit.item));
   const rows = timelineRows(filmography.credits, {
     format,
     role: activeRole,
@@ -308,6 +317,7 @@ export function CreditTimeline({
         ref={listRef}
         onScroll={handleScroll}
         data={rows}
+        extraData={libraries}
         estimatedItemSize={view === 'grid' ? 252 : ROW_HEIGHT}
         getItemType={(row) => row.kind}
         keyExtractor={(row) => row.key}
@@ -408,7 +418,7 @@ export function CreditTimeline({
                         onActionsPress={() => onItemActions(credit, roles)}
                         subtitle={roles}
                       />
-                      <WatchedMark item={credit.item} poster />
+                      <CreditWatchedMark item={credit.item} libraries={libraries} poster />
                     </View>
                   ))}
                   {Array.from({ length: columns - row.entries.length }, (_, index) => (
@@ -419,6 +429,7 @@ export function CreditTimeline({
                 <TimelineEntry
                   credit={row.credit}
                   last={row.last}
+                  libraries={libraries}
                   onActions={onItemActions}
                   onPress={onItemPress}
                   roles={row.roles}

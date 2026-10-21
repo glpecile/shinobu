@@ -5,6 +5,7 @@ import { List } from '@/components/List';
 import { ProviderIcon } from '@/components/provider-icon';
 import { SmallPoster } from '@/components/small-poster';
 import { WatchedMark } from '@/components/watched-mark';
+import type { MediaProgress } from '@/lib/media-progress';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -70,13 +71,13 @@ function WatchlistRow({
   entry,
   onPress,
   onActions,
-  showWatched,
+  watched,
   showActions,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
-  showWatched?: boolean;
+  watched?: MediaProgress;
   showActions?: boolean;
 }) {
   return (
@@ -105,7 +106,7 @@ function WatchlistRow({
       onPress={() => onPress(entry.item)}
       trailing={
         <View className="flex-row items-center gap-2">
-          {showWatched && <WatchedMark item={entry.item} showProgress />}
+          {watched != null && <WatchedMark item={entry.item} showProgress state={watched} />}
           <ProviderCluster providers={entry.sources} />
         </View>
       }
@@ -124,7 +125,7 @@ export function WatchlistRows({
   onRefresh,
   onEndReached,
   footer,
-  showWatched,
+  watched,
   showActions,
   itemLayoutAnimation,
 }: MediaLayoutProps) {
@@ -133,6 +134,7 @@ export function WatchlistRows({
       className="flex-1"
       contentContainerStyle={{ paddingTop: 4, paddingBottom: showActions ? 96 : undefined }}
       data={entries}
+      extraData={watched}
       itemLayoutAnimation={itemLayoutAnimation}
       // Four rows ahead so a fast fling doesn't outrun the mounts — see
       // poster-wall.tsx.
@@ -150,7 +152,7 @@ export function WatchlistRows({
       }
       // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (
-        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} showActions={showActions} showWatched={showWatched} />
+        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} showActions={showActions} watched={watched?.(entry.item)} />
       )}
       ListFooterComponent={footer}
     />
