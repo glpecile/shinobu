@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, type Href } from 'expo-router';
 import { useState } from 'react';
@@ -17,6 +18,7 @@ import { allowRoutePush, usePushRoute } from '@/lib/navigation';
 import { sourceProviderOf } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
+import { mediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -55,9 +57,16 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   const href = routes.details(item.id, item.type);
 
   const newTab = useNewTabPress(href);
+  const queryClient = useQueryClient();
+
+  // Starts the details fetch during the push transition instead of after it.
+  function prefetchDetails() {
+    void queryClient.prefetchQuery(mediaDetailsQuery(queryClient, item));
+  }
 
   function onCardPress() {
     if (newTab.opened()) return;
+    prefetchDetails();
     pushRoute(href);
   }
 
@@ -127,6 +136,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
           href={routes.details(item.id, item.type, zoom ? coverImage : undefined) as Href}
           onPress={(event) => {
             if (!allowRoutePush(href)) event.preventDefault();
+            else prefetchDetails();
           }}
         >
           <Pressable

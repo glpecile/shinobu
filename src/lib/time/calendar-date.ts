@@ -20,11 +20,24 @@ export function formatCalendarDate(
 ): string {
   const [year, month, day] = date.split('-').map(Number);
   if (!year || !month || !day) return date;
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    ...options,
-    timeZone: 'UTC',
-  });
+  return calendarFormatter(options).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+// Hermes builds a formatter on every `toLocaleDateString`; episode rows call this per row.
+const calendarFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function calendarFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = JSON.stringify(options);
+  let formatter = calendarFormatters.get(key);
+  if (formatter == null) {
+    formatter = new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      ...options,
+      timeZone: 'UTC',
+    });
+    calendarFormatters.set(key, formatter);
+  }
+  return formatter;
 }

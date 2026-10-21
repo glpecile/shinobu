@@ -35,10 +35,25 @@ const DEFAULT_TRANSITION: ImageProps['transition'] = {
  */
 const DEFAULT_CACHE_POLICY: ImageProps['cachePolicy'] = 'memory-disk';
 
-export function Image(props: ComponentProps<typeof StyledImage>) {
-  const { source, onError } = props;
-  const uri = typeof source === 'string' ? source
+const LETTERBOXD_POSTER_PREFIX = 'https://a.ltrbxd.com/resized/film-poster/';
+
+type ImageComponentProps = ComponentProps<typeof StyledImage>;
+
+function uriOf(source: ImageComponentProps['source']): string | undefined {
+  return typeof source === 'string' ? source
     : source != null && typeof source === 'object' && 'uri' in source ? source.uri : undefined;
+}
+
+/** Only a Letterboxd poster pays for the poster-recovery query; rails mount hundreds of images. */
+export function Image(props: ImageComponentProps) {
+  return uriOf(props.source)?.startsWith(LETTERBOXD_POSTER_PREFIX) === true
+    ? <LetterboxdPosterImage {...props} />
+    : <StyledImage cachePolicy={DEFAULT_CACHE_POLICY} transition={DEFAULT_TRANSITION} {...props} />;
+}
+
+function LetterboxdPosterImage(props: ImageComponentProps) {
+  const { source, onError } = props;
+  const uri = uriOf(source);
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const { data: poster } = useLetterboxdPosterQuery(uri ?? null, failedUri === uri);
   return (
@@ -48,7 +63,7 @@ export function Image(props: ComponentProps<typeof StyledImage>) {
       {...props}
       source={poster != null ? (typeof source === 'object' ? { ...source, uri: poster } : poster) : source}
       onError={(event) => {
-        if (uri?.startsWith('https://a.ltrbxd.com/resized/film-poster/')) setFailedUri(uri);
+        setFailedUri(uri ?? null);
         onError?.(event);
       }}
     />

@@ -43,16 +43,19 @@ export const mediaDetailsQueryKeys = {
       item?.type ?? 'none',
       item?.isFilm === true,
       item?.tmdbTvVariant ?? null,
-      // All three ids key the entry: enrichment that discovers a new id
-      // (catalogue/identity merges) refetches naturally instead of serving
-      // the pre-enrichment result forever.
+      // Enrichment that discovers a new id refetches instead of serving the
+      // pre-enrichment result forever. With a TMDB id and token, TMDB answers
+      // and the other ids only feed its failover, so a Trakt id arriving after
+      // the screen mounts doesn't refetch and re-suspend the credits.
       item?.externalIds.tmdb ?? null,
-      item?.externalIds.trakt ?? null,
-      item?.externalIds.anilist ?? null,
+      ...(item?.externalIds.tmdb != null && tmdbToken() !== ''
+        ? []
+        : [item?.externalIds.trakt ?? null, item?.externalIds.anilist ?? null]),
     ] as const,
 };
 
-// Display metadata churns slowly; an hour keeps back-navigation free.
+// Display metadata churns slowly; an hour keeps back-navigation free. Kept
+// cached as long, so reopening a title within the hour skips the skeleton.
 const DETAILS_STALE_TIME_MS = 60 * 60 * 1000;
 
 /**
@@ -141,6 +144,7 @@ export function mediaDetailsQuery(
       );
     },
     staleTime: DETAILS_STALE_TIME_MS,
+    gcTime: DETAILS_STALE_TIME_MS,
   };
 }
 

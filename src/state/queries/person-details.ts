@@ -28,6 +28,7 @@ export function useSuspensePersonByNameQuery(params: { name: string }) {
         { signal },
       ),
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }
 
@@ -37,5 +38,6 @@ export function useSuspenseAniListStaffQuery(params: { id: number }) {
     queryKey: anilistQueryKeys.staff(params.id),
     queryFn: ({ signal }) => Effect.runPromise(getAniListStaff(anilistDeps(), { id: params.id }), { signal }),
     staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
   });
 }

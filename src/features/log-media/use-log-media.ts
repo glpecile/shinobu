@@ -33,6 +33,7 @@ import {
 } from '@/state/queries/mapping';
 import { resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
+import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
 import type { ProviderId } from '@/lib/providers/types';
@@ -829,6 +830,22 @@ export function useLogMedia() {
         plan.variables,
       );
 
+      // Ticks the logged episodes now; the invalidation below confirms them
+      // against Trakt a round trip later.
+      const traktId = item.externalIds.trakt;
+      const loggedEpisodes = plan.variables.episodes;
+      if (result.succeeded.includes('trakt') && traktId != null && loggedEpisodes != null) {
+        queryClient.setQueryData<TraktShowProgressResult>(
+          traktQueryKeys.showProgress(traktId),
+          (progress) => progress == null ? progress : {
+            ...progress,
+            watchedKeys: new Set([
+              ...progress.watchedKeys,
+              ...loggedEpisodes.map((episode) => `${episode.season}-${episode.number}`),
+            ]),
+          },
+        );
+      }
       // Both skip flavors ride along: reconcile skips (`skipped`) prove the
       // provider is ahead of the cached sections, and adapter skips
       // (`result.skipped`) cost only a recompute from warm caches.
