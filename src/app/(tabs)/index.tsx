@@ -42,6 +42,7 @@ import {
   hasUpNextSources,
   useRefetchUnifiedFeed,
 } from '@/state/queries/use-unified-feed';
+import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
@@ -134,6 +135,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
 
 function FeedScreen() {
   const pushRoute = usePushRoute();
+  const prefetchDetails = usePrefetchMediaDetails();
   const connected = useConnectedProviders();
   const feedProviders = providersForFeed(connected);
   // Warm each provider host's connection pool as the feed mounts — a beat ahead
@@ -166,6 +168,7 @@ function FeedScreen() {
   const scrollRef = useRef<ScrollViewInstance>(null);
 
   function openDetails(item: NormalizedMediaItem) {
+    prefetchDetails(item);
     pushRoute(routes.details(item.id, item.type));
   }
 

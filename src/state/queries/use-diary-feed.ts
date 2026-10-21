@@ -13,7 +13,7 @@ import {
   serializdNextPage,
 } from '@/lib/providers/serializd/diary';
 import { providersForFeed } from '@/lib/providers/routing';
-import { getSimklDiary } from '@/lib/providers/simkl/diary';
+import { simklDiaryEntries } from '@/lib/providers/simkl/diary';
 import { getHistory, getMovieHistory } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
 import type { DiaryDay, NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
@@ -33,7 +33,7 @@ import {
 import { letterboxdDeps } from './letterboxd';
 import { serializdDeps } from './serializd';
 import type { ProviderFailure } from './settle';
-import { simklDeps } from './simkl';
+import { simklLibraryQuery, simklQueryKeys } from './simkl';
 import { traktDeps } from './trakt';
 
 // Trakt/AniList paginate at 50; history is append-mostly so a generous
@@ -108,10 +108,11 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   },
   // Simkl has no history endpoint — the diary is a projection of the one
   // `/sync/all-items` snapshot (per-episode watched instants), so like
-  // Letterboxd it is a single window (rate-limit discipline:
-  // docs/solutions/simkl-rate-limits-and-write-lock.md).
-  simkl: async (_queryClient, _page, signal) => ({
-    entries: await Effect.runPromise(getSimklDiary(simklDeps()), { signal }),
+  // Letterboxd it is a single window. It reads the shared library query, so
+  // the details screen and Up Next's copy is reused rather than downloaded
+  // again (docs/solutions/simkl-rate-limits-and-write-lock.md).
+  simkl: async (queryClient) => ({
+    entries: simklDiaryEntries(await queryClient.fetchQuery(simklLibraryQuery())),
     next: undefined,
   }),
 };
@@ -204,7 +205,11 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     fetchNextPage: () => {
       void query.fetchNextPage();
     },
-    refetch: () => query.refetch(),
+    // Pull-to-refresh must re-read Simkl's library, not serve the shared copy.
+    refetch: async () => {
+      await queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot(), refetchType: 'none' });
+      return query.refetch();
+    },
   };
 }
 

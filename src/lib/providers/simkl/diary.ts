@@ -1,10 +1,6 @@
-import { Effect } from 'effect';
 
-import type { ProviderError } from '@/lib/providers/errors';
 import type { NormalizedDiaryEntry } from '@/types/media';
-import type { SimklDeps } from './deps';
 import type { SimklLibrary, SimklLibraryEntry } from './normalize';
-import { getAllItems } from './reads';
 
 const provider = 'simkl' as const;
 
@@ -109,17 +105,4 @@ export function simklDiaryEntries(library: SimklLibrary): NormalizedDiaryEntry[]
   return entries
     .sort((a, b) => entryMs(b) - entryMs(a))
     .slice(0, SIMKL_DIARY_WINDOW);
-}
-
-/**
- * The diary read (plan 0016 diary contract, Simkl leg): the whole unfiltered
- * snapshot in one authorized GET, projected to `NormalizedDiaryEntry[]`. A
- * single window, not a cursor — the queryFn wiring gives it
- * `getNextPageParam: () => undefined` so it exhausts after page 1 and drops
- * out of the diary watermark early, the Letterboxd RSS precedent.
- */
-export function getSimklDiary(
-  deps: SimklDeps,
-): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
-  return getAllItems(deps, {}).pipe(Effect.map(simklDiaryEntries));
 }

@@ -70,7 +70,12 @@ export function useShowSeasonsSource(
 function showSeasonsQueryOptions(source: ShowSeasonsSource): {
   queryKey: readonly unknown[];
   queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedSeason[]>;
+  staleTime: number;
+  gcTime: number;
 } {
+  // Season structure, not watch progress: an hour matches the details
+  // metadata, so reopening a show skips the seasons skeleton.
+  const cache = { staleTime: SEASONS_STALE_TIME_MS, gcTime: SEASONS_STALE_TIME_MS };
   return source.source === 'trakt'
     ? {
         queryKey: traktQueryKeys.seasons(source.traktId),
@@ -79,13 +84,17 @@ function showSeasonsQueryOptions(source: ShowSeasonsSource): {
             getShowSeasons(traktDeps(), { traktId: source.traktId }),
             { signal },
           ),
+        ...cache,
       }
     : {
         queryKey: tmdbQueryKeys.seasons(source.tmdbId),
         queryFn: ({ signal }): Promise<NormalizedSeason[]> =>
           Effect.runPromise(getTvSeasons(tmdbDeps(), { tmdbId: source.tmdbId }), { signal }),
+        ...cache,
       };
 }
+
+const SEASONS_STALE_TIME_MS = 60 * 60 * 1000;
 
 /**
  * Full seasons + episodes from whichever source `useShowSeasonsSource`

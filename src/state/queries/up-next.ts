@@ -479,6 +479,9 @@ function simklCalendarFile(
     queryKey: simklQueryKeys.calendar(kind),
     queryFn: ({ signal }) => Effect.runPromise(getCalendar(simklDeps(), kind), { signal }),
     staleTime: SIMKL_CALENDAR_STALE_MS,
+    // No observer holds it, so the default five minutes would evict it and
+    // re-download the file on the next Up Next recompute.
+    gcTime: SIMKL_CALENDAR_STALE_MS,
   });
 }
 
@@ -757,7 +760,7 @@ export async function fetchUpNextInputs(
   };
 }
 
-function upNextOptions(
+export function upNextOptions(
   queryClient: QueryClient,
   connected: readonly ProviderId[],
 ) {

@@ -25,6 +25,8 @@ import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 export const DIARY_QUERY_ROOT = ['diary'] as const;
 
 export const diaryQueryKeys = {
+  /** Every account's feed, apart from the per-film plays — what the persister allowlists. */
+  feedRoot: () => [...DIARY_QUERY_ROOT, 'feed'] as const,
   /** Keyed by the active provider set and the username-scoped sessions, so
    *  connecting a tracker or reconnecting as another account is a new query,
    *  never the prior account's entries. */
@@ -34,7 +36,7 @@ export const diaryQueryKeys = {
     serializdUsername: string,
   ) =>
     [
-      ...DIARY_QUERY_ROOT,
+      ...diaryQueryKeys.feedRoot(),
       providers.join(','),
       letterboxdUsername,
       serializdUsername,

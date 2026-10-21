@@ -11,6 +11,7 @@ import type { CardBadge } from '@/features/up-next/badges';
 import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
 import { usePushRoute } from '@/lib/navigation';
+import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { Badge } from './badge';
@@ -54,6 +55,8 @@ export function EpisodeCard({
   const { lead, entries } = group;
   const title = lead.item.title.trim() || 'Untitled';
   const pushRoute = usePushRoute();
+  // The episode screen places the episode from the show's details.
+  const prefetchDetails = usePrefetchMediaDetails();
   const art = useCardArt(lead.item);
   const label = groupLabel(group);
   const stacked = entries.length > 1;
@@ -87,7 +90,14 @@ export function EpisodeCard({
           onLongPress={
             onActionsPress == null ? undefined : () => onActionsPress(lead.item)
           }
-          onPress={() => (href == null ? onPress?.(lead.item) : pushRoute(href))}
+          onPress={() => {
+            if (href == null) {
+              onPress?.(lead.item);
+              return;
+            }
+            prefetchDetails(lead.item);
+            pushRoute(href);
+          }}
         >
           {stacked && (
             // Drawn before the art so the art paints over them. Flat surface
