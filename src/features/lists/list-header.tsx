@@ -52,7 +52,7 @@ export function ListsHeader({ provider, title, subtitle, metadata, shareHref, mo
             <Text className="font-display text-foreground text-xl flex-1 min-w-0" ellipsizeMode="tail" numberOfLines={1}>{title}</Text>
           )}
         </View>
-        {(subtitle != null || metadata != null) && <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+        {(subtitle != null || metadata != null) && <View className={cn('flex-row flex-wrap items-center gap-x-3 gap-y-1', metadata != null && 'min-h-11')}>
           {subtitle != null && (title == null ? <Skeleton className="h-4 w-24 rounded" /> : <Text className="font-sans text-muted text-xs" numberOfLines={1}>{subtitle}</Text>)}
           {metadata}
         </View>}

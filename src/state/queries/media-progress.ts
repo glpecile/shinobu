@@ -78,7 +78,7 @@ export function useItemProgress(items: readonly NormalizedMediaItem[], libraries
     items: resolved,
     progress,
     connected: connected.length > 0,
-    loading: queries.some((query) => query.isPending),
+    loading: queries.some((query) => query.isPending || query.isFetching),
     failed: queries.some((query) => query.isError),
     incomplete,
     retry: () => Promise.all(queries.map((query) => query.refetch())),

@@ -15,14 +15,14 @@ export function ListProgress({ state, countLabel, partial = false }: { state: Re
   const label = `${incomplete ? 'At least ' : ''}${completed} of ${items.length}${partial ? ' loaded' : ''} ${films ? 'watched' : 'completed'}`;
   const ready = connected && items.length > 0 && !loading && !failed;
   return (
-    <View className="gap-1">
+    <View className="flex-row flex-wrap items-center gap-2">
       <Tooltip label={ready ? label : countLabel}>
         <View accessible className="flex-row items-center gap-2" accessibilityLabel={`${ready ? label : countLabel}${started > 0 ? ` · ${started} started` : ''}`}>
-          {connected && items.length > 0 && <ProgressRing label={loading ? 'Checking watch history' : label} max={items.length} value={completed} />}
+          {ready && <ProgressRing label={label} max={items.length} value={completed} />}
           <MorphText className="font-sans text-sm text-muted tabular-nums">{ready ? `${completed}/${countLabel}` : countLabel}</MorphText>
         </View>
       </Tooltip>
-      {failed && <Button className="self-start" icon={<Button.Icon name="refresh" />} label="Retry" loading={loading} onPress={() => void retry()} size="sm" variant="quiet" />}
+      {(failed || loading) && <Tooltip label={loading ? 'Checking watch history' : 'Couldn’t check watch history. Retry'}><Button icon={<Button.Icon name="refresh" />} iconOnly label={loading ? 'Checking watch history' : 'Retry watch history'} loading={loading} onPress={() => void retry()} size="sm" variant="ghost" /></Tooltip>}
     </View>
   );
 }
