@@ -204,6 +204,7 @@ export function ProviderPicker({
         aria-expanded={expanded}
         className="flex-row items-center justify-between px-4 py-3"
         onPress={() => setExpanded(!expanded)}
+        pressBehavior="immediate"
       >
         <View className="flex-row items-center gap-2 flex-1 mr-3">
           {selected.length === 0 && (

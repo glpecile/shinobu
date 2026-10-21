@@ -1,6 +1,32 @@
+function hasExpanded(node) {
+  return node?.type === 'ObjectExpression' && node.properties.some((property) =>
+    (property.key?.name ?? property.key?.value) === 'expanded' ||
+    ((property.key?.name ?? property.key?.value) === 'accessibilityState' && hasExpanded(property.value)),
+  );
+}
+
 export default {
   meta: { name: 'shinobu' },
   rules: {
+    'immediate-disclosures': {
+      meta: { schema: [] },
+      create(context) {
+        return {
+          JSXOpeningElement(node) {
+            if (!['PresstableOpacity', 'PresstableScale', 'PressableCard', 'ActionableRow'].includes(node.name.name)) return;
+            const attributes = node.attributes.filter((attribute) => attribute.type === 'JSXAttribute');
+            const expanded = attributes.some((attribute) =>
+              attribute.name.name === 'aria-expanded' ||
+              (['accessibilityState', 'accessibility'].includes(attribute.name.name) && hasExpanded(attribute.value?.expression)),
+            );
+            if (expanded && !attributes.some((attribute) => attribute.name.name === 'pressBehavior' &&
+              (attribute.value?.value ?? attribute.value?.expression?.value) === 'immediate')) {
+              context.report({ node, message: 'Disclosures must accept every press. Set pressBehavior="immediate" on the disclosure pressable.' });
+            }
+          },
+        };
+      },
+    },
     'no-hardcoded-routes': {
       meta: { schema: [] },
       create(context) {

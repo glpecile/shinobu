@@ -71,9 +71,11 @@ for what that one structurally cannot catch.
 A blocked push does **not** extend the window, or a finger resting on a card
 could keep its route locked out indefinitely.
 
-The press debounce stays. It still earns its keep on non-navigating actions (the
-quick-log checkmark, connect buttons), and the two guards cover different
-failure modes.
+Repeat protection remains the default for actions such as the quick-log
+checkmark and connect buttons. Disclosures must accept every press, so their
+pressables use `pressBehavior="immediate"`. The shared wrapper's default
+`pressBehavior="prevent-repeat"` drops repeats within 500 ms. The navigation
+guard remains independent of that choice.
 
 ## Enforcement
 

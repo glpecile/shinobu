@@ -21,8 +21,11 @@ export function Collapsible({
   return (
     <View className="border border-border rounded-lg">
       <PresstableOpacity
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
         className="flex-row items-center gap-2 px-4 py-3"
         onPress={() => setOpen(!open)}
+        pressBehavior="immediate"
       >
         <DisclosureChevron from="forward" open={open} size={16} />
         <Text className="text-foreground font-sans-semibold text-sm flex-1">

@@ -462,6 +462,7 @@ export function TagPicker({
           accessibilityState={{ expanded }}
           className="flex-row items-center gap-1 self-start mt-2 py-1"
           onPress={() => setExpanded(!expanded)}
+          pressBehavior="immediate"
         >
           <Text className="text-muted font-sans text-xs">
             {expanded ? 'Show less' : 'Show more'}

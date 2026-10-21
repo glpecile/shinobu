@@ -212,6 +212,11 @@ instead. The 忍 kanji uses the OS font on purpose.
 Compose every `className` with `cn()` from `@/lib/cn`, never a template literal,
 so a caller's class replaces the default instead of competing with it.
 
+Disclosures use `pressBehavior="immediate"` on `PresstableOpacity`,
+`PresstableScale`, `PressableCard`, or `ActionableRow`, so every press toggles. Other actions
+default to `prevent-repeat`, which drops repeat presses within 500 ms.
+`shinobu/immediate-disclosures` enforces this for expanded accessibility states.
+
 Prefer Uniwind's `ios:`, `android:`, and `web:` variants for platform-specific
 styling. Use platform files only when the implementation differs or a native-only
 import requires them; don't split a component just to vary its classes.
