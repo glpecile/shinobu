@@ -26,3 +26,8 @@ the season window, so a new wall rises in on first load and on every
 season/format switch, and scrolling touches no animation at all. Presets only
 (`FadeIn`, `FadeInUp`), per
 `reanimated-web-keyframe-pins-position.md`.
+
+Details permits a season's rows to unfold after an explicit open, then clears
+that marker in `onScroll`. Legend List's web scroll component never forwards
+`onScrollBeginDrag`, so relying on that callback leaves the marker set through
+wheel, keyboard, and scrollbar scrolling and replays the entrance on remount.

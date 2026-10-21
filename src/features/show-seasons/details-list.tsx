@@ -84,7 +84,10 @@ export function DetailsList({
           )}
         </View>
       }
-      onScroll={(event) => scrollY.set(event.nativeEvent.contentOffset.y)}
+      onScroll={(event) => {
+        scrollY.set(event.nativeEvent.contentOffset.y);
+        if (unfolding != null) setUnfolding(null);
+      }}
       onScrollBeginDrag={() => setUnfolding(null)}
       scrollEventThrottle={16}
       renderScrollComponent={(props) => (
