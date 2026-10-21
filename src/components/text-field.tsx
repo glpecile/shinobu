@@ -1,5 +1,5 @@
 import { useState, type Ref } from 'react';
-import type { TextInput, TextInputProps } from 'react-native';
+import type { TextInputInstance, TextInputProps } from 'react-native';
 
 import { AnimatedTextInput } from '@/components/animated-view';
 import { cn } from '@/lib/cn';
@@ -10,7 +10,7 @@ import { useThemeColor } from '@/lib/theme-color';
  * The app's pill text input, with the search field's accent border on focus.
  * Takes every `TextInput` prop but `className`; `multiline` rounds it into a box.
  */
-export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref<TextInput> }) {
+export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref<TextInputInstance> }) {
   const [focused, setFocused] = useState(false);
   const muted = useThemeColor('--color-muted');
   const accent = useThemeColor('--color-accent');

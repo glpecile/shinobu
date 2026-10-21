@@ -60,7 +60,7 @@ function subscribe(onStoreChange: () => void): () => void {
  * the moment a token is saved, without an app restart (R13).
  */
 export function tmdbToken(): string {
-  return readToken();
+  return isServer() ? builderTmdbToken() : readToken();
 }
 
 /** Reactive counterpart — re-renders when the stored token is saved or cleared. */

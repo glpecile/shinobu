@@ -1,7 +1,7 @@
 import { type Ref, useState } from 'react';
 import {
   RefreshControl,
-  type ScrollView,
+  type ScrollViewInstance,
   type ScrollViewProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { useThemeColor } from '@/lib/theme-color';
 
 interface RefreshableScrollViewProps extends ScrollViewProps {
-  ref?: Ref<ScrollView>;
+  ref?: Ref<ScrollViewInstance>;
   /**
    * Kicks off the refresh; the spinner stays visible until the promise
    * settles. Rejections are swallowed here — screens surface their own error

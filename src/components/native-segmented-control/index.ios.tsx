@@ -17,7 +17,7 @@ export function NativeSegmentedControl<T extends string>({
   const scheme = useColorScheme();
   return (
     <View className={className}>
-      <Host colorScheme={scheme} style={{ height: 36, width: '100%' }}>
+      <Host colorScheme={scheme ?? undefined} style={{ height: 36, width: '100%' }}>
         <Picker
           label={accessibilityLabel}
           modifiers={[pickerStyle('segmented')]}

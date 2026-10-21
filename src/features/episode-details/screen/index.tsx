@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, type ScrollViewInstance, Text, useWindowDimensions, View } from 'react-native';
 import { FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
@@ -78,7 +78,7 @@ function EpisodePager({
   order: fullOrder,
 }: EpisodeScreenProps & { order: EpisodeRef[] }) {
   const router = useRouter();
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
   const reduceMotion = useReducedMotion();
   const window = useWindowDimensions();
   const { width } = window;

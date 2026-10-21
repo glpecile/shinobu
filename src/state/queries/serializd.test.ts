@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { expect, mock, test } from 'bun:test';
+import { expect, mock, spyOn, test } from 'bun:test';
 import { createElement, Suspense } from 'react';
 import { renderToString } from 'react-dom/server';
 
@@ -67,20 +67,38 @@ test.each([
 });
 
 test('details resolve cached list media only from the current Serializd account', () => {
-  const client = new QueryClient();
-  const item: NormalizedMediaItem = {
-    id: 'tmdb-tv-1396', title: 'Breaking Bad', coverImage: '', type: 'TV',
-    currentProgress: 0, progressUnit: 'episode', lastUpdated: '2026-10-08T00:00:00Z', externalIds: { tmdb: 1396 },
-  };
-  client.setQueryData(serializdQueryKeys.list('gian', '42'), { entries: [{ id: '1396//', item }] });
-  setProviderSession('serializd', { accessToken: 'tok', username: 'gian' });
-  expect(findInSerializdListsCache(client, item.id)).toEqual(item);
-  setProviderSession('serializd', { accessToken: 'other', username: 'other' });
-  expect(findInSerializdListsCache(client, item.id)).toBeUndefined();
-  clearProviderSession('serializd');
-  expect(findInSerializdListsCache(client, item.id)).toBeUndefined();
-  client.setQueryData(serializdQueryKeys.list(null, '7'), { entries: [{ id: '1396//', item }] });
-  expect(findInSerializdListsCache(client, item.id)).toEqual(item);
+  const globals = globalThis as { window?: unknown };
+  globals.window = {};
+  try {
+    const client = new QueryClient();
+    const item: NormalizedMediaItem = {
+      id: 'tmdb-tv-1396', title: 'Breaking Bad', coverImage: '', type: 'TV',
+      currentProgress: 0, progressUnit: 'episode', lastUpdated: '2026-10-08T00:00:00Z', externalIds: { tmdb: 1396 },
+    };
+    client.setQueryData(serializdQueryKeys.list('gian', '42'), { entries: [{ id: '1396//', item }] });
+    setProviderSession('serializd', { accessToken: 'tok', username: 'gian' });
+    expect(findInSerializdListsCache(client, item.id)).toEqual(item);
+    setProviderSession('serializd', { accessToken: 'other', username: 'other' });
+    expect(findInSerializdListsCache(client, item.id)).toBeUndefined();
+    clearProviderSession('serializd');
+    expect(findInSerializdListsCache(client, item.id)).toBeUndefined();
+    client.setQueryData(serializdQueryKeys.list(null, '7'), { entries: [{ id: '1396//', item }] });
+    expect(findInSerializdListsCache(client, item.id)).toEqual(item);
+  } finally {
+    delete globals.window;
+  }
+});
+
+test('server-rendered media resolution does not read the local session', () => {
+  const read = spyOn(store, 'get').mockImplementation(() => {
+    throw new Error('Storage is unavailable during server rendering');
+  });
+  try {
+    expect(findInSerializdListsCache(new QueryClient(), 'tmdb-tv-1396')).toBeUndefined();
+    expect(read).not.toHaveBeenCalled();
+  } finally {
+    read.mockRestore();
+  }
 });
 
 test('a membership edit waits for a pending rename and preserves both changes', async () => {

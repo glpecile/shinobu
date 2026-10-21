@@ -61,6 +61,7 @@ const clientIdKeyFor = (id: ProviderId) => `clientId.${id}`;
 
 /** Per-provider API client id — avoids requiring env-file edits for user builds. */
 export function getProviderClientId(id: ProviderId): string | null {
+  if (process.env.EXPO_OS === 'web' && typeof window === 'undefined') return null;
   return storage.getString(clientIdKeyFor(id)) ?? null;
 }
 

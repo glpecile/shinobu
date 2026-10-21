@@ -154,8 +154,6 @@ export function ProviderSigninWebView<T>({
           {visible && (
             <NitroWebView
               injectedJavaScript={injectUserAgent ? CAPTURE_USER_AGENT_SCRIPT : undefined}
-              // Nitro dispatches event props across the JSI boundary — each one
-              // must be wrapped in callback(...) or it throws at render time.
               onLoadEnd={callback(() => void tryCapture())}
               onNavigationStateChange={callback(onNavigationStateChange)}
               onMessage={injectUserAgent ? callback(onMessage) : undefined}

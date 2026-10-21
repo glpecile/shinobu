@@ -91,6 +91,7 @@ export function useSuspenseSerializdListQuery(username: string | null, id: strin
 
 /** Cache-only resolution keeps list entries usable even without a TMDB token. */
 export function findInSerializdListsCache(queryClient: QueryClient, id: string) {
+  if (typeof window === 'undefined') return undefined;
   // Same username source as the detail query's key (`getSerializdUsername()`),
   // so a connected-but-invalid session never hides a cached hit.
   return queryClient.getQueriesData<{ entries: SerializdListEntry[] }>({ queryKey: [...serializdQueryKeys.listRoot(), getSerializdUsername() ?? null] })

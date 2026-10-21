@@ -46,3 +46,23 @@ export function useConnectedProviders(): readonly ProviderId[] {
   empty state to the connected state is the SSR-correct behavior.
 - Never call `MMKV.get*`, `set*`, or `getAllKeys` at module top level if the
   module may be imported during web SSR.
+
+## SDK 58 static export
+
+SDK 58 prerendering reached provider client-ID resolution from detail, episode,
+and search queries. Reading a device override during server rendering threw the
+same MMKV storage error. `getProviderClientId` now returns no device override on
+the web server, so public requests use bundled client IDs. Native and browser
+reads still use stored overrides. The session-layer regression test rejects any
+server storage access.
+
+The cache-only `findInSerializdListsCache` lookup also read its account key during
+server rendering. It now returns no personal cached item on the server before
+reading the username. `serializd.test.ts` verifies that this path never reads local
+storage; the existing account-isolation case still covers client resolution.
+
+The non-reactive `tmdbToken()` read must return the bundled public token on the
+server. Returning an empty token while `useTmdbToken` reports that the build has
+one caused Suspense lookup pages to send unauthenticated TMDB requests and abort
+the export with a 401. Its session-layer regression test verifies the server token
+without allowing a local-storage read.

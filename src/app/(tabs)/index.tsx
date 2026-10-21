@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
 import Head from '@/components/head';
 import {
-  type ScrollView,
+  type ScrollViewInstance,
   Text,
   useWindowDimensions,
   View,
@@ -163,7 +163,7 @@ function FeedScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   function openDetails(item: NormalizedMediaItem) {
     pushRoute(routes.details(item.id, item.type));

@@ -3,7 +3,7 @@ import {
   Platform,
   View,
   type LayoutChangeEvent,
-  type ScrollView,
+  type ScrollViewInstance,
   type ViewStyle,
 } from 'react-native';
 import {
@@ -92,7 +92,7 @@ export function Pager<T extends string>({
   progress: SharedValue<number>;
   renderPage: (value: T) => ReactNode;
 }) {
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   // The page last scrolled into place. Null until the first layout, so the
   // initial position is a jump, not a slide in from the first page.
@@ -107,7 +107,7 @@ export function Pager<T extends string>({
   const driven = useSharedValue(0);
 
   function scrollNode(): HTMLElement | null {
-    return isWeb ? (scroller.current?.getScrollableNode() ?? null) : null;
+    return isWeb ? ((scroller.current?.getScrollableNode() ?? null) as unknown as HTMLElement | null) : null;
   }
 
   function setScrollLeft(x: number) {

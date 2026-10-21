@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { TextInput } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -101,7 +101,7 @@ export function LogFormFields({
   onTagsChange,
   pending,
 }: LogFormFieldsProps) {
-  const tagsInput = useRef<TextInput>(null);
+  const tagsInput = useRef<TextInputInstance>(null);
   const pushRoute = usePushRoute();
   const userscriptLikes = useLetterboxdUserscript('like');
   const diaryProviders = DIARY_PROVIDERS.filter((id) =>

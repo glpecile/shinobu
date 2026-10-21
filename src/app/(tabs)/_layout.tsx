@@ -1,4 +1,4 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/native-tabs';
 import { haptics } from '@/lib/haptics';
 
 import { emitSearchFocusRequest } from '@/features/search/focus-signal';
