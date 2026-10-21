@@ -574,23 +574,26 @@ function DiaryChildRow({
  * failed provider(s), tap-to-retry. Shown over the entries that did load,
  * never a blank screen (same contract as the feed and the log fan-out).
  *
- * It is a button, so it is `components/button` — a quiet centred pill that hugs its
+ * It is a button, so it is `components/button` — a quiet pill that hugs its
  * label rather than a full-bleed bar, which is what kept reading as an alert
  * the list couldn't get rid of. The glyph is the app's retry verb; the label
- * says what failed.
+ * says what failed. Centred over the list on narrow screens; on wide web it
+ * heads the side calendar column, aligned to the month.
  */
 function DiaryFailureBanner({
   providers,
   onRetry,
+  className,
 }: {
   providers: ProviderId[];
   onRetry: () => void;
+  className?: string;
 }) {
   const names = providers.map((id) => PROVIDERS[id].label).join(', ');
   // Centred by a wrapper, not `self-center`: on web Legend List puts the
   // header in a non-flex div, where align-self does nothing.
   return (
-    <View className="items-center mt-3 mb-4">
+    <View className={cn('items-center mt-3 mb-4', className)}>
       <Button
         accessibilityLabel={`Retry loading ${names}`}
         icon={<Button.Icon name="refresh" />}
@@ -891,7 +894,7 @@ export function DiaryList({
             }
           }}
           ListHeaderComponent={
-            failedProviders.length > 0 ? (
+            failedProviders.length > 0 && !wide ? (
               <DiaryFailureBanner onRetry={onRetry} providers={failedProviders} />
             ) : undefined
           }
@@ -959,6 +962,9 @@ export function DiaryList({
       </View>
       {wide && (
         <View className={SIDE_CALENDAR}>
+          {failedProviders.length > 0 && (
+            <DiaryFailureBanner className="items-start px-6" onRetry={onRetry} providers={failedProviders} />
+          )}
           <SectionEnter key={sideMonth}>
             <DiaryMonth month={sideMonth} stacked {...activityProps} />
           </SectionEnter>
