@@ -25,7 +25,7 @@ export function NativePickerMenu<T extends string | number | null>({
   const scheme = useColorScheme();
 
   return (
-    <Host colorScheme={scheme} matchContents>
+    <Host colorScheme={scheme ?? undefined} matchContents>
       <DropdownMenu expanded={open} onDismissRequest={() => setOpen(false)}>
         <DropdownMenu.Trigger>
           <RNHostView matchContents>

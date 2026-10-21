@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { Modal, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Modal, ScrollView, useWindowDimensions, View, type ViewInstance } from 'react-native';
 import {
   FadeIn,
   FadeInDown,
@@ -39,7 +39,7 @@ export interface SheetProps {
  * has made it visible, where React's `autoFocus` is dropped
  * (docs/solutions/web-sheet-autofocus-dropped.md).
  */
-function focusFirstFieldOnReveal(view: View | null) {
+function focusFirstFieldOnReveal(view: ViewInstance | null) {
   const overlay = view as unknown as HTMLElement | null;
   if (overlay == null || hasCoarsePointer()) return;
 

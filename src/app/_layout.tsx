@@ -7,8 +7,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
 import { useFonts } from "expo-font";
-import { DarkTheme, DefaultTheme, Stack } from "expo-router";
-import { ThemeProvider } from "expo-router/react-navigation";
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { ErrorBoundary } from "react-error-boundary";
 import { useEffect, useState } from "react";

@@ -21,7 +21,7 @@ export function NativePickerMenu<T extends string | number | null>({
         title: option.label,
         state: option.value === value ? 'on' : 'off',
       }))}
-      colorScheme={scheme}
+      colorScheme={scheme ?? undefined}
       onPressAction={({ nativeEvent }) => {
         const option = options[Number(nativeEvent.event)];
         if (option == null || option.value === value) return;

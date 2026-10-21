@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
 import Head from '@/components/head';
-import { Keyboard, ScrollView, Text, TextInput, View } from 'react-native';
+import { Keyboard, ScrollView, Text, type TextInputInstance, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
@@ -291,7 +291,7 @@ export default function SearchScreen() {
   // params (docs/solutions/native-tab-press-wipes-route-params.md).
   const [selectedScope, setSelectedScope] = useState(params.scope);
   const muted = useThemeColor('--color-muted');
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   // The same actions dialog the feed and diary open — quick log, details, and
   // the provider links, from a result row.
   const { openActions, sheetProps } = useCardActions();

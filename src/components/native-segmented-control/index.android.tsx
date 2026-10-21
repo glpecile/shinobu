@@ -29,7 +29,7 @@ export function NativeSegmentedControl<T extends string>({
   const foreground = useThemeColor('--color-foreground');
   return (
     <View accessibilityLabel={accessibilityLabel} className={className}>
-      <Host colorScheme={scheme} matchContents={{ vertical: true }} seedColor={accent} style={{ width: '100%' }}>
+      <Host colorScheme={scheme ?? undefined} matchContents={{ vertical: true }} seedColor={accent} style={{ width: '100%' }}>
         <SingleChoiceSegmentedButtonRow>
           {options.map((option) => (
             <SegmentedButton

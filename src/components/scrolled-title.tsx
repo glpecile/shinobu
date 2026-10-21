@@ -5,7 +5,7 @@ import {
   useContext,
   useRef,
 } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, type ViewInstance } from 'react-native';
 import {
   type SharedValue,
   useAnimatedReaction,
@@ -33,7 +33,7 @@ interface AnchorFrame {
 }
 
 interface ScrolledTitleContextValue {
-  anchorRef: RefObject<View | null>;
+  anchorRef: RefObject<ViewInstance | null>;
   scrollY: SharedValue<number>;
   anchor: SharedValue<AnchorFrame>;
   measure: () => void;
@@ -77,8 +77,8 @@ function covered(
  * wheel tick that skips the whole overlap still gets a full slide.
  */
 export function ScrolledTitle({ children }: { children: ReactNode }) {
-  const frameRef = useRef<View>(null);
-  const anchorRef = useRef<View>(null);
+  const frameRef = useRef<ViewInstance>(null);
+  const anchorRef = useRef<ViewInstance>(null);
   const scrollY = useSharedValue(0);
   const anchor = useSharedValue<AnchorFrame>({ y: 0, height: 0 });
 

@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useRef, useState, type RefObject } from 'react';
-import { TextInput, View } from 'react-native';
+import { TextInput, type TextInputInstance, View } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
@@ -24,11 +24,11 @@ export function SearchField({ value, onChangeText, onClear, loading, placeholder
   placeholder: string;
   accessibilityLabel: string;
   autoFocus?: boolean;
-  ref?: RefObject<TextInput | null>;
+  ref?: RefObject<TextInputInstance | null>;
   /** Layout only. */
   className?: string;
 }) {
-  const ownRef = useRef<TextInput>(null);
+  const ownRef = useRef<TextInputInstance>(null);
   const inputRef = ref ?? ownRef;
   const [focused, setFocused] = useState(false);
   const muted = useThemeColor('--color-muted');
