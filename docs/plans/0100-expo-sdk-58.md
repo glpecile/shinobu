@@ -18,9 +18,9 @@ Validation at this checkpoint:
 - Typecheck and lint passed (existing lint warnings remain).
 - `bun run test`: 1500 passed, 0 failed across 151 files.
 - Classname, router-push, external-link checks and `git diff --check` passed.
-- Static web export remains under verification. SDK 58 exposed server-side MMKV
-  reads and a missing bundled TMDB token; fixes and regression tests are included.
-  The latest export log is machine-local at `/tmp/shinobu-sdk58-web-handoff.log`.
+- `bun run build:web` passed after fixing server-side MMKV reads and bundled
+  TMDB-token handling. Regression tests cover the storage/token boundaries.
+  The export log is machine-local at `/tmp/shinobu-sdk58-web-handoff.log`.
 
 Live QA:
 
@@ -35,7 +35,6 @@ Live QA:
 - Movie logging, TV logging, and list creation have not been exercised on either
   platform. No media logs or lists were created by this QA checkpoint.
 
-This is a draft checkpoint, not release approval. Complete the web export,
-remaining live flows, and review before marking the PR ready. Native dependency
+This is a draft checkpoint, not release approval. Complete the remaining live flows and review before marking the PR ready. Native dependency
 changes require `bun ios.clean` / `bun android.clean` for other checkouts; later
 source-only fixes hot reload.
