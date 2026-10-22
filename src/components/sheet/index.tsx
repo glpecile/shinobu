@@ -10,8 +10,8 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 
-import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 import { RailFadeColor } from '@/components/rail';
 
 import { sheetScrollMetrics } from './metrics';
@@ -34,6 +34,7 @@ export interface SheetProps {
  * sizes to content. The only allowed import of the lib (oxlint-enforced).
  */
 export function Sheet({ open, onClose, children }: SheetProps) {
+  const keyboardHeight = useKeyboardState((state) => (state.isVisible ? state.height : 0));
   // A focused field outlives the sheet, which stays mounted while closed, so
   // its keyboard would stay up over the screen beneath.
   function close() {
@@ -60,6 +61,12 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         if (index === 0 && open) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
+      // Android's keyboard draws over the sheet, which is short enough that
+      // its scroller has nowhere to scroll a field to. Shrinking the host lifts
+      // the sheet above the keyboard, like `adjustResize`; the host re-anchors
+      // on resize natively. Resize the host, never the content, which crashed
+      // Fabric (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md).
+      style={process.env.EXPO_OS === 'android' && open ? { bottom: keyboardHeight } : undefined}
       surface={
         <View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />
       }
@@ -88,23 +95,6 @@ const MAX_SHEET_FRACTION = 0.85;
 
 /** Sub-pixel layout noise must not re-size the sheet. */
 const HEIGHT_EPSILON = 1;
-
-/**
- * How far above the keyboard the auto-scroll parks a focused input. Sized for
- * what renders directly *under* an input — the log sheet's collapsed
- * tag-suggestion row plus its "Show more" toggle (~90dp) — because parking the
- * input flush against the keyboard (the old 24) is exactly how the tags field
- * kept its suggestions buried behind the keyboard.
- *
- * Deliberately *not* the whole-sheet lift you might reach for instead: growing
- * the sheet's height while the keyboard event is in flight makes the native
- * `'content'` detent re-measure mid-transaction and segfaults Fabric in
- * `findShadowNodeByTag_DEPRECATED` (reproduced 2026-08-28, see
- * docs/solutions/bottom-sheet-content-detent-clips-tall-content.md). The sheet
- * must keep its height while the keyboard moves; only the scroll offset may
- * compensate.
- */
-const BOTTOM_OFFSET = 120;
 
 /**
  * Sheet content scrolls **only once it has to**.
@@ -159,37 +149,18 @@ function SheetContent({ children }: { children: ReactNode }) {
     </View>
   );
 
-  // Android's soft keyboard covers the sheet outright (plan 0024 U11 / R8), so
-  // it gets the keyboard-aware scroller: once the sheet is at the cap its
-  // bottom padding gives the focused field somewhere to scroll to. iOS keeps
-  // the plain scroller, deliberately — its sheet host already moves with the
-  // keyboard, and a second compensation would over-shoot. `EXPO_OS` is inlined
-  // at build time, so this branch is constant per platform and never remounts.
-  //
-  // The Android scroller is *always* enabled, not gated on `scrollEnabled`:
-  // keyboard-controller resolves the focused input's parent scroll view
-  // natively at focus time and only accepts a ReactScrollView whose
-  // `scrollEnabled` is already true. Gating on the keyboard being visible
-  // (the previous fix) always lost that race — the first scroll into view
-  // only happened once typing re-measured the input. A short sheet stays
-  // draggable-to-dismiss regardless: Android's ScrollView never intercepts a
-  // drag while it can't scroll (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md).
-  const scroller =
-    process.env.EXPO_OS === 'android' ? (
-      <KeyboardAwareScrollView
-        bottomOffset={BOTTOM_OFFSET}
-        keyboardShouldPersistTaps="handled"
-      >
-        {body}
-      </KeyboardAwareScrollView>
-    ) : (
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={scrollEnabled}
-      >
-        {body}
-      </ScrollView>
-    );
+  // No keyboard-aware scroller: the sheet host itself moves above the keyboard
+  // (see `Sheet`), so scrolling the field up as well would over-shoot. The
+  // lifted host can leave less room than the cap, so Android's scroller stays
+  // enabled; its ScrollView never intercepts a drag while it can't scroll.
+  const scroller = (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      scrollEnabled={scrollEnabled || process.env.EXPO_OS === 'android'}
+    >
+      {body}
+    </ScrollView>
+  );
 
   // The height goes on a plain `View` around the scroller rather than on the
   // scroller itself, because for one frame — before the first measurement —
@@ -198,7 +169,12 @@ function SheetContent({ children }: { children: ReactNode }) {
   // latches, so every sheet opened at the cap. An auto-height `View` has
   // nothing to fill: with no definite height above it the scroller's
   // `flexGrow` has no free space to claim and it reports its content.
-  return <View style={height == null ? undefined : { height }}>{scroller}</View>;
+  // `flexShrink` lets it fit a sheet the keyboard has made shorter than `height`.
+  return (
+    <View style={height == null ? undefined : { height, flexShrink: 1 }}>
+      {scroller}
+    </View>
+  );
 }
 
 /** Mounted once in app/_layout.tsx — hosts the modal sheets' portal. */

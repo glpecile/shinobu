@@ -68,6 +68,24 @@ applied on the overflow branch, where being slightly under the native cap is
 harmless (the scroller appears a little early rather than the sheet clipping),
 and the hugging branch — the common one — uses no magic number at all.
 
+**Keyboard (2026-10-22, supersedes the history below).** Android now lifts the
+whole sheet: `Sheet` sets the host's `style={{ bottom: keyboardHeight }}` while
+open, the way `adjustResize` would. The host re-anchors natively on resize
+(`BottomSheetHostView.refreshDetentsFromLayout`), so the Rename sheet — short
+enough that no scroller could bring its field into view — sits above the
+keyboard. Both platforms now use a plain `ScrollView`; keeping the keyboard-aware
+one on top over-scrolled the sheet's header off screen. Android keeps scrolling
+enabled and lets the fixed-height wrapper shrink, so content remains reachable
+when the keyboard leaves less room than the content cap. iOS gates scrolling on
+overflow as before.
+
+This resizes the *host*, never the measured content, which is what segfaulted
+Fabric below. One trap it exposed: a Reanimated `entering` (`FadeIn`) that is
+still running when the host resizes freezes at opacity 0, so an autofocused
+sheet opened blank. `WriteSheet.Step` fades with a CSS animation instead.
+
+History:
+
 **Keyboard.** Nested-scrollable negotiation is automatic, but keyboard handling
 is deliberately not — the lib is unopinionated there, so the platform split from
 plan 0024 U11/R8 stands, only with scrollers:
