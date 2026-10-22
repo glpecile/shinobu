@@ -5,6 +5,8 @@ import {
 } from '@legendapp/list/react-native';
 import { AnimatedLegendList, type AnimatedLegendListProps } from '@legendapp/list/reanimated';
 import type { ReactElement, Ref } from 'react';
+import type { ScrollViewProps } from 'react-native';
+import { GestureScrollView } from '@/components/animated-view';
 
 /**
  * The one allowed Legend List import in the app (AGENTS.md, .oxlintrc.json).
@@ -38,10 +40,14 @@ export type { LegendListRef } from '@legendapp/list/react-native';
  * A zero threshold means the top edge is never "reached", so it never closes
  * the gate. Nothing in the app uses `onStartReached`; if one does, it must
  * pass its own threshold and re-verify the jump case.
+ *
+ * `renderScrollComponent` defaults to gesture-handler's ScrollView so a fling
+ * stopped on a row doesn't press it (docs/solutions/ghost-taps-while-scrolling.md).
  */
 export function List<T>({
   recycleItems = false,
   onStartReachedThreshold = 0,
+  renderScrollComponent = renderGestureScrollView,
   itemLayoutAnimation,
   sharedValues,
   ...props
@@ -54,6 +60,11 @@ export function List<T>({
       {...(sharedValues != null ? { sharedValues } : {})}
       onStartReachedThreshold={onStartReachedThreshold}
       recycleItems={recycleItems}
+      renderScrollComponent={renderScrollComponent}
     />
   );
+}
+
+function renderGestureScrollView(props: ScrollViewProps) {
+  return <GestureScrollView {...props} />;
 }
