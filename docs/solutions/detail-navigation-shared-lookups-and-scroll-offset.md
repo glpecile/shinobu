@@ -59,3 +59,11 @@ drag-start events reliably.
   the new native scroll path still needs Android runtime coverage.
 
 No dependency or native configuration changed. These changes hot reload.
+
+## Further profiling candidates
+
+Item resolution flattens several cached collections before finding one item,
+and all detail footer sections share one virtualized row. Large histories and
+long credit lists may expose allocation or offscreen-render costs there. Measure
+those workloads before replacing cache scans or splitting the footer; neither
+was established as a bottleneck in this run.
