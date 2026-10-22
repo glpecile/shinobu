@@ -1,12 +1,9 @@
 import { type Ref, useState } from 'react';
-import {
-  RefreshControl,
-  type ScrollViewInstance,
-  type ScrollViewProps,
-} from 'react-native';
+import type { ScrollViewInstance, ScrollViewProps } from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnimatedScrollView } from '@/components/animated-view';
+import { GestureScrollView } from '@/components/animated-view';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { useThemeColor } from '@/lib/theme-color';
 
@@ -70,8 +67,9 @@ export function RefreshableScrollView({
 
   return (
     // Reanimated's, so a screen can hand `onScroll` a worklet (the details
-    // screen's title bar); for everyone else it is a plain ScrollView.
-    <AnimatedScrollView
+    // screen's title bar). The RefreshControl is gesture-handler's too, so its
+    // pull waits on that scroll gesture.
+    <GestureScrollView
       {...rest}
       refreshControl={
         <RefreshControl
@@ -86,6 +84,6 @@ export function RefreshableScrollView({
       }
     >
       {children}
-    </AnimatedScrollView>
+    </GestureScrollView>
   );
 }

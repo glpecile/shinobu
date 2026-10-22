@@ -1,6 +1,7 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import { useState } from 'react';
-import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { CenteredNotice } from '@/components/centered-notice';

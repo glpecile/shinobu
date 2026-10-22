@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { router as imperativeRouter, useRouter } from 'expo-router';
 
 import { openedInNewTab } from './new-tab';
 import { createPushGuard } from './push-guard';
@@ -12,9 +12,25 @@ export { PUSH_GUARD_MS, createPushGuard, type PushGuard } from './push-guard';
  */
 const pushGuard = createPushGuard();
 
-/** Link navigation shares the imperative push guard, keyed by its public route. */
+/**
+ * The stack promotes any hidden screen of the pushed route's name and swaps in
+ * the new params, so a press-in on one card followed by a tap on another
+ * flashed the first card's page. Detail routes have no `getId` on purpose:
+ * with one, every press-in during a scroll would keep its own hidden screen.
+ */
+let preloadedHref: string | null = null;
+
+/**
+ * Link navigation shares the imperative push guard, keyed by its public route.
+ * An allowed push replaces a hidden screen preloaded for a different href.
+ */
 export function allowRoutePush(href: string): boolean {
-  return pushGuard.allow(href);
+  if (!pushGuard.allow(href)) return false;
+  if (preloadedHref != null && href !== preloadedHref) {
+    imperativeRouter.prefetch(href as Parameters<typeof imperativeRouter.prefetch>[0]);
+    preloadedHref = href;
+  }
+  return true;
 }
 
 /**
@@ -29,6 +45,7 @@ export function usePreloadRoute(): (href: string) => void {
   return (href: string) => {
     if (process.env.EXPO_OS === 'web') return;
     router.prefetch(href as Parameters<typeof router.prefetch>[0]);
+    preloadedHref = href;
   };
 }
 

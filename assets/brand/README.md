@@ -14,7 +14,7 @@ Recipes used for the current assets (from this directory, output to `../images/`
 | asset                         | canvas | fraction | bg          | fg     |
 | ----------------------------- | ------ | -------- | ----------- | ------ |
 | icon.png                      | 1024   | 0.62     | FFFFFF      | DC2626 |
-| ios-icon-dark.png             | 1024   | 0.62     | transparent | DC2626 |
+| ios-icon-dark.png             | 1024   | 0.62     | 000000      | DC2626 |
 | ios-icon-tinted.png           | 1024   | 0.62     | transparent | 8E8E93 |
 | adaptive-icon.png             | 1024   | 0.45     | transparent | DC2626 |
 | adaptive-icon-monochrome.png  | 1024   | 0.45     | transparent | FFFFFF |
