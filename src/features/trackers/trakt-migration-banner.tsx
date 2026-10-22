@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { LayoutAnimation, Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { CARD_SHELL } from '@/components/card-shell';
 import { cn } from '@/lib/cn';
+import { DISCLOSURE_LAYOUT } from '@/lib/motion';
 import { useTraktNeedsCredentials } from '@/state/session';
 
 /**
@@ -26,6 +28,7 @@ let dismissedThisLaunch = false;
 export function TraktMigrationBanner({ onReconnect }: { onReconnect: () => void }) {
   const needsCredentials = useTraktNeedsCredentials();
   const [dismissed, setDismissed] = useState(dismissedThisLaunch);
+  const reduceMotion = useReducedMotion();
 
   if (!needsCredentials || dismissed) return null;
 
@@ -51,6 +54,8 @@ export function TraktMigrationBanner({ onReconnect }: { onReconnect: () => void 
           label="Not now"
           onPress={() => {
             dismissedThisLaunch = true;
+            // The provider cards below close the gap instead of jumping up.
+            if (!reduceMotion) LayoutAnimation.configureNext(DISCLOSURE_LAYOUT);
             setDismissed(true);
           }}
           size="sm"

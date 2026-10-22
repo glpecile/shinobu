@@ -20,7 +20,6 @@ import { PickerSheet } from '@/components/picker-sheet';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
-import { SectionEnter } from '@/components/section-enter';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SearchField } from '@/components/search-field';
 import { SuspenseSection } from '@/components/suspense-section';
@@ -468,8 +467,7 @@ export default function SearchScreen() {
   const rows = sections.flatMap((section) => section.rows);
   const fetching = searchable && sections.some((section) => section.search.isFetching);
 
-  // The screen below the field is one of five mutually exclusive states; the
-  // name is the key that makes a change of state remount — and so re-enter.
+  // The screen below the field is one of five mutually exclusive states.
   const state = !searchable
     ? 'idle'
     : sections.every((section) => section.search.isLoading)
@@ -518,10 +516,6 @@ export default function SearchScreen() {
         />
       </View>
 
-      {/* Keyed per state, so results arriving fade and settle in over the
-          skeleton they replace instead of cutting. The list itself stays
-          mounted across queries — a later search swaps its rows in under the
-          stale dim below. */}
       {/* Inset before keyboard avoidance so the tab bar and keyboard overlap
           aren't added together. Android's tab host already insets content. */}
       <SafeAreaView edges={{ bottom: process.env.EXPO_OS === 'ios' }} style={{ flex: 1 }}>
@@ -529,7 +523,9 @@ export default function SearchScreen() {
           {/* The Fab anchors to this frame: an absolute child of the padded view
               sits on its padding box, under the keyboard. */}
           <View className="flex-1">
-            <SectionEnter className="flex-1" key={state}>
+            {/* No entrance between states: typing drives them many times a
+                day, so each one cuts. */}
+            <View className="flex-1">
               {state === 'idle' ? (
                 scope.value === 'titles' ? (
                   <ScrollView
@@ -626,7 +622,7 @@ export default function SearchScreen() {
                   />
                 </AnimatedView>
               )}
-            </SectionEnter>
+            </View>
             <Fab
               className="absolute bottom-5 right-6"
               hint="Chooses what to search for"

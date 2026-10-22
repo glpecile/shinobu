@@ -11,6 +11,7 @@ import Head from '@/components/head';
 import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 import { List } from '@/components/List';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
+import { SectionEnter } from '@/components/section-enter';
 import { Sheet } from '@/components/sheet';
 import { SmallPoster } from '@/components/small-poster';
 import { TextField } from '@/components/text-field';
@@ -57,7 +58,7 @@ const SHARING_NOTE: Record<LetterboxdListSharing, string> = {
 };
 
 function FieldError({ children }: { children: ReactNode }) {
-  return <Text className="text-accent font-sans text-xs" role="alert">{children}</Text>;
+  return <SectionEnter><Text className="text-accent font-sans text-xs" role="alert">{children}</Text></SectionEnter>;
 }
 
 function Field({ label, note, error, children }: { label: string; note?: string; error?: string; children: ReactNode }) {
@@ -248,7 +249,7 @@ export function NewListForm({ providers, initialProvider }: {
         </View>
         <View className="gap-3">
           {!writable && <Text className="text-muted font-sans text-sm">{needsScript ? 'Install or update the Letterboxd script, then reload this tab to create lists here.' : 'Reconnect Letterboxd with a signed-in session to create lists here.'}</Text>}
-          {mutation.isError && <Text className="text-accent font-sans text-sm" role="alert">{mutation.error.message}</Text>}
+          {mutation.isError && <SectionEnter><Text className="text-accent font-sans text-sm" role="alert">{mutation.error.message}</Text></SectionEnter>}
           {needsScript && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
           {writable && <Button
             icon={<Button.Icon name="add" />}
