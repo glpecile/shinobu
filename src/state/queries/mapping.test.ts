@@ -1,5 +1,9 @@
-import { QueryClient } from '@tanstack/react-query';
+import { isCancelledError, QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
 import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+
+import type { NormalizedMediaItem } from '@/types/media';
 
 /**
  * `mapping.ts`'s Trakt-riding lookups (`cachedTraktLookup`, `movieSearchQuery`
@@ -38,11 +42,16 @@ mock.module('react-native-mmkv', () => ({
 
 /** Routes each request by URL substring; unmatched URLs 404 (media-details.test.ts pattern). */
 let routes: Array<[match: string, body: unknown, status?: number]> = [];
+let pendingResponse: { promise: Promise<Response>; started: () => void } | undefined;
 const requestedUrls: string[] = [];
 mock.module('@/lib/http/client', () => ({
   httpFetch: async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input);
     requestedUrls.push(url);
+    if (pendingResponse != null) {
+      pendingResponse.started();
+      return pendingResponse.promise;
+    }
     const hit = routes.find(([match]) => url.includes(match));
     if (hit == null) return new Response('{}', { status: 404 });
     return new Response(JSON.stringify(hit[1]), {
@@ -88,6 +97,8 @@ const {
   cachedTmdbMovieIdByTitle,
   cachedTraktLookup,
   cachedTraktTextSearch,
+  useSimklLookupQuery,
+  useTraktIdentityQuery,
 } = await import('./mapping');
 const { setProviderClientId, clearProviderClientId } = await import(
   '@/state/session/tokens'
@@ -97,6 +108,7 @@ const { clearTmdbToken } = await import('@/state/session/tmdb-token');
 beforeEach(() => {
   store.clear();
   routes = [];
+  pendingResponse = undefined;
   requestedUrls.length = 0;
   // Trakt credentials are BYO-only after detachment (plan 0034 R12) — the
   // stored client id is the whole gate; `store.clear()` above already wiped
@@ -135,23 +147,102 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     expect(calledHost('api.simkl.com')).toBe(false);
   });
 
-  test('with no Trakt credentials, falls back to Simkl `/search/id`', async () => {
+  test('without Trakt credentials, detail identity and public lookup share one Simkl request', async () => {
     routes = [
       ['api.simkl.com/search/id', [{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]],
     ];
 
-    const result = await cachedTraktLookup(freshClient(), {
-      source: 'tmdb',
-      id: 949,
-      kind: 'movie',
-    });
+    const client = freshClient();
+    const item: NormalizedMediaItem = {
+      id: 'tmdb-movie-949', title: 'Heat', type: 'MOVIE', coverImage: '',
+      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 949 },
+    };
+    let publicLookup!: ReturnType<typeof useSimklLookupQuery>;
+    let identityLookup!: ReturnType<typeof useTraktIdentityQuery>;
+    function Read() {
+      publicLookup = useSimklLookupQuery({ tmdb: 949, type: 'movie' });
+      identityLookup = useTraktIdentityQuery(item);
+      return null;
+    }
+    renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+    const [publicResult, identityResult, result] = await Promise.all([
+      publicLookup.refetch(),
+      identityLookup.refetch(),
+      cachedTraktLookup(client, {
+        source: 'tmdb',
+        id: 949,
+        kind: 'movie',
+      }),
+    ]);
 
+    expect(publicResult.data?.id).toBe('simkl-5');
+    expect(identityResult.data?.id).toBe('simkl-5');
     expect(result?.id).toBe('simkl-5');
     expect(calledHost('api.trakt.tv')).toBe(false);
     expect(calledHost('api.simkl.com')).toBe(true);
     const simklUrl = requestedUrls.find((url) => url.includes('api.simkl.com'));
     expect(simklUrl).toContain('tmdb=949');
     expect(simklUrl).toContain('type=movie');
+    expect(requestedUrls.filter((url) => url.includes('api.simkl.com'))).toHaveLength(1);
+    client.clear();
+  });
+
+  test('a shared Simkl failure remains an error for the public lookup and a miss for identity enrichment', async () => {
+    routes = [['api.simkl.com/search/id', {}, 429]];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let publicLookup!: ReturnType<typeof useSimklLookupQuery>;
+    function Read() {
+      publicLookup = useSimklLookupQuery({ tmdb: 949, type: 'movie' });
+      return null;
+    }
+    renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+    const [publicResult, identity] = await Promise.allSettled([
+      publicLookup.refetch({ throwOnError: true }),
+      cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' }),
+    ]);
+    expect(publicResult).toMatchObject({ status: 'rejected', reason: { _tag: 'ProviderRateLimitError' } });
+    expect(identity).toMatchObject({ status: 'fulfilled', value: null });
+    client.clear();
+  });
+
+  test('unmounting a variant poster keeps the active detail identity request alive', async () => {
+    const client = freshClient();
+    const tmdbId = 949;
+    const response = Promise.withResolvers<Response>();
+    const started = Promise.withResolvers<void>();
+    pendingResponse = { promise: response.promise, started: () => started.resolve() };
+    function PublicRead() {
+      useSimklLookupQuery({ tmdb: tmdbId, type: 'movie' });
+      return null;
+    }
+    function IdentityRead() {
+      useTraktIdentityQuery({
+        id: 'tmdb-movie-949', title: 'Heat', type: 'MOVIE', coverImage: '',
+        currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: tmdbId },
+      });
+      return null;
+    }
+    renderToString(createElement(QueryClientProvider, { client }, createElement(PublicRead)));
+    const publicQuery = client.getQueryCache().getAll().at(-1)!;
+    const publicObserver = new QueryObserver(client, { ...publicQuery.options, queryKey: publicQuery.queryKey });
+    renderToString(createElement(QueryClientProvider, { client }, createElement(IdentityRead)));
+    const identityQuery = client.getQueryCache().getAll().at(-1)!;
+    const identityObserver = new QueryObserver(client, { ...identityQuery.options, queryKey: identityQuery.queryKey });
+    const unsubscribePublic = publicObserver.subscribe(() => {});
+    const unsubscribeIdentity = identityObserver.subscribe(() => {});
+    const lookup = cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' });
+    try {
+      await started.promise;
+      unsubscribePublic();
+      response.resolve(Response.json([{ type: 'movie', title: 'Heat', ids: { simkl: 5 } }]));
+      expect((await lookup)?.id).toBe('simkl-5');
+      expect(identityObserver.getCurrentResult().data).toMatchObject({ id: 'simkl-5' });
+      expect(requestedUrls).toHaveLength(1);
+    } finally {
+      unsubscribePublic();
+      unsubscribeIdentity();
+      client.clear();
+    }
   });
 
   test('a Simkl miss (empty array) resolves to null, not an error', async () => {
@@ -164,6 +255,20 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  test('cancelling an identity lookup rejects instead of caching a mapping miss', async () => {
+    const client = freshClient();
+    const response = Promise.withResolvers<Response>();
+    const started = Promise.withResolvers<void>();
+    pendingResponse = { promise: response.promise, started: () => started.resolve() };
+    const result = cachedTraktLookup(client, { source: 'tmdb', id: 949, kind: 'movie' })
+      .then(() => false, isCancelledError);
+    await started.promise;
+    await client.cancelQueries();
+    expect(await result).toBe(true);
+    response.resolve(Response.json([]));
+    client.clear();
   });
 });
 

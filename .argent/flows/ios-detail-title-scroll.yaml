@@ -1,0 +1,36 @@
+steps:
+  - echo: Controlled 500ms native scroll measures title tracking. Keep these exact gesture parameters for comparisons.
+  - tool: gesture-swipe
+    args:
+      fromX: 0.75
+      fromY: 0.72
+      toX: 0.75
+      toY: 0.25
+      momentum: false
+      durationMs: 500
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Crew
+      timeoutMs: 5000
+  - echo: Reverse the same controlled scroll; expect the movie metadata at the top
+      again.
+  - tool: gesture-swipe
+    args:
+      fromX: 0.75
+      fromY: 0.25
+      toX: 0.75
+      toY: 0.72
+      momentum: false
+      durationMs: 500
+  - tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: MOVIE
+        role: StaticText
+      timeoutMs: 5000
+executionPrerequisite: "iOS details for Spider-Man: Brand New Day at scroll
+  offset zero, header and Cast visible, no development overlay. Stage using its
+  card or shared link."
