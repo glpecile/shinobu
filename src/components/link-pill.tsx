@@ -37,7 +37,7 @@ export function LinkPill({
   // web-only ⋯ reveal rides on RN-web's pointer events instead.
   const [hovered, setHovered] = useState(false);
   const webActions =
-    process.env.EXPO_OS === 'web' && hovered ? onLongPress : undefined;
+    process.env.EXPO_OS === 'web' ? onLongPress : undefined;
 
   return (
     <View
@@ -71,6 +71,7 @@ export function LinkPill({
           label={`More options for ${label}`}
           onPress={webActions}
           size="sm"
+          visible={hovered}
         />
       )}
     </View>

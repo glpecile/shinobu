@@ -4,7 +4,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { CSS_EASE_OUT, DURATION } from '@/lib/motion';
 
 /**
- * Web has no stack transition: a pushed screen (or a tab switch under `Slot`)
+ * Web has no stack transition: a pushed screen
  * just pops into place. This is the enter every fresh page plays instead — a
  * short blur-fade rather than a slide, because two unrelated pages crossfading
  * read as two objects swapping; a few px of blur bridges them into one surface

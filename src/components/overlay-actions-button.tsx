@@ -2,8 +2,10 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
 
 export type OverlayActionsButtonSize = 'sm' | 'md' | 'lg';
@@ -55,11 +57,17 @@ export function OverlayActionsButton({
   const shown = visible || focused;
   const icon = useThemeColor(ICON_TOKEN[tone]);
   return (
-    <View
+    <AnimatedView
       className={cn(className)}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      style={{ opacity: shown ? 1 : 0, pointerEvents: shown ? 'auto' : 'none' }}
+      style={{
+        opacity: shown ? 1 : 0,
+        pointerEvents: shown ? 'auto' : 'none',
+        transitionProperty: 'opacity',
+        transitionDuration: focused ? 0 : DURATION.exit,
+        transitionTimingFunction: EASE_OUT,
+      }}
     >
       <PresstableOpacity
         accessibilityLabel={label}
@@ -79,6 +87,6 @@ export function OverlayActionsButton({
           />
         </View>
       </PresstableOpacity>
-    </View>
+    </AnimatedView>
   );
 }

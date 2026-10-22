@@ -1,6 +1,6 @@
 import { createAnimatedPressable, PressableOpacity } from 'pressto';
 import { useRef, type ComponentProps, type MouseEventHandler } from 'react';
-import { interpolate } from 'react-native-reanimated';
+import { interpolate, useReducedMotion } from 'react-native-reanimated';
 import { withUniwind } from '@/lib/with-uniwind';
 
 /**
@@ -46,9 +46,12 @@ type PressBehaviorProps = {
 const RIPPLE_COLOR = 'transparent';
 
 /** pressto's own scale pressable, with the shrink overridable per instance. */
-const PressableScale = createAnimatedPressable<{ minScale?: number }>(
+const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion?: boolean }>(
   (progress, { config, metadata }) => {
     'worklet';
+    if (metadata?.reduceMotion) {
+      return { opacity: interpolate(progress, [0, 1], [1, config.activeOpacity]) };
+    }
     return {
       transform: [
         {
@@ -105,12 +108,13 @@ export function PresstableScale({
   minScale?: number;
 }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
+  const reduceMotion = useReducedMotion();
   return (
     <UniwindPressableScale
       rippleColor={RIPPLE_COLOR}
       {...rest}
       {...pressInProps(onPressIn)}
-      metadata={{ minScale }}
+      metadata={{ minScale, reduceMotion }}
       onPress={handlePress}
     />
   );
