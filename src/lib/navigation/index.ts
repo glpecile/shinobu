@@ -26,8 +26,7 @@ let preloadedHref: string | null = null;
  */
 export function allowRoutePush(href: string): boolean {
   if (!pushGuard.allow(href)) return false;
-  // Same top-level route: only a hidden screen of the pushed kind gets promoted.
-  if (preloadedHref != null && href !== preloadedHref && href.split('/')[1] === preloadedHref.split('/')[1]) {
+  if (preloadedHref != null && href !== preloadedHref) {
     imperativeRouter.prefetch(href as Parameters<typeof imperativeRouter.prefetch>[0]);
     preloadedHref = href;
   }

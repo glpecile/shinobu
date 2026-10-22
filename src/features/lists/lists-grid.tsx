@@ -1,4 +1,5 @@
-import { RefreshControl, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

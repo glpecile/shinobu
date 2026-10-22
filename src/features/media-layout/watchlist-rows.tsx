@@ -1,4 +1,5 @@
-import { RefreshControl, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { List } from '@/components/List';

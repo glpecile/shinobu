@@ -8,7 +8,7 @@ finger lands to stop a fling, or on a short drag that starts on a poster.
 
 ## Cause
 
-Every pressable in the app is pressto, which renders gesture-handler's
+Shared animated pressables use pressto, which renders gesture-handler's
 `BaseButton`. Legend List and `RefreshableScrollView` scrolled with React
 Native's own `ScrollView`, which gesture-handler doesn't track as a gesture.
 Nothing told the button that the touch became, or ended, a scroll, so the lift
@@ -24,6 +24,8 @@ the drag becomes a scroll and cancels the button under the finger.
   ScrollView through Reanimated, so worklet `onScroll` and `sharedValues`
   still work.
 - `List` defaults `renderScrollComponent` to it.
+- List callers also supply gesture-handler's `RefreshControl`, so its pull
+  gesture blocks the scroll gesture while refresh activates.
 - `RefreshableScrollView` uses it with gesture-handler's `RefreshControl`,
   which its ScrollView expects so the pull waits on the scroll gesture.
 
