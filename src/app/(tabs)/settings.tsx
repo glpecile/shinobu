@@ -11,6 +11,7 @@ import { CARD_SHELL } from '@/components/card-shell';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
 import { GroupedList } from '@/components/grouped-list';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
@@ -21,7 +22,8 @@ import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
-import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
+import { setThemePreference, useThemePreference } from '@/state/prefs/theme';
+import { unhideItem,unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
 
 /**
  * One column width and one gutter for the whole screen. Web's navigation rail
@@ -30,7 +32,13 @@ import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/
  * gets; `max-w-2xl` is the detail screens' centering pattern, narrowed because
  * settings read better in a shorter measure than a details page.
  */
-const CONTENT_COLUMN = 'w-full max-w-2xl self-center';
+const THEME_OPTIONS = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+] as const;
+
+const CONTENT_COLUMN ='w-full max-w-2xl self-center';
 const CONTENT_GUTTER = process.env.EXPO_OS === 'web' ? 'px-4' : 'px-6';
 /**
  * Web route headers (Diary, Search, Watchlist) are one full-width `px-6` row
@@ -99,6 +107,7 @@ function HiddenItemsSection() {
 
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
+  const themePreference = useThemePreference();
 
   return (
     <View className="flex-1 bg-background">
@@ -143,6 +152,15 @@ export default function SettingsScreen() {
             <ConnectTmdbTokenSection />
             <NotificationsSettingsSection />
             <HiddenItemsSection />
+            <View>
+              <Eyebrow className="mb-3">Appearance</Eyebrow>
+              <NativeSegmentedControl
+                accessibilityLabel="Theme"
+                onChange={setThemePreference}
+                options={THEME_OPTIONS}
+                value={themePreference}
+              />
+            </View>
             <View>
               <Eyebrow className="mb-3">About</Eyebrow>
               <View className={cn(CARD_SHELL, 'flex-row items-center justify-between gap-3')}>

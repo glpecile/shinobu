@@ -38,6 +38,7 @@ import { ToastHost } from "@/components/toast-host";
 import { PROVIDERS } from "@/lib/providers/registry";
 import { toast } from "@/lib/toast";
 import { onProviderConnected } from "@/state/session/tokens";
+import { applyThemePreference } from "@/state/prefs/theme";
 import { useNotificationTapNavigation } from "@/features/notifications/use-notification-tap-navigation";
 
 SplashScreen.preventAutoHideAsync();
@@ -45,6 +46,7 @@ SplashScreen.preventAutoHideAsync();
 // Module scope, not an effect: AniList's web return connects inside the home
 // route's first effect, which runs before any effect here could subscribe.
 onProviderConnected((id) => toast.success(`Connected to ${PROVIDERS[id].label}`));
+applyThemePreference();
 
 export default function Layout() {
   const [fontsLoaded, fontError] = useFonts({
