@@ -7,7 +7,7 @@ import { AnimatedView } from '@/components/animated-view';
 import { SectionEnter } from '@/components/section-enter';
 import { Sheet } from '@/components/sheet';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
-import { DURATION } from '@/lib/motion';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 
@@ -33,7 +33,15 @@ const stepFade = { from: { opacity: 0 }, to: { opacity: 1 } };
 function Step({ children }: { children: ReactNode }) {
   const reducedMotion = useReducedMotion();
   return (
-    <AnimatedView style={{ animationName: stepFade, animationDuration: reducedMotion ? 1 : DURATION.swap, animationFillMode: 'both' }}>
+    <AnimatedView
+      style={{
+        opacity: 0,
+        animationName: stepFade,
+        animationDuration: reducedMotion ? 1 : DURATION.swap,
+        animationTimingFunction: EASE_OUT,
+        animationFillMode: 'both',
+      }}
+    >
       {children}
     </AnimatedView>
   );

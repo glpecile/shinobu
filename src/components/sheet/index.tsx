@@ -150,9 +150,14 @@ function SheetContent({ children }: { children: ReactNode }) {
   );
 
   // No keyboard-aware scroller: the sheet host itself moves above the keyboard
-  // (see `Sheet`), so scrolling the field up as well would over-shoot.
+  // (see `Sheet`), so scrolling the field up as well would over-shoot. The
+  // lifted host can leave less room than the cap, so Android's scroller stays
+  // enabled; its ScrollView never intercepts a drag while it can't scroll.
   const scroller = (
-    <ScrollView keyboardShouldPersistTaps="handled" scrollEnabled={scrollEnabled}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      scrollEnabled={scrollEnabled || process.env.EXPO_OS === 'android'}
+    >
       {body}
     </ScrollView>
   );
@@ -164,7 +169,12 @@ function SheetContent({ children }: { children: ReactNode }) {
   // latches, so every sheet opened at the cap. An auto-height `View` has
   // nothing to fill: with no definite height above it the scroller's
   // `flexGrow` has no free space to claim and it reports its content.
-  return <View style={height == null ? undefined : { height }}>{scroller}</View>;
+  // `flexShrink` lets it fit a sheet the keyboard has made shorter than `height`.
+  return (
+    <View style={height == null ? undefined : { height, flexShrink: 1 }}>
+      {scroller}
+    </View>
+  );
 }
 
 /** Mounted once in app/_layout.tsx — hosts the modal sheets' portal. */

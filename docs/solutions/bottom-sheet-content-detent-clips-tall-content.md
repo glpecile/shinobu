@@ -73,8 +73,11 @@ whole sheet: `Sheet` sets the host's `style={{ bottom: keyboardHeight }}` while
 open, the way `adjustResize` would. The host re-anchors natively on resize
 (`BottomSheetHostView.refreshDetentsFromLayout`), so the Rename sheet — short
 enough that no scroller could bring its field into view — sits above the
-keyboard. Both platforms now use the plain gated `ScrollView`; keeping the
-keyboard-aware one on top over-scrolled the sheet's header off screen.
+keyboard. Both platforms now use a plain `ScrollView`; keeping the keyboard-aware
+one on top over-scrolled the sheet's header off screen. Android keeps scrolling
+enabled and lets the fixed-height wrapper shrink, so content remains reachable
+when the keyboard leaves less room than the content cap. iOS gates scrolling on
+overflow as before.
 
 This resizes the *host*, never the measured content, which is what segfaulted
 Fabric below. One trap it exposed: a Reanimated `entering` (`FadeIn`) that is
