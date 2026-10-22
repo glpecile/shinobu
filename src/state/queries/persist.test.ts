@@ -5,7 +5,7 @@ import { createElement, type ReactNode } from 'react';
 
 GlobalRegistrator.register();
 const { QueryClient, useQuery } = await import('@tanstack/react-query');
-const { renderHook, waitFor } = await import('@testing-library/react');
+const { act, renderHook, waitFor } = await import('@testing-library/react');
 
 // Native modules do not load under bun; keep the real persister over an
 // in-memory MMKV substitute and stub the unused network edges.
@@ -85,6 +85,46 @@ test('a corrupt snapshot is discarded and queries resume without an unhandled re
     error.mockRestore();
     warning.mockRestore();
     store.clear();
+  }
+});
+
+test('persists completed refetches and removals without snapshotting fetch starts', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryKey = traktQueryKeys.watchedShows();
+  client.setQueryData(queryKey, ['cached']);
+  const persistClient = mock((_snapshot: PersistedClient) => {});
+  const persister = { persistClient, restoreClient: () => undefined, removeClient: () => {} };
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(PersistQueryClientProvider, { client, persister, children });
+  const read = renderHook(() => null, { wrapper });
+  const response = Promise.withResolvers<string[]>();
+  let fetching: Promise<string[]> | undefined;
+  try {
+    await act(async () => {});
+    act(() => {
+      fetching = client.fetchQuery({ queryKey, queryFn: () => response.promise });
+    });
+    expect(client.getQueryState(queryKey)?.fetchStatus).toBe('fetching');
+    expect(persistClient).not.toHaveBeenCalled();
+
+    await act(async () => {
+      response.resolve(['fresh']);
+      await fetching;
+    });
+    expect(persistClient).toHaveBeenCalledTimes(1);
+    expect(persistClient.mock.calls[0]?.[0].clientState.queries[0]?.state.data).toEqual(['fresh']);
+
+    act(() => client.removeQueries({ queryKey }));
+    expect(persistClient).toHaveBeenCalledTimes(2);
+    expect(persistClient.mock.calls[1]?.[0].clientState.queries).toEqual([]);
+
+    act(() => client.setQueryData(['media-details', 'unpersisted'], 'ignored'));
+    expect(persistClient).toHaveBeenCalledTimes(2);
+  } finally {
+    response.resolve([]);
+    await fetching?.catch(() => {});
+    read.unmount();
+    client.clear();
   }
 });
 

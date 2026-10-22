@@ -66,6 +66,8 @@ export function PersistQueryClientProvider({
       unsubscribe = client.getQueryCache().subscribe((event) => {
         if (
           (event.type === 'added' || event.type === 'updated' || event.type === 'removed') &&
+          // Fetch status changes before new data arrives; dehydration walks the whole cache.
+          !(event.type === 'updated' && event.action.type === 'fetch') &&
           isPersistedQueryKey(event.query.queryKey)
         ) {
           void persistQueryClientSave(options);

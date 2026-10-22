@@ -133,5 +133,14 @@ export function findInDiaryCache(
   queryClient: QueryClient,
   id: string,
 ): NormalizedDiaryEntry['item'] | undefined {
-  return cachedDiaryEntries(queryClient).find((entry) => entry?.item?.id === id)?.item;
+  for (const [, data] of queryClient.getQueriesData<{ pages?: DiaryPage[] }>({ queryKey: DIARY_QUERY_ROOT })) {
+    for (const page of Array.isArray(data?.pages) ? data.pages : []) {
+      for (const slice of Object.values(page?.slices ?? {})) {
+        const found = Array.isArray(slice?.entries)
+          ? slice.entries.find((entry) => entry?.item?.id === id) : undefined;
+        if (found != null) return found.item;
+      }
+    }
+  }
+  return undefined;
 }
