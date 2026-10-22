@@ -84,7 +84,30 @@ describe('findInDiaryCache', () => {
   // route's ErrorBoundary with it.
   test('survives a malformed row', () => {
     const queryClient = cache([undefined, {}, diaryEntry('trakt-100')]);
+    queryClient.setQueryData([...DIARY_QUERY_ROOT, 'malformed-entries'], {
+      pages: [{ slices: { trakt: { entries: {} } } }],
+    });
+    queryClient.setQueryData([...DIARY_QUERY_ROOT, 'malformed-pages'], { pages: {} });
     expect(findInDiaryCache(queryClient, 'trakt-100')?.title).toBe('Perfect Blue');
     expect(findInDiaryCache(queryClient, 'trakt-999')).toBeUndefined();
+  });
+
+  test('keeps query, page and provider order when an item has several copies', () => {
+    const queryClient = new QueryClient();
+    const first = diaryEntry('trakt-100');
+    const later = { ...first, item: { ...first.item, title: 'Later copy' } };
+    queryClient.setQueryData([...DIARY_QUERY_ROOT, 'first'], {
+      pages: [
+        { slices: { trakt: { entries: [first] }, simkl: { entries: [later] } } },
+        { slices: { trakt: { entries: [later, diaryEntry('trakt-200')] } } },
+      ],
+    });
+    queryClient.setQueryData([...DIARY_QUERY_ROOT, 'second'], {
+      pages: [{ slices: { trakt: { entries: [later, diaryEntry('trakt-300')] } } }],
+    });
+    expect(findInDiaryCache(queryClient, 'trakt-100')).toBe(first.item);
+    expect(findInDiaryCache(queryClient, 'trakt-200')?.id).toBe('trakt-200');
+    expect(findInDiaryCache(queryClient, 'trakt-300')?.id).toBe('trakt-300');
+    expect(findInDiaryCache(queryClient, 'missing')).toBeUndefined();
   });
 });

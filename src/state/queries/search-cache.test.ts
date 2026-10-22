@@ -46,14 +46,18 @@ describe('findInSearchCache', () => {
 
   test('scans every cached query under a root, not just the newest', () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData([...SEARCH_QUERY_ROOTS.anilist, 'vin', 20], [manga(1)]);
+    queryClient.setQueryData([...SEARCH_QUERY_ROOTS.trakt, 'sibling'], { pages: [] });
+    const first = manga(1);
+    queryClient.setQueryData([...SEARCH_QUERY_ROOTS.anilist, 'vin', 20], [first]);
     queryClient.setQueryData(
       [...SEARCH_QUERY_ROOTS.anilist, 'vinland', 20],
-      [manga(30002)],
+      [manga(30002), { ...first, title: 'Later copy' }],
     );
+    queryClient.setQueryData([...SEARCH_QUERY_ROOTS.tmdb, 'vin', 20], [{ ...first, title: 'TMDB copy' }]);
 
-    expect(findInSearchCache(queryClient, 'anilist-1')).toBeDefined();
+    expect(findInSearchCache(queryClient, 'anilist-1')).toBe(first);
     expect(findInSearchCache(queryClient, 'anilist-30002')).toBeDefined();
+    expect(findInSearchCache(queryClient, 'anilist-999')).toBeUndefined();
   });
 
   test('misses cleanly on a cold deep link', () => {

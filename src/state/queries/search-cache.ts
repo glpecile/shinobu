@@ -31,15 +31,14 @@ export function findInSearchCache(
   id: string,
 ): NormalizedMediaItem | undefined {
   for (const root of Object.values(SEARCH_QUERY_ROOTS)) {
-    const found = queryClient
-      .getQueriesData<NormalizedMediaItem[]>({ queryKey: root })
-      .flatMap(([, data]) => data ?? [])
+    for (const [, data] of queryClient.getQueriesData<NormalizedMediaItem[]>({ queryKey: root })) {
       // `item?.id`, for the reason spelled out in `diary-pages.ts`: these roots
       // are prefixes, so a sibling query landing under one gets scanned here
       // too, and a resolution helper must degrade to "Not found" rather than
       // throw and take the route's ErrorBoundary with it.
-      .find((item) => item?.id === id);
-    if (found != null) return found;
+      const found = Array.isArray(data) ? data.find((item) => item?.id === id) : undefined;
+      if (found != null) return found;
+    }
   }
   return undefined;
 }

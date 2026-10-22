@@ -25,7 +25,11 @@ function findItemById(
   groups: NormalizedMediaItem[][],
   mediaType?: MediaType,
 ): NormalizedMediaItem | undefined {
-  return groups.flat().find((item) => item.id === id && (mediaType == null || item.type === mediaType));
+  for (const group of groups) {
+    const found = group.find((item) => item?.id === id && (mediaType == null || item.type === mediaType));
+    if (found != null) return found;
+  }
+  return undefined;
 }
 
 /**
@@ -39,18 +43,20 @@ function findInTmdbCache(
   queryClient: QueryClient,
   id: string,
 ): NormalizedMediaItem | undefined {
-  return queryClient
-    .getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
-      queryKey: tmdbQueryKeys.all,
-    })
-    // `row?.items ?? []` and `item?.id`: `tmdbQueryKeys.all` is a prefix, so a
+  for (const [, data] of queryClient.getQueriesData<{ rows?: Array<{ items: NormalizedMediaItem[] }> }>({
+    queryKey: tmdbQueryKeys.all,
+  })) {
+    // `row?.items` and `item?.id`: `tmdbQueryKeys.all` is a prefix, so a
     // sibling TMDB query whose rows are shaped differently gets scanned here
-    // too — and `rows.flatMap((row) => row.items)` on a row without `items`
-    // yields `undefined` entries that crash the whole details screen. Same
+    // too. A row without `items` must not crash the whole details screen. Same
     // failure `diary-pages.ts` documents; a resolution helper degrades to
     // "Not found", never throws.
-    .flatMap(([, data]) => data?.rows?.flatMap((row) => row?.items ?? []) ?? [])
-    .find((item) => item?.id === id);
+    for (const row of data?.rows ?? []) {
+      const found = Array.isArray(row?.items) ? row.items.find((item) => item?.id === id) : undefined;
+      if (found != null) return found;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -61,12 +67,15 @@ function findInSeasonalPagesCache(
   queryClient: QueryClient,
   id: string,
 ): NormalizedMediaItem | undefined {
-  return queryClient
-    .getQueriesData<{ pages?: SeasonalAnimePage[] }>({
-      queryKey: anilistQueryKeys.seasonalAnimePagesRoot(),
-    })
-    .flatMap(([, data]) => data?.pages?.flatMap((page) => page.items) ?? [])
-    .find((item) => item?.id === id);
+  for (const [, data] of queryClient.getQueriesData<{ pages?: SeasonalAnimePage[] }>({
+    queryKey: anilistQueryKeys.seasonalAnimePagesRoot(),
+  })) {
+    for (const page of data?.pages ?? []) {
+      const found = Array.isArray(page?.items) ? page.items.find((item) => item?.id === id) : undefined;
+      if (found != null) return found;
+    }
+  }
+  return undefined;
 }
 
 /**
