@@ -45,6 +45,7 @@
       "expo-font",
       "expo-background-task",
       "./plugins/with-release-signing.js",
+      "./plugins/with-dark-adaptive-icon.js",
       [
         "expo-notifications",
         {
