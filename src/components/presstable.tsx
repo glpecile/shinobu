@@ -20,6 +20,8 @@ export type PressBehavior = 'immediate' | 'prevent-repeat';
 type PressBehaviorProps = {
   /** `immediate` accepts every press; `prevent-repeat` (default) drops repeats within 500 ms. */
   pressBehavior?: PressBehavior;
+  /** Fires as the finger lands, before the press is known to be a tap. */
+  onPressIn?: () => void;
 };
 
 /**
@@ -63,6 +65,15 @@ const PressableScale = createAnimatedPressable<{ minScale?: number }>(
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
+/**
+ * pressto 0.7 fires its own `onPressIn` from gesture-handler 2's `onBegan`,
+ * which gesture-handler 3's button renamed to `onBegin`, so it never runs.
+ * Remove once pressto listens for `onBegin`.
+ */
+function pressInProps(onPressIn: (() => void) | undefined) {
+  return onPressIn == null ? null : { onBegin: () => onPressIn() };
+}
+
 function usePressHandler<Args extends unknown[]>(
   onPress: ((...args: Args) => void) | undefined,
   pressBehavior: PressBehavior,
@@ -87,9 +98,10 @@ function usePressHandler<Args extends unknown[]>(
 export function PresstableScale({
   minScale,
   onPress,
+  onPressIn,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata'> & PressBehaviorProps & {
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn'> & PressBehaviorProps & {
   minScale?: number;
 }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
@@ -97,6 +109,7 @@ export function PresstableScale({
     <UniwindPressableScale
       rippleColor={RIPPLE_COLOR}
       {...rest}
+      {...pressInProps(onPressIn)}
       metadata={{ minScale }}
       onPress={handlePress}
     />
@@ -106,9 +119,10 @@ export function PresstableScale({
 /** Dims while pressed — buttons, icon taps, inline text actions. */
 export function PresstableOpacity({
   onPress,
+  onPressIn,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: ComponentProps<typeof UniwindPressableOpacity> & PressBehaviorProps & {
+}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn'> & PressBehaviorProps & {
   /** Web-only DOM handler, forwarded by pressto but omitted from its prop types. */
   onMouseDown?: MouseEventHandler<HTMLElement>;
 }) {
@@ -117,6 +131,7 @@ export function PresstableOpacity({
     <UniwindPressableOpacity
       rippleColor={RIPPLE_COLOR}
       {...rest}
+      {...pressInProps(onPressIn)}
       onPress={handlePress}
     />
   );

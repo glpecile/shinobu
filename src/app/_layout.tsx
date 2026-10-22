@@ -132,6 +132,9 @@ export default function Layout() {
                 <Stack
                   screenOptions={{
                     headerShown: false,
+                    // Android 13+'s default push runs 450 ms, and the
+                    // duration can't be changed; this slide runs 200 ms.
+                    animation: process.env.EXPO_OS === "android" ? "ios_from_right" : undefined,
                     contentStyle: [{ backgroundColor }, pageEnter],
                   }}
                 >

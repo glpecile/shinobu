@@ -9,6 +9,7 @@ import type { MediaProgress } from '@/lib/media-progress';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { usePreloadRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -80,6 +81,7 @@ function WatchlistRow({
   watched?: MediaProgress;
   showActions?: boolean;
 }) {
+  const preloadRoute = usePreloadRoute();
   return (
     <ActionableRow
       className="px-6 py-2.5"
@@ -104,6 +106,7 @@ function WatchlistRow({
       onActions={onActions}
       showActions={showActions}
       onPress={() => onPress(entry.item)}
+      onPressIn={() => preloadRoute(routes.details(entry.item.id, entry.item.type))}
       trailing={
         <View className="flex-row items-center gap-2">
           {watched != null && <WatchedMark item={entry.item} showProgress state={watched} />}

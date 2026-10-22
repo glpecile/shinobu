@@ -10,7 +10,7 @@ import { PresstableScale } from '@/components/presstable';
 import type { CardBadge } from '@/features/up-next/badges';
 import { episodeHref } from '@/features/up-next/entry';
 import { groupLabel, type UpNextGroup } from '@/features/up-next/group';
-import { usePushRoute } from '@/lib/navigation';
+import { usePreloadRoute, usePushRoute } from '@/lib/navigation';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -55,6 +55,7 @@ export function EpisodeCard({
   const { lead, entries } = group;
   const title = lead.item.title.trim() || 'Untitled';
   const pushRoute = usePushRoute();
+  const preloadRoute = usePreloadRoute();
   // The episode screen places the episode from the show's details.
   const prefetchDetails = usePrefetchMediaDetails();
   const art = useCardArt(lead.item);
@@ -90,6 +91,7 @@ export function EpisodeCard({
           onLongPress={
             onActionsPress == null ? undefined : () => onActionsPress(lead.item)
           }
+          onPressIn={href == null ? undefined : () => preloadRoute(href)}
           onPress={() => {
             if (href == null) {
               onPress?.(lead.item);
