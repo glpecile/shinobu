@@ -48,7 +48,6 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   const { coverImage } = useTraktMediaImages(item);
   // Uniwind has no group-hover support.
   const [hovered, setHovered] = useState(false);
-  const showActionsButton = process.env.EXPO_OS === 'web' && hovered;
   const pushRoute = usePushRoute();
   const preloadRoute = usePreloadRoute();
   const reduceMotion = useReducedMotion();
@@ -148,12 +147,13 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
           {content}
         </PresstableScale>
       )}
-      {showActionsButton && (
+      {process.env.EXPO_OS === 'web' && (
         <OverlayActionsButton
           className="absolute top-2 right-2"
           label={`More options for ${item.title}`}
           onPress={() => onActionsPress(item)}
           size="md"
+          visible={hovered}
         />
       )}
     </View>

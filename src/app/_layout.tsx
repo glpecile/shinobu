@@ -98,7 +98,7 @@ export default function Layout() {
         }
       : navigationBase;
   // Web-only blur-fade on every pushed screen (no-op on native, which has its
-  // own stack transition). Tab switches get the same enter in (tabs)/_layout.web.
+  // own stack transition).
   const pageEnter = usePageEnterStyle();
 
   // Notification tap → details route, in all three app states (R10).

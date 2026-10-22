@@ -271,8 +271,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   // mount flag can't do this: the sync update batches with the mount effect's
   // own update, re-arming transitions in the collapsing commit.)
   const [animated, setAnimated] = useState(false);
-  function userToggleSidebar(): void {
-    setAnimated(true);
+  function userToggleSidebar(animate = true): void {
+    setAnimated(animate);
     toggleSidebarCollapsed();
   }
 
@@ -283,7 +283,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'b' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        userToggleSidebar();
+        userToggleSidebar(false);
       }
     }
     document.addEventListener('keydown', onKeyDown);
@@ -326,7 +326,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           // Unarmed until a user toggle (see above): the boot sync to a
           // stored collapsed pref must snap, not slide.
           // oxlint-disable-next-line shadcn/no-arbitrary-values -- Tailwind has no width-only transition
-          animated && 'md:transition-[width] md:duration-220',
+          animated && 'md:transition-[width] md:duration-220 md:motion-reduce:transition-none',
           collapsed && 'md:w-16',
         )}
       >
