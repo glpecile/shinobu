@@ -74,6 +74,7 @@ function Field({ label, note, error, children }: { label: string; note?: string;
 function SwitchRow({ label, note, value, onChange, disabled }: { label: string; note: string; value: boolean; onChange: (value: boolean) => void; disabled: boolean }) {
   const accent = useThemeColor('--color-accent');
   const border = useThemeColor('--color-border');
+  const accentForeground = useThemeColor('--color-accent-foreground');
   return (
     <View className="flex-row items-center gap-4">
       <View className="flex-1 min-w-0">
@@ -82,6 +83,8 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
       </View>
       <Switch
         accessibilityLabel={label}
+        // react-native-web paints the on thumb teal unless this web-only prop is set.
+        {...{ activeThumbColor: accentForeground }}
         disabled={disabled}
         onValueChange={(next) => { haptics.selection(); onChange(next); }}
         thumbColor={process.env.EXPO_OS === 'android' ? (value ? accent : undefined) : undefined}
