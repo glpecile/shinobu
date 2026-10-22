@@ -9,6 +9,7 @@ import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { ErrorBoundary } from "react-error-boundary";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -164,6 +165,9 @@ export default function Layout() {
                   <Stack.Screen name="lists/serializd/[id]" />
                   <Stack.Screen name="anime-seasons/index" />
                 </Stack>
+                {/* Here, not in a screen: a frozen unfocused tab misses a
+                    theme change and leaves light icons on a light bar. */}
+                <StatusBar style="auto" />
                 {/* Hidden authenticated WebView that runs Letterboxd writes
                     (native only; renders null on web). */}
                 <LetterboxdWriteBridge />
