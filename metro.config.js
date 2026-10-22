@@ -26,6 +26,14 @@ uniwindConfig.resolver.resolveRequest = (context, moduleName, platform) =>
     ? context.resolveRequest(context, moduleName, platform)
     : uniwindResolveRequest(context, moduleName, platform);
 
+// Expo ships inline requires off. Turned on so launch only runs the modules
+// the first screen needs.
+const getTransformOptions = uniwindConfig.transformer.getTransformOptions;
+uniwindConfig.transformer.getTransformOptions = async (...args) => {
+  const options = await getTransformOptions(...args);
+  return { ...options, transform: { ...options.transform, inlineRequires: true } };
+};
+
 // --- Local worker proxy (web dev only) --------------------------------------
 // `bun web` (Metro) has no Worker, so the same-origin proxy paths the web app
 // depends on in production (`/api/serializd/*`, `/api/letterboxd/*`, `/api/fourchan/*`) 404 there

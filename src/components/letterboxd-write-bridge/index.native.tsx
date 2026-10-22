@@ -50,15 +50,18 @@ function ConnectedWriteBridge() {
         left: -9999,
       }}
     >
-      <NitroWebView
-        // A new instance installs the script before loading, including repeat
-        // logs of the same film. The native cookie store survives remounts.
-        key={page?.script ?? 'idle'}
-        injectedJavaScript={page?.script}
-        onMessage={callback((event) => handleLetterboxdMessage(event.nativeEvent.data))}
-        source={{ uri: `${LETTERBOXD_BASE_URL}${page?.path ?? '/'}` }}
-        style={{ width: 1, height: 1 }}
-      />
+      {/* Created on the first write, so launch doesn't load Letterboxd. */}
+      {page != null && (
+        <NitroWebView
+          // A new instance installs the script before loading, including repeat
+          // logs of the same film. The native cookie store survives remounts.
+          key={page.script}
+          injectedJavaScript={page.script}
+          onMessage={callback((event) => handleLetterboxdMessage(event.nativeEvent.data))}
+          source={{ uri: `${LETTERBOXD_BASE_URL}${page.path}` }}
+          style={{ width: 1, height: 1 }}
+        />
+      )}
     </View>
   );
 }
