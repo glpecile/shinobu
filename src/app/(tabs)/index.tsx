@@ -299,7 +299,6 @@ export default function App() {
       ) : (
         <FeedScreen />
       )}
-
     </View>
   );
 }

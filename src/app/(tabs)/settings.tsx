@@ -22,8 +22,14 @@ import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
+import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
 import { setThemePreference, useThemePreference } from '@/state/prefs/theme';
-import { unhideItem,unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
+
+const THEME_OPTIONS = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+] as const;
 
 /**
  * One column width and one gutter for the whole screen. Web's navigation rail
@@ -32,13 +38,7 @@ import { unhideItem,unhideList, useHiddenItems, useHiddenLists } from '@/state/p
  * gets; `max-w-2xl` is the detail screens' centering pattern, narrowed because
  * settings read better in a shorter measure than a details page.
  */
-const THEME_OPTIONS = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-] as const;
-
-const CONTENT_COLUMN ='w-full max-w-2xl self-center';
+const CONTENT_COLUMN = 'w-full max-w-2xl self-center';
 const CONTENT_GUTTER = process.env.EXPO_OS === 'web' ? 'px-4' : 'px-6';
 /**
  * Web route headers (Diary, Search, Watchlist) are one full-width `px-6` row
@@ -156,6 +156,7 @@ export default function SettingsScreen() {
               <Eyebrow className="mb-3">Appearance</Eyebrow>
               <NativeSegmentedControl
                 accessibilityLabel="Theme"
+                className="web:min-h-14"
                 onChange={setThemePreference}
                 options={THEME_OPTIONS}
                 value={themePreference}
