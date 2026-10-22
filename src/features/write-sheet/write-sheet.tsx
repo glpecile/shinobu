@@ -1,7 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
-import { FadeIn } from 'react-native-reanimated';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { SectionEnter } from '@/components/section-enter';
@@ -22,16 +22,21 @@ import {
  * sheet's own height animates under it (native: the `'content'` detent; web:
  * the panel's height transition).
  *
- * A preset, not a custom `Keyframe`: the entering view has to contribute its
- * height to the sheet's flow, and a `Keyframe`'s web cleanup pins the element
- * out of it (docs/solutions/reanimated-web-keyframe-pins-position.md). No
- * `exiting` either — an exiting view keeps its layout space on native, so the
- * sheet would briefly measure both views stacked and lurch to the sum.
+ * A CSS animation, not an `entering` layout animation: Android's keyboard
+ * resizes the sheet host, and a resize mid-`FadeIn` left the view stuck at
+ * opacity 0 — the Rename sheet opened blank. No `exiting` either: an exiting
+ * view keeps its layout space on native, so the sheet would briefly measure
+ * both views stacked and lurch to the sum.
  */
-const stepEntering = FadeIn.duration(DURATION.swap);
+const stepFade = { from: { opacity: 0 }, to: { opacity: 1 } };
 
 function Step({ children }: { children: ReactNode }) {
-  return <AnimatedView entering={stepEntering}>{children}</AnimatedView>;
+  const reducedMotion = useReducedMotion();
+  return (
+    <AnimatedView style={{ animationName: stepFade, animationDuration: reducedMotion ? 1 : DURATION.swap, animationFillMode: 'both' }}>
+      {children}
+    </AnimatedView>
+  );
 }
 
 function Title({ children }: { children: ReactNode }) {
