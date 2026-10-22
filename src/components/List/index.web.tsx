@@ -10,6 +10,7 @@ import { useIsFocused } from 'expo-router';
 export type ListProps<T> = Omit<LegendListProps<T>, 'refScrollView'> & {
   ref?: Ref<LegendListRef>;
   itemLayoutAnimation?: AnimatedLegendListProps<T>['itemLayoutAnimation'];
+  sharedValues?: AnimatedLegendListProps<T>['sharedValues'];
 };
 export type { LegendListRef } from '@legendapp/list/react-native';
 
@@ -37,6 +38,7 @@ export function List<T>({
   recycleItems = false,
   onStartReachedThreshold = 0,
   itemLayoutAnimation,
+  sharedValues,
   ...props
 }: ListProps<T>): ReactElement {
   const focused = useIsFocused();
@@ -44,6 +46,7 @@ export function List<T>({
   void keyboardDismissMode;
   void nestedScrollEnabled;
   void scrollEnabled;
+  void sharedValues;
   const ListComponent = itemLayoutAnimation == null ? LegendList : AnimatedLegendList;
   // Both defaulted, not omitted — see index.tsx for why.
   return (

@@ -17,6 +17,7 @@ import type { ReactElement, Ref } from 'react';
 export type ListProps<T> = Omit<LegendListProps<T>, 'refScrollView'> & {
   ref?: Ref<LegendListRef>;
   itemLayoutAnimation?: AnimatedLegendListProps<T>['itemLayoutAnimation'];
+  sharedValues?: AnimatedLegendListProps<T>['sharedValues'];
 };
 export type { LegendListRef } from '@legendapp/list/react-native';
 
@@ -42,13 +43,15 @@ export function List<T>({
   recycleItems = false,
   onStartReachedThreshold = 0,
   itemLayoutAnimation,
+  sharedValues,
   ...props
 }: ListProps<T>): ReactElement {
-  const ListComponent = itemLayoutAnimation == null ? LegendList : AnimatedLegendList;
+  const ListComponent = itemLayoutAnimation == null && sharedValues == null ? LegendList : AnimatedLegendList;
   return (
     <ListComponent
       {...props}
       {...(itemLayoutAnimation != null ? { itemLayoutAnimation } : {})}
+      {...(sharedValues != null ? { sharedValues } : {})}
       onStartReachedThreshold={onStartReachedThreshold}
       recycleItems={recycleItems}
     />

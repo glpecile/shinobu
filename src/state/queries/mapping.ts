@@ -1,4 +1,4 @@
-import { useQuery, type QueryClient } from '@tanstack/react-query';
+import { isCancelledError, useQuery, type FetchQueryOptions, type QueryClient } from '@tanstack/react-query';
 import { Effect } from 'effect';
 import { useSyncExternalStore } from 'react';
 
@@ -200,6 +200,17 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
   });
 }
 
+function simklLookupQuery(params: SimklLookupParams) {
+  return {
+    queryKey: mappingQueryKeys.simklLookup(params),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(lookupSimklByExternalId(simklDeps(), params), { signal }).then(
+        (results) => results[0] ?? null,
+      ),
+    ...FOREVER,
+  };
+}
+
 /**
  * The Simkl record behind a foreign id, or Simkl's own: the details variants
  * row discovers an item's Simkl page with it, and a cold `/details/simkl-<id>`
@@ -208,12 +219,7 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
  */
 export function useSimklLookupQuery(params: SimklLookupParams | null) {
   return useQuery({
-    queryKey: mappingQueryKeys.simklLookup(params ?? {}),
-    queryFn: ({ signal }) =>
-      Effect.runPromise(lookupSimklByExternalId(simklDeps(), params ?? {}), { signal }).then(
-        (results) => results[0] ?? null,
-      ),
-    ...FOREVER,
+    ...simklLookupQuery(params ?? {}),
     enabled: params != null,
   });
 }
@@ -400,30 +406,30 @@ export function useAniListEpisodeWatchedQuery(params: {
  * resolve to `null` forever instead of Simkl's still-useful
  * tmdb/imdb/mal/simkl id bag.
  */
-function traktOrSimklLookup(
+function identityLookupQuery(
   via: IdentityLookupVia,
   params: {
     source: 'tvdb' | 'tmdb' | 'imdb';
     id: number | string;
     kind: 'movie' | 'show';
   },
-  signal: AbortSignal,
-): Promise<NormalizedMediaItem | null> {
+): FetchQueryOptions<NormalizedMediaItem | null> {
   if (via === 'trakt') {
-    return Effect.runPromise(lookupByExternalId(traktDeps(), params), { signal })
-      .catch((error) => mappingMiss(error, signal));
+    return {
+      queryKey: mappingQueryKeys.traktLookup(params.source, params.id, params.kind, via),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        Effect.runPromise(lookupByExternalId(traktDeps(), params), { signal })
+          .catch((error) => mappingMiss(error, signal)),
+      ...FOREVER,
+    };
   }
-  return Effect.runPromise(
-    lookupSimklByExternalId(simklDeps(), {
-      type: params.kind,
-      ...(params.source === 'tvdb' ? { tvdb: Number(params.id) } : {}),
-      ...(params.source === 'tmdb' ? { tmdb: Number(params.id) } : {}),
-      ...(params.source === 'imdb' ? { imdb: String(params.id) } : {}),
-    }),
-    { signal },
-  )
-    .then((results) => results[0] ?? null)
-    .catch((error) => mappingMiss(error, signal));
+  // Identity enrichment and the public variant poster share Simkl's cache and in-flight read.
+  return simklLookupQuery({
+    type: params.kind,
+    ...(params.source === 'tvdb' ? { tvdb: Number(params.id) } : {}),
+    ...(params.source === 'tmdb' ? { tmdb: Number(params.id) } : {}),
+    ...(params.source === 'imdb' ? { imdb: String(params.id) } : {}),
+  });
 }
 
 export function cachedTraktLookup(
@@ -434,16 +440,9 @@ export function cachedTraktLookup(
     kind: 'movie' | 'show';
   },
 ) {
-  const via = identityLookupVia();
-  return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.traktLookup(
-      params.source,
-      params.id,
-      params.kind,
-      via,
-    ),
-    queryFn: ({ signal }) => traktOrSimklLookup(via, params, signal),
-    ...FOREVER,
+  return queryClient.fetchQuery(identityLookupQuery(identityLookupVia(), params)).catch((error) => {
+    if (isCancelledError(error)) throw error;
+    return null;
   });
 }
 
@@ -650,9 +649,7 @@ export function useTraktIdentityQuery(item: NormalizedMediaItem | undefined) {
   const kind = item?.type === 'TV' ? 'show' : 'movie';
   const via = useIdentityLookupVia();
   return useQuery({
-    queryKey: mappingQueryKeys.traktLookup('tmdb', tmdbId ?? 0, kind, via),
-    queryFn: ({ signal }) => traktOrSimklLookup(via, { source: 'tmdb', id: tmdbId ?? 0, kind }, signal),
-    ...FOREVER,
+    ...identityLookupQuery(via, { source: 'tmdb', id: tmdbId ?? 0, kind }),
     enabled:
       item != null &&
       (item.type === 'MOVIE' || item.type === 'TV') &&

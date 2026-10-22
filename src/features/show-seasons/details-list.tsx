@@ -84,10 +84,11 @@ export function DetailsList({
           )}
         </View>
       }
-      onScroll={(event) => {
+      sharedValues={process.env.EXPO_OS === 'web' ? undefined : { scrollOffset: scrollY }}
+      onScroll={process.env.EXPO_OS === 'web' ? (event) => {
         scrollY.set(event.nativeEvent.contentOffset.y);
         if (unfolding != null) setUnfolding(null);
-      }}
+      } : unfolding == null ? undefined : () => setUnfolding(null)}
       onScrollBeginDrag={() => setUnfolding(null)}
       scrollEventThrottle={16}
       renderScrollComponent={(props) => (
