@@ -13,6 +13,7 @@ import {
 } from '@/state/queries/show-seasons';
 import { useSimklEpisodeStateQuery } from '@/state/queries/simkl';
 import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
+import { usePrefetchTmdbEpisode } from '@/state/queries/tmdb';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
 import { useState } from 'react';
@@ -102,6 +103,7 @@ function ShowDetailsList({
 
   const { openLog: openLogSession } = useCatchUpControls();
   const pushRoute = usePushRoute();
+  const prefetchEpisode = usePrefetchTmdbEpisode();
   // The long-pressed row — kept (not nulled) while its sheet closes.
   const [pressed, setPressed] = useState<{
     season: NormalizedSeason;
@@ -159,8 +161,10 @@ function ShowDetailsList({
             setActionsOpen(true);
           },
           onMarkEpisode: markEpisode,
-          onOpenEpisode: (s, episode) =>
-            pushRoute(routes.episode(item.id, s.number, episode.number)),
+          onOpenEpisode: (s, episode) => {
+            prefetchEpisode({ tmdbId: item.externalIds.tmdb, season: s.number, number: episode.number });
+            pushRoute(routes.episode(item.id, s.number, episode.number));
+          },
           onMarkSeason: (s) => {
             // Never include unaired episodes in a season-wide mark — the
             // confirm sheet must not promise to log episodes the user couldn't

@@ -148,6 +148,14 @@ export function mediaDetailsQuery(
   };
 }
 
+/** Starts an item's details fetch on press, so it runs during the push transition. */
+export function usePrefetchMediaDetails() {
+  const queryClient = useQueryClient();
+  return (item: NormalizedMediaItem) => {
+    void queryClient.prefetchQuery(mediaDetailsQuery(queryClient, item));
+  };
+}
+
 /** Non-suspending variant for the details header metadata merge. */
 export function useMediaDetailsQuery(item: NormalizedMediaItem | undefined) {
   const queryClient = useQueryClient();

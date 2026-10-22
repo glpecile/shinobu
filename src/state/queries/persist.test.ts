@@ -37,6 +37,7 @@ mock.module('expo-crypto', () => ({
 }));
 
 const { anilistQueryKeys } = await import('./anilist');
+const { diaryQueryKeys } = await import('./diary-pages');
 const { letterboxdQueryKeys } = await import('./letterboxd');
 const { createQueryPersister, deserialize, isPersistedQueryKey, serialize } = await import('./persist');
 const { PersistQueryClientProvider } = await import('./persist-provider');
@@ -114,6 +115,15 @@ describe('serialize / deserialize', () => {
   // `map.size === 0` guard passes (`undefined === 0` is false) and the next
   // line calls `map.values()`, so every cold-started anime details screen with
   // a mapping threw "undefined is not a function".
+  // A restored infinite query refetches every page it holds on its first read.
+  test('writes only an infinite query\'s first page', () => {
+    const data = { pages: [{ slices: {} }, { slices: {} }], pageParams: [{ simkl: 1 }, { simkl: 2 }] };
+    expect(restoredData(clientWith(diaryQueryKeys.feed(['simkl'], '', ''), data))).toEqual({
+      pages: [{ slices: {} }],
+      pageParams: [{ simkl: 1 }],
+    });
+  });
+
   test('round-trips a Map instead of flattening it to {}', () => {
     const data = new Map([
       [1, { season: 1, number: 1 }],
@@ -171,6 +181,8 @@ describe('isPersistedQueryKey', () => {
     // The cross-provider watchlist gather (plan 0031): without it this is the
     // one home row that pops in as a skeleton after every cold start.
     expect(isPersistedQueryKey(watchlistQueryKeys.inputs())).toBe(true);
+    expect(isPersistedQueryKey(diaryQueryKeys.feed(['simkl'], '', ''))).toBe(true);
+    expect(isPersistedQueryKey(letterboxdQueryKeys.lists('gian', 'liked'))).toBe(true);
   });
 
   // The allowlist exists to keep the unbounded caches off disk — web's
@@ -184,6 +196,7 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(['tmdb', 'person', 1])).toBe(false);
     expect(isPersistedQueryKey(['mapping', 'trakt-search', 'bebop', 1998])).toBe(false);
     expect(isPersistedQueryKey(['mapping', 'season-layout', 1, 2])).toBe(false);
+    expect(isPersistedQueryKey(diaryQueryKeys.filmPlays(['simkl'], { tmdb: 1 }))).toBe(false);
   });
 
   test('matches on whole segments, not string prefixes', () => {

@@ -1,6 +1,7 @@
 import {
   keepPreviousData,
   useQuery,
+  useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
@@ -105,6 +106,16 @@ function episodeQueryOptions(params: {
     // person page, so sheet → screen → back costs one request, not three.
     staleTime: PERSON_STALE_TIME_MS,
     gcTime: PERSON_STALE_TIME_MS,
+  };
+}
+
+/** Starts an episode's TMDB read on press, so the episode screen's credits load during the push. */
+export function usePrefetchTmdbEpisode() {
+  const queryClient = useQueryClient();
+  return (params: { tmdbId: number | undefined; season: number; number: number }) => {
+    const { tmdbId } = params;
+    if (tmdbId == null || tmdbToken() === '') return;
+    void queryClient.prefetchQuery(episodeQueryOptions({ ...params, tmdbId }));
   };
 }
 

@@ -5,7 +5,7 @@ import type { UpNextInputs } from '@/features/up-next/types';
 import type { ProviderId } from '@/lib/providers/types';
 import { getMutedNotificationKinds, getNotificationsEnabled } from '@/state/prefs/notifications';
 import { prefsStorage } from '@/state/prefs/storage';
-import { fetchUpNextInputs } from '@/state/queries/up-next';
+import { upNextOptions } from '@/state/queries/up-next';
 import { usableProviderIds } from '@/state/session/trakt-migration';
 
 import { computeNotificationSchedule, type NotificationKind } from './compute-schedule';
@@ -80,7 +80,8 @@ export function createRefreshDeps(queryClient: QueryClient): RefreshNotification
     // Usable, not merely connected (plan 0034 U9): a MigrationNeeded Trakt
     // session must not schedule notification fetches that can only 401.
     connectedProviders: usableProviderIds,
-    gatherInputs: (connected) => fetchUpNextInputs(queryClient, connected),
+    // The Up Next slot, so a cold start's refresh shares the gather the feed is already running.
+    gatherInputs: (connected) => queryClient.fetchQuery(upNextOptions(queryClient, connected)),
     schedule: replaceScheduledNotifications,
     now: () => new Date(),
     throttle: {

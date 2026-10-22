@@ -53,6 +53,7 @@ import {
   SEARCH_MIN_QUERY_LENGTH,
   useTraktSearchQuery,
 } from '@/state/queries/trakt';
+import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -282,6 +283,7 @@ export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pushRoute = usePushRoute();
+  const prefetchDetails = usePrefetchMediaDetails();
   const params = useLocalSearchParams<{ q?: string; scope?: string }>();
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
@@ -477,6 +479,7 @@ export default function SearchScreen() {
           : 'results';
 
   function openDetails(item: NormalizedMediaItem) {
+    prefetchDetails(item);
     pushRoute(routes.details(item.id, item.type));
   }
 

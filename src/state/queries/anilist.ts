@@ -487,6 +487,7 @@ export function useAniListStaffIdQuery(params: {
     },
     enabled: (params.enabled ?? true) && name !== '',
     staleTime: NAME_RESOLUTION_STALE_MS,
+    gcTime: NAME_RESOLUTION_STALE_MS,
   });
 }
 
@@ -507,6 +508,7 @@ export function useAniListStudioIdQuery(params: {
     },
     enabled: (params.enabled ?? true) && name !== '',
     staleTime: NAME_RESOLUTION_STALE_MS,
+    gcTime: NAME_RESOLUTION_STALE_MS,
   });
 }
 

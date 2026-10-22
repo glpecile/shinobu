@@ -4,7 +4,9 @@ import type { Query, QueryClient } from '@tanstack/react-query';
 import { createMMKV, type MMKV } from 'react-native-mmkv';
 
 import { anilistQueryKeys } from './anilist';
+import { diaryQueryKeys } from './diary-pages';
 import { letterboxdQueryKeys } from './letterboxd';
+import { serializdQueryKeys } from './serializd';
 import { simklQueryKeys } from './simkl';
 import { traktQueryKeys } from './trakt';
 import { upNextQueryKeys } from './up-next';
@@ -125,8 +127,30 @@ function isTaggedMap(value: unknown): value is TaggedMap {
   );
 }
 
+/**
+ * Infinite queries keep only their first page on disk: a restored infinite
+ * query refetches every page it holds, so a deep scroll would otherwise cost
+ * a cold start one request per page before the screen settles.
+ */
+function firstPagesOnly(client: PersistedClient): PersistedClient {
+  return {
+    ...client,
+    clientState: {
+      ...client.clientState,
+      queries: client.clientState.queries.map((query) => {
+        const data = query.state.data as { pages?: unknown; pageParams?: unknown } | undefined;
+        if (!Array.isArray(data?.pages) || !Array.isArray(data.pageParams)) return query;
+        return {
+          ...query,
+          state: { ...query.state, data: { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) } },
+        };
+      }),
+    },
+  };
+}
+
 export function serialize(client: PersistedClient): string {
-  return JSON.stringify(client, (_key, value: unknown) => {
+  return JSON.stringify(firstPagesOnly(client), (_key, value: unknown) => {
     if (value instanceof Set) return { [SET_TAG]: [...value] };
     if (value instanceof Map) return { [MAP_TAG]: [...value] };
     return value;
@@ -182,6 +206,13 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   simklQueryKeys.trending('tv').slice(0, -1),
   anilistQueryKeys.seasonalAnime({ season: 'WINTER', year: 0 }).slice(0, -3),
   letterboxdQueryKeys.watchlist('').slice(0, -1),
+  // Home's created and liked list rows, so they restore with the rest of the feed.
+  letterboxdQueryKeys.listsRoot(),
+  serializdQueryKeys.listsRoot(),
+  // The Diary tab, so it opens on the last session's entries. Native only:
+  // Simkl's 500-entry window alone can approach a megabyte, more than web's
+  // `localStorage` can spare beside the rest of the snapshot.
+  ...(process.env.EXPO_OS === 'web' ? [] : [diaryQueryKeys.feedRoot()]),
 ];
 
 function hasPrefix(key: readonly unknown[], prefix: readonly unknown[]): boolean {

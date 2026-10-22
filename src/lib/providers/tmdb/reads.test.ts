@@ -95,27 +95,17 @@ describe('getMediaCatalogue', () => {
 });
 
 describe('getTvSeasons', () => {
-  test('folds every season into append_to_response batches and normalizes', async () => {
+  test('reads the layout and seasons 0–19 in one call, and normalizes', async () => {
     const urls: string[] = [];
     const fetch = (input: RequestInfo | URL): Promise<Response> => {
-      const url = String(input);
-      urls.push(url);
-      if (!url.includes('append_to_response')) {
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
-              seasons: [
-                { season_number: 0, episode_count: 1 },
-                { season_number: 1, episode_count: 2 },
-              ],
-            }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } },
-          ),
-        );
-      }
+      urls.push(String(input));
       return Promise.resolve(
         new Response(
           JSON.stringify({
+            seasons: [
+              { season_number: 0, episode_count: 1 },
+              { season_number: 1, episode_count: 2 },
+            ],
             'season/0': {
               episodes: [{ episode_number: 1, name: 'Pilot Special' }],
             },
@@ -148,9 +138,8 @@ describe('getTvSeasons', () => {
       getTvSeasons({ fetch, token: 'test-token' }, { tmdbId: 93222 }),
     );
 
-    // One layout call + one batched append call — never one call per season.
-    expect(urls).toHaveLength(2);
-    expect(urls[1]).toContain('append_to_response=season/0,season/1');
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toContain('append_to_response=season/0,season/1,');
     // Specials sort last, mirroring the Trakt normalizer.
     expect(seasons.map((season) => season.title)).toEqual([
       'Season 1',
@@ -167,12 +156,11 @@ describe('getTvSeasons', () => {
     ]);
   });
 
-  test('splits shows beyond 20 seasons across requests', async () => {
+  test('fetches seasons past 19 in a follow-up batch', async () => {
     const urls: string[] = [];
     const fetch = (input: RequestInfo | URL): Promise<Response> => {
-      const url = String(input);
-      urls.push(url);
-      const body = url.includes('append_to_response')
+      urls.push(String(input));
+      const body = urls.length > 1
         ? {}
         : {
             seasons: Array.from({ length: 25 }, (_, index) => ({
@@ -192,11 +180,10 @@ describe('getTvSeasons', () => {
       getTvSeasons({ fetch, token: 'test-token' }, { tmdbId: 456 }),
     );
 
-    // Layout + ceil(25 / 20) append batches.
-    expect(urls).toHaveLength(3);
-    expect(urls[1]).toContain('season/20');
-    expect(urls[1]).not.toContain('season/21');
-    expect(urls[2]).toContain('season/21');
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toContain('season/19');
+    expect(urls[0]).not.toContain('season/20');
+    expect(urls[1]).toContain('append_to_response=season/20,season/21,season/22,season/23,season/24,season/25');
     // A season the append response omitted still renders, just empty.
     expect(seasons).toHaveLength(25);
     expect(seasons[0]?.episodes).toEqual([]);

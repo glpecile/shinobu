@@ -143,15 +143,17 @@ export function getTvSeasonLayout(
   params: { tmdbId: number },
 ): Effect.Effect<SeasonLayout, ProviderError> {
   return tmdbRequest<TmdbSeasonLayoutResponse>(deps, `/tv/${params.tmdbId}`).pipe(
-    Effect.map((raw) =>
-      (raw.seasons ?? []).flatMap((season): SeasonSlot[] => {
-        const number = season?.season_number;
-        const count = season?.episode_count;
-        if (number == null || count == null) return [];
-        return [{ season: number, episodeCount: count }];
-      }),
-    ),
+    Effect.map(seasonLayout),
   );
+}
+
+function seasonLayout(raw: TmdbSeasonLayoutResponse): SeasonLayout {
+  return (raw.seasons ?? []).flatMap((season): SeasonSlot[] => {
+    const number = season?.season_number;
+    const count = season?.episode_count;
+    if (number == null || count == null) return [];
+    return [{ season: number, episodeCount: count }];
+  });
 }
 
 interface TmdbSeasonEpisodeRaw {
@@ -201,36 +203,45 @@ function normalizeTmdbSeason(
   };
 }
 
+/** Seasons 0–19, appended blind to the layout request; TMDB omits the ones a show lacks. */
+const FIRST_APPENDED_SEASONS = Array.from({ length: SEASON_APPEND_LIMIT }, (_, index) => index);
+
+function appendSeasons(numbers: readonly number[]): string {
+  return numbers.map((number) => `season/${number}`).join(',');
+}
+
 /**
  * Full seasons + episodes for one show — the Trakt-less counterpart of
  * `getShowSeasons` (plan 0034 KTD-8: post-detachment, TMDB is the catalogue
- * substitute for every non-BYO build). One `/tv/{id}` call for the season
- * numbers, then `append_to_response=season/N` batches (20 per request, TMDB's
- * append cap) fold every season's episode list into as few round-trips as
- * possible. Specials sort last via the shared `orderSeasons`, so both sources
- * hand the accordion an identically shaped list.
+ * substitute for every non-BYO build). The `/tv/{id}` layout call carries
+ * seasons 0–19 in its `append_to_response` (20 is TMDB's append cap), so most
+ * shows load in one round trip; seasons past 19 follow in further batches.
+ * Specials sort last via the shared `orderSeasons`, so both sources hand the
+ * accordion an identically shaped list.
  */
 export function getTvSeasons(
   deps: TmdbDeps,
   params: { tmdbId: number },
 ): Effect.Effect<NormalizedSeason[], ProviderError> {
+  type Appended = Record<string, TmdbAppendedSeasonRaw | undefined>;
   return Effect.gen(function* () {
-    const layout = yield* getTvSeasonLayout(deps, { tmdbId: params.tmdbId });
-    const numbers = layout.map((slot) => slot.season);
-    const seasons: NormalizedSeason[] = [];
-    for (let i = 0; i < numbers.length; i += SEASON_APPEND_LIMIT) {
-      const chunk = numbers.slice(i, i + SEASON_APPEND_LIMIT);
-      const append = chunk.map((number) => `season/${number}`).join(',');
-      const raw = yield* tmdbRequest<
-        Record<string, TmdbAppendedSeasonRaw | undefined>
-      >(deps, `/tv/${params.tmdbId}?append_to_response=${append}`);
-      for (const number of chunk) {
-        seasons.push(
-          normalizeTmdbSeason(number, raw[`season/${number}`]?.episodes ?? []),
-        );
-      }
+    const first = yield* tmdbRequest<TmdbSeasonLayoutResponse & Appended>(
+      deps,
+      `/tv/${params.tmdbId}?append_to_response=${appendSeasons(FIRST_APPENDED_SEASONS)}`,
+    );
+    const appended: Appended = { ...first };
+    const numbers = seasonLayout(first).map((slot) => slot.season);
+    const rest = numbers.filter((number) => !FIRST_APPENDED_SEASONS.includes(number));
+    for (let i = 0; i < rest.length; i += SEASON_APPEND_LIMIT) {
+      const raw = yield* tmdbRequest<Appended>(
+        deps,
+        `/tv/${params.tmdbId}?append_to_response=${appendSeasons(rest.slice(i, i + SEASON_APPEND_LIMIT))}`,
+      );
+      Object.assign(appended, raw);
     }
-    return orderSeasons(seasons);
+    return orderSeasons(
+      numbers.map((number) => normalizeTmdbSeason(number, appended[`season/${number}`]?.episodes ?? [])),
+    );
   });
 }
 

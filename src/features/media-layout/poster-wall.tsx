@@ -9,6 +9,7 @@ import { PresstableScale } from '@/components/presstable';
 import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { WatchlistEntry } from '@/features/watchlist/types';
@@ -74,6 +75,7 @@ function PosterCell({
   showActions?: boolean;
 }) {
   const item = entry.item;
+  const prefetchDetails = usePrefetchMediaDetails();
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
@@ -140,7 +142,10 @@ function PosterCell({
           accessibilityLabel={accessibilityLabel}
           className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
           onLongPress={() => onActions(item)}
-          onPress={() => onPress(item)}
+          onPress={() => {
+            prefetchDetails(item);
+            onPress(item);
+          }}
         >
           <PosterFace
             // Always on, unlike the hover caption: "on both my trackers" versus

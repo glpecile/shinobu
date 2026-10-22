@@ -29,14 +29,21 @@ export interface SerializdWatchedShow {
 export const getSerializdWatchedShows = Effect.fn('serializd.getWatchedShows')(function* (deps: SerializdDeps) {
   const username = deps.session?.username;
   if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider: 'serializd', refreshFailed: true });
-  const items: SerializdWatchedShow[] = [];
-  let totalPages = 1;
-  for (let page = 1; page <= totalPages; page++) {
-    const raw = yield* serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/watchedpage_v2/${page}?sort_by=date_added_desc`, { auth: true });
-    const result = yield* Schema.decodeUnknownEffect(WatchedPage)(raw).pipe(
-      Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'unrecognized watched shows page' })),
+  const readPage = (page: number) =>
+    serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/watchedpage_v2/${page}?sort_by=date_added_desc`, { auth: true }).pipe(
+      Effect.flatMap((raw) => Schema.decodeUnknownEffect(WatchedPage)(raw).pipe(
+        Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'unrecognized watched shows page' })),
+      )),
     );
-    totalPages = result.totalPages;
+  // Page 1 carries the page count; the rest load a few at a time instead of one by one.
+  const first = yield* readPage(1);
+  const rest = yield* Effect.forEach(
+    Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) => index + 2),
+    readPage,
+    { concurrency: 3 },
+  );
+  const items: SerializdWatchedShow[] = [];
+  for (const result of [first, ...rest]) {
     for (const show of result.items) {
       if (show.seasonIds.length === 0) continue;
       items.push({
