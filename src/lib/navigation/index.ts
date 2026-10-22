@@ -18,6 +18,21 @@ export function allowRoutePush(href: string): boolean {
 }
 
 /**
+ * Renders `href` hidden in the stack so the push that follows lands on a
+ * mounted screen. Call it on press-in of a press that always navigates. The
+ * stack keeps one preloaded screen per route, so a press-in that turns into a
+ * scroll costs one hidden render. Native only: on web the hidden screen's
+ * `<Head>` would retitle the tab.
+ */
+export function usePreloadRoute(): (href: string) => void {
+  const router = useRouter();
+  return (href: string) => {
+    if (process.env.EXPO_OS === 'web') return;
+    router.prefetch(href as Parameters<typeof router.prefetch>[0]);
+  };
+}
+
+/**
  * `router.push`, minus the duplicate. Use this instead of `useRouter().push`
  * for anything a press can reach; `useRouter` stays the way to `back()`,
  * `replace()` or read navigation state. Returns whether the push was accepted
