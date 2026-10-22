@@ -1,4 +1,3 @@
-import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/button';
@@ -300,8 +299,6 @@ export default function App() {
       ) : (
         <FeedScreen />
       )}
-
-      <StatusBar style="auto" />
     </View>
   );
 }

@@ -9,6 +9,7 @@ import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { ErrorBoundary } from "react-error-boundary";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -38,6 +39,7 @@ import { ToastHost } from "@/components/toast-host";
 import { PROVIDERS } from "@/lib/providers/registry";
 import { toast } from "@/lib/toast";
 import { onProviderConnected } from "@/state/session/tokens";
+import { applyThemePreference } from "@/state/prefs/theme";
 import { useNotificationTapNavigation } from "@/features/notifications/use-notification-tap-navigation";
 
 SplashScreen.preventAutoHideAsync();
@@ -45,6 +47,7 @@ SplashScreen.preventAutoHideAsync();
 // Module scope, not an effect: AniList's web return connects inside the home
 // route's first effect, which runs before any effect here could subscribe.
 onProviderConnected((id) => toast.success(`Connected to ${PROVIDERS[id].label}`));
+applyThemePreference();
 
 export default function Layout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -162,6 +165,9 @@ export default function Layout() {
                   <Stack.Screen name="lists/serializd/[id]" />
                   <Stack.Screen name="anime-seasons/index" />
                 </Stack>
+                {/* Here, not in a screen: a frozen unfocused tab misses a
+                    theme change and leaves light icons on a light bar. */}
+                <StatusBar style="auto" />
                 {/* Hidden authenticated WebView that runs Letterboxd writes
                     (native only; renders null on web). */}
                 <LetterboxdWriteBridge />

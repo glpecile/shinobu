@@ -11,6 +11,7 @@ import { CARD_SHELL } from '@/components/card-shell';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
 import { GroupedList } from '@/components/grouped-list';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { PresstableOpacity } from '@/components/presstable';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
@@ -22,6 +23,13 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
+import { setThemePreference, useThemePreference } from '@/state/prefs/theme';
+
+const THEME_OPTIONS = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+] as const;
 
 /**
  * One column width and one gutter for the whole screen. Web's navigation rail
@@ -99,6 +107,7 @@ function HiddenItemsSection() {
 
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
+  const themePreference = useThemePreference();
 
   return (
     <View className="flex-1 bg-background">
@@ -143,6 +152,16 @@ export default function SettingsScreen() {
             <ConnectTmdbTokenSection />
             <NotificationsSettingsSection />
             <HiddenItemsSection />
+            <View>
+              <Eyebrow className="mb-3">Appearance</Eyebrow>
+              <NativeSegmentedControl
+                accessibilityLabel="Theme"
+                className="web:min-h-14"
+                onChange={setThemePreference}
+                options={THEME_OPTIONS}
+                value={themePreference}
+              />
+            </View>
             <View>
               <Eyebrow className="mb-3">About</Eyebrow>
               <View className={cn(CARD_SHELL, 'flex-row items-center justify-between gap-3')}>

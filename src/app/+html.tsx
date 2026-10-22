@@ -85,6 +85,33 @@ export default function Root({ children }: { children: React.ReactNode }) {
                   background-color: #ffffff;
                 }
               }
+              html.dark, html.dark body, html.dark #boot-loader {
+                background-color: #0a0a0a;
+                color: #0a0a0a;
+              }
+              html.light, html.light body, html.light #boot-loader {
+                background-color: #ffffff;
+                color: #ffffff;
+              }
+            `,
+          }}
+        />
+        {/*
+          A pinned theme (state/prefs/theme.ts) applied before first paint, as
+          next-themes does, so a reload doesn't flash the system theme. Uniwind
+          adopts a theme class it finds on <html> when it loads. The key is
+          MMKV's web localStorage key, `<id>\<key>`.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var theme = localStorage.getItem("prefs\\\\theme");
+                if (theme === "light" || theme === "dark") {
+                  document.documentElement.classList.add(theme);
+                  document.documentElement.style.colorScheme = theme;
+                }
+              } catch (e) {}
             `,
           }}
         />

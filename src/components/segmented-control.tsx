@@ -38,7 +38,7 @@ export interface SegmentedControlProps<T extends string> {
 }
 
 const segmentClass = (size: 'sm' | 'md') =>
-  cn('flex-1 items-center rounded-full', size === 'sm' ? 'py-1' : 'py-1.5');
+  cn('flex-1 items-center justify-center rounded-full', size === 'sm' ? 'py-1' : 'py-1.5');
 const labelClass = (size: 'sm' | 'md') =>
   cn('font-sans-semibold', size === 'sm' ? 'text-xs' : 'text-sm');
 
