@@ -16,21 +16,33 @@ single throwaway request opens a pipe the real reads reuse. `lib/http/warm-conne
 warms each connected provider's host root (+ TMDB, which every detail screen hits)
 using two mechanisms:
 
-- **`prefetch(url)`** — warms the pool *this* session, fired from the feed screen's
+- **`prefetch(url, { headers: { prefetchKey } })`** — warms the pool *this* session, fired from the feed screen's
   mount effect, a beat before TanStack fires the real queries.
 - **`prefetchOnAppStart(url, { prefetchKey })`** — registers a *persistent* native
   prewarm that runs at process start on the next launch, before JS boots, so a
-  returning user's first Up Next load never pays the handshake.
+  returning user's first Up Next load can reuse the connection.
 
 Both are best-effort (`.catch(() => {})`) and hit host roots with no auth — a
-4xx/redirect back is fine, the connection is warmed regardless and the response is
-discarded. The module self-guards to run once per session. The web sibling
+4xx/redirect back is fine, the connection is warmed regardless and provider reads
+ignore the cached root response. The module self-guards to run once per session. The web sibling
 (`warm-connections.web.ts`) is a no-op: browsers own their own connection pool and
 there is no nitro-fetch on web.
 
 Scope is deliberately narrow — only the hosts the home waterfall races against
-(Trakt, AniList) plus TMDB. Letterboxd/Serializd warm on their own read paths; this
+(Trakt, AniList, Simkl) plus TMDB. Letterboxd/Serializd warm on their own read paths; this
 is not a general "prewarm everything" hook.
+
+## Nitro Fetch 1.8 request validation
+
+`prefetch` requires a `prefetchKey` header before it calls the native transport.
+The earlier `prefetch(url)` call rejected on every invocation, and the best-effort
+catch hid the failure. Both warmup paths now supply the same key. The regression
+test runs Nitro Fetch's real JavaScript validation with only its native JSI
+boundary replaced, and checks that the warmup reaches that boundary.
+
+These keys warm connections only. Provider reads do not supply them and do not
+consume the cached root response. Android's startup replay is configured by the
+Nitro Fetch Expo plugin in `app.json`; generated native files need no edits.
 
 ## What it does *not* fix
 

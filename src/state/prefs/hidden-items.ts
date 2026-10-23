@@ -65,8 +65,14 @@ function getServerSnapshot(): HiddenItem[] {
 }
 
 function subscribe(onStoreChange: () => void): () => void {
-  const subscription = prefsStorage.addOnValueChangedListener(() => {
-    cache.clear();
+  const subscription = prefsStorage.addOnValueChangedListener((key) => {
+    if (key.startsWith(KEY_PREFIX)) {
+      cache.delete(KEY_PREFIX);
+    } else if (key.startsWith(LIST_PREFIX)) {
+      cache.delete(LIST_PREFIX);
+    } else {
+      return;
+    }
     onStoreChange();
   });
   return () => subscription.remove();
