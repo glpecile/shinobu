@@ -16,7 +16,7 @@
 </details>
 
 <p align="center">
-  <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen with progress, seasons, and related posters with muted captions and AniList source badges" />
+  <img src="./docs/images/screenshot-details.png" width="49%" alt="An anime's detail screen with its title and overview beside the poster, then progress, seasons, and related posters with muted captions and AniList source badges" />
   <img src="./docs/images/screenshot-person.png" width="49%" alt="NISIOISIN's page with biography, works filters, and anime and manga posters with role captions and AniList source badges" /><br />
   <sub>A detail page and NISIOISIN's works, with no tracker connected. Person pages remember your poster or list preference locally.</sub>
 </p>
@@ -33,7 +33,7 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 - **Up Next in your timezone.** An episode counts as watchable once it has aired where you are, not where the show airs.
 - **Local release notifications.** iOS and Android schedule reminders for upcoming episodes on the device. There is no push server.
 - **A link when a write can't happen.** If a tracker rejects a write, or can't take one on your platform, you get a link to that title's page on the tracker so you can log it there.
-- **Detail pages.** Metadata comes from TMDB first, with Trakt and AniList as fallbacks. Pages list cast, crew, seasons, and related titles. AniList titles also show characters, staff, recommendations, and tags. A Variants row links to the same title on TMDB and the trackers, and pressing a title copies it.
+- **Detail pages.** Metadata comes from TMDB first, with Trakt and AniList as fallbacks. The header sets the title beside the poster, and wide screens fit the overview there too. Pages list cast, crew, seasons, and related titles. AniList titles also show characters, staff, recommendations, and tags. A Variants row links to the same title on TMDB and the trackers, and pressing a title copies it.
 - **Episode pages.** Swipe between episodes. Marking one watched opens the next.
 - **Person and studio pages.** A person's or studio's work sits on one timeline, newest first, filtered by format and role.
 - **Anime seasons.** Browse each season's anime from AniList, split into series and films.
