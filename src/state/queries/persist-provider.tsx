@@ -18,6 +18,9 @@ import { isPersistedQueryKey, persistOptions } from './persist';
  */
 const RESTORES_SYNC = process.env.EXPO_OS !== 'web';
 
+/** Bound snapshot work to the same two-second window as disk writes. */
+const THROTTLE_MS = 2_000;
+
 /** `persistQueryClientRestore` without its `await`, for the synchronous MMKV persister. */
 function restoreNow(client: QueryClient, persister: Persister) {
   try {
@@ -34,8 +37,8 @@ function restoreNow(client: QueryClient, persister: Persister) {
 }
 
 /**
- * TanStack's `PersistQueryClientProvider`, saving only when a persisted query
- * changes. Upstream dehydrates the whole cache synchronously on every cache
+ * TanStack's `PersistQueryClientProvider`, batching changes to persisted queries
+ * before dehydration. Upstream dehydrates the whole cache synchronously on every cache
  * event and throttles only the write, so each list row's queries walked every
  * entry in the session's cache while the list scrolled.
  */
@@ -58,6 +61,11 @@ export function PersistQueryClientProvider({
     const options = { ...persistOptions, queryClient: client, persister };
     let unsubscribe: (() => void) | undefined;
     let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      timer = undefined;
+      void persistQueryClientSave(options);
+    };
     // Restore already discards a corrupt snapshot; recovery must also consume its rejection.
     const restored = RESTORES_SYNC ? Promise.resolve() : persistQueryClientRestore(options).catch(() => {});
     void restored.finally(() => {
@@ -70,13 +78,17 @@ export function PersistQueryClientProvider({
           !(event.type === 'updated' && event.action.type === 'fetch') &&
           isPersistedQueryKey(event.query.queryKey)
         ) {
-          void persistQueryClientSave(options);
+          timer ??= setTimeout(flush, THROTTLE_MS);
         }
       });
     });
     return () => {
       active = false;
       unsubscribe?.();
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        flush();
+      }
     };
   }, [client, persister]);
 

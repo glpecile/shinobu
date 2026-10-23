@@ -18,8 +18,16 @@ renderer-memory improvement has been measured.
 - `state/prefs/collapsed-diary-days.ts` rebuilt its day set on every preference
   event. Ignore keys outside its prefix. Together these filters preserve snapshot
   identity when an unrelated section collapses, avoiding downstream refiltering.
+- `state/queries/persist-provider.tsx` now batches eligible cache events before
+  dehydration. The first event starts a bounded two-second window; expiry saves
+  the live cache once, and subscription cleanup flushes pending changes. The
+  storage persister uses `throttleTime: 0` to avoid a second two-second delay.
+  In a synthetic burst of 20 persisted refetch completions with one unpersisted
+  query present, snapshots and cache traversals fell from 20 to one, and entry
+  visits fell from 420 to 21. That is 95% less work in this workload, with no
+  measured device, frame-time or latency gain.
 
-All three fixes are JavaScript changes and hot reload. Storage keys and formats
+All four fixes are JavaScript changes and hot reload. Storage keys and formats
 stay compatible.
 
 ## Installed packages and update check
@@ -60,12 +68,10 @@ with the npm release would undo that work.
    MMKV makes storage fast, but `persist.ts` still serializes and restores the
    whole allowed query snapshot on JS, including the Set/Map codec. Existing
    persistence event filtering and first-page limits already remove unnecessary
-   work. Remaining qualifying cache events each call `persistQueryClientSave`,
-   which dehydrates synchronously before the persister's two-second throttle.
-   A burst of successful queries can therefore build many snapshots before one
-   write. Measure dehydration, parse, codec, hydrate and storage durations before
-   changing the persistence architecture. Native buffers alone do not make JSON
-   parsing native.
+   work. Snapshot batching now coalesces qualifying events before dehydration,
+   as described above. Measure remaining dehydration, parse, codec, hydrate and
+   storage durations before changing the persistence architecture further.
+   Native buffers alone do not make JSON parsing native.
 
 3. **Trial off-thread parsing only for a measured large response.** Installed
    Nitro Fetch exports `nitroFetchOnWorklet`, and installed Worklets supports its
@@ -109,3 +115,10 @@ Full repository checks are recorded in the accompanying task result.
 router-push and external-link guards passed, as did `git diff --check`. Lint
 reported seven existing warnings outside the changed files. No device profiling,
 native rebuild or dependency upgrade was performed.
+
+The later snapshot-batching change passed all 10 focused persistence tests,
+scoped oxlint and typecheck. Its regression uses fake timers and the real storage
+persister with fake native MMKV. It checks the two-second boundary, current data,
+late removals without timer resets and cleanup flushing without a duplicate save.
+Corrupt-restore and Set/Map codec coverage remain in place. Restore behavior,
+max age, first-page limits and garbage-collection rules are unchanged.
