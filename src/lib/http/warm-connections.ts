@@ -21,10 +21,10 @@ import type { ProviderId } from '@/lib/providers/types';
  *     mounts — a beat before TanStack fires the real queries.
  *   - `prefetchOnAppStart` registers a persistent native prewarm that runs at
  *     *process* start on the next launch, before JS even boots, so a returning
- *     user's first Up Next load never pays the handshake at all.
+ *     user's first Up Next load can reuse the connection.
  *
  * The requests hit each host root with no auth; a 4xx/redirect back is fine —
- * the connection is warmed regardless, and the response is discarded. Only
+ * the connection is warmed regardless, and provider reads ignore the root response. Only
  * connected providers are warmed, and only once per session.
  */
 const HOST_ROOTS: Record<ProviderId, string | null> = {
@@ -61,9 +61,10 @@ export function warmProviderConnections(connected: readonly ProviderId[]): void 
   ];
 
   for (const url of hosts) {
+    const prefetchKey = `warm:${url}`;
     // Best-effort: a rejected warmup must never surface. The connection is
     // pooled by the native layer whether the throwaway request 200s or 404s.
-    void prefetch(url).catch(() => {});
-    void prefetchOnAppStart(url, { prefetchKey: `warm:${url}` }).catch(() => {});
+    void prefetch(url, { headers: { prefetchKey } }).catch(() => {});
+    void prefetchOnAppStart(url, { prefetchKey }).catch(() => {});
   }
 }

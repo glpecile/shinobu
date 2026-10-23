@@ -60,9 +60,6 @@ const BUSTER = 'v6';
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;
 
-/** Writes are debounced: the Up Next fan alone fires ~20 cache events in a burst. */
-const THROTTLE_MS = 2_000;
-
 let cache: MMKV | null = null;
 
 /**
@@ -242,7 +239,8 @@ export function shouldPersistQuery(query: Query): boolean {
 export function createQueryPersister(): Persister {
   return createSyncStoragePersister({
     key: PERSIST_KEY,
-    throttleTime: THROTTLE_MS,
+    // The provider batches before dehydration; do not delay the disk write again.
+    throttleTime: 0,
     serialize,
     deserialize,
     storage: {

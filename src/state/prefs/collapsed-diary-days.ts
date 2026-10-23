@@ -51,7 +51,8 @@ function getServerSnapshot(): ReadonlySet<string> {
 }
 
 function subscribe(onStoreChange: () => void): () => void {
-  const subscription = prefsStorage.addOnValueChangedListener(() => {
+  const subscription = prefsStorage.addOnValueChangedListener((key) => {
+    if (!key.startsWith(KEY_PREFIX)) return;
     cached = readCollapsedDays();
     onStoreChange();
   });

@@ -1,6 +1,6 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
-import { describe, expect, mock, spyOn, test } from 'bun:test';
+import { describe, expect, jest, mock, spyOn, test } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 
 GlobalRegistrator.register();
@@ -88,43 +88,79 @@ test('a corrupt snapshot is discarded and queries resume without an unhandled re
   }
 });
 
-test('persists completed refetches and removals without snapshotting fetch starts', async () => {
+test('batches completed refetches into one current snapshot and flushes pending removals on cleanup', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const queryKey = traktQueryKeys.watchedShows();
-  client.setQueryData(queryKey, ['cached']);
-  const persistClient = mock((_snapshot: PersistedClient) => {});
-  const persister = { persistClient, restoreClient: () => undefined, removeClient: () => {} };
+  const keys = Array.from({ length: 20 }, (_, index) => traktQueryKeys.showProgress(index));
+  for (const key of keys) client.setQueryData(key, 'cached');
+  const persister = createQueryPersister();
+  const persistClient = spyOn(persister, 'persistClient');
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(PersistQueryClientProvider, { client, persister, children });
   const read = renderHook(() => null, { wrapper });
-  const response = Promise.withResolvers<string[]>();
-  let fetching: Promise<string[]> | undefined;
+  const cache = client.getQueryCache();
+  const originalGetAll = cache.getAll.bind(cache);
+  let visits = 0;
+  const getAll = spyOn(cache, 'getAll').mockImplementation(() => {
+    const queries = originalGetAll();
+    visits += queries.length;
+    return queries;
+  });
+  const responses = keys.map(() => Promise.withResolvers<string>());
+  let fetching: Promise<string>[] = [];
   try {
     await act(async () => {});
+    jest.useFakeTimers();
     act(() => {
-      fetching = client.fetchQuery({ queryKey, queryFn: () => response.promise });
+      client.setQueryData(['media-details', 'unpersisted'], 'ignored');
+      fetching = keys.map((queryKey, index) => client.fetchQuery({ queryKey, queryFn: () => responses[index]!.promise }));
     });
-    expect(client.getQueryState(queryKey)?.fetchStatus).toBe('fetching');
+    act(() => jest.advanceTimersByTime(2_000));
     expect(persistClient).not.toHaveBeenCalled();
-
+    expect(getAll).not.toHaveBeenCalled();
+    getAll.mockClear();
+    visits = 0;
     await act(async () => {
-      response.resolve(['fresh']);
-      await fetching;
+      responses.forEach((response, index) => response.resolve(`fresh-${index}`));
+      await Promise.all(fetching);
     });
+    act(() => jest.advanceTimersByTime(1_999));
+    expect(persistClient).not.toHaveBeenCalled();
+    expect(getAll).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(1));
     expect(persistClient).toHaveBeenCalledTimes(1);
-    expect(persistClient.mock.calls[0]?.[0].clientState.queries[0]?.state.data).toEqual(['fresh']);
+    expect(getAll).toHaveBeenCalledTimes(1);
+    expect(visits).toBe(21);
+    act(() => jest.advanceTimersByTime(1));
+    expect(deserialize(store.get('shinobu.query-cache')!).clientState.queries.map((query) => query.state.data)).toEqual(
+      keys.map((_, index) => `fresh-${index}`),
+    );
 
-    act(() => client.removeQueries({ queryKey }));
-    expect(persistClient).toHaveBeenCalledTimes(2);
-    expect(persistClient.mock.calls[1]?.[0].clientState.queries).toEqual([]);
+    act(() => client.setQueryData(keys[0]!, 'latest'));
+    act(() => jest.advanceTimersByTime(1_999));
+    act(() => client.removeQueries({ queryKey: keys[1], exact: true }));
+    expect(persistClient).toHaveBeenCalledTimes(1);
+    act(() => jest.advanceTimersByTime(1));
+    const saved = persistClient.mock.calls[1]?.[0].clientState.queries;
+    expect(saved).toHaveLength(19);
+    expect(saved?.[0]?.state.data).toBe('latest');
+    expect(saved?.some((query) => JSON.stringify(query.queryKey) === JSON.stringify(keys[1]))).toBe(false);
 
-    act(() => client.setQueryData(['media-details', 'unpersisted'], 'ignored'));
-    expect(persistClient).toHaveBeenCalledTimes(2);
-  } finally {
-    response.resolve([]);
-    await fetching?.catch(() => {});
+    act(() => client.removeQueries({ queryKey: ['trakt'], exact: false }));
     read.unmount();
+    expect(persistClient).toHaveBeenCalledTimes(3);
+    expect(persistClient.mock.calls[2]?.[0].clientState.queries).toEqual([]);
+    act(() => jest.advanceTimersByTime(2_000));
+    expect(persistClient).toHaveBeenCalledTimes(3);
+    expect(deserialize(store.get('shinobu.query-cache')!).clientState.queries).toEqual([]);
+  } finally {
+    responses.forEach((response) => response.resolve('cleanup'));
+    await Promise.allSettled(fetching);
+    read.unmount();
+    jest.useRealTimers();
+    getAll.mockRestore();
+    persistClient.mockRestore();
     client.clear();
+    store.clear();
   }
 });
 
