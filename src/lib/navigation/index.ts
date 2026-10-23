@@ -39,12 +39,16 @@ export function allowRoutePush(href: string): boolean {
  * stack keeps one preloaded screen per route, so a press-in that turns into a
  * scroll costs one hidden render. Native only: on web the hidden screen's
  * `<Head>` would retitle the tab.
+ *
+ * Urgent, not in a transition: a pending preload let the tap's push promote
+ * an older hidden screen, then swapped in the new one, so Android slid the
+ * page in twice (docs/solutions/stale-detail-preload.md).
  */
 export function usePreloadRoute(): (href: string) => void {
   const router = useRouter();
   return (href: string) => {
     if (process.env.EXPO_OS === 'web') return;
-    router.prefetch(href as Parameters<typeof router.prefetch>[0]);
+    router.prefetch(href as Parameters<typeof router.prefetch>[0], { inTransition: false });
     preloadedHref = href;
   };
 }
