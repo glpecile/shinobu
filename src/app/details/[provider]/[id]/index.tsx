@@ -477,9 +477,14 @@ function DetailsSkeleton({ zoomPoster }: { zoomPoster?: string }) {
     <>
       <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end -mt-24 mb-6">
+        <View className="flex-row items-end gap-4 -mt-24 mb-6">
+          <View className="flex-1">
+            <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
+            <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
+            <Skeleton className="h-3 w-32 rounded mt-2" delay={staggerDelay(2)} />
+          </View>
           <Link.AppleZoomTarget>
-            <View className="w-28 h-40 rounded-lg overflow-hidden bg-surface">
+            <View className="w-32 h-48 md:w-48 md:h-72 rounded-lg overflow-hidden bg-surface">
               {zoomPoster != null ? (
                 <Image source={{ uri: zoomPoster }} className="w-full h-full" transition={0} />
               ) : (
@@ -487,11 +492,6 @@ function DetailsSkeleton({ zoomPoster }: { zoomPoster?: string }) {
               )}
             </View>
           </Link.AppleZoomTarget>
-          <View className="flex-1 ml-4 pb-1">
-            <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
-            <Skeleton className="h-8 w-56 rounded mt-2" delay={staggerDelay(2)} />
-            <Skeleton className="h-3 w-40 rounded mt-2" delay={staggerDelay(2)} />
-          </View>
         </View>
         <ExpandableText.Skeleton />
       </View>
@@ -658,6 +658,7 @@ function DetailsScreen() {
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
   const meta = metaLine(shown);
   const alternates = alternateTitles(shown);
+  const overview = shown.overview != null ? <ExpandableText text={shown.overview} /> : null;
   // "0 / 1 episodes" on a film (anime films included) is noise — only show
   // progress where it means something (series, manga, or a film already logged).
   const showProgress =
@@ -756,20 +757,8 @@ function DetailsScreen() {
 
       {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end -mt-24 mb-6">
-          <Link.AppleZoomTarget>
-            <View className="w-28 h-40">
-              <ZoomableImage
-                alt={shown.title}
-                uri={zoomPoster ?? (shown.coverImage || artwork.coverImage)}
-                type="image"
-                className="w-28 h-40 rounded-lg border border-border bg-surface"
-                contentFit="cover"
-                {...(zoomPoster != null ? { transition: 0 } : {})}
-              />
-            </View>
-          </Link.AppleZoomTarget>
-          <View className="flex-1 ml-4 pb-1">
+        <View className="flex-row items-end gap-4 -mt-24 mb-6">
+          <View className="flex-1">
             <View className="flex-row items-center gap-3">
                <Eyebrow>{shown.type}</Eyebrow>
               {shown.rating != null && (
@@ -794,7 +783,7 @@ function DetailsScreen() {
               />
             </ScrolledTitle.Anchor>
             {alternates.length > 0 && (
-              <Text className="text-muted font-sans text-sm mt-0.5">
+              <Text className="text-muted font-sans text-sm mt-0.5" numberOfLines={2}>
                 {alternates.join(' · ')}
               </Text>
             )}
@@ -804,10 +793,25 @@ function DetailsScreen() {
               </Text>
             )}
             <WatchedLine item={shown} />
+            {/* Wide screens fill the column beside the poster; phones keep the
+                overview full width below it. */}
+            {overview != null && <View className="hidden md:flex mt-4">{overview}</View>}
           </View>
+          <Link.AppleZoomTarget>
+            <View className="w-32 h-48 md:w-48 md:h-72">
+              <ZoomableImage
+                alt={shown.title}
+                uri={zoomPoster ?? (shown.coverImage || artwork.coverImage)}
+                type="image"
+                className="w-32 h-48 md:w-48 md:h-72 rounded-lg border border-border bg-surface"
+                contentFit="cover"
+                {...(zoomPoster != null ? { transition: 0 } : {})}
+              />
+            </View>
+          </Link.AppleZoomTarget>
         </View>
 
-        {shown.overview != null && <ExpandableText text={shown.overview} />}
+        {overview != null && <View className="md:hidden">{overview}</View>}
 
         {/* Placement only, film-like only (plan 0031 R11): a film that isn't
             out yet can't be logged, so the want-to-watch CTA is the primary
