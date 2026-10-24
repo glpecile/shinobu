@@ -41,3 +41,23 @@ number. Mushoku Tensei's prequel 166873 ends at S2E24, absolute 49, while sequel
 178789 starts at S3E1, absolute 50. Projecting absolute 50 into TMDB's differently
 sized seasons would write S3E3. Without the sequel's own table, that transition
 must skip instead.
+
+## Watch Next lost the matching tracker's ids (2026-10-24)
+
+The AniList card for 213805 carried only AniList and MAL ids. The matching
+Simkl card already carried TMDB 283428 and TVDB 459627, but Up Next deduplication
+discarded that card without transferring its ids. Ani.zip still had no TV ids
+or episode rows for the sequel, so log enrichment could not recover them.
+Serializd was excluded before episode translation and had no skip outcome.
+
+Keep missing external ids from cards sharing the same AniList or MAL entry
+on the surviving AniList card. Preserve AniList's own ids, progress and episode
+numbering. A shared TMDB/TVDB show alone is insufficient: separate anime season
+entries can share the same canonical show while requiring different Simkl ids.
+
+A read-only check with the running app's Watch Next inputs reproduced the
+missing target. Carrying the matching Simkl ids through the existing log plan
+resolved entry episode 4 to S1E18 with Serializd as a writable target. Serializd's
+public season endpoint returned season id 440547 with 28 episodes. No provider
+writes were performed. `compute.test.ts` covers the retained ids, AniList episode
+numbering, unchanged input, and the canonical-show-only boundary.

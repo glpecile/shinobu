@@ -788,6 +788,8 @@ describe('computeUpNext — cross-provider dedupe (R5)', () => {
     expect(data.continueWatching[0].source).toBe('anilist');
     // Differing progress across providers must not produce two cards.
     expect(episodeOf(data.continueWatching[0]).number).toBe(6);
+    // A shared show id doesn't prove the same AniList season entry.
+    expect(data.continueWatching[0].item.externalIds.trakt).toBeUndefined();
   });
 
   test('an unresolvable TMDB id leaves the duplicate standing (best-effort)', () => {
@@ -981,14 +983,18 @@ describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => 
 });
 
 describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () => {
-  test('an AniList entry and a Simkl calendar row sharing only a MAL id collapse to the AniList card', () => {
+  test.each([
+    { identity: 'MAL', ids: { mal: 55555 } },
+    { identity: 'AniList', ids: { anilist: 901 } },
+  ])('a shared $identity entry keeps the AniList card with the tracker’s write ids', ({ ids }) => {
     // The live duplicate: "Youjo Senki II" (AniList, romaji) next to "Saga of
     // Tanya the Evil Season 2" (Simkl calendar, English) — same show, same
-    // airing, no TMDB id on either side, MAL id on both.
+    // airing. The tracker carries the TV identity AniList needs for logging.
+    const item = anime(901, { externalIds: { anilist: 901, mal: 55555 } });
     const data = computeUpNext(
       inputs({
         anilist: [
-          anilistInput(anime(901, { externalIds: { anilist: 901, mal: 55555 } }), {
+          anilistInput(item, {
             nextAiring: { episode: 6, airingAt: localInstant(2026, 7, 25, 9, 30) },
             totalEpisodes: 12,
           }),
@@ -997,7 +1003,7 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
           calendarInput(
             simklShow(9901, {
               title: 'Saga of Tanya the Evil Season 2',
-              externalIds: { simkl: 9901, mal: 55555 },
+              externalIds: { simkl: 9901, tmdb: 283428, tvdb: 459627, ...ids },
             }),
             { number: 5, firstAired: localInstant(2026, 7, 25, 9, 30) },
             { source: 'simkl' },
@@ -1008,6 +1014,11 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
     );
     expect(data.calendar).toHaveLength(1);
     expect(data.calendar[0].source).toBe('anilist');
+    expect(data.calendar[0].item.externalIds).toEqual({
+      anilist: 901, mal: 55555, simkl: 9901, tmdb: 283428, tvdb: 459627,
+    });
+    expect(episodeOf(data.calendar[0]).number).toBe(6);
+    expect(item.externalIds).toEqual({ anilist: 901, mal: 55555 });
   });
 });
 
