@@ -5,6 +5,20 @@ priority: P2
 
 # Tracking workflow improvements
 
+## Reconciliation, 2026-10-23
+
+This file is a collection of proposals, not one implementation task.
+Sorting #226 is closed: PR #254 added it and PR #265 subsequently replaced
+runtime sorting with alphabetical sorting. Current choices are original order,
+title A to Z/Z to A, and release year in both directions. Do not restore
+runtime sorting from the original issue requirements.
+
+The next scoped tracking feature is pause/drop in #227, starting with provider
+verification and a focused plan. Personal ratings remain a separate spike.
+Title preferences, progress explanations, local search, recent searches,
+identity corrections and preference transfer remain proposals. See
+[the backlog index](README.md) for operational priorities and issue coverage.
+
 Drafted 2026-10-12 after a quick source review of tracking, library browsing,
 search history, identity matching and export workflows, checked against Shinobu's
 current implementation. These are proposals, not verified bugs or approved
@@ -17,8 +31,9 @@ review. Prioritize runtime and release-year sorting separately, then focus on
 the provider-specific tracking gaps below. The original convenience proposals
 remain lower-priority background, not the recommended next issues.
 
-**Created:** [#226 — Sort watchlist by runtime and release year](https://github.com/glpecile/shinobu/issues/226).
-This issue does not include text search or recent searches.
+**Resolved:** [#226](https://github.com/glpecile/shinobu/issues/226), followed by
+the alphabetical-sort replacement in PR #265. Text search and recent searches
+were not part of that implementation.
 
 ## Provider-specific candidates
 
@@ -137,38 +152,29 @@ in item 3 below is a possible later action, not a prerequisite for this display.
 - Coordinate with `docs/plans/0080-anilist-query-budget.md`; do not widen AniList
   requests or change cache persistence as a side effect of these features.
 
-## 1. Sorting issue created; local title search remains optional
+## 1. Sorting resolved; local title search remains optional
 
-**Current:** `src/app/watchlist/index.tsx` narrows the merged entries by provider.
-`src/features/watchlist/filter.ts` preserves source marks and partial counts;
-the toolbar adds a tracker picker and a grid/list toggle. There is no local
-title search or user-selected sort in that path.
+Implemented sorting lives in `src/lib/media-sort.ts`,
+`src/features/media-layout/media-sort-control.tsx`, and
+`src/state/prefs/media-sort.ts`. Watchlist filtering precedes sorting and both
+layouts receive the same result. PR #265 replaced runtime choices with
+alphabetical choices; release-year sorting remains. Partial lists show
+"Sorting loaded titles" and retain existing pagination. See
+`docs/plans/0085-watchlist-and-list-sorting.md` for the implementation history.
 
-- [ ] Add a local title field matching `title`, available alternate titles and
-  aliases. Keep catalog search separate: typing here must not issue requests.
-- [ ] Add “Recently added”, “Runtime” and “Release year” sorting per #226.
-  Runtime is film duration or per-episode series duration, not estimated total
-  watch time; manga and unknown values belong last. Audit provider field coverage
-  and merge-time metadata loss without adding a detail-fetch waterfall. Preserve the
-  existing order as the default; missing dates/years belong last, not at epoch
-  zero or today's date. Use a deterministic tie-breaker.
-- [ ] Extend the existing pure filter layer; derive the visible array during
-  render without effects, mirrored state or a generic filtering framework.
-- [ ] Keep transient filters in URL params through `src/lib/routes.ts`, matching
-  the current provider filter. A standing sort preference may use the existing
-  `src/state/prefs/` pattern; do not persist the filtered array.
-- [ ] Preserve tracker counts as counts of the underlying list. Show the visible
-  result count separately and distinguish “No matches” from an empty watchlist.
+Local title search remains a separate, lower-priority proposal:
 
-**Paging constraint:** filtering and sorting operate on loaded entries only.
-When `incomplete` is nonempty, say “Searching loaded titles” / “Sorting loaded
-titles” and retain an explicit Load more action even if the filter finds zero
-rows. Never scrape every Letterboxd page to make filtering appear complete.
+- [ ] Match title, alternate titles and aliases over loaded entries without
+      provider requests. Compose with the existing provider filter and sort.
+- [ ] Derive the visible array during render. Keep transient filters in route
+      params through `src/lib/routes.ts`; preserve existing sort preferences.
+- [ ] Preserve underlying tracker counts, show the visible result count
+      separately, and distinguish no matches from an empty watchlist.
+- [ ] Label partial search "Searching loaded titles" and keep Load more
+      reachable even when the current filter returns no rows.
 
-**Done when:** provider + title filters compose, clearing restores the list,
-alternate names match, both layouts use the same ordering, and an empty filtered
-page still allows pagination. Extend `filter.test.ts` for the changed branches;
-do not repeat the existing source-count and partial-count tests.
+Do not scrape every Letterboxd page to make filtering appear complete. If this
+proposal is selected, extend neighboring filter tests only for new branches.
 
 ## 2. Deferred — Recent searches with scope and privacy controls
 
@@ -269,8 +275,8 @@ preferences transfer, not a backup of watch history.
 
 ## Delivery order and validation
 
-Prioritize sorting through #226. Next, discuss provider-specific candidate A
-and spike B; C is a smaller provider-preference improvement, while D improves
+Sorting through #226 is resolved. Next, plan provider-specific candidate A
+and spike B separately; C is a smaller provider-preference improvement, while D improves
 visibility into existing reconciliation. Recent searches and preference transfers
 are not the recommended next issues. Spike item 3 before committing to its UI
 or storage shape. Write a focused `docs/plans/`

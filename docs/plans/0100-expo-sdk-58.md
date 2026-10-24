@@ -1,5 +1,16 @@
 # Expo SDK 58
 
+## Reconciliation, 2026-10-23
+
+PR #289 merged on 2026-10-21. The draft checkpoint below is historical; the
+second live QA pass supersedes its earlier untested-flow list. Successful
+iOS movie/TV logging, iOS list creation and Android TV logging were recorded.
+Still unverified there: Android list creation, the Android Letterboxd retry,
+and fresh AniList/Simkl connections. The separate minified-release WorkManager
+fix and its UI limits are documented in
+`docs/solutions/android-release-workmanager-constructor-stripped.md`.
+Merge status does not establish that those remaining runtime checks passed.
+
 Upgrade from SDK 57 to the stable SDK 58 release and use Expo's supported package versions. Remove the SDK 57 screens override, add the Android native-tab icon peer, and migrate affected React Native ref types and Router imports. Keep generated native directories untracked.
 
 Validation includes Expo Doctor, repository checks, the existing test suite, a static web export, and clean native development builds. Use existing simulator provider sessions to check connections, movie and TV logging, and list creation. Record actual coverage and any authentication or provider blockers; do not substitute mocked writes for live-flow verification.

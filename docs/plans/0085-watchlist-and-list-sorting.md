@@ -1,5 +1,15 @@
 # Watchlist and list sorting — #226
 
+## Current outcome, 2026-10-23
+
+Issue #226 is closed. PR #254 shipped the original design below; PR #265
+replaced runtime sorting with alphabetical A to Z/Z to A because list runtime
+coverage was insufficient. Original order and release-year sorts remain, with
+separate watchlist/list preferences and loaded-subset notices. Retired runtime
+preferences fall back to original order. Runtime display remains supported.
+The runtime-sort requirements below describe the earlier implementation,
+not work to restore.
+
 ## Scope and implementation
 
 1. Add one immutable sorter for entries with an `id` and normalized `item`.
