@@ -5,6 +5,11 @@ priority: P1
 
 # Simkl cour-split anime entries share one TMDB id and mis-merge per episode
 
+Reconciled 2026-10-23: the fix below shipped and the owner verified Tanya's
+watched state. Renamed the stale `pending` filename to match `status: done`.
+The separate Link Click follow-up still lacks live verification; see the
+[backlog index](README.md) for remaining QA.
+
 Owner report 2026-09-16: the episode screen for *Saga of Tanya the Evil* S2E11
 read "Logged on Simkl" with a Rewatch button while Simkl's own page showed the
 episode unwatched.
@@ -26,7 +31,7 @@ episode unwatched.
 - Even the right entry keys wrong: its per-entry episodes 1..n land as
   `"1-n"` against TMDB's season 2.
 
-## Remaining fix (checked 2026-09-27)
+## Original fix plan (implemented 2026-09-27)
 
 1. Preserve the non-film anime TMDB guard until a cour-safe lookup exists. For
    films and ordinary shows, prefer an exact Simkl id across the bucket before

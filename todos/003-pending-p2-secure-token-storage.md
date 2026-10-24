@@ -15,7 +15,7 @@ bluesky-social/social-app's `state/persisted` platform-split pattern).
 
 Unblocked. Trakt, Letterboxd, Serializd and Simkl sessions now persist through
 `state/session/tokens.ts`; AniList's code is in but still awaits owner client-id
-registration and live verification (`todos/002`). Checked 2026-09-27: the single
+registration and live verification (`todos/002`). Checked 2026-10-23: the single
 `createMMKV({ id: 'session' })` store still has no `encryptionKey` and holds
 sessions, user-entered Trakt client secrets and the optional TMDB token.
 

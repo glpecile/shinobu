@@ -5,6 +5,15 @@ priority: P3
 
 # Native Expo UI opportunities from the 2026-09-26 sweep
 
+## Reconciliation, 2026-10-23
+
+The audit below used SDK 57. The current dependency is `@expo/ui ~58.0.21`;
+recheck its contracts before another migration. The native menu and segmented
+control wrappers remain implemented. Year-menu distant selection, larger text
+and screen-reader validation remain open. Title-copy menus are still only a
+proposal. The rejected controls below remain rejected. This is a validation
+and proposal backlog, not missing implementation of all six items.
+
 A source-only audit against the installed `@expo/ui` 57.0.19, following
 `018-done-p3-animation-opportunities.md`. Items are ordered by usefulness and
 confidence. Item 4 was tried on iOS and rejected after device validation.

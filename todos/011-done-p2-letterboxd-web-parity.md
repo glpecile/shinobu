@@ -1,4 +1,14 @@
+---
+status: done
+priority: P2
+---
+
 # Letterboxd web parity via API-route proxy
+
+Reconciled 2026-10-23: this completed todo covers the GET-only proxy. Web writes
+later gained a separate userscript transport; this does not permit POSTs through
+the Worker. See `docs/plans/0043-letterboxd-userscript-watchlist.md` and the
+current userscript bridge in `src/lib/providers/letterboxd/`.
 
 - **Status:** done (2026-07-22, reads-only scope — writes re-spiked, still walled)
 - **Priority:** p2

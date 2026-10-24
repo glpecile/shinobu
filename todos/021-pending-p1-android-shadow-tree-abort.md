@@ -1,4 +1,21 @@
+---
+status: pending
+priority: P1
+---
+
 # Investigate Android React Native/Reanimated commit abort
+
+## Reconciliation, 2026-10-23
+
+Keep open pending reproduction on the current build. `package.json` now has
+React Native 0.88.0 and Reanimated 4.7.1, after SDK 58 in PR #289. The original
+trace below predates those dependencies. Reproduce against a matching current
+binary before choosing a fix; no current reproduction was attempted during
+this source audit.
+
+The v0.7.5 WorkManager/R8 constructor fix addresses a separate crash before
+React Native starts. It does not establish that this ShadowTree assertion is
+fixed. See `docs/solutions/android-release-workmanager-constructor-stripped.md`.
 
 ## Evidence
 

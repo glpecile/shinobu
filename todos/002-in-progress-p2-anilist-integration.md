@@ -5,6 +5,14 @@ priority: P2
 
 # AniList Integration
 
+## Reconciliation, 2026-10-23
+
+The bundled native/web client IDs in `src/lib/providers/anilist/config.ts`
+are still empty. Owner registration and the complete fresh-connect/film-log/
+catch-up/rewatch pass remain open. Existing-session use is not proof of the
+one-tap setup criterion. SDK 58 QA records connected AniList sessions but no
+fresh AniList connection, in `docs/plans/0100-expo-sdk-58.md`.
+
 Wire up AniList as a connected provider (`state/session/`): OAuth, the read side
 (GraphQL `MediaList(status: CURRENT)` into `useUnifiedFeed`), and a write adapter
 (`SaveMediaListEntry` mutation) registered in the provider routing table so
