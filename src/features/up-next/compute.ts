@@ -383,6 +383,8 @@ export function identityKeys(
  * what the AniList write path advances. The join runs over every shared
  * identity key (tmdb/tvdb/imdb/mal/anilist — see `identityKeys`); entries with
  * no resolvable id at all leave the duplicate standing — R5 stays best-effort.
+ * A shared AniList/MAL entry also supplies missing write ids to the winner;
+ * a shared TV show alone cannot vouch for a particular anime season's ids.
  *
  * Films dedupe on the *pair* `(tmdbId, release.kind)` instead (KTD-6): one film
  * on two watchlists is one TMDB id, but its theatrical and digital rows are
@@ -394,6 +396,21 @@ function dedupeByTmdb(
   others: readonly UpNextEntry[],
   anilistIdKeys: ReadonlySet<string>,
 ): UpNextEntry[] {
+  const enriched = anilist.map((entry) => {
+    const ids = entry.item.externalIds;
+    let item = entry.item;
+    for (const other of others) {
+      if (other.kind !== 'episode') continue;
+      const otherIds = other.item.externalIds;
+      if (
+        (ids.anilist != null && ids.anilist === otherIds.anilist) ||
+        (ids.mal != null && ids.mal === otherIds.mal)
+      ) {
+        item = { ...item, externalIds: { ...otherIds, ...item.externalIds } };
+      }
+    }
+    return item === entry.item ? entry : { ...entry, item };
+  });
   const kept = others.filter((entry) => {
     // Only an episode can be an AniList entry's twin: anime *films* never
     // produce an AniList entry, so a numeric collision between a TMDB movie id
@@ -403,7 +420,7 @@ function dedupeByTmdb(
       anilistIdKeys.has(key),
     );
   });
-  return dedupeReleases([...anilist, ...kept]);
+  return dedupeReleases([...enriched, ...kept]);
 }
 
 /**
