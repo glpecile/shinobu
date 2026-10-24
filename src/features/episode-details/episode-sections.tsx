@@ -41,9 +41,9 @@ import type { EpisodeRef } from './episode-neighbours';
  */
 
 /**
- * The wide still, or the 忍 placeholder while TMDB hasn't answered / has none.
- * Plain image, not `ZoomableImage`: the actions sheet draws it too, and the
- * lightbox's zoom transition renders inside the sheet's clip.
+ * The actions sheet's wide still, or the 忍 placeholder while TMDB hasn't
+ * answered / has none. Plain image, not `ZoomableImage`: the lightbox's zoom
+ * transition renders inside the sheet's clip.
  */
 export function EpisodeStill({
   uri,

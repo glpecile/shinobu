@@ -477,7 +477,7 @@ function DetailsSkeleton({ zoomPoster }: { zoomPoster?: string }) {
     <>
       <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end gap-4 -mt-24 mb-6">
+        <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
           <View className="flex-1">
             <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
@@ -757,7 +757,7 @@ function DetailsScreen() {
 
       {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end gap-4 -mt-24 mb-6">
+        <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
           <View className="flex-1">
             <View className="flex-row items-center gap-3">
                <Eyebrow>{shown.type}</Eyebrow>

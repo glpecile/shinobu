@@ -1,4 +1,4 @@
-import { router as imperativeRouter, useRouter } from 'expo-router';
+import { router as imperativeRouter, useNavigation, useRouter } from 'expo-router';
 
 import { openedInNewTab } from './new-tab';
 import { createPushGuard } from './push-guard';
@@ -46,8 +46,9 @@ export function allowRoutePush(href: string): boolean {
  */
 export function usePreloadRoute(): (href: string) => void {
   const router = useRouter();
+  const navigation = useNavigation();
   return (href: string) => {
-    if (process.env.EXPO_OS === 'web') return;
+    if (process.env.EXPO_OS === 'web' || !navigation.isFocused()) return;
     router.prefetch(href as Parameters<typeof router.prefetch>[0], { inTransition: false });
     preloadedHref = href;
   };
@@ -59,10 +60,17 @@ export function usePreloadRoute(): (href: string) => void {
  * `replace()` or read navigation state. Returns whether the push was accepted
  * (false for a blocked duplicate or a web new-tab open), so contextual press
  * feedback stays quiet when nothing happened in this tab.
+ *
+ * A press on a screen that is no longer focused never navigates. A tap queued
+ * behind a slow push runs its handler after the time guard expires, so only
+ * focus can tell it from a fresh press
+ * (docs/solutions/double-tap-pushes-two-detail-screens.md).
  */
 export function usePushRoute(): (href: string) => boolean {
   const router = useRouter();
+  const navigation = useNavigation();
   return (href: string) => {
+    if (!navigation.isFocused()) return false;
     // Web only; a no-op elsewhere.
     if (openedInNewTab(href)) return false;
     if (!allowRoutePush(href)) return false;

@@ -7,7 +7,9 @@ import { AnimatedView } from '@/components/animated-view';
 import { BlurEnter } from '@/components/blur-enter';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { useLightbox } from '@/components/lightbox/state';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
+import { ZoomableImage } from '@/components/zoomable-image';
 import { DURATION } from '@/lib/motion';
 import { PeopleSectionsSkeleton } from '@/features/person/people-section';
 import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
@@ -24,7 +26,6 @@ import {
   EpisodeLogs,
   EpisodeNavigation,
   EpisodeOverview,
-  EpisodeStill,
   useGoToEpisode,
 } from '@/features/episode-details/episode-sections';
 import { useEpisode } from '@/features/episode-details/use-episode';
@@ -39,13 +40,12 @@ export interface EpisodeScreenProps {
 }
 
 /** Above this the still and the text sit side by side instead of stacked. */
-const TWO_COLUMN_MIN_WIDTH = 768;
+const TWO_COLUMN_MIN_WIDTH = 1024;
 
 /**
- * Web: a page inside the sidebar shell. Wide viewports get the still beside
- * the heading (a 16:9 image stacked over text wastes the width a desktop
- * has); narrow ones stack like the native screens. The overview and credits
- * run the full width below either way.
+ * Web: a page inside the sidebar shell. Wide viewports match the details
+ * header: heading and overview on the left, the still pinned top right, the
+ * log button full width below. Narrow ones stack like the native screens.
  */
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
@@ -58,10 +58,11 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   // Web stacks keep covered screens mounted, so a screen pushed on top (the
   // series via "View series") would otherwise still hear the arrows.
   const isFocused = useIsFocused();
+  const { activeLightbox } = useLightbox();
   // ← / → step between episodes — the keyboard's swipe. A subscription to
   // the document, so an effect; skipped while a field has focus.
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || activeLightbox != null) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const focused = document.activeElement;
@@ -81,7 +82,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isFocused, go, next, prev]);
+  }, [isFocused, activeLightbox, go, next, prev]);
 
   return (
     <View className="flex-1 bg-background">
@@ -93,13 +94,8 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
       </Head>
       {view.episode == null && view.isLoading ? <EpisodeScreenSkeleton onBack={onBack} /> : <ScrollView className="flex-1">
         <BlurEnter className="w-full max-w-4xl self-center px-6 pt-24 pb-44">
-          <View className={cn(wide && 'flex-row gap-8 items-start')}>
-            <EpisodeStill
-              className={cn('rounded-lg border border-border', wide ? 'flex-1' : 'w-full')}
-              title={title}
-              uri={view.still}
-            />
-            <View className={cn('flex-1', !wide && 'mt-5')}>
+          <View className={cn(wide ? 'flex-row gap-8 items-start' : 'flex-col-reverse gap-5')}>
+            <View className="flex-1">
               {view.episode == null ? (
                 <Text className="text-muted font-sans">This episode isn’t listed.</Text>
               ) : (
@@ -113,20 +109,30 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                     showTitle={item.title}
                   />
                   <EpisodeLogs className="mt-3" logs={logs} />
-                  <EpisodeLogButton
-                    className="mt-5 self-start"
-                    episode={view.episode}
-                    item={item}
-                    number={number}
-                    season={season}
-                    watched={logs.length > 0}
-                  />
+                  {wide && <EpisodeOverview className="mt-4" episode={view.episode} />}
                 </>
               )}
             </View>
+            <ZoomableImage
+              alt={title}
+              className={cn('aspect-video rounded-lg border border-border bg-surface', wide ? 'w-80' : 'w-full')}
+              contentFit="cover"
+              type="image"
+              uri={view.still}
+            />
           </View>
           {view.episode != null && (
-            <EpisodeOverview className="mt-6" episode={view.episode} />
+            <>
+              <EpisodeLogButton
+                className="mt-6"
+                episode={view.episode}
+                item={item}
+                number={number}
+                season={season}
+                watched={logs.length > 0}
+              />
+              {!wide && <EpisodeOverview className="mt-6" episode={view.episode} />}
+            </>
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
           <DiscussionSection episode={{ season, number }} item={item} />
@@ -147,17 +153,18 @@ export function EpisodeScreenSkeleton({ onBack }: { onBack: () => void }) {
   return (
     <AnimatedView className="flex-1 bg-background" exiting={FadeOut.duration(DURATION.exit)}>
       <View className="w-full max-w-4xl self-center px-6 pt-24 pb-12">
-        <View className={cn(wide && 'flex-row gap-8 items-start')}>
+        <View className={cn(wide ? 'flex-row gap-8 items-start' : 'flex-col-reverse gap-5')}>
+          <View className="flex-1">
+            <EpisodeHeaderSkeleton />
+            {wide && <ExpandableText.Skeleton className="mt-4" lines={4} />}
+          </View>
           <Skeleton
-            className={cn('aspect-video rounded-lg', wide ? 'flex-1' : 'w-full')}
+            className={cn('aspect-video rounded-lg', wide ? 'w-80' : 'w-full')}
             delay={staggerDelay(0)}
           />
-          <View className={cn('flex-1', !wide && 'mt-5')}>
-            <EpisodeHeaderSkeleton />
-            <Skeleton className="h-12 w-44 rounded-full mt-5" delay={staggerDelay(1)} />
-          </View>
         </View>
-        <ExpandableText.Skeleton className="mt-6" lines={4} />
+        <Skeleton className="h-12 w-full rounded-full mt-6" delay={staggerDelay(1)} />
+        {!wide && <ExpandableText.Skeleton className="mt-6" lines={4} />}
         <PeopleSectionsSkeleton />
       </View>
       <FloatingBackButton onPress={onBack} />

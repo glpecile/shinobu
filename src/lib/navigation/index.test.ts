@@ -5,7 +5,13 @@ const router = {
   prefetch: (href: string) => { dispatched.push(`preload ${href}`); },
   push: (href: string) => { dispatched.push(`push ${href}`); },
 };
-mock.module('expo-router', () => ({ router, useRouter: () => router }));
+let focused = true;
+const navigation = { isFocused: () => focused };
+mock.module('expo-router', () => ({
+  router,
+  useNavigation: () => navigation,
+  useRouter: () => router,
+}));
 
 const previousOS = process.env.EXPO_OS;
 process.env.EXPO_OS = 'ios';
@@ -26,4 +32,16 @@ test('opening a show after an episode replaces an earlier hidden detail before p
     'preload /details/tmdb/2',
     'push /details/tmdb/2',
   ]);
+});
+
+test('a tap queued behind a slow push neither preloads nor pushes from the covered screen', () => {
+  const preload = usePreloadRoute();
+  const push = usePushRoute();
+  focused = false;
+  const before = dispatched.length;
+
+  preload('/details/tmdb/3');
+  expect(push('/details/tmdb/3')).toBe(false);
+  expect(dispatched.length).toBe(before);
+  focused = true;
 });
