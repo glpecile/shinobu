@@ -35,11 +35,13 @@ test('opening a show after an episode replaces an earlier hidden detail before p
 });
 
 test('a tap queued behind a slow push neither preloads nor pushes from the covered screen', () => {
+  const preload = usePreloadRoute();
+  const push = usePushRoute();
   focused = false;
   const before = dispatched.length;
 
-  usePreloadRoute()('/details/tmdb/3');
-  expect(usePushRoute()('/details/tmdb/3')).toBe(false);
+  preload('/details/tmdb/3');
+  expect(push('/details/tmdb/3')).toBe(false);
   expect(dispatched.length).toBe(before);
   focused = true;
 });

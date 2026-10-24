@@ -7,6 +7,7 @@ import { AnimatedView } from '@/components/animated-view';
 import { BlurEnter } from '@/components/blur-enter';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
+import { useLightbox } from '@/components/lightbox/state';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { DURATION } from '@/lib/motion';
@@ -39,7 +40,7 @@ export interface EpisodeScreenProps {
 }
 
 /** Above this the still and the text sit side by side instead of stacked. */
-const TWO_COLUMN_MIN_WIDTH = 768;
+const TWO_COLUMN_MIN_WIDTH = 1024;
 
 /**
  * Web: a page inside the sidebar shell. Wide viewports match the details
@@ -57,10 +58,11 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   // Web stacks keep covered screens mounted, so a screen pushed on top (the
   // series via "View series") would otherwise still hear the arrows.
   const isFocused = useIsFocused();
+  const { activeLightbox } = useLightbox();
   // ← / → step between episodes — the keyboard's swipe. A subscription to
   // the document, so an effect; skipped while a field has focus.
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused || activeLightbox != null) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       const focused = document.activeElement;
@@ -80,7 +82,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isFocused, go, next, prev]);
+  }, [isFocused, activeLightbox, go, next, prev]);
 
   return (
     <View className="flex-1 bg-background">
