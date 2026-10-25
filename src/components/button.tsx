@@ -25,7 +25,8 @@ export type ButtonSize = 'sm' | 'md';
 /** Container classes per variant — `off` covers both disabled and loading. */
 const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   log: { on: 'bg-log', off: 'bg-log/40' },
-  primary: { on: 'bg-foreground', off: 'bg-foreground/40' },
+  // Bordered like `quiet` so the two match in size side by side.
+  primary: { on: 'border border-foreground bg-foreground', off: 'border border-transparent bg-foreground/40' },
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border web:hover:bg-border/40', off: 'border border-border opacity-60' },
   'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
