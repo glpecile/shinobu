@@ -17,7 +17,7 @@ export const AnimatedText = withUniwind(Animated.Text);
 export const AnimatedScrollView = withUniwind(Animated.ScrollView);
 
 /**
- * A vertical scroll surface whose rows are pressables. Pressables are
+ * A scroll surface whose rows are pressables. Pressables are
  * gesture-handler buttons, and only gesture-handler's ScrollView cancels them
  * when a drag becomes a scroll; inside React Native's own, a finger that stops
  * a fling or starts a scroll lifts as a press

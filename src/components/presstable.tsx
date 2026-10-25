@@ -109,9 +109,11 @@ export function PresstableScale({
 }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
+  // Android refresh pulls can leave the button without activating a scroll gesture.
   return (
     <UniwindPressableScale
       rippleColor={RIPPLE_COLOR}
+      shouldCancelWhenOutside
       {...rest}
       {...pressInProps(onPressIn)}
       metadata={{ minScale, reduceMotion }}
@@ -134,6 +136,7 @@ export function PresstableOpacity({
   return (
     <UniwindPressableOpacity
       rippleColor={RIPPLE_COLOR}
+      shouldCancelWhenOutside
       {...rest}
       {...pressInProps(onPressIn)}
       onPress={handlePress}

@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';
-import { ScrollView, type ScrollViewInstance, Text, useWindowDimensions, View } from 'react-native';
+import { type ScrollViewInstance, Text, useWindowDimensions, View } from 'react-native';
 import { FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
-import { AnimatedView } from '@/components/animated-view';
+import { AnimatedView, GestureScrollView } from '@/components/animated-view';
 import { BlurEnter } from '@/components/blur-enter';
 import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton } from '@/components/floating-back-button';
@@ -129,7 +129,7 @@ function EpisodePager({
       onLayout={(event) => setHeight(event.nativeEvent.layout.height)}
     >
       <EpisodeStep value={step}>
-        <ScrollView
+        <GestureScrollView
           contentOffset={{ x: settled * width, y: 0 }}
           horizontal
           onMomentumScrollEnd={(event) => settleAt(event.nativeEvent.contentOffset.x)}
@@ -149,7 +149,7 @@ function EpisodePager({
             </View>
           ))}
           <View style={{ width: (order.length - 1 - last) * width }} />
-        </ScrollView>
+        </GestureScrollView>
         <EpisodeNavigation id={item.id} next={order[index + 1]} number={number} prev={order[index - 1]} season={season} />
       </EpisodeStep>
       <FloatingBackButton onPress={onBack} />
@@ -185,7 +185,7 @@ function EpisodePage({
   const hero = view.still || item.backdropImage || '';
 
   return (
-    <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom }}>
+    <GestureScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom }}>
       <BlurEnter>
         <View className="h-64 relative">
           {hero === '' ? (
@@ -228,7 +228,7 @@ function EpisodePage({
           <RatingsSection episode={{ season, number, ratings: view.ratings }} item={item} />
         </View>
       </BlurEnter>
-    </ScrollView>
+    </GestureScrollView>
   );
 }
 

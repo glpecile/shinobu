@@ -3,11 +3,11 @@ import { createContext, useContext, useState } from 'react';
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  ScrollView,
   type ScrollViewProps,
   View,
 } from 'react-native';
 
+import { GestureScrollView } from '@/components/animated-view';
 import { List, type ListProps } from '@/components/List';
 import { type ThemeColorToken, useThemeColor } from '@/lib/theme-color';
 
@@ -72,7 +72,7 @@ export function Rail({ onScroll, ...rest }: ScrollViewProps) {
   const { scrollProps, fade } = useRailFade(onScroll);
   return (
     <View>
-      <ScrollView
+      <GestureScrollView
         horizontal
         nestedScrollEnabled
         showsHorizontalScrollIndicator={false}
