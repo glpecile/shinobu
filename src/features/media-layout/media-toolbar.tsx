@@ -1,10 +1,14 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Skeleton } from '@/components/skeleton';
 import { ViewToggle } from '@/components/view-toggle';
-import { setWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
+import { useMediaSort, type MediaSortScope } from '@/state/prefs/media-sort';
+import { setWatchlistView, useWatchlistView, type WatchlistView } from '@/state/prefs/watchlist-view';
+
+import { MediaSortControl } from './media-sort-control';
 
 /** Filters scroll together; the layout control never moves offscreen. */
 export function MediaToolbar({ children, view, notice }: {
@@ -28,24 +32,20 @@ export function MediaToolbar({ children, view, notice }: {
 }
 
 /**
- * Pill-sized placeholders with the same fixed layout-control slot. `labelled`
- * is a small labelled button (a list's Rename); `actions` are icon buttons,
- * each pulled in as the lists' `ToolbarIcon`.
+ * Render preference controls at their intrinsic sizes while data loads.
+ * Only data-dependent actions need placeholders.
  */
-export function MediaToolbarSkeleton({ filter = false, labelled = false, actions = 0, layout = false }: { filter?: boolean; labelled?: boolean; actions?: number; layout?: boolean }) {
+export function MediaToolbarSkeleton({ filter = false, labelled = false, actions = 0, layout = false, scope = 'watchlist' }: { filter?: boolean; labelled?: boolean; actions?: number; layout?: boolean; scope?: MediaSortScope }) {
+  const view = useWatchlistView();
+  const sort = useMediaSort(scope);
   return (
-    <View className="flex-row items-center gap-3 px-6 pb-3">
-      <View className="flex-1 min-w-0 flex-row items-center gap-2 overflow-hidden">
-        {filter && <Skeleton className="h-9.5 w-36 shrink-0 rounded-full" />}
-        <Skeleton className="h-9.5 w-40 shrink-0 rounded-full" />
-        {labelled && <Skeleton className="h-9.5 w-24 shrink-0 rounded-full" />}
-        {Array.from({ length: actions }).map((_, index) => (
-          <View className="size-11 -mx-0.75 items-center justify-center" key={index}><Skeleton className="size-9.5 rounded-full" /></View>
-        ))}
-      </View>
-      {layout && <View className="h-11 shrink-0 items-center justify-center android:size-11">
-        <Skeleton className="h-8 w-20 rounded-md android:size-9.5 android:rounded-full" />
-      </View>}
-    </View>
+    <MediaToolbar view={layout ? view : undefined}>
+      {filter && <Skeleton className="h-9.5 w-36 shrink-0 rounded-full" />}
+      <MediaSortControl scope={scope} sort={sort} />
+      {labelled && <Button disabled icon={<Button.Icon name="create-outline" />} label="Rename" onPress={() => {}} size="sm" variant="quiet" />}
+      {Array.from({ length: actions }).map((_, index) => (
+        <View className="size-11 -mx-0.75 items-center justify-center" key={index}><Skeleton className="size-9.5 rounded-full" /></View>
+      ))}
+    </MediaToolbar>
   );
 }

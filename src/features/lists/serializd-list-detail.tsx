@@ -121,7 +121,7 @@ export function SerializdListSkeleton({ shareHref, signedIn }: { shareHref?: str
   return (
     <>
       <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" shareHref={shareHref} subtitle="" />
-      <MediaToolbarSkeleton actions={signedIn && compact ? 2 : 1} labelled={signedIn && !compact} />
+      <MediaToolbarSkeleton actions={signedIn && compact ? 2 : 1} labelled={signedIn && !compact} scope="lists" />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />

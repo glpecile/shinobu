@@ -46,13 +46,16 @@ export function ListsHeader({ provider, title, subtitle, metadata, shareHref, mo
       <View className="flex-1 min-w-0 gap-1">
         <View className="flex-row items-center gap-2">
           <ProviderIcon id={provider} size={16} />
-          {title == null ? <Skeleton className="h-7 w-56 shrink rounded" /> : morphTitle ? (
+          {title == null ? <View className="flex-1 min-w-0" style={process.env.EXPO_OS === 'web' ? { maxWidth: 224 } : undefined}>
+            <Text className="font-display text-xl" numberOfLines={1}>{'\u00a0'}</Text>
+            <Skeleton className="absolute inset-0 rounded" />
+          </View> : morphTitle ? (
             <MorphText className="font-display text-foreground text-2xl">{title}</MorphText>
           ) : (
             <Text className="font-display text-foreground text-xl flex-1 min-w-0" ellipsizeMode="tail" numberOfLines={1}>{title}</Text>
           )}
         </View>
-        {(subtitle != null || metadata != null) && <View className={cn('flex-row flex-wrap items-center gap-x-3 gap-y-1', metadata != null && 'min-h-11')}>
+        {(subtitle != null || metadata != null) && <View className={cn('flex-row flex-wrap items-center gap-x-3 gap-y-1', metadata != null && 'min-h-5')} style={{ alignContent: 'center' }}>
           {subtitle != null && (title == null ? <Skeleton className="h-4 w-24 rounded" /> : <Text className="font-sans text-muted text-xs" numberOfLines={1}>{subtitle}</Text>)}
           {metadata}
         </View>}

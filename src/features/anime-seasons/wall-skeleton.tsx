@@ -13,9 +13,9 @@ function GridSkeleton({ animated }: { animated: boolean }) {
         <View
           className="p-1"
           key={index}
-          style={{ width: `${100 / columns}%`, aspectRatio: 2 / 3 }}
+          style={{ width: `${100 / columns}%` }}
         >
-          <Skeleton animated={animated} className="w-full h-full rounded-md" delay={staggerDelay(index)} />
+          <Skeleton animated={animated} className="w-full aspect-2/3 rounded-md" delay={staggerDelay(index)} />
         </View>
       ))}
     </View>
