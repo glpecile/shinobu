@@ -17,7 +17,7 @@ import {
 } from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
 import { ProviderIcon } from '@/components/provider-icon';
-import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
+import { CollapsibleSection } from '@/components/collapsible-section';
 import {
   homeHeaderClassName,
   homeHeaderTitleSize,
@@ -178,7 +178,7 @@ function FeedScreen() {
 
   return (
     <View className="flex-1">
-      <RefreshableScrollView
+      <CollapsibleSection.Scroll
         className="flex-1"
         ref={scrollRef}
         // Web has no header (sidebar owns brand) so it needs top breathing room.
@@ -254,7 +254,7 @@ function FeedScreen() {
         <FeedEnd
           onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         />
-      </RefreshableScrollView>
+      </CollapsibleSection.Scroll>
       <CardActionsSheet {...sheetProps} />
     </View>
   );

@@ -1,11 +1,10 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { List } from '@/components/List';
-import { ProviderIcon } from '@/components/provider-icon';
 import { useRailFade } from '@/components/rail';
 import { ViewAllLink } from '@/components/view-all-link';
-import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { MediaCard } from './media-card';
@@ -30,8 +29,8 @@ interface MediaCarouselProps {
    * cour and must keep its collapse state).
    */
   collapseKey: string;
-  /** The provider this row is sourced from — renders its brand mark. */
-  provider?: ProviderId;
+  /** The source's `ProviderIcon`, or a `CollapsibleSection.Icon` for merged rows. */
+  leading?: ReactNode;
   items: readonly NormalizedMediaItem[];
   /** Per-item context line under the type label (see MediaCard's `subtitle`). */
   subtitles?: Record<string, string>;
@@ -48,7 +47,7 @@ interface MediaCarouselProps {
 export function MediaCarousel({
   title,
   collapseKey,
-  provider,
+  leading,
   items,
   subtitles,
   onItemActions,
@@ -61,7 +60,7 @@ export function MediaCarousel({
   return (
     <CollapsibleSection
       collapseKey={collapseKey}
-      leading={provider != null ? <ProviderIcon id={provider} size={16} /> : undefined}
+      leading={leading}
       title={title}
       action={onViewAll != null && <ViewAllLink onPress={onViewAll} title={title} />}
     >

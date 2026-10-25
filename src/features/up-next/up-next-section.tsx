@@ -139,6 +139,7 @@ export function UpNextSection({
         <AnimatedView exiting={CARD_EXIT}>
           <CollapsibleSection
             collapseKey="up-next-continue"
+            leading={<CollapsibleSection.Icon name="play-circle-outline" />}
             title="Continue Watching"
           >
             <VirtualizedRail
@@ -178,6 +179,7 @@ export function UpNextSection({
 
       <CollapsibleSection
         collapseKey="up-next-calendar"
+        leading={<CollapsibleSection.Icon name="calendar-outline" />}
         title="This week"
       >
         <WeekStrip
