@@ -104,7 +104,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                     episode={view.episode}
                     id={item.id}
                     number={number}
-                        season={season}
+                    season={season}
                     showTitle={item.title}
                   />
                   <EpisodeLogs className="mt-3" logs={logs} />

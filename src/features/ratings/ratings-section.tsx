@@ -71,7 +71,7 @@ function RatingChip({ rating, item, episode }: ChipProps & { rating: NormalizedR
       external={url != null}
       icon={<ProviderIcon id={rating.source} size={16} />}
       label={spokenRating(rating)}
-      onPress={() => (url != null ? openExternalUrl(url) : undefined)}
+      onPress={url != null ? () => openExternalUrl(url) : undefined}
     >
       <Text className="text-foreground font-sans-semibold text-sm">
         {scoreText(rating)}

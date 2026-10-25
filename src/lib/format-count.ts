@@ -7,8 +7,7 @@
  */
 export function formatCount(count: number): string {
   for (const [suffix, size] of UNITS) {
-    const value = Math.round((count / size) * 10) / 10;
-    if (value >= 1 && count >= 1000) return `${value}${suffix}`;
+    if (count >= size) return `${Math.round((count / size) * 10) / 10}${suffix}`;
   }
   return String(count);
 }

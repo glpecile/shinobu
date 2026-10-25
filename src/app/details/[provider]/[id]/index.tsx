@@ -92,6 +92,8 @@ import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
+import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import { wikidataQueryKeys } from '@/state/queries/wikidata';
 import { useConnectedProviders } from '@/state/session';
 import type {
   NormalizedCastMember,
@@ -712,6 +714,9 @@ function DetailsScreen() {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
     }
+    for (const key of [simklQueryKeys.all, letterboxdQueryKeys.all, wikidataQueryKeys.all]) {
+      queryClient.removeQueries({ queryKey: key, type: 'inactive', predicate: (query) => query.state.status === 'error' });
+    }
     setRefreshCount((count) => count + 1);
     return Promise.allSettled([
       refetchFeed(),
@@ -723,6 +728,8 @@ function DetailsScreen() {
       queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
       queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
       queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: wikidataQueryKeys.all, type: 'active' }),
     ]);
   }
 
