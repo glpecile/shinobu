@@ -54,7 +54,7 @@ const INDEX_MIN_WIDTH = 1024;
  * the header once its head scrolls away, and lists itself in the wide-web index.
  *
  * ```tsx
- * <SettingsRail.Section title="Trackers" count="2 of 5 connected">
+ * <SettingsRail.Section title="Trackers" count="2 of 5 connected" icon="link-outline">
  *   <SettingsRail.Head label="Trackers, 2 of 5 connected">
  *     <RailHead.Icon name="link-outline">Trackers</RailHead.Icon>
  *     <RailHead.Count>2 of 5 connected</RailHead.Count>
@@ -77,10 +77,10 @@ function SettingsRailSection({
   icon,
 }: {
   children: ReactNode;
-  title?: string;
-  count?: string;
+  title: string;
+  count: string;
   /** The head's glyph again, for the wide-web index. */
-  icon?: IconName;
+  icon: IconName;
 }) {
   const [open, setOpen] = useState(true);
   const { scrollY, place } = useContext(ScrollContext);
@@ -89,7 +89,6 @@ function SettingsRailSection({
 
   // The index drops a section that stops rendering (the last hidden item shown again).
   useEffect(() => {
-    if (title == null) return;
     return () => place(title, null);
   }, [place, title]);
 
@@ -100,13 +99,11 @@ function SettingsRailSection({
           const { y, height: sectionHeight } = event.nativeEvent.layout;
           top.set(y);
           height.set(sectionHeight);
-          if (title != null && icon != null) place(title, { y, icon });
+          place(title, { y, icon });
         }}
       >
         {children}
-        {title != null && (
-          <SettingsRailPinned count={count} height={height} scrollY={scrollY} title={title} top={top} />
-        )}
+        <SettingsRailPinned count={count} height={height} scrollY={scrollY} title={title} top={top} />
       </View>
     </OpenContext.Provider>
   );
@@ -127,7 +124,7 @@ function SettingsRailPinned({
   height,
 }: {
   title: string;
-  count?: string;
+  count: string;
   scrollY: SharedValue<number>;
   top: SharedValue<number>;
   height: SharedValue<number>;
@@ -178,11 +175,9 @@ function SettingsRailPinned({
         }}
       >
         <Text className="font-display text-base text-foreground">{title}</Text>
-        {count != null && (
-          <Text className="ml-3 shrink text-muted font-sans text-xs" numberOfLines={1}>
-            {count}
-          </Text>
-        )}
+        <Text className="ml-3 shrink text-muted font-sans text-xs" numberOfLines={1}>
+          {count}
+        </Text>
       </AnimatedView>
     </AnimatedView>
   );

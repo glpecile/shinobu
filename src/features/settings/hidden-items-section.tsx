@@ -80,7 +80,7 @@ export function HiddenItemsSection() {
         <RailHead.Icon name="eye-off-outline">Hidden</RailHead.Icon>
         <RailHead.Count>{count}</RailHead.Count>
       </SettingsRail.Head>
-      {hidden.length > SEARCH_MIN && (
+      {(hidden.length > SEARCH_MIN || query.length > 0) && (
         <SettingsRail.Row>
           <View className="flex-1">
             <TextField

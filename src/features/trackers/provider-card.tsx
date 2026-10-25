@@ -41,7 +41,9 @@ export function ProviderCard({
     status = (
       <View className="flex-row items-center gap-1.5">
         <View className="w-1.5 h-1.5 rounded-full bg-success mt-0.5" />
-        <SettingsRail.Subtitle>{username ?? 'Connected'}</SettingsRail.Subtitle>
+        <View className="flex-1 min-w-0">
+          <SettingsRail.Subtitle>{username ?? 'Connected'}</SettingsRail.Subtitle>
+        </View>
       </View>
     );
   } else if (reconnect) {
