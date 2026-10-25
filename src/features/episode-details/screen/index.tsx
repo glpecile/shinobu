@@ -17,7 +17,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { haptics } from '@/lib/haptics';
 import { DURATION } from '@/lib/motion';
 import { PeopleSectionsSkeleton } from '@/features/person/people-section';
-import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
+import { RatingsSection } from '@/features/ratings/ratings-section';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { EpisodeLogButton } from '@/features/episode-details/episode-log-button';
@@ -208,7 +208,6 @@ function EpisodePage({
                 episode={view.episode}
                 id={item.id}
                 number={number}
-                rating={view.rating}
                 season={season}
                 showTitle={item.title}
               />
@@ -226,7 +225,7 @@ function EpisodePage({
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
           <DiscussionSection episode={{ season, number }} item={item} />
-          <ProviderLinksSection episode={{ season, number }} item={item} />
+          <RatingsSection episode={{ season, number, ratings: view.ratings }} item={item} />
         </View>
       </BlurEnter>
     </ScrollView>

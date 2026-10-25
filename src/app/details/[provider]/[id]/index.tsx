@@ -47,7 +47,7 @@ import {
   PersonCreditSheet,
   type PersonCredit,
 } from '@/features/person';
-import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
+import { RatingsSection } from '@/features/ratings/ratings-section';
 import { ReleaseTimeline } from '@/features/release-timeline/release-timeline';
 import { StudioSheet } from '@/features/studio/studio-sheet';
 import {
@@ -92,6 +92,8 @@ import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
+import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import { wikidataQueryKeys } from '@/state/queries/wikidata';
 import { useConnectedProviders } from '@/state/session';
 import type {
   NormalizedCastMember,
@@ -526,7 +528,6 @@ function DetailsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  const muted = useThemeColor('--color-muted');
   // The hero scrim fades to the *page background*, not black: the title
   // straddles the image/page boundary and `text-foreground` is near-black in
   // the light theme, so a black scrim swallowed it there. Dark theme looks
@@ -713,6 +714,9 @@ function DetailsScreen() {
         queryClient.removeQueries({ queryKey: key, type: 'inactive' });
       }
     }
+    for (const key of [simklQueryKeys.all, letterboxdQueryKeys.all, wikidataQueryKeys.all]) {
+      queryClient.removeQueries({ queryKey: key, type: 'inactive', predicate: (query) => query.state.status === 'error' });
+    }
     setRefreshCount((count) => count + 1);
     return Promise.allSettled([
       refetchFeed(),
@@ -724,6 +728,8 @@ function DetailsScreen() {
       queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
       queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
       queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.all, type: 'active' }),
+      queryClient.refetchQueries({ queryKey: wikidataQueryKeys.all, type: 'active' }),
     ]);
   }
 
@@ -759,21 +765,7 @@ function DetailsScreen() {
       <View className="w-full max-w-4xl self-center px-6">
         <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
           <View className="flex-1">
-            <View className="flex-row items-center gap-3">
-               <Eyebrow>{shown.type}</Eyebrow>
-              {shown.rating != null && (
-                <View className="flex-row items-center gap-1">
-                  <Ionicons
-                    color={muted}
-                    name="star"
-                    size={12}
-                  />
-                  <Text className="text-foreground text-xs font-sans-semibold">
-                    {shown.rating.toFixed(1)}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <Eyebrow>{shown.type}</Eyebrow>
             <ScrolledTitle.Anchor className="mt-1">
               <CopyTitle
                 alternates={alternates}
@@ -895,7 +887,7 @@ function DetailsScreen() {
 
       {shown.type !== 'MANGA' && <DiscussionSection item={shown} />}
 
-      <ProviderLinksSection item={shown} />
+      <RatingsSection item={shown} resetKey={refreshCount} />
     </View>
   );
   const layout = { header, footer, onRefresh: refresh };

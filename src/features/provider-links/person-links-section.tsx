@@ -11,7 +11,7 @@ import { useConnectedProviders } from '@/state/session';
 import { ProviderLinkRows } from './provider-link-row';
 
 /**
- * The `ProviderLinksSection` sibling for `/person/[id]` — same pill treatment,
+ * The details `RatingsSection`'s link pills, for `/person/[id]` — same pill treatment,
  * same `openExternalUrl` hand-off, different subject. A person has no *source*
  * provider (TMDB is the single source of truth for people, and TMDB is a
  * metadata source, never a link target), so unlike the item section this gates

@@ -42,7 +42,7 @@ const FILM: AniListMedia = {
 };
 
 describe('normalizeAniListMedia', () => {
-  test('normalizes a series with english title, stripped html, 0–10 rating', () => {
+  test('normalizes a series with english title, stripped html, average score', () => {
     const item = normalizeAniListMedia(SERIES, NOW_ISO);
     expect(item).toMatchObject({
       id: 'anilist-21',
@@ -55,7 +55,7 @@ describe('normalizeAniListMedia', () => {
       year: 1999,
       runtime: 24,
       genres: ['Action', 'Adventure'],
-      rating: 8.8,
+      ratings: [{ source: 'anilist', value: 88, scale: '%' }],
       type: 'ANIME',
       currentProgress: 0,
       progressUnit: 'episode',

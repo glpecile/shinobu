@@ -6,7 +6,12 @@
  * same row height on lists cards.
  */
 export function formatCount(count: number): string {
-  return compact.format(count);
+  for (const [suffix, size] of UNITS) {
+    if (count >= size) return `${Math.round((count / size) * 10) / 10}${suffix}`;
+  }
+  return String(count);
 }
 
-const compact = new Intl.NumberFormat('en', { maximumFractionDigits: 1, notation: 'compact' });
+// By hand: Hermes on iOS ignores `Intl.NumberFormat`'s `notation: 'compact'`
+// and prints the whole number with grouping ("40,552").
+const UNITS = [['B', 1e9], ['M', 1e6], ['K', 1e3]] as const;

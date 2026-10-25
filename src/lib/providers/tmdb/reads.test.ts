@@ -223,7 +223,7 @@ describe('getTvEpisode', () => {
     ]);
     expect(details.episode.title).toBe('The Laughing Dead');
     expect(details.still).toBe('https://image.tmdb.org/t/p/w780/still.jpg');
-    expect(details.rating).toBe(7.4);
+    expect(details.ratings).toEqual([{ source: 'tmdb', value: 7.4, scale: 10 }]);
     expect(details.cast.map((member) => member.name)).toEqual(['Regular', 'Guest']);
     expect(details.crew[0]?.job).toBe('Director');
   });

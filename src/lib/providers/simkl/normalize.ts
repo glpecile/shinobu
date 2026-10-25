@@ -1,4 +1,4 @@
-import type { MediaType, NormalizedMediaItem } from '@/types/media';
+import type { MediaType, NormalizedMediaItem, NormalizedRating } from '@/types/media';
 
 /**
  * Raw Simkl payload shapes — these never escape lib/providers (AGENTS.md Data
@@ -240,6 +240,20 @@ export interface SimklTrendingItem {
 }
 
 export type SimklTrendingKind = 'movies' | 'tv' | 'anime';
+
+// ---- Ratings ----
+
+interface SimklScore {
+  rating?: number | null;
+  votes?: number | null;
+}
+
+/** `/ratings?…&fields=simkl,ext,rank`; Simkl answers `null` for an id it doesn't index. */
+export interface SimklRatingsRaw {
+  simkl?: SimklScore | null;
+  IMDB?: SimklScore | null;
+  MAL?: (SimklScore & { rank?: number | null }) | null;
+}
 
 // ---- Search by id ----
 
@@ -588,7 +602,6 @@ export function normalizeTrendingItem(
 
   const { type, isFilm } = mediaTypeFor(TRENDING_MEDIA_TYPE[kind], raw.anime_type);
   const releaseDate = isoDateFromUs(raw.release_date);
-  const rating = raw.ratings?.simkl?.rating;
 
   return {
     id: `simkl-${simklId}`,
@@ -602,7 +615,7 @@ export function normalizeTrendingItem(
     // probe 2026-07-31) — the year derives from it.
     ...(releaseDate != null ? { year: Number(releaseDate.slice(0, 4)) } : {}),
     ...(raw.genres != null && raw.genres.length > 0 ? { genres: raw.genres } : {}),
-    ...(rating != null ? { rating } : {}),
+    ...(raw.ratings?.simkl != null ? { ratings: normalizeRatings({ simkl: raw.ratings.simkl }) } : {}),
     type,
     ...(isFilm ? { isFilm } : {}),
     ...(releaseDate != null ? { releaseDate } : {}),
@@ -612,6 +625,32 @@ export function normalizeTrendingItem(
     lastUpdated: nowIso,
     externalIds: externalIdsFrom(raw.ids),
   };
+}
+
+// ---- Ratings ----
+
+function simklScore(
+  source: 'simkl' | 'imdb' | 'mal',
+  score: SimklScore | null | undefined,
+  rank?: number | null,
+): NormalizedRating[] {
+  if (score?.rating == null || score.rating <= 0) return [];
+  return [{
+    source,
+    value: score.rating,
+    scale: 10,
+    ...(score.votes != null && score.votes > 0 ? { votes: score.votes } : {}),
+    ...(rank != null ? { rank } : {}),
+  }];
+}
+
+/** Simkl's own score plus the IMDb (movies, TV) or MAL (anime) score it mirrors. */
+export function normalizeRatings(raw: SimklRatingsRaw | null): NormalizedRating[] {
+  return [
+    ...simklScore('simkl', raw?.simkl),
+    ...simklScore('imdb', raw?.IMDB),
+    ...simklScore('mal', raw?.MAL, raw?.MAL?.rank),
+  ];
 }
 
 // ---- Search by id ----

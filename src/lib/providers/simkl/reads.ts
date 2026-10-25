@@ -1,6 +1,6 @@
 import { Clock, Effect } from 'effect';
 
-import type { NormalizedMediaItem } from '@/types/media';
+import type { NormalizedMediaItem, NormalizedRating } from '@/types/media';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import { SIMKL_CDN_BASE_URL } from './config';
 import type { SimklDeps } from './deps';
@@ -9,6 +9,7 @@ import {
   normalizeActivities,
   normalizeAllItems,
   normalizeCalendarFile,
+  normalizeRatings,
   normalizeSearchIdMatch,
   normalizeTrendingItem,
   normalizeUserSettings,
@@ -19,6 +20,7 @@ import {
   type SimklCalendarFile,
   type SimklLibrary,
   type SimklLibraryBucket,
+  type SimklRatingsRaw,
   type SimklSearchIdMatch,
   type SimklTrendingItem,
   type SimklTrendingKind,
@@ -224,15 +226,54 @@ export interface SimklLookupParams {
  * client params only. An unknown id is a `200 []`, so an empty array — never
  * an error — means "Simkl doesn't index this".
  */
-export function lookupByExternalId(
-  deps: SimklDeps,
-  params: SimklLookupParams,
-): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+function lookupQuery(params: SimklLookupParams): URLSearchParams {
   const query = new URLSearchParams();
   for (const key of ['simkl', 'tmdb', 'imdb', 'tvdb', 'mal', 'anilist', 'anidb', 'type'] as const) {
     const value = params[key];
     if (value != null) query.set(key, String(value));
   }
+  return query;
+}
+
+/**
+ * The one id `/ratings` looks `item` up by, or null when it has none. An anime
+ * cour goes by its own MAL/AniList entry, never the TMDB series it belongs to.
+ * Otherwise TMDB first: the details screen merges ids in as they resolve, and
+ * an id the item arrived with keeps the query key, and the chip, stable.
+ */
+export function ratingsLookup(
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>,
+): SimklLookupParams | null {
+  const { simkl, imdb, mal, anilist, tmdb } = item.externalIds;
+  if (item.type === 'ANIME' && mal != null) return { mal };
+  if (item.type === 'ANIME' && anilist != null) return { anilist };
+  if (tmdb != null) return { tmdb, type: item.type === 'MOVIE' || item.isFilm === true ? 'movie' : 'show' };
+  if (simkl != null) return { simkl };
+  if (imdb != null) return { imdb };
+  return null;
+}
+
+/**
+ * `/ratings` — Simkl's score and the IMDb or MAL score it mirrors, by any id
+ * `/search/id` takes (probed 2026-10-25). Public, client params only, and an
+ * unknown id answers `200 null`. `ext` adds IMDb/MAL; MAL's rank rides in it.
+ */
+export function getRatings(
+  deps: SimklDeps,
+  params: SimklLookupParams,
+): Effect.Effect<NormalizedRating[], ProviderError> {
+  const query = lookupQuery(params);
+  query.set('fields', 'simkl,ext');
+  return simklHttp<SimklRatingsRaw | null>(deps, `/ratings?${query.toString()}`).pipe(
+    Effect.map(normalizeRatings),
+  );
+}
+
+export function lookupByExternalId(
+  deps: SimklDeps,
+  params: SimklLookupParams,
+): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const query = lookupQuery(params);
   return Effect.gen(function* () {
     const raw = yield* simklHttp<SimklSearchIdMatch[]>(
       deps,

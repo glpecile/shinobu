@@ -279,8 +279,8 @@ describe('normalizeCreditRows', () => {
       NOW,
     );
 
-    expect(row.items[0].rating).toBe(7.4);
-    expect(row.items[1].rating).toBeUndefined();
+    expect(row.items[0].ratings).toEqual([{ source: 'tmdb', value: 7.4, scale: 10 }]);
+    expect(row.items[1].ratings).toBeUndefined();
   });
 });
 
@@ -401,7 +401,7 @@ describe('normalizeMovieCatalogue', () => {
       year: 1999,
       releaseDate: '1999-03-30',
       runtime: 136,
-      rating: 8.2,
+      ratings: [{ source: 'tmdb', value: 8.2, scale: 10 }],
       genres: ['Action'],
       type: 'MOVIE',
       currentProgress: 0,

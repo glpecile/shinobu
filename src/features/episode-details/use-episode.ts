@@ -4,7 +4,7 @@ import {
 } from '@/state/queries/show-seasons';
 import { useTmdbEpisodeQuery } from '@/state/queries/tmdb';
 import { useTmdbToken } from '@/state/session/tmdb-token';
-import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
+import type { NormalizedEpisode, NormalizedMediaItem, NormalizedRating } from '@/types/media';
 
 import { episodeNeighbours, episodeOrder, type EpisodeRef } from './episode-neighbours';
 
@@ -16,7 +16,8 @@ export interface EpisodeView {
   next?: EpisodeRef;
   /** Wide still from TMDB; '' until it answers or when there is none. */
   still: string;
-  rating?: number;
+  /** TMDB's score for the episode itself. */
+  ratings?: NormalizedRating[];
   isLoading: boolean;
   /** Whether the credit sections can be fetched at all (id + token). */
   tmdbId: number | undefined;
@@ -61,7 +62,7 @@ export function useEpisode(
     episode,
     ...(seasons.data == null ? {} : episodeNeighbours(seasons.data, season, number)),
     still: tmdb.data?.still ?? '',
-    ...(tmdb.data?.rating != null ? { rating: tmdb.data.rating } : {}),
+    ...(tmdb.data?.ratings != null ? { ratings: tmdb.data.ratings } : {}),
     isLoading: episode == null && (seasons.isPending || tmdb.isPending),
     tmdbId,
     order: seasons.data == null ? [] : episodeOrder(seasons.data, season),

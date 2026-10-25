@@ -45,7 +45,7 @@ export function sourceLinkFor(item: LinkItem): ProviderLink | undefined {
  * first — linked even if currently disconnected, since it's where the item
  * came from — then every other connected provider, deduped, filtered to
  * buildable URLs. Shared by the card-actions sheet (takes `[0]`) and the
- * details "View on" section (renders all).
+ * details Ratings section (renders all).
  */
 export function providerLinksFor(
   item: LinkItem,

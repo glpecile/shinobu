@@ -6,16 +6,18 @@ import { getFilmPoster, getFilmItem } from './film';
 const metadata = '<script type="application/ld+json">{"@type":"Movie","name":"Beast Boy: Lone Wolf","dateCreated":"2024-10-28"}</script>';
 
 describe('incoming Letterboxd film lookup', () => {
-  test('reads the film identity from the body, not a recommendation elsewhere', async () => {
+  test('reads the film identity from the body, not a recommendation elsewhere, and its rating', async () => {
+    const rated = '<script type="application/ld+json">{"@type":"Movie","name":"Alien","aggregateRating":{"bestRating":5,"reviewCount":449170,"@type":"AggregateRating","ratingValue":4.24,"ratingCount":4553659,"worstRating":0.5}}</script>';
     const item = await Effect.runPromise(getFilmItem({
       tmdb: null,
       fetch: async (url) => {
         expect(String(url)).toBe('https://letterboxd.com/film/alien/');
-        return new Response(`<body class="film backdropped" data-type="film" data-tmdb-type="movie" data-tmdb-id="348"><div data-tmdb-id="999"></div>${metadata}</body>`);
+        return new Response(`<body class="film backdropped" data-type="film" data-tmdb-type="movie" data-tmdb-id="348"><div data-tmdb-id="999"></div>${rated}</body>`);
       },
     }, 'alien'));
     expect(item?.id).toBe('letterboxd-alien');
     expect(item?.externalIds).toEqual({ letterboxd: 'alien', tmdb: 348 });
+    expect(item?.ratings).toEqual([{ source: 'letterboxd', value: 4.24, scale: 5, votes: 4553659 }]);
   });
 
   test('a missing film returns a lookup miss without invalidating a session', async () => {

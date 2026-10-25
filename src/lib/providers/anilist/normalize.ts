@@ -137,7 +137,9 @@ export function normalizeAniListMedia(
     ...(year != null ? { year } : {}),
     ...(media.duration != null ? { runtime: media.duration } : {}),
     ...(genres != null && genres.length > 0 ? { genres } : {}),
-    ...(media.averageScore != null ? { rating: media.averageScore / 10 } : {}),
+    ...(media.averageScore != null
+      ? { ratings: [{ source: 'anilist', value: media.averageScore, scale: '%' }] }
+      : {}),
     type,
     // AniList's ANIME covers movie-format entries; MOVIE format is what makes
     // an item fan out to Trakt/Letterboxd as a film (plan.md 1.3).

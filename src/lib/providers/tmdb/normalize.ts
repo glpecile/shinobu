@@ -6,6 +6,7 @@ import type {
   NormalizedEpisode,
   NormalizedMediaItem,
   NormalizedPerson,
+  NormalizedRating,
   NormalizedStudio,
   PersonCreditRow,
   ReleaseCalendar,
@@ -28,6 +29,7 @@ interface TmdbCreditBase {
   release_date?: string | null;
   first_air_date?: string | null;
   vote_average?: number | null;
+  vote_count?: number | null;
 }
 
 export interface TmdbCastCredit extends TmdbCreditBase {
@@ -122,6 +124,21 @@ export function parseTmdbItemId(
   return { kind: match[1] as TmdbKind, tmdbId: Number(match[2]) };
 }
 
+/** TMDB reports 0 for an unrated title, not null, so 0 means no score. */
+function tmdbRatings(
+  raw: Pick<TmdbCreditBase, 'vote_average' | 'vote_count'>,
+): { ratings?: NormalizedRating[] } {
+  if (raw.vote_average == null || raw.vote_average <= 0) return {};
+  return {
+    ratings: [{
+      source: 'tmdb',
+      value: raw.vote_average,
+      scale: 10,
+      ...(raw.vote_count != null && raw.vote_count > 0 ? { votes: raw.vote_count } : {}),
+    }],
+  };
+}
+
 function normalizeKindedItem(
   raw: TmdbCreditBase,
   kind: TmdbKind,
@@ -132,7 +149,6 @@ function normalizeKindedItem(
 
   const date = kindedDate(raw, kind);
   const year = date != null ? Number(date.slice(0, 4)) : Number.NaN;
-  const rating = raw.vote_average ?? 0;
   return {
     id: `tmdb-${kind}-${raw.id}`,
     title,
@@ -145,8 +161,7 @@ function normalizeKindedItem(
     // Keep the full date, not just the derived year: the log button needs it
     // to refuse a film that isn't out yet (same gate as an unaired episode).
     ...(date != null ? { releaseDate: date } : {}),
-    // TMDB reports 0 for unrated titles, not null — treat it as "no rating".
-    ...(rating > 0 ? { rating } : {}),
+    ...tmdbRatings(raw),
     type: kind === 'movie' ? 'MOVIE' : 'TV',
     currentProgress: 0,
     progressUnit: 'episode',
@@ -420,6 +435,7 @@ export interface TmdbReleaseDatesCountry {
 }
 
 export interface TmdbMovieResponse extends TmdbCreditBase {
+  imdb_id?: string | null;
   genres?: TmdbGenre[];
   runtime?: number | null;
   production_companies?: TmdbCompanyRef[];
@@ -495,6 +511,7 @@ export interface TmdbTvResponse extends TmdbCreditBase {
   episode_run_time?: number[];
   number_of_episodes?: number | null;
   production_companies?: TmdbCompanyRef[];
+  external_ids?: { imdb_id?: string | null } | null;
   aggregate_credits?: {
     cast?: TmdbAggregateCastEntry[];
     crew?: TmdbAggregateCrewEntry[];
@@ -666,6 +683,11 @@ function catalogueExtras(
   };
 }
 
+/** The IMDb id links the IMDb score to its page. TMDB sends '' for none. */
+function imdbId(item: NormalizedMediaItem, id: string | null | undefined) {
+  return id != null && id !== '' ? { externalIds: { ...item.externalIds, imdb: id } } : {};
+}
+
 export function normalizeMovieCatalogue(
   raw: TmdbMovieResponse,
   nowIso: string,
@@ -678,6 +700,7 @@ export function normalizeMovieCatalogue(
       ...item,
       ...catalogueExtras(raw, raw.runtime ?? undefined, undefined),
       ...(releaseCalendar != null ? { releaseCalendar } : {}),
+      ...imdbId(item, raw.imdb_id),
     },
     cast: normalizeCastEntries(
       (raw.credits?.cast ?? []).map((entry) => ({
@@ -712,6 +735,7 @@ export function normalizeTvCatalogue(
         raw.episode_run_time?.[0],
         raw.number_of_episodes ?? undefined,
       ),
+      ...imdbId(item, raw.external_ids?.imdb_id),
     },
     cast: normalizeCastEntries(
       (raw.aggregate_credits?.cast ?? []).map((entry) => ({
@@ -750,6 +774,7 @@ export interface TmdbEpisodeResponse {
   runtime?: number | null;
   still_path?: string | null;
   vote_average?: number | null;
+  vote_count?: number | null;
   /** Top-level guest list, present even without the credits append. */
   guest_stars?: TmdbMovieCastEntry[] | null;
   crew?: TmdbMovieCrewEntry[] | null;
@@ -766,8 +791,7 @@ export interface TmdbEpisodeDetails {
   episode: NormalizedEpisode;
   /** Wide still (`w780`); '' when TMDB has none. */
   still: string;
-  /** Community rating on a 0–10 scale; absent when unrated. */
-  rating?: number;
+  ratings?: NormalizedRating[];
   /** Regulars first, then guest stars — the people actually in this episode. */
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
@@ -817,9 +841,7 @@ export function normalizeTvEpisode(
       ...(raw.runtime != null ? { runtime: raw.runtime } : {}),
     },
     still: tmdbImageUrl(raw.still_path, 'w780'),
-    ...(raw.vote_average != null && raw.vote_average > 0
-      ? { rating: raw.vote_average }
-      : {}),
+    ...tmdbRatings(raw),
     cast,
     crew,
   };

@@ -12,6 +12,9 @@ import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * A bordered pill that opens something; `external` marks a link that leaves the app.
+ * `children` replace the label's text when it needs styling (a score and its
+ * scale); `label` then only names the pill to assistive tech.
+ * Omit `onPress` for a static value without a destination.
  *
  * `onLongPress` doubles as the web hover ⋯ (an `OverlayActionsButton`
  * straddling the pill's top-right corner, like the person card's): web has no
@@ -24,20 +27,39 @@ export function LinkPill({
   external = false,
   onPress,
   onLongPress,
+  children,
 }: {
   icon?: ReactNode;
   label: string;
+  children?: ReactNode;
   external?: boolean;
-  onPress: () => void | Promise<void>;
+  onPress?: () => void | Promise<void>;
   onLongPress?: () => void;
 }) {
   const muted = useThemeColor('--color-muted');
-  const { loading, open } = useLinkHandoff(onPress);
+  const { loading, open } = useLinkHandoff(() => onPress?.());
   // JS hover state, not CSS: uniwind has no `group-hover:` support, so the
   // web-only ⋯ reveal rides on RN-web's pointer events instead.
   const [hovered, setHovered] = useState(false);
   const webActions =
     process.env.EXPO_OS === 'web' ? onLongPress : undefined;
+
+  // Android needs the border on the inner View, not on pressto's button.
+  const content = (
+    <View
+      accessible={onPress == null}
+      accessibilityLabel={onPress == null ? label : undefined}
+      className="min-h-11 flex-row items-center gap-2 bg-surface border border-border rounded-full px-4 py-2"
+    >
+      {icon}
+      {children ?? <Text className="text-foreground font-sans text-sm">{label}</Text>}
+      {external && onPress != null && <View className="size-5 items-center justify-center">
+        {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={12} />}
+      </View>}
+    </View>
+  );
+
+  if (onPress == null) return content;
 
   return (
     <View
@@ -48,6 +70,7 @@ export function LinkPill({
       <PresstableOpacity
         className="rounded-full"
         accessibilityRole="button"
+        accessibilityLabel={children != null ? label : undefined}
         accessibilityState={{ busy: loading, disabled: loading }}
         aria-busy={loading}
         aria-disabled={loading}
@@ -55,15 +78,7 @@ export function LinkPill({
         onLongPress={onLongPress}
         onPress={external ? open : onPress}
       >
-        {/* The box sits on an inner View: a border on the pressable is never drawn
-            on Android (docs/solutions/pressto-border-not-drawn-on-android.md). */}
-        <View className="flex-row items-center gap-2 bg-surface border border-border rounded-full px-4 py-2">
-          {icon}
-          <Text className="text-foreground font-sans text-sm">{label}</Text>
-          {external && <View className="size-5 items-center justify-center">
-            {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={12} />}
-          </View>}
-        </View>
+        {content}
       </PresstableOpacity>
       {webActions != null && (
         <OverlayActionsButton

@@ -39,6 +39,11 @@ const FilmMetadata = Schema.fromJsonString(Schema.Struct({
   genre: Schema.optional(Schema.Array(Schema.String)),
   image: Schema.optional(Schema.String.check(Schema.isPattern(/^https:\/\/a\.ltrbxd\.com\/resized\/[^\s]+$/))),
   description: Schema.optional(Schema.String),
+  // `ratingCount` counts ratings; the smaller `reviewCount` beside it counts reviews.
+  aggregateRating: Schema.optional(Schema.Struct({
+    ratingValue: Schema.Number,
+    ratingCount: Schema.optional(Schema.Number),
+  })),
 }));
 
 /** Preserve Letterboxd's log identity; a TV match is display-only, never a movie ID. */
@@ -64,6 +69,16 @@ export const getFilmItem = Effect.fnUntraced(function* (
     overview: metadata.description,
     runtime: Number(/^PT([0-9]+)M$/.exec(metadata.duration ?? '')?.[1]) || undefined,
     genres: metadata.genre == null ? undefined : [...metadata.genre],
+    ...(metadata.aggregateRating != null
+      ? {
+        ratings: [{
+          source: 'letterboxd',
+          value: metadata.aggregateRating.ratingValue,
+          scale: 5,
+          ...(metadata.aggregateRating.ratingCount != null ? { votes: metadata.aggregateRating.ratingCount } : {}),
+        }],
+      }
+      : {}),
     type: 'MOVIE',
     currentProgress: 0,
     progressUnit: 'episode',

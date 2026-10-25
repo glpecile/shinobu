@@ -9,7 +9,7 @@ import { PROVIDERS } from '@/lib/providers/registry';
 
 /**
  * A "View on …" row, the *sheet* treatment of a provider link — the app's
- * centered `quiet` button, matching the other sheet actions above it. The pages use pills instead (`ProviderLinksSection`, `PersonLinksSection`): a page has room
+ * centered `quiet` button, matching the other sheet actions above it. The pages use pills instead (`RatingsSection`, `PersonLinksSection`): a page has room
  * to lay links out as a cluster, a sheet is a stack of one-tap actions and a
  * row of pills reads as a different kind of control in the middle of it.
  *
