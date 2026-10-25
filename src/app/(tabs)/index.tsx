@@ -181,11 +181,11 @@ function FeedScreen() {
       <CollapsibleSection.Scroll
         className="flex-1"
         ref={scrollRef}
-        // Web has no header (sidebar owns brand) so it needs top breathing room.
+        // Wide web has no header (sidebar owns brand) so it needs top breathing room.
         // Android's tab bar reserves its own space; iOS's floating bar needs clearance.
         contentContainerClassName={
           process.env.EXPO_OS === 'web'
-            ? 'pt-6 pb-8'
+            ? 'pt-2 pb-8 md:pt-6'
             : process.env.EXPO_OS === 'android'
               ? 'pt-2 pb-4'
               : 'pt-2 pb-24'
@@ -273,22 +273,24 @@ export default function App() {
           name="description"
         />
       </Head>
-      {/* The tab bar (native) / sidebar (web) now own navigation, so the header
-          is brand-only. On web the sidebar already carries the 忍 mark, so this
-          duplicate title is dropped there. */}
-      {process.env.EXPO_OS !== 'web' && (
-        <View className={homeHeaderClassName}>
-          {/* Connection status lives in Settings. */}
-          <Text
-            className={cn(
-              homeHeaderTitleSize,
-              'font-display text-foreground tracking-tight',
-            )}
-          >
-            忍 Shinobu
-          </Text>
-        </View>
-      )}
+      {/* Brand-only header. From `md` the web sidebar carries the 忍 mark, so
+          it's hidden there; a web-only class because native tablets match `md`. */}
+      <View
+        className={cn(
+          homeHeaderClassName,
+          process.env.EXPO_OS === 'web' && 'md:hidden',
+        )}
+      >
+        {/* Connection status lives in Settings. */}
+        <Text
+          className={cn(
+            homeHeaderTitleSize,
+            'font-display text-foreground tracking-tight',
+          )}
+        >
+          忍 Shinobu
+        </Text>
+      </View>
 
       {connected.length === 0 ? (
         oauthStatus === 'exchanging' ? (
