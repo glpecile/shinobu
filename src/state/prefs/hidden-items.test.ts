@@ -29,6 +29,7 @@ mock.module('react-native-mmkv', () => ({
 
 const { setDiaryDayCollapsed, useCollapsedDiaryDays } = await import('./collapsed-diary-days');
 const { setSectionCollapsed } = await import('./collapsed-sections');
+const { prefsStorage } = await import('./storage');
 const { hideItem, hideList, unhideItem, unhideList, useHiddenItems, useHiddenLists, visibleByIds, visibleItems } = await import('./hidden-items');
 
 const items = [{ id: 'trakt-1' }, { id: 'trakt-2' }, { id: 'trakt-3' }];
@@ -46,7 +47,7 @@ test('preference snapshots change only when their own keys change', () => {
     expect(read.result.current.lists).toBe(initial.lists);
     expect(read.result.current.days).toBe(initial.days);
 
-    act(() => hideItem({ id: 'trakt-1', title: 'Film' }));
+    act(() => hideItem({ id: 'trakt-1', title: 'Film', type: 'MOVIE' }));
     expect(read.result.current.lists).toBe(initial.lists);
     const hiddenItems = read.result.current.items;
 
@@ -56,7 +57,7 @@ test('preference snapshots change only when their own keys change', () => {
 
     act(() => setDiaryDayCollapsed('2026-10-23', true));
     expect(read.result.current).toEqual({
-      items: [{ id: 'trakt-1', title: 'Film' }],
+      items: [{ id: 'trakt-1', title: 'Film', type: 'MOVIE' }],
       lists: [{ id: 'watchlist', title: 'Watchlist' }],
       days: new Set(['2026-10-23']),
     });
@@ -67,6 +68,20 @@ test('preference snapshots change only when their own keys change', () => {
       setDiaryDayCollapsed('2026-10-23', false);
     });
     expect(read.result.current).toEqual({ items: [], lists: [], days: new Set() });
+  } finally {
+    read.unmount();
+    store.clear();
+  }
+});
+
+test.each([
+  { saved: 'Old film', title: 'Old film' },
+  { saved: '{"title":"Old film","type":"UNKNOWN","id":"wrong-item"}', title: 'Old film' },
+])('hidden item storage keeps its key identity and tolerates legacy or unknown types: $saved', ({ saved, title }) => {
+  const read = renderHook(() => useHiddenItems());
+  try {
+    act(() => prefsStorage.set('hiddenItem.trakt-9', saved));
+    expect(read.result.current).toEqual([{ id: 'trakt-9', title }]);
   } finally {
     read.unmount();
     store.clear();

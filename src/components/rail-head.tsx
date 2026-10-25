@@ -1,10 +1,12 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
+import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * The rail every list down a gutter shares: a fixed-width left column with
@@ -114,6 +116,27 @@ function RailHeadTitle({ children, muted = false, showRail = true }: { children:
   );
 }
 
+/**
+ * A glyph ringed on the rail with a title beside it, for runs named by topic
+ * rather than date (the Settings sections). `pb-3` matches the trailing block,
+ * so the count centres on the title.
+ */
+function RailHeadIcon({ name, children }: { name: ComponentProps<typeof Ionicons>['name']; children: ReactNode }) {
+  const open = useContext(OpenContext);
+  const muted = useThemeColor('--color-muted');
+  return (
+    <View className="relative flex-row items-center pb-3">
+      <View className={cn(RAIL_W, 'items-center')}>
+        <View className="w-8 h-8 rounded-full bg-background border border-border items-center justify-center">
+          <Ionicons color={muted} name={name} size={16} />
+        </View>
+      </View>
+      <Text className="font-display text-xl leading-none text-foreground pr-2">{children}</Text>
+      {open && <View className={cn(LEAD_LINE, 'top-8')} />}
+    </View>
+  );
+}
+
 /** The count, then the hairline out to the chevron that turns with the fold. */
 function RailHeadCount({ children }: { children: ReactNode }) {
   const open = useContext(OpenContext);
@@ -154,5 +177,6 @@ function RailHeadSkeleton({ lead, showRail = true }: { lead: 'date' | 'title'; s
 
 RailHead.Date = RailHeadDate;
 RailHead.Title = RailHeadTitle;
+RailHead.Icon = RailHeadIcon;
 RailHead.Count = RailHeadCount;
 RailHead.Skeleton = RailHeadSkeleton;

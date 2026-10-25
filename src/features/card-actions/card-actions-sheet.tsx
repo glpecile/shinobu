@@ -416,7 +416,7 @@ export function CardActionsSheet({
               label={hideLabel}
               onPress={() => {
                 haptics.confirm();
-                hideItem({ id: item.id, title: item.title });
+                hideItem({ id: item.id, title: item.title, type: item.type });
                 onClose();
               }}
               variant="quiet"

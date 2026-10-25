@@ -1,179 +1,90 @@
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
-
-import { Eyebrow } from '@/components/eyebrow';
-import Head from '@/components/head';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { CARD_SHELL } from '@/components/card-shell';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
-import { GroupedList } from '@/components/grouped-list';
+import Head from '@/components/head';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
-import { NativeSegmentedControl } from '@/components/native-segmented-control';
-import { PresstableOpacity } from '@/components/presstable';
-import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
-import { screenHeaderTopPadding } from '@/components/screen-header-spacing';
+import { RailHead } from '@/components/rail-head';
+import {
+  homeHeaderClassName,
+  homeHeaderTitleSize,
+} from '@/components/screen-header-spacing';
 import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
+import { HiddenItemsSection } from '@/features/settings/hidden-items-section';
+import { SettingsRail } from '@/features/settings/settings-rail';
+import { ThemePicker } from '@/features/settings/theme-picker';
 import { ProviderCardsSection } from '@/features/trackers/provider-cards-section';
 import { cn } from '@/lib/cn';
-import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
-import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
-import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
-import { setThemePreference, useThemePreference } from '@/state/prefs/theme';
+import { useThemePreference } from '@/state/prefs/theme';
 
-const THEME_OPTIONS = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-] as const;
+const THEME_LABEL = { system: 'System', light: 'Light', dark: 'Dark' } as const;
 
-/**
- * One column width and one gutter for the whole screen. Web's navigation rail
- * eats 64px of a phone-sized viewport before this screen sees it, so the gutter
- * is a notch tighter there to leave the card interiors the same room native
- * gets; `max-w-2xl` is the detail screens' centering pattern, narrowed because
- * settings read better in a shorter measure than a details page.
- */
-const CONTENT_COLUMN = 'w-full max-w-2xl self-center';
-const CONTENT_GUTTER = process.env.EXPO_OS === 'web' ? 'px-4' : 'px-6';
-/**
- * Web route headers (Diary, Search, Watchlist) are one full-width `px-6` row
- * under the sidebar, so the title lands in the same spot on every tab; native
- * keeps the title on the cards' left edge via the content column.
- */
-const HEADER_COLUMN =
-  process.env.EXPO_OS === 'web' ? 'px-6' : cn(CONTENT_COLUMN, CONTENT_GUTTER);
-
-/**
- * Feed items hidden from a card's actions dialog, and lists hidden from a list
- * card's sheet. Listed here (the only settings surface) so hiding is always
- * reversible; the row itself opens the item's details page (which resolves
- * hidden items too — includeHidden) or the list.
- */
-function HiddenItemsSection() {
-  const pushRoute = usePushRoute();
-  const hidden = [
-    ...useHiddenItems().map((item) => ({ ...item, href: routes.details(item.id), icon: 'eye-off-outline' as const, unhide: () => unhideItem(item.id) })),
-    ...useHiddenLists().map((list) => ({ ...list, href: list.id, icon: 'list-outline' as const, unhide: () => unhideList(list.id) })),
-  ];
-  const muted = useThemeColor('--color-muted');
-
-  if (hidden.length === 0) return null;
-
-  return (
-    <View>
-      <Eyebrow className="mb-3">Hidden items</Eyebrow>
-      <GroupedList>
-        {hidden.map((item) => (
-          <GroupedList.Item
-            className="flex-row items-center justify-between"
-            key={item.id}
-          >
-            <PresstableOpacity
-              accessibilityLabel={`Open ${item.title}`}
-              className="flex-1 flex-row items-center gap-3 mr-3"
-              onPress={() => pushRoute(item.href)}
-            >
-              <Ionicons
-                color={muted}
-                name={item.icon}
-                size={18}
-              />
-              <Text
-                className="flex-1 text-foreground font-sans-semibold text-base"
-                numberOfLines={1}
-              >
-                {item.title}
-              </Text>
-            </PresstableOpacity>
-            <Button
-              accessibilityLabel={`Show ${item.title} again`}
-              icon={<Button.Icon name="eye-outline" />}
-              label="Show"
-              onPress={item.unhide}
-              size="sm"
-              variant="quiet"
-            />
-          </GroupedList.Item>
-        ))}
-      </GroupedList>
-    </View>
-  );
-}
+const VERSION = Constants.expoConfig?.version;
 
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
-  const themePreference = useThemePreference();
+  const theme = THEME_LABEL[useThemePreference()];
+  const version = VERSION != null ? `v${VERSION}` : 'Unknown';
 
   return (
     <View className="flex-1 bg-background">
       <Head>
         <title>Settings — Shinobu</title>
       </Head>
-      {/* A top-level tab now (native tab bar / web sidebar) — no back button. */}
-      <View
-        className={cn(
-          'flex-row items-center',
-          HEADER_COLUMN,
-          screenHeaderTopPadding,
-          'pb-4',
-        )}
-      >
-        <Text className="text-2xl font-display text-foreground">
+      {/* A top-level tab (native tab bar / web sidebar), so Diary's header and no back button. */}
+      <View className={homeHeaderClassName}>
+        <Text className={cn(homeHeaderTitleSize, 'font-display text-foreground tracking-tight')}>
           Settings
         </Text>
       </View>
 
       <KeyboardAvoidingView behavior="padding" className="flex-1">
-        <RefreshableScrollView
+        <SettingsRail.Scroll
           className="flex-1"
           // Native clears the bottom tab bar (unmeasurable height); web doesn't.
-          contentContainerClassName={
-            process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'
-          }
+          contentContainerClassName={process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'}
           keyboardShouldPersistTaps="handled"
           // This screen has no server data of its own — the useful refresh is
           // marking every cached query stale so the feed refetches on return.
           onRefresh={() => queryClient.invalidateQueries()}
           tab="settings"
         >
-          {/* One `gap-6` owns the rhythm between sections instead of each
-              section carrying its own `mt-6`/`mb-6` — sections that render
-              nothing (no hidden items, notifications on web) then cost no
-              space at all, and the first one is never flush under the header:
-              `pt-2` on top of the header's `pb-4` makes that first break the
-              same 24px as every gap below it. */}
-          <View className={cn(CONTENT_COLUMN, CONTENT_GUTTER, 'gap-6 pt-2')}>
+          {/* Full width from the left edge, like Diary's rail; wide web puts the index beside it. */}
+          <View>
             <ProviderCardsSection />
-            <ConnectTmdbTokenSection />
             <NotificationsSettingsSection />
-            <HiddenItemsSection />
-            <View>
-              <Eyebrow className="mb-3">Appearance</Eyebrow>
-              <NativeSegmentedControl
-                accessibilityLabel="Theme"
-                className="web:min-h-14"
-                onChange={setThemePreference}
-                options={THEME_OPTIONS}
-                value={themePreference}
-              />
-            </View>
-            <View>
-              <Eyebrow className="mb-3">About</Eyebrow>
-              <View className={cn(CARD_SHELL, 'flex-row items-center justify-between gap-3')}>
+            <ConnectTmdbTokenSection />
+            <SettingsRail.Section count={theme} icon="contrast-outline" title="Appearance">
+              <SettingsRail.Head label={`Appearance, ${theme}`}>
+                <RailHead.Icon name="contrast-outline">Appearance</RailHead.Icon>
+                <RailHead.Count>{theme}</RailHead.Count>
+              </SettingsRail.Head>
+              <SettingsRail.Row>
                 <View className="flex-1">
-                  <Text className="text-foreground font-sans-semibold text-base">
-                    Shinobu
-                  </Text>
-                  <Text className="text-muted font-sans text-xs mt-0.5">
-                    Version {Constants.expoConfig?.version ?? 'unknown'}
-                  </Text>
+                  <ThemePicker />
                 </View>
+              </SettingsRail.Row>
+            </SettingsRail.Section>
+            <HiddenItemsSection />
+            <SettingsRail.Section count={version} icon="information-circle-outline" title="About">
+              <SettingsRail.Head label={`About, ${version}`}>
+                <RailHead.Icon name="information-circle-outline">About</RailHead.Icon>
+                <RailHead.Count>{version}</RailHead.Count>
+              </SettingsRail.Head>
+              <SettingsRail.Row>
+                <SettingsRail.Lead>
+                  {/* The 忍 kanji uses the OS font on purpose (AGENTS.md). */}
+                  <Text className="text-accent text-xl">忍</Text>
+                </SettingsRail.Lead>
+                <SettingsRail.Text>
+                  <SettingsRail.Title>Shinobu</SettingsRail.Title>
+                  <SettingsRail.Subtitle>Version {VERSION ?? 'unknown'}</SettingsRail.Subtitle>
+                </SettingsRail.Text>
                 <Button
+                  className="shrink-0"
                   icon={<Button.Icon name="open-outline" />}
                   label={process.env.EXPO_OS === 'web' ? 'View code' : 'View releases'}
                   onPress={() => {
@@ -183,13 +94,13 @@ export default function SettingsScreen() {
                         : 'https://github.com/glpecile/shinobu/releases',
                     );
                   }}
-                  size="sm"
+                  size="md"
                   variant="quiet"
                 />
-              </View>
-            </View>
+              </SettingsRail.Row>
+            </SettingsRail.Section>
           </View>
-        </RefreshableScrollView>
+        </SettingsRail.Scroll>
       </KeyboardAvoidingView>
     </View>
   );

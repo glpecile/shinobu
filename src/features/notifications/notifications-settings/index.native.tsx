@@ -1,13 +1,12 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { useState, useSyncExternalStore } from 'react';
 
 import { Button } from '@/components/button';
-import { Eyebrow } from '@/components/eyebrow';
-import { GroupedList } from '@/components/grouped-list';
 import { NativeSwitch } from '@/components/native-switch';
+import { RailHead } from '@/components/rail-head';
+import { SettingsRail } from '@/features/settings/settings-rail';
 import { useThemeColor } from '@/lib/theme-color';
 import {
   NOTIFICATION_KINDS,
@@ -17,16 +16,18 @@ import { createRefreshDeps, refreshNotifications } from '@/features/notification
 import { cancelAllScheduledNotifications, scheduleTestNotification } from '@/features/notifications/scheduler';
 import type { UpNextInputs } from '@/features/up-next/types';
 import {
+  getMutedNotificationKinds,
   setNotificationKindMuted,
   setNotificationsEnabled,
   useNotificationKindEnabled,
   useNotificationsEnabled,
 } from '@/state/prefs/notifications';
+import { prefsStorage } from '@/state/prefs/storage';
 import { upNextQueryKeys } from '@/state/queries/up-next';
 
 /**
  * Opt-in toggle + permission flow + dev test affordance (plan 0020 U6, R8,
- * R11) on the Manage Trackers screen. Native only — see `index.tsx`.
+ * R11) as the Settings rail's Notifications section. Native only — see `index.tsx`.
  */
 
 /** Best-effort: whatever Up Next already has cached, no extra fetch (R11's "real tracked item"). */
@@ -43,7 +44,7 @@ const KIND_ICONS = {
 } as const satisfies Record<NotificationKind, string>;
 
 /** Mutes one kind and reschedules now, so the change applies before the next foreground. */
-function KindToggle({ kind, label }: { kind: NotificationKind; label: string }) {
+function KindToggle({ kind, label, alertsOn }: { kind: NotificationKind; label: string; alertsOn: boolean }) {
   const enabled = useNotificationKindEnabled(kind);
   const queryClient = useQueryClient();
   const muted = useThemeColor('--color-muted');
@@ -54,21 +55,43 @@ function KindToggle({ kind, label }: { kind: NotificationKind; label: string }) 
   }
 
   return (
-    <GroupedList.Item className="flex-row items-center">
-      <Ionicons color={muted} name={KIND_ICONS[kind]} size={18} />
-      <Text className="flex-1 mx-3 text-foreground font-sans text-base" numberOfLines={1}>
-        {label}
-      </Text>
-      <NativeSwitch accessibilityLabel={label} onValueChange={handleChange} value={enabled} />
-    </GroupedList.Item>
+    <SettingsRail.Row dimmed={!alertsOn}>
+      <SettingsRail.Lead>
+        <Ionicons color={muted} name={KIND_ICONS[kind]} size={18} />
+      </SettingsRail.Lead>
+      <SettingsRail.Text>
+        <SettingsRail.Title>{label}</SettingsRail.Title>
+      </SettingsRail.Text>
+      <NativeSwitch
+        accessibilityLabel={label}
+        disabled={!alertsOn}
+        onValueChange={handleChange}
+        value={enabled}
+      />
+    </SettingsRail.Row>
+  );
+}
+
+function subscribePrefs(onStoreChange: () => void): () => void {
+  const subscription = prefsStorage.addOnValueChangedListener(onStoreChange);
+  return () => subscription.remove();
+}
+
+/** How many kinds are unmuted, for the section's count. */
+function useEnabledKindCount(): number {
+  return useSyncExternalStore(
+    subscribePrefs,
+    () => NOTIFICATION_KINDS.length - getMutedNotificationKinds().size,
   );
 }
 
 export function NotificationsSettingsSection() {
   const enabled = useNotificationsEnabled();
+  const kindCount = useEnabledKindCount();
   const queryClient = useQueryClient();
   const [requesting, setRequesting] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const muted = useThemeColor('--color-muted');
 
   async function handleToggle(next: boolean): Promise<void> {
     if (!next) {
@@ -93,43 +116,48 @@ export function NotificationsSettingsSection() {
     }
   }
 
+  let count = 'Off';
+  if (enabled) count = kindCount === 1 ? '1 kind' : `${kindCount} kinds`;
+
   return (
-    <View>
-      <Eyebrow className="mb-3">Notifications</Eyebrow>
-      <GroupedList>
-        <GroupedList.Item className="flex-row items-center">
-          <View className="flex-1 mr-3">
-            <Text className="text-foreground font-sans-semibold text-base">Release alerts</Text>
-            <Text className="text-muted font-sans text-xs mt-0.5">
-              {permissionDenied
-                ? "Notifications are blocked for Shinobu. Allow them in your device's settings."
-                : 'Local notifications when something you track airs or comes out.'}
-            </Text>
-          </View>
-          <NativeSwitch
-            accessibilityLabel="Release alerts"
-            disabled={requesting}
-            onValueChange={handleToggle}
-            value={enabled}
+    <SettingsRail.Section count={count} icon="notifications-outline" title="Notifications">
+      <SettingsRail.Head label={`Notifications, ${count}`}>
+        <RailHead.Icon name="notifications-outline">Notifications</RailHead.Icon>
+        <RailHead.Count>{count}</RailHead.Count>
+      </SettingsRail.Head>
+      <SettingsRail.Row>
+        <SettingsRail.Lead>
+          <Ionicons color={muted} name="alarm-outline" size={18} />
+        </SettingsRail.Lead>
+        <SettingsRail.Text>
+          <SettingsRail.Title>Release alerts</SettingsRail.Title>
+          <SettingsRail.Subtitle lines={2}>
+            {permissionDenied
+              ? "Notifications are blocked for Shinobu. Allow them in your device's settings."
+              : 'Scheduled on this device, 7 to 14 days ahead.'}
+          </SettingsRail.Subtitle>
+        </SettingsRail.Text>
+        <NativeSwitch
+          accessibilityLabel="Release alerts"
+          disabled={requesting}
+          onValueChange={handleToggle}
+          value={enabled}
+        />
+      </SettingsRail.Row>
+      {NOTIFICATION_KINDS.map(({ kind, label }) => (
+        <KindToggle alertsOn={enabled} key={kind} kind={kind} label={label} />
+      ))}
+      {__DEV__ && enabled && (
+        <SettingsRail.Row>
+          <Button
+            icon={<Button.Icon name="notifications-outline" />}
+            label="Send test notification"
+            onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
+            size="md"
+            variant="quiet"
           />
-        </GroupedList.Item>
-        {enabled &&
-          NOTIFICATION_KINDS.map(({ kind, label }) => (
-            <KindToggle key={kind} kind={kind} label={label} />
-          ))}
-        {__DEV__ && enabled && (
-          <GroupedList.Item>
-            <Button
-              className="self-start"
-              icon={<Button.Icon name="notifications-outline" />}
-              label="Send test notification"
-              onPress={() => scheduleTestNotification(sampleTrackedItemId(queryClient))}
-              size="sm"
-              variant="quiet"
-            />
-          </GroupedList.Item>
-        )}
-      </GroupedList>
-    </View>
+        </SettingsRail.Row>
+      )}
+    </SettingsRail.Section>
   );
 }

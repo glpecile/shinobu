@@ -85,7 +85,6 @@ function ProviderSheetContent({
             any time.
           </Text>
           <Button
-            icon={<Button.Icon name="unlink-outline" />}
             label="Disconnect"
             onPress={() => {
               haptics.confirm();

@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Settings redesign — variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet" />
+<script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: inherit; }
+  body { background: #18181a; color: #e7e7e7; font-family: Inter, system-ui, sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  ion-icon { display: block; flex: none; }
+  .display { font-family: 'Space Grotesk', sans-serif; font-weight: 700; letter-spacing: -0.01em; }
+  .semi { font-weight: 600; }
+
+  /* ---------- studio chrome ---------- */
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 14px 24px; background: #18181acc; backdrop-filter: blur(12px); border-bottom: 1px solid #2a2a2d; }
+  .toolbar h1 { font-size: 15px; margin-right: auto; }
+  .toolbar h1 span { color: #888; font-weight: 400; margin-left: 8px; }
+  .seg { display: flex; background: #26262a; border-radius: 10px; padding: 3px; }
+  .seg button { padding: 6px 12px; border-radius: 8px; font-size: 13px; color: #aaa; }
+  .seg button.on { background: #3a3a40; color: #fff; }
+  .stage { display: flex; gap: 40px; justify-content: center; align-items: flex-start; padding: 40px 24px 80px; }
+  .stage.webvp { flex-direction: column; align-items: center; }
+  .notes { width: 340px; font-size: 14px; line-height: 1.55; color: #bbb; }
+  .stage.webvp .notes { width: 1200px; columns: 2; column-gap: 40px; }
+  .notes h2 { color: #fff; font-size: 22px; margin-bottom: 4px; }
+  .notes .tag { color: #888; font-size: 13px; margin-bottom: 16px; }
+  .notes h3 { color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; break-after: avoid; }
+  .notes li { margin: 0 0 6px 18px; }
+
+  /* ---------- device + tokens (src/global.css, plus one proposed --surface-2) ---------- */
+  .device { --bg:#0a0a0a; --surface:#111111; --surface-2:#1c1c1f; --fg:#ffffff; --muted:#aaaaaa; --border:#333333; --success:#86efac;
+    background: var(--bg); color: var(--fg); position: relative; overflow: hidden; display: flex; flex-direction: column; flex: none; }
+  .device[data-theme=light] { --bg:#ffffff; --surface:#f5f5f5; --surface-2:#e9e9ec; --fg:#0a0a0a; --muted:#666666; --border:#e5e5e5; --success:#15803d; }
+  .phone.narrow { width: 320px; }
+  .device.big .t, .device.big .s, .device.big .display, .device.big .btn, .device.big .b-count, .device.big .c-theme { zoom: 1.6; }
+  .phone { width: 390px; height: 844px; border-radius: 50px; box-shadow: 0 0 0 10px #050505, 0 0 0 11px #3a3a3a, 0 40px 90px #000a; }
+  .statusbar { height: 46px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0; font-size: 14px; font-weight: 600; }
+  .statusbar .icons { display: flex; gap: 6px; }
+  .screen { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .scroll { flex: 1; overflow-y: auto; scrollbar-width: none; min-height: 0; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .tabbar { height: 84px; flex: none; display: flex; justify-content: space-around; padding: 10px 12px 0; border-top: 1px solid var(--border); background: var(--bg); }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); width: 72px; }
+  .tab .pill { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab.on { color: var(--fg); }
+  .tab.on .pill { background: var(--surface-2); }
+  .web { width: 1200px; height: 780px; border-radius: 14px; box-shadow: 0 0 0 1px #333, 0 40px 90px #000a; }
+  .chrome { height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .chrome i { width: 12px; height: 12px; border-radius: 6px; background: var(--border); }
+  .chrome .url { margin-left: 16px; flex: 0 1 420px; height: 26px; border-radius: 13px; background: var(--bg); font-size: 12px; color: var(--muted); display: flex; align-items: center; padding: 0 12px; }
+  .webbody { flex: 1; display: flex; min-height: 0; }
+  .navrail { width: 76px; flex: none; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 18px; }
+  .navrail .kanji { font-size: 26px; color: #dc2626; margin-bottom: 14px; font-family: system-ui; }
+  .navrail .tab { width: 64px; }
+  .main { flex: 1; position: relative; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ---------- shared atoms ---------- */
+  .pi { display: grid; place-items: center; color: #fff; font-weight: 700; font-family: 'Space Grotesk'; background: var(--c); flex: none; }
+  .pi.lb { background: #14181c; gap: 2px; grid-auto-flow: column; }
+  .pi.lb b { width: 7px; height: 7px; border-radius: 50%; }
+  .muted { color: var(--muted); }
+  .t { font-size: 16px; font-weight: 600; }
+  .s { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .grow { flex: 1; min-width: 0; }
+  .ellip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Material 3 switch. "On" is neutral foreground, never red: red is reserved for logging. */
+  .sw { width: 52px; height: 32px; border-radius: 16px; border: 2px solid var(--muted); position: relative; flex: none; transition: background .2s, border-color .2s; }
+  .sw::after { content: ''; position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: all .2s cubic-bezier(.2,.8,.2,1); }
+  .sw.on { background: var(--fg); border-color: var(--fg); }
+  .sw.on::after { top: 2px; left: 22px; width: 24px; height: 24px; background: var(--bg); }
+  .sw:disabled { opacity: .38; }
+  .btn { height: 40px; padding: 0 16px; border-radius: 20px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+  .btn.tonal { background: var(--surface-2); }
+  .btn.outline { box-shadow: inset 0 0 0 1px var(--border); }
+  .btn.text { padding: 0 10px; }
+  .btn.solid { background: var(--fg); color: var(--bg); }
+  .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; }
+  .radio.on { border-color: var(--fg); }
+  .radio.on::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--fg); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; margin-right: 6px; vertical-align: 1px; }
+  .segc { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .segc button { flex: 1; height: 32px; border-radius: 7px; font-size: 13px; color: var(--muted); }
+  .segc button.on { background: var(--surface-2); color: var(--fg); font-weight: 600; }
+  .scrim { position: absolute; inset: 0; background: #000a; z-index: 5; animation: fade .2s; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-radius: 28px 28px 0 0; padding: 10px 24px 34px; animation: up .28s cubic-bezier(.2,.8,.2,1); }
+  .sheet .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--muted); opacity: .5; margin: 0 auto 18px; }
+  .web .sheet { left: 50%; top: 50%; bottom: auto; width: 440px; border-radius: 28px; padding: 28px; transform: translate(-50%,-50%); animation: pop .22s cubic-bezier(.2,.8,.2,1); }
+  .web .sheet .handle { display: none; }
+  @keyframes fade { from { opacity: 0 } }
+  @keyframes up { from { transform: translateY(100%) } }
+  @keyframes pop { from { opacity: 0; transform: translate(-50%,-48%) scale(.97) } }
+
+  /* ---------- A · Material list-detail ---------- */
+  .a-pad { padding: 0 16px 24px; }
+  .a-title { font-size: 34px; padding: 14px 4px 18px; }
+  .a-search { height: 52px; border-radius: 26px; background: var(--surface); display: flex; align-items: center; gap: 12px; padding: 0 18px; color: var(--muted); font-size: 15px; margin-bottom: 16px; }
+  .a-hero { width: 100%; display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 28px; background: var(--surface); margin-bottom: 16px; }
+  .stack { display: flex; }
+  .stack .pi { width: 36px; height: 36px; border-radius: 50%; box-shadow: 0 0 0 3px var(--surface); font-size: 15px; }
+  .stack .pi + .pi { margin-left: -10px; }
+  .group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+  .group > * { border-radius: 6px; background: var(--surface); }
+  .group > :first-child { border-top-left-radius: 24px; border-top-right-radius: 24px; }
+  .group > :last-child { border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
+  .glabel { font-size: 14px; font-weight: 600; color: var(--muted); padding: 8px 18px 10px; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 14px 18px; min-height: 72px; width: 100%; }
+  .row.tight { min-height: 64px; }
+  .row .ic { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
+  .row .pi { width: 40px; height: 40px; border-radius: 12px; font-size: 17px; }
+  .row.sel { background: var(--surface-2); }
+  .row.sel .ic { background: var(--fg); color: var(--bg); }
+  .a-bar { height: 64px; flex: none; display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+  .iconbtn { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; }
+  .a-bar .title { font-size: 22px; }
+  .mainsw { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-radius: 32px; background: var(--surface-2); margin-bottom: 16px; width: 100%; font-size: 18px; font-weight: 600; transition: background .2s, color .2s; }
+  .mainsw.on { background: var(--fg); color: var(--bg); }
+  .mainsw.on .sw { background: var(--bg); border-color: var(--bg); }
+  .mainsw.on .sw::after { background: var(--fg); }
+  .a-split { flex: 1; display: flex; min-height: 0; }
+  .a-list { width: 380px; flex: none; border-right: 1px solid var(--border); }
+  .a-detail { flex: 1; }
+  .a-detail .inner { max-width: 640px; padding: 28px 40px 40px; }
+  .a-detail h2 { font-size: 30px; margin-bottom: 6px; }
+  .a-detail .lede { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+  .banner { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border-radius: 24px; box-shadow: inset 0 0 0 1px var(--border); margin-bottom: 16px; font-size: 14px; }
+
+  /* ---------- B · Diary rail ---------- */
+  .b-header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 14px 24px 10px; }
+  .b-header .display { font-size: 32px; letter-spacing: -0.02em; }
+  .b-wrap { position: relative; flex: 1; display: flex; min-height: 0; }
+  .b-col { padding-bottom: 32px; }
+  .web .b-col { max-width: 720px; margin: 0 auto; width: 100%; }
+  .b-gut { width: 56px; flex: none; position: relative; }
+  .b-gut::before { content: ''; position: absolute; left: 27.5px; width: 1px; top: 0; bottom: 0; background: var(--border); }
+  .b-head { display: flex; padding-top: 22px; width: 100%; }
+  .b-head .b-gut::before { top: 38px; }
+  .b-head.closed .b-gut::before { display: none; }
+  .b-node { position: relative; z-index: 1; margin: 0 auto; width: 34px; height: 34px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 1px var(--border); display: grid; place-items: center; color: var(--muted); }
+  .b-headmain { flex: 1; display: flex; align-items: center; gap: 10px; padding-right: 24px; min-width: 0; height: 34px; }
+  .b-headmain .display { font-size: 18px; }
+  .b-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .b-rule { flex: 1; height: 1px; background: var(--border); }
+  .chev { color: var(--muted); transition: transform .2s; }
+  .closed .chev { transform: rotate(-90deg); }
+  .b-row { display: flex; min-height: 66px; }
+  .b-row:first-of-type { margin-top: 4px; }
+  .b-body { flex: 1; display: flex; align-items: center; gap: 12px; padding: 8px 24px 8px 0; min-width: 0; }
+  .b-body .pi { width: 36px; height: 36px; border-radius: 8px; font-size: 15px; }
+  .b-lead { width: 36px; display: grid; place-items: center; color: var(--muted); flex: none; }
+  .b-row.dim .b-body > :not(.sw) { opacity: .45; }
+  .b-sticky { position: absolute; top: 0; left: 0; right: 0; z-index: 2; display: flex; align-items: baseline; gap: 12px; padding: 8px 24px; background: var(--bg); border-bottom: 1px solid var(--border); opacity: 0; transform: translateY(-6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  .b-sticky.on { opacity: 1; transform: none; }
+  .b-sticky .display { font-size: 15px; }
+  .b-search { flex: 1; height: 40px; border-radius: 20px; background: var(--surface); display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--muted); }
+  .b-search input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--fg); font: inherit; font-size: 15px; }
+  .b-row.pressable { cursor: pointer; }
+  .b-row.pressable:active .b-body { opacity: .6; }
+  .b-toc { width: 220px; flex: none; padding: 26px 24px; border-left: 1px solid var(--border); }
+  .b-toc .eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .b-toc button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 0; font-size: 14px; color: var(--muted); }
+  .b-toc button.on { color: var(--fg); font-weight: 600; }
+
+  /* ---------- C · Expressive hub ---------- */
+  .c-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 6px; }
+  .c-head .display { font-size: 32px; }
+  .c-sec { padding: 0 20px; margin-top: 26px; }
+  .c-sec > .lbl { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .c-sec > .lbl .display { font-size: 18px; }
+  .c-tiles { display: flex; gap: 10px; overflow-x: auto; padding: 0 20px; margin: 0 -20px; scrollbar-width: none; }
+  .c-tile { width: 112px; height: 136px; flex: none; border-radius: 24px; background: var(--surface); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: transform .15s; }
+  .c-tile:active { transform: scale(.97); }
+  .c-tile .pi { width: 44px; height: 44px; border-radius: 14px; font-size: 19px; }
+  .c-tile.off .pi { filter: grayscale(1); opacity: .5; }
+  .c-tile.on { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent); }
+  .c-tile .add { position: absolute; top: 12px; right: 12px; width: 26px; height: 26px; border-radius: 13px; background: var(--surface-2); display: grid; place-items: center; }
+  .web .c-tiles { display: grid; grid-template-columns: repeat(5, 1fr); margin: 0; padding: 0; }
+  .web .c-tile { width: auto; height: 150px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { height: 36px; padding: 0 14px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--border); display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+  .chip.on { background: var(--surface-2); box-shadow: none; font-weight: 600; }
+  .chips.dis { opacity: .38; pointer-events: none; }
+  .c-themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .c-theme { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; }
+  .c-theme .thumb { width: 100%; aspect-ratio: .78; border-radius: 18px; overflow: hidden; position: relative; padding: 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .c-theme .thumb::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--border); z-index: 1; }
+  .c-theme.on .thumb { outline: 2px solid var(--fg); outline-offset: 3px; }
+  .c-theme { padding: 5px; }
+  .c-theme.on { font-weight: 600; }
+  .c-theme .thumb { padding: 0; }
+  .thumb-face { position: absolute; inset: 0; padding: 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .thumb .split { position: absolute; inset: 0; clip-path: inset(0 0 0 50%); }
+  .thumb i { display: block; height: 7px; border-radius: 4px; }
+  .c-card { border-radius: 24px; background: var(--surface); }
+  .c-foot { text-align: center; padding: 44px 20px 32px; color: var(--muted); font-size: 13px; }
+  .c-foot .k { font-size: 34px; color: var(--fg); opacity: .9; font-family: system-ui; margin-bottom: 8px; }
+  .c-foot .links { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .web .c-head { width: calc(100% - 80px); max-width: 1000px; margin: 0 auto; padding: 22px 20px 0; }
+  .web .c-themes { max-width: 380px; }
+  .web .b-body .c-themes { max-width: 420px; }
+  .c-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; max-width: 1000px; margin: 0 auto; }
+  .c-grid .full { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<div class="toolbar" id="toolbar"></div>
+<div class="stage" id="stage"></div>
+<!-- break-ui: dev-only data toggle, not part of the design under test -->
+<div id="datatoggle" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;box-shadow:0 8px 30px #000a;border-radius:12px"></div>
+
+<script>
+const P = [
+  { id: 'simkl', name: 'Simkl', color: '#73c26e', types: 'Movies · TV · Anime', user: 'gian' },
+  { id: 'anilist', name: 'AniList', color: '#02a9ff', types: 'Anime · Manga', user: 'glpecile' },
+  { id: 'trakt', name: 'Trakt', color: '#9f42c6', types: 'Movies · TV', user: 'gian', byo: true },
+  { id: 'letterboxd', name: 'Letterboxd', color: '#00e054', types: 'Movies', user: 'gian', mobileOnly: true },
+  { id: 'serializd', name: 'Serializd', color: '#6d5dfc', types: 'TV', user: 'gian' },
+];
+const KINDS = [
+  ['episode', 'New episodes', 'tv-outline'],
+  ['theatrical', 'In theaters', 'film-outline'],
+  ['digital', 'Streaming releases', 'play-circle-outline'],
+  ['physical', 'Disc releases', 'disc-outline'],
+];
+const VARIANTS = {
+  A: { name: 'Material list-detail', tag: 'Android 16 Settings: a hub of categories, each its own page; two panes on web.' },
+  B: { name: 'Diary rail', tag: 'One scroll, set on the diary’s gutter rail; sections fold like days.' },
+  C: { name: 'Expressive hub', tag: 'Trackers up front as tiles; Material 3 Expressive controls below.' },
+};
+/* Same icons the diary's format filter and release timeline use. Today's HiddenItem stores only
+   id → title, so the type is new data the hide action would have to save. */
+const TYPE_ICON = { MOVIE: 'film-outline', TV: 'tv-outline', ANIME: 'tv-outline', MANGA: 'book-outline', LIST: 'list-outline' };
+const TYPE_LABEL = { MOVIE: 'Movie', TV: 'TV show', ANIME: 'Anime', MANGA: 'Manga', LIST: 'List' };
+const allKinds = (v) => Object.fromEntries(KINDS.map(([k]) => [k, v]));
+const filler = (n) => Array.from({ length: n }, (_, i) => ({
+  title: ['Bleach', 'Severance', 'Dune: Part Two', 'One Piece', 'The Bear', 'Vinland Saga', 'Oppenheimer', 'Berserk'][i % 8] + (i >= 8 ? ` (${Math.floor(i / 8) + 1})` : ''),
+  type: ['ANIME', 'TV', 'MOVIE', 'ANIME', 'TV', 'MANGA', 'MOVIE', 'MANGA'][i % 8] }));
+const DATA = {
+  demo: () => ({
+    users: { simkl: 'gian', anilist: 'glpecile', trakt: 'gian', letterboxd: 'gian', serializd: 'gian' },
+    connected: { simkl: true, anilist: true, trakt: false, letterboxd: false, serializd: false },
+    alerts: true, kinds: { episode: true, theatrical: true, digital: true, physical: false },
+    tmdb: true, pref: 'system', version: '0.7.6',
+    hidden: [{ title: 'Chainsaw Man', type: 'ANIME' }, { title: 'Oppenheimer', type: 'MOVIE' }, { title: 'Weekend watch', type: 'LIST' }],
+  }),
+  worst: () => ({
+    // Simkl shows its display name; AniList caps names at 20; Letterboxd and Serializd keep the sign-in username.
+    users: { simkl: 'Aleksandra Wiśniewska-Kowalczyk', anilist: 'MontgomeryTheThird3', trakt: 'gian', letterboxd: 'bartholomew_fitz', serializd: 'bartholomew.fitzgerald.northwind' },
+    connected: { simkl: true, anilist: true, trakt: 'reconnect', letterboxd: false, serializd: true },
+    alerts: true, kinds: { episode: true, theatrical: false, digital: false, physical: false },
+    tmdb: false, pref: 'system', version: '1.12.0-beta.3 (412)',
+    hidden: [
+      { title: 'Re:ZERO -Starting Life in Another World- Season 3 Part 2: Counterattack Arc', type: 'ANIME' },
+      { title: "Frieren: Beyond Journey's End", type: 'ANIME' },
+      { title: "Frieren: Beyond Journey's End", type: 'ANIME' },
+      { title: 'やはり俺の青春ラブコメはまちがっている。完', type: 'ANIME' },
+      { title: '', type: 'MOVIE' },
+      { title: 'Up', type: 'MOVIE' },
+      { title: "Movies I pretend I've seen but absolutely have not (2024 edition)", type: 'LIST' },
+      { title: "Kaguya-sama wa Kokurasetai: Tensai-tachi no Ren'ai Zunōsen", type: 'MANGA' },
+      ...filler(79),
+    ],
+  }),
+  empty: () => ({ ...DATA.demo(), connected: { simkl: false, anilist: false, trakt: false, letterboxd: false, serializd: false }, alerts: false, kinds: allKinds(false), tmdb: false, hidden: [] }),
+  one: () => ({ ...DATA.demo(), connected: { simkl: true, anilist: false, trakt: false, letterboxd: false, serializd: false }, kinds: { ...allKinds(false), episode: true }, hidden: [{ title: 'Chainsaw Man', type: 'ANIME' }] }),
+  huge: () => ({ ...DATA.demo(), hidden: filler(1000) }),
+};
+let S = { variant: 'B', vp: 'phone', system: 'dark', text: 'default', data: 'demo', aPage: null, aWebPage: 'trackers', bClosed: [], sheet: null, hiddenAll: false, hiddenQuery: '', ...DATA.demo() };
+
+const ic = (name, size = 20) => `<ion-icon name="${name}" style="font-size:${size}px"></ion-icon>`;
+const on = (p) => S.connected[p.id] === true;
+const needsReconnect = (p) => S.connected[p.id] === 'reconnect';
+const isWeb = () => S.vp === 'web';
+const conn = () => P.filter(on);
+const avail = () => P.filter((p) => !on(p));
+const theme = () => (S.pref === 'system' ? S.system : S.pref);
+const prefLabel = { system: 'System', light: 'Light', dark: 'Dark' };
+const piHtml = (p, st = '') => p.id === 'letterboxd'
+  ? `<span class="pi lb" style="${st}"><b style="background:#ff8000"></b><b style="background:#00e054"></b><b style="background:#40bcf4"></b></span>`
+  : `<span class="pi" style="--c:${p.color};${st}">${p.name[0]}</span>`;
+const status = (p) => on(p) ? `<span class="dot"></span>Connected as ${S.users[p.id]}`
+  : needsReconnect(p) ? 'Add your API app to keep syncing'
+  : p.byo ? 'Bring your own API app' : p.types;
+const knob = (isOn) => `<span class="sw ${isOn ? 'on' : ''}" aria-hidden="true"></span>`;
+const sw = (isOn, act, dis = false) => `<button class="sw ${isOn ? 'on' : ''}" role="switch" aria-checked="${isOn}" data-act="${act}" ${dis ? 'disabled' : ''}></button>`;
+const provBtn = (p, cls = 'sm') => on(p)
+  ? `<button class="btn outline ${cls}" data-act="prov:${p.id}">Disconnect</button>`
+  : needsReconnect(p) ? `<button class="btn tonal ${cls}" data-act="prov:${p.id}">${ic('refresh', 16)}Reconnect</button>`
+  : `<button class="btn tonal ${cls}" data-act="prov:${p.id}">${ic('add', 16)}Connect</button>`;
+const kindsOn = () => KINDS.filter(([k]) => S.kinds[k]).length;
+
+const mini = (dark) => {
+  const bg = dark ? '#0a0a0a' : '#fff', fg = dark ? '#333' : '#e5e5e5', ac = dark ? '#fff' : '#0a0a0a';
+  return `<div class="thumb-face" style="background:${bg}"><i style="width:55%;background:${ac}"></i><i style="background:${fg}"></i><i style="width:70%;background:${fg}"></i><i style="width:40%;background:#dc2626;margin-top:auto"></i></div>`;
+};
+const themeThumbs = () => ['system', 'light', 'dark'].map((v) => `<button class="c-theme ${S.pref === v ? 'on' : ''}" data-act="pref:${v}" role="radio" aria-checked="${S.pref === v}">
+    <div class="thumb">${v === 'system' ? mini(false) + `<div class="split">${mini(true)}</div>` : mini(v === 'dark')}</div>${prefLabel[v]}</button>`).join('');
+
+/* ============ A · Material list-detail ============ */
+const A_PAGES = () => [
+  [['trackers', 'link-outline', 'Trackers', conn().map((p) => p.name).join(', ') || 'None connected'],
+   ['metadata', 'sparkles-outline', 'Metadata', S.tmdb ? 'TMDB token added' : 'Add TMDB for posters and credits']],
+  [...(isWeb() ? [] : [['notifications', 'notifications-outline', 'Notifications', S.alerts ? `On · ${kindsOn()} of 4 kinds` : 'Off']]),
+   ['appearance', 'contrast-outline', 'Appearance', prefLabel[S.pref]],
+   ...(S.hidden.length ? [['hidden', 'eye-off-outline', 'Hidden items', `${S.hidden.length} hidden`]] : [])],
+  [['about', 'information-circle-outline', 'About', `Version ${S.version}`]],
+];
+const A_TITLES = { trackers: 'Trackers', metadata: 'Metadata', notifications: 'Notifications', appearance: 'Appearance', hidden: 'Hidden items', about: 'About' };
+
+function aHub() {
+  const c = conn();
+  const sel = isWeb() ? S.aWebPage : null;
+  return `
+    <div class="a-title display">Settings</div>
+    <div class="a-search">${ic('search')}Search settings</div>
+    <button class="a-hero" data-act="apage:trackers">
+      <div class="stack">${c.length ? c.map(piHtml).join('') : `<span class="pi" style="--c:var(--surface-2);color:var(--muted)">${ic('link-outline', 18)}</span>`}</div>
+      <div class="grow"><div class="t">${c.length ? `${c.length} of ${P.length} trackers connected` : 'No trackers yet'}</div>
+      <div class="s">${c.length ? 'Logs write to all of them' : 'Connect one to start logging'}</div></div>
+    </button>
+    ${A_PAGES().filter((g) => g.length).map((g) => `<div class="group">${g.map(([id, icon, t, s]) => `
+      <button class="row ${sel === id ? 'sel' : ''}" data-act="apage:${id}">
+        <span class="ic">${ic(icon)}</span>
+        <span class="grow"><div class="t">${t}</div><div class="s ellip">${s}</div></span>
+      </button>`).join('')}</div>`).join('')}`;
+}
+
+function aDetail(page) {
+  switch (page) {
+    case 'trackers': return `
+      ${conn().length ? `<div class="glabel">Connected</div><div class="group">${conn().map(aProvRow).join('')}</div>` : ''}
+      ${avail().length ? `<div class="glabel">Available</div><div class="group">${avail().map(aProvRow).join('')}</div>` : ''}
+      <div class="banner">${ic('layers-outline')}<div class="muted">Every log goes to each connected tracker that handles its type. Your diary merges them back into one feed.</div></div>`;
+    case 'metadata': return `
+      <div class="group"><div class="row">
+        <span class="ic">${ic('key-outline')}</span>
+        <span class="grow"><div class="t">TMDB token</div><div class="s">${S.tmdb ? 'Added · ••••a91f' : 'Not added'}</div></span>
+        ${S.tmdb ? `<button class="btn outline sm" data-act="tmdb">Remove</button>` : `<button class="btn tonal sm" data-act="tmdb">${ic('add', 16)}Add</button>`}
+      </div>
+      <button class="row tight"><span class="ic">${ic('help-circle-outline')}</span><span class="grow t">How to get a token</span>${ic('open-outline', 18)}</button></div>
+      <div class="banner">${ic('information-circle-outline')}<div class="muted">TMDB fills posters, cast, and person and studio pages. It never stores your logs.</div></div>`;
+    case 'notifications': return `
+      <button class="mainsw ${S.alerts ? 'on' : ''}" role="switch" aria-checked="${S.alerts}" data-act="alerts"><span class="grow">Release alerts</span>${knob(S.alerts)}</button>
+      <div class="glabel">Notify me about</div>
+      <div class="group">${KINDS.map(([k, label, icon]) => `
+        <div class="row tight" style="${S.alerts ? '' : 'opacity:.45'}"><span class="ic">${ic(icon)}</span><span class="grow t" style="font-weight:400">${label}</span>${sw(S.kinds[k], `kind:${k}`, !S.alerts)}</div>`).join('')}</div>
+      <div class="s" style="padding:0 18px 16px">Scheduled on this device 7 to 14 days ahead.</div>
+      <button class="btn tonal" data-act="noop" style="margin-left:4px">${ic('paper-plane-outline', 16)}Send test notification</button>`;
+    case 'appearance': return `
+      <div class="glabel">Theme</div>
+      <div class="group">${['system', 'light', 'dark'].map((v) => `
+        <button class="row tight" data-act="pref:${v}"><span class="radio ${S.pref === v ? 'on' : ''}"></span>
+        <span class="grow"><div class="t" style="font-weight:400">${prefLabel[v]}</div>${v === 'system' ? `<div class="s">Follows your device</div>` : ''}</span></button>`).join('')}</div>`;
+    case 'hidden': return S.hidden.length ? `
+      <div class="group">${S.hidden.map((h, i) => `
+        <div class="row tight"><span class="ic">${ic(TYPE_ICON[h.type])}</span><span class="grow t ellip">${h.title}</span>
+        <button class="btn text sm" data-act="unhide:${i}">${ic('eye-outline', 16)}Show</button></div>`).join('')}</div>
+      <div class="s" style="padding:0 18px">Hidden from Home and the diary. Showing one puts it back.</div>`
+      : `<div class="muted" style="padding:24px 18px">Nothing hidden.</div>`;
+    case 'about': return `
+      <div class="group">
+        <div class="row tight"><span class="ic">${ic('logo-github')}</span><span class="grow"><div class="t">Shinobu</div><div class="s">Version ${S.version}</div></span></div>
+        <button class="row tight" data-act="noop"><span class="ic">${ic('pricetags-outline')}</span><span class="grow t" style="font-weight:400">${isWeb() ? 'View code' : 'View releases'}</span>${ic('open-outline', 18)}</button>
+      </div>`;
+  }
+  return '';
+}
+function aProvRow(p) {
+  return `<div class="row">${piHtml(p)}<span class="grow"><div class="t">${p.name}</div><div class="s ellip">${status(p)}</div></span>${provBtn(p)}</div>`;
+}
+
+function renderA() {
+  if (isWeb()) {
+    const pg = S.aWebPage;
+    return `<div class="a-split">
+      <div class="a-list scroll" data-scroll="alist"><div class="a-pad">${aHub()}</div></div>
+      <div class="a-detail scroll" data-scroll="adetail"><div class="inner">
+        <h2 class="display">${A_TITLES[pg]}</h2>
+        ${pg === 'trackers' ? `<div class="lede">Connect where you already track. Shinobu has no account of its own.</div>` : '<div style="height:16px"></div>'}
+        ${aDetail(pg)}</div></div></div>`;
+  }
+  if (!S.aPage) return `<div class="scroll" data-scroll="ahub"><div class="a-pad">${aHub()}</div></div>`;
+  return `<div class="a-bar"><button class="iconbtn" data-act="aback" aria-label="Back">${ic('arrow-back', 24)}</button><span class="title display">${A_TITLES[S.aPage]}</span></div>
+    <div class="scroll" data-scroll="a-${S.aPage}"><div class="a-pad" style="padding-top:8px">${aDetail(S.aPage)}</div></div>`;
+}
+
+/* ============ B · Diary rail ============ */
+function bSections() {
+  const c = conn();
+  return [
+    { id: 'trackers', icon: 'link-outline', title: 'Trackers', count: `${c.length} of ${P.length} connected`,
+      rows: P.slice().sort((a, b) => (on(b) || needsReconnect(b)) - (on(a) || needsReconnect(a))).map((p) => bRow(piHtml(p), p.name, status(p), provBtn(p))) },
+    { id: 'notifications', icon: 'notifications-outline', title: 'Notifications', count: S.alerts ? `${kindsOn()} kinds` : 'Off', native: true,
+      rows: [bRow(`<span class="b-lead">${ic('alarm-outline')}</span>`, 'Release alerts', '7 to 14 days ahead, on this device', sw(S.alerts, 'alerts')),
+        ...KINDS.map(([k, label, icon]) => bRow(`<span class="b-lead">${ic(icon, 18)}</span>`, label, '', sw(S.kinds[k], `kind:${k}`, !S.alerts), !S.alerts))] },
+    { id: 'metadata', icon: 'sparkles-outline', title: 'Metadata', count: S.tmdb ? 'TMDB' : 'Not set',
+      rows: [bRow(`<span class="b-lead">${ic('key-outline')}</span>`, 'TMDB token', S.tmdb ? 'Added · ••••a91f' : 'Posters, cast, and people pages',
+        S.tmdb ? `<button class="btn outline sm" data-act="tmdb">Remove</button>` : `<button class="btn tonal sm" data-act="tmdb">Add</button>`)] },
+    { id: 'appearance', icon: 'contrast-outline', title: 'Appearance', count: prefLabel[S.pref],
+      rows: [`<div class="b-row"><div class="b-gut"></div><div class="b-body" style="padding-top:12px;padding-bottom:12px"><div class="c-themes grow" role="radiogroup" aria-label="Theme">${themeThumbs()}</div></div></div>`] },
+    ...(S.hidden.length ? [{ id: 'hidden', icon: 'eye-off-outline', title: 'Hidden', count: `${S.hidden.length} items`,
+      rows: hiddenRows() }] : []),
+    { id: 'about', icon: 'information-circle-outline', title: 'About', count: `v${S.version}`,
+      rows: [bRow(`<span class="b-lead" style="font-size:20px;color:#dc2626;font-family:system-ui">忍</span>`, 'Shinobu', `Version ${S.version}`, `<button class="btn text sm" data-act="noop">${isWeb() ? 'Code' : 'Releases'}${ic('open-outline', 14)}</button>`)] },
+  ].filter((s) => !(s.native && isWeb()));
+}
+const HIDDEN_PREVIEW = 5;
+const HIDDEN_SEARCH_MIN = 20;
+function hiddenRows() {
+  const q = S.hiddenQuery.trim().toLowerCase();
+  const matches = S.hidden.map((h, i) => ({ h, i })).filter(({ h }) => h.title.toLowerCase().includes(q));
+  const shown = S.hiddenAll ? matches : matches.slice(0, HIDDEN_PREVIEW);
+  const rest = matches.length - shown.length;
+  const search = S.hidden.length > HIDDEN_SEARCH_MIN ? [`<div class="b-row"><div class="b-gut"></div><div class="b-body"><label class="b-search">${ic('search', 16)}<input id="hiddenq" type="search" placeholder="Search ${S.hidden.length} hidden" value="${S.hiddenQuery.replaceAll('"', '&quot;')}" oninput="hiddenSearch(this)" /></label></div></div>`] : [];
+  // The whole row opens the item (or the list); only the trailing button unhides.
+  const rows = shown.map(({ h, i }) => bRow(`<span class="b-lead">${ic(TYPE_ICON[h.type], 18)}</span>`, h.title, TYPE_LABEL[h.type], `<button class="btn text sm" data-act="unhide:${i}">Show</button>`).replace('<div class="b-row ', `<div data-act="open:${i}" class="b-row pressable `));
+  const none = q && !matches.length ? [bRow(`<span class="b-lead">${ic('search', 18)}</span>`, 'No matches', `Nothing hidden matches “${S.hiddenQuery}”`, '')] : [];
+  const toggle = rest > 0 ? [`<div class="b-row"><div class="b-gut"></div><div class="b-body"><button class="btn text sm" style="margin-left:-10px" data-act="hiddenall:1">${ic('chevron-down', 16)}Show ${rest} more</button></div></div>`]
+    : S.hiddenAll && matches.length > HIDDEN_PREVIEW ? [`<div class="b-row"><div class="b-gut"></div><div class="b-body"><button class="btn text sm" style="margin-left:-10px" data-act="hiddenall:">${ic('chevron-up', 16)}Show less</button></div></div>`] : [];
+  return [...search, ...rows, ...none, ...toggle];
+}
+function hiddenSearch(input) {
+  S.hiddenQuery = input.value;
+  render();
+  const next = document.getElementById('hiddenq');
+  next.focus();
+  next.setSelectionRange(next.value.length, next.value.length);
+}
+const bRow = (lead, t, s, trailing, dim) => `<div class="b-row ${dim ? 'dim' : ''}"><div class="b-gut"></div><div class="b-body">${lead}<div class="grow"><div class="t ellip">${t}</div>${s ? `<div class="s ellip">${s}</div>` : ''}</div>${trailing}</div></div>`;
+
+function renderB() {
+  const secs = bSections();
+  const body = secs.map((s, i) => {
+    const closed = S.bClosed.includes(s.id);
+    const last = i === secs.length - 1;
+    return `<section data-sec="${s.id}" data-title="${s.title}" data-count="${s.count}">
+      <button class="b-head ${closed ? 'closed' : ''}" data-act="bcol:${s.id}" aria-expanded="${!closed}">
+        <div class="b-gut"><div class="b-node">${ic(s.icon, 16)}</div></div>
+        <div class="b-headmain"><span class="display">${s.title}</span><span class="b-rule"></span><span class="b-count">${s.count}</span><span class="chev">${ic('chevron-down', 16)}</span></div>
+      </button>
+      ${closed ? '' : `<div class="${last ? 'b-last' : ''}">${s.rows.join('')}</div>`}
+    </section>`;
+  }).join('');
+  return `<div class="b-header"><span class="display">Settings</span></div>
+    <div class="b-wrap">
+      <div style="position:relative;flex:1;display:flex;min-width:0">
+        <div class="b-sticky" id="bsticky"><span class="display"></span><span class="s"></span></div>
+        <div class="scroll" data-scroll="b" onscroll="bScroll(this)"><div class="b-col">${body}</div></div>
+      </div>
+      ${isWeb() ? `<nav class="b-toc"><div class="eyebrow">On this page</div>${secs.map((s) => `<button data-act="bjump:${s.id}" data-toc="${s.id}">${ic(s.icon, 16)}${s.title}</button>`).join('')}</nav>` : ''}
+    </div>`;
+}
+function bScroll(el) {
+  let cur = null;
+  for (const sec of el.querySelectorAll('section')) if (sec.offsetTop - el.offsetTop + 30 <= el.scrollTop) cur = sec;
+  const st = document.getElementById('bsticky');
+  if (!st) return;
+  st.classList.toggle('on', !!cur);
+  if (cur) { st.children[0].textContent = cur.dataset.title; st.children[1].textContent = cur.dataset.count; }
+  const active = cur?.dataset.sec ?? el.querySelector('section')?.dataset.sec;
+  document.querySelectorAll('[data-toc]').forEach((b) => b.classList.toggle('on', b.dataset.toc === active));
+}
+
+/* ============ C · Expressive hub ============ */
+function renderC() {
+  const c = conn();
+  const tiles = P.map((p) => `
+    <button class="c-tile ${on(p) ? 'on' : 'off'}" style="--c:${p.color}" data-act="sheet:${p.id}">
+      ${piHtml(p)}${on(p) ? '' : `<span class="add">${ic('add', 16)}</span>`}
+      <div><div class="t" style="font-size:15px">${p.name}</div><div class="s ellip" style="font-size:12px">${on(p) ? '<span class="dot"></span>Synced' : 'Connect'}</div></div>
+    </button>`).join('');
+  const trackers = `<section class="c-sec full"><div class="lbl"><span class="display">Trackers</span><span class="s">${c.length} of ${P.length} connected</span></div><div class="c-tiles">${tiles}</div></section>`;
+  const alerts = isWeb() ? '' : `<section class="c-sec"><div class="lbl"><span class="display">Release alerts</span></div>
+      <button class="mainsw ${S.alerts ? 'on' : ''}" role="switch" aria-checked="${S.alerts}" data-act="alerts" style="font-size:16px"><span class="grow">${S.alerts ? 'On' : 'Off'}<div style="font-size:12px;font-weight:400;opacity:.7;margin-top:2px">7 to 14 days ahead</div></span>${knob(S.alerts)}</button>
+      <div class="chips ${S.alerts ? '' : 'dis'}">${KINDS.map(([k, label]) => `<button class="chip ${S.kinds[k] ? 'on' : ''}" data-act="kind:${k}">${S.kinds[k] ? ic('checkmark', 16) : ''}${label}</button>`).join('')}</div>
+      <button class="btn text sm" data-act="noop" style="margin-top:10px;margin-left:-10px">${ic('paper-plane-outline', 15)}Send a test</button></section>`;
+  const appearance = `<section class="c-sec"><div class="lbl"><span class="display">Appearance</span></div><div class="c-themes">${themeThumbs()}</div></section>`;
+  const metadata = `<section class="c-sec"><div class="lbl"><span class="display">Metadata</span></div><div class="c-card group" style="margin:0">
+      <div class="row"><span class="ic">${ic('key-outline')}</span><span class="grow"><div class="t">TMDB token</div><div class="s">${S.tmdb ? 'Added · ••••a91f' : 'Posters, cast, people'}</div></span>
+      ${S.tmdb ? `<button class="btn outline sm" data-act="tmdb">Remove</button>` : `<button class="btn tonal sm" data-act="tmdb">Add</button>`}</div></div></section>`;
+  const hidden = S.hidden.length ? `<section class="c-sec"><div class="lbl"><span class="display">Hidden</span><span class="s">${S.hidden.length}</span></div><div class="group" style="margin:0">
+      ${S.hidden.map((h, i) => `<div class="row tight"><span class="ic">${ic(TYPE_ICON[h.type], 18)}</span><span class="grow t ellip">${h.title}</span><button class="btn text sm" data-act="unhide:${i}">Show</button></div>`).join('')}</div></section>` : '';
+  const foot = `<div class="c-foot full"><div class="k">忍</div>Shinobu ${S.version}<div class="links"><button class="btn text sm" data-act="noop">Releases</button><button class="btn text sm" data-act="noop">Source</button></div></div>`;
+  const content = isWeb()
+    ? `<div class="c-grid">${trackers}${appearance}${metadata}${hidden}${foot}</div>`
+    : `${trackers}${alerts}${appearance}${metadata}${hidden}${foot}`;
+  return `<div class="c-head"><span class="display">Settings</span></div><div class="scroll" data-scroll="c" style="${isWeb() ? 'padding:0 40px' : ''}">${content}</div>${cSheet()}`;
+}
+function cSheet() {
+  const p = P.find((x) => x.id === S.sheet);
+  if (!p) return '';
+  return `<div class="scrim" data-act="sheet:"></div><div class="sheet"><div class="handle"></div>
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px">${piHtml(p, 'width:52px;height:52px;border-radius:16px;font-size:22px')}
+      <div><div class="display" style="font-size:22px">${p.name}</div><div class="s">${status(p)}</div></div></div>
+    <div class="s" style="font-size:14px;line-height:1.5;margin-bottom:20px">Logs ${p.types.toLowerCase().replaceAll(' · ', ', ')}. ${p.byo ? 'Needs your own Trakt API app; Shinobu ships no Trakt key.' : p.mobileOnly ? 'Logs write through your signed-in Letterboxd session.' : 'Signs in with ' + p.name + ' directly.'}</div>
+    ${on(p) ? `<button class="btn outline" style="width:100%;justify-content:center" data-act="prov:${p.id}">${ic('unlink-outline', 16)}Disconnect</button>`
+      : `<button class="btn solid" style="width:100%;justify-content:center" data-act="prov:${p.id}">${ic('link-outline', 16)}Connect ${p.name}</button>`}
+  </div>`;
+}
+
+/* ============ frame + notes ============ */
+const NOTES = {
+  A: [['Why', ['Android 16’s settings: one hub of categories with a one-line summary each, segmented groups with 24px outer and 6px inner corners, no chevrons.',
+      'The tracker card at the top is the account header, the spot Android uses for your Google account.',
+      'On web it becomes Material’s list-detail layout: the hub on the left, the page on the right. It’s the most web-native of the three.']],
+    ['Trade-offs', ['Every change costs a tap in and a tap back. The current screen has about six controls, so the hub may be more structure than it needs.',
+      'Needs a sub-route per page, under routes.settings.*.']],
+    ['To iterate', ['Make search real, or drop it. Android only has it because it has 200+ settings.', 'Primary-switch bar on Notifications: keep it, or use a plain row?']]],
+  B: [['Why', ['Built from the diary’s own parts: the 56px gutter rail, section heads that look like day heads (node, title, rule, count, chevron), 66px rows, and a sticky head that drops in from under the header.',
+      'Everything sits on one scroll and there are no cards, so it stays as calm as the diary.',
+      'Web adds a sticky “On this page” index that tracks your scroll position.']],
+    ['Trade-offs', ['It’s the least “Android” of the three; the native feel comes from Material controls on a Shinobu layout.', 'The rail only means something if you know the diary. A first-time user just sees a hairline.']],
+    ['To iterate', ['Should the fold state persist like diary days (collapsed-diary-days)?', 'Rail node: an icon, or the section’s first letter in Space Grotesk to echo the date?']]],
+  C: [['Why', ['Trackers are the whole product, so they come first: tiles in brand colors with a ring when connected. Tapping one opens a bottom sheet (a dialog on web), the same sheet ProviderSheet already uses.',
+      'Material 3 Expressive controls: a primary switch, filter chips for alert kinds, and visual theme previews like Android’s Wallpaper & style.',
+      'On web the sections become a two-column grid under a five-tile tracker row.']],
+    ['Trade-offs', ['It’s the most visual and has the most new parts (tile, chip, theme thumbnail).', 'The tiles hide each tracker’s status line until you open the sheet.']],
+    ['To iterate', ['Is the inverted primary switch too loud next to the red logging button?', 'Hidden items might fit better as poster thumbnails than as rows.']]],
+};
+
+function frame(inner) {
+  const tabs = [['home-outline', 'Home'], ['search-outline', 'Search'], ['book-outline', 'Diary'], ['settings', 'Settings']]
+    .map(([i, l]) => `<div class="tab ${l === 'Settings' ? 'on' : ''}"><span class="pill">${ic(i, 20)}</span>${l}</div>`).join('');
+  if (isWeb()) return `<div class="device web ${S.text === 'big' ? 'big' : ''}" data-theme="${theme()}">
+      <div class="chrome"><i></i><i></i><i></i><div class="url">shinobu.app/settings</div></div>
+      <div class="webbody"><nav class="navrail"><div class="kanji">忍</div>${tabs}</nav><div class="main">${inner}</div></div></div>`;
+  return `<div class="device phone ${S.vp === 'narrow' ? 'narrow' : ''} ${S.text === 'big' ? 'big' : ''}" data-theme="${theme()}">
+      <div class="statusbar"><span>9:41</span><span class="icons">${ic('cellular', 15)}${ic('wifi', 15)}${ic('battery-full', 18)}</span></div>
+      <div class="screen">${inner}</div><div class="tabbar">${tabs}</div></div>`;
+}
+
+function render() {
+  const scrolls = {};
+  document.querySelectorAll('[data-scroll]').forEach((el) => (scrolls[el.dataset.scroll] = el.scrollTop));
+  const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button class="${S[key] === v ? 'on' : ''}" data-act="${key}:${v}">${l}</button>`).join('')}</div>`;
+  document.getElementById('toolbar').innerHTML = `
+    <h1>Settings redesign<span>${VARIANTS[S.variant].tag}</span></h1>
+    ${seg('variant', Object.entries(VARIANTS).map(([k, v]) => [k, `${k} · ${v.name}`]))}
+    ${seg('vp', [['phone', 'Phone'], ['narrow', '320'], ['web', 'Web']])}
+    ${seg('text', [['default', 'Text 100%'], ['big', 'Text 160%']])}
+    ${seg('system', [['dark', 'Dark'], ['light', 'Light']])}
+`;
+  document.getElementById('datatoggle').innerHTML = seg('data', [['demo', 'Demo data'], ['worst', 'Worst case'], ['empty', 'Empty'], ['one', 'One'], ['huge', '1,000 hidden']]);
+  const inner = { A: renderA, B: renderB, C: renderC }[S.variant]();
+  const v = VARIANTS[S.variant];
+  document.getElementById('stage').className = `stage ${isWeb() ? 'webvp' : ''}`;
+  document.getElementById('stage').innerHTML = frame(inner) + `<div class="notes"><h2 class="display">${S.variant} · ${v.name}</h2><div class="tag">${v.tag}</div>
+    ${NOTES[S.variant].map(([h, items]) => `<h3>${h}</h3><ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>`).join('')}
+    <h3>Shared</h3><ul><li>Uses the existing tokens, plus one proposed <code>--surface-2</code> for icon circles and selected states.</li><li>Switches are “on” in the foreground color, not red; solid red stays reserved for logging.</li><li>Notifications are native-only, so they’re absent on web, same as today.</li></ul></div>`;
+  document.querySelectorAll('[data-scroll]').forEach((el) => { el.scrollTop = scrolls[el.dataset.scroll] ?? 0; if (el.dataset.scroll === 'b') bScroll(el); });
+}
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el || el.disabled) return;
+  e.stopPropagation();
+  const [act, arg] = el.dataset.act.split(':');
+  switch (act) {
+    case 'variant': S.variant = arg; S.aPage = null; S.sheet = null; break;
+    case 'vp': S.vp = arg; S.sheet = null; break;
+    case 'system': S.system = arg; break;
+    case 'data': S.data = arg; Object.assign(S, DATA[arg](), { hiddenAll: false, hiddenQuery: '' }); break;
+    case 'open': alert(`Opens ${S.hidden[+arg].type === 'LIST' ? 'the list' : 'details for'} “${S.hidden[+arg].title}”`); return;
+    case 'hiddenall': S.hiddenAll = !!arg; break;
+    case 'text': S.text = arg; break;
+    case 'prov': S.connected[arg] = S.connected[arg] !== true; break;
+    case 'apage': if (isWeb()) S.aWebPage = arg; else S.aPage = arg; break;
+    case 'aback': S.aPage = null; break;
+    case 'alerts': S.alerts = !S.alerts; break;
+    case 'kind': S.kinds[arg] = !S.kinds[arg]; break;
+    case 'pref': S.pref = arg; break;
+    case 'tmdb': S.tmdb = !S.tmdb; break;
+    case 'unhide': S.hidden.splice(+arg, 1); if (!S.hidden.length && S.aWebPage === 'hidden') S.aWebPage = 'trackers'; if (S.aPage === 'hidden' && !S.hidden.length) S.aPage = null; break;
+    case 'bcol': S.bClosed = S.bClosed.includes(arg) ? S.bClosed.filter((x) => x !== arg) : [...S.bClosed, arg]; break;
+    case 'bjump': { const sc = document.querySelector('[data-scroll=b]'); const sec = sc.querySelector(`[data-sec=${arg}]`); sc.scrollTo({ top: sec.offsetTop - sc.offsetTop, behavior: 'smooth' }); return; }
+    case 'sheet': S.sheet = arg || null; break;
+    default: return;
+  }
+  render();
+});
+render();
+</script>
+</body>
+</html>

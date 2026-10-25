@@ -108,8 +108,9 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  *
  * **Every button in the app takes one.** A label without a glyph beside it
  * reads as a different design system than the row above it, which is how the
- * log sheet ended up as the one dialog with no icons anywhere. The app's
- * vocabulary — one verb, one glyph, everywhere:
+ * log sheet ended up as the one dialog with no icons anywhere. The one
+ * exception is Disconnect, a label-only button. The app's vocabulary — one
+ * verb, one glyph, everywhere:
  *
  * | glyph | verb |
  * | --- | --- |
@@ -123,7 +124,7 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `close` | dismiss without writing |
  * | `search-outline` | search |
  * | `checkmark` | done, nothing left to do |
- * | `link-outline` / `unlink-outline` | connect / disconnect a tracker |
+ * | `link-outline` | connect a tracker |
  * | `chevron-back` / `chevron-forward` | step to the previous / next sibling in place |
  * | `copy-outline` | copy text to the clipboard |
  * | `heart-outline` / `heart` | like — filled when selected |

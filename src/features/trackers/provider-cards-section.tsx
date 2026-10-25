@@ -1,29 +1,26 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { View } from 'react-native';
 
-import { Eyebrow } from '@/components/eyebrow';
-import { GroupedList } from '@/components/grouped-list';
+import { RailHead } from '@/components/rail-head';
 import { SectionEnter } from '@/components/section-enter';
+import { SettingsRail } from '@/features/settings/settings-rail';
 import { ProviderCard } from '@/features/trackers/provider-card';
 import {
   shouldAutoCloseSheet,
   splitProviders,
 } from '@/features/trackers/provider-connections';
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
-import { TraktMigrationBanner } from '@/features/trackers/trakt-migration-banner';
 import { haptics } from '@/lib/haptics';
 import type { ProviderId } from '@/lib/providers/types';
 import {
   SERVER_CONNECTED_PROVIDERS,
   useConnectedProviders,
+  useTraktNeedsCredentials,
 } from '@/state/session';
 
 /**
- * The Settings screen's two provider sections, both driven by the
- * registry (AGENTS.md: adding a provider widens `PROVIDERS`, nothing else).
- *
- * Returns a fragment, not a wrapper `View`, so the screen's `gap-6` still sees
- * two independent sections — and an empty half costs no space at all.
+ * The Settings screen's Trackers section: every provider in the registry
+ * (AGENTS.md: adding a provider widens `PROVIDERS`, nothing else), connected
+ * first, then available.
  *
  * The provider sheet is hoisted here rather than living inside each card: one
  * `ModalBottomSheet` for the screen, opened on whichever provider was tapped
@@ -31,6 +28,7 @@ import {
  */
 export function ProviderCardsSection() {
   const connectedIds = useConnectedProviders();
+  const traktNeedsCredentials = useTraktNeedsCredentials();
   const { connected, disconnected } = splitProviders(connectedIds);
   const [shownIds, setShownIds] = useState(connectedIds);
   const [movedIds, setMovedIds] = useState<ProviderId[]>([]);
@@ -72,51 +70,26 @@ export function ProviderCardsSection() {
     if (autoClose) setSheetOpen(false);
   }, [autoClose]);
 
+  const count = `${connected.length} of ${connected.length + disconnected.length} connected`;
+
   return (
     <>
-      {/* MigrationNeeded (plan 0034 U9): a Trakt token with no credentials is
-          gated out of `connectedIds`, so the card below reads disconnected —
-          this banner is what explains that, and its action opens the same
-          sheet (the guided BYO wizard) the card would. */}
-      <TraktMigrationBanner onReconnect={() => openSheet('trakt')} />
-
-      {connected.length > 0 && (
-        <View>
-          <Eyebrow className="mb-3">Connected trackers</Eyebrow>
-          <GroupedList>
-            {connected.map((id) => (
-              <GroupedList.Item key={id}>
-                <MovedCard moved={movedIds.includes(id)}>
-                  <ProviderCard
-                    connected
-                    id={id}
-                    onOpenSheet={() => openSheet(id)}
-                  />
-                </MovedCard>
-              </GroupedList.Item>
-            ))}
-          </GroupedList>
-        </View>
-      )}
-
-      {disconnected.length > 0 && (
-        <View>
-          <Eyebrow className="mb-3">Available trackers</Eyebrow>
-          <GroupedList>
-            {disconnected.map((id) => (
-              <GroupedList.Item key={id}>
-                <MovedCard moved={movedIds.includes(id)}>
-                  <ProviderCard
-                    connected={false}
-                    id={id}
-                    onOpenSheet={() => openSheet(id)}
-                  />
-                </MovedCard>
-              </GroupedList.Item>
-            ))}
-          </GroupedList>
-        </View>
-      )}
+      <SettingsRail.Section count={count} icon="link-outline" title="Trackers">
+        <SettingsRail.Head label={`Trackers, ${count}`}>
+          <RailHead.Icon name="link-outline">Trackers</RailHead.Icon>
+          <RailHead.Count>{count}</RailHead.Count>
+        </SettingsRail.Head>
+        {[...connected, ...disconnected].map((id) => (
+          <MovedCard key={id} moved={movedIds.includes(id)}>
+            <ProviderCard
+              connected={connected.includes(id)}
+              id={id}
+              onOpenSheet={() => openSheet(id)}
+              reconnect={id === 'trakt' && traktNeedsCredentials}
+            />
+          </MovedCard>
+        ))}
+      </SettingsRail.Section>
 
       <ProviderSheet
         connected={sheetWasConnected}
@@ -128,7 +101,7 @@ export function ProviderCardsSection() {
   );
 }
 
-/** Settles a card into the section it just moved to during this visit. */
+/** Settles a row into the place it just moved to during this visit. */
 function MovedCard({
   moved,
   children,

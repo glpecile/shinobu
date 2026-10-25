@@ -37,6 +37,9 @@
  * reads as "Letterboxd" at a glance. Simkl's accent is its softer brand green
  * (#73c26e) — muted next to Letterboxd's neon #00e054, which keeps the two
  * greens tellable apart as dots.
+ *
+ * `--color-preview-*` paint the settings theme picker's miniature light and dark
+ * screens, so they too are identical in both themes.
  */
 @layer theme {
   :root {
@@ -56,6 +59,12 @@
       --color-success-tonal: #dcfce7;
       --color-toast-shadow: #0000001f;
       --color-toast-surface: #ffffff;
+      --color-preview-light: #ffffff;
+      --color-preview-light-ink: #0a0a0a;
+      --color-preview-light-line: #e5e5e5;
+      --color-preview-dark: #0a0a0a;
+      --color-preview-dark-ink: #ffffff;
+      --color-preview-dark-line: #333333;
     }
 
     @variant dark {
@@ -74,6 +83,12 @@
       --color-success-tonal: #052e16;
       --color-toast-shadow: #00000066;
       --color-toast-surface: #1c1c1f;
+      --color-preview-light: #ffffff;
+      --color-preview-light-ink: #0a0a0a;
+      --color-preview-light-line: #e5e5e5;
+      --color-preview-dark: #0a0a0a;
+      --color-preview-dark-ink: #ffffff;
+      --color-preview-dark-line: #333333;
     }
   }
 }
