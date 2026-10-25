@@ -1,4 +1,4 @@
-import { useReducer, useState } from 'react';
+import { Fragment, useReducer, useState } from 'react';
 import { Platform, Text, useWindowDimensions, View } from 'react-native';
 import {
   FadeIn,
@@ -21,6 +21,7 @@ import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metri
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { WeekStrip } from '@/features/up-next/ui/week-strip';
 import { CollapsibleSection } from '@/components/collapsible-section';
+import { SectionEnter, useArrivalHistory } from '@/components/section-enter';
 import { DURATION, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useWakeAt } from '@/lib/time/use-wake-at';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -115,8 +116,6 @@ export function UpNextSection({
   const { fontScale } = useWindowDimensions();
   const cardRailHeight = episodeCardRailHeight(fontScale);
 
-  if (continueWatching.length === 0 && calendar.length === 0) return null;
-
   // Feed the strip *both* sections: today's already-aired episodes (which live
   // in Continue Watching) still belong on the today cell — the strip is a
   // schedule, not a second view of the aired/upcoming split. Off-window and
@@ -129,51 +128,70 @@ export function UpNextSection({
   const week = calendarWeek([...continueWatching, ...calendar], now).map(
     (day) => ({ ...day, groups: groupDayEntries(day.entries) }),
   );
+  // What a streaming refetch adds after the first render rises in, at the
+  // outermost level that is new: the section, else the Continue Watching
+  // block, else the card.
+  const [startedEmpty] = useState(continueWatching.length === 0 && calendar.length === 0);
+  const [hadContinueWatching] = useState(continueWatching.length > 0);
+  const arrivalHistory = useArrivalHistory([
+    ...continueWatching.map((entry) => entry.item.id),
+    ...week.flatMap((day) => day.groups.map((group) => group.id)),
+  ]);
+
+  if (continueWatching.length === 0 && calendar.length === 0) return null;
+
   const selected = week.find((day) => day.offset === selectedOffset) ?? week[0];
 
+  const Root = startedEmpty ? SectionEnter : View;
+  const ContinueWatchingRise =
+    hadContinueWatching || startedEmpty ? Fragment : SectionEnter;
+
   return (
-    <View>
+    <Root>
       {continueWatching.length > 0 && (
         // The last card's own exit can't play once the whole block unmounts
         // with it, so the block carries the same fade.
         <AnimatedView exiting={CARD_EXIT}>
-          <CollapsibleSection
-            collapseKey="up-next-continue"
-            leading={<CollapsibleSection.Icon name="play-circle-outline" />}
-            title="Continue Watching"
-          >
-            <VirtualizedRail
-              // Horizontal Legend List padding does not offset items on web.
-              // Spacers match the header's px-4; CardSlot already adds mr-3.
-              // See docs/solutions/legend-list-horizontal-content-padding-web.md.
-              ListHeaderComponent={<View className="w-4" />}
-              ListFooterComponent={<View className="w-1" />}
-              data={continueWatching}
-              estimatedItemSize={268}
-              // Show keys keep the visible card mounted when quick-log advances it.
-              keyExtractor={(entry) => entry.item.id}
-              style={{ height: cardRailHeight }}
-              renderItem={({ item: entry }) => (
-                <CardSlot
-                  // Continue Watching is aired episodes by construction; the
-                  // narrowing is what the union buys — no release row can slip
-                  // in here and render a quick-log for something with no episode.
-                  action={
-                    entry.kind === 'episode' ? (
-                      <QuickLogButton entry={entry} />
-                    ) : undefined
-                  }
-                  badges={continueWatchingBadges(entry, now)}
-                  // Wrapped, not grouped: this section holds one entry per show
-                  // by construction (the pool fan answers with a single
-                  // `next_episode` pointer each), so it can't produce a batch.
-                  group={soloGroup(entry)}
-                  onActionsPress={onItemActions}
-                  onPress={onItemPress}
-                />
-              )}
-            />
-          </CollapsibleSection>
+          <ContinueWatchingRise>
+            <CollapsibleSection
+              collapseKey="up-next-continue"
+              leading={<CollapsibleSection.Icon name="play-circle-outline" />}
+              title="Continue Watching"
+            >
+              <VirtualizedRail
+                // Horizontal Legend List padding does not offset items on web.
+                // Spacers match the header's px-4; CardSlot already adds mr-3.
+                // See docs/solutions/legend-list-horizontal-content-padding-web.md.
+                ListHeaderComponent={<View className="w-4" />}
+                ListFooterComponent={<View className="w-1" />}
+                data={continueWatching}
+                estimatedItemSize={268}
+                // Show keys keep the visible card mounted when quick-log advances it.
+                keyExtractor={(entry) => entry.item.id}
+                style={{ height: cardRailHeight }}
+                renderItem={({ item: entry }) => (
+                  <CardSlot
+                    // Continue Watching is aired episodes by construction; the
+                    // narrowing is what the union buys — no release row can slip
+                    // in here and render a quick-log for something with no episode.
+                    action={
+                      entry.kind === 'episode' ? (
+                        <QuickLogButton entry={entry} />
+                      ) : undefined
+                    }
+                    badges={continueWatchingBadges(entry, now)}
+                    // Wrapped, not grouped: this section holds one entry per show
+                    // by construction (the pool fan answers with a single
+                    // `next_episode` pointer each), so it can't produce a batch.
+                    group={soloGroup(entry)}
+                    arrival={hadContinueWatching ? { id: entry.item.id, seen: arrivalHistory } : undefined}
+                    onActionsPress={onItemActions}
+                    onPress={onItemPress}
+                  />
+                )}
+              />
+            </CollapsibleSection>
+          </ContinueWatchingRise>
         </AnimatedView>
       )}
 
@@ -253,6 +271,7 @@ export function UpNextSection({
                         : calendarBadges(group.lead, now)
                     }
                     group={group}
+                    arrival={!startedEmpty ? { id: group.id, seen: arrivalHistory } : undefined}
                     onActionsPress={onItemActions}
                     onPress={onItemPress}
                   />
@@ -262,6 +281,6 @@ export function UpNextSection({
           </AnimatedView>
         </View>
       </CollapsibleSection>
-    </View>
+    </Root>
   );
 }

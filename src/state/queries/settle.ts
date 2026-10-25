@@ -43,3 +43,41 @@ export async function settle<Input>(
     return { inputs: [], errors: [{ provider, message: errorMessage(error) }] };
   }
 }
+
+type Settled<Legs extends readonly unknown[]> = { [K in keyof Legs]: Legs[K] | undefined };
+
+/**
+ * Streams a gather into `streamedQuery`: each time a leg settles, yields
+ * `merge` of the legs settled so far (the rest are `undefined`) when that is
+ * `worthShowing`, and always yields the complete merge last. Legs come from
+ * `settle`/`none`, so none of them rejects.
+ */
+export async function* streamLegs<Legs extends readonly unknown[] | [], Merged>(
+  legs: { [K in keyof Legs]: Legs[K] | Promise<Legs[K]> },
+  merge: (settled: Settled<Legs>) => Merged,
+  worthShowing: (partial: Merged) => boolean,
+): AsyncGenerator<Merged> {
+  const settled: unknown[] = legs.map(() => undefined);
+  let settledCount = 0;
+  let shownCount = 0;
+  const pending = new Map(
+    legs.map((leg: unknown, index) => [
+      index,
+      Promise.resolve(leg).then((value) => {
+        settled[index] = value;
+        settledCount += 1;
+        return index;
+      }),
+    ]),
+  );
+  while (pending.size > 0) {
+    pending.delete(await Promise.race(pending.values()));
+    // Legs settling in one tick are raced out one by one; show them once.
+    if (settledCount === shownCount) continue;
+    const merged = merge([...settled] as Settled<Legs>);
+    if (settledCount === legs.length || worthShowing(merged)) {
+      shownCount = settledCount;
+      yield merged;
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, mock, test } from 'bun:test';
 
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
@@ -45,7 +45,7 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { fetchUpNextInputs } = await import('./up-next');
+const { fetchUpNextInputs, refreshUpNextInputs, upNextOptions } = await import('./up-next');
 
 function show(traktId: number, lastUpdated: string): NormalizedMediaItem {
   return {
@@ -723,16 +723,14 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     expect(inputs.calendar).toEqual([]);
   });
 
-  test('nothing tracked skips the megabyte calendar downloads entirely', async () => {
-    const { client, simklRequests } = fakeClient({});
+  test('with nothing tracked, a calendar file failing is not an error', async () => {
+    const { client } = fakeClient({ failingSimkl: ['tv', 'anime', 'movie_release'] });
 
     const inputs = await fetchUpNextInputs(client, ['simkl']);
 
     expect(inputs.calendar).toEqual([]);
     expect(inputs.releases).toEqual([]);
-    expect(simklRequests).not.toContain('tv');
-    expect(simklRequests).not.toContain('anime');
-    expect(simklRequests).not.toContain('movie_release');
+    expect(inputs.errors).toEqual([]);
   });
 
   test('one calendar file failing degrades only its own leg (R7)', async () => {
@@ -778,3 +776,56 @@ describe('fetchUpNextInputs — the Simkl legs (plan 0034 U8)', () => {
     expect(progressRequests).toEqual([]);
   });
 });
+
+describe('refreshUpNextInputs', () => {
+  test('marks every leg stale before refetching the gather', async () => {
+    const calls: string[] = [];
+    const client = {
+      invalidateQueries: ({ queryKey }: { queryKey: readonly unknown[] }) => {
+        calls.push(`invalidate:${queryKey.join('/')}`);
+        return Promise.resolve();
+      },
+      refetchQueries: ({ queryKey }: { queryKey: readonly unknown[] }) => {
+        calls.push(`refetch:${queryKey.join('/')}`);
+        return Promise.resolve();
+      },
+    } as unknown as QueryClient;
+    const { setProviderSession } = await import('@/state/session/tokens');
+    setProviderSession('letterboxd', { accessToken: '', username: 'gian' });
+
+    await refreshUpNextInputs(client);
+
+    // The CDN calendar files are absent on purpose: they keep their hour.
+    expect(calls).toEqual([
+      'invalidate:trakt/watched-shows',
+      'invalidate:trakt/show-progress',
+      'invalidate:trakt/my-calendar',
+      'invalidate:simkl/all-items',
+      'invalidate:anilist/current-anime-entries',
+      'invalidate:letterboxd/watchlist/gian',
+      'refetch:up-next/inputs',
+    ]);
+  });
+});
+
+// Both gathers must observe cancellation before a late provider can restore purged data.
+for (const name of ['up-next', 'watchlist'] as const) {
+  test(`${name} does not repopulate a purged cache when a provider finishes late`, async () => {
+    const { watchlistOptions } = await import('./watchlist');
+    const late = Promise.withResolvers<AniListCurrentEntry[]>();
+    const legs = { fetchQuery: () => late.promise } as unknown as QueryClient;
+    const options = name === 'up-next'
+      ? upNextOptions(legs, ['anilist'])
+      : watchlistOptions(legs, ['anilist']);
+    const client = new QueryClient();
+    const pending = client.fetchQuery<unknown>(options).catch(() => undefined);
+    await Promise.resolve();
+    client.removeQueries({ queryKey: options.queryKey });
+    late.resolve([animeEntry(1)]);
+    await pending;
+    // Drain the cancelled stream, which still owns the in-flight provider read.
+    await Bun.sleep(0);
+    expect(client.getQueryData(options.queryKey)).toBeUndefined();
+    client.clear();
+  });
+}

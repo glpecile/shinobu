@@ -1,4 +1,5 @@
 import {
+  experimental_streamedQuery as streamedQuery,
   useQueryClient,
   useSuspenseQuery,
   type QueryClient,
@@ -42,12 +43,13 @@ import {
   traktCalendarRange,
 } from '@/lib/providers/trakt/reads';
 import { useConnectedProviders } from '@/state/session';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { fetchCurrentAnimeEntries } from './anilist';
-import { fetchLetterboxdReleaseInputs } from './letterboxd';
+import { anilistQueryKeys, fetchCurrentAnimeEntries } from './anilist';
+import { fetchLetterboxdReleaseInputs, letterboxdQueryKeys } from './letterboxd';
 import { cachedAniZipIds } from './mapping';
-import { none, settle } from './settle';
+import { none, settle, streamLegs } from './settle';
 import { simklDeps, simklQueryKeys, simklWatchingLibraryQuery } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { UP_NEXT_QUERY_ROOT } from './up-next-cache';
@@ -532,14 +534,17 @@ async function simklTrackedItems(queryClient: QueryClient): Promise<{
 async function simklCalendarInputs(
   queryClient: QueryClient,
 ): Promise<CalendarUpNextInput[]> {
-  const tracked = await simklTrackedItems(queryClient);
-  // Nothing tracked means no row can survive the intersection — skip two
-  // megabyte-class downloads that could only produce [].
-  if (tracked.episodes.size === 0) return [];
-  const [tv, anime] = await Promise.all([
+  // Started beside the library reads rather than after them, which takes a
+  // round trip off Up Next's cold load. An empty library still downloads the
+  // files; their failure only counts once something is tracked.
+  const files = Promise.all([
     simklCalendarFile(queryClient, 'tv'),
     simklCalendarFile(queryClient, 'anime'),
   ]);
+  files.catch(() => {});
+  const tracked = await simklTrackedItems(queryClient);
+  if (tracked.episodes.size === 0) return [];
+  const [tv, anime] = await files;
   return [...tv, ...anime].flatMap((entry): CalendarUpNextInput[] => {
     const item = tracked.episodes.get(entry.simklId);
     if (item == null || entry.episode == null) return [];
@@ -580,9 +585,12 @@ async function simklCalendarInputs(
 async function simklReleaseInputs(
   queryClient: QueryClient,
 ): Promise<ReleaseUpNextInput[]> {
+  // Parallel to the library reads, like the episode files above.
+  const file = simklCalendarFile(queryClient, 'movie_release');
+  file.catch(() => {});
   const tracked = await simklTrackedItems(queryClient);
   if (tracked.movies.size === 0) return [];
-  const rows = await simklCalendarFile(queryClient, 'movie_release');
+  const rows = await file;
   return rows.flatMap((entry): ReleaseUpNextInput[] => {
     const item = tracked.movies.get(entry.simklId);
     if (item == null) return [];
@@ -679,94 +687,138 @@ async function anilistInputs(
  * provider-tagged `progress`/`calendar`/`releases` legs when connected, and
  * `computeUpNext` owns the cross-tracker collapse (KTD-10).
  */
-export async function fetchUpNextInputs(
+function streamUpNextInputs(
   queryClient: QueryClient,
   connected: readonly ProviderId[],
-): Promise<UpNextInputs> {
+): AsyncGenerator<UpNextInputs> {
   const feedProviders = providersForFeed(connected);
   const wantsTrakt = feedProviders.includes('trakt');
   const wantsSimkl = feedProviders.includes('simkl');
   const wantsAniList = feedProviders.includes('anilist');
   const wantsLetterboxd = feedProviders.includes('letterboxd');
+  const [movies, streaming] = MOVIE_CALENDARS;
 
-  const [
-    trakt,
-    traktCalendar,
-    movieCalendars,
-    simklProgress,
-    simklCalendar,
-    simklReleases,
-    letterboxd,
-    anilist,
-  ] = await Promise.all([
-    wantsTrakt
-      ? settle('trakt', () => traktInputs(queryClient))
-      : none<ProgressUpNextInput>(),
-    wantsTrakt
-      ? settle('trakt', () => traktCalendarInputs(queryClient))
-      : none<CalendarUpNextInput>(),
-    Promise.all(
-      MOVIE_CALENDARS.map((calendar) =>
-        wantsTrakt
-          ? settle('trakt', () => traktReleaseInputs(queryClient, calendar))
-          : none<ReleaseUpNextInput>(),
-      ),
-    ),
-    wantsSimkl
-      ? settle('simkl', () => simklInputs(queryClient))
-      : none<ProgressUpNextInput>(),
-    wantsSimkl
-      ? settle('simkl', () => simklCalendarInputs(queryClient))
-      : none<CalendarUpNextInput>(),
-    wantsSimkl
-      ? settle('simkl', () => simklReleaseInputs(queryClient))
-      : none<ReleaseUpNextInput>(),
-    wantsLetterboxd
-      ? settle('letterboxd', () =>
-          fetchLetterboxdReleaseInputs(queryClient, new Date()),
-        )
-      : none<ReleaseUpNextInput>(),
-    wantsAniList
-      ? settle('anilist', () =>
-          anilistInputs(queryClient, wantsTrakt || wantsSimkl),
-        )
-      : none<AniListUpNextInput>(),
-  ]);
-
-  return {
-    progress: [...trakt.inputs, ...simklProgress.inputs],
-    calendar: [...traktCalendar.inputs, ...simklCalendar.inputs],
-    // One array, four sources: dedupe collapses a film watchlisted in several
-    // places to a single row per release kind (KTD-6), which is only possible
-    // because every source's rows carry (or resolve) the same TMDB id. Simkl
-    // first — `dedupeReleases` keeps the first row in per `(tmdb, kind)`, and
-    // Simkl wins a metadata conflict (KTD-10/R10).
-    releases: [
-      ...simklReleases.inputs,
-      ...movieCalendars.flatMap((calendar) => calendar.inputs),
-      ...letterboxd.inputs,
+  return streamLegs(
+    [
+      wantsTrakt
+        ? settle('trakt', () => traktInputs(queryClient))
+        : none<ProgressUpNextInput>(),
+      wantsTrakt
+        ? settle('trakt', () => traktCalendarInputs(queryClient))
+        : none<CalendarUpNextInput>(),
+      wantsTrakt
+        ? settle('trakt', () => traktReleaseInputs(queryClient, movies))
+        : none<ReleaseUpNextInput>(),
+      wantsTrakt
+        ? settle('trakt', () => traktReleaseInputs(queryClient, streaming))
+        : none<ReleaseUpNextInput>(),
+      wantsSimkl
+        ? settle('simkl', () => simklInputs(queryClient))
+        : none<ProgressUpNextInput>(),
+      wantsSimkl
+        ? settle('simkl', () => simklCalendarInputs(queryClient))
+        : none<CalendarUpNextInput>(),
+      wantsSimkl
+        ? settle('simkl', () => simklReleaseInputs(queryClient))
+        : none<ReleaseUpNextInput>(),
+      wantsLetterboxd
+        ? settle('letterboxd', () =>
+            fetchLetterboxdReleaseInputs(queryClient, new Date()),
+          )
+        : none<ReleaseUpNextInput>(),
+      wantsAniList
+        ? settle('anilist', () =>
+            anilistInputs(queryClient, wantsTrakt || wantsSimkl),
+          )
+        : none<AniListUpNextInput>(),
     ],
-    anilist: anilist.inputs,
-    errors: [
-      ...trakt.errors,
-      ...traktCalendar.errors,
-      ...movieCalendars.flatMap((calendar) => calendar.errors),
-      ...simklProgress.errors,
-      ...simklCalendar.errors,
-      ...simklReleases.errors,
-      ...letterboxd.errors,
-      ...anilist.errors,
-    ],
-  };
+    (legs) => {
+      const [
+        trakt,
+        traktCalendar,
+        traktMovies,
+        traktStreaming,
+        simklProgress,
+        simklCalendar,
+        simklReleases,
+        letterboxd,
+        anilist,
+      ] = legs.map((leg) => leg ?? none()) as {
+        [K in keyof typeof legs]: NonNullable<(typeof legs)[K]>;
+      };
+      return {
+        progress: [...trakt.inputs, ...simklProgress.inputs],
+        calendar: [...traktCalendar.inputs, ...simklCalendar.inputs],
+        // One array, four sources: dedupe collapses a film watchlisted in several
+        // places to a single row per release kind (KTD-6), which is only possible
+        // because every source's rows carry (or resolve) the same TMDB id. Simkl
+        // first — `dedupeReleases` keeps the first row in per `(tmdb, kind)`, and
+        // Simkl wins a metadata conflict (KTD-10/R10).
+        releases: [
+          ...simklReleases.inputs,
+          ...traktMovies.inputs,
+          ...traktStreaming.inputs,
+          ...letterboxd.inputs,
+        ],
+        anilist: anilist.inputs,
+        errors: [
+          ...trakt.errors,
+          ...traktCalendar.errors,
+          ...traktMovies.errors,
+          ...traktStreaming.errors,
+          ...simklProgress.errors,
+          ...simklCalendar.errors,
+          ...simklReleases.errors,
+          ...letterboxd.errors,
+          ...anilist.errors,
+        ],
+      };
+    },
+    (partial) =>
+      partial.progress.length + partial.calendar.length + partial.releases.length +
+        partial.anilist.length > 0,
+  );
 }
 
+const NO_UP_NEXT_INPUTS: UpNextInputs = {
+  progress: [],
+  calendar: [],
+  releases: [],
+  anilist: [],
+  errors: [],
+};
+
+export async function fetchUpNextInputs(
+  queryClient: QueryClient,
+  connected: readonly ProviderId[],
+): Promise<UpNextInputs> {
+  let inputs = NO_UP_NEXT_INPUTS;
+  for await (const partial of streamUpNextInputs(queryClient, connected)) inputs = partial;
+  return inputs;
+}
+
+/**
+ * A cold slot streams: the sections render once the first source with inputs
+ * settles, and the rest join as they arrive. `replace` keeps a refetch on the
+ * old inputs until every source is back, so a restored or refreshed slot never
+ * shrinks to a partial one.
+ */
 export function upNextOptions(
   queryClient: QueryClient,
   connected: readonly ProviderId[],
 ) {
   return {
     queryKey: upNextQueryKeys.inputs(),
-    queryFn: () => fetchUpNextInputs(queryClient, connected),
+    queryFn: streamedQuery<UpNextInputs, UpNextInputs>({
+      streamFn: (context) => {
+        // Reading the signal lets streamedQuery stop cache writes after a purge.
+        void context.signal;
+        return streamUpNextInputs(queryClient, connected);
+      },
+      reducer: (_previous, partial) => partial,
+      initialValue: NO_UP_NEXT_INPUTS,
+      refetchMode: 'replace',
+    }),
   };
 }
 
@@ -780,6 +832,27 @@ export function prefetchUpNextInputs(
   connected: readonly ProviderId[],
 ): Promise<void> {
   return queryClient.prefetchQuery(upNextOptions(queryClient, connected));
+}
+
+/**
+ * Pull-to-refresh for the slot. Like `refreshWatchlistInputs`, it marks each
+ * leg's own entry stale first: the legs ride `fetchQuery` staleTimes of up to
+ * 15 minutes, so refetching the gather alone re-serves them. The Simkl CDN
+ * calendar files keep their hour; they move only when a broadcaster does.
+ */
+export async function refreshUpNextInputs(queryClient: QueryClient): Promise<void> {
+  const username = getLetterboxdUsername();
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() }),
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.showProgress(0).slice(0, -1) }),
+    queryClient.invalidateQueries({ queryKey: traktQueryKeys.myCalendarRoot() }),
+    queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() }),
+    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnimeEntries() }),
+    ...(username == null
+      ? []
+      : [queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.watchlist(username) })]),
+  ]);
+  await queryClient.refetchQueries({ queryKey: upNextQueryKeys.inputs() });
 }
 
 export interface UpNextResult extends UpNextData {

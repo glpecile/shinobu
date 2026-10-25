@@ -233,7 +233,11 @@ export function retainPersistedQueries(queryClient: QueryClient): QueryClient {
 
 /** Errored and pending queries are never written: only settled data restores. */
 export function shouldPersistQuery(query: Query): boolean {
-  return query.state.status === 'success' && isPersistedQueryKey(query.queryKey);
+  // A cold streamed gather is successful before its last provider has arrived.
+  const streaming = query.queryKey[0] === 'up-next' || query.queryKey[0] === 'watchlist';
+  return query.state.status === 'success' &&
+    (!streaming || query.state.fetchStatus === 'idle') &&
+    isPersistedQueryKey(query.queryKey);
 }
 
 export function createQueryPersister(): Persister {

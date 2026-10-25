@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { List } from '@/components/List';
 import { useRailFade } from '@/components/rail';
+import { SectionEnter, useArrivalHistory } from '@/components/section-enter';
 import { ViewAllLink } from '@/components/view-all-link';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -54,6 +55,7 @@ export function MediaCarousel({
   onViewAll,
 }: MediaCarouselProps) {
   const { scrollProps, fade } = useRailFade();
+  const arrivalHistory = useArrivalHistory(items.map((item) => item.id));
 
   if (items.length === 0) return null;
 
@@ -84,15 +86,20 @@ export function MediaCarousel({
           // carries `mr-3`.
           ListHeaderComponent={<View style={{ width: EDGE_GUTTER }} />}
           ListFooterComponent={<View style={{ width: EDGE_GUTTER - CARD_GAP }} />}
-          renderItem={({ item }) => (
-            <View className="mr-3">
+          renderItem={({ item }) => {
+            const card = (
               <MediaCard
                 item={item}
                 onActionsPress={onItemActions}
                 subtitle={subtitles?.[item.id]}
               />
-            </View>
-          )}
+            );
+            return (
+              <View className="mr-3">
+                <SectionEnter arrival={{ id: item.id, seen: arrivalHistory }}>{card}</SectionEnter>
+              </View>
+            );
+          }}
           showsHorizontalScrollIndicator={false}
           style={{ height: CARD_HEIGHT }}
           {...scrollProps}

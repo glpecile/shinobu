@@ -39,7 +39,7 @@ mock.module('expo-crypto', () => ({
 const { anilistQueryKeys } = await import('./anilist');
 const { diaryQueryKeys } = await import('./diary-pages');
 const { letterboxdQueryKeys } = await import('./letterboxd');
-const { createQueryPersister, deserialize, isPersistedQueryKey, serialize } = await import('./persist');
+const { createQueryPersister, deserialize, isPersistedQueryKey, serialize, shouldPersistQuery } = await import('./persist');
 const { PersistQueryClientProvider } = await import('./persist-provider');
 const { traktQueryKeys } = await import('./trakt');
 const { simklQueryKeys } = await import('./simkl');
@@ -280,4 +280,16 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(['up-next'])).toBe(false);
     expect(isPersistedQueryKey(['watchlist-elsewhere', 'inputs'])).toBe(false);
   });
+});
+
+test('partial streamed gathers persist only after their final provider settles', async () => {
+  const client = new QueryClient();
+  for (const queryKey of [upNextQueryKeys.inputs(), watchlistQueryKeys.inputs()]) {
+    const query = client.getQueryCache().build<unknown, Error, unknown, readonly unknown[]>(client, { queryKey });
+    query.setState({ status: 'success', fetchStatus: 'fetching', data: { inputs: [] } });
+    expect(shouldPersistQuery(query)).toBe(false);
+    query.setState({ fetchStatus: 'idle' });
+    expect(shouldPersistQuery(query)).toBe(true);
+  }
+  client.clear();
 });
