@@ -81,7 +81,8 @@ export function diaryStates(pages: readonly DiaryPage[]): DiaryPageState[] {
     for (const [provider, slice] of Object.entries(page.slices) as Array<
       [ProviderId, DiarySlice]
     >) {
-      const entries = [...(byProvider.get(provider)?.entries ?? []), ...slice.entries];
+      const entries = byProvider.get(provider)?.entries ?? [];
+      for (const entry of slice.entries) entries.push(entry);
       const failed = slice.error != null && entries.length === 0;
       byProvider.set(provider, {
         provider,

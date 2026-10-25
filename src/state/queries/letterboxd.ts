@@ -127,6 +127,8 @@ export const letterboxdQueryKeys = {
   film: (slug: string) => [...letterboxdQueryKeys.all, 'film', slug] as const,
   slug: (tmdbId: number) => [...letterboxdQueryKeys.all, 'slug', tmdbId] as const,
   filmWatchesRoot: () => [...letterboxdQueryKeys.all, 'film-watch'] as const,
+  diaryRoot: () => [...letterboxdQueryKeys.all, 'diary'] as const,
+  diary: (username: string) => [...letterboxdQueryKeys.diaryRoot(), username] as const,
   filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? null : null] as const,
   poster: (slug: string) => [...letterboxdQueryKeys.all, 'poster', slug] as const,
   watchlist: (username: string) =>
