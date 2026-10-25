@@ -60,12 +60,14 @@ describe('diaryStates', () => {
   test('a failed later page keeps the entries and retries that page', () => {
     const pages: DiaryPage[] = [
       { slices: { trakt: { entries: [diaryEntry('a')], next: 2 } } },
-      { slices: { trakt: { entries: [], next: 2, error: 'boom' } } },
+      { slices: { trakt: { entries: [diaryEntry('b')], next: 3 } } },
+      { slices: { trakt: { entries: [], next: 3, error: 'boom' } } },
     ];
+    for (const page of pages) Object.freeze(page.slices.trakt!.entries);
     const [state] = diaryStates(pages);
-    expect(state.entries).toHaveLength(1);
+    expect(state.entries.map((entry) => entry.item.id)).toEqual(['a', 'b']);
     expect(state).toMatchObject({ failed: false, hasMore: true, error: 'boom' });
-    expect(nextDiaryCursor(pages)).toEqual({ trakt: 2 });
+    expect(nextDiaryCursor(pages)).toEqual({ trakt: 3 });
   });
 });
 

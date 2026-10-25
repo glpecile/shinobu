@@ -55,6 +55,7 @@ const ITEM: NormalizedMediaItem = {
 function recordingClient(): { client: QueryClient; keys: string[] } {
   const keys: string[] = [];
   const client = {
+    cancelQueries: () => Promise.resolve(),
     invalidateQueries: ({ queryKey }: { queryKey: readonly unknown[] }) => {
       keys.push(queryKey.join('/'));
     },

@@ -637,6 +637,10 @@ export function invalidateAfterLog(
   }
   if (succeeded.includes('letterboxd')) {
     queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.filmWatchesRoot() });
+    // A pre-write RSS response must not repopulate the shared input as fresh.
+    void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
+    void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
+    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' });
   }
   // Every diary provider's write lands a new log — the unified diary must
   // show it on its next visit (plan 0016 KTD9). One query, one invalidation.

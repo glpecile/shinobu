@@ -30,7 +30,7 @@ import {
   type DiaryPage,
   type DiarySlice,
 } from './diary-pages';
-import { letterboxdDeps } from './letterboxd';
+import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { serializdDeps } from './serializd';
 import type { ProviderFailure } from './settle';
 import { simklLibraryQuery, simklQueryKeys } from './simkl';
@@ -43,6 +43,18 @@ import { traktDeps } from './trakt';
 // windowing would drop them wholesale after a deep scroll.
 const PAGE_SIZE = 50;
 const DIARY_STALE_MS = 5 * 60_000;
+
+/** The same RSS window serves the diary and every film's dated plays. */
+function letterboxdDiaryQuery() {
+  return {
+    queryKey: letterboxdQueryKeys.diary(getLetterboxdUsername() ?? ''),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 }), { signal }),
+    staleTime: DIARY_STALE_MS,
+    // The unified page settles failures itself; don't delay it with retries.
+    retry: false,
+  };
+}
 
 /** A short final page signals end-of-history; a full page has a successor. */
 function pageAfter(entries: NormalizedDiaryEntry[], page: number) {
@@ -93,8 +105,8 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
   // exhausts after page 1 and drops out of the watermark early. On web it
   // reads through the Worker proxy (plan 0018); native reads letterboxd.com.
-  letterboxd: async (_queryClient, _page, signal) => ({
-    entries: await Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 }), { signal }),
+  letterboxd: async (queryClient) => ({
+    entries: await queryClient.fetchQuery(letterboxdDiaryQuery()),
     next: undefined,
   }),
   // A real paginated read: the page carries `{ entries, totalPages }`.
@@ -203,11 +215,15 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     hasNextPage: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     fetchNextPage: () => {
-      void query.fetchNextPage();
+      void query.fetchNextPage({ cancelRefetch: false });
     },
-    // Pull-to-refresh must re-read Simkl's library, not serve the shared copy.
+    // Refresh the shared reads before the unified page asks for them.
     refetch: async () => {
-      await queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot(), refetchType: 'none' });
+      await queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot(), refetchType: 'none' }),
+        queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.diaryRoot(), refetchType: 'none' }),
+      ]);
       return query.refetch();
     },
   };
@@ -258,7 +274,7 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
           ? fetchAniListActivityPage(queryClient, 1, anilist, signal)
           : [],
         providers.includes('letterboxd') && (tmdb != null || letterboxd != null)
-          ? Effect.runPromise(getDiary(letterboxdDeps(), { page: 1 }), { signal }).then((entries) =>
+          ? queryClient.fetchQuery(letterboxdDiaryQuery()).then((entries) =>
               entries.filter(
                 (entry) =>
                   (tmdb != null && entry.item.externalIds.tmdb === tmdb) ||
