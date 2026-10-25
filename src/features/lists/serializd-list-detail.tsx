@@ -120,14 +120,14 @@ export function SerializdListSkeleton({ shareHref, signedIn }: { shareHref?: str
   const compact = useWindowDimensions().width < 640;
   return (
     <>
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="serializd" shareHref={shareHref} subtitle="" />
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider="serializd" shareHref={shareHref} subtitle="" />
       <MediaToolbarSkeleton actions={signedIn && compact ? 2 : 1} labelled={signedIn && !compact} scope="lists" />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>
           <Skeleton className="w-12 h-18 rounded" delay={staggerDelay(index)} />
           <View className="gap-2">
-            <Skeleton className="h-5 w-40 rounded" delay={staggerDelay(index)} />
-            <Skeleton className="h-3 w-24 rounded" delay={staggerDelay(index)} />
+            <Skeleton className="h-5 w-40 rounded-full" delay={staggerDelay(index)} />
+            <Skeleton className="h-3 w-24 rounded-full" delay={staggerDelay(index)} />
           </View>
         </View>
       ))}

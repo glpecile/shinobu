@@ -95,7 +95,7 @@ export function ListFilmsSkeleton({ likeButton, owned, shareHref }: { likeButton
   const compact = useWindowDimensions().width < 640;
   return (
     <View className="flex-1">
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded" />} provider="letterboxd" shareHref={shareHref} subtitle="" />
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider="letterboxd" shareHref={shareHref} subtitle="" />
       <MediaToolbarSkeleton actions={1 + (likeButton ? 1 : 0) + (owned && compact ? 1 : 0)} labelled={owned && !compact} layout scope="lists" />
       <WallSkeleton />
     </View>

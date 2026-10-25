@@ -30,8 +30,8 @@ function RowsSkeleton({ animated }: { animated: boolean }) {
         <View className="flex-row items-center px-6 py-2.5" key={index}>
           <Skeleton animated={animated} className="w-12 h-18 rounded" delay={staggerDelay(index)} />
           <View className="ml-4 gap-2">
-            <Skeleton animated={animated} className="h-4 w-44 rounded" delay={staggerDelay(index)} />
-            <Skeleton animated={animated} className="h-3 w-24 rounded" delay={staggerDelay(index)} />
+            <Skeleton animated={animated} className="h-4 w-44 rounded-full" delay={staggerDelay(index)} />
+            <Skeleton animated={animated} className="h-3 w-24 rounded-full" delay={staggerDelay(index)} />
           </View>
         </View>
       ))}
