@@ -237,7 +237,7 @@
         ],
         "contracts": [
           {
-            "pattern": "^(Animated\\w+|GestureScrollView|Presstable\\w+|Image|ZoomableImage|KeyboardAvoidingView|KeyboardAwareScrollView|RefreshableScrollView|List|Skeleton|PosterPlaceholder|MorphText|BlurEnter|SectionEnter)$",
+            "pattern": "^(Animated\\w+|GestureScrollView|Presstable\\w+|Image|ZoomableImage|KeyboardAvoidingView|KeyboardAwareScrollView|RefreshableScrollView|CollapsibleSectionScroll|List|Skeleton|PosterPlaceholder|MorphText|BlurEnter|SectionEnter)$",
             "allow": [
               "layout",
               "spacing",

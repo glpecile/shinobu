@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { MediaCarousel } from '@/components/media-carousel';
+import { ProviderIcon } from '@/components/provider-icon';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
@@ -19,7 +20,7 @@ function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type:
         collapseKey="details-relations"
         items={data.relations.map((relation) => relation.item)}
         onItemActions={onItemActions}
-        provider="anilist"
+        leading={<ProviderIcon id="anilist" size={16} />}
         subtitles={Object.fromEntries(
           data.relations.map((relation) => [relation.item.id, relation.relation]),
         )}
@@ -39,7 +40,7 @@ function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: num
             collapseKey="details-recommendations"
             items={data.recommendations}
             onItemActions={onItemActions}
-            provider="anilist"
+            leading={<ProviderIcon id="anilist" size={16} />}
             title="Recommendations"
           />
         </View>

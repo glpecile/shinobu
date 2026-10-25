@@ -112,7 +112,7 @@ export function UpNextSectionSkeleton() {
   return (
     <View>
       {/* Continue Watching */}
-      <CollapsibleSection collapseKey="up-next-continue" title="Continue Watching">
+      <CollapsibleSection collapseKey="up-next-continue" leading={<CollapsibleSection.Icon name="play-circle-outline" />} title="Continue Watching">
         <View style={{ height: cardRailHeight }}>
           <Rail className="px-4">
             {Array.from({ length: cardCount }).map((_, index) => (
@@ -123,7 +123,7 @@ export function UpNextSectionSkeleton() {
       </CollapsibleSection>
 
       {/* This week */}
-      <CollapsibleSection collapseKey="up-next-calendar" title="This week">
+      <CollapsibleSection collapseKey="up-next-calendar" leading={<CollapsibleSection.Icon name="calendar-outline" />} title="This week">
         <Rail
           className="px-4"
         >

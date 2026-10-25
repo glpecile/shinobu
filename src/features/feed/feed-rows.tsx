@@ -1,7 +1,9 @@
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { CollapsibleSection } from '@/components/collapsible-section';
 import { MediaCarousel } from '@/components/media-carousel';
+import { ProviderIcon } from '@/components/provider-icon';
 import { haptics } from '@/lib/haptics';
 import {
   animeSeasonLabel,
@@ -68,6 +70,7 @@ export function YourWatchlistRow({
       collapseKey="your-watchlist"
       items={items}
       onItemActions={onItemActions}
+      leading={<CollapsibleSection.Icon name="bookmark-outline" />}
       onViewAll={() => pushRoute(routes.watchlist())}
       title="Your Watchlist"
     />
@@ -111,7 +114,7 @@ export function LetterboxdWatchlistRow({
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.watchlist('letterboxd'))}
-      provider="letterboxd"
+      leading={<ProviderIcon id="letterboxd" size={16} />}
       title="Watchlist"
     />
   );
@@ -127,7 +130,7 @@ export function TrendingMoviesRow({
       collapseKey="trending-movies"
       items={items}
       onItemActions={onItemActions}
-      provider="simkl"
+      leading={<ProviderIcon id="simkl" size={16} />}
       title="Trending Movies"
     />
   );
@@ -143,7 +146,7 @@ export function TrendingShowsRow({
       collapseKey="trending-shows"
       items={items}
       onItemActions={onItemActions}
-      provider="simkl"
+      leading={<ProviderIcon id="simkl" size={16} />}
       title="Trending TV Shows"
     />
   );
@@ -164,7 +167,7 @@ export function SeasonalAnimeRow({
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
-      provider="anilist"
+      leading={<ProviderIcon id="anilist" size={16} />}
       title={`Anime of ${animeSeasonLabel(season)}`}
     />
   );
@@ -191,7 +194,7 @@ export function AnimeMoviesRow({
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
-      provider="anilist"
+      leading={<ProviderIcon id="anilist" size={16} />}
       title={`Films of ${animeSeasonLabel(season)}`}
     />
   );
