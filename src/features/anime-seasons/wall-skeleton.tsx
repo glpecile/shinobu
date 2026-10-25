@@ -13,9 +13,9 @@ function GridSkeleton({ animated }: { animated: boolean }) {
         <View
           className="p-1"
           key={index}
-          style={{ width: `${100 / columns}%`, aspectRatio: 2 / 3 }}
+          style={{ width: `${100 / columns}%` }}
         >
-          <Skeleton animated={animated} className="w-full h-full rounded-md" delay={staggerDelay(index)} />
+          <Skeleton animated={animated} className="w-full aspect-2/3 rounded-md" delay={staggerDelay(index)} />
         </View>
       ))}
     </View>
@@ -30,8 +30,8 @@ function RowsSkeleton({ animated }: { animated: boolean }) {
         <View className="flex-row items-center px-6 py-2.5" key={index}>
           <Skeleton animated={animated} className="w-12 h-18 rounded" delay={staggerDelay(index)} />
           <View className="ml-4 gap-2">
-            <Skeleton animated={animated} className="h-4 w-44 rounded" delay={staggerDelay(index)} />
-            <Skeleton animated={animated} className="h-3 w-24 rounded" delay={staggerDelay(index)} />
+            <Skeleton animated={animated} className="h-4 w-44 rounded-full" delay={staggerDelay(index)} />
+            <Skeleton animated={animated} className="h-3 w-24 rounded-full" delay={staggerDelay(index)} />
           </View>
         </View>
       ))}

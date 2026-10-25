@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Button } from '@/components/button';
 import { MorphText } from '@/components/morph-text';
 import { ProgressRing } from '@/components/progress-ring';
+import { Spinner } from '@/components/spinner';
 import { Tooltip } from '@/components/tooltip';
 import type { useMediaProgress } from '@/state/queries/media-progress';
 
@@ -16,13 +17,15 @@ export function ListProgress({ state, countLabel, partial = false }: { state: Re
   const ready = connected && items.length > 0 && !loading && !failed;
   return (
     <View className="flex-row flex-wrap items-center gap-2">
-      <Tooltip label={ready ? label : countLabel}>
-        <View accessible className="flex-row items-center gap-2" accessibilityLabel={`${ready ? label : countLabel}${started > 0 ? ` · ${started} started` : ''}`}>
-          {ready && <ProgressRing label={label} max={items.length} value={completed} />}
+      <Tooltip label={loading ? 'Checking watch history' : ready ? label : countLabel}>
+        <View accessible className="flex-row items-center gap-2" accessibilityLabel={`${loading ? 'Checking watch history. ' : ''}${ready ? label : countLabel}${started > 0 ? ` · ${started} started` : ''}`}>
+          {(ready || loading) && <View className="size-5 items-center justify-center">
+            {loading ? <Spinner /> : <ProgressRing label={label} max={items.length} value={completed} />}
+          </View>}
           <MorphText className="font-sans text-sm text-muted tabular-nums">{ready ? `${completed}/${countLabel}` : countLabel}</MorphText>
         </View>
       </Tooltip>
-      {(failed || loading) && <Tooltip label={loading ? 'Checking watch history' : 'Couldn’t check watch history. Retry'}><Button icon={<Button.Icon name="refresh" />} iconOnly label={loading ? 'Checking watch history' : 'Retry watch history'} loading={loading} onPress={() => void retry()} size="sm" variant="ghost" /></Tooltip>}
+      {failed && !loading && <Tooltip label="Couldn’t check watch history. Retry"><Button icon={<Button.Icon name="refresh" />} iconOnly label="Retry watch history" onPress={() => void retry()} size="sm" variant="ghost" /></Tooltip>}
     </View>
   );
 }
