@@ -5,10 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
 import Head from '@/components/head';
-import { Keyboard, ScrollView, Text, type TextInputInstance, View } from 'react-native';
+import { Keyboard, Text, type TextInputInstance, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
-import { AnimatedView } from '@/components/animated-view';
+import { AnimatedView, GestureScrollView } from '@/components/animated-view';
 import { CenteredNotice } from '@/components/centered-notice';
 import { Eyebrow } from '@/components/eyebrow';
 import { Fab } from '@/components/fab';
@@ -528,7 +528,7 @@ export default function SearchScreen() {
             <View className="flex-1">
               {state === 'idle' ? (
                 scope.value === 'titles' ? (
-                  <ScrollView
+                  <GestureScrollView
                     className="flex-1"
                     contentContainerClassName="pb-28"
                     keyboardDismissMode="on-drag"
@@ -546,7 +546,7 @@ export default function SearchScreen() {
                     <SuspenseSection fallback={<FeedRowSkeleton />}>
                       <TrendingShowsRow onItemActions={openActions} />
                     </SuspenseSection>
-                  </ScrollView>
+                  </GestureScrollView>
                 ) : (
                   <CenteredNotice className="-mt-16">
                     <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>

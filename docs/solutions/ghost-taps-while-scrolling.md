@@ -31,3 +31,13 @@ the drag becomes a scroll and cancels the button under the finger.
 
 A new scroll surface whose rows are pressables uses `GestureScrollView`, not
 `react-native`'s `ScrollView`.
+
+## Pull-to-refresh on Android
+
+A downward drag at the top of a list started a refresh and then fired the
+button the drag started on, such as Add to watchlist or a diary day's
+collapse chevron. Android's `SwipeRefreshLayout` takes the pull natively, so no
+gesture-handler gesture activates to cancel the button. gesture-handler 3's
+`BaseButton` presses on any lift that wasn't cancelled and reports
+`pointerInside` to `onPress`, which pressto drops. `Presstable*` sets
+`shouldCancelWhenOutside`, so a press that leaves the button's bounds cancels.
