@@ -7,6 +7,7 @@ import {
 } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
+import { SectionEnter } from '@/components/section-enter';
 import type { CardBadge } from '@/features/up-next/badges';
 import type { UpNextGroup } from '@/features/up-next/group';
 import { DURATION } from '@/lib/motion';
@@ -35,23 +36,34 @@ interface CardSlotProps {
   group: UpNextGroup;
   badges?: CardBadge[];
   action?: ReactNode;
+  /** Shared by the rail so remounted cards do not repeat their entrance. */
+  arrival?: { id: string; seen: Set<string> };
   onPress: (item: NormalizedMediaItem) => void;
   onActionsPress: (item: NormalizedMediaItem) => void;
 }
 
 /**
  * An `EpisodeCard` in a rail, carrying the row's exit and layout transitions.
- * No `entering`: the section rises in as one and a card must not perform on
- * load.
+ * Only a new arrival rises in: on load the section rises in as one.
  */
 export function CardSlot({
   group,
   badges,
   action,
+  arrival,
   onPress,
   onActionsPress,
 }: CardSlotProps) {
   const reduceMotion = useReducedMotion();
+  const card = (
+    <EpisodeCard
+      action={action}
+      badges={badges}
+      group={group}
+      onActionsPress={onActionsPress}
+      onPress={onPress}
+    />
+  );
 
   return (
     <AnimatedView
@@ -59,13 +71,7 @@ export function CardSlot({
       exiting={CARD_EXIT}
       layout={reduceMotion ? undefined : CARD_LAYOUT}
     >
-      <EpisodeCard
-        action={action}
-        badges={badges}
-        group={group}
-        onActionsPress={onActionsPress}
-        onPress={onPress}
-      />
+      {arrival == null ? card : <SectionEnter arrival={arrival}>{card}</SectionEnter>}
     </AnimatedView>
   );
 }

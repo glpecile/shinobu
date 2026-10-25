@@ -18,15 +18,14 @@ import {
   type AnimeFormatFilter,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
-import { getWatchlist } from '@/lib/providers/letterboxd/watchlist';
 import { useHiddenItems } from '@/state/prefs/hidden-items';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { anilistQueryKeys, fetchSeasonalAnime } from './anilist';
-import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
+import { letterboxdQueryKeys, letterboxdWatchlistOptions } from './letterboxd';
 import { simklDeps, simklQueryKeys } from './simkl';
 import { serializdQueryKeys } from './serializd';
-import { upNextQueryKeys } from './up-next';
-import { watchlistQueryKeys } from './watchlist';
+import { refreshUpNextInputs } from './up-next';
+import { refreshWatchlistInputs } from './watchlist';
 
 /** One named row of the home feed — never index into the query array. */
 type FeedSlot =
@@ -110,10 +109,7 @@ export const feedOptions = {
     staleTime: CATALOGUE_STALE_MS,
   }),
   // Personal rows — only fetched while their provider is connected.
-  yourWatchlist: (username: string) => ({
-    queryKey: letterboxdQueryKeys.watchlist(username),
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getWatchlist(letterboxdDeps()), { signal }),
-  }),
+  yourWatchlist: (username: string) => letterboxdWatchlistOptions(username),
 };
 
 /**
@@ -219,66 +215,30 @@ export function useSuspenseYourWatchlistQuery(username: string) {
 }
 
 /**
- * Home sections that are query-backed but not `NormalizedMediaItem[]` rows, so
- * they never join `activeFeedConfigs` (the details screen's by-id resolution
- * must not trigger Up Next's per-show request fan). Pull-to-refresh still owns
- * them — this is the sibling registration plan 0019 U4 calls for.
- */
-function activeSectionKeys(
-  connected: readonly ProviderId[],
-): Array<{ slot: string; queryKey: readonly unknown[] }> {
-  const feedProviders = providersForFeed(connected);
-  if (feedProviders.length === 0) return [];
-  const keys: Array<{ slot: string; queryKey: readonly unknown[] }> = [];
-  if (hasUpNextSources(connected)) {
-    keys.push({ slot: 'upNext', queryKey: upNextQueryKeys.inputs() });
-  }
-  // The merged watchlist (plan 0031 KTD-11) — registered here for
-  // pull-to-refresh, **never** as a `feedOptions` slot: the slot contract is
-  // `NormalizedMediaItem[]` and `useUnifiedFeed` is also mounted by the details
-  // screen, so a slot would break the type *and* run the whole gather on every
-  // details open. The old `trakt`/`anilist` early return moved into the branch
-  // above for the same unit: a Letterboxd-only user — the one user who has this
-  // row today — must still reach their own watchlist through refresh.
-  keys.push({ slot: 'watchlist', queryKey: watchlistQueryKeys.inputs() });
-  if (feedProviders.includes('letterboxd')) {
-    keys.push({ slot: 'letterboxdLists', queryKey: letterboxdQueryKeys.listsRoot() });
-  }
-  if (feedProviders.includes('serializd')) {
-    keys.push({ slot: 'serializdLists', queryKey: serializdQueryKeys.listsRoot() });
-  }
-  if (feedProviders.includes('anilist')) {
-    // The network read behind the "Your Anime" row: refetching only the
-    // derived items key would re-derive from this cached entry (plan 0019 U2).
-    keys.push({
-      slot: 'currentAnimeEntries',
-      queryKey: anilistQueryKeys.currentAnimeEntries(),
-    });
-  }
-  return keys;
-}
-
-/**
- * Pull-to-refresh for the home feed: refetches every applicable feed query in
- * parallel and resolves once all settle. Kept out of the row hooks so the
- * screen-level `RefreshableScrollView` has one promise to wait on.
+ * Pull-to-refresh for the home feed: refreshes every section Home renders in
+ * parallel and resolves once all settle. The catalogue slots belong to Search,
+ * so they stay out. The gathers go through their refresh helpers, which mark
+ * each leg stale first; refetching a gather alone re-serves cached legs.
  */
 export function useRefetchUnifiedFeed() {
   const queryClient = useQueryClient();
   const connected = useConnectedProviders();
 
   function refetch() {
-    const targets = [
-      ...activeFeedConfigs(connected, queryClient, animeSeasonAt(new Date())),
-      ...activeSectionKeys(connected),
-    ];
+    const feedProviders = providersForFeed(connected);
     // allSettled, not all: one provider failing to refresh must not hide the
     // outcome of the others (partial-failure contract, AGENTS.md).
-    return Promise.allSettled(
-      targets.map((target) =>
-        queryClient.refetchQueries({ queryKey: target.queryKey }),
-      ),
-    );
+    return Promise.allSettled([
+      ...(hasUpNextSources(connected) ? [refreshUpNextInputs(queryClient)] : []),
+      // Also refreshes Letterboxd's own row, which reads the gather's page 1.
+      ...(feedProviders.length > 0 ? [refreshWatchlistInputs(queryClient)] : []),
+      ...(feedProviders.includes('letterboxd')
+        ? [queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.listsRoot() })]
+        : []),
+      ...(feedProviders.includes('serializd')
+        ? [queryClient.refetchQueries({ queryKey: serializdQueryKeys.listsRoot() })]
+        : []),
+    ]);
   }
 
   return refetch;

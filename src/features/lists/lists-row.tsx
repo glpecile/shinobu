@@ -9,7 +9,7 @@ import { usePushRoute } from '@/lib/navigation';
 import type { LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
 import type { SerializdListKind } from '@/lib/providers/serializd/lists';
 import { routes } from '@/lib/routes';
-import { useLetterboxdListsQuery } from '@/state/queries/letterboxd';
+import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
@@ -46,7 +46,7 @@ export function ListsRowSkeleton() {
 }
 
 export function LetterboxdListsRow({ username, kind }: { username: string; kind: LetterboxdListKind }) {
-  const pages = useLetterboxdListsQuery(username, kind);
+  const pages = useSuspenseLetterboxdListsQuery(username, kind);
   return <ListsRail indexHref={routes.letterboxdLists(kind)} kind={kind} lists={(pages.data?.pages[0]?.lists ?? []).map(letterboxdListSummary)} provider="letterboxd" />;
 }
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -31,17 +31,23 @@ const sectionFading = {
 export function SectionEnter({
   children,
   className,
+  arrival,
 }: {
   children: ReactNode;
   className?: string;
+  arrival?: { id: string; seen: Set<string> };
 }) {
   const reduceMotion = useReducedMotion();
+  const [animate] = useState(() => arrival == null || !arrival.seen.has(arrival.id));
 
   return (
     <AnimatedView
       className={className}
+      onCSSAnimationStart={() => {
+        if (arrival != null) arrival.seen.add(arrival.id);
+      }}
       style={{
-        animationName: reduceMotion ? sectionFading : sectionEntering,
+        animationName: animate ? (reduceMotion ? sectionFading : sectionEntering) : 'none',
         animationDuration: `${DURATION.swap}ms`,
         animationTimingFunction: EASE_OUT,
         // Native honours it; Reanimated's web path drops it, harmlessly.
@@ -51,4 +57,10 @@ export function SectionEnter({
       {children}
     </AnimatedView>
   );
+}
+
+/** Initial rows and started entrances stay still when a rail remounts them. */
+export function useArrivalHistory(ids: readonly string[]): Set<string> {
+  const [seen] = useState(() => new Set(ids));
+  return seen;
 }

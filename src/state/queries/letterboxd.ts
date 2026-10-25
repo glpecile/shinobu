@@ -359,14 +359,39 @@ export function useLetterboxdWatchlistPagesQuery() {
     ? (getLetterboxdUsername() ?? '')
     : '';
 
+  const queryClient = useQueryClient();
+
   return useInfiniteQuery({
+    ...letterboxdWatchlistPagesOptions(queryClient, username),
+    enabled: username !== '',
+  });
+}
+
+/** Page 1 of the watchlist: the feed row, Up Next's releases, and page 1 of the grid. */
+export function letterboxdWatchlistOptions(username: string) {
+  return {
+    queryKey: letterboxdQueryKeys.watchlist(username),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getWatchlist(letterboxdDeps()), { signal }),
+    staleTime: WATCHLIST_STALE_MS,
+  };
+}
+
+/**
+ * The paginated watchlist, shared by the grid and the merged gather. Page 1
+ * reads through the single-page entry, so home scrapes it once rather than
+ * once per key; invalidating the grid therefore names both keys.
+ */
+export function letterboxdWatchlistPagesOptions(queryClient: QueryClient, username: string) {
+  return infiniteQueryOptions({
     queryKey: letterboxdQueryKeys.watchlistPages(username),
     queryFn: ({ pageParam, signal }) =>
-      Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam }), { signal }),
+      pageParam === 1
+        ? queryClient.fetchQuery(letterboxdWatchlistOptions(username))
+        : Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam }), { signal }),
     initialPageParam: 1,
     getNextPageParam: (lastPage: NormalizedMediaItem[], _pages, lastPageParam) =>
       lastPage.length < WATCHLIST_PAGE_SIZE ? undefined : lastPageParam + 1,
-    enabled: username !== '',
   });
 }
 
@@ -443,11 +468,7 @@ export function fetchLetterboxdReleaseInputs(
   if (username === '' || tmdbToken() === '') return Promise.resolve([]);
 
   return queryClient
-    .fetchQuery({
-      queryKey: letterboxdQueryKeys.watchlist(username),
-      queryFn: ({ signal }) => Effect.runPromise(getWatchlist(letterboxdDeps()), { signal }),
-      staleTime: WATCHLIST_STALE_MS,
-    })
+    .fetchQuery(letterboxdWatchlistOptions(username))
     .then((films: NormalizedMediaItem[]) =>
       letterboxdReleaseInputs(films, now, resolveWatchlistFilm(queryClient)),
     );

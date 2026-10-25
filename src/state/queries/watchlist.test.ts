@@ -349,6 +349,7 @@ describe('refreshWatchlistInputs', () => {
       'invalidate:trakt/watchlist',
       'invalidate:anilist/current-anime-entries',
       'invalidate:simkl/all-items',
+      'invalidate:letterboxd/watchlist/gian',
       'invalidate:letterboxd/watchlist-pages/gian',
       'refetch:watchlist/inputs',
     ]);

@@ -1,4 +1,5 @@
 import {
+  experimental_streamedQuery as streamedQuery,
   hashKey,
   useQueryClient,
   useSuspenseQuery,
@@ -7,10 +8,7 @@ import {
 import { Effect } from 'effect';
 
 import type { WatchlistInput, WatchlistInputs } from '@/features/watchlist/types';
-import {
-  getWatchlistPage,
-  WATCHLIST_PAGE_SIZE,
-} from '@/lib/providers/letterboxd/watchlist';
+import { WATCHLIST_PAGE_SIZE } from '@/lib/providers/letterboxd/watchlist';
 import { providersForFeed } from '@/lib/providers/routing';
 import { getAllItems } from '@/lib/providers/simkl/reads';
 import { getWatchlist } from '@/lib/providers/trakt/reads';
@@ -20,8 +18,8 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistQueryKeys, fetchWatchlistAnime } from './anilist';
-import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
-import { none, settle } from './settle';
+import { letterboxdQueryKeys, letterboxdWatchlistPagesOptions } from './letterboxd';
+import { none, settle, streamLegs } from './settle';
 import { simklDeps, simklQueryKeys } from './simkl';
 import { traktDeps, traktQueryKeys } from './trakt';
 import { WATCHLIST_QUERY_ROOT } from './watchlist-cache';
@@ -170,7 +168,8 @@ interface WatchlistPages {
  * only the pages already loaded, which is what the grid's own refetch does.
  * The list is **never** auto-paged here to complete dedupe — 22 sequential
  * fetches on mobile data per gather is exactly what plan 0031's scope boundary
- * rules out. `fetchLetterboxdReleaseInputs` keeps its separate page-1 entry.
+ * rules out. Page 1 reads through the feed row's entry, which Up Next's
+ * releases share, so the three surfaces cost one scrape.
  */
 /**
  * Whether Letterboxd's leg has read the user's whole watchlist, judged from the
@@ -197,12 +196,7 @@ async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInpu
   const queryKey = letterboxdQueryKeys.watchlistPages(username);
   const cached = queryClient.getQueryData<WatchlistPages>(queryKey);
   const data = await queryClient.fetchInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam, signal }: { pageParam: number; signal: AbortSignal }) =>
-      Effect.runPromise(getWatchlistPage(letterboxdDeps(), { page: pageParam }), { signal }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage: NormalizedMediaItem[], _pages, lastPageParam: number) =>
-      lastPage.length < WATCHLIST_PAGE_SIZE ? undefined : lastPageParam + 1,
+    ...letterboxdWatchlistPagesOptions(queryClient, username),
     pages: Math.max(cached?.pages.length ?? 1, 1),
     staleTime: WATCHLIST_STALE_MS,
   });
@@ -253,50 +247,83 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
  * gatherer feeds the watchlist surface only and `fetchUpNextInputs` never
  * calls it.
  */
+function streamWatchlistInputs(
+  queryClient: QueryClient,
+  connected: readonly ProviderId[],
+): AsyncGenerator<WatchlistInputs> {
+  const feedProviders = watchlistReadProviders(connected);
+  return streamLegs(
+    // In `WATCHLIST_READ_PROVIDERS` order: `incomplete` finds a leg by its index.
+    [
+      feedProviders.includes('trakt')
+        ? settle('trakt', () => traktInputs(queryClient))
+        : none<WatchlistInput>(),
+      feedProviders.includes('anilist')
+        ? settle('anilist', () => anilistInputs(queryClient))
+        : none<WatchlistInput>(),
+      feedProviders.includes('letterboxd')
+        ? settle('letterboxd', () => letterboxdInputs(queryClient))
+        : none<WatchlistInput>(),
+      feedProviders.includes('simkl')
+        ? settle('simkl', () => simklInputs(queryClient))
+        : none<WatchlistInput>(),
+    ],
+    (legs) => {
+      const [trakt, anilist, letterboxd, simkl] = legs.map(
+        (leg) => leg ?? none<WatchlistInput>(),
+      );
+      // A leg still streaming in is *incomplete*, as is a Letterboxd leg with
+      // unread pages. A failed one is already `errors`, and R35 treats both as
+      // unknown membership, so reporting it twice would only make the two lists
+      // overlap.
+      const incomplete = WATCHLIST_READ_PROVIDERS.filter((provider, index) =>
+        feedProviders.includes(provider) &&
+        (legs[index] == null ||
+          (provider === 'letterboxd' &&
+            letterboxd.errors.length === 0 &&
+            !letterboxdLegIsComplete(queryClient))),
+      );
+      return {
+        inputs: [...trakt.inputs, ...anilist.inputs, ...letterboxd.inputs, ...simkl.inputs],
+        errors: [...trakt.errors, ...anilist.errors, ...letterboxd.errors, ...simkl.errors],
+        incomplete,
+      };
+    },
+    (partial) => partial.inputs.length > 0,
+  );
+}
+
+const NO_WATCHLIST_INPUTS: WatchlistInputs = { inputs: [], errors: [], incomplete: [] };
+
 export async function fetchWatchlistInputs(
   queryClient: QueryClient,
   connected: readonly ProviderId[],
 ): Promise<WatchlistInputs> {
-  const feedProviders = watchlistReadProviders(connected);
-  const [trakt, anilist, letterboxd, simkl] = await Promise.all([
-    feedProviders.includes('trakt')
-      ? settle('trakt', () => traktInputs(queryClient))
-      : none<WatchlistInput>(),
-    feedProviders.includes('anilist')
-      ? settle('anilist', () => anilistInputs(queryClient))
-      : none<WatchlistInput>(),
-    feedProviders.includes('letterboxd')
-      ? settle('letterboxd', () => letterboxdInputs(queryClient))
-      : none<WatchlistInput>(),
-    feedProviders.includes('simkl')
-      ? settle('simkl', () => simklInputs(queryClient))
-      : none<WatchlistInput>(),
-  ]);
-
-  // Only a leg that actually ran and succeeded can be *incomplete* — a failed
-  // one is already `errors`, and R35 treats both as unknown membership, so
-  // reporting it twice would only make the two lists overlap.
-  const incomplete: ProviderId[] =
-    feedProviders.includes('letterboxd') &&
-    letterboxd.errors.length === 0 &&
-    !letterboxdLegIsComplete(queryClient)
-      ? ['letterboxd']
-      : [];
-
-  return {
-    inputs: [...trakt.inputs, ...anilist.inputs, ...letterboxd.inputs, ...simkl.inputs],
-    errors: [...trakt.errors, ...anilist.errors, ...letterboxd.errors, ...simkl.errors],
-    incomplete,
-  };
+  let inputs = NO_WATCHLIST_INPUTS;
+  for await (const partial of streamWatchlistInputs(queryClient, connected)) inputs = partial;
+  return inputs;
 }
 
+/**
+ * Streams like `upNextOptions`: a cold grid renders once the first provider
+ * with rows settles, and a refetch holds the old inputs until all are back.
+ */
 export function watchlistOptions(
   queryClient: QueryClient,
   connected: readonly ProviderId[],
 ) {
   return {
     queryKey: watchlistQueryKeys.inputs(),
-    queryFn: () => fetchWatchlistInputs(queryClient, connected),
+    queryFn: streamedQuery<WatchlistInputs, WatchlistInputs>({
+      streamFn: (context) => {
+        // Reading the signal lets streamedQuery stop cache writes after a purge.
+        void context.signal;
+        return streamWatchlistInputs(queryClient, connected);
+      },
+      reducer: (_previous, partial) => partial,
+      initialValue: NO_WATCHLIST_INPUTS,
+      refetchMode: 'replace',
+    }),
     staleTime: WATCHLIST_STALE_MS,
   };
 }
@@ -331,6 +358,10 @@ export async function refreshWatchlistInputs(
     ...(username == null
       ? []
       : [
+          // Invalidate page 1 before an active grid can refetch through it.
+          queryClient.invalidateQueries({
+            queryKey: letterboxdQueryKeys.watchlist(username),
+          }),
           queryClient.invalidateQueries({
             queryKey: letterboxdQueryKeys.watchlistPages(username),
           }),
