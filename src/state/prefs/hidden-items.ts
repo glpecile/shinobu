@@ -1,26 +1,32 @@
 import { useSyncExternalStore } from 'react';
 
+import type { MediaType } from '@/types/media';
+
 import { isServer, prefsStorage } from './storage';
 
 /**
  * Individual feed items the user hid (long-press on a card), plus hidden
  * lists under their own prefix. Items are stored as
- * `hiddenItem.<NormalizedMediaItem.id>` → title, so the Settings
- * unhide list can name each entry without refetching it. Ids are
+ * `hiddenItem.<NormalizedMediaItem.id>` → `{ title, type }` JSON, so the
+ * Settings unhide list can name each entry without refetching it. Entries
+ * saved before the type was stored are a plain title string and read back
+ * without a `type`. Ids are
  * provider-scoped (`trakt-123`, `letterboxd-slug`), so hiding a card hides
  * that provider's copy — which is also the only copy the feed shows.
  */
 export interface HiddenItem {
   id: string;
   title: string;
+  /** Items only; absent on lists and on items hidden before it was stored. */
+  type?: MediaType;
 }
 
 const KEY_PREFIX = 'hiddenItem.';
 /** Lists hidden from a list card's sheet, keyed by the list's in-app href (unique across providers, and where Settings opens it). */
 const LIST_PREFIX = 'hiddenList.';
 
-export function hideItem(item: HiddenItem): void {
-  prefsStorage.set(`${KEY_PREFIX}${item.id}`, item.title);
+export function hideItem(item: HiddenItem & { type: MediaType }): void {
+  prefsStorage.set(`${KEY_PREFIX}${item.id}`, JSON.stringify({ title: item.title, type: item.type }));
 }
 
 export function unhideItem(id: string): void {
@@ -35,14 +41,34 @@ export function unhideList(href: string): void {
   prefsStorage.remove(`${LIST_PREFIX}${href}`);
 }
 
+function parseItem(value: string): Omit<HiddenItem, 'id'> {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && 'title' in parsed && typeof parsed.title === 'string') {
+      if ('type' in parsed) {
+        switch (parsed.type) {
+          case 'MOVIE':
+          case 'TV':
+          case 'ANIME':
+          case 'MANGA':
+            return { title: parsed.title, type: parsed.type };
+        }
+      }
+      return { title: parsed.title };
+    }
+  } catch {}
+  return { title: value };
+}
+
 function readHidden(prefix: string): HiddenItem[] {
   return prefsStorage
     .getAllKeys()
     .filter((key) => key.startsWith(prefix))
-    .map((key) => ({
-      id: key.slice(prefix.length),
-      title: prefsStorage.getString(key) ?? '',
-    }));
+    .map((key) => {
+      const value = prefsStorage.getString(key) ?? '';
+      const id = key.slice(prefix.length);
+      return prefix === KEY_PREFIX ? { id, ...parseItem(value) } : { id, title: value };
+    });
 }
 
 const cache = new Map<string, HiddenItem[]>();

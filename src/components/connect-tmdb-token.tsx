@@ -1,3 +1,4 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -7,13 +8,13 @@ import { z } from 'zod';
 
 import { Button } from '@/components/button';
 import { Collapsible } from '@/components/collapsible';
-import { Eyebrow } from '@/components/eyebrow';
+import { RailHead } from '@/components/rail-head';
 import { Steps } from '@/components/steps';
-import { CARD_SHELL } from '@/components/card-shell';
 import { TextField } from '@/components/text-field';
-import { cn } from '@/lib/cn';
+import { SettingsRail } from '@/features/settings/settings-rail';
 import { TMDB_API_SETTINGS_URL } from '@/lib/providers/external-urls';
 import { TMDB_API_BASE_URL } from '@/lib/providers/tmdb/config';
+import { useThemeColor } from '@/lib/theme-color';
 import { mediaDetailsQueryKeys } from '@/state/queries/media-details';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import {
@@ -61,8 +62,8 @@ const STATUS_MESSAGE: Record<Exclude<SaveStatus, 'idle' | 'checking'>, string> =
  * Bring-your-own TMDB key (plan 0024 U10). TMDB is the primary metadata source
  * for every detail screen and the only source for the person/studio routes
  * (AGENTS.md), but its token is builder-supplied — a build that ships none
- * leaves those surfaces dark with no way in from the app. This section is that
- * way in, and it renders **only** when the build ships no token: with one
+ * leaves those surfaces dark with no way in from the app. Settings' Metadata
+ * section is that way in, and it renders **only** when the build ships no token: with one
  * present a stored value would be ignored anyway (`resolveTmdbToken`), so
  * offering the field would be a lie.
  *
@@ -76,6 +77,7 @@ export function ConnectTmdbTokenSection() {
   const [saved, setSaved] = useState<string | null>(() => storedTmdbToken());
   const [status, setStatus] = useState<SaveStatus>('idle');
   const queryClient = useQueryClient();
+  const muted = useThemeColor('--color-muted');
 
   const {
     control,
@@ -129,31 +131,39 @@ export function ConnectTmdbTokenSection() {
 
   if (hasBuilderTmdbToken()) return null;
 
+  const count = saved != null ? 'TMDB' : 'Not set';
+
   return (
-    <View>
-      <Eyebrow className="mb-3">TMDB token</Eyebrow>
-      <View className={cn(CARD_SHELL, 'gap-4')}>
-        {saved != null ? (
-          <>
-            <Text className="text-foreground font-sans-semibold text-base">
-              TMDB connected
-            </Text>
-            <Text className="text-muted font-sans text-sm">
-              Detail pages use TMDB for artwork, cast, crew, and studios, and
-              the people and studio pages are available.
-            </Text>
-            <Button
-              accessibilityLabel="Remove TMDB token"
-              className="self-start"
-              icon={<Button.Icon name="trash-outline" />}
-              label="Remove token"
-              onPress={clear}
-              size="sm"
-              variant="outline"
-            />
-          </>
-        ) : (
-          <>
+    <SettingsRail.Section count={count} icon="sparkles-outline" title="Metadata">
+      <SettingsRail.Head label={`Metadata, ${count}`}>
+        <RailHead.Icon name="sparkles-outline">Metadata</RailHead.Icon>
+        <RailHead.Count>{count}</RailHead.Count>
+      </SettingsRail.Head>
+      <SettingsRail.Row>
+        <SettingsRail.Lead>
+          <Ionicons color={muted} name="key-outline" size={18} />
+        </SettingsRail.Lead>
+        <SettingsRail.Text>
+          <SettingsRail.Title>TMDB token</SettingsRail.Title>
+          <SettingsRail.Subtitle>
+            {saved != null ? 'Added' : 'Posters, cast, and people pages'}
+          </SettingsRail.Subtitle>
+        </SettingsRail.Text>
+        {saved != null && (
+          <Button
+            accessibilityLabel="Remove TMDB token"
+            className="shrink-0"
+            icon={<Button.Icon name="trash-outline" />}
+            label="Remove"
+            onPress={clear}
+            size="md"
+            variant="outline"
+          />
+        )}
+      </SettingsRail.Row>
+      {saved == null && (
+        <SettingsRail.Row>
+          <View className="flex-1 gap-4">
             <Text className="text-muted font-sans text-sm">
               This build ships without a TMDB key, so detail pages fall back to
               your trackers’ metadata and the people and studio pages stay
@@ -233,9 +243,9 @@ export function ConnectTmdbTokenSection() {
               loadingLabel="Checking…"
               onPress={() => void submit()}
             />
-          </>
-        )}
-      </View>
-    </View>
+          </View>
+        </SettingsRail.Row>
+      )}
+    </SettingsRail.Section>
   );
 }

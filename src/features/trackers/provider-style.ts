@@ -30,18 +30,3 @@ export function statusLine(
   if (!connected) return 'Not connected';
   return username != null ? `Connected as ${username}` : 'Connected';
 }
-
-/**
- * The same status, short enough to survive a 390px viewport minus the 64px web
- * nav rail *and* an always-visible action button beside it. That button
- * (Disconnect vs Connect) already carries "connected", so the username alone
- * says the rest — the long form truncated to "Connecte…" in that column, which
- * reads as a bug.
- */
-export function compactStatus(
-  connected: boolean,
-  username: string | undefined,
-): string {
-  if (!connected) return 'Not connected';
-  return username ?? 'Connected';
-}
