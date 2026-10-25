@@ -97,7 +97,6 @@ export function ProviderCard({
             connect();
           }}
           size="md"
-          variant="quiet"
         />
       )}
     </SettingsRail.Row>

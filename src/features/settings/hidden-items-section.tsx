@@ -8,6 +8,8 @@ import { RailHead } from '@/components/rail-head';
 import { TextField } from '@/components/text-field';
 import { SettingsRail } from '@/features/settings/settings-rail';
 import { usePushRoute } from '@/lib/navigation';
+import { PROVIDERS } from '@/lib/providers/registry';
+import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { unhideItem, unhideList, useHiddenItems, useHiddenLists } from '@/state/prefs/hidden-items';
@@ -25,8 +27,14 @@ const KIND_ICON: Record<Kind, ComponentProps<typeof Ionicons>['name']> = {
   ANIME: 'tv-outline',
   MANGA: 'book-outline',
   LIST: 'list-outline',
-  LEGACY: 'eye-off-outline',
+  LEGACY: 'albums-outline',
 };
+
+/** Items hidden before their type was stored still name it when their provider tracks one type. */
+function legacyKind(id: string): Kind {
+  const types = PROVIDERS[id.split('-')[0] as ProviderId]?.mediaTypes;
+  return types?.length === 1 ? types[0] : 'LEGACY';
+}
 
 const KIND_LABEL: Record<Kind, string> = {
   MOVIE: 'Movie',
@@ -53,7 +61,7 @@ export function HiddenItemsSection() {
     ...useHiddenItems().map((item) => ({
       key: `item-${item.id}`,
       title: item.title.trim() || 'Untitled',
-      kind: (item.type ?? 'LEGACY') as Kind,
+      kind: item.type ?? legacyKind(item.id),
       href: routes.details(item.id),
       unhide: () => unhideItem(item.id),
     })),
