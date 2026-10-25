@@ -25,7 +25,7 @@ const catalogue: NormalizedMediaItem = {
   year: 2025,
   runtime: 104,
   genres: ['Drama', 'Animation'],
-  rating: 7.8,
+  ratings: [{ source: 'tmdb', value: 7.8, scale: 10 }],
   type: 'MOVIE',
   currentProgress: 0,
   progressUnit: 'episode',
@@ -44,7 +44,7 @@ describe('mergeCatalogueMetadata', () => {
     expect(merged.overview).toBe('A man rebuilds his life.');
     expect(merged.runtime).toBe(104);
     expect(merged.genres).toEqual(['Drama', 'Animation']);
-    expect(merged.rating).toBe(7.8);
+    expect(merged.ratings).toEqual([{ source: 'tmdb', value: 7.8, scale: 10 }]);
   });
 
   test('unions external ids with the item side winning', () => {
@@ -62,12 +62,12 @@ describe('mergeCatalogueMetadata', () => {
     const withOwnMeta: NormalizedMediaItem = {
       ...letterboxdItem,
       overview: 'Original overview.',
-      rating: 9.1,
+      ratings: [{ source: 'tmdb', value: 9.1, scale: 10 }],
     };
     const merged = mergeCatalogueMetadata(withOwnMeta, catalogue);
 
     expect(merged.overview).toBe('Original overview.');
-    expect(merged.rating).toBe(9.1);
+    expect(merged.ratings).toEqual([{ source: 'tmdb', value: 9.1, scale: 10 }]);
     expect(merged.year).toBe(2025);
   });
 
@@ -104,7 +104,7 @@ describe('applyPrimaryMetadata', () => {
     title: 'Arcane',
     coverImage: 'https://trakt/poster.jpg',
     overview: 'Trakt synopsis.',
-    rating: 8.5,
+    ratings: [{ source: 'simkl', value: 8.5, scale: 10 }],
     year: 2021,
     type: 'TV',
     currentProgress: 5,
@@ -121,7 +121,7 @@ describe('applyPrimaryMetadata', () => {
       coverImage: 'https://tmdb/poster.jpg',
       backdropImage: 'https://tmdb/backdrop.jpg',
       overview: 'TMDB synopsis.',
-      rating: 8.8,
+      ratings: [{ source: 'tmdb', value: 8.8, scale: 10 }],
       runtime: 41,
       genres: ['Animation'],
       type: 'TV',
@@ -138,7 +138,10 @@ describe('applyPrimaryMetadata', () => {
     // …but the item carried no backdrop, so TMDB's fills the gap.
     expect(merged.backdropImage).toBe('https://tmdb/backdrop.jpg');
     expect(merged.overview).toBe('TMDB synopsis.');
-    expect(merged.rating).toBe(8.8);
+    expect(merged.ratings).toEqual([
+      { source: 'tmdb', value: 8.8, scale: 10 },
+      { source: 'simkl', value: 8.5, scale: 10 },
+    ]);
     expect(merged.genres).toEqual(['Animation']);
     // Identity + user state stay the item's.
     expect(merged.id).toBe('trakt-1');
@@ -210,7 +213,7 @@ describe('applyPrimaryMetadata', () => {
 
     expect(sparse.coverImage).toBe('https://trakt/poster.jpg');
     expect(sparse.overview).toBe('Trakt synopsis.');
-    expect(sparse.rating).toBe(8.5);
+    expect(sparse.ratings).toEqual(item.ratings);
     expect(applyPrimaryMetadata(item, null)).toBe(item);
   });
 

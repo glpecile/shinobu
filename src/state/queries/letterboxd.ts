@@ -6,6 +6,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
 import { Effect } from 'effect';
@@ -26,7 +27,7 @@ import {
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
 import { getFilmPoster, getFilmItem } from '@/lib/providers/letterboxd/film';
-import { getLetterboxdFilmWatch } from '@/lib/providers/letterboxd/watched';
+import { getLetterboxdFilmWatch, resolveFilmSlug } from '@/lib/providers/letterboxd/watched';
 import {
   getListsPage,
   getListFilmsPage,
@@ -124,6 +125,7 @@ export function validateLetterboxdUsername(username: string): Promise<boolean> {
 export const letterboxdQueryKeys = {
   all: ['letterboxd'] as const,
   film: (slug: string) => [...letterboxdQueryKeys.all, 'film', slug] as const,
+  slug: (tmdbId: number) => [...letterboxdQueryKeys.all, 'slug', tmdbId] as const,
   filmWatchesRoot: () => [...letterboxdQueryKeys.all, 'film-watch'] as const,
   filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? null : null] as const,
   poster: (slug: string) => [...letterboxdQueryKeys.all, 'poster', slug] as const,
@@ -272,6 +274,23 @@ export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
 
 export function useLetterboxdFilmQuery(slug: string | null) {
   return useQuery(letterboxdFilmQuery(slug, useTmdbToken() !== ''));
+}
+
+/** The public film page behind the details Ratings section's Letterboxd score. */
+export function useSuspenseLetterboxdFilmQuery(slug: string) {
+  const { queryKey, queryFn, staleTime, retry } = letterboxdFilmQuery(slug, useTmdbToken() !== '');
+  return useSuspenseQuery({ queryKey, queryFn, staleTime, retry });
+}
+
+/** A film's slug, from its TMDB id, for an item that arrived without one. Null when Letterboxd lacks the film. */
+export function useSuspenseLetterboxdSlugQuery(tmdbId: number) {
+  return useSuspenseQuery({
+    queryKey: letterboxdQueryKeys.slug(tmdbId),
+    queryFn: ({ signal }) => Effect.runPromise(resolveFilmSlug(letterboxdDeps(), tmdbId), { signal }),
+    // A film's slug doesn't change.
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
 }
 
 /** Account-keyed watches are independent of the public film identity cache. */

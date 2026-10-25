@@ -12,7 +12,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { DURATION } from '@/lib/motion';
 import { PeopleSectionsSkeleton } from '@/features/person/people-section';
-import { ProviderLinksSection } from '@/features/provider-links/provider-links-section';
+import { RatingsSection } from '@/features/ratings/ratings-section';
 import Head from '@/components/head';
 import { cn } from '@/lib/cn';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -104,8 +104,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
                     episode={view.episode}
                     id={item.id}
                     number={number}
-                    rating={view.rating}
-                    season={season}
+                        season={season}
                     showTitle={item.title}
                   />
                   <EpisodeLogs className="mt-3" logs={logs} />
@@ -136,7 +135,7 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
           )}
           <EpisodeCreditsSection number={number} season={season} tmdbId={view.tmdbId} />
           <DiscussionSection episode={{ season, number }} item={item} />
-          <ProviderLinksSection episode={{ season, number }} item={item} />
+          <RatingsSection episode={{ season, number, ratings: view.ratings }} item={item} />
         </BlurEnter>
       </ScrollView>}
 

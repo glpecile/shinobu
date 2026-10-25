@@ -33,8 +33,6 @@ interface TraktExtendedFields {
   /** Minutes; for shows this is a typical episode's runtime. */
   runtime?: number;
   genres?: string[];
-  /** Community rating, 0–10 float. */
-  rating?: number;
 }
 
 export interface TraktMovie extends TraktExtendedFields {
@@ -121,7 +119,6 @@ function detailFields(
     ...(raw.year != null ? { year: raw.year } : {}),
     ...(raw.runtime != null ? { runtime: raw.runtime } : {}),
     ...(raw.genres != null ? { genres: raw.genres } : {}),
-    ...(raw.rating != null ? { rating: raw.rating } : {}),
   };
 }
 

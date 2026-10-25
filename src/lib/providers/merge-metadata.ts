@@ -1,4 +1,16 @@
-import type { NormalizedMediaItem } from '@/types/media';
+import type { NormalizedMediaItem, NormalizedRating } from '@/types/media';
+
+/** One score per source, `first`'s where both carry one. */
+function mergeRatings(
+  first: NormalizedRating[] | undefined,
+  second: NormalizedRating[] | undefined,
+): Pick<NormalizedMediaItem, 'ratings'> {
+  const ratings = [
+    ...(first ?? []),
+    ...(second ?? []).filter((rating) => !first?.some(({ source }) => source === rating.source)),
+  ];
+  return ratings.length > 0 ? { ratings } : {};
+}
 
 /**
  * Fill an item's missing display metadata from a catalogue record of the same
@@ -42,9 +54,7 @@ export function mergeCatalogueMetadata(
     ...(item.genres == null && catalogue.genres != null
       ? { genres: catalogue.genres }
       : {}),
-    ...(item.rating == null && catalogue.rating != null
-      ? { rating: catalogue.rating }
-      : {}),
+    ...mergeRatings(item.ratings, catalogue.ratings),
     externalIds: { ...catalogue.externalIds, ...item.externalIds },
   };
 }
@@ -52,7 +62,7 @@ export function mergeCatalogueMetadata(
 /**
  * The TMDB-first inverse of `mergeCatalogueMetadata` (plan 0014): `primary`
  * (the TMDB catalogue record) WINS for pure *text* display fields when it has
- * them — overview, genres, rating, runtime, year, release dates — because TMDB
+ * them — overview, genres, its score, runtime, year, release dates — because TMDB
  * is the source of truth for metadata. AniList series entries are the exception:
  * each is a separate cour, while the TMDB record covers the whole show, so only
  * missing artwork and external identity are merged there. Fill-only for `totalEpisodes` (provider
@@ -98,7 +108,7 @@ export function applyPrimaryMetadata(
     ...(!isAnimeCour && primary.genres != null && primary.genres.length > 0
       ? { genres: primary.genres }
       : {}),
-    ...(!isAnimeCour && primary.rating != null ? { rating: primary.rating } : {}),
+    ...(!isAnimeCour ? mergeRatings(primary.ratings, item.ratings) : {}),
     ...(!isAnimeCour && primary.runtime != null ? { runtime: primary.runtime } : {}),
     ...(!isAnimeCour && primary.year != null ? { year: primary.year } : {}),
     // Per-key, item winning: AniList's native title is the canonical one for

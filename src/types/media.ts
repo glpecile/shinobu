@@ -36,6 +36,36 @@ export interface ReleaseCalendar {
   physical?: string;
 }
 
+/** Where a community score comes from. Only Simkl, AniList and Letterboxd are providers. */
+export type RatingSource =
+  | 'tmdb'
+  | 'simkl'
+  | 'imdb'
+  | 'mal'
+  | 'anilist'
+  | 'letterboxd'
+  | 'rottenTomatoes'
+  | 'metacritic';
+
+/**
+ * One source's community score, kept on the scale that source publishes
+ * (#318): never rescaled, so a Letterboxd 4.2 reads as /5 and a Tomatometer as
+ * a percentage.
+ */
+export interface NormalizedRating {
+  source: RatingSource;
+  value: number;
+  /** `%` for Rotten Tomatoes' Tomatometer and AniList's average score. */
+  scale: 10 | 5 | 100 | '%';
+  votes?: number;
+  /** MAL's overall rank. */
+  rank?: number;
+  /** The date a Wikidata score was recorded (`P585`), a bare `YYYY-MM-DD`. */
+  asOf?: string;
+  /** The title's page id on a non-provider source, e.g. `m/inception` on Rotten Tomatoes. */
+  pageId?: string;
+}
+
 export interface NormalizedMediaItem {
   /** Unique combined identifier: `${providerId}-${nativeId}`, e.g. `trakt-12345`. */
   id: string;
@@ -56,8 +86,8 @@ export interface NormalizedMediaItem {
   /** Minutes: whole film for MOVIE/anime films; typical episode for series. Not total/remaining series time; absent for manga. */
   runtime?: number;
   genres?: string[];
-  /** Provider community rating on a 0–10 scale. */
-  rating?: number;
+  /** Community scores, one per source, each on that source's own scale. */
+  ratings?: NormalizedRating[];
   type: MediaType;
   /** Display-only TMDB TV relationship for a whole-entry Letterboxd film log. */
   tmdbTvVariant?: number;

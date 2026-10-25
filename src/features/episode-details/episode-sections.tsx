@@ -67,14 +67,13 @@ export function EpisodeStill({
   );
 }
 
-/** "S2E10 · Show title" eyebrow, the episode title, air date · runtime, rating. */
+/** "S2E10 · Show title" eyebrow, the episode title, air date · runtime. */
 export function EpisodeHeading({
   id,
   showTitle,
   season,
   number,
   episode,
-  rating,
   align = 'left',
 }: {
   id: string;
@@ -82,10 +81,8 @@ export function EpisodeHeading({
   season: number;
   number: number;
   episode: NormalizedEpisode;
-  rating?: number | undefined;
   align?: 'left' | 'center';
 }) {
-  const muted = useThemeColor('--color-muted');
   const pushRoute = usePushRoute();
   const meta = episodeMetaLine(episode);
   const centered = align === 'center';
@@ -107,23 +104,9 @@ export function EpisodeHeading({
       >
         {episode.title}
       </Text>
-      <View className={cn('flex-row items-center gap-3 mt-1.5', centered && 'justify-center')}>
-        {meta !== '' && (
-          <Text className="text-muted font-sans text-sm">{meta}</Text>
-        )}
-        {rating != null && (
-          <View className="flex-row items-center gap-1">
-            <Ionicons
-              color={muted}
-              name="star"
-              size={12}
-            />
-            <Text className="text-foreground text-xs font-sans-semibold">
-              {rating.toFixed(1)}
-            </Text>
-          </View>
-        )}
-      </View>
+      {meta !== '' && (
+        <Text className={cn('text-muted font-sans text-sm mt-1.5', centered && 'text-center')}>{meta}</Text>
+      )}
     </View>
   );
 }

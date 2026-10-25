@@ -17,6 +17,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // R1/R34).
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    communityScore: false,
   },
   anilist: {
     id: 'anilist',
@@ -31,6 +32,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // "unconditional".
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    // `averageScore`, a percentage.
+    communityScore: true,
   },
   // Public reads use the GET-only relay on web. Film logs write in a signed-in
   // session through the native WebView or the optional web userscript bridge.
@@ -53,6 +56,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // rollback: revert both tokens to 'manual' if the endpoint regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    // The film page's JSON-LD `aggregateRating`, out of 5.
+    communityScore: true,
   },
   // Unofficial JSON API (plan 0017), TMDB-keyed TV tracking. Symmetric
   // read+write like Trakt: a TV (or TMDB-enriched anime series) log fans out
@@ -89,6 +94,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // (KTD-9) if the probe's finding or the read ever regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'manual',
+    // Its API has no average; only the www page shows one (#318).
+    communityScore: false,
   },
   // Official OAuth API (plan 0034), TMDB/IMDB/MAL-keyed TV + movie + anime
   // tracking — the Trakt-detachment provider. Landed **capability-gated**
@@ -126,5 +133,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // item model, is very nearly all of them — removes cleanly with nothing to
     // lose. Standing rollback stays a one-token revert to 'manual'.
     watchlistRemove: 'write',
+    // `/ratings` also carries the IMDb (movies, TV) or MAL (anime) score.
+    communityScore: true,
   },
 };

@@ -12,6 +12,8 @@ import { useThemeColor } from '@/lib/theme-color';
 
 /**
  * A bordered pill that opens something; `external` marks a link that leaves the app.
+ * `children` replace the label's text when it needs styling (a score and its
+ * scale); `label` then only names the pill to assistive tech.
  *
  * `onLongPress` doubles as the web hover ⋯ (an `OverlayActionsButton`
  * straddling the pill's top-right corner, like the person card's): web has no
@@ -24,9 +26,11 @@ export function LinkPill({
   external = false,
   onPress,
   onLongPress,
+  children,
 }: {
   icon?: ReactNode;
   label: string;
+  children?: ReactNode;
   external?: boolean;
   onPress: () => void | Promise<void>;
   onLongPress?: () => void;
@@ -48,6 +52,7 @@ export function LinkPill({
       <PresstableOpacity
         className="rounded-full"
         accessibilityRole="button"
+        accessibilityLabel={children != null ? label : undefined}
         accessibilityState={{ busy: loading, disabled: loading }}
         aria-busy={loading}
         aria-disabled={loading}
@@ -59,7 +64,7 @@ export function LinkPill({
             on Android (docs/solutions/pressto-border-not-drawn-on-android.md). */}
         <View className="flex-row items-center gap-2 bg-surface border border-border rounded-full px-4 py-2">
           {icon}
-          <Text className="text-foreground font-sans text-sm">{label}</Text>
+          {children ?? <Text className="text-foreground font-sans text-sm">{label}</Text>}
           {external && <View className="size-5 items-center justify-center">
             {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={12} />}
           </View>}

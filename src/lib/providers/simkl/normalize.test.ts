@@ -5,6 +5,7 @@ import {
   normalizeAllItems,
   normalizeCalendarFile,
   normalizeLibraryEntry,
+  normalizeRatings,
   normalizeSearchIdMatch,
   normalizeTrendingItem,
   normalizeUserSettings,
@@ -367,6 +368,29 @@ describe('normalizeCalendarFile', () => {
   });
 });
 
+describe('normalizeRatings', () => {
+  test.each([
+    [
+      { simkl: { rating: 8.6, votes: 15013 }, IMDB: { rating: 8.8, votes: 2882936 } },
+      [
+        { source: 'simkl', value: 8.6, scale: 10, votes: 15013 },
+        { source: 'imdb', value: 8.8, scale: 10, votes: 2882936 },
+      ],
+    ],
+    [
+      { simkl: { rating: 9.2, votes: 6496 }, MAL: { rating: 9.2, votes: 947307, rank: 1 } },
+      [
+        { source: 'simkl', value: 9.2, scale: 10, votes: 6496 },
+        { source: 'mal', value: 9.2, scale: 10, votes: 947307, rank: 1 },
+      ],
+    ],
+    // Simkl answers `null` for an id it doesn't index.
+    [null, []],
+  ] as const)('%j', (raw, expected) => {
+    expect(normalizeRatings(raw)).toEqual([...expected]);
+  });
+});
+
 describe('normalizeTrendingItem', () => {
   const movie: SimklTrendingItem = {
     title: 'The Odyssey',
@@ -395,7 +419,7 @@ describe('normalizeTrendingItem', () => {
       overview: 'Odysseus sails home.',
       year: 2026,
       genres: ['Adventure'],
-      rating: 8.54,
+      ratings: [{ source: 'simkl', value: 8.54, scale: 10, votes: 1161 }],
       type: 'MOVIE',
       // MM/DD/YYYY is a calendar date, not an instant — re-expressed as the
       // bare ISO date the NormalizedMediaItem contract names.

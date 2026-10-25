@@ -91,6 +91,22 @@ export function providersForWrite(
 }
 
 /**
+ * Whose community scores the details Ratings section reads for `item`:
+ * connected (usable), publishing a score, and applicable to the item's
+ * (effective) type, so Letterboxd only scores films and AniList only anime.
+ */
+export function providersForRatings(
+  item: RoutableItem,
+  connected: readonly ProviderId[],
+): ProviderId[] {
+  const types = effectiveTypes(item);
+  return connected.filter((id) => {
+    const provider = PROVIDERS[id];
+    return provider.communityScore && types.some((type) => provider.mediaTypes.includes(type));
+  });
+}
+
+/**
  * Which providers `useUnifiedFeed` aggregates: connected and read-capable.
  */
 export function providersForFeed(connected: readonly ProviderId[]): ProviderId[] {

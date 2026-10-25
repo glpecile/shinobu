@@ -1,5 +1,11 @@
 import anilistIcon from '@/assets/providers/anilist.svg';
+// IMDb, MyAnimeList, Rotten Tomatoes and Metacritic are score sources, not
+// providers (#318). Each mark is the site's own favicon, like Simkl's below.
+import imdbIcon from '@/assets/providers/imdb.png';
 import letterboxdIcon from '@/assets/providers/letterboxd.svg';
+import metacriticIcon from '@/assets/providers/metacritic.svg';
+import myanimelistIcon from '@/assets/providers/myanimelist.svg';
+import rottenTomatoesIcon from '@/assets/providers/rotten-tomatoes.png';
 // Serializd ships no simple-icons SVG mark — this is their own favicon
 // (converted from serializd.com/favicon.ico), the actual brand logo.
 import serializdIcon from '@/assets/providers/serializd.png';
@@ -19,8 +25,9 @@ import traktIcon from '@/assets/providers/trakt.svg';
 
 import { Image } from '@/components/image';
 import type { ProviderId } from '@/lib/providers/types';
+import type { RatingSource } from '@/types/media';
 
-export type IconSourceId = ProviderId | 'tmdb';
+export type IconSourceId = ProviderId | RatingSource;
 
 // Official brand marks in official brand colors, bundled (assets/providers/)
 // so they work offline and inside the strict web CSP. SVG assets render
@@ -37,6 +44,10 @@ const ICONS: Record<IconSourceId, number> = {
   serializd: serializdIcon,
   simkl: simklIcon,
   tmdb: tmdbIcon,
+  imdb: imdbIcon,
+  mal: myanimelistIcon,
+  rottenTomatoes: rottenTomatoesIcon,
+  metacritic: metacriticIcon,
 };
 
 export function ProviderIcon({ id, size = 20 }: { id: IconSourceId; size?: number }) {

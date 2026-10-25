@@ -6,9 +6,10 @@ export type ProviderId = 'trakt' | 'anilist' | 'letterboxd' | 'serializd' | 'sim
 
 // Metadata-only sources (no session, no registry entry, never a fan-out
 // target) that still ride the shared error taxonomy. TMDB backs the person
-// route; ani.zip stays out of this union because it degrades to null instead
-// of failing (lib/providers/mapping/anizip.ts).
-export type MetadataSourceId = 'tmdb';
+// route, Wikidata the Rotten Tomatoes and Metacritic scores. ani.zip stays out
+// of this union because it degrades to null instead of failing
+// (lib/providers/mapping/anizip.ts).
+export type MetadataSourceId = 'tmdb' | 'wikidata';
 
 /** Anything a ProviderError can originate from. */
 export type ErrorSourceId = ProviderId | MetadataSourceId;
@@ -73,6 +74,11 @@ export interface ProviderDescriptor {
    * stays one flat list shared by all verbs. Verb splits; platform does not.
    */
   watchlistRemove: WriteSupport;
+  /**
+   * Whether the provider publishes a community score the details Ratings
+   * section reads (#318). Trakt's and Serializd's stay links only.
+   */
+  communityScore: boolean;
   /**
    * Platforms (`process.env.EXPO_OS` values) where this provider's write is
    * structurally impossible even though `canWrite` is true overall — e.g.

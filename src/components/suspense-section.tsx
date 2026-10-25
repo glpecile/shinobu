@@ -16,6 +16,8 @@ interface BoundaryProps {
    * a `resetKey` retry that fails again is a new error and toasts again.
    */
   errorToast?: { title: string; message?: string };
+  /** What stands in after a failure; nothing by default. */
+  errorFallback?: ReactNode;
 }
 
 /**
@@ -42,7 +44,7 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   }
 
   override render() {
-    return this.state.failed ? null : this.props.children;
+    return this.state.failed ? this.props.errorFallback ?? null : this.props.children;
   }
 }
 
@@ -53,13 +55,15 @@ function subscribeNever() {
 /**
  * Suspense boundary for a self-contained, suspense-query-backed screen
  * section: shows `fallback` (a skeleton) while the query loads, renders
- * nothing if it fails, and retries after a failure when `resetKey` changes.
+ * `errorFallback` (nothing by default) if it fails, and retries after a
+ * failure when `resetKey` changes.
  */
 export function SuspenseSection({
   fallback,
   children,
   resetKey,
   errorToast,
+  errorFallback,
 }: BoundaryProps & { fallback: ReactNode }) {
   // Static web export awaits every suspended query, so prerendering a section
   // would fetch its provider at build time, and an outage there fails the
@@ -72,7 +76,7 @@ export function SuspenseSection({
   );
   if (!hydrated) return fallback;
   return (
-    <SectionErrorBoundary resetKey={resetKey} errorToast={errorToast}>
+    <SectionErrorBoundary errorFallback={errorFallback} resetKey={resetKey} errorToast={errorToast}>
       <Suspense fallback={fallback}>
         <SectionEnter>{children}</SectionEnter>
       </Suspense>

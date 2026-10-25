@@ -106,7 +106,7 @@ export function getMediaCatalogue(
         : normalizeTvCatalogue(
             yield* tmdbRequest<TmdbTvResponse>(
               deps,
-              `/tv/${params.tmdbId}?append_to_response=aggregate_credits`,
+              `/tv/${params.tmdbId}?append_to_response=aggregate_credits,external_ids`,
             ),
             nowIso,
           );

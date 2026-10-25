@@ -106,7 +106,7 @@ function Stop({
  * "In theaters · Digital · Physical" as a rail below Studios (plan 0029),
  * replacing the single muted "Digital release · …" line that used to sit under
  * the meta line. It takes the same `mt-8` + display-heading shell as its
- * neighbours down there (Seasons, Cast, Studios, View on) rather than the
+ * neighbours down there (Seasons, Cast, Studios, Ratings) rather than the
  * small uppercase label a header-adjacent block would use.
  *
  * Movie-only in practice: `releaseCalendar` comes from the TMDB movie

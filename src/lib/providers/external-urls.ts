@@ -2,7 +2,7 @@
 // setup pages the connect flows link users to, OAuth endpoints that otherwise
 // sit in react-native-importing modules, and the pure per-item public-page
 // URL builder (`providerItemUrl`, plans 0022/0023) shared by the manual-log
-// fallback and the "View on" links. The constants above must stay free of
+// fallback and the Ratings section's links. The constants above must stay free of
 // react-native imports — scripts/check-external-urls.ts loads them under
 // plain bun (bun can't parse RN's entry point) to probe that these URLs are
 // still alive. Precedent for the risk: trakt.tv/oauth/applications died in
@@ -12,7 +12,7 @@
 
 import { animeEffectiveMovieTvType } from './routing';
 import type { ProviderId } from './types';
-import type { NormalizedMediaItem, NormalizedPerson } from '@/types/media';
+import type { NormalizedMediaItem, NormalizedPerson, NormalizedRating } from '@/types/media';
 
 /** Where a user creates their own Trakt API app (BYO client id + secret). */
 export const TRAKT_CREATE_APP_URL = 'https://app.trakt.tv/settings/apps/api/new';
@@ -130,7 +130,7 @@ function simklUrl(item: UrlItem): string | null {
  * TMDB's own page for `item`, or null without a TMDB id (or for MANGA, which
  * TMDB doesn't carry). Deliberately *not* a `providerItemUrl` case: TMDB is a
  * metadata source with no `ProviderId` and no registry entry (AGENTS.md,
- * "TMDB"), so it joins the details "View on" cluster without widening the
+ * "TMDB"), so it joins the details Ratings section without widening the
  * provider union — the same exception `ProviderIcon`'s `IconSourceId` makes.
  */
 export function tmdbItemUrl(item: UrlItem, episode?: UrlEpisode): string | null {
@@ -168,6 +168,39 @@ export function providerItemUrl(
       return serializdUrl(item);
     case 'simkl':
       return simklUrl(item);
+  }
+}
+
+/** Rotten Tomatoes and Metacritic page ids (`m/inception`, `movie/inception`) as Wikidata records them. */
+const SCORE_PAGE_ID = /^[a-z]+\/[a-z0-9_-]+$/i;
+
+/**
+ * Where a score links: the item on that source, so a rating never dead-ends.
+ * Providers link through `providerItemUrl`; IMDb and MAL by the item's bridge
+ * ids; Rotten Tomatoes and Metacritic by the page id Wikidata recorded. Null
+ * when no id addresses the page.
+ */
+export function ratingUrl(
+  rating: Pick<NormalizedRating, 'source' | 'pageId'>,
+  item: UrlItem,
+  episode?: UrlEpisode,
+): string | null {
+  const pageId = rating.pageId != null && SCORE_PAGE_ID.test(rating.pageId) ? rating.pageId : null;
+  switch (rating.source) {
+    case 'tmdb':
+      return tmdbItemUrl(item, episode);
+    case 'simkl':
+    case 'anilist':
+    case 'letterboxd':
+      return providerItemUrl(rating.source, item, episode);
+    case 'imdb':
+      return item.externalIds.imdb == null ? null : `https://www.imdb.com/title/${item.externalIds.imdb}/`;
+    case 'mal':
+      return item.externalIds.mal == null ? null : `https://myanimelist.net/anime/${item.externalIds.mal}`;
+    case 'rottenTomatoes':
+      return pageId == null ? null : `https://www.rottentomatoes.com/${pageId}`;
+    case 'metacritic':
+      return pageId == null ? null : `https://www.metacritic.com/${pageId}/`;
   }
 }
 

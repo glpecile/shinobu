@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Effect } from 'effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -14,8 +14,11 @@ import type {
 } from '@/lib/providers/simkl/normalize';
 import {
   getAllItems,
+  getRatings,
   getUserSettings,
+  ratingsLookup,
   type SimklCalendarKind,
+  type SimklLookupParams,
 } from '@/lib/providers/simkl/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -97,6 +100,7 @@ export const simklQueryKeys = {
   /** The connected account itself — cached forever; disconnect purges the
    *  whole `['simkl']` root, so a reconnect as another user can't reuse it. */
   userSettings: () => [...simklQueryKeys.all, 'user-settings'] as const,
+  ratings: (lookup: SimklLookupParams | null) => [...simklQueryKeys.all, 'ratings', lookup] as const,
 };
 
 /**
@@ -317,5 +321,20 @@ export function useSimklUsernameQuery(options: { enabled?: boolean } = {}) {
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
     select: (settings) => settings.username ?? undefined,
+  });
+}
+
+/**
+ * Simkl's score and the IMDb or MAL one beside it, for the details Ratings
+ * section. Scores move slowly and Simkl caches `/ratings` for two days, so a
+ * day here costs nothing in freshness.
+ */
+export function useSuspenseSimklRatingsQuery(item: NormalizedMediaItem) {
+  const lookup = ratingsLookup(item);
+  return useSuspenseQuery({
+    queryKey: simklQueryKeys.ratings(lookup),
+    queryFn: ({ signal }) =>
+      lookup == null ? [] : Effect.runPromise(getRatings(simklDeps(), lookup), { signal }),
+    staleTime: 24 * 60 * 60_000,
   });
 }
