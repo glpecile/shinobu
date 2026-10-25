@@ -149,23 +149,30 @@ function SettingsRailPinned({
     },
   );
 
-  const follow = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: Math.max(0, Math.min(scrollY.get() - top.get(), height.get() - barHeight.get())) },
-    ],
-  }));
+  // Web pins with CSS sticky inside a section-tall track instead: Firefox
+  // scrolls on the compositor, so a transform set from JS lands frames behind
+  // the content and the bar judders.
+  const follow = useAnimatedStyle(() =>
+    process.env.EXPO_OS === 'web'
+      ? {}
+      : {
+          transform: [
+            { translateY: Math.max(0, Math.min(scrollY.get() - top.get(), height.get() - barHeight.get())) },
+          ],
+        },
+  );
 
   return (
     <AnimatedView
       accessibilityElementsHidden={!visible}
-      className="absolute top-0 left-0 right-0"
+      className="absolute top-0 left-0 right-0 web:bottom-0"
       importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
-      onLayout={(event) => barHeight.set(event.nativeEvent.layout.height)}
       style={[follow, { pointerEvents: 'none' }]}
     >
       <AnimatedView
         accessibilityRole="header"
-        className="flex-row items-baseline px-6 py-2 bg-background border-b border-border"
+        className="flex-row items-baseline px-6 py-2 bg-background border-b border-border web:sticky web:top-0"
+        onLayout={(event) => barHeight.set(event.nativeEvent.layout.height)}
         style={{
           opacity: visible ? 1 : 0,
           transform: [{ translateY: visible ? 0 : -6 }],
@@ -199,7 +206,7 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
 
   useAnimatedReaction(
     () => scrollY.get() <= HEAD_PASSED,
-    (atTop) => { if (atTop) scheduleOnRN(setCurrent, null); },
+    (atTop, wasAtTop) => { if (atTop && wasAtTop !== true) scheduleOnRN(setCurrent, null); },
   );
 
   const onScroll = useAnimatedScrollHandler((event) => {
