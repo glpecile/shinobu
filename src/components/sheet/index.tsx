@@ -9,8 +9,10 @@ import {
   useWindowDimensions,
   View,
   type LayoutChangeEvent,
+  type ViewStyle,
 } from 'react-native';
-import { useKeyboardState } from 'react-native-keyboard-controller';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import { createAnimatedComponent, useAnimatedStyle } from 'react-native-reanimated';
 
 import { RailFadeColor } from '@/components/rail';
 
@@ -34,7 +36,9 @@ export interface SheetProps {
  * sizes to content. The only allowed import of the lib (oxlint-enforced).
  */
 export function Sheet({ open, onClose, children }: SheetProps) {
-  const keyboardHeight = useKeyboardState((state) => (state.isVisible ? state.height : 0));
+  // Negative while the keyboard is up, tracked per frame on the UI thread.
+  const keyboard = useReanimatedKeyboardAnimation();
+  const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.value : 0 }));
   // A focused field outlives the sheet, which stays mounted while closed, so
   // its keyboard would stay up over the screen beneath.
   function close() {
@@ -66,7 +70,11 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       // the sheet above the keyboard, like `adjustResize`; the host re-anchors
       // on resize natively. Resize the host, never the content, which crashed
       // Fabric (docs/solutions/bottom-sheet-content-detent-clips-tall-content.md).
-      style={process.env.EXPO_OS === 'android' && open ? { bottom: keyboardHeight } : undefined}
+      // The lift follows the keyboard frame by frame: jumping to its final
+      // height flashed the screen behind between the sheet and the keyboard.
+      // The lib types `style` as static, but it lands on the wrapped view.
+      style={process.env.EXPO_OS === 'android' ? (lift as unknown as ViewStyle) : undefined}
+      wrapNativeView={process.env.EXPO_OS === 'android' ? createAnimatedComponent : undefined}
       surface={
         <View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />
       }
