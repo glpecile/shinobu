@@ -1,5 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -64,6 +64,7 @@ import { parseLocalInstant } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { ratingsLookup } from '@/lib/providers/simkl/reads';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import { usePushRoute } from '@/lib/navigation';
 import { mediaItemId, routes } from '@/lib/routes';
@@ -93,7 +94,7 @@ import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { tmdbQueryKeys } from '@/state/queries/tmdb';
 import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
-import { wikidataQueryKeys } from '@/state/queries/wikidata';
+import { wikidataQueryKeys, wikidataRatingsLookup } from '@/state/queries/wikidata';
 import { useConnectedProviders } from '@/state/session';
 import type {
   NormalizedCastMember,
@@ -544,14 +545,13 @@ function DetailsScreen() {
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const { item, isLoading, refetchFeed } = useResolvedMediaItem(id, mediaType);
+  const { item, isLoading } = useResolvedMediaItem(id, mediaType);
   // TMDB is the metadata source of truth (plan 0014): the same composed
   // query that feeds the credit sections hands the header a catalogue
   // record, and its display fields override whatever the origin provider
   // carried. Non-suspending — the header renders instantly from the item
   // and sharpens when TMDB answers.
   const mediaDetails = useMediaDetailsQuery(item);
-  const traktId = item?.externalIds.trakt;
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
   const onAniList = item != null && PROVIDERS.anilist.mediaTypes.includes(item.type);
@@ -683,54 +683,39 @@ function DetailsScreen() {
   const premiere = seriesPremiere(shown, headerEpisodes ?? []);
 
   function refresh() {
+    // Home stays mounted under the stack, so provider-root refreshes also
+    // reload its unrelated feeds.
+    const { trakt, tmdb, letterboxd } = shown.externalIds;
+    const letterboxdSlug = letterboxd ?? (tmdb != null
+      ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb))
+      : null);
+    const keys: QueryKey[] = [
+      mediaDetailsQueryKeys.details(item),
+      traktQueryKeys.watchedMovies(),
+      traktQueryKeys.watchedShows(),
+      simklQueryKeys.allItems(),
+      simklQueryKeys.ratings(ratingsLookup(shown)),
+      wikidataQueryKeys.ratings(wikidataRatingsLookup(shown)),
+      ...(trakt != null
+        ? [traktQueryKeys.seasons(trakt), traktQueryKeys.showProgress(trakt), traktQueryKeys.images(shown.type, trakt)]
+        : []),
+      ...(tmdb != null ? [tmdbQueryKeys.seasons(tmdb), letterboxdQueryKeys.slug(tmdb)] : []),
+      ...(letterboxdSlug != null ? [letterboxdQueryKeys.film(letterboxdSlug)] : []),
+      ...(anilistId != null
+        ? [anilistQueryKeys.entryState(anilistId), anilistQueryKeys.relations(anilistId), anilistQueryKeys.anime(anilistId)]
+        : []),
+    ];
     // Sections that failed are unmounted, leaving their queries inactive and
-    // stuck in error state — remove those so the resetKey remount refetches
+    // stuck in error state. Remove those so the resetKey remount refetches
     // from scratch. Healthy (active) ones refetch in the background instead,
     // without re-suspending into a skeleton.
-    queryClient.removeQueries({
-      queryKey: mediaDetailsQueryKeys.all,
-      type: 'inactive',
-    });
-    if (traktId != null && item?.type === 'TV') {
-      for (const key of [
-        traktQueryKeys.seasons(traktId),
-        traktQueryKeys.showProgress(traktId),
-      ]) {
-        queryClient.removeQueries({ queryKey: key, type: 'inactive' });
-      }
-    }
-    // The TMDB seasons leg (plan 0034) fails the same way a Trakt one can.
-    if (item?.externalIds.tmdb != null && item?.type === 'TV') {
-      queryClient.removeQueries({
-        queryKey: tmdbQueryKeys.seasons(item.externalIds.tmdb),
-        type: 'inactive',
-      });
-    }
-    if (anilistId != null && onAniList) {
-      for (const key of [
-        anilistQueryKeys.entryState(anilistId),
-        anilistQueryKeys.relations(anilistId),
-      ]) {
-        queryClient.removeQueries({ queryKey: key, type: 'inactive' });
-      }
-    }
-    for (const key of [simklQueryKeys.all, letterboxdQueryKeys.all, wikidataQueryKeys.all]) {
-      queryClient.removeQueries({ queryKey: key, type: 'inactive', predicate: (query) => query.state.status === 'error' });
+    for (const queryKey of keys) {
+      queryClient.removeQueries({ queryKey, type: 'inactive', predicate: (query) => query.state.status === 'error' });
     }
     setRefreshCount((count) => count + 1);
-    return Promise.allSettled([
-      refetchFeed(),
-      queryClient.refetchQueries({
-        queryKey: mediaDetailsQueryKeys.all,
-        type: 'active',
-      }),
-      queryClient.refetchQueries({ queryKey: traktQueryKeys.all, type: 'active' }),
-      queryClient.refetchQueries({ queryKey: anilistQueryKeys.all, type: 'active' }),
-      queryClient.refetchQueries({ queryKey: simklQueryKeys.all, type: 'active' }),
-      queryClient.refetchQueries({ queryKey: tmdbQueryKeys.all, type: 'active' }),
-      queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.all, type: 'active' }),
-      queryClient.refetchQueries({ queryKey: wikidataQueryKeys.all, type: 'active' }),
-    ]);
+    return Promise.allSettled(
+      keys.map((queryKey) => queryClient.refetchQueries({ queryKey, type: 'active' })),
+    );
   }
 
   const header = (

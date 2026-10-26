@@ -21,7 +21,7 @@ const METACRITIC = 'Q150248';
 const TOMATOMETER = 'Q108403393';
 const METASCORE = 'Q106515043';
 
-/** The ids a title is looked up by. TMDB wins; MAL and AniList are only for anime without one. */
+/** The ids a title is looked up by: TMDB, or MAL and AniList for anime. TMDB wins when both are set. */
 export interface WikidataLookup {
   tmdb?: { kind: 'movie' | 'tv'; id: number };
   mal?: number;

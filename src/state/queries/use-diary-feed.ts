@@ -264,7 +264,9 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
   const { trakt, anilist, tmdb, letterboxd } = item.externalIds;
 
   return useQuery({
-    queryKey: diaryQueryKeys.filmPlays(providers, item.externalIds),
+    // Only the ids the fetch reads: the catalogue merge adds others (IMDb) once
+    // TMDB answers, which would otherwise refetch every play.
+    queryKey: diaryQueryKeys.filmPlays(providers, { trakt, anilist, tmdb, letterboxd }),
     queryFn: async ({ signal }) => {
       const settled = await Promise.allSettled([
         providers.includes('trakt') && trakt != null
