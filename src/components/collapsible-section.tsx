@@ -118,18 +118,20 @@ export function CollapsibleSection({
       onLayout={(event) => sectionHeight.set(event.nativeEvent.layout.height)}
       ref={section}
     >
-      {/* Reserves the action's `min-h-11` while collapsed hides it, so the
-          header doesn't jump on toggle (matches `SkeletonSectionHeader`). */}
+      {/* Pinned, padding instead of margin lets the background cover the gap
+          around the title; the negative margin keeps the unpinned layout. */}
       <AnimatedView
-        className={cn('flex-row items-center justify-between px-4 mb-3', action && 'min-h-11', scroll && 'z-10 bg-background web:sticky web:top-0')}
+        className={cn('flex-row items-center justify-between px-4 mb-3', scroll && 'z-10 mb-0 pb-3 bg-background web:sticky web:top-0 web:-mt-3 web:pt-3')}
         onLayout={(event) => headerHeight.set(event.nativeEvent.layout.height)}
         style={sticky}
       >
+        {/* Reserves the action's `min-h-11` while collapsed hides it, so the
+            header doesn't jump on toggle (matches `SkeletonSectionHeader`). */}
         <PresstableOpacity
           accessibilityLabel={`${collapsed ? 'Expand' : 'Collapse'} ${title}`}
           accessibilityRole="button"
           accessibilityState={{ expanded: !collapsed }}
-          className="flex-row items-center gap-2 shrink"
+          className={cn('flex-row items-center gap-2 shrink', action && 'min-h-11')}
           onPress={toggle}
           pressBehavior="immediate"
         >
