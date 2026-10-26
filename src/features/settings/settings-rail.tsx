@@ -103,7 +103,7 @@ function SettingsRailSection({
         }}
       >
         {children}
-        <SettingsRailPinned count={count} height={height} scrollY={scrollY} title={title} top={top} />
+        <SettingsRailPinned count={count} height={height} icon={icon} scrollY={scrollY} title={title} top={top} />
       </View>
     </OpenContext.Provider>
   );
@@ -119,12 +119,14 @@ function SettingsRailSection({
 function SettingsRailPinned({
   title,
   count,
+  icon,
   scrollY,
   top,
   height,
 }: {
   title: string;
   count: string;
+  icon: IconName;
   scrollY: SharedValue<number>;
   top: SharedValue<number>;
   height: SharedValue<number>;
@@ -133,6 +135,7 @@ function SettingsRailPinned({
   const reduceMotion = useReducedMotion();
   const barHeight = useSharedValue(0);
   const [visible, setVisible] = useState(false);
+  const muted = useThemeColor('--color-muted');
 
   function handlePin(next: boolean) {
     setVisible(next);
@@ -171,7 +174,7 @@ function SettingsRailPinned({
     >
       <AnimatedView
         accessibilityRole="header"
-        className="flex-row items-baseline px-6 py-2 bg-background border-b border-border web:sticky web:top-0"
+        className="flex-row items-center gap-2 px-6 py-2 bg-background border-b border-border web:sticky web:top-0"
         onLayout={(event) => barHeight.set(event.nativeEvent.layout.height)}
         style={{
           opacity: visible ? 1 : 0,
@@ -181,8 +184,9 @@ function SettingsRailPinned({
           transitionTimingFunction: EASE_OUT,
         }}
       >
+        <Ionicons color={muted} name={icon} size={16} />
         <Text className="font-display text-base text-foreground">{title}</Text>
-        <Text className="ml-3 shrink text-muted font-sans text-xs" numberOfLines={1}>
+        <Text className="ml-1 shrink text-muted font-sans text-xs" numberOfLines={1}>
           {count}
         </Text>
       </AnimatedView>

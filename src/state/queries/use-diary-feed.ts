@@ -71,7 +71,7 @@ async function fetchAniListActivityPage(
   page: number,
   mediaId?: number,
   signal?: AbortSignal,
-): Promise<NormalizedDiaryEntry[]> {
+): Promise<{ entries: NormalizedDiaryEntry[]; hasNextPage: boolean; readTo?: string }> {
   const deps = anilistDeps();
   const viewer = await queryClient.fetchQuery({
     queryKey: anilistQueryKeys.viewer(),
@@ -89,7 +89,7 @@ type FetchSlice = (
   queryClient: QueryClient,
   page: number,
   signal?: AbortSignal,
-) => Promise<Pick<DiarySlice, 'entries' | 'next'>>;
+) => Promise<Pick<DiarySlice, 'entries' | 'next' | 'readTo'>>;
 
 /** One page of each provider's diary; the effects run here (containment rule). */
 const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
@@ -98,8 +98,8 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
     return { entries, next: pageAfter(entries, page) };
   },
   anilist: async (queryClient, page, signal) => {
-    const entries = await fetchAniListActivityPage(queryClient, page, undefined, signal);
-    return { entries, next: pageAfter(entries, page) };
+    const { entries, hasNextPage, readTo } = await fetchAniListActivityPage(queryClient, page, undefined, signal);
+    return { entries, next: hasNextPage ? page + 1 : undefined, readTo };
   },
   // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
   // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
@@ -273,7 +273,7 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
           ? Effect.runPromise(getMovieHistory(traktDeps(), { traktId: trakt }), { signal })
           : [],
         providers.includes('anilist') && anilist != null
-          ? fetchAniListActivityPage(queryClient, 1, anilist, signal)
+          ? fetchAniListActivityPage(queryClient, 1, anilist, signal).then((result) => result.entries)
           : [],
         providers.includes('letterboxd') && (tmdb != null || letterboxd != null)
           ? queryClient.fetchQuery(letterboxdDiaryQuery()).then((entries) =>

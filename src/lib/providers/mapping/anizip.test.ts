@@ -167,4 +167,18 @@ describe('fetchAniZipIds (unchanged by the episode-map sibling)', () => {
       await fetchAniZipIds(jsonFetch({ episodes: DANDADAN_S2.episodes }), LOOKUP),
     ).toBeNull();
   });
+
+  test('an unknown id returns null', async () => {
+    expect(
+      await fetchAniZipIds(async () => new Response(null, { status: 404 }), LOOKUP),
+    ).toBeNull();
+  });
+
+  test.each([
+    ['503 response', async () => new Response(null, { status: 503 })],
+    ['malformed JSON', malformedFetch],
+    ['network error', offlineFetch],
+  ] as const)('%s rejects instead of becoming a mapping miss', async (_, fetch) => {
+    await expect(fetchAniZipIds(fetch, LOOKUP)).rejects.toThrow();
+  });
 });

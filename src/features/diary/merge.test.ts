@@ -57,13 +57,14 @@ function entry(
 function state(
   provider: ProviderId,
   entries: NormalizedDiaryEntry[],
-  options: { hasMore?: boolean; failed?: boolean } = {},
+  options: { hasMore?: boolean; failed?: boolean; readTo?: string } = {},
 ): DiaryProviderState {
   return {
     provider,
     entries,
     hasMore: options.hasMore ?? false,
     failed: options.failed ?? false,
+    readTo: options.readTo,
   };
 }
 
@@ -143,6 +144,18 @@ describe('watermarkProviders', () => {
     ]);
     // Letterboxd's oldest (July 12) is the newest oldest-loaded → it advances.
     expect(providers).toEqual(['letterboxd']);
+  });
+
+  test('a page that filtered to nothing still holds and advances by how far it read', () => {
+    const states = [
+      state('trakt', [
+        entry('trakt', '1', '2026-07-12T00:00:00.000Z'),
+        entry('trakt', '2', '2026-07-01T00:00:00.000Z'),
+      ], { hasMore: true }),
+      state('anilist', [], { hasMore: true, readTo: '2026-07-10T00:00:00.000Z' }),
+    ];
+    expect(mergeDiaryEntries(states).map((e) => e.id)).toEqual(['trakt-1']);
+    expect(watermarkProviders(states)).toEqual(['anilist']);
   });
 
   test('cold-start providers with nothing loaded yet all advance', () => {

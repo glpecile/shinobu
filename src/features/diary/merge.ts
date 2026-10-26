@@ -22,6 +22,8 @@ export interface DiaryProviderState {
   provider: ProviderId;
   /** Every entry loaded across pages so far (order irrelevant — sorted here). */
   entries: NormalizedDiaryEntry[];
+  /** The oldest instant read when it passes the oldest entry (see `DiarySlice`). */
+  readTo?: string;
   /** More pages remain to fetch (false when exhausted OR failed). */
   hasMore: boolean;
   /** This provider's initial or pagination fetch failed. */
@@ -53,7 +55,7 @@ function entryMs(entry: NormalizedDiaryEntry): number {
 /**
  * Deduplicates by log id (newest occurrence wins), applies the watermark cut,
  * and sorts descending (plan 0016 KTD3). The watermark is the newest
- * "oldest-loaded" instant among providers that still have more pages — no entry
+ * "read-back-to" instant among providers that still have more pages — no entry
  * older than it is exposed, since a not-yet-fetched page of that provider could
  * still fill the gap. Failed and exhausted providers drop out of the watermark.
  */
@@ -81,33 +83,45 @@ export function mergeDiaryEntries(
   return cut.sort((a, b) => entryMs(b) - entryMs(a));
 }
 
+/**
+ * How far back each provider with more pages has read (epoch ms): its oldest
+ * entry, or its `readTo` when the page read past entries it dropped. Providers
+ * with nothing loaded yet are left out.
+ */
+function readFrontiers(
+  states: readonly DiaryProviderState[],
+): Array<{ provider: ProviderId; min: number }> {
+  return states
+    .filter((state) => state.hasMore && !state.failed)
+    .flatMap((state) => {
+      const readTo = state.readTo != null ? parseLocalInstant(state.readTo)?.getTime() : undefined;
+      const min = Math.min(...state.entries.map(entryMs), readTo ?? Infinity);
+      return Number.isFinite(min) ? [{ provider: state.provider, min }] : [];
+    });
+}
+
 /** The watermark instant (epoch ms), or null when nobody has more pages. */
 function computeWatermark(
   states: readonly DiaryProviderState[],
 ): number | null {
-  const mins = states
-    .filter((state) => state.hasMore && !state.failed && state.entries.length > 0)
-    .map((state) => Math.min(...state.entries.map(entryMs)));
+  const mins = readFrontiers(states).map((frontier) => frontier.min);
   return mins.length > 0 ? Math.max(...mins) : null;
 }
 
 /**
  * Which provider(s) sit at the watermark and must advance on `fetchNextPage`
- * (plan 0016 KTD3): the ones whose oldest-loaded entry defines the current cut.
+ * (plan 0016 KTD3): the ones whose read-back-to instant defines the current cut.
  * Advancing them lowers the watermark and releases held-back entries. Providers
  * with more pages but nothing loaded yet advance too (cold start).
  */
 export function watermarkProviders(
   states: readonly DiaryProviderState[],
 ): ProviderId[] {
-  const withMore = states.filter((state) => state.hasMore && !state.failed);
-  const loaded = withMore.filter((state) => state.entries.length > 0);
-  if (loaded.length === 0) return withMore.map((state) => state.provider);
+  const mins = readFrontiers(states);
+  if (mins.length === 0) {
+    return states.filter((state) => state.hasMore && !state.failed).map((state) => state.provider);
+  }
 
-  const mins = loaded.map((state) => ({
-    provider: state.provider,
-    min: Math.min(...state.entries.map(entryMs)),
-  }));
   const watermark = Math.max(...mins.map((m) => m.min));
   return mins.filter((m) => m.min === watermark).map((m) => m.provider);
 }

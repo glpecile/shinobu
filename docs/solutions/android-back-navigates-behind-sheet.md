@@ -3,7 +3,7 @@
 `@swmansion/react-native-bottom-sheet` 0.16.2 leaves Android Back handling to the
 consumer. An open sheet therefore does not prevent navigation underneath it.
 
-Version 0.17.0-next.2 adds `ModalBottomSheet.onCloseRequest`: a native controlled
+Version 0.17.0 adds `ModalBottomSheet.onCloseRequest`: a native controlled
 close request for Android system Back, committed predictive Back, and Escape.
 The shared native `Sheet` passes its existing `onClose` handler to this prop;
 the caller updates `open`, which moves the sheet to its closed detent. No effect,
@@ -20,7 +20,7 @@ are non-focusable/non-touchable. iOS retains the portal and web its Modal.
 This presentation change is JS-only on a client already built with the pinned
 version; no BackHandler or per-screen navigation guard is added.
 
-The dependency is pinned to that exact prerelease. This needs a clean native
+The dependency is pinned to stable 0.17.1. This needs a clean native
 rebuild (`bun android.clean`, or `bun ios.clean` for iOS), not just Fast Refresh.
 Lint and TypeScript checks pass. The owner confirmed working behavior after
 the rebuild guidance; the agent did not complete a passing runtime check.

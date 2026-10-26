@@ -154,6 +154,7 @@ export function getCurrentAnime(
 
 interface ListActivityResponse {
   Page: {
+    pageInfo?: { hasNextPage: boolean } | null;
     activities: Array<AniListListActivity | null> | null;
   } | null;
 }
@@ -164,18 +165,24 @@ interface ListActivityResponse {
  * updates; non-watch/read statuses (plan/pause/drop) drop out in normalization.
  * Reuses the cached `viewerId`. Page size stays inside the 30 req/min budget
  * (docs/solutions/anilist-rate-limit-retry-storm.md) — the caller sets a
- * generous staleTime and `maxPages` (plan 0016 KTD9).
+ * generous staleTime (plan 0016 KTD9). `readTo` is the oldest activity the
+ * page read, dropped ones included, so a page that filters to nothing still
+ * moves the diary's watermark.
  */
 export function getListActivity(
   deps: AniListDeps,
   /** `mediaId` narrows to one title's activity; omitted, it drops out of the body. */
   params: { viewerId: number; page: number; perPage?: number; mediaId?: number },
-): Effect.Effect<NormalizedDiaryEntry[], ProviderError> {
+): Effect.Effect<
+  { entries: NormalizedDiaryEntry[]; hasNextPage: boolean; readTo?: string },
+  ProviderError
+> {
   const perPage = params.perPage ?? 50;
   return anilistAuthedRequest<ListActivityResponse>(
     deps,
     `query ($userId: Int, $mediaId: Int, $page: Int, $perPage: Int) {
       Page(page: $page, perPage: $perPage) {
+        pageInfo { hasNextPage }
         activities(userId: $userId, mediaId: $mediaId, type: MEDIA_LIST, sort: ID_DESC) {
           ... on ListActivity {
             id
@@ -196,12 +203,20 @@ export function getListActivity(
       },
     },
   ).pipe(
-    Effect.map((data) =>
-      (data.Page?.activities ?? [])
-        .filter((activity): activity is AniListListActivity => activity != null)
-        .map((activity) => normalizeListActivity(activity))
-        .filter((entry): entry is NormalizedDiaryEntry => entry != null),
-    ),
+    Effect.map((data) => {
+      const activities = (data.Page?.activities ?? []).filter(
+        (activity): activity is AniListListActivity => activity != null,
+      );
+      // Merged list updates keep their first id, so ID_DESC isn't createdAt order.
+      const oldest = Math.min(...activities.flatMap((activity) => activity.createdAt ?? []));
+      return {
+        entries: activities
+          .map((activity) => normalizeListActivity(activity))
+          .filter((entry): entry is NormalizedDiaryEntry => entry != null),
+        hasNextPage: data.Page?.pageInfo?.hasNextPage === true,
+        readTo: Number.isFinite(oldest) ? new Date(oldest * 1000).toISOString() : undefined,
+      };
+    }),
   );
 }
 

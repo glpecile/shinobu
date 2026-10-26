@@ -152,8 +152,9 @@ export default function DiaryScreen() {
         />
       </View>
     );
-  } else if (diary.entryCount === 0) {
-    // R9 (4): loaded cleanly, genuinely nothing logged yet.
+  } else if (diary.entryCount === 0 && !diary.hasNextPage) {
+    // R9 (4): loaded cleanly, genuinely nothing logged yet. With pages left,
+    // the list's empty state offers "Load more" instead.
     content = (
       <View className="flex-1 justify-center pb-16">
         <EmptyStateTile

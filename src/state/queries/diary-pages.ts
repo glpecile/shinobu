@@ -55,6 +55,8 @@ export interface DiarySlice {
   /** The page to fetch after this one; undefined once exhausted. A failed
    *  fetch keeps its own page so the next advance retries it. */
   next: number | undefined;
+  /** The oldest instant read, past entries the normalizer dropped (AniList). */
+  readTo?: string;
   /** The fetch failed — data, never a thrown query (partial-failure contract). */
   error?: string;
 }
@@ -81,12 +83,15 @@ export function diaryStates(pages: readonly DiaryPage[]): DiaryPageState[] {
     for (const [provider, slice] of Object.entries(page.slices) as Array<
       [ProviderId, DiarySlice]
     >) {
-      const entries = byProvider.get(provider)?.entries ?? [];
+      const previous = byProvider.get(provider);
+      const entries = previous?.entries ?? [];
       for (const entry of slice.entries) entries.push(entry);
-      const failed = slice.error != null && entries.length === 0;
+      const readTo = slice.readTo ?? previous?.readTo;
+      const failed = slice.error != null && entries.length === 0 && readTo == null;
       byProvider.set(provider, {
         provider,
         entries,
+        readTo,
         failed,
         hasMore: !failed && slice.next != null,
         next: slice.next,

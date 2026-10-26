@@ -321,11 +321,11 @@ function ProviderMarks({ providers }: { providers: ProviderId[] }) {
 
 /** The 36×54 rail poster, lazily recovered when the log arrives artless. */
 function DiaryPoster({ item }: { item: NormalizedMediaItem }) {
-  const { coverImage: providerCover } = useTraktMediaImages(item);
-  // Serializd's sparse logs carry a TMDB TV ID; reuse detail metadata only
-  // when provider recovery has no art, without delaying the diary page.
+  const { coverImage: providerCover, loading } = useTraktMediaImages(item);
+  // Serializd's sparse logs carry a TMDB TV ID; fall back to detail metadata
+  // once provider recovery has finished without art.
   const { data: details } = useMediaDetailsQuery(
-    providerCover === '' && item.externalIds.tmdb != null ? item : undefined,
+    providerCover === '' && !loading && item.externalIds.tmdb != null ? item : undefined,
   );
   const coverImage = providerCover || details?.catalogue?.coverImage || '';
   return <SmallPoster uri={coverImage} recyclingKey={item.id} size="sm" />;

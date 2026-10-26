@@ -78,35 +78,31 @@ function queryFor(lookup: AniZipLookup): string {
 }
 
 /**
- * One mapping lookup, deliberately *not* an Effect and *not* failable: a
- * mapping miss (unknown id, non-anime, network hiccup) degrades to `null`,
- * which downstream reads as "this item only exists on its origin provider" —
- * the fan-out then simply doesn't widen (plan 0011 decision 5). Responses can
- * be ~1 MB (the per-episode table); only `mappings` is decoded. Callers cache
- * results (mappings don't churn) — see `features/log-media/enrich.ts`.
+ * One mapping lookup: `null` means ani.zip confirmed no mapping, through a
+ * 404 or an absent `mappings` block. Other failures throw so callers don't
+ * cache them as misses. Responses can be ~1 MB (the per-episode table); only
+ * `mappings` is decoded. Callers cache results (mappings don't churn), see
+ * `features/log-media/enrich.ts`.
  */
 export async function fetchAniZipIds(
   fetch: HttpFetch,
   lookup: AniZipLookup,
 ): Promise<AniZipIds | null> {
-  try {
-    const response = await fetch(`${ANIZIP_MAPPINGS_URL}?${queryFor(lookup)}`);
-    if (!response.ok) return null;
-    const body = (await response.json()) as AniZipResponse;
-    const mappings = body.mappings;
-    if (mappings == null) return null;
+  const response = await fetch(`${ANIZIP_MAPPINGS_URL}?${queryFor(lookup)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`ani.zip mappings ${response.status}`);
+  const body = (await response.json()) as AniZipResponse;
+  const mappings = body.mappings;
+  if (mappings == null) return null;
 
-    const tmdb = Number(mappings.themoviedb_id);
-    return {
-      ...(mappings.anilist_id != null ? { anilist: mappings.anilist_id } : {}),
-      ...(mappings.thetvdb_id != null ? { tvdb: mappings.thetvdb_id } : {}),
-      ...(Number.isFinite(tmdb) && tmdb > 0 ? { tmdb } : {}),
-      ...(mappings.imdb_id != null ? { imdb: mappings.imdb_id } : {}),
-      ...(mappings.type != null ? { type: mappings.type } : {}),
-    };
-  } catch {
-    return null;
-  }
+  const tmdb = Number(mappings.themoviedb_id);
+  return {
+    ...(mappings.anilist_id != null ? { anilist: mappings.anilist_id } : {}),
+    ...(mappings.thetvdb_id != null ? { tvdb: mappings.thetvdb_id } : {}),
+    ...(Number.isFinite(tmdb) && tmdb > 0 ? { tmdb } : {}),
+    ...(mappings.imdb_id != null ? { imdb: mappings.imdb_id } : {}),
+    ...(mappings.type != null ? { type: mappings.type } : {}),
+  };
 }
 
 /**
@@ -118,8 +114,8 @@ export async function fetchAniZipIds(
  * episode 3 resolves to S02E03 instead of the phantom S01E03 the fan-out used
  * to write.
  *
- * Same non-failable contract as the ids fetch — `null` on any miss, never a
- * throw — and the same ~1 MB payload hazard
+ * Returns `null` on any miss or failure, never throws, and shares the ids
+ * fetch's ~1 MB payload hazard
  * (docs/solutions/web-cors-anizip.md), which is why only `{season, number}`
  * survives the decode and only *write actions* ever call this (KTD4). Keys are
  * AniDB-entry-derived: `"S1"`-style specials keys and any entry without a
