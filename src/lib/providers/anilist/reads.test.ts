@@ -10,8 +10,8 @@ test('a filtered activity page retains AniList pagination', async () => {
   const fetch: HttpFetch = async () => Response.json({ data: { Page: {
     pageInfo: { hasNextPage: true },
     activities: [
-      { id: 5001, status: 'plans to watch', progress: null, createdAt: 1_752_000_000, media },
       { id: 5002, status: 'watched episode', progress: '1', createdAt: 1_752_000_100, media },
+      { id: 5001, status: 'plans to watch', progress: null, createdAt: 1_752_000_000, media },
     ],
   } } });
   const tokens: TokenStore = {
@@ -24,4 +24,5 @@ test('a filtered activity page retains AniList pagination', async () => {
 
   expect(result.hasNextPage).toBe(true);
   expect(result.entries).toHaveLength(1);
+  expect(result.readTo).toBe(new Date(1_752_000_000 * 1000).toISOString());
 });

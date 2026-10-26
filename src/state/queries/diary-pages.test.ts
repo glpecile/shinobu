@@ -69,6 +69,14 @@ describe('diaryStates', () => {
     expect(state).toMatchObject({ failed: false, hasMore: true, error: 'boom' });
     expect(nextDiaryCursor(pages)).toEqual({ trakt: 3 });
   });
+
+  test('a page read past dropped rows keeps its place when the next page fails', () => {
+    const [state] = diaryStates([
+      { slices: { anilist: { entries: [], next: 2, readTo: '2026-07-10T00:00:00.000Z' } } },
+      { slices: { anilist: { entries: [], next: 2, error: 'boom' } } },
+    ]);
+    expect(state).toMatchObject({ failed: false, hasMore: true, readTo: '2026-07-10T00:00:00.000Z' });
+  });
 });
 
 function cache(entries: unknown[]): QueryClient {

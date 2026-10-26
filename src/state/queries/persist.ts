@@ -55,7 +55,9 @@ const PERSIST_KEY = 'shinobu.query-cache';
 // bump: a pre-U8 snapshot restores without those arrays and `computeUpNext`
 // throws on `inputs.progress.map` during the first render after upgrade.
 // v6: seasonal catalogue entries now retain pageInfo beside their card items.
-const BUSTER = 'v6';
+// v7: ani.zip id lookups no longer cache transient failures as `null`; drop the
+// forever-cached misses written before that.
+const BUSTER = 'v7';
 
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;

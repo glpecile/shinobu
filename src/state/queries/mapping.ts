@@ -169,12 +169,16 @@ const FOREVER = {
   gcTime: Number.POSITIVE_INFINITY,
 };
 
-/** Resolves null on failure without caching it, so the next call retries. */
+/**
+ * Resolves null on failure without caching it, so the next call retries. No
+ * query retries: callers await these in sequence.
+ */
 export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.anizip(lookup),
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
+    retry: false,
   }).catch(() => null);
 }
 
