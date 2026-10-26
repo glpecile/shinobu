@@ -14,6 +14,11 @@
 
 ## Status
 
+- **Execution review**: Use `traktId != null && isPending` for `loading` in
+  the artless-item branch. A cold enabled query stays pending while offline,
+  whereas `isLoading` becomes false when fetching pauses. This keeps details
+  from queuing alongside unresolved Trakt recovery. Disabled queries without
+  a Trakt id must still return `loading: false`.
 - **Priority**: P2
 - **Effort**: S
 - **Risk**: LOW

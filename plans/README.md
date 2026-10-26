@@ -9,12 +9,28 @@ before starting, honor its STOP conditions, and update your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| [001](001-anilist-diary-pagination.md) | AniList diary keeps paginating past filtered entries | P1 | S | — | TODO |
-| [002](002-anizip-transient-failures-not-cached.md) | Failed ani.zip lookups are retried, not cached as misses | P1 | S | — | TODO |
-| [003](003-diary-poster-fallback-after-trakt.md) | Diary posters wait for Trakt art before a details read | P2 | S | — | TODO |
-| [004](004-bottom-sheet-stable-release.md) | Bottom sheet off `0.17.0-next.2` to stable `0.17.1` | P2 | S + device QA | — | TODO |
+| [001](001-anilist-diary-pagination.md) | AniList diary keeps paginating past filtered entries | P1 | S | — | DONE |
+| [002](002-anizip-transient-failures-not-cached.md) | Failed ani.zip lookups are retried, not cached as misses | P1 | S | — | DONE |
+| [003](003-diary-poster-fallback-after-trakt.md) | Diary posters wait for Trakt art before a details read | P2 | S | — | DONE |
+| [004](004-bottom-sheet-stable-release.md) | Bottom sheet off `0.17.0-next.2` to stable `0.17.1` | P2 | S + device QA | — | BLOCKED (code complete; full native checklist pending) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+
+## Execution evidence
+
+- 001 and 002 regressions failed against the baseline and pass with their fixes.
+- 003 includes paused offline recovery. An installed TanStack QueryObserver
+  check confirms the fallback waits through pause and reconnect, while a
+  missing Trakt id still permits fallback.
+- Combined TypeScript, lint, class-name and navigation checks pass, with 1,542
+  isolated tests passing. Expo's dependency check and external-link check pass.
+- Previously persisted ani.zip misses are not invalidated by this change.
+- iOS clean rebuild and install pass with bottom sheet 0.17.1. The episode
+  log sheet opens at content height with its confirm action visible. Scrim
+  dismissal closes the form and keyboard while preserving the details route.
+- iOS card long-press automation navigated instead of opening actions, and
+  the rapid-cycle attempt drifted navigation. Card actions, long-tag scrolling
+  and ten verified cycles remain unverified. No provider writes were made.
 
 ## Dependency notes
 
