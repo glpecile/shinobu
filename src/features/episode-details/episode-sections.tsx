@@ -112,9 +112,10 @@ export function EpisodeHeading({
 }
 
 /**
- * "Logged on Trakt · Sep 3, 2026" — one row per provider that records the
- * episode as watched. Nothing when none does: an absent line is honest, a
- * "not logged" line would overclaim for the providers this can't read.
+ * "Logged on AniList & Simkl · Sep 3, 2026" — one line for every provider that
+ * records the episode as watched, dated by the latest watch. Nothing when none
+ * does: an absent line is honest, a "not logged" line would overclaim for the
+ * providers this can't read.
  */
 export function EpisodeLogs({
   logs,
@@ -125,22 +126,25 @@ export function EpisodeLogs({
 }) {
   const accent = useThemeColor('--color-accent');
   if (logs.length === 0) return null;
+  const labels = logs.map((log) => PROVIDERS[log.provider].label);
+  const names = labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(', ')} & ${labels.at(-1)}`;
+  const watchedAt = logs
+    .flatMap((log) => (log.watchedAt != null ? [log.watchedAt] : []))
+    .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
   return (
-    <View className={cn('gap-2', className)}>
+    <View className={cn('flex-row items-center gap-2', className)}>
+      <Ionicons
+        color={accent}
+        name="eye"
+        size={14}
+      />
       {logs.map((log) => (
-        <View className="flex-row items-center gap-2" key={log.provider}>
-          <Ionicons
-            color={accent}
-            name="eye"
-            size={14}
-          />
-          <ProviderIcon id={log.provider} size={16} />
-          <Text className="text-muted font-sans text-sm">
-            Logged on {PROVIDERS[log.provider].label}
-            {log.watchedAt != null ? ` · ${formatAirDate(log.watchedAt)}` : ''}
-          </Text>
-        </View>
+        <ProviderIcon id={log.provider} key={log.provider} size={16} />
       ))}
+      <Text className="flex-1 text-muted font-sans text-sm">
+        Logged on {names}
+        {watchedAt != null ? ` · ${formatAirDate(watchedAt)}` : ''}
+      </Text>
     </View>
   );
 }
