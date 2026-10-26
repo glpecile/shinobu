@@ -31,6 +31,11 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - iOS card long-press automation navigated instead of opening actions, and
   the rapid-cycle attempt drifted navigation. Card actions, long-tag scrolling
   and ten verified cycles remain unverified. No provider writes were made.
+- Android clean prebuild and Gradle compilation pass, producing the debug
+  APK. The full clean command exits 1 when Expo's emulator-property query
+  times out before installation, leaving Android runtime QA blocked.
+- `bun run build:web` exits 0 and exports `dist`. Browser interactions and
+  live Trakt poster-request sequencing remain unverified.
 
 ## Dependency notes
 
