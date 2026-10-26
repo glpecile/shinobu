@@ -169,12 +169,13 @@ const FOREVER = {
   gcTime: Number.POSITIVE_INFINITY,
 };
 
+/** Resolves null on failure without caching it, so the next call retries. */
 export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.anizip(lookup),
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
-  });
+  }).catch(() => null);
 }
 
 /**
