@@ -143,7 +143,7 @@ export function useTraktItemQuery(traktId: number | null, type?: MediaType) {
  * per-item catalogue fetch — trending/search items already carry art and
  * resolve without a request. Art never churns, so the cache entry never goes
  * stale (docs/solutions/trakt-watched-endpoints-2026-api-changes.md).
- * `loading` is true only while the recovery read is in flight.
+ * `loading` includes an enabled recovery read pending its first result, even when paused offline.
  */
 export function useTraktMediaImages(
   item: NormalizedMediaItem | undefined,
@@ -151,7 +151,7 @@ export function useTraktMediaImages(
   const traktId = item?.externalIds.trakt;
   const type = item?.type ?? 'MOVIE';
   const missingArt = item != null && item.coverImage === '';
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     // Cards that already have art share one idle entry rather than adding one
     // per title, which every cache-wide invalidation would then scan.
     queryKey: traktQueryKeys.images(type, missingArt ? traktId ?? -1 : -1),
@@ -173,7 +173,7 @@ export function useTraktMediaImages(
         : {}),
     };
   }
-  return { ...(data ?? { coverImage: '' }), loading: isLoading };
+  return { ...(data ?? { coverImage: '' }), loading: traktId != null && isPending };
 }
 
 /**
