@@ -15,12 +15,13 @@ import { getClientIdForProvider } from '@/state/session/provider-config';
 import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistDeps } from './anilist';
+import { anilistDeps, anilistRelationsQuery } from './anilist';
 import {
   cachedAniZipIds,
   cachedTmdbMovieIdByTitle,
   cachedTmdbTvIdByTvdb,
 } from './mapping';
+import { seasonsSourceFor, showSeasonsQueryOptions } from './show-seasons';
 import { tmdbDeps } from './tmdb';
 import { traktDeps } from './trakt';
 
@@ -148,11 +149,23 @@ export function mediaDetailsQuery(
   };
 }
 
-/** Starts an item's details fetch on press, so it runs during the push transition. */
+/**
+ * Starts the reads the details screen suspends on (credits, seasons, AniList
+ * relations and episodes) together on press, so they run during the push
+ * transition instead of after the screen mounts.
+ */
 export function usePrefetchMediaDetails() {
   const queryClient = useQueryClient();
   return (item: NormalizedMediaItem) => {
     void queryClient.prefetchQuery(mediaDetailsQuery(queryClient, item));
+    const anilistId = item.externalIds.anilist;
+    if (anilistId != null) {
+      void queryClient.prefetchQuery(
+        anilistRelationsQuery(queryClient, { mediaId: anilistId, type: item.type }),
+      );
+    }
+    const seasons = item.type === 'TV' ? seasonsSourceFor(item) : null;
+    if (seasons != null) void queryClient.prefetchQuery(showSeasonsQueryOptions(seasons));
   };
 }
 

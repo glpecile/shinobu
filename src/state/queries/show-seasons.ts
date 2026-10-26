@@ -25,10 +25,10 @@ export type ShowSeasonsSource =
   | { source: 'trakt'; traktId: number }
   | { source: 'tmdb'; tmdbId: number };
 
-function seasonsSourceFor(
+export function seasonsSourceFor(
   item: Pick<NormalizedMediaItem, 'externalIds'>,
-  traktUsable: boolean,
-  tmdbUsable: boolean,
+  traktUsable = getClientIdForProvider('trakt') !== '',
+  tmdbUsable = tmdbToken() !== '',
 ): ShowSeasonsSource | null {
   const traktId = item.externalIds.trakt;
   if (traktId != null && traktUsable) return { source: 'trakt', traktId };
@@ -67,7 +67,7 @@ export function useShowSeasonsSource(
 /** Trakt shares `traktQueryKeys.seasons` with the pre-existing hooks —
  *  whichever mounts first fills the cache for both. The widened `queryKey`
  *  type lets the two sources' literal key tuples share one options shape. */
-function showSeasonsQueryOptions(source: ShowSeasonsSource): {
+export function showSeasonsQueryOptions(source: ShowSeasonsSource): {
   queryKey: readonly unknown[];
   queryFn: (context: { signal: AbortSignal }) => Promise<NormalizedSeason[]>;
   staleTime: number;

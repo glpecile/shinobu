@@ -98,7 +98,6 @@ function findInSeasonalPagesCache(
 export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   item: NormalizedMediaItem | undefined;
   isLoading: boolean;
-  refetchFeed: () => Promise<unknown>;
 } {
   // includeHidden: hidden items must still resolve here — the Manage
   // Trackers hidden list links straight to the details screen.
@@ -203,7 +202,6 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
       ((imdb != null || serializd != null) && externalItem.isPending) ||
       (traktDeepLinkItem.isEnabled && traktDeepLinkItem.isPending) ||
       (simklDeepLink != null && simklDeepLinkItem.isPending),
-    refetchFeed: feed.refetch,
   };
 }
 

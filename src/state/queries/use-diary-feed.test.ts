@@ -3,7 +3,7 @@ import { beforeEach, expect, mock, test } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 
 import type { ProviderId } from '@/lib/providers/types';
-import type { NormalizedDiaryEntry } from '@/types/media';
+import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
 GlobalRegistrator.register();
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
@@ -145,5 +145,22 @@ test('repeated pagination shares a page request and does not cancel refresh', as
     expect(aborted).toBe(0);
     expect(requests).toBe(2);
     await act(async () => { release(); await refreshed; });
+  } finally { read.unmount(); client.clear(); }
+});
+
+test('film plays keep their fetch when the catalogue merge adds an IMDb id', async () => {
+  providers = ['trakt'];
+  setProviderSession('trakt', { accessToken: 'test' });
+  setProviderClientId('trakt', 'test');
+  let requests = 0;
+  transport = async () => { requests++; return Response.json([]); };
+  const { client, wrapper } = setup();
+  const traktFilm: NormalizedMediaItem = { ...film, externalIds: { trakt: 1, tmdb: 10494 } };
+  const read = renderHook(({ item }) => useFilmPlaysQuery(item), { wrapper, initialProps: { item: traktFilm } });
+  try {
+    await waitFor(() => expect(read.result.current.isSuccess).toBe(true));
+    read.rerender({ item: { ...traktFilm, externalIds: { ...traktFilm.externalIds, imdb: 'tt0156887' } } });
+    expect(read.result.current.isFetching).toBe(false);
+    expect(requests).toBe(1);
   } finally { read.unmount(); client.clear(); }
 });

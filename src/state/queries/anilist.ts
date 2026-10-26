@@ -314,7 +314,7 @@ export function useSuspenseAniListRelationsQuery(params: {
   return useSuspenseQuery(anilistRelationsQuery(queryClient, params));
 }
 
-function anilistRelationsQuery(queryClient: QueryClient, params: { mediaId: number; type: MediaType }) {
+export function anilistRelationsQuery(queryClient: QueryClient, params: { mediaId: number; type: MediaType }) {
   const { mediaId } = params;
   const withCredits = params.type === 'MANGA';
   const revision = aniListSessionRevision();
