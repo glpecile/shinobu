@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import type {

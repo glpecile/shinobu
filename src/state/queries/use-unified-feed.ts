@@ -4,7 +4,7 @@ import {
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 
 import { providersForFeed } from '@/lib/providers/routing';

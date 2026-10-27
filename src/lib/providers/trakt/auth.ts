@@ -1,4 +1,5 @@
-import { Effect, type Result } from 'effect';
+import * as Effect from 'effect/Effect';
+import type * as Result from 'effect/Result';
 
 import type { ProviderSession } from '@/types/session';
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';

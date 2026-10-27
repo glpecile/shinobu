@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Text, View } from 'react-native';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';

@@ -1,4 +1,5 @@
-import { Duration, Effect } from 'effect';
+import * as Duration from 'effect/Duration';
+import * as Effect from 'effect/Effect';
 
 import {
   RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,

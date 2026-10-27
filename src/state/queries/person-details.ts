@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { getAniListStaff } from '@/lib/providers/anilist/reads';
 import { getPersonByName } from '@/lib/providers/person-details';

@@ -1,4 +1,5 @@
-import { Duration, Effect } from 'effect';
+import * as Duration from 'effect/Duration';
+import * as Effect from 'effect/Effect';
 
 import {
   ProviderAuthError,

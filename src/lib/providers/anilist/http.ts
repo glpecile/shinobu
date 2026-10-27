@@ -1,4 +1,7 @@
-import { Clock, Duration, Effect, Schema } from 'effect';
+import * as Clock from 'effect/Clock';
+import * as Duration from 'effect/Duration';
+import * as Effect from 'effect/Effect';
+import * as Schema from 'effect/Schema';
 
 import { SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { optionalNullable } from '@/lib/providers/schema';

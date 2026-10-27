@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
 import type { NormalizedMediaItem } from '@/types/media';

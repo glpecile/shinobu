@@ -5,7 +5,7 @@ import {
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import type { WatchlistInput, WatchlistInputs } from '@/features/watchlist/types';
 import { WATCHLIST_PAGE_SIZE } from '@/lib/providers/letterboxd/watchlist';

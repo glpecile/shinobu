@@ -1,4 +1,5 @@
-import { Clock, Effect } from 'effect';
+import * as Clock from 'effect/Clock';
+import * as Effect from 'effect/Effect';
 
 import type { ProviderError } from '@/lib/providers/errors';
 import type {

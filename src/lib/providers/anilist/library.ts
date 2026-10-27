@@ -1,4 +1,6 @@
-import { Clock, Effect, Schema } from 'effect';
+import * as Clock from 'effect/Clock';
+import * as Effect from 'effect/Effect';
+import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';

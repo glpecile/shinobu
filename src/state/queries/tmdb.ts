@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { tmdbToken } from '@/state/session/tmdb-token';

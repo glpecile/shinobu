@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { getDiscussionCatalog, matchDiscussionThreads, type DiscussionBoard } from '@/lib/http/fourchan';

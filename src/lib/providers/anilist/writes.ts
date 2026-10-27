@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import type { NormalizedMediaItem } from '@/types/media';

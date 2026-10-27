@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, useSuspenseQuery, type InfiniteData } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import { searchMedia } from '@/lib/providers/trakt/reads';

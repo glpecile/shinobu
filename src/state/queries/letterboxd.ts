@@ -9,7 +9,7 @@ import {
   useSuspenseQuery,
   type QueryClient,
 } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import {
   letterboxdReleaseInputs,

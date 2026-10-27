@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { ProviderNetworkError, type ProviderError } from '@/lib/providers/errors';
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
