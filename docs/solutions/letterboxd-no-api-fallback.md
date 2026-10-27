@@ -109,20 +109,28 @@ on-device rounds, two hard findings killed it:
    Cloudflare `403` ("Just a moment…"), which is why the write must run inside
    the WebView (it holds `cf_clearance`).
 
-**Working design (plan 0012):** a hidden, always-mounted `LetterboxdWriteBridge`
-WebView (shares the login's WKWebView cookie store, so it's genuinely signed in)
-runs the write via `evaluateJavaScript`:
-- navigate it to the film page (`/film/{slug}/` or `/tmdb/{id}/`) — this is still
-  needed so `window.supermodelCSRF` and the `production:identifier` meta are on
-  the page for the session,
-- read the film LID from the `production:identifier` meta and `window.supermodelCSRF`,
+**Working design (plan 0012):** `LetterboxdWriteBridge` mounts one hidden
+WebView per in-flight write (it shares the login's WKWebView cookie store, so
+it's genuinely signed in) and unmounts it when the write settles. Two writes
+used to share one WebView, so a second write (a log's derived watchlist removal)
+navigated the first away and left it to time out. Each WebView:
+- loads the film page (`/film/{slug}/` or `/tmdb/{id}/`) with a document-end
+  script. Imperative `evaluateJavaScript` crashes WebKit on iOS,
+- reads the film LID from the `production:identifier` meta and `window.supermodelCSRF`.
+  Writes don't pre-fetch the ~285 KB page over nitro-fetch for the LID, because
+  that doubled the download before every write,
 - `fetch('/api/v0/production-log-entries', { method:'POST', credentials:'include',
   headers:{ 'Content-Type':'application/json; charset=UTF-8', 'X-CSRF-TOKEN': csrf },
   body: JSON.stringify({ productionId, diaryDetails, tags, like:false }) })`,
-- relay `{status, body}` back over `window.ReactNativeWebView.postMessage` →
-  the WebView's `onMessage` (nitro-webview's `evaluateJavaScript` returns
-  `String(describing:)`, so it can't await the fetch promise — the postMessage
-  bridge is the async channel), matched by request id.
+- relays `{status, body}` back over `window.ReactNativeWebView.postMessage` →
+  the WebView's `onMessage`, matched by request id.
+
+`/tmdb/{id}/` for an id Letterboxd has no film for answers **200**, not 404,
+with a "TMDB Import Result" page that has no `production:identifier` meta. The
+script reports `no-production-lid`, which surfaces as "Letterboxd has no film",
+not as a dead session. A Cloudflare challenge page (`window._cf_chl_opt`) skips
+the script without consuming the request, so the real page after the challenge
+still writes.
 
 Off-device automation was attempted (parse the simulator's binarycookies, drive
 the loop with curl) but the URLSession store holds only `letterboxd.user` +

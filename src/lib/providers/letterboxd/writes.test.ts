@@ -15,11 +15,6 @@ const SESSION: LetterboxdSession = {
   csrf: 'csrf-token-123',
 };
 
-// A trimmed film page carrying the LID the diary API keys on. The LID lives in
-// the entity-encoded `production:identifier` meta
-// (docs/solutions/letterboxd-no-api-fallback.md).
-const FILM_PAGE = `<html><head><meta name="production:identifier" content="{&quot;lid&quot;:&quot;UH8e&quot;,&quot;uid&quot;:&quot;film:1234878&quot;}"></head><body></body></html>`;
-
 function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
   return {
     id: 'letterboxd-tuner',
@@ -35,13 +30,11 @@ function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMedia
 }
 
 /**
- * Fakes the two transports the write uses: `fetch` for public film-page
- * resolution, and `webFetch` for the authenticated diary write that (on device)
- * navigates to the film page and submits its form inside the login WebView.
- * Records the request so tests can assert what the write drives.
+ * Fakes `webFetch`, the authenticated diary write that (on device) loads the
+ * film page and posts inside the login WebView. `fetch` throws: the WebView
+ * reads the LID itself, so a write never downloads the film page first.
  */
 function fakeDeps(options: {
-  filmPageStatus?: number;
   webResponse?: LetterboxdWebResponse;
   withWebFetch?: boolean;
   onWrite?: (request: LetterboxdWebRequest) => void;
@@ -50,7 +43,7 @@ function fakeDeps(options: {
   return {
     username: 'gian',
     session: SESSION,
-    fetch: async () => new Response(FILM_PAGE, { status: options.filmPageStatus ?? 200 }),
+    fetch: async () => { throw new Error('Native writes must not fetch the film page'); },
     webFetch: withWebFetch
       ? async (request) => {
           options.onWrite?.(request);
@@ -89,8 +82,6 @@ describe('logToLetterboxd', () => {
     );
 
     expect(captured?.filmPath).toBe('/film/tuner/');
-    // The film is identified by its LID (productionId) for the /api/v0 write.
-    expect(captured?.filmLid).toBe('UH8e');
     expect(captured?.viewingDateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     // Tags are trimmed into a string array.
     expect(captured?.tags).toEqual(['rewatch-night', 'imax']);
@@ -104,7 +95,15 @@ describe('logToLetterboxd', () => {
     await Effect.runPromise(logToLetterboxd(deps, movie({ tmdb: 999 })));
 
     expect(captured?.filmPath).toBe('/tmdb/999/');
-    expect(captured?.filmLid).toBe('UH8e');
+  });
+
+  test('reports a TMDB id Letterboxd has no film for, not a dead session', async () => {
+    const deps = fakeDeps({ webResponse: { status: 0, body: 'no-production-lid' } });
+    const outcome = await Effect.runPromise(
+      Effect.flip(logToLetterboxd(deps, movie({ tmdb: 999 }))),
+    );
+    expect(outcome._tag).toBe('ProviderDecodeError');
+    expect((outcome as { detail: string }).detail).toContain('/tmdb/999/');
   });
 
   test('marks a parity rewatch', async () => {

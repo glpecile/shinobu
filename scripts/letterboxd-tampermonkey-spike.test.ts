@@ -22,7 +22,7 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
     expect(hasLetterboxdUserscript('like')).toBe(false);
     expect(hasLetterboxdUserscript('list-like')).toBe(false);
     await expect(getLetterboxdUserscriptFetch('gian')!({
-      filmPath: '/film/alien/', filmLid: '2awY', viewingDateStr: '2026-09-30',
+      filmPath: '/film/alien/', viewingDateStr: '2026-09-30',
       rewatch: false, tags: [], liked: true,
     })).rejects.toThrow('Update the Letterboxd script');
     app.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '8');

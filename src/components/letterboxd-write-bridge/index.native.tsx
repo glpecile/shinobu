@@ -10,8 +10,9 @@ import {
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 
 /**
- * A hidden bridge that mounts a fresh page WebView for each write so film and
- * list writes can run *inside* it (plan 0012). It shares the same WKWebView /
+ * A hidden bridge that mounts a page WebView per in-flight write, so film and
+ * list writes can run *inside* it (plan 0012), and unmounts it once the write
+ * settles so no Letterboxd page keeps running in the background. It shares the same WKWebView /
  * Android cookie store the login flow populated, so it is authenticated without
  * any cookie replay — the one thing that works, since replayed cookies land as
  * signed-out at the origin (docs/solutions/letterboxd-no-api-fallback.md).
@@ -26,11 +27,12 @@ export function LetterboxdWriteBridge() {
 }
 
 function ConnectedWriteBridge() {
-  const [page, setPage] = useState<{ path: string; script: string } | null>(null);
+  const [pages, setPages] = useState<Array<{ id: string; path: string; script: string }>>([]);
 
   useEffect(() => {
     registerLetterboxdWebView({
-      loadPage: (path, script) => setPage({ path, script }),
+      loadPage: (id, path, script) => setPages((current) => [...current, { id, path, script }]),
+      unloadPage: (id) => setPages((current) => current.filter((page) => page.id !== id)),
     });
     return () => registerLetterboxdWebView(null);
   }, []);
@@ -50,18 +52,16 @@ function ConnectedWriteBridge() {
         left: -9999,
       }}
     >
-      {/* Created on the first write, so launch doesn't load Letterboxd. */}
-      {page != null && (
+      {/* The native cookie store is shared across instances, so each is signed in. */}
+      {pages.map((page) => (
         <NitroWebView
-          // A new instance installs the script before loading, including repeat
-          // logs of the same film. The native cookie store survives remounts.
-          key={page.script}
+          key={page.id}
           injectedJavaScript={page.script}
           onMessage={callback((event) => handleLetterboxdMessage(event.nativeEvent.data))}
           source={{ uri: `${LETTERBOXD_BASE_URL}${page.path}` }}
           style={{ width: 1, height: 1 }}
         />
-      )}
+      ))}
     </View>
   );
 }
