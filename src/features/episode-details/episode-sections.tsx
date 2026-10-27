@@ -9,6 +9,7 @@ import { ExpandableText } from '@/components/expandable-text';
 import { Fab } from '@/components/fab';
 import { Eyebrow } from '@/components/eyebrow';
 import { Image } from '@/components/image';
+import { MetaLine } from '@/components/meta-line';
 import { MorphText } from '@/components/morph-text';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -30,7 +31,7 @@ import { useSuspenseTmdbEpisodeQuery } from '@/state/queries/tmdb';
 import type { NormalizedEpisode } from '@/types/media';
 
 import type { EpisodeLog } from './use-episode-logs';
-import { episodeCode, episodeMetaLine, formatAirDate } from './episode-label';
+import { episodeCode, formatAirDate } from './episode-label';
 import type { EpisodeRef } from './episode-neighbours';
 
 /**
@@ -84,7 +85,6 @@ export function EpisodeHeading({
   align?: 'left' | 'center';
 }) {
   const pushRoute = usePushRoute();
-  const meta = episodeMetaLine(episode);
   const centered = align === 'center';
   function goToSeries() {
     if (pushRoute(routes.details(id, 'TV'))) haptics.selection();
@@ -104,9 +104,14 @@ export function EpisodeHeading({
       >
         {episode.title}
       </Text>
-      {meta !== '' && (
-        <Text className={cn('text-muted font-sans text-sm mt-1.5', centered && 'text-center')}>{meta}</Text>
-      )}
+      <MetaLine
+        align={align}
+        className="mt-1.5"
+        parts={[
+          episode.firstAired != null && <MetaLine.Part icon="calendar-outline">{formatAirDate(episode.firstAired)}</MetaLine.Part>,
+          episode.runtime != null && <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>,
+        ]}
+      />
     </View>
   );
 }

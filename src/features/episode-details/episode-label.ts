@@ -1,6 +1,5 @@
 import { formatCalendarDate } from '@/lib/time/calendar-date';
 import { isDateOnly } from '@/lib/time/has-aired';
-import type { NormalizedEpisode } from '@/types/media';
 
 /**
  * "S2E10" — the pointer every episode surface leads with, in the app's one
@@ -30,13 +29,3 @@ const airInstantFormatter = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
   year: 'numeric',
 });
-
-/** "Thu, Sep 3, 2026 · 28 min" from whichever fields exist; '' when neither. */
-export function episodeMetaLine(episode: Pick<NormalizedEpisode, 'firstAired' | 'runtime'>): string {
-  return [
-    episode.firstAired != null ? formatAirDate(episode.firstAired) : null,
-    episode.runtime != null ? `${episode.runtime} min` : null,
-  ]
-    .filter((part) => part != null)
-    .join(' · ');
-}
