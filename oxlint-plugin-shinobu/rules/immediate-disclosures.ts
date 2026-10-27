@@ -24,8 +24,10 @@ export default defineRule({
           attribute.name.name === 'aria-expanded' ||
           (['accessibilityState', 'accessibility'].includes(nodeName(attribute.name) ?? '') && attribute.value?.type === 'JSXExpressionContainer' && hasExpanded(attribute.value.expression)),
         );
-        if (expanded && !attributes.some((attribute) => attribute.name.name === 'pressBehavior' &&
-          nodeName(attribute.value?.type === 'JSXExpressionContainer' ? attribute.value.expression : attribute.value) === 'immediate')) {
+        if (expanded && !attributes.some((attribute) => {
+          const value = attribute.value?.type === 'JSXExpressionContainer' ? attribute.value.expression : attribute.value;
+          return attribute.name.name === 'pressBehavior' && value?.type === 'Literal' && value.value === 'immediate';
+        })) {
           context.report({ node, message: 'Disclosures must accept every press. Set pressBehavior="immediate" on the disclosure pressable.' });
         }
       },

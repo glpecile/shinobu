@@ -10,6 +10,7 @@ test('lint requires immediate presses for disclosures and preserves guarded acti
       declare const PressableCard: any;
       declare const ActionableRow: any;
       declare const open: boolean;
+      const immediate = 'prevent-repeat';
       export const allowed = <>
         <PresstableOpacity accessibilityState={{ expanded: open }} pressBehavior="immediate" />
         <PressableCard accessibilityState={{ expanded: open }} pressBehavior={'immediate'} />
@@ -18,6 +19,7 @@ test('lint requires immediate presses for disclosures and preserves guarded acti
         <ActionableRow accessibility={{ accessibilityState: { expanded: open } }} pressBehavior="immediate" />
       </>;
       export const rejected = <>
+        <PresstableOpacity accessibilityState={{ expanded: open }} pressBehavior={immediate} />
         <PresstableOpacity accessibilityState={{ expanded: open }} />
         <PressableCard accessibilityState={{ expanded: false }} pressBehavior="prevent-repeat" />
         <PresstableScale aria-expanded={open} />
@@ -25,5 +27,5 @@ test('lint requires immediate presses for disclosures and preserves guarded acti
       </>;
     `,
   });
-  expect(diagnostics).toHaveLength(4);
+  expect(diagnostics).toHaveLength(5);
 });
