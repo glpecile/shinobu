@@ -106,6 +106,14 @@ describe('logToLetterboxd', () => {
     expect((outcome as { detail: string }).detail).toContain('/tmdb/999/');
   });
 
+  test('reports a Cloudflare challenge as a non-retryable failure, not a dead session', async () => {
+    const deps = fakeDeps({ webResponse: { status: 0, body: 'challenge' } });
+    const outcome = await Effect.runPromise(
+      Effect.flip(logToLetterboxd(deps, movie({ letterboxd: 'parasite-2019' }))),
+    );
+    expect(outcome).toMatchObject({ _tag: 'ProviderNetworkError', status: 403, retryable: false });
+  });
+
   test('marks a parity rewatch', async () => {
     let captured: LetterboxdWebRequest | undefined;
     const deps = fakeDeps({ onWrite: (r) => (captured = r) });

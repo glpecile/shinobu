@@ -120,6 +120,24 @@ describe('Letterboxd page-load write bridge', () => {
     dom.close();
   });
 
+  test.each([
+    ['diary', 'production-log-entries'],
+    ['watchlist', 'letterboxd-metadata'],
+  ] as const)('a challenged %s request relays the challenge marker, not its HTML', async (verb, challenged) => {
+    const webView = fakeWebView();
+    registerLetterboxdWebView(webView.ref);
+    const pending = verb === 'diary' ? letterboxdWebFetch(REQUEST) : letterboxdWatchlistWebFetch({ filmPath: REQUEST.filmPath, inWatchlist: true });
+    const dom = new Window({ url: `https://letterboxd.com${REQUEST.filmPath}` });
+    dom.document.head.innerHTML = '<meta name="production:identifier" content=\'{"lid":"pageLid"}\'>';
+    const window = { location: dom.location, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
+    const fetch = async (url: string) => url.includes(challenged)
+      ? new Response('<!DOCTYPE html><title>Just a moment...</title>', { status: 403, headers: { 'cf-mitigated': 'challenge' } })
+      : Response.json({ csrf: 'csrf' });
+    new Function('window', 'document', 'sessionStorage', 'fetch', webView.pages[0].script)(window, dom.document, { getItem() {}, setItem() {} }, fetch);
+    expect(await pending).toEqual({ status: 0, body: 'challenge' });
+    dom.close();
+  });
+
   test('ignores messages that are not ours', async () => {
     const webView = fakeWebView();
     registerLetterboxdWebView(webView.ref);
