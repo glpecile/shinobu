@@ -43,6 +43,6 @@ to an outdated emulator or claim it fixed by a Metro reconnection.
 - Capture the interaction leading to the next abort and a symbolicated native
   trace, without recording credentials or performing provider writes.
 - Verify the installed development binary matches native dependencies. If not,
-  use `bun android.clean`, not edits to generated Android files.
+  use `bun android:clean`, not edits to generated Android files.
 - Check supported upstream fixes and app-level animation/layout fixes before
   any dependency change. No third-party patches without owner approval.

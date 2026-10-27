@@ -38,7 +38,7 @@
   validation. Run independent read-only correctness and complexity reviews before
   publishing the PR and waiting for CI.
 
-All changes hot reload. No `bun ios.clean` / `bun android.clean` needed.
+All changes hot reload. No `bun ios:clean` / `bun android:clean` needed.
 
 ## Results
 

@@ -12,4 +12,4 @@
   Allow only HTTP(S) link opening. Disable unused math and code highlighting.
 - Extend the existing AniList biography regression, then run focused tests,
   typecheck, lint, class/link checks, and a web export. Mobile needs
-  `bun ios.clean` / `bun android.clean` after adding the native renderer.
+  `bun ios:clean` / `bun android:clean` after adding the native renderer.

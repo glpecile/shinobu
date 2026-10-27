@@ -212,7 +212,7 @@ retry once. Deferred until on-device testing shows it's needed.
 
 `expo-file-system` + `expo-sharing` for the native CSV share sheet — both are
 config-plugin-free Expo modules but ship native code: **clean rebuild
-required** (`bun ios.clean` / `bun android.clean`) after install.
+required** (`bun ios:clean` / `bun android:clean`) after install.
 
 ## Step plan
 
@@ -234,7 +234,7 @@ The session-capture write path is complete and green (127 tests, typecheck +
 lint clean). Final pieces this pass:
 
 - **`nitro-webview` added** (v0.1.0, Nitro host component — no config plugin,
-  autolinked). **Clean rebuild required** (`bun ios.clean` / `bun android.clean`)
+  autolinked). **Clean rebuild required** (`bun ios:clean` / `bun android:clean`)
   before the native sign-in flow runs — it ships native code and won't load in
   the existing dev-client binary. Web is unaffected (nitro-webview is native-only;
   web resolves the default `index.tsx`).

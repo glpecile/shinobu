@@ -70,7 +70,7 @@ Behaviour changes in the 0.17.0 release notes to watch in QA:
   pass `[0, 'content']` and `0 | 1`, which are valid.
 
 Native build rule (AGENTS.md): `android/` and `ios/` are generated and never
-edited. A native dependency change needs `bun ios.clean` / `bun android.clean`.
+edited. A native dependency change needs `bun ios:clean` / `bun android:clean`.
 A `pod install` version mismatch means clean-prebuild, never `pod update`.
 
 ## Commands you will need
@@ -82,8 +82,8 @@ A `pod install` version mismatch means clean-prebuild, never `pod update`.
 | Lint            | `bun lint`              | exit 0              |
 | Tests           | `bun run test`          | all pass            |
 | Expo deps check | `bunx expo install --check` | no complaint about this package |
-| iOS rebuild     | `bun ios.clean`         | app builds and launches (owner machine) |
-| Android rebuild | `bun android.clean`     | app builds and launches (owner machine) |
+| iOS rebuild     | `bun ios:clean`         | app builds and launches (owner machine) |
+| Android rebuild | `bun android:clean`     | app builds and launches (owner machine) |
 
 ## Scope
 
@@ -137,7 +137,7 @@ If you can't build native apps in your environment, stop after Step 3, set
 the plan to `BLOCKED (needs device QA)` in `plans/README.md`, and hand the
 checklist below to the owner.
 
-Run `bun ios.clean` and `bun android.clean`, then check on each platform:
+Run `bun ios:clean` and `bun android:clean`, then check on each platform:
 
 1. Long-press a card → card-actions sheet opens at content height, not full screen.
 2. Open the log sheet on a movie with many Letterboxd tags. The sheet caps
@@ -174,7 +174,7 @@ in Step 4 is the real verification.
   (`git diff bun.lock` touches unrelated packages beyond its own entry).
 - Any Step 4 check fails. Report which check and on which platform, and
   don't try workarounds in the sheet component.
-- `pod install` reports a version mismatch you can't clear with `bun ios.clean`.
+- `pod install` reports a version mismatch you can't clear with `bun ios:clean`.
 
 ## Maintenance notes
 

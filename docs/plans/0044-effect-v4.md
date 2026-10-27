@@ -45,4 +45,4 @@ No additional browser runtime errors occurred. Native verification covers
 Hermes exports, not device interaction, because Argent tools were unavailable.
 
 This dependency is JavaScript-only. Existing dev clients can hot reload;
-`bun ios.clean` and `bun android.clean` are unnecessary.
+`bun ios:clean` and `bun android:clean` are unnecessary.

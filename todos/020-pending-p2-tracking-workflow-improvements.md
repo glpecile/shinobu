@@ -290,4 +290,4 @@ features must add zero provider requests while interacting with cached data.
 
 This todo changes no runtime behavior and needs no rebuild. Implementations
 using existing JS/TS dependencies hot reload; any approved native dependency or
-config change requires `bun ios.clean` / `bun android.clean`.
+config change requires `bun ios:clean` / `bun android:clean`.

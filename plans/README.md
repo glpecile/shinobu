@@ -40,7 +40,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 ## Dependency notes
 
 - The plans touch disjoint files and can run in parallel worktrees.
-- 004 needs native rebuilds (`bun ios.clean`, `bun android.clean`) and device
+- 004 needs native rebuilds (`bun ios:clean`, `bun android:clean`) and device
   QA. 001–003 are JS-only and hot reload.
 
 ## Audit scope rules (owner decisions, 2026-10-26)

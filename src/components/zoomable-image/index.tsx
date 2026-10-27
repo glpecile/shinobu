@@ -28,7 +28,7 @@ type ZoomableImageProps = ComponentProps<typeof Image> & {
  * exist for that path and are inert here.
  *
  * Native module — adding/upgrading galeria needs a clean rebuild
- * (`bun ios.clean` / `bun android.clean`), and it pins iOS ≥ 16.4
+ * (`bun ios:clean` / `bun android:clean`), and it pins iOS ≥ 16.4
  * (app.json expo-build-properties).
  */
 export function ZoomableImage({

@@ -77,7 +77,7 @@ Daily-driver testing surfaced 13 issues: two produce wrong data (stale same-titl
 - **KTD4 — Virtualize the carousel; don't band-aid with memo.** `MediaCarousel` moves from `ScrollView` + `map` to the shared `components/List` wrapper (Legend List, horizontal) per AGENTS.md. Bound the data too: the Your Shows row renders a capped slice (match the trending rows' 30) — up to 1000 mounted cards is unreasonable in any renderer, and per-card image queries (`useTraktMediaImages`) are the N+1 amplifier that virtualization plus the cap contains. Fix `useVisibleItems` returning a new array identity every render so React Compiler memoization can hold.
 - **KTD5 — Cmd+click via press-event modifier keys, not anchors.** pressto pressables render `div[role="button"]` and RNGH kills `onPress` for any other role (`docs/solutions/web-pressto-accessibility-role-kills-onpress.md`), so cards cannot become `<a>` elements. Read `metaKey`/`ctrlKey` from the web press event and open via the existing `lib/open-external-url` (`window.open(..., 'noopener')`).
 - **KTD6 — TMDB stays a non-provider; its key gets a dedicated store.** TMDB has no `ProviderId` (deliberate, per registry design). The user key lives in the session MMKV store as a dedicated key beside `clientId.*` — not by widening `ProviderId`. `tmdbToken()` resolves env-first, then stored key; reads become reactive (`useSyncExternalStore` over `onSessionChange`) because `details/[id].tsx` gates person/studio routes on it at render time. SSR-safe lazy reads per `docs/solutions/expo-web-ssr-mmkv-storage-on-server.md`.
-- **KTD7 — Predictive back is an `app.json` change under CNG.** Set `android.predictiveBackGestureEnabled: true` in `app.json` (Expo SDK 57 supports it; the generated manifest currently carries `enableOnBackInvokedCallback="false"`). Never hand-edit `android/` — the change lands via clean prebuild and requires a native rebuild (`bun android.clean`).
+- **KTD7 — Predictive back is an `app.json` change under CNG.** Set `android.predictiveBackGestureEnabled: true` in `app.json` (Expo SDK 57 supports it; the generated manifest currently carries `enableOnBackInvokedCallback="false"`). Never hand-edit `android/` — the change lands via clean prebuild and requires a native rebuild (`bun android:clean`).
 
 ### High-Level Technical Design
 
@@ -268,7 +268,7 @@ flowchart TB
 
 - **Goal:** predictive back gesture on Android 13+ (R10).
 - **Files:** `app.json`.
-- **Approach:** per KTD7 — `android.predictiveBackGestureEnabled: true` in `app.json`. CNG rule: no `android/` edits; regenerate with `bun android.clean`. **Native rebuild required** — flag it in the PR description. Sanity-check in-app back behavior (sheets, WebView sign-in, details stack) with the gesture since `react-native-screens` 4.26 handles it but custom back handling can misbehave.
+- **Approach:** per KTD7 — `android.predictiveBackGestureEnabled: true` in `app.json`. CNG rule: no `android/` edits; regenerate with `bun android:clean`. **Native rebuild required** — flag it in the PR description. Sanity-check in-app back behavior (sheets, WebView sign-in, details stack) with the gesture since `react-native-screens` 4.26 handles it but custom back handling can misbehave.
 - **Test scenarios:** `Test expectation: none — native config.`
 - **Verification:** after clean rebuild on an Android 13+ device with predictive back enabled in developer options, back-swipe from details shows the predictive animation; sheet dismissal and tab back-behavior still correct.
 
@@ -281,7 +281,7 @@ flowchart TB
 | Lint | `bun lint` | all units |
 | Unit tests | `bun test` | all; new coverage mandatory in U5, U6, U7, U8, U9, U10 |
 | Web smoke | `bun web` + `bun run dev:worker`, manual pass (pattern: `docs/solutions/web-headless-smoke-test-playwright.md`) | U2, U3, U4, U9, U10 |
-| Android device pass | dev client via `bun android` (`bun android.clean` after U13) | U1, U7, U11, U12, U13 |
+| Android device pass | dev client via `bun android` (`bun android:clean` after U13) | U1, U7, U11, U12, U13 |
 | iOS non-regression | spot-check search focus, sheet, refresh | U1, U11, U12 |
 
 Fan-out/routing invariants (AGENTS.md): partial-failure surfacing and manual-link fallback untouched; `routing.test.ts` and `fan-out.test.ts` must stay green.

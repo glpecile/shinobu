@@ -18,7 +18,7 @@ Fold the owner's follow-ups into PR #190:
 Run lint, typecheck, existing tests and repository checks. No new dependency,
 native edit or dependency patch. JS-only: hot reload on a dev client rebuilt
 with `@swmansion/react-native-bottom-sheet` 0.17.0-next.2. An older client needs
-`bun android.clean` for the native Back handler added in PR #185.
+`bun android:clean` for the native Back handler added in PR #185.
 Keep device checks limited; no profiling or speedup claim.
 
 ## Validation

@@ -65,7 +65,7 @@ Effect runs only at the boundary (`Effect.runPromise` in `queryFn`), matching `s
 
 ## 7. Galeria image zoom
 
-- `bun add @nandorojo/galeria`. **Native module → rebuild required** (`bun ios.clean` / `bun android.clean`); no Expo Go. New Architecture requirement is met (Expo 57 / RN 0.86). Galeria needs **iOS deployment target ≥ 16.4** — if prebuild rejects it, add `expo-build-properties` to `app.json` plugins with `ios.deploymentTarget: "16.4"` (config change → also rebuild).
+- `bun add @nandorojo/galeria`. **Native module → rebuild required** (`bun ios:clean` / `bun android:clean`); no Expo Go. New Architecture requirement is met (Expo 57 / RN 0.86). Galeria needs **iOS deployment target ≥ 16.4** — if prebuild rejects it, add `expo-build-properties` to `app.json` plugins with `ios.deploymentTarget: "16.4"` (config change → also rebuild).
 - Wrap once, per convention: **`src/components/zoomable-image.tsx`** — composes `<Galeria urls={[uri]}><Galeria.Image>` around the app's existing `components/image` (expo-image is supported by galeria); renders a plain `Image` when the uri is empty. Screens never import galeria directly (add to `no-restricted-imports` in `.oxlintrc.json`, same pattern as the List/expo-image rules).
 - Use it for: the details-screen poster (`artwork.coverImage`) and the person-screen headshot. Galeria's web support is single-image only — exactly our usage, so web works too.
 
@@ -78,7 +78,7 @@ Effect runs only at the boundary (`Effect.runPromise` in `queryFn`), matching `s
    - Movie/TV details → tap a cast member (has tmdbId) → person page: bio + Acting/Directing rows, newest first.
    - Anime details (AniList credits) → tap a voice actor → `/person/lookup` resolves by name → person page.
    - Tap a filmography card → details page resolves (via tmdb-credits cache) and backfills Trakt identity (seasons/cast/studios render).
-   - Poster tap on details + headshot tap on person → galeria zoom (web single-image; native after `bun ios.clean`).
+   - Poster tap on details + headshot tap on person → galeria zoom (web single-image; native after `bun ios:clean`).
 
 ## Out of scope / follow-ups
 

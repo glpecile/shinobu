@@ -43,7 +43,7 @@ stay compatible.
 improves Android HTTP body reads, buffer allocation, UTF-8 decoding and Cronet
 thread scheduling. Its peer requirements fit installed Nitro and Worklets. Its
 advertised 30% improvement is for iOS WebSockets, which this app does not use.
-The upgrade is not applied here; it requires `bun ios.clean` / `bun android.clean`
+The upgrade is not applied here; it requires `bun ios:clean` / `bun android:clean`
 and a comparable native run with large Simkl/Diary responses.
 
 Published WebView 0.2.2 targets an older React Native version. The

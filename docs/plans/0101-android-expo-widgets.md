@@ -59,7 +59,7 @@ fix without patching the library.
 
 - `expo-widgets` lets a widget open a deep link (a root or element `url`, or
   `actionStartActivity`). Then build Up Next as a snapshot widget, with the
-  native rebuild (`bun android.clean`), an empty state for no providers, and
+  native rebuild (`bun android:clean`), an empty state for no providers, and
   "last updated" text for stale data.
 - `expo-widgets` can schedule custom notifications, or `expo-notifications`
   accepts custom content views. Then move the scheduled release notification to
