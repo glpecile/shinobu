@@ -28,7 +28,8 @@ export function MetaLine({
     <Text className={cn('text-muted font-sans text-sm', align === 'center' && 'text-center', className)}>
       {shown.map((part, index) => (
         <Fragment key={index}>
-          {index > 0 && ' · '}
+          {/* Non-breaking before the dot so a wrap starts the next line at an icon. */}
+          {index > 0 && '\u00A0· '}
           {part}
         </Fragment>
       ))}
@@ -41,7 +42,9 @@ function Part({ icon, children }: { icon: ComponentProps<typeof Ionicons>['name'
   const muted = useThemeColor('--color-muted');
   return (
     <>
-      <Ionicons accessible={false} color={muted} name={icon} size={14} /> {children}
+      <Ionicons accessible={false} color={muted} name={icon} size={14} />
+      {/* Non-breaking so the icon never ends a line apart from its text. */}
+      {`\u00A0${children}`}
     </>
   );
 }
