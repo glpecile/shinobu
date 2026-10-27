@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { Effect } from 'effect';
 
 import type { LetterboxdDeps } from './deps';
-import { getLetterboxdFilmWatch } from './watched';
+import { getLetterboxdFilmWatch, resolveFilmSlug } from './watched';
 import type { NormalizedMediaItem } from '@/types/media';
 
 const item: NormalizedMediaItem = { id: 'letterboxd-vampire-hunter-d', title: 'Vampire Hunter D', type: 'MOVIE', coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { letterboxd: 'vampire-hunter-d' } };
@@ -13,24 +13,19 @@ test('a public member viewing records a watch even without a date or RSS entry',
   expect(await Effect.runPromise(getLetterboxdFilmWatch(deps(viewing), item))).toMatchObject({ externalIds: { letterboxd: 'vampire-hunter-d' }, currentProgress: 1 });
 });
 
-test('TMDB films use the exact redirect before the member viewing, not a title search', async () => {
-  const calls: string[] = [];
-  const d = deps(viewing);
-  d.fetch = async (url) => {
-    calls.push(String(url));
-    return new Response(calls.length === 1 ? '<meta property="og:url" content="https://letterboxd.com/film/vampire-hunter-d/">' : viewing);
+test('native resolves a slug from the manual redirect without downloading the film page', async () => {
+  const init: RequestInit[] = [];
+  const d = deps('');
+  d.fetch = async (_url, options) => {
+    init.push(options ?? {});
+    return new Response(null, { status: 302, headers: { location: '/film/vampire-hunter-d/' } });
   };
-  await Effect.runPromise(getLetterboxdFilmWatch(d, { ...item, externalIds: { tmdb: 9463 } }));
-  expect(calls).toEqual(['https://letterboxd.com/tmdb/9463/', 'https://letterboxd.com/glp/film/vampire-hunter-d/']);
+  expect(await Effect.runPromise(resolveFilmSlug(d, 9463))).toBe('vampire-hunter-d');
+  expect(init[0].redirect).toBe('manual');
 });
 
-test('a followed TMDB redirect names the film without reading its page', async () => {
-  const redirect = new Response(null);
-  Object.defineProperty(redirect, 'url', { value: 'https://letterboxd.com/film/vampire-hunter-d/' });
-  redirect.text = async () => { throw new Error('must not read the redirected page'); };
-  const d = deps(viewing);
-  d.fetch = async (url) => String(url).includes('/tmdb/') ? redirect : new Response(viewing);
-  expect(await Effect.runPromise(getLetterboxdFilmWatch(d, { ...item, externalIds: { tmdb: 9463 } }))).toMatchObject({ externalIds: { letterboxd: 'vampire-hunter-d' } });
+test('the web proxy follows the redirect, so its page names the film through og:url', async () => {
+  expect(await Effect.runPromise(resolveFilmSlug(deps('<meta property="og:url" content="https://letterboxd.com/film/vampire-hunter-d/">'), 9463))).toBe('vampire-hunter-d');
 });
 
 test('an absent public viewing supplies no positive watch evidence', async () => {

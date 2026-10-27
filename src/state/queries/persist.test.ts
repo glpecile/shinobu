@@ -259,6 +259,9 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(watchlistQueryKeys.inputs())).toBe(true);
     expect(isPersistedQueryKey(diaryQueryKeys.feed(['simkl'], '', ''))).toBe(true);
     expect(isPersistedQueryKey(letterboxdQueryKeys.lists('gian', 'liked'))).toBe(true);
+    expect(isPersistedQueryKey(letterboxdQueryKeys.slug(27205))).toBe(true);
+    expect(isPersistedQueryKey([...letterboxdQueryKeys.film('inception'), true])).toBe(true);
+    expect(isPersistedQueryKey([...letterboxdQueryKeys.filmWatchesRoot(), 'gian', 'inception', null])).toBe(true);
   });
 
   // The allowlist exists to keep the unbounded caches off disk — web's

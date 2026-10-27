@@ -262,13 +262,15 @@ export function findInLetterboxdListsCache(queryClient: QueryClient, id: string)
     .find((item) => item.id === id);
 }
 
-/** Public film pages resolve cold links and cached entries on every platform. */
+/** Public film pages resolve cold links and cached entries on every platform. Persisted, so rows don't refetch them per cold start. */
 export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
   return {
     queryKey: [...letterboxdQueryKeys.film(slug ?? ''), hasTmdb],
     queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getFilmItem({ fetch: letterboxdDeps().fetch, tmdb: hasTmdb ? tmdbDeps() : null }, slug ?? ''), { signal }),
     enabled: slug != null,
-    staleTime: 60 * 60_000,
+    // Identity never churns; only the Letterboxd average drifts, and a day is
+    // the persisted snapshot's lifetime anyway.
+    staleTime: 24 * 60 * 60_000,
     retry: false,
     throwOnError: false,
   };
@@ -285,14 +287,18 @@ export function useSuspenseLetterboxdFilmQuery(slug: string) {
 }
 
 /** A film's slug, from its TMDB id, for an item that arrived without one. Null when Letterboxd lacks the film. */
-export function useSuspenseLetterboxdSlugQuery(tmdbId: number) {
-  return useSuspenseQuery({
+function letterboxdSlugQuery(tmdbId: number) {
+  return {
     queryKey: letterboxdQueryKeys.slug(tmdbId),
-    queryFn: ({ signal }) => Effect.runPromise(resolveFilmSlug(letterboxdDeps(), tmdbId), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(resolveFilmSlug(letterboxdDeps(), tmdbId), { signal }),
     // A film's slug doesn't change.
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,
-  });
+  };
+}
+
+export function useSuspenseLetterboxdSlugQuery(tmdbId: number) {
+  return useSuspenseQuery(letterboxdSlugQuery(tmdbId));
 }
 
 /** Account-keyed watches are independent of the public film identity cache. */
@@ -300,9 +306,16 @@ export function letterboxdFilmWatchQuery(username: string | null, item: Normaliz
   const filmLike = item.type === 'MOVIE' || item.isFilm === true;
   return {
     queryKey: letterboxdQueryKeys.filmWatch(username ?? '', item),
-    queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(getLetterboxdFilmWatch({ ...letterboxdDeps(), username }, item), { signal }),
+    queryFn: async ({ client, signal }: { client: QueryClient; signal: AbortSignal }) => {
+      const tmdb = item.externalIds.tmdb;
+      const slug = item.externalIds.letterboxd ?? (tmdb == null ? null : await client.fetchQuery(letterboxdSlugQuery(tmdb)));
+      if (slug == null) return null;
+      return Effect.runPromise(getLetterboxdFilmWatch({ ...letterboxdDeps(), username }, { ...item, externalIds: { ...item.externalIds, letterboxd: slug } }), { signal });
+    },
     enabled: username != null && filmLike && (item.externalIds.letterboxd != null || item.externalIds.tmdb != null),
-    staleTime: 5 * 60_000,
+    // A Shinobu log invalidates these (useLogMedia); this only bounds how long
+    // a log made on letterboxd.com itself takes to show.
+    staleTime: 60 * 60_000,
     retry: false,
     throwOnError: false,
   };
