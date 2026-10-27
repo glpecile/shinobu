@@ -2,7 +2,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { Text, View } from 'react-native';
 
-import { Button } from '@/components/button';
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
 import Head from '@/components/head';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
@@ -75,18 +74,8 @@ export default function SettingsScreen() {
                 <RailHead.Count>{version}</RailHead.Count>
               </SettingsRail.Head>
               <SettingsRail.Row>
-                <SettingsRail.Lead>
-                  {/* The 忍 kanji uses the OS font on purpose (AGENTS.md). */}
-                  <Text className="text-accent text-xl">忍</Text>
-                </SettingsRail.Lead>
-                <SettingsRail.Text>
-                  <SettingsRail.Title>Shinobu</SettingsRail.Title>
-                  <SettingsRail.Subtitle>Version {VERSION ?? 'unknown'}</SettingsRail.Subtitle>
-                </SettingsRail.Text>
-                <Button
-                  className="shrink-0"
-                  icon={<Button.Icon name="open-outline" />}
-                  label={process.env.EXPO_OS === 'web' ? 'View code' : 'View releases'}
+                <SettingsRail.Target
+                  accessibilityLabel={process.env.EXPO_OS === 'web' ? 'View Shinobu code' : 'View Shinobu releases'}
                   onPress={() => {
                     void openExternalUrl(
                       process.env.EXPO_OS === 'web'
@@ -94,9 +83,16 @@ export default function SettingsScreen() {
                         : 'https://github.com/glpecile/shinobu/releases',
                     );
                   }}
-                  size="md"
-                  variant="quiet"
-                />
+                >
+                  <SettingsRail.Lead>
+                    {/* The 忍 kanji uses the OS font on purpose (AGENTS.md). */}
+                    <Text className="text-accent text-xl">忍</Text>
+                  </SettingsRail.Lead>
+                  <SettingsRail.Text>
+                    <SettingsRail.Title>Shinobu</SettingsRail.Title>
+                    <SettingsRail.Subtitle>Version {VERSION ?? 'unknown'}</SettingsRail.Subtitle>
+                  </SettingsRail.Text>
+                </SettingsRail.Target>
               </SettingsRail.Row>
             </SettingsRail.Section>
           </View>
