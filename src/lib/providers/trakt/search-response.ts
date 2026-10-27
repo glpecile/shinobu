@@ -1,4 +1,5 @@
-import { Effect, Schema } from 'effect';
+import * as Effect from 'effect/Effect';
+import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError } from '@/lib/providers/errors';
 import { optionalNullable } from '@/lib/providers/schema';

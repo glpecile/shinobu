@@ -4,7 +4,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
 import { getDiary } from '@/lib/providers/letterboxd/diary';

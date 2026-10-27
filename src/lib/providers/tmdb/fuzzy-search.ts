@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import type { ProviderError } from '@/lib/providers/errors';
 import { titleKey } from '@/lib/providers/pick-movie-match';

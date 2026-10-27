@@ -1,4 +1,5 @@
-import { Effect, Schema } from 'effect';
+import * as Effect from 'effect/Effect';
+import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError, ProviderNetworkError, ProviderRateLimitError, type ProviderError } from '@/lib/providers/errors';
 import type { HttpFetch } from '@/lib/http/types';

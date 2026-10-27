@@ -1,4 +1,5 @@
-import { Effect, Schema } from 'effect';
+import * as Effect from 'effect/Effect';
+import * as Schema from 'effect/Schema';
 
 import { ProviderAuthError, ProviderDecodeError, ProviderNetworkError, ProviderRateLimitError } from '@/lib/providers/errors';
 import type { NormalizedMediaItem } from '@/types/media';

@@ -1,4 +1,6 @@
-import { Effect, Predicate, Schema } from 'effect';
+import * as Effect from 'effect/Effect';
+import * as Predicate from 'effect/Predicate';
+import * as Schema from 'effect/Schema';
 
 import type { HttpFetch } from '@/lib/http/types';
 import {

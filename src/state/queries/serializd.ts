@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseInfiniteQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';

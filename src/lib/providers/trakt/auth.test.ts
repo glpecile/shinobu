@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import type { ProviderSession } from '@/types/session';
 import type { TokenStore } from '@/lib/providers/token-store';

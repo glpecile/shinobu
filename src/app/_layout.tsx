@@ -18,6 +18,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AppShell } from "@/components/app-shell";
 import { BootSplash, dismissBootSplash } from "@/components/boot-splash";
 import { ErrorFallback } from "@/components/error-fallback";
+import { endLaunchReplay } from "@/lib/http/client";
 import { iconFonts } from "@/lib/icon-fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { Lightbox } from "@/components/lightbox";
@@ -40,7 +41,6 @@ import { PROVIDERS } from "@/lib/providers/registry";
 import { toast } from "@/lib/toast";
 import { onProviderConnected } from "@/state/session/tokens";
 import { applyThemePreference } from "@/state/prefs/theme";
-import { useNotificationTapNavigation } from "@/features/notifications/use-notification-tap-navigation";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,7 +62,14 @@ export default function Layout() {
 
   // One QueryClient per app lifetime. TanStack Query handles provider fetches,
   // token refresh retries, and feed invalidation on connect/disconnect.
-  const [queryClient] = useState(() => retainPersistedQueries(createQueryClient()));
+  const [queryClient] = useState(() => {
+    const client = retainPersistedQueries(createQueryClient());
+    // A write makes the launch's replayed responses stale.
+    client.getMutationCache().subscribe((event) => {
+      if (event.type === "added") endLaunchReplay();
+    });
+    return client;
+  });
   // …and one persister, so the home feed's critical path restores from MMKV on
   // launch and revalidates behind the restored data (state/queries/persist.ts).
   const [persister] = useState(createQueryPersister);
@@ -104,18 +111,15 @@ export default function Layout() {
   // own stack transition).
   const pageEnter = usePageEnterStyle();
 
-  // Notification tap → details route, in all three app states (R10).
-  useNotificationTapNavigation();
-
+  const fontsReady = fontsLoaded || fontError != null;
+  // Web's splash is static HTML in +html.tsx.
+  const [splashPainted, setSplashPainted] = useState(Platform.OS === "web");
+  const appReady = fontsReady && splashPainted;
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (fontsReady) {
       dismissBootSplash();
     }
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
+  }, [fontsReady]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -123,6 +127,7 @@ export default function Layout() {
         client={queryClient}
         persister={persister}
       >
+      {appReady && (
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <KeyboardProvider>
           <SheetProvider>
@@ -193,7 +198,8 @@ export default function Layout() {
           </SheetProvider>
         </KeyboardProvider>
       </ErrorBoundary>
-      <BootSplash />
+      )}
+      <BootSplash ready={appReady} onPainted={() => setSplashPainted(true)} />
       </PersistQueryClientProvider>
     </GestureHandlerRootView>
   );

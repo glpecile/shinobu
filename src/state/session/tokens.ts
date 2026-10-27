@@ -113,8 +113,13 @@ export function clearStoredTmdbToken(): void {
   storage.remove(TMDB_TOKEN_KEY);
 }
 
-/** Subscribe to any session change; returns an unsubscribe function. */
-export function onSessionChange(listener: () => void): () => void {
-  const subscription = storage.addOnValueChangedListener(() => listener());
+/** Whether a session key holds a credential sent with requests. */
+export function isTokenKey(key: string): boolean {
+  return PROVIDER_KEY_PATTERN.test(key) || key === TMDB_TOKEN_KEY;
+}
+
+/** Subscribe to any session change, by key; returns an unsubscribe function. */
+export function onSessionChange(listener: (key: string) => void): () => void {
+  const subscription = storage.addOnValueChangedListener(listener);
   return () => subscription.remove();
 }

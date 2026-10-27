@@ -53,7 +53,7 @@ with the npm release would undo that work.
 
 ## Opportunities worth measuring next
 
-1. **Prefetch actual startup reads before JS boots.** Current registration warms
+1. **Done: `lib/http/launch-replay.ts`, see `docs/solutions/nitro-connection-warmup.md`.** **Prefetch actual startup reads before JS boots.** Current registration warms
    unauthenticated host roots. Provider requests never consume those root bodies.
    Nitro Fetch supports registering a real read and consuming it with a matching
    `prefetchKey`. Start with one stable home request, such as Simkl's list read,

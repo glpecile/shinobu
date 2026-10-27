@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { Effect, Result } from 'effect';
+import * as Effect from 'effect/Effect';
+import * as Result from 'effect/Result';
 
 import type { ProviderSession } from '@/types/session';
 import { traktAuthedRequest } from './api';

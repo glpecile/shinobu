@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { Button } from '@/components/button';
 import {

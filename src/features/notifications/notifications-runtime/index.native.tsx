@@ -8,6 +8,7 @@ import {
   unregisterNotificationsBackgroundTask,
 } from '@/features/notifications/background-task';
 import { createRefreshDeps, refreshNotifications } from '@/features/notifications/refresh';
+import { useNotificationTapNavigation } from '@/features/notifications/use-notification-tap-navigation';
 import { useNotificationsEnabled } from '@/state/prefs/notifications';
 
 // Module-eval side effect (this file is imported eagerly from
@@ -36,6 +37,9 @@ Notifications.setNotificationHandler({
 export function NotificationsRuntime(): null {
   const queryClient = useQueryClient();
   const enabled = useNotificationsEnabled();
+  // Notification tap → details route, in all three app states (R10). Here,
+  // not in the root layout, which mounts its navigator after the boot splash.
+  useNotificationTapNavigation();
 
   useEffect(() => {
     void refreshNotifications(createRefreshDeps(queryClient));

@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 import { useSyncExternalStore } from 'react';
 
 import { getTvSeasons } from '@/lib/providers/tmdb/reads';

@@ -44,6 +44,33 @@ These keys warm connections only. Provider reads do not supply them and do not
 consume the cached root response. Android's startup replay is configured by the
 Nitro Fetch Expo plugin in `app.json`; generated native files need no edits.
 
+## Launch read replay
+
+`lib/http/launch-replay.ts` goes past warming. `httpFetch` records the
+provider reads that succeed in the first 10 s of a foreground launch, up to 20,
+and registers each with `prefetchOnAppStart` under a hash of its method, URL,
+headers and body. The next cold start fires them natively before JS loads, and
+the session's first identical read claims the response if it's under 60 s old.
+
+- **What replays.** Idempotent reads only: Trakt, TMDB and Simkl CDN GETs,
+  Simkl's `/sync/activities`, and AniList GraphQL queries. Mutations are
+  excluded. Simkl's `all-items` stays gated on activities in JS.
+- **Claimed once per session.** Nitro's prefetch cache never evicts on read,
+  so without this a refresh inside the TTL would receive the launch response.
+- **Tokens.** Entries carry `Authorization` in Nitro's encrypted queue. A
+  write to a token key in the session store drops them all and stops replay
+  for that launch. Late responses cannot register the removed credentials,
+  and a native registration already in flight removes itself when it finishes.
+  Any TanStack mutation also stops replay before later reads can consume
+  responses from before the write.
+- **Fresh cache wastes the replay.** If the restored cache is still fresh, the
+  replay goes unused. Every host on the list tolerates that volume.
+- **Verified on the iPhone simulator.** Three cold launches: the second
+  launch's cache was still fresh, so nothing was claimed. Clearing the cache
+  before the third launch let it claim 10 reads, and 9 were served from the
+  replay (`nitroPrefetched: true`). The miss was an AniList read the previous
+  launch hadn't recorded.
+
 ## What it does *not* fix
 
 The waterfall's *depth* (20 progress reads in 5 sequential waves) is inherent to

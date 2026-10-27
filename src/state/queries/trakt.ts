@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Effect } from 'effect';
+import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
