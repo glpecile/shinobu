@@ -1,25 +1,20 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { View } from 'react-native';
 
-import { Button } from '@/components/button';
 import { ProviderIcon } from '@/components/provider-icon';
 import { SettingsRail } from '@/features/settings/settings-rail';
-import { capabilityLabels } from '@/features/trackers/provider-style';
-import { useConnectAction } from '@/features/trackers/use-connect-action';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
-import { haptics } from '@/lib/haptics';
+import { useThemeColor } from '@/lib/theme-color';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 
 /**
- * One provider's row on the Trackers rail, in whichever of its two states
- * applies. Pressing the row opens the provider's sheet. Connecting happens in
- * place when the provider needs nothing from the user and hands off to the
- * sheet when it does (`use-connect-action.ts`).
+ * One provider's row on the Trackers rail. Pressing it opens the provider's
+ * sheet, which connects or disconnects, so every row ends in a chevron.
  *
  * The caller owns the connected/disconnected decision (`splitProviders`).
  * `reconnect` is Trakt holding a token without the user's own credentials
- * (plan 0034 U9): gated out of connected, so the row says why and the button
- * opens the same guided setup.
+ * (plan 0034 U9): gated out of connected, so the row says why.
  */
 export function ProviderCard({
   id,
@@ -33,8 +28,8 @@ export function ProviderCard({
   onOpenSheet: () => void;
 }) {
   const username = useProviderUsername(id, connected);
-  const { needsSheet, connect, connecting } = useConnectAction(id);
   const { label } = PROVIDERS[id];
+  const muted = useThemeColor('--color-muted');
 
   let status;
   if (connected) {
@@ -53,7 +48,7 @@ export function ProviderCard({
       </SettingsRail.Subtitle>
     );
   } else {
-    status = <SettingsRail.Subtitle>{capabilityLabels(id).join(', ')}</SettingsRail.Subtitle>;
+    status = <SettingsRail.Subtitle>Not connected</SettingsRail.Subtitle>;
   }
 
   return (
@@ -68,37 +63,8 @@ export function ProviderCard({
           <SettingsRail.Title>{label}</SettingsRail.Title>
           {status}
         </SettingsRail.Text>
+        <Ionicons color={muted} name="chevron-forward" size={18} />
       </SettingsRail.Target>
-      {connected ? (
-        // The one label-only button (components/button docblock).
-        <Button
-          accessibilityLabel={`Disconnect ${label}`}
-          className="shrink-0"
-          label="Disconnect"
-          onPress={onOpenSheet}
-          size="md"
-          variant="quiet"
-        />
-      ) : (
-        <Button
-          accessibilityLabel={`${reconnect ? 'Reconnect' : 'Connect'} ${label}`}
-          className="shrink-0"
-          icon={<Button.Icon name="link-outline" />}
-          label={reconnect ? 'Reconnect' : 'Connect'}
-          // The one-tap providers open a browser session, which takes long
-          // enough on a cold start to look like a dead tap without this.
-          loading={connecting}
-          onPress={() => {
-            if (needsSheet) {
-              onOpenSheet();
-              return;
-            }
-            haptics.selection();
-            connect();
-          }}
-          size="md"
-        />
-      )}
     </SettingsRail.Row>
   );
 }
