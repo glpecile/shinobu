@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
+import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
 import { EmptyStateTile } from '@/components/empty-state-tile';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
@@ -82,7 +83,15 @@ function StateIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['name
  * posture is computed from several queries at once (the aggregate case AGENTS.md
  * allows), not single-query branching.
  */
-export default function DiaryScreen() {
+export default function DiaryTab() {
+  return (
+    <DeferredTab>
+      <DiaryScreen />
+    </DeferredTab>
+  );
+}
+
+function DiaryScreen() {
   const pushRoute = usePushRoute();
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();

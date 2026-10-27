@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -7,12 +7,17 @@ import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
 import { KEYFRAME_EASE_OUT } from '@/lib/motion';
 
+import { markBootRevealed } from './revealed';
+
 export function dismissBootSplash() {}
 
-/** Hand the OS splash to a themed overlay once the ready app has laid out. */
-export function BootSplash() {
+/**
+ * Hands the OS splash to a themed overlay. It mounts ahead of the app and
+ * calls `onPainted` once its image is on screen; the app renders after that,
+ * and the commit that mounts it passes `ready` and starts the reveal.
+ */
+export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: () => void }) {
   const [finished, setFinished] = useState(false);
-  const started = useRef(false);
   const laidOut = useRef(false);
   const imageLoaded = useRef(false);
   const opacity = useSharedValue(1);
@@ -24,6 +29,7 @@ export function BootSplash() {
 
   function finish() {
     setFinished(true);
+    markBootRevealed();
   }
 
   function reveal() {
@@ -37,23 +43,31 @@ export function BootSplash() {
     }));
   }
 
-  function handOff() {
-    if (started.current || !laidOut.current || !imageLoaded.current) return;
-    started.current = true;
-    void SplashScreen.hideAsync().then(reveal, reveal);
+  function painted() {
+    if (laidOut.current && imageLoaded.current) onPainted();
   }
+
+  // A layout effect runs in the commit that mounts the app, before that
+  // commit's effects and the re-renders they schedule. The fade runs on the UI
+  // thread, so it starts beside the hide rather than after its promise.
+  useLayoutEffect(() => {
+    if (!ready) return;
+    void SplashScreen.hideAsync().catch(() => {});
+    reveal();
+  }, [ready]);
 
   if (finished) return null;
 
   return (
     <AnimatedView
-      className="absolute inset-0 items-center justify-center bg-background"
+      // Faded out before the JS thread gets to unmount it.
+      className="pointer-events-none absolute inset-0 items-center justify-center bg-background"
       style={backdrop}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       onLayout={() => {
         laidOut.current = true;
-        handOff();
+        painted();
       }}
     >
       <AnimatedView style={mark}>
@@ -65,7 +79,7 @@ export function BootSplash() {
           transition={0}
           onLoadEnd={() => {
             imageLoaded.current = true;
-            handOff();
+            painted();
           }}
         />
       </AnimatedView>

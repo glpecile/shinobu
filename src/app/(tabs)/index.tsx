@@ -17,6 +17,7 @@ import {
 } from '@/components/feed-skeleton';
 import { FloatingTile } from '@/components/floating-tile';
 import { ProviderIcon } from '@/components/provider-icon';
+import { useBootRevealed } from '@/components/boot-splash/revealed';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import {
   homeHeaderClassName,
@@ -164,6 +165,8 @@ function FeedScreen() {
   const [refreshCount, setRefreshCount] = useState(0);
   // The single actions dialog behind every card's long-press / web ⋯ button.
   const { openActions, sheetProps } = useCardActions();
+  // Its module graph is most of logging; nothing opens it before the reveal.
+  const revealed = useBootRevealed();
   const scrollRef = useRef<ScrollViewInstance>(null);
 
   function openDetails(item: NormalizedMediaItem) {
@@ -255,7 +258,7 @@ function FeedScreen() {
           onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         />
       </CollapsibleSection.Scroll>
-      <CardActionsSheet {...sheetProps} />
+      {revealed && <CardActionsSheet {...sheetProps} />}
     </View>
   );
 }

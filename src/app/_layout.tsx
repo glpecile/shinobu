@@ -107,15 +107,15 @@ export default function Layout() {
   // Notification tap → details route, in all three app states (R10).
   useNotificationTapNavigation();
 
+  const fontsReady = fontsLoaded || fontError != null;
+  // Web's splash is static HTML in +html.tsx.
+  const [splashPainted, setSplashPainted] = useState(Platform.OS === "web");
+  const appReady = fontsReady && splashPainted;
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (fontsReady) {
       dismissBootSplash();
     }
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
+  }, [fontsReady]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -123,6 +123,7 @@ export default function Layout() {
         client={queryClient}
         persister={persister}
       >
+      {appReady && (
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <KeyboardProvider>
           <SheetProvider>
@@ -193,7 +194,8 @@ export default function Layout() {
           </SheetProvider>
         </KeyboardProvider>
       </ErrorBoundary>
-      <BootSplash />
+      )}
+      <BootSplash ready={appReady} onPainted={() => setSplashPainted(true)} />
       </PersistQueryClientProvider>
     </GestureHandlerRootView>
   );

@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { Text, View } from 'react-native';
 
 import { ConnectTmdbTokenSection } from '@/components/connect-tmdb-token';
+import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { RailHead } from '@/components/rail-head';
@@ -23,7 +24,15 @@ const THEME_LABEL = { system: 'System', light: 'Light', dark: 'Dark' } as const;
 
 const VERSION = Constants.expoConfig?.version;
 
-export default function SettingsScreen() {
+export default function SettingsTab() {
+  return (
+    <DeferredTab>
+      <SettingsScreen />
+    </DeferredTab>
+  );
+}
+
+function SettingsScreen() {
   const queryClient = useQueryClient();
   const theme = THEME_LABEL[useThemePreference()];
   const version = VERSION != null ? `v${VERSION}` : 'Unknown';

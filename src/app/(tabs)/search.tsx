@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
+import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
 import { Keyboard, Text, type TextInputInstance, View } from 'react-native';
 
@@ -280,7 +281,15 @@ function sectionRows<Hit>(
   return [header, ...items.map(toRow)];
 }
 
-export default function SearchScreen() {
+export default function SearchTab() {
+  return (
+    <DeferredTab>
+      <SearchScreen />
+    </DeferredTab>
+  );
+}
+
+function SearchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pushRoute = usePushRoute();
