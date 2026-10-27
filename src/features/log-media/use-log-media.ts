@@ -16,9 +16,10 @@ import {
 } from '@/lib/providers/serializd/progress';
 import { recordRecentTags } from '@/state/prefs/recent-tags';
 import { DIARY_QUERY_ROOT, cachedDiaryEntries } from '@/state/queries/diary-pages';
-import { letterboxdDeps, letterboxdQueryKeys } from '@/state/queries/letterboxd';
+import { letterboxdDeps, letterboxdFilmWatchQuery, letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
 import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
+import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import {
   continuePrequelTable,
@@ -471,69 +472,77 @@ async function providerHasWatch(
 ): Promise<boolean> {
   const episodes = domains.canonical;
   try {
-    if (provider === 'trakt') {
-      if (episodes == null) {
-        const watched = await queryClient.fetchQuery({
-          queryKey: traktQueryKeys.watchedMovies(),
-          queryFn: () => Effect.runPromise(getWatchedMovies(traktDeps())),
+    switch (provider) {
+      case 'trakt': {
+        if (episodes == null) {
+          const watched = await queryClient.fetchQuery({
+            queryKey: traktQueryKeys.watchedMovies(),
+            queryFn: () => Effect.runPromise(getWatchedMovies(traktDeps())),
+          });
+          return traktHasFilm(watched, item);
+        }
+        const traktId = item.externalIds.trakt;
+        if (traktId == null) return false;
+        const progress = await queryClient.fetchQuery({
+          queryKey: traktQueryKeys.showProgress(traktId),
+          queryFn: () =>
+            Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
         });
-        return traktHasFilm(watched, item);
+        return traktHasEpisodes(progress.watchedKeys, episodes);
       }
-      const traktId = item.externalIds.trakt;
-      if (traktId == null) return false;
-      const progress = await queryClient.fetchQuery({
-        queryKey: traktQueryKeys.showProgress(traktId),
-        queryFn: () =>
-          Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
-      });
-      return traktHasEpisodes(progress.watchedKeys, episodes);
-    }
 
-    if (provider === 'anilist') {
-      const mediaId = item.externalIds.anilist;
-      if (mediaId == null) return false;
-      const state = await queryClient.fetchQuery({
-        queryKey: anilistQueryKeys.entryState(mediaId),
-        queryFn: () =>
-          Effect.runPromise(getEntryState(anilistDeps(), { mediaId })),
-      });
-      const entryNumbers = domains.entry;
-      return entryNumbers == null
-        ? anilistHasFilm(state.entry)
-        : anilistHasEpisodes(state.entry, entryNumbers);
-    }
-
-    if (provider === 'serializd') {
-      const tmdbId = item.externalIds.tmdb;
-      const username = getSerializdUsername();
-      // TV-only: no join key, no session, or a movie (no episodes) → nothing to
-      // reconcile against, so treat as "doesn't have it" (write is the intent).
-      if (tmdbId == null || username == null || episodes == null) return false;
-
-      const watchedKeys = await queryClient.fetchQuery({
-        queryKey: serializdQueryKeys.progress(username, tmdbId),
-        queryFn: () =>
-          Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(), { tmdbId })),
-        staleTime: SERIALIZD_STALE_MS,
-      });
-      if (!serializdHasEpisodes(watchedKeys, episodes)) return false;
-
-      // R12/AE6: a Serializd log is a two-call sequence, so episode-watched
-      // progress alone doesn't prove the diary entry landed. A single-episode
-      // log creates a diary entry — require its presence, else a retry after a
-      // partial write would skip and silently drop the diary write. A whole-
-      // season batch (/watched_v2) creates no diary entry, so progress suffices.
-      if (episodes.length === 1) {
-        return await serializdDiaryHasEpisode(queryClient, tmdbId, episodes[0]);
+      case 'anilist': {
+        const mediaId = item.externalIds.anilist;
+        if (mediaId == null) return false;
+        const state = await queryClient.fetchQuery({
+          queryKey: anilistQueryKeys.entryState(mediaId),
+          queryFn: () =>
+            Effect.runPromise(getEntryState(anilistDeps(), { mediaId })),
+        });
+        const entryNumbers = domains.entry;
+        return entryNumbers == null
+          ? anilistHasFilm(state.entry)
+          : anilistHasEpisodes(state.entry, entryNumbers);
       }
-      return true;
+
+      case 'serializd': {
+        const tmdbId = item.externalIds.tmdb;
+        const username = getSerializdUsername();
+        // TV-only: no join key, no session, or a movie (no episodes) → nothing to
+        // reconcile against, so treat as "doesn't have it" (write is the intent).
+        if (tmdbId == null || username == null || episodes == null) return false;
+
+        const watchedKeys = await queryClient.fetchQuery({
+          queryKey: serializdQueryKeys.progress(username, tmdbId),
+          queryFn: () =>
+            Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(), { tmdbId })),
+          staleTime: SERIALIZD_STALE_MS,
+        });
+        if (!serializdHasEpisodes(watchedKeys, episodes)) return false;
+
+        // R12/AE6: a Serializd log is a two-call sequence, so episode-watched
+        // progress alone doesn't prove the diary entry landed. A single-episode
+        // log creates a diary entry — require its presence, else a retry after a
+        // partial write would skip and silently drop the diary write. A whole-
+        // season batch (/watched_v2) creates no diary entry, so progress suffices.
+        if (episodes.length === 1) {
+          return await serializdDiaryHasEpisode(queryClient, tmdbId, episodes[0]);
+        }
+        return true;
+      }
+
+      case 'letterboxd': {
+        const username = getLetterboxdUsername();
+        if (username == null || episodes != null) return false;
+        // The member film page proves a viewing; null only means "no evidence".
+        return (await queryClient.fetchQuery(letterboxdFilmWatchQuery(username, item))) != null;
+      }
     }
   } catch {
     return false;
   }
   // Providers without a branch fall through to the conservative default:
-  // Letterboxd has no readable watch state (RSS diary only), and Simkl —
-  // readable since plan 0034 U7 — deliberately has no branch yet, because it
+  // Simkl — readable since plan 0034 U7 — deliberately has no branch yet, because it
   // is not the mechanical parallel of the ones above. A real Simkl reconcile
   // needs the *unfiltered* /sync/all-items snapshot (the item may sit in any
   // status bucket; the cached up-next legs hold only watching/plantowatch)

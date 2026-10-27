@@ -102,6 +102,22 @@ test('a whole-series Letterboxd confirmation reaches only its diary adapter, wit
   expect(deliveries[0].entryEpisodes).toBeUndefined();
 });
 
+test('a Letterboxd film the member page already shows is logged again as a rewatch', async () => {
+  const { connectLetterboxd } = await import('@/state/session/letterboxd');
+  const { letterboxdFilmWatchQuery } = await import('@/state/queries/letterboxd');
+  connectLetterboxd('glptest');
+  const item: NormalizedMediaItem = {
+    id: 'letterboxd-inception', title: 'Inception', coverImage: '', type: 'MOVIE',
+    currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { letterboxd: 'inception' },
+  };
+  const queryClient = client();
+  queryClient.setQueryData(letterboxdFilmWatchQuery('glptest', item).queryKey, { ...item, currentProgress: 1 });
+  const plan = await planLogWrite(queryClient, { item }, ['letterboxd']);
+  expect(plan.writeTargets).toEqual(['letterboxd']);
+  expect(plan.variables.rewatch).toBe(true);
+  store.clear();
+});
+
 /**
  * Real Dan Da Dan S2 data: ani.zip maps the entry's 1..12 to TVDB S02E01..12,
  * absolute 13..24 — while Trakt *and* TMDB both hold one continuous

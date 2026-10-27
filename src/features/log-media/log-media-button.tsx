@@ -12,6 +12,7 @@ import {
   useShowSeasonsSource,
 } from '@/state/queries/show-seasons';
 import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
+import { useFilmPlaysQuery } from '@/state/queries/use-diary-feed';
 import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -43,6 +44,9 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);
   const watchedInfo = useWatchedInfo(item);
+  // The details screen's "Watched · date" line reads these dated plays too
+  // (Letterboxd's RSS among them), so the button can't contradict it.
+  const filmPlays = useFilmPlaysQuery(item);
   const anilistEntry = useAniListEntryStateQuery({
     type: item.type,
     mediaId: item.externalIds.anilist,
@@ -111,6 +115,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const anilistProgress = anilistEntry.data?.entry?.progress;
   const isRewatch =
     watchedInfo != null ||
+    (filmPlays.data?.length ?? 0) > 0 ||
     anilistStatus === 'COMPLETED' ||
     anilistStatus === 'REPEATING';
 

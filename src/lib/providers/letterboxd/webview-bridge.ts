@@ -80,6 +80,16 @@ export function handleLetterboxdMessage(data: string): void {
 }
 
 /**
+ * Relays a write script's fetch outcome. Cloudflare can challenge the in-page
+ * AJAX call even after the film page itself loaded; that answer is a 403 HTML
+ * page, not a session rejection, so it gets its own `challenge` marker.
+ */
+const RELAY = `function relay(r){
+      if (r.headers.get('cf-mitigated') === 'challenge') { post({ status: 0, body: 'challenge' }); return; }
+      return r.text().then(function(t){ post({ status: r.status, body: t }); });
+    }`;
+
+/**
  * The submit script — runs on the freshly-rendered film page. It POSTs the diary
  * entry to Letterboxd's modern same-origin JSON API,
  * `POST /api/v0/production-log-entries`, exactly as the site's own JS does
@@ -106,6 +116,7 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
   return `(function(){
     var id = ${JSON.stringify(id)};
     function post(o){ o.id = id; try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch(e){} }
+    ${RELAY}
     try {
       // The film LID (productionId) the API keys on — read from the page's own meta.
       var lid = '';
@@ -121,9 +132,7 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-CSRF-TOKEN': csrf },
         body: JSON.stringify(payload)
-      }).then(function(r){
-        return r.text().then(function(t){ post({ status: r.status, body: t }); });
-      }).catch(function(e){ post({ status: 0, body: 'fetch-error: ' + String(e) }); });
+      }).then(relay).catch(function(e){ post({ status: 0, body: 'fetch-error: ' + String(e) }); });
     } catch (e) { post({ status: 0, body: 'script-error: ' + String(e) }); }
   })();`;
 }
@@ -145,6 +154,7 @@ function buildWatchlistScript(
   return `(function(){
     var id = ${JSON.stringify(id)};
     function post(o){ o.id = id; try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch(e){} }
+    ${RELAY}
     try {
       var lid = '';
       var meta = document.querySelector('meta[name="production:identifier"]');
@@ -155,16 +165,17 @@ function buildWatchlistScript(
         credentials: 'include',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: ''
-      }).then(function(r){ return r.json(); }).then(function(metadata){
-        var csrf = (metadata && metadata.csrf) || '';
-        if (!csrf) { post({ status: 0, body: 'no-csrf' }); return; }
-        return fetch((window.baseURL || '') + '/api/v0/me/watchlist/' + lid, {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json; charset=UTF-8', 'x-csrf-token': csrf },
-          body: JSON.stringify({ inWatchlist: ${JSON.stringify(request.inWatchlist)} })
-        }).then(function(r){
-          return r.text().then(function(t){ post({ status: r.status, body: t }); });
+      }).then(function(r){
+        if (!r.ok) return relay(r);
+        return r.json().then(function(metadata){
+          var csrf = (metadata && metadata.csrf) || '';
+          if (!csrf) { post({ status: 0, body: 'no-csrf' }); return; }
+          return fetch((window.baseURL || '') + '/api/v0/me/watchlist/' + lid, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8', 'x-csrf-token': csrf },
+            body: JSON.stringify({ inWatchlist: ${JSON.stringify(request.inWatchlist)} })
+          }).then(relay);
         });
       }).catch(function(e){ post({ status: 0, body: 'fetch-error: ' + String(e) }); });
     } catch (e) { post({ status: 0, body: 'script-error: ' + String(e) }); }

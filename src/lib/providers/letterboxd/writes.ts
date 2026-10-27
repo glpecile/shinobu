@@ -51,7 +51,8 @@ export function filmPathFor(item: NormalizedMediaItem): string | null {
  * or null when `response` carries a real HTTP status. A page without the
  * `production:identifier` meta is Letterboxd's "TMDB Import Result" page for an
  * id it has no film for (it answers 200, not 404). `no-csrf` only happens
- * signed-out. Anything else is the in-page fetch failing, which is not a dead session.
+ * signed-out. `challenge` is Cloudflare walling the in-page request. Anything
+ * else is the in-page fetch failing, which is not a dead session.
  */
 export function scriptFailure(
   response: LetterboxdWebResponse,
@@ -63,6 +64,15 @@ export function scriptFailure(
       return new ProviderDecodeError({ provider, detail: `Letterboxd has no film at ${filmPath}` });
     case 'no-csrf':
       return new ProviderAuthError({ provider, refreshFailed: true });
+    case 'challenge':
+      // Not a dead session, and not safe to replay blindly: the user checks
+      // Letterboxd, through the outcome's item link, before retrying.
+      return new ProviderNetworkError({
+        provider,
+        status: 403,
+        retryable: false,
+        cause: new Error('Letterboxd needs verification. Check the film on Letterboxd before retrying.'),
+      });
     default:
       return new ProviderNetworkError({
         provider,
@@ -95,7 +105,7 @@ function messageText(message: ApiMessage): string {
 /**
  * Reads the `/api/v0/production-log-entries` outcome. Success is `200
  * { logEntry, messages }`; a validation failure is `400 { message | messages }`;
- * `401`/`403` is an unauthenticated/expired session (or Cloudflare wall) we treat
+ * `401`/`403` is an unauthenticated/expired session we treat
  * as a dead session ("reconnect Letterboxd"). Even a 200 can carry a
  * `messages: [{ type: 'Error' }]`, which the site itself treats as a failure.
  * `status`/`body` come from the WebView `fetch` relayed over the postMessage
@@ -108,8 +118,8 @@ function interpretDiaryResponse(
   return Effect.gen(function* () {
     const failure = scriptFailure(response, filmPath);
     if (failure != null) return yield* failure;
-    // 403 is either a CSRF/session rejection or a Cloudflare wall; either way the
-    // in-session write failed to authenticate — same reconnect move as 401.
+    // A Cloudflare wall already returned as `challenge`, so a 403 here is a
+    // CSRF/session rejection — same reconnect move as 401.
     if (response.status === 401 || response.status === 403) {
       return yield* new ProviderAuthError({ provider, refreshFailed: true });
     }
