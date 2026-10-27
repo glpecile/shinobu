@@ -1,6 +1,6 @@
 # Prebuild fails: DOMParser.parseFromString "undefined" mimeType
 
-**Symptom:** `expo prebuild` (via `bun ios.clean`) dies in
+**Symptom:** `expo prebuild` (via `bun ios:clean`) dies in
 `withIosInfoPlistBaseMod`:
 
 ```

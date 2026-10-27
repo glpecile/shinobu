@@ -8,7 +8,7 @@ Rendering `<Head>` from `expo-router/head` on iOS crashes with:
 > (requires rebuild). Add the Config Plugin
 > `{ plugins: [["expo-router", { origin: "...<URL>..." }]] }`.
 
-A clean rebuild (`bun ios.clean`) does not help — the error is about missing
+A clean rebuild (`bun ios:clean`) does not help — the error is about missing
 config, not a stale native project.
 
 ## Cause

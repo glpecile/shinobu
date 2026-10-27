@@ -76,8 +76,8 @@ bun web            # run in the browser
 bun ios            # build and run the iOS dev client
 bun android        # build and run the Android dev client
 
-bun ios.clean      # regenerate the native project first, needed after
-bun android.clean  # app.json, config plugin, or native dependency changes
+bun ios:clean      # regenerate the native project first, needed after
+bun android:clean  # app.json, config plugin, or native dependency changes
 ```
 
 Web development also needs the Worker running, because Metro doesn't serve `/api/*`:

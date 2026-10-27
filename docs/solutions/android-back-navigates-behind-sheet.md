@@ -21,7 +21,7 @@ This presentation change is JS-only on a client already built with the pinned
 version; no BackHandler or per-screen navigation guard is added.
 
 The dependency is pinned to stable 0.17.1. This needs a clean native
-rebuild (`bun android.clean`, or `bun ios.clean` for iOS), not just Fast Refresh.
+rebuild (`bun android:clean`, or `bun ios:clean` for iOS), not just Fast Refresh.
 Lint and TypeScript checks pass. The owner confirmed working behavior after
 the rebuild guidance; the agent did not complete a passing runtime check.
 
@@ -37,5 +37,5 @@ On October 6, the emulator's installed APK had last been updated on October 4,
 before the October 5 dependency upgrade. Its DEX contained `BottomSheetView`
 but neither close-request controller, `hasCloseRequestHandler`, nor
 `onCloseRequest`. Updating the JS bundle alone cannot enable Back handling in
-that binary. Run `bun android.clean` before verifying the fix; the overlay prop
+that binary. Run `bun android:clean` before verifying the fix; the overlay prop
 is hot-reloadable only after that native prerequisite is installed.

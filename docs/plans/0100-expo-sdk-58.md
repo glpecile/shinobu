@@ -47,7 +47,7 @@ Live QA:
   platform. No media logs or lists were created by this QA checkpoint.
 
 This is a draft checkpoint, not release approval. Complete the remaining live flows and review before marking the PR ready. Native dependency
-changes require `bun ios.clean` / `bun android.clean` for other checkouts; later
+changes require `bun ios:clean` / `bun android:clean` for other checkouts; later
 source-only fixes hot reload.
 
 ## Live QA checkpoint — 2026-10-20 (second pass)

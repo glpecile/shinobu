@@ -102,5 +102,5 @@ be optional in the shared session type).
 ## New dependencies
 
 `expo-auth-session` + `expo-crypto` + `expo-web-browser` (Expo SDK modules,
-ship native code → dev-client rebuild required: `bun ios.clean` /
-`bun android.clean`).
+ship native code → dev-client rebuild required: `bun ios:clean` /
+`bun android:clean`).

@@ -52,7 +52,7 @@ the actual icon library in the README.
   viewer, native filmography filters, and search keyboard input. Do not change sessions
   or send provider writes during smoke testing.
 - One PR with release rationale and actual validation results. Native updates
-  require `bun ios.clean` / `bun android.clean`, not just hot reload.
+  require `bun ios:clean` / `bun android:clean`, not just hot reload.
 
 ## Results
 

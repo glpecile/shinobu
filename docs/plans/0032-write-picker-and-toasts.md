@@ -247,8 +247,8 @@ work there.
   same verb, which is precisely the cross-mount case that guard exists for.
 
 - **KTD-5. `burnt` ships native code, so this is a clean-prebuild PR.** Per
-  AGENTS.md § CNG the PR body must state it: `bun ios.clean` /
-  `bun android.clean` before the change is visible. Shinobu already cannot run in
+  AGENTS.md § CNG the PR body must state it: `bun ios:clean` /
+  `bun android:clean` before the change is visible. Shinobu already cannot run in
   Expo Go (nitro modules), so a dev client is the standing workflow and the cost
   is a rebuild, not a workflow change. `burnt` is by `@nandorojo`, whose
   `@nandorojo/galeria` is already a trusted dependency here.
@@ -345,7 +345,7 @@ watchlist grid's inline per-provider notice changes.
 
 - `bun test`, `bun typecheck`, `bun lint`, `bun check:classnames`,
   `bun check:router-push`.
-- **Clean prebuild required** (KTD-5): `bun ios.clean` / `bun android.clean`.
+- **Clean prebuild required** (KTD-5): `bun ios:clean` / `bun android:clean`.
   State it in the PR body per AGENTS.md § CNG.
 - Manual, all four targets: watchlist an unreleased film → the picker opens with
   every connected provider selected → confirm → sheet closes, one toast names

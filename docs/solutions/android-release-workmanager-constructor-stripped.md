@@ -18,7 +18,7 @@ published APK confirms `WorkDatabase_Impl`, `OverwritingInputMerger`, and
 
 `app.json` adds constructor keep rules through the existing `expo-build-properties`
 plugin. This preserves release optimization and dependency versions, and requires
-a clean native rebuild (`bun android.clean` for development). Never edit generated
+a clean native rebuild (`bun android:clean` for development). Never edit generated
 `android/` files. Cache clearing cannot restore code missing from the APK.
 
 Expo confirmed the same dependency failure in

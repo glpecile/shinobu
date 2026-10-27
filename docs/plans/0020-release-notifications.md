@@ -16,7 +16,7 @@ execution: code
 - **Authority:** AGENTS.md conventions (no backend, `hasAired` centralization, CNG rebuild rules) override this plan; this plan overrides implementer preference on scope and sequencing; the owner's live decisions override both.
 - **Execution profile:** `execution: code`. Pure computation units are test-first; native scheduling/background units are smoke-verified on an Android dev client.
 - **Stop conditions:** Stop and surface — do not guess — if (a) any design would require a push server, FCM tokens, or any remote relay (hard no per todos/007), (b) `expo-background-task`/`expo-notifications` turn out incompatible with Expo SDK 57 as installed, (c) provider reads cannot run headless outside React (they can today — `traktDeps()`/`anilistDeps()` are module-level), or (d) the change would touch the Worker proxies or provider registry write semantics.
-- **Tail ownership:** Implementer lands the work per repo convention (branch + PR) and states clearly that this feature **requires a clean native rebuild** (`bun android.clean`); the owner runs the on-device verification pass.
+- **Tail ownership:** Implementer lands the work per repo convention (branch + PR) and states clearly that this feature **requires a clean native rebuild** (`bun android:clean`); the owner runs the on-device verification pass.
 
 ---
 
@@ -77,7 +77,7 @@ Shinobu computes upcoming episodes (plan 0019 Calendar) but never tells the user
 ### Key Technical Decisions
 
 - KTD-1. **Reuse the Up Next input pipeline, headless.** The candidate computation must run without React (the background task has no component tree). Extract the provider input gathering in `src/state/queries/up-next.ts` into a non-hook module (e.g. `src/features/up-next/gather-inputs.ts`) that both the existing `queryFn` and the notification refresher call. Provider reads already run via `Effect.runPromise(read(deps()))` with module-level deps builders and MMKV-stored tokens, so nothing blocks headless execution. Rejected: a second, notification-only fetch path (would drift from Up Next and double provider budget spend — AniList is 30 req/min, `docs/solutions/anilist-rate-limit-retry-storm.md`).
-- KTD-2. **expo-notifications + expo-task-manager + expo-background-task.** All are Expo SDK packages compatible with SDK 57; expo-background-task is the current API (expo-background-fetch is deprecated) and maps to WorkManager on Android / BGTaskScheduler on iOS — the exact shape otraku uses on Flutter. All three ship native code: **clean rebuild required** (`bun android.clean` / `bun ios.clean`), and the expo-notifications config plugin entry in `app.json` sets `icon` (monochrome) + `color` (`#DC2626`). Per the Nitro-preference rule: no Nitro alternative exists for notifications/background scheduling, so Expo's own modules are the right call.
+- KTD-2. **expo-notifications + expo-task-manager + expo-background-task.** All are Expo SDK packages compatible with SDK 57; expo-background-task is the current API (expo-background-fetch is deprecated) and maps to WorkManager on Android / BGTaskScheduler on iOS — the exact shape otraku uses on Flutter. All three ship native code: **clean rebuild required** (`bun android:clean` / `bun ios:clean`), and the expo-notifications config plugin entry in `app.json` sets `icon` (monochrome) + `color` (`#DC2626`). Per the Nitro-preference rule: no Nitro alternative exists for notifications/background scheduling, so Expo's own modules are the right call.
 - KTD-3. **Cancel-then-schedule with a hash guard.** Idempotency comes from full-batch replacement, not per-notification diffing; the MMKV content hash (sorted `itemId/season/episode/instant` lines) skips the whole replace when nothing changed (R7). Rejected: per-notification identifiers + diffing (more states to get wrong for zero user-visible gain at ≤50 notifications).
 - KTD-4. **The task definition lives at module scope and is imported from the root layout.** `TaskManager.defineTask` must execute during bundle evaluation for headless launches; define it in the scheduler feature module and import that module from `src/app/_layout.tsx` (side-effect import), registering with `BackgroundTask.registerTaskAsync` (~720 min minimum interval) only when the toggle is on and platform is native.
 - KTD-5. **Connected-provider detection headless.** The refresher derives the connected set from the session token getters (`src/state/session/tokens.ts` and siblings), not from the `useConnectedProviders` hook; add a non-hook `getConnectedProviders()` next to the hook if one doesn't already exist.
@@ -117,7 +117,7 @@ flowchart LR
 **Dependencies:** none.
 **Files:** `package.json`, `app.json`.
 **Approach:** `bunx expo install` the three packages so versions match SDK 57. Do not create a notification icon asset if `assets/images/adaptive-icon-monochrome.png` is reusable — reuse it.
-**Test scenarios:** Test expectation: none — dependency/config unit; proven by U4–U6 smoke and a successful `bun android.clean` prebuild.
+**Test scenarios:** Test expectation: none — dependency/config unit; proven by U4–U6 smoke and a successful `bun android:clean` prebuild.
 **Verification:** `bunx expo prebuild --platform android` succeeds; generated manifest (inspected, not committed) contains the notification icon/color meta-data. State in the PR that a clean rebuild is required.
 
 ### U2. Headless Up Next input gathering
@@ -188,7 +188,7 @@ flowchart LR
 
 - `bun test`, `bun typecheck`, `bun lint` — green at every unit boundary.
 - `bun run build:web` — web bundle builds; no notification native module reaches the web bundle.
-- Android dev client (`bun android.clean` once after U1): U6's on-device checklist (permission prompt, test notification, cancel-on-disable) and U7's three-state tap matrix.
+- Android dev client (`bun android:clean` once after U1): U6's on-device checklist (permission prompt, test notification, cancel-on-disable) and U7's three-state tap matrix.
 - Background task: registered task visible via `BackgroundTask.getStatusAsync`/`adb`; a forced task run (`expo-background-task` test trigger where available) executes `refreshNotifications` without a foregrounded app.
 
 ## Definition of Done

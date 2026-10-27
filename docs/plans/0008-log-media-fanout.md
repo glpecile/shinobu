@@ -97,7 +97,7 @@ satisfied by Reanimated 4), and `@expo/ui` (SwiftUI/Compose views; its
 `community/datetime-picker` entry point is the drop-in replacement for
 `@react-native-community/datetimepicker`, which is lint-banned; no config
 plugin). All ship native code → **dev-client rebuild required**:
-`bun ios.clean` / `bun android.clean`. Web needs no rebuild (all three are
+`bun ios:clean` / `bun android:clean`. Web needs no rebuild (all three are
 platform-split with JS/DOM fallbacks).
 
 ## Out of scope

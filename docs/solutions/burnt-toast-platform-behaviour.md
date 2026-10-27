@@ -51,7 +51,7 @@ Sonner's host offsets.
 - `duration` is now **milliseconds** (sonner's unit) — burnt used seconds; the
   durations live in `src/lib/toast/index.ts` and nowhere else.
 - sonner-native peer-deps `react-native-svg` (new native dep at adoption) —
-  adding/upgrading needs `bun ios.clean` / `bun android.clean` (AGENTS.md §
+  adding/upgrading needs `bun ios:clean` / `bun android:clean` (AGENTS.md §
   CNG). Its dismiss gestures need `GestureHandlerRootView` (already at root)
   and it sits under expo-router's `SafeAreaProvider`.
 - Historical (burnt 0.13.0, observed 2026-07-29): iOS SPIndicator capsule

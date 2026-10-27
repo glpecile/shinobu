@@ -172,5 +172,5 @@ attributed to the menus. Track its reproduction separately rather than adding
 
 The package is already installed. These JS/TS changes should hot reload in a
 dev client built with the current dependencies. A package or native config
-change would require `bun ios.clean` / `bun android.clean`. This todo alone
+change would require `bun ios:clean` / `bun android:clean`. This todo alone
 needs no rebuild.

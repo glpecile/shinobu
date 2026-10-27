@@ -24,10 +24,10 @@ pod (`ExpoModulesCore`, then more). Since `ios/` is CNG-generated and gitignored
 regenerate it wholesale:
 
 ```sh
-bun ios.clean   # expo prebuild --platform ios --clean && bun ios (regens ios/, then builds + runs)
+bun ios:clean   # expo prebuild --platform ios --clean && bun ios (regens ios/, then builds + runs)
 ```
 
 **Rule going forward:** after adding/removing/upgrading any dependency that
 ships native code, or changing `app.json`/config plugins, do a clean prebuild
-(`bun ios.clean` / `bun android.clean`) before building — never `pod update`
+(`bun ios:clean` / `bun android:clean`) before building — never `pod update`
 individual pods or hand-edit anything under `ios/`.
