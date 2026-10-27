@@ -72,12 +72,6 @@ export interface LetterboxdDeps {
 export interface LetterboxdWebRequest {
   /** Film page to render so the CSRF token + LID meta are in the session, e.g. `/film/tuner/`. */
   filmPath: string;
-  /**
-   * The film's Letterboxd **LID** (`productionId` for the API, e.g. `UH8e`) —
-   * NOT the `film:{numericId}` uid. A fallback if the page's `production:identifier`
-   * meta can't be read inside the WebView; `''` when it couldn't be resolved.
-   */
-  filmLid: string;
   /** `letterboxd.com`-local YYYY-MM-DD diary date. */
   viewingDateStr: string;
   /** Diary tags (the API takes a JSON string array), possibly empty. */
@@ -110,12 +104,6 @@ export type LetterboxdWebFetch = (
 export interface LetterboxdWatchlistWebRequest {
   /** Film page to render so the LID meta is in the session, e.g. `/film/tuner/`. */
   filmPath: string;
-  /**
-   * The film's Letterboxd **LID** (e.g. `294O`) — a fallback if the page's
-   * `production:identifier` meta can't be read inside the WebView; `''` when
-   * it couldn't be resolved.
-   */
-  filmLid: string;
   /** The target membership state — the body of the PATCH, verbatim. */
   inWatchlist: boolean;
 }

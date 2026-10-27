@@ -10,7 +10,7 @@ import {
 } from '@/lib/providers/errors';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { LetterboxdDeps, LetterboxdWebResponse } from './deps';
-import { filmPathFor, resolveFilmLid } from './writes';
+import { filmPathFor, scriptFailure } from './writes';
 
 const provider = 'letterboxd' as const;
 
@@ -19,28 +19,20 @@ const provider = 'letterboxd' as const;
  * an empty body — the state after the call is the state that was sent, not
  * "whatever the opposite of before was" (the capture's classification,
  * docs/solutions/letterboxd-watchlist-write.md). `status: 0` bodies are the
- * injected script's own failure markers: `no-csrf` means the metadata call
- * came back without a token, which only happens signed-out, so it maps to the
- * same reconnect move as a 401/403.
+ * injected script's own failure markers (`scriptFailure`).
  */
 function interpretWatchlistResponse(
   response: LetterboxdWebResponse,
+  filmPath: string,
 ): Effect.Effect<void, ProviderError> {
   return Effect.gen(function* () {
+    const failure = scriptFailure(response, filmPath);
+    if (failure != null) return yield* failure;
     if (response.status === 401 || response.status === 403) {
       return yield* new ProviderAuthError({ provider, refreshFailed: true });
     }
     if (response.status === 429) {
       return yield* new ProviderRateLimitError({ provider });
-    }
-    if (response.status === 0) {
-      if (response.body === 'no-csrf') {
-        return yield* new ProviderAuthError({ provider, refreshFailed: true });
-      }
-      return yield* new ProviderNetworkError({
-        provider,
-        cause: new Error(`Letterboxd watchlist script failed: ${response.body}`),
-      });
     }
     if (response.status < 200 || response.status >= 300) {
       return yield* new ProviderDecodeError({
@@ -57,11 +49,9 @@ function interpretWatchlistResponse(
  * so a repeat add is idempotent and plan 0031 KTD-6's hazard (a wrong guess
  * *removing* a film while reporting success) does not exist on this endpoint.
  * Native writes ride the same captured-WebView-session plumbing as the diary
- * write (`deps.watchlistWebFetch`): the film's LID resolves over public
- * nitro-fetch as a fallback (the injected script reads it off the page meta
- * too), then the CSRF fetch + PATCH run *inside* the authenticated login
- * WebView. Web writes can instead use the userscript, resolving the LID in the
- * signed-in browser tab without exporting cookies. No session or transport fails as a
+ * write (`deps.watchlistWebFetch`): the LID read, CSRF fetch, and PATCH run
+ * *inside* the authenticated login WebView. Web writes can instead use the
+ * userscript, in the signed-in browser tab without exporting cookies. No session or transport fails as a
  * dead session so the caller surfaces "reconnect Letterboxd" rather than
  * silently dropping the write.
  */
@@ -98,18 +88,14 @@ export function setLetterboxdWatchlist(
     );
   }
 
-  return (userscriptFetch != null ? Effect.succeed('') : resolveFilmLid(deps, item)).pipe(
-    Effect.flatMap((filmLid) =>
-      Effect.gen(function* () {
-        const response = yield* Effect.tryPromise({
-          try: () => watchlistWebFetch({ filmPath, filmLid, inWatchlist }),
-          catch: (cause) => new ProviderNetworkError({ provider, cause }),
-        });
-        yield* interpretWatchlistResponse(response);
-        return { status: 'ok' } as const;
-      }),
-    ),
-  );
+  return Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () => watchlistWebFetch({ filmPath, inWatchlist }),
+      catch: (cause) => new ProviderNetworkError({ provider, cause }),
+    });
+    yield* interpretWatchlistResponse(response, filmPath);
+    return { status: 'ok' } as const;
+  });
 }
 
 /** The add verb — `useWatchlistMedia`'s fan-out target. */

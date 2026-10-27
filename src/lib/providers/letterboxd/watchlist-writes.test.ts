@@ -18,10 +18,6 @@ const SESSION: LetterboxdSession = {
   csrf: 'csrf-token-123',
 };
 
-// A trimmed film page carrying the LID the watchlist API keys on — same
-// entity-encoded `production:identifier` meta the diary write reads.
-const FILM_PAGE = `<html><head><meta name="production:identifier" content="{&quot;lid&quot;:&quot;294O&quot;,&quot;uid&quot;:&quot;film:51155&quot;}"></head><body></body></html>`;
-
 function movie(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
   return {
     id: 'letterboxd-the-thing',
@@ -45,7 +41,7 @@ function fakeDeps(options: {
   return {
     username: 'gian',
     session: SESSION,
-    fetch: async () => new Response(FILM_PAGE, { status: 200 }),
+    fetch: async () => { throw new Error('Native writes must not fetch the film page'); },
     watchlistWebFetch: withTransport
       ? async (request) => {
           options.onWrite?.(request);
@@ -67,9 +63,9 @@ describe('setLetterboxdWatchlist (plan 0033 R3/R4)', () => {
       },
     };
     expect(await Effect.runPromise(addToLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({ status: 'ok' });
-    expect(captured).toEqual({ filmPath: '/tmdb/348/', filmLid: '', inWatchlist: true });
+    expect(captured).toEqual({ filmPath: '/tmdb/348/', inWatchlist: true });
     expect(await Effect.runPromise(removeFromLetterboxdWatchlist(deps, movie({ tmdb: 348 })))).toEqual({ status: 'ok' });
-    expect(captured).toEqual({ filmPath: '/tmdb/348/', filmLid: '', inWatchlist: false });
+    expect(captured).toEqual({ filmPath: '/tmdb/348/', inWatchlist: false });
   });
   test('the add navigates to the film page and PATCHes inWatchlist: true', async () => {
     let captured: LetterboxdWatchlistWebRequest | undefined;
@@ -80,7 +76,6 @@ describe('setLetterboxdWatchlist (plan 0033 R3/R4)', () => {
     );
 
     expect(captured?.filmPath).toBe('/film/the-thing/');
-    expect(captured?.filmLid).toBe('294O');
     expect(captured?.inWatchlist).toBe(true);
   });
 

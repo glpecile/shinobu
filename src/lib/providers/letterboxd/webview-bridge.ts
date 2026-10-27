@@ -26,9 +26,12 @@ import type {
  * which wraps `letterboxdWebFetch` in `Effect.tryPromise` (AGENTS.md boundary).
  */
 
-/** Page-load transport exposed by the mounted React bridge. */
+/** Page-load transport exposed by the mounted React bridge. Each write gets
+ * its own page, so concurrent writes (a log and its derived watchlist removal)
+ * never navigate each other away; `unloadPage` frees it once the write settles. */
 export interface LetterboxdWebViewHandle {
-  loadPage(path: string, script: string): void;
+  loadPage(id: string, path: string, script: string): void;
+  unloadPage(id: string): void;
 }
 
 interface Pending {
@@ -87,7 +90,7 @@ export function handleLetterboxdMessage(data: string): void {
  *
  * Two page-derived values ride along:
  *  - `productionId` — the film's **LID**, read from the `production:identifier`
- *    meta (`{"lid":"UH8e",…}`); falls back to the LID resolved by writes.ts.
+ *    meta (`{"lid":"UH8e",…}`).
  *  - `X-CSRF-TOKEN` header — **`window.supermodelCSRF`** (the API takes the token
  *    in a header, not the body). Falls back to the `com.xk72.webparts.csrf`
  *    cookie only if the global is absent.
@@ -108,7 +111,6 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
       var lid = '';
       var meta = document.querySelector('meta[name="production:identifier"]');
       if (meta) { try { lid = (JSON.parse(meta.getAttribute('content') || '{}') || {}).lid || ''; } catch (e) {} }
-      if (!lid) lid = ${JSON.stringify(request.filmLid)};
       if (!lid) { post({ status: 0, body: 'no-production-lid' }); return; }
       // The token the site itself submits — falls back to the cookie only if absent.
       var csrf = window.supermodelCSRF;
@@ -133,8 +135,8 @@ function buildSubmitScript(id: string, request: LetterboxdWebRequest): string {
  * `POST /ajax/letterboxd-metadata/` (what the site's own control does — not the
  * diary write's `window.supermodelCSRF` page-global), sent as `x-csrf-token` on
  * `PATCH /api/v0/me/watchlist/{lid}` with the target state in the body. The
- * film's LID is read off the page's `production:identifier` meta, falling back
- * to the LID resolved by the adapter. Outcome relayed over postMessage.
+ * film's LID is read off the page's `production:identifier` meta. Outcome
+ * relayed over postMessage.
  */
 function buildWatchlistScript(
   id: string,
@@ -147,7 +149,6 @@ function buildWatchlistScript(
       var lid = '';
       var meta = document.querySelector('meta[name="production:identifier"]');
       if (meta) { try { lid = (JSON.parse(meta.getAttribute('content') || '{}') || {}).lid || ''; } catch (e) {} }
-      if (!lid) lid = ${JSON.stringify(request.filmLid)};
       if (!lid) { post({ status: 0, body: 'no-production-lid' }); return; }
       fetch((window.baseURL || '') + '/ajax/letterboxd-metadata/', {
         method: 'POST',
@@ -186,7 +187,7 @@ function runInPage(
     return Promise.reject(new Error('Letterboxd WebView is not mounted'));
   }
   const id = `lb-${(counter += 1)}-${Date.now()}`;
-  return new Promise<LetterboxdWebResponse>((resolve, reject) => {
+  const response = new Promise<LetterboxdWebResponse>((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error('Letterboxd WebView write timed out'));
@@ -204,8 +205,11 @@ function runInPage(
     try {
       // Document-end injection runs again on navigation/reload. Consume the
       // request in tab-local storage before writing so it can never log twice.
-      ref.loadPage(path, `(function(){
+      // A Cloudflare challenge page reloads into the real page once it passes,
+      // so it must not consume the request.
+      ref.loadPage(id, path, `(function(){
         if (window.location.origin !== 'https://letterboxd.com') return;
+        if (window._cf_chl_opt) return;
         var key = ${JSON.stringify(id)};
         if (sessionStorage.getItem(key)) return;
         sessionStorage.setItem(key, 'sent');
@@ -215,6 +219,7 @@ function runInPage(
       fail(error);
     }
   });
+  return response.finally(() => ref.unloadPage(id));
 }
 
 /**

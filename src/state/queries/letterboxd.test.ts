@@ -105,11 +105,7 @@ test('list likes share optimistic state across buttons and remounts, and roll ba
   }
   const render = () => renderToString(createElement(QueryClientProvider, { client }, createElement(LikeRead)));
   let loaded = Promise.withResolvers<string>();
-  registerLetterboxdWebView({ loadPage: (_path, script) => {
-    const id = /id:\s*("lb-[^"]+")/.exec(script)?.[1];
-    if (id == null) throw new Error('Missing bridge request ID');
-    loaded.resolve(JSON.parse(id));
-  } });
+  registerLetterboxdWebView({ loadPage: (id) => loaded.resolve(id), unloadPage: () => {} });
   try {
     expect(render()).toContain('aria-pressed="false"');
     const like = mutation.mutateAsync(true);
@@ -388,11 +384,7 @@ test('confirmed membership additions stay visible in a partially loaded list unt
     return null;
   }
   const loaded = Promise.withResolvers<string>();
-  registerLetterboxdWebView({ loadPage: (_path, script) => {
-    const id = /id:\s*("lb-[^"]+")/.exec(script)?.[1];
-    if (id == null) throw new Error('Missing bridge request ID');
-    loaded.resolve(JSON.parse(id));
-  } });
+  registerLetterboxdWebView({ loadPage: (id) => loaded.resolve(id), unloadPage: () => {} });
   try {
     renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
     const item: NormalizedMediaItem = { id: 'tmdb-movie-348', title: 'Alien', type: 'MOVIE', coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 348 } };

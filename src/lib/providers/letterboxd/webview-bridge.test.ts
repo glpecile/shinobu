@@ -16,12 +16,15 @@ import {
 } from './webview-bridge';
 
 function fakeWebView() {
-  const pages: Array<{ filmPath: string; script: string }> = [];
+  const pages: Array<{ id: string; filmPath: string; script: string }> = [];
   return {
     pages,
     ref: {
-      loadPage: (filmPath: string, script: string) => {
-        pages.push({ filmPath, script });
+      loadPage: (id: string, filmPath: string, script: string) => {
+        pages.push({ id, filmPath, script });
+      },
+      unloadPage: (id: string) => {
+        pages.splice(pages.findIndex((page) => page.id === id), 1);
       },
     },
   };
@@ -29,7 +32,6 @@ function fakeWebView() {
 
 const REQUEST: LetterboxdWebRequest = {
   filmPath: '/film/tuner/',
-  filmLid: 'UH8e',
   viewingDateStr: '2026-07-17',
   tags: ['rewatch-night', 'imax'],
   rewatch: false,
@@ -51,7 +53,7 @@ describe('Letterboxd page-load write bridge', () => {
       ? letterboxdListLikeWebFetch({ listPath: '/jack/list/classics/', username: 'gian', liked: verb === 'list-like' })
       : verb === 'diary'
       ? letterboxdWebFetch(REQUEST)
-      : letterboxdWatchlistWebFetch({ filmPath: REQUEST.filmPath, filmLid: REQUEST.filmLid, inWatchlist: false });
+      : letterboxdWatchlistWebFetch({ filmPath: REQUEST.filmPath, inWatchlist: false });
     const page = webView.pages[0];
     expect(page.filmPath).toBe(isList ? '/jack/list/classics/' : REQUEST.filmPath);
 
@@ -62,6 +64,7 @@ describe('Letterboxd page-load write bridge', () => {
     const requests: Array<{ url: string; init: RequestInit }> = [];
     const window = {
       location: dom.location,
+      _cf_chl_opt: {} as object | undefined,
       supermodelCSRF: 'page-csrf',
       person: { loggedIn: true, username: 'gian', trusted: true },
       ReactNativeWebView: { postMessage: handleLetterboxdMessage },
@@ -73,6 +76,10 @@ describe('Letterboxd page-load write bridge', () => {
     };
     const run = new Function('window', 'document', 'sessionStorage', 'fetch', page.script);
     const sessionStorage = { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value) };
+    run(window, dom.document, sessionStorage, fetch);
+    expect(requests).toHaveLength(0);
+    expect(storage.size).toBe(0);
+    window._cf_chl_opt = undefined;
     run(window, dom.document, sessionStorage, fetch);
     expect(await pending).toEqual({ status: 200, body: '{"logEntry":{"id":"saved"}}' });
     // A different document models a reload, not just another call in one page.
@@ -122,6 +129,19 @@ describe('Letterboxd page-load write bridge', () => {
     handleLetterboxdMessage(JSON.stringify({ id: 'someone-else', status: 200, body: '{}' }));
     handleLetterboxdMessage(JSON.stringify({ id, status: 200, body: '{}' }));
     expect((await pending).status).toBe(200);
+  });
+
+  test('a second write gets its own page instead of replacing the first, and both unload once settled', async () => {
+    const webView = fakeWebView();
+    registerLetterboxdWebView(webView.ref);
+    const log = letterboxdWebFetch(REQUEST);
+    const removal = letterboxdWatchlistWebFetch({ filmPath: REQUEST.filmPath, inWatchlist: false });
+    const [first, second] = webView.pages.map((page) => page.id);
+    handleLetterboxdMessage(JSON.stringify({ id: first, status: 200, body: '{}' }));
+    handleLetterboxdMessage(JSON.stringify({ id: second, status: 204, body: '' }));
+    expect((await log).status).toBe(200);
+    expect((await removal).status).toBe(204);
+    expect(webView.pages).toHaveLength(0);
   });
 
   test('rejects in-flight writes when the bridge unmounts', async () => {

@@ -8,7 +8,6 @@ import {
   type ProviderError,
 } from '@/lib/providers/errors';
 import type { NormalizedMediaItem } from '@/types/media';
-import { LETTERBOXD_BASE_URL } from './config';
 import type { LetterboxdDeps, LetterboxdWebResponse } from './deps';
 
 const provider = 'letterboxd' as const;
@@ -33,27 +32,9 @@ function localDateStr(iso?: string): string {
 }
 
 /**
- * The film's Letterboxd **LID** — the `productionId` the modern
- * `/api/v0/production-log-entries` write keys on (NOT the `film:{numericId}` uid
- * the dead form used). It lives in the page's `production:identifier` meta,
- * HTML-entity-encoded: `content="{&quot;lid&quot;:&quot;UH8e&quot;,…}"`
- * (docs/solutions/letterboxd-no-api-fallback.md). Match the encoded form first,
- * then a plain `"lid":"…"` as a fallback.
- */
-function parseFilmLid(html: string): string | null {
-  const match =
-    /production:identifier"\s+content="[^"]*?&quot;lid&quot;:&quot;([A-Za-z0-9]+)&quot;/.exec(
-      html,
-    ) ?? /"lid":"([A-Za-z0-9]+)"/.exec(html);
-  return match == null ? null : match[1];
-}
-
-/**
- * The film page to load for a movie routed here: its Letterboxd slug page, or
- * the external-id redirect `/tmdb/{id}/` → `/film/{slug}/` for a Trakt/TMDB
- * movie with no Letterboxd identity. `null` when neither id is present. Used
- * both to resolve the numeric id (nitro-fetch) and to navigate the write
- * WebView to render the diary webpart.
+ * The film page a write loads: its Letterboxd slug page, or the external-id
+ * redirect `/tmdb/{id}/` → `/film/{slug}/` for a Trakt/TMDB movie with no
+ * Letterboxd identity. `null` when neither id is present.
  */
 export function filmPathFor(item: NormalizedMediaItem): string | null {
   const slug = item.externalIds.letterboxd;
@@ -66,62 +47,28 @@ export function filmPathFor(item: NormalizedMediaItem): string | null {
 }
 
 /**
- * The API write keys on the film's LID (`productionId`). Resolve it from a full
- * film page (which, unlike the `/json/` AJAX endpoints, isn't Cloudflare-walled).
- * This is only a fallback — the write's injected script reads the LID off the
- * page's own meta inside the WebView — so an unresolvable LID is not fatal.
+ * The injected scripts' own `status: 0` failure markers (webview-bridge.ts),
+ * or null when `response` carries a real HTTP status. A page without the
+ * `production:identifier` meta is Letterboxd's "TMDB Import Result" page for an
+ * id it has no film for (it answers 200, not 404). `no-csrf` only happens
+ * signed-out. Anything else is the in-page fetch failing, which is not a dead session.
  */
-export function resolveFilmLid(
-  deps: LetterboxdDeps,
-  item: NormalizedMediaItem,
-): Effect.Effect<string, ProviderError> {
-  const path = filmPathFor(item);
-
-  if (path == null) {
-    return Effect.fail(
-      new ProviderDecodeError({
+export function scriptFailure(
+  response: LetterboxdWebResponse,
+  filmPath: string,
+): ProviderError | null {
+  if (response.status !== 0) return null;
+  switch (response.body) {
+    case 'no-production-lid':
+      return new ProviderDecodeError({ provider, detail: `Letterboxd has no film at ${filmPath}` });
+    case 'no-csrf':
+      return new ProviderAuthError({ provider, refreshFailed: true });
+    default:
+      return new ProviderNetworkError({
         provider,
-        detail: `"${item.title}" has no Letterboxd slug or tmdb id to resolve a film id`,
-      }),
-    );
+        cause: new Error(`Letterboxd write script failed: ${response.body}`),
+      });
   }
-
-  return Effect.gen(function* () {
-    // Film pages are public — resolve the LID over plain nitro-fetch. Only the
-    // *write* needs the authenticated WebView (deps.webFetch).
-    const response = yield* Effect.tryPromise({
-      try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}${path}`, { signal }),
-      catch: (cause) => new ProviderNetworkError({ provider, cause }),
-    });
-
-    if (response.status === 404) {
-      return yield* new ProviderDecodeError({
-        provider,
-        detail: `Letterboxd has no film at ${path}`,
-      });
-    }
-    if (!response.ok) {
-      return yield* new ProviderNetworkError({
-        provider,
-        cause: new Error(`Letterboxd responded ${response.status} for ${path}`),
-      });
-    }
-
-    const html = yield* Effect.tryPromise({
-      try: () => response.text(),
-      catch: () =>
-        new ProviderDecodeError({ provider, detail: `unreadable film page ${path}` }),
-    });
-
-    const filmLid = parseFilmLid(html);
-    if (filmLid == null) {
-      return yield* new ProviderDecodeError({
-        provider,
-        detail: `no film LID found on ${path}`,
-      });
-    }
-    return filmLid;
-  });
 }
 
 /** Trimmed, non-empty diary tags (the app's Letterboxd-only log field). The
@@ -156,8 +103,11 @@ function messageText(message: ApiMessage): string {
  */
 function interpretDiaryResponse(
   response: LetterboxdWebResponse,
+  filmPath: string,
 ): Effect.Effect<void, ProviderError> {
   return Effect.gen(function* () {
+    const failure = scriptFailure(response, filmPath);
+    if (failure != null) return yield* failure;
     // 403 is either a CSRF/session rejection or a Cloudflare wall; either way the
     // in-session write failed to authenticate — same reconnect move as 401.
     if (response.status === 401 || response.status === 403) {
@@ -210,17 +160,16 @@ function interpretDiaryResponse(
 }
 
 /**
- * The Letterboxd write adapter `useLogMedia` fans out to (plan 0012). Resolve
- * the film's LID over public nitro-fetch (a fallback — the injected script reads
- * it off the page too), then run the diary POST *inside the authenticated login
- * WebView* (`deps.webFetch`) — replaying the captured cookies over nitro-fetch
- * lands as signed-out at the origin, so the WebView is the only channel that
- * carries the real session (docs/solutions/letterboxd-no-api-fallback.md).
+ * The Letterboxd write adapter `useLogMedia` fans out to (plan 0012). Runs the
+ * diary POST *inside the authenticated login WebView* (`deps.webFetch`), whose
+ * injected script reads the film's LID off the page it loads. Replaying the
+ * captured cookies over nitro-fetch lands as signed-out at the origin, so the
+ * WebView is the only channel that carries the real session (docs/solutions/letterboxd-no-api-fallback.md).
  * Movies and anime films only; routing.ts guarantees nothing else reaches here.
  * No captured session (or no WebView transport, e.g. web) fails as a dead session
  * so the caller surfaces "reconnect Letterboxd" rather than silently dropping the
  * write. The web userscript transport uses the connected username instead of a
- * captured cookie session and resolves the film LID in the Letterboxd tab.
+ * captured cookie session.
  */
 export function logToLetterboxd(
   deps: LetterboxdDeps,
@@ -254,25 +203,18 @@ export function logToLetterboxd(
     );
   }
 
-  // The userscript resolves the film inside Letterboxd; web must not fetch a
-  // film page through the public-feed proxy, whose allowlist excludes it.
-  return (deps.userscriptFetch != null ? Effect.succeed('') : resolveFilmLid(deps, item)).pipe(
-    Effect.flatMap((filmLid) =>
-      Effect.gen(function* () {
-        const response = yield* Effect.tryPromise({
-          try: () =>
-            webFetch({
-              filmPath,
-              filmLid,
-              viewingDateStr: localDateStr(options.watchedAt),
-              tags: tagList(options),
-              liked: options.liked === true,
-              rewatch: options.rewatch === true,
-            }),
-          catch: (cause) => new ProviderNetworkError({ provider, cause }),
-        });
-        yield* interpretDiaryResponse(response);
-      }),
-    ),
-  );
+  return Effect.gen(function* () {
+    const response = yield* Effect.tryPromise({
+      try: () =>
+        webFetch({
+          filmPath,
+          viewingDateStr: localDateStr(options.watchedAt),
+          tags: tagList(options),
+          liked: options.liked === true,
+          rewatch: options.rewatch === true,
+        }),
+      catch: (cause) => new ProviderNetworkError({ provider, cause }),
+    });
+    yield* interpretDiaryResponse(response, filmPath);
+  });
 }
