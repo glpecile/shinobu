@@ -116,3 +116,30 @@ test('lint reserves red tokens and variants for logging entry points', () => {
     rmSync(dir, { recursive: true });
   }
 });
+
+test('lint rejects Reanimated deps arrays and composed easings', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shinobu-reanimated-lint-'));
+  try {
+    writeFileSync(join(dir, 'motion.tsx'), `
+      declare const useAnimatedStyle: any;
+      declare const useAnimatedReaction: any;
+      declare const Easing: any;
+      export const allowed = () => {
+        useAnimatedStyle(() => ({}));
+        useAnimatedReaction(() => 0, () => {});
+        return Easing.bezier(0.5, 1, 0.89, 1);
+      };
+      export const rejected = (open: boolean) => {
+        useAnimatedStyle(() => ({ opacity: open ? 1 : 0 }), [open]);
+        useAnimatedReaction(() => 0, () => {}, [open]);
+        return Easing.out(Easing.quad);
+      };
+    `);
+    const result = Bun.spawnSync(['bun', 'x', '--no-install', 'oxlint', '--config', resolve('.oxlintrc.json'), '--format', 'json', dir]);
+    const codes = JSON.parse(result.stdout.toString()).diagnostics.map((diagnostic: { code: string }) => diagnostic.code);
+    expect(codes.filter((code: string) => code === 'shinobu(reanimated-no-deps)')).toHaveLength(2);
+    expect(codes.filter((code: string) => code === 'shinobu(web-safe-easing)')).toHaveLength(1);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});

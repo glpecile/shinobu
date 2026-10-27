@@ -147,6 +147,41 @@ export default {
         };
       },
     },
+    'reanimated-no-deps': {
+      meta: { schema: [] },
+      create(context) {
+        // Arguments each hook takes before its deps array. Native ignores the
+        // array and warns; the worklet plugin already tracks captured values.
+        const arity = { useAnimatedStyle: 1, useAnimatedProps: 1, useDerivedValue: 1, useAnimatedScrollHandler: 1, useAnimatedReaction: 2 };
+        return {
+          CallExpression(node) {
+            const max = arity[node.callee.name];
+            if (max != null && node.arguments.length > max) {
+              context.report({
+                node: node.arguments[max],
+                message: `Drop the dependency array: ${node.callee.name} ignores it on native and logs a warning.`,
+              });
+            }
+          },
+        };
+      },
+    },
+    'web-safe-easing': {
+      meta: { schema: [] },
+      create(context) {
+        return {
+          CallExpression(node) {
+            const callee = node.callee;
+            if (callee.type === 'MemberExpression' && callee.object.name === 'Easing' && ['in', 'out', 'inOut'].includes(callee.property.name)) {
+              context.report({
+                node,
+                message: 'Use Easing.bezier or a lib/motion token: Reanimated web layout animations run composed easings as linear.',
+              });
+            }
+          },
+        };
+      },
+    },
     'no-pointer-events-prop': {
       meta: { schema: [] },
       create(context) {
