@@ -205,6 +205,12 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   simklQueryKeys.trending('tv').slice(0, -1),
   anilistQueryKeys.seasonalAnime({ season: 'WINTER', year: 0 }).slice(0, -3),
   letterboxdQueryKeys.watchlist('').slice(0, -1),
+  // Per-film Letterboxd reads behind every film row: the TMDB → slug mapping,
+  // film identity (a small normalized item, not the page), and watched checks
+  // (positive evidence or null-for-unknown, never "unwatched").
+  letterboxdQueryKeys.slug(0).slice(0, -1),
+  letterboxdQueryKeys.film('').slice(0, -1),
+  letterboxdQueryKeys.filmWatchesRoot(),
   // Home's created and liked list rows, so they restore with the rest of the feed.
   letterboxdQueryKeys.listsRoot(),
   serializdQueryKeys.listsRoot(),
