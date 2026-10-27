@@ -283,7 +283,7 @@ or storage shape. Write a focused `docs/plans/`
 entry before implementing each feature rather than treat this backlog as one PR.
 
 For implemented changes, run the affected neighboring tests, `bun typecheck`,
-`bun lint`, `bun check:classnames`, `bun check:router-push` and `bun check:links`.
+`bun lint` and `bun check:links`.
 Check iOS, Android and web with larger text, keyboard/screen-reader navigation,
 light/dark themes and partial provider failures. Local browsing/search-history
 features must add zero provider requests while interacting with cached data.

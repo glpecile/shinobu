@@ -79,10 +79,10 @@ guard remains independent of that choice.
 
 ## Enforcement
 
-`bun check:router-push` (`scripts/check-router-push.ts`, in CI) fails on any
-bare `router.push`/`router.navigate` outside `src/lib/navigation/`. Same reason
-as `check-classnames.ts`: oxlint has no `no-restricted-syntax`, and this is a
-call shape rather than an import.
+`bun lint` runs `shinobu/no-unguarded-push` from
+`oxlint-plugin-shinobu/rules/no-unguarded-push.ts`. It rejects bare
+`router.push`/`router.navigate` outside `src/lib/navigation/`, including aliased
+routers and destructured methods. This replaces the standalone regex script.
 
 Navigation that genuinely isn't press-driven opts out with a
 `// push-guard-exempt: <reason>` comment above the call. There are two, both

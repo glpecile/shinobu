@@ -76,10 +76,8 @@ test('metadata, progress, episodes and relations share a request and revalidate 
   const wrapper = ({ children }: { children: ReactNode }) => createElement(
     QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children),
   );
-  const readEpisodes = () => useAniListEpisodesQuery({ mediaId: 1 }).data;
-  const readRelations = () => useSuspenseAniListRelationsQuery({ mediaId: 1, type: 'ANIME' }).data;
-  const episodes = renderHook(readEpisodes, { wrapper });
-  const relations = renderHook(readRelations, { wrapper });
+  const episodes = renderHook(() => useAniListEpisodesQuery({ mediaId: 1 }).data, { wrapper });
+  const relations = renderHook(() => useSuspenseAniListRelationsQuery({ mediaId: 1, type: 'ANIME' }).data, { wrapper });
   const metadata = renderHook(() => useAnimeByIdQuery(1), { wrapper });
   const progress = renderHook(() => useAniListEntryStateQuery({ mediaId: 1 }), { wrapper });
   await waitFor(() => expect(episodes.result.current?.episodes).toHaveLength(1));
@@ -100,7 +98,7 @@ test('metadata, progress, episodes and relations share a request and revalidate 
   progress.unmount();
   episodes.unmount();
   relations.unmount();
-  const revisit = renderHook(readEpisodes, { wrapper });
+  const revisit = renderHook(() => useAniListEpisodesQuery({ mediaId: 1 }).data, { wrapper });
   await waitFor(() => expect(revisit.result.current?.episodes).toHaveLength(1));
   expect(requests).toBe(3);
   revisit.unmount();

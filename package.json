@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^21.0.4",
+    "@oxlint/plugins": "1.88.0",
     "@shadcn/lint": "^0.2.0",
     "@testing-library/react": "^16.3.3",
     "@types/bun": "^1.4.2",
@@ -93,8 +94,6 @@
     "web": "expo start --web",
     "dev:worker": "mkdir -p dist && wrangler dev",
     "test": "bun test --isolate",
-    "check:classnames": "bun scripts/check-classnames.ts",
-    "check:router-push": "bun scripts/check-router-push.ts",
     "check:links": "bun scripts/check-external-urls.ts",
     "release:bump": "bun scripts/bump-version.ts",
     "typecheck": "tsc --noEmit",

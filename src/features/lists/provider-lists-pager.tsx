@@ -17,8 +17,8 @@ export function ProviderListsPager({ provider, username, kind }: {
 }) {
   // A phone has room for the switch's labels or the link's, not both.
   const compact = useWindowDimensions().width < 640;
-  const url = provider === 'letterboxd' ? letterboxdListsUrl(username, kind) : serializdListsUrl(username);
-  return <ListsPager action={url != null && <ProviderListLink iconOnly={compact} provider={provider} size="sm" url={url} />} kind={kind} renderKind={(pageKind) => {
+  const actionUrl = provider === 'letterboxd' ? letterboxdListsUrl(username, kind) : serializdListsUrl(username);
+  return <ListsPager action={actionUrl != null && <ProviderListLink iconOnly={compact} provider={provider} size="sm" url={actionUrl} />} kind={kind} renderKind={(pageKind) => {
     switch (provider) {
       case 'letterboxd': {
         const url = letterboxdListsUrl(username, pageKind);

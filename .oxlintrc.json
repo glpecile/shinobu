@@ -16,15 +16,9 @@
   "jsPlugins": [
     "eslint-plugin-react-you-might-not-need-an-effect",
     "@shadcn/lint",
-    "./scripts/lint-rules.mjs"
+    "./oxlint-plugin-shinobu/index.ts"
   ],
   "rules": {
-    "shinobu/no-hardcoded-routes": "error",
-    "shinobu/log-color-only": "error",
-    "shinobu/no-pointer-events-prop": "error",
-    "shinobu/reanimated-no-deps": "error",
-    "shinobu/web-safe-easing": "error",
-    "shinobu/immediate-disclosures": "error",
     "no-underscore-dangle": [
       "warn",
       {
@@ -378,6 +372,30 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "files": [
+        "oxlint-plugin-shinobu/**"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ],
+      "rules": {
+        "shinobu/no-template-classnames": "error",
+        "shinobu/no-unguarded-push": "error",
+        "shinobu/no-hardcoded-routes": "error",
+        "shinobu/log-color-only": "error",
+        "shinobu/no-pointer-events-prop": "error",
+        "shinobu/reanimated-no-deps": "error",
+        "shinobu/web-safe-easing": "error",
+        "shinobu/immediate-disclosures": "error"
       }
     }
   ],

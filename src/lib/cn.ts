@@ -5,7 +5,7 @@
  * clsx + tailwind-merge, zero runtime dependencies, much faster).
  *
  * Every composed `className` goes through this instead of a template literal
- * (`scripts/check-classnames.ts` enforces it). Two reasons, and the second is
+ * (`shinobu/no-template-classnames` enforces it). Two reasons, and the second is
  * the one a template literal can't give you:
  *
  * 1. Conditionals stay flat — `cn('border-border', focused && 'border-accent')`

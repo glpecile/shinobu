@@ -18,10 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun lint
-      - run: bun check:classnames
-      - run: bun check:router-push
       - run: bun typecheck
       - run: bun run test

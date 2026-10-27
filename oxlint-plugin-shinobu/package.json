@@ -1,0 +1,5 @@
+{
+  "name": "oxlint-plugin-shinobu",
+  "private": true,
+  "type": "module"
+}

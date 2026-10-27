@@ -79,6 +79,7 @@ describe('Letterboxd page-load write bridge', () => {
     run(window, dom.document, sessionStorage, fetch);
     expect(requests).toHaveLength(0);
     expect(storage.size).toBe(0);
+    // eslint-disable-next-line no-underscore-dangle -- Cloudflare owns this challenge flag.
     window._cf_chl_opt = undefined;
     run(window, dom.document, sessionStorage, fetch);
     expect(await pending).toEqual({ status: 200, body: '{"logEntry":{"id":"saved"}}' });
