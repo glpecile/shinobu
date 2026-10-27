@@ -2,7 +2,6 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { Modal, View } from 'react-native';
 import {
-  Easing,
   FadeIn,
   FadeOut,
   Keyframe,
@@ -14,6 +13,7 @@ import { Image } from '@/components/image';
 import { useLightbox, useLightboxControls } from '@/components/lightbox/state';
 import { PresstableOpacity } from '@/components/presstable';
 import { RoundIconButton } from '@/components/round-icon-button';
+import { KEYFRAME_EASE_EXIT, KEYFRAME_EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 /** Exit motion runs this long before the Modal unmounts — keep in sync below. */
@@ -32,7 +32,7 @@ const imageEntering = new Keyframe({
   100: {
     opacity: 1,
     transform: [{ scale: 1 }],
-    easing: Easing.bezier(0.23, 1, 0.32, 1),
+    easing: KEYFRAME_EASE_OUT,
   },
 }).duration(260);
 
@@ -42,7 +42,7 @@ const imageExiting = new Keyframe({
   100: {
     opacity: 0,
     transform: [{ scale: 0.96 }],
-    easing: Easing.out(Easing.quad),
+    easing: KEYFRAME_EASE_EXIT,
   },
 }).duration(EXIT_MS);
 

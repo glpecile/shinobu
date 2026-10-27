@@ -19,10 +19,6 @@ import { cubicBezier, Easing } from 'react-native-reanimated';
  * Everything here is timing + easing, never springs: springs don't run on web in
  * this codebase (see `components/lightbox/index.web.tsx`), and the same surfaces
  * ship to web, iOS and Android.
- *
- * `components/app-shell/index.web.tsx` and `components/lightbox/index.web.tsx`
- * predate this module and still inline equivalent curves; migrate them
- * opportunistically rather than in an unrelated change.
  */
 
 /**
@@ -48,11 +44,11 @@ export const EASE_IN_OUT = cubicBezier(0.77, 0, 0.175, 1);
 export const TIMING_EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1);
 
 /**
- * Exits: quick and quiet. `ease-in`-shaped rather than `ease-out` because the
- * user has already decided to leave — the element should get out of the way,
- * not perform. Quadratic, so it never feels like it stalls before moving.
+ * Quick ease-out for exits. A bezier keeps predefined web layout animations
+ * from dropping composed curves like `Easing.out(Easing.quad)` to linear.
+ * Custom `Keyframe` builders on web still only support named curves.
  */
-export const KEYFRAME_EASE_EXIT = Easing.out(Easing.quad);
+export const KEYFRAME_EASE_EXIT = Easing.bezier(0.5, 1, 0.89, 1);
 
 /**
  * Durations, in ms. All well under the 300ms ceiling for product UI: past that

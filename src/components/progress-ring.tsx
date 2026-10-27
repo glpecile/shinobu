@@ -20,7 +20,7 @@ export function ProgressRing({ value, max, label, size = 16 }: { value: number; 
       duration: reducedMotion ? 0 : DURATION.toggle,
       easing: TIMING_EASE_IN_OUT,
     }),
-  }), [circumference, fraction, reducedMotion]);
+  }));
   return (
     <View accessibilityLabel={label} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max, now: Math.min(value, max) }}>
       <Svg height={size} width={size} viewBox={`0 0 ${size} ${size}`}>

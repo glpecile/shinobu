@@ -82,6 +82,10 @@ export function CollapsibleSection({
   children: ReactNode;
 }) {
   const scroll = useContext(ScrollContext);
+  // Worklets capture these instead of `scroll`: a capture is copied to the UI thread, and the `content` view ref can't be.
+  const scrollY = scroll?.scrollY;
+  const contentY = scroll?.contentY;
+  const layoutVersion = scroll?.layoutVersion;
   const section = useRef<ViewInstance>(null);
   // Unpinned until measured.
   const top = useSharedValue(Number.POSITIVE_INFINITY);
@@ -97,14 +101,14 @@ export function CollapsibleSection({
   }
 
   useAnimatedReaction(
-    () => scroll?.layoutVersion.get(),
+    () => layoutVersion?.get(),
     () => scheduleOnRN(measureTop),
   );
 
   const sticky = useAnimatedStyle(() => {
-    if (!_WORKLET || scroll == null) return {};
+    if (!_WORKLET || scrollY == null || contentY == null) return {};
     return {
-      transform: [{ translateY: Math.max(0, Math.min(scroll.scrollY.get() - scroll.contentY.get() - top.get(), sectionHeight.get() - headerHeight.get())) }],
+      transform: [{ translateY: Math.max(0, Math.min(scrollY.get() - contentY.get() - top.get(), sectionHeight.get() - headerHeight.get())) }],
     };
   });
   const collapsed = useSectionCollapsed(collapseKey);

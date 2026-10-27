@@ -29,6 +29,10 @@ export type { LegendListRef } from '@legendapp/list/react-native';
  * it only leaks `keyboardshouldpersisttaps` onto that div and logs a React
  * warning on every mount. Don't "fix" this again without re-checking which
  * scroller Legend List actually renders on web.
+ *
+ * That scroller is also a bare block `<div>`, so a vertical list would size to
+ * its rows or mount at height 0. It gets RN `ScrollView`'s default flex unless
+ * it's horizontal or `scrollEnabled={false}`, where it should fit its rows.
  */
 export function List<T>({
   keyboardShouldPersistTaps,
@@ -39,6 +43,7 @@ export function List<T>({
   onStartReachedThreshold = 0,
   itemLayoutAnimation,
   sharedValues,
+  style,
   ...props
 }: ListProps<T>): ReactElement {
   const focused = useIsFocused();
@@ -53,6 +58,7 @@ export function List<T>({
     <Activity mode={focused ? 'visible' : 'hidden'}>
       <ListComponent
         {...props}
+        style={props.horizontal || scrollEnabled === false ? style : [{ flexGrow: 1, flexShrink: 1 }, style]}
         {...(itemLayoutAnimation != null ? { itemLayoutAnimation } : {})}
         onStartReachedThreshold={onStartReachedThreshold}
         recycleItems={recycleItems}

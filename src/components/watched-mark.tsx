@@ -22,7 +22,7 @@ export function WatchedMark({ item, state, poster = false, showProgress = false 
       opacity: withTiming(watched ? 1 : 0, timing),
       transform: [{ scale: withTiming(watched ? 1 : 0.8, timing) }],
     };
-  }, [watched]);
+  });
   return (
     <>
     <AnimatedView
