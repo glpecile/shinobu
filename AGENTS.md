@@ -105,6 +105,9 @@ and `ActionableRow`, `PressableCard`, and `Rail` have contracts in
 When a component rejects a class, add a variant, or give it a contract when its
 docs say it owns that class. `bun check:classnames`, `bun check:router-push`,
 and `bun check:links` cover the rest. Reviewers enforce the Suspense, no-dead-end, and proxy rules.
+`shinobu/reanimated-no-deps` and `shinobu/web-safe-easing` reject Reanimated
+code that only warns at runtime. A Metro or browser console warning from your
+change is a bug to fix before shipping, not noise.
 
 ## Navigation
 
