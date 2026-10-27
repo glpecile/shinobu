@@ -58,7 +58,11 @@ the session's first identical read claims the response if it's under 60 s old.
 - **Claimed once per session.** Nitro's prefetch cache never evicts on read,
   so without this a refresh inside the TTL would receive the launch response.
 - **Tokens.** Entries carry `Authorization` in Nitro's encrypted queue. A
-  write to a token key in the session store drops them all.
+  write to a token key in the session store drops them all and stops replay
+  for that launch. Late responses cannot register the removed credentials,
+  and a native registration already in flight removes itself when it finishes.
+  Any TanStack mutation also stops replay before later reads can consume
+  responses from before the write.
 - **Fresh cache wastes the replay.** If the restored cache is still fresh, the
   replay goes unused. Every host on the list tolerates that volume.
 - **Verified on the iPhone simulator.** Three cold launches: the second

@@ -1,6 +1,7 @@
 import { fetch as nitroFetch } from 'react-native-nitro-fetch';
 
 import { fetchWithLaunchReplay } from './launch-replay';
+export { endLaunchReplay } from './launch-replay';
 import type { HttpFetch } from './types';
 
 // Nitro-fetch is WHATWG-compatible (Cronet/URLSession under the hood) but its

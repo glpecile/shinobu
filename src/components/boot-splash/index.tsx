@@ -38,8 +38,9 @@ export function BootSplash({ ready, onPainted }: { ready: boolean; onPainted: ()
       easing: KEYFRAME_EASE_OUT,
       // Reduced motion retains the fade, but drops the scale above.
       reduceMotion: ReduceMotion.Never,
-    }, (complete) => {
-      if (complete) scheduleOnRN(finish);
+    }, () => {
+      // A cancelled fade still finishes, or the deferred tabs would never mount.
+      scheduleOnRN(finish);
     }));
   }
 

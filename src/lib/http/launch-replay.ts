@@ -39,6 +39,7 @@ const startedAt = Date.now();
 const claimed = new Set<string>();
 const recorded = new Map<string, Replay>();
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
+let ended = false;
 let cache: MMKV | undefined;
 
 function storage(): MMKV {
@@ -98,13 +99,15 @@ function persist() {
     if (!recorded.has(key)) void removeFromAutoPrefetch(key);
   }
   for (const { key, url, ...request } of recorded.values()) {
-    void prefetchOnAppStart(url, { ...request, prefetchKey: key, prefetchCacheTtlMs: REPLAY_TTL_MS } as RequestInit).catch(() => {});
+    void prefetchOnAppStart(url, { ...request, prefetchKey: key, prefetchCacheTtlMs: REPLAY_TTL_MS } as RequestInit)
+      .then(() => { if (ended) return removeFromAutoPrefetch(key); })
+      .catch(() => {});
   }
   storage().set(STORED_KEYS, JSON.stringify([...recorded.keys()]));
 }
 
 function record(replay: Replay) {
-  if (AppState.currentState !== 'active' || recorded.size >= MAX_REPLAYS) return;
+  if (ended || AppState.currentState !== 'active' || recorded.size >= MAX_REPLAYS) return;
   const remaining = startedAt + RECORD_WINDOW_MS - Date.now();
   if (remaining <= 0) return;
   recorded.set(replay.key, replay);
@@ -113,7 +116,7 @@ function record(replay: Replay) {
 
 /** `fetch` with the launch replay claimed and the launch's reads recorded. */
 export function fetchWithLaunchReplay(fetch: HttpFetch, input: RequestInfo | URL, init?: RequestInit) {
-  const replay = replayFor(input, init);
+  const replay = ended || Date.now() - startedAt > REPLAY_TTL_MS ? null : replayFor(input, init);
   if (replay == null) return fetch(input, init);
   const claim = !claimed.has(replay.key);
   claimed.add(replay.key);
@@ -129,10 +132,18 @@ export function fetchWithLaunchReplay(fetch: HttpFetch, input: RequestInfo | URL
   return response;
 }
 
+/** Stop claiming and recording launch responses after writes or credential changes. */
+export function endLaunchReplay() {
+  ended = true;
+}
+
 // Recorded reads carry the token they were sent with. A changed or removed
 // token takes them out of the native queue; the next launch records afresh.
 onSessionChange((key) => {
-  if (isTokenKey(key)) forget();
+  if (isTokenKey(key)) {
+    endLaunchReplay();
+    forget();
+  }
 });
 
 function forget() {
