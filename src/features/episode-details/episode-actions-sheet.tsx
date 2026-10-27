@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
+import { MetaLine } from '@/components/meta-line';
 import { SheetHeader } from '@/components/sheet-header';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -9,7 +10,7 @@ import { hasAired } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
 import type { NormalizedEpisode, NormalizedMediaItem } from '@/types/media';
 
-import { episodeCode, episodeMetaLine } from './episode-label';
+import { episodeCode, formatAirDate } from './episode-label';
 import { EpisodeLogs, EpisodeStill } from './episode-sections';
 import { useEpisode } from './use-episode';
 import { useEpisodeLogs } from './use-episode-logs';
@@ -56,8 +57,6 @@ function SheetBody({
   const aired = episode.firstAired == null ? entryAired ?? false : hasAired(episode.firstAired);
   const airsIn = aired ? null : formatRelativeDay(episode.firstAired);
 
-  const metaLine = episodeMetaLine(episode);
-
   return (
     <>
       <SheetHeader>
@@ -65,7 +64,13 @@ function SheetBody({
         <SheetHeader.Content>
           <SheetHeader.Eyebrow>{episodeCode(season, number)}</SheetHeader.Eyebrow>
           <SheetHeader.Title>{episode.title}</SheetHeader.Title>
-          {metaLine !== '' && <SheetHeader.Subtitle>{metaLine}</SheetHeader.Subtitle>}
+          <MetaLine
+            className="mt-1"
+            parts={[
+              episode.firstAired != null && <MetaLine.Part icon="calendar-outline">{formatAirDate(episode.firstAired)}</MetaLine.Part>,
+              episode.runtime != null && <MetaLine.Part icon="time-outline">{`${episode.runtime} min`}</MetaLine.Part>,
+            ]}
+          />
         </SheetHeader.Content>
       </SheetHeader>
 

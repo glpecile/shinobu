@@ -16,6 +16,7 @@ import { FloatingBackButton } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
+import { MetaLine } from '@/components/meta-line';
 import { MorphText } from '@/components/morph-text';
 import { Rail } from '@/components/rail';
 import { ScrolledTitle } from '@/components/scrolled-title';
@@ -104,19 +105,6 @@ import type {
   NormalizedStudio,
   MediaType,
 } from '@/types/media';
-
-/** "2026 · 128 min · Drama, Thriller" from whichever fields exist. */
-function metaLine(item: NormalizedMediaItem): string {
-  return [
-    item.year != null ? String(item.year) : null,
-    item.runtime != null ? `${item.runtime} min` : null,
-    item.genres != null && item.genres.length > 0
-      ? item.genres.slice(0, 3).join(', ')
-      : null,
-  ]
-    .filter((part) => part != null)
-    .join(' · ');
-}
 
 /** The item's other names, minus the one already shown and any repeat (case-insensitive). */
 function alternateTitles(item: NormalizedMediaItem): string[] {
@@ -657,7 +645,6 @@ function DetailsScreen() {
   }
 
   const shown = applyPrimaryMetadata(item, mediaDetails.data?.catalogue);
-  const meta = metaLine(shown);
   const alternates = alternateTitles(shown);
   const overview = shown.overview != null ? <ExpandableText text={shown.overview} /> : null;
   // "0 / 1 episodes" on a film (anime films included) is noise — only show
@@ -764,11 +751,16 @@ function DetailsScreen() {
                 {alternates.join(' · ')}
               </Text>
             )}
-            {meta !== '' && (
-              <Text className="text-muted font-sans text-sm mt-1.5">
-                {meta}
-              </Text>
-            )}
+            <MetaLine
+              className="mt-1.5"
+              parts={[
+                shown.year != null && <MetaLine.Part icon="calendar-outline">{String(shown.year)}</MetaLine.Part>,
+                shown.runtime != null && <MetaLine.Part icon="time-outline">{`${shown.runtime} min`}</MetaLine.Part>,
+                shown.genres != null && shown.genres.length > 0 && (
+                  <MetaLine.Part icon="pricetags-outline">{shown.genres.slice(0, 3).join(', ')}</MetaLine.Part>
+                ),
+              ]}
+            />
             <WatchedLine item={shown} />
             {/* Wide screens fill the column beside the poster; phones keep the
                 overview full width below it. */}
