@@ -180,6 +180,28 @@ function episodeOf(entry: UpNextEntry): UpNextEpisode {
   return entry.episode;
 }
 
+function upcoming(id: number, month: number, day: number) {
+  return computeUpNext(
+    inputs({
+      calendar: [
+        calendarInput(show(id), {
+          season: 1,
+          number: 2,
+          firstAired: localInstant(2026, month, day, 12, 0),
+        }),
+      ],
+    }),
+    NOW,
+  ).calendar;
+}
+
+function upcomingAt(id: number, instant: string): UpNextEntry[] {
+  return computeUpNext(
+    inputs({ calendar: [calendarInput(show(id), { season: 1, number: 2, firstAired: instant })] }),
+    NOW,
+  ).calendar;
+}
+
 describe('selectUpNextPool', () => {
   test('does not mutate its input', () => {
     const shows = [
@@ -1023,21 +1045,6 @@ describe('computeUpNext — cross-provider identity join (plan 0034 U9.5)', () =
 });
 
 describe('calendarWeek — the week strip buckets (U8)', () => {
-  function upcoming(id: number, month: number, day: number) {
-    return computeUpNext(
-      inputs({
-        calendar: [
-          calendarInput(show(id), {
-            season: 1,
-            number: 2,
-            firstAired: localInstant(2026, month, day, 12, 0),
-          }),
-        ],
-      }),
-      NOW,
-    ).calendar;
-  }
-
   test("today's already-aired episodes land on the today cell (not just upcoming)", () => {
     // The whole point of feeding the strip *both* sections: an episode that
     // aired earlier today is in Continue Watching, but the today cell must
@@ -1175,13 +1182,6 @@ describe('episodesBehind', () => {
 });
 
 describe('nextSplitChange — what the section’s clock waits for', () => {
-  function upcomingAt(id: number, instant: string): UpNextEntry[] {
-    return computeUpNext(
-      inputs({ calendar: [calendarInput(show(id), { season: 1, number: 2, firstAired: instant })] }),
-      NOW,
-    ).calendar;
-  }
-
   test('the soonest upcoming airing, or local midnight when none comes first', () => {
     const tonight = localInstant(2026, 7, 23, 21, 30);
     expect(nextSplitChange(upcomingAt(90, tonight), NOW)).toBe(Date.parse(tonight));

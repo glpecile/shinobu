@@ -530,10 +530,10 @@ describe('formatClusterCount', () => {
 });
 
 // --- Serializd (plan 0017 U7) ---
-describe('Serializd diary in the unified merge', () => {
-  const tvItem = (id: string) =>
-    item({ id, title: 'Breaking Bad', type: 'TV', externalIds: { tmdb: 1396 } });
+const tvItem = (id: string) =>
+  item({ id, title: 'Breaking Bad', type: 'TV', externalIds: { tmdb: 1396 } });
 
+describe('Serializd diary in the unified merge', () => {
   test('a Serializd TV entry collapses with a same-day Trakt entry of the same show+episode', () => {
     const day = '2026-07-20T18:00:00.000Z';
     const trakt = entry('trakt', 't1', day, {

@@ -160,7 +160,7 @@ show selection checkmarks: these are actions, not a single-choice filter.
 Use directory-based platform variants and keep imports behind app components.
 For each item, check iOS, Android and the existing web behavior, including
 light/dark mode, larger text and spoken selection state. Run `bun typecheck`,
-`bun lint`, `bun check:classnames`, `bun check:router-push` and `bun check:links`
+`bun lint` and `bun check:links`
 after implementation.
 
 User screenshots confirm the tracker menus render on iOS and Android,

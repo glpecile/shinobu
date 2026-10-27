@@ -89,15 +89,22 @@ bun run dev:worker  # wrangler dev on :8787, the Serializd, Letterboxd, and 4cha
 ### Checks
 
 ```sh
-bun lint               # conventions, import rules, filename casing
-bun check:classnames   # every composed className goes through cn()
-bun check:router-push  # navigation uses usePushRoute, not useRouter().push
+bun lint               # conventions, imports, class names, guarded navigation
 bun typecheck          # tsc --noEmit
 bun test               # bun:test
 bun check:links        # probe the provider URLs the app depends on
 ```
 
 [`ci.yml`](.github/workflows/ci.yml) runs everything except `check:links` on every PR, and a PR can't merge until they pass. Provider URLs break over time rather than because of a diff, so [`link-health.yml`](.github/workflows/link-health.yml) runs `check:links` daily and on PRs that touch the provider layer.
+
+Lint tooling uses Node.js 24 for native TypeScript plugin loading, pinned in CI.
+
+Custom rules live in [`oxlint-plugin-shinobu/`](oxlint-plugin-shinobu/index.ts),
+with one typed rule and CLI test per file in `rules/`. Register a rule in
+`index.ts` and enable it for app source in `.oxlintrc.json`. The shared test
+runner enables only the rule under test. `bun lint` replaces the former
+`check:classnames` and `check:router-push` commands. Live URL probes stay in
+`check:links`.
 
 ### Web
 
