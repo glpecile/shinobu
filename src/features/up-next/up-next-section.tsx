@@ -8,6 +8,7 @@ import {
 } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
+import { MorphText } from '@/components/morph-text';
 import { VirtualizedRail } from '@/components/rail';
 import {
   calendarBadges,
@@ -214,14 +215,11 @@ export function UpNextSection({
           className="mt-3"
           style={{ minHeight: episodeCardRailHeight(fontScale, STACK_HEADROOM) }}
         >
-          {/* Keyed on the day so a switch remounts and replays the enter. No exit
-              on the block: an exiting copy would sit in flow beside the
-              incoming one and shove the feed around, which the reserved
-              minHeight above is there to prevent. The cards keep `CardSlot`'s
-              exit, but a day switch unmounts this subtree whole, so only the
-              enter plays. */}
+          {/* Populated days remount to replay the enter; empty days keep their
+              message mounted so it can morph. No block exit: an outgoing copy
+              would sit in flow beside the incoming one and shift the feed. */}
           <AnimatedView
-            key={selected.offset}
+            key={selected.groups.length === 0 ? 'empty' : selected.offset}
             className="flex-1"
             entering={dayContentAnimation(direction, reduceMotion)}
           >
@@ -232,9 +230,13 @@ export function UpNextSection({
               // Theming).
               <View className="flex-1 items-center justify-center px-4">
                 <Text className="text-muted/40 text-4xl mb-2">忍</Text>
-                <Text className="text-muted font-sans text-sm text-center">
+                <MorphText
+                  className="text-muted font-sans text-sm text-center"
+                  // Native glyph rows cannot wrap at enlarged system text sizes.
+                  numberOfLines={fontScale > 1 ? 0 : undefined}
+                >
                   {emptyDayCopy(selected.offset, selected.label)}
-                </Text>
+                </MorphText>
               </View>
             ) : (
               <VirtualizedRail
