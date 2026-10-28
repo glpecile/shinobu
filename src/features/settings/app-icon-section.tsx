@@ -1,5 +1,4 @@
-import { getAppIconName, setAlternateAppIcon, supportsAlternateIcons } from 'expo-alternate-app-icons';
-import { useState } from 'react';
+import { useAppIcon } from '@hzblj/expo-app-icons';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
@@ -8,34 +7,34 @@ import { RailHead } from '@/components/rail-head';
 import { SettingsRail } from '@/features/settings/settings-rail';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
+import { toast } from '@/lib/toast';
 
-/** `null` is the default icon, which follows the system appearance. Names match app.json. */
-const OPTIONS: { value: string | null; label: string; source: number }[] = [
-  { value: null, label: 'Shinobu', source: require('../../../assets/images/icon.png') },
-  { value: 'Crimson', label: 'Kiss-shot', source: require('../../../assets/images/app-icons/crimson.png') },
-  { value: 'Void', label: 'Acerola', source: require('../../../assets/images/app-icons/void.png') },
-  { value: 'Weird', label: 'Orion', source: require('../../../assets/images/app-icons/weird.png') },
+/** Names match app.json; the default icon follows the system appearance. */
+const OPTIONS: { value: string; label: string; source: number }[] = [
+  { value: 'default', label: 'Shinobu', source: require('../../../assets/images/icon.png') },
+  { value: 'crimson', label: 'Kiss-shot', source: require('../../../assets/images/app-icons/crimson.png') },
+  { value: 'void', label: 'Acerola', source: require('../../../assets/images/app-icons/void.png') },
+  { value: 'weird', label: 'Orion', source: require('../../../assets/images/app-icons/weird.png') },
 ];
 
 /**
  * App icon setting as a radio group of icon previews. The OS owns the current
- * icon, so nothing is persisted here. iOS answers a change with its own alert.
+ * icon. iOS answers a change with its own alert; Android applies it on background.
  * Renders nothing on web and on devices without alternate icons.
  */
 export function AppIconSection() {
-  const [current, setCurrent] = useState(() => (supportsAlternateIcons ? getAppIconName() : null));
-  if (!supportsAlternateIcons) return null;
+  const { icon: current, isSupported, setIcon } = useAppIcon();
+  if (!isSupported) return null;
 
   const label = OPTIONS.find((option) => option.value === current)?.label ?? 'Shinobu';
 
-  async function select(next: string | null) {
+  async function select(next: string) {
     if (next === current) return;
     haptics.selection();
     try {
-      await setAlternateAppIcon(next);
-      setCurrent(next);
+      await setIcon(next);
     } catch {
-      // The OS refused (e.g. iOS while the app is backgrounding); the selection stays on the real icon.
+      toast.error('Could not change app icon', 'Try again while Shinobu is open.');
     }
   }
 
@@ -74,6 +73,11 @@ export function AppIconSection() {
           })}
         </View>
       </SettingsRail.Row>
+      {process.env.EXPO_OS === 'android' && (
+        <SettingsRail.Row>
+          <SettingsRail.Subtitle lines={2}>The icon changes when you leave the app.</SettingsRail.Subtitle>
+        </SettingsRail.Row>
+      )}
     </SettingsRail.Section>
   );
 }
