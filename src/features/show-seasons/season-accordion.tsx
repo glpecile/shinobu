@@ -1,9 +1,10 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
@@ -58,8 +59,9 @@ export function EpisodeRow({
   // ⋯ reveal rides on RN-web's pointer events (the PersonCard pattern) —
   // long-press is not a discoverable web gesture.
   const [hovered, setHovered] = useState(false);
-  const showActionsButton =
-    process.env.EXPO_OS === 'web' && hovered && onActions != null;
+  // Phone widths drop "Mark as" so the title keeps room to fit on one line.
+  const compact = useWindowDimensions().width < 640;
+  const hasActionsButton = process.env.EXPO_OS === 'web' && onActions != null;
   // Every known air date stays in the meta line; upcoming episodes also show
   // a countdown in the mark-button slot. No date at
   // all on an unstarted season leaves only the bare word; released catalogue
@@ -115,30 +117,34 @@ export function EpisodeRow({
           {label}
         </PresstableOpacity>
       )}
-      {showActionsButton && (
-        <PresstableOpacity
-          accessibilityLabel={`More about episode ${episode.number}`}
-          accessibilityRole="button"
-          className="w-8 h-8 mr-2 items-center justify-center rounded-full"
-          onPress={onActions}
-        >
-          <Ionicons color={muted} name="ellipsis-horizontal" size={16} />
-        </PresstableOpacity>
-      )}
-      {aired ? (
-        <Button
-          icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
-          label={isWatched ? 'Rewatch' : 'Mark as watched'}
-          morphLabel
-          onPress={onMark}
-          size="sm"
-          variant="quiet"
-        />
-      ) : (
-        <Text className="text-muted font-sans text-xs px-3">
-          {airsIn ?? 'Unaired'}
-        </Text>
-      )}
+      {/* The ⋯ floats beside the trailing slot rather than taking a column, so
+          hovering never rewraps the title. */}
+      <View className="relative justify-center">
+        {hasActionsButton && (
+          <OverlayActionsButton
+            className="absolute -left-10 top-0 bottom-0 justify-center"
+            label={`More about episode ${episode.number}`}
+            onPress={onActions}
+            tone="surface"
+            visible={hovered}
+          />
+        )}
+        {aired ? (
+          <Button
+            icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
+            accessibilityLabel={isWatched ? undefined : 'Mark as watched'}
+            label={isWatched ? 'Rewatch' : compact ? 'Watched' : 'Mark as watched'}
+            morphLabel
+            onPress={onMark}
+            size="sm"
+            variant="quiet"
+          />
+        ) : (
+          <Text className="text-muted font-sans text-xs px-3">
+            {airsIn ?? 'Unaired'}
+          </Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -191,8 +197,6 @@ export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
   return (
     <View className="px-4 py-3 border-b border-border bg-accent/5">
       <Button
-        align="start"
-        className="self-start"
         icon={<Button.Icon name="eye-outline" />}
         label="Mark season as watched"
         onPress={onPress}

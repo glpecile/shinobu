@@ -860,11 +860,11 @@ function DetailsScreen() {
 
       <ReleaseTimeline item={shown} />
 
-      <DetailVariantsSection item={shown} />
-
       {shown.type !== 'MANGA' && <DiscussionSection item={shown} />}
 
       <RatingsSection item={shown} resetKey={refreshCount} />
+
+      <DetailVariantsSection item={shown} />
     </View>
   );
   const layout = { header, footer, onRefresh: refresh };
