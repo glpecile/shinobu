@@ -61,24 +61,20 @@ Spoiler-marked and deleted files stay hidden.
 Do not set pressto's role to `link` on web: RNGH only dispatches the press for
 its default button role (`web-pressto-accessibility-role-kills-onpress.md`).
 The preview accessibility label names its external destination instead.
-Chromium verified thread and romaji-search clicks open the correct new tabs.
-The demo's loaded and loading card bounds match, with a 16px gap and no
-vertical shift between sections. The aggregate board results do not use section
-rise animation, so cards do not move against an already-loaded rail.
+Chromium verified thread clicks open the correct new tabs. The aggregate board
+results do not use section rise animation, so cards do not move against an
+already-loaded rail.
 
 Stress checks at 320px, 390px, and 2560px, with doubled text size and RTL,
 found clipping from the fixed card height and narrow-screen width, blank failed
 images, empty subjects, and truncated large thread IDs. Compact cards now use
 a minimum height, a narrow-screen width, a thumbnail fallback, a literal
-thread-title fallback, and wrapping metadata. The dev-only demo keeps these
-fixtures and its URL-backed controls for future checks.
+thread-title fallback, and wrapping metadata.
 
 The page shows compact cards and uses an ellipsis beside Discussion to open the
 shared Sheet. The sheet is titled Discussion options and offers refresh plus
-Open /board/ gateways to the unfiltered catalogs. Gateways use every board
-selected for the item, even when only one board returns matches. Movies check
-both /tv/ and /co/; anime series check /a/; anime films check all three. Earlier Chromium checks
-verified opening, searching, and closing at 320px, 390px, and desktop widths,
+Open /board/ links to the unfiltered catalogs of every board selected for the
+item. Chromium checks verified opening and closing at 320px, 390px, and desktop widths,
 including enlarged text, a single thread, and twelve matches. Mocked movie
 catalogs verified that empty/failed lookups hide the entire section while one
 successful board remains visible when the other boards fail.
