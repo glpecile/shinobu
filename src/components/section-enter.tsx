@@ -19,6 +19,23 @@ const sectionFading = {
 };
 
 /**
+ * Holds the first frame inside the animation timeline so staggered entrances
+ * stay hidden until their turn, without relying on a backwards fill.
+ */
+export function heldKeyframes<Frame>(
+  keyframes: { '0%': Frame; '100%': Frame },
+  delay: number,
+  duration: number,
+) {
+  if (delay === 0) return keyframes;
+  return {
+    '0%': keyframes['0%'],
+    [`${(delay / (delay + duration)) * 100}%`]: keyframes['0%'],
+    '100%': keyframes['100%'],
+  };
+}
+
+/**
  * Fades and settles its children in on mount — what a section resolving looks
  * like instead of a hard cut. `SuspenseSection` mounts it when its query
  * resolves; a screen switching between mutually exclusive states (skeleton,

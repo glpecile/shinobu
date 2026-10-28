@@ -1,21 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import Head from '@/components/head';
 import {
   type ScrollViewInstance,
   Text,
-  useWindowDimensions,
   View,
 } from 'react-native';
 
-import { EmptyStateTile } from '@/components/empty-state-tile';
 import {
   FeedRowSkeleton,
   FeedSkeleton,
   UpNextSectionSkeleton,
 } from '@/components/feed-skeleton';
-import { FloatingTile } from '@/components/floating-tile';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useBootRevealed } from '@/components/boot-splash/revealed';
 import { CollapsibleSection } from '@/components/collapsible-section';
@@ -23,6 +21,8 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
+import { AnimatedView, GestureScrollView } from '@/components/animated-view';
+import { heldKeyframes, SectionEnter } from '@/components/section-enter';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -31,10 +31,13 @@ import {
   YourWatchlistRow,
   LetterboxdWatchlistRow,
 } from '@/features/feed/feed-rows';
+import { PosterWall } from '@/features/feed/poster-wall';
 import { UpNextSection } from '@/features/up-next/up-next-section';
 import { LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
+import { EASE_OUT } from '@/lib/motion';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
+import { PROVIDERS } from '@/lib/providers/registry';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -50,85 +53,102 @@ import { useConnectedProviders } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/**
- * The four provider marks decorating the zero-providers hero — one per tracker
- * Shinobu writes to. `position` is the wide-viewport absolute placement (the
- * corners around the centred copy); compact viewports ignore it and lay the
- * tiles out in a row above the copy instead — see `EmptyFeed`.
- */
-const EMPTY_HERO_TILES = [
-  { delay: 0, id: 'simkl', position: { left: '20%', top: '22%' }, rotate: '-8deg' },
-  { delay: 650, id: 'anilist', position: { right: '20%', top: '26%' }, rotate: '7deg' },
-  // Nudged further left than the shared 20% inset.
-  { delay: 1300, id: 'letterboxd', position: { bottom: '24%', left: '14%' }, rotate: '6deg' },
-  { delay: 1950, id: 'serializd', position: { bottom: '20%', right: '20%' }, rotate: '-6deg' },
-] as const;
+const PROVIDER_IDS = Object.values(PROVIDERS).map((provider) => provider.id);
+const COPY_STAGGER = 60;
+const HERO_ENTER_DURATION = 450;
+
+/** Blur clears as the copy rises; iOS ignores `filter` and keeps the fade and rise. */
+const heroEntering = {
+  '0%': { opacity: 0, filter: 'blur(4px)', transform: [{ translateY: 8 }] },
+  '100%': { opacity: 1, filter: 'blur(0px)', transform: [{ translateY: 0 }] },
+};
+const heroFading = { '0%': { opacity: 0 }, '100%': { opacity: 1 } };
+
+/** The first-run copy's staggered entrance: longer than `SectionEnter` so the blur reads. */
+function HeroEnter({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <AnimatedView
+      className={className}
+      style={{
+        animationName: heldKeyframes(reduceMotion ? heroFading : heroEntering, delay, HERO_ENTER_DURATION),
+        animationDuration: HERO_ENTER_DURATION + delay,
+        animationTimingFunction: EASE_OUT,
+      }}
+    >
+      {children}
+    </AnimatedView>
+  );
+}
 
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
   const pushRoute = usePushRoute();
-  const { width } = useWindowDimensions();
-  const compact = width < 640;
-  const tile = compact ? 56 : 72;
-  const icon = compact ? 28 : 36;
+  // The copy staggers in once the native splash has faded, not underneath it.
+  const revealed = useBootRevealed();
 
   return (
-    // No horizontal padding here: `EmptyStateTile` brings its own `px-8`, and
-    // stacking the two halved the width the CTA's label had to lay out in.
-    <View className="flex-1 items-center justify-center">
-      {/* Percentage offsets can't guarantee clearance at phone heights — the
-          centred copy fills the middle band and the tiles were painting over
-          the headline, the CTA, and the account note. So compact drops the
-          absolute placement entirely and puts the marks in normal flow above
-          the copy; only wide viewports keep the floating corners. */}
-      {compact ? (
-        <View className="flex-row items-center justify-center gap-2 mb-6">
-          {EMPTY_HERO_TILES.map((mark) => (
-            <FloatingTile
-              delay={mark.delay}
-              floating={false}
-              key={mark.id}
-              rotate={mark.rotate}
-              style={{ width: tile, height: tile }}
-            >
-              <ProviderIcon id={mark.id} size={icon} />
-            </FloatingTile>
-          ))}
-        </View>
-      ) : (
-        EMPTY_HERO_TILES.map((mark) => (
-          <FloatingTile
-            delay={mark.delay}
-            key={mark.id}
-            rotate={mark.rotate}
-            style={{ ...mark.position, width: tile, height: tile }}
-          >
-            <ProviderIcon id={mark.id} size={icon} />
-          </FloatingTile>
-        ))
-      )}
-
-      {/* The headline/copy/CTA is the shared empty-state tile (hero size); the
-          floating provider marks above and the account note below stay as
-          Home-specific chrome around it. */}
-      <EmptyStateTile
-        cta={{
-          icon: <Button.Icon name="link-outline" />,
-          label: 'Connect your trackers',
-          onPress: () => pushRoute(routes.settings),
-        }}
-        description="Shinobu is a harness for your media trackers — log a movie, show, or anime once and every one you've connected stays in sync."
-        size="hero"
-        title={`One log.\nEvery tracker.`}
+    <View className="flex-1">
+      <PosterWall />
+      <GestureScrollView
+        className="flex-1"
+        contentContainerClassName="grow justify-end md:justify-center pt-4"
       >
-        {connectFailed && (
-          <Text className="text-accent font-sans text-sm mt-4 text-center">
-            Connecting your tracker failed. Please try again.
-          </Text>
+        {/* Phones anchor it to the bottom for thumb reach (iOS clears its floating
+            tab bar); wide viewports centre it against the wall. */}
+        {revealed && (
+          <View className="w-full max-w-2xl px-6 pb-8 ios:pb-28 md:px-16 md:pb-0">
+            {/* First-run only, so it earns a staggered entrance. */}
+            <HeroEnter className="flex-row gap-1.5 mb-5">
+              {PROVIDER_IDS.map((id) => (
+                <View
+                  className="size-8 items-center justify-center rounded-lg bg-surface border border-border"
+                  key={id}
+                >
+                  <ProviderIcon id={id} size={18} />
+                </View>
+              ))}
+            </HeroEnter>
+            <HeroEnter delay={COPY_STAGGER}>
+              <Text className="font-display text-foreground tracking-tight text-4xl md:text-6xl">
+                {'One log.\nEvery tracker.'}
+              </Text>
+            </HeroEnter>
+            <HeroEnter className="mt-3 md:mt-5" delay={COPY_STAGGER * 2}>
+              <Text className="font-sans text-muted text-base leading-relaxed md:max-w-md">
+                Log a movie, show, anime, or manga once across your connected trackers.
+              </Text>
+            </HeroEnter>
+            {connectFailed && (
+              <SectionEnter className="mt-4">
+                <Text className="text-accent font-sans text-sm">
+                  Connecting your tracker failed. Please try again.
+                </Text>
+              </SectionEnter>
+            )}
+            <HeroEnter className="mt-6" delay={COPY_STAGGER * 3}>
+              <Button
+                className="self-stretch md:self-start"
+                icon={<Button.Icon name="link-outline" />}
+                label="Connect a tracker"
+                onPress={() => pushRoute(routes.settings)}
+              />
+            </HeroEnter>
+            <HeroEnter className="mt-4" delay={COPY_STAGGER * 4}>
+              <Text className="text-muted font-sans text-xs text-center md:text-left">
+                No Shinobu account. Tokens stay on this device.
+              </Text>
+            </HeroEnter>
+          </View>
         )}
-      </EmptyStateTile>
-      <Text className="text-muted font-sans text-xs mt-5 px-8 text-center">
-        No Shinobu account — your provider tokens never leave this device.
-      </Text>
+      </GestureScrollView>
     </View>
   );
 }
@@ -272,7 +292,7 @@ export default function App() {
       <Head>
         <title>Shinobu</title>
         <meta
-          content="Shinobu is a harness for your media trackers. Log a movie, show, or anime once and every one you've connected stays in sync."
+          content="Log a movie, show, anime, or manga once across your connected trackers with Shinobu."
           name="description"
         />
       </Head>
