@@ -52,6 +52,38 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#DC2626"
         }
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Crimson",
+            "ios": "./assets/images/app-icons/crimson.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/crimson-foreground.png",
+              "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
+              "backgroundColor": "#DC2626"
+            }
+          },
+          {
+            "name": "Void",
+            "ios": "./assets/images/app-icons/void.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/void-foreground.png",
+              "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
+              "backgroundColor": "#DC2626"
+            }
+          },
+          {
+            "name": "Weird",
+            "ios": "./assets/images/app-icons/weird.png",
+            "android": {
+              "foregroundImage": "./assets/images/app-icons/weird-foreground.png",
+              "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
+              "backgroundColor": "#090909"
+            }
+          }
+        ]
       ]
     ],
     "name": "Shinobu",

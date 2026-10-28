@@ -18,6 +18,7 @@
     "cn": "^0.3.3",
     "effect": "^4.0.4",
     "expo": "~58.0.19",
+    "expo-alternate-app-icons": "^8.0.0",
     "expo-auth-session": "~58.0.14",
     "expo-background-task": "~58.0.11",
     "expo-build-properties": "~58.0.11",
