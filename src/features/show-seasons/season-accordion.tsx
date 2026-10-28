@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
@@ -59,6 +59,8 @@ export function EpisodeRow({
   // ⋯ reveal rides on RN-web's pointer events (the PersonCard pattern) —
   // long-press is not a discoverable web gesture.
   const [hovered, setHovered] = useState(false);
+  // Phone widths drop "Mark as" so the title keeps room to fit on one line.
+  const compact = useWindowDimensions().width < 640;
   const hasActionsButton = process.env.EXPO_OS === 'web' && onActions != null;
   // Every known air date stays in the meta line; upcoming episodes also show
   // a countdown in the mark-button slot. No date at
@@ -130,7 +132,8 @@ export function EpisodeRow({
         {aired ? (
           <Button
             icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
-            label={isWatched ? 'Rewatch' : 'Mark as watched'}
+            accessibilityLabel={isWatched ? undefined : 'Mark as watched'}
+          label={isWatched ? 'Rewatch' : compact ? 'Watched' : 'Mark as watched'}
             morphLabel
             onPress={onMark}
             size="sm"
@@ -194,8 +197,6 @@ export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
   return (
     <View className="px-4 py-3 border-b border-border bg-accent/5">
       <Button
-        align="start"
-        className="self-end"
         icon={<Button.Icon name="eye-outline" />}
         label="Mark season as watched"
         onPress={onPress}
