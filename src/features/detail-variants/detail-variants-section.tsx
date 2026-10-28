@@ -58,7 +58,7 @@ export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
         accessibilityLabel={`${open ? 'Collapse' : 'Expand'} Variants`}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        className="flex-row items-center gap-2 self-start"
+        className="min-h-11 flex-row items-center gap-2 self-start"
         onPress={() => setSectionCollapsed('detail-variants', open)}
         pressBehavior="immediate"
       >

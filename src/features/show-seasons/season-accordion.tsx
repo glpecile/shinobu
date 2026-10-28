@@ -133,7 +133,7 @@ export function EpisodeRow({
           <Button
             icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
             accessibilityLabel={isWatched ? undefined : 'Mark as watched'}
-          label={isWatched ? 'Rewatch' : compact ? 'Watched' : 'Mark as watched'}
+            label={isWatched ? 'Rewatch' : compact ? 'Watched' : 'Mark as watched'}
             morphLabel
             onPress={onMark}
             size="sm"
