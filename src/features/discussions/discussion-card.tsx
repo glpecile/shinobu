@@ -12,7 +12,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { useThemeColor } from '@/lib/theme-color';
 
-export interface DiscussionPreview {
+interface DiscussionPreview {
   id: number;
   title: string;
   image: string;

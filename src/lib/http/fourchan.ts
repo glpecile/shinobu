@@ -23,10 +23,6 @@ export function discussionBoards(item: NormalizedMediaItem): DiscussionBoard[] {
   return anime ? movie ? ['a', 'tv', 'co'] : ['a'] : ['tv', 'co'];
 }
 
-export function discussionSearchUrl(board: DiscussionBoard, title: string) {
-  return `https://boards.4chan.org/${board}/catalog#s=${encodeURIComponent(title)}`;
-}
-
 /** Plain searchable text only; remote HTML is never rendered. */
 function plainText(value: string): string {
   return value.replace(/<[^>]*>/g, ' ').replace(/&#(x[\da-f]+|\d+);/gi, (_, code: string) => {
