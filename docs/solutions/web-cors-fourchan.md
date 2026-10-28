@@ -15,7 +15,7 @@ for one minute. There is no account, database, or request logging in the relay.
 
 Both platforms share title matching and external preview cards. Native stays on the
 public JSON API. Threads disappear as they expire; there is no archive lookup.
-The section and its search links are hidden when no catalog produces a title match.
+The section and its board links are hidden when no catalog produces a title match.
 Independent board queries preserve other boards' matches when one fails.
 
 Local web dev needs `bun run dev:worker` and a restart of `bun web` after the
@@ -74,8 +74,10 @@ thread-title fallback, and wrapping metadata. The dev-only demo keeps these
 fixtures and its URL-backed controls for future checks.
 
 The page shows compact cards and uses an ellipsis beside Discussion to open the
-shared Sheet. The sheet is titled Search discussions and contains only
-title/romaji Search on /board/ actions, not another thread list. Chromium checks
+shared Sheet. The sheet is titled Discussion options and offers refresh plus
+Open /board/ gateways to the unfiltered catalogs. Gateways use every board
+selected for the item, even when only one board returns matches. Movies check
+both /tv/ and /co/; anime series check /a/; anime films check all three. Earlier Chromium checks
 verified opening, searching, and closing at 320px, 390px, and desktop widths,
 including enlarged text, a single thread, and twelve matches. Mocked movie
 catalogs verified that empty/failed lookups hide the entire section while one

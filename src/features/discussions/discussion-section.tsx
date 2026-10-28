@@ -7,7 +7,7 @@ import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
-import { discussionBoards, discussionSearchUrl, type DiscussionBoard } from '@/lib/http/fourchan';
+import { discussionBoards, type DiscussionBoard } from '@/lib/http/fourchan';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -34,21 +34,19 @@ export function DiscussionSection({ item, episode }: {
   };
   const boards = discussionBoards(searchItem);
   const { threads, isFetching, refetch } = useDiscussionsQuery(boards, searchItem, episode?.season, episode?.number);
-  const searchTitles = [...new Set([searchItem.titles.english ?? item.title, searchItem.titles.romaji])]
-    .filter((title): title is string => title != null && title.trim() !== '');
-  return <DiscussionResults isFetching={isFetching} onRefresh={refetch} searchTitles={searchTitles} threads={threads} />;
+  return <DiscussionResults boards={boards} isFetching={isFetching} onRefresh={refetch} threads={threads} />;
 }
 
-function DiscussionSearchLink({ board, title, label }: { board: DiscussionBoard; title: string; label: string }) {
-  const { loading, open } = useLinkHandoff(() => openExternalUrl(discussionSearchUrl(board, title), { inApp: false }));
+function DiscussionBoardLink({ board }: { board: DiscussionBoard }) {
+  const { loading, open } = useLinkHandoff(() => openExternalUrl(`https://boards.4chan.org/${board}/catalog`, { inApp: false }));
   return (
     <Button
-      accessibilityLabel={`Search 4chan /${board}/ for ${title}`}
+      accessibilityLabel={`Open 4chan /${board}/ catalog`}
       align="start"
       icon={<Button.Icon name="open-outline" />}
-      label={label}
+      label={`Open /${board}/`}
       loading={loading}
-      loadingLabel={label}
+      loadingLabel={`Opening /${board}/`}
       onPress={open}
       variant="quiet"
     />
@@ -56,16 +54,15 @@ function DiscussionSearchLink({ board, title, label }: { board: DiscussionBoard;
 }
 
 /** Shared by details and the dev preview, including the hidden empty state. */
-export function DiscussionResults({ threads, searchTitles = [], isFetching = false, onRefresh }: {
+export function DiscussionResults({ threads, boards, isFetching = false, onRefresh }: {
   threads: { board: DiscussionBoard; thread: DiscussionPreview }[];
-  searchTitles?: string[];
+  boards: DiscussionBoard[];
   isFetching?: boolean;
   onRefresh?: () => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   if (threads.length === 0) return null;
-  const boards = [...new Set(threads.map(({ board }) => board))];
   return (
     <AnimatedView style={{
       animationName: discussionFade,
@@ -77,7 +74,7 @@ export function DiscussionResults({ threads, searchTitles = [], isFetching = fal
       <Section.Header>
         <Section.Title>Discussion</Section.Title>
         <View className="flex-1" />
-        {(onRefresh != null || searchTitles.length > 0) && (
+        {(onRefresh != null || boards.length > 0) && (
           <Button
             icon={<Button.Icon name="ellipsis-horizontal" />}
             iconOnly
@@ -109,14 +106,7 @@ export function DiscussionResults({ threads, searchTitles = [], isFetching = fal
             }}
             variant="quiet"
           />}
-          {boards.flatMap((board) => searchTitles.map((title, index) => (
-            <DiscussionSearchLink
-              board={board}
-              key={`${board}-${title}`}
-              label={`Search on /${board}/${searchTitles.length > 1 ? ` · ${index === 0 ? 'Title' : 'Romaji'}` : ''}`}
-              title={title}
-            />
-          )))}
+          {boards.map((board) => <DiscussionBoardLink board={board} key={board} />)}
         </View>
       </Sheet>
     </Section>
