@@ -52,11 +52,15 @@ let prequel: { id: number; episodes: number } | null = null;
 let prequelIds: AniZipIds | null = null;
 let prequelMap: AniZipEpisodeMap | null = null;
 let prequelTmdb: number | null = null;
+let courIds = new Map<number, AniZipIds>();
+let courMaps = new Map<number, AniZipEpisodeMap>();
+let laterCours = new Map<number, number[]>();
 const mappingCalls: string[] = [];
 
 mock.module('@/state/queries/mapping', () => ({
   // Enrichment already has every id it needs on these fixtures.
-  cachedAniZipIds: () => Promise.resolve(prequelIds),
+  cachedAniZipIds: (_client: unknown, lookup: { anilistId?: number }) =>
+    Promise.resolve(courIds.get(lookup.anilistId ?? -1) ?? prequelIds),
   cachedAniListFilmId: () => Promise.resolve(null),
   cachedTraktLookup: () => Promise.resolve(null),
   cachedTraktTextSearch: () => Promise.resolve(null),
@@ -65,13 +69,15 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
   cachedAniZipEpisodeMap: (_client: unknown, anilistId: number) => {
     mappingCalls.push(`episode-map:${anilistId}`);
-    return Promise.resolve(anilistId === prequel?.id ? prequelMap : episodeMap);
+    return Promise.resolve(courMaps.get(anilistId) ?? (anilistId === prequel?.id ? prequelMap : episodeMap));
   },
   cachedSeasonLayout: (_client: unknown, ids: Record<string, number>) => {
     mappingCalls.push(`season-layout:${JSON.stringify(ids)}`);
     return Promise.resolve(seasonLayout);
   },
   cachedAniListPrequel: () => Promise.resolve(prequel),
+  cachedAniListLaterCours: (_client: unknown, anilistId: number) =>
+    Promise.resolve(laterCours.get(anilistId) ?? []),
   cachedTmdbTvIdByTvdb: () => Promise.resolve(prequelTmdb),
 }));
 
@@ -131,6 +137,10 @@ function sequelMap(): AniZipEpisodeMap {
       { season: 2, number: index + 1, absolute: index + 13 },
     ]),
   );
+}
+
+function tenEpisodes(season: number): AniZipEpisodeMap {
+  return new Map(Array.from({ length: 10 }, (_, index) => [index + 1, { season, number: index + 1 }]));
 }
 
 const ONE_CONTINUOUS_SEASON: SeasonLayout = [{ season: 1, episodeCount: 24 }];
@@ -198,6 +208,9 @@ beforeEach(() => {
   prequelIds = null;
   prequelMap = null;
   prequelTmdb = null;
+  courIds = new Map();
+  courMaps = new Map();
+  laterCours = new Map();
   mappingCalls.length = 0;
   store.clear();
 });
@@ -345,6 +358,47 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
 
     expect(plan.targets).toEqual(['trakt']);
     expect(mappingCalls).toEqual([]);
+    expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
+  });
+  test.each(['mapped', 'missing-map', 'missing-mal'] as const)('a later TMDB season resolves its cour safely: %s', async (mapping) => {
+    // Real Cyberpunk: Edgerunners data. TMDB 105248 holds both cours as S1 and
+    // S2; AniList 120377 is S1 and 195539 (MAL 61990), related as OTHER, is S2.
+    courIds = new Map([
+      [120377, { anilist: 120377, tvdb: 384541, mal: 42310 }],
+      [195539, { anilist: 195539, tvdb: 384541, mal: 61990 }],
+    ]);
+    courMaps = new Map([[120377, tenEpisodes(1)], [195539, tenEpisodes(2)]]);
+    laterCours = new Map([[120377, [195539]]]);
+    const item: NormalizedMediaItem = {
+      id: 'tmdb-tv-105248', title: 'Cyberpunk: Edgerunners', coverImage: '', type: 'TV',
+      currentProgress: 10, progressUnit: 'episode', lastUpdated: '',
+      externalIds: { tmdb: 105248, tvdb: 384541, anilist: 120377, simkl: 1 },
+    };
+    if (mapping === 'missing-map') courMaps.set(195539, new Map());
+    if (mapping === 'missing-mal') courIds.set(195539, { anilist: 195539, tvdb: 384541 });
+    const queryClient = client();
+    seedAniList(queryClient, 195539, { status: 'CURRENT', progress: 2 });
+
+    const plan = await planLogWrite(queryClient, { item, episodes: [{ season: 2, number: 3 }] }, ['anilist', 'simkl']);
+
+    const deliveries = new Map<ProviderId, LogMediaVariables>();
+    const result = await fanOutLog(
+      withMappingSkips(recordingAdapters(deliveries), plan.mappingSkips),
+      plan.writeTargets,
+      plan.variables,
+    );
+    if (mapping !== 'mapped') {
+      expect(deliveries.has('simkl')).toBe(false);
+      expect(result.outcomes).toContainEqual({
+        provider: 'simkl', status: 'skipped',
+        reason: 'Could not resolve a cour-specific Simkl identity for these episodes',
+      });
+      return;
+    }
+    expect(plan.targets).toEqual(['anilist', 'simkl']);
+    expect(plan.variables.item.type).toBe('ANIME');
+    expect(plan.variables.item.externalIds).toEqual({ tmdb: 105248, tvdb: 384541, anilist: 195539, mal: 61990 });
+    expect(plan.variables.entryEpisodes).toEqual([3]);
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
   });
 });

@@ -120,8 +120,13 @@ export async function enrichExternalIds(
     }
   }
 
-  // Trakt-origin movie/TV → reverse-map into AniList's world.
-  if (isMovieTv && externalIds.anilist == null && connected.includes('anilist')) {
+  // Trakt-origin movie/TV → reverse-map into AniList's world, which also
+  // names the cour Simkl tracks a later season under.
+  if (
+    isMovieTv &&
+    externalIds.anilist == null &&
+    (connected.includes('anilist') || connected.includes('simkl'))
+  ) {
     const lookup: AniZipLookup | null =
       item.type === 'TV' && externalIds.tvdb != null
         ? { tvdbId: externalIds.tvdb }

@@ -9,7 +9,7 @@ import {
   type AniZipEpisodeMap,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
-import { getSeriesPrequel, searchAnimeFilms } from '@/lib/providers/anilist/reads';
+import { getSeriesNeighbours, searchAnimeFilms } from '@/lib/providers/anilist/reads';
 import {
   pickAnimeFilmMatch,
   pickMovieMatch,
@@ -161,7 +161,7 @@ export const mappingQueryKeys = {
   /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
-  anilistPrequel: (anilistId: number) => ['mapping', 'anilist-prequel', anilistId] as const,
+  anilistNeighbours: (anilistId: number) => ['mapping', 'anilist-neighbours', anilistId] as const,
 };
 
 const FOREVER = {
@@ -595,23 +595,35 @@ export function cachedAniListFilmId(
   });
 }
 
-/**
- * A split-cour sequel's prequel, for continuing its ani.zip table when ani.zip
- * hasn't mapped the sequel yet. Write actions only.
- */
-export function cachedAniListPrequel(
-  queryClient: QueryClient,
-  anilistId: number,
-): Promise<{ id: number; episodes: number } | null> {
+function cachedAniListNeighbours(queryClient: QueryClient, anilistId: number) {
   return queryClient.fetchQuery({
-    queryKey: mappingQueryKeys.anilistPrequel(anilistId),
+    queryKey: mappingQueryKeys.anilistNeighbours(anilistId),
     queryFn: ({ signal }) =>
-      Effect.runPromise(getSeriesPrequel(anilistDeps(), { mediaId: anilistId }), { signal })
+      Effect.runPromise(getSeriesNeighbours(anilistDeps(), { mediaId: anilistId }), { signal })
         .catch((error) => mappingMiss(error, signal)),
     // Not forever: a miss can be AniList's rate limit, not an answer.
     staleTime: EPISODE_MAP_STALE_MS,
     gcTime: EPISODE_MAP_STALE_MS,
   });
+}
+
+/**
+ * A split-cour sequel's prequel, for continuing its ani.zip table when ani.zip
+ * hasn't mapped the sequel yet. Write actions only.
+ */
+export async function cachedAniListPrequel(
+  queryClient: QueryClient,
+  anilistId: number,
+): Promise<{ id: number; episodes: number } | null> {
+  return (await cachedAniListNeighbours(queryClient, anilistId))?.prequel ?? null;
+}
+
+/** Candidate later cours of an AniList series, for placing a later canonical season. Write actions only. */
+export async function cachedAniListLaterCours(
+  queryClient: QueryClient,
+  anilistId: number,
+): Promise<number[]> {
+  return (await cachedAniListNeighbours(queryClient, anilistId))?.later ?? [];
 }
 
 /**

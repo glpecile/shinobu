@@ -13,6 +13,7 @@ export interface AniZipIds {
   tvdb?: number;
   tmdb?: number;
   imdb?: string;
+  mal?: number;
   /** "TV" | "MOVIE" | … as anime-lists classifies it. */
   type?: string;
 }
@@ -51,6 +52,7 @@ interface AniZipResponse {
     /** ani.zip sends TMDB ids as strings. */
     themoviedb_id?: string | number | null;
     imdb_id?: string | null;
+    mal_id?: number | null;
     type?: string | null;
   } | null;
 }
@@ -101,6 +103,7 @@ export async function fetchAniZipIds(
     ...(mappings.thetvdb_id != null ? { tvdb: mappings.thetvdb_id } : {}),
     ...(Number.isFinite(tmdb) && tmdb > 0 ? { tmdb } : {}),
     ...(mappings.imdb_id != null ? { imdb: mappings.imdb_id } : {}),
+    ...(mappings.mal_id != null ? { mal: mappings.mal_id } : {}),
     ...(mappings.type != null ? { type: mappings.type } : {}),
   };
 }
