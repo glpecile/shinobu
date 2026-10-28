@@ -23,10 +23,12 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import {
   continuePrequelTable,
+  entryNumberFor,
   translateEntryEpisodes,
 } from '@/lib/providers/mapping/episode-translation';
 import {
   cachedAniListPrequel,
+  cachedAniListLaterCours,
   cachedAniZipEpisodeMap,
   cachedAniZipIds,
   cachedSeasonLayout,
@@ -310,7 +312,7 @@ interface LogPlan {
   item: NormalizedMediaItem;
   targets: ProviderId[];
   domains: LogDomains;
-  /** Canonical-domain providers blocked by a mapping miss → their reason (R3). */
+  /** Providers blocked by an identity or episode mapping miss → their reason (R3). */
   mappingSkips: Map<ProviderId, string>;
 }
 
@@ -345,6 +347,42 @@ async function entryEpisodeMap(
   return continuePrequelTable(prequelMap, prequel.episodes, entryNumbers) ?? own;
 }
 
+// shortcut: search at most eight entries; widen this if a real franchise exceeds the limit.
+const MAX_COUR_LOOKUPS = 8;
+
+/**
+ * The AniList entry holding a canonical batch, with the batch in that entry's
+ * own numbering. TMDB and Trakt keep later cours as seasons of one show, while
+ * AniList and Simkl give each cour its own entry. Related entries are only
+ * candidates: ani.zip must place the entry on the same TVDB show and map every
+ * episode to it.
+ */
+async function canonicalCourEntry(
+  queryClient: QueryClient,
+  anilistId: number,
+  episodes: ReadonlyArray<{ season: number; number: number }>,
+): Promise<{ anilist: number; mal?: number; entry: number[] } | null> {
+  const queue = [anilistId];
+  const seen = new Set(queue);
+  let tvdb: number | undefined;
+  for (let id = queue.shift(); id != null; id = queue.shift()) {
+    const ids = await cachedAniZipIds(queryClient, { anilistId: id });
+    tvdb ??= ids?.tvdb;
+    if (tvdb == null || ids?.tvdb !== tvdb) continue;
+    const map = await cachedAniZipEpisodeMap(queryClient, id);
+    const entry = map == null ? [] : episodes.map((episode) => entryNumberFor(map, episode));
+    if (entry.length > 0 && entry.every((number): number is number => number != null)) {
+      return { anilist: id, ...(ids.mal != null ? { mal: ids.mal } : {}), entry };
+    }
+    for (const next of await cachedAniListLaterCours(queryClient, id)) {
+      if (seen.has(next) || seen.size >= MAX_COUR_LOOKUPS) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return null;
+}
+
 /**
  * Everything a log needs settled *before* reconcile: cross-provider ids, the
  * routed targets, and — the plan 0027 step — which canonical `{season, number}`
@@ -357,13 +395,32 @@ async function resolveLogPlan(
   variables: LogMediaVariables,
   connected: readonly ProviderId[],
 ): Promise<LogPlan> {
-  const item = await enrichExternalIds(queryClient, variables.item, connected);
+  let item = await enrichExternalIds(queryClient, variables.item, connected);
 
   const canonicalInput = intendedEpisodes(variables);
   const entryInput =
     variables.entryEpisodes != null && variables.entryEpisodes.length > 0
       ? variables.entryEpisodes
       : null;
+
+  // A later season logged from a TMDB/Trakt show logs to that cour's own
+  // AniList and Simkl entry, as the cour's AniList page would.
+  const cour =
+    entryInput == null &&
+    item.isFilm !== true &&
+    item.externalIds.anilist != null &&
+    canonicalInput?.some((episode) => episode.season !== 1) === true
+      ? await canonicalCourEntry(queryClient, item.externalIds.anilist, canonicalInput)
+      : null;
+  if (cour != null) {
+    // The show's Simkl and MAL ids name its first cour.
+    const { simkl: _simkl, mal: _mal, ...ids } = item.externalIds;
+    item = {
+      ...item,
+      type: 'ANIME',
+      externalIds: { ...ids, anilist: cour.anilist, ...(cour.mal != null ? { mal: cour.mal } : {}) },
+    };
+  }
 
   const targets = resolveWriteTargets(item, connected, {
     capability: 'log',
@@ -372,6 +429,7 @@ async function resolveLogPlan(
     // AniList entry. An entry-domain batch is already in AniList's own
     // numbering, so it stays a target whatever season it maps to.
     nonSeasonOneEpisodes:
+      cour == null &&
       entryInput == null &&
       canonicalInput != null &&
       canonicalInput.some((episode) => episode.season !== 1),
@@ -381,6 +439,15 @@ async function resolveLogPlan(
   });
 
   const mappingSkips = new Map<ProviderId, string>();
+  if (
+    targets.includes('simkl') &&
+    entryInput == null &&
+    item.externalIds.anilist != null &&
+    canonicalInput?.some((episode) => episode.season !== 1) === true &&
+    ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
+  ) {
+    mappingSkips.set('simkl', 'Could not resolve a cour-specific Simkl identity for these episodes');
+  }
   if (entryInput == null) {
     return {
       item,
@@ -388,17 +455,19 @@ async function resolveLogPlan(
       domains: {
         canonical: canonicalInput,
         // A canonical season-1 batch *is* the entry's own numbering (plan
-        // 0011). A season-2+ batch has **no** entry-domain reading: AniList
-        // never receives it (the nonSeasonOneEpisodes guard above), and Simkl
-        // (plan 0034 U6) must reverse-map it through the ani.zip table in its
-        // adapter rather than trust a raw episode number as an AniDB one —
-        // deriving `entry` here would hand it S02E03 as "entry episode 3",
-        // the wrong-identity write plan 0027 exists to prevent.
+        // 0011). A season-2+ batch outside a resolved cour has **no**
+        // entry-domain reading: AniList never receives it (the
+        // nonSeasonOneEpisodes guard above), and Simkl (plan 0034 U6) must
+        // reverse-map it through the ani.zip table in its adapter rather than
+        // trust a raw episode number as an AniDB one — deriving `entry` here
+        // would hand it S02E03 as "entry episode 3", the wrong-identity write
+        // plan 0027 exists to prevent.
         entry:
-          canonicalInput != null &&
-          canonicalInput.every((episode) => episode.season === 1)
+          cour?.entry ??
+          (canonicalInput != null &&
+            canonicalInput.every((episode) => episode.season === 1)
             ? canonicalInput.map((episode) => episode.number)
-            : null,
+            : null),
       },
       mappingSkips,
     };
@@ -739,7 +808,7 @@ export interface LogWritePlan {
   writeTargets: ProviderId[];
   /** Targets reconcile found already in sync (skipped, no reason). */
   skipped: ProviderId[];
-  /** Canonical-domain providers blocked by a mapping miss → their reason (R3). */
+  /** Providers blocked by an identity or episode mapping miss → their reason (R3). */
   mappingSkips: ReadonlyMap<ProviderId, string>;
   /** What every adapter sees: canonical `episodes` *and* entry `entryEpisodes`. */
   variables: LogMediaVariables;

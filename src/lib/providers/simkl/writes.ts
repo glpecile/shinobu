@@ -2,6 +2,7 @@ import * as Effect from 'effect/Effect';
 
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
+import { entryNumberFor } from '@/lib/providers/mapping/episode-translation';
 import { ProviderAuthError, ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SimklDeps } from './deps';
@@ -158,30 +159,6 @@ function seasonsFor(
     number: season,
     episodes: numbers.map((number) => ({ number })),
   }));
-}
-
-/**
- * Reverse the ani.zip table: canonical `{season, number}` → the AniDB-derived
- * entry number Simkl's anime catalog counts by (plan 0034 KTD-6). Two axes,
- * mirroring `placeInLayout`'s forward direction: the TVDB `{season, number}`
- * pair directly, then the `absolute` axis for the single-continuous-season case
- * (a tracker that keeps one season yields canonical `{1, absolute}`). `null` on
- * a miss *or* an ambiguous match — a wrong episode number is worse than no
- * write (docs/solutions/trakt-text-search-wrong-movie-match.md).
- */
-function entryNumberFor(
-  map: AniZipEpisodeMap,
-  episode: { season: number; number: number },
-): number | null {
-  let match: number | null = null;
-  for (const [entryNumber, row] of map) {
-    const direct = row.season === episode.season && row.number === episode.number;
-    const viaAbsolute = episode.season === 1 && row.absolute === episode.number;
-    if (!direct && !viaAbsolute) continue;
-    if (match != null && match !== entryNumber) return null;
-    match = entryNumber;
-  }
-  return match;
 }
 
 /**

@@ -158,6 +158,7 @@ describe('fetchAniZipIds (unchanged by the episode-map sibling)', () => {
       tvdb: 432832,
       tmdb: 240411,
       imdb: 'tt30217403',
+      mal: 60543,
       type: 'TV',
     });
   });

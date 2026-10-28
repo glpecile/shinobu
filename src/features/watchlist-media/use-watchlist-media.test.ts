@@ -51,6 +51,7 @@ mock.module('@/state/queries/mapping', () => ({
   cachedAniZipEpisodeMap: () => Promise.resolve(null),
   cachedSeasonLayout: () => Promise.resolve(null),
   cachedAniListPrequel: () => Promise.resolve(null),
+  cachedAniListLaterCours: () => Promise.resolve([]),
   cachedTmdbTvIdByTvdb: () => Promise.resolve(null),
 }));
 

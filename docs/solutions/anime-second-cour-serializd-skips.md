@@ -61,3 +61,25 @@ resolved entry episode 4 to S1E18 with Serializd as a writable target. Serializd
 public season endpoint returned season id 440547 with 28 episodes. No provider
 writes were performed. `compute.test.ts` covers the retained ids, AniList episode
 numbering, unchanged input, and the canonical-show-only boundary.
+
+## A TMDB season 2 log missed AniList and Simkl (2026-10-28)
+
+Logging S2E1 of *Cyberpunk: Edgerunners* from its TMDB page (105248, S1 10 +
+S2 10) reached neither AniList nor Simkl. Enrichment maps TVDB 384541 to the
+first cour, AniList 120377. Routing then drops AniList for any season-2+
+canonical batch, and Simkl received a `shows[]` S2 write keyed to the show's
+first cour.
+
+`resolveLogPlan` now looks for the AniList cour holding the batch before
+routing (`canonicalCourEntry`). It checks the enriched entry, then its related
+TV/ONA series. The relation type alone isn't enough: AniList links 120377 and
+195539 as `OTHER`, not `SEQUEL`/`PREQUEL`. A candidate counts only when ani.zip
+gives it the same TVDB id and maps every episode to it (195539: S2E1..10 →
+entry 1..10). The log then proceeds as that cour's ANIME log, with the MAL id
+from ani.zip. The show's own Simkl and MAL ids are dropped because they name
+the first cour. Trakt and Serializd keep the canonical episodes the user
+pressed.
+
+If the later cour cannot be mapped, or has no cour-specific MAL id, Simkl
+returns a reasoned skip. It must not fall back to the first cour's Simkl id or
+the whole show's TMDB/IMDb ids for that later cour.

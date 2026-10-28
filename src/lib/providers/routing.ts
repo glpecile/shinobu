@@ -159,9 +159,8 @@ export interface WriteTargetOptions {
   capability: WriteCapability;
   /**
    * A **canonical**-domain batch (the Trakt seasons UI) touching season 2+
-   * stays off AniList: a reverse map from a canonical season to the sibling
-   * AniList entry that represents it is out of scope (plan 0027 R6/A2), so the
-   * only safe move is not to write.
+   * stays off AniList when `useLogMedia` found no AniList cour holding it, so
+   * the only safe move is not to write.
    *
    * This is *not* the anime case any more. An AniList-origin log arrives in the
    * entry's own 1..n numbering, and `useLogMedia` translates it to a canonical
