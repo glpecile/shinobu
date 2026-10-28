@@ -23,8 +23,6 @@ export interface EpisodeView {
   tmdbId: number | undefined;
   /** The sequence this episode sits in (`episodeOrder`); empty until the seasons list loads. */
   order: EpisodeRef[];
-  /** The seasons list is still in flight, so `order` is not final. */
-  orderLoading: boolean;
 }
 
 /**
@@ -66,6 +64,5 @@ export function useEpisode(
     isLoading: episode == null && (seasons.isPending || tmdb.isPending),
     tmdbId,
     order: seasons.data == null ? [] : episodeOrder(seasons.data, season),
-    orderLoading: seasons.isLoading,
   };
 }
