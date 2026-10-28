@@ -56,6 +56,13 @@ view already is (a swipe's momentum end, a jump) or on resize, and the prop
 diff never sends it mid-gesture or mid-tap. react-native-web ignores the prop;
 web keeps its layout-effect jump, which has no race there.
 
+The episode pager can first render a single episode while its seasons list is
+still loading. On Android, when the list arrives, its scroll view changes key so the full
+sequence and the opened episode's offset mount together. Updating the existing
+view's offset alongside a wider content container has the same Android race.
+This one-time remount resets vertical scroll and expanded content if the user
+has already started reading. iOS keeps the same subtree and its reading state.
+
 A settle more than one page from the selected cour is still refused and jumped
 back, so the URL can't follow a position nobody chose.
 

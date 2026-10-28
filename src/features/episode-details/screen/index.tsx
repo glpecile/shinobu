@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRef, useState } from 'react';
-import { type ScrollViewInstance, Text, useWindowDimensions, View } from 'react-native';
+import { useDeferredValue, useRef, useState } from 'react';
+import { Platform, type ScrollViewInstance, Text, useWindowDimensions, View } from 'react-native';
 import { FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
@@ -61,7 +61,8 @@ const BOUNDARY_TOLERANCE = 2;
  */
 export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenProps) {
   const view = useEpisode(item, season, number);
-  if (view.isLoading || view.orderLoading) {
+  // A long-running show's seasons list can arrive well after this episode.
+  if (view.isLoading) {
     return <EpisodeScreenSkeleton onBack={onBack} />;
   }
   return (
@@ -69,7 +70,6 @@ export function EpisodeScreen({ item, season, number, onBack }: EpisodeScreenPro
   );
 }
 
-/** Mounted once the order is known, so `settled` starts on the opened episode. */
 function EpisodePager({
   item,
   season,
@@ -89,10 +89,19 @@ function EpisodePager({
   );
   const order = found === -1 ? [{ season, number }] : fullOrder;
   const index = Math.max(found, 0);
-  // The page the scroll last rested on: what the mounted window is centred on
-  // and where `contentOffset` points. Not `index` — that moves when a button
-  // step starts, and a changed `contentOffset` would cut its scroll short.
-  const [settled, setSettled] = useState(index);
+  // The episode the scroll last rested on: what the mounted window is centred
+  // on and where `contentOffset` points. Not `index` — that moves when a button
+  // step starts, and a changed `contentOffset` would cut its scroll short. An
+  // episode rather than a page, so it stays put when the order loads around it.
+  const [settledEpisode, setSettledEpisode] = useState<EpisodeRef>({ season, number });
+  const settled = Math.max(
+    order.findIndex(
+      (entry) => entry.season === settledEpisode.season && entry.number === settledEpisode.number,
+    ),
+    0,
+  );
+  // Neighbours mount in a deferred pass, so the opened page commits alone first.
+  const reach = useDeferredValue(1, 0);
 
   function commit(target: EpisodeRef) {
     router.setParams({ episode: [String(target.season), String(target.number)] });
@@ -103,7 +112,7 @@ function EpisodePager({
     if (Math.abs(x - page * width) > BOUNDARY_TOLERANCE) return;
     const landed = order[page];
     if (landed == null) return;
-    setSettled(page);
+    setSettledEpisode(landed);
     if (page === index) return;
     haptics.selection();
     commit(landed);
@@ -116,12 +125,12 @@ function EpisodePager({
     if (page === -1) return;
     scroller.current?.scrollTo({ x: page * width, animated: !reduceMotion });
     // A jump fires no momentum event.
-    if (reduceMotion) setSettled(page);
+    if (reduceMotion) setSettledEpisode(target);
     commit(target);
   }
 
-  const first = Math.max(Math.min(settled - 1, index), 0);
-  const last = Math.min(Math.max(settled + 1, index), order.length - 1);
+  const first = Math.max(Math.min(settled - reach, index), 0);
+  const last = Math.min(Math.max(settled + reach, index), order.length - 1);
 
   return (
     <View
@@ -132,6 +141,8 @@ function EpisodePager({
         <GestureScrollView
           contentOffset={{ x: settled * width, y: 0 }}
           horizontal
+          // Android applies offsets before layout; mount the expanded content with its offset.
+          key={Platform.OS === 'android' && found === -1 ? 'pending' : 'resolved'}
           onMomentumScrollEnd={(event) => settleAt(event.nativeEvent.contentOffset.x)}
           pagingEnabled
           ref={scroller}
