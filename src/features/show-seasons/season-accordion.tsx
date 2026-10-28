@@ -58,8 +58,7 @@ export function EpisodeRow({
   // ⋯ reveal rides on RN-web's pointer events (the PersonCard pattern) —
   // long-press is not a discoverable web gesture.
   const [hovered, setHovered] = useState(false);
-  const showActionsButton =
-    process.env.EXPO_OS === 'web' && hovered && onActions != null;
+  const hasActionsButton = process.env.EXPO_OS === 'web' && onActions != null;
   // Every known air date stays in the meta line; upcoming episodes also show
   // a countdown in the mark-button slot. No date at
   // all on an unstarted season leaves only the bare word; released catalogue
@@ -115,11 +114,12 @@ export function EpisodeRow({
           {label}
         </PresstableOpacity>
       )}
-      {showActionsButton && (
+      {/* Hidden, not unmounted, off hover: its slot stays reserved so the title doesn't rewrap. */}
+      {hasActionsButton && (
         <PresstableOpacity
           accessibilityLabel={`More about episode ${episode.number}`}
           accessibilityRole="button"
-          className="w-8 h-8 mr-2 items-center justify-center rounded-full"
+          className={cn('w-8 h-8 mr-2 items-center justify-center rounded-full', !hovered && 'opacity-0')}
           onPress={onActions}
         >
           <Ionicons color={muted} name="ellipsis-horizontal" size={16} />
@@ -191,8 +191,7 @@ export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
   return (
     <View className="px-4 py-3 border-b border-border bg-accent/5">
       <Button
-        align="start"
-        className="self-start"
+        className="self-end"
         icon={<Button.Icon name="eye-outline" />}
         label="Mark season as watched"
         onPress={onPress}

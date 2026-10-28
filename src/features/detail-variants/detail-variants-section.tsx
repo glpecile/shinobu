@@ -1,8 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { View } from 'react-native';
 
+import { Collapse } from '@/components/collapse';
+import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PosterFace } from '@/components/poster-face';
-import { PresstableScale } from '@/components/presstable';
+import { PresstableOpacity, PresstableScale } from '@/components/presstable';
 import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { usePushRoute } from '@/lib/navigation';
@@ -27,8 +30,9 @@ const LABELS = {
   letterboxd: PROVIDERS.letterboxd.label,
 } as const;
 
-/** The item's other details pages, as posters in the watchlist wall's look. */
+/** The item's other details pages, as posters in the watchlist wall's look, collapsed by default. */
 export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
+  const [open, setOpen] = useState(false);
   // A TMDB page resolves cold only by fetching it, which takes the token.
   const hasTmdb = useTmdbToken() !== '';
   const anilist = useAniListIdByTmdbQuery(item).data;
@@ -50,14 +54,26 @@ export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
 
   return (
     <Section>
-      <Section.Header>
+      <PresstableOpacity
+        accessibilityLabel={`${open ? 'Collapse' : 'Expand'} Variants`}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        className="flex-row items-center gap-2 self-start"
+        onPress={() => setOpen(!open)}
+        pressBehavior="immediate"
+      >
         <Section.Title>Variants</Section.Title>
-      </Section.Header>
-      <Rail contentContainerClassName="gap-3">
-        {variants.map((variant) => (
-          <VariantPoster item={item} key={variant.id} variant={variant} />
-        ))}
-      </Rail>
+        <DisclosureChevron open={open} size={18} />
+      </PresstableOpacity>
+      <Collapse open={open}>
+        <View className="mt-4">
+          <Rail contentContainerClassName="gap-3">
+            {variants.map((variant) => (
+              <VariantPoster item={item} key={variant.id} variant={variant} />
+            ))}
+          </Rail>
+        </View>
+      </Collapse>
     </Section>
   );
 }
