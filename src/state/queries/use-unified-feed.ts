@@ -1,6 +1,5 @@
 import {
   useQueries,
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
   type QueryClient,
@@ -178,10 +177,6 @@ function activeFeedConfigs(
 
 export function useSuspenseTrendingMoviesQuery() {
   return useSuspenseQuery(feedOptions.trendingMovies());
-}
-
-export function useTrendingMoviesQuery() {
-  return useQuery(feedOptions.trendingMovies());
 }
 
 export function useSuspenseTrendingShowsQuery() {

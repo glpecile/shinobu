@@ -141,11 +141,6 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
                 onPress={() => pushRoute(routes.settings)}
               />
             </HeroEnter>
-            <HeroEnter className="mt-4" delay={COPY_STAGGER * 4}>
-              <Text className="text-muted font-sans text-xs text-center md:text-left">
-                No Shinobu account. Tokens stay on this device.
-              </Text>
-            </HeroEnter>
           </View>
         )}
       </GestureScrollView>
