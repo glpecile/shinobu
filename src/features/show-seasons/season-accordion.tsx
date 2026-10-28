@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PressableCard } from '@/components/pressable-card';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
@@ -114,31 +115,33 @@ export function EpisodeRow({
           {label}
         </PresstableOpacity>
       )}
-      {/* Hidden, not unmounted, off hover: its slot stays reserved so the title doesn't rewrap. */}
-      {hasActionsButton && (
-        <PresstableOpacity
-          accessibilityLabel={`More about episode ${episode.number}`}
-          accessibilityRole="button"
-          className={cn('w-8 h-8 mr-2 items-center justify-center rounded-full', !hovered && 'opacity-0')}
-          onPress={onActions}
-        >
-          <Ionicons color={muted} name="ellipsis-horizontal" size={16} />
-        </PresstableOpacity>
-      )}
-      {aired ? (
-        <Button
-          icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
-          label={isWatched ? 'Rewatch' : 'Mark as watched'}
-          morphLabel
-          onPress={onMark}
-          size="sm"
-          variant="quiet"
-        />
-      ) : (
-        <Text className="text-muted font-sans text-xs px-3">
-          {airsIn ?? 'Unaired'}
-        </Text>
-      )}
+      {/* The ⋯ floats beside the trailing slot rather than taking a column, so
+          hovering never rewraps the title. */}
+      <View className="relative justify-center">
+        {hasActionsButton && (
+          <OverlayActionsButton
+            className="absolute -left-10 top-0 bottom-0 justify-center"
+            label={`More about episode ${episode.number}`}
+            onPress={onActions}
+            tone="surface"
+            visible={hovered}
+          />
+        )}
+        {aired ? (
+          <Button
+            icon={<Button.Icon name={isWatched ? 'eye' : 'eye-outline'} />}
+            label={isWatched ? 'Rewatch' : 'Mark as watched'}
+            morphLabel
+            onPress={onMark}
+            size="sm"
+            variant="quiet"
+          />
+        ) : (
+          <Text className="text-muted font-sans text-xs px-3">
+            {airsIn ?? 'Unaired'}
+          </Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -191,6 +194,7 @@ export function SeasonMarkRow({ onPress }: { onPress: () => void }) {
   return (
     <View className="px-4 py-3 border-b border-border bg-accent/5">
       <Button
+        align="start"
         className="self-end"
         icon={<Button.Icon name="eye-outline" />}
         label="Mark season as watched"

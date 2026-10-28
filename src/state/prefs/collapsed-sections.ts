@@ -13,11 +13,7 @@ export function setSectionCollapsed(
   sectionKey: string,
   collapsed: boolean,
 ): void {
-  if (collapsed) {
-    prefsStorage.set(keyFor(sectionKey), true);
-  } else {
-    prefsStorage.remove(keyFor(sectionKey));
-  }
+  prefsStorage.set(keyFor(sectionKey), collapsed);
 }
 
 function subscribe(onStoreChange: () => void): () => void {
@@ -25,13 +21,13 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => subscription.remove();
 }
 
-/** Whether one feed section is collapsed — reactive across the app. */
-export function useSectionCollapsed(sectionKey: string): boolean {
+/** Whether one section is collapsed — reactive across the app. Unset reads `defaultCollapsed`. */
+export function useSectionCollapsed(sectionKey: string, defaultCollapsed = false): boolean {
   // Booleans compare by value, so no snapshot caching is needed here (unlike
   // the array-snapshot stores in this directory).
   return useSyncExternalStore(
     subscribe,
-    () => !isServer() && prefsStorage.getBoolean(keyFor(sectionKey)) === true,
-    () => false,
+    () => (isServer() ? defaultCollapsed : prefsStorage.getBoolean(keyFor(sectionKey)) ?? defaultCollapsed),
+    () => defaultCollapsed,
   );
 }

@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Collapse } from '@/components/collapse';
@@ -18,6 +17,7 @@ import {
 } from '@/state/queries/mapping';
 import { useDeepLinkItem } from '@/state/queries/resolve-item';
 import { findLetterboxdTwinInCache } from '@/state/queries/watchlist-cache';
+import { setSectionCollapsed, useSectionCollapsed } from '@/state/prefs/collapsed-sections';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -30,9 +30,9 @@ const LABELS = {
   letterboxd: PROVIDERS.letterboxd.label,
 } as const;
 
-/** The item's other details pages, as posters in the watchlist wall's look, collapsed by default. */
+/** The item's other details pages, as posters in the watchlist wall's look, collapsed until the user opens it. */
 export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
-  const [open, setOpen] = useState(false);
+  const open = !useSectionCollapsed('detail-variants', true);
   // A TMDB page resolves cold only by fetching it, which takes the token.
   const hasTmdb = useTmdbToken() !== '';
   const anilist = useAniListIdByTmdbQuery(item).data;
@@ -59,7 +59,7 @@ export function DetailVariantsSection({ item }: { item: NormalizedMediaItem }) {
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         className="flex-row items-center gap-2 self-start"
-        onPress={() => setOpen(!open)}
+        onPress={() => setSectionCollapsed('detail-variants', open)}
         pressBehavior="immediate"
       >
         <Section.Title>Variants</Section.Title>
