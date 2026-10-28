@@ -7,6 +7,7 @@
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo/ui": "~58.0.23",
     "@hookform/resolvers": "^5.9.1",
+    "@hzblj/expo-app-icons": "0.1.4",
     "@legendapp/list": "^3.6.0",
     "@nandorojo/galeria": "^3.1.0",
     "@react-native-vector-icons/ionicons": "^13.1.5",

@@ -11,6 +11,7 @@ import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
+import { AppIconSection } from '@/features/settings/app-icon-section';
 import { NotificationsSettingsSection } from '@/features/notifications/notifications-settings';
 import { HiddenItemsSection } from '@/features/settings/hidden-items-section';
 import { SettingsRail } from '@/features/settings/settings-rail';
@@ -76,6 +77,7 @@ function SettingsScreen() {
                 </View>
               </SettingsRail.Row>
             </SettingsRail.Section>
+            <AppIconSection />
             <HiddenItemsSection />
             <SettingsRail.Section count={version} icon="information-circle-outline" title="About">
               <SettingsRail.Head label={`About, ${version}`}>

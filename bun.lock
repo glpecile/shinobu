@@ -9,6 +9,7 @@
         "@expo-google-fonts/space-grotesk": "^0.4.1",
         "@expo/ui": "~58.0.23",
         "@hookform/resolvers": "^5.9.1",
+        "@hzblj/expo-app-icons": "0.1.4",
         "@legendapp/list": "^3.6.0",
         "@nandorojo/galeria": "^3.1.0",
         "@react-native-vector-icons/ionicons": "^13.1.5",
@@ -419,6 +420,8 @@
     "@humanwhocodes/module-importer": ["@humanwhocodes/module-importer@1.0.1", "", {}, "sha512-bxveV4V8v5Yb4ncFTT3rPSgZBOpCkjfK0y4oVVVJwIuDVBRMDXrPyXRL988i5ap9m9bnyEEjWfm5WkBmtffLfA=="],
 
     "@humanwhocodes/retry": ["@humanwhocodes/retry@0.4.3", "", {}, "sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ=="],
+
+    "@hzblj/expo-app-icons": ["@hzblj/expo-app-icons@0.1.4", "", { "dependencies": { "@expo/image-utils": "^0.11.6 || ^0.12.0", "jimp-compact": "0.16.1" }, "peerDependencies": { "expo": ">=57", "react": "*", "react-native": "*" } }, "sha512-jholTb4Jw+Sm+zxgmeQ34ogNA+X3qDp1+9vitNvvFYHmjjk+jzsUIff+tg01UjtITsZawvNxS8cdFXItTwGcdQ=="],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 
