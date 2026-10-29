@@ -168,7 +168,10 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
       anilistByMal.set(`${item.type === 'MANGA' ? 'manga' : 'show'}:${mal}`, anilist);
     }
   }
-  type Series = { keys: Set<string>; units: Set<string>; manga: boolean };
+  // A fan-out log numbers one episode twice: TMDB's season/episode and the
+  // AniList entry's own. The two schemes can't be joined, so a show counts
+  // whichever describes more episodes.
+  type Series = { keys: Set<string>; seasoned: Set<string>; unseasoned: Set<string>; manga: boolean };
   const series = new Set<Series>();
   const byIdentity = new Map<string, Series>();
   for (const entry of entries) {
@@ -186,7 +189,8 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
       if (match == null) continue;
       if (group == null) group = match;
       else if (group !== match) {
-        for (const unit of match.units) group.units.add(unit);
+        for (const unit of match.seasoned) group.seasoned.add(unit);
+        for (const unit of match.unseasoned) group.unseasoned.add(unit);
         for (const alias of match.keys) {
           group.keys.add(alias);
           byIdentity.set(alias, group);
@@ -195,7 +199,7 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
       }
     }
     if (group == null) {
-      group = { keys: new Set(), units: new Set(), manga: item.type === 'MANGA' };
+      group = { keys: new Set(), seasoned: new Set(), unseasoned: new Set(), manga: item.type === 'MANGA' };
       series.add(group);
     }
     for (const key of keys) {
@@ -208,8 +212,10 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
     const animeIdentity = anilist != null
       ? `anilist:${anilist}`
       : item.externalIds.mal != null ? `mal:${item.externalIds.mal}` : identityKey(item);
-    const numbering = entry.season != null ? `season:${entry.season}` : `entry:${animeIdentity}`;
-    for (const episode of entry.episodes) group.units.add(`${numbering}:${episode}`);
+    for (const episode of entry.episodes) {
+      if (entry.season != null) group.seasoned.add(`${entry.season}:${episode}`);
+      else group.unseasoned.add(`${animeIdentity}:${episode}`);
+    }
   }
   let shows = 0;
   let episodes = 0;
@@ -217,13 +223,14 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   let chapters = 0;
   let units = films;
   for (const group of series) {
-    units += Math.max(group.units.size, 1);
+    const count = Math.max(group.seasoned.size, group.unseasoned.size);
+    units += Math.max(count, 1);
     if (group.manga) {
       manga++;
-      chapters += group.units.size;
+      chapters += count;
     } else {
       shows++;
-      episodes += group.units.size;
+      episodes += count;
     }
   }
   const parts: string[] = [];
