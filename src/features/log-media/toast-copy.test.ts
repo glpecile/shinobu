@@ -24,6 +24,22 @@ describe('logToastCopy (plan 0032 R9)', () => {
 });
 
 describe('episodeNoticeToastCopy', () => {
+  test('a reasoned skip does not claim an episode was logged', () => {
+    expect(
+      episodeNoticeToastCopy('Episode 118', {
+        succeeded: [],
+        failed: [],
+        outcomes: [
+          { provider: 'simkl', status: 'skipped', reason: 'Simkl could not match any submitted item (not_found)' },
+        ],
+      }),
+    ).toEqual({
+      tone: 'error',
+      title: 'Episode 118 was not logged',
+      message: 'Simkl: Simkl could not match any submitted item (not_found).',
+    });
+  });
+
   test('a failure names where it failed and where it landed', () => {
     expect(
       episodeNoticeToastCopy('Episode 118', {

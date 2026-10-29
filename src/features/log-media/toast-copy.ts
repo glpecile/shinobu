@@ -26,8 +26,7 @@ export function logToastCopy(
 
 /**
  * A catch-up episode's toast when its report isn't clean but the sheet was
- * already dismissed. A failure names where it failed; otherwise the episode
- * logged and each provider's note rides along, in the report's neutral tone.
+ * already dismissed. Report where it landed and preserve provider notes.
  */
 export function episodeNoticeToastCopy(
   code: string,
@@ -46,8 +45,8 @@ export function episodeNoticeToastCopy(
     outcome.status === 'error' || outcome.reason == null ? [] : [`${PROVIDERS[outcome.provider].label}: ${outcome.reason}.`],
   );
   return {
-    tone: 'success',
-    title: `Logged ${code.toLowerCase()}`,
+    tone: report.succeeded.length > 0 ? 'success' : 'error',
+    title: report.succeeded.length > 0 ? `Logged ${code.toLowerCase()}` : `${code} was not logged`,
     message: [list(report.succeeded), ...notes].filter(Boolean).join('. '),
   };
 }

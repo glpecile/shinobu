@@ -2,6 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-screens/experimental';
 
 import { DeferredTab } from '@/components/deferred-tab';
@@ -307,6 +308,7 @@ function SearchScreen() {
   const muted = useThemeColor('--color-muted');
   const inputRef = useRef<TextInputInstance>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
+  const reduceMotion = useReducedMotion();
   // The same actions dialog the feed and diary open — quick log, details, and
   // the provider links, from a result row.
   const { openActions, sheetProps } = useCardActions();
@@ -560,7 +562,7 @@ function SearchScreen() {
                       <TrendingShowsRow onItemActions={openActions} />
                     </SuspenseSection>
                     <FeedEnd
-                      onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+                      onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion })}
                     />
                   </GestureScrollView>
                 ) : (
