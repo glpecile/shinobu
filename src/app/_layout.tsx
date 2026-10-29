@@ -1,11 +1,5 @@
 import "@/global.css";
 
-import {
-  Inter_400Regular,
-  Inter_400Regular_Italic,
-  Inter_600SemiBold,
-} from "@expo-google-fonts/inter";
-import { SpaceGrotesk_700Bold } from "@expo-google-fonts/space-grotesk";
 import { useFonts } from "expo-font";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -19,7 +13,7 @@ import { AppShell } from "@/components/app-shell";
 import { BootSplash, dismissBootSplash } from "@/components/boot-splash";
 import { ErrorFallback } from "@/components/error-fallback";
 import { endLaunchReplay } from "@/lib/http/client";
-import { iconFonts } from "@/lib/icon-fonts";
+import { fonts } from "@/lib/fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
 import { Lightbox } from "@/components/lightbox";
 import { LightboxProvider } from "@/components/lightbox/state";
@@ -50,15 +44,7 @@ onProviderConnected((id) => toast.success(`Connected to ${PROVIDERS[id].label}`)
 applyThemePreference();
 
 export default function Layout() {
-  const [fontsLoaded, fontError] = useFonts({
-    SpaceGrotesk_700Bold,
-    Inter_400Regular,
-    Inter_400Regular_Italic,
-    Inter_600SemiBold,
-    // Icon fonts are only populated on web — native bundles them via the
-    // config plugins (see lib/icon-fonts).
-    ...iconFonts,
-  });
+  const [fontsLoaded, fontError] = useFonts(fonts);
 
   // One QueryClient per app lifetime. TanStack Query handles provider fetches,
   // token refresh retries, and feed invalidation on connect/disconnect.
@@ -114,7 +100,7 @@ export default function Layout() {
   const fontsReady = fontsLoaded || fontError != null;
   // Web's splash is static HTML in +html.tsx.
   const [splashPainted, setSplashPainted] = useState(Platform.OS === "web");
-  const appReady = fontsReady && splashPainted;
+  const appReady = Platform.OS === "web" || (fontsReady && splashPainted);
   useEffect(() => {
     if (fontsReady) {
       dismissBootSplash();

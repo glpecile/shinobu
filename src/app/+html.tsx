@@ -2,6 +2,8 @@
 
 import { ScrollViewStyleReset, useServerDocumentContext } from "expo-router/html";
 
+import { fontFaceCss, preloadedFonts } from "@/lib/fonts/web-faces";
+
 // This file is web-only and used to configure the root HTML for every
 // web page during static rendering.
 // The contents of this function only run in Node.js environments and
@@ -117,6 +119,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
         />
 
         {headNodes}
+
+        {preloadedFonts.map((href) => (
+          <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="" />
+        ))}
+        <style dangerouslySetInnerHTML={{ __html: fontFaceCss }} />
 
         {/* Add any additional <head> elements that you want globally available on web... */}
       </head>

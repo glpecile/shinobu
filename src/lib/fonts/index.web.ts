@@ -1,12 +1,11 @@
-import ioniconsFont from "@react-native-vector-icons/ionicons/fonts/Ionicons.ttf";
 import type { FontSource } from "expo-font";
 
-// The static icon components (@react-native-vector-icons/<set>/static) render
-// a glyph with fontFamily "<Set>" but ship no fontSource — they expect the
-// config plugin to have bundled the font, which only happens on native. On web
-// nothing registers the font, so every icon renders as tofu. Loading the ttf
-// through expo-font injects the matching @font-face rule; the key must equal
-// the set's postScriptName.
-export const iconFonts: Record<string, FontSource> = {
-  Ionicons: ioniconsFont,
+// +html declares the faces. Expo treats its own SSR styles as already loaded,
+// so register only on the client to keep the splash up until the files arrive.
+export const fonts: Record<string, FontSource> = typeof window === "undefined" ? {} : {
+  SpaceGrotesk_700Bold: "/fonts/space-grotesk-700.woff2",
+  Inter_400Regular: "/fonts/inter-400.woff2",
+  Inter_400Regular_Italic: "/fonts/inter-400-italic.woff2",
+  Inter_600SemiBold: "/fonts/inter-600.woff2",
+  Ionicons: "/fonts/ionicons.woff2",
 };
