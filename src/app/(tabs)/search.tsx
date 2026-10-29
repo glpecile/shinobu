@@ -32,6 +32,7 @@ import {
   TrendingMoviesRow,
   TrendingShowsRow,
 } from '@/features/feed/feed-rows';
+import { PosterWall } from '@/features/feed/poster-wall';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -557,14 +558,19 @@ function SearchScreen() {
                     </SuspenseSection>
                   </GestureScrollView>
                 ) : (
-                  <CenteredNotice className="-mt-16">
-                    <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
-                    <CenteredNotice.Title>Search</CenteredNotice.Title>
-                    <CenteredNotice.Body>
-                      Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
-                      {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
-                    </CenteredNotice.Body>
-                  </CenteredNotice>
+                  <View className="flex-1">
+                    <PosterWall key={scope.value} subject={scope.value} />
+                    {/* Where the wall's fade turns solid, as on Home: low on
+                        phones (clear of the Fab), left on wide screens. */}
+                    <View className="flex-1 justify-end md:justify-center px-6 pb-24 md:px-16 md:pb-16">
+                      <Text className="text-5xl text-muted mb-4">忍</Text>
+                      <Text className="text-2xl font-display text-foreground">Search</Text>
+                      <Text className="text-base font-sans text-muted mt-3 max-w-sm leading-relaxed">
+                        Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
+                        {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
+                      </Text>
+                    </View>
+                  </View>
                 )
               ) : state === 'loading' ? (
                 <ResultsSkeleton />
