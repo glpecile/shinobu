@@ -5,8 +5,6 @@
     "": {
       "name": "shinobu",
       "dependencies": {
-        "@expo-google-fonts/inter": "^0.4.2",
-        "@expo-google-fonts/space-grotesk": "^0.4.1",
         "@expo/ui": "~58.0.23",
         "@hookform/resolvers": "^5.9.1",
         "@hzblj/expo-app-icons": "0.1.4",
@@ -68,6 +66,8 @@
         "zod": "^4.6.7",
       },
       "devDependencies": {
+        "@expo-google-fonts/inter": "^0.4.2",
+        "@expo-google-fonts/space-grotesk": "^0.4.1",
         "@happy-dom/global-registrator": "^21.0.4",
         "@oxlint/plugins": "1.88.0",
         "@shadcn/lint": "^0.2.0",
