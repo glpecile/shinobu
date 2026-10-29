@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-screens/experimental';
 
 import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
-import { Keyboard, Text, type TextInputInstance, View } from 'react-native';
+import { Keyboard, type ScrollViewInstance, Text, type TextInputInstance, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView, GestureScrollView } from '@/components/animated-view';
@@ -28,6 +28,7 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import {
   AnimeMoviesRow,
+  FeedEnd,
   SeasonalAnimeRow,
   TrendingMoviesRow,
   TrendingShowsRow,
@@ -305,6 +306,7 @@ function SearchScreen() {
   const [selectedScope, setSelectedScope] = useState(params.scope);
   const muted = useThemeColor('--color-muted');
   const inputRef = useRef<TextInputInstance>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   // The same actions dialog the feed and diary open — quick log, details, and
   // the provider links, from a result row.
   const { openActions, sheetProps } = useCardActions();
@@ -543,6 +545,7 @@ function SearchScreen() {
                     contentContainerClassName="pb-28"
                     keyboardDismissMode="on-drag"
                     keyboardShouldPersistTaps="handled"
+                    ref={scrollRef}
                   >
                     <SuspenseSection fallback={<FeedRowSkeleton hasAction />}>
                       <SeasonalAnimeRow onItemActions={openActions} season={animeSeason} />
@@ -556,6 +559,9 @@ function SearchScreen() {
                     <SuspenseSection fallback={<FeedRowSkeleton />}>
                       <TrendingShowsRow onItemActions={openActions} />
                     </SuspenseSection>
+                    <FeedEnd
+                      onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+                    />
                   </GestureScrollView>
                 ) : (
                   <View className="flex-1">

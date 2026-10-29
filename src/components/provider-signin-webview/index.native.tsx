@@ -10,6 +10,7 @@ import {
   type WebViewNavigationState,
 } from 'nitro-webview';
 
+import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';
 
 // Page-load injection avoids Nitro's off-main-thread iOS evaluateJavaScript call.
@@ -147,7 +148,18 @@ export function ProviderSigninWebView<T>({
           <SafeAreaView edges={['top']}>
             <View className="px-4 py-3 border-b border-border">
               <Sheet.Header className="items-center" onClose={onClose}>
-                <Text className="text-foreground font-sans-semibold text-base">{title}</Text>
+                <View className="flex-row items-center gap-3">
+                  <Text className="flex-1 text-foreground font-sans-semibold text-base">{title}</Text>
+                  <Button
+                    className="shrink-0"
+                    icon={<Button.Icon name="refresh" />}
+                    iconOnly
+                    label="Reload page"
+                    onPress={() => webViewRef.current?.reload()}
+                    shape="pill"
+                    variant="quiet"
+                  />
+                </View>
               </Sheet.Header>
             </View>
           </SafeAreaView>

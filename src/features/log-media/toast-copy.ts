@@ -23,3 +23,31 @@ export function logToastCopy(
         : list(report.succeeded),
   };
 }
+
+/**
+ * A catch-up episode's toast when its report isn't clean but the sheet was
+ * already dismissed. A failure names where it failed; otherwise the episode
+ * logged and each provider's note rides along, in the report's neutral tone.
+ */
+export function episodeNoticeToastCopy(
+  code: string,
+  report: Pick<LogMediaResult, 'succeeded' | 'failed' | 'outcomes'>,
+): { tone: 'success' | 'error'; title: string; message?: string } {
+  if (report.failed.length > 0) {
+    return {
+      tone: 'error',
+      title: `${code} failed on ${list(report.failed)}`,
+      ...(report.succeeded.length > 0
+        ? { message: `Logged on ${list(report.succeeded)}.` }
+        : {}),
+    };
+  }
+  const notes = report.outcomes.flatMap((outcome) =>
+    outcome.status === 'error' || outcome.reason == null ? [] : [`${PROVIDERS[outcome.provider].label}: ${outcome.reason}.`],
+  );
+  return {
+    tone: 'success',
+    title: `Logged ${code.toLowerCase()}`,
+    message: [list(report.succeeded), ...notes].filter(Boolean).join('. '),
+  };
+}
