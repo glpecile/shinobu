@@ -18,9 +18,9 @@ import { FORMAT_OPTIONS, type FormatFilter } from '@/features/credit-timeline/gr
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
+import { DiaryWelcome } from '@/features/diary/diary-welcome';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
-import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
@@ -112,20 +112,7 @@ function DiaryScreen() {
   let content: React.ReactNode;
   if (connected.length === 0) {
     // R9 (1): no providers connected.
-    content = (
-      <View className="flex-1 justify-center pb-16">
-        <EmptyStateTile
-          cta={{
-            icon: <Button.Icon name="link-outline" />,
-            label: 'Connect your trackers',
-            onPress: () => pushRoute(routes.settings),
-          }}
-          description="Connect a tracker to see everything you've logged — from Shinobu and from the providers directly — in one place."
-          icon={<StateIcon name="book-outline" />}
-          title="Your diary lives here"
-        />
-      </View>
-    );
+    content = <DiaryWelcome timeZone={diary.timeZone} />;
   } else if (diary.activeProviders.length === 0) {
     // R9 (2): connected, but nothing readable on this platform (Letterboxd on web).
     content = (
