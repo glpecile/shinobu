@@ -440,6 +440,13 @@ describe('summarizeDay', () => {
     }))).label).toBe('2 episodes of 1 show');
   });
 
+  test('one fan-out log numbered by season and by anime entry counts once', () => {
+    expect(summarizeDay([
+      mergedEntry({ id: 'tv', item: item({ id: 'tv', type: 'TV', externalIds: { tmdb: 7 } }), season: 4, episodes: [6] }),
+      mergedEntry({ id: 'anime', item: item({ id: 'anime', type: 'ANIME', externalIds: { anilist: 9, tmdb: 7 } }), episodes: [6] }),
+    ]).label).toBe('1 episode of 1 show');
+  });
+
   test('does not invent episode counts for title-only activity or empty days', () => {
     expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toEqual({ label: '1 show', units: 1 });
     expect(summarizeDay([])).toEqual({ label: '', units: 0 });
