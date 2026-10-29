@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useReducedMotion } from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
 
-import { Button } from '@/components/button';
 import Head from '@/components/head';
 import {
+  Platform,
   type ScrollViewInstance,
   Text,
   View,
@@ -14,15 +13,15 @@ import {
   FeedSkeleton,
   UpNextSectionSkeleton,
 } from '@/components/feed-skeleton';
-import { ProviderIcon } from '@/components/provider-icon';
 import { useBootRevealed } from '@/components/boot-splash/revealed';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
-import { AnimatedView, GestureScrollView } from '@/components/animated-view';
-import { heldKeyframes, sectionFading } from '@/components/section-enter';
+import { GestureScrollView } from '@/components/animated-view';
+import { ConnectTrackerButton } from '@/components/connect-tracker-button';
+import { COPY_STAGGER, HeroEnter, HeroProviders } from '@/components/hero-enter';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -35,9 +34,7 @@ import { PosterWall } from '@/features/feed/poster-wall';
 import { UpNextSection } from '@/features/up-next/up-next-section';
 import { LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
-import { EASE_OUT } from '@/lib/motion';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
-import { PROVIDERS } from '@/lib/providers/registry';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -53,67 +50,32 @@ import { useConnectedProviders } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
-const PROVIDER_IDS = Object.values(PROVIDERS).map((provider) => provider.id);
-const COPY_STAGGER = 60;
-const HERO_ENTER_DURATION = 450;
-
-/** Blur clears as the copy rises; iOS ignores `filter` and keeps the fade and rise. */
-const heroEntering = {
-  '0%': { opacity: 0, filter: 'blur(4px)', transform: [{ translateY: 8 }] },
-  '100%': { opacity: 1, filter: 'blur(0px)', transform: [{ translateY: 0 }] },
-};
-
-/** The first-run copy's staggered entrance: longer than `SectionEnter` so the blur reads. */
-function HeroEnter({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  const reduceMotion = useReducedMotion();
-  return (
-    <AnimatedView
-      className={className}
-      style={{
-        animationName: heldKeyframes(reduceMotion ? sectionFading : heroEntering, delay, HERO_ENTER_DURATION),
-        animationDuration: HERO_ENTER_DURATION + delay,
-        animationTimingFunction: EASE_OUT,
-      }}
-    >
-      {children}
-    </AnimatedView>
-  );
-}
-
+// Only a mouse hovers; native keeps the whole first-run screen scrollable.
+const WALL_HOVER = Platform.OS === 'web';
 function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
-  const pushRoute = usePushRoute();
   // The copy staggers in once the native splash has faded, not underneath it.
   const revealed = useBootRevealed();
 
   return (
     <View className="flex-1">
       <PosterWall />
+      {/* On web the empty space passes the pointer through, so hovering a
+          poster column pauses it; touch screens keep the whole area scrollable. */}
       <GestureScrollView
-        className="flex-1"
-        contentContainerClassName="grow justify-end md:justify-center pt-4"
+        className={cn('flex-1', WALL_HOVER && 'pointer-events-none')}
+        contentContainerClassName={cn('grow justify-end md:justify-center pt-4', WALL_HOVER && 'pointer-events-none')}
       >
         {/* Phones anchor it to the bottom for thumb reach (iOS clears its floating
             tab bar); wide viewports centre it against the wall. */}
         {revealed && (
-          <View className="w-full max-w-2xl px-6 pb-8 ios:pb-28 md:px-16 md:pb-0">
+          <View
+            className="w-full max-w-2xl px-6 pb-8 ios:pb-28 md:px-16 md:pb-0"
+            // Uniwind has no `pointer-events-auto`; this re-enables the copy under the pass-through.
+            style={{ pointerEvents: 'auto' }}
+          >
             {/* First-run only, so it earns a staggered entrance. */}
-            <HeroEnter className="flex-row gap-1.5 mb-5">
-              {PROVIDER_IDS.map((id) => (
-                <View
-                  className="size-8 items-center justify-center rounded-lg bg-surface border border-border"
-                  key={id}
-                >
-                  <ProviderIcon id={id} size={18} />
-                </View>
-              ))}
+            <HeroEnter className="mb-5">
+              <HeroProviders />
             </HeroEnter>
             <HeroEnter delay={COPY_STAGGER}>
               <Text
@@ -136,12 +98,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
               </HeroEnter>
             )}
             <HeroEnter className="mt-6" delay={COPY_STAGGER * 4}>
-              <Button
-                className="self-stretch md:self-start"
-                icon={<Button.Icon name="link-outline" />}
-                label="Connect a tracker"
-                onPress={() => pushRoute(routes.settings)}
-              />
+              <ConnectTrackerButton className="self-stretch md:self-start" />
             </HeroEnter>
           </View>
         )}

@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { css, useReducedMotion } from 'react-native-reanimated';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
@@ -82,9 +82,11 @@ const COLUMN_RHYTHM = [
 /** A fixed mix of classic films and anime keeps the welcome wall out of release-week trends. */
 export function PosterWall() {
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
   const reduceMotion = useReducedMotion();
+  // The column under a hovering pointer holds still so its posters can be read.
+  const [hovered, setHovered] = useState<number | null>(null);
   // `useCSSVariable`, not `useThemeColor`: the fade composes a transparent stop
   // (`${background}00`), which web's `var(--token)` can't. Wait for hydration
   // so the wall and this colour are client-only
@@ -101,7 +103,7 @@ export function PosterWall() {
     <View
       aria-hidden
       className="absolute inset-0 overflow-hidden"
-      style={{ pointerEvents: 'none' }}
+      style={{ pointerEvents: 'box-none' }}
     >
       <View
         className="absolute flex-row justify-center opacity-50"
@@ -111,6 +113,9 @@ export function PosterWall() {
           right: -width / 4,
           top: -size.height,
           transform: [{ rotate: '-8deg' }],
+          // Pivot on the viewport's centre, not the far taller row's, or the tilt
+          // slides the visible stretch sideways and bares one edge.
+          transformOrigin: `50% ${height / 2 + size.height}px`,
         }}
       >
         {Array.from({ length: columns }, (_, column) => {
@@ -122,6 +127,8 @@ export function PosterWall() {
           return (
             <AnimatedView
               key={column}
+              onPointerEnter={() => setHovered(column)}
+              onPointerLeave={() => setHovered((current) => (current === column ? null : current))}
               style={{
                 marginTop: -rhythm.offset * (size.height + size.gap),
                 animationName: heldKeyframes(
@@ -141,7 +148,7 @@ export function PosterWall() {
                   animationTimingFunction: 'linear',
                   animationIterationCount: 'infinite',
                   animationDirection: column % 2 === 0 ? 'normal' : 'reverse',
-                  animationPlayState: focused ? 'running' : 'paused',
+                  animationPlayState: focused && hovered !== column ? 'running' : 'paused',
                 }}
               >
                 {[...set, ...set, ...set].map((uri, index) => (
@@ -164,7 +171,7 @@ export function PosterWall() {
         end={wide ? { x: 0, y: 0.5 } : { x: 0.5, y: 1 }}
         locations={wide ? [0.25, 0.5, 0.62] : [0, 0.45, 0.68]}
         start={wide ? { x: 1, y: 0.5 } : { x: 0.5, y: 0 }}
-        style={{ position: 'absolute', inset: 0 }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
       />
     </View>
   );
