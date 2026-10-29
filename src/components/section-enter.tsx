@@ -13,7 +13,7 @@ const sectionEntering = {
 };
 
 /** Reduced motion keeps the fade and drops the travel. */
-const sectionFading = {
+export const sectionFading = {
   '0%': { opacity: 0 },
   '100%': { opacity: 1 },
 };
@@ -27,7 +27,6 @@ export function heldKeyframes<Frame>(
   delay: number,
   duration: number,
 ) {
-  if (delay === 0) return keyframes;
   return {
     '0%': keyframes['0%'],
     [`${(delay / (delay + duration)) * 100}%`]: keyframes['0%'],

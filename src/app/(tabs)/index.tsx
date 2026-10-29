@@ -22,7 +22,7 @@ import {
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
 import { AnimatedView, GestureScrollView } from '@/components/animated-view';
-import { heldKeyframes, SectionEnter } from '@/components/section-enter';
+import { heldKeyframes, sectionFading } from '@/components/section-enter';
 import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
@@ -62,7 +62,6 @@ const heroEntering = {
   '0%': { opacity: 0, filter: 'blur(4px)', transform: [{ translateY: 8 }] },
   '100%': { opacity: 1, filter: 'blur(0px)', transform: [{ translateY: 0 }] },
 };
-const heroFading = { '0%': { opacity: 0 }, '100%': { opacity: 1 } };
 
 /** The first-run copy's staggered entrance: longer than `SectionEnter` so the blur reads. */
 function HeroEnter({
@@ -79,7 +78,7 @@ function HeroEnter({
     <AnimatedView
       className={className}
       style={{
-        animationName: heldKeyframes(reduceMotion ? heroFading : heroEntering, delay, HERO_ENTER_DURATION),
+        animationName: heldKeyframes(reduceMotion ? sectionFading : heroEntering, delay, HERO_ENTER_DURATION),
         animationDuration: HERO_ENTER_DURATION + delay,
         animationTimingFunction: EASE_OUT,
       }}
@@ -117,7 +116,10 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
               ))}
             </HeroEnter>
             <HeroEnter delay={COPY_STAGGER}>
-              <Text className="font-display text-foreground tracking-tight text-4xl md:text-6xl">
+              <Text
+                accessibilityRole="header"
+                className="font-display text-foreground tracking-tight text-4xl md:text-6xl"
+              >
                 {'One log.\nEvery tracker.'}
               </Text>
             </HeroEnter>
@@ -127,13 +129,13 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
               </Text>
             </HeroEnter>
             {connectFailed && (
-              <SectionEnter className="mt-4">
+              <HeroEnter className="mt-4" delay={COPY_STAGGER * 3}>
                 <Text className="text-accent font-sans text-sm">
                   Connecting your tracker failed. Please try again.
                 </Text>
-              </SectionEnter>
+              </HeroEnter>
             )}
-            <HeroEnter className="mt-6" delay={COPY_STAGGER * 3}>
+            <HeroEnter className="mt-6" delay={COPY_STAGGER * 4}>
               <Button
                 className="self-stretch md:self-start"
                 icon={<Button.Icon name="link-outline" />}

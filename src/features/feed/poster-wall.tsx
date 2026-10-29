@@ -8,7 +8,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Image } from '@/components/image';
-import { heldKeyframes } from '@/components/section-enter';
+import { heldKeyframes, sectionFading } from '@/components/section-enter';
 import { EASE_OUT } from '@/lib/motion';
 import { tmdbImageUrl } from '@/lib/providers/tmdb/config';
 
@@ -59,7 +59,7 @@ const driftBy = (size: typeof COMPACT) =>
 const COMPACT_DRIFT = driftBy(COMPACT);
 const WIDE_DRIFT = driftBy(WIDE);
 
-/** The wall rises in column by column when the posters arrive, masking their scattered loads. */
+/** The wall's tiles rise in column by column; each poster cross-fades in as it loads. */
 const ENTER_DURATION = 700;
 const ENTER_STAGGER = 60;
 const ENTER_RISE = 24;
@@ -67,8 +67,6 @@ const wallEntering = {
   '0%': { opacity: 0, transform: [{ translateY: ENTER_RISE }] },
   '100%': { opacity: 1, transform: [{ translateY: 0 }] },
 };
-/** Reduced motion keeps the fade and drops the travel. */
-const wallFading = { '0%': { opacity: 0 }, '100%': { opacity: 1 } };
 
 /** Per-column start offset (in posters) and loop length, so no two neighbours move in step. */
 const COLUMN_RHYTHM = [
@@ -91,20 +89,18 @@ export function PosterWall() {
   // (`${background}00`), which web's `var(--token)` can't. Wait for hydration
   // so the wall and this colour are client-only
   // (docs/solutions/web-prerender-bakes-js-resolved-colors.md).
-  const backgroundVariable = useCSSVariable('--color-background');
-  const background = typeof backgroundVariable === 'string' ? backgroundVariable : undefined;
+  const background = useCSSVariable('--color-background');
 
   const wide = width >= 768;
   const size = wide ? WIDE : COMPACT;
   // The tilt pulls the corners inward, so the wall is half again as wide as the screen.
   const columns = Math.ceil((width * 1.5) / (size.width + size.gap));
-  if (!hydrated || background == null) return null;
+  if (!hydrated || typeof background !== 'string') return null;
 
   return (
     <View
-      accessibilityElementsHidden
+      aria-hidden
       className="absolute inset-0 overflow-hidden"
-      importantForAccessibility="no-hide-descendants"
       style={{ pointerEvents: 'none' }}
     >
       <View
@@ -129,7 +125,7 @@ export function PosterWall() {
               style={{
                 marginTop: -rhythm.offset * (size.height + size.gap),
                 animationName: heldKeyframes(
-                  reduceMotion ? wallFading : wallEntering,
+                  reduceMotion ? sectionFading : wallEntering,
                   column * ENTER_STAGGER,
                   ENTER_DURATION,
                 ),

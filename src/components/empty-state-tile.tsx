@@ -32,15 +32,11 @@ export function EmptyStateTile({
   return (
     <View className={cn('items-center justify-center px-8', className)}>
       {icon != null && <View className="mb-3">{icon}</View>}
-      <Text
-        className="font-display text-foreground text-center tracking-tight text-xl"
-      >
+      <Text className="font-display text-foreground text-center tracking-tight text-xl">
         {title}
       </Text>
       {description != null && (
-        <Text
-          className="font-sans text-muted text-center leading-relaxed text-sm mt-2 max-w-xs"
-        >
+        <Text className="font-sans text-muted text-center leading-relaxed text-sm mt-2 max-w-xs">
           {description}
         </Text>
       )}
