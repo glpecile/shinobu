@@ -13,10 +13,26 @@ const sectionEntering = {
 };
 
 /** Reduced motion keeps the fade and drops the travel. */
-const sectionFading = {
+export const sectionFading = {
   '0%': { opacity: 0 },
   '100%': { opacity: 1 },
 };
+
+/**
+ * Holds the first frame inside the animation timeline so staggered entrances
+ * stay hidden until their turn, without relying on a backwards fill.
+ */
+export function heldKeyframes<Frame>(
+  keyframes: { '0%': Frame; '100%': Frame },
+  delay: number,
+  duration: number,
+) {
+  return {
+    '0%': keyframes['0%'],
+    [`${(delay / (delay + duration)) * 100}%`]: keyframes['0%'],
+    '100%': keyframes['100%'],
+  };
+}
 
 /**
  * Fades and settles its children in on mount — what a section resolving looks

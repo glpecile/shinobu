@@ -38,6 +38,10 @@ export async function registerNotificationsBackgroundTask(): Promise<void> {
     NOTIFICATIONS_BACKGROUND_TASK,
   );
   if (isRegistered) return;
+  // Restricted on iOS simulators and when Background App Refresh is off,
+  // where registering only logs a warning.
+  const status = await BackgroundTask.getStatusAsync();
+  if (status === BackgroundTask.BackgroundTaskStatus.Restricted) return;
   await BackgroundTask.registerTaskAsync(NOTIFICATIONS_BACKGROUND_TASK, {
     minimumInterval: MINIMUM_INTERVAL_MINUTES,
   });
