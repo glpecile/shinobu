@@ -10,7 +10,7 @@ import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
 import { DEFAULT_LOG_TAGS, LogConfirmForm, LogFormFields, labels } from '@/features/log-media/log-confirm-sheet';
 import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request';
 import { parseTags } from '@/features/log-media/parse-tags';
-import { logToastCopy } from '@/features/log-media/toast-copy';
+import { episodeNoticeToastCopy, logToastCopy } from '@/features/log-media/toast-copy';
 import { useLogMedia } from '@/features/log-media/use-log-media';
 import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
 import { useLetterboxdCompletion } from '@/features/log-media/use-letterboxd-completion';
@@ -353,10 +353,8 @@ function CatchUpForm({
           const copy = logToastCopy(result);
           toast.success(`${copy.title} ${episodeCode.toLowerCase()}`, copy.message);
         } else {
-          toast.error(
-            `${episodeCode} failed on ${labels(result.failed)}`,
-            result.succeeded.length > 0 ? `${labels(result.succeeded)} was logged.` : undefined,
-          );
+          const copy = episodeNoticeToastCopy(episodeCode, result);
+          toast[copy.tone](copy.title, copy.message);
         }
       },
       (error: unknown) => {

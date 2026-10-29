@@ -249,9 +249,13 @@ export function ConnectSimklButton() {
   }
 
   return (
-    <View className="items-center gap-3">
+    <View className="w-full gap-3">
+      <Text className="text-muted font-sans text-sm">
+        You sign in on Simkl's own site, and Shinobu keeps only the resulting
+        access token on this device — your password is never sent to Shinobu.
+      </Text>
       {status === 'error' && (
-        <Text className="text-accent font-sans text-sm text-center">
+        <Text className="text-accent font-sans text-xs">
           Could not connect. Tap Connect to try again.
         </Text>
       )}
@@ -264,6 +268,7 @@ export function ConnectSimklButton() {
       />
       {embeddedClientId === '' && storedClientId != null && (
         <PresstableOpacity
+          className="self-center"
           onPress={() => {
             clearProviderClientId('simkl');
             setStoredClientId(null);
