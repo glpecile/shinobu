@@ -6,6 +6,7 @@ import {
 } from '@/lib/time/relative-day';
 import type { NormalizedMediaItem } from '@/types/media';
 
+import { isNewEpisode } from './badges';
 import { entryInstant } from './entry';
 import type {
   AniListUpNextInput,
@@ -458,6 +459,19 @@ function entryOrder(entry: UpNextEntry): number {
 }
 
 /**
+ * Fresh episodes (the "New" badge window) lead, latest airing first, so a show
+ * that just dropped an episode isn't buried under a backlog. The rest follow
+ * most recently watched first, the order the pool arrives in.
+ */
+function continueWatchingOrder(a: UpNextEntry, b: UpNextEntry, now: Date): number {
+  const aNew = isNewEpisode(a, now);
+  const bNew = isNewEpisode(b, now);
+  if (aNew !== bNew) return aNew ? -1 : 1;
+  if (aNew) return entryOrder(b) - entryOrder(a);
+  return b.item.lastUpdated.localeCompare(a.item.lastUpdated);
+}
+
+/**
  * When the split next changes with no new data (epoch ms): the soonest
  * upcoming airing becoming aired, or local midnight moving the week strip and
  * the day badges. What the section's clock waits for.
@@ -523,11 +537,9 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   );
 
   return {
-    // Most recently watched first — the same ordering the pool arrives in, so
-    // the show you were last watching sits at the head of the row.
     continueWatching: entries
       .filter((entry) => entry.status === 'aired')
-      .sort((a, b) => b.item.lastUpdated.localeCompare(a.item.lastUpdated)),
+      .sort((a, b) => continueWatchingOrder(a, b, now)),
     // Soonest first, releases and episodes interleaved: Calendar is read as a
     // schedule, not as a library, and a film out on Friday belongs between
     // Thursday's and Saturday's episodes rather than in a group of its own.
