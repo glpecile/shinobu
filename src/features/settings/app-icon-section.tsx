@@ -58,9 +58,9 @@ export function AppIconSection() {
       </SettingsRail.Row>
       {process.env.EXPO_OS === 'android' && (
         <SettingsRail.Row>
-          <View accessible accessibilityLabel="The icon changes when you leave the app." className="flex-row items-center gap-1.5">
+          <View accessible accessibilityLabel="The icon changes when you leave the app." className="flex-1 min-w-0 flex-row items-center gap-1.5">
             <Ionicons color={muted} name="information-circle-outline" size={16} />
-            <Text className="font-sans text-xs text-muted">The icon changes when you leave the app.</Text>
+            <Text className="flex-1 font-sans text-xs text-muted">The icon changes when you leave the app.</Text>
           </View>
         </SettingsRail.Row>
       )}
