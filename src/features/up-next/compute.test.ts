@@ -276,20 +276,30 @@ describe('computeUpNext — Trakt shows', () => {
     expect(data.calendar).toHaveLength(0);
   });
 
-  test('Continue Watching is ordered most recently watched first', () => {
-    const aired = localInstant(2026, 7, 20, 12, 0);
+  test('Continue Watching leads with new episodes, then most recently watched', () => {
+    const backlog = localInstant(2026, 7, 10, 12, 0);
     const data = computeUpNext(
       inputs({
         progress: [
           progressInput(show(9, { lastUpdated: '2026-07-18T00:00:00.000Z' }), {
             season: 1,
             number: 2,
-            firstAired: aired,
+            firstAired: backlog,
           }),
           progressInput(show(10, { lastUpdated: '2026-07-22T00:00:00.000Z' }), {
             season: 1,
             number: 3,
-            firstAired: aired,
+            firstAired: backlog,
+          }),
+          progressInput(show(11, { lastUpdated: '2026-07-01T00:00:00.000Z' }), {
+            season: 2,
+            number: 1,
+            firstAired: localInstant(2026, 7, 20, 12, 0),
+          }),
+          progressInput(show(12, { lastUpdated: '2026-07-01T00:00:00.000Z' }), {
+            season: 2,
+            number: 1,
+            firstAired: localInstant(2026, 7, 22, 12, 0),
           }),
         ],
       }),
@@ -297,7 +307,7 @@ describe('computeUpNext — Trakt shows', () => {
     );
     expect(
       data.continueWatching.map((entry) => entry.item.externalIds.trakt),
-    ).toEqual([10, 9]);
+    ).toEqual([12, 11, 10, 9]);
   });
 });
 
