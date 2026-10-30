@@ -1,6 +1,6 @@
 import { useAppIcon } from '@hzblj/expo-app-icons';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Text, View } from 'react-native';
+import { Text, useColorScheme, View } from 'react-native';
 import { Image } from '@/components/image';
 import { RailHead } from '@/components/rail-head';
 import { PreviewPicker } from '@/features/settings/preview-picker';
@@ -10,11 +10,12 @@ import { toast } from '@/lib/toast';
 
 /** Names match app.json; the default icon follows the system appearance. */
 const OPTIONS: { value: string; label: string; source: number }[] = [
-  { value: 'default', label: 'Shinobu', source: require('../../../assets/images/icon.png') },
+  { value: 'default', label: 'Automatic', source: require('../../../assets/images/icon.png') },
   { value: 'crimson', label: 'Kiss-shot', source: require('../../../assets/images/app-icons/crimson.png') },
   { value: 'void', label: 'Acerola', source: require('../../../assets/images/app-icons/void.png') },
   { value: 'weird', label: 'Orion', source: require('../../../assets/images/app-icons/weird.png') },
 ];
+const DEFAULT_DARK_SOURCE = require('../../../assets/images/ios-icon-dark.png');
 
 /**
  * App icon setting as a radio group of icon previews. The OS owns the current
@@ -24,9 +25,10 @@ const OPTIONS: { value: string; label: string; source: number }[] = [
 export function AppIconSection() {
   const { icon: current, isSupported, setIcon } = useAppIcon();
   const muted = useThemeColor('--color-muted');
+  const dark = useColorScheme() === 'dark';
   if (!isSupported) return null;
 
-  const label = OPTIONS.find((option) => option.value === current)?.label ?? 'Shinobu';
+  const label = OPTIONS.find((option) => option.value === current)?.label ?? 'Automatic';
 
   async function select(next: string) {
     try {
@@ -47,7 +49,7 @@ export function AppIconSection() {
           {OPTIONS.map((option) => (
             <PreviewPicker.Option key={option.value} value={option.value}>
               <PreviewPicker.Preview>
-                <Image className="aspect-square w-full" source={option.source} transition={0} />
+                <Image className="aspect-square w-full" source={dark && option.value === 'default' ? DEFAULT_DARK_SOURCE : option.source} transition={0} />
               </PreviewPicker.Preview>
               <PreviewPicker.Label>{option.label}</PreviewPicker.Label>
             </PreviewPicker.Option>
