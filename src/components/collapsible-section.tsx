@@ -10,7 +10,7 @@ import {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { AnimatedView } from '@/components/animated-view';
+import { AnimatedView, GestureScrollView } from '@/components/animated-view';
 import { Collapse } from '@/components/collapse';
 import { RefreshableScrollView } from '@/components/refreshable-scroll-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
@@ -34,8 +34,11 @@ const ScrollContext = createContext<{
 /** Pins nested section headings within this scroll viewport, including async rows. */
 function CollapsibleSectionScroll({
   children,
+  onRefresh,
   ...props
-}: Omit<ComponentProps<typeof RefreshableScrollView>, 'onScroll' | 'scrollEventThrottle'>) {
+}: Omit<ComponentProps<typeof RefreshableScrollView>, 'onScroll' | 'scrollEventThrottle' | 'onRefresh'> & {
+  onRefresh?: () => Promise<unknown>;
+}) {
   const content = useRef<ViewInstance>(null);
   const contentY = useSharedValue(0);
   const scrollY = useSharedValue(0);
@@ -43,26 +46,32 @@ function CollapsibleSectionScroll({
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
   });
+  const scrollProps = {
+    ...props,
+    // Firefox scrolls on the compositor; web headings use CSS sticky instead.
+    onScroll: process.env.EXPO_OS === 'web' ? undefined : onScroll,
+    scrollEventThrottle: 16,
+  };
+  const contentView = (
+    // A row loading or unmounting above a nested section moves it without its own onLayout.
+    <View
+      onLayout={(event) => {
+        contentY.set(event.nativeEvent.layout.y);
+        layoutVersion.set(layoutVersion.get() + 1);
+      }}
+      ref={content}
+    >
+      {children}
+    </View>
+  );
 
   return (
     <ScrollContext.Provider value={{ content, contentY, scrollY, layoutVersion }}>
-      <RefreshableScrollView
-        {...props}
-        // Web pins with CSS sticky, so it skips the per-frame JS (docs/solutions/firefox-scroll-linked-pinned-titles.md).
-        onScroll={process.env.EXPO_OS === 'web' ? undefined : onScroll}
-        scrollEventThrottle={16}
-      >
-        {/* A row loading or unmounting above a nested section moves it without its own onLayout. */}
-        <View
-          onLayout={(event) => {
-            contentY.set(event.nativeEvent.layout.y);
-            layoutVersion.set(layoutVersion.get() + 1);
-          }}
-          ref={content}
-        >
-          {children}
-        </View>
-      </RefreshableScrollView>
+      {onRefresh == null ? (
+        <GestureScrollView {...scrollProps}>{contentView}</GestureScrollView>
+      ) : (
+        <RefreshableScrollView {...scrollProps} onRefresh={onRefresh}>{contentView}</RefreshableScrollView>
+      )}
     </ScrollContext.Provider>
   );
 }
