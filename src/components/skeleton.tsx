@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
@@ -26,7 +27,10 @@ export function staggerDelay(index: number): number {
  * (e.g. "w-20 h-20 rounded-full"). Every skeleton in the app composes this.
  *
  * Pass `delay` (from `staggerDelay`) in a row or grid; blocks belonging to one
- * card share a delay so it breathes as a unit.
+ * card share a delay so it breathes as a unit. Every block runs on one clock,
+ * so a block that mounts late joins the breath already under way: a section's
+ * skeleton after its hold, or the copy fading out over arriving content, stays
+ * in step with the skeletons around it.
  * Set `animated={false}` for mounted placeholders outside the visible page.
  */
 export function Skeleton({
@@ -40,6 +44,7 @@ export function Skeleton({
 }) {
   // Dropped entirely, not softened: this loop runs until the network answers.
   const reduceMotion = useReducedMotion();
+  const [phase] = useState(() => performance.now() % DURATION.pulse);
 
   return (
     <AnimatedView
@@ -53,7 +58,8 @@ export function Skeleton({
               opacity: 0.5,
               animationName: pulse,
               animationDuration: `${DURATION.pulse}ms`,
-              animationDelay: `${delay}ms`,
+              // Negative once the clock is past `delay`: the loop starts partway.
+              animationDelay: `${delay - phase}ms`,
               animationIterationCount: 'infinite',
               animationTimingFunction: 'ease-in-out',
             }

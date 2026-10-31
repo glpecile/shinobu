@@ -1,6 +1,17 @@
-import { Component, Suspense, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  Component,
+  Suspense,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { View } from 'react-native';
 
-import { SectionEnter } from '@/components/section-enter';
+import { AnimatedView } from '@/components/animated-view';
+import { heldKeyframes, SectionEnter, sectionFading } from '@/components/section-enter';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { toast } from '@/lib/toast';
 
 interface BoundaryProps {
@@ -53,10 +64,116 @@ function subscribeNever() {
 }
 
 /**
+ * How long a skeleton waits unseen; content that beats it appears at once, so
+ * a fast load never flashes one. React reveals a boundary's content no sooner
+ * than 300ms after its fallback commits (`FALLBACK_THROTTLE_MS`, React DOM and
+ * Fabric alike), so a shorter hold would show the skeleton to loads that had
+ * already finished.
+ */
+const SKELETON_HOLD = 300;
+
+const skeletonEntering = heldKeyframes(sectionFading, SKELETON_HOLD, DURATION.swap);
+
+/** What a section's content learns, as it lands, about the skeleton it replaces. */
+interface Outgoing {
+  /** When the skeleton's hold began: null if none went up, -Infinity if the server rendered it. */
+  since: number | null;
+  /** Its width, so the copy fading out over the content covers the same box. */
+  width?: number;
+}
+
+/** The fallback, held back for `SKELETON_HOLD` and then faded in; one the server rendered is already on screen. */
+function SkeletonHold({
+  children,
+  onHoldStart,
+  onWidth,
+  served,
+}: {
+  children: ReactNode;
+  onHoldStart: () => void;
+  onWidth: (width: number) => void;
+  served: boolean;
+}) {
+  return (
+    <AnimatedView
+      onCSSAnimationStart={onHoldStart}
+      onLayout={(event) => onWidth(event.nativeEvent.layout.width)}
+      style={
+        served
+          ? undefined
+          : {
+              animationName: skeletonEntering,
+              animationDuration: SKELETON_HOLD + DURATION.swap,
+              animationTimingFunction: EASE_OUT,
+            }
+      }
+    >
+      {children}
+    </AnimatedView>
+  );
+}
+
+/**
+ * The content replacing a skeleton. One that never showed leaves no trace and
+ * the content appears at once. One that showed is pinned over the content
+ * where it stood and fades out from the opacity it had reached, as the
+ * content fades in under it.
+ */
+function Reveal({
+  children,
+  outgoing,
+  skeleton,
+}: {
+  children: ReactNode;
+  outgoing: RefObject<Outgoing>;
+  skeleton: ReactNode;
+}) {
+  // Read once, as the content first lands; later renders keep how it arrived.
+  const [from] = useState(() => {
+    const { since, width } = outgoing.current;
+    if (since == null) return null;
+    const shown = Math.min(Math.max((performance.now() - since - SKELETON_HOLD) / DURATION.swap, 0), 1);
+    // `EASE_OUT` is easeOutQuint, so this is how far the skeleton's fade-in got.
+    const opacity = 1 - (1 - shown) ** 5;
+    return opacity > 0 ? { opacity, width } : null;
+  });
+  const [leaving, setLeaving] = useState(from != null);
+
+  return (
+    <View>
+      {from == null ? children : <SectionEnter>{children}</SectionEnter>}
+      {from != null && leaving && (
+        <AnimatedView
+          aria-hidden
+          className="absolute inset-x-0 top-0"
+          importantForAccessibility="no-hide-descendants"
+          onCSSAnimationEnd={() => setLeaving(false)}
+          style={{
+            pointerEvents: 'none',
+            width: from.width,
+            // Where it rests if the end event is late: Reanimated's web path drops fill modes.
+            opacity: 0,
+            animationName: { '0%': { opacity: from.opacity }, '100%': { opacity: 0 } },
+            animationDuration: DURATION.swap * from.opacity,
+            animationTimingFunction: EASE_OUT,
+          }}
+        >
+          {skeleton}
+        </AnimatedView>
+      )}
+    </View>
+  );
+}
+
+/**
  * Suspense boundary for a self-contained, suspense-query-backed screen
  * section: shows `fallback` (a skeleton) while the query loads, renders
  * `errorFallback` (nothing by default) if it fails, and retries after a
  * failure when `resetKey` changes.
+ *
+ * The skeleton waits `SKELETON_HOLD` before it shows, so a fast or cached load
+ * never flashes one, and content arriving over a shown skeleton crossfades
+ * with it in place.
  */
 export function SuspenseSection({
   fallback,
@@ -74,11 +191,31 @@ export function SuspenseSection({
     () => true,
     () => false,
   );
+  // A prerendered skeleton has been on screen since the page loaded, so
+  // holding it back would blank it.
+  const [served] = useState(() => !hydrated);
+  const outgoing = useRef<Outgoing>({ since: served ? -Infinity : null });
   if (!hydrated) return fallback;
   return (
     <SectionErrorBoundary errorFallback={errorFallback} resetKey={resetKey} errorToast={errorToast}>
-      <Suspense fallback={fallback}>
-        <SectionEnter>{children}</SectionEnter>
+      <Suspense
+        fallback={
+          <SkeletonHold
+            onHoldStart={() => {
+              outgoing.current.since = performance.now();
+            }}
+            onWidth={(width) => {
+              outgoing.current.width = width;
+            }}
+            served={served}
+          >
+            {fallback}
+          </SkeletonHold>
+        }
+      >
+        <Reveal outgoing={outgoing} skeleton={fallback}>
+          {children}
+        </Reveal>
       </Suspense>
     </SectionErrorBoundary>
   );
