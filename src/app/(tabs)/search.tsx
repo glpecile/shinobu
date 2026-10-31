@@ -10,7 +10,8 @@ import Head from '@/components/head';
 import { Keyboard, type ScrollViewInstance, Text, type TextInputInstance, View } from 'react-native';
 
 import { ActionableRow } from '@/components/actionable-row';
-import { AnimatedView, GestureScrollView } from '@/components/animated-view';
+import { AnimatedView } from '@/components/animated-view';
+import { CollapsibleSection } from '@/components/collapsible-section';
 import { CenteredNotice } from '@/components/centered-notice';
 import { Eyebrow } from '@/components/eyebrow';
 import { Fab } from '@/components/fab';
@@ -542,7 +543,7 @@ function SearchScreen() {
             <View className="flex-1">
               {state === 'idle' ? (
                 scope.value === 'titles' ? (
-                  <GestureScrollView
+                  <CollapsibleSection.Scroll
                     className="flex-1"
                     contentContainerClassName="pb-28"
                     keyboardDismissMode="on-drag"
@@ -564,7 +565,7 @@ function SearchScreen() {
                     <FeedEnd
                       onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion })}
                     />
-                  </GestureScrollView>
+                  </CollapsibleSection.Scroll>
                 ) : (
                   <View className="flex-1">
                     <PosterWall key={scope.value} subject={scope.value} />
