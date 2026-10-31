@@ -27,7 +27,7 @@ import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
-import { CopyTitle } from '@/features/copy-title/copy-title';
+import { alternateTitles, CopyTitle } from '@/features/copy-title/copy-title';
 import { DetailVariantsSection } from '@/features/detail-variants/detail-variants-section';
 import { DiscussionSection } from '@/features/discussions/discussion-section';
 import {
@@ -105,18 +105,6 @@ import type {
   NormalizedStudio,
   MediaType,
 } from '@/types/media';
-
-/** The item's other names, minus the one already shown and any repeat (case-insensitive). */
-function alternateTitles(item: NormalizedMediaItem): string[] {
-  const seen = new Set([item.title.toLowerCase()]);
-  const shown: string[] = [];
-  for (const candidate of [item.titles?.english, item.titles?.romaji, item.titles?.native]) {
-    if (candidate == null || candidate === '' || seen.has(candidate.toLowerCase())) continue;
-    seen.add(candidate.toLowerCase());
-    shown.push(candidate);
-  }
-  return shown;
-}
 
 /**
  * Turns an AniList list entry into the same "Watched/Watching …" phrasing the
