@@ -3,6 +3,7 @@ import * as Effect from 'effect/Effect';
 import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
+import { ProviderNetworkError, ProviderRateLimitError } from '@/lib/providers/errors';
 import {
   fetchAniZipEpisodeMap,
   fetchAniZipIds,
@@ -283,7 +284,7 @@ export function cachedAniZipEpisodeMap(
   queryClient: QueryClient,
   anilistId: number,
 ): Promise<AniZipEpisodeMap | null> {
-  return queryClient.fetchQuery(episodeMapQuery(anilistId));
+  return queryClient.fetchQuery(episodeMapQuery(anilistId)).catch(nullUnlessCancelled);
 }
 
 /**
@@ -299,8 +300,26 @@ export function useAniZipEpisodeMapQuery(anilistId: number | undefined) {
   });
 }
 
+/**
+ * A lookup's catch: a definitive answer (auth, decode, 4xx) caches as a miss;
+ * a rate limit, 5xx or network failure rethrows so nothing is cached and the
+ * next caller retries. Wrappers below turn the rejection into `null`.
+ */
 function mappingMiss(error: unknown, signal: AbortSignal): null {
-  if (signal.aborted) throw error;
+  if (signal.aborted || isTransientLookupFailure(error)) throw error;
+  return null;
+}
+
+function isTransientLookupFailure(error: unknown): boolean {
+  return (
+    error instanceof ProviderRateLimitError ||
+    (error instanceof ProviderNetworkError && (error.status == null || error.status >= 500))
+  );
+}
+
+/** Every exported `cached*` wrapper's catch: callers get `null` for any failure but a cancel. */
+function nullUnlessCancelled(error: unknown): null {
+  if (isCancelledError(error)) throw error;
   return null;
 }
 
@@ -361,7 +380,7 @@ export function cachedSeasonLayout(
   const tmdbId = ids.tmdb;
   const traktId = ids.trakt;
   if (tmdbId == null && traktId == null) return Promise.resolve(null);
-  return queryClient.fetchQuery(seasonLayoutQueryOptions(tmdbId, traktId));
+  return queryClient.fetchQuery(seasonLayoutQueryOptions(tmdbId, traktId)).catch(nullUnlessCancelled);
 }
 
 /**
@@ -445,10 +464,7 @@ export function cachedTraktLookup(
     kind: 'movie' | 'show';
   },
 ) {
-  return queryClient.fetchQuery(identityLookupQuery(identityLookupVia(), params)).catch((error) => {
-    if (isCancelledError(error)) throw error;
-    return null;
-  });
+  return queryClient.fetchQuery(identityLookupQuery(identityLookupVia(), params)).catch(nullUnlessCancelled);
 }
 
 /**
@@ -502,7 +518,7 @@ export function cachedTmdbTvIdByTvdb(
       Effect.runPromise(findByTvdbId(tmdbDeps(), { tvdbId }), { signal })
         .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
-  });
+  }).catch(nullUnlessCancelled);
 }
 
 export function cachedTraktTextSearch(
@@ -510,7 +526,7 @@ export function cachedTraktTextSearch(
   title: string,
   year: number | undefined,
 ) {
-  return queryClient.fetchQuery(movieSearchQuery(title, year, movieSearchVia()));
+  return queryClient.fetchQuery(movieSearchQuery(title, year, movieSearchVia())).catch(nullUnlessCancelled);
 }
 
 /**
@@ -530,7 +546,7 @@ export function cachedTmdbMovieIdByTitle(
       searchTmdbMovieId(params, signal)
         .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
-  });
+  }).catch(nullUnlessCancelled);
 }
 
 /**
@@ -592,7 +608,7 @@ export function cachedAniListFilmId(
         )
         .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
-  });
+  }).catch(nullUnlessCancelled);
 }
 
 function cachedAniListNeighbours(queryClient: QueryClient, anilistId: number) {
@@ -615,7 +631,8 @@ export async function cachedAniListPrequel(
   queryClient: QueryClient,
   anilistId: number,
 ): Promise<{ id: number; episodes: number } | null> {
-  return (await cachedAniListNeighbours(queryClient, anilistId))?.prequel ?? null;
+  const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(nullUnlessCancelled);
+  return neighbours?.prequel ?? null;
 }
 
 /** Candidate later cours of an AniList series, for placing a later canonical season. Write actions only. */
@@ -623,7 +640,8 @@ export async function cachedAniListLaterCours(
   queryClient: QueryClient,
   anilistId: number,
 ): Promise<number[]> {
-  return (await cachedAniListNeighbours(queryClient, anilistId))?.later ?? [];
+  const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(nullUnlessCancelled);
+  return neighbours?.later ?? [];
 }
 
 /**

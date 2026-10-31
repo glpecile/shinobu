@@ -270,6 +270,24 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     response.resolve(Response.json([]));
     client.clear();
   });
+
+  test('a Trakt 503 resolves null without caching, so the next lookup re-fetches', async () => {
+    setProviderClientId('trakt', 'trakt-cid');
+    const client = freshClient();
+    const params = { source: 'tmdb', id: 949, kind: 'movie' } as const;
+    routes = [['api.trakt.tv/search/tmdb/949', {}, 503]];
+
+    expect(await cachedTraktLookup(client, params)).toBeNull();
+
+    routes = [
+      ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
+    ];
+    const result = await cachedTraktLookup(client, params);
+
+    expect(result?.id).toBe('trakt-1');
+    expect(requestedUrls.filter((url) => url.includes('api.trakt.tv/search/tmdb/949'))).toHaveLength(2);
+    client.clear();
+  });
 });
 
 describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
