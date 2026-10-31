@@ -77,6 +77,16 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // (plan 0031 U11/KTD-5).
     expect(keys).toContain('trakt/watchlist');
     expect(keys).toContain('watchlist/inputs');
+    expect(keys).toContain('trakt/watched-shows');
+    expect(keys).not.toContain('trakt/watched-movies');
+  });
+
+  test('a successful Trakt film log refreshes watched movies only', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterLog(client, { ...ITEM, type: 'MOVIE' }, ['trakt']);
+    expect(keys).toContain('trakt/watched-movies');
+    expect(keys).not.toContain('trakt/watched-shows');
+    expect(keys).not.toContain('trakt/show-progress/1');
   });
 
   test('a successful AniList log recomputes them, and the entries read behind them', () => {
