@@ -14,6 +14,7 @@ import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { anilistAuthorizeUrl, anilistClientId } from '@/lib/providers/anilist/config';
 import { ANILIST_CREATE_CLIENT_URL } from '@/lib/providers/external-urls';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
+import { beginOAuthFlow } from '@/state/session/oauth-flow';
 import {
   clearProviderClientId,
   getProviderClientId,
@@ -76,16 +77,18 @@ export function useAniListConnect() {
     if (id === '') return;
 
     setStatus('connecting');
-    const url = anilistAuthorizeUrl(id);
 
     if (Platform.OS === 'web') {
       // Same-window redirect; AniList returns to the client's registered
-      // redirect URL (the site origin) with the token in the fragment.
-      window.location.assign(url);
+      // redirect URL (the site origin) with the token in the fragment. The
+      // return leg connects only for this pending flow (state/session/oauth-flow.ts).
+      const state = crypto.randomUUID();
+      beginOAuthFlow('anilist', state);
+      window.location.assign(anilistAuthorizeUrl(id, state));
       return;
     }
 
-    const result = await openAuthSessionAsync(url, SHINOBU_NATIVE_REDIRECT_URI);
+    const result = await openAuthSessionAsync(anilistAuthorizeUrl(id), SHINOBU_NATIVE_REDIRECT_URI);
     if (result.type !== 'success') {
       // User-cancelled/dismissed — not an error worth alarming about.
       setStatus('idle');

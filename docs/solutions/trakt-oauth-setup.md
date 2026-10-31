@@ -69,7 +69,7 @@ must therefore be mounted on the home screen, not inside `ConnectTraktButton`
 This bug shipped once: the handler lived in the button, the browser came back
 to `/?code=...`, nothing exchanged the code, and the app silently stayed
 disconnected. The handler now lives in
-`src/state/session/use-trakt-oauth-callback.ts`, mounted by `src/app/index.tsx`.
+`src/state/session/use-oauth-callback.ts`, mounted by `src/app/(tabs)/index.tsx`.
 If the web redirect URI ever changes (e.g. to a dedicated `/auth/trakt` route),
 move the hook's mount point to that route in the same change.
 
@@ -80,9 +80,11 @@ Constraints inside that hook, all learned the hard way:
   the async exchange, and even on paths that don't exchange — so a refresh or a
   restored tab never replays a consumed code (Trakt answers 400
   `invalid_grant`, surfaced as `ProviderNetworkError`).
-- **Skip the exchange when Trakt is already connected.** A stale code in a
-  leftover tab otherwise produces a guaranteed-failure exchange and a scary
-  error for a user whose session is perfectly fine.
+- **Exchange only for a pending flow.** `connect` stores the request
+  `state` (`state/session/oauth-flow.ts`). The return exchanges only when a
+  pending flow exists and its `state` matches, then consumes it. A leftover tab
+  or a replayed URL finds no flow and does nothing. A reconnect over a stale
+  token works, because the stored token no longer decides anything.
 - The web build is statically pre-rendered (`web.output: "static"`), so the
   hook must not read `window` in a `useState` initializer — first client render
   has to match the server HTML; do the URL check inside `useEffect`.

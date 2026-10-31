@@ -24,6 +24,7 @@ import {
   TRAKT_REDIRECT_URIS,
 } from '@/lib/providers/trakt/redirect-uri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
+import { beginOAuthFlow } from '@/state/session/oauth-flow';
 import { useProviderCredentials } from '@/state/session/use-provider-credentials';
 
 const discovery = {
@@ -158,7 +159,13 @@ export function useTraktConnect() {
       // On web the most reliable flow is a same-window redirect: Trakt sends
       // the user back to the home route with ?code=..., where
       // useOAuthCallback exchanges it. This avoids popup blockers and
-      // orphaned auth windows.
+      // orphaned auth windows. The return leg exchanges only for this
+      // pending flow and its `state` (state/session/oauth-flow.ts).
+      if (typeof request.state !== 'string' || request.state === '') {
+        setStatus('error');
+        return;
+      }
+      beginOAuthFlow('trakt', request.state);
       window.location.assign(request.url);
       return;
     }

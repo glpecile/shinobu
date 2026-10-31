@@ -47,6 +47,7 @@ mock.module('@/state/queries/anilist', () => ({
 }));
 
 const { handleOAuthReturn } = await import('./use-oauth-callback');
+const { beginOAuthFlow } = await import('./oauth-flow');
 const { setProviderClientId, setProviderClientSecret, setProviderSession } =
   await import('./tokens');
 
@@ -108,6 +109,7 @@ describe('handleOAuthReturn — Simkl marker routing (plan 0034 U5)', () => {
   });
 
   test('an unmarked ?code= return stays on the Trakt path (backward compat)', async () => {
+    beginOAuthFlow('trakt', 'st-2');
     stubWindow('http://localhost:8081/?code=trakt-code&state=st-2');
     setProviderClientId('trakt', 'trakt-cid');
     setProviderClientSecret('trakt', 'trakt-secret');
@@ -173,13 +175,75 @@ describe('handleOAuthReturn — Simkl marker routing (plan 0034 U5)', () => {
   });
 
   test('an AniList fragment return still wins before either code path', async () => {
-    stubWindow('http://localhost:8081/#access_token=tok&token_type=Bearer');
+    beginOAuthFlow('anilist', 'st-a');
+    stubWindow('http://localhost:8081/#access_token=tok&token_type=Bearer&state=st-a');
     const { statuses, setStatus } = recordStatuses();
 
     await handleOAuthReturn(setStatus);
 
     expect(anilistRedirectCalls).toHaveLength(1);
     expect(simklExchangeCalls).toHaveLength(0);
+    expect(traktExchangeCalls).toHaveLength(0);
+    expect(statuses).toEqual([]);
+  });
+});
+
+describe('handleOAuthReturn — web returns need a pending flow (plan 007)', () => {
+  test('an AniList fragment with no pending flow is stripped and ignored', async () => {
+    stubWindow('http://localhost:8081/#access_token=tok&token_type=Bearer');
+    const { statuses, setStatus } = recordStatuses();
+
+    await handleOAuthReturn(setStatus);
+
+    expect(anilistRedirectCalls).toHaveLength(0);
+    expect(statuses).toEqual([]);
+    expect(replacedUrls).toHaveLength(1);
+  });
+
+  test('an AniList fragment whose state differs from the pending one is an error', async () => {
+    beginOAuthFlow('anilist', 'st-a');
+    stubWindow('http://localhost:8081/#access_token=tok&token_type=Bearer&state=other');
+    const { statuses, setStatus } = recordStatuses();
+
+    await handleOAuthReturn(setStatus);
+
+    expect(anilistRedirectCalls).toHaveLength(0);
+    expect(statuses).toEqual(['error']);
+  });
+
+  test('a pending Trakt flow exchanges over a stored session (reconnect)', async () => {
+    beginOAuthFlow('trakt', 'st-9');
+    setProviderSession('trakt', { accessToken: 'old' });
+    setProviderClientId('trakt', 'trakt-cid');
+    setProviderClientSecret('trakt', 'trakt-secret');
+    stubWindow('http://localhost:8081/?code=fresh&state=st-9');
+
+    await handleOAuthReturn(recordStatuses().setStatus);
+
+    expect(traktExchangeCalls).toHaveLength(1);
+  });
+
+  test('a Trakt return whose state differs from the pending one is an error', async () => {
+    beginOAuthFlow('trakt', 'st-9');
+    setProviderClientId('trakt', 'trakt-cid');
+    setProviderClientSecret('trakt', 'trakt-secret');
+    stubWindow('http://localhost:8081/?code=fresh&state=wrong');
+    const { statuses, setStatus } = recordStatuses();
+
+    await handleOAuthReturn(setStatus);
+
+    expect(traktExchangeCalls).toHaveLength(0);
+    expect(statuses).toEqual(['error']);
+  });
+
+  test('a Trakt code with no pending flow never exchanges', async () => {
+    setProviderClientId('trakt', 'trakt-cid');
+    setProviderClientSecret('trakt', 'trakt-secret');
+    stubWindow('http://localhost:8081/?code=stray');
+    const { statuses, setStatus } = recordStatuses();
+
+    await handleOAuthReturn(setStatus);
+
     expect(traktExchangeCalls).toHaveLength(0);
     expect(statuses).toEqual([]);
   });

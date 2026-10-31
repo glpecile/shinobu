@@ -11,6 +11,7 @@ import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import { exchangeSimklCode } from '@/state/queries/simkl';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 
+import { takeOAuthFlow } from './oauth-flow';
 import {
   getClientIdForProvider,
   getClientSecretForProvider,
@@ -24,15 +25,21 @@ export type OAuthCallbackStatus = 'idle' | 'exchanging' | 'error';
  * step. Authorization codes are single-use with a short TTL, so once seen
  * they must never survive in the address bar — a refresh or restored tab
  * would replay them and get a guaranteed 400 from Trakt. `state` is the
- * expo-auth-session echo; it travels with the code and is stripped alongside.
+ * expo-auth-session echo the caller matches against the pending flow; it
+ * travels with the code and is stripped alongside.
  */
-function consumeTraktReturnParams(): { code: string | null; denied: boolean } {
+function consumeTraktReturnParams(): {
+  code: string | null;
+  state: string | null;
+  denied: boolean;
+} {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
+  const state = params.get('state');
   const denied = params.get('error') != null;
 
   if (code == null && !denied) {
-    return { code: null, denied: false };
+    return { code: null, state: null, denied: false };
   }
 
   const url = new URL(window.location.href);
@@ -41,7 +48,7 @@ function consumeTraktReturnParams(): { code: string | null; denied: boolean } {
   url.searchParams.delete('state');
   window.history.replaceState(null, '', url.toString());
 
-  return { code, denied };
+  return { code, state, denied };
 }
 
 /**
@@ -87,7 +94,9 @@ function consumeSimklReturnParams(): {
  * Reads AniList's implicit-grant fragment (`#access_token=…`) and erases it.
  * The fragment never reaches any server, but it *is* the bearer token — it
  * must not linger in the address bar/history either. Returns the full URL
- * that carried the fragment, or null when this isn't an AniList return.
+ * that carried the fragment, or null when this isn't an AniList return. The
+ * caller connects only for a pending flow: any link can carry a fragment, and
+ * connecting from one would sign the visitor in as someone else.
  */
 function consumeAniListReturnFragment(): string | null {
   const { hash } = window.location;
@@ -105,14 +114,27 @@ function consumeAniListReturnFragment(): string | null {
  * testable without React: AniList's fragment first (no network, can't collide
  * with a query-param return), then Simkl's *marked* `?code=` (the
  * `?oauth=simkl` marker branches before the code is consumed), then Trakt for
- * every unmarked `?code=` — the pre-Simkl behavior, byte for byte. Expects
- * `window` to exist; the hook guards the platform.
+ * every unmarked `?code=`. AniList and Trakt complete only when this browser
+ * started that connect: a pending flow (`oauth-flow.ts`) is consumed once and
+ * its `state` must match the echoed one. Expects `window` to exist; the hook
+ * guards the platform.
  */
 export async function handleOAuthReturn(
   setStatus: (status: OAuthCallbackStatus) => void,
 ): Promise<void> {
   const anilistReturn = consumeAniListReturnFragment();
   if (anilistReturn != null) {
+    const expected = takeOAuthFlow('anilist');
+    // A stray or replayed link: the fragment is already stripped, nothing more to do.
+    if (expected == null) return;
+    const state = new URLSearchParams(
+      anilistReturn.slice(anilistReturn.indexOf('#') + 1),
+    ).get('state');
+    // A missing echo still passes on the pending flow alone.
+    if (state != null && state !== expected) {
+      setStatus('error');
+      return;
+    }
     if (!connectAniListFromRedirect(anilistReturn)) {
       setStatus('error');
     }
@@ -157,19 +179,26 @@ export async function handleOAuthReturn(
     return;
   }
 
-  const { code, denied } = consumeTraktReturnParams();
+  const { code, state, denied } = consumeTraktReturnParams();
   if (denied) {
+    takeOAuthFlow('trakt');
     setStatus('error');
     return;
   }
   if (code == null) return;
 
-  // A code can linger in a tab that predates the exchange (or failed it).
-  // If Trakt is already connected there is nothing to gain from replaying
-  // it, and without the client id + secret pair the exchange cannot be
-  // built at all.
+  // A code can linger in a tab that predates the exchange (or failed it), or
+  // arrive on a link this browser never started. Only a pending flow with a
+  // matching `state` exchanges, and it overwrites any stored session, so a
+  // reconnect over a stale token works. Without the client id + secret pair
+  // the exchange cannot be built at all.
+  const expected = takeOAuthFlow('trakt');
+  if (expected == null) return;
+  if (state !== expected) {
+    setStatus('error');
+    return;
+  }
   if (
-    connectedProviderIds().includes('trakt') ||
     getClientIdForProvider('trakt') === '' ||
     getClientSecretForProvider('trakt') === ''
   ) {
