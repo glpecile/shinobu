@@ -39,6 +39,7 @@ mock.module('expo-crypto', () => ({
 
 const { invalidateAfterLog } = await import('./use-log-media');
 const { watchlistQueryKeys } = await import('@/state/queries/watchlist');
+const { letterboxdQueryKeys } = await import('@/state/queries/letterboxd');
 
 const ITEM: NormalizedMediaItem = {
   id: 'trakt-1',
@@ -110,6 +111,25 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     for (const queryKey of keys) {
       expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
     }
+    client.clear();
+  });
+
+  test('a Letterboxd log invalidates only the logged film’s watch reads', () => {
+    const client = new QueryClient();
+    const bySlug = [...letterboxdQueryKeys.filmWatchesRoot(), 'u', 'inception', null];
+    const byTmdb = [...letterboxdQueryKeys.filmWatchesRoot(), 'u', null, 27205];
+    const otherFilm = [...letterboxdQueryKeys.filmWatchesRoot(), 'u', 'heat', null];
+    for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
+
+    invalidateAfterLog(
+      client,
+      { ...ITEM, type: 'MOVIE', externalIds: { letterboxd: 'inception', tmdb: 27205 } },
+      ['letterboxd'],
+    );
+
+    expect(client.getQueryState(bySlug)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(byTmdb)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(otherFilm)?.isInvalidated).toBe(false);
     client.clear();
   });
 

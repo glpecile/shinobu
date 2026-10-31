@@ -714,7 +714,17 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('letterboxd')) {
-    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.filmWatchesRoot() });
+    // Only this film's watch reads changed. The root holds one HTML-scrape
+    // query per film on every mounted list, so invalidating it refetched them all.
+    const tmdb = item.externalIds.tmdb ?? null;
+    const slug =
+      item.externalIds.letterboxd ??
+      (tmdb != null ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null : null);
+    queryClient.invalidateQueries({
+      queryKey: letterboxdQueryKeys.filmWatchesRoot(),
+      predicate: ({ queryKey }) =>
+        (slug != null && queryKey[3] === slug) || (tmdb != null && queryKey[4] === tmdb),
+    });
     // A pre-write RSS response must not repopulate the shared input as fresh.
     void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
     void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });
