@@ -585,4 +585,24 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
     expect(plan.skipped).toEqual([]);
     expect(plan.writeTargets).toEqual(['trakt', 'simkl']);
   });
+
+  test('a retry of a first-watch round skips a provider whose failed write landed', async () => {
+    const queryClient = client();
+    const item: NormalizedMediaItem = {
+      id: 'trakt-1', title: 'Inception', coverImage: '', type: 'MOVIE',
+      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 1, tmdb: 27205 },
+    };
+    queryClient.setQueryData(traktQueryKeys.watchedMovies(), [item]);
+
+    const plan = await planLogWrite(
+      queryClient,
+      { item, providers: ['trakt'], retryOf: { rewatch: false } },
+      ['trakt'],
+    );
+
+    expect(plan.rewatch).toBe(false);
+    expect(plan.skipped).toEqual(['trakt']);
+    expect(plan.writeTargets).toEqual([]);
+    expect(plan.variables).not.toHaveProperty('retryOf');
+  });
 });

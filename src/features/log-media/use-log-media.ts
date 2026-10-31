@@ -58,6 +58,7 @@ import {
   reconcileLogTargets,
   traktHasEpisodes,
   traktHasFilm,
+  type LogDecision,
   type ProviderWatchRecord,
 } from './reconcile';
 import {
@@ -850,7 +851,14 @@ export async function planLogWrite(
   const records: ProviderWatchRecord[] = answers.flatMap(({ provider, hasIt }) =>
     hasIt == null ? [] : [{ provider, hasIt }],
   );
-  const decisions = reconcileLogTargets(records);
+  const retryOf = variables.retryOf;
+  const decisions: LogDecision[] =
+    retryOf == null
+      ? reconcileLogTargets(records)
+      : records.map(({ provider, hasIt }) => ({
+          provider,
+          action: retryOf.rewatch ? 'rewatch' : hasIt ? 'skip' : 'log',
+        }));
   const skipped = decisions
     .filter((decision) => decision.action === 'skip')
     .map((decision) => decision.provider);
@@ -871,6 +879,7 @@ export async function planLogWrite(
     episode: _episode,
     episodes: _episodes,
     entryEpisodes: _entryEpisodes,
+    retryOf: _retryOf,
     ...rest
   } = variables;
 

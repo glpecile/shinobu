@@ -219,6 +219,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
+  const [retryOf, setRetryOf] = useState<{ rewatch: boolean } | null>(null);
   // Warms the pre-write watch-state reads while the sheet is open, so Confirm starts writing at once.
   useLogReconcileQuery({
     item,
@@ -244,6 +245,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       liked,
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
+      ...(retryOf != null ? { retryOf } : {}),
     });
     trackBusy(item.id, write);
     void write.then(
@@ -292,6 +294,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   function retry() {
     if (result != null && result.failed.length > 0) {
       setSelectedProviders([...result.failed]);
+      setRetryOf({ rewatch: result.rewatch });
     }
     logMedia.reset();
   }

@@ -46,6 +46,12 @@ export interface LogMediaVariables {
    * keeping the rest of the fan-out intact.
    */
   providers?: ProviderId[];
+  /**
+   * Set by the confirm sheet's retry: the original round's rewatch decision.
+   * A retried provider that already has the watch then landed on the first
+   * try, so it is skipped instead of being logged again as a rewatch.
+   */
+  retryOf?: { rewatch: boolean };
 }
 
 /**
