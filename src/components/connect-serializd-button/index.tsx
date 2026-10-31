@@ -2,13 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Text, View } from 'react-native';
-import * as Effect from 'effect/Effect';
 import { z } from 'zod';
 
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
-import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd';
-import { serializdDeps } from '@/state/queries/serializd';
+import { loginSerializd } from '@/state/queries/serializd';
 import { connectSerializd } from '@/state/session/serializd';
 
 const credentialsSchema = z.object({
@@ -43,30 +41,18 @@ export function ConnectSerializdButton() {
   const submit = handleSubmit(async (values) => {
     setStatus('submitting');
     setErrorMessage(null);
-    const deps = serializdDeps();
-    const login = await Effect.runPromise(
-      Effect.result(
-        loginToSerializd(deps, { email: values.email.trim(), password: values.password }),
-      ),
-    );
-    if (login._tag === 'Failure') {
+    try {
+      const session = await loginSerializd({
+        email: values.email.trim(),
+        password: values.password,
+      });
+      connectSerializd(session);
+    } catch (error) {
       // Surface the API's own message (wrong password, etc.); store nothing.
-      setErrorMessage(loginErrorText(login.failure.message));
+      setErrorMessage(loginErrorText(error instanceof Error ? error.message : String(error)));
+    } finally {
       setStatus('idle');
-      return;
     }
-
-    // Some login responses omit the username — recover it from the token.
-    let username = login.success.username;
-    if (username === '') {
-      const validated = await Effect.runPromise(
-        Effect.result(validateAuthToken(deps, login.success.token)),
-      );
-      if (validated._tag === 'Success') username = validated.success.username;
-    }
-
-    connectSerializd({ accessToken: login.success.token, username });
-    setStatus('idle');
   });
 
   return (
