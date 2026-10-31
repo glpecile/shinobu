@@ -190,7 +190,7 @@ export function CardActionsSheet({
   // Remembers which opening chose the mode, so reopening or a new item falls
   // back to the rows.
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'copy' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove';
+    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
@@ -281,7 +281,7 @@ export function CardActionsSheet({
           request={logRequest}
         />
       )}
-      {item != null && mode === 'copy' && (
+      {item != null && mode === 'copy-title' && (
         <CopyTitleOptions
           alternates={alternateTitles(item)}
           onClose={() => setMode('actions')}
@@ -301,7 +301,8 @@ export function CardActionsSheet({
               <PresstableOpacity
                 accessibilityHint="Opens copy options"
                 accessibilityRole="button"
-                onPress={() => setMode('copy')}
+                className="min-h-11 justify-center"
+                onPress={() => setMode('copy-title')}
               >
                 <SheetHeader.Title>{item.title}</SheetHeader.Title>
               </PresstableOpacity>
