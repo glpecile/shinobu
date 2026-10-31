@@ -1,6 +1,6 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import { useState } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Text, useWindowDimensions, View } from 'react-native';
 import { RefreshControl } from 'react-native-gesture-handler';
 
 import { ActionableRow } from '@/components/actionable-row';
@@ -67,7 +67,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         className="flex-1"
         data={sortMediaEntries(entries, sort)}
         estimatedItemSize={92}
-        itemLayoutAnimation={reducedMotion ? undefined : membershipLayout}
+        itemLayoutAnimation={Platform.OS === 'web' || reducedMotion ? undefined : membershipLayout}
         contentContainerStyle={{ paddingBottom: target != null ? 96 : undefined }}
         keyExtractor={(entry) => entry.id}
         refreshControl={<RefreshControl onRefresh={() => void query.refetch()} refreshing={query.isRefetching} />}

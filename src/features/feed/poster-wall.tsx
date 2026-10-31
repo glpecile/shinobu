@@ -271,8 +271,12 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
   const wide = width >= 768;
   const logos = subject === 'studios';
   const size = (logos ? LOGO_TILES : POSTER_TILES)[wide ? 'wide' : 'compact'];
-  // The tilt pulls the corners inward, so the wall is half again as wide as the screen.
-  const columns = Math.ceil((width * 1.5) / (size.width + size.gap));
+  // The tilt pulls the corners inward; tall static walls also need side overscan.
+  const wallWidth = reduceMotion ? Math.max(width * 1.5, width + height * Math.sin((8 * Math.PI) / 180) + size.width * 2) : width * 1.5;
+  const columns = Math.ceil(wallWidth / (size.width + size.gap));
+  // Cover the rotated viewport and each column's negative start offset without loop buffers.
+  const tiltOverscan = reduceMotion ? Math.ceil(wallWidth * Math.sin((8 * Math.PI) / 180) / 2) : 0;
+  const staticRows = Math.ceil((height + tiltOverscan * 2 + size.height * 3) / (size.height + size.gap));
   // Re-deal only when the layout changes, not on every hover.
   const dealtFor = `${subject}:${columns}:${size.perColumn}`;
   const [dealt, setDealt] = useState(() => ({
@@ -294,13 +298,13 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
         className="absolute flex-row justify-center opacity-50"
         style={{
           gap: size.gap,
-          left: -width / 4,
-          right: -width / 4,
-          top: -size.height,
+          left: -(wallWidth - width) / 2,
+          right: -(wallWidth - width) / 2,
+          top: -size.height - tiltOverscan,
           transform: [{ rotate: '-8deg' }],
           // Pivot on the viewport's centre, not the far taller row's, or the tilt
           // slides the visible stretch sideways and bares one edge.
-          transformOrigin: `50% ${height / 2 + size.height}px`,
+          transformOrigin: `50% ${height / 2 + size.height + tiltOverscan}px`,
         }}
       >
         {dealt.sets.map((set, column) => {
@@ -333,7 +337,7 @@ export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
                   animationPlayState: focused && hovered !== column ? 'running' : 'paused',
                 }}
               >
-                {[...set, ...set, ...set].map((uri, index) => (
+                {(reduceMotion ? Array.from({ length: staticRows }, (_, index) => set[index % set.length]) : [...set, ...set, ...set]).map((uri, index) => (
                   // Index keys: the repeated set repeats every uri by design.
                   <View
                     className={cn('rounded-lg overflow-hidden bg-surface', logos && 'p-4 border border-border')}

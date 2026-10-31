@@ -1,5 +1,6 @@
 import {
   infiniteQueryOptions,
+  QueryObserver,
   skipToken,
   useInfiniteQuery,
   useIsMutating,
@@ -308,7 +309,22 @@ export function letterboxdFilmWatchQuery(username: string | null, item: Normaliz
     queryKey: letterboxdQueryKeys.filmWatch(username ?? '', item),
     queryFn: async ({ client, signal }: { client: QueryClient; signal: AbortSignal }) => {
       const tmdb = item.externalIds.tmdb;
-      const slug = item.externalIds.letterboxd ?? (tmdb == null ? null : await client.fetchQuery(letterboxdSlugQuery(tmdb)));
+      let slug = item.externalIds.letterboxd ?? null;
+      signal.throwIfAborted();
+      if (slug == null && tmdb != null) {
+        const options = letterboxdSlugQuery(tmdb);
+        // The last watch consumer leaving cancels the shared identity lookup.
+        const observer = new QueryObserver(client, options);
+        const unsubscribe = observer.subscribe(() => {});
+        signal.addEventListener('abort', unsubscribe, { once: true });
+        try {
+          slug = await client.fetchQuery(options);
+        } finally {
+          signal.removeEventListener('abort', unsubscribe);
+          unsubscribe();
+        }
+      }
+      signal.throwIfAborted();
       if (slug == null) return null;
       return Effect.runPromise(getLetterboxdFilmWatch({ ...letterboxdDeps(), username }, { ...item, externalIds: { ...item.externalIds, letterboxd: slug } }), { signal });
     },

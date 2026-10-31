@@ -8,6 +8,7 @@ import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import { searchMovie, searchTitles } from '@/lib/providers/tmdb/reads';
 import { titleKey } from '@/lib/providers/pick-movie-match';
 import { LETTERBOXD_BASE_URL } from './config';
+import { letterboxdPublicReads } from './public-reads';
 
 const getFilmHtml = Effect.fnUntraced(function* (
   deps: { fetch: HttpFetch },
@@ -29,7 +30,7 @@ const getFilmHtml = Effect.fnUntraced(function* (
     try: () => response.text(),
     catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
   });
-});
+}, letterboxdPublicReads.withPermit);
 
 const FilmMetadata = Schema.fromJsonString(Schema.Struct({
   '@type': Schema.Literal('Movie'),

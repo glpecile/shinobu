@@ -229,24 +229,27 @@ export function NewListForm({ providers, initialProvider }: {
           {items.length === 0 ? (
             <Text className="text-muted font-sans text-sm">{provider === 'letterboxd' ? 'Optional. Add films now or from the list later.' : 'Add the first show to start the list.'}</Text>
           ) : (
-            <List
-              data={items}
-              estimatedItemSize={70}
-              extraData={ranked}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item, index }) => (
-                <View className="flex-row items-center gap-3 py-1.5">
-                  {ranked && <Text className="text-muted font-display text-base w-6 text-right">{index + 1}</Text>}
-                  <SmallPoster recyclingKey={item.id} size="sm" uri={item.coverImage} />
-                  <View className="flex-1 min-w-0">
-                    <Text className="text-foreground font-sans-semibold text-sm" numberOfLines={1}>{item.title}</Text>
-                    {item.year != null && <Text className="text-muted font-sans text-xs mt-0.5">{item.year}</Text>}
+            <View style={{ height: Math.min(items.length, 5) * 70 }}>
+              <List
+                data={items}
+                estimatedItemSize={70}
+                extraData={ranked}
+                keyExtractor={(item) => item.id}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item, index }) => (
+                  <View className="flex-row items-center gap-3 py-1.5">
+                    {ranked && <Text className="text-muted font-display text-base w-6 text-right">{index + 1}</Text>}
+                    <SmallPoster recyclingKey={item.id} size="sm" uri={item.coverImage} />
+                    <View className="flex-1 min-w-0">
+                      <Text className="text-foreground font-sans-semibold text-sm" numberOfLines={1}>{item.title}</Text>
+                      {item.year != null && <Text className="text-muted font-sans text-xs mt-0.5">{item.year}</Text>}
+                    </View>
+                    <Button disabled={busy} icon={<Button.Icon name="close" />} iconOnly label={`Remove ${item.title}`} onPress={() => { haptics.selection(); setItems((current) => current.filter((entry) => entry.id !== item.id)); }} size="sm" variant="ghost" />
                   </View>
-                  <Button disabled={busy} icon={<Button.Icon name="close" />} iconOnly label={`Remove ${item.title}`} onPress={() => { haptics.selection(); setItems((current) => current.filter((entry) => entry.id !== item.id)); }} size="sm" variant="ghost" />
-                </View>
-              )}
-            />
+                )}
+              />
+            </View>
           )}
           {errors.items?.message != null && <FieldError>{errors.items.message}</FieldError>}
         </View>
