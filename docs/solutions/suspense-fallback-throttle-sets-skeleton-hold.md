@@ -25,3 +25,8 @@ within the window appears at once with no crossfade, because the skeleton was
 never visible.
 
 Check `FALLBACK_THROTTLE_MS` again after a React upgrade.
+
+Interactive fallbacks, such as the ratings provider link, pass
+`animateFallback={false}`. Opacity alone leaves a hidden control focusable,
+and `aria-hidden` on an outgoing copy does not remove its descendants from
+the web Tab order. These fallbacks stay visible and are never cloned.

@@ -168,7 +168,7 @@ function ProviderRating({ provider, url, item, resetKey }: {
   }
   if (score == null) return link;
   return (
-    <SuspenseSection errorFallback={link} fallback={link} resetKey={resetKey}>
+    <SuspenseSection animateFallback={false} errorFallback={link} fallback={link} resetKey={resetKey}>
       {score}
     </SuspenseSection>
   );

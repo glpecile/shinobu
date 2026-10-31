@@ -133,7 +133,7 @@ function Reveal({
     const { since, width } = outgoing.current;
     if (since == null) return null;
     const shown = Math.min(Math.max((performance.now() - since - SKELETON_HOLD) / DURATION.swap, 0), 1);
-    // `EASE_OUT` is easeOutQuint, so this is how far the skeleton's fade-in got.
+    // Approximate EASE_OUT's easeOutQuint curve during a partial fade.
     const opacity = 1 - (1 - shown) ** 5;
     return opacity > 0 ? { opacity, width } : null;
   });
@@ -151,7 +151,7 @@ function Reveal({
           style={{
             pointerEvents: 'none',
             width: from.width,
-            // Where it rests if the end event is late: Reanimated's web path drops fill modes.
+            // Stay invisible if the animation finishes before its end event arrives.
             opacity: 0,
             animationName: { '0%': { opacity: from.opacity }, '100%': { opacity: 0 } },
             animationDuration: DURATION.swap * from.opacity,
@@ -181,7 +181,12 @@ export function SuspenseSection({
   resetKey,
   errorToast,
   errorFallback,
-}: BoundaryProps & { fallback: ReactNode }) {
+  animateFallback = true,
+}: BoundaryProps & {
+  fallback: ReactNode;
+  /** Real controls must stay visible and must never be cloned into the crossfade. */
+  animateFallback?: boolean;
+}) {
   // Static web export awaits every suspended query, so prerendering a section
   // would fetch its provider at build time, and an outage there fails the
   // build (error boundaries don't run on the server). The server snapshot also
@@ -200,22 +205,26 @@ export function SuspenseSection({
     <SectionErrorBoundary errorFallback={errorFallback} resetKey={resetKey} errorToast={errorToast}>
       <Suspense
         fallback={
-          <SkeletonHold
-            onHoldStart={() => {
-              outgoing.current.since = performance.now();
-            }}
-            onWidth={(width) => {
-              outgoing.current.width = width;
-            }}
-            served={served}
-          >
-            {fallback}
-          </SkeletonHold>
+          animateFallback ? (
+            <SkeletonHold
+              onHoldStart={() => {
+                outgoing.current.since = performance.now();
+              }}
+              onWidth={(width) => {
+                outgoing.current.width = width;
+              }}
+              served={served}
+            >
+              {fallback}
+            </SkeletonHold>
+          ) : fallback
         }
       >
-        <Reveal outgoing={outgoing} skeleton={fallback}>
-          {children}
-        </Reveal>
+        {animateFallback ? (
+          <Reveal outgoing={outgoing} skeleton={fallback}>
+            {children}
+          </Reveal>
+        ) : children}
       </Suspense>
     </SectionErrorBoundary>
   );
