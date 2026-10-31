@@ -5,10 +5,12 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { Button } from '@/components/button';
+import { PresstableOpacity } from '@/components/presstable';
 import { SmallPoster } from '@/components/small-poster';
 import { ShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
+import { alternateTitles, CopyTitleOptions } from '@/features/copy-title/copy-title';
 import { ListMembershipForm } from '@/features/lists/list-membership-form';
 import type { ListEditTarget } from '@/state/queries/list-membership';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
@@ -188,7 +190,7 @@ export function CardActionsSheet({
   // Remembers which opening chose the mode, so reopening or a new item falls
   // back to the rows.
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove';
+    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
@@ -279,6 +281,16 @@ export function CardActionsSheet({
           request={logRequest}
         />
       )}
+      {item != null && mode === 'copy-title' && (
+        <CopyTitleOptions
+          alternates={alternateTitles(item)}
+          onClose={() => setMode('actions')}
+          onCopied={onClose}
+          title={item.title}
+          tmdbId={item.externalIds.tmdb}
+          year={item.year}
+        />
+      )}
       {item != null && mode === 'actions' && (
         <>
           {/* Opened by a long-press with no page transition, so the artwork
@@ -286,7 +298,14 @@ export function CardActionsSheet({
           <SheetHeader>
             <SheetPoster item={item} />
             <SheetHeader.Content>
-              <SheetHeader.Title>{item.title}</SheetHeader.Title>
+              <PresstableOpacity
+                accessibilityHint="Opens copy options"
+                accessibilityRole="button"
+                className="min-h-11 justify-center"
+                onPress={() => setMode('copy-title')}
+              >
+                <SheetHeader.Title>{item.title}</SheetHeader.Title>
+              </PresstableOpacity>
               <SheetHeader.Subtitle>
                 {[item.type, item.year != null ? String(item.year) : null]
                   .filter((part) => part != null)
