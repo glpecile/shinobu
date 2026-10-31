@@ -729,6 +729,7 @@ export function DiaryList({
   onOpen,
   onItemActions,
 }: DiaryListProps) {
+  const reduceMotion = useReducedMotion();
   const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
@@ -787,7 +788,7 @@ export function DiaryList({
     onLoadMore: onEndReached,
     onSelectDay: (dayKey: string) => {
       const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
-      if (index !== -1) void listRef.current?.scrollToIndex({ index });
+      if (index !== -1) void listRef.current?.scrollToIndex({ index, animated: !reduceMotion });
     },
   };
 
@@ -957,7 +958,7 @@ export function DiaryList({
         )}
         <ScrollToTopFab
           className="ios:bottom-24"
-          onPress={() => void listRef.current?.scrollToOffset({ offset: 0 })}
+          onPress={() => void listRef.current?.scrollToOffset({ offset: 0, animated: !reduceMotion })}
           visible={showScrollTop}
         />
       </View>

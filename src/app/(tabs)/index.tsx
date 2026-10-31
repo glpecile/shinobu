@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import Head from '@/components/head';
 import {
@@ -108,6 +109,7 @@ function EmptyFeed({ connectFailed }: { connectFailed: boolean }) {
 }
 
 function FeedScreen() {
+  const reduceMotion = useReducedMotion();
   const pushRoute = usePushRoute();
   const prefetchDetails = usePrefetchMediaDetails();
   const connected = useConnectedProviders();
@@ -229,7 +231,7 @@ function FeedScreen() {
           </>
         )}
         <FeedEnd
-          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion })}
         />
       </CollapsibleSection.Scroll>
       {revealed && <CardActionsSheet {...sheetProps} />}

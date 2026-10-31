@@ -1,5 +1,5 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
-import { useWindowDimensions, View } from 'react-native';
+import { Platform, useWindowDimensions, View } from 'react-native';
 
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
@@ -72,7 +72,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
       ) : (
         <Layout
           showActions={target != null}
-          itemLayoutAnimation={reducedMotion ? undefined : membershipLayout}
+          itemLayoutAnimation={Platform.OS === 'web' || reducedMotion ? undefined : membershipLayout}
           watched={(item) => progressById.get(item.id)}
           entries={sortMediaEntries(items.map((item) => ({ id: item.id, item, sources: [], sourceIds: [item.id] })), sort)}
           footer={<LoadMoreFooter failed={pages.isFetchNextPageError} loading={pages.isFetchingNextPage} noun="films" onRetry={() => void pages.fetchNextPage()} />}

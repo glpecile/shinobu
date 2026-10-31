@@ -1,8 +1,9 @@
-import { InfiniteQueryObserver, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { InfiniteQueryObserver, QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { createElement, Suspense } from 'react';
 import { renderToString } from 'react-dom/server';
 
+import type { HttpFetch } from '@/lib/http/types';
 import type { TmdbMediaCatalogue } from '@/lib/providers/tmdb/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -19,7 +20,8 @@ mock.module('react-native-mmkv', () => ({
   }),
 }));
 let readResponse = () => new Response('{}');
-mock.module('@/lib/http/client', () => ({ httpFetch: async () => readResponse() }));
+let readPublic: HttpFetch = async () => readResponse();
+mock.module('@/lib/http/client', () => ({ httpFetch: (input: RequestInfo | URL, init?: RequestInit) => readPublic(input, init) }));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
@@ -46,7 +48,7 @@ afterAll(() => {
   delete globals.window;
 });
 
-const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, useLetterboxdListLike, useLetterboxdListsQuery, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
+const { fetchLetterboxdReleaseInputs, findInLetterboxdListsCache, letterboxdQueryKeys, letterboxdFilmQuery, letterboxdFilmWatchQuery, useLetterboxdListLike, useLetterboxdListsQuery, useSuspenseLetterboxdListsQuery, useSuspenseLetterboxdListFilmsQuery } = await import(
   './letterboxd'
 );
 // Written through the session layer's own setters rather than into the map
@@ -402,5 +404,89 @@ test('confirmed membership additions stay visible in a partially loaded list unt
     unsubscribe();
     client.clear();
     clearProviderSession('letterboxd');
+  }
+});
+
+test('cold film identities and watches share a bounded queue that drains and cancels on unsubscribe', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const pending: { url: string; resolve: (response: Response) => void }[] = [];
+  let started = 0;
+  let active = 0;
+  let peak = 0;
+  let aborted = 0;
+  const unsubscribes: (() => void)[] = [];
+  readPublic = (input, init) => new Promise((resolve, reject) => {
+    const signal = init!.signal!;
+    started += 1;
+    active += 1;
+    peak = Math.max(peak, active);
+    signal.addEventListener('abort', () => {
+      active -= 1;
+      aborted += 1;
+      reject(signal.reason);
+    }, { once: true });
+    pending.push({ url: String(input), resolve: (response) => { active -= 1; resolve(response); } });
+  });
+  const subscribe = (prefix: string) => {
+    for (let index = 0; index < 40; index += 1) {
+      const slug = `${prefix}-${index}`;
+      unsubscribes.push(new QueryObserver(client, letterboxdFilmQuery(slug, false)).subscribe(() => {}));
+      const item = film(slug, slug);
+      if (index % 2 === 1) item.externalIds = { tmdb: index + (prefix === 'complete' ? 1 : 1001) };
+      unsubscribes.push(new QueryObserver(client, letterboxdFilmWatchQuery('gian', item)).subscribe(() => {}));
+    }
+  };
+  try {
+    subscribe('complete');
+    await Bun.sleep(0);
+    expect(started).toBe(4);
+    while (pending.length > 0) {
+      const request = pending.shift()!;
+      const tmdb = /\/tmdb\/([0-9]+)\//.exec(request.url)?.[1];
+      if (tmdb != null) {
+        request.resolve(new Response(null, { status: 302, headers: { location: `/film/resolved-${tmdb}/` } }));
+        await Bun.sleep(0);
+        continue;
+      }
+      const slug = /\/film\/([^/]+)\//.exec(request.url)![1];
+      request.resolve(new Response(request.url.includes('/gian/')
+        ? `<body data-owner="gian"><section class="film-viewing-info-wrapper"><a href="/film/${slug}/">Film</a></section>`
+        : `<body data-tmdb-id="1" data-tmdb-type="movie"><script type="application/ld+json">{"@type":"Movie","name":"Film"}</script>`));
+      await Bun.sleep(0);
+    }
+    await Promise.all(client.getQueryCache().getAll().map((query) => query.promise));
+    expect(started).toBe(100);
+    expect(peak).toBe(4);
+    expect(client.getQueryCache().getAll().every((query) => query.state.status === 'success')).toBe(true);
+    subscribe('cancel');
+    await Bun.sleep(0);
+    expect(started).toBe(104);
+    unsubscribes.forEach((unsubscribe) => unsubscribe());
+    await Bun.sleep(0);
+    expect(aborted).toBe(4);
+    expect(started).toBe(104);
+    expect(active).toBe(0);
+    pending.length = 0;
+    const sharedItem = { ...film('shared', 'Shared'), externalIds: { tmdb: 2001 } };
+    const first = new QueryObserver(client, letterboxdFilmWatchQuery('gian', sharedItem));
+    const second = new QueryObserver(client, letterboxdFilmWatchQuery('other', sharedItem));
+    const unsubscribeFirst = first.subscribe(() => {});
+    unsubscribes.push(unsubscribeFirst, second.subscribe(() => {}));
+    await Bun.sleep(0);
+    expect(started).toBe(105);
+    unsubscribeFirst();
+    await Bun.sleep(0);
+    expect(aborted).toBe(4);
+    pending.shift()!.resolve(new Response(null, { status: 302, headers: { location: '/film/shared/' } }));
+    await Bun.sleep(0);
+    expect(started).toBe(106);
+    expect(pending[0].url).toBe('https://letterboxd.com/other/film/shared/');
+    pending.shift()!.resolve(new Response('<body data-owner="other"><section class="film-viewing-info-wrapper"><a href="/film/shared/">Shared</a></section>'));
+    await Bun.sleep(0);
+    expect(second.getCurrentResult().data?.currentProgress).toBe(1);
+  } finally {
+    unsubscribes.forEach((unsubscribe) => unsubscribe());
+    client.clear();
+    readPublic = async () => readResponse();
   }
 });

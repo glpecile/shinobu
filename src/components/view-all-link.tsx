@@ -5,6 +5,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';
 import { PresstableOpacity } from '@/components/presstable';
+import { EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 /** The quiet onward link used by Home section headers. */
@@ -21,7 +22,11 @@ export function ViewAllLink({
   return (
     <View
       className="shrink-0"
-      onPointerEnter={() => setHovered(true)}
+      onPointerEnter={(event) => setHovered(
+        event.nativeEvent.pointerType !== 'touch'
+        && typeof globalThis.matchMedia === 'function'
+        && globalThis.matchMedia('(hover: hover) and (pointer: fine)').matches,
+      )}
       onPointerLeave={() => setHovered(false)}
     >
       <PresstableOpacity
@@ -36,7 +41,7 @@ export function ViewAllLink({
             transform: [{ translateX: hovered && !reduceMotion ? 3 : 0 }],
             transitionProperty: 'transform',
             transitionDuration: reduceMotion ? 0 : 160,
-            transitionTimingFunction: 'ease-out',
+            transitionTimingFunction: EASE_OUT,
           }}
         >
           <Ionicons color={foreground} name="chevron-forward" size={14} />

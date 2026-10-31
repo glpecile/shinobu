@@ -5,6 +5,7 @@ import { ProviderAuthError, ProviderDecodeError, ProviderNetworkError, ProviderR
 import type { NormalizedMediaItem } from '@/types/media';
 import { LETTERBOXD_BASE_URL } from './config';
 import type { LetterboxdDeps } from './deps';
+import { letterboxdPublicReads } from './public-reads';
 
 const Username = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{1,39}$/));
 const Slug = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), Schema.isMaxLength(200));
@@ -39,7 +40,7 @@ export const resolveFilmSlug = Effect.fnUntraced(function* (deps: Pick<Letterbox
     ?? /<meta\b[^>]*property="og:url"[^>]*content="https:\/\/letterboxd\.com\/film\/([^/]+)\/"/.exec(yield* readText(redirect))?.[1];
   if (slug == null) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'TMDB redirect has no film identity' });
   return slug;
-});
+}, letterboxdPublicReads.withPermit);
 
 /** Public viewings supply positive evidence; a missing page does not prove unwatched. Needs the item's slug. */
 export const getLetterboxdFilmWatch = Effect.fn('letterboxd.getFilmWatch')(function* (deps: LetterboxdDeps, item: NormalizedMediaItem) {
@@ -56,4 +57,4 @@ export const getLetterboxdFilmWatch = Effect.fn('letterboxd.getFilmWatch')(funct
     return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'unrecognized member film viewing' });
   }
   return { ...item, externalIds: { ...item.externalIds, letterboxd: slug }, currentProgress: 1 };
-});
+}, letterboxdPublicReads.withPermit);
