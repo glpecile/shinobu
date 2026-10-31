@@ -71,7 +71,7 @@ export function ComingSoonRow({ username, onItemActions, onItemPress }: {
   const entries: UpNextEpisodeEntry[] = [];
   const shows = new Map<string, string>();
   const visible = visibleByIds(data, hidden, (entry) => [entry.item.id]);
-  for (const episode of visible.toSorted((a, b) => a.airDate.localeCompare(b.airDate))) {
+  for (const episode of [...visible].sort((a, b) => a.airDate.localeCompare(b.airDate))) {
     if ((localDayOffset(episode.airDate, now) ?? -1) < 0) continue;
     const day = shows.get(episode.item.id) ?? episode.airDate;
     if (day !== episode.airDate) continue;

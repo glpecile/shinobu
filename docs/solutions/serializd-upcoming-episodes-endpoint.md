@@ -26,4 +26,13 @@ The Coming Soon read validates its bearer through the existing
 a 200 response alone do not prove authentication. A regression test covers the
 revoked-token editorial fallback.
 
+Signed-in iOS probe on 2026-10-31: a validated session returned `items: []`,
+while the same endpoint without the bearer returned four editorial items.
+Both responses included `additionalData.showLogCount: []`, so that field is
+not an authentication discriminator. Home correctly hides the empty result.
+
+Native QA on the iPhone simulator also exposed that this Hermes runtime lacks
+`Array.prototype.toSorted`. Sort a copied array for the row's airing order;
+`toSorted` worked in Chromium and Bun but crashed the native render.
+
 Re-probe: `curl` the path with the three app headers from `web-cors-serializd.md`.

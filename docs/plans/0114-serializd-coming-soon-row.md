@@ -29,11 +29,16 @@ Serializd is connected, hides when nothing is upcoming, and has no View all.
 - Web reaches it through one new exact-match GET rule in `worker/serializd-proxy.ts`.
   `search/` stays closed otherwise; it also carries user search.
 
+Verified on the connected iPhone 17 Pro simulator (2026-10-31): a validated
+session returned zero items, while the same read without a bearer returned four
+editorial items. Home hid the empty row. Worst-case fixture cards, Continue
+Watching, and a populated This Week day rendered after replacing `toSorted`
+with sorting a copied array for Hermes.
+
 Open:
 
-- The signed-in response is unverified. Confirm the endpoint personalizes the
-  row on a real account; token validation rejects the known revoked-session
-  fallback but does not prove the valid-session payload is personalized.
+- A nonempty signed-in upcoming result remains unobserved; the connected test
+  account's personalized result was empty.
 - Later-cour anime uses TMDB numbering and art: Ramparts of Ice 2nd Season
   reads as `S1E18` on the show's season-1 poster, while AniList's This Week
   card calls it `E4`. A show tracked in both appears in both rows that week.
