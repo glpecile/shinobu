@@ -113,6 +113,8 @@ async function traktInputs(
   });
 
   const pool = selectUpNextPool(shows);
+  let attempted = 0;
+  let firstFailure: unknown;
   const results = await Effect.runPromise(
     Effect.forEach(
       pool,
@@ -120,6 +122,7 @@ async function traktInputs(
         Effect.promise(async (): Promise<ProgressUpNextInput | null> => {
           const traktId = item.externalIds.trakt;
           if (traktId == null) return null;
+          attempted += 1;
           try {
             const progress = await queryClient.fetchQuery({
               queryKey: traktQueryKeys.showProgress(traktId),
@@ -147,7 +150,8 @@ async function traktInputs(
                 ? { episodesBehind: behind }
                 : {}),
             };
-          } catch {
+          } catch (error) {
+            firstFailure ??= error;
             return null;
           }
         }),
@@ -155,7 +159,11 @@ async function traktInputs(
     ),
   );
 
-  return results.filter((input): input is ProgressUpNextInput => input != null);
+  const inputs = results.filter((input): input is ProgressUpNextInput => input != null);
+  // One show failing omits that show; every show failing is the leg failing,
+  // so settle() reports it instead of replacing good cached rows with none.
+  if (attempted > 0 && inputs.length === 0 && firstFailure !== undefined) throw firstFailure;
+  return inputs;
 }
 
 /**
