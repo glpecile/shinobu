@@ -46,6 +46,8 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method }> = [
   { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
   { match: (p) => p === 'list/add_item' || p === 'list/edit' || p === 'list/create', method: 'POST' },
   { match: (p) => /^list\/[1-9][0-9]{0,14}$/.test(p), method: 'GET' },
+  // Coming Soon (plan 0114). Exact match: `search/` holds user search too.
+  { match: (p) => p === 'search/upcoming_episodes_v3', method: 'GET' },
   { match: (p) => p.startsWith('show/'), method: 'GET' },
   { match: (p) => p.startsWith('user/'), method: 'GET' },
 ];

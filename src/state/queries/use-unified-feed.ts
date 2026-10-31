@@ -236,7 +236,10 @@ export function useRefetchUnifiedFeed() {
         ? [queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.listsRoot() })]
         : []),
       ...(feedProviders.includes('serializd')
-        ? [queryClient.refetchQueries({ queryKey: serializdQueryKeys.listsRoot() })]
+        ? [
+            queryClient.refetchQueries({ queryKey: serializdQueryKeys.listsRoot() }),
+            queryClient.refetchQueries({ queryKey: [...serializdQueryKeys.all, 'upcoming'], type: 'active' }),
+          ]
         : []),
     ]);
   }

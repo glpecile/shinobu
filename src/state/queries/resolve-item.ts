@@ -11,7 +11,7 @@ import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
 import { findInLetterboxdListsCache, useLetterboxdFilmQuery } from './letterboxd';
-import { findInSerializdListsCache } from './serializd';
+import { findInSerializdListsCache, findInSerializdUpcomingCache } from './serializd';
 import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
@@ -131,6 +131,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     findInWatchlistCache(queryClient, id) ??
     findInLetterboxdListsCache(queryClient, id) ??
     findInSerializdListsCache(queryClient, id) ??
+    findInSerializdUpcomingCache(queryClient, id) ??
     findInTmdbCache(queryClient, id) ??
     findInSeasonalPagesCache(queryClient, id);
   const resolvedItem = mediaType == null || cachedItem?.type === mediaType ? cachedItem : undefined;

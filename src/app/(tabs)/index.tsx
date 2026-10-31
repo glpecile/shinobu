@@ -12,6 +12,7 @@ import {
 import {
   FeedRowSkeleton,
   FeedSkeleton,
+  LandscapeRowSkeleton,
   UpNextSectionSkeleton,
 } from '@/components/feed-skeleton';
 import { useBootRevealed } from '@/components/boot-splash/revealed';
@@ -33,6 +34,7 @@ import {
 } from '@/features/feed/feed-rows';
 import { PosterWall } from '@/features/feed/poster-wall';
 import { UpNextSection } from '@/features/up-next/up-next-section';
+import { ComingSoonRow } from '@/features/up-next/coming-soon-row';
 import { LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
@@ -193,6 +195,16 @@ function FeedScreen() {
           >
             <YourWatchlistRow
               onItemActions={openActions}
+            />
+          </SuspenseSection>
+        )}
+        {/* Serializd's further-out airings, after what the user means to watch. */}
+        {serializdUsername != null && (
+          <SuspenseSection fallback={<LandscapeRowSkeleton />} resetKey={refreshCount}>
+            <ComingSoonRow
+              onItemActions={openActions}
+              onItemPress={openDetails}
+              username={serializdUsername}
             />
           </SuspenseSection>
         )}

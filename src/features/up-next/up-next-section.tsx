@@ -9,7 +9,6 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { MorphText } from '@/components/morph-text';
-import { VirtualizedRail } from '@/components/rail';
 import {
   calendarBadges,
   continueWatchingBadges,
@@ -17,8 +16,9 @@ import {
 import { calendarWeek, nextSplitChange } from '@/features/up-next/compute';
 import { groupDayEntries, soloGroup } from '@/features/up-next/group';
 import { useUpNextSections } from '@/features/up-next/use-up-next-sections';
-import { CARD_EXIT, CardSlot } from '@/features/up-next/ui/card-slot';
-import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
+import { CARD_EXIT } from '@/features/up-next/ui/card-slot';
+import { EpisodeCardRail, STACK_HEADROOM } from '@/features/up-next/ui/episode-card-rail';
+import { episodeCardRailHeight } from '@/features/up-next/ui/metrics';
 import { QuickLogButton } from '@/features/up-next/ui/quick-log-button';
 import { WeekStrip } from '@/features/up-next/ui/week-strip';
 import { CollapsibleSection } from '@/components/collapsible-section';
@@ -43,12 +43,6 @@ export interface UpNextSectionProps {
   onItemPress: (item: NormalizedMediaItem) => void;
   onItemActions: (item: NormalizedMediaItem) => void;
 }
-
-// Headroom above the day's cards for a stacked group's card backs, which sit
-// `STACK_OFFSET * 2` px above the face card and would otherwise be clipped by
-// the row. Applied whether or not the day holds a stack: paying it only
-// sometimes would move every card down by 10px the moment a season dropped.
-const STACK_HEADROOM = STACK_OFFSET * 2;
 
 /**
  * The day's cards settle in when the user picks a different day. Signed travel,
@@ -115,7 +109,6 @@ export function UpNextSection({
   const [direction, setDirection] = useState(0);
   const reduceMotion = useReducedMotion();
   const { fontScale } = useWindowDimensions();
-  const cardRailHeight = episodeCardRailHeight(fontScale);
 
   // Feed the strip *both* sections: today's already-aired episodes (which live
   // in Continue Watching) still belong on the today cell — the strip is a
@@ -159,37 +152,19 @@ export function UpNextSection({
               leading={<CollapsibleSection.Icon name="play-circle-outline" />}
               title="Continue Watching"
             >
-              <VirtualizedRail
-                // Horizontal Legend List padding does not offset items on web.
-                // Spacers match the header's px-4; CardSlot already adds mr-3.
-                // See docs/solutions/legend-list-horizontal-content-padding-web.md.
-                ListHeaderComponent={<View className="w-4" />}
-                ListFooterComponent={<View className="w-1" />}
-                data={continueWatching}
-                estimatedItemSize={268}
-                // Show keys keep the visible card mounted when quick-log advances it.
-                keyExtractor={(entry) => entry.item.id}
-                style={{ height: cardRailHeight }}
-                renderItem={({ item: entry }) => (
-                  <CardSlot
-                    // Continue Watching is aired episodes by construction; the
-                    // narrowing is what the union buys — no release row can slip
-                    // in here and render a quick-log for something with no episode.
-                    action={
-                      entry.kind === 'episode' ? (
-                        <QuickLogButton entry={entry} />
-                      ) : undefined
-                    }
-                    badges={continueWatchingBadges(entry, now)}
-                    // Wrapped, not grouped: this section holds one entry per show
-                    // by construction (the pool fan answers with a single
-                    // `next_episode` pointer each), so it can't produce a batch.
-                    group={soloGroup(entry)}
-                    arrival={hadContinueWatching ? { id: entry.item.id, seen: arrivalHistory } : undefined}
-                    onActionsPress={onItemActions}
-                    onPress={onItemPress}
-                  />
-                )}
+              <EpisodeCardRail
+                // Continue Watching is aired episodes by construction; the
+                // narrowing is what the union buys — no release row can slip
+                // in here and render a quick-log for something with no episode.
+                action={(group) => group.lead.kind === 'episode' ? <QuickLogButton entry={group.lead} /> : undefined}
+                arrival={hadContinueWatching ? (group) => ({ id: group.lead.item.id, seen: arrivalHistory }) : undefined}
+                badges={(group) => continueWatchingBadges(group.lead, now)}
+                // Wrapped, not grouped: this section holds one entry per show
+                // by construction (the pool fan answers with a single
+                // `next_episode` pointer each), so it can't produce a batch.
+                groups={continueWatching.map(soloGroup)}
+                onActionsPress={onItemActions}
+                onPress={onItemPress}
               />
             </CollapsibleSection>
           </ContinueWatchingRise>
@@ -239,45 +214,24 @@ export function UpNextSection({
                 </MorphText>
               </View>
             ) : (
-              <VirtualizedRail
-                // The top padding is the stack headroom: a grouped card's backs
-                // sit above its face card, and a horizontal scroll view clips at
-                // its own frame.
-                contentContainerStyle={{
-                  paddingTop: STACK_HEADROOM,
-                }}
-                ListHeaderComponent={<View className="w-4" />}
-                ListFooterComponent={<View className="w-1" />}
-                data={selected.groups}
-                estimatedItemSize={268}
-                keyExtractor={(group) => group.id}
-                style={{ height: episodeCardRailHeight(fontScale, STACK_HEADROOM) }}
-                renderItem={({ item: group }) => (
-                  <CardSlot
-                    // Aired-today episodes are watchable right now, so they
-                    // keep the quick-log checkmark here too; still-upcoming
-                    // ones — and release rows, which are never loggable —
-                    // only carry their day badge. A batch never gets one
-                    // either: the checkmark logs a single episode, and there
-                    // is no honest answer to which of ten it would advance.
-                    action={
-                      group.entries.length === 1 &&
-                      group.lead.status === 'aired' &&
-                      group.lead.kind === 'episode' ? (
-                        <QuickLogButton entry={group.lead} />
-                      ) : undefined
-                    }
-                    badges={
-                      group.lead.status === 'aired'
-                        ? continueWatchingBadges(group.lead, now)
-                        : calendarBadges(group.lead, now)
-                    }
-                    group={group}
-                    arrival={!startedEmpty ? { id: group.id, seen: arrivalHistory } : undefined}
-                    onActionsPress={onItemActions}
-                    onPress={onItemPress}
-                  />
-                )}
+              <EpisodeCardRail
+                // Aired-today episodes are watchable right now, so they keep
+                // the quick-log checkmark here too; still-upcoming ones — and
+                // release rows, which are never loggable — only carry their
+                // day badge. A batch never gets one either: the checkmark logs
+                // a single episode, and there is no honest answer to which of
+                // ten it would advance.
+                action={(group) =>
+                  group.entries.length === 1 && group.lead.status === 'aired' && group.lead.kind === 'episode'
+                    ? <QuickLogButton entry={group.lead} />
+                    : undefined}
+                arrival={!startedEmpty ? (group) => ({ id: group.id, seen: arrivalHistory }) : undefined}
+                badges={(group) =>
+                  group.lead.status === 'aired' ? continueWatchingBadges(group.lead, now) : calendarBadges(group.lead, now)}
+                groups={selected.groups}
+                onActionsPress={onItemActions}
+                onPress={onItemPress}
+                stacked
               />
             )}
           </AnimatedView>

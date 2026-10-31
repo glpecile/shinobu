@@ -1,6 +1,7 @@
 import { View, useWindowDimensions } from 'react-native';
 
 import { Rail } from '@/components/rail';
+import { ProviderIcon } from '@/components/provider-icon';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
@@ -67,6 +68,21 @@ function SkeletonLandscapeCard({ index, hasAction = false }: { index: number; ha
         {hasAction && <Skeleton className="size-11 shrink-0 rounded-xl" delay={delay} />}
       </View>
     </View>
+  );
+}
+
+/** Coming Soon's stacked rail, honoring its saved collapse state while loading. */
+export function LandscapeRowSkeleton() {
+  const { width, fontScale } = useWindowDimensions();
+  const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
+  return (
+    <CollapsibleSection collapseKey="serializd-coming-soon" leading={<ProviderIcon id="serializd" size={16} />} title="Coming Soon">
+      <View style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2), paddingTop: STACK_OFFSET * 2 }}>
+        <Rail className="px-4">
+          {Array.from({ length: cardCount }).map((_, index) => <SkeletonLandscapeCard index={index} key={index} />)}
+        </Rail>
+      </View>
+    </CollapsibleSection>
   );
 }
 
