@@ -46,6 +46,7 @@ describe('allowlist', () => {
       ['/api/serializd/user/gian/lists?sort_by=date_created_desc&page=2', 'GET'],
       ['/api/serializd/user/gian/liked_lists?sort_by=date_created_desc&page=1', 'GET'],
       ['/api/serializd/list/42', 'GET'],
+      ['/api/serializd/search/upcoming_episodes_v3?cursor=', 'GET'],
       ['/api/serializd/list/add_item', 'POST'],
       ['/api/serializd/list/edit', 'POST'],
       ['/api/serializd/list/create', 'POST'],
@@ -130,6 +131,7 @@ describe('allowlist', () => {
       '/api/serializd/list/42/items',
       '/api/serializd/list/42%2F..%2Flogin',
       '/api/serializd/list/0',
+      '/api/serializd/search/trending',
     ]) {
       for (const method of ['GET', 'POST'] as const) {
         const upstream = capturingUpstream(Response.json({}));

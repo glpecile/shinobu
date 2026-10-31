@@ -27,7 +27,8 @@ export function formatCalendarDate(
 const calendarFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function calendarFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const key = JSON.stringify(options);
+  // `year: undefined` drops a default, so it must not share `{}`'s key.
+  const key = JSON.stringify(options, (_, value: unknown) => (value === undefined ? null : value));
   let formatter = calendarFormatters.get(key);
   if (formatter == null) {
     formatter = new Intl.DateTimeFormat(undefined, {

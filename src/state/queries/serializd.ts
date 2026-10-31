@@ -7,6 +7,7 @@ import type { SerializdDeps } from '@/lib/providers/serializd/deps';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
 import { getSerializdWatchedShows } from '@/lib/providers/serializd/watched';
+import { getSerializdUpcoming, type SerializdUpcomingEpisode } from '@/lib/providers/serializd/upcoming';
 
 /**
  * Real dependency wiring for Serializd effects — same state → lib/providers
@@ -44,6 +45,7 @@ export const serializdQueryKeys = {
   lists: (username: string, kind: SerializdListKind) => [...serializdQueryKeys.listsRoot(), username, kind] as const,
   listRoot: () => [...serializdQueryKeys.all, 'list'] as const,
   list: (username: string | null, id: string) => [...serializdQueryKeys.listRoot(), username, id] as const,
+  upcoming: (username: string) => [...serializdQueryKeys.all, 'upcoming', username] as const,
   progress: (username: string, tmdbId: number) =>
     [...serializdQueryKeys.all, 'progress', username, tmdbId] as const,
 };
@@ -67,6 +69,15 @@ export function useSerializdProgressQuery(tmdbId: number | undefined, username: 
     queryFn: ({ signal }) => Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(username), { tmdbId: tmdbId! }), { signal }),
     enabled: username != null && tmdbId != null,
     staleTime: 5 * 60_000,
+  });
+}
+
+/** Serializd's "Coming soon" for the signed-in account. */
+export function useSuspenseSerializdUpcomingQuery(username: string) {
+  return useSuspenseQuery({
+    queryKey: serializdQueryKeys.upcoming(username),
+    queryFn: ({ signal }) => Effect.runPromise(getSerializdUpcoming(serializdDeps(username)), { signal }),
+    staleTime: 60 * 60_000,
   });
 }
 
@@ -96,4 +107,11 @@ export function findInSerializdListsCache(queryClient: QueryClient, id: string) 
   // so a connected-but-invalid session never hides a cached hit.
   return queryClient.getQueriesData<{ entries: SerializdListEntry[] }>({ queryKey: [...serializdQueryKeys.listRoot(), getSerializdUsername() ?? null] })
     .flatMap(([, data]) => data?.entries ?? []).find((entry) => entry.item.id === id)?.item;
+}
+
+/** Coming Soon cards carry TMDB ids, which a cold details read can't serve without a TMDB token. */
+export function findInSerializdUpcomingCache(queryClient: QueryClient, id: string) {
+  if (typeof window === 'undefined') return undefined;
+  return queryClient.getQueriesData<SerializdUpcomingEpisode[]>({ queryKey: [...serializdQueryKeys.all, 'upcoming'] })
+    .flatMap(([, data]) => data ?? []).find((episode) => episode.item.id === id)?.item;
 }

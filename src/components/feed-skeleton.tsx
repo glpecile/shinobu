@@ -70,6 +70,22 @@ function SkeletonLandscapeCard({ index, hasAction = false }: { index: number; ha
   );
 }
 
+/** A stacked landscape row with its header, like Coming Soon. */
+export function LandscapeRowSkeleton() {
+  const { width, fontScale } = useWindowDimensions();
+  const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
+  return (
+    <View className="mb-6">
+      <SkeletonSectionHeader widthClass="w-40" />
+      <View style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2), paddingTop: STACK_OFFSET * 2 }}>
+        <Rail className="px-4">
+          {Array.from({ length: cardCount }).map((_, index) => <SkeletonLandscapeCard index={index} key={index} />)}
+        </Rail>
+      </View>
+    </View>
+  );
+}
+
 function SkeletonDayCell({ index }: { index: number }) {
   // Mirrors the real cell's internal stack (weekday · date · dot row) so the
   // strip is the same height here as once it resolves.
