@@ -5,15 +5,26 @@ import { QueryClient } from '@tanstack/react-query';
 (globalThis as { __DEV__?: boolean }).__DEV__ = true;
 
 // react-native-mmkv backs both the session store and Simkl's per-flow PKCE
-// storage — one in-memory Map serves both instances under bun.
+// storage — one in-memory Map serves both instances under bun. Writes notify
+// listeners the way MMKV does in-process, for `syncQueryCacheWithSessions`.
 const store = new Map<string, string>();
+const listeners = new Set<(key: string) => void>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
     getString: (key: string) => store.get(key),
-    set: (key: string, value: string) => store.set(key, value),
-    remove: (key: string) => store.delete(key),
+    set: (key: string, value: string) => {
+      store.set(key, value);
+      for (const listener of listeners) listener(key);
+    },
+    remove: (key: string) => {
+      store.delete(key);
+      for (const listener of listeners) listener(key);
+    },
     getAllKeys: () => [...store.keys()],
-    addOnValueChangedListener: () => ({ remove() {} }),
+    addOnValueChangedListener: (listener: (key: string) => void) => {
+      listeners.add(listener);
+      return { remove: () => listeners.delete(listener) };
+    },
   }),
 }));
 // The simkl query layer imports the platform http client, which can't load
@@ -33,8 +44,8 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { disconnectProvider } = await import('./index');
-const { getProviderSession, setProviderSession } = await import('./tokens');
+const { disconnectProvider, syncQueryCacheWithSessions } = await import('./index');
+const { clearProviderSession, getProviderSession, setProviderSession } = await import('./tokens');
 const { getSimklAuthFlow, saveSimklAuthFlow } = await import(
   '@/lib/providers/simkl/auth'
 );
@@ -43,7 +54,10 @@ const { DIARY_QUERY_ROOT } = await import('@/state/queries/diary-pages');
 const { UP_NEXT_QUERY_ROOT } = await import('@/state/queries/up-next-cache');
 const { WATCHLIST_QUERY_ROOT } = await import('@/state/queries/watchlist-cache');
 
-beforeEach(() => store.clear());
+beforeEach(() => {
+  store.clear();
+  listeners.clear();
+});
 
 describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
   test("clears the token, every ['simkl']-rooted query and the merged caches", () => {
@@ -94,5 +108,38 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
 
     expect(getSimklAuthFlow()).not.toBeNull();
     expect(getProviderSession('trakt')).toBeNull();
+  });
+});
+
+describe('syncQueryCacheWithSessions', () => {
+  test('a session cleared outside Disconnect purges like one', () => {
+    setProviderSession('anilist', { accessToken: 'a' });
+    const queryClient = new QueryClient();
+    const upNextKey = [...UP_NEXT_QUERY_ROOT, 'inputs'];
+    queryClient.setQueryData(['anilist', 'viewer'], 1);
+    queryClient.setQueryData(upNextKey, { progress: [] });
+    const unsubscribe = syncQueryCacheWithSessions(queryClient);
+
+    // What the transport's `tokens.clear()` does on a dead token.
+    clearProviderSession('anilist');
+
+    expect(queryClient.getQueryData(['anilist', 'viewer'])).toBeUndefined();
+    expect(queryClient.getQueryData(upNextKey)).toBeUndefined();
+    unsubscribe();
+  });
+
+  test('a new connect invalidates the merged gathers; a token refresh does not', () => {
+    const queryClient = new QueryClient();
+    const watchlistKey = [...WATCHLIST_QUERY_ROOT, 'inputs'];
+    queryClient.setQueryData(watchlistKey, { inputs: [], errors: [] });
+    const unsubscribe = syncQueryCacheWithSessions(queryClient);
+
+    setProviderSession('trakt', { accessToken: 't-1' });
+    expect(queryClient.getQueryState(watchlistKey)?.isInvalidated).toBe(true);
+
+    queryClient.setQueryData(watchlistKey, { inputs: [], errors: [] });
+    setProviderSession('trakt', { accessToken: 't-2' });
+    expect(queryClient.getQueryState(watchlistKey)?.isInvalidated).toBe(false);
+    unsubscribe();
   });
 });
