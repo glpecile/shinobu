@@ -18,6 +18,7 @@ test('reads with the session bearer and normalizes each airing onto its TMDB sho
     baseUrl: 'https://api.test',
     session: { accessToken: 'tok', username: 'gian' },
     fetch: async (url, init) => {
+      if (String(url).endsWith('/validateauthtoken')) return Response.json({ isValid: true, username: 'gian' });
       expect(String(url)).toBe('https://api.test/search/upcoming_episodes_v3');
       expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer tok');
       return Response.json({ items: [item, { ...item, episodeNumber: 3, episodeName: 'Episode 3' }], nextCursor: null, additionalData: {} });
@@ -32,4 +33,16 @@ test('reads with the session bearer and normalizes each airing onto its TMDB sho
   expect(episode).not.toHaveProperty('runtime');
   // TMDB's placeholder name only repeats the episode code.
   expect(placeholder).not.toHaveProperty('title');
+});
+
+test('rejects a revoked session before the endpoint can return its editorial fallback', async () => {
+  const deps: SerializdDeps = {
+    baseUrl: 'https://api.test',
+    session: { accessToken: 'revoked', username: 'gian' },
+    fetch: async (url) => String(url).endsWith('/validateauthtoken')
+      ? Response.json({ isValid: false })
+      : Response.json({ items: [item] }),
+  };
+  const error = await Effect.runPromise(Effect.flip(getSerializdUpcoming(deps)));
+  expect(error).toMatchObject({ _tag: 'ProviderAuthError', refreshFailed: true });
 });

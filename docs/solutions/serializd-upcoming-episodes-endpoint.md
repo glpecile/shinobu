@@ -21,4 +21,9 @@ return c.get(t,{params:{cursor:A,should_get_progress:e}})}
   personalized from fallback.
 - `search/premieres` exists but answered 500 signed out.
 
+The Coming Soon read validates its bearer through the existing
+`validateAuthToken` before requesting upcoming episodes. A nonempty bearer and
+a 200 response alone do not prove authentication. A regression test covers the
+revoked-token editorial fallback.
+
 Re-probe: `curl` the path with the three app headers from `web-cors-serializd.md`.

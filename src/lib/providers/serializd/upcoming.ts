@@ -4,6 +4,7 @@ import * as Schema from 'effect/Schema';
 import { ProviderDecodeError } from '@/lib/providers/errors';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
+import { validateAuthToken } from './auth';
 import { serializdHttp } from './http';
 
 const Id = Schema.Int.check(Schema.isGreaterThan(0));
@@ -48,6 +49,8 @@ const tmdbImage = (size: string, path: string | null | undefined) => (path ? `ht
  * First page only: the row is a browse slice, and `nextCursor` is ignored.
  */
 export const getSerializdUpcoming = Effect.fn('serializd.getUpcoming')(function* (deps: SerializdDeps) {
+  // This endpoint returns editorial shows with 200 even for a revoked bearer.
+  yield* validateAuthToken(deps, deps.session?.accessToken ?? '');
   const raw = yield* serializdHttp<unknown>(deps, '/search/upcoming_episodes_v3', { auth: true });
   const page = yield* Schema.decodeUnknownEffect(RawPage)(raw).pipe(
     Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'unrecognized upcoming episodes' })),

@@ -10,6 +10,9 @@ Serializd is connected, hides when nothing is upcoming, and has no View all.
   episode routes as every other TV item.
 - The read requires a Serializd session (`auth: true`). Signed out the route
   answers 200 with an editorial set, which must never reach the feed.
+  Validate the bearer with `validateAuthToken` before each fetch because a
+  revoked bearer receives the same fallback. Home refresh includes this query;
+  hidden items stay hidden and the row wakes at local midnight and on foreground.
 - Without a TMDB token a `tmdb-tv-<id>` has no cold read, so
   `findInSerializdUpcomingCache` resolves it from this query, as Serializd
   lists already do.
@@ -28,10 +31,9 @@ Serializd is connected, hides when nothing is upcoming, and has no View all.
 
 Open:
 
-- The signed-in response is unverified. An invalid token also gets 200 with
-  the editorial set, not a 401, so a revoked session would show strangers'
-  shows instead of the reconnect banner. Compare a real signed-in body for a
-  field that tells them apart (`additionalData.showLogCount` is `[]` signed out).
+- The signed-in response is unverified. Confirm the endpoint personalizes the
+  row on a real account; token validation rejects the known revoked-session
+  fallback but does not prove the valid-session payload is personalized.
 - Later-cour anime uses TMDB numbering and art: Ramparts of Ice 2nd Season
   reads as `S1E18` on the show's season-1 poster, while AniList's This Week
   card calls it `E4`. A show tracked in both appears in both rows that week.

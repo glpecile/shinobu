@@ -1,13 +1,17 @@
+import { useReducer } from 'react';
+
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';
 import type { SerializdUpcomingEpisode } from '@/lib/providers/serializd/upcoming';
 import { formatCalendarDate } from '@/lib/time/calendar-date';
-import { localDayOffset } from '@/lib/time/relative-day';
+import { localDayAt, localDayOffset } from '@/lib/time/relative-day';
+import { useWakeAt } from '@/lib/time/use-wake-at';
+import { useHiddenItems, visibleByIds } from '@/state/prefs/hidden-items';
 import { useSuspenseSerializdUpcomingQuery } from '@/state/queries/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { CardBadge } from './badges';
-import { groupDayEntries, type UpNextGroup } from './group';
+import { groupDayEntries } from './group';
 import type { UpNextEpisodeEntry } from './types';
 import { EpisodeCardRail } from './ui/episode-card-rail';
 
@@ -44,6 +48,10 @@ function toEntry(episode: SerializdUpcomingEpisode): UpNextEpisodeEntry {
   };
 }
 
+function newDate(): Date {
+  return new Date();
+}
+
 /**
  * Serializd's "Coming soon" under the watchlist: each followed show's next air
  * day, on This Week's cards. No View all; the first page is the row.
@@ -54,22 +62,25 @@ export function ComingSoonRow({ username, onItemActions, onItemPress }: {
   onItemPress: (item: NormalizedMediaItem) => void;
 }) {
   const { data } = useSuspenseSerializdUpcomingQuery(username);
-  const now = new Date();
+  const hidden = useHiddenItems();
+  const [now, refreshNow] = useReducer(newDate, undefined, newDate);
+  useWakeAt(localDayAt(1, now).getTime(), now, refreshNow);
   // One card per show at its next air day, so a season drop stacks as it does
   // on This Week; already-aired entries belong to Continue Watching.
   const byEntry = new Map<string, SerializdUpcomingEpisode>();
-  const days = new Map<string, UpNextEpisodeEntry[]>();
+  const entries: UpNextEpisodeEntry[] = [];
   const shows = new Map<string, string>();
-  for (const episode of data.toSorted((a, b) => a.airDate.localeCompare(b.airDate))) {
+  const visible = visibleByIds(data, hidden, (entry) => [entry.item.id]);
+  for (const episode of visible.toSorted((a, b) => a.airDate.localeCompare(b.airDate))) {
     if ((localDayOffset(episode.airDate, now) ?? -1) < 0) continue;
     const day = shows.get(episode.item.id) ?? episode.airDate;
     if (day !== episode.airDate) continue;
     shows.set(episode.item.id, day);
     const entry = toEntry(episode);
     byEntry.set(entry.id, episode);
-    days.set(day, [...(days.get(day) ?? []), entry]);
+    entries.push(entry);
   }
-  const groups: UpNextGroup[] = [...days.values()].flatMap(groupDayEntries);
+  const groups = groupDayEntries(entries);
   if (groups.length === 0) return null;
   return (
     <CollapsibleSection
