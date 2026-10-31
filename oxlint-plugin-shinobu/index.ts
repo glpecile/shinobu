@@ -1,5 +1,6 @@
 import { definePlugin } from '@oxlint/plugins';
 
+import effectBoundary from './rules/effect-boundary.ts';
 import immediateDisclosures from './rules/immediate-disclosures.ts';
 import noHardcodedRoutes from './rules/no-hardcoded-routes.ts';
 import logColorOnly from './rules/log-color-only.ts';
@@ -21,5 +22,6 @@ export default definePlugin({
     'reanimated-no-deps': reanimatedNoDeps,
     'web-safe-easing': webSafeEasing,
     'no-pointer-events-prop': noPointerEventsProp,
+    'effect-boundary': effectBoundary,
   },
 });
