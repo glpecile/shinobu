@@ -23,7 +23,10 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 let providers: ProviderId[] = [];
-mock.module('@/state/session', () => ({ useConnectedProviders: () => providers }));
+mock.module('@/state/session', () => ({
+  useConnectedProviders: () => providers,
+  currentUsableProviders: () => providers,
+}));
 let transport: (url: string, init?: RequestInit) => Promise<Response>;
 mock.module('@/lib/http/client', () => ({ httpFetch: (url: string, init?: RequestInit) => transport(String(url), init) }));
 

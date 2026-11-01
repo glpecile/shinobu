@@ -85,6 +85,17 @@ export function useTraktNeedsCredentials(): boolean {
   );
 }
 
+/**
+ * The usable providers at call time, for a fetch. A connect invalidates the
+ * active gathers (`syncQueryCacheWithSessions`) before React re-renders them,
+ * so a list captured at render would refetch without the new provider.
+ * Usable, not merely connected: a MigrationNeeded Trakt session can only 401.
+ * Prerendering has no storage and reads the hook's server snapshot.
+ */
+export function currentUsableProviders(): readonly ProviderId[] {
+  return isServer() ? SERVER_CONNECTED_PROVIDERS : usableProviderIds();
+}
+
 /** Every cache a provider's session backs: its own root and the merged gathers. */
 export function purgeProviderQueries(queryClient: QueryClient, id: ProviderId): void {
   // Drop the provider's cached reads with its session — every provider's

@@ -31,7 +31,7 @@ export function UpNextPrefetch(): null {
     if (providersForFeed(connected).length === 0) return;
 
     const warm = (): void => {
-      void prefetchUpNextInputs(queryClient, connected);
+      void prefetchUpNextInputs(queryClient);
     };
 
     warm();

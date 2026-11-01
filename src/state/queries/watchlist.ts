@@ -13,7 +13,7 @@ import { providersForFeed } from '@/lib/providers/routing';
 import { getAllItems } from '@/lib/providers/simkl/reads';
 import { getWatchlist } from '@/lib/providers/trakt/reads';
 import type { ProviderId } from '@/lib/providers/types';
-import { useConnectedProviders } from '@/state/session';
+import { currentUsableProviders, useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -308,17 +308,14 @@ export async function fetchWatchlistInputs(
  * Streams like `upNextOptions`: a cold grid renders once the first provider
  * with rows settles, and a refetch holds the old inputs until all are back.
  */
-export function watchlistOptions(
-  queryClient: QueryClient,
-  connected: readonly ProviderId[],
-) {
+export function watchlistOptions(queryClient: QueryClient) {
   return {
     queryKey: watchlistQueryKeys.inputs(),
     queryFn: streamedQuery<WatchlistInputs, WatchlistInputs>({
       streamFn: (context) => {
         // Reading the signal lets streamedQuery stop cache writes after a purge.
         void context.signal;
-        return streamWatchlistInputs(queryClient, connected);
+        return streamWatchlistInputs(queryClient, currentUsableProviders());
       },
       reducer: (_previous, partial) => partial,
       initialValue: NO_WATCHLIST_INPUTS,
@@ -377,6 +374,7 @@ export async function refreshWatchlistInputs(
  */
 export function useSuspenseWatchlistInputsQuery(): WatchlistInputs {
   const queryClient = useQueryClient();
-  const connected = useConnectedProviders();
-  return useSuspenseQuery(watchlistOptions(queryClient, connected)).data;
+  // Rebinds after a purge, like `useSuspenseUpNextQuery`.
+  useConnectedProviders();
+  return useSuspenseQuery(watchlistOptions(queryClient)).data;
 }

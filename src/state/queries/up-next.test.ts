@@ -826,11 +826,13 @@ describe('refreshUpNextInputs', () => {
 for (const name of ['up-next', 'watchlist'] as const) {
   test(`${name} does not repopulate a purged cache when a provider finishes late`, async () => {
     const { watchlistOptions } = await import('./watchlist');
+    const { setProviderSession } = await import('@/state/session/tokens');
+    setProviderSession('anilist', { accessToken: 'a' });
+    // The gathers read sessions only on the client (`currentUsableProviders`).
+    (globalThis as { window?: unknown }).window = {};
     const late = Promise.withResolvers<AniListCurrentEntry[]>();
     const legs = { fetchQuery: () => late.promise } as unknown as QueryClient;
-    const options = name === 'up-next'
-      ? upNextOptions(legs, ['anilist'])
-      : watchlistOptions(legs, ['anilist']);
+    const options = name === 'up-next' ? upNextOptions(legs) : watchlistOptions(legs);
     const client = new QueryClient();
     const pending = client.fetchQuery<unknown>(options).catch(() => undefined);
     await Promise.resolve();
@@ -841,5 +843,7 @@ for (const name of ['up-next', 'watchlist'] as const) {
     await Bun.sleep(0);
     expect(client.getQueryData(options.queryKey)).toBeUndefined();
     client.clear();
+    delete (globalThis as { window?: unknown }).window;
+    store.clear();
   });
 }

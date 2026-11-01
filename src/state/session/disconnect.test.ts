@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/react-query';
 
 // The graph reaches modules that read Metro's `__DEV__` global at import time.
 (globalThis as { __DEV__?: boolean }).__DEV__ = true;
@@ -27,10 +27,13 @@ mock.module('react-native-mmkv', () => ({
     },
   }),
 }));
-// The simkl query layer imports the platform http client, which can't load
-// under bun — nothing here goes near the network.
+// The platform http client can't load under bun; requests are recorded instead.
+const requested: string[] = [];
 mock.module('@/lib/http/client', () => ({
-  httpFetch: async () => new Response('{}'),
+  httpFetch: async (input: RequestInfo | URL) => {
+    requested.push(String(input));
+    return Response.json([]);
+  },
 }));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
@@ -45,7 +48,15 @@ mock.module('expo-crypto', () => ({
 }));
 
 const { disconnectProvider, syncQueryCacheWithSessions } = await import('./index');
-const { clearProviderSession, getProviderSession, setProviderSession } = await import('./tokens');
+const {
+  clearProviderSession,
+  getProviderSession,
+  setProviderClientId,
+  setProviderClientSecret,
+  setProviderSession,
+} = await import('./tokens');
+const { watchlistOptions } = await import('@/state/queries/watchlist');
+const { upNextOptions } = await import('@/state/queries/up-next');
 const { getSimklAuthFlow, saveSimklAuthFlow } = await import(
   '@/lib/providers/simkl/auth'
 );
@@ -57,6 +68,7 @@ const { WATCHLIST_QUERY_ROOT } = await import('@/state/queries/watchlist-cache')
 beforeEach(() => {
   store.clear();
   listeners.clear();
+  requested.length = 0;
 });
 
 describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
@@ -128,18 +140,40 @@ describe('syncQueryCacheWithSessions', () => {
     unsubscribe();
   });
 
-  test('a new connect invalidates the merged gathers; a token refresh does not', () => {
-    const queryClient = new QueryClient();
-    const watchlistKey = [...WATCHLIST_QUERY_ROOT, 'inputs'];
-    queryClient.setQueryData(watchlistKey, { inputs: [], errors: [] });
+  test.each([
+    ['watchlist', watchlistOptions],
+    ['up-next', upNextOptions],
+  ] as const)('a new connect refetches the active %s gather with that provider; a token refresh does not', async (_, options) => {
+    // Session reads are client-only (`currentUsableProviders`).
+    (globalThis as { window?: unknown }).window = {};
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const unsubscribe = syncQueryCacheWithSessions(queryClient);
+    const observer = new QueryObserver<unknown>(queryClient, options(queryClient));
+    const idle = () =>
+      new Promise<QueryObserverResult>((resolve) => {
+        const stop = observer.subscribe((result) => {
+          if (result.fetchStatus === 'idle') {
+            stop();
+            resolve(result);
+          }
+        });
+      });
+    const stopObserving = observer.subscribe(() => {});
+    await idle();
 
+    setProviderClientId('trakt', 'cid');
+    setProviderClientSecret('trakt', 'secret');
     setProviderSession('trakt', { accessToken: 't-1' });
-    expect(queryClient.getQueryState(watchlistKey)?.isInvalidated).toBe(true);
+    await idle();
+    expect(requested.some((url) => url.startsWith('https://api.trakt.tv/'))).toBe(true);
 
-    queryClient.setQueryData(watchlistKey, { inputs: [], errors: [] });
+    requested.length = 0;
     setProviderSession('trakt', { accessToken: 't-2' });
-    expect(queryClient.getQueryState(watchlistKey)?.isInvalidated).toBe(false);
+    expect(observer.getCurrentResult().fetchStatus).toBe('idle');
+    expect(requested).toEqual([]);
+    stopObserving();
     unsubscribe();
+    queryClient.clear();
+    delete (globalThis as { window?: unknown }).window;
   });
 });

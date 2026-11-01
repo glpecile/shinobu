@@ -50,7 +50,6 @@ function makeDeps(overrides: Partial<RefreshNotificationsDeps> = {}) {
     isEnabled: () => true,
     mutedKinds: () => new Set(),
     isWeb: () => false,
-    connectedProviders: () => ['trakt'],
     gatherInputs: async () => {
       calls.gather += 1;
       return EMPTY_INPUTS;

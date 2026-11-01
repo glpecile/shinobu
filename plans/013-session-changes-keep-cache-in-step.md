@@ -45,6 +45,13 @@ After this plan, a small root component subscribes to the session store. When a
 When one appears for a provider that wasn't connected it invalidates the two
 merged gathers. A token refresh (an overwrite of an existing session) does nothing.
 
+Revision (#386 review): invalidating isn't enough on its own. It refetches an
+active gather at once, before React re-renders it, and the gather's `queryFn`
+captured the old provider list, so it finished fresh without the new
+provider's rows. `upNextOptions` and `watchlistOptions` now read the usable
+providers when each fetch starts (`currentUsableProviders`), and the test
+drives both through an active `QueryObserver`.
+
 ## Current state
 
 `src/state/session/index.ts`, `disconnectProvider` (after plan 006 lands, it

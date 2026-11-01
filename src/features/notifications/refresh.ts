@@ -2,11 +2,9 @@ import type { QueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 
 import type { UpNextInputs } from '@/features/up-next/types';
-import type { ProviderId } from '@/lib/providers/types';
 import { getMutedNotificationKinds, getNotificationsEnabled } from '@/state/prefs/notifications';
 import { prefsStorage } from '@/state/prefs/storage';
 import { upNextOptions } from '@/state/queries/up-next';
-import { usableProviderIds } from '@/state/session/trakt-migration';
 
 import { computeNotificationSchedule, type NotificationKind } from './compute-schedule';
 import { replaceScheduledNotifications } from './scheduler';
@@ -31,8 +29,7 @@ export interface RefreshNotificationsDeps {
   isEnabled: () => boolean;
   mutedKinds: () => ReadonlySet<NotificationKind>;
   isWeb: () => boolean;
-  connectedProviders: () => readonly ProviderId[];
-  gatherInputs: (connected: readonly ProviderId[]) => Promise<UpNextInputs>;
+  gatherInputs: () => Promise<UpNextInputs>;
   schedule: (
     candidates: ReturnType<typeof computeNotificationSchedule>,
   ) => Promise<ScheduleResult>;
@@ -65,8 +62,7 @@ export async function refreshNotifications(
   // A disconnected/broken provider contributes zero inputs plus an error
   // entry (fetchUpNextInputs' own partial-failure contract) — never a
   // rejection, so the other provider's candidates still get scheduled (R4).
-  const connected = deps.connectedProviders();
-  const inputs = await deps.gatherInputs(connected);
+  const inputs = await deps.gatherInputs();
   if (!deps.isEnabled()) return;
   const candidates = computeNotificationSchedule(inputs, deps.now(), deps.mutedKinds());
   // Offline or every leg down: an empty list from a failed gather would cancel
@@ -81,11 +77,8 @@ export function createRefreshDeps(queryClient: QueryClient): RefreshNotification
     isEnabled: getNotificationsEnabled,
     mutedKinds: getMutedNotificationKinds,
     isWeb: () => Platform.OS === 'web',
-    // Usable, not merely connected (plan 0034 U9): a MigrationNeeded Trakt
-    // session must not schedule notification fetches that can only 401.
-    connectedProviders: usableProviderIds,
     // The Up Next slot, so a cold start's refresh shares the gather the feed is already running.
-    gatherInputs: (connected) => queryClient.fetchQuery(upNextOptions(queryClient, connected)),
+    gatherInputs: () => queryClient.fetchQuery(upNextOptions(queryClient)),
     schedule: replaceScheduledNotifications,
     now: () => new Date(),
     throttle: {

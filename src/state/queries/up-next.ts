@@ -42,7 +42,7 @@ import {
   getWatchedShows,
   traktCalendarRange,
 } from '@/lib/providers/trakt/reads';
-import { useConnectedProviders } from '@/state/session';
+import { currentUsableProviders, useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -807,18 +807,16 @@ export async function fetchUpNextInputs(
  * settles, and the rest join as they arrive. `replace` keeps a refetch on the
  * old inputs until every source is back, so a restored or refreshed slot never
  * shrinks to a partial one.
+ * Each fetch reads `currentUsableProviders` when it starts.
  */
-export function upNextOptions(
-  queryClient: QueryClient,
-  connected: readonly ProviderId[],
-) {
+export function upNextOptions(queryClient: QueryClient) {
   return {
     queryKey: upNextQueryKeys.inputs(),
     queryFn: streamedQuery<UpNextInputs, UpNextInputs>({
       streamFn: (context) => {
         // Reading the signal lets streamedQuery stop cache writes after a purge.
         void context.signal;
-        return streamUpNextInputs(queryClient, connected);
+        return streamUpNextInputs(queryClient, currentUsableProviders());
       },
       reducer: (_previous, partial) => partial,
       initialValue: NO_UP_NEXT_INPUTS,
@@ -832,11 +830,8 @@ export function upNextOptions(
  * `prefetchQuery` honours the client's `staleTime`, so returning to a still-fresh
  * app is a no-op rather than another run of the fan.
  */
-export function prefetchUpNextInputs(
-  queryClient: QueryClient,
-  connected: readonly ProviderId[],
-): Promise<void> {
-  return queryClient.prefetchQuery(upNextOptions(queryClient, connected));
+export function prefetchUpNextInputs(queryClient: QueryClient): Promise<void> {
+  return queryClient.prefetchQuery(upNextOptions(queryClient));
 }
 
 /**
@@ -878,7 +873,9 @@ export interface UpNextResult extends UpNextData {
  */
 export function useSuspenseUpNextQuery(now: Date): UpNextResult {
   const queryClient = useQueryClient();
-  const connected = useConnectedProviders();
-  const { data } = useSuspenseQuery(upNextOptions(queryClient, connected));
+  // Re-renders on a session change, which rebinds the observer to a rebuilt
+  // query after `purgeProviderQueries` removes this one; observers aren't told.
+  useConnectedProviders();
+  const { data } = useSuspenseQuery(upNextOptions(queryClient));
   return { ...computeUpNext(data, now), errors: data.errors, now };
 }
