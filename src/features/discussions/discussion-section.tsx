@@ -50,10 +50,10 @@ export function DiscussionSection({ item, episode }: {
   const [open, setOpen] = useState(false);
   const [redditAttempt, setRedditAttempt] = useState(0);
   const queryClient = useQueryClient();
-  const { data: anilistId } = useAniListIdByTmdbQuery(item);
+  const { data: anilistId, isLoading: mappingLoading } = useAniListIdByTmdbQuery(item);
   const animeId = item.externalIds.anilist ?? anilistId ?? null;
   // AniList-origin items already carry the titles and aliases this read supplies.
-  const { data: anime } = useAnimeByIdQuery(item.id.startsWith('anilist-') ? null : animeId);
+  const { data: anime, isLoading: animeLoading } = useAnimeByIdQuery(item.id.startsWith('anilist-') ? null : animeId);
   const searchItem = {
     ...item,
     titles: { ...item.titles, ...anime?.titles },
@@ -82,12 +82,14 @@ export function DiscussionSection({ item, episode }: {
   const fourchanOnly = <DiscussionBody {...chrome} fade threads={fourchan.threads} />;
   return (
     <SuspenseSection animateFallback={false} errorFallback={fourchanOnly} fallback={fourchanOnly} resetKey={redditAttempt}>
-      <RedditDiscussions
-        {...chrome}
-        episode={episode}
-        fourchan={fourchan.threads}
-        item={searchItem}
-      />
+      {mappingLoading || animeLoading ? fourchanOnly : (
+        <RedditDiscussions
+          {...chrome}
+          episode={episode}
+          fourchan={fourchan.threads}
+          item={searchItem}
+        />
+      )}
     </SuspenseSection>
   );
 }

@@ -39,6 +39,10 @@ as no posts instead of throwing: React logs every boundary-caught error with
 refetches it. Atom entries
 have no spoiler flag, so Reddit cards never show thumbnails.
 
+Wait for the existing ani.zip identity and AniList title reads before starting
+Reddit. Searching the initial TMDB title first spends the IP budget before the
+romaji search can run. The 4chan cards remain available during enrichment.
+
 Every web user shares the Worker's egress IP, and with it the one-search-a-minute
 budget. If production returns 429s, add an edge cache in front of the
 upstream fetch rather than more retries.
