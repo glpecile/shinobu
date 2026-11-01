@@ -144,10 +144,16 @@ describe('fetchAniZipEpisodeMap', () => {
     ).toBeNull();
   });
 
-  test('non-200, malformed JSON, and network errors all degrade to null', async () => {
-    expect(await fetchAniZipEpisodeMap(jsonFetch({}, false), LOOKUP)).toBeNull();
-    expect(await fetchAniZipEpisodeMap(malformedFetch, LOOKUP)).toBeNull();
-    expect(await fetchAniZipEpisodeMap(offlineFetch, LOOKUP)).toBeNull();
+  test('an unknown id is a miss', async () => {
+    expect(
+      await fetchAniZipEpisodeMap(async () => new Response(null, { status: 404 }), LOOKUP),
+    ).toBeNull();
+  });
+
+  test('a 500, malformed JSON, and network errors reject instead of becoming a miss', async () => {
+    await expect(fetchAniZipEpisodeMap(jsonFetch({}, false), LOOKUP)).rejects.toThrow();
+    await expect(fetchAniZipEpisodeMap(malformedFetch, LOOKUP)).rejects.toThrow();
+    await expect(fetchAniZipEpisodeMap(offlineFetch, LOOKUP)).rejects.toThrow();
   });
 });
 

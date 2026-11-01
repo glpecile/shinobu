@@ -81,3 +81,13 @@ single-layout assumption — the fan-out would then write the right episode to
 one provider and the wrong one to the other. Nothing in the sample did, but if
 it turns up, the fix is to resolve the layout per write target rather than
 once. Record the instance here first.
+
+## Transient metadata failures (2026-11-01)
+
+A transient TMDB failure must still try the Trakt season-layout fallback.
+Throwing inside the first lookup's catch bypassed that fallback and made
+canonical anime logs skip usable targets. `seasonLayoutQueryOptions` retains
+the failure while trying both sources, then rejects only if neither supplies
+a layout. The rejection stays out of the cache, so the next call retries.
+The HTTP-boundary regression in `mapping.test.ts` covers fallback success and
+an unanswered failure followed by recovery. Cancellation still stops at once.

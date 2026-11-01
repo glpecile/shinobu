@@ -3,7 +3,8 @@ import * as Effect from 'effect/Effect';
 
 import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type SerializdListKind } from '@/lib/providers/serializd/lists';
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';
-import type { SerializdDeps } from '@/lib/providers/serializd/deps';
+import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd/auth';
+import type { SerializdDeps, SerializdSession } from '@/lib/providers/serializd/deps';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
 import { getSerializdWatchedShows } from '@/lib/providers/serializd/watched';
@@ -24,6 +25,35 @@ export function serializdDeps(username?: string | null): SerializdDeps {
     baseUrl: serializdBaseUrl,
     session: username === undefined || session?.username === username ? session : null,
   };
+}
+
+/**
+ * Web connect: exchanges email and password for a session. Rejects with the
+ * provider error, whose message is the API's own (wrong password, etc.).
+ */
+export async function loginSerializd(credentials: {
+  email: string;
+  password: string;
+}): Promise<SerializdSession> {
+  const deps = serializdDeps();
+  const login = await Effect.runPromise(loginToSerializd(deps, credentials));
+  let username = login.username;
+  if (username === '') {
+    // Some login responses omit the username; validating the token returns it.
+    username = await Effect.runPromise(validateAuthToken(deps, login.token)).then(
+      (validated) => validated.username,
+      () => '',
+    );
+  }
+  return { accessToken: login.token, username };
+}
+
+/** Native connect: validates a token captured from the sign-in WebView. */
+export function validateSerializdToken(token: string): Promise<SerializdSession> {
+  return Effect.runPromise(validateAuthToken(serializdDeps(), token)).then((result) => ({
+    accessToken: result.token,
+    username: result.username,
+  }));
 }
 
 /**

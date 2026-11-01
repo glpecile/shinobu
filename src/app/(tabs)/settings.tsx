@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { Text, View } from 'react-native';
 
@@ -20,6 +19,7 @@ import { ProviderCardsSection } from '@/features/trackers/provider-cards-section
 import { cn } from '@/lib/cn';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useThemePreference } from '@/state/prefs/theme';
+import { useRefetchUnifiedFeed } from '@/state/queries/use-unified-feed';
 
 const THEME_LABEL = { system: 'System', light: 'Light', dark: 'Dark' } as const;
 
@@ -34,7 +34,7 @@ export default function SettingsTab() {
 }
 
 function SettingsScreen() {
-  const queryClient = useQueryClient();
+  const refetchFeed = useRefetchUnifiedFeed();
   const theme = THEME_LABEL[useThemePreference()];
   const version = VERSION != null ? `v${VERSION}` : 'Unknown';
 
@@ -56,9 +56,9 @@ function SettingsScreen() {
           // Native clears the bottom tab bar (unmeasurable height); web doesn't.
           contentContainerClassName={process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'}
           keyboardShouldPersistTaps="handled"
-          // This screen has no server data of its own — the useful refresh is
-          // marking every cached query stale so the feed refetches on return.
-          onRefresh={() => queryClient.invalidateQueries()}
+          // Pull refreshes the home feed. The tracker usernames here are
+          // cached for the session (use-provider-username.ts).
+          onRefresh={refetchFeed}
           tab="settings"
         >
           {/* Full width from the left edge, like Diary's rail; wide web puts the index beside it. */}
