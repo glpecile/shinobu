@@ -21,7 +21,7 @@ unblocking work floated up. Work top to bottom unless a dependency says otherwis
 | 2 | [006](006-disconnect-purges-diary.md) | Disconnecting a provider also drops the cached unified diary | bug / privacy | P1 | S | LOW | — | DONE (#368) |
 | 3 | [008](008-readme-token-encryption-claim.md) | The README stops claiming tokens are encrypted | docs (security claim) | P1 | S | LOW | — | DONE (#378) |
 | 4 | [009](009-simkl-unbuildable-entry-skips-alone.md) | An unbuildable Simkl log is skipped on its own, never coalesced into a batch's `ok` | bug | P1 | S | LOW | — | DONE (#374) |
-| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | DONE (#382; AniList `state` echo unverified, needs one real web connect) |
+| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | NEEDS REVISION (#382; absent-state login CSRF; real web connect unverified) |
 | 6 | [010](010-mapping-lookups-dont-cache-transient-failures.md) | Identity and title lookups stop caching a network failure as "no match" | bug | P2 | S–M | LOW | — | DONE (#377) |
 | 7 | [011](011-trakt-continue-watching-reports-total-failure.md) | Trakt Continue Watching reports an error when every progress call fails | bug | P2 | S | LOW | — | DONE (#370) |
 | 8 | [012](012-notifications-keep-schedule-on-failed-gather.md) | A failed gather never replaces scheduled release notifications with nothing | bug | P2 | S | LOW | 011 (recommended) | DONE (#380, stacked on #370) |
@@ -29,8 +29,8 @@ unblocking work floated up. Work top to bottom unless a dependency says otherwis
 | 10 | [018](018-letterboxd-film-watch-invalidation-scoped.md) | A Letterboxd log refreshes only the logged film's watch state | perf | P2 | S | LOW | — | DONE (#373) |
 | 11 | [015](015-harden-github-workflows.md) | Workflows pin actions and Bun; the release job keeps signing secrets narrow | security + dx | P2 | S | MED | — | DONE (#372; release dry run pending) |
 | 12 | [016](016-web-security-headers.md) | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS) | security | P2 | S | LOW | — | DONE (#381) |
-| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | DONE (#386, stacked on #368) |
-| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | DONE (#385, stacked on #369) |
+| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | NEEDS REVISION (#386; active gathers can refetch the old provider set) |
+| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | NEEDS REVISION (#385; retry reconciliation reuses fresh pre-write cache) |
 | 15 | [019](019-resolve-item-characterization-tests.md) | `useResolvedMediaItem` gets characterization tests | tests | P2 | M | LOW | — | DONE (#375) |
 | 16 | [020](020-letterboxd-userscript-localhost-opt-in.md) | The Letterboxd userscript trusts localhost only after an explicit opt-in | security | P3 | S | LOW | — | DONE (#384) |
 | 17 | [021](021-serializd-proxy-exact-get-paths.md) | The Serializd proxy forwards only the GET paths and query keys the app uses | security | P3 | S | MED | — | DONE (#387) |
@@ -71,11 +71,20 @@ Plan 0113 records them green at `dd6e6b9`. Every plan starts with
 
 ### Execution evidence (round 2)
 
+Review update, 2026-11-01: plans 007, 013 and 014 remain open for the
+correctness findings recorded in #382, #386 and #385. Their earlier green
+unit tests did not cover those paths. These implementations follow their plans;
+the findings identify gaps in those plans, not undocumented deviations. The two direction spikes remain design
+proposals; a DONE spike does not authorize or implement its feature. DONE
+means the linked PR completed implementation or its spike, not that it merged.
+
 - Baseline at `01e42b3`: typecheck and lint exit 0, 1,571 tests pass. The
   `nitro-webview` git dependency was served from a local checkout of
   `275e918` because the sandbox blocks GitHub API tarballs. The lockfile is unchanged.
-- Every DONE code plan passes typecheck, lint and `bun run test`, and its new
-  or changed tests fail with the fix reverted. Stacked PRs (013, 014, 012, 022)
+- Every code plan marked DONE below was reported to pass typecheck, lint and `bun run test`, and its new
+  or changed tests were reported to fail with the fix reverted. This is
+  implementation evidence, not a claim that every PR was merged or its runtime
+  checks completed. Stacked PRs (013, 014, 012, 022)
   say so at the top and carry their dependency's commit until it merges.
 - 024 stopped on its own condition before any edit:
   `grep -rn "from '@/features/" src/lib` also lists `src/lib/media-sort.test.ts`
@@ -87,8 +96,11 @@ Plan 0113 records them green at `dd6e6b9`. Every plan starts with
 - 007's step 0 (does AniList echo `state`) and its STOP condition could not be
   checked: the sandbox refuses `anilist.co`. Do one real web AniList connect before merging.
 - 015's `release.yml` dry run needs a workflow dispatch. actionlint was not run.
-- 016: the export copies `public/_headers`, and `wrangler dev` serves all five
-  headers on `/` and `/letterboxd.user.js`. The browser pass was not run.
+- 016: the initial sandbox could not finish the export or run a browser pass.
+  The 2026-11-01 review completed `build:web` using the existing local build
+  environment, checked HTTP 200 and all five headers on `/` and
+  `/letterboxd.user.js`, and rendered Home, Search, Settings and Inception
+  details through local Wrangler in Chromium with no captured console entries.
 - Browser or account checks in 013, 014, 017, 021 and 023 were skipped. Each PR says which.
 - 030 skipped its browser offline pass. Its "today" section comes from code and a
   local TanStack script, with no network or account.
