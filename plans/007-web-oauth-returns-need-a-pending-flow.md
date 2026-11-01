@@ -145,9 +145,11 @@ It uses its own MMKV instance id so writing it never fires `onSessionChange`
 listeners mid-OAuth. MMKV falls back to `localStorage` on web.
 
 AniList's OAuth server is Laravel Passport, whose implicit grant echoes a
-`state` request parameter in the redirect fragment. Step 0 confirms this. The
-design below stays safe even if it doesn't: the pending flow alone already
-blocks a drive-by link.
+`state` request parameter in the redirect fragment. Step 0 is meant to confirm
+this on AniList itself; it has not been run (the sandbox refuses `anilist.co`). The
+return requires that echo to match exactly: a pending flow alone doesn't bind
+the token to this browser's request, so a crafted link without `state` sent
+while a flow is pending would still sign the visitor in (#382 review).
 
 ## Commands you will need
 
@@ -194,8 +196,8 @@ Any answer is fine: you are only checking whether the server rejects the
 `state` parameter (a 4xx/5xx status). If you can sign in to AniList in a
 browser, also check that the post-consent redirect fragment contains
 `state=probe123`. Record what you saw in your final report. If you can't
-confirm the echo, continue: step 3 accepts a missing `state` as long as a
-pending flow exists.
+confirm the echo, continue, but leave the PR open until one real web AniList
+connect shows `state` in the return fragment: step 3 rejects a missing `state`.
 
 **Verify**: you have a one-line note for the report.
 
@@ -248,7 +250,7 @@ In `use-oauth-callback.ts`:
     status (a stray or replayed link). The fragment is already stripped.
   - Read the returned fragment's `state`:
     `new URLSearchParams(anilistReturn.slice(anilistReturn.indexOf('#') + 1)).get('state')`.
-    If it is present and `!== expected` → `setStatus('error'); return;`.
+    If it `!== expected`, including missing → `setStatus('error'); return;`.
   - Otherwise call `connectAniListFromRedirect(anilistReturn)` as today.
 - Trakt: make `consumeTraktReturnParams` also return `state: params.get('state')`.
   Replace the guard. The new order is:
@@ -284,8 +286,8 @@ In `use-oauth-callback.test.ts`:
 - Add exactly these cases (one per new branch):
   1. AniList fragment with **no** pending flow → `anilistRedirectCalls` stays
      empty, statuses `[]`, and the fragment is still stripped (`replacedUrls` has 1 entry).
-  2. AniList fragment whose `state` differs from the pending one → no connect,
-     statuses `['error']`.
+  2. AniList fragment whose `state` differs from, or is missing for, the
+     pending one → no connect, statuses `['error']`.
   3. Trakt `?code=…&state=st-9` with a pending flow `st-9` **while a Trakt
      session is already stored** (`setProviderSession('trakt', { accessToken: 'old' })`)
      plus client id and secret → `traktExchangeCalls` has 1 entry. This is the
@@ -321,7 +323,7 @@ credentials, run one real connect each and confirm it completes.
 
 ## Test plan
 
-- Five new cases plus two updated ones in `use-oauth-callback.test.ts` (listed in step 4).
+- Five new cases (the second run for a differing and a missing `state`) plus two updated ones in `use-oauth-callback.test.ts` (listed in step 4).
 - All existing Simkl cases must pass untouched.
 - `bun run test` → all pass.
 

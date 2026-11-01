@@ -24,6 +24,7 @@ import {
   TRAKT_REDIRECT_URIS,
 } from '@/lib/providers/trakt/redirect-uri';
 import { exchangeTraktCode } from '@/state/queries/trakt';
+import { beginOAuthFlow } from '@/state/session/oauth-flow';
 import { useProviderCredentials } from '@/state/session/use-provider-credentials';
 
 const discovery = {
@@ -159,6 +160,7 @@ export function useTraktConnect() {
       // the user back to the home route with ?code=..., where
       // useOAuthCallback exchanges it. This avoids popup blockers and
       // orphaned auth windows.
+      beginOAuthFlow('trakt', request.state);
       window.location.assign(request.url);
       return;
     }

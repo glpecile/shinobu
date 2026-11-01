@@ -53,8 +53,10 @@ export function anilistClientId(): string {
  * The implicit-grant authorize URL for a resolved client id. AniList
  * redirects back to the client's registered redirect URL with
  * `#access_token=…&token_type=Bearer&expires_in=…` in the fragment — there
- * is no code exchange.
+ * is no code exchange. Web passes a `state`, which AniList echoes in the
+ * fragment for the return leg to match.
  */
-export function anilistAuthorizeUrl(clientId: string): string {
-  return `${ANILIST_AUTHORIZE_URL}?client_id=${clientId}&response_type=token`;
+export function anilistAuthorizeUrl(clientId: string, state?: string): string {
+  const url = `${ANILIST_AUTHORIZE_URL}?client_id=${clientId}&response_type=token`;
+  return state == null ? url : `${url}&state=${encodeURIComponent(state)}`;
 }
