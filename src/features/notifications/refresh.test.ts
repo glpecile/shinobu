@@ -97,6 +97,19 @@ describe('refreshNotifications', () => {
     expect(calls.schedule).toBe(0);
   });
 
+  test('a gather that failed and found nothing keeps the existing schedule', async () => {
+    const { deps, calls } = makeDeps({
+      gatherInputs: async () => ({
+        ...EMPTY_INPUTS,
+        errors: [{ provider: 'trakt', message: 'offline' }],
+      }),
+    });
+
+    await refreshNotifications(deps, { throttle: false });
+
+    expect(calls.schedule).toBe(0);
+  });
+
   test('two foreground triggers within the throttle window run once', async () => {
     const { deps, calls } = makeDeps();
     await refreshNotifications(deps);
