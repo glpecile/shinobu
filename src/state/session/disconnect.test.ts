@@ -39,6 +39,7 @@ const { getSimklAuthFlow, saveSimklAuthFlow } = await import(
   '@/lib/providers/simkl/auth'
 );
 const { simklQueryKeys } = await import('@/state/queries/simkl');
+const { DIARY_QUERY_ROOT } = await import('@/state/queries/diary-pages');
 const { UP_NEXT_QUERY_ROOT } = await import('@/state/queries/up-next-cache');
 const { WATCHLIST_QUERY_ROOT } = await import('@/state/queries/watchlist-cache');
 
@@ -53,12 +54,14 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
     });
     queryClient.setQueryData(simklQueryKeys.allItems(), { shows: [] });
     queryClient.setQueryData(['trakt', 'viewer'], 'unrelated');
-    // Both hold every provider's rows under a key naming none of them, so the
+    // All three hold every provider's rows under a key naming none of them, so the
     // per-provider purge can't reach them.
     const watchlistKey = [...WATCHLIST_QUERY_ROOT, 'inputs'];
     const upNextKey = [...UP_NEXT_QUERY_ROOT, 'inputs'];
     queryClient.setQueryData(watchlistKey, { inputs: [], errors: [] });
     queryClient.setQueryData(upNextKey, { progress: [] });
+    const diaryKey = [...DIARY_QUERY_ROOT, 'feed', 'simkl,trakt', '', ''];
+    queryClient.setQueryData(diaryKey, { pages: [], pageParams: [] });
 
     disconnectProvider(queryClient, 'simkl');
 
@@ -67,6 +70,7 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
     expect(queryClient.getQueryData(simklQueryKeys.allItems())).toBeUndefined();
     expect(queryClient.getQueryData(watchlistKey)).toBeUndefined();
     expect(queryClient.getQueryData(upNextKey)).toBeUndefined();
+    expect(queryClient.getQueryData(diaryKey)).toBeUndefined();
     // Another provider's cache must survive a Simkl disconnect untouched.
     expect(queryClient.getQueryData(['trakt', 'viewer'])).toBe(
       'unrelated' as never,
