@@ -668,8 +668,10 @@ export function invalidateAfterLog(
   // the *enriched* item (the mutation may have discovered ids the caller's
   // copy lacks), which is why this lives here and not in onSuccess.
   if (succeeded.includes('trakt')) {
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() });
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedMovies() });
+    const filmLike = item.type === 'MOVIE' || item.isFilm === true;
+    queryClient.invalidateQueries({
+      queryKey: filmLike ? traktQueryKeys.watchedMovies() : traktQueryKeys.watchedShows(),
+    });
     // Trakt removes a watched item from the watchlist server-side — "watching 1
     // episode will remove the entire show or season" — so a log silently
     // changes the watchlist too, and the cached read would otherwise sit stale
@@ -678,7 +680,7 @@ export function invalidateAfterLog(
     // type/sort the surface requested.
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
     const traktId = item.externalIds.trakt;
-    if (traktId != null) {
+    if (!filmLike && traktId != null) {
       // TV logs also change this show's seasons/progress views (plan 0010).
       queryClient.invalidateQueries({
         queryKey: traktQueryKeys.showProgress(traktId),
@@ -731,7 +733,10 @@ export function invalidateAfterLog(
     queryClient.invalidateQueries({
       queryKey: letterboxdQueryKeys.filmWatchesRoot(),
       predicate: ({ queryKey }) =>
-        (slug != null && queryKey[3] === slug) || (tmdb != null && queryKey[4] === tmdb),
+        (slug != null && (queryKey[3] === slug ||
+          (typeof queryKey[4] === 'number' &&
+            queryClient.getQueryData(letterboxdQueryKeys.slug(queryKey[4])) === slug))) ||
+        (tmdb != null && queryKey[4] === tmdb),
     });
     // A pre-write RSS response must not repopulate the shared input as fresh.
     void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });

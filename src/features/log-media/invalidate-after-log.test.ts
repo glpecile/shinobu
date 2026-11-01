@@ -81,6 +81,16 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     // (plan 0031 U11/KTD-5).
     expect(keys).toContain('trakt/watchlist');
     expect(keys).toContain('watchlist/inputs');
+    expect(keys).toContain('trakt/watched-shows');
+    expect(keys).not.toContain('trakt/watched-movies');
+  });
+
+  test('a successful Trakt film log refreshes watched movies only', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterLog(client, { ...ITEM, type: 'MOVIE' }, ['trakt']);
+    expect(keys).toContain('trakt/watched-movies');
+    expect(keys).not.toContain('trakt/watched-shows');
+    expect(keys).not.toContain('trakt/show-progress/1');
   });
 
   test('a successful AniList log recomputes them, and the entries read behind them', () => {
@@ -124,14 +134,16 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     const byTmdb = letterboxdQueryKeys.filmWatch('u', film({ tmdb: 27205 }));
     const otherFilm = letterboxdQueryKeys.filmWatch('u', film({ letterboxd: 'heat' }));
     for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
-    // A TMDB-only item finds its slug-keyed reads through the cached slug lookup.
+    // Both directions share the cached TMDB-to-slug mapping.
     client.setQueryData(letterboxdQueryKeys.slug(27205), 'inception');
 
-    invalidateAfterLog(client, film({ tmdb: 27205 }), ['letterboxd']);
-
-    expect(client.getQueryState(bySlug)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(byTmdb)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(otherFilm)?.isInvalidated).toBe(false);
+    for (const externalIds of [{ letterboxd: 'inception' }, { tmdb: 27205 }]) {
+      for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
+      invalidateAfterLog(client, film(externalIds), ['letterboxd']);
+      expect(client.getQueryState(bySlug)?.isInvalidated).toBe(true);
+      expect(client.getQueryState(byTmdb)?.isInvalidated).toBe(true);
+      expect(client.getQueryState(otherFilm)?.isInvalidated).toBe(false);
+    }
     client.clear();
   });
 

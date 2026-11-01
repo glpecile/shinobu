@@ -27,3 +27,12 @@ inline, so ratings and watched eyes share one request per film. All three hold
 small normalized values (a slug, a `NormalizedMediaItem`, or null), not HTML. A
 cached null watch still means unknown, never unwatched
 (`letterboxd-unknown-watches-and-list-likes.md`).
+
+## Invalidating watched aliases (2026-11-01)
+
+A successful log can carry only a Letterboxd slug while a mounted row reads
+its watch through a TMDB-only key. Matching only ids on the logged item left
+that alias fresh for an hour. `invalidateAfterLog` also compares each cached
+watch key's TMDB id through the shared slug lookup, so slug-only and TMDB-only
+logs invalidate both aliases without refetching unrelated films. The existing
+invalidation test exercises both directions against a real QueryClient.
