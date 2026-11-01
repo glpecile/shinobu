@@ -8,7 +8,7 @@ honor its STOP conditions, and update your row when done.
 - Round 2: 2026-10-31 against commit `1003c59` (plans 005–030), a full audit
   covering correctness, security, performance, tests, tech debt, DX, docs and direction.
 
-Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+Status values: TODO | IN PROGRESS | DONE | NEEDS REVISION (review finding) | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
 ## Round 2: ranked index (2026-10-31)
 
@@ -17,32 +17,32 @@ unblocking work floated up. Work top to bottom unless a dependency says otherwis
 
 | Rank | Plan | Title | Category | Priority | Effort | Risk | Depends on | Status |
 |-----:|------|-------|----------|----------|--------|------|------------|--------|
-| 1 | [005](005-simkl-reconcile-blocks-rewatches.md) | A provider whose watch state can't be read no longer blocks rewatches elsewhere | bug | P1 | S | LOW | — | TODO |
-| 2 | [006](006-disconnect-purges-diary.md) | Disconnecting a provider also drops the cached unified diary | bug / privacy | P1 | S | LOW | — | TODO |
-| 3 | [008](008-readme-token-encryption-claim.md) | The README stops claiming tokens are encrypted | docs (security claim) | P1 | S | LOW | — | TODO |
-| 4 | [009](009-simkl-unbuildable-entry-skips-alone.md) | An unbuildable Simkl log is skipped on its own, never coalesced into a batch's `ok` | bug | P1 | S | LOW | — | TODO |
-| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | TODO |
-| 6 | [010](010-mapping-lookups-dont-cache-transient-failures.md) | Identity and title lookups stop caching a network failure as "no match" | bug | P2 | S–M | LOW | — | TODO |
-| 7 | [011](011-trakt-continue-watching-reports-total-failure.md) | Trakt Continue Watching reports an error when every progress call fails | bug | P2 | S | LOW | — | TODO |
-| 8 | [012](012-notifications-keep-schedule-on-failed-gather.md) | A failed gather never replaces scheduled release notifications with nothing | bug | P2 | S | LOW | 011 (recommended) | TODO |
-| 9 | [017](017-settings-refresh-scoped.md) | Settings pull-to-refresh refreshes the home feed, not the whole cache | perf | P2 | S | LOW | — | TODO |
-| 10 | [018](018-letterboxd-film-watch-invalidation-scoped.md) | A Letterboxd log refreshes only the logged film's watch state | perf | P2 | S | LOW | — | TODO |
-| 11 | [015](015-harden-github-workflows.md) | Workflows pin actions and Bun; the release job keeps signing secrets narrow | security + dx | P2 | S | MED | — | TODO |
-| 12 | [016](016-web-security-headers.md) | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS) | security | P2 | S | LOW | — | TODO |
-| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | TODO |
-| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | TODO |
-| 15 | [019](019-resolve-item-characterization-tests.md) | `useResolvedMediaItem` gets characterization tests | tests | P2 | M | LOW | — | TODO |
-| 16 | [020](020-letterboxd-userscript-localhost-opt-in.md) | The Letterboxd userscript trusts localhost only after an explicit opt-in | security | P3 | S | LOW | — | TODO |
-| 17 | [021](021-serializd-proxy-exact-get-paths.md) | The Serializd proxy forwards only the GET paths and query keys the app uses | security | P3 | S | MED | — | TODO |
-| 18 | [022](022-trakt-log-invalidates-by-media-type.md) | A Trakt log refreshes the watched library for its own media type only | perf | P3 | S | LOW | 018 | TODO |
-| 19 | [024](024-write-result-type-in-provider-layer.md) | `ProviderWriteResult` lives in the provider layer | tech-debt | P3 | S | LOW | — | TODO |
-| 20 | [026](026-up-next-calendar-key-test-clock.md) | The Up Next calendar-key test uses a fixed clock | tests (flake) | P3 | S | LOW | — | TODO |
-| 21 | [027](027-agents-and-plan-md-drift.md) | AGENTS.md, plan.md and README stop steering agents toward banned patterns | docs | P3 | S | LOW | — | TODO |
-| 22 | [025](025-ci-web-export-and-doctor.md) | CI checks the static web export and Expo doctor on every PR | dx | P3 | S | LOW | 015 | TODO |
-| 23 | [023](023-effect-boundary-lint-rule.md) | A lint rule keeps Effect in its layers; Serializd connect stops importing it | tech-debt | P3 | M | LOW | — | TODO |
-| 24 | [028](028-measure-persisted-snapshot-size.md) | Investigate: measure the persisted snapshot on web | perf (investigate) | P3 | S | LOW | — | TODO |
-| 25 | [029](029-spike-undo-a-log.md) | Direction spike: "undo this log" across providers | direction | — | S (feature L) | LOW | — | TODO |
-| 26 | [030](030-spike-offline-durable-logs.md) | Direction spike: restart-safe offline logging (#208) | direction | — | S–M (feature L) | LOW | 005, 014 (recommended) | TODO |
+| 1 | [005](005-simkl-reconcile-blocks-rewatches.md) | A provider whose watch state can't be read no longer blocks rewatches elsewhere | bug | P1 | S | LOW | — | DONE (#369) |
+| 2 | [006](006-disconnect-purges-diary.md) | Disconnecting a provider also drops the cached unified diary | bug / privacy | P1 | S | LOW | — | DONE (#368) |
+| 3 | [008](008-readme-token-encryption-claim.md) | The README stops claiming tokens are encrypted | docs (security claim) | P1 | S | LOW | — | DONE (#378) |
+| 4 | [009](009-simkl-unbuildable-entry-skips-alone.md) | An unbuildable Simkl log is skipped on its own, never coalesced into a batch's `ok` | bug | P1 | S | LOW | — | DONE (#374) |
+| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | NEEDS REVISION (#382; absent-state login CSRF; real web connect unverified) |
+| 6 | [010](010-mapping-lookups-dont-cache-transient-failures.md) | Identity and title lookups stop caching a network failure as "no match" | bug | P2 | S–M | LOW | — | DONE (#377) |
+| 7 | [011](011-trakt-continue-watching-reports-total-failure.md) | Trakt Continue Watching reports an error when every progress call fails | bug | P2 | S | LOW | — | DONE (#370) |
+| 8 | [012](012-notifications-keep-schedule-on-failed-gather.md) | A failed gather never replaces scheduled release notifications with nothing | bug | P2 | S | LOW | 011 (recommended) | DONE (#380, stacked on #370) |
+| 9 | [017](017-settings-refresh-scoped.md) | Settings pull-to-refresh refreshes the home feed, not the whole cache | perf | P2 | S | LOW | — | DONE (#371) |
+| 10 | [018](018-letterboxd-film-watch-invalidation-scoped.md) | A Letterboxd log refreshes only the logged film's watch state | perf | P2 | S | LOW | — | DONE (#373) |
+| 11 | [015](015-harden-github-workflows.md) | Workflows pin actions and Bun; the release job keeps signing secrets narrow | security + dx | P2 | S | MED | — | DONE (#372; release dry run pending) |
+| 12 | [016](016-web-security-headers.md) | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS) | security | P2 | S | LOW | — | DONE (#381) |
+| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | NEEDS REVISION (#386; active gathers can refetch the old provider set) |
+| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | NEEDS REVISION (#385; retry reconciliation reuses fresh pre-write cache) |
+| 15 | [019](019-resolve-item-characterization-tests.md) | `useResolvedMediaItem` gets characterization tests | tests | P2 | M | LOW | — | DONE (#375) |
+| 16 | [020](020-letterboxd-userscript-localhost-opt-in.md) | The Letterboxd userscript trusts localhost only after an explicit opt-in | security | P3 | S | LOW | — | DONE (#384) |
+| 17 | [021](021-serializd-proxy-exact-get-paths.md) | The Serializd proxy forwards only the GET paths and query keys the app uses | security | P3 | S | MED | — | DONE (#387) |
+| 18 | [022](022-trakt-log-invalidates-by-media-type.md) | A Trakt log refreshes the watched library for its own media type only | perf | P3 | S | LOW | 018 | DONE (#383, stacked on #373) |
+| 19 | [024](024-write-result-type-in-provider-layer.md) | `ProviderWriteResult` lives in the provider layer | tech-debt | P3 | S | LOW | — | BLOCKED (STOP: `src/lib/media-sort.test.ts` already imports `@/features/watchlist/*`) |
+| 20 | [026](026-up-next-calendar-key-test-clock.md) | The Up Next calendar-key test uses a fixed clock | tests (flake) | P3 | S | LOW | — | DONE (#376) |
+| 21 | [027](027-agents-and-plan-md-drift.md) | AGENTS.md, plan.md and README stop steering agents toward banned patterns | docs | P3 | S | LOW | — | DONE (#388) |
+| 22 | [025](025-ci-web-export-and-doctor.md) | CI checks the static web export and Expo doctor on every PR | dx | P3 | S | LOW | 015 | BLOCKED (STOP: `build:web` prerenders `studio/lookup/[name]` with a live TMDB fetch) |
+| 23 | [023](023-effect-boundary-lint-rule.md) | A lint rule keeps Effect in its layers; Serializd connect stops importing it | tech-debt | P3 | M | LOW | — | DONE (#379) |
+| 24 | [028](028-measure-persisted-snapshot-size.md) | Investigate: measure the persisted snapshot on web | perf (investigate) | P3 | S | LOW | — | BLOCKED (needs real connected accounts in a browser) |
+| 25 | [029](029-spike-undo-a-log.md) | Direction spike: "undo this log" across providers | direction | — | S (feature L) | LOW | — | DONE (#389, `docs/plans/0115-undo-log.md`) |
+| 26 | [030](030-spike-offline-durable-logs.md) | Direction spike: restart-safe offline logging (#208) | direction | — | S–M (feature L) | LOW | 005, 014 (recommended) | DONE (#390, `docs/plans/0116-offline-log-replay.md`) |
 
 Direction spikes (029, 030) are options for the owner, not ranked against
 bugs. Each produces a design doc in `docs/plans/`, never production code. The
@@ -68,6 +68,44 @@ Plan 023 notes what a new feature write hook must do.
 was absent and the advisor doesn't install, so those commands were **not run**.
 Plan 0113 records them green at `dd6e6b9`. Every plan starts with
 `bun install --frozen-lockfile`.
+
+### Execution evidence (round 2)
+
+Review update, 2026-11-01: plans 007, 013 and 014 remain open for the
+correctness findings recorded in #382, #386 and #385. Their earlier green
+unit tests did not cover those paths. These implementations follow their plans;
+the findings identify gaps in those plans, not undocumented deviations. The two direction spikes remain design
+proposals; a DONE spike does not authorize or implement its feature. DONE
+means the linked PR completed implementation or its spike, not that it merged.
+
+- Baseline at `01e42b3`: typecheck and lint exit 0, 1,571 tests pass. The
+  `nitro-webview` git dependency was served from a local checkout of
+  `275e918` because the sandbox blocks GitHub API tarballs. The lockfile is unchanged.
+- Every code plan marked DONE below was reported to pass typecheck, lint and `bun run test`, and its new
+  or changed tests were reported to fail with the fix reverted. This is
+  implementation evidence, not a claim that every PR was merged or its runtime
+  checks completed. Stacked PRs (013, 014, 012, 022)
+  say so at the top and carry their dependency's commit until it merges.
+- 024 stopped on its own condition before any edit:
+  `grep -rn "from '@/features/" src/lib` also lists `src/lib/media-sort.test.ts`
+  (imports from `@/features/watchlist/*`, present at `1003c59`).
+- 025 stopped on its own condition: `bun run build:web` exits 1 after 160 s with
+  `Failed to statically export route: studio/lookup/[name]` after a TMDB request
+  (`ProviderNetworkError: tmdb: network error`). `expo-doctor` was not run.
+- 028 needs connected tracker accounts in a browser. None were available.
+- 007's step 0 (does AniList echo `state`) and its STOP condition could not be
+  checked: the sandbox refuses `anilist.co`. Do one real web AniList connect before merging.
+- 015's `release.yml` dry run needs a workflow dispatch. actionlint was not run.
+- 016: the initial sandbox could not finish the export or run a browser pass.
+  The 2026-11-01 review completed `build:web` using the existing local build
+  environment, checked HTTP 200 and all five headers on `/` and
+  `/letterboxd.user.js`, and rendered Home, Search, Settings and Inception
+  details through local Wrangler in Chromium with no captured console entries.
+- Browser or account checks in 013, 014, 017, 021 and 023 were skipped. Each PR says which.
+- 030 skipped its browser offline pass. Its "today" section comes from code and a
+  local TanStack script, with no network or account.
+- 029's Trakt removal call is cited from a community client, because the official
+  Trakt and Simkl docs were blocked. No removal endpoint was called.
 
 ## Round 1 (2026-10-26)
 

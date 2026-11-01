@@ -29,7 +29,7 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 - **One feed.** Your history from every connected tracker merges into a single timeline. If one tracker is down, you lose its row, not the whole screen.
 - **One diary.** Every watch and read log from every tracker sits in one list, newest first. When two trackers log the same title on the same day, the diary shows one row.
 - **One watchlist.** The watchlist page gathers every tracker's watchlist into one poster wall that you can filter by tracker. When you add a title, the picker shows which trackers already have it.
-- **No backend, no database.** Each tracker's token is its session. Tokens stay on your device, encrypted on iOS and Android. Nothing about you is stored anywhere else.
+- **No backend, no database.** Each tracker's token is its session. Tokens stay on your device, in app storage on iOS and Android and in the browser's local storage on web. Encrypting them at rest is planned. Nothing about you is stored anywhere else.
 - **Up Next in your timezone.** An episode counts as watchable once it has aired where you are, not where the show airs.
 - **Local release notifications.** iOS and Android schedule reminders for upcoming episodes on the device. There is no push server.
 - **A link when a write can't happen.** If a tracker rejects a write, or can't take one on your platform, you get a link to that title's page on the tracker so you can log it there.
@@ -47,7 +47,7 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 | [Uniwind](https://docs.uniwind.dev) | Tailwind CSS for React Native, from the Unistyles team. Theme tokens with light and dark variants. |
 | [TanStack Query](https://tanstack.com/query) | Every read and write, including caching, invalidation, and writes to several trackers at once. |
 | [Effect](https://effect.website) | Typed errors, retries, and rate-limit backoff. Effect stays inside the provider service layer and never reaches a component. |
-| [Nitro Modules](https://nitro.margelo.com) | [`react-native-mmkv`](https://github.com/mrousavy/react-native-mmkv) stores tokens encrypted. [`react-native-nitro-fetch`](https://github.com/margelo/react-native-nitro-fetch) sends requests through Cronet or URLSession on native. [`nitro-webview`](https://github.com/l2hyunwoo/nitro-webview) runs the tracker sign-in and write WebViews. |
+| [Nitro Modules](https://nitro.margelo.com) | [`react-native-mmkv`](https://github.com/mrousavy/react-native-mmkv) stores tokens and local state. [`react-native-nitro-fetch`](https://github.com/margelo/react-native-nitro-fetch) sends requests through Cronet or URLSession on native. [`nitro-webview`](https://github.com/l2hyunwoo/nitro-webview) runs the tracker sign-in and write WebViews. |
 | [Legend List](https://github.com/LegendApp/legend-list) | Virtualized lists everywhere. It is pure TypeScript, runs on web, and sits behind one `components/List` wrapper. |
 | [expo-image](https://docs.expo.dev/versions/latest/sdk/image/) + [galeria](https://github.com/nandorojo/galeria) | Posters cached in memory and on disk, so long grids don't exhaust memory. Tap a poster or headshot to zoom through Galeria on native and a separate lightbox on web. |
 | [Ionicons](https://github.com/oblador/react-native-vector-icons/tree/master/packages/ionicons) | Bundled, font-rendered UI icons on all platforms. [Nano Icons](https://github.com/software-mansion-labs/react-native-nano-icons) generates fonts from custom SVGs; the existing icon pack needs no extra generation pipeline. |
@@ -68,6 +68,9 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 
 > [!NOTE]
 > Shinobu links native Nitro modules, so it can't run in Expo Go. iOS and Android need a custom dev client.
+
+Copy `.env.template` to `.env.local` and fill in what you have. Every value is
+optional, and features without a credential stay off.
 
 ```sh
 bun install

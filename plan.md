@@ -24,7 +24,7 @@ Symmetric, opt-in providers. A user connects zero or more of them; connecting on
 
 * **Trakt.tv (REST v2)** — TV + movies. Read: `/sync/watched`. Write: `/sync/history` (log a watch).
 * **AniList (GraphQL)** — anime + manga, including anime films (AniList's `ANIME` media type covers movie-format entries too, e.g. a Ghibli film). Read: `MediaListCollection` query. Write: `SaveMediaListEntry` mutation.
-* **Letterboxd (REST)** — movies, including anime films. Read: diary/log entries. Write: create a log entry (a diary entry, a review, or both). **Caveat:** API access is by request only — you email `api@letterboxd.com` describing intended use, and Letterboxd's stated policy explicitly excludes "personal projects," so approval isn't guaranteed. Treat this as a live risk to track (`todos/004`), not a solved integration. If access isn't granted, the CSV diary export/import path is the fallback degraded mode — not the primary design.
+* **Letterboxd** — movies, including anime films. There is no public API. Reads use public pages and RSS (through the GET-only Worker proxy on web). Writes go through the user's signed-in session: a native WebView on iOS and Android, and a Tampermonkey userscript on web (`docs/plans/0012-letterboxd-fallback-integration.md`, `docs/solutions/letterboxd-web-userscript-bridge.md`).
 
 **Amendment (2026-07-31, `docs/plans/0034-simkl-provider-and-trakt-detachment.md`).** Two providers joined and the standing of one changed:
 
@@ -146,67 +146,18 @@ This is now implemented for real: `AGENTS.md` at the repo root (with `CLAUDE.md`
 - All network interactions must conform to the `NormalizedMediaItem` data contract.
 - Logging a media item is a fan-out action across every connected, applicable provider (1.3) — never a single-provider write.
 - Component Design: Leverage asymmetric white space and hard black borders mimicking anime title cards.
-- Layouts must be explicit: Avoid using grid/flex calculations blindly that do not resolve cleanly on Expo Web. Use explicit platform breakpoints (`Platform.OS`).
+- Platform differences use Uniwind's `ios:`, `android:` and `web:` variants. Platform files are only for differing implementations (AGENTS.md).
 
 ```
 
-### 3.2 Core Component Blueprint: The Aggregated Media Card
+### 3.2 Components
 
-Agents should focus on generating pure functional components. Below is the reference blueprint for triggering the unified log fan-out (1.3) from a card — `onLogMedia` is expected to resolve to a `useLogMedia`-style mutation that writes to every connected, applicable provider, not a single backend.
-
-```tsx
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { NormalizedMediaItem } from '../types/media';
-
-interface MediaCardProps {
-  item: NormalizedMediaItem;
-  onLogMedia: (item: NormalizedMediaItem) => Promise<void>;
-}
-
-export const MediaCard: React.FC<MediaCardProps> = ({ item, onLogMedia }) => {
-  return (
-    <View style={styles.cardContainer}>
-      <Image source={{ uri: item.coverImage }} style={styles.posterImage} />
-      <View style={styles.metaOverlay}>
-        <Text style={styles.titleText} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.typeBadge}>{item.type}</Text>
-        
-        <View style={styles.progressRow}>
-          <Text style={styles.progressText}>Progress: {item.currentProgress}</Text>
-          <TouchableOpacity 
-            style={styles.incrementButton}
-            onPress={() => onLogMedia(item)}
-          >
-            <Text style={styles.buttonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const styles = StyleSheet.StyleSheet.create({
-  cardContainer: {
-    backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#333',
-    position: 'relative',
-    margin: 8,
-    width: 160,
-    height: 240,
-  },
-  posterImage: { width: '100%', height: '100%', opacity: 0.7 },
-  metaOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8, backgroundColor: 'rgba(0,0,0,0.85)' },
-  titleText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
-  typeBadge: { color: '#DC2626', fontSize: 10, letterSpacing: 1, marginTop: 2, fontWeight: '600' },
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  progressText: { color: '#AAA', fontSize: 11 },
-  incrementButton: { backgroundColor: '#DC2626', width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 }
-});
-
-```
+The original card blueprint that stood here predates the repo's conventions
+and is superseded. Build components by AGENTS.md: Uniwind classes composed with
+`cn()`, `components/image` for posters, `components/button` and the pressables
+in `components/presstable`, theme tokens from `src/global.css`, and
+`useLogMedia` for logging. `src/components/media-card.tsx` is the live
+equivalent of the old blueprint.
 
 ---
 

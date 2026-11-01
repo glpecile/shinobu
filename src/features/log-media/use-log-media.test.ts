@@ -519,6 +519,26 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     expect(mappingCalls).toEqual([]);
     expect(entries[0]).toMatchObject({ entryEpisodes: [3], episodeMap: null });
   });
+
+  test('an entry Simkl cannot build is skipped on its own and never queued', async () => {
+    const item: NormalizedMediaItem = {
+      id: 'letterboxd-inception', title: 'Inception', coverImage: '', type: 'MOVIE',
+      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: {},
+    };
+    const calls: unknown[] = [];
+    const adapter = simklLogAdapter(client(), (entry) => {
+      calls.push(entry);
+      return Promise.resolve({ status: 'ok' as const });
+    });
+
+    const result = await adapter({ item });
+
+    expect(calls).toHaveLength(0);
+    expect(result).toMatchObject({
+      status: 'skipped',
+      reason: expect.stringContaining('no Simkl-resolvable id'),
+    });
+  });
 });
 
 describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => {
@@ -569,5 +589,20 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
     );
     expect(seen.get('anilist')?.rewatch).toBe(true);
     expect(result.succeeded).toEqual(['anilist']);
+  });
+
+  test('a provider without a watch-state read does not turn a rewatch into a catch-up', async () => {
+    const queryClient = client();
+    const item: NormalizedMediaItem = {
+      id: 'trakt-1', title: 'Inception', coverImage: '', type: 'MOVIE',
+      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 1, tmdb: 27205 },
+    };
+    queryClient.setQueryData(traktQueryKeys.watchedMovies(), [item]);
+
+    const plan = await planLogWrite(queryClient, { item }, ['trakt', 'simkl']);
+
+    expect(plan.rewatch).toBe(true);
+    expect(plan.skipped).toEqual([]);
+    expect(plan.writeTargets).toEqual(['trakt', 'simkl']);
   });
 });
