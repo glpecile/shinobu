@@ -28,8 +28,10 @@ mock.module('react-native-mmkv', () => ({
 mock.module('react-native', () => ({
   Platform: { OS: 'ios', select: (spec: Record<string, unknown>) => spec.ios },
 }));
+const emptyResponse = async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('{}');
+let httpHandler = emptyResponse;
 mock.module('@/lib/http/client', () => ({
-  httpFetch: async () => new Response('{}'),
+  httpFetch: (input: RequestInfo | URL, init?: RequestInit) => httpHandler(input, init),
 }));
 mock.module('@/lib/providers/serializd/transport', () => ({
   serializdFetch: async () => new Response('{}'),
@@ -81,9 +83,14 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbTvIdByTvdb: () => Promise.resolve(prequelTmdb),
 }));
 
-const { planLogWrite, simklLogAdapter, withMappingSkips } = await import(
-  './use-log-media'
-);
+const {
+  invalidateAfterLog,
+  logAdapters,
+  planLogWrite,
+  simklLogAdapter,
+  withMappingSkips,
+  withUnconfirmed,
+} = await import('./use-log-media');
 const { fanOutLog } = await import('./fan-out');
 const { manualLinkForOutcome, splitSkippedOutcomes } = await import(
   './manual-write-links'
@@ -213,6 +220,7 @@ beforeEach(() => {
   laterCours = new Map();
   mappingCalls.length = 0;
   store.clear();
+  httpHandler = emptyResponse;
 });
 
 describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () => {
@@ -604,5 +612,106 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
     expect(plan.rewatch).toBe(true);
     expect(plan.skipped).toEqual([]);
     expect(plan.writeTargets).toEqual(['trakt', 'simkl']);
+  });
+});
+
+describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
+  const inception: NormalizedMediaItem = {
+    id: 'trakt-1', title: 'Inception', coverImage: '', type: 'MOVIE',
+    currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 1, tmdb: 27205 },
+  };
+
+  async function connectTrakt() {
+    const { setProviderClientId, setProviderClientSecret, setProviderSession } = await import(
+      '@/state/session/tokens'
+    );
+    setProviderSession('trakt', { accessToken: 'tok' });
+    setProviderClientId('trakt', 'cid');
+    setProviderClientSecret('trakt', 'secret');
+  }
+
+  test('a first watch that landed but reported failure is not sent again', async () => {
+    await connectTrakt();
+    const queryClient = client();
+    let watched: unknown[] = [];
+    let posts = 0;
+    httpHandler = async (input, init) => {
+      const url = String(input);
+      if (init?.method === 'POST' && url.includes('/sync/history')) {
+        posts += 1;
+        // The server commits the play, then the response times out.
+        watched = [{
+          plays: 1, last_watched_at: '2026-11-01T00:00:00.000Z', last_updated_at: '2026-11-01T00:00:00.000Z',
+          movie: { title: 'Inception', year: 2010, ids: { trakt: 1, tmdb: 27205 } },
+        }];
+        return new Response('', { status: 504 });
+      }
+      if (url.includes('/sync/watched/movies')) return Response.json(watched);
+      return new Response('{}');
+    };
+
+    // The same steps useLogMedia's mutationFn runs, against the real Trakt adapter.
+    const first = await planLogWrite(queryClient, { item: inception }, ['trakt']);
+    const report = await fanOutLog(logAdapters(queryClient), first.writeTargets, first.variables);
+    expect(report.failed).toEqual(['trakt']);
+    invalidateAfterLog(queryClient, first.item, report.succeeded, first.skipped);
+
+    const retry = await planLogWrite(
+      queryClient,
+      { item: inception, providers: report.failed, retryOf: { rewatch: first.rewatch } },
+      ['trakt'],
+    );
+
+    expect(retry.skipped).toEqual(['trakt']);
+    expect(retry.writeTargets).toEqual([]);
+    expect(retry.variables).not.toHaveProperty('retryOf');
+    expect(posts).toBe(1);
+  });
+
+  const tmdbShow: NormalizedMediaItem = {
+    id: 'tmdb-1399', title: 'Game of Thrones', coverImage: '', type: 'TV',
+    currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 1399 },
+  };
+
+  test.each([
+    ['its read fails', { item: inception }],
+    ['it has no Trakt id to read by', { item: tmdbShow, episodes: [{ season: 1, number: 1 }] }],
+  ])('a retried target is reported, not sent again, when %s', async (_, intent) => {
+    await connectTrakt();
+    const queryClient = client();
+    queryClient.setQueryData(traktQueryKeys.watchedMovies(), []);
+    let posts = 0;
+    httpHandler = async (_input, init) => {
+      if (init?.method === 'POST') posts += 1;
+      return new Response('', { status: 503 });
+    };
+
+    const retry = await planLogWrite(
+      queryClient,
+      { ...intent, providers: ['trakt'], retryOf: { rewatch: false } },
+      ['trakt'],
+    );
+    const report = await fanOutLog(
+      withUnconfirmed(logAdapters(queryClient), retry.unconfirmed),
+      retry.writeTargets,
+      retry.variables,
+    );
+
+    expect(retry.unconfirmed).toEqual(['trakt']);
+    expect(report.failed).toEqual(['trakt']);
+    expect(manualLinkForOutcome(report.outcomes[0], intent.item)).not.toBeNull();
+    expect(posts).toBe(0);
+  });
+
+  test('a rewatch retry stays a rewatch when no target can be read', async () => {
+    const plan = await planLogWrite(
+      client(),
+      { item: inception, providers: ['simkl'], retryOf: { rewatch: true } },
+      ['simkl'],
+    );
+
+    expect(plan.writeTargets).toEqual(['simkl']);
+    expect(plan.unconfirmed).toEqual([]);
+    expect(plan.variables.rewatch).toBe(true);
   });
 });
