@@ -7,7 +7,6 @@ import { Image } from '@/components/image';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
-import type { DiscussionBoard } from '@/lib/http/fourchan';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { useThemeColor } from '@/lib/theme-color';
@@ -39,17 +38,17 @@ function DiscussionThumbnail({ image, title }: { image: string; title: string })
   );
 }
 
-/** Compact external preview of a catalog's opening post. */
-export function DiscussionCard({ thread, board }: {
-  thread: DiscussionPreview; board: DiscussionBoard;
+/** Compact external preview of a 4chan opening post or Reddit post. */
+export function DiscussionCard({ thread, site, meta, accessibilityPlace, url }: {
+  thread: DiscussionPreview; site: string; meta: string; accessibilityPlace: string; url: string;
 }) {
   const muted = useThemeColor('--color-muted');
   const { width } = useWindowDimensions();
-  const title = thread.title.trim() || `/${board}/ thread #${thread.id}`;
-  const { loading, open } = useLinkHandoff(() => openExternalUrl(`https://boards.4chan.org/${board}/thread/${thread.id}`, { inApp: false }));
+  const title = thread.title.trim() || meta;
+  const { loading, open } = useLinkHandoff(() => openExternalUrl(url, { inApp: false }));
   return (
     <PresstableOpacity
-      accessibilityLabel={`Open ${title} on 4chan /${board}/, thread ${thread.id}`}
+      accessibilityLabel={`Open ${title} on ${site} ${accessibilityPlace}`}
       accessibilityRole="button"
       accessibilityState={{ busy: loading, disabled: loading }}
       aria-busy={loading}
@@ -66,7 +65,7 @@ export function DiscussionCard({ thread, board }: {
             {title}
           </Text>
           <View className="flex-row items-center justify-between gap-2">
-            <Text className="text-muted font-sans text-xs flex-1 min-w-0">/{board}/ · #{thread.id}</Text>
+            <Text className="text-muted font-sans text-xs flex-1 min-w-0">{meta}</Text>
             <View className="size-5 shrink-0 items-center justify-center">
               {loading ? <Spinner color={muted} /> : <Ionicons color={muted} name="open-outline" size={14} />}
             </View>

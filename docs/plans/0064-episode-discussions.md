@@ -42,3 +42,6 @@
   direct. See `docs/solutions/web-cors-fourchan.md`.
 - Use thread 291481805 as the title-alias regression example, not a pinned link.
 - No provider/session registration, backend, archives, dependencies or native build changes.
+- Reddit (2026-11-01): one Atom search of r/anime, r/movies or r/television per
+  item, matched with the same title rules and shown in the same rail without
+  thumbnails. See `docs/solutions/reddit-logged-out-json-blocked.md`.

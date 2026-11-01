@@ -7,7 +7,8 @@ import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
-import { discussionBoards, type DiscussionBoard } from '@/lib/http/fourchan';
+import { discussionBoards } from '@/lib/http/fourchan';
+import { discussionSubreddit, subredditSearchTerm } from '@/lib/http/reddit';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { DURATION, EASE_OUT } from '@/lib/motion';
@@ -36,7 +37,11 @@ export function DiscussionSection({ item, episode }: {
     externalIds: { ...item.externalIds, ...(animeId != null ? { anilist: animeId } : {}) },
   };
   const boards = discussionBoards(searchItem);
-  const { threads, isFetching, refetch } = useDiscussionsQuery(boards, searchItem, episode?.season, episode?.number);
+  const subreddit = discussionSubreddit(searchItem);
+  const term = subredditSearchTerm(searchItem, subreddit);
+  const { threads, isFetching, refetch } = useDiscussionsQuery(
+    boards, { subreddit, term }, searchItem, episode?.season, episode?.number,
+  );
   if (threads.length === 0) return null;
   return (
     <AnimatedView style={{
@@ -60,7 +65,7 @@ export function DiscussionSection({ item, episode }: {
         />
       </Section.Header>
       <Rail contentContainerClassName="gap-4">
-        {threads.map(({ board, thread }) => <DiscussionCard board={board} key={`${board}-${thread.id}`} thread={thread} />)}
+        {threads.map(({ key, ...preview }) => <DiscussionCard key={key} {...preview} />)}
       </Rail>
       <Sheet onClose={() => setOpen(false)} open={open}>
         <Sheet.Header className="items-center">
@@ -79,7 +84,19 @@ export function DiscussionSection({ item, episode }: {
             }}
             variant="quiet"
           />
-          {boards.map((board) => <DiscussionBoardLink board={board} key={board} />)}
+          {boards.map((board) => (
+            <DiscussionLink
+              accessibilityLabel={`Open 4chan /${board}/ catalog`}
+              key={board}
+              label={`/${board}/`}
+              url={`https://boards.4chan.org/${board}/catalog`}
+            />
+          ))}
+          <DiscussionLink
+            accessibilityLabel={`Search r/${subreddit} on Reddit`}
+            label={`r/${subreddit}`}
+            url={`https://www.reddit.com/r/${subreddit}/search/?q=${encodeURIComponent(term)}&restrict_sr=on&sort=new`}
+          />
         </View>
       </Sheet>
     </Section>
@@ -87,16 +104,16 @@ export function DiscussionSection({ item, episode }: {
   );
 }
 
-function DiscussionBoardLink({ board }: { board: DiscussionBoard }) {
-  const { loading, open } = useLinkHandoff(() => openExternalUrl(`https://boards.4chan.org/${board}/catalog`, { inApp: false }));
+function DiscussionLink({ label, url, accessibilityLabel }: { label: string; url: string; accessibilityLabel: string }) {
+  const { loading, open } = useLinkHandoff(() => openExternalUrl(url, { inApp: false }));
   return (
     <Button
-      accessibilityLabel={`Open 4chan /${board}/ catalog`}
+      accessibilityLabel={accessibilityLabel}
       align="start"
       icon={<Button.Icon name="open-outline" />}
-      label={`Open /${board}/`}
+      label={`Open ${label}`}
       loading={loading}
-      loadingLabel={`Opening /${board}/`}
+      loadingLabel={`Opening ${label}`}
       onPress={open}
       variant="quiet"
     />
