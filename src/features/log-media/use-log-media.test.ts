@@ -519,6 +519,26 @@ describe('the Simkl leg of the log fan-out (plan 0034 U6)', () => {
     expect(mappingCalls).toEqual([]);
     expect(entries[0]).toMatchObject({ entryEpisodes: [3], episodeMap: null });
   });
+
+  test('an entry Simkl cannot build is skipped on its own and never queued', async () => {
+    const item: NormalizedMediaItem = {
+      id: 'letterboxd-inception', title: 'Inception', coverImage: '', type: 'MOVIE',
+      currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: {},
+    };
+    const calls: unknown[] = [];
+    const adapter = simklLogAdapter(client(), (entry) => {
+      calls.push(entry);
+      return Promise.resolve({ status: 'ok' as const });
+    });
+
+    const result = await adapter({ item });
+
+    expect(calls).toHaveLength(0);
+    expect(result).toMatchObject({
+      status: 'skipped',
+      reason: expect.stringContaining('no Simkl-resolvable id'),
+    });
+  });
 });
 
 describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => {

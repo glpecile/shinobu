@@ -117,8 +117,9 @@ export async function fetchAniZipIds(
  * episode 3 resolves to S02E03 instead of the phantom S01E03 the fan-out used
  * to write.
  *
- * Returns `null` on any miss or failure, never throws, and shares the ids
- * fetch's ~1 MB payload hazard
+ * `null` means ani.zip confirmed there is no table, through a 404 or an absent
+ * `episodes` block. Other failures throw so callers don't cache them as
+ * misses. Shares the ids fetch's ~1 MB payload hazard
  * (docs/solutions/web-cors-anizip.md), which is why only `{season, number}`
  * survives the decode and only *write actions* ever call this (KTD4). Keys are
  * AniDB-entry-derived: `"S1"`-style specials keys and any entry without a
@@ -128,33 +129,30 @@ export async function fetchAniZipEpisodeMap(
   fetch: HttpFetch,
   lookup: AniZipLookup,
 ): Promise<AniZipEpisodeMap | null> {
-  try {
-    const response = await fetch(`${ANIZIP_MAPPINGS_URL}?${queryFor(lookup)}`);
-    if (!response.ok) return null;
-    const body = (await response.json()) as AniZipEpisodesResponse;
-    const episodes = body.episodes;
-    if (episodes == null) return null;
+  const response = await fetch(`${ANIZIP_MAPPINGS_URL}?${queryFor(lookup)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`ani.zip episodes ${response.status}`);
+  const body = (await response.json()) as AniZipEpisodesResponse;
+  const episodes = body.episodes;
+  if (episodes == null) return null;
 
-    const map = new Map<number, AniZipCanonicalEpisode>();
-    for (const [key, episode] of Object.entries(episodes)) {
-      const entryNumber = Number(key);
-      // "S1"/"S2" (specials) parse to NaN and drop out here.
-      if (!Number.isInteger(entryNumber) || entryNumber < 1) continue;
-      const season = episode?.seasonNumber;
-      const number = episode?.episodeNumber;
-      if (season == null || number == null) continue;
-      if (!Number.isInteger(season) || !Number.isInteger(number)) continue;
-      const absolute = episode?.absoluteEpisodeNumber;
-      map.set(entryNumber, {
-        season,
-        number,
-        ...(absolute != null && Number.isInteger(absolute) && absolute > 0
-          ? { absolute }
-          : {}),
-      });
-    }
-    return map;
-  } catch {
-    return null;
+  const map = new Map<number, AniZipCanonicalEpisode>();
+  for (const [key, episode] of Object.entries(episodes)) {
+    const entryNumber = Number(key);
+    // "S1"/"S2" (specials) parse to NaN and drop out here.
+    if (!Number.isInteger(entryNumber) || entryNumber < 1) continue;
+    const season = episode?.seasonNumber;
+    const number = episode?.episodeNumber;
+    if (season == null || number == null) continue;
+    if (!Number.isInteger(season) || !Number.isInteger(number)) continue;
+    const absolute = episode?.absoluteEpisodeNumber;
+    map.set(entryNumber, {
+      season,
+      number,
+      ...(absolute != null && Number.isInteger(absolute) && absolute > 0
+        ? { absolute }
+        : {}),
+    });
   }
+  return map;
 }

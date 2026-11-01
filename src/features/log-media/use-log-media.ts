@@ -5,7 +5,11 @@ import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { logToSerializd } from '@/lib/providers/serializd/writes';
-import { logToSimkl, type SimklLogEntry } from '@/lib/providers/simkl/writes';
+import {
+  logToSimkl,
+  simklEntryDropReason,
+  type SimklLogEntry,
+} from '@/lib/providers/simkl/writes';
 import {
   diaryHasEpisode,
   getSerializdDiary,
@@ -221,14 +225,19 @@ export function simklLogAdapter(
       needsMap && anilistId != null
         ? await cachedAniZipEpisodeMap(queryClient, anilistId).catch(() => null)
         : null;
-    return log({
+    const entry: SimklLogEntry = {
       item,
       ...(episode != null ? { episode } : {}),
       ...(episodes != null ? { episodes } : {}),
       ...(entryEpisodes != null ? { entryEpisodes } : {}),
       ...(watchedAt != null ? { watchedAt } : {}),
       episodeMap,
-    });
+    };
+    const dropReason = simklEntryDropReason(entry);
+    // An unbuildable entry would be dropped inside a coalesced POST and inherit
+    // the other entries' ok; alone it is a reasoned skip with the manual link.
+    if (dropReason != null) return { status: 'skipped', reason: dropReason };
+    return log(entry);
   };
 }
 
@@ -660,8 +669,10 @@ export function invalidateAfterLog(
   // the *enriched* item (the mutation may have discovered ids the caller's
   // copy lacks), which is why this lives here and not in onSuccess.
   if (succeeded.includes('trakt')) {
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedShows() });
-    queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchedMovies() });
+    const filmLike = item.type === 'MOVIE' || item.isFilm === true;
+    queryClient.invalidateQueries({
+      queryKey: filmLike ? traktQueryKeys.watchedMovies() : traktQueryKeys.watchedShows(),
+    });
     // Trakt removes a watched item from the watchlist server-side — "watching 1
     // episode will remove the entire show or season" — so a log silently
     // changes the watchlist too, and the cached read would otherwise sit stale
@@ -670,7 +681,7 @@ export function invalidateAfterLog(
     // type/sort the surface requested.
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
     const traktId = item.externalIds.trakt;
-    if (traktId != null) {
+    if (!filmLike && traktId != null) {
       // TV logs also change this show's seasons/progress views (plan 0010).
       queryClient.invalidateQueries({
         queryKey: traktQueryKeys.showProgress(traktId),
@@ -715,7 +726,19 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('letterboxd')) {
-    queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.filmWatchesRoot() });
+    // Only this film's watch reads changed; the root holds one HTML-scrape query per film.
+    const tmdb = item.externalIds.tmdb ?? null;
+    const slug =
+      item.externalIds.letterboxd ??
+      (tmdb != null ? queryClient.getQueryData<string | null>(letterboxdQueryKeys.slug(tmdb)) ?? null : null);
+    queryClient.invalidateQueries({
+      queryKey: letterboxdQueryKeys.filmWatchesRoot(),
+      predicate: ({ queryKey }) =>
+        (slug != null && (queryKey[3] === slug ||
+          (typeof queryKey[4] === 'number' &&
+            queryClient.getQueryData(letterboxdQueryKeys.slug(queryKey[4])) === slug))) ||
+        (tmdb != null && queryKey[4] === tmdb),
+    });
     // A pre-write RSS response must not repopulate the shared input as fresh.
     void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
     void queryClient.cancelQueries({ queryKey: letterboxdQueryKeys.diaryRoot() });

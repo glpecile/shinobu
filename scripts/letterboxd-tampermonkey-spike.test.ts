@@ -7,7 +7,7 @@ const run = new Function('GM', 'unsafeWindow', `return ${script.slice(script.ind
 const id = '12345678-1234-1234-1234-123456789abc';
 
 test('keeps unsupported old-script writes blocked and detects installed-script capabilities', async () => {
-  const app = new Window({ url: 'http://localhost:8081/' });
+  const app = new Window({ url: 'https://shinobu.glpecile.xyz/' });
   const original = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis, 'document', { configurable: true, value: app.document });
   try {
@@ -42,6 +42,19 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
   }
 });
 
+test('attaches on a localhost dev port only after the trust-localhost opt-in', async () => {
+  const dev = new Window({ url: 'http://localhost:8081/' });
+  const page = { location: dev.location, document: dev.document, addEventListener() {} };
+  try {
+    await run({ getValue: async () => false }, page);
+    expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBeNull();
+    await run({ getValue: async () => true }, page);
+    expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBe('11');
+  } finally {
+    dev.close();
+  }
+});
+
 test.each([
   { name: 'adds a list entry through the browser session and returns a receipt', username: 'gian', path: '/gian/list/classics/', status: 200, body: '{"messages":[],"data":{"id":"listLid","version":5}}', sent: true, message: '', present: true },
   { name: 'removes a list entry through the browser session', username: 'gian', path: '/gian/list/classics/', status: 200, body: '{"messages":[],"data":{"id":"listLid","version":5}}', sent: true, message: '', present: false },
@@ -71,7 +84,7 @@ test.each([
   const watchlist = 'watchlist' in options;
   const listLike = 'listLike' in options;
   const listMembership = 'present' in options;
-  const app = new Window({ url: 'http://localhost:8081/' });
+  const app = new Window({ url: 'https://shinobu.glpecile.xyz/' });
   const film = new Window({ url: `https://letterboxd.com${listMembership ? path + 'edit/' : listLike ? '/jack/list/classics/' : '/film/alien/'}#shinobu-log=${id}` });
   film.document.body.innerHTML = `<meta name="production:identifier" content='{"lid":"2awY","type":"film"}'><section id="userpanel" data-owner="${listMembership ? ('owner' in options ? options.owner : 'gian') : 'jack'}" data-list-identifier='{"type":"list","lid":"listLid","uid":"filmlist:79356687"}'></section>`;
   if (listMembership) film.document.body.innerHTML += `<div data-component-class="ListEditor" data-list-lid="listLid" data-list-version="4" data-list-url="${path}"></div>`;
@@ -151,7 +164,7 @@ test.each([
   { name: 'reports Letterboxd validation errors', owner: 'gian', body: { messages: [{ type: 'Error', title: 'Duplicate film' }] }, result: 'Duplicate film' },
   { name: 'refuses a receipt for another member', owner: 'jack', body: { messages: [] }, result: 'did not confirm' },
 ])('list creation $name', async ({ owner, body, result: expected }) => {
-  const app = new Window({ url: 'http://localhost:8081/' });
+  const app = new Window({ url: 'https://shinobu.glpecile.xyz/' });
   const tab = new Window({ url: `https://letterboxd.com/list/new/#shinobu-log=${id}` });
   const storage = new Map<string, unknown>();
   let storageListener: ((key: string, old: unknown, value: unknown) => void) | undefined;
