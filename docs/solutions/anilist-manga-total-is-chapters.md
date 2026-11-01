@@ -1,6 +1,6 @@
 # AniList manga keep their total in `chapters`, never `episodes`
 
-**Found:** 2026-11-01, wiring manga chapter logs (plan 0115 M1, issue #209).
+**Found:** 2026-11-01, wiring manga chapter logs (plan 0117 M1, issue #392).
 
 ## The trap
 

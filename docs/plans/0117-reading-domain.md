@@ -4,7 +4,7 @@ date: 2026-11-01
 issue: 209
 ---
 
-# 0115 — Reading: finish manga, then Hardcover books, then comics
+# 0117 — Reading: finish manga, then Hardcover books, then comics
 
 Issue #209 asked for a feasibility spike and a scoped plan before any reading
 provider is chosen. The evidence is in

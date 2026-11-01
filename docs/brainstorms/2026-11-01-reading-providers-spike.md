@@ -2,7 +2,7 @@
 
 API feasibility spike for issue #209: which services can be a reading
 provider, and what manga still lacks. Decisions are extracted into
-`docs/plans/0115-reading-domain.md`; this file keeps the evidence.
+`docs/plans/0117-reading-domain.md`; this file keeps the evidence.
 
 The 2026-07-04 brainstorm (`2026-07-04-future-domains-and-no-backend.md`)
 named Goodreads as dead and Hardcover as the candidate. Both claims were
