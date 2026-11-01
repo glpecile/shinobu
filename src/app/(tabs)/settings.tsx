@@ -56,9 +56,8 @@ function SettingsScreen() {
           // Native clears the bottom tab bar (unmeasurable height); web doesn't.
           contentContainerClassName={process.env.EXPO_OS === 'web' ? 'pb-8' : 'pb-24'}
           keyboardShouldPersistTaps="handled"
-          // No server data of its own. Pull refreshes the home feed the
-          // trackers above feed, the same scoped refresh Home uses, never the
-          // whole cache.
+          // Pull refreshes the home feed. The tracker usernames here are
+          // cached for the session (use-provider-username.ts).
           onRefresh={refetchFeed}
           tab="settings"
         >
