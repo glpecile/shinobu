@@ -5,7 +5,11 @@ import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { logToSerializd } from '@/lib/providers/serializd/writes';
-import { logToSimkl, type SimklLogEntry } from '@/lib/providers/simkl/writes';
+import {
+  logToSimkl,
+  simklEntryDropReason,
+  type SimklLogEntry,
+} from '@/lib/providers/simkl/writes';
 import {
   diaryHasEpisode,
   getSerializdDiary,
@@ -220,14 +224,19 @@ export function simklLogAdapter(
       needsMap && anilistId != null
         ? await cachedAniZipEpisodeMap(queryClient, anilistId).catch(() => null)
         : null;
-    return log({
+    const entry: SimklLogEntry = {
       item,
       ...(episode != null ? { episode } : {}),
       ...(episodes != null ? { episodes } : {}),
       ...(entryEpisodes != null ? { entryEpisodes } : {}),
       ...(watchedAt != null ? { watchedAt } : {}),
       episodeMap,
-    });
+    };
+    const dropReason = simklEntryDropReason(entry);
+    // An unbuildable entry would be dropped inside a coalesced POST and inherit
+    // the other entries' ok; alone it is a reasoned skip with the manual link.
+    if (dropReason != null) return { status: 'skipped', reason: dropReason };
+    return log(entry);
   };
 }
 
@@ -538,7 +547,7 @@ async function providerHasWatch(
   provider: ProviderId,
   item: NormalizedMediaItem,
   domains: LogDomains,
-): Promise<boolean> {
+): Promise<boolean | null> {
   const episodes = domains.canonical;
   try {
     switch (provider) {
@@ -610,7 +619,9 @@ async function providerHasWatch(
   } catch {
     return false;
   }
-  // Providers without a branch fall through to the conservative default:
+  // Providers without a branch (Simkl) can't be read yet, so they answer null,
+  // "unknown": `planLogWrite` leaves them out of the catch-up vs. rewatch
+  // decision and always writes them.
   // Simkl — readable since plan 0034 U7 — deliberately has no branch yet, because it
   // is not the mechanical parallel of the ones above. A real Simkl reconcile
   // needs the *unfiltered* /sync/all-items snapshot (the item may sit in any
@@ -622,10 +633,8 @@ async function providerHasWatch(
   // canonical-origin batch needs the same ani.zip reverse map
   // `simklLogAdapter` uses before its watchedKeys can be trusted. A
   // wrong-domain compare recreates the false in-sync skip plan 0027 removed.
-  // Deferred to follow-up (plan 0034 Scope Boundaries); until then both count
-  // as "doesn't have it", so the write (the user's actual intent) always
-  // fires.
-  return false;
+  // Deferred to follow-up (plan 0034 Scope Boundaries).
+  return null;
 }
 
 /**
@@ -659,8 +668,6 @@ export function invalidateAfterLog(
   // the *enriched* item (the mutation may have discovered ids the caller's
   // copy lacks), which is why this lives here and not in onSuccess.
   if (succeeded.includes('trakt')) {
-    // A film can't change watched shows and an episode can't change watched
-    // movies; both are whole-library reads.
     const filmLike = item.type === 'MOVIE' || item.isFilm === true;
     queryClient.invalidateQueries({
       queryKey: filmLike ? traktQueryKeys.watchedMovies() : traktQueryKeys.watchedShows(),
@@ -718,8 +725,7 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('letterboxd')) {
-    // Only this film's watch reads changed. The root holds one HTML-scrape
-    // query per film on every mounted list, so invalidating it refetched them all.
+    // Only this film's watch reads changed; the root holds one HTML-scrape query per film.
     const tmdb = item.externalIds.tmdb ?? null;
     const slug =
       item.externalIds.letterboxd ??
@@ -727,7 +733,10 @@ export function invalidateAfterLog(
     queryClient.invalidateQueries({
       queryKey: letterboxdQueryKeys.filmWatchesRoot(),
       predicate: ({ queryKey }) =>
-        (slug != null && queryKey[3] === slug) || (tmdb != null && queryKey[4] === tmdb),
+        (slug != null && (queryKey[3] === slug ||
+          (typeof queryKey[4] === 'number' &&
+            queryClient.getQueryData(letterboxdQueryKeys.slug(queryKey[4])) === slug))) ||
+        (tmdb != null && queryKey[4] === tmdb),
     });
     // A pre-write RSS response must not repopulate the shared input as fresh.
     void queryClient.cancelQueries({ queryKey: DIARY_QUERY_ROOT });
@@ -853,11 +862,16 @@ export async function planLogWrite(
   // season-1 keys for a season-2 intent and turn a genuine parity rewatch into
   // a catch-up (plan 0027 R4).
   const reconcileTargets = targets.filter((provider) => !mappingSkips.has(provider));
-  const records: ProviderWatchRecord[] = await Promise.all(
+  const answers = await Promise.all(
     reconcileTargets.map(async (provider) => ({
       provider,
       hasIt: await providerHasWatch(queryClient, provider, item, domains),
     })),
+  );
+  // A provider that can't report its state (null) is written but has no say
+  // in catch-up vs. rewatch, like a mapping-skipped provider above.
+  const records: ProviderWatchRecord[] = answers.flatMap(({ provider, hasIt }) =>
+    hasIt == null ? [] : [{ provider, hasIt }],
   );
   const decisions = reconcileLogTargets(records);
   const skipped = decisions

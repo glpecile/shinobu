@@ -80,6 +80,7 @@
     "wrangler": "^4.150.0"
   },
   "private": true,
+  "packageManager": "bun@1.4.4",
   "enriched-markdown": {
     "enableCodeHighlight": false,
     "enableMath": false

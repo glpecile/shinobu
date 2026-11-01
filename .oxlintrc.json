@@ -399,7 +399,8 @@
         "shinobu/no-pointer-events-prop": "error",
         "shinobu/reanimated-no-deps": "error",
         "shinobu/web-safe-easing": "error",
-        "shinobu/immediate-disclosures": "error"
+        "shinobu/immediate-disclosures": "error",
+        "shinobu/effect-boundary": "error"
       }
     }
   ],

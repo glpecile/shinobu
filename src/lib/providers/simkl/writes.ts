@@ -253,6 +253,63 @@ interface SimklSyncHistoryResponse {
 }
 
 /**
+ * One entry's sync-body payload and the array it files under, or the reason
+ * `logToSimkl` drops it.
+ */
+function buildEntry(
+  entry: SimklLogEntry,
+): { category: SimklCategory; payload: Record<string, unknown> } | string {
+  const { item, watchedAt } = entry;
+  const category = categoryFor(item);
+  const ids = category == null ? null : idsFor(item);
+  if (category == null || ids == null) {
+    return category == null
+      ? `media type ${item.type} does not route to Simkl (routing.ts should have filtered it)`
+      : `"${item.title}" has no Simkl-resolvable id (simkl/tmdb/imdb for movies & TV, simkl/mal for anime)`;
+  }
+  const watched = watchedAt != null ? { watched_at: watchedAt } : {};
+
+  if (item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true)) {
+    // Movie-shaped: the whole item, no seasons — but an anime film still
+    // files under anime[] (see categoryFor).
+    return { category, payload: { ids, ...watched } };
+  }
+  if (item.type === 'ANIME') {
+    const numbers = animeEpisodeNumbers(entry);
+    if (typeof numbers === 'string') return numbers;
+    return {
+      category,
+      payload: {
+        ids,
+        seasons: [{ number: 1, episodes: numbers.map((number) => ({ number })) }],
+        ...watched,
+      },
+    };
+  }
+  // TV: canonical episodes, grouped by season (one entry per show).
+  const batch =
+    entry.episodes != null && entry.episodes.length > 0
+      ? entry.episodes
+      : entry.episode != null
+        ? [entry.episode]
+        : [];
+  if (batch.length === 0) {
+    return `logging "${item.title}" to Simkl requires an episode (season/number)`;
+  }
+  return { category, payload: { ids, seasons: seasonsFor(batch), ...watched } };
+}
+
+/**
+ * Why `logToSimkl` would drop this entry, or null when it can be written.
+ * Depends only on the entry, so the log queue asks before coalescing: an
+ * unbuildable entry must report its own skip, not ride a batch's `ok`.
+ */
+export function simklEntryDropReason(entry: SimklLogEntry): string | null {
+  const built = buildEntry(entry);
+  return typeof built === 'string' ? built : null;
+}
+
+/**
  * The Simkl mark-watched adapter (plan 0034 R3/R4): one `POST /sync/history`
  * per invocation, whatever the batch holds — `movies[]` whole-item, `shows[]`
  * episode-level (`seasons[].episodes[]`), anime under `anime[]` in AniDB
@@ -280,52 +337,15 @@ export function logToSimkl(
   const shows: Array<Record<string, unknown>> = [];
   const anime: Array<Record<string, unknown>> = [];
   const dropped: string[] = [];
+  const byCategory: Record<SimklCategory, Array<Record<string, unknown>>> = { movies, shows, anime };
 
   for (const entry of entries) {
-    const { item, watchedAt } = entry;
-    const category = categoryFor(item);
-    const ids = category == null ? null : idsFor(item);
-    if (category == null || ids == null) {
-      dropped.push(
-        category == null
-          ? `media type ${item.type} does not route to Simkl (routing.ts should have filtered it)`
-          : `"${item.title}" has no Simkl-resolvable id (simkl/tmdb/imdb for movies & TV, simkl/mal for anime)`,
-      );
+    const built = buildEntry(entry);
+    if (typeof built === 'string') {
+      dropped.push(built);
       continue;
     }
-    const watched = watchedAt != null ? { watched_at: watchedAt } : {};
-
-    if (item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true)) {
-      // Movie-shaped: the whole item, no seasons — but an anime film still
-      // files under anime[] (see categoryFor).
-      (category === 'anime' ? anime : movies).push({ ids, ...watched });
-      continue;
-    }
-    if (item.type === 'ANIME') {
-      const numbers = animeEpisodeNumbers(entry);
-      if (typeof numbers === 'string') {
-        dropped.push(numbers);
-        continue;
-      }
-      anime.push({
-        ids,
-        seasons: [{ number: 1, episodes: numbers.map((number) => ({ number })) }],
-        ...watched,
-      });
-      continue;
-    }
-    // TV: canonical episodes, grouped by season (one entry per show).
-    const batch =
-      entry.episodes != null && entry.episodes.length > 0
-        ? entry.episodes
-        : entry.episode != null
-          ? [entry.episode]
-          : [];
-    if (batch.length === 0) {
-      dropped.push(`logging "${item.title}" to Simkl requires an episode (season/number)`);
-      continue;
-    }
-    shows.push({ ids, seasons: seasonsFor(batch), ...watched });
+    byCategory[built.category].push(built.payload);
   }
 
   const mergedShows = mergeSameItem(shows);

@@ -52,6 +52,10 @@ const ITEM: NormalizedMediaItem = {
   externalIds: { trakt: 1, anilist: 9 },
 };
 
+function film(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
+  return { ...ITEM, type: 'MOVIE', externalIds };
+}
+
 /** Records the keys a run invalidated, joined so they read as paths. */
 function recordingClient(): { client: QueryClient; keys: string[] } {
   const keys: string[] = [];
@@ -126,20 +130,20 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
 
   test('a Letterboxd log invalidates only the logged film’s watch reads', () => {
     const client = new QueryClient();
-    const bySlug = [...letterboxdQueryKeys.filmWatchesRoot(), 'u', 'inception', null];
-    const byTmdb = [...letterboxdQueryKeys.filmWatchesRoot(), 'u', null, 27205];
-    const otherFilm = [...letterboxdQueryKeys.filmWatchesRoot(), 'u', 'heat', null];
+    const bySlug = letterboxdQueryKeys.filmWatch('u', film({ letterboxd: 'inception' }));
+    const byTmdb = letterboxdQueryKeys.filmWatch('u', film({ tmdb: 27205 }));
+    const otherFilm = letterboxdQueryKeys.filmWatch('u', film({ letterboxd: 'heat' }));
     for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
+    // Both directions share the cached TMDB-to-slug mapping.
+    client.setQueryData(letterboxdQueryKeys.slug(27205), 'inception');
 
-    invalidateAfterLog(
-      client,
-      { ...ITEM, type: 'MOVIE', externalIds: { letterboxd: 'inception', tmdb: 27205 } },
-      ['letterboxd'],
-    );
-
-    expect(client.getQueryState(bySlug)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(byTmdb)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(otherFilm)?.isInvalidated).toBe(false);
+    for (const externalIds of [{ letterboxd: 'inception' }, { tmdb: 27205 }]) {
+      for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
+      invalidateAfterLog(client, film(externalIds), ['letterboxd']);
+      expect(client.getQueryState(bySlug)?.isInvalidated).toBe(true);
+      expect(client.getQueryState(byTmdb)?.isInvalidated).toBe(true);
+      expect(client.getQueryState(otherFilm)?.isInvalidated).toBe(false);
+    }
     client.clear();
   });
 

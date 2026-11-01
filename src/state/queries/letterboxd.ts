@@ -292,8 +292,10 @@ function letterboxdSlugQuery(tmdbId: number) {
   return {
     queryKey: letterboxdQueryKeys.slug(tmdbId),
     queryFn: ({ signal }: { signal: AbortSignal }) => Effect.runPromise(resolveFilmSlug(letterboxdDeps(), tmdbId), { signal }),
-    // A film's slug doesn't change.
+    // A film's slug doesn't change, and invalidateAfterLog reads it after the
+    // watch query that fetched it has unsubscribed.
     staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
     retry: false,
   };
 }
