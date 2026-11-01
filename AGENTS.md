@@ -59,8 +59,10 @@ as a JS plugin, enforces this.
 - TanStack Query for every fetch and mutation. It owns caching and invalidation.
 - Effect for typed errors, retries, and concurrency, only in `lib/providers/`
   and `lib/http/`. `state/queries/*` calls `Effect.runPromise` in
-  `queryFn`/`mutationFn`, and no component, screen, or hook signature sees an
-  `Effect` (`docs/brainstorms/2026-07-07-effect-for-provider-layer.md`).
+  `queryFn`/`mutationFn`, as do the feature write hooks, and no component,
+  screen, or hook signature sees an `Effect`
+  (`docs/brainstorms/2026-07-07-effect-for-provider-layer.md`).
+  `shinobu/effect-boundary` enforces this.
 - `react-native-mmkv` for tokens and local state, with `localStorage` on web.
   The session store currently has no native `encryptionKey`; encryption at rest
   is deferred to `todos/003-pending-p2-secure-token-storage.md`, including key
