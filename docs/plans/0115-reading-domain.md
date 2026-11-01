@@ -60,18 +60,18 @@ decisions and the units, one sub-issue of #209 each.
 Each unit is one sub-issue of #209. M-units need no new provider and can run in
 parallel; M3 owns the one new AniList read that the reading list also uses.
 
-| Unit | Title | Depends on |
-| --- | --- | --- |
-| M1 | Log the next chapter from details and the card sheet | — |
-| M2 | Log several chapters in one write | M1 |
-| M3 | Continue reading rail and manga want-to-read read-back | — |
-| M4 | Diary Reading filter | — |
-| B0 | Register Hardcover OAuth apps and probe browser access | owner: Hardcover account |
-| B1 | Connect Hardcover as the book provider | B0 |
-| B2 | Read the Hardcover library into rails, reading list and diary | B1, M3, M4 |
-| B3 | Log page progress, finishes and want-to-read to Hardcover | B1 |
-| B4 | Find books in search and open book details | B1 |
-| C0 | Choose a comics tracker | owner answer |
+| Unit | Issue | Title | Depends on |
+| --- | --- | --- | --- |
+| M1 | #392 | Log the next chapter from details and the card sheet | — |
+| M2 | #393 | Log several chapters in one write | M1 |
+| M3 | #394 | Continue reading rail and manga want-to-read read-back | — |
+| M4 | #395 | Diary Reading filter | — |
+| B0 | #396 | Register Hardcover OAuth apps and probe browser access | owner: Hardcover account |
+| B1 | #397 | Connect Hardcover as the book provider | B0 |
+| B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3, M4 |
+| B3 | #399 | Log page progress, finishes and want-to-read to Hardcover | B1 |
+| B4 | #400 | Find books in search and open book details | B1 |
+| C0 | #401 | Choose a comics tracker | owner answer |
 
 ### M1. Log the next chapter
 
