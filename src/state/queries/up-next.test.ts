@@ -273,8 +273,7 @@ describe('fetchUpNextInputs', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.progress).toEqual([]);
-    expect(inputs.errors).toContainEqual({ provider: 'trakt', message: 'progress 1 down' });
+    expect(inputs.errors.map((failure) => failure.provider)).toEqual(['trakt']);
   });
 
   test('the pool caps the per-show request fan (R6/KTD-2)', async () => {

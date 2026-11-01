@@ -99,9 +99,10 @@ const MAPPING_CONCURRENCY = 4;
 
 /**
  * Continue Watching's Trakt source: pool first (KTD-2), then one
- * `next_episode`-bearing progress call per pooled show. A single show's failure
- * omits that show — never the section. Since plan 0030 this fan answers for the
- * aired half only; Calendar reads the my-calendars endpoints below.
+ * `next_episode`-bearing progress call per pooled show. One show failing omits
+ * that show; every show failing fails the leg, so `settle` reports it. Since
+ * plan 0030 this fan answers for the aired half only; Calendar reads the
+ * my-calendars endpoints below.
  */
 async function traktInputs(
   queryClient: QueryClient,
@@ -113,7 +114,6 @@ async function traktInputs(
   });
 
   const pool = selectUpNextPool(shows);
-  let attempted = 0;
   let firstFailure: unknown;
   const results = await Effect.runPromise(
     Effect.forEach(
@@ -122,7 +122,6 @@ async function traktInputs(
         Effect.promise(async (): Promise<ProgressUpNextInput | null> => {
           const traktId = item.externalIds.trakt;
           if (traktId == null) return null;
-          attempted += 1;
           try {
             const progress = await queryClient.fetchQuery({
               queryKey: traktQueryKeys.showProgress(traktId),
@@ -160,9 +159,7 @@ async function traktInputs(
   );
 
   const inputs = results.filter((input): input is ProgressUpNextInput => input != null);
-  // One show failing omits that show; every show failing is the leg failing,
-  // so settle() reports it instead of replacing good cached rows with none.
-  if (attempted > 0 && inputs.length === 0 && firstFailure !== undefined) throw firstFailure;
+  if (inputs.length === 0 && firstFailure !== undefined) throw firstFailure;
   return inputs;
 }
 
