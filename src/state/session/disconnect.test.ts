@@ -1,25 +1,39 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryObserver, type QueryObserverResult } from '@tanstack/react-query';
 
 // The graph reaches modules that read Metro's `__DEV__` global at import time.
 (globalThis as { __DEV__?: boolean }).__DEV__ = true;
 
 // react-native-mmkv backs both the session store and Simkl's per-flow PKCE
-// storage — one in-memory Map serves both instances under bun.
+// storage — one in-memory Map serves both instances under bun. Writes notify
+// listeners the way MMKV does in-process, for `syncQueryCacheWithSessions`.
 const store = new Map<string, string>();
+const listeners = new Set<(key: string) => void>();
 mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({
     getString: (key: string) => store.get(key),
-    set: (key: string, value: string) => store.set(key, value),
-    remove: (key: string) => store.delete(key),
+    set: (key: string, value: string) => {
+      store.set(key, value);
+      for (const listener of listeners) listener(key);
+    },
+    remove: (key: string) => {
+      store.delete(key);
+      for (const listener of listeners) listener(key);
+    },
     getAllKeys: () => [...store.keys()],
-    addOnValueChangedListener: () => ({ remove() {} }),
+    addOnValueChangedListener: (listener: (key: string) => void) => {
+      listeners.add(listener);
+      return { remove: () => listeners.delete(listener) };
+    },
   }),
 }));
-// The simkl query layer imports the platform http client, which can't load
-// under bun — nothing here goes near the network.
+// The platform http client can't load under bun; requests are recorded instead.
+const requested: string[] = [];
 mock.module('@/lib/http/client', () => ({
-  httpFetch: async () => new Response('{}'),
+  httpFetch: async (input: RequestInfo | URL) => {
+    requested.push(String(input));
+    return Response.json([]);
+  },
 }));
 mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
@@ -33,8 +47,16 @@ mock.module('expo-crypto', () => ({
   digestStringAsync: async () => 'unused',
 }));
 
-const { disconnectProvider } = await import('./index');
-const { getProviderSession, setProviderSession } = await import('./tokens');
+const { disconnectProvider, syncQueryCacheWithSessions } = await import('./index');
+const {
+  clearProviderSession,
+  getProviderSession,
+  setProviderClientId,
+  setProviderClientSecret,
+  setProviderSession,
+} = await import('./tokens');
+const { watchlistOptions } = await import('@/state/queries/watchlist');
+const { upNextOptions } = await import('@/state/queries/up-next');
 const { getSimklAuthFlow, saveSimklAuthFlow } = await import(
   '@/lib/providers/simkl/auth'
 );
@@ -43,7 +65,11 @@ const { DIARY_QUERY_ROOT } = await import('@/state/queries/diary-pages');
 const { UP_NEXT_QUERY_ROOT } = await import('@/state/queries/up-next-cache');
 const { WATCHLIST_QUERY_ROOT } = await import('@/state/queries/watchlist-cache');
 
-beforeEach(() => store.clear());
+beforeEach(() => {
+  store.clear();
+  listeners.clear();
+  requested.length = 0;
+});
 
 describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
   test("clears the token, every ['simkl']-rooted query and the merged caches", () => {
@@ -94,5 +120,60 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
 
     expect(getSimklAuthFlow()).not.toBeNull();
     expect(getProviderSession('trakt')).toBeNull();
+  });
+});
+
+describe('syncQueryCacheWithSessions', () => {
+  test('a session cleared outside Disconnect purges like one', () => {
+    setProviderSession('anilist', { accessToken: 'a' });
+    const queryClient = new QueryClient();
+    const upNextKey = [...UP_NEXT_QUERY_ROOT, 'inputs'];
+    queryClient.setQueryData(['anilist', 'viewer'], 1);
+    queryClient.setQueryData(upNextKey, { progress: [] });
+    const unsubscribe = syncQueryCacheWithSessions(queryClient);
+
+    // What the transport's `tokens.clear()` does on a dead token.
+    clearProviderSession('anilist');
+
+    expect(queryClient.getQueryData(['anilist', 'viewer'])).toBeUndefined();
+    expect(queryClient.getQueryData(upNextKey)).toBeUndefined();
+    unsubscribe();
+  });
+
+  test.each([
+    ['watchlist', watchlistOptions],
+    ['up-next', upNextOptions],
+  ] as const)('a new connect refetches the active %s gather with that provider; a token refresh does not', async (_, options) => {
+    // Session reads are client-only (`currentUsableProviders`).
+    (globalThis as { window?: unknown }).window = {};
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const unsubscribe = syncQueryCacheWithSessions(queryClient);
+    const observer = new QueryObserver<unknown>(queryClient, options(queryClient));
+    const idle = () =>
+      new Promise<QueryObserverResult>((resolve) => {
+        const stop = observer.subscribe((result) => {
+          if (result.fetchStatus === 'idle') {
+            stop();
+            resolve(result);
+          }
+        });
+      });
+    const stopObserving = observer.subscribe(() => {});
+    await idle();
+
+    setProviderClientId('trakt', 'cid');
+    setProviderClientSecret('trakt', 'secret');
+    setProviderSession('trakt', { accessToken: 't-1' });
+    await idle();
+    expect(requested.some((url) => url.startsWith('https://api.trakt.tv/'))).toBe(true);
+
+    requested.length = 0;
+    setProviderSession('trakt', { accessToken: 't-2' });
+    expect(observer.getCurrentResult().fetchStatus).toBe('idle');
+    expect(requested).toEqual([]);
+    stopObserving();
+    unsubscribe();
+    queryClient.clear();
+    delete (globalThis as { window?: unknown }).window;
   });
 });

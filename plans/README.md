@@ -29,7 +29,7 @@ unblocking work floated up. Work top to bottom unless a dependency says otherwis
 | 10 | [018](018-letterboxd-film-watch-invalidation-scoped.md) | A Letterboxd log refreshes only the logged film's watch state | perf | P2 | S | LOW | — | DONE (#373) |
 | 11 | [015](015-harden-github-workflows.md) | Workflows pin actions and Bun; the release job keeps signing secrets narrow | security + dx | P2 | S | MED | — | DONE (#372; release dry run pending) |
 | 12 | [016](016-web-security-headers.md) | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS) | security | P2 | S | LOW | — | DONE (#381) |
-| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | NEEDS REVISION (#386; active gathers can refetch the old provider set) |
+| 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | DONE (#386; gathers read the usable providers when each fetch starts) |
 | 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | DONE (#385; retries refetch watch state and don't resend an unreadable target) |
 | 15 | [019](019-resolve-item-characterization-tests.md) | `useResolvedMediaItem` gets characterization tests | tests | P2 | M | LOW | — | DONE (#375) |
 | 16 | [020](020-letterboxd-userscript-localhost-opt-in.md) | The Letterboxd userscript trusts localhost only after an explicit opt-in | security | P3 | S | LOW | — | DONE (#384) |
@@ -71,9 +71,10 @@ Plan 0113 records them green at `dd6e6b9`. Every plan starts with
 
 ### Execution evidence (round 2)
 
-Review update, 2026-11-01: plans 007, 013 and 014 remain open for the
-correctness findings recorded in #382, #386 and #385. Their earlier green
-unit tests did not cover those paths. These implementations follow their plans;
+Review update, 2026-11-01: plans 013 and 014 were revised and shipped in
+#386 and #385 for the correctness findings recorded there. Plan 007's revision
+is pushed to #382, which stays open until one real web AniList connect
+confirms the `state` echo. Their earlier green unit tests did not cover those paths. These implementations follow their plans;
 the findings identify gaps in those plans, not undocumented deviations. The two direction spikes remain design
 proposals; a DONE spike does not authorize or implement its feature. DONE
 means the linked PR completed implementation or its spike, not that it merged.

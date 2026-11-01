@@ -11,7 +11,7 @@ import type { ProviderSession } from '@/types/session';
 const storage = createMMKV({ id: 'session' });
 
 const keyFor = (id: ProviderId) => `session.${id}`;
-const PROVIDER_KEY_PATTERN = /^session\.(.+)$/;
+export const PROVIDER_KEY_PATTERN = /^session\.(.+)$/;
 
 export function getProviderSession(id: ProviderId): ProviderSession | null {
   const raw = storage.getString(keyFor(id));

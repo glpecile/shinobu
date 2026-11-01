@@ -21,6 +21,7 @@ import { createQueryPersister, retainPersistedQueries } from "@/state/queries/pe
 import { PersistQueryClientProvider } from "@/state/queries/persist-provider";
 import { createQueryClient } from "@/state/queries/query-client";
 import { UpNextPrefetch } from "@/features/up-next/up-next-prefetch";
+import { SessionCacheSync } from "@/features/trackers/session-cache-sync";
 import { CatchUpLogSheet } from "@/features/log-media/session/catch-up-log-sheet";
 import { CatchUpLogProvider } from "@/features/log-media/session/state";
 import { usePageEnterStyle } from "@/lib/page-transition";
@@ -165,6 +166,9 @@ export default function Layout() {
                 {/* Release-notification refresh + background task lifecycle
                     (native only; renders null on web). */}
                 <NotificationsRuntime />
+                {/* Purges a provider's caches when its session disappears and
+                    refreshes the merged gathers when one connects. */}
+                <SessionCacheSync />
                 {/* Warms the Up Next slot on launch and on every foreground
                     transition, so its waterfall overlaps app start. */}
                 <UpNextPrefetch />
