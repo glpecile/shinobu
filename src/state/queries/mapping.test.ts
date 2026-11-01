@@ -270,6 +270,24 @@ describe('cachedTraktLookup (plan 0034 KTD-8)', () => {
     response.resolve(Response.json([]));
     client.clear();
   });
+
+  test('a Trakt 503 resolves null without caching, so the next lookup re-fetches', async () => {
+    setProviderClientId('trakt', 'trakt-cid');
+    const client = freshClient();
+    const params = { source: 'tmdb', id: 949, kind: 'movie' } as const;
+    routes = [['api.trakt.tv/search/tmdb/949', {}, 503]];
+
+    expect(await cachedTraktLookup(client, params)).toBeNull();
+
+    routes = [
+      ['api.trakt.tv/search/tmdb/949', [{ type: 'movie', movie: { title: 'Heat', ids: { trakt: 1 } } }]],
+    ];
+    const result = await cachedTraktLookup(client, params);
+
+    expect(result?.id).toBe('trakt-1');
+    expect(requestedUrls.filter((url) => url.includes('api.trakt.tv/search/tmdb/949'))).toHaveLength(2);
+    client.clear();
+  });
 });
 
 describe('cachedTraktTextSearch / movieSearchQuery (plan 0034 KTD-8)', () => {
@@ -321,6 +339,29 @@ describe('cachedSeasonLayout (plan 0034 KTD-8)', () => {
     expect(layout).toEqual([{ season: 1, episodeCount: 12 }]);
     expect(calledHost('api.themoviedb.org')).toBe(true);
     expect(calledHost('api.trakt.tv')).toBe(false);
+  });
+
+  test('a transient TMDB failure still tries Trakt, and an unanswered failure is not cached', async () => {
+    process.env.EXPO_PUBLIC_TMDB_TOKEN = 'tmdb-token';
+    clearTmdbToken();
+    setProviderClientId('trakt', 'trakt-cid');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    routes = [
+      ['api.themoviedb.org/3/tv/100', {}, 503],
+      ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]],
+    ];
+
+    expect(await cachedSeasonLayout(client, { tmdb: 100, trakt: 200 })).toEqual([
+      { season: 1, episodeCount: 10 },
+    ]);
+    client.clear();
+    routes[1] = ['api.trakt.tv/shows/200/seasons', []];
+    expect(await cachedSeasonLayout(client, { tmdb: 100, trakt: 200 })).toBeNull();
+    routes[1] = ['api.trakt.tv/shows/200/seasons', [{ number: 1, episode_count: 10 }]];
+    expect(await cachedSeasonLayout(client, { tmdb: 100, trakt: 200 })).toEqual([
+      { season: 1, episodeCount: 10 },
+    ]);
+    client.clear();
   });
 
   test('resolves to null immediately when neither id is known', async () => {
