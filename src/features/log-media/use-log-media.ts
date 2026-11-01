@@ -38,6 +38,7 @@ import {
   cachedSeasonLayout,
   cachedTmdbTvIdByTvdb,
 } from '@/state/queries/mapping';
+import { PROVIDERS } from '@/lib/providers/registry';
 import { resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
@@ -273,6 +274,30 @@ export function withMappingSkips(
     [...mappingSkips].map(([provider, reason]): [ProviderId, WriteAdapter<LogMediaVariables>] => [
       provider,
       () => Promise.resolve({ status: 'skipped', reason }),
+    ]),
+  );
+  return { ...adapters, ...overrides };
+}
+
+/**
+ * Fails, without writing, each retried target that couldn't say whether its
+ * failed write landed: resending could log the watch twice. The error keeps
+ * it in `failed`, so the report links to the provider and Try again re-reads.
+ */
+export function withUnconfirmed(
+  adapters: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>,
+  unconfirmed: readonly ProviderId[],
+): Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>> {
+  if (unconfirmed.length === 0) return adapters;
+  const overrides = Object.fromEntries(
+    unconfirmed.map((provider): [ProviderId, WriteAdapter<LogMediaVariables>] => [
+      provider,
+      () =>
+        Promise.reject(
+          new Error(
+            `Couldn't check whether the last try reached ${PROVIDERS[provider].label}, so it wasn't sent again.`,
+          ),
+        ),
     ]),
   );
   return { ...adapters, ...overrides };
@@ -540,6 +565,9 @@ async function resolveLogPlan(
  * counts as "doesn't have it": the write is the user's actual intent, and a
  * duplicate on a provider beats silently dropping the log.
  *
+ * A retry passes `fresh`: its failed write may have landed after the cached
+ * read, so it refetches, and a failed read answers null ("unknown") instead.
+ *
  * Each provider is asked in its own numbering domain (plan 0027 R4): Trakt and
  * Serializd against `domains.canonical`, AniList against `domains.entry`.
  */
@@ -548,8 +576,10 @@ async function providerHasWatch(
   provider: ProviderId,
   item: NormalizedMediaItem,
   domains: LogDomains,
+  fresh = false,
 ): Promise<boolean | null> {
   const episodes = domains.canonical;
+  const freshness = fresh ? { staleTime: 0 } : {};
   try {
     switch (provider) {
       case 'trakt': {
@@ -557,15 +587,18 @@ async function providerHasWatch(
           const watched = await queryClient.fetchQuery({
             queryKey: traktQueryKeys.watchedMovies(),
             queryFn: () => Effect.runPromise(getWatchedMovies(traktDeps())),
+            ...freshness,
           });
           return traktHasFilm(watched, item);
         }
         const traktId = item.externalIds.trakt;
-        if (traktId == null) return false;
+        // `logToTrakt` can still write by tmdb/tvdb id, so a retry can't rule it out.
+        if (traktId == null) return fresh ? null : false;
         const progress = await queryClient.fetchQuery({
           queryKey: traktQueryKeys.showProgress(traktId),
           queryFn: () =>
             Effect.runPromise(getShowWatchedProgress(traktDeps(), { traktId })),
+          ...freshness,
         });
         return traktHasEpisodes(progress.watchedKeys, episodes);
       }
@@ -577,6 +610,7 @@ async function providerHasWatch(
           queryKey: anilistQueryKeys.entryState(mediaId),
           queryFn: () =>
             Effect.runPromise(getEntryState(anilistDeps(), { mediaId })),
+          ...freshness,
         });
         const entryNumbers = domains.entry;
         return entryNumbers == null
@@ -595,7 +629,7 @@ async function providerHasWatch(
           queryKey: serializdQueryKeys.progress(username, tmdbId),
           queryFn: () =>
             Effect.runPromise(getWatchedEpisodeKeys(serializdDeps(), { tmdbId })),
-          staleTime: SERIALIZD_STALE_MS,
+          staleTime: fresh ? 0 : SERIALIZD_STALE_MS,
         });
         if (!serializdHasEpisodes(watchedKeys, episodes)) return false;
 
@@ -614,11 +648,13 @@ async function providerHasWatch(
         const username = getLetterboxdUsername();
         if (username == null || episodes != null) return false;
         // The member film page proves a viewing; null only means "no evidence".
-        return (await queryClient.fetchQuery(letterboxdFilmWatchQuery(username, item))) != null;
+        return (
+          await queryClient.fetchQuery({ ...letterboxdFilmWatchQuery(username, item), ...freshness })
+        ) != null;
       }
     }
   } catch {
-    return false;
+    return fresh ? null : false;
   }
   // Providers without a branch (Simkl) can't be read yet, so they answer null,
   // "unknown": `planLogWrite` leaves them out of the catch-up vs. rewatch
@@ -834,6 +870,8 @@ export interface LogWritePlan {
   skipped: ProviderId[];
   /** Providers blocked by an identity or episode mapping miss → their reason (R3). */
   mappingSkips: ReadonlyMap<ProviderId, string>;
+  /** Retried targets that can't say whether their failed write landed (`withUnconfirmed`). */
+  unconfirmed: ProviderId[];
   /** What every adapter sees: canonical `episodes` *and* entry `entryEpisodes`. */
   variables: LogMediaVariables;
   rewatch: boolean;
@@ -863,10 +901,11 @@ export async function planLogWrite(
   // season-1 keys for a season-2 intent and turn a genuine parity rewatch into
   // a catch-up (plan 0027 R4).
   const reconcileTargets = targets.filter((provider) => !mappingSkips.has(provider));
+  const retryOf = variables.retryOf;
   const answers = await Promise.all(
     reconcileTargets.map(async (provider) => ({
       provider,
-      hasIt: await providerHasWatch(queryClient, provider, item, domains),
+      hasIt: await providerHasWatch(queryClient, provider, item, domains, retryOf != null),
     })),
   );
   // A provider that can't report its state (null) is written but has no say
@@ -874,7 +913,8 @@ export async function planLogWrite(
   const records: ProviderWatchRecord[] = answers.flatMap(({ provider, hasIt }) =>
     hasIt == null ? [] : [{ provider, hasIt }],
   );
-  const retryOf = variables.retryOf;
+  // A retry keeps its round's rewatch decision, and a first-watch retry skips
+  // a target whose failed write landed.
   const decisions: LogDecision[] =
     retryOf == null
       ? reconcileLogTargets(records)
@@ -889,8 +929,13 @@ export async function planLogWrite(
   // flows through the normal fan-out merge (and plan 0022's manual link
   // fires); their adapter resolves the reason without writing anything.
   const writeTargets = targets.filter((provider) => !skipped.includes(provider));
+  const unconfirmed =
+    retryOf?.rewatch === false
+      ? answers.filter(({ hasIt }) => hasIt == null).map(({ provider }) => provider)
+      : [];
   const rewatch =
-    decisions.length > 0 && decisions.every((decision) => decision.action === 'rewatch');
+    retryOf?.rewatch ??
+    (decisions.length > 0 && decisions.every((decision) => decision.action === 'rewatch'));
 
   // Rebuild the episode fields from the resolved domains rather than
   // forwarding the caller's: after translation the variables carry *both*
@@ -912,6 +957,7 @@ export async function planLogWrite(
     writeTargets,
     skipped,
     mappingSkips,
+    unconfirmed,
     rewatch,
     variables: {
       ...rest,
@@ -944,7 +990,10 @@ export function useLogMedia() {
       const { item, targets, skipped } = plan;
 
       const result = await fanOutLog(
-        withMappingSkips(logAdapters(queryClient), plan.mappingSkips),
+        withUnconfirmed(
+          withMappingSkips(logAdapters(queryClient), plan.mappingSkips),
+          plan.unconfirmed,
+        ),
         plan.writeTargets,
         plan.variables,
       );
