@@ -7,7 +7,7 @@ import { parseSimklItemId } from '@/lib/providers/simkl/normalize';
 import { parseTmdbItemId } from '@/lib/providers/tmdb/normalize';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
-import { anilistQueryKeys, useAnimeByIdQuery } from './anilist';
+import { anilistQueryKeys, findInCurrentMangaCache, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
 import { useMediaDetailsQuery } from './media-details';
 import { findInLetterboxdListsCache, useLetterboxdFilmQuery } from './letterboxd';
@@ -118,8 +118,11 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     // surfaces); those rows are gone, so the gather that produced the card is
     // now what answers for it. Cache-only, like every step here.
     findInUpNextCache(queryClient, id) ??
-    // Search results belong to no feed slot (plan 0009) — and manga belongs to
-    // no feed row at all, so this is the only way it resolves (plan 0024 U8).
+    // Continue Reading cards, from the manga read behind the rail; its copy
+    // carries the reader's chapter progress.
+    findInCurrentMangaCache(queryClient, id) ??
+    // Search results belong to no feed slot (plan 0009), and a manga that is
+    // neither being read nor on the reading list resolves only here.
     findInSearchCache(queryClient, id) ??
     // Diary rows live in no feed slot and no search — resolve them from the
     // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).

@@ -117,6 +117,19 @@ were deleted, along with the never-read `plannedAnime()` key. The regression
 test in `state/queries/anilist.test.ts` is one case now: a mid-run PLANNING
 entry reaches the watchlist (`fetchWatchlistAnime`) and nowhere in Up Next.
 
+## Amendment (2026-11-01, plan 0117 M3): a second shared read, same gate
+
+Manga now has its own list read, `getCurrentManga`
+(`MediaListCollection(type: MANGA, status_in: [CURRENT, REPEATING, PLANNING])`),
+cached under `currentMangaEntries()`. It is the same hazard one type over:
+a planned manga has `progress: 0`, and if PLANNING reached Continue Reading,
+every manga the user ever meant to read would show up as one they are reading.
+`AniListMangaEntry` keeps all three statuses, and each consumer selects its
+own: Continue Reading (`useSuspenseReadingMangaQuery`) takes CURRENT and
+REPEATING, and the reading list (`fetchWatchlistManga`) takes PLANNING. The
+gate test in `state/queries/anilist.test.ts` has a second case that runs the
+real read and checks both slices and the single request.
+
 ## Rule of thumb
 
 As of 2026-10-04, recent premieres are an exception to the historical PLANNING

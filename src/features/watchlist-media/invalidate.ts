@@ -45,7 +45,11 @@ export function invalidateAfterWatchlist(
   }
   if (succeeded.includes('anilist')) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
-    queryClient.invalidateQueries({ queryKey: anilistQueryKeys.currentAnimeEntries() });
+    queryClient.invalidateQueries({
+      queryKey: item.type === 'MANGA'
+        ? anilistQueryKeys.currentMangaEntries()
+        : anilistQueryKeys.currentAnimeEntries(),
+    });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {
       // KTD-2's exclusive-status guard reads this before the next write; a

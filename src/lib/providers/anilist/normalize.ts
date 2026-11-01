@@ -251,6 +251,30 @@ export function normalizeCurrentAnimeEntry(
   };
 }
 
+/**
+ * A reading or planned manga list entry (plan 0117 M3). The list read asks for
+ * three statuses in one request, and each surface slices by `status`: Continue
+ * Reading takes CURRENT and REPEATING, the reading list takes PLANNING.
+ */
+export interface AniListMangaEntry {
+  item: NormalizedMediaItem;
+  status: 'CURRENT' | 'REPEATING' | 'PLANNING';
+  /** The MediaList row's own id: a removal hint, never evidence (see `AniListCurrentEntry.entryId`). */
+  entryId?: number;
+}
+
+export function normalizeCurrentMangaEntry(
+  entry: AniListListEntry,
+  nowIso: string,
+): AniListMangaEntry {
+  return {
+    item: normalizeAniListListEntry(entry, nowIso),
+    // PLANNING is the restricted status, so only an explicit one is planned.
+    status: entry.status === 'PLANNING' || entry.status === 'REPEATING' ? entry.status : 'CURRENT',
+    ...(entry.id != null ? { entryId: entry.id } : {}),
+  };
+}
+
 // ---- Diary activity (plan 0016) ----
 
 /**

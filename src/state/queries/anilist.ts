@@ -17,6 +17,7 @@ import { getAnimeRelations } from '@/lib/providers/anilist/relations';
 import { getAniListLibrary } from '@/lib/providers/anilist/library';
 import {
   getCurrentAnime,
+  getCurrentManga,
   getSeasonalAnime,
   getViewer,
   searchAniListStaff,
@@ -25,7 +26,7 @@ import {
   type SeasonalAnimePage,
 } from '@/lib/providers/anilist/reads';
 import { namesMatch, pickPersonMatch } from '@/lib/providers/tmdb/normalize';
-import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
+import type { AniListCurrentEntry, AniListMangaEntry } from '@/lib/providers/anilist/normalize';
 import type {
   AnimeFormatFilter,
   AnimeSeasonWindow,
@@ -106,6 +107,12 @@ export const anilistQueryKeys = {
   currentAnimeEntries: () =>
     [...anilistQueryKeys.all, 'current-anime-entries'] as const,
   /**
+   * The manga twin (plan 0117 M3): reading, rereading and planned manga in one
+   * read, which Continue Reading and the reading list each slice by status.
+   */
+  currentMangaEntries: () =>
+    [...anilistQueryKeys.all, 'current-manga-entries'] as const,
+  /**
    * Popular anime of one cour — keyed by season so a boundary crossing
    * refetches, and by format so the explorer's narrowing gets its own entry.
    * The home rows are `(cour, TV)` and `(cour, MOVIE)`; the explorer opened
@@ -153,13 +160,22 @@ export const anilistQueryKeys = {
 const NAME_RESOLUTION_STALE_MS = 24 * 60 * 60_000;
 
 /**
- * Two consumers want the currently-watching list at different fidelities (the
- * feed row wants items, Up Next wants airing info), and the 30 req/min budget
- * says they share one request. So the *entries* key owns the network read and
- * the items key derives from it; this window keeps the second reader off the
- * wire without letting either go visibly stale (a log invalidates both).
+ * Each list read feeds two surfaces through one request (anime: Up Next and the
+ * watchlist; manga: Continue Reading and the reading list), as the 30 req/min
+ * budget requires. This window keeps the second reader off the wire; logs and
+ * watchlist writes invalidate the reads, so it never hides the user's own change.
  */
-const CURRENT_ANIME_STALE_MS = 60_000;
+const LIST_ENTRIES_STALE_MS = 60_000;
+
+/** The viewer the list reads are keyed by, fetched once per session (the disconnect purge drops it). */
+function fetchViewer(queryClient: QueryClient, deps: AniListDeps) {
+  return queryClient.fetchQuery({
+    queryKey: anilistQueryKeys.viewer(),
+    queryFn: ({ signal }) => Effect.runPromise(getViewer(deps), { signal }),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
+  });
+}
 
 /** Shared personal library for watched marks and progress, without per-title GraphQL reads. */
 export function useAniListLibraryQuery(enabled: boolean) {
@@ -168,12 +184,7 @@ export function useAniListLibraryQuery(enabled: boolean) {
     queryKey: anilistQueryKeys.library(),
     queryFn: async ({ signal }) => {
       const deps = anilistDeps();
-      const viewer = await queryClient.fetchQuery({
-        queryKey: anilistQueryKeys.viewer(),
-        queryFn: ({ signal: viewerSignal }) => Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
-        staleTime: Number.POSITIVE_INFINITY,
-        gcTime: Number.POSITIVE_INFINITY,
-      });
+      const viewer = await fetchViewer(queryClient, deps);
       return Effect.runPromise(getAniListLibrary(deps, viewer.id), { signal });
     },
     enabled,
@@ -196,15 +207,10 @@ export function fetchCurrentAnimeEntries(
     queryKey: anilistQueryKeys.currentAnimeEntries(),
     queryFn: async ({ signal }) => {
       const deps = anilistDeps();
-      const viewer = await queryClient.fetchQuery({
-        queryKey: anilistQueryKeys.viewer(),
-        queryFn: ({ signal: viewerSignal }) => Effect.runPromise(getViewer(deps), { signal: viewerSignal }),
-        staleTime: Number.POSITIVE_INFINITY,
-        gcTime: Number.POSITIVE_INFINITY,
-      });
+      const viewer = await fetchViewer(queryClient, deps);
       return Effect.runPromise(getCurrentAnime(deps, { viewerId: viewer.id }), { signal });
     },
-    staleTime: CURRENT_ANIME_STALE_MS,
+    staleTime: LIST_ENTRIES_STALE_MS,
   });
 }
 
@@ -229,6 +235,64 @@ export async function fetchWatchlistAnime(
   return entries.filter(
     (entry) => entry.status === 'PLANNING' || entry.status === 'CURRENT',
   );
+}
+
+/**
+ * The manga list read behind Continue Reading and the reading list. The rail's
+ * observer and the watchlist gather's fetch both use these options, so they
+ * share one cache entry and one request.
+ */
+function currentMangaEntriesOptions(queryClient: QueryClient) {
+  return {
+    queryKey: anilistQueryKeys.currentMangaEntries(),
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
+      const deps = anilistDeps();
+      const viewer = await fetchViewer(queryClient, deps);
+      return Effect.runPromise(getCurrentManga(deps, { viewerId: viewer.id }), { signal });
+    },
+    staleTime: LIST_ENTRIES_STALE_MS,
+  };
+}
+
+/**
+ * The reading-list slice: PLANNING manga only. A manga being read or reread
+ * is on Continue Reading instead.
+ */
+export async function fetchWatchlistManga(
+  queryClient: QueryClient,
+): Promise<Array<AniListMangaEntry & { status: 'PLANNING' }>> {
+  const entries = await queryClient.fetchQuery(currentMangaEntriesOptions(queryClient));
+  return entries.filter(
+    (entry): entry is AniListMangaEntry & { status: 'PLANNING' } => entry.status === 'PLANNING',
+  );
+}
+
+// Module scope, so the selected rail keeps its identity between renders.
+function readingManga(entries: AniListMangaEntry[]): NormalizedMediaItem[] {
+  return entries
+    .filter((entry) => entry.status === 'CURRENT' || entry.status === 'REPEATING')
+    .map((entry) => entry.item);
+}
+
+/**
+ * Home's Continue Reading rail: CURRENT and REPEATING manga, newest update
+ * first. Never PLANNING, which may reach the reading list but no surface that
+ * means "you are partway through this"
+ * (`docs/solutions/anilist-shared-list-query-status-gate.md`).
+ */
+export function useSuspenseReadingMangaQuery() {
+  const queryClient = useQueryClient();
+  return useSuspenseQuery({ ...currentMangaEntriesOptions(queryClient), select: readingManga });
+}
+
+/** A Continue Reading card's item, for the details screen's cache-only resolution chain. */
+export function findInCurrentMangaCache(
+  queryClient: QueryClient,
+  id: string,
+): NormalizedMediaItem | undefined {
+  return queryClient
+    .getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries())
+    ?.find((entry) => entry.item.id === id)?.item;
 }
 
 /**

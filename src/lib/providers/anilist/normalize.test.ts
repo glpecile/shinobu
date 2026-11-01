@@ -4,6 +4,7 @@ import {
   normalizeAniListListEntry,
   normalizeAniListMedia,
   normalizeCurrentAnimeEntry,
+  normalizeCurrentMangaEntry,
   normalizeListActivity,
   parseAniListItemId,
   type AniListListActivity,
@@ -303,6 +304,21 @@ describe('normalizeCurrentAnimeEntry (plan 0019 U2)', () => {
     expect(normalizeCurrentAnimeEntry(entry, NOW_ISO).status).toBe('CURRENT');
   });
 
+});
+
+describe('normalizeCurrentMangaEntry (plan 0117 M3)', () => {
+  test('REPEATING and PLANNING survive, anything else reads as CURRENT', () => {
+    const media: AniListMedia = { ...SERIES, type: 'MANGA', format: 'MANGA', chapters: 59 };
+    const status = (raw?: string) =>
+      normalizeCurrentMangaEntry({ status: raw, progress: 12, media }, NOW_ISO).status;
+    // Continue Reading takes CURRENT and REPEATING; the reading list takes
+    // PLANNING. A planned guess for an unknown value would hide a manga
+    // the user is reading.
+    expect(status('REPEATING')).toBe('REPEATING');
+    expect(status('PLANNING')).toBe('PLANNING');
+    expect(status(undefined)).toBe('CURRENT');
+    expect(normalizeCurrentMangaEntry({ id: 9002, status: 'CURRENT', progress: 12, media }, NOW_ISO).entryId).toBe(9002);
+  });
 });
 
 describe('parseAniListItemId', () => {

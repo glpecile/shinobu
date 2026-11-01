@@ -99,6 +99,13 @@ describe('invalidateAfterWatchlist (plan 0031 KTD-5/R19)', () => {
     expect(keys).toContain('anilist/relations/9');
   });
 
+  test('an AniList manga write refreshes the manga read instead', () => {
+    const { client, keys } = recordingClient();
+    invalidateAfterWatchlist(client, { ...SHOW, type: 'MANGA' }, ['anilist']);
+    expect(keys).toContain('anilist/current-manga-entries');
+    expect(keys).not.toContain('anilist/current-anime-entries');
+  });
+
   test('Letterboxd invalidates both separately-keyed reads of one list', () => {
     const { client, keys } = recordingClient();
     invalidateAfterWatchlist(client, SHOW, ['letterboxd']);

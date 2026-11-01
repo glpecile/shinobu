@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, mock, test } from 'bun:test';
 
-import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
+import type { AniListCurrentEntry, AniListMangaEntry } from '@/lib/providers/anilist/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
 
 // Import-time stubs only: MMKV, the native fetch client and react-native's
@@ -119,10 +119,20 @@ function plannedAnime(anilistId: number): AniListCurrentEntry {
   };
 }
 
+function plannedManga(anilistId: number): AniListMangaEntry {
+  return {
+    item: { ...plannedAnime(anilistId).item, type: 'MANGA', progressUnit: 'chapter' },
+    status: 'PLANNING',
+    entryId: 5000 + anilistId,
+  };
+}
+
 interface Scenario {
   trakt?: NormalizedMediaItem[];
   /** The widened AniList list read's payload — CURRENT *and* PLANNING. */
   anime?: AniListCurrentEntry[];
+  /** The manga list read's payload. */
+  manga?: AniListMangaEntry[];
   /** Every page the infinite Letterboxd entry already holds. */
   letterboxdPages?: NormalizedMediaItem[][];
   /** `/sync/all-items?status=plantowatch` — bucket doesn't matter to the leg. */
@@ -143,6 +153,7 @@ function fakeClient(scenario: Scenario) {
       if (scenario.failing?.includes('anilist') === true) throw new Error('anilist down');
       return scenario.anime ?? [];
     }
+    if (root === 'anilist' && kind === 'current-manga-entries') return scenario.manga ?? [];
     if (root === 'simkl' && kind === 'all-items') {
       if (scenario.failing?.includes('simkl') === true) throw new Error('simkl down');
       return { shows: scenario.simkl ?? [], movies: [], anime: [] };
@@ -185,18 +196,20 @@ describe('fetchWatchlistInputs', () => {
     expect(requested).toEqual(['trakt/watchlist/all/added/desc']);
   });
 
-  test('the AniList leg is the CURRENT ∪ PLANNING slice of the already-cached read', async () => {
+  test('the AniList leg is the anime and reading-list slices of the already-cached reads', async () => {
     const { client, requested } = fakeClient({
       anime: [
         plannedAnime(1),
         { ...plannedAnime(2), status: 'CURRENT' },
       ],
+      manga: [plannedManga(3)],
     });
 
     const inputs = await fetchWatchlistInputs(client, ['anilist']);
 
     // Plan 0035 R1: an anime you are watching is watchlisted. Both rows come
-    // through, each stamped with the status the picker warns off (R3).
+    // through, each stamped with the status the picker warns off (R3), and so
+    // does a manga on the reading list (plan 0117 M3).
     expect(inputs.inputs).toEqual([
       {
         item: expect.objectContaining({ id: 'anilist-1' }),
@@ -210,9 +223,15 @@ describe('fetchWatchlistInputs', () => {
         anilistStatus: 'CURRENT',
         entryId: 5002,
       },
+      {
+        item: expect.objectContaining({ id: 'anilist-3', type: 'MANGA' }),
+        source: 'anilist',
+        anilistStatus: 'PLANNING',
+        entryId: 5003,
+      },
     ]);
-    // Zero extra requests: one cached list read, no per-status query of its own.
-    expect(requested).toEqual(['anilist/current-anime-entries']);
+    // Zero extra requests: the two cached list reads, no per-status query.
+    expect(requested).toEqual(['anilist/current-anime-entries', 'anilist/current-manga-entries']);
   });
 
   test('the Letterboxd leg reads every loaded page, not just page 1', async () => {
@@ -348,6 +367,7 @@ describe('refreshWatchlistInputs', () => {
     expect(calls).toEqual([
       'invalidate:trakt/watchlist',
       'invalidate:anilist/current-anime-entries',
+      'invalidate:anilist/current-manga-entries',
       'invalidate:simkl/all-items',
       'invalidate:letterboxd/watchlist/gian',
       'invalidate:letterboxd/watchlist-pages/gian',

@@ -9,10 +9,13 @@ import {
 } from '@/features/watchlist/find-watchlist-removal';
 import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { haptics } from '@/lib/haptics';
+import { useAniListEntryStateQuery } from '@/state/queries/anilist';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
+import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
+  isReadIntent,
   isWatchlistCtaSettled,
   watchlistCtaCopy,
   watchlistResultView,
@@ -31,8 +34,8 @@ import {
 /**
  * The want-to-watch CTA (plan 0031 U8, reshaped by plan 0032 KTD-4) — a
  * **sibling** of `LogMediaButton`, never a branch inside it. That component
- * `return null`s for MANGA and for a series whose next episode can't be named,
- * which are exactly the items this one exists for.
+ * `return null`s for a series whose next episode can't be named, which is
+ * exactly an item this one exists for.
  *
  * Since plan 0032 the button **opens the target picker; it does not write**
  * (KTD-4). The three inline result families that used to render under it live
@@ -103,6 +106,21 @@ export function WatchlistMediaButton({
   // watchlist but missing from another has an add left to offer (owner report
   // 2026-08-01). False whenever the answer is unknown, so R35 holds.
   const stillOffered = useWatchlistAddStillOffered(item);
+  const connected = useConnectedProviders();
+  // The entry read `LogMediaButton` already holds for this manga, so it costs
+  // no request of its own.
+  const anilistEntry = useAniListEntryStateQuery({
+    type: item.type,
+    mediaId: item.externalIds.anilist,
+    enabled: isReadIntent(item) && connected.includes('anilist'),
+  });
+  // A manga's only add target is AniList, which never writes over an entry it
+  // already has (plan 0031 KTD-2). Once the manga is being read, finished or
+  // shelved there, the add could only be refused.
+  const trackedManga =
+    isReadIntent(item) &&
+    anilistEntry.data?.entry != null &&
+    anilistEntry.data.entry.status !== 'PLANNING';
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
@@ -114,7 +132,7 @@ export function WatchlistMediaButton({
 
   // Nothing connected can take this item — the same silence `LogMediaButton`
   // keeps rather than offering an action that can only fail.
-  if (writable.length === 0 && manual.length === 0) return null;
+  if ((writable.length === 0 && manual.length === 0) || trackedManga) return null;
 
   function openRemovePicker() {
     // `settled` implies the gathered cache holds a matching input (that is what

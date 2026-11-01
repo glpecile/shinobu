@@ -33,11 +33,11 @@ interface MediaCardProps {
 
 function progressLabel(item: NormalizedMediaItem): string | null {
   if (item.currentProgress === 0) return null;
-  const unit = item.progressUnit === 'chapter' ? 'ch' : 'ep';
-  if (item.totalEpisodes != null && item.totalEpisodes > 0) {
-    return `${item.currentProgress}/${item.totalEpisodes} ${unit}`;
+  const hasTotal = item.totalEpisodes != null && item.totalEpisodes > 0;
+  if (item.progressUnit === 'chapter') {
+    return hasTotal ? `Ch ${item.currentProgress} / ${item.totalEpisodes}` : `Ch ${item.currentProgress}`;
   }
-  return `${item.currentProgress} ${unit}`;
+  return hasTotal ? `${item.currentProgress}/${item.totalEpisodes} ep` : `${item.currentProgress} ep`;
 }
 
 export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCardProps) {
