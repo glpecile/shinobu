@@ -42,11 +42,16 @@ describe('isSerializdProxyRequest', () => {
 describe('allowlist', () => {
   test('passes allowlisted path+method pairs through to upstream', async () => {
     for (const [path, method] of [
-      ['/api/serializd/user/gian/diary', 'GET'],
+      // Every client GET shape, with the query it sends.
+      ['/api/serializd/show/1396', 'GET'],
+      ['/api/serializd/show/1396/season/0', 'GET'],
+      ['/api/serializd/user/gian/diary?page=3', 'GET'],
       ['/api/serializd/user/gian/lists?sort_by=date_created_desc&page=2', 'GET'],
-      ['/api/serializd/user/gian/liked_lists?sort_by=date_created_desc&page=1', 'GET'],
+      ['/api/serializd/user/gian.b_c-d/liked_lists?sort_by=liked_on_desc&page=1', 'GET'],
+      ['/api/serializd/user/gian/show/1396/progress', 'GET'],
+      ['/api/serializd/user/gian/watchedpage_v2/2?sort_by=date_added_desc', 'GET'],
       ['/api/serializd/list/42', 'GET'],
-      ['/api/serializd/search/upcoming_episodes_v3?cursor=', 'GET'],
+      ['/api/serializd/search/upcoming_episodes_v3', 'GET'],
       ['/api/serializd/list/add_item', 'POST'],
       ['/api/serializd/list/edit', 'POST'],
       ['/api/serializd/list/create', 'POST'],
@@ -63,8 +68,17 @@ describe('allowlist', () => {
         upstream.fetch,
       );
       expect(res.status).toBe(200);
-      expect(upstream.captured).toHaveLength(1);
+      expect(upstream.captured.map(({ url }) => url)).toEqual([
+        `https://serializd.onrender.com/api/${path.slice('/api/serializd/'.length)}`,
+      ]);
     }
+  });
+
+  test('a query key the rule does not allow is 400, never forwarded', async () => {
+    const upstream = capturingUpstream(Response.json({}));
+    const res = await handleSerializdProxy(proxyRequest('/api/serializd/show/12?x=1'), upstream.fetch);
+    expect(res.status).toBe(400);
+    expect(upstream.captured).toHaveLength(0);
   });
 
   test('a wrong method on an allowlisted path is 405', async () => {
@@ -132,6 +146,12 @@ describe('allowlist', () => {
       '/api/serializd/list/42%2F..%2Flogin',
       '/api/serializd/list/0',
       '/api/serializd/search/trending',
+      // GETs are exact paths, not `show/` or `user/` prefixes.
+      '/api/serializd/show/12/cast',
+      '/api/serializd/show/abc',
+      '/api/serializd/user/gian/admin',
+      '/api/serializd/user/gian%2F..%2Flogin/diary',
+      '/api/serializd/user/gian/show/1/progress/extra',
     ]) {
       for (const method of ['GET', 'POST'] as const) {
         const upstream = capturingUpstream(Response.json({}));
@@ -160,6 +180,16 @@ describe('request hardening', () => {
       expect(res.status).toBe(413);
       expect(upstream.captured).toHaveLength(0);
     }
+  });
+
+  test('rejects a declared oversize body before reading it', async () => {
+    const upstream = capturingUpstream(Response.json({}));
+    const res = await handleSerializdProxy(
+      proxyRequest('/api/serializd/login', { method: 'POST', body: '{}', headers: { 'Content-Length': '70000' } }),
+      upstream.fetch,
+    );
+    expect(res.status).toBe(413);
+    expect(upstream.captured).toHaveLength(0);
   });
 
   test('accepts a complete list editor payload while bounding only that endpoint at 1 MiB', async () => {
@@ -208,17 +238,6 @@ describe('request hardening', () => {
       expect(headers.Cookie).toBeUndefined();
       expect(headers['X-Evil']).toBeUndefined();
     }
-  });
-
-  test('forwards to the upstream host + preserves the query string', async () => {
-    const upstream = capturingUpstream(Response.json({}));
-    await handleSerializdProxy(
-      proxyRequest('/api/serializd/user/gian/diary?page=3'),
-      upstream.fetch,
-    );
-    expect(upstream.captured[0].url).toBe(
-      'https://serializd.onrender.com/api/user/gian/diary?page=3',
-    );
   });
 });
 

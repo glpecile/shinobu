@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import { clearSimklAuthFlow } from '@/lib/providers/simkl/auth-flow';
 import type { ProviderId } from '@/lib/providers/types';
+import { DIARY_QUERY_ROOT } from '@/state/queries/diary-pages';
 import { UP_NEXT_QUERY_ROOT } from '@/state/queries/up-next-cache';
 import { WATCHLIST_QUERY_ROOT } from '@/state/queries/watchlist-cache';
 import { clearProviderSession, onSessionChange } from './tokens';
@@ -104,6 +105,10 @@ export function disconnectProvider(queryClient: QueryClient, id: ProviderId): vo
   // them. Without this, disconnecting Trakt leaves that account's rows on the
   // surface for the whole stale window — and on disk, since it is persisted.
   queryClient.removeQueries({ queryKey: [...WATCHLIST_QUERY_ROOT] });
+  // The third exception: the unified diary's key names the provider set and
+  // two usernames, not the Trakt/AniList/Simkl account, and it is persisted
+  // on native. Reconnecting as another account must not restore it.
+  queryClient.removeQueries({ queryKey: [...DIARY_QUERY_ROOT] });
 }
 
 export function useDisconnectProvider(): (id: ProviderId) => void {

@@ -61,6 +61,9 @@ The app's public-read proxy is not used to resolve the film LID for this write.
 - Install through Letterboxd's Advanced setup in the provider sheet. The
   canonical userscript is `public/letterboxd.user.js`, served at
   `/letterboxd.user.js`; there is no separate source copy to keep in sync.
+- On `localhost` dev ports the script stays inert unless
+  `shinobu-trust-localhost` is `true` in Tampermonkey's storage for the
+  script. Set it only on a machine where those ports serve Shinobu.
 - Film logs and watchlist additions and removals are enabled with version 0.5.0.
 - The script refuses an account or film mismatch. Requests expire and are
   consumed before sending; there is no automatic retry.

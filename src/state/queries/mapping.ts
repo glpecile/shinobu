@@ -342,11 +342,17 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
   return {
     queryKey: mappingQueryKeys.seasonLayout(tmdbId ?? null, traktId ?? null, via),
     queryFn: async ({ signal }: { signal: AbortSignal }): Promise<SeasonLayout | null> => {
+      let transientFailure: unknown;
+      const miss = (error: unknown): null => {
+        if (signal.aborted) throw error;
+        if (isTransientLookupFailure(error)) transientFailure = error;
+        return null;
+      };
       if (tmdbId != null) {
         const layout = await Effect.runPromise(
           getTvSeasonLayout(tmdbDeps(), { tmdbId }),
           { signal },
-        ).catch((error) => mappingMiss(error, signal));
+        ).catch(miss);
         // An empty array means TMDB answered but knows no seasons — fall
         // through to Trakt rather than treating "no data" as an answer.
         if (layout != null && layout.length > 0) return layout;
@@ -363,9 +369,10 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
         const layout = await Effect.runPromise(
           getShowSeasonLayout(traktDeps(), { traktId }),
           { signal },
-        ).catch((error) => mappingMiss(error, signal));
+        ).catch(miss);
         if (layout != null && layout.length > 0) return layout;
       }
+      if (transientFailure != null) throw transientFailure;
       return null;
     },
     staleTime: EPISODE_MAP_STALE_MS,
