@@ -35,12 +35,16 @@ jobs:
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
           java-version: '17'
@@ -53,8 +57,8 @@ jobs:
       - name: Verify tag matches expo.version
         if: github.event_name == 'push'
         run: |
-          if [ "${{ github.ref_name }}" != "v${{ steps.version.outputs.value }}" ]; then
-            echo "::error::Tag ${{ github.ref_name }} does not match expo.version ${{ steps.version.outputs.value }} (expected v${{ steps.version.outputs.value }})"
+          if [ "$GITHUB_REF_NAME" != "v${{ steps.version.outputs.value }}" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match expo.version ${{ steps.version.outputs.value }} (expected v${{ steps.version.outputs.value }})"
             exit 1
           fi
 
@@ -64,8 +68,10 @@ jobs:
       # failing, so early tags before the owner runs the runbook (U5) still work.
       - name: Determine signing mode
         id: signing
+        env:
+          KEYSTORE: ${{ secrets.SHINOBU_KEYSTORE_BASE64 }}
         run: |
-          if [ -n "${{ secrets.SHINOBU_KEYSTORE_BASE64 }}" ]; then
+          if [ -n "$KEYSTORE" ]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
             echo "suffix=" >> "$GITHUB_OUTPUT"
           else
@@ -73,39 +79,26 @@ jobs:
             echo "suffix=-unsigned-debug" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Decode release keystore
-        if: steps.signing.outputs.signed == 'true'
-        run: echo "${{ secrets.SHINOBU_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
-
-      # Only set when signed — leaving these unset (rather than set-but-empty)
-      # is what makes `plugins/with-release-signing.js`'s
-      # `project.hasProperty(...)` fallback to debug signing actually fire.
-      - name: Configure release signing properties
-        if: steps.signing.outputs.signed == 'true'
-        run: |
-          {
-            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_STORE_FILE=$RUNNER_TEMP/release.keystore"
-            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_STORE_PASSWORD=${{ secrets.SHINOBU_UPLOAD_STORE_PASSWORD }}"
-            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_ALIAS=${{ secrets.SHINOBU_UPLOAD_KEY_ALIAS }}"
-            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_PASSWORD=${{ secrets.SHINOBU_UPLOAD_KEY_PASSWORD }}"
-          } >> "$GITHUB_ENV"
-
       # Builder-supplied provider credentials (AGENTS.md: TMDB is
       # "builder-supplied"; Trakt/AniList follow the same one-tap-connect
       # pattern) baked into the shipped APK via Expo's standard
       # EXPO_PUBLIC_* env handling — the same file Metro reads locally
-      # (.env.local). Dynamic: every repo secret named EXPO_PUBLIC_* is
-      # written, so adding a provider credential is a secrets-page change,
-      # not a workflow edit. A missing secret writes no line, which every
-      # consumer already treats as "ship without this credential" (falls
-      # back to per-user guided setup, never a build failure).
+      # (.env.local). Explicit list: whatever is named here ships inside a
+      # public APK, so adding a provider credential is a deliberate workflow
+      # edit (keep it in step with .env.template). A missing secret writes no
+      # line, which every consumer already treats as "ship without this
+      # credential" (falls back to per-user guided setup, never a build failure).
       - name: Write provider credentials
         env:
-          ALL_SECRETS: ${{ toJSON(secrets) }}
+          EXPO_PUBLIC_SIMKL_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_SIMKL_CLIENT_ID }}
+          EXPO_PUBLIC_ANILIST_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_CLIENT_ID }}
+          EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID }}
+          EXPO_PUBLIC_TMDB_TOKEN: ${{ secrets.EXPO_PUBLIC_TMDB_TOKEN }}
         run: |
-          jq -r 'to_entries[]
-            | select(.key | startswith("EXPO_PUBLIC_"))
-            | "\(.key)=\(.value)"' <<<"$ALL_SECRETS" > .env.local
+          : > .env.local
+          for name in EXPO_PUBLIC_SIMKL_CLIENT_ID EXPO_PUBLIC_ANILIST_CLIENT_ID EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID EXPO_PUBLIC_TMDB_TOKEN; do
+            if [ -n "${!name}" ]; then printf '%s=%s\n' "$name" "${!name}" >> .env.local; fi
+          done
 
       - name: Prebuild Android project
         run: bunx expo prebuild --platform android
@@ -123,7 +116,7 @@ jobs:
       # `android-warm.yml` is the sole writer. The run_id-suffixed key never
       # hits exactly; the prefix restore-keys pick up the warm entry.
       - name: Restore ccache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ github.workspace }}/.ccache
           key: ccache-android-${{ runner.os }}-${{ hashFiles('bun.lock', 'app.json') }}-${{ github.run_id }}
@@ -144,6 +137,32 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           cache-read-only: true
+
+      # Signing material appears only here, after `bun install`, prebuild and
+      # Gradle setup, so their dependency code never sees it. The plugin reads
+      # these properties when Gradle evaluates app/build.gradle, not at prebuild.
+      - name: Decode release keystore
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          KEYSTORE: ${{ secrets.SHINOBU_KEYSTORE_BASE64 }}
+        run: printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      # Only set when signed — leaving these unset (rather than set-but-empty)
+      # is what makes `plugins/with-release-signing.js`'s
+      # `project.hasProperty(...)` fallback to debug signing actually fire.
+      - name: Configure release signing properties
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          STORE_PASSWORD: ${{ secrets.SHINOBU_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SHINOBU_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SHINOBU_UPLOAD_KEY_PASSWORD }}
+        run: |
+          {
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_STORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_ALIAS=$KEY_ALIAS"
+            echo "ORG_GRADLE_PROJECT_SHINOBU_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
       # `--build-cache` reuses task outputs warmed on `main`; the daemon is left
       # running so the arm64 invocation below reuses it; the heap override
@@ -180,7 +199,7 @@ jobs:
       # condition) — the dry-run path is inspecting these workflow artifacts.
       - name: Upload dry-run artifacts
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: shinobu-dry-run-apks
           path: dist/*
@@ -191,7 +210,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="$GITHUB_REF_NAME"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
           else
