@@ -265,6 +265,17 @@ describe('fetchUpNextInputs', () => {
     expect(inputs.errors).toEqual([]);
   });
 
+  test('every show’s progress failing is a Trakt error, not an empty section', async () => {
+    const { client } = fakeClient({
+      shows: [show(1, '2026-07-20T00:00:00.000Z'), show(2, '2026-07-19T00:00:00.000Z')],
+      failingProgress: [1, 2],
+    });
+
+    const inputs = await fetchUpNextInputs(client, ['trakt']);
+
+    expect(inputs.errors.map((failure) => failure.provider)).toEqual(['trakt']);
+  });
+
   test('the pool caps the per-show request fan (R6/KTD-2)', async () => {
     const { client, progressRequests } = fakeClient({
       shows: Array.from({ length: 25 }, (_, index) =>
