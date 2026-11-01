@@ -171,6 +171,25 @@ describe('logToAniList series', () => {
     });
   });
 
+  test('the next episode of a rewatch stays REPEATING', async () => {
+    const captured = { variables: null as unknown };
+    await Effect.runPromise(
+      logToAniList(
+        capturingDeps(captured, {
+          entry: { status: 'REPEATING', progress: 1, repeat: 0 },
+          episodes: 16,
+        }),
+        SERIES,
+        { progress: 2 },
+      ),
+    );
+    expect(captured.variables).toEqual({
+      mediaId: 104578,
+      status: 'REPEATING',
+      progress: 2,
+    });
+  });
+
   test("a manga's last chapter flips the entry to COMPLETED", async () => {
     const captured = { variables: null as unknown };
     await Effect.runPromise(

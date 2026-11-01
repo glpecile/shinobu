@@ -127,7 +127,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   // Prefer the provider's live entry over the item's own progress, which is a
   // snapshot of wherever the tap came from: 0 on a trending card or a
   // cold-resolved Simkl page.
-  const total = item.totalEpisodes;
+  const total = anilistEntry.data?.total ?? item.totalEpisodes;
   const currentProgress =
     anilistProgress ?? simklAnimeEntry.data?.item.currentProgress ?? item.currentProgress;
   // A finished entry wraps to unit 1 and says so, like the series path.
@@ -175,11 +175,10 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   // user is actually waiting on.
   const seriesEpisodeAired =
     !isSeries || (seriesNext?.aired === true && upcoming == null);
-  // A manga's next chapter comes from its live entry, and a search card's
-  // progress is 0. Logging chapter 1 over a real progress of 12 would
-  // reconcile as a reread and reset the entry to REPEATING at 1. Anime gets
-  // the same protection from its airing gate, which shares this request.
-  const mangaProgressKnown = !isManga || anilistEntry.status === 'success';
+  // A search card's progress is 0: logging chapter 1 over real progress would
+  // reconcile as a reread and reset the entry. Cached data survives a failed
+  // refetch, so only a missing entry blocks. Anime gets this from its airing gate.
+  const mangaProgressKnown = !isManga || anilistEntry.data !== undefined;
   const canLog = nextEpisodeAired && released && seriesEpisodeAired && mangaProgressKnown;
 
   // The one string this whole flow speaks: the CTA's label, the confirm
@@ -217,7 +216,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
         ? null
         : unairedEpisodeLabel(`Episode ${nextEpisode}`, episodeData?.firstAired)
       : isManga
-        ? anilistEntry.isError ? 'Couldn’t load your progress' : null
+        ? !mangaProgressKnown && anilistEntry.isError ? 'Couldn’t load your progress' : null
         : releaseStatus === 'unknown'
           ? 'No release date yet'
           : releaseStatus === 'unreleased'

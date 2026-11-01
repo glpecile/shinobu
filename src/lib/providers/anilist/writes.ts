@@ -95,10 +95,12 @@ export function logToAniList(
         });
       }
       const total = state.total;
+      const finished = total != null && progress >= total;
+      // A reread in progress stays REPEATING until it reaches the total.
       const status =
-        options.rewatch === true
+        options.rewatch === true || (state.entry?.status === 'REPEATING' && !finished)
           ? 'REPEATING'
-          : total != null && progress >= total
+          : finished
             ? 'COMPLETED'
             : 'CURRENT';
       variables = { mediaId, status, progress };
