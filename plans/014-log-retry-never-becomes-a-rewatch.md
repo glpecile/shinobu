@@ -39,6 +39,13 @@ the original round was not a rewatch, a retried provider that already has the
 watch is **skipped** ("already logged"), never upgraded to a rewatch. If the
 original round *was* a rewatch, the retry stays a rewatch.
 
+Revision (#385 review): the retry can't assume a fresh re-read. Reconcile reads
+go through `fetchQuery`, so a retry inside the stale window reused the
+pre-write cached absence and sent the landed write again. A retry now refetches
+its targets' watch state, and on a first-watch retry a target whose state
+can't be read (a failed read, or Simkl) is reported as a failure with its
+manual link instead of being sent again.
+
 ## Current state
 
 `src/features/log-media/log-confirm-sheet.tsx`:

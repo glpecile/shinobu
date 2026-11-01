@@ -30,7 +30,7 @@ unblocking work floated up. Work top to bottom unless a dependency says otherwis
 | 11 | [015](015-harden-github-workflows.md) | Workflows pin actions and Bun; the release job keeps signing secrets narrow | security + dx | P2 | S | MED | — | DONE (#372; release dry run pending) |
 | 12 | [016](016-web-security-headers.md) | The web app sends baseline security headers (no framing, nosniff, referrer, HSTS) | security | P2 | S | LOW | — | DONE (#381) |
 | 13 | [013](013-session-changes-keep-cache-in-step.md) | Losing or gaining a session keeps the query cache in step | bug | P2 | M | MED | 006 | NEEDS REVISION (#386; active gathers can refetch the old provider set) |
-| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | NEEDS REVISION (#385; retry reconciliation reuses fresh pre-write cache) |
+| 14 | [014](014-log-retry-never-becomes-a-rewatch.md) | Retrying a failed provider never turns a landed write into a rewatch | bug (MED confidence) | P2 | S | LOW | 005 | DONE (#385; retries refetch watch state and don't resend an unreadable target) |
 | 15 | [019](019-resolve-item-characterization-tests.md) | `useResolvedMediaItem` gets characterization tests | tests | P2 | M | LOW | — | DONE (#375) |
 | 16 | [020](020-letterboxd-userscript-localhost-opt-in.md) | The Letterboxd userscript trusts localhost only after an explicit opt-in | security | P3 | S | LOW | — | DONE (#384) |
 | 17 | [021](021-serializd-proxy-exact-get-paths.md) | The Serializd proxy forwards only the GET paths and query keys the app uses | security | P3 | S | MED | — | DONE (#387) |
