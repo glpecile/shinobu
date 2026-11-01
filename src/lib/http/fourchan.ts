@@ -24,7 +24,7 @@ export function discussionBoards(item: NormalizedMediaItem): DiscussionBoard[] {
 }
 
 /** Plain searchable text only; remote HTML is never rendered. */
-function plainText(value: string): string {
+export function plainText(value: string): string {
   return value.replace(/<[^>]*>/g, ' ').replace(/&#(x[\da-f]+|\d+);/gi, (_, code: string) => {
     const point = code.toLowerCase().startsWith('x') ? parseInt(code.slice(1), 16) : Number(code);
     return point <= 0x10ffff ? String.fromCodePoint(point) : ' ';
