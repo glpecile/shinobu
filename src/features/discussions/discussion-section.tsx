@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
+import { useState, type ComponentProps } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -7,12 +8,17 @@ import { Button } from '@/components/button';
 import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { Sheet } from '@/components/sheet';
-import { discussionBoards } from '@/lib/http/fourchan';
-import { discussionSubreddit, subredditSearchTerm } from '@/lib/http/reddit';
+import { SuspenseSection } from '@/components/suspense-section';
+import { discussionBoards, type DiscussionBoard } from '@/lib/http/fourchan';
+import { discussionSubreddit, subredditSearchTerm, type DiscussionSubreddit } from '@/lib/http/reddit';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLinkHandoff } from '@/lib/open-external-url/use-link-handoff';
 import { DURATION, EASE_OUT } from '@/lib/motion';
-import { useDiscussionsQuery } from '@/state/queries/discussions';
+import {
+  discussionQueryKeys,
+  useDiscussionsQuery,
+  useSuspenseRedditDiscussionsQuery,
+} from '@/state/queries/discussions';
 import { useAnimeByIdQuery } from '@/state/queries/anilist';
 import { useAniListIdByTmdbQuery } from '@/state/queries/mapping';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -20,12 +26,30 @@ import { DiscussionCard } from './discussion-card';
 
 const discussionFade = { from: { opacity: 0 }, to: { opacity: 1 } };
 
-/** Renders nothing until a board returns a matching thread. */
+type Discussion = { key: string } & ComponentProps<typeof DiscussionCard>;
+
+interface DiscussionChrome {
+  boards: DiscussionBoard[];
+  subreddit: DiscussionSubreddit;
+  term: string;
+  isFetching: boolean;
+  onRefresh: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Renders nothing until a 4chan board or the subreddit returns a matching
+ * thread. Reddit reads sit behind their own boundary, so 4chan cards show
+ * while Reddit loads or fails. A rate-limited search shows no Reddit cards
+ * until Refresh in the sheet.
+ */
 export function DiscussionSection({ item, episode }: {
   item: NormalizedMediaItem; episode?: { season: number; number: number };
 }) {
   const [open, setOpen] = useState(false);
-  const reducedMotion = useReducedMotion();
+  const [redditAttempt, setRedditAttempt] = useState(0);
+  const queryClient = useQueryClient();
   const { data: anilistId } = useAniListIdByTmdbQuery(item);
   const animeId = item.externalIds.anilist ?? anilistId ?? null;
   // AniList-origin items already carry the titles and aliases this read supplies.
@@ -39,17 +63,55 @@ export function DiscussionSection({ item, episode }: {
   const boards = discussionBoards(searchItem);
   const subreddit = discussionSubreddit(searchItem);
   const term = subredditSearchTerm(searchItem, subreddit);
-  const { threads, isFetching, refetch } = useDiscussionsQuery(
-    boards, { subreddit, term }, searchItem, episode?.season, episode?.number,
+  const redditKey = discussionQueryKeys.subreddit(subreddit, term);
+  const redditFetching = useIsFetching({ queryKey: redditKey }) > 0;
+  const fourchan = useDiscussionsQuery(boards, searchItem, episode?.season, episode?.number);
+  const chrome: DiscussionChrome = {
+    boards,
+    subreddit,
+    term,
+    isFetching: fourchan.isFetching || redditFetching,
+    onRefresh: () => {
+      void fourchan.refetch();
+      void queryClient.refetchQueries({ queryKey: redditKey });
+      setRedditAttempt((attempt) => attempt + 1);
+    },
+    open,
+    onOpenChange: setOpen,
+  };
+  const fourchanOnly = <DiscussionBody {...chrome} fade threads={fourchan.threads} />;
+  return (
+    <SuspenseSection animateFallback={false} errorFallback={fourchanOnly} fallback={fourchanOnly} resetKey={redditAttempt}>
+      <RedditDiscussions
+        {...chrome}
+        episode={episode}
+        fourchan={fourchan.threads}
+        item={searchItem}
+      />
+    </SuspenseSection>
   );
+}
+
+function RedditDiscussions({ fourchan, item, episode, ...chrome }: DiscussionChrome & {
+  fourchan: Discussion[]; item: NormalizedMediaItem; episode?: { season: number; number: number };
+}) {
+  const reddit = useSuspenseRedditDiscussionsQuery(chrome.subreddit, chrome.term, item, episode?.season, episode?.number);
+  // 4chan cards already on screen in the fallback must not fade in again.
+  return <DiscussionBody {...chrome} fade={fourchan.length === 0} threads={[...fourchan, ...reddit]} />;
+}
+
+function DiscussionBody({ threads, boards, subreddit, term, isFetching, onRefresh, open, onOpenChange, fade }: DiscussionChrome & {
+  threads: Discussion[]; fade: boolean;
+}) {
+  const reducedMotion = useReducedMotion();
   if (threads.length === 0) return null;
   return (
-    <AnimatedView style={{
+    <AnimatedView style={fade ? {
       animationName: discussionFade,
       animationDuration: reducedMotion ? 1 : DURATION.swap,
       animationTimingFunction: EASE_OUT,
       animationFillMode: 'both',
-    }}>
+    } : undefined}>
     <Section>
       <Section.Header>
         <Section.Title>Discussion</Section.Title>
@@ -59,7 +121,7 @@ export function DiscussionSection({ item, episode }: {
           iconOnly
           label="Discussion options"
           loading={isFetching}
-          onPress={() => setOpen(true)}
+          onPress={() => onOpenChange(true)}
           size="sm"
           variant="quiet"
         />
@@ -67,7 +129,7 @@ export function DiscussionSection({ item, episode }: {
       <Rail contentContainerClassName="gap-4">
         {threads.map(({ key, ...preview }) => <DiscussionCard key={key} {...preview} />)}
       </Rail>
-      <Sheet onClose={() => setOpen(false)} open={open}>
+      <Sheet onClose={() => onOpenChange(false)} open={open}>
         <Sheet.Header className="items-center">
           <Text className="font-display text-xl text-foreground">Discussion options</Text>
         </Sheet.Header>
@@ -79,8 +141,8 @@ export function DiscussionSection({ item, episode }: {
             loading={isFetching}
             loadingLabel="Refreshing discussions"
             onPress={() => {
-              setOpen(false);
-              void refetch();
+              onOpenChange(false);
+              onRefresh();
             }}
             variant="quiet"
           />

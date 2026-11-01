@@ -32,8 +32,11 @@ The Discussion section searches one subreddit per item through the Atom
 feed: r/anime for anime (romaji title), r/movies for films, and r/television
 for everything else. Native reads `www.reddit.com` directly. Web goes through
 the approved fourth Worker exception, `/api/reddit/{sub}/search.rss?q=`
-(`worker/reddit-proxy.ts`). Results are cached for ten minutes. A 429 or block
-page fails only the Reddit query, so 4chan matches still show. Atom entries
+(`worker/reddit-proxy.ts`). Results are cached for ten minutes. The Reddit read
+has its own `SuspenseSection`, but a 429 or block page stays in the query cache
+as no posts instead of throwing: React logs every boundary-caught error with
+`console.error`, which LogBox shows on native. Refresh in the Discussion sheet
+refetches it. Atom entries
 have no spoiler flag, so Reddit cards never show thumbnails.
 
 Every web user shares the Worker's egress IP, and with it the one-search-a-minute
