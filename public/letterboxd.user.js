@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shinobu Letterboxd bridge
 // @namespace    https://shinobu.glpecile.xyz/
-// @version      0.9.1
+// @version      0.10.0
 // @description  Send Shinobu film logs, watchlist changes, new lists and custom list changes through your signed-in Letterboxd tab.
 // @match        https://shinobu.glpecile.xyz/*
 // @match        http://localhost/*
@@ -24,8 +24,12 @@
   const origin = page.location.origin;
   const prefix = 'shinobu-letterboxd-';
   const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+  const devOrigin = /^http:\/\/(localhost|127\.0\.0\.1):(8081|8082|19006)$/.test(origin);
+  // Local dev servers on these ports are not necessarily Shinobu (8081 is
+  // every Expo project's Metro). Developers opt in per install by setting
+  // `shinobu-trust-localhost` to true in Tampermonkey's storage tab.
   const appOrigin = origin === 'https://shinobu.glpecile.xyz' ||
-    /^http:\/\/(localhost|127\.0\.0\.1):(8081|8082|19006)$/.test(origin);
+    (devOrigin && await GM.getValue('shinobu-trust-localhost', false) === true);
 
   if (appOrigin) {
     const seen = new Set();

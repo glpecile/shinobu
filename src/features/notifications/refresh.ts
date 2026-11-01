@@ -71,6 +71,7 @@ export async function refreshNotifications(
   const candidates = computeNotificationSchedule(inputs, deps.now(), deps.mutedKinds());
   // Offline or every leg down: an empty list from a failed gather would cancel
   // every pending alert. Keep the last schedule; the next good refresh replaces it.
+
   if (inputs.errors.length > 0 && candidates.length === 0) return;
   await deps.schedule(candidates);
 }

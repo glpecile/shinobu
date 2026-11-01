@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import * as Effect from 'effect/Effect';
 
 import { Button } from '@/components/button';
 import {
@@ -11,10 +10,9 @@ import {
   extractSerializdLogin,
   SERIALIZD_SIGN_IN_URL,
   SERIALIZD_WEB_ORIGIN,
-  validateAuthToken,
   type CapturedSerializdLogin,
 } from '@/lib/providers/serializd';
-import { serializdDeps } from '@/state/queries/serializd';
+import { validateSerializdToken } from '@/state/queries/serializd';
 import { connectSerializd } from '@/state/session/serializd';
 
 /**
@@ -33,10 +31,7 @@ export function ConnectSerializdButton() {
   const onCaptured = async (captured: CapturedSerializdLogin) => {
     setStatus('validating');
     try {
-      const result = await Effect.runPromise(
-        validateAuthToken(serializdDeps(), captured.accessToken),
-      );
-      connectSerializd({ accessToken: result.token, username: result.username });
+      connectSerializd(await validateSerializdToken(captured.accessToken));
       setStatus('idle');
     } catch {
       setStatus('error');

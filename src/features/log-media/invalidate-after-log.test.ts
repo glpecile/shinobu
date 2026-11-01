@@ -39,6 +39,7 @@ mock.module('expo-crypto', () => ({
 
 const { invalidateAfterLog } = await import('./use-log-media');
 const { watchlistQueryKeys } = await import('@/state/queries/watchlist');
+const { letterboxdQueryKeys } = await import('@/state/queries/letterboxd');
 
 const ITEM: NormalizedMediaItem = {
   id: 'trakt-1',
@@ -50,6 +51,10 @@ const ITEM: NormalizedMediaItem = {
   lastUpdated: '2026-07-22T00:00:00.000Z',
   externalIds: { trakt: 1, anilist: 9 },
 };
+
+function film(externalIds: NormalizedMediaItem['externalIds']): NormalizedMediaItem {
+  return { ...ITEM, type: 'MOVIE', externalIds };
+}
 
 /** Records the keys a run invalidated, joined so they read as paths. */
 function recordingClient(): { client: QueryClient; keys: string[] } {
@@ -110,6 +115,23 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     for (const queryKey of keys) {
       expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
     }
+    client.clear();
+  });
+
+  test('a Letterboxd log invalidates only the logged film’s watch reads', () => {
+    const client = new QueryClient();
+    const bySlug = letterboxdQueryKeys.filmWatch('u', film({ letterboxd: 'inception' }));
+    const byTmdb = letterboxdQueryKeys.filmWatch('u', film({ tmdb: 27205 }));
+    const otherFilm = letterboxdQueryKeys.filmWatch('u', film({ letterboxd: 'heat' }));
+    for (const queryKey of [bySlug, byTmdb, otherFilm]) client.setQueryData(queryKey, {});
+    // A TMDB-only item finds its slug-keyed reads through the cached slug lookup.
+    client.setQueryData(letterboxdQueryKeys.slug(27205), 'inception');
+
+    invalidateAfterLog(client, film({ tmdb: 27205 }), ['letterboxd']);
+
+    expect(client.getQueryState(bySlug)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(byTmdb)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(otherFilm)?.isInvalidated).toBe(false);
     client.clear();
   });
 

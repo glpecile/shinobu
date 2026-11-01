@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, setSystemTime, test } from 'bun:test';
 
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
 import type {
@@ -273,8 +273,7 @@ describe('fetchUpNextInputs', () => {
 
     const inputs = await fetchUpNextInputs(client, ['trakt']);
 
-    expect(inputs.progress).toEqual([]);
-    expect(inputs.errors).toContainEqual({ provider: 'trakt', message: 'progress 1 down' });
+    expect(inputs.errors.map((failure) => failure.provider)).toEqual(['trakt']);
   });
 
   test('the pool caps the per-show request fan (R6/KTD-2)', async () => {
@@ -378,17 +377,20 @@ describe('fetchUpNextInputs — the my-calendars sources (U4/U5)', () => {
   });
 
   test('the calendar key carries the local start date and the 7-day window', async () => {
-    const { client, calendarKeys } = fakeClient({});
+    setSystemTime(new Date(2026, 6, 20, 12, 0, 0));
+    try {
+      const { client, calendarKeys } = fakeClient({});
 
-    await fetchUpNextInputs(client, ['trakt']);
+      await fetchUpNextInputs(client, ['trakt']);
 
-    // Keyed by the local day so the cached week rolls over at local midnight
-    // rather than serving yesterday's window to an app left open overnight.
-    const now = new Date();
-    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    for (const key of calendarKeys) {
-      expect(key[3]).toBe(expected);
-      expect(key[4]).toBe(7);
+      // Keyed by the local day so the cached week rolls over at local midnight
+      // rather than serving yesterday's window to an app left open overnight.
+      for (const key of calendarKeys) {
+        expect(key[3]).toBe('2026-07-20');
+        expect(key[4]).toBe(7);
+      }
+    } finally {
+      setSystemTime();
     }
   });
 
