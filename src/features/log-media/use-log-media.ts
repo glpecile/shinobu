@@ -5,7 +5,11 @@ import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { logToSerializd } from '@/lib/providers/serializd/writes';
-import { logToSimkl, type SimklLogEntry } from '@/lib/providers/simkl/writes';
+import {
+  logToSimkl,
+  simklEntryDropReason,
+  type SimklLogEntry,
+} from '@/lib/providers/simkl/writes';
 import {
   diaryHasEpisode,
   getSerializdDiary,
@@ -220,14 +224,19 @@ export function simklLogAdapter(
       needsMap && anilistId != null
         ? await cachedAniZipEpisodeMap(queryClient, anilistId).catch(() => null)
         : null;
-    return log({
+    const entry: SimklLogEntry = {
       item,
       ...(episode != null ? { episode } : {}),
       ...(episodes != null ? { episodes } : {}),
       ...(entryEpisodes != null ? { entryEpisodes } : {}),
       ...(watchedAt != null ? { watchedAt } : {}),
       episodeMap,
-    });
+    };
+    const dropReason = simklEntryDropReason(entry);
+    // An unbuildable entry would be dropped inside a coalesced POST and inherit
+    // the other entries' ok; alone it is a reasoned skip with the manual link.
+    if (dropReason != null) return { status: 'skipped', reason: dropReason };
+    return log(entry);
   };
 }
 
