@@ -714,8 +714,7 @@ export function invalidateAfterLog(
     }
   }
   if (succeeded.includes('letterboxd')) {
-    // Only this film's watch reads changed. The root holds one HTML-scrape
-    // query per film on every mounted list, so invalidating it refetched them all.
+    // Only this film's watch reads changed; the root holds one HTML-scrape query per film.
     const tmdb = item.externalIds.tmdb ?? null;
     const slug =
       item.externalIds.letterboxd ??
