@@ -8,7 +8,7 @@ honor its STOP conditions, and update your row when done.
 - Round 2: 2026-10-31 against commit `1003c59` (plans 005–030), a full audit
   covering correctness, security, performance, tests, tech debt, DX, docs and direction.
 
-Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+Status values: TODO | IN PROGRESS | DONE | NEEDS REVISION (review finding) | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
 ## Round 2: ranked index (2026-10-31)
 
