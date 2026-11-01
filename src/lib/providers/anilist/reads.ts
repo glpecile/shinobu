@@ -705,13 +705,19 @@ export interface AniListEntryState {
     /** Names of the custom lists this entry sits on; empty when it sits on none. */
     customLists: string[];
   } | null;
-  /** Total episodes when AniList knows it (null for ongoing shows). */
-  episodes: number | null;
+  /**
+   * The count `entry.progress` runs up to: episodes, or chapters for manga.
+   * Null while AniList doesn't know it (an airing show, a releasing manga).
+   */
+  total: number | null;
 }
 
 export interface MediaEntryResponse {
   Media: {
+    type: 'ANIME' | 'MANGA' | null;
     episodes: number | null;
+    // Manga carries its total here; `episodes` is always null for it.
+    chapters: number | null;
     mediaListEntry: {
       id: number | null;
       status: string | null;
@@ -740,7 +746,7 @@ export const ENTRY_FIELDS = 'id status progress repeat score notes startedAt { y
 export function normalizeEntryState(media: Partial<NonNullable<MediaEntryResponse['Media']>> | null): AniListEntryState {
   const raw = media?.mediaListEntry ?? null;
   return {
-    episodes: media?.episodes ?? null,
+    total: (media?.type === 'MANGA' ? media.chapters : media?.episodes) ?? null,
     entry: raw == null ? null : {
       id: raw.id ?? null,
       status: raw.status,
@@ -788,7 +794,9 @@ export function getEntryState(
     deps,
     `query ($mediaId: Int) {
       Media(id: $mediaId) {
+        type
         episodes
+        chapters
         mediaListEntry { ${ENTRY_FIELDS} }
       }
     }`,

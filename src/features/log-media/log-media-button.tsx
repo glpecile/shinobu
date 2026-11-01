@@ -29,8 +29,9 @@ import { useSeriesNextEpisode } from './use-series-next-episode';
 
 /**
  * Resolves the next log and its release gate, then opens the app-level logging
- * session. Films confirm once; series share the Continue Watching catch-up
- * chain. When no next episode can be named, the season picker takes over.
+ * session. Films and manga chapters confirm once; series share the Continue
+ * Watching catch-up chain. When no next episode can be named, the season
+ * picker takes over.
  *
  * `onOpenRequest` intercepts the built request before it opens the app-level
  * session, so a host that is already a sheet (the card-actions sheet) can
@@ -58,6 +59,9 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   });
   const seriesNextState = useSeriesNextEpisode(item);
   const isAnimeSeries = item.type === 'ANIME' && item.isFilm !== true;
+  // Manga counts chapters on its AniList entry the way an anime series counts
+  // episodes, minus the airing gate: AniList publishes no chapter schedule.
+  const isManga = item.type === 'MANGA';
   // Only an item that names its own Simkl entry: a TMDB id is shared by every
   // season of an anime, so matching on it would read a sibling's progress.
   const simklAnimeEntry = useSimklLibraryEntryQuery({
@@ -83,7 +87,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   // its "log manually" row (plan 0022 R3) — only hide when there's truly
   // nothing to offer.
   if (
-    (!isFilmLike && !isAnimeSeries && !isSeries) ||
+    (!isFilmLike && !isAnimeSeries && !isSeries && !isManga) ||
     (targets.length === 0 && manualTargets.length === 0) ||
     // Naming an episode is the whole affordance for a series: without one
     // there's nothing to put on the button, so the season picker takes over.
@@ -119,16 +123,17 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
     anilistStatus === 'COMPLETED' ||
     anilistStatus === 'REPEATING';
 
-  // Anime series log the next unwatched episode. Prefer the provider's live
-  // entry over the item's own progress, which is a snapshot of wherever the
-  // tap came from: 0 on a trending card or a cold-resolved Simkl page.
-  const total = item.totalEpisodes;
+  // Anime series and manga log the next unwatched episode or unread chapter.
+  // Prefer the provider's live entry over the item's own progress, which is a
+  // snapshot of wherever the tap came from: 0 on a trending card or a
+  // cold-resolved Simkl page.
+  const total = anilistEntry.data?.total ?? item.totalEpisodes;
   const currentProgress =
     anilistProgress ?? simklAnimeEntry.data?.item.currentProgress ?? item.currentProgress;
-  // A finished entry wraps to episode 1 and says so, like the series path.
-  const animeRewatch =
-    isAnimeSeries && total != null && total > 0 && currentProgress >= total;
-  const nextEpisode = animeRewatch ? 1 : currentProgress + 1;
+  // A finished entry wraps to unit 1 and says so, like the series path.
+  const entryRepeat =
+    (isAnimeSeries || isManga) && total != null && total > 0 && currentProgress >= total;
+  const nextEpisode = entryRepeat ? 1 : currentProgress + 1;
 
   // Never offer to log an episode that hasn't aired yet (todos/006).
   // Only evaluate aired status once the episodes query has successfully loaded.
@@ -170,7 +175,11 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   // user is actually waiting on.
   const seriesEpisodeAired =
     !isSeries || (seriesNext?.aired === true && upcoming == null);
-  const canLog = nextEpisodeAired && released && seriesEpisodeAired;
+  // A search card's progress is 0: logging chapter 1 over real progress would
+  // reconcile as a reread and reset the entry. Cached data survives a failed
+  // refetch, so only a missing entry blocks. Anime gets this from its airing gate.
+  const mangaProgressKnown = !isManga || anilistEntry.data !== undefined;
+  const canLog = nextEpisodeAired && released && seriesEpisodeAired && mangaProgressKnown;
 
   // The one string this whole flow speaks: the CTA's label, the confirm
   // sheet's title, and its confirm button. These were three ternary chains
@@ -179,12 +188,16 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const action = isSeries
     ? seriesAction
     : isAnimeSeries
-      ? animeRewatch
+      ? entryRepeat
         ? 'Rewatch'
         : `Log episode ${nextEpisode}`
-      : isRewatch
-        ? 'Rewatch'
-        : 'Mark as watched';
+      : isManga
+        ? entryRepeat
+          ? 'Reread'
+          : `Log chapter ${nextEpisode}`
+        : isRewatch
+          ? 'Rewatch'
+          : 'Mark as watched';
 
   // Why the action can't run yet, when it can't — the only thing that ever
   // replaces it on the CTA (the sheet can't open in these states at all).
@@ -202,11 +215,13 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
       ? nextEpisodeAired
         ? null
         : unairedEpisodeLabel(`Episode ${nextEpisode}`, episodeData?.firstAired)
-      : releaseStatus === 'unknown'
-        ? 'No release date yet'
-        : releaseStatus === 'unreleased'
-          ? unreleasedFilmLabel(item.releaseDate)
-          : null;
+      : isManga
+        ? !mangaProgressKnown && anilistEntry.isError ? 'Couldn’t load your progress' : null
+        : releaseStatus === 'unknown'
+          ? 'No release date yet'
+          : releaseStatus === 'unreleased'
+            ? unreleasedFilmLabel(item.releaseDate)
+            : null;
 
   // The subject, never the verb a second time: the title above already says
   // what this does, so the line under it says what it does it *to* — the
@@ -216,8 +231,10 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
       ? `You’ve watched every aired episode of “${item.title}” — this starts a rewatch at ${seriesLabel}.`
       : isSeries && seriesNext?.title != null
         ? `“${item.title}” — ${seriesLabel}: ${seriesNext.title}`
-        : animeRewatch
-          ? `You’ve watched every episode of “${item.title}” — this starts a rewatch at episode 1.`
+        : entryRepeat
+          ? isManga
+            ? `You’ve read every chapter of “${item.title}” — this starts a reread at chapter 1.`
+            : `You’ve watched every episode of “${item.title}” — this starts a rewatch at episode 1.`
           : isFilmLike && isRewatch
           ? `“${item.title}” is already in your history — this logs another watch.`
           : `“${item.title}”`;
@@ -245,13 +262,14 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
         loading={
           seriesNextState.status === 'loading' ||
           (upcomingNeeded && seasons.isLoading) ||
-          simklAnimeEntry.isLoading || busy
+          simklAnimeEntry.isLoading ||
+          (isManga && anilistEntry.isLoading) || busy
         }
         morphLabel
         onPress={() => {
           const request: LogRequest = {
             item, title: action, description,
-            ...(isAnimeSeries ? { entryEpisodes: [nextEpisode] } : {}),
+            ...(isAnimeSeries || isManga ? { entryEpisodes: [nextEpisode] } : {}),
             ...(isSeries && seriesNext != null
               ? { episodes: [{ season: seriesNext.season, number: seriesNext.number }] }
               : {}),
@@ -266,10 +284,10 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
       {/* The finished-show state earns a line of its own: the button below
           reads "Log rewatch", and this is what makes that make sense. */}
       {canLog &&
-        ((seriesNext?.rewatch === true && upcoming == null) || animeRewatch) &&
+        ((seriesNext?.rewatch === true && upcoming == null) || entryRepeat) &&
         !busy && (
           <Text className="text-muted font-sans text-sm mt-2 text-center">
-            🎉 You’ve watched every aired episode.
+            {isManga ? '🎉 You’ve read every chapter.' : '🎉 You’ve watched every aired episode.'}
           </Text>
         )}
     </View>
