@@ -210,9 +210,11 @@ Replay calls `useLogMedia().mutateAsync` with the record's `variables`,
 `providers` set to the pending legs, and the two replay-only inputs below.
 `planLogWrite` then re-runs enrichment, routing, and reconcile.
 
-- **Unsent legs** replay as a first log, without `retryOf`. Nothing was sent,
-  so a fresh reconcile is exact: parity still means a rewatch, and a provider
-  that gained the watch meanwhile is skipped.
+- **Unsent legs** replay with `retryOf: { rewatch: false }`. No first-round
+  reconciliation completed offline, so the app cannot infer rewatch intent.
+  A provider that gained the watch meanwhile is skipped; parity never creates
+  an unattended rewatch. An intentional rewatch queued before planning needs
+  a fresh interactive confirmation, outside automatic replay.
 - **Uncertain legs** replay with the record's `retryOf` (plan 014). A provider
   that now has the watch is skipped as "already logged" and never upgraded to a
   rewatch.
@@ -221,11 +223,14 @@ Replay calls `useLogMedia().mutateAsync` with the record's `variables`,
   unattended replay can't take that risk. If a reconcile read throws, the
   record stays pending until the next drain and no write is sent. In practice
   `providerHasWatch` rethrows instead of returning `false` when a
-  `strictReconcile` variable is set.
+  `strictReconcile` variable is set. Strict replay also forces fresh provider
+  watch-state reads, bypassing cached absence with `staleTime: 0`; the pre-write
+  cache must never decide whether an uncertain write landed. Plan 014's current
+  retry implementation does not yet do this and must be repaired first.
 
 | Leg | A read that proves absence (Trakt, AniList, Serializd TV) | No such read (Simkl, Letterboxd) |
 | --- | --- | --- |
-| unsent | Replay, fresh reconcile. | Replay. Nothing was sent. |
+| unsent | Replay with `retryOf: { rewatch: false }`; skip an existing watch. | Replay as non-rewatch. Nothing was sent. |
 | uncertain, `rewatch: false` | Replay with `retryOf`. Skips if it landed. | Don't replay. Show failed, with the link. |
 | uncertain, `rewatch: true` | Don't replay. Show failed, with the link. | Don't replay. Show failed, with the link. |
 
@@ -277,10 +282,11 @@ success or a failure, so `isCleanWriteReport` must not count it as either.
   (`useEffect` subscribes and cleans up). No timers poll.
 - **Sequential, oldest first, one record at a time.** Order matters for
   AniList's single counter. Replaying E5 before E3 makes E3's reconcile see
-  progress 5 ≥ 3, and at parity E3 becomes a rewatch. Within a record the
+  progress 5 ≥ 3 and skip E3 instead of replaying the original order. Within a record the
   fan-out stays parallel, as it is today.
-- **Simkl.** Writes go through `simklLogQueue`, so records replayed close
-  together coalesce into one POST behind the ~20 s lock
+- **Simkl.** Writes go through `simklLogQueue`. The drain awaits each record,
+  so separate records do not coalesce: each can spend its own ~20 s lock.
+  Only writes admitted together within one record can share a batch
   (`docs/solutions/simkl-rate-limits-and-write-lock.md`). The queue's own
   transient retries (`MAX_ATTEMPTS = 5`) still apply. No replay-level retry is
   added on top.
@@ -335,8 +341,8 @@ reloads.
 
 1. **How does native learn it's offline?** Recommended: wire `onlineManager`
    to a native connectivity signal. That makes step 1 (unsent) the common
-   native path, and unsent legs replay with full fidelity, including rewatches
-   and Simkl. AGENTS.md prefers a Nitro module. The candidates are `expo-network`
+   native path. Unsent legs replay as non-rewatches, including Simkl;
+   deliberate rewatches require interactive confirmation. AGENTS.md prefers a Nitro module. The candidates are `expo-network`
    and `@react-native-community/netinfo`, and whether a Nitro alternative exists
    is **unverified**. Any of them needs `bun ios:clean` / `bun android:clean`.
    Without a dependency, the fallback treats "every reconcile read failed with
