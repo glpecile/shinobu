@@ -130,8 +130,9 @@ export async function handleOAuthReturn(
     const state = new URLSearchParams(
       anilistReturn.slice(anilistReturn.indexOf('#') + 1),
     ).get('state');
-    // A missing echo still passes on the pending flow alone.
-    if (state != null && state !== expected) {
+    // A missing `state` fails too: a crafted link sent while a flow is
+    // pending would otherwise complete it.
+    if (state !== expected) {
       setStatus('error');
       return;
     }

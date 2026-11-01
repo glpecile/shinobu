@@ -200,9 +200,12 @@ describe('handleOAuthReturn — web returns need a pending flow (plan 007)', () 
     expect(replacedUrls).toHaveLength(1);
   });
 
-  test('an AniList fragment whose state differs from the pending one is an error', async () => {
+  test.each([
+    ['differs from', '&state=other'],
+    ['is missing for', ''],
+  ])('an AniList fragment whose state %s the pending one is an error', async (_, echo) => {
     beginOAuthFlow('anilist', 'st-a');
-    stubWindow('http://localhost:8081/#access_token=tok&token_type=Bearer&state=other');
+    stubWindow(`http://localhost:8081/#access_token=tok&token_type=Bearer${echo}`);
     const { statuses, setStatus } = recordStatuses();
 
     await handleOAuthReturn(setStatus);

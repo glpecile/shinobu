@@ -21,7 +21,7 @@ unblocking work floated up. Work top to bottom unless a dependency says otherwis
 | 2 | [006](006-disconnect-purges-diary.md) | Disconnecting a provider also drops the cached unified diary | bug / privacy | P1 | S | LOW | — | DONE (#368) |
 | 3 | [008](008-readme-token-encryption-claim.md) | The README stops claiming tokens are encrypted | docs (security claim) | P1 | S | LOW | — | DONE (#378) |
 | 4 | [009](009-simkl-unbuildable-entry-skips-alone.md) | An unbuildable Simkl log is skipped on its own, never coalesced into a batch's `ok` | bug | P1 | S | LOW | — | DONE (#374) |
-| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | NEEDS REVISION (#382; absent-state login CSRF; real web connect unverified) |
+| 5 | [007](007-web-oauth-returns-need-a-pending-flow.md) | Web OAuth returns only complete a connect this browser started (AniList login CSRF, Trakt `state`, Trakt reconnect) | security + bug | P1 | M | MED | — | BLOCKED (#382; exact `state` now required; needs one real web AniList connect to confirm the echo) |
 | 6 | [010](010-mapping-lookups-dont-cache-transient-failures.md) | Identity and title lookups stop caching a network failure as "no match" | bug | P2 | S–M | LOW | — | DONE (#377) |
 | 7 | [011](011-trakt-continue-watching-reports-total-failure.md) | Trakt Continue Watching reports an error when every progress call fails | bug | P2 | S | LOW | — | DONE (#370) |
 | 8 | [012](012-notifications-keep-schedule-on-failed-gather.md) | A failed gather never replaces scheduled release notifications with nothing | bug | P2 | S | LOW | 011 (recommended) | DONE (#380, stacked on #370) |
@@ -94,7 +94,9 @@ means the linked PR completed implementation or its spike, not that it merged.
   (`ProviderNetworkError: tmdb: network error`). `expo-doctor` was not run.
 - 028 needs connected tracker accounts in a browser. None were available.
 - 007's step 0 (does AniList echo `state`) and its STOP condition could not be
-  checked: the sandbox refuses `anilist.co`. Do one real web AniList connect before merging.
+  checked: the sandbox refuses `anilist.co`. The revision rejects a missing
+  `state` while a flow is pending, so a web AniList connect fails closed if
+  AniList doesn't echo it. Do one real web AniList connect before merging.
 - 015's `release.yml` dry run needs a workflow dispatch. actionlint was not run.
 - 016: the initial sandbox could not finish the export or run a browser pass.
   The 2026-11-01 review completed `build:web` using the existing local build
