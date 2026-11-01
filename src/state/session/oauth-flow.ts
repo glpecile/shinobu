@@ -17,29 +17,15 @@ const FLOW_MAX_AGE_MS = 15 * 60 * 1000;
 
 type PendingOAuthProvider = 'trakt' | 'anilist';
 
-const flowKeyFor = (provider: PendingOAuthProvider) => `oauthFlow.${provider}`;
-
 export function beginOAuthFlow(provider: PendingOAuthProvider, state: string): void {
-  flowStorage.set(flowKeyFor(provider), JSON.stringify({ state, startedAt: Date.now() }));
+  flowStorage.set(provider, JSON.stringify({ state, startedAt: Date.now() }));
 }
 
-/** The pending flow's `state`, consumed: `null` when none, unreadable or expired. */
+/** The pending flow's `state`, consumed: `null` when none or expired. */
 export function takeOAuthFlow(provider: PendingOAuthProvider): string | null {
-  const key = flowKeyFor(provider);
-  const raw = flowStorage.getString(key);
-  flowStorage.remove(key);
+  const raw = flowStorage.getString(provider);
+  flowStorage.remove(provider);
   if (raw == null) return null;
-  try {
-    const flow = JSON.parse(raw) as { state?: unknown; startedAt?: unknown };
-    if (
-      typeof flow.state !== 'string' ||
-      typeof flow.startedAt !== 'number' ||
-      Date.now() - flow.startedAt > FLOW_MAX_AGE_MS
-    ) {
-      return null;
-    }
-    return flow.state;
-  } catch {
-    return null;
-  }
+  const { state, startedAt } = JSON.parse(raw) as { state: string; startedAt: number };
+  return Date.now() - startedAt <= FLOW_MAX_AGE_MS ? state : null;
 }

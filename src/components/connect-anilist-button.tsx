@@ -80,8 +80,7 @@ export function useAniListConnect() {
 
     if (Platform.OS === 'web') {
       // Same-window redirect; AniList returns to the client's registered
-      // redirect URL (the site origin) with the token in the fragment. The
-      // return leg connects only for this pending flow (state/session/oauth-flow.ts).
+      // redirect URL (the site origin) with the token in the fragment.
       const state = crypto.randomUUID();
       beginOAuthFlow('anilist', state);
       window.location.assign(anilistAuthorizeUrl(id, state));
