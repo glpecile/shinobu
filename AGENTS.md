@@ -283,9 +283,11 @@ Screens use Suspense and error boundaries, not `if (isLoading)` branches.
 ## Queries
 
 Read hooks are `useXQuery` and `useSuspenseXQuery`, one per provider domain in
-`state/queries/`, with one query-key builder per domain. `useLogMedia` is the
-only write hook. Where a provider has a refresh grant, a 401 refreshes the token
-before the call fails. Every response normalizes into `NormalizedMediaItem`
+`state/queries/`, with one query-key builder per domain. Writes are mutations:
+`useLogMedia` for logs and the watchlist verbs in `features/watchlist-media/`,
+which fan out and report per-provider results, and single-provider list edits
+in `state/queries/`. Where a provider has a refresh grant, a 401 refreshes the
+token before the call fails. Every response normalizes into `NormalizedMediaItem`
 (`types/media.ts`) before a component sees it.
 
 ## Files and components

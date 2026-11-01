@@ -69,6 +69,9 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 > [!NOTE]
 > Shinobu links native Nitro modules, so it can't run in Expo Go. iOS and Android need a custom dev client.
 
+Copy `.env.template` to `.env.local` and fill in what you have. Every value is
+optional, and features without a credential stay off.
+
 ```sh
 bun install
 
