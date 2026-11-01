@@ -51,6 +51,15 @@ and `repeat`. Either way it first does a fresh `getEntryState` and proceeds only
 if the entry still holds what the log wrote; otherwise it skips with "changed
 since you logged" and the manual link.
 
+Deletion also requires a fresh read of every user-owned field that deletion
+would destroy: score, notes, custom-list membership, and start/completion
+dates, following the content safeguards in `anilist/writes.ts`'s
+`refusalClause`. The status/progress/repeat comparison alone is insufficient.
+Only delete when those fields are empty or provably unchanged from the
+post-log receipt, including any provider-filled dates. If the read or receipt
+cannot establish that, leave the entry intact and return the manual link.
+A restore only writes the captured log fields and preserves unrelated edits.
+
 The undo goes through `anilist-write-queue.ts`, which keeps one AniList write in
 flight. A queued later log of the same entry would otherwise land after the
 undo, or the undo would roll it back. When the queue folds several logs into one
@@ -103,7 +112,7 @@ through to `LogMediaResult.outcomes`. Plain objects, no `Effect`.
 | Provider | Receipt | Captured from |
 | --- | --- | --- |
 | Trakt | `{ ids, type, episodes, watchedAt }` | `logToTrakt`'s inputs |
-| AniList | `{ mediaId, entryId, before: { status, progress, repeat, startedAt, completedAt } \| null, wrote: { status, progress, repeat }, folded }` | `getEntryState` (gains `completedAt`), `SaveMediaListEntry.id`, the write queue |
+| AniList | `{ mediaId, entryId, before: { status, progress, repeat, startedAt, completedAt } \| null, wrote: { status, progress, repeat, score, notes, customLists, startedAt, completedAt }, folded }` | `getEntryState` (gains `completedAt`), `SaveMediaListEntry.id`, the write queue |
 
 Undo is a verb on the shared core like the watchlist verbs: `UNDO_ADAPTERS`
 passed to `runProviderWrites`, and `WriteCapability` gains `'log-undo'` mapped
@@ -141,7 +150,7 @@ optimistically are cleared.
 4. `useUndoLog`, `onUndo` on `toast.success`, the R7 amendment, and the report
    sheet.
 5. Tests beside the existing ones: `trakt/writes.test.ts` (one row of several
-   removed), `anilist/writes.test.ts` (restore, delete, changed-since skip),
+   removed), `anilist/writes.test.ts` (restore, delete, changed-since skip including new score/notes/custom-list data),
    `fan-out.test.ts` (receipt passes through).
 
 Effort: L (coarse). The AniList restore and the Letterboxd value are gated on
