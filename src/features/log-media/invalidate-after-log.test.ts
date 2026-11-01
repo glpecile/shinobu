@@ -103,6 +103,15 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     expect(keys).toContain('watchlist/inputs');
   });
 
+  test('an AniList manga log refreshes the manga read only', () => {
+    const { client, keys } = recordingClient();
+    // Continue Reading moves the card and the reading list drops a manga whose
+    // first chapter was logged; the anime read can't have changed.
+    invalidateAfterLog(client, { ...ITEM, type: 'MANGA' }, ['anilist']);
+    expect(keys).toContain('anilist/current-manga-entries');
+    expect(keys).not.toContain('anilist/current-anime-entries');
+  });
+
   test('a log that reached neither provider leaves the slot alone', () => {
     const { client, keys } = recordingClient();
     invalidateAfterLog(client, ITEM, ['letterboxd']);

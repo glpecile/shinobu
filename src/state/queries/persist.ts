@@ -190,6 +190,8 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   // one request that gates the currently-watching read.
   anilistQueryKeys.viewer(),
   anilistQueryKeys.currentAnimeEntries(),
+  // Continue Reading and the reading list's manga read.
+  anilistQueryKeys.currentMangaEntries(),
   // Identity mappings never churn (they're already `Infinity`-cached in
   // memory), and Up Next fans one per anime for cross-provider dedupe.
   // Literals, not `mappingQueryKeys`: importing `./mapping` here would drag

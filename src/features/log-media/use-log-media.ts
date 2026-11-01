@@ -727,9 +727,12 @@ export function invalidateAfterLog(
   if (succeeded.includes('anilist')) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
-    // Up Next and the watchlist both select off this one read.
+    // The one list read this log can change: manga feeds Continue Reading and
+    // the reading list, anime feeds Up Next and the watchlist.
     queryClient.invalidateQueries({
-      queryKey: anilistQueryKeys.currentAnimeEntries(),
+      queryKey: item.type === 'MANGA'
+        ? anilistQueryKeys.currentMangaEntries()
+        : anilistQueryKeys.currentAnimeEntries(),
     });
     const mediaId = item.externalIds.anilist;
     if (mediaId != null) {

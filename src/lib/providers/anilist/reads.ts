@@ -18,12 +18,14 @@ import type { AnimeFormatFilter, AnimeSeason } from './season';
 import {
   normalizeAniListMedia,
   normalizeCurrentAnimeEntry,
+  normalizeCurrentMangaEntry,
   normalizeListActivity,
   stripHtml,
   stripHtmlMarkup,
   type AniListCurrentEntry,
   type AniListListActivity,
   type AniListListEntry,
+  type AniListMangaEntry,
   type AniListMedia,
 } from './normalize';
 
@@ -80,6 +82,18 @@ interface MediaListCollectionResponse {
   } | null;
 }
 
+/** Every entry across the viewer's lists, once per media: a media can sit on several custom lists. */
+function collectionEntries(data: MediaListCollectionResponse): AniListListEntry[] {
+  const seen = new Set<number>();
+  return (data.MediaListCollection?.lists ?? [])
+    .flatMap((list) => list?.entries ?? [])
+    .filter((entry): entry is AniListListEntry => {
+      if (entry == null || seen.has(entry.media.id)) return false;
+      seen.add(entry.media.id);
+      return true;
+    });
+}
+
 /**
  * The viewer's watching **and** planned anime (`MediaListCollection(status_in:
  * [CURRENT, PLANNING])` — plan.md 1.2, widened by plan 0030 R12), flattened
@@ -134,22 +148,47 @@ export function getCurrentAnime(
     );
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
+    return collectionEntries(data)
+      .map((entry) => normalizeCurrentAnimeEntry(entry, nowIso))
+      .sort((a, b) => b.item.lastUpdated.localeCompare(a.item.lastUpdated));
+  });
+}
 
-    const entries = (data.MediaListCollection?.lists ?? [])
-      .flatMap((list) => list?.entries ?? [])
-      .filter((entry): entry is AniListListEntry => entry != null);
-
-    // A media can sit on several custom lists — dedupe by media id.
-    const seen = new Set<number>();
-    const listed: AniListCurrentEntry[] = [];
-    for (const entry of entries) {
-      if (seen.has(entry.media.id)) continue;
-      seen.add(entry.media.id);
-      listed.push(normalizeCurrentAnimeEntry(entry, nowIso));
-    }
-    return listed.sort((a, b) =>
-      b.item.lastUpdated.localeCompare(a.item.lastUpdated),
+/**
+ * The viewer's reading and planned manga (plan 0117 M3): the manga twin of
+ * `getCurrentAnime`, and one request on the same 30 req/min budget, never one
+ * per status. REPEATING rides along because a reread is in progress like a
+ * first read. The Continue Reading rail and the reading list each take their
+ * own status slice (`docs/solutions/anilist-shared-list-query-status-gate.md`).
+ * Sorted most recently updated first, the rail's order.
+ */
+export function getCurrentManga(
+  deps: AniListDeps,
+  params: { viewerId: number },
+): Effect.Effect<AniListMangaEntry[], ProviderError> {
+  return Effect.gen(function* () {
+    const data = yield* anilistAuthedRequest<MediaListCollectionResponse>(
+      deps,
+      `query ($userId: Int) {
+        MediaListCollection(userId: $userId, type: MANGA, status_in: [CURRENT, REPEATING, PLANNING]) {
+          lists {
+            entries {
+              id
+              status
+              progress
+              updatedAt
+              media { ${CARD_FIELDS} }
+            }
+          }
+        }
+      }`,
+      { variables: { userId: params.viewerId } },
     );
+    const now = yield* Clock.currentTimeMillis;
+    const nowIso = new Date(now).toISOString();
+    return collectionEntries(data)
+      .map((entry) => normalizeCurrentMangaEntry(entry, nowIso))
+      .sort((a, b) => b.item.lastUpdated.localeCompare(a.item.lastUpdated));
   });
 }
 

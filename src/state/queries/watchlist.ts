@@ -17,7 +17,7 @@ import { currentUsableProviders, useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistQueryKeys, fetchWatchlistAnime } from './anilist';
+import { anilistQueryKeys, fetchWatchlistAnime, fetchWatchlistManga } from './anilist';
 import { letterboxdQueryKeys, letterboxdWatchlistPagesOptions } from './letterboxd';
 import { none, settle, streamLegs } from './settle';
 import { simklDeps, simklQueryKeys } from './simkl';
@@ -127,24 +127,28 @@ async function traktInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
 }
 
 /**
- * AniList's leg: a **selector over an already-cached read**, costing zero extra
- * requests warm. Plan 0030 widened the one list request to
- * `status_in: [CURRENT, PLANNING]`, so both slices are already in the cache —
- * never "fix" this by adding a status query (30 req/min budget,
+ * AniList's leg: **selectors over already-cached reads**, costing zero extra
+ * requests warm. The anime and manga list reads each ask for every status
+ * their surfaces need in one request, so the watchlist's slices are already in
+ * the cache — never "fix" this by adding a status query (30 req/min budget,
  * docs/solutions/anilist-rate-limit-retry-storm.md).
  *
- * Reads **CURRENT ∪ PLANNING** (plan 0035 R1): an anime you are watching is
- * watchlisted. That is `fetchWatchlistAnime`, a fourth selector — the other
- * three keep their narrower slices, which is what leaves the status gate
+ * Reads **CURRENT ∪ PLANNING** anime (plan 0035 R1): an anime you are watching
+ * is watchlisted. Manga contributes PLANNING only (plan 0117 M3), since a manga
+ * being read is on Continue Reading. Each is its own selector, which is what
+ * leaves the status gate
  * (`docs/solutions/anilist-shared-list-query-status-gate.md`) intact.
  *
- * No `addedAt`: `MediaList.createdAt` is not part of that shared selection, and
- * widening it to sort one surface is not worth changing the read every other
- * consumer depends on. These rows sort into the undated block.
+ * No `addedAt`: `MediaList.createdAt` is not part of those shared selections,
+ * and widening them to sort one surface is not worth changing the reads every
+ * other consumer depends on. These rows sort into the undated block.
  */
 async function anilistInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
-  const entries = await fetchWatchlistAnime(queryClient);
-  return entries.map((entry) => ({
+  const [anime, manga] = await Promise.all([
+    fetchWatchlistAnime(queryClient),
+    fetchWatchlistManga(queryClient),
+  ]);
+  return [...anime, ...manga].map((entry) => ({
     item: entry.item,
     source: 'anilist',
     anilistStatus: entry.status,
@@ -334,9 +338,9 @@ export function watchlistOptions(queryClient: QueryClient) {
  * payloads the user pulled to replace — the same "provider keys first, then the
  * gatherer" ordering `invalidateAfterWatchlist` follows, for the same reason.
  *
- * The AniList entry it invalidates is the *shared* list read behind the "Your
- * Anime" row: this refreshes the network read those surfaces already share, it
- * does not change what either of them displays (R28).
+ * The AniList entries it invalidates are the *shared* list reads behind Up Next
+ * and Continue Reading: this refreshes the network reads those surfaces already
+ * share, it does not change what any of them displays (R28).
  */
 export async function refreshWatchlistInputs(
   queryClient: QueryClient,
@@ -346,6 +350,9 @@ export async function refreshWatchlistInputs(
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() }),
     queryClient.invalidateQueries({
       queryKey: anilistQueryKeys.currentAnimeEntries(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: anilistQueryKeys.currentMangaEntries(),
     }),
     // The prefix, not the exact `status=plantowatch` key: a stale write
     // elsewhere (a log moving an item out of `plantowatch`) can't be known

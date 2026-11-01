@@ -67,8 +67,8 @@ export interface WatchlistRemovePlan {
 }
 
 /**
- * Whether a provider's watchlist membership for `item` is knowable from the
- * gather at all (plan 0031 R35). Three connected-and-applicable cases can never
+ * Whether a provider's watchlist membership is knowable from the gather at all
+ * (plan 0031 R35). Three connected-and-applicable cases can never
  * appear in a `WatchlistEntry`'s `sources` no matter what the user's watchlists
  * hold, and treating any of them as "not on the list" is a claim the app has no
  * evidence for:
@@ -77,8 +77,6 @@ export interface WatchlistRemovePlan {
  *   `WATCHLIST_READ_PROVIDERS`. Reading that list rather than re-listing the
  *   providers here is deliberate: the day R32's leg lands, this answer changes
  *   with it instead of staying wrong in a second copy.
- * - **AniList for MANGA** — the leg is `fetchWatchlistAnime`, a selector over the
- *   `type: ANIME` shared list read (OQ-4a defers the manga read).
  * - **Any leg that errored on this gather** — R29 renders the grid with that
  *   leg's rows missing, which is indistinguishable from the provider not
  *   holding the item.
@@ -90,13 +88,11 @@ export interface WatchlistRemovePlan {
  */
 export function hasWatchlistReadLeg(
   provider: ProviderId,
-  item: Pick<NormalizedMediaItem, 'type'>,
   connected: readonly ProviderId[],
   errors: readonly ProviderFailure[],
   incomplete: readonly ProviderId[] = [],
 ): boolean {
   if (!watchlistReadProviders(connected).includes(provider)) return false;
-  if (provider === 'anilist' && item.type === 'MANGA') return false;
   if (incomplete.includes(provider)) return false;
   return !errors.some((failure) => failure.provider === provider);
 }
@@ -132,7 +128,7 @@ export function splitWatchlistRemoveTargets(
   const unknown = providersForWrite(item, connected, 'watchlist-remove').filter(
     (provider) =>
       !sources.includes(provider) &&
-      !hasWatchlistReadLeg(provider, item, connected, errors, incomplete),
+      !hasWatchlistReadLeg(provider, connected, errors, incomplete),
   );
   return {
     targets: writable.filter((provider) => sources.includes(provider)),
@@ -233,6 +229,6 @@ export function shouldOfferWatchlistAdd(
   return [...writable, ...manual].some(
     (provider) =>
       !entry.sources.includes(provider) &&
-      hasWatchlistReadLeg(provider, entry.item, connected, errors, incomplete),
+      hasWatchlistReadLeg(provider, connected, errors, incomplete),
   );
 }

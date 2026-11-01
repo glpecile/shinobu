@@ -12,6 +12,7 @@ import {
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
+import { useSuspenseReadingMangaQuery } from '@/state/queries/anilist';
 import { capFeedRow } from './row-cap';
 import {
   useSuspenseAnimeMoviesQuery,
@@ -73,6 +74,25 @@ export function YourWatchlistRow({
       leading={<CollapsibleSection.Icon name="bookmark-outline" />}
       onViewAll={() => pushRoute(routes.watchlist())}
       title="Your Watchlist"
+    />
+  );
+}
+
+/**
+ * The manga the user is reading or rereading on AniList, most recently updated
+ * first (plan 0117 M3). Cards read "Ch 12 / 59" from the entry's progress, and
+ * the row is capped like the other personal rows.
+ */
+export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
+  const { data } = useSuspenseReadingMangaQuery();
+  const items = capFeedRow(useVisibleItems(data));
+  return (
+    <MediaCarousel
+      collapseKey="continue-reading"
+      items={items}
+      onItemActions={onItemActions}
+      leading={<CollapsibleSection.Icon name="book-outline" />}
+      title="Continue Reading"
     />
   );
 }

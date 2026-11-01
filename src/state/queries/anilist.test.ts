@@ -26,10 +26,14 @@ mock.module('react-native-mmkv', () => ({
 let requests = 0;
 let failureStatus: number | undefined;
 let progressOverride: number | undefined;
+let mangaList: unknown[] | undefined;
 mock.module('@/lib/http/client', () => ({
   httpFetch: async (_url: string, init: RequestInit) => {
     requests++;
     if (failureStatus != null) return new Response('{}', { status: failureStatus });
+    if (mangaList != null && JSON.parse(String(init.body)).query.includes('MediaListCollection')) {
+      return Response.json({ data: { MediaListCollection: { lists: [{ entries: mangaList }] } } });
+    }
     if (JSON.parse(String(init.body)).query.includes('Page(page:')) return Response.json({ data: { Page: {
       pageInfo: { hasNextPage: false }, media: Array.from({ length: 50 }, (_, i) => ({ id: i + 1, type: 'ANIME' })),
     } } });
@@ -48,7 +52,7 @@ mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const { anilistQueryKeys, fetchWatchlistAnime, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
+const { anilistQueryKeys, fetchWatchlistAnime, fetchWatchlistManga, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseReadingMangaQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
 const { setProviderSession, clearProviderSession } = await import('@/state/session/tokens');
 const { createQueryClient } = await import('./query-client');
 
@@ -145,6 +149,10 @@ function entry(
   };
 }
 
+function mangaMedia(id: number) {
+  return { id, type: 'MANGA', title: { romaji: `Manga ${id}` }, chapters: 59 };
+}
+
 /**
  * The regression gate (plan 0031 R28, widened by plan 0035 R2), naming
  * `docs/solutions/anilist-shared-list-query-status-gate.md` on purpose: one
@@ -189,5 +197,31 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     );
     expect(upNext.continueWatching).toEqual([]);
     expect(upNext.calendar).toEqual([]);
+  });
+
+  test('one manga read feeds both surfaces, and PLANNING reaches only the reading list', async () => {
+    setProviderSession('anilist', { accessToken: 'first' });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(anilistQueryKeys.viewer(), { id: 1, name: 'Reader' });
+    mangaList = [
+      { id: 13, status: 'PLANNING', progress: 0, updatedAt: 1_752_000_300, media: mangaMedia(3) },
+      { id: 11, status: 'CURRENT', progress: 12, updatedAt: 1_752_000_100, media: mangaMedia(1) },
+      { id: 12, status: 'REPEATING', progress: 4, updatedAt: 1_752_000_200, media: mangaMedia(2) },
+    ];
+    requests = 0;
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(
+      QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children),
+    );
+    const rail = renderHook(() => useSuspenseReadingMangaQuery().data, { wrapper });
+
+    // Newest update first. The planned manga is the newest update and still
+    // stays off a rail that means "you are partway through this".
+    await waitFor(() => expect(rail.result.current?.map((item) => item.id)).toEqual(['anilist-2', 'anilist-1']));
+    expect((await fetchWatchlistManga(client)).map((planned) => planned.item.id)).toEqual(['anilist-3']);
+    expect(requests).toBe(1);
+    rail.unmount();
+    client.clear();
+    clearProviderSession('anilist');
+    mangaList = undefined;
   });
 });

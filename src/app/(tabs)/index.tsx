@@ -28,6 +28,7 @@ import { SuspenseSection } from '@/components/suspense-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import {
+  ContinueReadingRow,
   FeedEnd,
   YourWatchlistRow,
   LetterboxdWatchlistRow,
@@ -196,6 +197,12 @@ function FeedScreen() {
             <YourWatchlistRow
               onItemActions={openActions}
             />
+          </SuspenseSection>
+        )}
+        {/* What the user is partway through reading, after what they mean to watch. */}
+        {feedProviders.includes('anilist') && (
+          <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+            <ContinueReadingRow onItemActions={openActions} />
           </SuspenseSection>
         )}
         {/* Serializd's further-out airings, after what the user means to watch. */}

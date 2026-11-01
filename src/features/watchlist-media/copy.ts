@@ -266,8 +266,8 @@ export function removedFromSentence(succeeded: readonly ProviderId[]): string {
  *
  * `membershipUnknown` is R35's honesty clause and the reason this function
  * exists: `sources` records "providers whose read leg returned this item", so a
- * connected provider with no read leg (Serializd in v1, AniList for MANGA) or
- * one whose leg errored on this gather is **unknown**, not absent. Claiming
+ * connected provider with no read leg (Serializd in v1) or one whose leg
+ * errored on this gather is **unknown**, not absent. Claiming
  * "Removed" while the film is still on the user's Trakt watchlist — because the
  * Trakt leg failed and the row was never seen — is exactly the false
  * completeness claim R14 forbids. Those providers get an upfront manual row

@@ -7,10 +7,10 @@ import type { NormalizedMediaItem } from '@/types/media';
 /**
  * R35's routing rules, as pure functions (plan 0031 U16). The distinction this
  * suite exists to hold: **absence from `sources` is not proof of absence.**
- * `sources` records "providers whose read leg returned this item", so three
+ * `sources` records "providers whose read leg returned this item", so some
  * connected-and-applicable cases can never appear in it — Serializd (no leg in
- * v1), AniList for MANGA, and any leg that errored on this gather — and each of
- * them is `unknown`, not known-absent.
+ * v1), and any leg that errored or read only part of its list on this gather —
+ * and each of them is `unknown`, not known-absent.
  */
 const store = new Map<string, string>();
 mock.module('react-native-mmkv', () => ({
@@ -85,36 +85,26 @@ function entryFor(
 }
 
 describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
-
-  test('AniList can for anime and cannot for manga — the leg is `type: ANIME`', () => {
-    expect(hasWatchlistReadLeg('anilist', film({ type: 'ANIME' }), CONNECTED, [])).toBe(
-      true,
-    );
-    expect(hasWatchlistReadLeg('anilist', film({ type: 'MANGA' }), CONNECTED, [])).toBe(
-      false,
-    );
-  });
-
   test('a leg that errored on this gather makes its provider unknown, not absent', () => {
-    expect(hasWatchlistReadLeg('trakt', film(), CONNECTED, [])).toBe(true);
+    expect(hasWatchlistReadLeg('trakt', CONNECTED, [])).toBe(true);
     expect(
-      hasWatchlistReadLeg('trakt', film(), CONNECTED, [
+      hasWatchlistReadLeg('trakt', CONNECTED, [
         { provider: 'trakt', message: '502' },
       ]),
     ).toBe(false);
   });
 
   test('a provider that is not connected has no leg either', () => {
-    expect(hasWatchlistReadLeg('letterboxd', film(), ['trakt'], [])).toBe(false);
+    expect(hasWatchlistReadLeg('letterboxd', ['trakt'], [])).toBe(false);
   });
 
   test('a leg that read only part of the list has not proven absence', () => {
     // Letterboxd's scrape is paginated behind `onEndReached` and never
     // auto-paged, so a film on page 3 of a 600-film watchlist is missing from
     // `sources` for a reason that has nothing to do with membership.
-    expect(hasWatchlistReadLeg('letterboxd', film(), CONNECTED, [], [])).toBe(true);
+    expect(hasWatchlistReadLeg('letterboxd', CONNECTED, [], [])).toBe(true);
     expect(
-      hasWatchlistReadLeg('letterboxd', film(), CONNECTED, [], ['letterboxd']),
+      hasWatchlistReadLeg('letterboxd', CONNECTED, [], ['letterboxd']),
     ).toBe(false);
   });
 });
