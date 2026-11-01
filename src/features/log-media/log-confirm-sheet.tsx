@@ -11,6 +11,7 @@ import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-b
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { useCatchUpControls } from '@/features/log-media/session/state';
+import { isReadIntent } from '@/features/watchlist-media/copy';
 import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
@@ -43,6 +44,12 @@ const DIARY_PROVIDERS = [
   'letterboxd',
   'serializd',
 ] as const satisfies readonly ProviderId[];
+
+/**
+ * AniList's progress write takes no date, so a log reaching only AniList (any
+ * manga, an anime with no other tracker) has nothing to backdate.
+ */
+const UNDATED_PROVIDERS: readonly ProviderId[] = ['anilist'];
 
 /** Joins provider labels for "Writes to ..." and outcome copy in both sheets. */
 export function labels(ids: readonly ProviderId[]): string {
@@ -109,6 +116,7 @@ export function LogFormFields({
     selectedProviders.includes(id),
   );
   const showTagsField = onTagsChange != null && diaryProviders.length > 0;
+  const showDateField = selectedProviders.some((id) => !UNDATED_PROVIDERS.includes(id));
   const needsScriptUpdate = process.env.EXPO_OS === 'web' &&
     diaryProviders.includes('letterboxd') && !userscriptLikes;
 
@@ -152,16 +160,19 @@ export function LogFormFields({
           targets={targets}
         />
         <ManualWriteRows item={item} manual={manualTargets} />
-        <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
-          {diaryProviders.length > 0 && (
-            <LikeButton
-              disabled={pending || needsScriptUpdate}
-              label={`Like on ${labels(diaryProviders)}`}
-              liked={liked}
-              onChange={onLikedChange}
-            />
-          )}
-        </WatchedAtField>
+        {/* The like rides in this row, but a diary provider is never undated. */}
+        {showDateField && (
+          <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
+            {diaryProviders.length > 0 && (
+              <LikeButton
+                disabled={pending || needsScriptUpdate}
+                label={`Like on ${labels(diaryProviders)}`}
+                liked={liked}
+                onChange={onLikedChange}
+              />
+            )}
+          </WatchedAtField>
+        )}
         {needsScriptUpdate && (
           <Text className="text-muted font-sans text-xs mt-2">
             Update the Letterboxd userscript in Advanced setup to enable likes.
@@ -210,6 +221,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   onOpenRequest?: (request: LogRequest) => void;
 }) {
   const { item, title, description } = request;
+  const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
@@ -251,7 +263,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
         // A retired inline session must not close a newer host flow.
         if (!openRef.current) {
           if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome);
+            const copy = logToastCopy(outcome, repeat);
             toast.success(copy.title, copy.message);
           } else {
             toast.error(
@@ -267,7 +279,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parsedTags, liked });
             return;
           }
-          const copy = logToastCopy(outcome);
+          const copy = logToastCopy(outcome, repeat);
           toast.success(copy.title, copy.message);
           (onDismiss ?? onClose)();
         } else if (outcome.failed.length > 0) haptics.error();
@@ -316,7 +328,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             }
             result={result}
             succeededLine={(succeeded) =>
-              `${result?.rewatch ? 'Logged rewatch to' : 'Logged to'} ${labels(succeeded)}.`
+              `${result?.rewatch ? `Logged ${repeat} to` : 'Logged to'} ${labels(succeeded)}.`
             }
           />
           {logMedia.isError && (

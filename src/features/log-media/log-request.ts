@@ -10,8 +10,13 @@ export type LogRequest = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpi
   batch?: boolean;
 };
 
+/**
+ * Whether a request opens the episode catch-up chain rather than the one-shot
+ * form. Manga takes the form: the chain's queue walks an airing schedule,
+ * which manga chapters don't have.
+ */
 export function isEpisodeLog(request: LogRequest): boolean {
   const { item } = request;
-  return !request.batch && item.type !== 'MOVIE' && item.isFilm !== true &&
+  return !request.batch && item.type !== 'MOVIE' && item.type !== 'MANGA' && item.isFilm !== true &&
     (request.episodes?.length === 1 || request.entryEpisodes?.length === 1);
 }

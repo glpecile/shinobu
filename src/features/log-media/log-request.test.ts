@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import type { NormalizedMediaItem } from '@/types/media';
 import { isEpisodeLog, type LogRequest } from './log-request';
 
-test('only single-episode requests enter catch-up, never movies or season batches', () => {
+test('only single-episode requests enter catch-up, never movies, manga or season batches', () => {
   const item: NormalizedMediaItem = {
     id: 'show', title: 'Show', coverImage: '', type: 'TV', currentProgress: 0,
     progressUnit: 'episode', lastUpdated: '', externalIds: {},
@@ -17,4 +17,7 @@ test('only single-episode requests enter catch-up, never movies or season batche
   expect(isEpisodeLog({ ...request, episodes: undefined })).toBe(false);
   expect(isEpisodeLog({ ...request, item: { ...item, type: 'MOVIE' } })).toBe(false);
   expect(isEpisodeLog({ ...request, item: { ...item, type: 'ANIME', isFilm: true } })).toBe(false);
+  expect(isEpisodeLog({
+    ...request, episodes: undefined, entryEpisodes: [7], item: { ...item, type: 'MANGA', progressUnit: 'chapter' },
+  })).toBe(false);
 });

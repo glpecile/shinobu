@@ -9,10 +9,13 @@ describe('logToastCopy (plan 0032 R9)', () => {
     ).toEqual({ title: 'Logged', message: 'Trakt, Serializd' });
   });
 
-  test('a rewatch says so', () => {
+  test('a rewatch or a reread says so', () => {
     expect(
       logToastCopy({ rewatch: true, succeeded: ['trakt'], skipped: [] }).title,
     ).toBe('Logged rewatch');
+    expect(
+      logToastCopy({ rewatch: true, succeeded: ['anilist'], skipped: [] }, 'reread').title,
+    ).toBe('Logged reread');
   });
 
   test('a reconcile skip is the one extra fact a clean toast carries', () => {

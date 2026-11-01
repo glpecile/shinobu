@@ -94,7 +94,7 @@ export function logToAniList(
           detail: `logging "${item.title}" requires an episode/chapter progress`,
         });
       }
-      const total = state.episodes;
+      const total = state.total;
       const status =
         options.rewatch === true
           ? 'REPEATING'

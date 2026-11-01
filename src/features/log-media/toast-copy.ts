@@ -14,9 +14,11 @@ const list = (ids: readonly ProviderId[]) =>
 
 export function logToastCopy(
   report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'>,
+  /** What a repeat of this item is called: manga is reread, not rewatched. */
+  repeat: 'rewatch' | 'reread' = 'rewatch',
 ): { title: string; message: string } {
   return {
-    title: report.rewatch ? 'Logged rewatch' : 'Logged',
+    title: report.rewatch ? `Logged ${repeat}` : 'Logged',
     message:
       report.skipped.length > 0
         ? `${list(report.succeeded)} — ${list(report.skipped)} already had it`

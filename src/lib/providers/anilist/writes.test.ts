@@ -36,7 +36,12 @@ interface EntryFixture {
  */
 function capturingDeps(
   captured: { variables: unknown },
-  state: { entry: EntryFixture | null; episodes: number | null },
+  state: {
+    entry: EntryFixture | null;
+    episodes: number | null;
+    /** Extra `Media` fields, e.g. a manga's `type` and `chapters`. */
+    media?: Record<string, unknown>;
+  },
 ): AniListDeps {
   return {
     tokens: TOKENS,
@@ -50,7 +55,7 @@ function capturingDeps(
         return Response.json({ data: { SaveMediaListEntry: { id: 1 } } });
       }
       return Response.json({
-        data: { Media: { episodes: state.episodes, mediaListEntry: state.entry } },
+        data: { Media: { episodes: state.episodes, ...state.media, mediaListEntry: state.entry } },
       });
     },
   };
@@ -163,6 +168,27 @@ describe('logToAniList series', () => {
       mediaId: 104578,
       status: 'REPEATING',
       progress: 1,
+    });
+  });
+
+  test("a manga's last chapter flips the entry to COMPLETED", async () => {
+    const captured = { variables: null as unknown };
+    await Effect.runPromise(
+      logToAniList(
+        capturingDeps(captured, {
+          entry: { status: 'CURRENT', progress: 58, repeat: 0 },
+          // AniList reports a manga's total as `chapters`; `episodes` is null.
+          episodes: null,
+          media: { type: 'MANGA', chapters: 59 },
+        }),
+        { ...SERIES, id: 'anilist-100', type: 'MANGA', progressUnit: 'chapter', externalIds: { anilist: 100 } },
+        { progress: 59 },
+      ),
+    );
+    expect(captured.variables).toEqual({
+      mediaId: 100,
+      status: 'COMPLETED',
+      progress: 59,
     });
   });
 
