@@ -19,8 +19,7 @@ export default defineRule({
     const filename = context.filename.replaceAll('\\', '/');
     if (
       ALLOWED_DIRECTORIES.some((directory) => filename.includes(directory)) ||
-      ALLOWED_FILES.some((file) => filename.endsWith(file)) ||
-      /\.test\.tsx?$/.test(filename)
+      ALLOWED_FILES.some((file) => filename.endsWith(file))
     ) {
       return {};
     }

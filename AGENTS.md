@@ -59,9 +59,8 @@ as a JS plugin, enforces this.
 - TanStack Query for every fetch and mutation. It owns caching and invalidation.
 - Effect for typed errors, retries, and concurrency, only in `lib/providers/`
   and `lib/http/`. `state/queries/*` calls `Effect.runPromise` in
-  `queryFn`/`mutationFn` (and so do the three feature write hooks,
-  `use-log-media.ts`, `use-watchlist-media.ts` and `use-unwatchlist-media.ts`),
-  and no component, screen, or hook signature sees an `Effect`
+  `queryFn`/`mutationFn`, as do the feature write hooks, and no component,
+  screen, or hook signature sees an `Effect`
   (`docs/brainstorms/2026-07-07-effect-for-provider-layer.md`).
   `shinobu/effect-boundary` enforces this.
 - `react-native-mmkv` for tokens and local state, with `localStorage` on web.
@@ -106,9 +105,9 @@ shared component's `className` to layout. Primitive wrappers take any class,
 and `ActionableRow`, `PressableCard`, and `Rail` have contracts in
 `.oxlintrc.json`.
 When a component rejects a class, add a variant, or give it a contract when its
-docs say it owns that class. `shinobu/no-template-classnames`,
-`shinobu/no-unguarded-push` and `shinobu/effect-boundary` cover class
-composition, guarded navigation and the Effect boundary in `bun lint`. `bun check:links` probes external URL health. Reviewers enforce the
+docs say it owns that class. `shinobu/no-template-classnames` and
+`shinobu/no-unguarded-push` cover class composition and guarded navigation in
+`bun lint`. `bun check:links` probes external URL health. Reviewers enforce the
 Suspense, no-dead-end, and proxy rules.
 `shinobu/reanimated-no-deps` and `shinobu/web-safe-easing` reject Reanimated
 code that only warns at runtime. A Metro or browser console warning from your

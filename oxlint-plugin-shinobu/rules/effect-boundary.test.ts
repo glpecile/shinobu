@@ -7,5 +7,5 @@ test('Effect imports are rejected outside the provider, HTTP and query layers an
     'src/components/a.tsx': `import * as Effect from 'effect/Effect';`,
     'src/state/queries/b.ts': `import * as Effect from 'effect/Effect';`,
     'src/features/log-media/use-log-media.ts': `import * as Effect from 'effect/Effect';`,
-  })).toHaveLength(1);
+  }).map((diagnostic) => diagnostic.filename)).toEqual([expect.stringMatching(/src\/components\/a\.tsx$/)]);
 });
