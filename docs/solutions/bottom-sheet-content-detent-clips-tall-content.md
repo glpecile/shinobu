@@ -68,6 +68,18 @@ applied on the overflow branch, where being slightly under the native cap is
 harmless (the scroller appears a little early rather than the sheet clipping),
 and the hugging branch — the common one — uses no magic number at all.
 
+**Keyboard (2026-11-02).** The host lift below applies to both native platforms.
+The previous Android-only gate left iOS's manga chapter field and confirm button
+behind the number pad: the native sheet does not avoid it automatically. Apply
+the animated bottom inset to the wrapped host on iOS too. Enable iOS scrolling
+while the keyboard is visible, since the lifted host can be shorter than the
+content cap; restore the overflow gate after dismissal so short sheets still
+drag to dismiss. Keep the measured content height independent of the keyboard.
+On iPhone 17 Pro, focusing the chapter field now lifts the complete form above
+the keypad; typing replaces the default, a step applies on the first tap, and
+Confirm submits the range on the first tap with the keyboard open.
+The confirm check used an isolated mutation result, without a provider write.
+
 **Keyboard (2026-10-22, supersedes the history below).** Android now lifts the
 whole sheet: `Sheet` sets the host's `style={{ bottom: keyboardHeight }}` while
 open, the way `adjustResize` would. The host re-anchors natively on resize

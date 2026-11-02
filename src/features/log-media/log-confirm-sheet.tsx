@@ -3,7 +3,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useRef, useState } from 'react';
 import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { LikeButton } from '@/components/like-button';
@@ -323,6 +323,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   onOpenRequest?: (request: LogRequest) => void;
 }) {
   const { item, description } = request;
+  const { fontScale } = useWindowDimensions();
   const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
   const range = request.chapterRange;
   // Only a "Log chapter N" request renders the field, so no other log submits it.
@@ -511,7 +512,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
               label={title}
               loading={pending}
               loadingLabel="Logging…"
-              morphLabel={range != null}
+              morphLabel={range != null && fontScale <= 1}
               onPress={confirm}
             />
           </WriteSheet.Actions>
