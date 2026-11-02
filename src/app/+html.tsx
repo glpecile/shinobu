@@ -2,7 +2,11 @@
 
 import { ScrollViewStyleReset, useServerDocumentContext } from "expo-router/html";
 
+import { SHINOBU_WEB_DOMAIN } from "@/lib/config";
 import { fontFaceCss, preloadedFonts } from "@/lib/fonts/web-faces";
+
+const SITE_DESCRIPTION =
+  "Log a movie, show, anime, or manga once, and Shinobu writes it to every tracker you've connected.";
 
 // This file is web-only and used to configure the root HTML for every
 // web page during static rendering.
@@ -125,7 +129,17 @@ export default function Root({ children }: { children: React.ReactNode }) {
         ))}
         <style dangerouslySetInnerHTML={{ __html: fontFaceCss }} />
 
-        {/* Add any additional <head> elements that you want globally available on web... */}
+        {/*
+          Link-preview defaults. The Worker swaps these for a dynamic route's
+          own title, description, and card (worker/og.ts).
+        */}
+        <meta property="og:site_name" content="Shinobu" />
+        <meta property="og:type" content="website" />
+        <meta property="og:description" content={SITE_DESCRIPTION} />
+        <meta property="og:image" content={`${SHINOBU_WEB_DOMAIN}/og/site.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
       </head>
       <body {...bodyAttributes}>
         {children}

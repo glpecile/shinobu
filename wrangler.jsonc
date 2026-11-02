@@ -21,7 +21,11 @@
     // could answer a non-matching `/api/*` GET with the 404 page
     // (HTML) before the Worker ever runs. Everything else still serves assets
     // first (Worker only runs on a miss).
-     "run_worker_first": ["/api/serializd/*", "/api/letterboxd/*", "/api/fourchan/*", "/api/reddit/*"],
+    // The dynamic routes too, so link previews get their tags (plan 0118).
+     "run_worker_first": [
+      "/api/serializd/*", "/api/letterboxd/*", "/api/fourchan/*", "/api/reddit/*",
+      "/og/*", "/details/*", "/episode/*", "/person/*", "/studio/*", "/lists/*"
+    ],
     // Expo Router's static export emits `search.html`, `details/[id].html`,
     // etc. (no trailing slash in the route), matching how Expo Router's
     // own Link/router generate hrefs.
@@ -31,5 +35,7 @@
     // `404.html`, not Expo's `+not-found.html` naming.
     "not_found_handling": "404-page"
   },
+  // The link-preview card renderer (worker/og-image.tsx) imports its fonts.
+  "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],
   "routes": [{ "pattern": "shinobu.glpecile.xyz", "custom_domain": true }]
 }
