@@ -4,6 +4,7 @@ import effectBoundary from './rules/effect-boundary.ts';
 import immediateDisclosures from './rules/immediate-disclosures.ts';
 import noHardcodedRoutes from './rules/no-hardcoded-routes.ts';
 import logColorOnly from './rules/log-color-only.ts';
+import reactCompilerBailout from './rules/react-compiler-bailout.ts';
 import reanimatedNoDeps from './rules/reanimated-no-deps.ts';
 import webSafeEasing from './rules/web-safe-easing.ts';
 import noPointerEventsProp from './rules/no-pointer-events-prop.ts';
@@ -23,5 +24,6 @@ export default definePlugin({
     'web-safe-easing': webSafeEasing,
     'no-pointer-events-prop': noPointerEventsProp,
     'effect-boundary': effectBoundary,
+    'react-compiler-bailout': reactCompilerBailout,
   },
 });

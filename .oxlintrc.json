@@ -407,7 +407,8 @@
         "shinobu/reanimated-no-deps": "error",
         "shinobu/web-safe-easing": "error",
         "shinobu/immediate-disclosures": "error",
-        "shinobu/effect-boundary": "error"
+        "shinobu/effect-boundary": "error",
+        "shinobu/react-compiler-bailout": "error"
       }
     }
   ],
