@@ -615,20 +615,20 @@ describe('planLogWrite — reconcile across both domains (plan 0027 U4)', () => 
   });
 });
 
+async function connectTrakt() {
+  const { setProviderClientId, setProviderClientSecret, setProviderSession } = await import(
+    '@/state/session/tokens'
+  );
+  setProviderSession('trakt', { accessToken: 'tok' });
+  setProviderClientId('trakt', 'cid');
+  setProviderClientSecret('trakt', 'secret');
+}
+
 describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
   const inception: NormalizedMediaItem = {
     id: 'trakt-1', title: 'Inception', coverImage: '', type: 'MOVIE',
     currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { trakt: 1, tmdb: 27205 },
   };
-
-  async function connectTrakt() {
-    const { setProviderClientId, setProviderClientSecret, setProviderSession } = await import(
-      '@/state/session/tokens'
-    );
-    setProviderSession('trakt', { accessToken: 'tok' });
-    setProviderClientId('trakt', 'cid');
-    setProviderClientSecret('trakt', 'secret');
-  }
 
   test('a first watch that landed but reported failure is not sent again', async () => {
     await connectTrakt();
