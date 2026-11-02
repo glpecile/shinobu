@@ -48,7 +48,7 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */
-function entryMs(entry: NormalizedDiaryEntry): number {
+function entryMs(entry: Pick<NormalizedDiaryEntry, 'watchedAt'>): number {
   return parseLocalInstant(entry.watchedAt)?.getTime() ?? 0;
 }
 
@@ -75,12 +75,15 @@ export function mergeDiaryEntries(
   }
 
   const watermark = computeWatermark(states);
-  const cut =
-    watermark == null
-      ? [...byId.values()]
-      : [...byId.values()].filter((entry) => entryMs(entry) >= watermark);
-
-  return cut.sort((a, b) => entryMs(b) - entryMs(a));
+  const entries = [...byId.values()];
+  // Parsed once into a column: parsing inside the comparator re-parsed each
+  // date ~16 times for 300 logs, nine-tenths of the merge on Hermes.
+  const ms = entries.map(entryMs);
+  return entries
+    .map((_, index) => index)
+    .filter((index) => watermark == null || ms[index] >= watermark)
+    .sort((a, b) => ms[b] - ms[a])
+    .map((index) => entries[index]);
 }
 
 /**
@@ -308,10 +311,6 @@ export function dayKeyForInstant(instant: Date, timeZone: string): string {
 }
 
 interface CollapseBucket {
-  /** Union of every contributor's identity keys — later entries join on any
-   *  overlap, so an id-rich contributor (Simkl) bridges id-poor ones. */
-  identities: Set<string>;
-  episodesKey: string;
   providers: Set<ProviderId>;
   entries: NormalizedDiaryEntry[];
 }
@@ -348,16 +347,30 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
 }
 
 /** Within-day order: instant entries newest-first, then date-only entries. */
-function compareMergedDesc(a: MergedDiaryEntry, b: MergedDiaryEntry): number {
-  if (a.dateOnly !== b.dateOnly) return a.dateOnly ? 1 : -1;
-  return (
-    (parseLocalInstant(b.watchedAt)?.getTime() ?? 0) -
-    (parseLocalInstant(a.watchedAt)?.getTime() ?? 0)
-  );
+function sortMergedDesc(merged: MergedDiaryEntry[]): MergedDiaryEntry[] {
+  const ms = merged.map(entryMs);
+  return merged
+    .map((_, index) => index)
+    .sort((a, b) =>
+      merged[a].dateOnly !== merged[b].dateOnly ? (merged[a].dateOnly ? 1 : -1) : ms[b] - ms[a],
+    )
+    .map((index) => merged[index]);
 }
 
 function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
   const buckets: CollapseBucket[] = [];
+  // `episodesKey + identity` → indices of the buckets holding that identity.
+  // A joining entry indexes all its keys, so an id-rich contributor (Simkl)
+  // bridges id-poor ones; candidates are looked up, not scanned bucket by bucket.
+  const byIdentity = new Map<string, number[]>();
+  const indexBucket = (bucket: number, key: string, identities: Iterable<string>) => {
+    for (const identity of identities) {
+      const slot = `${key}\u0000${identity}`;
+      const indices = byIdentity.get(slot);
+      if (indices == null) byIdentity.set(slot, [bucket]);
+      else if (!indices.includes(bucket)) indices.push(bucket);
+    }
+  };
   for (const entry of entries) {
     const identities = identityKeys(entry.item);
     const key = episodesKey(entry.episodes);
@@ -367,26 +380,25 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
     // on any shared namespaced id (U9.5); joining unions the keys, so entries
     // are processed newest-first deterministically and a bridge contributor
     // extends the bucket's reach.
-    const bucket = buckets.find(
-      (candidate) =>
-        candidate.episodesKey === key &&
-        !candidate.providers.has(entry.provider) &&
-        identities.some((identity) => candidate.identities.has(identity)),
-    );
-    if (bucket != null) {
-      bucket.entries.push(entry);
-      bucket.providers.add(entry.provider);
-      for (const identity of identities) bucket.identities.add(identity);
+    // The earliest-created matching bucket wins, as a front-to-back scan would.
+    let match = -1;
+    for (const identity of identities) {
+      for (const index of byIdentity.get(`${key}\u0000${identity}`) ?? []) {
+        if ((match === -1 || index < match) && !buckets[index].providers.has(entry.provider)) {
+          match = index;
+        }
+      }
+    }
+    if (match !== -1) {
+      buckets[match].entries.push(entry);
+      buckets[match].providers.add(entry.provider);
+      indexBucket(match, key, identities);
     } else {
-      buckets.push({
-        identities: new Set(identities),
-        episodesKey: key,
-        providers: new Set([entry.provider]),
-        entries: [entry],
-      });
+      buckets.push({ providers: new Set([entry.provider]), entries: [entry] });
+      indexBucket(buckets.length - 1, key, identities);
     }
   }
-  return buckets.map(toMerged).sort(compareMergedDesc);
+  return sortMergedDesc(buckets.map(toMerged));
 }
 
 /**
@@ -570,14 +582,10 @@ export interface DiaryDayParts {
  * The rail gutter's stacked date: the numeral carries the day and the label
  * below it carries the month — or "Today", or a `Jul 25` month+year when the
  * day's local year differs from the current one (R8), since multi-year
- * scroll-back otherwise repeats identical labels.
+ * scroll-back otherwise repeats identical labels. `todayKey` is the user's
+ * local day from `dayKeyForInstant`.
  */
-export function formatDayParts(
-  dayKey: string,
-  now: Date,
-  timeZone: string,
-): DiaryDayParts {
-  const todayKey = dayKeyForInstant(now, timeZone);
+export function formatDayParts(dayKey: string, todayKey: string): DiaryDayParts {
   const [year, month, day] = dayKey.split('-').map(Number);
   const dayLabel = `${day ?? ''}`;
   if (dayKey === todayKey) {

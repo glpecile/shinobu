@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
@@ -30,6 +30,7 @@ import { useThemeColor } from '@/lib/theme-color';
 import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
+import { useWakeAt } from '@/lib/time/use-wake-at';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -38,7 +39,7 @@ import {
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
 import { matchesFormat, type FormatFilter } from '@/features/credit-timeline/group';
-import { useHiddenItems } from '@/state/prefs/hidden-items';
+import { useHiddenItems, type HiddenItem } from '@/state/prefs/hidden-items';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
@@ -79,17 +80,22 @@ import {
  * web), standing in for the day head once it leaves the top. It covers the list rather than sitting
  * above it, so showing and hiding it never moves a row. It stays mounted and
  * keeps its last day while hidden, so the fade out never shows an empty bar.
+ * Renders nothing once the day drops out of the rows (hidden or filtered).
  */
 function DiaryStickyDate({
-  label,
-  summary,
+  activity,
+  day,
+  today,
   visible,
 }: {
-  label: string;
-  summary: string;
+  activity: ReadonlyMap<string, DaySummary>;
+  day: string | null;
+  today: string;
   visible: boolean;
 }) {
   const reduceMotion = useReducedMotion();
+  const summary = day == null ? undefined : activity.get(day);
+  if (day == null || summary == null) return null;
   return (
     <AnimatedView
       accessibilityElementsHidden={!visible}
@@ -106,9 +112,9 @@ function DiaryStickyDate({
         transitionTimingFunction: EASE_OUT,
       }}
     >
-      <Text className="font-display text-base text-foreground">{label}</Text>
+      <Text className="font-display text-base text-foreground">{formatDayDate(day, today)}</Text>
       <Text className="ml-3 shrink text-muted font-sans text-xs" numberOfLines={1}>
-        {summary}
+        {summary.label}
       </Text>
     </AnimatedView>
   );
@@ -188,15 +194,23 @@ function clusterView(cluster: DiaryCluster): ClusterView {
   };
 }
 
+function newDate(): Date {
+  return new Date();
+}
+
 function flattenDays(
   days: DiaryDay[],
-  now: Date,
-  timeZone: string,
+  today: string,
   expanded: ReadonlySet<string>,
   collapsedDays: ReadonlySet<string>,
-  keep: (entry: MergedDiaryEntry) => boolean,
+  hidden: readonly HiddenItem[],
+  format: FormatFilter,
   inlineMonths: boolean,
 ): { items: DiaryListItem[]; activity: Map<string, DaySummary> } {
+  // Hiding is one global set (feed, watchlist, Up Next, diary).
+  const hiddenIds = new Set(hidden.map((item) => item.id));
+  const keep = (entry: MergedDiaryEntry) =>
+    !hiddenIds.has(entry.item.id) && matchesFormat(entry.item, format);
   const items: DiaryListItem[] = [];
   const activity = new Map<string, DaySummary>();
   let month = '';
@@ -216,7 +230,7 @@ function flattenDays(
       kind: 'header',
       key: `h-${day.key}`,
       dayKey: day.key,
-      parts: formatDayParts(day.key, now, timeZone),
+      parts: formatDayParts(day.key, today),
       summary: summary.label,
       collapsed,
     });
@@ -737,8 +751,9 @@ export function DiaryList({
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { expanded, toggle: toggleCluster } = useListDisclosure();
   const collapsedDays = useCollapsedDiaryDays();
-  const hiddenIds = new Set(useHiddenItems().map((item) => item.id));
+  const hiddenItems = useHiddenItems();
   const muted = useThemeColor('--color-muted');
+  const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
   let emptyIcon: React.ComponentProps<typeof Ionicons>['name'];
   let emptyTitle: string;
   switch (format) {
@@ -755,50 +770,17 @@ export function DiaryList({
       emptyTitle = hasNextPage ? 'No TV shows in loaded history' : 'No TV shows logged yet';
       break;
   }
-  const now = new Date();
-  const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
-  const { items, activity } = flattenDays(
-    days,
-    now,
-    timeZone,
-    expanded,
-    collapsedDays,
-    // Hiding is one global set (feed, watchlist, Up Next, diary).
-    (entry) => !hiddenIds.has(entry.item.id) && matchesFormat(entry.item, format),
-    !wide,
-  );
-
   const [sticky, setSticky] = useState<{ day: string | null; visible: boolean }>({
     day: null,
     visible: false,
   });
   const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
-  const stickyHeader = items.find(
-    (item): item is Extract<DiaryListItem, { kind: 'header' }> =>
-      item.kind === 'header' && item.dayKey === sticky.day,
-  );
-
-  const activityProps = {
-    activity,
-    // Days arrive newest-first; the last is as far back as the feed has loaded.
-    // Once there's no next page, the history is complete and earlier days are empty.
-    oldest: hasNextPage ? (days.at(-1)?.key ?? '') : '',
-    today: dayKeyForInstant(now, timeZone),
-    loadingMore: isFetchingNextPage,
-    onLoadMore: onEndReached,
-    onSelectDay: (dayKey: string) => {
-      const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
-      if (index !== -1) void listRef.current?.scrollToIndex({ index, animated: !reduceMotion });
-    },
-  };
-
+  // `.finally`, not `try/finally`: React Compiler can't lower a `try` without
+  // `catch` and skips the whole component, so every scroll-driven render
+  // rebuilt the list and both calendars.
   async function refresh() {
     setRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setRefreshing(false);
-    }
+    await onRefresh().finally(() => setRefreshing(false));
   }
 
   // Double-tapping the Diary tab runs the same refresh the pull gesture does,
@@ -806,6 +788,40 @@ export function DiaryList({
   // is fixed here rather than passed in because this list *is* that tab's
   // surface — it renders nowhere else.
   useTabDoubleTap('diary', () => void refresh());
+
+  // State, not an ambient `new Date()`, which React Compiler would cache until
+  // `timeZone` changes. It rolls over at local midnight and on foreground.
+  const [now, refreshNow] = useReducer(newDate, undefined, newDate);
+  useWakeAt(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime(), now, refreshNow);
+
+  // No hook below this point, and only plain values into `flattenDays`: React
+  // Compiler drops the memo when an input was made before a hook call or is a
+  // closure, and then the rows and both calendars rebuild on every
+  // sticky-header change while scrolling.
+  const today = dayKeyForInstant(now, timeZone);
+  const { items, activity } = flattenDays(
+    days,
+    today,
+    expanded,
+    collapsedDays,
+    hiddenItems,
+    format,
+    !wide,
+  );
+
+  const activityProps = {
+    activity,
+    // Days arrive newest-first; the last is as far back as the feed has loaded.
+    // Once there's no next page, the history is complete and earlier days are empty.
+    oldest: hasNextPage ? (days.at(-1)?.key ?? '') : '',
+    today,
+    loadingMore: isFetchingNextPage,
+    onLoadMore: onEndReached,
+    onSelectDay: (dayKey: string) => {
+      const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
+      if (index !== -1) void listRef.current?.scrollToIndex({ index, animated: !reduceMotion });
+    },
+  };
 
   /** A row is a day's last when the next item starts a new day (or ends it). */
   function isLastOfDay(index: number) {
@@ -836,7 +852,7 @@ export function DiaryList({
     if (past !== showScrollTop) setShowScrollTop(past);
   }
 
-  const sideMonth = visibleMonth ?? (days[0]?.key ?? activityProps.today).slice(0, 7);
+  const sideMonth = visibleMonth ?? (days[0]?.key ?? today).slice(0, 7);
 
   return (
     <View className="flex-1 flex-row">
@@ -949,13 +965,7 @@ export function DiaryList({
             <RefreshControl onRefresh={refresh} refreshing={refreshing} />
           }
         />
-        {stickyHeader != null && (
-          <DiaryStickyDate
-            label={formatDayDate(stickyHeader.dayKey, activityProps.today)}
-            summary={stickyHeader.summary}
-            visible={sticky.visible}
-          />
-        )}
+        <DiaryStickyDate activity={activity} day={sticky.day} today={today} visible={sticky.visible} />
         <ScrollToTopFab
           className="ios:bottom-24"
           onPress={() => void listRef.current?.scrollToOffset({ offset: 0, animated: !reduceMotion })}
