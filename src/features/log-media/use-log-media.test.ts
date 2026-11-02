@@ -131,6 +131,36 @@ test('a Letterboxd film the member page already shows is logged again as a rewat
   store.clear();
 });
 
+test('a manga chapter range costs the entry read and one save at its last chapter', async () => {
+  const { setProviderSession } = await import('@/state/session/tokens');
+  setProviderSession('anilist', { accessToken: 'tok' });
+  const item: NormalizedMediaItem = {
+    id: 'anilist-100', title: 'Paper Moon Couriers', coverImage: '', type: 'MANGA',
+    currentProgress: 5, progressUnit: 'chapter', lastUpdated: '', externalIds: { anilist: 100 },
+  };
+  // A releasing manga: AniList has no chapter count, so nothing caps the range.
+  const media = { type: 'MANGA', episodes: null, chapters: null, mediaListEntry: { status: 'CURRENT', progress: 5, repeat: 0 } };
+  const sent: { query: string; variables: unknown }[] = [];
+  httpHandler = async (_input, init) => {
+    const body = JSON.parse(String(init?.body)) as { query: string; variables: unknown };
+    sent.push(body);
+    return Response.json(body.query.includes('SaveMediaListEntry')
+      ? { data: { SaveMediaListEntry: { id: 1 } } }
+      : { data: { Media: media } });
+  };
+  const queryClient = client();
+  // The log button's entry query already holds the reconcile read.
+  seedAniList(queryClient, 100, { status: 'CURRENT', progress: 5 });
+
+  const plan = await planLogWrite(queryClient, { item, entryEpisodes: [6, 7, 8, 9, 10, 11, 12] }, ['anilist']);
+  const report = await fanOutLog(logAdapters(queryClient), plan.writeTargets, plan.variables);
+
+  expect(plan.rewatch).toBe(false);
+  expect(report.succeeded).toEqual(['anilist']);
+  expect(sent.map(({ query }) => query.includes('SaveMediaListEntry'))).toEqual([false, true]);
+  expect(sent[1]?.variables).toEqual({ mediaId: 100, status: 'CURRENT', progress: 12 });
+});
+
 /**
  * Real Dan Da Dan S2 data: ani.zip maps the entry's 1..12 to TVDB S02E01..12,
  * absolute 13..24 — while Trakt *and* TMDB both hold one continuous

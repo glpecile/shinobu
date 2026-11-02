@@ -16,9 +16,11 @@ export function logToastCopy(
   report: Pick<LogMediaResult, 'rewatch' | 'succeeded' | 'skipped'>,
   /** What a repeat of this item is called: manga is reread, not rewatched. */
   repeat: 'rewatch' | 'reread' = 'rewatch',
+  /** A manga chapter range, e.g. "chapters 6–12", which the title names. */
+  span?: string,
 ): { title: string; message: string } {
   return {
-    title: report.rewatch ? `Logged ${repeat}` : 'Logged',
+    title: report.rewatch ? `Logged ${repeat}` : span != null ? `Logged ${span}` : 'Logged',
     message:
       report.skipped.length > 0
         ? `${list(report.succeeded)} — ${list(report.skipped)} already had it`

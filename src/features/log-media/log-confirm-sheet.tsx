@@ -22,7 +22,7 @@ import { toast } from '@/lib/toast';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
-import type { LogRequest } from './log-request';
+import { chaptersThrough, throughChapterText, type LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
@@ -206,6 +206,55 @@ export function LogFormFields({
 }
 
 /**
+ * The manga form's "through chapter" field (plan 0117 M2): the last chapter
+ * this log covers, from the next unread one up to a known total.
+ */
+function ThroughChapterField({ from, total, value, onChange, invalid, pending }: {
+  from: number;
+  total?: number;
+  value: string;
+  onChange: (value: string) => void;
+  /** Below `from`, which the form can't submit. */
+  invalid: boolean;
+  pending: boolean;
+}) {
+  const input = useRef<TextInputInstance>(null);
+  const bounds = total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`;
+  return (
+    <View className={cn('mt-5 gap-2', pending && 'opacity-50')}>
+      <Text
+        className="text-foreground font-sans-semibold text-sm"
+        onPress={() => input.current?.focus()}
+      >
+        Through chapter
+      </Text>
+      <TextField
+        ref={input}
+        accessibilityHint={bounds}
+        accessibilityLabel="Through chapter"
+        editable={!pending}
+        inputMode="numeric"
+        // `entryEpisodes` lists every chapter of the range, so four digits keep
+        // a stray keystroke from building a huge one. The longest-running
+        // manga have about 2,000 chapters.
+        maxLength={4}
+        onChangeText={(text) => onChange(throughChapterText(text, total))}
+        returnKeyType="done"
+        selectTextOnFocus
+        value={value}
+      />
+      {invalid ? (
+        <Text className="text-accent font-sans text-xs" role="alert">
+          Enter chapter {from} or later.
+        </Text>
+      ) : (
+        <Text className="text-muted font-sans text-xs">{bounds}</Text>
+      )}
+    </View>
+  );
+}
+
+/**
  * One-shot movie/season-batch session: owns the form, confirmation, and
  * partial-failure report. Sheet-agnostic — the app-level `CatchUpLogSheet`
  * wraps it in its own drawer, and the card-actions sheet renders it in place
@@ -220,8 +269,19 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   /** Renders a Letterboxd series-completion follow-up inline, like `onClose`'s host does. */
   onOpenRequest?: (request: LogRequest) => void;
 }) {
-  const { item, title, description } = request;
+  const { item, description } = request;
   const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
+  const range = request.chapterRange;
+  const [throughText, setThroughText] = useState(range == null ? '' : String(range.from));
+  const rangeChapters = range == null ? null : chaptersThrough(range.from, throughText);
+  const unsubmittable = range != null && rangeChapters == null;
+  const entryEpisodes = rangeChapters ?? request.entryEpisodes;
+  // One chapter keeps the request's copy; a range is named in the title,
+  // report and toast.
+  const span = rangeChapters != null && rangeChapters.length > 1
+    ? `chapters ${rangeChapters[0]}–${rangeChapters[rangeChapters.length - 1]}`
+    : undefined;
+  const title = span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
@@ -232,7 +292,9 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
   const [retryOf, setRetryOf] = useState<{ rewatch: boolean } | null>(null);
-  // Warms the pre-write watch-state reads while the sheet is open, so Confirm starts writing at once.
+  // Warms the pre-write watch-state reads while the sheet is open, so Confirm
+  // starts writing at once. A chapter range reads the same entry, so typing
+  // doesn't re-warm.
   useLogReconcileQuery({
     item,
     episodes: request.episodes,
@@ -246,13 +308,13 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   }, [open]);
 
   function confirm() {
-    if (logMedia.isPending || selectedProviders.length === 0) return;
+    if (logMedia.isPending || selectedProviders.length === 0 || unsubmittable) return;
     haptics.confirm();
     const parsedTags = parseTags(tags);
     const write = logMedia.mutateAsync({
       item,
       episodes: request.episodes,
-      entryEpisodes: request.entryEpisodes,
+      entryEpisodes,
       providers: selectedProviders,
       liked,
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
@@ -265,7 +327,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
         // A retired inline session must not close a newer host flow.
         if (!openRef.current) {
           if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome, repeat);
+            const copy = logToastCopy(outcome, repeat, span);
             toast.success(copy.title, copy.message);
           } else {
             toast.error(
@@ -281,7 +343,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parsedTags, liked });
             return;
           }
-          const copy = logToastCopy(outcome, repeat);
+          const copy = logToastCopy(outcome, repeat, span);
           toast.success(copy.title, copy.message);
           (onDismiss ?? onClose)();
         } else if (outcome.failed.length > 0) haptics.error();
@@ -331,7 +393,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             }
             result={result}
             succeededLine={(succeeded) =>
-              `${result?.rewatch ? `Logged ${repeat} to` : 'Logged to'} ${labels(succeeded)}.`
+              `${result?.rewatch ? `Logged ${repeat} to` : span != null ? `Logged ${span} to` : 'Logged to'} ${labels(succeeded)}.`
             }
           />
           {logMedia.isError && (
@@ -351,6 +413,16 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       ) : (
         <>
           <WriteSheet.Description>{description}</WriteSheet.Description>
+          {range != null && (
+            <ThroughChapterField
+              from={range.from}
+              invalid={unsubmittable}
+              onChange={setThroughText}
+              pending={pending}
+              total={range.total}
+              value={throughText}
+            />
+          )}
           <LogFormFields
             item={item}
             manualTargets={manualTargets}
@@ -370,11 +442,12 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           <WriteSheet.Actions>
             <Button
               variant="log"
-              disabled={selectedProviders.length === 0}
+              disabled={selectedProviders.length === 0 || unsubmittable}
               icon={<Button.Icon name="eye" />}
               label={title}
               loading={pending}
               loadingLabel="Logging…"
+              morphLabel={range != null}
               onPress={confirm}
             />
           </WriteSheet.Actions>

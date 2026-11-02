@@ -134,6 +134,12 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const entryRepeat =
     (isAnimeSeries || isManga) && total != null && total > 0 && currentProgress >= total;
   const nextEpisode = entryRepeat ? 1 : currentProgress + 1;
+  // A manga log can run through a later chapter in the same write, except a
+  // reread's restart and the last chapter, which have nothing to run to.
+  const chapterRange =
+    isManga && !entryRepeat && (total == null || total > nextEpisode)
+      ? { from: nextEpisode, ...(total != null ? { total } : {}) }
+      : null;
 
   // Never offer to log an episode that hasn't aired yet (todos/006).
   // Only evaluate aired status once the episodes query has successfully loaded.
@@ -270,6 +276,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
           const request: LogRequest = {
             item, title: action, description,
             ...(isAnimeSeries || isManga ? { entryEpisodes: [nextEpisode] } : {}),
+            ...(chapterRange != null ? { chapterRange } : {}),
             ...(isSeries && seriesNext != null
               ? { episodes: [{ season: seriesNext.season, number: seriesNext.number }] }
               : {}),
