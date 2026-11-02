@@ -11,6 +11,12 @@ interface AniListAiringNode {
   airingAt: number;
 }
 
+interface AniListFuzzyDate {
+  year: number | null;
+  month: number | null;
+  day: number | null;
+}
+
 interface AniListStreamingEpisode {
   title: string;
   thumbnail: string;
@@ -25,6 +31,9 @@ export interface AnimeEpisodesResponse {
       edges: Array<{ node: AniListAiringNode } | null> | null;
     } | null;
     streamingEpisodes: Array<AniListStreamingEpisode | null> | null;
+    status: string | null;
+    startDate: AniListFuzzyDate | null;
+    endDate: AniListFuzzyDate | null;
   } | null;
 }
 
@@ -37,10 +46,25 @@ export const EPISODE_FIELDS = `
     edges { node { episode airingAt } }
   }
   streamingEpisodes { title thumbnail }
+  status
+  startDate { year month day }
+  endDate { year month day }
 `;
 
 function airingInstant(seconds: number): string {
   return new Date(seconds * 1000).toISOString();
+}
+
+/**
+ * The day a finished, all-at-once release (a Netflix-style drop) put out every
+ * episode, as `YYYY-MM-DD`. AniList schedules only episode 1 for those, so
+ * without this the rest read as unaired.
+ */
+function singleDayRelease(media: Partial<NonNullable<AnimeEpisodesResponse['Media']>>): string | undefined {
+  const { status, startDate: start, endDate: end } = media;
+  if (status !== 'FINISHED' || start?.year == null || start.month == null || start.day == null) return undefined;
+  if (end?.year !== start.year || end.month !== start.month || end.day !== start.day) return undefined;
+  return `${start.year}-${String(start.month).padStart(2, '0')}-${String(start.day).padStart(2, '0')}`;
 }
 
 /**
@@ -118,6 +142,7 @@ export function normalizeAnimeEpisodes(media: Partial<NonNullable<AnimeEpisodesR
   const scheduledCount = Math.max(0, ...airByEpisode.keys());
   const count = media.episodes ?? Math.max(0, ...streaming.keys(), scheduledCount);
   const duration = media.duration ?? undefined;
+  const releaseDay = singleDayRelease(media);
 
   const episodes: NormalizedEpisode[] = [];
   for (let number = 1; number <= count; number++) {
@@ -127,7 +152,7 @@ export function normalizeAnimeEpisodes(media: Partial<NonNullable<AnimeEpisodesR
       title: streamingEpisode?.title ?? `Episode ${number}`,
       ...(airByEpisode.has(number)
         ? { firstAired: airByEpisode.get(number) }
-        : {}),
+        : releaseDay != null ? { firstAired: releaseDay } : {}),
       ...(duration != null ? { runtime: duration } : {}),
     });
   }
