@@ -65,6 +65,7 @@ describe('Letterboxd page-load write bridge', () => {
     const window = {
       location: dom.location,
       _cf_chl_opt: {} as object | undefined,
+      stop: () => {},
       supermodelCSRF: 'page-csrf',
       person: { loggedIn: true, username: 'gian', trusted: true },
       ReactNativeWebView: { postMessage: handleLetterboxdMessage },
@@ -106,6 +107,42 @@ describe('Letterboxd page-load write bridge', () => {
     reloaded.close();
   });
 
+  test('a film write starts once the head is parsed, stops the page, and writes once', async () => {
+    const webView = fakeWebView();
+    registerLetterboxdWebView(webView.ref);
+    const pending = letterboxdWebFetch(REQUEST);
+    const dom = new Window({ url: `https://letterboxd.com${REQUEST.filmPath}` });
+    let onMutation: (() => void) | undefined;
+    let onContentLoaded: (() => void) | undefined;
+    const document = {
+      readyState: 'loading',
+      querySelector: (selector: string) => dom.document.querySelector(selector),
+      addEventListener: (_type: string, listener: () => void) => { onContentLoaded = listener; },
+    };
+    class MutationObserver {
+      constructor(callback: () => void) { onMutation = callback; }
+      observe() {}
+      disconnect() {}
+    }
+    let stops = 0;
+    const requests: string[] = [];
+    const storage = new Map<string, string>();
+    const window = { location: dom.location, stop: () => { stops += 1; }, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
+    const fetch = async (url: string) => { requests.push(url); return new Response('{}'); };
+    new Function('window', 'document', 'sessionStorage', 'fetch', 'MutationObserver', webView.pages[0].script)(
+      window, document, { getItem: (key: string) => storage.get(key), setItem: (key: string, value: string) => storage.set(key, value) }, fetch, MutationObserver,
+    );
+    onMutation!();
+    expect(requests).toHaveLength(0);
+    dom.document.head.innerHTML = '<meta name="production:identifier" content=\'{"lid":"pageLid"}\'>';
+    onMutation!();
+    onContentLoaded!();
+    expect(stops).toBe(1);
+    expect(requests).toEqual(['/api/v0/production-log-entries']);
+    expect((await pending).status).toBe(200);
+    dom.close();
+  });
+
   test.each(['account', 'path', 'identifier', 'captcha', 'csrf', 'own-list'] as const)('list likes refuse %s failures without writing', async (failure) => {
     const webView = fakeWebView();
     registerLetterboxdWebView(webView.ref);
@@ -130,7 +167,7 @@ describe('Letterboxd page-load write bridge', () => {
     const pending = verb === 'diary' ? letterboxdWebFetch(REQUEST) : letterboxdWatchlistWebFetch({ filmPath: REQUEST.filmPath, inWatchlist: true });
     const dom = new Window({ url: `https://letterboxd.com${REQUEST.filmPath}` });
     dom.document.head.innerHTML = '<meta name="production:identifier" content=\'{"lid":"pageLid"}\'>';
-    const window = { location: dom.location, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
+    const window = { location: dom.location, stop: () => {}, supermodelCSRF: 'csrf', ReactNativeWebView: { postMessage: handleLetterboxdMessage } };
     const fetch = async (url: string) => url.includes(challenged)
       ? new Response('<!DOCTYPE html><title>Just a moment...</title>', { status: 403, headers: { 'cf-mitigated': 'challenge' } })
       : Response.json({ csrf: 'csrf' });

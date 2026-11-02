@@ -56,7 +56,7 @@ function ConnectedWriteBridge() {
       {pages.map((page) => (
         <NitroWebView
           key={page.id}
-          injectedJavaScript={page.script}
+          injectedJavaScriptBeforeContentLoaded={page.script}
           onMessage={callback((event) => handleLetterboxdMessage(event.nativeEvent.data))}
           source={{ uri: `${LETTERBOXD_BASE_URL}${page.path}` }}
           style={{ width: 1, height: 1 }}
