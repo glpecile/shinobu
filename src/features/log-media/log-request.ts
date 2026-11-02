@@ -27,10 +27,26 @@ export function isEpisodeLog(request: LogRequest): boolean {
     (request.episodes?.length === 1 || request.entryEpisodes?.length === 1);
 }
 
-/** What the "through chapter" field shows for typed `text`: its digits, clamped to a known total. */
+/**
+ * The cap on the "through chapter" field when AniList has no total.
+ * `entryEpisodes` lists every chapter of a range, so a stray keystroke can't
+ * build a huge one. The longest-running manga have about 2,000 chapters.
+ */
+const LAST_CHAPTER = 9999;
+
+/** What the "through chapter" field shows for typed `text`: its digits, clamped to the total or `LAST_CHAPTER`. */
 export function throughChapterText(text: string, total?: number): string {
   const digits = text.replace(/\D/g, '');
-  return total != null && Number(digits) > total ? String(total) : digits;
+  const cap = total ?? LAST_CHAPTER;
+  return Number(digits) > cap ? String(cap) : digits;
+}
+
+/**
+ * The field after its back or forward button: one chapter, kept between
+ * `from` and the cap. From an empty or too-low value, either lands on `from`.
+ */
+export function stepThroughChapter(text: string, step: 1 | -1, from: number, total?: number): string {
+  return String(Math.min(total ?? LAST_CHAPTER, Math.max(from, Number(text) + step)));
 }
 
 /**

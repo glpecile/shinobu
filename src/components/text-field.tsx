@@ -25,7 +25,8 @@ export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref
       selectionHandleColor={accent}
       textAlignVertical={props.multiline ? 'top' : undefined}
       {...props}
-      className={cn('border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent', props.multiline && 'rounded-2xl min-h-24')}
+      // react-native-web ignores the `textAlign` prop, so centring rides as a class too.
+      className={cn('border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent', props.multiline && 'rounded-2xl min-h-24', props.textAlign === 'center' && 'text-center')}
       onBlur={(event) => {
         setFocused(false);
         props.onBlur?.(event);

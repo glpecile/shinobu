@@ -22,7 +22,7 @@ import { toast } from '@/lib/toast';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
-import { chaptersThrough, throughChapterText, type LogRequest } from './log-request';
+import { chaptersThrough, stepThroughChapter, throughChapterText, type LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
@@ -206,8 +206,9 @@ export function LogFormFields({
 }
 
 /**
- * The manga form's "through chapter" field (plan 0117 M2): the last chapter
- * this log covers, from the next unread one up to a known total.
+ * The manga form's "through chapter" stepper (plan 0117 M2): the last chapter
+ * this log covers, from the next unread one up to a known total, typed or
+ * stepped with the buttons either side.
  */
 function ThroughChapterField({ from, total, value, onChange, invalid, pending }: {
   from: number;
@@ -220,6 +221,12 @@ function ThroughChapterField({ from, total, value, onChange, invalid, pending }:
 }) {
   const input = useRef<TextInputInstance>(null);
   const bounds = total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`;
+
+  function step(by: 1 | -1) {
+    haptics.selection();
+    onChange(stepThroughChapter(value, by, from, total));
+  }
+
   return (
     <View className={cn('mt-5 gap-2', pending && 'opacity-50')}>
       <Text
@@ -228,21 +235,40 @@ function ThroughChapterField({ from, total, value, onChange, invalid, pending }:
       >
         Through chapter
       </Text>
-      <TextField
-        ref={input}
-        accessibilityHint={bounds}
-        accessibilityLabel="Through chapter"
-        editable={!pending}
-        inputMode="numeric"
-        // `entryEpisodes` lists every chapter of the range, so four digits keep
-        // a stray keystroke from building a huge one. The longest-running
-        // manga have about 2,000 chapters.
-        maxLength={4}
-        onChangeText={(text) => onChange(throughChapterText(text, total))}
-        returnKeyType="done"
-        selectTextOnFocus
-        value={value}
-      />
+      <View className="flex-row items-center gap-3">
+        <Button
+          disabled={pending || Number(value) <= from}
+          icon={<Button.Icon name="chevron-back" />}
+          iconOnly
+          label="Previous chapter"
+          onPress={() => step(-1)}
+          pressBehavior="immediate"
+          variant="quiet"
+        />
+        <View className="flex-1">
+          <TextField
+            ref={input}
+            accessibilityHint={bounds}
+            accessibilityLabel="Through chapter"
+            editable={!pending}
+            inputMode="numeric"
+            onChangeText={(text) => onChange(throughChapterText(text, total))}
+            returnKeyType="done"
+            selectTextOnFocus
+            textAlign="center"
+            value={value}
+          />
+        </View>
+        <Button
+          disabled={pending || stepThroughChapter(value, 1, from, total) === value}
+          icon={<Button.Icon name="chevron-forward" />}
+          iconOnly
+          label="Next chapter"
+          onPress={() => step(1)}
+          pressBehavior="immediate"
+          variant="quiet"
+        />
+      </View>
       {invalid ? (
         <Text className="text-accent font-sans text-xs" role="alert">
           Enter chapter {from} or later.
