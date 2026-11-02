@@ -10,6 +10,18 @@ skip a 404 and never read its tags. Those paths now go through
 `run_worker_first`. `withPageMeta` (`worker/og.ts`) returns 200 for paths
 `parseCardPath` recognizes and keeps the 404 for everything else.
 
+The shell also has no `<title>`. When metadata cannot resolve, keep the site
+image and description and inject `Shinobu` as the title and `og:title`, so
+shared links still have a complete site preview.
+
+Simkl's `/search/id` supplies the media type but no overview. Follow it with
+the typed `/movies`, `/tv`, or `/anime` detail read with `extended=full` for
+the description. Anime details also supply the English title as `en_title`.
+
+Workers Builds variables only reach the build. The metadata reader needs
+`EXPO_PUBLIC_TMDB_TOKEN` and `EXPO_PUBLIC_SIMKL_CLIENT_ID` in the Worker's
+runtime Variables and Secrets too; otherwise those links use the site card.
+
 ## satori ≥ 0.33 does not run on Workers
 
 satori 0.33 added HarfBuzz text shaping. Its Emscripten glue reads
