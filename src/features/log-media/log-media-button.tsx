@@ -264,12 +264,15 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
         icon={<Button.Icon name={isRewatch ? 'eye' : 'eye-outline'} />}
         label={blocked ?? action}
         // The episode number arrives with Trakt's progress read — a spinner
-        // says "resolving which episode", not "your tap did nothing".
+        // says "resolving which episode", not "your tap did nothing". Manga
+        // also waits out the refetch a log starts: until it lands, the cached
+        // entry names a chapter the log already covered, and confirming that
+        // one reconciles as a reread that lowers the counter.
         loading={
           seriesNextState.status === 'loading' ||
           (upcomingNeeded && seasons.isLoading) ||
           simklAnimeEntry.isLoading ||
-          (isManga && anilistEntry.isLoading) || busy
+          (isManga && anilistEntry.isFetching) || busy
         }
         morphLabel
         onPress={() => {
