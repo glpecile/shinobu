@@ -78,7 +78,7 @@ function ProviderSheetContent({
       </SheetHeader>
 
       {connected ? (
-        <View className="mt-5 gap-3">
+        <View className="mt-5 gap-5">
           <Text className="text-muted font-sans text-sm">
             Shinobu forgets this {PROVIDERS[id].label} session on this device.
             Nothing on {PROVIDERS[id].label} is deleted, and you can reconnect
