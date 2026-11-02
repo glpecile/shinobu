@@ -18,9 +18,10 @@
 
 ## How it was measured
 
-- **Device**: iPhone 17 Pro simulator, iOS 26.5, dev build (Hermes, React
-  Compiler on), the owner's real accounts: 294 diary logs (227 Simkl), 82
-  queries in the cache.
+- **Devices**: iPhone 17 Pro simulator (iOS 26.5) for the full scenario, plus
+  a Pixel 8 Pro (Android 17) for the diary before/after. Dev builds (Hermes,
+  React Compiler on), the owner's real accounts: 294 diary logs (227 Simkl),
+  82 queries in the cache.
 - **Scenario** (52 s, scripted with argent): pull to refresh on Home, scroll
   Home, open an episode from Continue Watching, go back, open Diary, scroll it
   four times, go back to Home.
@@ -34,7 +35,7 @@
 
 | # | Spot | Time now (before) | Case matched | Where | Speedup |
 |---|------|-------------------|--------------|-------|---------|
-| 1 | Diary scroll rebuilds every row and both month calendars on each sticky-header change | 27 hot commits, **2,076 ms** in 10 s of scrolling (worst 191 ms); `DiaryMonth` 15 renders; 5,555 ms busy JS | Uses a cache (React Compiler memo) that was silently off | `src/features/diary/diary-list.tsx` `DiaryList` (L733–990), `DiaryStickyDate` (L85) | **DONE: 23×** less hot-commit time (89 ms over 2 commits); `DiaryMonth` 15 → 1 render (a real mount); busy JS **2.9×** less (1,914 ms) |
+| 1 | Diary scroll rebuilds every row and both month calendars on each sticky-header change | 27 hot commits, **2,076 ms** in 10 s of scrolling (worst 191 ms); `DiaryMonth` 15 renders; 5,555 ms busy JS | Uses a cache (React Compiler memo) that was silently off | `src/features/diary/diary-list.tsx` `DiaryList` (L733–990), `DiaryStickyDate` (L85) | **DONE.** iOS sim: total commit time **20×** less (2,211 → 108 ms), hot commits 27 → 2, `DiaryMonth` 15 → 1 render (a real mount), busy JS **2.9×** less. Pixel 8 Pro: total commit time **1.6×** less (1,524 → 950 ms), worst commit 315 → 198 ms, `DiaryMonth` 4 → 0 renders; the remainder is LegendList recycling rows, which both runs pay |
 | 2 | Opening an episode mounts both neighbour pages at full fidelity | 5 hot commits, **704 ms**; the deferred neighbour pass alone is **228 ms** (3× `EpisodePage`, 124 `Skeleton`, 4 people rails, 2 discussion and 2 ratings sections nobody can see) | Nothing matched, so data-oriented: produce data, not views, for off-screen pages | `src/features/episode-details/screen/index.tsx` `EpisodePager` (L73–168), `EpisodePage` (L175) | Expected **~3×** on the 228 ms commit; open follow-up B |
 | 3 | Diary merge sort parses two ISO dates per comparison | **3.32 ms** per merge (2,396 comparisons for 294 logs; the sort is 92% of it) | AoS → SoA: the sort reads one field, so parse it once into a key column | `src/features/diary/merge.ts` `mergeDiaryEntries` (L62) | **DONE: 4.3×** (0.77 ms); the sort alone **8.6×** (3.05 → 0.36 ms) |
 | 4 | Diary day collapse scans every bucket's identity set per entry | **3.84 ms** per regroup | Hot loop hitting hash tables: a flat bucket array indexed by `episodesKey + identity`, and precomputed within-day sort keys | `src/features/diary/merge.ts` `collapseDay` (L360), `sortMergedDesc` (L350) | **DONE: 1.15×** (3.33 ms). Less than expected: the remainder is per-bucket allocation in `toMerged`; see follow-up D |
