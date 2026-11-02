@@ -254,14 +254,26 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   }
   if (label == null) return null;
 
+  // A MorphText can't wrap, so each part morphs on its own and the parts wrap
+  // as whole units beside the poster instead of running under it.
+  const parts = label.split(' · ');
   return (
-    <View className="flex-row items-center gap-1.5 mt-1.5">
-      <Ionicons
-        color={accent}
-        name="eye"
-        size={13}
-      />
-      <MorphText className="text-muted font-sans text-sm">{label}</MorphText>
+    <View className="flex-row items-start gap-1.5 mt-1.5">
+      {/* One text-sm line tall, so the eye centres on the first line. */}
+      <View className="h-5 justify-center">
+        <Ionicons
+          color={accent}
+          name="eye"
+          size={13}
+        />
+      </View>
+      <View className="flex-1 flex-row flex-wrap gap-x-1">
+        {parts.map((part, index) => (
+          <MorphText key={index} className="text-muted font-sans text-sm">
+            {index < parts.length - 1 ? `${part} ·` : part}
+          </MorphText>
+        ))}
+      </View>
     </View>
   );
 }
