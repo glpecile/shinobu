@@ -16,7 +16,7 @@ import type {
  * write must run in-session — the only channel carrying the real session is the
  * WebView itself (proven empirically, docs/solutions/letterboxd-no-api-fallback.md).
  *
- * Each write mounts its film or list page with a document-end script. Nitro's imperative
+ * Each write mounts its film or list page with a document-start script. Nitro's imperative
  * `evaluateJavaScript` runs off the main thread and crashes WebKit on iOS.
  * The injected script relays
  * the outcome over `window.ReactNativeWebView.postMessage(...)` → the WebView's
@@ -183,15 +183,25 @@ function buildWatchlistScript(
 }
 
 /**
- * Native writes load the target page with a document-end script so
- * the page-derived values (identifier, live session) are in place. Outcome arrives via
- * postMessage → `handleLetterboxdMessage`. Rejects if no WebView is mounted
- * (web / not connected) so the adapter surfaces a dead-session error rather
- * than hanging.
+ * A film page has everything its writes need once `<head>` is parsed: the LID
+ * meta closes the head, after the inline script that sets `supermodelCSRF`.
+ */
+const FILM_HEAD_PARSED = `document.querySelector('meta[name="production:identifier"]')`;
+
+/**
+ * Native writes load the target page with a document-start script that runs
+ * the write at DOMContentLoaded, or as soon as `ready` (a JS expression) holds,
+ * and then stops the rest of the page from loading. Waiting for the whole page
+ * took ~40 s on a 3G-like link, versus ~7 s for a film write that starts after
+ * `<head>` and stops the page's ads and images.
+ * Outcome arrives via postMessage → `handleLetterboxdMessage`. Rejects if no
+ * WebView is mounted (web / not connected) so the adapter surfaces a
+ * dead-session error rather than hanging.
  */
 function runInPage(
   path: string,
   buildScript: (id: string) => string,
+  ready?: string,
 ): Promise<LetterboxdWebResponse> {
   const ref = webView;
   if (ref == null) {
@@ -214,17 +224,25 @@ function runInPage(
     };
 
     try {
-      // Document-end injection runs again on navigation/reload. Consume the
-      // request in tab-local storage before writing so it can never log twice.
-      // A Cloudflare challenge page reloads into the real page once it passes,
-      // so it must not consume the request.
+      // Document-start injection runs again on navigation/reload, and `start`
+      // can fire from both triggers. Consume the request in tab-local storage
+      // before writing so it can never log twice. A Cloudflare challenge page
+      // reloads into the real page once it passes, so it must not consume it.
       ref.loadPage(id, path, `(function(){
         if (window.location.origin !== 'https://letterboxd.com') return;
-        if (window._cf_chl_opt) return;
         var key = ${JSON.stringify(id)};
-        if (sessionStorage.getItem(key)) return;
-        sessionStorage.setItem(key, 'sent');
-        ${buildScript(id)}
+        function start() {
+          if (window._cf_chl_opt || sessionStorage.getItem(key)) return;
+          sessionStorage.setItem(key, 'sent');
+          ${ready != null ? 'window.stop();' : ''}
+          ${buildScript(id)}
+        }
+        if (document.readyState !== 'loading') return start();
+        document.addEventListener('DOMContentLoaded', start);
+        ${ready != null ? `var observer = new MutationObserver(function(){
+          if (${ready}) { observer.disconnect(); start(); }
+        });
+        observer.observe(document, { childList: true, subtree: true });` : ''}
       })();`);
     } catch (error) {
       fail(error);
@@ -234,12 +252,12 @@ function runInPage(
 }
 
 /**
- * Load the authenticated film page and POST the diary entry at document end.
+ * Load the authenticated film page and POST the diary entry once its head is parsed.
  */
 export function letterboxdWebFetch(
   request: LetterboxdWebRequest,
 ): Promise<LetterboxdWebResponse> {
-  return runInPage(request.filmPath, (id) => buildSubmitScript(id, request));
+  return runInPage(request.filmPath, (id) => buildSubmitScript(id, request), FILM_HEAD_PARSED);
 }
 
 /**
@@ -249,7 +267,7 @@ export function letterboxdWebFetch(
 export function letterboxdWatchlistWebFetch(
   request: LetterboxdWatchlistWebRequest,
 ): Promise<LetterboxdWebResponse> {
-  return runInPage(request.filmPath, (id) => buildWatchlistScript(id, request));
+  return runInPage(request.filmPath, (id) => buildWatchlistScript(id, request), FILM_HEAD_PARSED);
 }
 
 /** Uses the site's declarative like form; captcha-required likes stay on Letterboxd. */
