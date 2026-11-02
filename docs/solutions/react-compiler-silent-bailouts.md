@@ -35,8 +35,13 @@ for the whole component or for one memo scope:
 
 ## How to check a file
 
+`bun lint` does it: `shinobu/react-compiler-bailout` runs the compiler over
+every component and hook file and fails on each function it skips. It only sees
+whole-function bailouts, not the dropped memo scopes above, so check those by
+hand:
+
 ```js
-// node with NODE_PATH=node_modules; prints CompileError events per function
+// node with NODE_PATH=node_modules; prints CompileError events per function, as the rule does
 const babel = require('@babel/core');
 const events = [];
 babel.transformSync(source, {

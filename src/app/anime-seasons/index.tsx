@@ -99,11 +99,7 @@ function SeasonWall({
 
   async function refresh() {
     setRefreshing(true);
-    try {
-      await pages.refetch();
-    } finally {
-      setRefreshing(false);
-    }
+    await pages.refetch().finally(() => setRefreshing(false));
   }
 
   if (items.length === 0) {

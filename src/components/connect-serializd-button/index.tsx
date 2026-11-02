@@ -41,18 +41,16 @@ export function ConnectSerializdButton() {
   const submit = handleSubmit(async (values) => {
     setStatus('submitting');
     setErrorMessage(null);
-    try {
-      const session = await loginSerializd({
-        email: values.email.trim(),
-        password: values.password,
-      });
-      connectSerializd(session);
-    } catch (error) {
+    await loginSerializd({
+      email: values.email.trim(),
+      password: values.password,
+    })
+      .then((session) => connectSerializd(session))
       // Surface the API's own message (wrong password, etc.); store nothing.
-      setErrorMessage(loginErrorText(error instanceof Error ? error.message : String(error)));
-    } finally {
-      setStatus('idle');
-    }
+      .catch((error: unknown) => {
+        setErrorMessage(loginErrorText(error instanceof Error ? error.message : String(error)));
+      })
+      .finally(() => setStatus('idle'));
   });
 
   return (

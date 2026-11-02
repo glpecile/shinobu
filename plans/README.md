@@ -254,4 +254,4 @@ Round 2:
 
 | Plan | Title | Category | Priority | Effort | Risk | Status |
 |------|-------|----------|----------|--------|------|--------|
-| [031](031-performance-review-2026-11.md) | The five slowest spots from a device profile | perf | P2 | M | LOW–MED | IN PROGRESS (diary leaves done in this PR; follow-ups A–D open) |
+| [031](031-performance-review-2026-11.md) | The five slowest spots from a device profile | perf | P3 | S | LOW | IN PROGRESS (diary leaves and the compiler lint done in #411; follow-ups A–B open) |

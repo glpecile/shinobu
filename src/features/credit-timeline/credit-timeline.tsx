@@ -262,11 +262,11 @@ export function CreditTimeline({
       : {}),
   }));
   function refocus() {
-    settle.value = 0;
-    settle.value = withTiming(1, {
+    settle.set(0);
+    settle.set(withTiming(1, {
       duration: DURATION.swap,
       easing: KEYFRAME_EASE_OUT,
-    });
+    }));
   }
   const listRef = useRef<LegendListRef>(null);
   const { scrollY } = useScrolledTitle();
@@ -303,7 +303,7 @@ export function CreditTimeline({
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     // Fed from here, on the JS thread: the title bar only moves while the
     // header is on screen, where nothing else is keeping this thread busy.
-    scrollY.value = event.nativeEvent.contentOffset.y;
+    scrollY.set(event.nativeEvent.contentOffset.y);
   }
 
   return (

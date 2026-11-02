@@ -117,13 +117,13 @@ export function useSimklConnect() {
       return;
     }
 
-    try {
-      await exchangeSimklCode({ code, state: state ?? '', redirectUri });
-      setStatus('idle');
-    } catch (error) {
-      setStatus('error');
-      console.error('Simkl OAuth exchange failed', error);
-    }
+    await exchangeSimklCode({ code, state: state ?? '', redirectUri }).then(
+      () => setStatus('idle'),
+      (error: unknown) => {
+        setStatus('error');
+        console.error('Simkl OAuth exchange failed', error);
+      },
+    );
   }
 
   return {

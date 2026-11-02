@@ -42,7 +42,7 @@ export function EpisodeRow({
   onMark,
   onOpen,
   onActions,
-  aired = hasAired(episode.firstAired),
+  aired: airedProp,
 }: {
   season: NormalizedSeason;
   episode: NormalizedEpisode;
@@ -52,6 +52,7 @@ export function EpisodeRow({
   onActions?: (() => void) | undefined;
   aired?: boolean;
 }) {
+  const aired = airedProp ?? hasAired(episode.firstAired);
   const accent = useThemeColor('--color-accent');
   const muted = useThemeColor('--color-muted');
   const foreground = useThemeColor('--color-foreground');

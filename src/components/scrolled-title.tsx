@@ -89,7 +89,7 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
       // A screen parked under a pushed one lays out at zero (web hides it with
       // `display: none`); keep the real frame so the bar doesn't exit and re-enter.
       if (height === 0) return;
-      anchor.value = { y: y + scrollY.value, height };
+      anchor.set({ y: y + scrollY.value, height });
     });
   }
 
@@ -121,7 +121,7 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
 export function useScrolledTitle() {
   const { scrollY } = useScrolledTitleContext('useScrolledTitle');
   const onScroll = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+    scrollY.set(event.contentOffset.y);
   });
   return { scrollY, onScroll, scrollEventThrottle: 16 as const };
 }
@@ -155,12 +155,12 @@ function useCovered(
     () => covered(scrollY.value, anchor.value, whole, barHeight),
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
-      progress.value = withTiming(
+      progress.set(withTiming(
         isCovered ? 1 : 0,
         isCovered
           ? { duration, easing: KEYFRAME_EASE_OUT }
           : { duration: DURATION.exit, easing: KEYFRAME_EASE_EXIT },
-      );
+      ));
     },
   );
   return progress;

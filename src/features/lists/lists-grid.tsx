@@ -73,11 +73,7 @@ export function ListsIndex({
   const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
   async function refresh() {
     setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
+    await refetch().finally(() => setRefreshing(false));
   }
   return (
     <>

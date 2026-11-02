@@ -8,13 +8,11 @@ export function useLinkHandoff(openLink: () => void | Promise<void>) {
   async function open() {
     if (loading) return;
     setLoading(true);
-    try {
-      await openLink();
-    } catch {
-      toast.error('Could not open link', 'Try again or check that a browser is installed.');
-    } finally {
-      setLoading(false);
-    }
+    // The executor runs `openLink` synchronously, inside the press, so a web
+    // popup keeps its user activation; a sync throw becomes the rejection.
+    await new Promise<void>((resolve) => resolve(openLink()))
+      .catch(() => toast.error('Could not open link', 'Try again or check that a browser is installed.'))
+      .finally(() => setLoading(false));
   }
   return { loading, open };
 }
