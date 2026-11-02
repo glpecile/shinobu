@@ -1,6 +1,9 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useRef, useState } from 'react';
+import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { LikeButton } from '@/components/like-button';
@@ -18,6 +21,7 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -30,6 +34,13 @@ import { useLogTargetsSplit } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 import { LetterboxdCompletionOffer } from './letterboxd-completion-offer';
+import {
+  chaptersThrough,
+  stepThroughChapter,
+  throughChapterSchema,
+  throughChapterText,
+  type ThroughChapterForm,
+} from './through-chapter-schema';
 
 /** Editable diary tag shared by one-shot and chained logging sessions. */
 export const DEFAULT_LOG_TAGS = 'shinobu, ';
@@ -206,6 +217,97 @@ export function LogFormFields({
 }
 
 /**
+ * The manga form's "through chapter" stepper (plan 0117 M2): the last chapter
+ * this log covers, from the next unread one up to a known total, typed or
+ * stepped with the buttons either side. Its rule is `throughChapterSchema`.
+ */
+function ThroughChapterField({ control, getValues, from, total, pending }: {
+  control: Control<ThroughChapterForm>;
+  getValues: UseFormGetValues<ThroughChapterForm>;
+  from: number;
+  total?: number;
+  pending: boolean;
+}) {
+  const input = useRef<TextInputInstance>(null);
+  const { field, fieldState } = useController({ control, name: 'through' });
+  const muted = useThemeColor('--color-muted');
+  const accent = useThemeColor('--color-accent');
+  const bounds = total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`;
+  const error = fieldState.error?.message;
+
+  // Steps from the form's live value: two quick presses can both land before
+  // a re-render, and the rendered `field.value` would drop the second.
+  function step(by: 1 | -1) {
+    haptics.selection();
+    field.onChange(stepThroughChapter(getValues('through'), by, from, total));
+  }
+
+  return (
+    <View className={cn('mt-5 gap-2', pending && 'opacity-50')}>
+      <Text
+        className="text-foreground font-sans-semibold text-sm"
+        onPress={() => input.current?.focus()}
+      >
+        Through chapter
+      </Text>
+      <View className="flex-row items-center gap-3">
+        <Button
+          disabled={pending || Number(field.value) <= from}
+          icon={<Button.Icon name="chevron-back" />}
+          iconOnly
+          label="Previous chapter"
+          onPress={() => step(-1)}
+          pressBehavior="immediate"
+          variant="quiet"
+        />
+        <View className="flex-1">
+          <TextField
+            ref={input}
+            accessibilityHint={bounds}
+            accessibilityLabel="Through chapter"
+            editable={!pending}
+            inputMode="numeric"
+            onBlur={field.onBlur}
+            onChangeText={(text) => field.onChange(throughChapterText(text, from, total))}
+            returnKeyType="done"
+            selectTextOnFocus
+            textAlign="center"
+            value={field.value}
+          />
+        </View>
+        <Button
+          disabled={pending || stepThroughChapter(field.value, 1, from, total) === field.value}
+          icon={<Button.Icon name="chevron-forward" />}
+          iconOnly
+          label="Next chapter"
+          onPress={() => step(1)}
+          pressBehavior="immediate"
+          variant="quiet"
+        />
+      </View>
+      {/* Keyed so an error mounts as a new alert, which a screen reader
+          announces; flipping the role on a mounted note may not be. */}
+      <View key={error == null ? 'note' : 'error'} className="flex-row items-center gap-1.5">
+        <Ionicons
+          accessibilityElementsHidden
+          aria-hidden
+          importantForAccessibility="no"
+          color={error == null ? muted : accent}
+          name={error == null ? 'information-circle-outline' : 'alert-circle-outline'}
+          size={16}
+        />
+        <Text
+          className={cn('flex-1 font-sans text-xs', error == null ? 'text-muted' : 'text-accent')}
+          role={error == null ? undefined : 'alert'}
+        >
+          {error ?? bounds}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
  * One-shot movie/season-batch session: owns the form, confirmation, and
  * partial-failure report. Sheet-agnostic — the app-level `CatchUpLogSheet`
  * wraps it in its own drawer, and the card-actions sheet renders it in place
@@ -220,8 +322,24 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   /** Renders a Letterboxd series-completion follow-up inline, like `onClose`'s host does. */
   onOpenRequest?: (request: LogRequest) => void;
 }) {
-  const { item, title, description } = request;
+  const { item, description } = request;
+  const { fontScale } = useWindowDimensions();
   const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
+  const range = request.chapterRange;
+  // Only a "Log chapter N" request renders the field, so no other log submits it.
+  const { control, getValues, handleSubmit, formState: { errors } } = useForm<ThroughChapterForm>({
+    defaultValues: { through: range == null ? '' : String(range.from) },
+    mode: 'onChange',
+    // Typing toward chapter 125 from 120 passes through "1" and "12", so the
+    // error waits for a pause in typing. A confirm validates at once.
+    delayError: 500,
+    resolver: zodResolver(throughChapterSchema(range?.from ?? 1)),
+  });
+  const through = Number(useWatch({ control, name: 'through' }));
+  // One chapter keeps the request's copy; a range is named in the title and
+  // toast.
+  const span = range != null && through > range.from ? `chapters ${range.from}–${through}` : undefined;
+  const title = span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
@@ -232,7 +350,9 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
   const [retryOf, setRetryOf] = useState<{ rewatch: boolean } | null>(null);
-  // Warms the pre-write watch-state reads while the sheet is open, so Confirm starts writing at once.
+  // Warms the pre-write watch-state reads while the sheet is open, so Confirm
+  // starts writing at once. A chapter range reads the same entry, so typing
+  // doesn't re-warm.
   useLogReconcileQuery({
     item,
     episodes: request.episodes,
@@ -247,12 +367,20 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
 
   function confirm() {
     if (logMedia.isPending || selectedProviders.length === 0) return;
+    if (range == null) {
+      send(request.entryEpisodes);
+      return;
+    }
+    void handleSubmit(({ through: last }) => send(chaptersThrough(range.from, Number(last))))();
+  }
+
+  function send(entryEpisodes: number[] | undefined) {
     haptics.confirm();
     const parsedTags = parseTags(tags);
     const write = logMedia.mutateAsync({
       item,
       episodes: request.episodes,
-      entryEpisodes: request.entryEpisodes,
+      entryEpisodes,
       providers: selectedProviders,
       liked,
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
@@ -265,7 +393,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
         // A retired inline session must not close a newer host flow.
         if (!openRef.current) {
           if (isCleanWriteReport(outcome)) {
-            const copy = logToastCopy(outcome, repeat);
+            const copy = logToastCopy(outcome, repeat, span);
             toast.success(copy.title, copy.message);
           } else {
             toast.error(
@@ -281,7 +409,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             setCompletionOffer({ ...followUp, watchedAt: watchedAt?.toISOString(), tags: parsedTags, liked });
             return;
           }
-          const copy = logToastCopy(outcome, repeat);
+          const copy = logToastCopy(outcome, repeat, span);
           toast.success(copy.title, copy.message);
           (onDismiss ?? onClose)();
         } else if (outcome.failed.length > 0) haptics.error();
@@ -351,6 +479,15 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       ) : (
         <>
           <WriteSheet.Description>{description}</WriteSheet.Description>
+          {range != null && (
+            <ThroughChapterField
+              control={control}
+              from={range.from}
+              getValues={getValues}
+              pending={pending}
+              total={range.total}
+            />
+          )}
           <LogFormFields
             item={item}
             manualTargets={manualTargets}
@@ -370,11 +507,12 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           <WriteSheet.Actions>
             <Button
               variant="log"
-              disabled={selectedProviders.length === 0}
+              disabled={selectedProviders.length === 0 || errors.through != null}
               icon={<Button.Icon name="eye" />}
               label={title}
               loading={pending}
               loadingLabel="Logging…"
+              morphLabel={range != null && fontScale <= 1}
               onPress={confirm}
             />
           </WriteSheet.Actions>

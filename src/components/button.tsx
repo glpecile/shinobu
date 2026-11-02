@@ -14,7 +14,7 @@ import {
 
 import { AnimatedView } from '@/components/animated-view';
 import { MorphText } from '@/components/morph-text';
-import { PresstableOpacity } from '@/components/presstable';
+import { PresstableOpacity, type PressBehavior } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor, type ThemeColorToken } from '@/lib/theme-color';
@@ -236,6 +236,11 @@ export interface ButtonProps {
   /** Toggle state, announced on native and web. */
   pressed?: boolean;
   /**
+   * `immediate` for a button pressed in quick succession, like a stepper's,
+   * whose repeats the default `prevent-repeat` would drop.
+   */
+  pressBehavior?: PressBehavior;
+  /**
    * Layout only — `shrink-0`, `self-start`, `self-stretch`, `mt-2`.
    * Deliberately last in the `cn` chain so it wins, but appearance belongs to
    * `variant`/`size`/`shape`.
@@ -284,6 +289,7 @@ export function Button({
   accessibilityLabel,
   iconOnly = false,
   pressed,
+  pressBehavior,
   className,
 }: ButtonProps) {
   const reduceMotion = useReducedMotion();
@@ -332,6 +338,7 @@ export function Button({
       aria-pressed={pressed}
       disabled={unavailable}
       onPress={onPress}
+      pressBehavior={pressBehavior}
     >
       {/* Slot fades are for swaps on a mounted button. Its own mount and
           unmount skip them, or every row in a list that opens or closes

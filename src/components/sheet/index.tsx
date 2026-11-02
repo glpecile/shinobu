@@ -11,7 +11,7 @@ import {
   type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import { useKeyboardState, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { createAnimatedComponent, useAnimatedStyle } from 'react-native-reanimated';
 
 import { RailFadeColor } from '@/components/rail';
@@ -65,7 +65,7 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         if (index === 0 && open) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
-      // Android's keyboard draws over the sheet, which is short enough that
+      // The keyboard draws over the sheet, which is short enough that
       // its scroller has nowhere to scroll a field to. Shrinking the host lifts
       // the sheet above the keyboard, like `adjustResize`; the host re-anchors
       // on resize natively. Resize the host, never the content, which crashed
@@ -73,8 +73,8 @@ export function Sheet({ open, onClose, children }: SheetProps) {
       // The lift follows the keyboard frame by frame: jumping to its final
       // height flashed the screen behind between the sheet and the keyboard.
       // The lib types `style` as static, but it lands on the wrapped view.
-      style={process.env.EXPO_OS === 'android' ? (lift as unknown as ViewStyle) : undefined}
-      wrapNativeView={process.env.EXPO_OS === 'android' ? createAnimatedComponent : undefined}
+      style={lift as unknown as ViewStyle}
+      wrapNativeView={createAnimatedComponent}
       surface={
         <View className="absolute inset-0 bg-surface rounded-t-3xl border border-border" />
       }
@@ -136,6 +136,7 @@ const HEIGHT_EPSILON = 1;
  * is focused would otherwise be swallowed as a keyboard dismissal.
  */
 function SheetContent({ children }: { children: ReactNode }) {
+  const keyboardVisible = useKeyboardState((state) => state.isVisible);
   const maxHeight = Math.round(
     useWindowDimensions().height * MAX_SHEET_FRACTION,
   );
@@ -159,12 +160,12 @@ function SheetContent({ children }: { children: ReactNode }) {
 
   // No keyboard-aware scroller: the sheet host itself moves above the keyboard
   // (see `Sheet`), so scrolling the field up as well would over-shoot. The
-  // lifted host can leave less room than the cap, so Android's scroller stays
-  // enabled; its ScrollView never intercepts a drag while it can't scroll.
+  // lifted host can leave less room than the cap, so iOS enables scrolling
+  // with the keyboard; without it, short sheets stay draggable-to-dismiss.
   const scroller = (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      scrollEnabled={scrollEnabled || process.env.EXPO_OS === 'android'}
+      scrollEnabled={scrollEnabled || keyboardVisible || process.env.EXPO_OS === 'android'}
     >
       {body}
     </ScrollView>

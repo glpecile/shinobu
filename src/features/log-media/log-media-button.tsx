@@ -134,6 +134,12 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const entryRepeat =
     (isAnimeSeries || isManga) && total != null && total > 0 && currentProgress >= total;
   const nextEpisode = entryRepeat ? 1 : currentProgress + 1;
+  // A manga log can run through a later chapter in the same write, except a
+  // reread's restart and the last chapter, which have nothing to run to.
+  const chapterRange =
+    isManga && !entryRepeat && (total == null || total > nextEpisode)
+      ? { from: nextEpisode, ...(total != null ? { total } : {}) }
+      : null;
 
   // Never offer to log an episode that hasn't aired yet (todos/006).
   // Only evaluate aired status once the episodes query has successfully loaded.
@@ -258,18 +264,22 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
         icon={<Button.Icon name={isRewatch ? 'eye' : 'eye-outline'} />}
         label={blocked ?? action}
         // The episode number arrives with Trakt's progress read — a spinner
-        // says "resolving which episode", not "your tap did nothing".
+        // says "resolving which episode", not "your tap did nothing". Manga
+        // also waits out the refetch a log starts: until it lands, the cached
+        // entry names a chapter the log already covered, and confirming that
+        // one reconciles as a reread that lowers the counter.
         loading={
           seriesNextState.status === 'loading' ||
           (upcomingNeeded && seasons.isLoading) ||
           simklAnimeEntry.isLoading ||
-          (isManga && anilistEntry.isLoading) || busy
+          (isManga && anilistEntry.isFetching) || busy
         }
         morphLabel
         onPress={() => {
           const request: LogRequest = {
             item, title: action, description,
             ...(isAnimeSeries || isManga ? { entryEpisodes: [nextEpisode] } : {}),
+            ...(chapterRange != null ? { chapterRange } : {}),
             ...(isSeries && seriesNext != null
               ? { episodes: [{ season: seriesNext.season, number: seriesNext.number }] }
               : {}),

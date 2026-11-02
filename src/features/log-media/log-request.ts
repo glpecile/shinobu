@@ -8,6 +8,12 @@ export type LogRequest = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpi
   entry?: UpNextEpisodeEntry;
   /** Season-wide selections stay batched even when only one episode has aired. */
   batch?: boolean;
+  /**
+   * A "Log chapter N" request whose form can run it through a later chapter
+   * (plan 0117 M2). `from` is N, and `total` is AniList's chapter count, the
+   * field's cap; an ongoing manga has none.
+   */
+  chapterRange?: { from: number; total?: number };
 };
 
 /**
