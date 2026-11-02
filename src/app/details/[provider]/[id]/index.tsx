@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 
@@ -60,6 +60,7 @@ import {
 import { SuspenseSection } from '@/components/suspense-section';
 import { formatAirDate } from '@/features/episode-details/episode-label';
 import { localDayKey } from '@/features/diary/merge';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { parseLocalInstant } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
@@ -199,6 +200,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     enabled: connected.includes('simkl'),
   }).data;
   const accent = useThemeColor('--color-accent');
+  const { fontScale } = useWindowDimensions();
 
   const plays = useFilmPlaysQuery(item).data ?? [];
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -255,21 +257,35 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   if (label == null) return null;
 
   // A MorphText can't wrap, so each part morphs on its own and the parts wrap
-  // as whole units beside the poster instead of running under it.
-  const parts = label.split(' · ');
+  // as whole units beside the poster instead of running under it. Past 1×
+  // system text one part can outgrow the column, so the line falls back to a
+  // wrapping Text, like Up Next's empty day.
+  const wrapsAsText = fontScale > 1;
+  const parts = wrapsAsText ? [label] : label.split(' · ');
   return (
-    <View className="flex-row items-start gap-1.5 mt-1.5">
-      {/* One text-sm line tall, so the eye centres on the first line. */}
-      <View className="h-5 justify-center">
+    // One stop for a screen reader, though each native MorphText is its own.
+    <View accessible accessibilityLabel={label} className="flex-row items-start gap-1.5 mt-1.5">
+      {/* One text-sm line (20pt, scaled like the text), so the eye centres on the first line. */}
+      <View className="justify-center" style={{ height: 20 * fontScale }}>
         <Ionicons
           color={accent}
           name="eye"
           size={13}
         />
       </View>
-      <View className="flex-1 flex-row flex-wrap gap-x-1">
+      <View
+        accessibilityElementsHidden
+        className={cn('flex-1', !wrapsAsText && 'flex-row flex-wrap gap-x-1')}
+        importantForAccessibility="no-hide-descendants"
+      >
         {parts.map((part, index) => (
-          <MorphText key={index} className="text-muted font-sans text-sm">
+          <MorphText
+            // Dates run newest first, so they count from the end: a new play's
+            // date mounts instead of shifting every older date into the next.
+            key={index === 0 ? 'status' : parts.length - index}
+            className="text-muted font-sans text-sm"
+            numberOfLines={wrapsAsText ? 0 : undefined}
+          >
             {index < parts.length - 1 ? `${part} ·` : part}
           </MorphText>
         ))}
