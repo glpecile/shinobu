@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useRef, useState } from 'react';
-import { useController, useForm, useWatch, type Control } from 'react-hook-form';
+import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
@@ -35,11 +35,11 @@ import { WatchedAtField } from './watched-at-field';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 import { LetterboxdCompletionOffer } from './letterboxd-completion-offer';
 import {
+  chaptersThrough,
   stepThroughChapter,
   throughChapterSchema,
   throughChapterText,
   type ThroughChapterForm,
-  type ThroughChapters,
 } from './through-chapter-schema';
 
 /** Editable diary tag shared by one-shot and chained logging sessions. */
@@ -221,8 +221,9 @@ export function LogFormFields({
  * this log covers, from the next unread one up to a known total, typed or
  * stepped with the buttons either side. Its rule is `throughChapterSchema`.
  */
-function ThroughChapterField({ control, from, total, pending }: {
-  control: Control<ThroughChapterForm, unknown, ThroughChapters>;
+function ThroughChapterField({ control, getValues, from, total, pending }: {
+  control: Control<ThroughChapterForm>;
+  getValues: UseFormGetValues<ThroughChapterForm>;
   from: number;
   total?: number;
   pending: boolean;
@@ -234,9 +235,11 @@ function ThroughChapterField({ control, from, total, pending }: {
   const bounds = total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`;
   const error = fieldState.error?.message;
 
+  // Steps from the form's live value: two quick presses can both land before
+  // a re-render, and the rendered `field.value` would drop the second.
   function step(by: 1 | -1) {
     haptics.selection();
-    field.onChange(stepThroughChapter(field.value, by, from, total));
+    field.onChange(stepThroughChapter(getValues('through'), by, from, total));
   }
 
   return (
@@ -265,7 +268,7 @@ function ThroughChapterField({ control, from, total, pending }: {
             editable={!pending}
             inputMode="numeric"
             onBlur={field.onBlur}
-            onChangeText={(text) => field.onChange(throughChapterText(text, total))}
+            onChangeText={(text) => field.onChange(throughChapterText(text, from, total))}
             returnKeyType="done"
             selectTextOnFocus
             textAlign="center"
@@ -282,9 +285,12 @@ function ThroughChapterField({ control, from, total, pending }: {
           variant="quiet"
         />
       </View>
-      <View className="flex-row items-center gap-1.5">
+      {/* Keyed so an error mounts as a new alert, which a screen reader
+          announces; flipping the role on a mounted note may not be. */}
+      <View key={error == null ? 'note' : 'error'} className="flex-row items-center gap-1.5">
         <Ionicons
           accessibilityElementsHidden
+          aria-hidden
           importantForAccessibility="no"
           color={error == null ? muted : accent}
           name={error == null ? 'information-circle-outline' : 'alert-circle-outline'}
@@ -320,14 +326,17 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
   const range = request.chapterRange;
   // Only a "Log chapter N" request renders the field, so no other log submits it.
-  const { control, handleSubmit, formState: { errors } } = useForm<ThroughChapterForm, unknown, ThroughChapters>({
+  const { control, getValues, handleSubmit, formState: { errors } } = useForm<ThroughChapterForm>({
     defaultValues: { through: range == null ? '' : String(range.from) },
     mode: 'onChange',
+    // Typing toward chapter 125 from 120 passes through "1" and "12", so the
+    // error waits for a pause in typing. A confirm validates at once.
+    delayError: 500,
     resolver: zodResolver(throughChapterSchema(range?.from ?? 1)),
   });
   const through = Number(useWatch({ control, name: 'through' }));
-  // One chapter keeps the request's copy; a range is named in the title,
-  // report and toast.
+  // One chapter keeps the request's copy; a range is named in the title and
+  // toast.
   const span = range != null && through > range.from ? `chapters ${range.from}–${through}` : undefined;
   const title = span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
@@ -361,7 +370,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       send(request.entryEpisodes);
       return;
     }
-    void handleSubmit(({ chapters }) => send(chapters))();
+    void handleSubmit(({ through: last }) => send(chaptersThrough(range.from, Number(last))))();
   }
 
   function send(entryEpisodes: number[] | undefined) {
@@ -449,7 +458,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             }
             result={result}
             succeededLine={(succeeded) =>
-              `${result?.rewatch ? `Logged ${repeat} to` : span != null ? `Logged ${span} to` : 'Logged to'} ${labels(succeeded)}.`
+              `${result?.rewatch ? `Logged ${repeat} to` : 'Logged to'} ${labels(succeeded)}.`
             }
           />
           {logMedia.isError && (
@@ -473,6 +482,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             <ThroughChapterField
               control={control}
               from={range.from}
+              getValues={getValues}
               pending={pending}
               total={range.total}
             />
