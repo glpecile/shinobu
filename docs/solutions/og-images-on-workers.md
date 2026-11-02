@@ -28,3 +28,11 @@ resvg's wasm are imported as modules that wrangler precompiles.
 On an M-series Mac, satori takes ~6 ms and resvg ~160 ms per 1200×630 card.
 That is far over the free plan's 10 ms CPU limit, so this needs Workers Paid.
 The Cache API keeps the cost to one render per card per week.
+
+## Free the WASM render objects
+
+Both `Resvg` and its rendered image need `.free()` after `asPng()`, including
+on failure. The installed binding never registers constructed `Resvg` objects
+with its finalizer. Repeated uncached renders otherwise retain WASM allocations
+in the shared isolate. A check through `handleOgImage` grew WASM memory by
+92 MB over 30 identical renders before cleanup; explicit cleanup keeps it flat.

@@ -151,7 +151,17 @@ async function renderCard(card: Card, loadBrand: () => Promise<string | null>): 
       ],
     },
   );
-  return new Resvg(svg).render().asPng();
+  const renderer = new Resvg(svg);
+  try {
+    const image = renderer.render();
+    try {
+      return image.asPng();
+    } finally {
+      image.free();
+    }
+  } finally {
+    renderer.free();
+  }
 }
 
 export function isOgImageRequest(url: URL): boolean {
