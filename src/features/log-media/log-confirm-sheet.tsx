@@ -1,4 +1,7 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useRef, useState } from 'react';
+import { useController, useForm, useWatch, type Control } from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
@@ -18,11 +21,12 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
-import { chaptersThrough, stepThroughChapter, throughChapterText, type LogRequest } from './log-request';
+import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
@@ -30,6 +34,13 @@ import { useLogTargetsSplit } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 import { LetterboxdCompletionOffer } from './letterboxd-completion-offer';
+import {
+  stepThroughChapter,
+  throughChapterSchema,
+  throughChapterText,
+  type ThroughChapterForm,
+  type ThroughChapters,
+} from './through-chapter-schema';
 
 /** Editable diary tag shared by one-shot and chained logging sessions. */
 export const DEFAULT_LOG_TAGS = 'shinobu, ';
@@ -208,23 +219,24 @@ export function LogFormFields({
 /**
  * The manga form's "through chapter" stepper (plan 0117 M2): the last chapter
  * this log covers, from the next unread one up to a known total, typed or
- * stepped with the buttons either side.
+ * stepped with the buttons either side. Its rule is `throughChapterSchema`.
  */
-function ThroughChapterField({ from, total, value, onChange, invalid, pending }: {
+function ThroughChapterField({ control, from, total, pending }: {
+  control: Control<ThroughChapterForm, unknown, ThroughChapters>;
   from: number;
   total?: number;
-  value: string;
-  onChange: (value: string) => void;
-  /** Below `from`, which the form can't submit. */
-  invalid: boolean;
   pending: boolean;
 }) {
   const input = useRef<TextInputInstance>(null);
+  const { field, fieldState } = useController({ control, name: 'through' });
+  const muted = useThemeColor('--color-muted');
+  const accent = useThemeColor('--color-accent');
   const bounds = total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`;
+  const error = fieldState.error?.message;
 
   function step(by: 1 | -1) {
     haptics.selection();
-    onChange(stepThroughChapter(value, by, from, total));
+    field.onChange(stepThroughChapter(field.value, by, from, total));
   }
 
   return (
@@ -237,7 +249,7 @@ function ThroughChapterField({ from, total, value, onChange, invalid, pending }:
       </Text>
       <View className="flex-row items-center gap-3">
         <Button
-          disabled={pending || Number(value) <= from}
+          disabled={pending || Number(field.value) <= from}
           icon={<Button.Icon name="chevron-back" />}
           iconOnly
           label="Previous chapter"
@@ -252,15 +264,16 @@ function ThroughChapterField({ from, total, value, onChange, invalid, pending }:
             accessibilityLabel="Through chapter"
             editable={!pending}
             inputMode="numeric"
-            onChangeText={(text) => onChange(throughChapterText(text, total))}
+            onBlur={field.onBlur}
+            onChangeText={(text) => field.onChange(throughChapterText(text, total))}
             returnKeyType="done"
             selectTextOnFocus
             textAlign="center"
-            value={value}
+            value={field.value}
           />
         </View>
         <Button
-          disabled={pending || stepThroughChapter(value, 1, from, total) === value}
+          disabled={pending || stepThroughChapter(field.value, 1, from, total) === field.value}
           icon={<Button.Icon name="chevron-forward" />}
           iconOnly
           label="Next chapter"
@@ -269,13 +282,21 @@ function ThroughChapterField({ from, total, value, onChange, invalid, pending }:
           variant="quiet"
         />
       </View>
-      {invalid ? (
-        <Text className="text-accent font-sans text-xs" role="alert">
-          Enter chapter {from} or later.
+      <View className="flex-row items-center gap-1.5">
+        <Ionicons
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          color={error == null ? muted : accent}
+          name={error == null ? 'information-circle-outline' : 'alert-circle-outline'}
+          size={16}
+        />
+        <Text
+          className={cn('flex-1 font-sans text-xs', error == null ? 'text-muted' : 'text-accent')}
+          role={error == null ? undefined : 'alert'}
+        >
+          {error ?? bounds}
         </Text>
-      ) : (
-        <Text className="text-muted font-sans text-xs">{bounds}</Text>
-      )}
+      </View>
     </View>
   );
 }
@@ -298,15 +319,16 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const { item, description } = request;
   const repeat = isReadIntent(item) ? 'reread' : 'rewatch';
   const range = request.chapterRange;
-  const [throughText, setThroughText] = useState(range == null ? '' : String(range.from));
-  const rangeChapters = range == null ? null : chaptersThrough(range.from, throughText);
-  const unsubmittable = range != null && rangeChapters == null;
-  const entryEpisodes = rangeChapters ?? request.entryEpisodes;
+  // Only a "Log chapter N" request renders the field, so no other log submits it.
+  const { control, handleSubmit, formState: { errors } } = useForm<ThroughChapterForm, unknown, ThroughChapters>({
+    defaultValues: { through: range == null ? '' : String(range.from) },
+    mode: 'onChange',
+    resolver: zodResolver(throughChapterSchema(range?.from ?? 1)),
+  });
+  const through = Number(useWatch({ control, name: 'through' }));
   // One chapter keeps the request's copy; a range is named in the title,
   // report and toast.
-  const span = rangeChapters != null && rangeChapters.length > 1
-    ? `chapters ${rangeChapters[0]}–${rangeChapters[rangeChapters.length - 1]}`
-    : undefined;
+  const span = range != null && through > range.from ? `chapters ${range.from}–${through}` : undefined;
   const title = span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
@@ -334,7 +356,15 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   }, [open]);
 
   function confirm() {
-    if (logMedia.isPending || selectedProviders.length === 0 || unsubmittable) return;
+    if (logMedia.isPending || selectedProviders.length === 0) return;
+    if (range == null) {
+      send(request.entryEpisodes);
+      return;
+    }
+    void handleSubmit(({ chapters }) => send(chapters))();
+  }
+
+  function send(entryEpisodes: number[] | undefined) {
     haptics.confirm();
     const parsedTags = parseTags(tags);
     const write = logMedia.mutateAsync({
@@ -441,12 +471,10 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           <WriteSheet.Description>{description}</WriteSheet.Description>
           {range != null && (
             <ThroughChapterField
+              control={control}
               from={range.from}
-              invalid={unsubmittable}
-              onChange={setThroughText}
               pending={pending}
               total={range.total}
-              value={throughText}
             />
           )}
           <LogFormFields
@@ -468,7 +496,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           <WriteSheet.Actions>
             <Button
               variant="log"
-              disabled={selectedProviders.length === 0 || unsubmittable}
+              disabled={selectedProviders.length === 0 || errors.through != null}
               icon={<Button.Icon name="eye" />}
               label={title}
               loading={pending}
