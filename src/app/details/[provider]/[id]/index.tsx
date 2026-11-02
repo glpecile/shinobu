@@ -263,7 +263,8 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const wrapsAsText = fontScale > 1;
   const parts = wrapsAsText ? [label] : label.split(' · ');
   return (
-    // One stop for a screen reader, though each native MorphText is its own.
+    // One VoiceOver/TalkBack stop, though each native MorphText is its own.
+    // Web reads the parts inline, so it needs no grouping.
     <View accessible accessibilityLabel={label} className="flex-row items-start gap-1.5 mt-1.5">
       {/* One text-sm line (20pt, scaled like the text), so the eye centres on the first line. */}
       <View className="justify-center" style={{ height: 20 * fontScale }}>
