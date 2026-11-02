@@ -240,16 +240,22 @@ async function resolveMedia(env: OgEnv, provider: MediaProvider, id: string): Pr
     case 'simkl': {
       const clientId = env.EXPO_PUBLIC_SIMKL_CLIENT_ID;
       if (!clientId) return null;
-      const [hit] = (await read<Array<{ type: string; title: string; poster?: string; year?: number }>>(
-        `${SIMKL_API_BASE_URL}/search/id?simkl=${id}&client_id=${encodeURIComponent(clientId)}`,
+      const query = `client_id=${encodeURIComponent(clientId)}`;
+      // A bare Simkl id carries no type, and only the typed detail read has the overview.
+      const [hit] = (await read<Array<{ type: string }>>(`${SIMKL_API_BASE_URL}/search/id?simkl=${id}&${query}`, {}, 'json')) ?? [];
+      const path = hit?.type === 'movie' ? 'movies' : hit?.type === 'anime' ? 'anime' : hit?.type === 'tv' ? 'tv' : null;
+      if (path == null) return null;
+      const item = await read<{ title: string; en_title?: string | null; year?: number; poster?: string; overview?: string }>(
+        `${SIMKL_API_BASE_URL}/${path}/${id}?extended=full&${query}`,
         {},
         'json',
-      )) ?? [];
-      if (!hit) return null;
+      );
+      if (!item) return null;
       return {
-        title: hit.title,
-        eyebrow: join([hit.type === 'movie' ? 'Movie' : hit.type === 'anime' ? 'Anime' : 'TV', hit.year]),
-        posters: hit.poster ? [`https://simkl.in/posters/${hit.poster}_m.jpg`] : [],
+        title: item.en_title || item.title,
+        eyebrow: join([path === 'movies' ? 'Movie' : path === 'anime' ? 'Anime' : 'TV', item.year]),
+        description: item.overview || undefined,
+        posters: item.poster ? [`https://simkl.in/posters/${item.poster}_m.jpg`] : [],
       };
     }
     case 'letterboxd':
@@ -366,9 +372,12 @@ export async function withPageMeta(request: Request, page: Response, env: OgEnv,
   if (source == null) return page;
   const found = new Response(page.body, { status: 200, headers: page.headers });
   const card = await cachedCard(source, url, env, ctx);
-  if (card == null) return found;
+  // The shell has no <title>, and some apps (Telegram) drop a preview without one,
+  // so an unresolved item still previews as the site card under the app's name.
+  const tags = card == null ? '<title>Shinobu</title><meta property="og:title" content="Shinobu" />' : cardMetaTags(card, url);
+  const replaced = card == null ? 'title' : 'title, meta[property^="og:"], meta[name^="twitter:"], meta[name="description"]';
   return new HTMLRewriter()
-    .on('title, meta[property^="og:"], meta[name^="twitter:"], meta[name="description"]', { element: (element) => { element.remove(); } })
-    .on('head', { element: (element) => { element.append(cardMetaTags(card, url), { html: true }); } })
+    .on(replaced, { element: (element) => { element.remove(); } })
+    .on('head', { element: (element) => { element.append(tags, { html: true }); } })
     .transform(found);
 }
