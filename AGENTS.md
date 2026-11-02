@@ -194,6 +194,10 @@ catalogs. No thread, archive, image, arbitrary board, or write endpoints.
 r/movies, and r/television, with `q` as its only parameter. No JSON API,
 comments, media, arbitrary subreddit, or write endpoints.
 
+The same Worker renders link previews (`worker/og.ts`, `worker/og-image.tsx`).
+It is not a proxy. It reads public metadata by an allowlisted id and returns
+only HTML tags and a PNG. Never pass user sessions or arbitrary text through it.
+
 Local web dev needs `bun run dev:worker` next to `bun web`. Restart `bun web`
 after editing `metro.config.js`.
 
