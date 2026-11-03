@@ -32,8 +32,11 @@ const COMPILABLE = /\.tsx$|(?:function|const|let)\s+use[A-Z]/;
 const OPT_OUT = new Set(['use no memo', 'use no forget']);
 
 function optsOut(body: readonly ESTree.Node[] | undefined): boolean {
-  const first = body?.[0];
-  return first != null && 'directive' in first && OPT_OUT.has(first.directive ?? '');
+  for (const statement of body ?? []) {
+    if (!('directive' in statement) || statement.directive == null) break;
+    if (OPT_OUT.has(statement.directive)) return true;
+  }
+  return false;
 }
 
 /**

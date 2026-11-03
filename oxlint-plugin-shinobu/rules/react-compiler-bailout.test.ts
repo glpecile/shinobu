@@ -16,11 +16,12 @@ test('a component React Compiler skips is reported, and the opt-out directive is
   }
   return <button onClick={refresh} />;
 }`,
-    'opted-out.tsx': `export function OptedOut({ load }: { load: () => Promise<void> }) {
+    'opted-out.tsx': `export function OptedOut(props: { load: () => Promise<void> }) {
+  'use strict';
   // Why it opts out.
   'use no memo';
   async function refresh() {
-    try { await load(); } finally { console.log('done'); }
+    try { await props.load(); } finally { console.log('done'); }
   }
   return <button onClick={refresh} />;
 }`,
