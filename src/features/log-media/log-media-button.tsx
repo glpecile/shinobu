@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { useCatchUpControls, useQuickLogBusy } from '@/features/log-media/session/state';
+import { Provider } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useAniListEntryStateQuery,
@@ -51,7 +52,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   const anilistEntry = useAniListEntryStateQuery({
     type: item.type,
     mediaId: item.externalIds.anilist,
-    enabled: connected.includes('anilist'),
+    enabled: connected.includes(Provider.AniList),
   });
   const anilistEpisodes = useAniListEpisodesQuery({
     mediaId: item.externalIds.anilist,
@@ -66,7 +67,7 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
   // season of an anime, so matching on it would read a sibling's progress.
   const simklAnimeEntry = useSimklLibraryEntryQuery({
     item: isAnimeSeries && item.externalIds.simkl != null ? item : null,
-    enabled: connected.includes('simkl'),
+    enabled: connected.includes(Provider.Simkl),
   });
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
 

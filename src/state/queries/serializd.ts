@@ -5,6 +5,7 @@ import { getSerializdList, getSerializdListsPage, type SerializdListEntry, type 
 import { serializdBaseUrl, serializdFetch } from '@/lib/providers/serializd/transport';
 import { loginToSerializd, validateAuthToken } from '@/lib/providers/serializd/auth';
 import type { SerializdDeps, SerializdSession } from '@/lib/providers/serializd/deps';
+import { Provider } from '@/lib/providers/types';
 import { getSerializdSession, getSerializdUsername } from '@/state/session/serializd';
 import { getWatchedEpisodeKeys } from '@/lib/providers/serializd/progress';
 import { getSerializdWatchedShows } from '@/lib/providers/serializd/watched';
@@ -69,7 +70,7 @@ export function validateSerializdToken(token: string): Promise<SerializdSession>
  * GET per log is within the politeness budget (KTD7).
  */
 export const serializdQueryKeys = {
-  all: ['serializd'] as const,
+  all: [Provider.Serializd] as const,
   watchedShows: (username: string) => [...serializdQueryKeys.all, 'watched-shows', username] as const,
   listsRoot: () => [...serializdQueryKeys.all, 'lists'] as const,
   lists: (username: string, kind: SerializdListKind) => [...serializdQueryKeys.listsRoot(), username, kind] as const,

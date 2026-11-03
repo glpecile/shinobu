@@ -10,6 +10,7 @@ import * as Effect from 'effect/Effect';
 import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
+import { Provider } from '@/lib/providers/types';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
@@ -44,9 +45,9 @@ import { SEARCH_MIN_QUERY_LENGTH } from './trakt';
 // Module-level singleton for the same reason as trakt.ts: effects compare the
 // store by identity (and the MMKV listener contract expects one writer path).
 const tokenStore: TokenStore = {
-  get: () => getProviderSession('anilist'),
-  set: (session) => setProviderSession('anilist', session),
-  clear: () => clearProviderSession('anilist'),
+  get: () => getProviderSession(Provider.AniList),
+  set: (session) => setProviderSession(Provider.AniList, session),
+  clear: () => clearProviderSession(Provider.AniList),
 };
 
 /**
@@ -67,7 +68,7 @@ export function anilistDeps(): AniListDeps {
 export function connectAniListFromRedirect(url: string): boolean {
   const session = sessionFromImplicitRedirect(url, Date.now());
   if (session == null) return false;
-  setProviderSession('anilist', session);
+  setProviderSession(Provider.AniList, session);
   return true;
 }
 
@@ -81,7 +82,7 @@ let lastAniListToken: string | undefined;
 let sessionRevision = 0;
 function aniListSessionRevision() {
   if (typeof window === 'undefined') return 0;
-  const token = getProviderSession('anilist')?.accessToken;
+  const token = getProviderSession(Provider.AniList)?.accessToken;
   if (token !== lastAniListToken) {
     lastAniListToken = token;
     sessionRevision++;
@@ -94,7 +95,7 @@ function useAniListSessionRevision() {
 }
 
 export const anilistQueryKeys = {
-  all: ['anilist'] as const,
+  all: [Provider.AniList] as const,
   viewer: () => [...anilistQueryKeys.all, 'viewer'] as const,
   library: () => [...anilistQueryKeys.all, 'library'] as const,
   /**
@@ -382,7 +383,7 @@ export function anilistRelationsQuery(queryClient: QueryClient, params: { mediaI
   const { mediaId } = params;
   const withCredits = params.type === 'MANGA';
   const revision = aniListSessionRevision();
-  const session = typeof window === 'undefined' ? null : getProviderSession('anilist');
+  const session = typeof window === 'undefined' ? null : getProviderSession(Provider.AniList);
   return {
     queryKey: [...anilistQueryKeys.relations(mediaId), revision, withCredits],
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
@@ -391,7 +392,7 @@ export function anilistRelationsQuery(queryClient: QueryClient, params: { mediaI
           ...tokenStore,
           get: () => session,
           clear: () => {
-            if (getProviderSession('anilist')?.accessToken === session?.accessToken) tokenStore.clear();
+            if (getProviderSession(Provider.AniList)?.accessToken === session?.accessToken) tokenStore.clear();
           },
         } }, { mediaId, withCredits }),
         { signal },

@@ -1,6 +1,7 @@
 import * as Effect from 'effect/Effect';
 import type * as Result from 'effect/Result';
 
+import { Provider } from '@/lib/providers/types';
 import type { ProviderSession } from '@/types/session';
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -57,7 +58,7 @@ export function refreshSession(
   deps: TraktDeps,
 ): Effect.Effect<ProviderSession, ProviderError> {
   const refreshToken = deps.tokens.get()?.refreshToken;
-  const dead = new ProviderAuthError({ provider: 'trakt', refreshFailed: true });
+  const dead = new ProviderAuthError({ provider: Provider.Trakt, refreshFailed: true });
 
   if (refreshToken == null) {
     return Effect.fail(dead);

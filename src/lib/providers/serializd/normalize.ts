@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry } from '@/types/media';
 
 /**
@@ -75,7 +76,7 @@ export function normalizeDiaryReview(
 
   return {
     id,
-    provider: 'serializd',
+    provider: Provider.Serializd,
     // KTD8: order/group by the server's page field, not the (possibly
     // backdated, non-monotone) watch instant.
     watchedAt: raw.dateAdded,

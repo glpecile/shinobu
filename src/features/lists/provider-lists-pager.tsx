@@ -1,5 +1,6 @@
 import { useWindowDimensions } from 'react-native';
 
+import { Provider } from '@/lib/providers/types';
 import { ProviderListLink } from './list-header';
 import { ListsGridSkeleton } from './lists-grid';
 import type { ListsKind } from './lists-kind-filter';
@@ -11,22 +12,22 @@ import { serializdListsUrl } from '@/lib/providers/serializd/lists';
 
 /** Each neighbour loads and recovers independently, without remounting the pager. */
 export function ProviderListsPager({ provider, username, kind }: {
-  provider: 'letterboxd' | 'serializd';
+  provider: typeof Provider.Letterboxd | typeof Provider.Serializd;
   username: string;
   kind: ListsKind;
 }) {
   // A phone has room for the switch's labels or the link's, not both.
   const compact = useWindowDimensions().width < 640;
-  const actionUrl = provider === 'letterboxd' ? letterboxdListsUrl(username, kind) : serializdListsUrl(username);
+  const actionUrl = provider === Provider.Letterboxd ? letterboxdListsUrl(username, kind) : serializdListsUrl(username);
   return <ListsPager action={actionUrl != null && <ProviderListLink iconOnly={compact} provider={provider} size="sm" url={actionUrl} />} kind={kind} renderKind={(pageKind) => {
     switch (provider) {
-      case 'letterboxd': {
+      case Provider.Letterboxd: {
         const url = letterboxdListsUrl(username, pageKind);
         return <ListsPage embedded fallback={<ListsGridSkeleton />} index provider={provider} url={url}>
           {url != null && <LetterboxdListsIndex kind={pageKind} url={url} username={username} />}
         </ListsPage>;
       }
-      case 'serializd': {
+      case Provider.Serializd: {
         const url = serializdListsUrl(username);
         return <ListsPage embedded fallback={<ListsGridSkeleton />} index provider={provider} url={url}>
           {url != null && <SerializdListsIndex kind={pageKind} username={username} />}

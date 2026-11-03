@@ -7,6 +7,7 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import { LETTERBOXD_BASE_URL } from './config';
 import type { LetterboxdDeps } from './deps';
 
@@ -110,28 +111,28 @@ export function getUserTags(
   const username = deps.username;
   if (username == null || username === '') {
     return Effect.fail(
-      new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true }),
+      new ProviderAuthError({ provider: Provider.Letterboxd, refreshFailed: true }),
     );
   }
 
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/tags/`, { signal }),
-      catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
+      catch: (cause) => new ProviderNetworkError({ provider: Provider.Letterboxd, cause }),
     });
 
     if (response.status === 404) {
       return yield* new ProviderAuthError({
-        provider: 'letterboxd',
+        provider: Provider.Letterboxd,
         refreshFailed: true,
       });
     }
     if (response.status === 429) {
-      return yield* new ProviderRateLimitError({ provider: 'letterboxd' });
+      return yield* new ProviderRateLimitError({ provider: Provider.Letterboxd });
     }
     if (!response.ok) {
       return yield* new ProviderNetworkError({
-        provider: 'letterboxd',
+        provider: Provider.Letterboxd,
         cause: new Error(`Letterboxd responded ${response.status} for /${username}/tags/`),
       });
     }
@@ -140,7 +141,7 @@ export function getUserTags(
       try: () => response.text(),
       catch: () =>
         new ProviderDecodeError({
-          provider: 'letterboxd',
+          provider: Provider.Letterboxd,
           detail: 'unreadable tags page body',
         }),
     });

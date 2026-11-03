@@ -2,7 +2,7 @@ import type {
   AnimeFormatFilter,
   AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { MediaType } from '@/types/media';
 
@@ -33,10 +33,10 @@ export const routes = {
   details: (id: string, mediaType?: MediaType, zoomPoster?: string) => {
     let suffix = '';
     switch (id.slice(0, id.indexOf('-'))) {
-      case 'trakt':
+      case Provider.Trakt:
         if (mediaType === 'MOVIE' || mediaType === 'TV') suffix = `/${mediaType === 'MOVIE' ? 'movie' : 'tv'}`;
         break;
-      case 'anilist':
+      case Provider.AniList:
         if (mediaType === 'MANGA') suffix = '/manga';
         break;
     }
@@ -68,7 +68,7 @@ export const routes = {
   watchlist: (provider?: ProviderId) =>
     provider == null ? '/watchlist' : (`/watchlist?provider=${provider}` as const),
   /** The list editor; `provider` preselects where it saves. */
-  newList: (provider?: 'letterboxd' | 'serializd') =>
+  newList: (provider?: typeof Provider.Letterboxd | typeof Provider.Serializd) =>
     provider == null ? '/lists/new' : (`/lists/new?provider=${provider}` as const),
   letterboxdLists: (kind: 'created' | 'liked') => `/lists/letterboxd?kind=${kind}` as const,
   letterboxdList: (owner: string, slug: string) =>

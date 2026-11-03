@@ -19,6 +19,7 @@ export function sameProgressItem(item: NormalizedMediaItem, candidate: Normalize
     return (item.externalIds.anilist != null && item.externalIds.anilist === candidate.externalIds.anilist) ||
       (item.externalIds.simkl != null && item.externalIds.simkl === candidate.externalIds.simkl);
   }
+  // oxlint-disable-next-line shinobu/no-provider-literals -- externalIds keys, not provider ids.
   return ['tmdb', 'trakt', 'anilist', 'simkl', 'mal', 'letterboxd'].some((key) => {
     const id = key as keyof NormalizedMediaItem['externalIds'];
     return item.externalIds[id] != null && item.externalIds[id] === candidate.externalIds[id];

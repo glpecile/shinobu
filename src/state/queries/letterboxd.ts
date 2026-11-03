@@ -52,6 +52,7 @@ import {
   getWatchlistPage,
   WATCHLIST_PAGE_SIZE,
 } from '@/lib/providers/letterboxd/watchlist';
+import { Provider } from '@/lib/providers/types';
 import {
   getLetterboxdSession,
   getLetterboxdUsername,
@@ -124,7 +125,7 @@ export function validateLetterboxdUsername(username: string): Promise<boolean> {
 }
 
 export const letterboxdQueryKeys = {
-  all: ['letterboxd'] as const,
+  all: [Provider.Letterboxd] as const,
   film: (slug: string) => [...letterboxdQueryKeys.all, 'film', slug] as const,
   slug: (tmdbId: number) => [...letterboxdQueryKeys.all, 'slug', tmdbId] as const,
   filmWatchesRoot: () => [...letterboxdQueryKeys.all, 'film-watch'] as const,
@@ -363,7 +364,7 @@ export function useLetterboxdTagsQuery() {
   // Same SSR gate as the watchlist hooks: `connected` is empty in the server
   // snapshot (docs/solutions/expo-web-ssr-mmkv-storage-on-server.md), so the
   // MMKV username read below only ever runs on the client.
-  const username = connected.includes('letterboxd')
+  const username = connected.includes(Provider.Letterboxd)
     ? (getLetterboxdUsername() ?? '')
     : '';
 
@@ -388,7 +389,7 @@ export function useLetterboxdWatchlistPagesQuery() {
   const connected = useConnectedProviders();
   // Same SSR gate as the single-page hook above: `connected` is empty in the
   // server snapshot, so the MMKV read only ever runs on the client.
-  const username = connected.includes('letterboxd')
+  const username = connected.includes(Provider.Letterboxd)
     ? (getLetterboxdUsername() ?? '')
     : '';
 

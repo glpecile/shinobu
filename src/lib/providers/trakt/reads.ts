@@ -94,6 +94,7 @@ export function searchMedia(
 export function lookupByExternalId(
   deps: TraktDeps,
   params: {
+    // oxlint-disable-next-line shinobu/no-provider-literals -- Trakt's /search/{id_type} values.
     source: 'trakt' | 'tvdb' | 'tmdb' | 'imdb';
     id: number | string;
     kind: 'movie' | 'show';

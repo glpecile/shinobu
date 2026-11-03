@@ -19,7 +19,7 @@ import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
@@ -52,15 +52,15 @@ export const DEFAULT_LOG_TAGS = 'shinobu, ';
  * way a hardcoded "(Letterboxd)" did on a TV log.
  */
 const DIARY_PROVIDERS = [
-  'letterboxd',
-  'serializd',
+  Provider.Letterboxd,
+  Provider.Serializd,
 ] as const satisfies readonly ProviderId[];
 
 /**
  * AniList's progress write takes no date, so a log reaching only AniList (any
  * manga, an anime with no other tracker) has nothing to backdate.
  */
-const UNDATED_PROVIDERS: readonly ProviderId[] = ['anilist'];
+const UNDATED_PROVIDERS: readonly ProviderId[] = [Provider.AniList];
 
 /** Joins provider labels for "Writes to ..." and outcome copy in both sheets. */
 export function labels(ids: readonly ProviderId[]): string {
@@ -129,7 +129,7 @@ export function LogFormFields({
   const showTagsField = onTagsChange != null && diaryProviders.length > 0;
   const showDateField = selectedProviders.some((id) => !UNDATED_PROVIDERS.includes(id));
   const needsScriptUpdate = process.env.EXPO_OS === 'web' &&
-    diaryProviders.includes('letterboxd') && !userscriptLikes;
+    diaryProviders.includes(Provider.Letterboxd) && !userscriptLikes;
 
   function toggleProvider(id: ProviderId) {
     onSelectedProvidersChange(

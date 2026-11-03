@@ -7,9 +7,10 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { SerializdDeps } from './deps';
 
-const provider = 'serializd' as const;
+const provider = Provider.Serializd;
 
 export interface SerializdHttpOptions {
   method?: 'GET' | 'POST';

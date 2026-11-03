@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -10,8 +11,8 @@ import type { NormalizedMediaItem } from '@/types/media';
  * without pulling the http client.
  */
 export const SEARCH_QUERY_ROOTS = {
-  trakt: ['trakt', 'search'] as const,
-  anilist: ['anilist', 'search'] as const,
+  trakt: [Provider.Trakt, 'search'] as const,
+  anilist: [Provider.AniList, 'search'] as const,
   // TMDB is a metadata source, not a provider, but its title search *is* the
   // Movies & TV search section post-detachment — tapped results must resolve
   // on the details screen exactly like tracker-sourced ones.

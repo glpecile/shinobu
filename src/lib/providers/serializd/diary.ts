@@ -1,12 +1,13 @@
 import * as Effect from 'effect/Effect';
 
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
 import { normalizeDiaryReview, type SerializdDiaryReview } from './normalize';
 
-const provider = 'serializd' as const;
+const provider = Provider.Serializd;
 
 /** One page of the diary plus the server's total-page count (drives paging). */
 export interface SerializdDiaryPage {

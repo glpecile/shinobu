@@ -16,6 +16,7 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { AniListDeps } from './deps';
 
 // Lives here (not config.ts) so the Effect layer stays free of react-native
@@ -69,7 +70,7 @@ export function anilistGraphQL<A>(
   return Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis;
     const remaining = (cooldowns.get(deps.fetch) ?? 0) - now;
-    if (remaining > 0) return yield* new ProviderRateLimitError({ provider: 'anilist', retryAfterMs: remaining });
+    if (remaining > 0) return yield* new ProviderRateLimitError({ provider: Provider.AniList, retryAfterMs: remaining });
     const response = yield* Effect.tryPromise({
       try: (signal) =>
         deps.fetch(ANILIST_GRAPHQL_URL, {
@@ -88,11 +89,11 @@ export function anilistGraphQL<A>(
             variables: options.variables ?? {},
           }),
         }),
-      catch: (cause) => new ProviderNetworkError({ provider: 'anilist', cause }),
+      catch: (cause) => new ProviderNetworkError({ provider: Provider.AniList, cause }),
     });
 
     if (response.status === 401) {
-      return yield* new ProviderAuthError({ provider: 'anilist', refreshFailed: true });
+      return yield* new ProviderAuthError({ provider: Provider.AniList, refreshFailed: true });
     }
     const rateLimitError = () => {
       const retryAfterSeconds = Number(response.headers.get('Retry-After'));
@@ -103,7 +104,7 @@ export function anilistGraphQL<A>(
       ) || 60_000;
       cooldowns.set(deps.fetch, Math.max(cooldowns.get(deps.fetch) ?? 0, now + retryAfterMs));
       return new ProviderRateLimitError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         retryAfterMs,
       });
     };
@@ -111,9 +112,9 @@ export function anilistGraphQL<A>(
     const responseError = (detail: string) => {
       if (response.status === 429) return rateLimitError();
       return response.ok
-        ? new ProviderDecodeError({ provider: 'anilist', detail })
+        ? new ProviderDecodeError({ provider: Provider.AniList, detail })
         : new ProviderNetworkError({
-            provider: 'anilist',
+            provider: Provider.AniList,
             status: response.status,
             cause: new Error(`AniList refused the request (HTTP ${response.status}): ${detail}`),
           });
@@ -141,7 +142,7 @@ export function anilistGraphQL<A>(
     // Replaying the same rejected operation only spends more of the rate budget.
     if (body.error?.messages?.some((message) => /^Bad request[.!]?$/i.test(message)) === true) {
       return yield* new ProviderNetworkError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         status: response.status,
         retryable: false,
         cause: new Error(`AniList rejected the query (HTTP ${response.status}): ${body.error.messages.join('; ')}`),
@@ -153,14 +154,14 @@ export function anilistGraphQL<A>(
       // AniList reports a dead/invalid bearer token as a GraphQL error
       // ("Invalid token"), not always as a bare 401.
       if (!apiDisabled && body.errors.some((e) => e.status === 401 || /invalid token/i.test(e.message ?? ''))) {
-        return yield* new ProviderAuthError({ provider: 'anilist', refreshFailed: true });
+        return yield* new ProviderAuthError({ provider: Provider.AniList, refreshFailed: true });
       }
       // Name the refusal for what it is. A 2xx with `errors[]` is a query
       // problem; a 4xx with the same shape is AniList declining to serve the
       // request at all (the Referer gate above, an edge rule), and reads
       // very differently in a log than "network error".
       return yield* new ProviderNetworkError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         status: response.status,
         cause: new Error(
           response.ok
@@ -171,7 +172,7 @@ export function anilistGraphQL<A>(
     }
     if (!response.ok || body.data == null) {
       return yield* new ProviderNetworkError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         status: response.status,
         cause: new Error(`AniList responded ${response.status} with no data`),
       });
@@ -218,7 +219,7 @@ export function anilistAuthedRequest<A>(
     const accessToken = deps.tokens.get()?.accessToken;
     if (accessToken == null) {
       return Effect.fail(
-        new ProviderAuthError({ provider: 'anilist', refreshFailed: true }),
+        new ProviderAuthError({ provider: Provider.AniList, refreshFailed: true }),
       );
     }
     return withRateLimitRetry(

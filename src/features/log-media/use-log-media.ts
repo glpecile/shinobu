@@ -44,7 +44,7 @@ import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { getEntryState } from '@/lib/providers/anilist/reads';
 import { traktDeps, traktQueryKeys } from '@/state/queries/trakt';
@@ -320,7 +320,7 @@ const SERIALIZD_STALE_MS = 5 * 60_000;
  * but only ever alongside Trakt/Serializd-triggered translation or a
  * canonical-origin log that needed no translation at all.)
  */
-const CANONICAL_EPISODE_PROVIDERS: readonly ProviderId[] = ['trakt', 'serializd'];
+const CANONICAL_EPISODE_PROVIDERS: readonly ProviderId[] = [Provider.Trakt, Provider.Serializd];
 
 function intendedEpisodes(
   variables: LogMediaVariables,
@@ -475,13 +475,13 @@ async function resolveLogPlan(
 
   const mappingSkips = new Map<ProviderId, string>();
   if (
-    targets.includes('simkl') &&
+    targets.includes(Provider.Simkl) &&
     entryInput == null &&
     item.externalIds.anilist != null &&
     canonicalInput?.some((episode) => episode.season !== 1) === true &&
     ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
   ) {
-    mappingSkips.set('simkl', 'Could not resolve a cour-specific Simkl identity for these episodes');
+    mappingSkips.set(Provider.Simkl, 'Could not resolve a cour-specific Simkl identity for these episodes');
   }
   if (entryInput == null) {
     return {
@@ -582,7 +582,7 @@ async function providerHasWatch(
   const freshness = fresh ? { staleTime: 0 } : {};
   try {
     switch (provider) {
-      case 'trakt': {
+      case Provider.Trakt: {
         if (episodes == null) {
           const watched = await queryClient.fetchQuery({
             queryKey: traktQueryKeys.watchedMovies(),
@@ -603,7 +603,7 @@ async function providerHasWatch(
         return traktHasEpisodes(progress.watchedKeys, episodes);
       }
 
-      case 'anilist': {
+      case Provider.AniList: {
         const mediaId = item.externalIds.anilist;
         if (mediaId == null) return false;
         const state = await queryClient.fetchQuery({
@@ -618,7 +618,7 @@ async function providerHasWatch(
           : anilistHasEpisodes(state.entry, entryNumbers);
       }
 
-      case 'serializd': {
+      case Provider.Serializd: {
         const tmdbId = item.externalIds.tmdb;
         const username = getSerializdUsername();
         // TV-only: no join key, no session, or a movie (no episodes) → nothing to
@@ -644,7 +644,7 @@ async function providerHasWatch(
         return true;
       }
 
-      case 'letterboxd': {
+      case Provider.Letterboxd: {
         const username = getLetterboxdUsername();
         if (username == null || episodes != null) return false;
         // The member film page proves a viewing; null only means "no evidence".
@@ -666,7 +666,7 @@ async function providerHasWatch(
       // `simklLogAdapter` uses before its watchedKeys can be trusted. A
       // wrong-domain compare recreates the false in-sync skip plan 0027
       // removed. Deferred to follow-up (plan 0034 Scope Boundaries).
-      case 'simkl':
+      case Provider.Simkl:
         return null;
     }
   } catch {
@@ -687,7 +687,7 @@ async function serializdDiaryHasEpisode(
 ): Promise<boolean> {
   const params = { tmdbId, episodeNumber: episode.number, season: episode.season };
   const cachedEntries = cachedDiaryEntries(queryClient).filter(
-    (entry) => entry.provider === 'serializd',
+    (entry) => entry.provider === Provider.Serializd,
   );
   if (diaryHasEpisode(cachedEntries, params)) return true;
 
@@ -704,7 +704,7 @@ export function invalidateAfterLog(
   // The write changed watch history — refresh the reads that show it. Runs on
   // the *enriched* item (the mutation may have discovered ids the caller's
   // copy lacks), which is why this lives here and not in onSuccess.
-  if (succeeded.includes('trakt')) {
+  if (succeeded.includes(Provider.Trakt)) {
     const filmLike = item.type === 'MOVIE' || item.isFilm === true;
     queryClient.invalidateQueries({
       queryKey: filmLike ? traktQueryKeys.watchedMovies() : traktQueryKeys.watchedShows(),
@@ -724,7 +724,7 @@ export function invalidateAfterLog(
       });
     }
   }
-  if (succeeded.includes('anilist')) {
+  if (succeeded.includes(Provider.AniList)) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
     // The one list read this log can change: manga feeds Continue Reading and
@@ -741,7 +741,7 @@ export function invalidateAfterLog(
       });
     }
   }
-  if (succeeded.includes('simkl')) {
+  if (succeeded.includes(Provider.Simkl)) {
     // The history POST moved items between Simkl's library buckets — every
     // cached all-items filter is stale (the prefix, not a per-filter key: this
     // path can't know which type/status a surface requested), and so is the
@@ -751,7 +751,7 @@ export function invalidateAfterLog(
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }
-  if (succeeded.includes('serializd')) {
+  if (succeeded.includes(Provider.Serializd)) {
     // The write moved progress — refresh it so the next reconcile sees it.
     const username = getSerializdUsername();
     if (username != null) {
@@ -764,7 +764,7 @@ export function invalidateAfterLog(
       }
     }
   }
-  if (succeeded.includes('letterboxd')) {
+  if (succeeded.includes(Provider.Letterboxd)) {
     // Only this film's watch reads changed; the root holds one HTML-scrape query per film.
     const tmdb = item.externalIds.tmdb ?? null;
     const slug =
@@ -791,9 +791,9 @@ export function invalidateAfterLog(
   // Logs can change membership or status without a separate watchlist write.
   // Refresh the gather only after the provider entries it reads are stale.
   if (
-    succeeded.includes('trakt') ||
-    succeeded.includes('anilist') ||
-    succeeded.includes('simkl')
+    succeeded.includes(Provider.Trakt) ||
+    succeeded.includes(Provider.AniList) ||
+    succeeded.includes(Provider.Simkl)
   ) {
     queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
   }
@@ -822,7 +822,7 @@ export function invalidateAfterLog(
   // 2026-08-02, "Logged — refresh to update").
   const touched = (provider: ProviderId) =>
     succeeded.includes(provider) || skipped.includes(provider);
-  if (touched('trakt') || touched('anilist') || touched('simkl')) {
+  if (touched(Provider.Trakt) || touched(Provider.AniList) || touched(Provider.Simkl)) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
   }
 }
@@ -1005,7 +1005,7 @@ export function useLogMedia() {
       // against Trakt a round trip later.
       const traktId = item.externalIds.trakt;
       const loggedEpisodes = plan.variables.episodes;
-      if (result.succeeded.includes('trakt') && traktId != null && loggedEpisodes != null) {
+      if (result.succeeded.includes(Provider.Trakt) && traktId != null && loggedEpisodes != null) {
         queryClient.setQueryData<TraktShowProgressResult>(
           traktQueryKeys.showProgress(traktId),
           (progress) => progress == null ? progress : {

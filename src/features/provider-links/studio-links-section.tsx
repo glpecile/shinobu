@@ -6,6 +6,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { providerStudioUrl, type UrlStudio } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { useAniListStudioIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
@@ -41,7 +42,7 @@ export function StudioLinksSection({
   // with no AniList connected (the pill wouldn't render either way).
   const studioId = useAniListStudioIdQuery({
     name: studio.name,
-    enabled: enabled && connected.includes('anilist') && studio.anilistId == null,
+    enabled: enabled && connected.includes(Provider.AniList) && studio.anilistId == null,
   });
   const anilistId = studio.anilistId ?? studioId.data ?? undefined;
 

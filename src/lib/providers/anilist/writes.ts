@@ -1,6 +1,7 @@
 import * as Effect from 'effect/Effect';
 
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
@@ -64,7 +65,7 @@ export function logToAniList(
   if (mediaId == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         detail: `"${item.title}" has no anilist id to log against`,
       }),
     );
@@ -90,7 +91,7 @@ export function logToAniList(
       const progress = options.progress;
       if (progress == null || progress <= 0) {
         return yield* new ProviderDecodeError({
-          provider: 'anilist',
+          provider: Provider.AniList,
           detail: `logging "${item.title}" requires an episode/chapter progress`,
         });
       }
@@ -113,7 +114,7 @@ export function logToAniList(
     );
     if (result.SaveMediaListEntry?.id == null) {
       return yield* new ProviderDecodeError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         detail: `AniList did not save a list entry for "${item.title}"`,
       });
     }
@@ -166,7 +167,7 @@ export function planOnAniList(
   if (mediaId == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         detail: `"${item.title}" has no anilist id to watchlist against`,
       }),
     );
@@ -178,7 +179,7 @@ export function planOnAniList(
       Effect.mapError(
         (error) =>
           new ProviderDecodeError({
-            provider: 'anilist',
+            provider: Provider.AniList,
             detail: `could not check your AniList entry for "${item.title}" — ${error.message}`,
           }),
       ),
@@ -211,7 +212,7 @@ export function planOnAniList(
     );
     if (result.SaveMediaListEntry?.id == null) {
       return yield* new ProviderDecodeError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         detail: `AniList did not save a list entry for "${item.title}"`,
       });
     }
@@ -314,7 +315,7 @@ export function deleteAniListEntry(
       Effect.mapError(
         (error) =>
           new ProviderDecodeError({
-            provider: 'anilist',
+            provider: Provider.AniList,
             detail: `could not check your AniList entry — ${error.message}`,
           }),
       ),
@@ -355,7 +356,7 @@ export function deleteAniListEntry(
     );
     if (result.DeleteMediaListEntry?.deleted !== true) {
       return yield* new ProviderDecodeError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         detail: 'AniList did not delete the list entry',
       });
     }

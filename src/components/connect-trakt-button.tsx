@@ -23,6 +23,7 @@ import {
   TRAKT_CORS_ORIGINS,
   TRAKT_REDIRECT_URIS,
 } from '@/lib/providers/trakt/redirect-uri';
+import { Provider } from '@/lib/providers/types';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 import { beginOAuthFlow } from '@/state/session/oauth-flow';
 import { useProviderCredentials } from '@/state/session/use-provider-credentials';
@@ -120,7 +121,7 @@ function CredentialInput({
  */
 export function useTraktConnect() {
   const [credentials, saveCredentials, clearCredentials] =
-    useProviderCredentials('trakt');
+    useProviderCredentials(Provider.Trakt);
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
   const clientId = credentials?.clientId ?? '';
@@ -160,7 +161,7 @@ export function useTraktConnect() {
       // the user back to the home route with ?code=..., where
       // useOAuthCallback exchanges it. This avoids popup blockers and
       // orphaned auth windows.
-      beginOAuthFlow('trakt', request.state);
+      beginOAuthFlow(Provider.Trakt, request.state);
       window.location.assign(request.url);
       return;
     }

@@ -12,6 +12,7 @@ import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
 import { useRenameList, type ListEditTarget } from '@/state/queries/list-membership';
@@ -24,8 +25,8 @@ function RenameForm({ target, onDone }: { target: ListEditTarget; onDone: () => 
   const mutation = useRenameList(target);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-rename');
-  const needsScript = process.env.EXPO_OS === 'web' && target.provider === 'letterboxd' && !hasScript;
-  const writable = target.provider !== 'letterboxd' || (process.env.EXPO_OS === 'web' ? hasScript : hasSession);
+  const needsScript = process.env.EXPO_OS === 'web' && target.provider === Provider.Letterboxd && !hasScript;
+  const writable = target.provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasScript : hasSession);
   const unchanged = name.trim() === '' || name.trim() === target.title;
   function save() {
     haptics.confirm();
@@ -34,7 +35,7 @@ function RenameForm({ target, onDone }: { target: ListEditTarget; onDone: () => 
         toast.success('List renamed', name.trim());
         onDone();
         // Letterboxd may give a renamed list a new address; the old one only redirects.
-        if (result.provider === 'letterboxd' && target.provider === 'letterboxd' && result.slug !== target.slug) router.replace(routes.letterboxdList(result.owner, result.slug));
+        if (result.provider === Provider.Letterboxd && target.provider === Provider.Letterboxd && result.slug !== target.slug) router.replace(routes.letterboxdList(result.owner, result.slug));
       },
       onError: () => haptics.error(),
     });

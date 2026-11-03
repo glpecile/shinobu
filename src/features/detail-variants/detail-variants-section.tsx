@@ -9,6 +9,7 @@ import { Rail } from '@/components/rail';
 import { Section } from '@/components/section';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import {
   simklLookupParamsFor,
@@ -25,9 +26,9 @@ import { detailVariants, type DetailVariant } from './variants';
 
 const LABELS = {
   tmdb: 'TMDB',
-  anilist: PROVIDERS.anilist.label,
-  simkl: PROVIDERS.simkl.label,
-  letterboxd: PROVIDERS.letterboxd.label,
+  anilist: PROVIDERS[Provider.AniList].label,
+  simkl: PROVIDERS[Provider.Simkl].label,
+  letterboxd: PROVIDERS[Provider.Letterboxd].label,
 } as const;
 
 /** The item's other details pages, as posters in the watchlist wall's look, collapsed until the user opens it. */

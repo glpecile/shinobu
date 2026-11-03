@@ -14,6 +14,7 @@ const WEB_DEV_ORIGIN = 'http://localhost:8081';
  * knows which provider it launched.
  */
 export const SIMKL_OAUTH_MARKER_PARAM = 'oauth';
+// oxlint-disable-next-line shinobu/no-provider-literals -- registered redirect URI marker; it must match byte-for-byte.
 export const SIMKL_OAUTH_MARKER_VALUE = 'simkl';
 
 function withSimklMarker(origin: string): string {

@@ -8,12 +8,13 @@ import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { ListsHeader, ProviderListLink } from './list-header';
 
 /** Request failures and render failures share the same retry and provider escape hatch. */
 export function ListsLoadError({ provider, url, index = false, title = 'List', shareHref, onRetry }: {
-  provider: 'letterboxd' | 'serializd';
+  provider: typeof Provider.Letterboxd | typeof Provider.Serializd;
   url: string;
   index?: boolean;
   title?: string;
@@ -25,7 +26,7 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
     <CenteredNotice>
       <CenteredNotice.Icon name="list-outline" />
       <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
-      <CenteredNotice.Body>{provider === 'letterboxd' ? 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
+      <CenteredNotice.Body>{provider === Provider.Letterboxd ? 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
       <View className="mt-6 items-center gap-3">
         <Button icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
         {!index && <ProviderListLink provider={provider} url={url} />}
@@ -36,7 +37,7 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
 
 /** Shared recovery and loading frame; resource pages own their query and identity. */
 export function ListsPage({ provider, title = 'List', url, shareHref, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
-  provider: 'letterboxd' | 'serializd';
+  provider: typeof Provider.Letterboxd | typeof Provider.Serializd;
   title?: string;
   url: string | null;
   /** Keeps a detail page's Share in its header when the list fails to load. */

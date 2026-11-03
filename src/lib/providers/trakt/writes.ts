@@ -1,5 +1,6 @@
 import * as Effect from 'effect/Effect';
 
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
@@ -89,7 +90,7 @@ export function logToTrakt(
   if (ids == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `"${item.title}" has no trakt/tmdb/tvdb/imdb id to log against`,
       }),
     );
@@ -110,7 +111,7 @@ export function logToTrakt(
     if (batch == null || batch.length === 0) {
       return Effect.fail(
         new ProviderDecodeError({
-          provider: 'trakt',
+          provider: Provider.Trakt,
           detail: `logging TV "${item.title}" requires an episode (season/number)`,
         }),
       );
@@ -140,7 +141,7 @@ export function logToTrakt(
   } else {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `media type ${item.type} does not route to Trakt (routing.ts should have filtered it)`,
       }),
     );
@@ -159,7 +160,7 @@ export function logToTrakt(
       if (notFound) {
         return Effect.fail(
           new ProviderDecodeError({
-            provider: 'trakt',
+            provider: Provider.Trakt,
             detail: `Trakt matched no items for "${item.title}" (not_found)`,
           }),
         );
@@ -217,7 +218,7 @@ export function addToTraktWatchlist(
   if (ids == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `"${item.title}" has no trakt/tmdb/tvdb/imdb id to watchlist against`,
       }),
     );
@@ -227,7 +228,7 @@ export function addToTraktWatchlist(
   if (body == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `media type ${item.type} does not route to Trakt (routing.ts should have filtered it)`,
       }),
     );
@@ -243,7 +244,7 @@ export function addToTraktWatchlist(
       if (notFound) {
         return Effect.fail(
           new ProviderDecodeError({
-            provider: 'trakt',
+            provider: Provider.Trakt,
             detail: `Trakt matched no items for "${item.title}" (not_found)`,
           }),
         );
@@ -261,7 +262,7 @@ export function addToTraktWatchlist(
       // Trakt accepted the request but recorded no intent, so don't claim it did.
       return Effect.fail(
         new ProviderDecodeError({
-          provider: 'trakt',
+          provider: Provider.Trakt,
           detail: `Trakt added nothing for "${item.title}"`,
         }),
       );
@@ -294,7 +295,7 @@ export function removeFromTraktWatchlist(
   if (ids == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `"${item.title}" has no trakt/tmdb/tvdb/imdb id to unwatchlist against`,
       }),
     );
@@ -304,7 +305,7 @@ export function removeFromTraktWatchlist(
   if (body == null) {
     return Effect.fail(
       new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `media type ${item.type} does not route to Trakt (routing.ts should have filtered it)`,
       }),
     );
@@ -321,7 +322,7 @@ export function removeFromTraktWatchlist(
       if (notFound) {
         return Effect.fail(
           new ProviderDecodeError({
-            provider: 'trakt',
+            provider: Provider.Trakt,
             detail: `Trakt matched no items for "${item.title}" (not_found)`,
           }),
         );

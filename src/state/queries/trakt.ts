@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
+import { Provider } from '@/lib/providers/types';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import type { TraktDeps } from '@/lib/providers/trakt/deps';
@@ -33,9 +34,9 @@ import {
 // coalesces concurrent token refreshes per token store, so the store's object
 // identity must be stable across queries.
 const tokenStore: TokenStore = {
-  get: () => getProviderSession('trakt'),
-  set: (session) => setProviderSession('trakt', session),
-  clear: () => clearProviderSession('trakt'),
+  get: () => getProviderSession(Provider.Trakt),
+  set: (session) => setProviderSession(Provider.Trakt, session),
+  clear: () => clearProviderSession(Provider.Trakt),
 };
 
 /**
@@ -47,8 +48,8 @@ export function traktDeps(): TraktDeps {
   return {
     fetch: httpFetch,
     tokens: tokenStore,
-    clientId: getClientIdForProvider('trakt'),
-    clientSecret: getClientSecretForProvider('trakt'),
+    clientId: getClientIdForProvider(Provider.Trakt),
+    clientSecret: getClientSecretForProvider(Provider.Trakt),
   };
 }
 
@@ -66,7 +67,7 @@ export function exchangeTraktCode(params: {
 }
 
 export const traktQueryKeys = {
-  all: ['trakt'] as const,
+  all: [Provider.Trakt] as const,
   /** The connected account itself — cached forever; disconnect purges the
    *  whole `['trakt']` root, so a reconnect as another user can't reuse it. */
   viewer: () => [...traktQueryKeys.all, 'viewer'] as const,
@@ -125,11 +126,11 @@ export const traktQueryKeys = {
 /** Cold Trakt links need a type: movie and show ID spaces overlap. Public, BYO client ID. */
 export function useTraktItemQuery(traktId: number | null, type?: MediaType) {
   const kind = type === 'MOVIE' || type === 'TV' ? type : undefined;
-  const enabled = traktId != null && kind != null && getClientIdForProvider('trakt') !== '';
+  const enabled = traktId != null && kind != null && getClientIdForProvider(Provider.Trakt) !== '';
   return useQuery({
     queryKey: traktQueryKeys.item(kind, traktId),
     queryFn: ({ signal }) => Effect.runPromise(lookupByExternalId(traktDeps(), {
-      source: 'trakt', id: traktId ?? 0, kind: kind === 'MOVIE' ? 'movie' : 'show',
+      source: Provider.Trakt, id: traktId ?? 0, kind: kind === 'MOVIE' ? 'movie' : 'show',
     }), { signal }),
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
@@ -255,7 +256,7 @@ export function useTraktWatchedInfo(
   item: NormalizedMediaItem,
 ): TraktWatchedInfo | null {
   const connected = useConnectedProviders();
-  const traktConnected = connected.includes('trakt');
+  const traktConnected = connected.includes(Provider.Trakt);
   const movieLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
 

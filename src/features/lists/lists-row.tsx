@@ -8,6 +8,7 @@ import { ViewAllLink } from '@/components/view-all-link';
 import { usePushRoute } from '@/lib/navigation';
 import type { LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
 import type { SerializdListKind } from '@/lib/providers/serializd/lists';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
@@ -47,12 +48,12 @@ export function ListsRowSkeleton() {
 
 export function LetterboxdListsRow({ username, kind }: { username: string; kind: LetterboxdListKind }) {
   const pages = useSuspenseLetterboxdListsQuery(username, kind);
-  return <ListsRail indexHref={routes.letterboxdLists(kind)} kind={kind} lists={(pages.data?.pages[0]?.lists ?? []).map(letterboxdListSummary)} provider="letterboxd" />;
+  return <ListsRail indexHref={routes.letterboxdLists(kind)} kind={kind} lists={(pages.data?.pages[0]?.lists ?? []).map(letterboxdListSummary)} provider={Provider.Letterboxd} />;
 }
 
 export function SerializdListsRow({ username, kind }: { username: string; kind: SerializdListKind }) {
   const pages = useSuspenseSerializdListsQuery(username, kind);
-  return <ListsRail indexHref={routes.serializdLists(kind)} kind={kind} lists={pages.data.pages[0].lists.map(serializdListSummary)} provider="serializd" />;
+  return <ListsRail indexHref={routes.serializdLists(kind)} kind={kind} lists={pages.data.pages[0].lists.map(serializdListSummary)} provider={Provider.Serializd} />;
 }
 
 type RailItem = ListSummary | { id: 'new' };

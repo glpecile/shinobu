@@ -8,11 +8,12 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { LetterboxdDeps, LetterboxdWebResponse } from './deps';
 import { filmPathFor, scriptFailure } from './writes';
 
-const provider = 'letterboxd' as const;
+const provider = Provider.Letterboxd;
 
 /**
  * Reads the `PATCH /api/v0/me/watchlist/{lid}` outcome. Success is a 204 with

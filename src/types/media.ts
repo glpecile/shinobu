@@ -9,7 +9,7 @@
 // Type-only import — erased at build, so the (media ↔ providers/types) type
 // cycle never becomes a runtime one. Kept because a diary entry's provider is
 // part of the normalized contract, alongside the item it embeds.
-import type { ProviderId } from '@/lib/providers/types';
+import type { Provider, ProviderId } from '@/lib/providers/types';
 
 // Extension point for future domains (e.g. 'GAME' | 'BOOK' | 'ALBUM').
 // Widen this union + the provider registry (lib/providers/registry.ts) only —
@@ -39,11 +39,11 @@ export interface ReleaseCalendar {
 /** Where a community score comes from. Only Simkl, AniList and Letterboxd are providers. */
 export type RatingSource =
   | 'tmdb'
-  | 'simkl'
+  | typeof Provider.Simkl
   | 'imdb'
   | 'mal'
-  | 'anilist'
-  | 'letterboxd'
+  | typeof Provider.AniList
+  | typeof Provider.Letterboxd
   | 'rottenTomatoes'
   | 'metacritic';
 

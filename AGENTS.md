@@ -164,6 +164,10 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
   `isFilm` and go to the movie targets plus AniList and Simkl.
 - All routing lives in `src/lib/providers/routing.ts`. Never branch on type or
   provider at a call site.
+- Spell a provider id as `Provider.Trakt` and so on (`lib/providers/types.ts`),
+  and its type as `typeof Provider.Trakt`, never a string literal.
+  `shinobu/no-provider-literals` enforces this outside tests. The values are
+  persisted and in URLs, so never change one.
 - `src/lib/providers/registry.ts` declares each provider's `MediaType`s,
   `canRead`, and `canWrite`. Don't assume a provider that reads also writes.
   Adding a provider widens the unions and the registry, nothing else.

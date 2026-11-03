@@ -1,4 +1,4 @@
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 
 import { getClientIdForProvider } from './provider-config';
 import { connectedProviderIds, getProviderSession } from './tokens';
@@ -27,7 +27,7 @@ import { connectedProviderIds, getProviderSession } from './tokens';
  * build — a stored session for any of them is usable by construction.
  */
 export function providerIsUsable(id: ProviderId): boolean {
-  if (id === 'trakt') return getClientIdForProvider('trakt') !== '';
+  if (id === Provider.Trakt) return getClientIdForProvider(Provider.Trakt) !== '';
   return true;
 }
 
@@ -43,6 +43,6 @@ export function usableProviderIds(): ProviderId[] {
  */
 export function traktNeedsCredentials(): boolean {
   return (
-    getProviderSession('trakt') != null && getClientIdForProvider('trakt') === ''
+    getProviderSession(Provider.Trakt) != null && getClientIdForProvider(Provider.Trakt) === ''
   );
 }

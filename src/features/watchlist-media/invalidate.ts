@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { anilistQueryKeys } from '@/state/queries/anilist';
 import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdQueryKeys } from '@/state/queries/serializd';
@@ -33,7 +33,7 @@ export function invalidateAfterWatchlist(
   item: NormalizedMediaItem,
   succeeded: readonly ProviderId[],
 ) {
-  if (succeeded.includes('trakt')) {
+  if (succeeded.includes(Provider.Trakt)) {
     // A watchlisted show/film enters `/calendars/my/*` — but the write cannot
     // know the window the read keyed itself by, so this is the prefix builder
     // (KTD-5), never `myCalendar(type, startDate, days)`.
@@ -43,7 +43,7 @@ export function invalidateAfterWatchlist(
     // know that key's sort arguments to refresh it.
     queryClient.invalidateQueries({ queryKey: traktQueryKeys.watchlistRoot() });
   }
-  if (succeeded.includes('anilist')) {
+  if (succeeded.includes(Provider.AniList)) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({
       queryKey: item.type === 'MANGA'
@@ -57,7 +57,7 @@ export function invalidateAfterWatchlist(
       queryClient.invalidateQueries({ queryKey: anilistQueryKeys.entryState(mediaId) });
     }
   }
-  if (succeeded.includes('letterboxd')) {
+  if (succeeded.includes(Provider.Letterboxd)) {
     const username = getLetterboxdUsername();
     if (username != null) {
       // Two separately-keyed reads of the same list — the feed row's single
@@ -69,7 +69,7 @@ export function invalidateAfterWatchlist(
       });
     }
   }
-  if (succeeded.includes('serializd')) {
+  if (succeeded.includes(Provider.Serializd)) {
     // No Serializd watchlist *read* exists in the app *yet* — the endpoint does
     // (`user/{username}/watchlistpage_v2/{page}`, R32), it is simply out of v1,
     // so this entry is a TODO rather than a claim of non-existence. What must
@@ -83,7 +83,7 @@ export function invalidateAfterWatchlist(
       });
     }
   }
-  if (succeeded.includes('simkl')) {
+  if (succeeded.includes(Provider.Simkl)) {
     // `add-to-list` moved the item into the plantowatch bucket — the cached
     // all-items filters (the prefix, since a write can't know which
     // type/status a surface requested) and the activities delta gating their

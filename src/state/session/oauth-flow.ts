@@ -1,4 +1,5 @@
 import { createMMKV } from 'react-native-mmkv';
+import { Provider } from '@/lib/providers/types';
 
 /**
  * The pending web OAuth flow for Trakt and AniList. A web OAuth return is
@@ -15,7 +16,7 @@ const flowStorage = createMMKV({ id: 'oauth-flow' });
 /** Longer than any consent screen, short enough that a stale tab can't use it. */
 const FLOW_MAX_AGE_MS = 15 * 60 * 1000;
 
-type PendingOAuthProvider = 'trakt' | 'anilist';
+type PendingOAuthProvider = typeof Provider.Trakt | typeof Provider.AniList;
 
 export function beginOAuthFlow(provider: PendingOAuthProvider, state: string): void {
   flowStorage.set(provider, JSON.stringify({ state, startedAt: Date.now() }));

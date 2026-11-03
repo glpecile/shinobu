@@ -7,7 +7,7 @@ import {
 import type { UrlItem } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderWriteOutcome } from '@/features/log-media/fan-out';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -120,7 +120,7 @@ export function destructiveRemoveWarning(params: {
   targets: readonly ProviderId[];
 }): string | null {
   const warnings: string[] = [];
-  if (params.anilistStatus === 'CURRENT' && params.targets.includes('anilist')) {
+  if (params.anilistStatus === 'CURRENT' && params.targets.includes(Provider.AniList)) {
     warnings.push(
       'AniList can’t un-plan something you’re watching, so this deletes your whole AniList entry — progress, score, notes and dates included.',
     );
@@ -131,7 +131,7 @@ export function destructiveRemoveWarning(params: {
   // this fires only on a row the user put back on the list by hand.
   if (
     (params.simklWatchedCount ?? 0) > 0 &&
-    params.targets.includes('simkl')
+    params.targets.includes(Provider.Simkl)
   ) {
     warnings.push(
       'Simkl can’t drop just the plan-to-watch status, so this deletes the whole Simkl entry — your watch history and rating for it included, and the show leaves Continue Watching and This week with it.',

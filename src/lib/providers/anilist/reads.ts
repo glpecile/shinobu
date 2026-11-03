@@ -1,6 +1,7 @@
 import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 
+import { Provider } from '@/lib/providers/types';
 import type {
   NormalizedDiaryEntry,
   NormalizedMediaItem,
@@ -533,7 +534,7 @@ export function getAniListStaff(
     const staff = data.Staff;
     if (staff == null) {
       return yield* new ProviderDecodeError({
-        provider: 'anilist',
+        provider: Provider.AniList,
         detail: `no staff record for id ${params.id}`,
       });
     }

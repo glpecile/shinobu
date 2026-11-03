@@ -1,4 +1,5 @@
 import type { SerializdSession } from '@/lib/providers/serializd/deps';
+import { Provider } from '@/lib/providers/types';
 import { getProviderSession, setProviderSession } from './tokens';
 
 /**
@@ -13,14 +14,14 @@ export function connectSerializd(params: {
   accessToken: string;
   username: string;
 }): void {
-  setProviderSession('serializd', {
+  setProviderSession(Provider.Serializd, {
     accessToken: params.accessToken,
     username: params.username,
   });
 }
 
 export function getSerializdUsername(): string | null {
-  return getProviderSession('serializd')?.username ?? null;
+  return getProviderSession(Provider.Serializd)?.username ?? null;
 }
 
 /**
@@ -29,7 +30,7 @@ export function getSerializdUsername(): string | null {
  * MMKV/localStorage before React uses the server snapshot (R16).
  */
 export function getSerializdSession(): SerializdSession | null {
-  const session = getProviderSession('serializd');
+  const session = getProviderSession(Provider.Serializd);
   if (
     session?.accessToken == null ||
     session.accessToken === '' ||

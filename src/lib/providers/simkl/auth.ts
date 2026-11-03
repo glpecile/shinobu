@@ -7,6 +7,7 @@ import {
 } from 'expo-crypto';
 
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { ProviderSession } from '@/types/session';
 import {
   clearSimklAuthFlow,
@@ -24,7 +25,7 @@ export {
   type SimklAuthFlow,
 } from './auth-flow';
 
-const provider = 'simkl' as const;
+const provider = Provider.Simkl;
 
 // --- PKCE (plan 0034 KTD-1) -------------------------------------------------
 

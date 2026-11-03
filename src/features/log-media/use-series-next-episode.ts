@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
@@ -32,8 +33,8 @@ export function useSeriesNextEpisode(
   item: NormalizedMediaItem | null,
 ): SeriesNextEpisodeState {
   const connected = useConnectedProviders();
-  const traktConnected = connected.includes('trakt');
-  const simklConnected = connected.includes('simkl');
+  const traktConnected = connected.includes(Provider.Trakt);
+  const simklConnected = connected.includes(Provider.Simkl);
   const isSeries = item?.type === 'TV';
   const traktId = isSeries ? item.externalIds.trakt : undefined;
   const traktUsable = traktConnected && traktId != null;

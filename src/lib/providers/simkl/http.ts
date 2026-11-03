@@ -7,10 +7,11 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import { SIMKL_API_BASE_URL, simklStandardParams } from './config';
 import type { SimklDeps } from './deps';
 
-const provider = 'simkl' as const;
+const provider = Provider.Simkl;
 
 export interface SimklHttpOptions {
   method?: 'GET' | 'POST';

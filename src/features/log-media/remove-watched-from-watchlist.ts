@@ -6,7 +6,7 @@ import {
   type WatchlistRemoveDeps,
 } from '@/features/watchlist-media/use-unwatchlist-media';
 import { findWatchlistRemoval } from '@/features/watchlist/find-watchlist-removal';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -59,7 +59,7 @@ export async function removeWatchedFromWatchlist(
   // snapshot that may not have caught up with the log yet
   // (docs/solutions/simkl-rate-limits-and-write-lock.md). The user's own
   // removal, aimed from the picker, keeps its Simkl leg.
-  const providers = removal.entry.sources.filter((id) => id !== 'simkl');
+  const providers = removal.entry.sources.filter((id) => id !== Provider.Simkl);
   if (providers.length === 0) return;
 
   try {

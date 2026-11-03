@@ -11,6 +11,7 @@ import {
   getMediaPeople,
   getMediaStudios,
 } from '@/lib/providers/trakt/reads';
+import { Provider } from '@/lib/providers/types';
 import type {
   MediaType,
   NormalizedCastMember,
@@ -49,7 +50,7 @@ export interface MediaDetails {
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
   studios: NormalizedStudio[];
-  source: 'tmdb' | 'trakt' | 'anilist' | 'none';
+  source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | 'none';
 }
 
 export interface MediaDetailsParams {
@@ -88,7 +89,7 @@ function providerFallback(
         cast: credits.cast,
         crew: credits.crew,
         studios: credits.studios,
-        source: 'anilist' as const,
+        source: Provider.AniList,
       })),
     );
   }
@@ -112,7 +113,7 @@ function providerFallback(
         cast: people.cast,
         crew: people.crew,
         studios,
-        source: 'trakt' as const,
+        source: Provider.Trakt,
       })),
     );
   }

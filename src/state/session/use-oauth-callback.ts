@@ -7,6 +7,7 @@ import {
   SIMKL_OAUTH_MARKER_VALUE,
 } from '@/lib/providers/simkl/redirect-uri';
 import { getTraktRedirectUri } from '@/lib/providers/trakt/redirect-uri';
+import { Provider } from '@/lib/providers/types';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import { exchangeSimklCode } from '@/state/queries/simkl';
 import { exchangeTraktCode } from '@/state/queries/trakt';
@@ -124,7 +125,7 @@ export async function handleOAuthReturn(
 ): Promise<void> {
   const anilistReturn = consumeAniListReturnFragment();
   if (anilistReturn != null) {
-    const expected = takeOAuthFlow('anilist');
+    const expected = takeOAuthFlow(Provider.AniList);
     // A stray or replayed link: the fragment is already stripped, nothing more to do.
     if (expected == null) return;
     const state = new URLSearchParams(
@@ -155,8 +156,8 @@ export async function handleOAuthReturn(
     // (docs/solutions/trakt-oauth-setup.md lesson), and without a client id
     // the exchange cannot be built at all.
     if (
-      connectedProviderIds().includes('simkl') ||
-      getClientIdForProvider('simkl') === ''
+      connectedProviderIds().includes(Provider.Simkl) ||
+      getClientIdForProvider(Provider.Simkl) === ''
     ) {
       return;
     }
@@ -182,7 +183,7 @@ export async function handleOAuthReturn(
 
   const { code, state, denied } = consumeTraktReturnParams();
   if (denied) {
-    takeOAuthFlow('trakt');
+    takeOAuthFlow(Provider.Trakt);
     setStatus('error');
     return;
   }
@@ -193,15 +194,15 @@ export async function handleOAuthReturn(
   // matching `state` exchanges, and it overwrites any stored session, so a
   // reconnect over a stale token works. Without the client id + secret pair
   // the exchange cannot be built at all.
-  const expected = takeOAuthFlow('trakt');
+  const expected = takeOAuthFlow(Provider.Trakt);
   if (expected == null) return;
   if (state !== expected) {
     setStatus('error');
     return;
   }
   if (
-    getClientIdForProvider('trakt') === '' ||
-    getClientSecretForProvider('trakt') === ''
+    getClientIdForProvider(Provider.Trakt) === '' ||
+    getClientSecretForProvider(Provider.Trakt) === ''
   ) {
     return;
   }

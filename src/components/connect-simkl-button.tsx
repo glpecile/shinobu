@@ -20,6 +20,7 @@ import {
   getSimklRedirectUri,
   SIMKL_REDIRECT_URIS,
 } from '@/lib/providers/simkl/redirect-uri';
+import { Provider } from '@/lib/providers/types';
 import { exchangeSimklCode } from '@/state/queries/simkl';
 import {
   clearProviderClientId,
@@ -67,7 +68,7 @@ type ClientIdForm = z.infer<typeof clientIdSchema>;
  */
 export function useSimklConnect() {
   const [storedClientId, setStoredClientId] = useState<string | null>(() =>
-    typeof window === 'undefined' ? null : getProviderClientId('simkl'),
+    typeof window === 'undefined' ? null : getProviderClientId(Provider.Simkl),
   );
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
@@ -158,7 +159,7 @@ export function ConnectSimklButton() {
   });
   // Saving the id means the user wants to connect — go straight into OAuth.
   const submitClientId = handleSubmit(async (values) => {
-    setProviderClientId('simkl', values.clientId);
+    setProviderClientId(Provider.Simkl, values.clientId);
     setStoredClientId(values.clientId);
     await connect(values.clientId);
   });
@@ -270,7 +271,7 @@ export function ConnectSimklButton() {
         <PresstableOpacity
           className="self-center"
           onPress={() => {
-            clearProviderClientId('simkl');
+            clearProviderClientId(Provider.Simkl);
             setStoredClientId(null);
           }}
         >

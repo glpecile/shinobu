@@ -9,6 +9,7 @@ import { EpisodeScreen, EpisodeScreenSkeleton } from '@/features/episode-details
 import { PersonNotFound } from '@/features/person';
 import { placeInLayout } from '@/lib/providers/mapping/season-layout';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
+import { Provider } from '@/lib/providers/types';
 import { mediaItemId, routes } from '@/lib/routes';
 import { useAniZipEpisodeMapQuery, useSeasonLayoutQuery } from '@/state/queries/mapping';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
@@ -35,7 +36,7 @@ export default function EpisodeRoute() {
   const [season, number] = parts.length === 1 ? [undefined, parts[0]] : parts;
   const detailsHref = id == null ? routes.home : routes.details(id, 'TV');
   const router = useRouter();
-  const { item: resolved, isLoading } = useResolvedMediaItem(id ?? '', provider === 'trakt' ? 'TV' : undefined);
+  const { item: resolved, isLoading } = useResolvedMediaItem(id ?? '', provider === Provider.Trakt ? 'TV' : undefined);
   // The same TMDB-over-provider merge the details screen applies: an anime
   // item has no TMDB id of its own, the catalogue read discovers it, and the
   // episode surfaces are TMDB-keyed. Cached from the details screen that

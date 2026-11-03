@@ -5,6 +5,7 @@ import { openExternalUrl } from '@/lib/open-external-url';
 import { providerPersonUrl, type UrlPerson } from '@/lib/providers/external-urls';
 import type { ProviderLink } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { useAniListStaffIdQuery } from '@/state/queries/anilist';
 import { useConnectedProviders } from '@/state/session';
 
@@ -49,7 +50,7 @@ export function PersonLinksSection({
   // unconnected AniList renders no pill, so resolving its id would buy nothing.
   const staffId = useAniListStaffIdQuery({
     name: person.name,
-    enabled: enabled && connected.includes('anilist') && person.anilistId == null,
+    enabled: enabled && connected.includes(Provider.AniList) && person.anilistId == null,
   });
   const anilistId = person.anilistId ?? staffId.data ?? undefined;
 

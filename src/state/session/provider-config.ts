@@ -1,7 +1,7 @@
 import { anilistClientId } from '@/lib/providers/anilist/config';
 import { simklClientId } from '@/lib/providers/simkl/config';
 import { traktClientId, traktClientSecret } from '@/lib/providers/trakt/config';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 
 import { getProviderClientId, getProviderClientSecret } from './tokens';
 
@@ -12,14 +12,14 @@ import { getProviderClientId, getProviderClientSecret } from './tokens';
  * any in-app override the user has entered (todos/009, no env-file edits).
  */
 export const providerClientIds: Record<ProviderId, () => string> = {
-  trakt: () => getProviderClientId('trakt') ?? traktClientId(),
+  trakt: () => getProviderClientId(Provider.Trakt) ?? traktClientId(),
   // Hybrid (2026-07-14): the embedded/env app-owned client (otraku-style
   // implicit grant, plan 0011) when the build ships one, else the id the
   // user entered in the connect form — Trakt-style, minus the secret (the
   // implicit grant has none).
   anilist: () => {
     const embedded = anilistClientId();
-    return embedded !== '' ? embedded : (getProviderClientId('anilist') ?? '');
+    return embedded !== '' ? embedded : (getProviderClientId(Provider.AniList) ?? '');
   },
   letterboxd: () => '',
   // No OAuth app registration (plan 0017): Serializd auth is a bearer token
@@ -28,7 +28,7 @@ export const providerClientIds: Record<ProviderId, () => string> = {
   serializd: () => '',
   // App-owned public PKCE client id (plan 0034 KTD-1 — no secret exists).
   // Trakt-style precedence: an in-app override wins, else the bundled env id.
-  simkl: () => getProviderClientId('simkl') ?? simklClientId(),
+  simkl: () => getProviderClientId(Provider.Simkl) ?? simklClientId(),
 };
 
 export function getClientIdForProvider(id: ProviderId): string {
@@ -43,8 +43,8 @@ export function getClientIdForProvider(id: ProviderId): string {
  */
 export const providerClientSecrets: Record<ProviderId, () => string> = {
   trakt: () =>
-    getProviderClientId('trakt') != null
-      ? (getProviderClientSecret('trakt') ?? '')
+    getProviderClientId(Provider.Trakt) != null
+      ? (getProviderClientSecret(Provider.Trakt) ?? '')
       : traktClientSecret(),
   anilist: () => '',
   letterboxd: () => '',

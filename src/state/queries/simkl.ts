@@ -21,6 +21,7 @@ import {
   type SimklLookupParams,
 } from '@/lib/providers/simkl/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
 import {
@@ -36,9 +37,9 @@ import { useConnectedProviders } from '@/state/session';
 // one writer path. No refresh machinery hangs off it — a Simkl 401 is a dead
 // session (plan 0034 KTD-2), never a refresh trigger.
 const tokenStore: TokenStore = {
-  get: () => getProviderSession('simkl'),
-  set: (session) => setProviderSession('simkl', session),
-  clear: () => clearProviderSession('simkl'),
+  get: () => getProviderSession(Provider.Simkl),
+  set: (session) => setProviderSession(Provider.Simkl, session),
+  clear: () => clearProviderSession(Provider.Simkl),
 };
 
 /**
@@ -53,7 +54,7 @@ export function simklDeps(): SimklDeps {
   return {
     fetch: httpFetch,
     tokens: tokenStore,
-    clientId: getClientIdForProvider('simkl'),
+    clientId: getClientIdForProvider(Provider.Simkl),
   };
 }
 
@@ -73,7 +74,7 @@ export function exchangeSimklCode(params: {
 }
 
 export const simklQueryKeys = {
-  all: ['simkl'] as const,
+  all: [Provider.Simkl] as const,
   /**
    * One `/sync/all-items` snapshot per type/status filter. The unfiltered read
    * rides the `all/all` segments so "whole library" and "one bucket" can never
@@ -285,11 +286,11 @@ export function useSimklWatchedInfo(
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
   const entry = useSimklLibraryEntryQuery({
     item,
-    enabled: useConnectedProviders().includes('simkl') && (filmLike || item.type === 'TV'),
+    enabled: useConnectedProviders().includes(Provider.Simkl) && (filmLike || item.type === 'TV'),
   }).data;
   const progress = useSimklProgressQuery({
     item,
-    enabled: useConnectedProviders().includes('simkl') && (filmLike || item.type === 'TV'),
+    enabled: useConnectedProviders().includes(Provider.Simkl) && (filmLike || item.type === 'TV'),
   }).data;
   // `enabled: false` stops the *fetch*, not the read: the snapshot is one
   // shared cache entry, so a screen another hook populated it for still

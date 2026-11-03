@@ -12,7 +12,7 @@ import { WATCHLIST_PAGE_SIZE } from '@/lib/providers/letterboxd/watchlist';
 import { providersForFeed } from '@/lib/providers/routing';
 import { getAllItems } from '@/lib/providers/simkl/reads';
 import { getWatchlist } from '@/lib/providers/trakt/reads';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { currentUsableProviders, useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -84,10 +84,10 @@ export type { WatchlistInput, WatchlistInputs };
  * still held to above before it can join this list.
  */
 const WATCHLIST_READ_PROVIDERS: readonly ProviderId[] = [
-  'trakt',
-  'anilist',
-  'letterboxd',
-  'simkl',
+  Provider.Trakt,
+  Provider.AniList,
+  Provider.Letterboxd,
+  Provider.Simkl,
 ];
 
 /**
@@ -123,7 +123,7 @@ async function traktInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
   });
   // `normalizeWatchlistRow` puts `listed_at` in `lastUpdated` precisely so the
   // merge can order by add-time (KTD-11); `nowIso` would make every row equal.
-  return items.map((item) => ({ item, source: 'trakt', addedAt: item.lastUpdated }));
+  return items.map((item) => ({ item, source: Provider.Trakt, addedAt: item.lastUpdated }));
 }
 
 /**
@@ -150,7 +150,7 @@ async function anilistInputs(queryClient: QueryClient): Promise<WatchlistInput[]
   ]);
   return [...anime, ...manga].map((entry) => ({
     item: entry.item,
-    source: 'anilist',
+    source: Provider.AniList,
     anilistStatus: entry.status,
     ...(entry.entryId != null ? { entryId: entry.entryId } : {}),
   }));
@@ -204,7 +204,7 @@ async function letterboxdInputs(queryClient: QueryClient): Promise<WatchlistInpu
     pages: Math.max(cached?.pages.length ?? 1, 1),
     staleTime: WATCHLIST_STALE_MS,
   });
-  return data.pages.flat().map((item) => ({ item, source: 'letterboxd' }));
+  return data.pages.flat().map((item) => ({ item, source: Provider.Letterboxd }));
 }
 
 /**
@@ -225,7 +225,7 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
   const entries = [...library.shows, ...library.movies, ...library.anime];
   return entries.map((entry) => ({
     item: entry.item,
-    source: 'simkl',
+    source: Provider.Simkl,
     ...(entry.addedToWatchlistAt != null
       ? { addedAt: entry.addedToWatchlistAt }
       : {}),
@@ -259,17 +259,17 @@ function streamWatchlistInputs(
   return streamLegs(
     // In `WATCHLIST_READ_PROVIDERS` order: `incomplete` finds a leg by its index.
     [
-      feedProviders.includes('trakt')
-        ? settle('trakt', () => traktInputs(queryClient))
+      feedProviders.includes(Provider.Trakt)
+        ? settle(Provider.Trakt, () => traktInputs(queryClient))
         : none<WatchlistInput>(),
-      feedProviders.includes('anilist')
-        ? settle('anilist', () => anilistInputs(queryClient))
+      feedProviders.includes(Provider.AniList)
+        ? settle(Provider.AniList, () => anilistInputs(queryClient))
         : none<WatchlistInput>(),
-      feedProviders.includes('letterboxd')
-        ? settle('letterboxd', () => letterboxdInputs(queryClient))
+      feedProviders.includes(Provider.Letterboxd)
+        ? settle(Provider.Letterboxd, () => letterboxdInputs(queryClient))
         : none<WatchlistInput>(),
-      feedProviders.includes('simkl')
-        ? settle('simkl', () => simklInputs(queryClient))
+      feedProviders.includes(Provider.Simkl)
+        ? settle(Provider.Simkl, () => simklInputs(queryClient))
         : none<WatchlistInput>(),
     ],
     (legs) => {
@@ -283,7 +283,7 @@ function streamWatchlistInputs(
       const incomplete = WATCHLIST_READ_PROVIDERS.filter((provider, index) =>
         feedProviders.includes(provider) &&
         (legs[index] == null ||
-          (provider === 'letterboxd' &&
+          (provider === Provider.Letterboxd &&
             letterboxd.errors.length === 0 &&
             !letterboxdLegIsComplete(queryClient))),
       );

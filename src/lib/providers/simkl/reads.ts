@@ -1,6 +1,7 @@
 import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem, NormalizedRating } from '@/types/media';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import { SIMKL_CDN_BASE_URL } from './config';
@@ -30,7 +31,7 @@ import {
   type SimklWatchStatus,
 } from './normalize';
 
-const provider = 'simkl' as const;
+const provider = Provider.Simkl;
 
 /**
  * The token rides from the store per call, Trakt-style — but with no refresh
@@ -229,6 +230,7 @@ export interface SimklLookupParams {
  */
 function lookupQuery(params: SimklLookupParams): URLSearchParams {
   const query = new URLSearchParams();
+  // oxlint-disable-next-line shinobu/no-provider-literals -- Simkl's /search/id parameter names.
   for (const key of ['simkl', 'tmdb', 'imdb', 'tvdb', 'mal', 'anilist', 'anidb', 'type'] as const) {
     const value = params[key];
     if (value != null) query.set(key, String(value));

@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 
 import type { UpNextEntry, UpNextRelease } from './types';
@@ -56,6 +57,6 @@ export function episodeHref(entry: UpNextEntry): string | undefined {
   if (entry.kind !== 'episode') return undefined;
   const { season, number } = entry.episode;
   if (season != null) return routes.episode(entry.item.id, season, number);
-  if (entry.source === 'anilist') return routes.animeEpisode(entry.item.id, number);
+  if (entry.source === Provider.AniList) return routes.animeEpisode(entry.item.id, number);
   return undefined;
 }

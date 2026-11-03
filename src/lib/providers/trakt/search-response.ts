@@ -3,6 +3,7 @@ import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError } from '@/lib/providers/errors';
 import { optionalNullable } from '@/lib/providers/schema';
+import { Provider } from '@/lib/providers/types';
 
 const optionalNumber = optionalNullable(Schema.Number);
 const optionalString = optionalNullable(Schema.String);
@@ -44,7 +45,7 @@ const searchResponse = Schema.Array(Schema.Union([
 export function decodeSearchResponse(input: unknown) {
   return Schema.decodeUnknownEffect(searchResponse)(input).pipe(
     Effect.mapError((error) => new ProviderDecodeError({
-      provider: 'trakt',
+      provider: Provider.Trakt,
       detail: `invalid search response: ${error.message}`,
     })),
   );

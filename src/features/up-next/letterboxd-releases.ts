@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import type { ReleaseUpNextInput, UpNextRelease } from './types';
@@ -103,7 +104,7 @@ function releaseInputs(film: NormalizedMediaItem): ReleaseUpNextInput[] {
     const date = calendar[kind];
     return date == null
       ? []
-      : [{ item: film, kind, date, source: 'letterboxd' as const }];
+      : [{ item: film, kind, date, source: Provider.Letterboxd }];
   });
 }
 

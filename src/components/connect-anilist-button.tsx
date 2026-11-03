@@ -13,6 +13,7 @@ import { TextField } from '@/components/text-field';
 import { SHINOBU_NATIVE_REDIRECT_URI, SHINOBU_WEB_DOMAIN } from '@/lib/config';
 import { anilistAuthorizeUrl, anilistClientId } from '@/lib/providers/anilist/config';
 import { ANILIST_CREATE_CLIENT_URL } from '@/lib/providers/external-urls';
+import { Provider } from '@/lib/providers/types';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
 import { beginOAuthFlow } from '@/state/session/oauth-flow';
 import {
@@ -66,7 +67,7 @@ function redirectUriForThisDevice(): string {
  */
 export function useAniListConnect() {
   const [storedClientId, setStoredClientId] = useState<string | null>(() =>
-    typeof window === 'undefined' ? null : getProviderClientId('anilist'),
+    typeof window === 'undefined' ? null : getProviderClientId(Provider.AniList),
   );
   const [status, setStatus] = useState<ConnectionStatus>('idle');
 
@@ -82,7 +83,7 @@ export function useAniListConnect() {
       // Same-window redirect; AniList returns to the client's registered
       // redirect URL (the site origin) with the token in the fragment.
       const state = crypto.randomUUID();
-      beginOAuthFlow('anilist', state);
+      beginOAuthFlow(Provider.AniList, state);
       window.location.assign(anilistAuthorizeUrl(id, state));
       return;
     }
@@ -128,7 +129,7 @@ export function ConnectAniListButton() {
   });
   // Saving the id means the user wants to connect — go straight into OAuth.
   const submitClientId = handleSubmit(async (values) => {
-    setProviderClientId('anilist', values.clientId);
+    setProviderClientId(Provider.AniList, values.clientId);
     setStoredClientId(values.clientId);
     await connect(values.clientId);
   });
@@ -237,7 +238,7 @@ export function ConnectAniListButton() {
         <PresstableOpacity
           className="self-center"
           onPress={() => {
-            clearProviderClientId('anilist');
+            clearProviderClientId(Provider.AniList);
             setStoredClientId(null);
           }}
         >

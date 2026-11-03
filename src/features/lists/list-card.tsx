@@ -6,6 +6,7 @@ import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
+import { Provider } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import { listMeta, type ListSummary } from './list-summary';
 import { PosterStack } from './poster-stack';
@@ -64,7 +65,7 @@ export function NewListCard({ provider, onPress }: { provider: ListSummary['prov
       </PosterStack>
       <Text className="text-foreground font-sans-semibold text-sm mt-2.5" numberOfLines={1}>New list</Text>
       <View className="flex-row items-center gap-2 mt-1">
-        <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>{provider === 'letterboxd' ? 'Films, ranked or not' : 'Shows, ranked or not'}</Text>
+        <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>{provider === Provider.Letterboxd ? 'Films, ranked or not' : 'Shows, ranked or not'}</Text>
         <ProviderIcon id={provider} size={12} />
       </View>
     </PresstableScale>

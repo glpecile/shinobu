@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { watchlistMergeKeys } from '@/features/watchlist/compute';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { titleKey } from '@/lib/providers/pick-movie-match';
 import type { LetterboxdListFilmsPage } from '@/lib/providers/letterboxd/lists';
@@ -74,18 +75,18 @@ export function findLetterboxdTwinInCache(
         queryKey: WATCHLIST_QUERY_ROOT,
       })
       .flatMap(([, data]) => data?.inputs ?? [])
-      .filter((input) => input?.source === 'letterboxd')
+      .filter((input) => input?.source === Provider.Letterboxd)
       .map((input) => input.item),
     ...cachedDiaryEntries(queryClient)
-      .filter((entry) => entry?.provider === 'letterboxd')
+      .filter((entry) => entry?.provider === Provider.Letterboxd)
       .map((entry) => entry.item),
-    ...queryClient.getQueriesData<NormalizedMediaItem[]>({ queryKey: ['letterboxd', 'watchlist'] })
+    ...queryClient.getQueriesData<NormalizedMediaItem[]>({ queryKey: [Provider.Letterboxd, 'watchlist'] })
       .flatMap(([, data]) => data ?? []),
-    ...queryClient.getQueriesData<{ pages: NormalizedMediaItem[][] }>({ queryKey: ['letterboxd', 'watchlist-pages'] })
+    ...queryClient.getQueriesData<{ pages: NormalizedMediaItem[][] }>({ queryKey: [Provider.Letterboxd, 'watchlist-pages'] })
       .flatMap(([, data]) => data?.pages.flat() ?? []),
-    ...queryClient.getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({ queryKey: ['letterboxd', 'list-films'] })
+    ...queryClient.getQueriesData<{ pages: LetterboxdListFilmsPage[] }>({ queryKey: [Provider.Letterboxd, 'list-films'] })
       .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? []),
-    ...queryClient.getQueriesData<NormalizedMediaItem | null>({ queryKey: ['letterboxd', 'film'] })
+    ...queryClient.getQueriesData<NormalizedMediaItem | null>({ queryKey: [Provider.Letterboxd, 'film'] })
       .flatMap(([, data]) => data == null ? [] : [data]),
   ];
   if (item.type === 'TV') {

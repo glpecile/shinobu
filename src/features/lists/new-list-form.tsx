@@ -24,6 +24,7 @@ import type { LetterboxdListSharing } from '@/lib/providers/letterboxd/deps';
 import { letterboxdListUrl } from '@/lib/providers/letterboxd/lists';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
@@ -121,10 +122,10 @@ export function NewListForm({ providers, initialProvider }: {
   const hasLetterboxdSession = useHasLetterboxdWriteSession();
   const hasLetterboxdScript = useLetterboxdUserscript('list-create');
   const label = PROVIDERS[provider].label;
-  const noun = provider === 'letterboxd' ? 'film' : 'show';
+  const noun = provider === Provider.Letterboxd ? 'film' : 'show';
   const items = picked.filter((item) => fitsProvider(provider, item));
-  const needsScript = process.env.EXPO_OS === 'web' && provider === 'letterboxd' && !hasLetterboxdScript;
-  const writable = provider === 'serializd' || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
+  const needsScript = process.env.EXPO_OS === 'web' && provider === Provider.Letterboxd && !hasLetterboxdScript;
+  const writable = provider === Provider.Serializd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
 
   // Read through getValues: recycled search rows can hold an older render's callback.
@@ -135,7 +136,7 @@ export function NewListForm({ providers, initialProvider }: {
   if (unlisted != null) {
     return (
       <>
-      <ListsHeader provider="letterboxd" title="New list" />
+      <ListsHeader provider={Provider.Letterboxd} title="New list" />
       <CenteredNotice>
         <CenteredNotice.Icon name="checkmark-circle-outline" />
         <CenteredNotice.Title>List created</CenteredNotice.Title>
@@ -155,14 +156,14 @@ export function NewListForm({ providers, initialProvider }: {
       onSuccess: (result) => {
         toast.success('List created', list.draft.name);
         switch (result.provider) {
-          case 'letterboxd':
-            if (list.provider === 'letterboxd' && list.draft.sharing !== 'Public') {
+          case Provider.Letterboxd:
+            if (list.provider === Provider.Letterboxd && list.draft.sharing !== 'Public') {
               setUnlisted({ name: list.draft.name, url: letterboxdListUrl(result.owner, result.slug) ?? `https://letterboxd.com/${result.owner}/lists/` });
               return;
             }
             router.replace(routes.letterboxdList(result.owner, result.slug));
             return;
-          case 'serializd':
+          case Provider.Serializd:
             router.replace(routes.serializdList(result.id));
         }
       },
@@ -188,7 +189,7 @@ export function NewListForm({ providers, initialProvider }: {
         )}
         <Field error={errors.name?.message} label="Name">
           <Controller control={control} name="name" render={({ field }) => (
-            <TextField accessibilityLabel="Name" autoCapitalize="sentences" autoCorrect editable={!busy} onBlur={field.onBlur} onChangeText={field.onChange} placeholder={provider === 'letterboxd' ? 'e.g. Best of the decade' : 'e.g. Comfort rewatches'} returnKeyType="next" value={field.value} />
+            <TextField accessibilityLabel="Name" autoCapitalize="sentences" autoCorrect editable={!busy} onBlur={field.onBlur} onChangeText={field.onChange} placeholder={provider === Provider.Letterboxd ? 'e.g. Best of the decade' : 'e.g. Comfort rewatches'} returnKeyType="next" value={field.value} />
           )} />
         </Field>
         <Field error={errors.description?.message} label="Description">
@@ -196,7 +197,7 @@ export function NewListForm({ providers, initialProvider }: {
             <TextField accessibilityLabel="Description" autoCapitalize="sentences" autoCorrect editable={!busy} multiline onBlur={field.onBlur} onChangeText={field.onChange} placeholder="What ties it together?" value={field.value} />
           )} />
         </Field>
-        {provider === 'letterboxd' && (
+        {provider === Provider.Letterboxd && (
           <Field error={errors.tags?.message} label="Tags">
             <Controller control={control} name="tags" render={({ field }) => (
               <>
@@ -206,8 +207,8 @@ export function NewListForm({ providers, initialProvider }: {
             )} />
           </Field>
         )}
-        <Field label="Who can see it" note={provider === 'letterboxd' ? SHARING_NOTE[sharing] : isPrivate ? 'Only you can see it.' : 'Anyone can find it on your profile.'}>
-          {provider === 'letterboxd'
+        <Field label="Who can see it" note={provider === Provider.Letterboxd ? SHARING_NOTE[sharing] : isPrivate ? 'Only you can see it.' : 'Anyone can find it on your profile.'}>
+          {provider === Provider.Letterboxd
             ? <Controller control={control} name="sharing" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-md" onChange={field.onChange} options={SHARING_OPTIONS} size="sm" value={field.value} />} />
             : <Controller control={control} name="isPrivate" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-72" onChange={(value) => field.onChange(value === 'private')} options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]} size="sm" value={field.value ? 'private' : 'public'} />} />}
         </Field>
@@ -215,7 +216,7 @@ export function NewListForm({ providers, initialProvider }: {
           <GroupedList.Item>
             <Controller control={control} name="ranked" render={({ field }) => <SwitchRow disabled={busy} label="Ranked" note={`Number each ${noun} by its position.`} onChange={field.onChange} value={field.value} />} />
           </GroupedList.Item>
-          {provider === 'serializd' && (
+          {provider === Provider.Serializd && (
             <GroupedList.Item>
               <Controller control={control} name="allowsComments" render={({ field }) => <SwitchRow disabled={busy} label="Comments" note="Let others comment on the list." onChange={field.onChange} value={field.value} />} />
             </GroupedList.Item>
@@ -223,11 +224,11 @@ export function NewListForm({ providers, initialProvider }: {
         </GroupedList>
         <View className="gap-3">
           <View className="flex-row items-center gap-3">
-            <Text className="text-foreground font-display text-lg flex-1">{provider === 'letterboxd' ? 'Films' : 'Shows'}{items.length > 0 && <Text className="text-muted font-sans text-sm">{`  ${items.length}`}</Text>}</Text>
+            <Text className="text-foreground font-display text-lg flex-1">{provider === Provider.Letterboxd ? 'Films' : 'Shows'}{items.length > 0 && <Text className="text-muted font-sans text-sm">{`  ${items.length}`}</Text>}</Text>
             <Button disabled={busy} icon={<Button.Icon name="add" />} label={`Add ${noun}s`} onPress={() => setSearching(true)} size="sm" variant="quiet" />
           </View>
           {items.length === 0 ? (
-            <Text className="text-muted font-sans text-sm">{provider === 'letterboxd' ? 'Optional. Add films now or from the list later.' : 'Add the first show to start the list.'}</Text>
+            <Text className="text-muted font-sans text-sm">{provider === Provider.Letterboxd ? 'Optional. Add films now or from the list later.' : 'Add the first show to start the list.'}</Text>
           ) : (
             <View style={{ height: Math.min(items.length, 5) * 70 }}>
               <List
@@ -292,7 +293,7 @@ export function NewListScreen({ providers, initialProvider }: { providers: reado
       <Head><title>New list — Shinobu</title></Head>
       {first == null ? (
         <>
-        <ListsHeader provider={initialProvider ?? 'letterboxd'} title="New list" />
+        <ListsHeader provider={initialProvider ?? Provider.Letterboxd} title="New list" />
         <CenteredNotice>
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>Connect a list provider</CenteredNotice.Title>
