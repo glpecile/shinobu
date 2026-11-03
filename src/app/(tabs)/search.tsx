@@ -71,9 +71,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 const SCOPES = [
   {
     value: 'titles',
-    label: 'Titles',
+    label: 'Movies & TV',
     icon: 'film-outline',
-    placeholder: 'Search titles',
+    placeholder: 'Search movies & TV',
   },
   {
     value: 'reading',
@@ -630,7 +630,7 @@ function SearchScreen() {
                       </CenteredNotice.Body>
                       <CenteredNotice.Action
                         icon={<Button.Icon name="search-outline" />}
-                        label="Search all titles"
+                        label="Search movies & TV"
                         onPress={() => setScope('titles')}
                       />
                     </>
