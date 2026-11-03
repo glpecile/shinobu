@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import type {
   NormalizedDiaryEntry,
   NormalizedMediaItem,
@@ -138,7 +139,7 @@ export function normalizeAniListMedia(
     ...(media.duration != null ? { runtime: media.duration } : {}),
     ...(genres != null && genres.length > 0 ? { genres } : {}),
     ...(media.averageScore != null
-      ? { ratings: [{ source: 'anilist', value: media.averageScore, scale: '%' }] }
+      ? { ratings: [{ source: Provider.AniList, value: media.averageScore, scale: '%' }] }
       : {}),
     type,
     // AniList's ANIME covers movie-format entries; MOVIE format is what makes
@@ -342,7 +343,7 @@ export function normalizeListActivity(
 
   return {
     id: `anilist-${raw.id}`,
-    provider: 'anilist',
+    provider: Provider.AniList,
     watchedAt,
     item,
     ...(episodes.length > 0 ? { episodes } : {}),

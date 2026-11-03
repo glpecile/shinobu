@@ -2,6 +2,7 @@ import * as Effect from 'effect/Effect';
 import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { validateAuthToken } from './auth';
@@ -53,7 +54,7 @@ export const getSerializdUpcoming = Effect.fn('serializd.getUpcoming')(function*
   yield* validateAuthToken(deps, deps.session?.accessToken ?? '');
   const raw = yield* serializdHttp<unknown>(deps, '/search/upcoming_episodes_v3', { auth: true });
   const page = yield* Schema.decodeUnknownEffect(RawPage)(raw).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'unrecognized upcoming episodes' })),
+    Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'unrecognized upcoming episodes' })),
   );
   const fetchedAt = new Date().toISOString();
   return page.items.map((entry): SerializdUpcomingEpisode => ({

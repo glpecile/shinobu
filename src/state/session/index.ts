@@ -2,7 +2,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 
 import { clearSimklAuthFlow } from '@/lib/providers/simkl/auth-flow';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { DIARY_QUERY_ROOT } from '@/state/queries/diary-pages';
 import { UP_NEXT_QUERY_ROOT } from '@/state/queries/up-next-cache';
 import { WATCHLIST_QUERY_ROOT } from '@/state/queries/watchlist-cache';
@@ -124,7 +124,7 @@ export function purgeProviderQueries(queryClient: QueryClient, id: ProviderId): 
  */
 export function disconnectProvider(queryClient: QueryClient, id: ProviderId): void {
   clearProviderSession(id);
-  if (id === 'simkl') {
+  if (id === Provider.Simkl) {
     // A pending PKCE verifier/state pair is scoped to a connect attempt, not
     // a session — but disconnecting mid-flow must not leave material around
     // that would validate some future stray code (plan 0034 U5).

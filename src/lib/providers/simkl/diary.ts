@@ -1,8 +1,9 @@
 
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry } from '@/types/media';
 import type { SimklLibrary, SimklLibraryEntry } from './normalize';
 
-const provider = 'simkl' as const;
+const provider = Provider.Simkl;
 
 /**
  * Simkl has no paginated history endpoint (nothing like Trakt's

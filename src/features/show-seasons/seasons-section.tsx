@@ -4,6 +4,7 @@ import { SuspenseSection } from '@/components/suspense-section';
 import { Section } from '@/components/section';
 import { Skeleton } from '@/components/skeleton';
 import { haptics } from '@/lib/haptics';
+import { Provider } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
 import {
   useShowSeasonsSource,
@@ -85,11 +86,11 @@ function ShowDetailsList({
   // Trakt progress takes precedence over Simkl's canonical episode view.
   const { data: traktWatched } = useTraktShowProgressQuery({
     traktId: traktId ?? undefined,
-    enabled: connected.includes('trakt') && traktId != null,
+    enabled: connected.includes(Provider.Trakt) && traktId != null,
   });
   const { data: simklEntry } = useSimklEpisodeStateQuery({
     item,
-    enabled: connected.includes('simkl'),
+    enabled: connected.includes(Provider.Simkl),
   });
   const watchedKeys =
     traktWatched?.watchedKeys ??

@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import type { MediaType, NormalizedMediaItem, NormalizedRating } from '@/types/media';
 
 /**
@@ -630,7 +631,7 @@ export function normalizeTrendingItem(
 // ---- Ratings ----
 
 function simklScore(
-  source: 'simkl' | 'imdb' | 'mal',
+  source: typeof Provider.Simkl | 'imdb' | 'mal',
   score: SimklScore | null | undefined,
   rank?: number | null,
 ): NormalizedRating[] {
@@ -647,7 +648,7 @@ function simklScore(
 /** Simkl's own score plus the IMDb (movies, TV) or MAL (anime) score it mirrors. */
 export function normalizeRatings(raw: SimklRatingsRaw | null): NormalizedRating[] {
   return [
-    ...simklScore('simkl', raw?.simkl),
+    ...simklScore(Provider.Simkl, raw?.simkl),
     ...simklScore('imdb', raw?.IMDB),
     ...simklScore('mal', raw?.MAL, raw?.MAL?.rank),
   ];

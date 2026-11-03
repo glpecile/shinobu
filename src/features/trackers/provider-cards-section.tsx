@@ -10,7 +10,7 @@ import {
 } from '@/features/trackers/provider-connections';
 import { ProviderSheet } from '@/features/trackers/provider-sheet';
 import { haptics } from '@/lib/haptics';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   SERVER_CONNECTED_PROVIDERS,
   useConnectedProviders,
@@ -85,7 +85,7 @@ export function ProviderCardsSection() {
               connected={connected.includes(id)}
               id={id}
               onOpenSheet={() => openSheet(id)}
-              reconnect={id === 'trakt' && traktNeedsCredentials}
+              reconnect={id === Provider.Trakt && traktNeedsCredentials}
             />
           </MovedCard>
         ))}

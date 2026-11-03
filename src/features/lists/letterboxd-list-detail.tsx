@@ -14,6 +14,7 @@ import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/m
 import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import { DURATION } from '@/lib/motion';
 import { sortMediaEntries } from '@/lib/media-sort';
+import { Provider } from '@/lib/providers/types';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -44,22 +45,22 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   const items = progress.items;
   const progressById = new Map(items.map((item, index) => [item.id, progress.progress[index]]));
   const shareHref = routes.letterboxdList(owner, slug);
-  if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider="letterboxd" shareHref={shareHref} url={url} />;
+  if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider={Provider.Letterboxd} shareHref={shareHref} url={url} />;
   const title = pages.data.pages[0].title;
   const target = username != null && username.toLowerCase() === owner.toLowerCase()
-    ? { provider: 'letterboxd' as const, username, owner, slug, title, url } : null;
+    ? { provider: Provider.Letterboxd, username, owner, slug, title, url } : null;
   return (
     <>
       <Head><title>{`${title} — Shinobu`}</title></Head>
       <ListsHeader
         shareHref={shareHref}
         metadata={<ListProgress countLabel={`${items.length}${pages.hasNextPage ? '+' : ''} ${items.length === 1 ? 'film' : 'films'}`} partial={pages.hasNextPage} state={progress} />}
-        provider="letterboxd" subtitle={`by ${owner}`} title={title}
+        provider={Provider.Letterboxd} subtitle={`by ${owner}`} title={title}
       />
       <MediaToolbar notice={sort !== 'default' && pages.hasNextPage ? <SortingLoadedNotice /> : undefined} view={view}>
         <MediaSortControl scope="lists" sort={sort} />
         {target != null && <RenameList key={title} target={target} />}
-        <ToolbarIcon><ProviderListLink iconOnly provider="letterboxd" url={url} /></ToolbarIcon>
+        <ToolbarIcon><ProviderListLink iconOnly provider={Provider.Letterboxd} url={url} /></ToolbarIcon>
         {username != null && <ToolbarIcon><ListLikeButton key={`${username}/${owner}/${slug}`} owner={owner} slug={slug} url={url} username={username} /></ToolbarIcon>}
       </MediaToolbar>
       {items.length === 0 ? (
@@ -67,7 +68,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
           <CenteredNotice.Body>{target != null ? 'Use the + button to add your first film.' : 'Films added to this list on Letterboxd will appear here.'}</CenteredNotice.Body>
-          <ProviderListLink provider="letterboxd" url={url} />
+          <ProviderListLink provider={Provider.Letterboxd} url={url} />
         </CenteredNotice>
       ) : (
         <Layout
@@ -94,7 +95,7 @@ export function ListFilmsSkeleton({ likeButton, owned, shareHref }: { likeButton
   const compact = useWindowDimensions().width < 640;
   return (
     <View className="flex-1">
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider="letterboxd" shareHref={shareHref} subtitle="" />
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider={Provider.Letterboxd} shareHref={shareHref} subtitle="" />
       <MediaToolbarSkeleton actions={1 + (likeButton ? 1 : 0) + (owned && compact ? 1 : 0)} labelled={owned && !compact} layout scope="lists" />
       <WallSkeleton />
     </View>

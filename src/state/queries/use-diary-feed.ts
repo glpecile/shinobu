@@ -15,7 +15,7 @@ import {
 import { providersForFeed } from '@/lib/providers/routing';
 import { simklDiaryEntries } from '@/lib/providers/simkl/diary';
 import { getHistory, getMovieHistory } from '@/lib/providers/trakt/reads';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import type { DiaryDay, NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
@@ -175,10 +175,10 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   // Letterboxd and Serializd reads need a stored username. The `readable`
   // gate keeps these MMKV reads out of web SSR renders (`readable` is empty
   // in the server snapshot — plan 0016 R16).
-  const letterboxdUsername = readable.includes('letterboxd')
+  const letterboxdUsername = readable.includes(Provider.Letterboxd)
     ? (getLetterboxdUsername() ?? '')
     : '';
-  const serializdUsername = readable.includes('serializd')
+  const serializdUsername = readable.includes(Provider.Serializd)
     ? (getSerializdUsername() ?? '')
     : '';
   const usernames: Partial<Record<ProviderId, string>> = {
@@ -269,13 +269,13 @@ export function useFilmPlaysQuery(item: NormalizedMediaItem) {
     queryKey: diaryQueryKeys.filmPlays(providers, { trakt, anilist, tmdb, letterboxd }),
     queryFn: async ({ signal }) => {
       const settled = await Promise.allSettled([
-        providers.includes('trakt') && trakt != null
+        providers.includes(Provider.Trakt) && trakt != null
           ? Effect.runPromise(getMovieHistory(traktDeps(), { traktId: trakt }), { signal })
           : [],
-        providers.includes('anilist') && anilist != null
+        providers.includes(Provider.AniList) && anilist != null
           ? fetchAniListActivityPage(queryClient, 1, anilist, signal).then((result) => result.entries)
           : [],
-        providers.includes('letterboxd') && (tmdb != null || letterboxd != null)
+        providers.includes(Provider.Letterboxd) && (tmdb != null || letterboxd != null)
           ? queryClient.fetchQuery(letterboxdDiaryQuery()).then((entries) =>
               entries.filter(
                 (entry) =>

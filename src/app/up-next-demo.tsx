@@ -17,6 +17,7 @@ import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import { CardSlot } from '@/features/up-next/ui/card-slot';
 import { episodeCardRailHeight } from '@/features/up-next/ui/metrics';
 import { WeekStrip } from '@/features/up-next/ui/week-strip';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
@@ -29,7 +30,7 @@ const BASE: UpNextEpisodeEntry = {
   id: 'simkl-demo-1',
   kind: 'episode',
   status: 'aired',
-  source: 'simkl',
+  source: Provider.Simkl,
   item: {
     id: 'simkl-demo-1', title: 'Link Click Season 3', type: 'ANIME',
     coverImage: artwork(640, 360), currentProgress: 2, progressUnit: 'episode',

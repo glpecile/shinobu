@@ -3,6 +3,7 @@ import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError, ProviderNetworkError, ProviderRateLimitError, type ProviderError } from '@/lib/providers/errors';
 import type { HttpFetch } from '@/lib/http/types';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import { searchMovie, searchTitles } from '@/lib/providers/tmdb/reads';
@@ -15,20 +16,20 @@ const getFilmHtml = Effect.fnUntraced(function* (
   slug: string,
 ): Effect.fn.Return<string | null, ProviderError> {
   if (slug.length > 200 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-    return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'Invalid film slug' });
+    return yield* new ProviderDecodeError({ provider: Provider.Letterboxd, detail: 'Invalid film slug' });
   }
   const response = yield* Effect.tryPromise({
     try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}/film/${slug}/`, { signal }),
-    catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
+    catch: (cause) => new ProviderNetworkError({ provider: Provider.Letterboxd, cause }),
   });
   if (response.status === 404) return null;
-  if (response.status === 429) return yield* new ProviderRateLimitError({ provider: 'letterboxd' });
+  if (response.status === 429) return yield* new ProviderRateLimitError({ provider: Provider.Letterboxd });
   if (!response.ok) {
-    return yield* new ProviderNetworkError({ provider: 'letterboxd', status: response.status, cause: new Error('Film page could not be loaded') });
+    return yield* new ProviderNetworkError({ provider: Provider.Letterboxd, status: response.status, cause: new Error('Film page could not be loaded') });
   }
   return yield* Effect.tryPromise({
     try: () => response.text(),
-    catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
+    catch: (cause) => new ProviderNetworkError({ provider: Provider.Letterboxd, cause }),
   });
 }, letterboxdPublicReads.withPermit);
 
@@ -61,7 +62,7 @@ export const getFilmItem = Effect.fnUntraced(function* (
     metadata = yield* Schema.decodeUnknownEffect(FilmMetadata)(json).pipe(Effect.catch(() => Effect.succeed(null)));
     if (metadata != null) break;
   }
-  if (metadata == null) return yield* new ProviderDecodeError({ provider: 'letterboxd', detail: 'Film page has no metadata' });
+  if (metadata == null) return yield* new ProviderDecodeError({ provider: Provider.Letterboxd, detail: 'Film page has no metadata' });
   const year = Number((metadata.datePublished ?? metadata.dateCreated)?.slice(0, 4)) || undefined;
   const item: NormalizedMediaItem = {
     id: `letterboxd-${slug}`,
@@ -74,7 +75,7 @@ export const getFilmItem = Effect.fnUntraced(function* (
     ...(metadata.aggregateRating != null
       ? {
         ratings: [{
-          source: 'letterboxd',
+          source: Provider.Letterboxd,
           value: metadata.aggregateRating.ratingValue,
           scale: 5,
           ...(metadata.aggregateRating.ratingCount != null ? { votes: metadata.aggregateRating.ratingCount } : {}),

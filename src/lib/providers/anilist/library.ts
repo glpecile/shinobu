@@ -3,6 +3,7 @@ import * as Effect from 'effect/Effect';
 import * as Schema from 'effect/Schema';
 
 import { ProviderDecodeError } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { AniListDeps } from './deps';
 import { anilistAuthedRequest } from './http';
 import { normalizeAniListListEntry } from './normalize';
@@ -44,7 +45,7 @@ export const getAniListLibrary = Effect.fn('anilist.getLibrary')(function* (deps
     manga: MediaListCollection(userId: $userId, type: MANGA) { ${fields} }
   }`, { variables: { userId: viewerId } });
   const data = yield* Schema.decodeUnknownEffect(Library)(raw).pipe(
-    Effect.mapError(() => new ProviderDecodeError({ provider: 'anilist', detail: 'unrecognized media library' })),
+    Effect.mapError(() => new ProviderDecodeError({ provider: Provider.AniList, detail: 'unrecognized media library' })),
   );
   const now = new Date(yield* Clock.currentTimeMillis).toISOString();
   const entries = [data.anime, data.manga].flatMap((collection) => collection?.lists.flatMap((list) => list?.entries ?? []) ?? []).filter((entry) => entry != null);

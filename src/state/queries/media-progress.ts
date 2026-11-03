@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 
 import { findAniListProgress, mergeMediaProgress, sameProgressItem, type MediaProgress } from '@/lib/media-progress';
+import { Provider } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
@@ -22,16 +23,16 @@ const filmLike = (item: NormalizedMediaItem) => item.type === 'MOVIE' || item.is
 export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
   const connected = useConnectedProviders();
   const anyTv = items.some((item) => item.type === 'TV');
-  const letterboxdUsername = connected.includes('letterboxd') ? getLetterboxdUsername() : null;
-  const serializdUsername = connected.includes('serializd') && anyTv ? getSerializdUsername() : null;
+  const letterboxdUsername = connected.includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;
+  const serializdUsername = connected.includes(Provider.Serializd) && anyTv ? getSerializdUsername() : null;
   return {
     connected,
     letterboxdUsername,
     serializdUsername,
-    movies: useWatchedMoviesQuery({ enabled: connected.includes('trakt') && items.some(filmLike) }),
-    shows: useWatchedShowsQuery({ enabled: connected.includes('trakt') && anyTv }),
-    simkl: useQuery({ ...simklLibraryQuery(), enabled: connected.includes('simkl') && items.length > 0, throwOnError: false }),
-    anilist: useAniListLibraryQuery(connected.includes('anilist') && items.length > 0),
+    movies: useWatchedMoviesQuery({ enabled: connected.includes(Provider.Trakt) && items.some(filmLike) }),
+    shows: useWatchedShowsQuery({ enabled: connected.includes(Provider.Trakt) && anyTv }),
+    simkl: useQuery({ ...simklLibraryQuery(), enabled: connected.includes(Provider.Simkl) && items.length > 0, throwOnError: false }),
+    anilist: useAniListLibraryQuery(connected.includes(Provider.AniList) && items.length > 0),
     serializd: useSerializdWatchedShowsQuery(serializdUsername),
   };
 }
@@ -51,16 +52,16 @@ export function useItemProgress(items: readonly NormalizedMediaItem[], libraries
   const progress = resolved.map((item, index) => {
     const sources: MediaProgress[] = [];
     const add = (current: number, total: number | undefined, completed = false) => sources.push({ watched: current > 0 || completed, current, total, completed, unit: item.progressUnit });
-    if (connected.includes('trakt')) {
+    if (connected.includes(Provider.Trakt)) {
       const match = (filmLike(item) ? movies.data : shows.data)?.find((entry) => sameProgressItem(item, entry));
       if (match != null) add(match.currentProgress, match.totalEpisodes);
     }
-    if (connected.includes('simkl') && simkl.data != null) {
+    if (connected.includes(Provider.Simkl) && simkl.data != null) {
       const entry = findLibraryEntry(simkl.data, item);
       if (entry != null) add(findLibraryProgress(simkl.data, item) ?? 0, item.type === 'TV' && entry.item.type === 'ANIME' ? undefined : entry.item.totalEpisodes,
         filmLike(item) ? entry.status === 'completed' : item.type !== 'TV' && entry.status === 'completed');
     }
-    if (connected.includes('anilist') && anilist.data != null) {
+    if (connected.includes(Provider.AniList) && anilist.data != null) {
       const entry = findAniListProgress(item, anilist.data);
       if (entry != null) add(entry.item.currentProgress, item.type === 'TV' ? undefined : entry.item.totalEpisodes, item.type !== 'TV' && (entry.status === 'COMPLETED' || entry.status === 'REPEATING'));
     }

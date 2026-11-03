@@ -1,4 +1,5 @@
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
+import { Provider } from '@/lib/providers/types';
 import { useSeasonLayoutQuery } from '@/state/queries/mapping';
 import { useSimklLibraryEntryQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
@@ -24,19 +25,19 @@ export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceSt
 
   const progress = useTraktShowProgressQuery({
     traktId,
-    enabled: chainable && source === 'trakt',
+    enabled: chainable && source === Provider.Trakt,
   });
   const simklEntry = useSimklLibraryEntryQuery({
     item,
-    enabled: chainable && source === 'simkl',
+    enabled: chainable && source === Provider.Simkl,
   });
   // Trakt only needs a layout when its cached progress predates `airedEpisodes`.
   const traktNeedsLayout =
-    source === 'trakt' && progress.data != null && progress.data.airedEpisodes == null;
+    source === Provider.Trakt && progress.data != null && progress.data.airedEpisodes == null;
   const needsLayout =
     chainable &&
     entry.episode.season != null &&
-    (source === 'simkl' || traktNeedsLayout);
+    (source === Provider.Simkl || traktNeedsLayout);
   const layout = useSeasonLayoutQuery({
     tmdb: needsLayout ? item.externalIds.tmdb : undefined,
     trakt: needsLayout ? traktId : undefined,
@@ -44,7 +45,7 @@ export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceSt
 
   if (!chainable) return { status: 'ready', evidence: {} };
 
-  if (source === 'trakt') {
+  if (source === Provider.Trakt) {
     if (traktId != null && progress.data == null && !progress.isError) {
       return { status: 'loading' };
     }
@@ -57,7 +58,7 @@ export function useCatchUpEvidence(entry: UpNextEpisodeEntry): CatchUpEvidenceSt
     };
   }
 
-  if (source === 'simkl') {
+  if (source === Provider.Simkl) {
     // `undefined` is "snapshot not loaded"; a loaded snapshot without this
     // show selects to `null`.
     if (simklEntry.data === undefined && !simklEntry.isError) {

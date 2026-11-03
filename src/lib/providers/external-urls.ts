@@ -11,7 +11,7 @@
 // (erased at build), so they don't break that constraint.
 
 import { animeEffectiveMovieTvType } from './routing';
-import type { ProviderId } from './types';
+import { Provider, type ProviderId } from './types';
 import type { NormalizedMediaItem, NormalizedPerson, NormalizedRating } from '@/types/media';
 
 /** Where a user creates their own Trakt API app (BYO client id + secret). */
@@ -158,15 +158,15 @@ export function providerItemUrl(
   episode?: UrlEpisode,
 ): string | null {
   switch (providerId) {
-    case 'trakt':
+    case Provider.Trakt:
       return traktUrl(item, episode);
-    case 'anilist':
+    case Provider.AniList:
       return anilistUrl(item);
-    case 'letterboxd':
+    case Provider.Letterboxd:
       return letterboxdUrl(item);
-    case 'serializd':
+    case Provider.Serializd:
       return serializdUrl(item);
-    case 'simkl':
+    case Provider.Simkl:
       return simklUrl(item);
   }
 }
@@ -189,9 +189,9 @@ export function ratingUrl(
   switch (rating.source) {
     case 'tmdb':
       return tmdbItemUrl(item, episode);
-    case 'simkl':
-    case 'anilist':
-    case 'letterboxd':
+    case Provider.Simkl:
+    case Provider.AniList:
+    case Provider.Letterboxd:
       return providerItemUrl(rating.source, item, episode);
     case 'imdb':
       return item.externalIds.imdb == null ? null : `https://www.imdb.com/title/${item.externalIds.imdb}/`;
@@ -325,13 +325,13 @@ export function providerPersonUrl(
   person: UrlPerson,
 ): string | null {
   switch (providerId) {
-    case 'letterboxd':
+    case Provider.Letterboxd:
       return letterboxdPersonUrl(person);
-    case 'anilist':
+    case Provider.AniList:
       return person.anilistId == null ? null : anilistStaffUrl(person.anilistId);
-    case 'trakt':
-    case 'serializd':
-    case 'simkl':
+    case Provider.Trakt:
+    case Provider.Serializd:
+    case Provider.Simkl:
       return null;
   }
 }
@@ -354,13 +354,13 @@ export function providerStudioUrl(
   studio: UrlStudio,
 ): string | null {
   switch (providerId) {
-    case 'letterboxd':
+    case Provider.Letterboxd:
       return letterboxdStudioUrl(studio.name);
-    case 'anilist':
+    case Provider.AniList:
       return studio.anilistId == null ? null : anilistStudioUrl(studio.anilistId);
-    case 'trakt':
-    case 'serializd':
-    case 'simkl':
+    case Provider.Trakt:
+    case Provider.Serializd:
+    case Provider.Simkl:
       return null;
   }
 }

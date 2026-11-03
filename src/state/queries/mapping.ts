@@ -31,6 +31,7 @@ import {
   lookupByExternalId,
   searchMedia,
 } from '@/lib/providers/trakt/reads';
+import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { hasBuilderTmdbToken, tmdbToken } from '@/state/session/tmdb-token';
 import { onSessionChange } from '@/state/session/tokens';
@@ -50,7 +51,7 @@ import { traktDeps } from './trakt';
  * degrading to `null` forever.
  */
 function traktHasCredentials(): boolean {
-  return getClientIdForProvider('trakt') !== '';
+  return getClientIdForProvider(Provider.Trakt) !== '';
 }
 
 /**
@@ -70,16 +71,16 @@ function traktHasCredentials(): boolean {
  * who answers. ani.zip and the AniList film search stay via-less: public,
  * session-independent sources whose answers no provider connect can improve.
  */
-type IdentityLookupVia = 'trakt' | 'simkl';
+type IdentityLookupVia = typeof Provider.Trakt | typeof Provider.Simkl;
 
 function identityLookupVia(): IdentityLookupVia {
-  return traktHasCredentials() ? 'trakt' : 'simkl';
+  return traktHasCredentials() ? Provider.Trakt : Provider.Simkl;
 }
 
-type MovieSearchVia = 'trakt' | 'tmdb' | 'none';
+type MovieSearchVia = typeof Provider.Trakt | 'tmdb' | 'none';
 
 function movieSearchVia(): MovieSearchVia {
-  if (traktHasCredentials()) return 'trakt';
+  if (traktHasCredentials()) return Provider.Trakt;
   return tmdbToken() === '' ? 'none' : 'tmdb';
 }
 
@@ -90,14 +91,14 @@ function tmdbVia(): TmdbVia {
   return tmdbToken() === '' ? 'none' : 'tmdb';
 }
 
-type SeasonLayoutVia = 'tmdb+trakt' | 'tmdb' | 'trakt' | 'none';
+type SeasonLayoutVia = 'tmdb+trakt' | 'tmdb' | typeof Provider.Trakt | 'none';
 
 function seasonLayoutVia(): SeasonLayoutVia {
   const tmdb = tmdbToken() !== '';
   const trakt = traktHasCredentials();
   if (tmdb && trakt) return 'tmdb+trakt';
   if (tmdb) return 'tmdb';
-  if (trakt) return 'trakt';
+  if (trakt) return Provider.Trakt;
   return 'none';
 }
 
@@ -111,7 +112,7 @@ function seasonLayoutVia(): SeasonLayoutVia {
  * only the builder TMDB token can be known during SSR.
  */
 function useIdentityLookupVia(): IdentityLookupVia {
-  return useSyncExternalStore(onSessionChange, identityLookupVia, () => 'simkl');
+  return useSyncExternalStore(onSessionChange, identityLookupVia, () => Provider.Simkl);
 }
 
 function useMovieSearchVia(): MovieSearchVia {
@@ -365,7 +366,7 @@ function seasonLayoutQueryOptions(tmdbId: number | undefined, traktId: number | 
       // No Simkl equivalent exists (`/sync/all-items` only reports a user's
       // own watched seasons, not a show's canonical structure) — TMDB above
       // stays the substitute KTD-8 allows for.
-      if (traktId != null && (via === 'tmdb+trakt' || via === 'trakt')) {
+      if (traktId != null && (via === 'tmdb+trakt' || via === Provider.Trakt)) {
         const layout = await Effect.runPromise(
           getShowSeasonLayout(traktDeps(), { traktId }),
           { signal },
@@ -445,7 +446,7 @@ function identityLookupQuery(
     kind: 'movie' | 'show';
   },
 ): FetchQueryOptions<NormalizedMediaItem | null> {
-  if (via === 'trakt') {
+  if (via === Provider.Trakt) {
     return {
       queryKey: mappingQueryKeys.traktLookup(params.source, params.id, params.kind, via),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
@@ -494,7 +495,7 @@ function movieSearchQuery(
   return {
     queryKey: mappingQueryKeys.traktSearch(title, year, via),
     queryFn: ({ signal }: { signal: AbortSignal }): Promise<NormalizedMediaItem | null> => {
-      if (via === 'trakt') {
+      if (via === Provider.Trakt) {
         // limit 10, not 5: an upcoming film can rank below a popular classic
         // sharing its title, and the year gate needs it in the result set.
         return Effect.runPromise(searchMedia(traktDeps(), { query: title, limit: 10 }), { signal })

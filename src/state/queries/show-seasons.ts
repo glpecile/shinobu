@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 
 import { getTvSeasons } from '@/lib/providers/tmdb/reads';
 import { getShowSeasons } from '@/lib/providers/trakt/reads';
+import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { hasBuilderTmdbToken, tmdbToken } from '@/state/session/tmdb-token';
 import { onSessionChange } from '@/state/session/tokens';
@@ -22,16 +23,16 @@ import { traktDeps, traktQueryKeys } from './trakt';
  * `null` means no source can answer and the seasons UI stays hidden.
  */
 export type ShowSeasonsSource =
-  | { source: 'trakt'; traktId: number }
+  | { source: typeof Provider.Trakt; traktId: number }
   | { source: 'tmdb'; tmdbId: number };
 
 export function seasonsSourceFor(
   item: Pick<NormalizedMediaItem, 'externalIds'>,
-  traktUsable = getClientIdForProvider('trakt') !== '',
+  traktUsable = getClientIdForProvider(Provider.Trakt) !== '',
   tmdbUsable = tmdbToken() !== '',
 ): ShowSeasonsSource | null {
   const traktId = item.externalIds.trakt;
-  if (traktId != null && traktUsable) return { source: 'trakt', traktId };
+  if (traktId != null && traktUsable) return { source: Provider.Trakt, traktId };
   const tmdbId = item.externalIds.tmdb;
   if (tmdbId != null && tmdbUsable) return { source: 'tmdb', tmdbId };
   return null;
@@ -52,7 +53,7 @@ export function useShowSeasonsSource(
 ): ShowSeasonsSource | null {
   const traktUsable = useSyncExternalStore(
     onSessionChange,
-    () => getClientIdForProvider('trakt') !== '',
+    () => getClientIdForProvider(Provider.Trakt) !== '',
     () => false,
   );
   const tmdbUsable = useSyncExternalStore(
@@ -76,7 +77,7 @@ export function showSeasonsQueryOptions(source: ShowSeasonsSource): {
   // Season structure, not watch progress: an hour matches the details
   // metadata, so reopening a show skips the seasons skeleton.
   const cache = { staleTime: SEASONS_STALE_TIME_MS, gcTime: SEASONS_STALE_TIME_MS };
-  return source.source === 'trakt'
+  return source.source === Provider.Trakt
     ? {
         queryKey: traktQueryKeys.seasons(source.traktId),
         queryFn: ({ signal }): Promise<NormalizedSeason[]> =>

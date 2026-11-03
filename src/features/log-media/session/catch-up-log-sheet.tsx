@@ -21,7 +21,7 @@ import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteResultReport } from '@/features/write-sheet/write-result-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import { upNextQueryKeys } from '@/state/queries/up-next';
@@ -408,7 +408,7 @@ function CatchUpForm({
   ).length;
   const sending = ledger.filter((row) => row.status === 'pending').length;
   const simklQueued =
-    selectedProviders.includes('simkl') && ledger.length > 1 && sending > 0;
+    selectedProviders.includes(Provider.Simkl) && ledger.length > 1 && sending > 0;
 
   // The sheet is a drawer, so it shows exactly one view. The form is the view
   // until the chain has settled with something still needing a hand — a clean

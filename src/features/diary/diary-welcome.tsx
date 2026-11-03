@@ -9,7 +9,7 @@ import { useCSSVariable } from 'uniwind';
 import { ConnectTrackerButton } from '@/components/connect-tracker-button';
 import { GestureScrollView } from '@/components/animated-view';
 import { COPY_STAGGER, HeroEnter, HeroProviders } from '@/components/hero-enter';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { tmdbImageUrl } from '@/lib/providers/tmdb/config';
 import type { DiaryDay, MediaType, MergedDiaryEntry } from '@/types/media';
 
@@ -125,28 +125,28 @@ interface SampleLog {
   liked?: boolean;
 }
 
-const BEBOP = { tmdb: 30991, type: 'TV', title: 'Cowboy Bebop', poster: '/xDiXDfZwC6XYC6fxHI1jl3A3Ill.jpg', providers: ['simkl', 'trakt'], season: 1 } as const;
+const BEBOP = { tmdb: 30991, type: 'TV', title: 'Cowboy Bebop', poster: '/xDiXDfZwC6XYC6fxHI1jl3A3Ill.jpg', providers: [Provider.Simkl, Provider.Trakt], season: 1 } as const;
 
 const bebop = (episode: number): SampleLog => ({ ...BEBOP, providers: [...BEBOP.providers], episode });
 
 /** Tonight's logs, in the order they land: a film, then a binge with a break. */
 const LIVE: SampleLog[] = [
-  { tmdb: 78, type: 'MOVIE', title: 'Blade Runner', poster: '/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg', providers: ['letterboxd', 'trakt'], liked: true },
+  { tmdb: 78, type: 'MOVIE', title: 'Blade Runner', poster: '/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg', providers: [Provider.Letterboxd, Provider.Trakt], liked: true },
   ...Array.from({ length: 13 }, (_, index) => bebop(index + 1)),
-  { tmdb: 603, type: 'MOVIE', title: 'The Matrix', poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg', providers: ['letterboxd', 'trakt'] },
+  { tmdb: 603, type: 'MOVIE', title: 'The Matrix', poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg', providers: [Provider.Letterboxd, Provider.Trakt] },
   ...Array.from({ length: 13 }, (_, index) => bebop(index + 14)),
 ];
 
 const HISTORY: (SampleLog & { daysAgo: number; hour: number })[] = [
-  { daysAgo: 2, hour: 20, tmdb: 129, type: 'MOVIE', title: 'Spirited Away', poster: '/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg', providers: ['letterboxd', 'simkl'], liked: true },
-  { daysAgo: 2, hour: 1, tmdb: 890, type: 'TV', title: 'Neon Genesis Evangelion', poster: '/y2ah9t0navXyIvoHg1uIbIHO3tt.jpg', providers: ['anilist'], season: 1, episode: 26 },
-  { daysAgo: 4, hour: 22, tmdb: 149, type: 'MOVIE', title: 'Akira', poster: '/neZ0ykEsPqxamsX6o5QNUFILQrz.jpg', providers: ['letterboxd'] },
-  { daysAgo: 6, hour: 21, tmdb: 10494, type: 'MOVIE', title: 'Perfect Blue', poster: '/6WTiOCfDPP8XV4jqfloiVWf7KHq.jpg', providers: ['trakt', 'simkl'] },
-  { daysAgo: 9, hour: 20, tmdb: 8392, type: 'MOVIE', title: 'My Neighbor Totoro', poster: '/rtGDOeG9LzoerkDGZF9dnVeLppL.jpg', providers: ['letterboxd'], liked: true },
-  { daysAgo: 12, hour: 23, tmdb: 9323, type: 'MOVIE', title: 'Ghost in the Shell', poster: '/9gC88zYUBARRSThcG93MvW14sqx.jpg', providers: ['trakt'] },
-  { daysAgo: 15, hour: 22, tmdb: 128, type: 'MOVIE', title: 'Princess Mononoke', poster: '/cMYCDADoLKLbB83g4WnJegaZimC.jpg', providers: ['letterboxd', 'simkl'] },
-  { daysAgo: 18, hour: 21, tmdb: 603, type: 'MOVIE', title: 'The Matrix', poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg', providers: ['trakt'] },
-  { daysAgo: 21, hour: 20, tmdb: 238, type: 'MOVIE', title: 'The Godfather', poster: '/3bhkrj58Vtu7enYsRolD1fZdja1.jpg', providers: ['letterboxd'], liked: true },
+  { daysAgo: 2, hour: 20, tmdb: 129, type: 'MOVIE', title: 'Spirited Away', poster: '/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg', providers: [Provider.Letterboxd, Provider.Simkl], liked: true },
+  { daysAgo: 2, hour: 1, tmdb: 890, type: 'TV', title: 'Neon Genesis Evangelion', poster: '/y2ah9t0navXyIvoHg1uIbIHO3tt.jpg', providers: [Provider.AniList], season: 1, episode: 26 },
+  { daysAgo: 4, hour: 22, tmdb: 149, type: 'MOVIE', title: 'Akira', poster: '/neZ0ykEsPqxamsX6o5QNUFILQrz.jpg', providers: [Provider.Letterboxd] },
+  { daysAgo: 6, hour: 21, tmdb: 10494, type: 'MOVIE', title: 'Perfect Blue', poster: '/6WTiOCfDPP8XV4jqfloiVWf7KHq.jpg', providers: [Provider.Trakt, Provider.Simkl] },
+  { daysAgo: 9, hour: 20, tmdb: 8392, type: 'MOVIE', title: 'My Neighbor Totoro', poster: '/rtGDOeG9LzoerkDGZF9dnVeLppL.jpg', providers: [Provider.Letterboxd], liked: true },
+  { daysAgo: 12, hour: 23, tmdb: 9323, type: 'MOVIE', title: 'Ghost in the Shell', poster: '/9gC88zYUBARRSThcG93MvW14sqx.jpg', providers: [Provider.Trakt] },
+  { daysAgo: 15, hour: 22, tmdb: 128, type: 'MOVIE', title: 'Princess Mononoke', poster: '/cMYCDADoLKLbB83g4WnJegaZimC.jpg', providers: [Provider.Letterboxd, Provider.Simkl] },
+  { daysAgo: 18, hour: 21, tmdb: 603, type: 'MOVIE', title: 'The Matrix', poster: '/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg', providers: [Provider.Trakt] },
+  { daysAgo: 21, hour: 20, tmdb: 238, type: 'MOVIE', title: 'The Godfather', poster: '/3bhkrj58Vtu7enYsRolD1fZdja1.jpg', providers: [Provider.Letterboxd], liked: true },
 ];
 
 function sampleEntry(log: SampleLog, id: string, at: Date): MergedDiaryEntry {

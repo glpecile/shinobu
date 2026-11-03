@@ -1,6 +1,6 @@
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
-import type { ProviderDescriptor, ProviderId, WriteSupport } from './types';
+import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
 type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'>;
 
@@ -81,7 +81,7 @@ export function providersForWrite(
   const types = effectiveTypes(item);
   return connected.filter((id) => {
     // A whole-entry Letterboxd TV log has no movie identity on other providers.
-    if (item.tmdbTvVariant != null && id !== 'letterboxd') return false;
+    if (item.tmdbTvVariant != null && id !== Provider.Letterboxd) return false;
     const provider = PROVIDERS[id];
     return (
       writeSupport(provider, capability) !== 'none' &&
@@ -120,7 +120,7 @@ export function isManualWriteTarget(
   capability?: WriteCapability,
   letterboxdUserscript = false,
 ): boolean {
-  if (provider === 'letterboxd' && platform === 'web' && capability != null && letterboxdUserscript) return false;
+  if (provider === Provider.Letterboxd && platform === 'web' && capability != null && letterboxdUserscript) return false;
   return PROVIDERS[provider].unsupportedWritePlatforms?.includes(platform) ?? false;
 }
 
@@ -193,7 +193,7 @@ export function resolveWriteTargets(
 ): ProviderId[] {
   let targets = providersForWrite(item, connected, options.capability);
   if (options.nonSeasonOneEpisodes === true) {
-    targets = targets.filter((provider) => provider !== 'anilist');
+    targets = targets.filter((provider) => provider !== Provider.AniList);
   }
   if (options.onlyProviders != null && options.onlyProviders.length > 0) {
     const only = options.onlyProviders;

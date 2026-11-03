@@ -11,6 +11,7 @@ import {
   type MediaDetailsDeps,
   type MediaDetails,
 } from '@/lib/providers/media-details';
+import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -110,7 +111,7 @@ async function resolveTmdbId(
 export function buildMediaDetailsDeps(): MediaDetailsDeps {
   return {
     tmdb: tmdbToken() !== '' ? tmdbDeps() : null,
-    trakt: getClientIdForProvider('trakt') !== '' ? traktDeps() : null,
+    trakt: getClientIdForProvider(Provider.Trakt) !== '' ? traktDeps() : null,
     anilist: anilistDeps(),
   };
 }

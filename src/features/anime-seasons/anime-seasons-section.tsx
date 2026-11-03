@@ -5,6 +5,7 @@ import { Section } from '@/components/section';
 import { Skeleton } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { haptics } from '@/lib/haptics';
+import { Provider } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { airedAnimeEpisodes } from '@/features/log-media/session/queue';
 import { useCatchUpControls } from '@/features/log-media/session/state';
@@ -83,7 +84,7 @@ function AnimeDetailsList({ item, resetKey, ...page }: {
   const connected = useConnectedProviders();
   const { data: entryState } = useAniListEntryStateQuery({
     mediaId,
-    enabled: connected.includes('anilist'),
+    enabled: connected.includes(Provider.AniList),
   });
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   // A manual-only target still needs the sheet openable (plan 0022 R3) —

@@ -6,6 +6,7 @@ import { CollapsibleSection } from '@/components/collapsible-section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { episodeCardRailHeight, STACK_OFFSET } from '@/features/up-next/ui/metrics';
+import { Provider } from '@/lib/providers/types';
 
 // Must stay in sync with MediaCard (w-40 = 160) and the mr-3 gap (12).
 const CARD_WIDTH = 160;
@@ -76,7 +77,7 @@ export function LandscapeRowSkeleton() {
   const { width, fontScale } = useWindowDimensions();
   const cardCount = Math.ceil(width / (LANDSCAPE_WIDTH + CARD_GAP)) + 1;
   return (
-    <CollapsibleSection collapseKey="serializd-coming-soon" leading={<ProviderIcon id="serializd" size={16} />} title="Coming Soon">
+    <CollapsibleSection collapseKey="serializd-coming-soon" leading={<ProviderIcon id={Provider.Serializd} size={16} />} title="Coming Soon">
       <View style={{ height: episodeCardRailHeight(fontScale, STACK_OFFSET * 2), paddingTop: STACK_OFFSET * 2 }}>
         <Rail className="px-4">
           {Array.from({ length: cardCount }).map((_, index) => <SkeletonLandscapeCard index={index} key={index} />)}

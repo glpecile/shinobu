@@ -13,7 +13,7 @@ import {
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import { haptics } from '@/lib/haptics';
 import { PROVIDERS } from '@/lib/providers/registry';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useDisconnectProvider } from '@/state/session';
 
 /**
@@ -98,7 +98,7 @@ function ProviderSheetContent({
           <ConnectButton />
         </View>
       )}
-      {id === 'letterboxd' && <LetterboxdAdvancedSetup />}
+      {id === Provider.Letterboxd && <LetterboxdAdvancedSetup />}
     </>
   );
 }

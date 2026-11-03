@@ -13,6 +13,7 @@ import {
   PersonNotFound,
   PersonSkeleton,
 } from '@/features/person';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useSuspenseAniListStaffQuery } from '@/state/queries/person-details';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
@@ -40,7 +41,7 @@ export default function PersonScreen() {
     }
   }
 
-  if ((provider !== 'tmdb' && provider !== 'anilist') || !Number.isSafeInteger(personId) || personId <= 0) {
+  if ((provider !== 'tmdb' && provider !== Provider.AniList) || !Number.isSafeInteger(personId) || personId <= 0) {
     return (
       <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />
     );
@@ -48,8 +49,8 @@ export default function PersonScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={provider === 'anilist' ? routes.anilistPerson(personId) : routes.person(personId)} /></>}>
-        {provider === 'anilist' ? (
+      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={provider === Provider.AniList ? routes.anilistPerson(personId) : routes.person(personId)} /></>}>
+        {provider === Provider.AniList ? (
           <AniListPersonContent anilistId={personId} />
         ) : (
           <PersonContent tmdbId={personId} />

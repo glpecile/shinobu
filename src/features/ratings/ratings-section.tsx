@@ -10,7 +10,7 @@ import { ratingUrl, tmdbItemUrl, type UrlEpisode } from '@/lib/providers/externa
 import { providerLinksFor } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { providersForRatings } from '@/lib/providers/routing';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
 import { useSuspenseLetterboxdFilmQuery, useSuspenseLetterboxdSlugQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSimklRatingsQuery } from '@/state/queries/simkl';
@@ -113,8 +113,8 @@ function SimklScores(props: ChipProps & { url: string }) {
   const { data } = useSuspenseSimklRatingsQuery(props.item);
   return (
     <View className="flex-row gap-2">
-      <ProviderScore provider="simkl" ratings={data} {...props} />
-      {data.filter(({ source }) => source !== 'simkl').map((rating) => (
+      <ProviderScore provider={Provider.Simkl} ratings={data} {...props} />
+      {data.filter(({ source }) => source !== Provider.Simkl).map((rating) => (
         <RatingChip key={rating.source} rating={rating} {...props} />
       ))}
     </View>
@@ -123,17 +123,17 @@ function SimklScores(props: ChipProps & { url: string }) {
 
 function AniListScore(props: ChipProps & { url: string; mediaId: number }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId: props.mediaId, type: props.item.type });
-  return <ProviderScore provider="anilist" ratings={data.item?.ratings} {...props} />;
+  return <ProviderScore provider={Provider.AniList} ratings={data.item?.ratings} {...props} />;
 }
 
 function LetterboxdFilmScore({ slug, ...props }: ChipProps & { url: string; slug: string }) {
   const { data } = useSuspenseLetterboxdFilmQuery(slug);
-  return <ProviderScore provider="letterboxd" ratings={data?.ratings} {...props} />;
+  return <ProviderScore provider={Provider.Letterboxd} ratings={data?.ratings} {...props} />;
 }
 
 function LetterboxdScore(props: ChipProps & { url: string; tmdbId: number }) {
   const { data: slug } = useSuspenseLetterboxdSlugQuery(props.tmdbId);
-  return slug == null ? <ProviderLink provider="letterboxd" url={props.url} /> : <LetterboxdFilmScore slug={slug} {...props} />;
+  return slug == null ? <ProviderLink provider={Provider.Letterboxd} url={props.url} /> : <LetterboxdFilmScore slug={slug} {...props} />;
 }
 
 /**
@@ -151,19 +151,19 @@ function ProviderRating({ provider, url, item, resetKey }: {
   const { anilist, letterboxd, tmdb } = item.externalIds;
   let score;
   switch (provider) {
-    case 'simkl':
+    case Provider.Simkl:
       score = <SimklScores item={item} url={url} />;
       break;
-    case 'anilist':
+    case Provider.AniList:
       score = anilist == null ? null : <AniListScore item={item} mediaId={anilist} url={url} />;
       break;
-    case 'letterboxd':
+    case Provider.Letterboxd:
       score = letterboxd != null
         ? <LetterboxdFilmScore item={item} slug={letterboxd} url={url} />
         : tmdb != null ? <LetterboxdScore item={item} tmdbId={tmdb} url={url} /> : null;
       break;
-    case 'trakt':
-    case 'serializd':
+    case Provider.Trakt:
+    case Provider.Serializd:
       score = null;
   }
   if (score == null) return link;

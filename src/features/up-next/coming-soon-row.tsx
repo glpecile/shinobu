@@ -3,6 +3,7 @@ import { useReducer } from 'react';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';
 import type { SerializdUpcomingEpisode } from '@/lib/providers/serializd/upcoming';
+import { Provider } from '@/lib/providers/types';
 import { formatCalendarDate } from '@/lib/time/calendar-date';
 import { localDayAt, localDayOffset } from '@/lib/time/relative-day';
 import { useWakeAt } from '@/lib/time/use-wake-at';
@@ -36,7 +37,7 @@ function toEntry(episode: SerializdUpcomingEpisode): UpNextEpisodeEntry {
     // The still is this episode's own art; the show backdrop is the fallback.
     item: { ...episode.item, backdropImage: episode.still ?? episode.item.backdropImage },
     status: 'upcoming',
-    source: 'serializd',
+    source: Provider.Serializd,
     kind: 'episode',
     episode: {
       season: episode.season,
@@ -85,7 +86,7 @@ export function ComingSoonRow({ username, onItemActions, onItemPress }: {
   return (
     <CollapsibleSection
       collapseKey="serializd-coming-soon"
-      leading={<ProviderIcon id="serializd" size={16} />}
+      leading={<ProviderIcon id={Provider.Serializd} size={16} />}
       title="Coming Soon"
     >
       <EpisodeCardRail

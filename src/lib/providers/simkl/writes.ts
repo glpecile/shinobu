@@ -4,13 +4,14 @@ import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
 import { entryNumberFor } from '@/lib/providers/mapping/episode-translation';
 import { ProviderAuthError, ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
 import type { SimklLibrary, SimklLibraryEntry } from './normalize';
 import { getAllItems } from './reads';
 
-const provider = 'simkl' as const;
+const provider = Provider.Simkl;
 
 /**
  * One item's worth of a Simkl history batch — deliberately the same fields the

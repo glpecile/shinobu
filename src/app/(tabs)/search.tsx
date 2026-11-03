@@ -42,6 +42,7 @@ import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePreloadRoute, usePushRoute } from '@/lib/navigation';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import {
@@ -383,8 +384,8 @@ function SearchScreen() {
   const tmdbAvailable = useTmdbToken() !== '';
   const moviesTvSource: IconSourceId | null = tmdbAvailable
     ? 'tmdb'
-    : getClientIdForProvider('trakt') !== ''
-      ? 'trakt'
+    : getClientIdForProvider(Provider.Trakt) !== ''
+      ? Provider.Trakt
       : null;
   // Studios exist on TMDB only, so without a token the scope isn't offered,
   // and a shared `?scope=studios` link falls back to titles.
@@ -399,7 +400,7 @@ function SearchScreen() {
   });
   const traktSearch = useTraktSearchQuery({
     query,
-    enabled: scope.value === 'titles' && moviesTvSource === 'trakt',
+    enabled: scope.value === 'titles' && moviesTvSource === Provider.Trakt,
   });
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({
@@ -434,7 +435,7 @@ function SearchScreen() {
               ]),
           {
             search: anilistSearch,
-            rows: sectionRows('anilist', 'Anime & Manga', anilistSearch, titleRow),
+            rows: sectionRows(Provider.AniList, 'Anime & Manga', anilistSearch, titleRow),
           },
         ]
       : scope.value === 'people'
@@ -456,7 +457,7 @@ function SearchScreen() {
               : []),
             {
               search: staffSearch,
-              rows: sectionRows('anilist', 'Anime & Manga', staffSearch, (hit) => ({
+              rows: sectionRows(Provider.AniList, 'Anime & Manga', staffSearch, (hit) => ({
                 kind: 'entity',
                 key: `anilist-staff-${hit.id}`,
                 name: hit.name,

@@ -33,7 +33,7 @@ import {
   type SimklCalendarKind,
 } from '@/lib/providers/simkl/reads';
 import type { TraktCalendarRelease } from '@/lib/providers/trakt/normalize';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   getMyMoviesCalendar,
   getMyShowsCalendar,
@@ -141,7 +141,7 @@ async function traktInputs(
                 : null;
             return {
               item,
-              source: 'trakt',
+              source: Provider.Trakt,
               ...(progress.nextEpisode != null
                 ? { nextEpisode: progress.nextEpisode }
                 : {}),
@@ -198,7 +198,7 @@ async function traktCalendarInputs(
   // Tagged outside the queryFn so the cache keeps holding the provider-shaped
   // rows (`TraktCalendarEpisode[]`) it always has — same idiom as the release
   // legs' `releaseInput` mapping.
-  return rows.map((row) => ({ ...row, source: 'trakt' as const }));
+  return rows.map((row) => ({ ...row, source: Provider.Trakt }));
 }
 
 /**
@@ -247,7 +247,7 @@ function releaseInput(release: TraktCalendarRelease): ReleaseUpNextInput {
     item: release.item,
     kind: release.kind,
     date: release.date,
-    source: 'trakt',
+    source: Provider.Trakt,
   };
 }
 
@@ -353,11 +353,11 @@ function simklProgressInput(
   airings: readonly SimklCalendarEntry[],
 ): ProgressUpNextInput {
   const next = entry.nextToWatch ?? calendarPointer(entry, airings);
-  if (next == null) return { item: entry.item, source: 'simkl' };
+  if (next == null) return { item: entry.item, source: Provider.Simkl };
   const behind = simklEpisodesBehind(entry);
   return {
     item: entry.item,
-    source: 'simkl',
+    source: Provider.Simkl,
     nextEpisode: {
       ...(next.season != null ? { season: next.season } : {}),
       number: next.episode,
@@ -556,7 +556,7 @@ async function simklCalendarInputs(
     return [
       {
         item,
-        source: 'simkl',
+        source: Provider.Simkl,
         episode: {
           ...(entry.episode.season != null
             ? { season: entry.episode.season }
@@ -604,7 +604,7 @@ async function simklReleaseInputs(
         item,
         kind: 'theatrical',
         date: entry.date.slice(0, 10),
-        source: 'simkl',
+        source: Provider.Simkl,
       },
     ];
   });
@@ -697,42 +697,42 @@ function streamUpNextInputs(
   connected: readonly ProviderId[],
 ): AsyncGenerator<UpNextInputs> {
   const feedProviders = providersForFeed(connected);
-  const wantsTrakt = feedProviders.includes('trakt');
-  const wantsSimkl = feedProviders.includes('simkl');
-  const wantsAniList = feedProviders.includes('anilist');
-  const wantsLetterboxd = feedProviders.includes('letterboxd');
+  const wantsTrakt = feedProviders.includes(Provider.Trakt);
+  const wantsSimkl = feedProviders.includes(Provider.Simkl);
+  const wantsAniList = feedProviders.includes(Provider.AniList);
+  const wantsLetterboxd = feedProviders.includes(Provider.Letterboxd);
   const [movies, streaming] = MOVIE_CALENDARS;
 
   return streamLegs(
     [
       wantsTrakt
-        ? settle('trakt', () => traktInputs(queryClient))
+        ? settle(Provider.Trakt, () => traktInputs(queryClient))
         : none<ProgressUpNextInput>(),
       wantsTrakt
-        ? settle('trakt', () => traktCalendarInputs(queryClient))
+        ? settle(Provider.Trakt, () => traktCalendarInputs(queryClient))
         : none<CalendarUpNextInput>(),
       wantsTrakt
-        ? settle('trakt', () => traktReleaseInputs(queryClient, movies))
+        ? settle(Provider.Trakt, () => traktReleaseInputs(queryClient, movies))
         : none<ReleaseUpNextInput>(),
       wantsTrakt
-        ? settle('trakt', () => traktReleaseInputs(queryClient, streaming))
+        ? settle(Provider.Trakt, () => traktReleaseInputs(queryClient, streaming))
         : none<ReleaseUpNextInput>(),
       wantsSimkl
-        ? settle('simkl', () => simklInputs(queryClient))
+        ? settle(Provider.Simkl, () => simklInputs(queryClient))
         : none<ProgressUpNextInput>(),
       wantsSimkl
-        ? settle('simkl', () => simklCalendarInputs(queryClient))
+        ? settle(Provider.Simkl, () => simklCalendarInputs(queryClient))
         : none<CalendarUpNextInput>(),
       wantsSimkl
-        ? settle('simkl', () => simklReleaseInputs(queryClient))
+        ? settle(Provider.Simkl, () => simklReleaseInputs(queryClient))
         : none<ReleaseUpNextInput>(),
       wantsLetterboxd
-        ? settle('letterboxd', () =>
+        ? settle(Provider.Letterboxd, () =>
             fetchLetterboxdReleaseInputs(queryClient, new Date()),
           )
         : none<ReleaseUpNextInput>(),
       wantsAniList
-        ? settle('anilist', () =>
+        ? settle(Provider.AniList, () =>
             anilistInputs(queryClient, wantsTrakt || wantsSimkl),
           )
         : none<AniListUpNextInput>(),

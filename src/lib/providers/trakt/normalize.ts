@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import type {
   NormalizedCastMember,
   NormalizedCrewMember,
@@ -642,7 +643,7 @@ export function normalizeHistoryItem(
   if (raw.type === 'movie' && raw.movie != null) {
     return {
       id: `trakt-${raw.id}`,
-      provider: 'trakt',
+      provider: Provider.Trakt,
       watchedAt: raw.watched_at,
       item: normalizeMovie(raw.movie, raw.watched_at),
     };
@@ -650,7 +651,7 @@ export function normalizeHistoryItem(
   if (raw.type === 'episode' && raw.show != null && raw.episode != null) {
     return {
       id: `trakt-${raw.id}`,
-      provider: 'trakt',
+      provider: Provider.Trakt,
       watchedAt: raw.watched_at,
       item: normalizeShow(raw.show, raw.watched_at),
       episodes: [raw.episode.number],

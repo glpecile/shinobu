@@ -5,6 +5,7 @@ import { ProviderIcon } from '@/components/provider-icon';
 import { Section } from '@/components/section';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
+import { Provider } from '@/lib/providers/types';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
@@ -20,7 +21,7 @@ function RelationsRow({ mediaId, type, onItemActions }: { mediaId: number; type:
         collapseKey="details-relations"
         items={data.relations.map((relation) => relation.item)}
         onItemActions={onItemActions}
-        leading={<ProviderIcon id="anilist" size={16} />}
+        leading={<ProviderIcon id={Provider.AniList} size={16} />}
         subtitles={Object.fromEntries(
           data.relations.map((relation) => [relation.item.id, relation.relation]),
         )}
@@ -40,7 +41,7 @@ function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: num
             collapseKey="details-recommendations"
             items={data.recommendations}
             onItemActions={onItemActions}
-            leading={<ProviderIcon id="anilist" size={16} />}
+            leading={<ProviderIcon id={Provider.AniList} size={16} />}
             title="Recommendations"
           />
         </View>

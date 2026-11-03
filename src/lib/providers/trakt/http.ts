@@ -7,6 +7,7 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import { TRAKT_API_BASE_URL } from './config';
 import type { TraktDeps } from './deps';
 
@@ -42,16 +43,16 @@ export function traktHttp<A>(
           },
           ...(options.body != null ? { body: JSON.stringify(options.body) } : {}),
         }),
-      catch: (cause) => new ProviderNetworkError({ provider: 'trakt', cause }),
+      catch: (cause) => new ProviderNetworkError({ provider: Provider.Trakt, cause }),
     });
 
     if (response.status === 401) {
-      return yield* new ProviderAuthError({ provider: 'trakt', refreshFailed: false });
+      return yield* new ProviderAuthError({ provider: Provider.Trakt, refreshFailed: false });
     }
     if (response.status === 429) {
       const retryAfterSeconds = Number(response.headers.get('Retry-After'));
       return yield* new ProviderRateLimitError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         ...(Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
           ? { retryAfterMs: retryAfterSeconds * 1000 }
           : {}),
@@ -69,7 +70,7 @@ export function traktHttp<A>(
       const limit = response.headers.get('X-Account-Limit');
       const upgradeUrl = response.headers.get('X-Upgrade-URL');
       return yield* new ProviderNetworkError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         cause: new Error(
           `Trakt account limit exceeded for ${path}${limit != null ? ` (limit ${limit})` : ''}${
             upgradeUrl != null ? ` — upgrade at ${upgradeUrl}` : ''
@@ -79,7 +80,7 @@ export function traktHttp<A>(
     }
     if (!response.ok) {
       return yield* new ProviderNetworkError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         cause: new Error(`Trakt responded ${response.status} for ${path}`),
       });
     }
@@ -89,7 +90,7 @@ export function traktHttp<A>(
     // no-content endpoint is ever added, give it an explicit void-typed path.
     if (response.status === 204) {
       return yield* new ProviderDecodeError({
-        provider: 'trakt',
+        provider: Provider.Trakt,
         detail: `unexpected empty 204 response from ${path}`,
       });
     }
@@ -98,7 +99,7 @@ export function traktHttp<A>(
       try: () => response.json() as Promise<A>,
       catch: () =>
         new ProviderDecodeError({
-          provider: 'trakt',
+          provider: Provider.Trakt,
           detail: `non-JSON body from ${path}`,
         }),
     });

@@ -41,6 +41,7 @@ import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { providersForFeed } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import {
   hasUpNextSources,
@@ -130,10 +131,10 @@ function FeedScreen() {
   // Letterboxd keeps its own films-only row beside it (owner, 2026-07-28). The
   // `feedProviders` gate also keeps this MMKV read out of web SSR renders
   // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
-  const letterboxdUsername = feedProviders.includes('letterboxd')
+  const letterboxdUsername = feedProviders.includes(Provider.Letterboxd)
     ? getLetterboxdUsername()
     : null;
-  const serializdUsername = feedProviders.includes('serializd') ? getSerializdUsername() : null;
+  const serializdUsername = feedProviders.includes(Provider.Serializd) ? getSerializdUsername() : null;
   // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
   // with none connected there is nothing to compute, so the sections never
   // mount. The predicate lives with the gather it gates (`use-unified-feed.ts`)
@@ -200,7 +201,7 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {/* What the user is partway through reading, after what they mean to watch. */}
-        {feedProviders.includes('anilist') && (
+        {feedProviders.includes(Provider.AniList) && (
           <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
             <ContinueReadingRow onItemActions={openActions} />
           </SuspenseSection>

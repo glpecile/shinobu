@@ -2,6 +2,7 @@ import * as Effect from 'effect/Effect';
 import * as Schema from 'effect/Schema';
 
 import { ProviderAuthError, ProviderDecodeError } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
@@ -29,11 +30,11 @@ export interface SerializdWatchedShow {
 /** One shared snapshot: Serializd retired per-show progress, so membership needs every page. */
 export const getSerializdWatchedShows = Effect.fn('serializd.getWatchedShows')(function* (deps: SerializdDeps) {
   const username = deps.session?.username;
-  if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider: 'serializd', refreshFailed: true });
+  if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
   const readPage = (page: number) =>
     serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/watchedpage_v2/${page}?sort_by=date_added_desc`, { auth: true }).pipe(
       Effect.flatMap((raw) => Schema.decodeUnknownEffect(WatchedPage)(raw).pipe(
-        Effect.mapError(() => new ProviderDecodeError({ provider: 'serializd', detail: 'unrecognized watched shows page' })),
+        Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'unrecognized watched shows page' })),
       )),
     );
   // Page 1 carries the page count; the rest load a few at a time instead of one by one.

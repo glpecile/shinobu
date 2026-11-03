@@ -1,6 +1,7 @@
 import { formatCount } from '@/lib/format-count';
 import { letterboxdListUrl, type LetterboxdList } from '@/lib/providers/letterboxd/lists';
 import { serializdListUrl, type SerializdList } from '@/lib/providers/serializd/lists';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -14,7 +15,7 @@ export type ListSummary = {
   count: string;
   href: string;
   url: string;
-} & ({ provider: 'letterboxd'; slug: string } | { provider: 'serializd' });
+} & ({ provider: typeof Provider.Letterboxd; slug: string } | { provider: typeof Provider.Serializd });
 
 function countLabel(count: number | undefined, noun: string) {
   return count == null ? '' : `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
@@ -22,7 +23,7 @@ function countLabel(count: number | undefined, noun: string) {
 
 export function letterboxdListSummary(list: LetterboxdList): ListSummary {
   return {
-    ...list, provider: 'letterboxd', count: countLabel(list.filmCount, 'film'),
+    ...list, provider: Provider.Letterboxd, count: countLabel(list.filmCount, 'film'),
     href: routes.letterboxdList(list.owner, list.slug),
     url: letterboxdListUrl(list.owner, list.slug) ?? '',
   };
@@ -30,7 +31,7 @@ export function letterboxdListSummary(list: LetterboxdList): ListSummary {
 
 export function serializdListSummary(list: SerializdList): ListSummary {
   return {
-    ...list, provider: 'serializd', count: countLabel(list.itemCount, 'item'),
+    ...list, provider: Provider.Serializd, count: countLabel(list.itemCount, 'item'),
     href: routes.serializdList(list.id),
     url: serializdListUrl(list.id) ?? '',
   };

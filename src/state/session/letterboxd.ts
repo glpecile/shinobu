@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 import type { LetterboxdSession } from '@/lib/providers/letterboxd/deps';
+import { Provider } from '@/lib/providers/types';
 import {
   getProviderSession,
   onSessionChange,
@@ -14,7 +15,7 @@ import {
  * until a web session is captured (`connectLetterboxdSession`).
  */
 export function connectLetterboxd(username: string): void {
-  setProviderSession('letterboxd', { accessToken: '', username });
+  setProviderSession(Provider.Letterboxd, { accessToken: '', username });
 }
 
 /**
@@ -28,7 +29,7 @@ export function connectLetterboxdSession(params: {
   csrf: string;
   userAgent?: string;
 }): void {
-  setProviderSession('letterboxd', {
+  setProviderSession(Provider.Letterboxd, {
     accessToken: '',
     username: params.username,
     cookie: params.cookie,
@@ -38,12 +39,12 @@ export function connectLetterboxdSession(params: {
 }
 
 export function getLetterboxdUsername(): string | null {
-  return getProviderSession('letterboxd')?.username ?? null;
+  return getProviderSession(Provider.Letterboxd)?.username ?? null;
 }
 
 /** The captured write session, or null for a read-only (username-only) connect. */
 export function getLetterboxdSession(): LetterboxdSession | null {
-  const session = getProviderSession('letterboxd');
+  const session = getProviderSession(Provider.Letterboxd);
   if (
     session?.cookie == null ||
     session.cookie === '' ||

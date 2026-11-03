@@ -7,10 +7,11 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { LetterboxdDeps, LetterboxdWebResponse } from './deps';
 
-const provider = 'letterboxd' as const;
+const provider = Provider.Letterboxd;
 
 export interface LetterboxdLogOptions {
   /** ISO instant; the diary date is its *local* calendar day. Omitted = today. */

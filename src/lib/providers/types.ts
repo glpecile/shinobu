@@ -1,8 +1,16 @@
 import type { MediaType } from '@/types/media';
 
-// Extension point: adding a provider means widening this union and adding a
-// descriptor to registry.ts — nothing else in the app should need to change.
-export type ProviderId = 'trakt' | 'anilist' | 'letterboxd' | 'serializd' | 'simkl';
+// Extension point: adding a provider means adding an id here and a descriptor
+// to registry.ts — nothing else in the app should need to change. The values are
+// persisted (session keys, query keys) and in URLs, so they never change.
+export const Provider = {
+  Trakt: 'trakt',
+  AniList: 'anilist',
+  Letterboxd: 'letterboxd',
+  Serializd: 'serializd',
+  Simkl: 'simkl',
+} as const;
+export type ProviderId = (typeof Provider)[keyof typeof Provider];
 
 // Metadata-only sources (no session, no registry entry, never a fan-out
 // target) that still ride the shared error taxonomy. TMDB backs the person

@@ -1,5 +1,6 @@
 import { episodeCode } from '@/features/episode-details/episode-label';
 import { hasStartedAiring } from '@/features/log-media/release-gate';
+import { Provider } from '@/lib/providers/types';
 import { hasAired } from '@/lib/time/has-aired';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import type { SimklLibraryEntry } from '@/lib/providers/simkl/normalize';
@@ -101,7 +102,7 @@ export function catchUpQueue(
     ...(title != null ? { title } : {}),
   };
 
-  if (entry.source === 'trakt' && evidence.trakt?.airedEpisodes != null) {
+  if (entry.source === Provider.Trakt && evidence.trakt?.airedEpisodes != null) {
     return fromTraktProgress(first, evidence.trakt);
   }
 
@@ -145,9 +146,9 @@ function fromTraktProgress(
  */
 function simklAiredCount(
   entry: UpNextEpisodeEntry,
-  simkl: CatchUpEvidence['simkl'],
+  simkl: CatchUpEvidence[typeof Provider.Simkl],
 ): number | null {
-  if (entry.source !== 'simkl' || simkl == null) return null;
+  if (entry.source !== Provider.Simkl || simkl == null) return null;
   const total = entry.item.totalEpisodes;
   const notAired = simkl.notAiredEpisodes;
   if (total == null || notAired == null) return null;

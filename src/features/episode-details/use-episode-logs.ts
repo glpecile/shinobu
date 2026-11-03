@@ -1,4 +1,4 @@
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { simklEpisodeIsWatched } from '@/lib/providers/simkl/episode-state';
 import { useSimklEpisodeStateQuery } from '@/state/queries/simkl';
 import { useTraktShowProgressQuery } from '@/state/queries/trakt';
@@ -28,34 +28,34 @@ export function useEpisodeLogs(
   const key = `${season}-${number}`;
   const trakt = useTraktShowProgressQuery({
     traktId: item.externalIds.trakt ?? undefined,
-    enabled: connected.includes('trakt'),
+    enabled: connected.includes(Provider.Trakt),
   });
   const simkl = useSimklEpisodeStateQuery({
     item,
-    enabled: connected.includes('simkl'),
+    enabled: connected.includes(Provider.Simkl),
   });
   const anilist = useAniListEpisodeWatchedQuery({
     item,
-    enabled: connected.includes('anilist'),
+    enabled: connected.includes(Provider.AniList),
   });
   const logs: EpisodeLog[] = [];
-  if (anilist.data.has(key)) logs.push({ provider: 'anilist' });
+  if (anilist.data.has(key)) logs.push({ provider: Provider.AniList });
   if (trakt.data?.watchedKeys.has(key)) {
     const watchedAt = trakt.data.lastWatchedAt?.[key];
-    logs.push({ provider: 'trakt', ...(watchedAt != null ? { watchedAt } : {}) });
+    logs.push({ provider: Provider.Trakt, ...(watchedAt != null ? { watchedAt } : {}) });
   }
   const simklEpisode = simkl.data?.watchedEpisodes.find(
     (entry) => entry.season === season && entry.number === number,
   );
   if (simklEpisode != null) {
     logs.push({
-      provider: 'simkl',
+      provider: Provider.Simkl,
       ...(simklEpisode.watchedAt != null ? { watchedAt: simklEpisode.watchedAt } : {}),
     });
   } else if (
     simklEpisodeIsWatched(simkl.data, season, number, firstAired)
   ) {
-    logs.push({ provider: 'simkl' });
+    logs.push({ provider: Provider.Simkl });
   }
   return logs;
 }

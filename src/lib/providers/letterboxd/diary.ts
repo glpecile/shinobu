@@ -7,6 +7,7 @@ import {
   ProviderRateLimitError,
   type ProviderError,
 } from '@/lib/providers/errors';
+import { Provider } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry } from '@/types/media';
 import { LETTERBOXD_BASE_URL } from './config';
 import type { LetterboxdDeps } from './deps';
@@ -114,7 +115,7 @@ export function normalizeDiaryItem(
 ): NormalizedDiaryEntry {
   return {
     id: `letterboxd-${raw.guid}`,
-    provider: 'letterboxd',
+    provider: Provider.Letterboxd,
     watchedAt: raw.watchedDate,
     dateOnly: true,
     liked: raw.liked === true,
@@ -151,7 +152,7 @@ export function getDiary(
   const username = deps.username;
   if (username == null || username === '') {
     return Effect.fail(
-      new ProviderAuthError({ provider: 'letterboxd', refreshFailed: true }),
+      new ProviderAuthError({ provider: Provider.Letterboxd, refreshFailed: true }),
     );
   }
   if (params.page > 1) return Effect.succeed([]);
@@ -159,21 +160,21 @@ export function getDiary(
   return Effect.gen(function* () {
     const response = yield* Effect.tryPromise({
       try: (signal) => deps.fetch(`${LETTERBOXD_BASE_URL}/${username}/rss/`, { signal }),
-      catch: (cause) => new ProviderNetworkError({ provider: 'letterboxd', cause }),
+      catch: (cause) => new ProviderNetworkError({ provider: Provider.Letterboxd, cause }),
     });
 
     if (response.status === 404) {
       return yield* new ProviderAuthError({
-        provider: 'letterboxd',
+        provider: Provider.Letterboxd,
         refreshFailed: true,
       });
     }
     if (response.status === 429) {
-      return yield* new ProviderRateLimitError({ provider: 'letterboxd' });
+      return yield* new ProviderRateLimitError({ provider: Provider.Letterboxd });
     }
     if (!response.ok) {
       return yield* new ProviderNetworkError({
-        provider: 'letterboxd',
+        provider: Provider.Letterboxd,
         cause: new Error(`Letterboxd responded ${response.status} for /${username}/rss/`),
       });
     }
@@ -182,7 +183,7 @@ export function getDiary(
       try: () => response.text(),
       catch: () =>
         new ProviderDecodeError({
-          provider: 'letterboxd',
+          provider: Provider.Letterboxd,
           detail: 'unreadable diary RSS body',
         }),
     });
@@ -191,7 +192,7 @@ export function getDiary(
     // the absence of a feed as a tagged error, never a silent empty diary.
     if (!xml.includes('<rss') && !xml.includes('<channel')) {
       return yield* new ProviderDecodeError({
-        provider: 'letterboxd',
+        provider: Provider.Letterboxd,
         detail: 'diary RSS feed absent (private or nonexistent profile)',
       });
     }

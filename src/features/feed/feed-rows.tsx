@@ -10,6 +10,7 @@ import {
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
 import { usePushRoute } from '@/lib/navigation';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { useSuspenseReadingMangaQuery } from '@/state/queries/anilist';
@@ -133,8 +134,8 @@ export function LetterboxdWatchlistRow({
       collapseKey="letterboxd-watchlist"
       items={items}
       onItemActions={onItemActions}
-      onViewAll={() => pushRoute(routes.watchlist('letterboxd'))}
-      leading={<ProviderIcon id="letterboxd" size={16} />}
+      onViewAll={() => pushRoute(routes.watchlist(Provider.Letterboxd))}
+      leading={<ProviderIcon id={Provider.Letterboxd} size={16} />}
       title="Watchlist"
     />
   );
@@ -150,7 +151,7 @@ export function TrendingMoviesRow({
       collapseKey="trending-movies"
       items={items}
       onItemActions={onItemActions}
-      leading={<ProviderIcon id="simkl" size={16} />}
+      leading={<ProviderIcon id={Provider.Simkl} size={16} />}
       title="Trending Movies"
     />
   );
@@ -166,7 +167,7 @@ export function TrendingShowsRow({
       collapseKey="trending-shows"
       items={items}
       onItemActions={onItemActions}
-      leading={<ProviderIcon id="simkl" size={16} />}
+      leading={<ProviderIcon id={Provider.Simkl} size={16} />}
       title="Trending TV Shows"
     />
   );
@@ -187,7 +188,7 @@ export function SeasonalAnimeRow({
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'TV'))}
-      leading={<ProviderIcon id="anilist" size={16} />}
+      leading={<ProviderIcon id={Provider.AniList} size={16} />}
       title={`Anime of ${animeSeasonLabel(season)}`}
     />
   );
@@ -214,7 +215,7 @@ export function AnimeMoviesRow({
       items={items}
       onItemActions={onItemActions}
       onViewAll={() => pushRoute(routes.animeSeasons(season, 'MOVIE'))}
-      leading={<ProviderIcon id="anilist" size={16} />}
+      leading={<ProviderIcon id={Provider.AniList} size={16} />}
       title={`Films of ${animeSeasonLabel(season)}`}
     />
   );

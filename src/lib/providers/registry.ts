@@ -1,4 +1,4 @@
-import type { ProviderDescriptor, ProviderId } from './types';
+import { Provider, type ProviderDescriptor, type ProviderId } from './types';
 
 /**
  * The single provider registry. Routing (routing.ts) derives everything from
@@ -6,8 +6,8 @@ import type { ProviderDescriptor, ProviderId } from './types';
  * scattered `if (provider === ...)` checks.
  */
 export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
-  trakt: {
-    id: 'trakt',
+  [Provider.Trakt]: {
+    id: Provider.Trakt,
     label: 'Trakt',
     mediaTypes: ['TV', 'MOVIE'],
     canRead: true,
@@ -19,8 +19,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     watchlistRemove: 'write',
     communityScore: false,
   },
-  anilist: {
-    id: 'anilist',
+  [Provider.AniList]: {
+    id: Provider.AniList,
     label: 'AniList',
     mediaTypes: ['ANIME', 'MANGA'],
     canRead: true,
@@ -37,8 +37,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
   },
   // Public reads use the GET-only relay on web. Film logs write in a signed-in
   // session through the native WebView or the optional web userscript bridge.
-  letterboxd: {
-    id: 'letterboxd',
+  [Provider.Letterboxd]: {
+    id: Provider.Letterboxd,
     label: 'Letterboxd',
     mediaTypes: ['MOVIE'],
     canRead: true,
@@ -65,8 +65,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
   // token from plain HTTP (native) or the same-origin CORS proxy (web), so —
   // unlike Letterboxd — no in-session WebView write bridge is needed. Reads
   // and writes both work on web via the proxy (docs/solutions/web-cors-serializd.md).
-  serializd: {
-    id: 'serializd',
+  [Provider.Serializd]: {
+    id: Provider.Serializd,
     label: 'Serializd',
     mediaTypes: ['TV'],
     canRead: true,
@@ -102,8 +102,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
   // (Letterboxd plan-0033 verify-then-flip precedent) in U1; each token flips
   // only when its leg is verified live. Reverting a token is the standing
   // rollback, exactly like Serializd's (KTD-9 precedent).
-  simkl: {
-    id: 'simkl',
+  [Provider.Simkl]: {
+    id: Provider.Simkl,
     label: 'Simkl',
     // TV + MOVIE like Trakt, plus ANIME natively — Simkl is the only provider
     // that matches an *unmapped* anime series/film directly (routing.ts's

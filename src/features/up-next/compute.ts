@@ -1,3 +1,4 @@
+import { Provider } from '@/lib/providers/types';
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
 import {
   formatDayHeading,
@@ -233,7 +234,7 @@ function classifyAnilistEntry(
     // season it belongs to. Stamping `season: 1` here is what made a
     // sequel-season quick log write phantom season-1 history to Trakt.
     episode: { number: next },
-    source: 'anilist' as const,
+    source: Provider.AniList,
   };
 
   if (airing == null) {
@@ -342,7 +343,7 @@ function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
 function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
   const simklKeys = new Set(
     entries
-      .filter((entry) => entry.kind === 'episode' && entry.source === 'simkl')
+      .filter((entry) => entry.kind === 'episode' && entry.source === Provider.Simkl)
       .flatMap((entry) =>
         identityKeys(entry.item.externalIds).map(
           (key) => `${key}:${entry.status}`,
@@ -351,7 +352,7 @@ function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
   );
   if (simklKeys.size === 0) return [...entries];
   return entries.filter((entry) => {
-    if (entry.kind !== 'episode' || entry.source === 'simkl') return true;
+    if (entry.kind !== 'episode' || entry.source === Provider.Simkl) return true;
     return !identityKeys(entry.item.externalIds).some((key) =>
       simklKeys.has(`${key}:${entry.status}`),
     );

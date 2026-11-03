@@ -9,6 +9,7 @@ import {
 } from '@/features/watchlist/find-watchlist-removal';
 import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { haptics } from '@/lib/haptics';
+import { Provider } from '@/lib/providers/types';
 import { useAniListEntryStateQuery } from '@/state/queries/anilist';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
@@ -112,7 +113,7 @@ export function WatchlistMediaButton({
   const anilistEntry = useAniListEntryStateQuery({
     type: item.type,
     mediaId: item.externalIds.anilist,
-    enabled: isReadIntent(item) && connected.includes('anilist'),
+    enabled: isReadIntent(item) && connected.includes(Provider.AniList),
   });
   // A manga's only add target is AniList, which never writes over an entry it
   // already has (plan 0031 KTD-2). Once the manga is being read, finished or

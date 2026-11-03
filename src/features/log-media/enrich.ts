@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import type { AniZipLookup } from '@/lib/providers/mapping/anizip';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   cachedAniListFilmId,
   cachedAniZipIds,
@@ -50,7 +50,7 @@ export async function enrichExternalIds(
     externalIds.tmdb == null &&
     externalIds.imdb == null &&
     item.title !== '' &&
-    (connected.includes('trakt') || connected.includes('simkl'))
+    (connected.includes(Provider.Trakt) || connected.includes(Provider.Simkl))
   ) {
     const found = await cachedTraktTextSearch(queryClient, item.title, item.year);
     if (found != null) {
@@ -76,9 +76,9 @@ export async function enrichExternalIds(
     externalIds.trakt == null &&
     externalIds.tmdb == null &&
     externalIds.tvdb == null &&
-    (connected.includes('trakt') ||
-      connected.includes('serializd') ||
-      connected.includes('simkl'))
+    (connected.includes(Provider.Trakt) ||
+      connected.includes(Provider.Serializd) ||
+      connected.includes(Provider.Simkl))
   ) {
     const mapped = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,
@@ -102,7 +102,7 @@ export async function enrichExternalIds(
 
   // Bridge ids → a real Trakt id (progress reads and cache invalidation key
   // on it; /sync/history alone could live off tvdb/tmdb).
-  if (isAnime && externalIds.trakt == null && connected.includes('trakt')) {
+  if (isAnime && externalIds.trakt == null && connected.includes(Provider.Trakt)) {
     const kind = item.isFilm === true ? 'movie' : 'show';
     const lookup =
       kind === 'show' && externalIds.tvdb != null
@@ -125,7 +125,7 @@ export async function enrichExternalIds(
   if (
     isMovieTv &&
     externalIds.anilist == null &&
-    (connected.includes('anilist') || connected.includes('simkl'))
+    (connected.includes(Provider.AniList) || connected.includes(Provider.Simkl))
   ) {
     const lookup: AniZipLookup | null =
       item.type === 'TV' && externalIds.tvdb != null
@@ -154,7 +154,7 @@ export async function enrichExternalIds(
     externalIds.anilist == null &&
     item.title !== '' &&
     item.year != null &&
-    connected.includes('anilist')
+    connected.includes(Provider.AniList)
   ) {
     const anilistId = await cachedAniListFilmId(queryClient, {
       title: item.title,

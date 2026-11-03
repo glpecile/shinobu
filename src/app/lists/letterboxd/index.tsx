@@ -4,18 +4,19 @@ import { ListsPage } from '@/features/lists/lists-page';
 import { listsTitle } from '@/features/lists/lists-row';
 import { ProviderListsPager } from '@/features/lists/provider-lists-pager';
 import { letterboxdListsUrl } from '@/lib/providers/letterboxd/lists';
+import { Provider } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 
 export default function LetterboxdListsScreen() {
   const params = useLocalSearchParams<{ kind?: string | string[] }>();
   const kind = params.kind ?? 'created';
-  const username = useConnectedProviders().includes('letterboxd') ? getLetterboxdUsername() : null;
+  const username = useConnectedProviders().includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;
   const validKind = kind === 'created' || kind === 'liked';
   const url = validKind ? letterboxdListsUrl(username ?? '', kind) : null;
   return (
-    <ListsPage contentKey={username ?? ''} index provider="letterboxd" title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
-      {url != null && username != null && validKind && <ProviderListsPager kind={kind} provider="letterboxd" username={username} />}
+    <ListsPage contentKey={username ?? ''} index provider={Provider.Letterboxd} title={validKind ? listsTitle(kind) : 'Lists'} unavailable={validKind && username == null ? 'connect' : 'invalid'} url={url}>
+      {url != null && username != null && validKind && <ProviderListsPager kind={kind} provider={Provider.Letterboxd} username={username} />}
     </ListsPage>
   );
 }

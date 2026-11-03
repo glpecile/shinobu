@@ -9,7 +9,7 @@ import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 
 import { providersForFeed } from '@/lib/providers/routing';
 import { getTrending } from '@/lib/providers/simkl/reads';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -122,9 +122,9 @@ export const feedOptions = {
 export function hasUpNextSources(connected: readonly ProviderId[]): boolean {
   const feedProviders = providersForFeed(connected);
   return (
-    feedProviders.includes('trakt') ||
-    feedProviders.includes('simkl') ||
-    feedProviders.includes('anilist')
+    feedProviders.includes(Provider.Trakt) ||
+    feedProviders.includes(Provider.Simkl) ||
+    feedProviders.includes(Provider.AniList)
   );
 }
 
@@ -140,28 +140,28 @@ function activeFeedConfigs(
 ): FeedQueryConfig[] {
   const feedProviders = providersForFeed(connected);
   const configs: FeedQueryConfig[] = [
-    { slot: 'trendingMovies', provider: 'simkl', ...feedOptions.trendingMovies() },
-    { slot: 'trendingShows', provider: 'simkl', ...feedOptions.trendingShows() },
+    { slot: 'trendingMovies', provider: Provider.Simkl, ...feedOptions.trendingMovies() },
+    { slot: 'trendingShows', provider: Provider.Simkl, ...feedOptions.trendingShows() },
     {
       slot: 'seasonalAnime',
-      provider: 'anilist',
+      provider: Provider.AniList,
       ...feedOptions.seasonalAnime(season, 'TV'),
     },
     {
       slot: 'animeMovies',
-      provider: 'anilist',
+      provider: Provider.AniList,
       ...feedOptions.seasonalAnime(season, 'MOVIE'),
     },
   ];
 
-  if (feedProviders.includes('letterboxd')) {
+  if (feedProviders.includes(Provider.Letterboxd)) {
     // The `feedProviders` gate also keeps this MMKV read out of web SSR renders
     // (empty in the server snapshot — docs/solutions/expo-web-ssr-mmkv-storage-on-server.md).
     const letterboxdUsername = getLetterboxdUsername();
     if (letterboxdUsername != null) {
       configs.push({
         slot: 'yourWatchlist',
-        provider: 'letterboxd',
+        provider: Provider.Letterboxd,
         ...feedOptions.yourWatchlist(letterboxdUsername),
       });
     }
@@ -232,10 +232,10 @@ export function useRefetchUnifiedFeed() {
       ...(hasUpNextSources(connected) ? [refreshUpNextInputs(queryClient)] : []),
       // Also refreshes Letterboxd's own row, which reads the gather's page 1.
       ...(feedProviders.length > 0 ? [refreshWatchlistInputs(queryClient)] : []),
-      ...(feedProviders.includes('letterboxd')
+      ...(feedProviders.includes(Provider.Letterboxd)
         ? [queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.listsRoot() })]
         : []),
-      ...(feedProviders.includes('serializd')
+      ...(feedProviders.includes(Provider.Serializd)
         ? [
             queryClient.refetchQueries({ queryKey: serializdQueryKeys.listsRoot() }),
             queryClient.refetchQueries({ queryKey: [...serializdQueryKeys.all, 'upcoming'], type: 'active' }),

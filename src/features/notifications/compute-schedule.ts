@@ -7,7 +7,7 @@ import type {
   UpNextInputs,
   UpNextRelease,
 } from '@/features/up-next/types';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { hasAired, isDateOnly, parseLocalInstant } from '@/lib/time/has-aired';
 import { localDayOffset } from '@/lib/time/relative-day';
 
@@ -237,13 +237,13 @@ function dedupeEpisodeSources(
 function dedupeTrackers(candidates: readonly RawCandidate[]): RawCandidate[] {
   const simklKeys = new Set(
     candidates
-      .filter((candidate) => candidate.source === 'simkl')
+      .filter((candidate) => candidate.source === Provider.Simkl)
       .flatMap((candidate) => candidate.keys),
   );
   if (simklKeys.size === 0) return [...candidates];
   return candidates.filter(
     (candidate) =>
-      candidate.source === 'simkl' || !sharesIdentity(candidate, simklKeys),
+      candidate.source === Provider.Simkl || !sharesIdentity(candidate, simklKeys),
   );
 }
 

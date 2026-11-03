@@ -19,6 +19,7 @@ import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { Provider } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { useListMembership, useSuspenseListSearchQuery, type ListEditTarget } from '@/state/queries/list-membership';
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
@@ -48,8 +49,8 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
   const mutation = useListMembership(target);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-membership');
-  const needsScript = process.env.EXPO_OS === 'web' && target.provider === 'letterboxd' && !hasScript;
-  const writable = target.provider !== 'letterboxd' || (process.env.EXPO_OS === 'web' ? hasScript : hasSession);
+  const needsScript = process.env.EXPO_OS === 'web' && target.provider === Provider.Letterboxd && !hasScript;
+  const writable = target.provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasScript : hasSession);
   const verb = present ? 'Add to list' : 'Remove from list';
   return (
     <WriteSheet.Step>
@@ -88,13 +89,13 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
 
 function SearchResults({ query, source, target, items, onSelect }: {
   query: string;
-  source: 'tmdb' | 'trakt';
+  source: 'tmdb' | typeof Provider.Trakt;
   target: ListSearchTarget;
   items: readonly NormalizedMediaItem[];
   onSelect: (item: NormalizedMediaItem) => void;
 }) {
   const { data } = useSuspenseListSearchQuery(query, source);
-  const results = data.filter((item) => target.provider === 'letterboxd' ? item.type === 'MOVIE' : item.type === 'TV');
+  const results = data.filter((item) => target.provider === Provider.Letterboxd ? item.type === 'MOVIE' : item.type === 'TV');
   return <List
     data={results}
     estimatedItemSize={76}
@@ -140,11 +141,11 @@ export function ListSearch({ target, items, onSelect, onClose }: {
   const [text, setText] = useState('');
   const query = useDeferredValue(text.trim());
   const token = useTmdbToken();
-  const source = token != null && token !== '' ? 'tmdb' : getClientIdForProvider('trakt') ? 'trakt' : null;
-  const fetching = useIsFetching({ queryKey: source === 'trakt' ? traktQueryKeys.search(query, 20) : tmdbQueryKeys.search(query), exact: true }) > 0;
-  const noun = target.provider === 'letterboxd' ? 'films' : 'shows';
+  const source = token != null && token !== '' ? 'tmdb' : getClientIdForProvider(Provider.Trakt) ? Provider.Trakt : null;
+  const fetching = useIsFetching({ queryKey: source === Provider.Trakt ? traktQueryKeys.search(query, 20) : tmdbQueryKeys.search(query), exact: true }) > 0;
+  const noun = target.provider === Provider.Letterboxd ? 'films' : 'shows';
   return <WriteSheet.Step>
-    <WriteSheet.Header onClose={onClose}><WriteSheet.Title>{target.provider === 'letterboxd' ? 'Add a film' : 'Add a show'}</WriteSheet.Title></WriteSheet.Header>
+    <WriteSheet.Header onClose={onClose}><WriteSheet.Title>{target.provider === Provider.Letterboxd ? 'Add a film' : 'Add a show'}</WriteSheet.Title></WriteSheet.Header>
     <WriteSheet.Description>{target.title}</WriteSheet.Description>
     <View className="mt-4">
       <SearchField
@@ -166,7 +167,7 @@ export function ListSearch({ target, items, onSelect, onClose }: {
       ) : text.trim().length < 2 || query.length < 2 ? (
         <CenteredNotice className="min-h-80">
           <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
-          <CenteredNotice.Title>{target.provider === 'letterboxd' ? 'Find a film' : 'Find a show'}</CenteredNotice.Title>
+          <CenteredNotice.Title>{target.provider === Provider.Letterboxd ? 'Find a film' : 'Find a show'}</CenteredNotice.Title>
           <CenteredNotice.Body>{`Search ${noun} to add to this list. Enter at least two characters to begin.`}</CenteredNotice.Body>
         </CenteredNotice>
       ) : (
@@ -211,7 +212,7 @@ export function AddToList({ target, items }: { target: ListEditTarget; items: re
   const [session, setSession] = useState(0);
   const [selected, setSelected] = useState<NormalizedMediaItem | null>(null);
   return <>
-    <Fab className="absolute bottom-6 end-6" icon="add" label={target.provider === 'letterboxd' ? 'Add a film to this list' : 'Add a show to this list'} onPress={() => { setSelected(null); setSession(session + 1); setOpen(true); }} />
+    <Fab className="absolute bottom-6 end-6" icon="add" label={target.provider === Provider.Letterboxd ? 'Add a film to this list' : 'Add a show to this list'} onPress={() => { setSelected(null); setSession(session + 1); setOpen(true); }} />
     <Sheet onClose={() => setOpen(false)} open={open}>
       {session > 0 && (selected == null
         ? <ListSearch items={items} key={`search-${session}`} onClose={() => setOpen(false)} onSelect={setSelected} target={target} />

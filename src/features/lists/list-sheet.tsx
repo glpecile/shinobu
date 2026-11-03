@@ -9,6 +9,7 @@ import { Tooltip } from '@/components/tooltip';
 import { haptics } from '@/lib/haptics';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { Provider } from '@/lib/providers/types';
 import { hideList } from '@/state/prefs/hidden-items';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -34,7 +35,7 @@ export function useListSheet() {
  */
 export function ListSheet({ list, open, onClose }: { list: ListSummary | null; open: boolean; onClose: () => void }) {
   const pushRoute = usePushRoute();
-  const letterboxdUsername = useConnectedProviders().includes('letterboxd') ? getLetterboxdUsername() : null;
+  const letterboxdUsername = useConnectedProviders().includes(Provider.Letterboxd) ? getLetterboxdUsername() : null;
   return (
     <Sheet onClose={onClose} open={open && list != null}>
       {list != null && (
@@ -52,7 +53,7 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
             <View className="flex-row items-center gap-2">
               <View className="flex-1"><ProviderListLink provider={list.provider} url={list.url} /></View>
               <Button.Capsule>
-                {list.provider === 'letterboxd' && letterboxdUsername != null && (
+                {list.provider === Provider.Letterboxd && letterboxdUsername != null && (
                   <ListLikeButton owner={list.owner} size="md" slug={list.slug} url={list.url} username={letterboxdUsername} variant="ghost" />
                 )}
                 <Tooltip label="Share">

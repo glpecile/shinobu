@@ -17,6 +17,7 @@ import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/m
 import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import { DURATION } from '@/lib/motion';
 import { sortMediaEntries } from '@/lib/media-sort';
+import { Provider } from '@/lib/providers/types';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
@@ -42,7 +43,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
   const list = query.data;
   const [actionEntry, setActionEntry] = useState<SerializdListEntry | null>(null);
   const target = username != null && username.toLowerCase() === list.owner.toLowerCase()
-    ? { provider: 'serializd' as const, username, id, title: list.title, url } : null;
+    ? { provider: Provider.Serializd, username, id, title: list.title, url } : null;
   const sort = useMediaSort('lists');
   const reducedMotion = useReducedMotion();
   const progress = useMediaProgress([...new Map(list.entries.map((entry) => [entry.item.id, entry.item])).values()]);
@@ -56,12 +57,12 @@ export function SerializdListItems({ username, id, url }: { username: string | n
       <ListsHeader
         shareHref={routes.serializdList(id)}
         metadata={<ListProgress countLabel={`${list.itemCount} ${list.itemCount === 1 ? 'item' : 'items'}`} partial={!list.complete} state={progress} />}
-        provider="serializd" subtitle={`by ${list.owner}`} title={list.title}
+        provider={Provider.Serializd} subtitle={`by ${list.owner}`} title={list.title}
       />
       <MediaToolbar notice={sort !== 'default' && !list.complete ? <SortingLoadedNotice /> : undefined}>
         <MediaSortControl scope="lists" sort={sort} />
         {target != null && <RenameList key={list.title} target={target} />}
-        <ToolbarIcon><ProviderListLink iconOnly provider="serializd" url={url} /></ToolbarIcon>
+        <ToolbarIcon><ProviderListLink iconOnly provider={Provider.Serializd} url={url} /></ToolbarIcon>
       </MediaToolbar>
       <List
         className="flex-1"
@@ -96,7 +97,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
           <CenteredNotice>
             <CenteredNotice.Title>More items on Serializd</CenteredNotice.Title>
             <CenteredNotice.Body>{`Serializd returned ${list.entries.length} of ${list.itemCount} items. Open the original list to see the rest.`}</CenteredNotice.Body>
-            <ProviderListLink provider="serializd" url={url} />
+            <ProviderListLink provider={Provider.Serializd} url={url} />
           </CenteredNotice>
         ) : undefined}
         ListEmptyComponent={list.complete ? (
@@ -104,7 +105,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             <CenteredNotice.Icon name="list-outline" />
             <CenteredNotice.Title>This list is empty</CenteredNotice.Title>
             <CenteredNotice.Body>{target != null ? 'Use the + button to add your first show.' : 'Items added on Serializd will appear here.'}</CenteredNotice.Body>
-            <ProviderListLink provider="serializd" url={url} />
+            <ProviderListLink provider={Provider.Serializd} url={url} />
           </CenteredNotice>
         ) : undefined}
       />
@@ -120,7 +121,7 @@ export function SerializdListSkeleton({ shareHref, signedIn }: { shareHref?: str
   const compact = useWindowDimensions().width < 640;
   return (
     <>
-      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider="serializd" shareHref={shareHref} subtitle="" />
+      <ListsHeader metadata={<Skeleton className="h-4 w-28 rounded-full" />} provider={Provider.Serializd} shareHref={shareHref} subtitle="" />
       <MediaToolbarSkeleton actions={signedIn && compact ? 2 : 1} labelled={signedIn && !compact} scope="lists" />
       {[0, 1, 2, 3].map((index) => (
         <View className="flex-row items-center px-6 py-2.5 gap-4" key={index}>

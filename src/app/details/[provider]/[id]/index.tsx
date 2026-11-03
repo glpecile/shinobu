@@ -62,6 +62,7 @@ import { formatAirDate } from '@/features/episode-details/episode-label';
 import { localDayKey } from '@/features/diary/merge';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
+import { Provider } from '@/lib/providers/types';
 import { parseLocalInstant } from '@/lib/time/has-aired';
 import { formatRelativeDay } from '@/lib/time/relative-day';
 import { applyPrimaryMetadata } from '@/lib/providers/merge-metadata';
@@ -184,7 +185,7 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: item.externalIds.anilist,
     type: item.type,
-    enabled: PROVIDERS.anilist.mediaTypes.includes(item.type) && connected.includes('anilist'),
+    enabled: PROVIDERS[Provider.AniList].mediaTypes.includes(item.type) && connected.includes(Provider.AniList),
   });
   // Simkl's leg (plan 0034): the library entry gives a Simkl-sourced show the
   // same line Trakt-sourced pages carry.
@@ -193,11 +194,11 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
     enabled:
       (item.type === 'TV' ||
         (item.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null)) &&
-      connected.includes('simkl'),
+      connected.includes(Provider.Simkl),
   });
   const simklProgress = useSimklProgressQuery({
     item,
-    enabled: connected.includes('simkl'),
+    enabled: connected.includes(Provider.Simkl),
   }).data;
   const accent = useThemeColor('--color-accent');
   const { fontScale } = useWindowDimensions();
@@ -529,8 +530,8 @@ function DetailsScreen() {
     default: break;
   }
   const validType = resourceType == null ||
-    (provider === 'trakt' && (mediaType === 'MOVIE' || mediaType === 'TV')) ||
-    (provider === 'anilist' && mediaType === 'MANGA');
+    (provider === Provider.Trakt && (mediaType === 'MOVIE' || mediaType === 'TV')) ||
+    (provider === Provider.AniList && mediaType === 'MANGA');
   const id = validType ? mediaItemId(provider, resourceId) ?? '' : '';
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -560,13 +561,13 @@ function DetailsScreen() {
   const mediaDetails = useMediaDetailsQuery(item);
   const anilistId = item?.externalIds.anilist;
   const connected = useConnectedProviders();
-  const onAniList = item != null && PROVIDERS.anilist.mediaTypes.includes(item.type);
+  const onAniList = item != null && PROVIDERS[Provider.AniList].mediaTypes.includes(item.type);
   // Items resolved from trending/search carry 0 progress even when the viewer
   // has already watched episodes. The live entry state corrects the stat tile.
   const anilistEntry = useAniListEntryStateQuery({
     mediaId: anilistId,
     type: item?.type,
-    enabled: onAniList && connected.includes('anilist'),
+    enabled: onAniList && connected.includes(Provider.AniList),
   });
   // TV progress spans anime cours; anime progress stays entry-relative.
   // Shares `WatchedLine`'s library cache, so it costs no extra request.
@@ -575,7 +576,7 @@ function DetailsScreen() {
     (item?.type === 'ANIME' && item.isFilm !== true && item.externalIds.simkl != null);
   const simklProgress = useSimklProgressQuery({
     item: onSimkl ? item : null,
-    enabled: connected.includes('simkl'),
+    enabled: connected.includes(Provider.Simkl),
   });
   // Items resolved from the watched feed arrive artless (Trakt dropped images
   // from /sync/watched/* in 2026) — recover poster/backdrop lazily.
@@ -637,7 +638,7 @@ function DetailsScreen() {
           Not found
         </Text>
         <Text className="text-muted font-sans text-center mb-6">
-          {provider === 'trakt'
+          {provider === Provider.Trakt
             ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'
             : 'This linked item could not be loaded.'}
         </Text>
@@ -649,7 +650,7 @@ function DetailsScreen() {
             onPress={() => openExternalUrl(externalUrl)}
           />
         )}
-        {provider === 'trakt' && (
+        {provider === Provider.Trakt && (
           <Button
             icon={<Button.Icon name="link-outline" />}
             label="Open Settings"

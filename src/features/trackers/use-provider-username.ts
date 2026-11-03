@@ -1,4 +1,4 @@
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useAniListViewerQuery } from '@/state/queries/anilist';
 import { useSimklUsernameQuery } from '@/state/queries/simkl';
 import { useTraktViewerQuery } from '@/state/queries/trakt';
@@ -26,9 +26,9 @@ export function useProviderUsername(
 ): string | undefined {
   // All three hooks run unconditionally (fixed hook count) and are gated by
   // `enabled` — the same shape `useDiaryFeed` uses for its per-provider reads.
-  const trakt = useTraktViewerQuery({ enabled: connected && id === 'trakt' });
-  const anilist = useAniListViewerQuery({ enabled: connected && id === 'anilist' });
-  const simkl = useSimklUsernameQuery({ enabled: connected && id === 'simkl' });
+  const trakt = useTraktViewerQuery({ enabled: connected && id === Provider.Trakt });
+  const anilist = useAniListViewerQuery({ enabled: connected && id === Provider.AniList });
+  const simkl = useSimklUsernameQuery({ enabled: connected && id === Provider.Simkl });
 
   if (!connected) return undefined;
 
