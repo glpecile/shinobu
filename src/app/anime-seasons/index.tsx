@@ -88,7 +88,6 @@ function SeasonWall({
     pages.data.pages[0]?.items ?? [],
     columns * 3,
   );
-  const [refreshing, setRefreshing] = useState(false);
   // AniList's popularity sort is not stable across pages, so a title can sit
   // on the tail of one page and the head of the next; the list needs unique
   // keys, so the first occurrence wins.
@@ -96,11 +95,6 @@ function SeasonWall({
   const view = useWatchlistView();
   const reduceMotion = useReducedMotion();
   const Layout = view === 'grid' ? PosterWall : WatchlistRows;
-
-  async function refresh() {
-    setRefreshing(true);
-    await pages.refetch().finally(() => setRefreshing(false));
-  }
 
   if (items.length === 0) {
     return (
@@ -153,8 +147,7 @@ function SeasonWall({
         }
         onItemActions={onItemActions}
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
-        onRefresh={() => void refresh()}
-        refreshing={refreshing}
+        onRefresh={pages.refetch}
       />
     </AnimatedView>
   );

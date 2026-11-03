@@ -79,8 +79,7 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
           onEndReached={pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError ? () => void pages.fetchNextPage() : undefined}
           onItemActions={openActions}
           onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
-          onRefresh={() => void pages.refetch()}
-          refreshing={pages.isRefetching}
+          onRefresh={pages.refetch}
         />
       )}
       <CardActionsSheet {...sheetProps} canHide={false} listRemoval={target == null ? null : { target }} />

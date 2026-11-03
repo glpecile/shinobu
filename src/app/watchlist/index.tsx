@@ -115,7 +115,6 @@ function WatchlistGrid({
   const pushRoute = usePushRoute();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  const [refreshing, setRefreshing] = useState(false);
   // The row the sheet was opened from, held in state rather than looked up out
   // of `entries` on every render (plan 0031 U16). That is the difference between
   // a removal you can read the result of and one you cannot: a successful
@@ -146,9 +145,8 @@ function WatchlistGrid({
   const enriched = entries.map((entry, index) => ({ ...entry, item: metadata.items[index] }));
   const shown = sortMediaEntries(filterWatchlistEntries(enriched, provider), sort);
 
-  async function refresh() {
-    setRefreshing(true);
-    await refreshWatchlistInputs(queryClient).finally(() => setRefreshing(false));
+  function refresh() {
+    return refreshWatchlistInputs(queryClient);
   }
 
   async function loadMore() {
@@ -228,8 +226,7 @@ function WatchlistGrid({
           openActions(item);
         }}
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
-        onRefresh={() => void refresh()}
-        refreshing={refreshing}
+        onRefresh={refresh}
       />
     );
 

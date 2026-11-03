@@ -1,10 +1,9 @@
-import { type Ref, useState } from 'react';
+import type { Ref } from 'react';
 import type { ScrollViewInstance, ScrollViewProps } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GestureScrollView } from '@/components/animated-view';
-import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
+import { RefreshControl } from '@/components/refresh-control';
 import { useThemeColor } from '@/lib/theme-color';
 
 interface RefreshableScrollViewProps extends ScrollViewProps {
@@ -48,37 +47,24 @@ export function RefreshableScrollView({
   children,
   ...rest
 }: RefreshableScrollViewProps) {
-  const [refreshing, setRefreshing] = useState(false);
   const accent = useThemeColor('--color-accent');
   // Context comes from the navigation stack's provider; the hook is safe on
   // web too (zero insets), so no platform fork is needed here.
   const insets = useSafeAreaInsets();
 
-  function refresh() {
-    setRefreshing(true);
-    onRefresh()
-      .catch(() => undefined)
-      .finally(() => setRefreshing(false));
-  }
-
-  // Same entry point as the pull gesture, so the spinner and the swallowed
-  // rejection behave identically however the refresh was asked for.
-  useTabDoubleTap(tab, refresh);
-
   return (
     // Reanimated's, so a screen can hand `onScroll` a worklet (the details
-    // screen's title bar). The RefreshControl is gesture-handler's too, so its
-    // pull waits on that scroll gesture.
+    // screen's title bar).
     <GestureScrollView
       {...rest}
       refreshControl={
         <RefreshControl
           colors={accent != null ? [accent] : undefined}
-          onRefresh={refresh}
+          onRefresh={onRefresh}
           progressViewOffset={
             spinnerBelowStatusBar === true ? insets.top : undefined
           }
-          refreshing={refreshing}
+          tab={tab}
           tintColor={accent}
         />
       }

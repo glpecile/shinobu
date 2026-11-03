@@ -1,13 +1,14 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore, useTransition } from 'react';
 
 import { Button } from '@/components/button';
 import { NativeSwitch } from '@/components/native-switch';
 import { RailHead } from '@/components/rail-head';
 import { SettingsRail } from '@/features/settings/settings-rail';
 import { useThemeColor } from '@/lib/theme-color';
+import { toast } from '@/lib/toast';
 import {
   NOTIFICATION_KINDS,
   type NotificationKind,
@@ -89,7 +90,7 @@ export function NotificationsSettingsSection() {
   const enabled = useNotificationsEnabled();
   const kindCount = useEnabledKindCount();
   const queryClient = useQueryClient();
-  const [requesting, setRequesting] = useState(false);
+  const [requesting, startRequest] = useTransition();
   const [permissionDenied, setPermissionDenied] = useState(false);
   const muted = useThemeColor('--color-muted');
 
@@ -101,15 +102,17 @@ export function NotificationsSettingsSection() {
       return;
     }
 
-    setRequesting(true);
-    await Notifications.requestPermissionsAsync()
-      .then(async ({ granted }) => {
+    startRequest(async () => {
+      try {
+        const { granted } = await Notifications.requestPermissionsAsync();
         setPermissionDenied(!granted);
         if (!granted) return;
         setNotificationsEnabled(true);
         await refreshNotifications(createRefreshDeps(queryClient));
-      })
-      .finally(() => setRequesting(false));
+      } catch {
+        toast.error('Could not update notifications', 'Try toggling release alerts again.');
+      }
+    });
   }
 
   let count = 'Off';

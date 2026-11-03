@@ -226,6 +226,20 @@
               "useCSSVariable"
             ],
             "message": "Import { useThemeColor } from @/lib/theme-color \u2014 the web build is a static export and reading a CSS variable in JS there resolves to nothing at prerender time, which React then never repaints (AGENTS.md: Theming). A colour that gets composed rather than painted is the one exception; say so in a comment and disable this rule on the line."
+          },
+          {
+            "name": "react-native",
+            "importNames": [
+              "RefreshControl"
+            ],
+            "message": "Use RefreshControl from @/components/refresh-control: it owns the pending state, so a pull doesn't re-render the list."
+          },
+          {
+            "name": "react-native-gesture-handler",
+            "importNames": [
+              "RefreshControl"
+            ],
+            "message": "Use RefreshControl from @/components/refresh-control: it owns the pending state, so a pull doesn't re-render the list."
           }
         ]
       }
@@ -323,6 +337,7 @@
         "src/components/keyboard-avoiding-view.tsx",
         "src/components/keyboard-aware-scroll-view.tsx",
         "src/components/presstable.tsx",
+        "src/components/refresh-control.tsx",
         "src/components/spinner.tsx",
         "src/components/zoomable-image/index.tsx",
         "src/lib/cn.ts",
