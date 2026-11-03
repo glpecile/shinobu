@@ -52,6 +52,13 @@ want one. A side effect a press causes runs in that press's
 handler. `eslint-plugin-react-you-might-not-need-an-effect`, loaded by oxlint
 as a JS plugin, enforces this.
 
+Add state only for a fact nothing else owns, such as a draft, a selection, or
+an open sheet. Fetched data stays in its query. Hold an id and resolve the item
+from query data, never a copy in state, context, or a form. A form holds only
+the user's edits over the fetched values. A promise's pending, result, and
+error come from `useQuery`, `useMutation`, or `useTransition`, never from
+`setState` around `await`, `.then()`, or `finally`.
+
 ## Tech stack
 
 - Expo Router for web, iPadOS, iOS, and Android from one codebase.
@@ -226,6 +233,10 @@ instead. The 忍 kanji uses the OS font on purpose.
 
 ## Class names and buttons
 
+Every visible heading, control, and status line earns its space. Don't render
+something because a provider or API exposes it, don't repeat context the screen
+already shows, and give each intent one control.
+
 Compose every `className` with `cn()` from `@/lib/cn`, never a template literal,
 so a caller's class replaces the default instead of competing with it.
 
@@ -291,6 +302,12 @@ Screens use Suspense and error boundaries, not `if (isLoading)` branches.
 - Cross-provider aggregate status and mutations can still branch on state.
 - Every placeholder composes `components/skeleton`. Blocks in a row or grid take
   `delay={staggerDelay(index)}`, and blocks in one card share a delay.
+- A skeleton keeps the resolved layout's frame, so text and controls don't move
+  when data lands. A mutation shows progress on its trigger through `loading`,
+  not in an added "Saving…" row.
+- Content stays mounted through refetch, pull-to-refresh, and a failed refresh,
+  which shows beside it. An empty list is a successful result with its own empty
+  state, never a loading test, and a disabled query is not loading.
 
 ## Queries
 
@@ -311,6 +328,10 @@ camelCase. Platform variants live in a directory (`foo/index.tsx`,
 Parent and child state such as numbering or selection lives in a context
 provider with subcomponents attached as properties (`src/components/steps.tsx`).
 Extract an inline sub-layout once a second screen needs it.
+
+Expose separate components or hooks instead of a mode prop or argument that
+picks a different tree or workflow (`isEpisode`, `kind: 'show' | 'season'`).
+Props that describe state, like `disabled`, are fine.
 
 ## Golden reference
 
