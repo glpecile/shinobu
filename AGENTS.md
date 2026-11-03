@@ -21,7 +21,11 @@ a follow-up in your summary.
 PR titles follow Conventional Commits, e.g. `fix(person): make biography links tappable`.
 
 Use `switch` when dispatching several cases of the same value (such as a
-provider), not a chain of `if`s, so the alternatives stay together.
+provider), not a chain of `if`s, so the alternatives stay together. A switch
+on a union names every member, so adding one (a provider, a media type) fails
+lint at each switch that must handle it. A switch that handles only some cases
+says so with `default: break`. Type-aware oxlint's
+`typescript/switch-exhaustiveness-check` enforces this.
 
 ## Tests
 

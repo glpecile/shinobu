@@ -148,6 +148,7 @@ function ButtonIcon({ name }: { name: React.ComponentProps<typeof Ionicons>['nam
     case 'chevron-back': path = 'm15 6-6 6 6 6'; break;
     case 'chevron-forward': path = 'm9 6 6 6-6 6'; break;
     case 'tv-outline': path = 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z M8 20h8'; break;
+    default: break;
   }
   if (path != null) {
     return (

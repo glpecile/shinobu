@@ -34,6 +34,7 @@ export default defineRule({
           switch (nodeName(specifier.imported)) {
             case 'router': routers.add(specifier.local.name); break;
             case 'useRouter': hooks.add(specifier.local.name); break;
+            default: break;
           }
         }
       },
