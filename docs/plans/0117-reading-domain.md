@@ -174,7 +174,7 @@ Write adapters through the existing fan-out and per-provider results:
 
 Search's Reading scope gains a Books section from
 `search(query_type: "book")`, as a source in `TITLE_SOURCES`
-(plan 0119 KTD-3), not a new scope. Titles gains it too. The details
+(plan 0119 KTD-3), not a new scope. Movies & TV gains it too. The details
 screen renders a `BOOK`: cover, authors, series and position, page count,
 description and Hardcover rating. There is no TMDB for books, so
 `getMediaDetails` returns provider data, as it does for manga. Characters come

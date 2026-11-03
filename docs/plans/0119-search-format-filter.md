@@ -14,54 +14,54 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
 
 ## Decisions
 
-- **KTD-1. Reading is one search scope.** The existing FAB opens Titles,
-  Reading, Cast & crew, and Studios (with a TMDB token). Reading is the one
-  option for everything read (plan 0117 KTD-10); Titles keeps the combined
-  movie, TV, anime, and manga search. No segmented control or separate Movies
-  and TV options.
+- **KTD-1. Reading is one search scope.** The existing FAB opens Movies & TV
+  (`?scope=titles`, the default), Reading, Cast & crew, and Studios (with a
+  TMDB token). Reading is the one option for everything read (plan 0117
+  KTD-10); Movies & TV keeps the combined movie, TV, anime, and manga search.
+  No segmented control or separate Movies and TV options.
 - **KTD-2. The scope rides the URL as `?scope=reading`.** The FAB icon,
   accessible label, selected picker row, and field placeholder reflect Reading.
   The selection is seeded into state because a tab tap wipes params. Existing
   `?format=READING` links open Reading; picking a scope clears `?format=`.
 - **KTD-3. A scope is a source list.** `TITLE_SOURCES` in
-  `features/search/formats.ts` lists the sections Titles (`ALL`) and Reading
+  `features/search/formats.ts` lists the sections Movies & TV (`ALL`) and Reading
   search, in order, each with its label. A source a scope leaves out sends no
   request under it. Hardcover's books (#400) and the comics tracker (#401)
-  join Reading, and Titles, as entries in that list, with one query hook
+  join Reading, and Movies & TV, as entries in that list, with one query hook
   each, and never as scopes of their own.
 - **KTD-4. The request narrows, not the page.**
 
   | Scope | TMDB | Trakt (fallback) | AniList `media(...)` |
   | --- | --- | --- | --- |
-  | Titles | `/search/multi` | `/search/movie,show` | no type filter |
+  | Movies & TV | `/search/multi` | `/search/movie,show` | no type filter |
   | Reading | none | none | `type: MANGA` (light novels and one-shots included) |
 
-- **KTD-5. Titles and Reading are separate AniList entries, never stale.**
+- **KTD-5. Movies & TV and Reading are separate AniList entries, never stale.**
   The type is the last element of `anilistQueryKeys.search`, and the AniList
   title search uses `staleTime: Infinity`, so flipping back to a scope reads
   the cache instead of spending AniList's 30/min budget
   (`docs/solutions/anilist-rate-limit-retry-storm.md`). gcTime still drops an
   entry once nothing shows it. A new query string keeps the last results up,
-  dimmed, but a new type doesn't (`keepPreviousSearch`), because Titles'
-  anime under the Reading header reads as the tap having been ignored. The
-  section shows its skeleton instead, as the explorer does.
+  dimmed, but a new type doesn't (`keepPreviousSearch`), because the combined
+  scope's anime under the Reading header reads as the tap having been ignored.
+  The section shows its skeleton instead, as the explorer does.
 - **KTD-6. Labels name what a section holds.**
 
   | Scope | Movies & TV section | AniList section |
   | --- | --- | --- |
-  | Titles | Movies & TV | Anime & Manga |
+  | Movies & TV | Movies & TV | Anime & Manga |
   | Reading | — | Manga & light novels |
 
   "Manga & light novels" still reads right beside a future "Books" section.
-  Titles keeps the combined AniList label, because its page really is mixed.
+  Movies & TV keeps the combined AniList label, because its page really is mixed.
 - **KTD-7. Empty and failed states keep the screen's rows.** A section with
   nothing disappears and a failed one shows its row. A Reading search with no
-  results says so and offers "Search all titles". The total-failure notice is
+  results says so and offers "Search movies & TV". The total-failure notice is
   unchanged.
 
 ## Not done
 
-- Reading's idle screen shows Titles' four rails. A Reading idle state (for
+- Reading's idle screen shows Movies & TV's four rails. A Reading idle state (for
   example, the Continue Reading rail) is a follow-up.
 - M4, the diary Reading filter, is unchanged and optional (plan 0117).
 
