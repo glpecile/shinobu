@@ -23,6 +23,7 @@ import { PickerSheet } from '@/components/picker-sheet';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
+import { Button } from '@/components/button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SearchField } from '@/components/search-field';
 import { SuspenseSection } from '@/components/suspense-section';
@@ -69,9 +70,15 @@ const SEARCH_DEBOUNCE_MS = 300;
 const SCOPES = [
   {
     value: 'titles',
-    label: 'Titles',
+    label: 'Movies & TV',
     icon: 'film-outline',
-    placeholder: 'Search titles',
+    placeholder: 'Search movies & TV',
+  },
+  {
+    value: 'reading',
+    label: 'Reading',
+    icon: 'library-outline',
+    placeholder: 'Search manga & light novels',
   },
   {
     value: 'people',
@@ -393,7 +400,10 @@ function SearchScreen() {
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
+  const reading = scope.value === 'reading';
+  const titleSearch = scope.value === 'titles' || reading;
 
+  // Reading searches AniList alone and never asks TMDB or Trakt.
   const tmdbSearch = useTmdbSearchQuery({
     query,
     enabled: scope.value === 'titles' && moviesTvSource === 'tmdb',
@@ -405,7 +415,8 @@ function SearchScreen() {
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({
     query,
-    enabled: scope.value === 'titles',
+    type: reading ? 'MANGA' : 'ALL',
+    enabled: titleSearch,
   });
   const personSearch = useTmdbPersonSearchQuery({
     query,
@@ -423,9 +434,9 @@ function SearchScreen() {
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
   const animeSeason = animeSeasonAt(new Date());
   const sections =
-    scope.value === 'titles'
+    titleSearch
       ? [
-          ...(moviesTvSource == null
+          ...(reading || moviesTvSource == null
             ? []
             : [
                 {
@@ -435,7 +446,12 @@ function SearchScreen() {
               ]),
           {
             search: anilistSearch,
-            rows: sectionRows(Provider.AniList, 'Anime & Manga', anilistSearch, titleRow),
+            rows: sectionRows(
+              Provider.AniList,
+              reading ? 'Manga & light novels' : 'Anime & Manga',
+              anilistSearch,
+              titleRow,
+            ),
           },
         ]
       : scope.value === 'people'
@@ -494,6 +510,11 @@ function SearchScreen() {
           ? 'empty'
           : 'results';
 
+  function setScope(next: SearchScope) {
+    setSelectedScope(next);
+    router.setParams({ scope: next === 'titles' ? undefined : next });
+  }
+
   function openDetails(item: NormalizedMediaItem) {
     prefetchDetails(item);
     pushRoute(routes.details(item.id, item.type));
@@ -519,7 +540,7 @@ function SearchScreen() {
         style={{ paddingTop: insets.top + 8 }}
       >
         <SearchField
-          accessibilityLabel={`Search ${scope.label.toLowerCase()}`}
+          accessibilityLabel={scope.placeholder}
           // Android's tab-focus request owns the keyboard; autofocus races it.
           autoFocus={process.env.EXPO_OS !== 'android' && !hasCoarsePointer()}
           className="flex-1"
@@ -543,7 +564,7 @@ function SearchScreen() {
                 day, so each one cuts. */}
             <View className="flex-1">
               {state === 'idle' ? (
-                scope.value === 'titles' ? (
+                titleSearch ? (
                   <CollapsibleSection.Scroll
                     className="flex-1"
                     contentContainerClassName="pb-28"
@@ -577,7 +598,7 @@ function SearchScreen() {
                       <Text className="text-2xl font-display text-foreground">Search</Text>
                       <Text className="text-base font-sans text-muted mt-3 max-w-sm leading-relaxed">
                         Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
-                        {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
+                        {tmdbAvailable ? ' reading, cast & crew, or studios.' : ' reading or cast & crew.'}
                       </Text>
                     </View>
                   </View>
@@ -595,7 +616,16 @@ function SearchScreen() {
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Icon name="search-outline" />
                   <CenteredNotice.Title>No results</CenteredNotice.Title>
-                  <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
+                  <CenteredNotice.Body>
+                    Nothing matched “{query.trim()}”{reading ? ' in manga & light novels' : ''}.
+                  </CenteredNotice.Body>
+                  {reading ? (
+                    <CenteredNotice.Action
+                      icon={<Button.Icon name="search-outline" />}
+                      label="Search movies & TV"
+                      onPress={() => setScope('titles')}
+                    />
+                  ) : null}
                 </CenteredNotice>
               ) : (
                 // While a newer query is in flight the previous results stay visible
@@ -664,10 +694,7 @@ function SearchScreen() {
       </SafeAreaView>
       <PickerSheet
         onClose={() => setScopeOpen(false)}
-        onSelect={(next: SearchScope) => {
-          setSelectedScope(next);
-          router.setParams({ scope: next === 'titles' ? undefined : next });
-        }}
+        onSelect={setScope}
         open={scopeOpen}
         title="Search for"
         value={scope.value}

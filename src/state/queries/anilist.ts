@@ -138,9 +138,9 @@ export const anilistQueryKeys = {
    *  (the only route a manga result can resolve through). Shared root so the
    *  scan in `search-cache.ts` can't drift from the key built here. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.anilist],
-  /** Public anime + manga text search (search screen's AniList section). */
-  search: (query: string, limit: number) =>
-    [...anilistQueryKeys.searchRoot(), query, limit] as const,
+  /** Public title search (search screen's AniList section), per scope. */
+  search: (query: string, limit: number, type: 'ALL' | 'MANGA') =>
+    [...anilistQueryKeys.searchRoot(), query, limit, type] as const,
   /** One staff member's profile and credits, by AniList id (`/person/anilist/<id>`). */
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
   staffSearch: (query: string) =>
@@ -425,27 +425,34 @@ export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
 }
 
 /**
- * Public anime/manga text search — the AniList half of the sectioned search
- * screen. Same enable/keepPreviousData/staleTime contract as
- * `useTraktSearchQuery` (the shared minimum-length constant lives there);
- * the 60s staleTime also matters here for the 30 req/min budget
- * (docs/solutions/anilist-rate-limit-retry-storm.md).
+ * Public title search, `MANGA` for the Reading scope — the AniList half of
+ * the sectioned search screen. Same enable contract as `useTraktSearchQuery`
+ * (the shared minimum-length constant lives there). Never stale: each type is
+ * its own entry, and flipping between Titles and Reading must read the cache,
+ * not spend the 30 req/min budget
+ * (docs/solutions/anilist-rate-limit-retry-storm.md). gcTime still drops an
+ * entry once nothing shows it.
  */
 export function useAniListSearchQuery(params: {
   query: string;
+  type: 'ALL' | 'MANGA';
   limit?: number;
   enabled?: boolean;
 }) {
   const query = params.query.trim();
   const limit = params.limit ?? 20;
+  const { type } = params;
   return useQuery({
-    queryKey: anilistQueryKeys.search(query, limit),
+    queryKey: anilistQueryKeys.search(query, limit, type),
     queryFn: ({ signal }) =>
-      Effect.runPromise(searchMedia(anilistDeps(), { query, limit }), { signal }),
+      Effect.runPromise(searchMedia(anilistDeps(), { query, limit, type }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
+    // A new query string keeps the last results up while it loads; a new type
+    // doesn't, since Titles' anime under the Reading header reads as ignored.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey.at(-1) === type ? previous : undefined,
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }
 

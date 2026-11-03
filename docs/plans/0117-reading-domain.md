@@ -26,6 +26,12 @@ decisions and the units, one sub-issue of #209 each.
   series entry. A book counts pages on a Hardcover read. A comic issue is read
   or unread. A manga log never writes Hardcover pages and a Hardcover volume
   never writes AniList chapters.
+- **KTD-10. Reading is one category.** Manga, light novels, books and comics
+  are all "reading" wherever the user picks or sees a grouping: one filter
+  option, one rail (Continue Reading), one reading list. The UI never offers
+  separate Manga, Books or Comics choices. The grouping is only what the user
+  sees; units still never convert (KTD-3). Numbered last so the decisions
+  below keep their numbers.
 - **KTD-4. Reading items route only to providers whose id they carry.**
   Reading has no ani.zip equivalent. Until a verified mapping exists, a book
   routes to Hardcover only with `externalIds.hardcover`, and a manga to AniList
@@ -65,10 +71,10 @@ parallel; M3 owns the one new AniList read that the reading list also uses.
 | M1 | #392 | Log the next chapter from details and the card sheet | — |
 | M2 | #393 | Log several chapters in one write | M1 |
 | M3 | #394 | Continue reading rail and manga want-to-read read-back | — |
-| M4 | #395 | Diary Reading filter | — |
+| M4 | #395 | Diary Reading filter (optional) | — |
 | B0 | #396 | Register Hardcover OAuth apps and probe browser access | owner: Hardcover account |
 | B1 | #397 | Connect Hardcover as the book provider | B0 |
-| B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3, M4 |
+| B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3 (M4 if it ships) |
 | B3 | #399 | Log page progress, finishes and want-to-read to Hardcover | B1 |
 | B4 | #400 | Find books in search and open book details | B1 |
 | C0 | #401 | Choose a comics tracker | owner answer |
@@ -107,11 +113,16 @@ window on the 30/min budget (`docs/solutions/anilist-rate-limit-retry-storm.md`)
   stops reporting AniList as unknown for manga. That closes plan 0031 OQ-4b.
 - Logs and watchlist writes invalidate the new key.
 
-### M4. Diary Reading filter
+### M4. Diary Reading filter (optional)
 
 The diary format filter adds a Reading option for manga, and later books,
 replacing plan 0095's "manga shows only under All". The month stats count
 chapters for it.
+
+Optional: it can land in either phase or stay undone. The owner preferred a
+search filter first, which shipped as plan 0119's Reading search scope.
+Search exposes Reading in its FAB scope picker; the diary keeps its own
+format options if M4 ships.
 
 ### B0. Register Hardcover OAuth apps and probe browser access
 
@@ -143,8 +154,8 @@ One `user_books` query by status (KTD-9) normalizes into
 `NormalizedMediaItem` with `type: 'BOOK'`, `progressUnit: 'page'`, the current
 read's `progress_pages`, and the edition's `pages` as the total. Currently
 Reading joins M3's rail, Want to Read joins the watchlist gather, and reading
-journal entries (started, progressed, finished) join the diary under M4's
-Reading filter.
+journal entries (started, progressed, finished) join the diary, under M4's
+Reading filter if it has shipped and under All otherwise.
 
 ### B3. Log to Hardcover
 
@@ -161,7 +172,9 @@ Write adapters through the existing fan-out and per-provider results:
 
 ### B4. Find books and open book details
 
-Search gains a Books section from `search(query_type: "book")`. The details
+Search's Reading scope gains a Books section from
+`search(query_type: "book")` (plan 0119 KTD-3), not a new scope. Movies & TV
+gains it too. The details
 screen renders a `BOOK`: cover, authors, series and position, page count,
 description and Hardcover rating. There is no TMDB for books, so
 `getMediaDetails` returns provider data, as it does for manga. Characters come
@@ -174,6 +187,8 @@ a bearer token from the account page, scrobble writes and collection reads.
 It is native-only on web, and scrobbling an unowned issue adds it as a digital
 copy. Hardcover's comics coverage is the zero-new-provider alternative. League
 of Comic Geeks has no API. C0 also settles KTD-5's comics `MediaType`.
+Whichever tracker wins, its search joins search's Reading scope as a section
+(plan 0119 KTD-3), never a Comics scope (KTD-10).
 
 ## Out of scope
 
