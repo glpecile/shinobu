@@ -19,7 +19,6 @@ import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { Image } from '@/components/image';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
-import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
@@ -40,12 +39,7 @@ import {
 import { PosterWall } from '@/features/feed/poster-wall';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
-import {
-  parseSearchFormat,
-  SEARCH_FORMAT_OPTIONS,
-  TITLE_SOURCES,
-  type SearchFormat,
-} from '@/features/search/formats';
+import { TITLE_SOURCES } from '@/features/search/formats';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePreloadRoute, usePushRoute } from '@/lib/navigation';
@@ -80,6 +74,12 @@ const SCOPES = [
     label: 'Titles',
     icon: 'film-outline',
     placeholder: 'Search titles',
+  },
+  {
+    value: 'reading',
+    label: 'Reading',
+    icon: 'book-outline',
+    placeholder: 'Search manga & light novels',
   },
   {
     value: 'people',
@@ -314,8 +314,9 @@ function SearchScreen() {
   const [scopeOpen, setScopeOpen] = useState(false);
   // Seeded from `?scope=`, like `input` from `?q=`: a tab tap wipes route
   // params (docs/solutions/native-tab-press-wipes-route-params.md).
-  const [selectedScope, setSelectedScope] = useState(params.scope);
-  const [selectedFormat, setSelectedFormat] = useState(params.format);
+  const [selectedScope, setSelectedScope] = useState(
+    params.scope ?? (params.format === 'READING' ? 'reading' : undefined),
+  );
   const muted = useThemeColor('--color-muted');
   const inputRef = useRef<TextInputInstance>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -402,10 +403,8 @@ function SearchScreen() {
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
-  // Titles only: People and Studios ignore it, and a format they don't use
-  // stays put for the next Titles search.
-  const format = parseSearchFormat(selectedFormat);
-  const formatLabel = SEARCH_FORMAT_OPTIONS.find((option) => option.value === format)?.label ?? '';
+  const titleSearch = scope.value === 'titles' || scope.value === 'reading';
+  const format = scope.value === 'reading' ? 'READING' : 'ALL';
   const titleSources = TITLE_SOURCES[format];
   const moviesTv = titleSources.find((entry) => entry.source === 'movies-tv');
   const anilist = titleSources.find((entry) => entry.source === Provider.AniList);
@@ -414,18 +413,18 @@ function SearchScreen() {
   const tmdbSearch = useTmdbSearchQuery({
     query,
     type: moviesTv?.type ?? 'ALL',
-    enabled: scope.value === 'titles' && moviesTv != null && moviesTvSource === 'tmdb',
+    enabled: titleSearch && moviesTv != null && moviesTvSource === 'tmdb',
   });
   const traktSearch = useTraktSearchQuery({
     query,
     type: moviesTv?.type ?? 'ALL',
-    enabled: scope.value === 'titles' && moviesTv != null && moviesTvSource === Provider.Trakt,
+    enabled: titleSearch && moviesTv != null && moviesTvSource === Provider.Trakt,
   });
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({
     query,
     type: anilist?.type ?? 'ALL',
-    enabled: scope.value === 'titles' && anilist != null,
+    enabled: titleSearch && anilist != null,
   });
   const personSearch = useTmdbPersonSearchQuery({
     query,
@@ -443,7 +442,7 @@ function SearchScreen() {
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
   const animeSeason = animeSeasonAt(new Date());
   const sections =
-    scope.value === 'titles'
+    titleSearch
       ? titleSources.flatMap((entry) => {
           switch (entry.source) {
             case 'movies-tv':
@@ -520,9 +519,9 @@ function SearchScreen() {
           ? 'empty'
           : 'results';
 
-  function setFormat(next: SearchFormat) {
-    setSelectedFormat(next);
-    router.setParams({ format: next === 'ALL' ? undefined : next });
+  function setScope(next: SearchScope) {
+    setSelectedScope(next);
+    router.setParams({ scope: next === 'titles' ? undefined : next, format: undefined });
   }
 
   function openDetails(item: NormalizedMediaItem) {
@@ -562,18 +561,6 @@ function SearchScreen() {
           value={input}
         />
       </View>
-      {scope.value === 'titles' ? (
-        <View className="px-4 pb-2 web:px-6">
-          <NativeSegmentedControl
-            accessibilityLabel="Format"
-            className="w-72"
-            onChange={setFormat}
-            options={SEARCH_FORMAT_OPTIONS}
-            size="sm"
-            value={format}
-          />
-        </View>
-      ) : null}
 
       {/* Inset before keyboard avoidance so the tab bar and keyboard overlap
           aren't added together. Android's tab host already insets content. */}
@@ -586,7 +573,7 @@ function SearchScreen() {
                 day, so each one cuts. */}
             <View className="flex-1">
               {state === 'idle' ? (
-                scope.value === 'titles' ? (
+                titleSearch ? (
                   <CollapsibleSection.Scroll
                     className="flex-1"
                     contentContainerClassName="pb-28"
@@ -620,7 +607,7 @@ function SearchScreen() {
                       <Text className="text-2xl font-display text-foreground">Search</Text>
                       <Text className="text-base font-sans text-muted mt-3 max-w-sm leading-relaxed">
                         Find any movie, show, anime, or manga — open its details or log it to your trackers. The button in the corner switches to
-                        {tmdbAvailable ? ' cast & crew or studios.' : ' cast & crew.'}
+                        {tmdbAvailable ? ' reading, cast & crew, or studios.' : ' reading or cast & crew.'}
                       </Text>
                     </View>
                   </View>
@@ -638,15 +625,15 @@ function SearchScreen() {
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Icon name="search-outline" />
                   <CenteredNotice.Title>No results</CenteredNotice.Title>
-                  {scope.value === 'titles' && format !== 'ALL' ? (
+                  {scope.value === 'reading' ? (
                     <>
                       <CenteredNotice.Body>
-                        Nothing matched “{query.trim()}” in {formatLabel}.
+                        Nothing matched “{query.trim()}” in Reading.
                       </CenteredNotice.Body>
                       <CenteredNotice.Action
                         icon={<Button.Icon name="search-outline" />}
-                        label="Search all formats"
-                        onPress={() => setFormat('ALL')}
+                        label="Search all titles"
+                        onPress={() => setScope('titles')}
                       />
                     </>
                   ) : (
@@ -720,10 +707,7 @@ function SearchScreen() {
       </SafeAreaView>
       <PickerSheet
         onClose={() => setScopeOpen(false)}
-        onSelect={(next: SearchScope) => {
-          setSelectedScope(next);
-          router.setParams({ scope: next === 'titles' ? undefined : next });
-        }}
+        onSelect={setScope}
         open={scopeOpen}
         title="Search for"
         value={scope.value}

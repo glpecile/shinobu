@@ -14,21 +14,15 @@ this filter instead of, or before, the diary's Reading filter (plan 0117 M4).
 
 ## Decisions
 
-- **KTD-1. Four options: All, Movies, TV, Reading.** The first three are the
-  filmography and diary list (`FORMAT_OPTIONS` in
-  `features/credit-timeline/group.ts`), reused rather than copied, and folded
-  the way `matchesFormat` folds AniList: an anime film is a movie, any other
-  anime format is TV. Anime isn't its own option. Users already meet it as a
-  movie or a series everywhere else, a fifth segment doesn't fit a phone
-  beside "Reading", and All still shows anime. The anime-seasons explorer's
-  list (All, TV, Films) is anime-only and stays its own. Reading is the one
-  option for everything read (plan 0117 KTD-10).
-- **KTD-2. A segmented control under the field, in the URL as `?format=`.**
-  `NativeSegmentedControl`, the diary's and explorer's control, sits under the
-  field and only in Titles. The scope picker stays about what you search for,
-  not how narrowly. The value rides the URL like `?scope=`, is omitted for All,
-  and is seeded into state like `?scope=`, because a tab tap wipes params.
-  People and Studios ignore it, and it stays put for the next Titles search.
+- **KTD-1. Reading is one search scope.** The existing FAB opens Titles,
+  Reading, Cast & crew, and Studios (with a TMDB token). Reading is the one
+  option for everything read (plan 0117 KTD-10); Titles keeps the combined
+  movie, TV, anime, and manga search. No segmented control or separate Movies
+  and TV options.
+- **KTD-2. The scope rides the URL as `?scope=reading`.** The FAB icon,
+  accessible label, selected picker row, and field placeholder reflect Reading.
+  The selection is seeded into state because a tab tap wipes params. Existing
+  `?format=READING` links open Reading; picking a scope clears `?format=`.
 - **KTD-3. A format is a source list.** `TITLE_SOURCES` in
   `features/search/formats.ts` lists each format's sections in order, each
   with its narrowing and label. A source a format leaves out sends no request
@@ -40,8 +34,6 @@ this filter instead of, or before, the diary's Reading filter (plan 0117 M4).
   | Format | TMDB | Trakt (fallback) | AniList `media(...)` |
   | --- | --- | --- | --- |
   | All | `/search/multi` | `/search/movie,show` | no type filter |
-  | Movies | `/search/movie` | `/search/movie` | `type: ANIME, format: MOVIE` |
-  | TV | `/search/tv` | `/search/show` | `type: ANIME, format_not: MOVIE` |
   | Reading | none | none | `type: MANGA` (light novels and one-shots included) |
 
   TMDB's fuzzy fallbacks stay on the narrowed endpoint.
@@ -60,8 +52,6 @@ this filter instead of, or before, the diary's Reading filter (plan 0117 M4).
   | Format | Movies & TV section | AniList section |
   | --- | --- | --- |
   | All | Movies & TV | Anime & Manga |
-  | Movies | Movies | Anime films |
-  | TV | TV | Anime series |
   | Reading | — | Manga & light novels |
 
   "Manga & light novels" still reads right beside a future "Books" section.
@@ -69,7 +59,7 @@ this filter instead of, or before, the diary's Reading filter (plan 0117 M4).
 - **KTD-7. Empty and failed states keep the screen's rows.** A section with
   nothing disappears and a failed one shows its row. A narrowed search with no
   results anywhere says which format it searched and offers "Search all
-  formats". The total-failure notice is unchanged.
+  titles". The total-failure notice is unchanged.
 
 ## Not done
 

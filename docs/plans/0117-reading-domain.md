@@ -121,8 +121,8 @@ chapters for it.
 
 Optional: it can land in either phase or stay undone. The owner preferred a
 search filter first, which shipped as plan 0119 with its own Reading option.
-If M4 ships, the diary reuses search's option list
-(`SEARCH_FORMAT_OPTIONS` in `features/search/formats.ts`).
+Search exposes Reading in its FAB scope picker; the diary keeps its own
+format options if M4 ships.
 
 ### B0. Register Hardcover OAuth apps and probe browser access
 
