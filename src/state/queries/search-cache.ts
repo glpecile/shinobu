@@ -20,6 +20,17 @@ export const SEARCH_QUERY_ROOTS = {
 };
 
 /**
+ * `keepPreviousData` for a title search: a new query string keeps the last
+ * results up, dimmed, while it loads, but a new format does not, since the
+ * last format's titles under the new format's header read as the tap having
+ * been ignored. Every title-search key ends in its format.
+ */
+export function keepPreviousSearch(format: string) {
+  return <Data>(previous: Data | undefined, previousQuery?: { queryKey: readonly unknown[] }) =>
+    previousQuery?.queryKey.at(-1) === format ? previous : undefined;
+}
+
+/**
  * Resolves a tapped search result from the cached search queries — the step in
  * the details resolution chain (plan 0009) that covers items belonging to no
  * feed row. Both providers are scanned: **manga appears in no feed row at

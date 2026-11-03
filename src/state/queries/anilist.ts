@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
 import { Provider } from '@/lib/providers/types';
-import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
+import { keepPreviousSearch, SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
@@ -138,9 +138,9 @@ export const anilistQueryKeys = {
    *  (the only route a manga result can resolve through). Shared root so the
    *  scan in `search-cache.ts` can't drift from the key built here. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.anilist],
-  /** Public anime + manga text search (search screen's AniList section). */
-  search: (query: string, limit: number) =>
-    [...anilistQueryKeys.searchRoot(), query, limit] as const,
+  /** Public title search (search screen's AniList section), per format. */
+  search: (query: string, limit: number, type: 'ALL' | 'MOVIE' | 'TV' | 'MANGA') =>
+    [...anilistQueryKeys.searchRoot(), query, limit, type] as const,
   /** One staff member's profile and credits, by AniList id (`/person/anilist/<id>`). */
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
   staffSearch: (query: string) =>
@@ -425,27 +425,31 @@ export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
 }
 
 /**
- * Public anime/manga text search — the AniList half of the sectioned search
- * screen. Same enable/keepPreviousData/staleTime contract as
- * `useTraktSearchQuery` (the shared minimum-length constant lives there);
- * the 60s staleTime also matters here for the 30 req/min budget
- * (docs/solutions/anilist-rate-limit-retry-storm.md).
+ * Public title search, narrowed to one format by `type` — the AniList half of
+ * the sectioned search screen. Same enable/placeholder contract as
+ * `useTraktSearchQuery` (the shared minimum-length constant lives there).
+ * Never stale: each format is its own entry, and flipping back to one must
+ * read the cache, not spend the 30 req/min budget
+ * (docs/solutions/anilist-rate-limit-retry-storm.md). gcTime still drops an
+ * entry once nothing shows it.
  */
 export function useAniListSearchQuery(params: {
   query: string;
+  type: 'ALL' | 'MOVIE' | 'TV' | 'MANGA';
   limit?: number;
   enabled?: boolean;
 }) {
   const query = params.query.trim();
   const limit = params.limit ?? 20;
+  const { type } = params;
   return useQuery({
-    queryKey: anilistQueryKeys.search(query, limit),
+    queryKey: anilistQueryKeys.search(query, limit, type),
     queryFn: ({ signal }) =>
-      Effect.runPromise(searchMedia(anilistDeps(), { query, limit }), { signal }),
+      Effect.runPromise(searchMedia(anilistDeps(), { query, limit, type }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
+    placeholderData: keepPreviousSearch(type),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }
 

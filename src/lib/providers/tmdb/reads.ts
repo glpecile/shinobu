@@ -321,22 +321,31 @@ export function searchMovie(
 }
 
 /**
- * Free-text movie+TV search for the search tab — one `/search/multi` call,
- * people dropped in normalization. This is the section's primary source
- * post-detachment (plan 0034): it needs only the builder token, so search
- * works with zero trackers connected and no Trakt client key in the build.
+ * Free-text title search for the search tab. `ALL` is one `/search/multi`
+ * call with people dropped in normalization; `MOVIE` and `TV` ask
+ * `/search/movie` or `/search/tv` for that kind alone. This is the section's
+ * primary source post-detachment (plan 0034): it needs only the builder
+ * token, so search works with zero trackers connected and no Trakt client key
+ * in the build.
  */
 export function searchTitles(
   deps: TmdbDeps,
-  params: { query: string },
+  params: { query: string; type?: 'ALL' | 'MOVIE' | 'TV' },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
+  const type = params.type ?? 'ALL';
+  const path = (endpoint: string) =>
+    `/search/${endpoint}?query=${encodeURIComponent(params.query)}&include_adult=false`;
   return Effect.gen(function* () {
-    const raw = yield* tmdbRequest<TmdbSearchResponse>(
-      deps,
-      `/search/multi?query=${encodeURIComponent(params.query)}&include_adult=false`,
-    );
     const now = yield* Clock.currentTimeMillis;
-    return normalizeMultiSearch(raw, new Date(now).toISOString());
+    const nowIso = new Date(now).toISOString();
+    switch (type) {
+      case 'ALL':
+        return normalizeMultiSearch(yield* tmdbRequest<TmdbSearchResponse>(deps, path('multi')), nowIso);
+      case 'MOVIE':
+        return normalizeTitleSearch(yield* tmdbRequest<TmdbSearchResponse>(deps, path('movie')), 'movie', nowIso);
+      case 'TV':
+        return normalizeTitleSearch(yield* tmdbRequest<TmdbSearchResponse>(deps, path('tv')), 'tv', nowIso);
+    }
   });
 }
 

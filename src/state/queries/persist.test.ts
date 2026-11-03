@@ -267,8 +267,8 @@ describe('isPersistedQueryKey', () => {
   // The allowlist exists to keep the unbounded caches off disk — web's
   // localStorage fallback has a few MB, and none of these help a cold start.
   test('rejects the unbounded per-item and per-query caches', () => {
-    expect(isPersistedQueryKey(traktQueryKeys.search('cowboy bebop', 20))).toBe(false);
-    expect(isPersistedQueryKey(anilistQueryKeys.search('bebop', 20))).toBe(false);
+    expect(isPersistedQueryKey(traktQueryKeys.search('cowboy bebop', 20, 'ALL'))).toBe(false);
+    expect(isPersistedQueryKey(anilistQueryKeys.search('bebop', 20, 'ALL'))).toBe(false);
     expect(isPersistedQueryKey(traktQueryKeys.images('TV', 1))).toBe(false);
     expect(isPersistedQueryKey(traktQueryKeys.seasons(1))).toBe(false);
     expect(isPersistedQueryKey(['media-details', 'trakt-1'])).toBe(false);

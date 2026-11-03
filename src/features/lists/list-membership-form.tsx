@@ -142,7 +142,7 @@ export function ListSearch({ target, items, onSelect, onClose }: {
   const query = useDeferredValue(text.trim());
   const token = useTmdbToken();
   const source = token != null && token !== '' ? 'tmdb' : getClientIdForProvider(Provider.Trakt) ? Provider.Trakt : null;
-  const fetching = useIsFetching({ queryKey: source === Provider.Trakt ? traktQueryKeys.search(query, 20) : tmdbQueryKeys.search(query), exact: true }) > 0;
+  const fetching = useIsFetching({ queryKey: source === Provider.Trakt ? traktQueryKeys.search(query, 20, 'ALL') : tmdbQueryKeys.search(query, 'ALL'), exact: true }) > 0;
   const noun = target.provider === Provider.Letterboxd ? 'films' : 'shows';
   return <WriteSheet.Step>
     <WriteSheet.Header onClose={onClose}><WriteSheet.Title>{target.provider === Provider.Letterboxd ? 'Add a film' : 'Add a show'}</WriteSheet.Title></WriteSheet.Header>

@@ -3,7 +3,7 @@ import * as Effect from 'effect/Effect';
 
 import type { HttpFetch } from '@/lib/http/types';
 import type { TokenStore } from '@/lib/providers/token-store';
-import { getListActivity } from './reads';
+import { getListActivity, searchMedia } from './reads';
 
 test('a filtered activity page retains AniList pagination', async () => {
   const media = { id: 21, type: 'ANIME', format: 'TV', title: { english: 'One Piece' } };
@@ -25,4 +25,23 @@ test('a filtered activity page retains AniList pagination', async () => {
   expect(result.hasNextPage).toBe(true);
   expect(result.entries).toHaveLength(1);
   expect(result.readTo).toBe(new Date(1_752_000_000 * 1000).toISOString());
+});
+
+test.each([
+  ['ALL', 'media(search: $search, sort: SEARCH_MATCH)'],
+  ['MOVIE', 'media(search: $search, type: ANIME, format: MOVIE, sort: SEARCH_MATCH)'],
+  ['TV', 'media(search: $search, type: ANIME, format_not: MOVIE, sort: SEARCH_MATCH)'],
+  ['MANGA', 'media(search: $search, type: MANGA, sort: SEARCH_MATCH)'],
+] as const)('a %s title search asks AniList for that format alone', async (type, media) => {
+  const bodies: string[] = [];
+  const fetch: HttpFetch = async (_input, init) => {
+    bodies.push(String(init?.body));
+    return Response.json({ data: { Page: { media: [] } } });
+  };
+  const tokens: TokenStore = { get: () => null, set: () => {}, clear: () => {} };
+
+  await Effect.runPromise(searchMedia({ fetch, tokens }, { query: 'frieren', type }));
+
+  expect(bodies).toHaveLength(1);
+  expect(JSON.parse(bodies[0] ?? '').query).toContain(media);
 });

@@ -137,7 +137,7 @@ export function useCreateList(username: string) {
 /** Reuses the search tab's cache and provider fallback. */
 export function useSuspenseListSearchQuery(query: string, source: 'tmdb' | typeof Provider.Trakt) {
   return useSuspenseQuery({
-    queryKey: source === 'tmdb' ? tmdbQueryKeys.search(query) : traktQueryKeys.search(query, 20),
+    queryKey: source === 'tmdb' ? tmdbQueryKeys.search(query, 'ALL') : traktQueryKeys.search(query, 20, 'ALL'),
     queryFn: ({ signal }) => source === 'tmdb'
       ? Effect.runPromise(searchTitlesFuzzy(tmdbDeps(), { query }), { signal })
       : Effect.runPromise(searchMedia(traktDeps(), { query, limit: 20 }), { signal }),

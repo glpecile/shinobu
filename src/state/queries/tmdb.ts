@@ -17,7 +17,7 @@ import {
   searchCompany,
   searchPerson,
 } from '@/lib/providers/tmdb/reads';
-import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
+import { keepPreviousSearch, SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { SEARCH_MIN_QUERY_LENGTH } from '@/state/queries/trakt';
 
 /** Real dependency wiring for TMDB effects (same shape as `traktDeps`). */
@@ -55,7 +55,8 @@ export const tmdbQueryKeys = {
   episode: (tmdbId: number, season: number, number: number) =>
     [...tmdbQueryKeys.all, 'episode', tmdbId, season, number] as const,
   /** Derived from SEARCH_QUERY_ROOTS so the details cache scan finds results. */
-  search: (query: string) => [...SEARCH_QUERY_ROOTS.tmdb, query] as const,
+  search: (query: string, type: 'ALL' | 'MOVIE' | 'TV') =>
+    [...SEARCH_QUERY_ROOTS.tmdb, query, type] as const,
 };
 
 // People's filmographies barely churn — a day of staleness is invisible, and
@@ -151,23 +152,25 @@ export function useTmdbEpisodeQuery(params: {
 }
 
 /**
- * Movie+TV fuzzy search for the search tab, the section's
- * primary source — same debounce/keepPreviousData contract as the Trakt
- * search it replaces. Disabled without a TMDB token; the screen falls back
- * to Trakt search only when a Trakt client key is active.
+ * Movie and TV fuzzy search for the search tab, the section's primary source,
+ * narrowed to one kind by `type`. Disabled without a TMDB token; the screen
+ * falls back to Trakt search only when a Trakt client key is active. Never
+ * stale, like the AniList half, so flipping between formats reads the cache.
  */
 export function useTmdbSearchQuery(params: {
   query: string;
+  type: 'ALL' | 'MOVIE' | 'TV';
   enabled?: boolean;
 }) {
   const query = params.query.trim();
+  const { type } = params;
   return useQuery({
-    queryKey: tmdbQueryKeys.search(query),
-    queryFn: ({ signal }) => Effect.runPromise(searchTitlesFuzzy(tmdbDeps(), { query }), { signal }),
+    queryKey: tmdbQueryKeys.search(query, type),
+    queryFn: ({ signal }) => Effect.runPromise(searchTitlesFuzzy(tmdbDeps(), { query, type }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
+    placeholderData: keepPreviousSearch(type),
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }
 

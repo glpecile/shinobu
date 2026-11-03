@@ -19,10 +19,12 @@ import { FeedRowSkeleton } from '@/components/feed-skeleton';
 import { Image } from '@/components/image';
 import { KeyboardAvoidingView } from '@/components/keyboard-avoiding-view';
 import { List } from '@/components/List';
+import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { PickerSheet } from '@/components/picker-sheet';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon, type IconSourceId } from '@/components/provider-icon';
+import { Button } from '@/components/button';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SearchField } from '@/components/search-field';
 import { SuspenseSection } from '@/components/suspense-section';
@@ -38,6 +40,12 @@ import {
 import { PosterWall } from '@/features/feed/poster-wall';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
+import {
+  parseSearchFormat,
+  SEARCH_FORMAT_OPTIONS,
+  TITLE_SOURCES,
+  type SearchFormat,
+} from '@/features/search/formats';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePreloadRoute, usePushRoute } from '@/lib/navigation';
@@ -299,7 +307,7 @@ function SearchScreen() {
   const router = useRouter();
   const pushRoute = usePushRoute();
   const prefetchDetails = usePrefetchMediaDetails();
-  const params = useLocalSearchParams<{ q?: string; scope?: string }>();
+  const params = useLocalSearchParams<{ q?: string; scope?: string; format?: string }>();
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
@@ -307,6 +315,7 @@ function SearchScreen() {
   // Seeded from `?scope=`, like `input` from `?q=`: a tab tap wipes route
   // params (docs/solutions/native-tab-press-wipes-route-params.md).
   const [selectedScope, setSelectedScope] = useState(params.scope);
+  const [selectedFormat, setSelectedFormat] = useState(params.format);
   const muted = useThemeColor('--color-muted');
   const inputRef = useRef<TextInputInstance>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -393,19 +402,30 @@ function SearchScreen() {
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
+  // Titles only: People and Studios ignore it, and a format they don't use
+  // stays put for the next Titles search.
+  const format = parseSearchFormat(selectedFormat);
+  const formatLabel = SEARCH_FORMAT_OPTIONS.find((option) => option.value === format)?.label ?? '';
+  const titleSources = TITLE_SOURCES[format];
+  const moviesTv = titleSources.find((entry) => entry.source === 'movies-tv');
+  const anilist = titleSources.find((entry) => entry.source === Provider.AniList);
 
+  // A section its format leaves out sends no request (Reading never asks TMDB).
   const tmdbSearch = useTmdbSearchQuery({
     query,
-    enabled: scope.value === 'titles' && moviesTvSource === 'tmdb',
+    type: moviesTv?.type ?? 'ALL',
+    enabled: scope.value === 'titles' && moviesTv != null && moviesTvSource === 'tmdb',
   });
   const traktSearch = useTraktSearchQuery({
     query,
-    enabled: scope.value === 'titles' && moviesTvSource === Provider.Trakt,
+    type: moviesTv?.type ?? 'ALL',
+    enabled: scope.value === 'titles' && moviesTv != null && moviesTvSource === Provider.Trakt,
   });
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({
     query,
-    enabled: scope.value === 'titles',
+    type: anilist?.type ?? 'ALL',
+    enabled: scope.value === 'titles' && anilist != null,
   });
   const personSearch = useTmdbPersonSearchQuery({
     query,
@@ -424,20 +444,26 @@ function SearchScreen() {
   const animeSeason = animeSeasonAt(new Date());
   const sections =
     scope.value === 'titles'
-      ? [
-          ...(moviesTvSource == null
-            ? []
-            : [
+      ? titleSources.flatMap((entry) => {
+          switch (entry.source) {
+            case 'movies-tv':
+              return moviesTvSource == null
+                ? []
+                : [
+                    {
+                      search: moviesTvSearch,
+                      rows: sectionRows(moviesTvSource, entry.label, moviesTvSearch, titleRow),
+                    },
+                  ];
+            case Provider.AniList:
+              return [
                 {
-                  search: moviesTvSearch,
-                  rows: sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch, titleRow),
+                  search: anilistSearch,
+                  rows: sectionRows(Provider.AniList, entry.label, anilistSearch, titleRow),
                 },
-              ]),
-          {
-            search: anilistSearch,
-            rows: sectionRows(Provider.AniList, 'Anime & Manga', anilistSearch, titleRow),
-          },
-        ]
+              ];
+          }
+        })
       : scope.value === 'people'
         ? [
             ...(tmdbAvailable
@@ -494,6 +520,11 @@ function SearchScreen() {
           ? 'empty'
           : 'results';
 
+  function setFormat(next: SearchFormat) {
+    setSelectedFormat(next);
+    router.setParams({ format: next === 'ALL' ? undefined : next });
+  }
+
   function openDetails(item: NormalizedMediaItem) {
     prefetchDetails(item);
     pushRoute(routes.details(item.id, item.type));
@@ -531,6 +562,18 @@ function SearchScreen() {
           value={input}
         />
       </View>
+      {scope.value === 'titles' ? (
+        <View className="px-4 pb-2 web:px-6">
+          <NativeSegmentedControl
+            accessibilityLabel="Format"
+            className="w-72"
+            onChange={setFormat}
+            options={SEARCH_FORMAT_OPTIONS}
+            size="sm"
+            value={format}
+          />
+        </View>
+      ) : null}
 
       {/* Inset before keyboard avoidance so the tab bar and keyboard overlap
           aren't added together. Android's tab host already insets content. */}
@@ -595,7 +638,20 @@ function SearchScreen() {
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Icon name="search-outline" />
                   <CenteredNotice.Title>No results</CenteredNotice.Title>
-                  <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
+                  {scope.value === 'titles' && format !== 'ALL' ? (
+                    <>
+                      <CenteredNotice.Body>
+                        Nothing matched “{query.trim()}” in {formatLabel}.
+                      </CenteredNotice.Body>
+                      <CenteredNotice.Action
+                        icon={<Button.Icon name="search-outline" />}
+                        label="Search all formats"
+                        onPress={() => setFormat('ALL')}
+                      />
+                    </>
+                  ) : (
+                    <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
+                  )}
                 </CenteredNotice>
               ) : (
                 // While a newer query is in flight the previous results stay visible
