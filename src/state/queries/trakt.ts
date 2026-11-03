@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
 import { Provider } from '@/lib/providers/types';
-import { keepPreviousSearch, SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
+import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { exchangeCodeForSession } from '@/lib/providers/trakt/auth';
 import type { TraktDeps } from '@/lib/providers/trakt/deps';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -76,8 +76,8 @@ export const traktQueryKeys = {
   /** Prefix for every search entry — details/[id] scans this for cache hits.
    *  Shared root so `search-cache.ts`'s scan can't drift from this key. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.trakt],
-  search: (query: string, limit: number, type: 'ALL' | 'MOVIE' | 'TV') =>
-    [...traktQueryKeys.searchRoot(), query, limit, type] as const,
+  search: (query: string, limit: number) =>
+    [...traktQueryKeys.searchRoot(), query, limit] as const,
   /** Full seasons + episodes for one show (plan 0010). */
   seasons: (traktId: number) =>
     [...traktQueryKeys.all, 'seasons', traktId] as const,
@@ -291,27 +291,23 @@ export function useTraktWatchedInfo(
 export const SEARCH_MIN_QUERY_LENGTH = 2;
 
 /**
- * Public movie/show text search (plan 0009), narrowed to one kind by `type`.
- * Disabled until the trimmed query reaches the minimum length;
- * `keepPreviousSearch` keeps the last results on screen between debounced
- * queries instead of flashing an empty list. Never stale, so flipping between
- * formats reads the cache.
+ * Public movie/show text search (plan 0009). Disabled until the trimmed query
+ * reaches the minimum length; `keepPreviousData` keeps the last results on
+ * screen between debounced queries instead of flashing an empty list.
  */
 export function useTraktSearchQuery(params: {
   query: string;
-  type: 'ALL' | 'MOVIE' | 'TV';
   limit?: number;
   enabled?: boolean;
 }) {
   const query = params.query.trim();
   const limit = params.limit ?? 20;
-  const { type } = params;
   return useQuery({
-    queryKey: traktQueryKeys.search(query, limit, type),
-    queryFn: ({ signal }) => Effect.runPromise(searchMedia(traktDeps(), { query, limit, type }), { signal }),
+    queryKey: traktQueryKeys.search(query, limit),
+    queryFn: ({ signal }) => Effect.runPromise(searchMedia(traktDeps(), { query, limit }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
-    placeholderData: keepPreviousSearch(type),
-    staleTime: Number.POSITIVE_INFINITY,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
   });
 }

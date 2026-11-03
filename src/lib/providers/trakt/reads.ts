@@ -61,20 +61,8 @@ function traktSegment(type: MediaType): 'movies' | 'shows' {
   return type === 'TV' ? 'shows' : 'movies';
 }
 
-function searchKinds(type: 'ALL' | 'MOVIE' | 'TV'): string {
-  switch (type) {
-    case 'ALL':
-      return 'movie,show';
-    case 'MOVIE':
-      return 'movie';
-    case 'TV':
-      return 'show';
-  }
-}
-
 /**
- * Text search across movies + TV shows in one public request (plan 0009), or
- * across one of them when `type` narrows it.
+ * Text search across movies + TV shows in one public request (plan 0009).
  * Rows Trakt indexes that we don't handle (episodes, people, …) drop out in
  * normalization rather than failing the whole search. `fields=title,aliases`
  * keeps relevance sane — Trakt's default searches overviews/taglines too,
@@ -82,14 +70,13 @@ function searchKinds(type: 'ALL' | 'MOVIE' | 'TV'): string {
  */
 export function searchMedia(
   deps: TraktDeps,
-  params: { query: string; limit?: number; type?: 'ALL' | 'MOVIE' | 'TV' },
+  params: { query: string; limit?: number },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const limit = params.limit ?? 20;
-  const kinds = searchKinds(params.type ?? 'ALL');
   return Effect.gen(function* () {
     const raw = yield* traktRequest<unknown>(
       deps,
-      `/search/${kinds}?query=${encodeURIComponent(params.query)}&fields=title,aliases&extended=full,images&limit=${limit}`,
+      `/search/movie,show?query=${encodeURIComponent(params.query)}&fields=title,aliases&extended=full,images&limit=${limit}`,
     ).pipe(Effect.flatMap(decodeSearchResponse));
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();

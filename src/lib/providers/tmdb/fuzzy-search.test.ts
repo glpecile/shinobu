@@ -129,26 +129,6 @@ describe('searchTitlesFuzzy', () => {
     expect(requests).toHaveLength(2);
   });
 
-  test('a narrowed search keeps its direct and fallback requests on that kind', async () => {
-    const paths: string[] = [];
-    const results = await Effect.runPromise(searchTitlesFuzzy({
-      token: 'test',
-      fetch: (input) => {
-        const url = new URL(String(input));
-        paths.push(`${url.pathname} ${url.searchParams.get('query')}`);
-        return Promise.resolve(Response.json({
-          results: url.searchParams.get('query') === 'bad' ? [{ id: 1396, name: 'Breaking Bad' }] : [],
-        }));
-      },
-    }, { query: 'breakng bad', type: 'TV' }));
-    expect(paths.map((path) => path.replace(/^.*\/search/, '/search'))).toEqual([
-      '/search/tv breakng bad',
-      '/search/tv breakng',
-      '/search/tv bad',
-    ]);
-    expect(results.map((item) => item.id)).toEqual(['tmdb-tv-1396']);
-  });
-
   test('a primary failure surfaces without starting fallback requests', async () => {
     const requests: string[] = [];
     const error = await Effect.runPromise(Effect.flip(searchTitlesFuzzy({

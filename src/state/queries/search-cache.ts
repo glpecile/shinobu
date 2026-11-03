@@ -20,14 +20,14 @@ export const SEARCH_QUERY_ROOTS = {
 };
 
 /**
- * `keepPreviousData` for a title search: a new query string keeps the last
- * results up, dimmed, while it loads, but a new format does not, since the
- * last format's titles under the new format's header read as the tap having
- * been ignored. Every title-search key ends in its format.
+ * `keepPreviousData` for a search narrowed by type: a new query string keeps
+ * the last results up, dimmed, while it loads, but a new type does not, since
+ * Titles' anime under the Reading header reads as the tap having been
+ * ignored. The search key ends in its type.
  */
-export function keepPreviousSearch(format: string) {
+export function keepPreviousSearch(type: string) {
   return <Data>(previous: Data | undefined, previousQuery?: { queryKey: readonly unknown[] }) =>
-    previousQuery?.queryKey.at(-1) === format ? previous : undefined;
+    previousQuery?.queryKey.at(-1) === type ? previous : undefined;
 }
 
 /**

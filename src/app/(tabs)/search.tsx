@@ -412,12 +412,10 @@ function SearchScreen() {
   // A section its format leaves out sends no request (Reading never asks TMDB).
   const tmdbSearch = useTmdbSearchQuery({
     query,
-    type: moviesTv?.type ?? 'ALL',
     enabled: titleSearch && moviesTv != null && moviesTvSource === 'tmdb',
   });
   const traktSearch = useTraktSearchQuery({
     query,
-    type: moviesTv?.type ?? 'ALL',
     enabled: titleSearch && moviesTv != null && moviesTvSource === Provider.Trakt,
   });
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;

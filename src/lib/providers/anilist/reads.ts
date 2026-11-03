@@ -595,34 +595,15 @@ export function getAniListStaff(
 }
 
 /**
- * The `media(...)` arguments that narrow a title search, in the filmography's
- * terms (`matchesFormat`): `MOVIE` is anime films, `TV` every other anime
- * format, and `MANGA` all of AniList's MANGA type, light novels (`NOVEL`)
- * and one-shots included.
- */
-function searchNarrowing(type: 'ALL' | 'MOVIE' | 'TV' | 'MANGA'): string {
-  switch (type) {
-    case 'ALL':
-      return '';
-    case 'MOVIE':
-      return 'type: ANIME, format: MOVIE, ';
-    case 'TV':
-      return 'type: ANIME, format_not: MOVIE, ';
-    case 'MANGA':
-      return 'type: MANGA, ';
-  }
-}
-
-/**
  * Public text search. `ALL` has no type filter, so one request covers
- * everything AniList can log (registry: ANIME + MANGA); a narrower `type` asks
- * AniList for that format alone rather than filtering a mixed page. Same
- * no-session contract as trending; SEARCH_MATCH keeps exact-title hits above
- * popularity noise.
+ * everything AniList can log (registry: ANIME + MANGA). `MANGA` asks for
+ * AniList's MANGA type alone, light novels (`NOVEL`) and one-shots included,
+ * rather than filtering a mixed page. Same no-session contract as trending;
+ * SEARCH_MATCH keeps exact-title hits above popularity noise.
  */
 export function searchMedia(
   deps: AniListDeps,
-  params: { query: string; limit?: number; type?: 'ALL' | 'MOVIE' | 'TV' | 'MANGA' },
+  params: { query: string; limit?: number; type?: 'ALL' | 'MANGA' },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const limit = params.limit ?? 20;
   return Effect.gen(function* () {
@@ -630,7 +611,7 @@ export function searchMedia(
       deps,
       `query ($search: String, $perPage: Int) {
         Page(page: 1, perPage: $perPage) {
-          media(search: $search, ${searchNarrowing(params.type ?? 'ALL')}sort: SEARCH_MATCH) { ${CARD_FIELDS} }
+          media(search: $search, ${params.type === 'MANGA' ? 'type: MANGA, ' : ''}sort: SEARCH_MATCH) { ${CARD_FIELDS} }
         }
       }`,
       { variables: { search: params.query, perPage: limit } },

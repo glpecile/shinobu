@@ -4,13 +4,13 @@ date: 2026-11-03
 issue: 209
 ---
 
-# 0119 — A format filter for search's Titles scope
+# 0119 — A Reading scope for search
 
 Search's Titles scope showed two sections: "Movies & TV" (TMDB `/search/multi`,
 or Trakt text search without a TMDB token) and "Anime & Manga" (AniList
 `searchMedia`, no type filter). Manga competed with anime for the same 20
-AniList results, and nothing narrowed a search to one format. The owner wants
-this filter instead of, or before, the diary's Reading filter (plan 0117 M4).
+AniList results, and nothing narrowed a search to what you read. The owner
+wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
 
 ## Decisions
 
@@ -23,48 +23,46 @@ this filter instead of, or before, the diary's Reading filter (plan 0117 M4).
   accessible label, selected picker row, and field placeholder reflect Reading.
   The selection is seeded into state because a tab tap wipes params. Existing
   `?format=READING` links open Reading; picking a scope clears `?format=`.
-- **KTD-3. A format is a source list.** `TITLE_SOURCES` in
-  `features/search/formats.ts` lists each format's sections in order, each
-  with its narrowing and label. A source a format leaves out sends no request
-  under it. Hardcover's books (#400) and the comics tracker (#401) join
-  Reading, and All, as entries in that list, with one query hook each, and
-  never as options of their own.
+- **KTD-3. A scope is a source list.** `TITLE_SOURCES` in
+  `features/search/formats.ts` lists the sections Titles (`ALL`) and Reading
+  search, in order, each with its label. A source a scope leaves out sends no
+  request under it. Hardcover's books (#400) and the comics tracker (#401)
+  join Reading, and Titles, as entries in that list, with one query hook
+  each, and never as scopes of their own.
 - **KTD-4. The request narrows, not the page.**
 
-  | Format | TMDB | Trakt (fallback) | AniList `media(...)` |
+  | Scope | TMDB | Trakt (fallback) | AniList `media(...)` |
   | --- | --- | --- | --- |
-  | All | `/search/multi` | `/search/movie,show` | no type filter |
+  | Titles | `/search/multi` | `/search/movie,show` | no type filter |
   | Reading | none | none | `type: MANGA` (light novels and one-shots included) |
 
-  TMDB's fuzzy fallbacks stay on the narrowed endpoint.
-- **KTD-5. Each format is its own cache entry, never stale.** The type is the
-  last element of each provider's existing search key (`tmdbQueryKeys.search`,
-  `traktQueryKeys.search`, `anilistQueryKeys.search`). Title searches use
-  `staleTime: Infinity`, so flipping back to a format reads the cache instead
-  of spending AniList's 30/min budget
+- **KTD-5. Titles and Reading are separate AniList entries, never stale.**
+  The type is the last element of `anilistQueryKeys.search`, and the AniList
+  title search uses `staleTime: Infinity`, so flipping back to a scope reads
+  the cache instead of spending AniList's 30/min budget
   (`docs/solutions/anilist-rate-limit-retry-storm.md`). gcTime still drops an
   entry once nothing shows it. A new query string keeps the last results up,
-  dimmed, but a new format doesn't (`keepPreviousSearch`), because the last
-  format's titles under the new header read as the tap having been ignored.
-  The section shows its skeleton instead, as the explorer does.
+  dimmed, but a new type doesn't (`keepPreviousSearch`), because Titles'
+  anime under the Reading header reads as the tap having been ignored. The
+  section shows its skeleton instead, as the explorer does.
 - **KTD-6. Labels name what a section holds.**
 
-  | Format | Movies & TV section | AniList section |
+  | Scope | Movies & TV section | AniList section |
   | --- | --- | --- |
-  | All | Movies & TV | Anime & Manga |
+  | Titles | Movies & TV | Anime & Manga |
   | Reading | — | Manga & light novels |
 
   "Manga & light novels" still reads right beside a future "Books" section.
-  All keeps the combined AniList label, because its page really is mixed.
+  Titles keeps the combined AniList label, because its page really is mixed.
 - **KTD-7. Empty and failed states keep the screen's rows.** A section with
-  nothing disappears and a failed one shows its row. A narrowed search with no
-  results anywhere says which format it searched and offers "Search all
-  titles". The total-failure notice is unchanged.
+  nothing disappears and a failed one shows its row. A Reading search with no
+  results says so and offers "Search all titles". The total-failure notice is
+  unchanged.
 
 ## Not done
 
-- The idle Titles screen keeps its four rails under every format. A Reading
-  idle state (for example, the Continue Reading rail) is a follow-up.
+- Reading's idle screen shows Titles' four rails. A Reading idle state (for
+  example, the Continue Reading rail) is a follow-up.
 - M4, the diary Reading filter, is unchanged and optional (plan 0117).
 
 ## Build

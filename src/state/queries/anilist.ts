@@ -138,8 +138,8 @@ export const anilistQueryKeys = {
    *  (the only route a manga result can resolve through). Shared root so the
    *  scan in `search-cache.ts` can't drift from the key built here. */
   searchRoot: () => [...SEARCH_QUERY_ROOTS.anilist],
-  /** Public title search (search screen's AniList section), per format. */
-  search: (query: string, limit: number, type: 'ALL' | 'MOVIE' | 'TV' | 'MANGA') =>
+  /** Public title search (search screen's AniList section), per scope. */
+  search: (query: string, limit: number, type: 'ALL' | 'MANGA') =>
     [...anilistQueryKeys.searchRoot(), query, limit, type] as const,
   /** One staff member's profile and credits, by AniList id (`/person/anilist/<id>`). */
   staff: (id: number) => [...anilistQueryKeys.all, 'staff', id] as const,
@@ -425,17 +425,17 @@ export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
 }
 
 /**
- * Public title search, narrowed to one format by `type` — the AniList half of
- * the sectioned search screen. Same enable/placeholder contract as
- * `useTraktSearchQuery` (the shared minimum-length constant lives there).
- * Never stale: each format is its own entry, and flipping back to one must
- * read the cache, not spend the 30 req/min budget
+ * Public title search, `MANGA` for the Reading scope — the AniList half of
+ * the sectioned search screen. Same enable contract as `useTraktSearchQuery`
+ * (the shared minimum-length constant lives there). Never stale: each type is
+ * its own entry, and flipping between Titles and Reading must read the cache,
+ * not spend the 30 req/min budget
  * (docs/solutions/anilist-rate-limit-retry-storm.md). gcTime still drops an
  * entry once nothing shows it.
  */
 export function useAniListSearchQuery(params: {
   query: string;
-  type: 'ALL' | 'MOVIE' | 'TV' | 'MANGA';
+  type: 'ALL' | 'MANGA';
   limit?: number;
   enabled?: boolean;
 }) {

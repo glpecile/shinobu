@@ -61,13 +61,13 @@ function titleScore(query: string, item: NormalizedMediaItem): number {
  */
 export const searchTitlesFuzzy = Effect.fnUntraced(function* (
   deps: TmdbDeps,
-  params: { query: string; type?: 'ALL' | 'MOVIE' | 'TV' },
+  params: { query: string },
 ): Effect.fn.Return<NormalizedMediaItem[], ProviderError> {
   const query = params.query.trim();
   const words = titleKey(query).split(' ').filter(Boolean);
   const key = words.join('');
   if (key === '') return [];
-  const direct = yield* searchTitles(deps, { query, type: params.type });
+  const direct = yield* searchTitles(deps, { query });
   const characters = Array.from(key);
   if (characters.length < 4 || characters.length > 120) return direct;
 
@@ -81,7 +81,7 @@ export const searchTitlesFuzzy = Effect.fnUntraced(function* (
         .sort((a, b) => b.length - a.length)
         .slice(0, 2);
     const supplements = yield* Effect.forEach(fallbacks, (word) =>
-      searchTitles(deps, { query: word, type: params.type }).pipe(Effect.catch(() => Effect.succeed([]))),
+      searchTitles(deps, { query: word }).pipe(Effect.catch(() => Effect.succeed([]))),
     { concurrency: 2 });
     for (const item of supplements.flat()) {
       if (ranked.has(item.id)) continue;
