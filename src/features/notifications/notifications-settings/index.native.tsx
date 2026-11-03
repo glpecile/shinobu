@@ -1,7 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore, useTransition } from 'react';
 
 import { Button } from '@/components/button';
 import { NativeSwitch } from '@/components/native-switch';
@@ -89,7 +89,7 @@ export function NotificationsSettingsSection() {
   const enabled = useNotificationsEnabled();
   const kindCount = useEnabledKindCount();
   const queryClient = useQueryClient();
-  const [requesting, setRequesting] = useState(false);
+  const [requesting, startRequest] = useTransition();
   const [permissionDenied, setPermissionDenied] = useState(false);
   const muted = useThemeColor('--color-muted');
 
@@ -101,15 +101,13 @@ export function NotificationsSettingsSection() {
       return;
     }
 
-    setRequesting(true);
-    await Notifications.requestPermissionsAsync()
-      .then(async ({ granted }) => {
-        setPermissionDenied(!granted);
-        if (!granted) return;
-        setNotificationsEnabled(true);
-        await refreshNotifications(createRefreshDeps(queryClient));
-      })
-      .finally(() => setRequesting(false));
+    startRequest(async () => {
+      const { granted } = await Notifications.requestPermissionsAsync();
+      setPermissionDenied(!granted);
+      if (!granted) return;
+      setNotificationsEnabled(true);
+      await refreshNotifications(createRefreshDeps(queryClient));
+    });
   }
 
   let count = 'Off';

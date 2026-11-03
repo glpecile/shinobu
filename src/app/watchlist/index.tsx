@@ -4,7 +4,7 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useTransition } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -115,7 +115,7 @@ function WatchlistGrid({
   const pushRoute = usePushRoute();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
   // The row the sheet was opened from, held in state rather than looked up out
   // of `entries` on every render (plan 0031 U16). That is the difference between
   // a removal you can read the result of and one you cannot: a successful
@@ -146,9 +146,10 @@ function WatchlistGrid({
   const enriched = entries.map((entry, index) => ({ ...entry, item: metadata.items[index] }));
   const shown = sortMediaEntries(filterWatchlistEntries(enriched, provider), sort);
 
-  async function refresh() {
-    setRefreshing(true);
-    await refreshWatchlistInputs(queryClient).finally(() => setRefreshing(false));
+  function refresh() {
+    startRefresh(async () => {
+      await refreshWatchlistInputs(queryClient);
+    });
   }
 
   async function loadMore() {
@@ -174,7 +175,7 @@ function WatchlistGrid({
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"
-          onPress={() => void refresh()}
+          onPress={refresh}
         />
       </CenteredNotice>
     );
@@ -228,7 +229,7 @@ function WatchlistGrid({
           openActions(item);
         }}
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
-        onRefresh={() => void refresh()}
+        onRefresh={refresh}
         refreshing={refreshing}
       />
     );
@@ -246,7 +247,7 @@ function WatchlistGrid({
         sort={sort}
         view={view}
       />
-      <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
+      <LegFailureNotice failures={errors} onRetry={refresh} />
       {layout}
       {/* The one surface that offers the removal (R35): only a `WatchlistEntry`
           knows which providers actually hold the item, and only this screen has

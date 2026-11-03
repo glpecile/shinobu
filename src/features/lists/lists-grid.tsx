@@ -1,6 +1,6 @@
 import { useWindowDimensions, View } from 'react-native';
 import { RefreshControl } from 'react-native-gesture-handler';
-import { useState } from 'react';
+import { useTransition } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -64,16 +64,17 @@ export function ListsIndex({
   emptyBody: string;
 }) {
   const pushRoute = usePushRoute();
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
   const insets = useSafeAreaInsets();
   const { columns, rowHeight } = useGrid();
   const { openList, sheetProps } = useListSheet();
   const loaded = [...new Map(lists.map((list) => [list.id, list])).values()];
   const pages = visibleByIds(loaded, useHiddenLists(), (list) => [list.href]);
   const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
-  async function refresh() {
-    setRefreshing(true);
-    await refetch().finally(() => setRefreshing(false));
+  function refresh() {
+    startRefresh(async () => {
+      await refetch();
+    });
   }
   return (
     <>
@@ -112,7 +113,7 @@ export function ListsIndex({
           // an exit-and-re-enter scroll; 0.3 re-arms on the landed page itself
           // (docs/solutions/legend-list-threshold-vs-short-pages.md).
           onEndReachedThreshold={0.3}
-          refreshControl={<RefreshControl onRefresh={() => void refresh()} refreshing={refreshing} />}
+          refreshControl={<RefreshControl onRefresh={refresh} refreshing={refreshing} />}
           renderItem={({ item }) => (
             <View className="px-2 pb-6">
               {'title' in item

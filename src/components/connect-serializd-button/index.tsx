@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { Text, View } from 'react-native';
 import { z } from 'zod';
@@ -26,8 +26,14 @@ type CredentialsForm = z.infer<typeof credentialsSchema>;
  * (plan 0017); the WebView path (mobile) is the primary, password-free connect.
  */
 export function ConnectSerializdButton() {
-  const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const login = useMutation({
+    // Never paused offline: the persister writes paused mutations to storage,
+    // and these variables carry the password.
+    networkMode: 'always',
+    mutationFn: (values: CredentialsForm) =>
+      loginSerializd({ email: values.email.trim(), password: values.password })
+        .then((session) => connectSerializd(session)),
+  });
 
   const {
     control,
@@ -38,20 +44,7 @@ export function ConnectSerializdButton() {
     resolver: zodResolver(credentialsSchema),
   });
 
-  const submit = handleSubmit(async (values) => {
-    setStatus('submitting');
-    setErrorMessage(null);
-    await loginSerializd({
-      email: values.email.trim(),
-      password: values.password,
-    })
-      .then((session) => connectSerializd(session))
-      // Surface the API's own message (wrong password, etc.); store nothing.
-      .catch((error: unknown) => {
-        setErrorMessage(loginErrorText(error instanceof Error ? error.message : String(error)));
-      })
-      .finally(() => setStatus('idle'));
-  });
+  const submit = handleSubmit((values) => login.mutate(values));
 
   return (
     <View className="w-full gap-3">
@@ -93,13 +86,14 @@ export function ConnectSerializdButton() {
       {errors.password != null && (
         <Text className="text-accent font-sans text-xs">{errors.password.message}</Text>
       )}
-      {errorMessage != null && (
-        <Text className="text-accent font-sans text-xs">{errorMessage}</Text>
+      {/* The API's own message (wrong password, etc.); nothing is stored. */}
+      {login.error != null && (
+        <Text className="text-accent font-sans text-xs">{loginErrorText(login.error.message)}</Text>
       )}
       <Button
         icon={<Button.Icon name="link-outline" />}
         label="Connect Serializd"
-        loading={status === 'submitting'}
+        loading={login.isPending}
         loadingLabel="Connecting…"
         onPress={() => void submit()}
       />

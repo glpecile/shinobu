@@ -1,4 +1,4 @@
-import { useReducer, useRef, useState } from 'react';
+import { useReducer, useRef, useState, useTransition } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
@@ -744,7 +744,7 @@ export function DiaryList({
   onItemActions,
 }: DiaryListProps) {
   const reduceMotion = useReducedMotion();
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
   // Flipped only on threshold crossings, so scrolling doesn't re-render.
@@ -775,19 +775,17 @@ export function DiaryList({
     visible: false,
   });
   const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
-  // `.finally`, not `try/finally`: React Compiler can't lower a `try` without
-  // `catch` and skips the whole component, so every scroll-driven render
-  // rebuilt the list and both calendars.
-  async function refresh() {
-    setRefreshing(true);
-    await onRefresh().finally(() => setRefreshing(false));
+  function refresh() {
+    startRefresh(async () => {
+      await onRefresh();
+    });
   }
 
   // Double-tapping the Diary tab runs the same refresh the pull gesture does,
   // spinner included (`app/(tabs)/_layout.tsx` emits the press). The tab name
   // is fixed here rather than passed in because this list *is* that tab's
   // surface — it renders nowhere else.
-  useTabDoubleTap('diary', () => void refresh());
+  useTabDoubleTap('diary', refresh);
 
   // State, not an ambient `new Date()`, which React Compiler would cache until
   // `timeZone` changes. It rolls over at local midnight and on foreground.

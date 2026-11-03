@@ -1,4 +1,4 @@
-import { type Ref, useState } from 'react';
+import { type Ref, useTransition } from 'react';
 import type { ScrollViewInstance, ScrollViewProps } from 'react-native';
 import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,17 +48,17 @@ export function RefreshableScrollView({
   children,
   ...rest
 }: RefreshableScrollViewProps) {
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
   const accent = useThemeColor('--color-accent');
   // Context comes from the navigation stack's provider; the hook is safe on
   // web too (zero insets), so no platform fork is needed here.
   const insets = useSafeAreaInsets();
 
   function refresh() {
-    setRefreshing(true);
-    onRefresh()
-      .catch(() => undefined)
-      .finally(() => setRefreshing(false));
+    // Swallowed here: a rejected async transition would reach the error boundary.
+    startRefresh(async () => {
+      await onRefresh().catch(() => undefined);
+    });
   }
 
   // Same entry point as the pull gesture, so the spinner and the swallowed
