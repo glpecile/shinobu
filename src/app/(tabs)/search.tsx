@@ -78,7 +78,7 @@ const SCOPES = [
   {
     value: 'reading',
     label: 'Reading',
-    icon: 'book-outline',
+    icon: 'library-outline',
     placeholder: 'Search manga & light novels',
   },
   {
