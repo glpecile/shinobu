@@ -93,6 +93,7 @@ export const getFilmItem = Effect.fnUntraced(function* (
     switch (/\bdata-tmdb-type=["']([^"']+)["']/.exec(body)?.[1]) {
       case 'movie': return { ...item, externalIds: { ...item.externalIds, tmdb: Number(id) } };
       case 'tv': return { ...item, tmdbTvVariant: Number(id) };
+      default: break;
     }
   }
   if (deps.tmdb == null || year == null) return item;

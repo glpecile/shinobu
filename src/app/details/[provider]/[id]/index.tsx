@@ -526,6 +526,7 @@ function DetailsScreen() {
     case 'movie': mediaType = 'MOVIE'; break;
     case 'tv': mediaType = 'TV'; break;
     case 'manga': mediaType = 'MANGA'; break;
+    default: break;
   }
   const validType = resourceType == null ||
     (provider === 'trakt' && (mediaType === 'MOVIE' || mediaType === 'TV')) ||

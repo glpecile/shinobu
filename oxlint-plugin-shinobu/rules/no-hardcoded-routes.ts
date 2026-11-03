@@ -67,6 +67,7 @@ export default defineRule({
             case 'router': routers.add(specifier.local.name); break;
             case 'useRouter': routerHooks.add(specifier.local.name); break;
             case 'usePushRoute': pushHooks.add(specifier.local.name); break;
+            default: break;
           }
         }
       },

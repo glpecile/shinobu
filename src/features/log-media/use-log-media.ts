@@ -652,26 +652,26 @@ async function providerHasWatch(
           await queryClient.fetchQuery({ ...letterboxdFilmWatchQuery(username, item), ...freshness })
         ) != null;
       }
+
+      // Null is "unknown": `planLogWrite` leaves Simkl out of the catch-up vs.
+      // rewatch decision and always writes it. Simkl, readable since plan 0034
+      // U7, is not the mechanical parallel of the ones above. A real reconcile
+      // needs the *unfiltered* /sync/all-items snapshot (the item may sit in
+      // any status bucket; the cached up-next legs hold only
+      // watching/plantowatch) fetched fresh per log, the heaviest Simkl read,
+      // against the activities-gated refetch discipline of
+      // docs/solutions/simkl-rate-limits-and-write-lock.md. Anime also
+      // compares in Simkl's AniDB-convention numbering (plan 0034 KTD-6), so a
+      // canonical-origin batch needs the same ani.zip reverse map
+      // `simklLogAdapter` uses before its watchedKeys can be trusted. A
+      // wrong-domain compare recreates the false in-sync skip plan 0027
+      // removed. Deferred to follow-up (plan 0034 Scope Boundaries).
+      case 'simkl':
+        return null;
     }
   } catch {
     return fresh ? null : false;
   }
-  // Providers without a branch (Simkl) can't be read yet, so they answer null,
-  // "unknown": `planLogWrite` leaves them out of the catch-up vs. rewatch
-  // decision and always writes them.
-  // Simkl — readable since plan 0034 U7 — deliberately has no branch yet, because it
-  // is not the mechanical parallel of the ones above. A real Simkl reconcile
-  // needs the *unfiltered* /sync/all-items snapshot (the item may sit in any
-  // status bucket; the cached up-next legs hold only watching/plantowatch)
-  // fetched fresh per log — the heaviest Simkl read, against the
-  // activities-gated refetch discipline of
-  // docs/solutions/simkl-rate-limits-and-write-lock.md — and anime compares
-  // in Simkl's AniDB-convention numbering (plan 0034 KTD-6), so a
-  // canonical-origin batch needs the same ani.zip reverse map
-  // `simklLogAdapter` uses before its watchedKeys can be trusted. A
-  // wrong-domain compare recreates the false in-sync skip plan 0027 removed.
-  // Deferred to follow-up (plan 0034 Scope Boundaries).
-  return null;
 }
 
 /**

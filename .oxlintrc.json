@@ -1,5 +1,8 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true
+  },
   "ignorePatterns": [
     "ios/**",
     "android/**",
@@ -289,7 +292,27 @@
           "^@/components/(animated-view|presstable|image|zoomable-image|keyboard-avoiding-view|keyboard-aware-scroll-view|refreshable-scroll-view|List|skeleton|poster-placeholder|morph-text|blur-enter|section-enter)$"
         ]
       }
-    ]
+    ],
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      {
+        "considerDefaultExhaustiveForUnions": true,
+        "allowDefaultCaseForExhaustiveSwitch": false
+      }
+    ],
+    "typescript/await-thenable": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-base-to-string": "off",
+    "typescript/no-floating-promises": "off",
+    "typescript/no-implied-eval": "off",
+    "typescript/no-misused-spread": "off",
+    "typescript/no-unnecessary-boolean-literal-compare": "off",
+    "typescript/no-unnecessary-type-arguments": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unnecessary-type-conversion": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/unbound-method": "off"
   },
   "overrides": [
     {
