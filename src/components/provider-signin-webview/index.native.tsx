@@ -67,6 +67,9 @@ export function ProviderSigninWebView<T>({
   onCaptured,
   captureUserAgent = false,
 }: ProviderSigninWebViewProps<T>) {
+  // Nitro's `callback()` wraps handlers that read refs while rendering, which
+  // React Compiler rejects. A sign-in sheet opened once gains nothing from memo.
+  'use no memo';
   const webViewRef = useRef<NitroWebViewType | null>(null);
   // The capture must fire exactly once even though several navigation events
   // race after login. Reset when each open mounts a fresh WebView.

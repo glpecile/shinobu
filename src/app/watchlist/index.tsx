@@ -148,11 +148,7 @@ function WatchlistGrid({
 
   async function refresh() {
     setRefreshing(true);
-    try {
-      await refreshWatchlistInputs(queryClient);
-    } finally {
-      setRefreshing(false);
-    }
+    await refreshWatchlistInputs(queryClient).finally(() => setRefreshing(false));
   }
 
   async function loadMore() {

@@ -7,6 +7,8 @@ honor its STOP conditions, and update your row when done.
 - Round 1: 2026-10-26 against commit `04cc56e` (plans 001–004).
 - Round 2: 2026-10-31 against commit `1003c59` (plans 005–030), a full audit
   covering correctness, security, performance, tests, tech debt, DX, docs and direction.
+- Round 3: 2026-11-02 against commit `1994ac9` (plan 031), a device-profiled
+  performance review of the five slowest spots.
 
 Status values: TODO | IN PROGRESS | DONE | NEEDS REVISION (review finding) | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -247,3 +249,9 @@ Round 2:
 - **Dependencies**: SDK 58 aligned. `.env.template` lists all four `EXPO_PUBLIC_*` vars.
 - **Duplicate `docs/plans` numbers (0044, 0074)**: only referenced by full filename. Harmless.
 - **`pr-labels.yml`**: the PR title goes through `env:`, and no workflow uses `pull_request_target`. Fine.
+
+## Round 3: performance review (2026-11-02)
+
+| Plan | Title | Category | Priority | Effort | Risk | Status |
+|------|-------|----------|----------|--------|------|--------|
+| [031](031-performance-review-2026-11.md) | The five slowest spots from a device profile | perf | P3 | S | LOW | IN PROGRESS (diary leaves and the compiler lint done in #411; follow-ups A–B open) |

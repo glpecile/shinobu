@@ -109,7 +109,10 @@ docs say it owns that class. `shinobu/no-template-classnames` and
 `shinobu/no-unguarded-push` cover class composition and guarded navigation in
 `bun lint`. `bun check:links` probes external URL health. Reviewers enforce the
 Suspense, no-dead-end, and proxy rules.
-`shinobu/reanimated-no-deps` and `shinobu/web-safe-easing` reject Reanimated
+`shinobu/react-compiler-bailout` runs React Compiler over `src/` and fails on
+any component or hook it would ship uncompiled
+(`docs/solutions/react-compiler-silent-bailouts.md`); write shared values
+with `.set()`. `shinobu/reanimated-no-deps` and `shinobu/web-safe-easing` reject Reanimated
 code that only warns at runtime. A Metro or browser console warning from your
 change is a bug to fix before shipping, not noise.
 

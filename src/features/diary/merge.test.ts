@@ -324,23 +324,23 @@ describe('formatEpisodeDetail', () => {
 });
 
 describe('formatDayParts', () => {
-  const now = new Date('2026-07-21T12:00:00.000Z');
+  const today = '2026-07-21';
   test('the current local day labels itself "Today" and flags it', () => {
-    expect(formatDayParts('2026-07-21', now, TZ_MINUS_5)).toEqual({
+    expect(formatDayParts('2026-07-21', today)).toEqual({
       day: '21',
       label: 'Today',
       isToday: true,
     });
   });
   test('a same-year day is a numeral over the short month', () => {
-    expect(formatDayParts('2026-07-20', now, TZ_MINUS_5)).toEqual({
+    expect(formatDayParts('2026-07-20', today)).toEqual({
       day: '20',
       label: 'Jul',
       isToday: false,
     });
   });
   test('a prior-year day appends the two-digit year to the month', () => {
-    expect(formatDayParts('2025-07-20', now, TZ_MINUS_5)).toEqual({
+    expect(formatDayParts('2025-07-20', today)).toEqual({
       day: '20',
       label: 'Jul 25',
       isToday: false,

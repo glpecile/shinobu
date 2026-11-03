@@ -78,7 +78,7 @@ export function PersistQueryClientProvider({
           !(event.type === 'updated' && event.action.type === 'fetch') &&
           isPersistedQueryKey(event.query.queryKey)
         ) {
-          timer ??= setTimeout(flush, THROTTLE_MS);
+          if (timer === undefined) timer = setTimeout(flush, THROTTLE_MS);
         }
       });
     });

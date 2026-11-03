@@ -223,8 +223,7 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
     setOffsets((previous) => {
       if (placement == null) {
         if (!(title in previous)) return previous;
-        const { [title]: _removed, ...rest } = previous;
-        return rest;
+        return Object.fromEntries(Object.entries(previous).filter(([key]) => key !== title));
       }
       if (previous[title]?.y === placement.y && previous[title]?.icon === placement.icon) return previous;
       return { ...previous, [title]: placement };

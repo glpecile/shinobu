@@ -102,18 +102,14 @@ export function NotificationsSettingsSection() {
     }
 
     setRequesting(true);
-    try {
-      const { granted } = await Notifications.requestPermissionsAsync();
-      if (!granted) {
-        setPermissionDenied(true);
-        return;
-      }
-      setPermissionDenied(false);
-      setNotificationsEnabled(true);
-      await refreshNotifications(createRefreshDeps(queryClient));
-    } finally {
-      setRequesting(false);
-    }
+    await Notifications.requestPermissionsAsync()
+      .then(async ({ granted }) => {
+        setPermissionDenied(!granted);
+        if (!granted) return;
+        setNotificationsEnabled(true);
+        await refreshNotifications(createRefreshDeps(queryClient));
+      })
+      .finally(() => setRequesting(false));
   }
 
   let count = 'Off';

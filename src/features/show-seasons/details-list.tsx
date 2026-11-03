@@ -71,9 +71,9 @@ export function DetailsList({
       // Watched state, mapping callbacks and the footer (which sharpens once
       // the item's TMDB id resolves) can change without changing the rows.
       extraData={[episodeSection, footer, unfolding]}
-      // Below every real row (desktop episodes ~63): Legend sizes its container
-      // pool from this guess and warns when opening a season outgrows it.
       estimatedItemSize={44}
+      // Keep expansion within the buffer used to allocate the initial pool.
+      drawDistance={50}
       getItemType={(row) => row.kind}
       keyExtractor={(row) => row.key}
       ListHeaderComponent={

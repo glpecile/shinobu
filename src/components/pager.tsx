@@ -135,7 +135,7 @@ export function Pager<T extends string>({
     const x = index * size.width;
     // A jump fires no scroll frames on every platform; keep the pill honest.
     if (!animated) {
-      progress.value = index;
+      progress.set(index);
       setSettled(index);
     }
     const node = animated ? scrollNode() : null;
@@ -144,14 +144,14 @@ export function Pager<T extends string>({
       return;
     }
     node.style.scrollSnapType = 'none';
-    driven.value = node.scrollLeft;
-    driven.value = withTiming(
+    driven.set(node.scrollLeft);
+    driven.set(withTiming(
       x,
       { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT },
       (finished) => {
         if (finished) scheduleOnRN(finishWebTap, index);
       },
-    );
+    ));
   }, [index, size.width, reduceMotion, progress, driven]);
 
   function onLayout(event: LayoutChangeEvent) {
@@ -186,7 +186,7 @@ export function Pager<T extends string>({
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (size.width === 0) return;
-      progress.value = event.contentOffset.x / size.width;
+      progress.set(event.contentOffset.x / size.width);
     },
     onMomentumEnd: (event) => {
       scheduleOnRN(settleAt, event.contentOffset.x);
