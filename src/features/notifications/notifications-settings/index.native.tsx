@@ -8,6 +8,7 @@ import { NativeSwitch } from '@/components/native-switch';
 import { RailHead } from '@/components/rail-head';
 import { SettingsRail } from '@/features/settings/settings-rail';
 import { useThemeColor } from '@/lib/theme-color';
+import { toast } from '@/lib/toast';
 import {
   NOTIFICATION_KINDS,
   type NotificationKind,
@@ -102,11 +103,15 @@ export function NotificationsSettingsSection() {
     }
 
     startRequest(async () => {
-      const { granted } = await Notifications.requestPermissionsAsync();
-      setPermissionDenied(!granted);
-      if (!granted) return;
-      setNotificationsEnabled(true);
-      await refreshNotifications(createRefreshDeps(queryClient));
+      try {
+        const { granted } = await Notifications.requestPermissionsAsync();
+        setPermissionDenied(!granted);
+        if (!granted) return;
+        setNotificationsEnabled(true);
+        await refreshNotifications(createRefreshDeps(queryClient));
+      } catch {
+        toast.error('Could not update notifications', 'Try toggling release alerts again.');
+      }
     });
   }
 
