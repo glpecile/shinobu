@@ -11,7 +11,7 @@ import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
 import { Provider } from '@/lib/providers/types';
-import { keepPreviousSearch, SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
+import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeRelations } from '@/lib/providers/anilist/relations';
@@ -448,7 +448,10 @@ export function useAniListSearchQuery(params: {
       Effect.runPromise(searchMedia(anilistDeps(), { query, limit, type }), { signal }),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
-    placeholderData: keepPreviousSearch(type),
+    // A new query string keeps the last results up while it loads; a new type
+    // doesn't, since Titles' anime under the Reading header reads as ignored.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey.at(-1) === type ? previous : undefined,
     staleTime: Number.POSITIVE_INFINITY,
   });
 }

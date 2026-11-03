@@ -597,8 +597,8 @@ export function getAniListStaff(
 /**
  * Public text search. `ALL` has no type filter, so one request covers
  * everything AniList can log (registry: ANIME + MANGA). `MANGA` asks for
- * AniList's MANGA type alone, light novels (`NOVEL`) and one-shots included,
- * rather than filtering a mixed page. Same no-session contract as trending;
+ * AniList's MANGA type alone, light novels (`NOVEL`) and one-shots included.
+ * Same no-session contract as trending;
  * SEARCH_MATCH keeps exact-title hits above popularity noise.
  */
 export function searchMedia(

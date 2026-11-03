@@ -20,17 +20,6 @@ export const SEARCH_QUERY_ROOTS = {
 };
 
 /**
- * `keepPreviousData` for a search narrowed by type: a new query string keeps
- * the last results up, dimmed, while it loads, but a new type does not, since
- * Titles' anime under the Reading header reads as the tap having been
- * ignored. The search key ends in its type.
- */
-export function keepPreviousSearch(type: string) {
-  return <Data>(previous: Data | undefined, previousQuery?: { queryKey: readonly unknown[] }) =>
-    previousQuery?.queryKey.at(-1) === type ? previous : undefined;
-}
-
-/**
  * Resolves a tapped search result from the cached search queries — the step in
  * the details resolution chain (plan 0009) that covers items belonging to no
  * feed row. Both providers are scanned: **manga appears in no feed row at

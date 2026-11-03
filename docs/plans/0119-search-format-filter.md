@@ -21,14 +21,11 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
   No segmented control or separate Movies and TV options.
 - **KTD-2. The scope rides the URL as `?scope=reading`.** The FAB icon,
   accessible label, selected picker row, and field placeholder reflect Reading.
-  The selection is seeded into state because a tab tap wipes params. Existing
-  `?format=READING` links open Reading; picking a scope clears `?format=`.
-- **KTD-3. A scope is a source list.** `TITLE_SOURCES` in
-  `features/search/formats.ts` lists the sections Movies & TV (`ALL`) and Reading
-  search, in order, each with its label. A source a scope leaves out sends no
-  request under it. Hardcover's books (#400) and the comics tracker (#401)
-  join Reading, and Movies & TV, as entries in that list, with one query hook
-  each, and never as scopes of their own.
+  The selection is seeded into state because a tab tap wipes params.
+- **KTD-3. Reading searches AniList alone.** The search screen branches on
+  the scope: Reading disables the TMDB and Trakt queries, so they send no
+  request. Hardcover's books (#400) and the comics tracker (#401) join
+  Reading as sections, never as scopes of their own.
 - **KTD-4. The request narrows, not the page.**
 
   | Scope | TMDB | Trakt (fallback) | AniList `media(...)` |
@@ -42,9 +39,10 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
   the cache instead of spending AniList's 30/min budget
   (`docs/solutions/anilist-rate-limit-retry-storm.md`). gcTime still drops an
   entry once nothing shows it. A new query string keeps the last results up,
-  dimmed, but a new type doesn't (`keepPreviousSearch`), because the combined
-  scope's anime under the Reading header reads as the tap having been ignored.
-  The section shows its skeleton instead, as the explorer does.
+  dimmed, but a new type doesn't (`useAniListSearchQuery`'s `placeholderData`),
+  because the combined scope's anime under the Reading header reads as the tap
+  having been ignored. The section shows its skeleton instead, as the explorer
+  does.
 - **KTD-6. Labels name what a section holds.**
 
   | Scope | Movies & TV section | AniList section |

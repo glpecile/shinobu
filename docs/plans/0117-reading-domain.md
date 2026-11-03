@@ -173,8 +173,8 @@ Write adapters through the existing fan-out and per-provider results:
 ### B4. Find books and open book details
 
 Search's Reading scope gains a Books section from
-`search(query_type: "book")`, as a source in `TITLE_SOURCES`
-(plan 0119 KTD-3), not a new scope. Movies & TV gains it too. The details
+`search(query_type: "book")` (plan 0119 KTD-3), not a new scope. Movies & TV
+gains it too. The details
 screen renders a `BOOK`: cover, authors, series and position, page count,
 description and Hardcover rating. There is no TMDB for books, so
 `getMediaDetails` returns provider data, as it does for manga. Characters come
@@ -187,7 +187,7 @@ a bearer token from the account page, scrobble writes and collection reads.
 It is native-only on web, and scrobbling an unowned issue adds it as a digital
 copy. Hardcover's comics coverage is the zero-new-provider alternative. League
 of Comic Geeks has no API. C0 also settles KTD-5's comics `MediaType`.
-Whichever tracker wins, its search joins search's Reading scope as a source
+Whichever tracker wins, its search joins search's Reading scope as a section
 (plan 0119 KTD-3), never a Comics scope (KTD-10).
 
 ## Out of scope

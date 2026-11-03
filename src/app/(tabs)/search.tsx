@@ -39,7 +39,6 @@ import {
 import { PosterWall } from '@/features/feed/poster-wall';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
-import { TITLE_SOURCES } from '@/features/search/formats';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePreloadRoute, usePushRoute } from '@/lib/navigation';
@@ -307,16 +306,14 @@ function SearchScreen() {
   const router = useRouter();
   const pushRoute = usePushRoute();
   const prefetchDetails = usePrefetchMediaDetails();
-  const params = useLocalSearchParams<{ q?: string; scope?: string; format?: string }>();
+  const params = useLocalSearchParams<{ q?: string; scope?: string }>();
   const initialQuery = typeof params.q === 'string' ? params.q : '';
   const [input, setInput] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
   const [scopeOpen, setScopeOpen] = useState(false);
   // Seeded from `?scope=`, like `input` from `?q=`: a tab tap wipes route
   // params (docs/solutions/native-tab-press-wipes-route-params.md).
-  const [selectedScope, setSelectedScope] = useState(
-    params.scope ?? (params.format === 'READING' ? 'reading' : undefined),
-  );
+  const [selectedScope, setSelectedScope] = useState(params.scope);
   const muted = useThemeColor('--color-muted');
   const inputRef = useRef<TextInputInstance>(null);
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -403,26 +400,23 @@ function SearchScreen() {
     (entry) => entry.value !== 'studios' || tmdbAvailable,
   );
   const scope = scopes.find((entry) => entry.value === selectedScope) ?? SCOPES[0];
-  const titleSearch = scope.value === 'titles' || scope.value === 'reading';
-  const format = scope.value === 'reading' ? 'READING' : 'ALL';
-  const titleSources = TITLE_SOURCES[format];
-  const moviesTv = titleSources.find((entry) => entry.source === 'movies-tv');
-  const anilist = titleSources.find((entry) => entry.source === Provider.AniList);
+  const reading = scope.value === 'reading';
+  const titleSearch = scope.value === 'titles' || reading;
 
-  // A section its format leaves out sends no request (Reading never asks TMDB).
+  // Reading searches AniList alone and never asks TMDB or Trakt.
   const tmdbSearch = useTmdbSearchQuery({
     query,
-    enabled: titleSearch && moviesTv != null && moviesTvSource === 'tmdb',
+    enabled: scope.value === 'titles' && moviesTvSource === 'tmdb',
   });
   const traktSearch = useTraktSearchQuery({
     query,
-    enabled: titleSearch && moviesTv != null && moviesTvSource === Provider.Trakt,
+    enabled: scope.value === 'titles' && moviesTvSource === Provider.Trakt,
   });
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({
     query,
-    type: anilist?.type ?? 'ALL',
-    enabled: titleSearch && anilist != null,
+    type: reading ? 'MANGA' : 'ALL',
+    enabled: titleSearch,
   });
   const personSearch = useTmdbPersonSearchQuery({
     query,
@@ -441,26 +435,25 @@ function SearchScreen() {
   const animeSeason = animeSeasonAt(new Date());
   const sections =
     titleSearch
-      ? titleSources.flatMap((entry) => {
-          switch (entry.source) {
-            case 'movies-tv':
-              return moviesTvSource == null
-                ? []
-                : [
-                    {
-                      search: moviesTvSearch,
-                      rows: sectionRows(moviesTvSource, entry.label, moviesTvSearch, titleRow),
-                    },
-                  ];
-            case Provider.AniList:
-              return [
+      ? [
+          ...(reading || moviesTvSource == null
+            ? []
+            : [
                 {
-                  search: anilistSearch,
-                  rows: sectionRows(Provider.AniList, entry.label, anilistSearch, titleRow),
+                  search: moviesTvSearch,
+                  rows: sectionRows(moviesTvSource, 'Movies & TV', moviesTvSearch, titleRow),
                 },
-              ];
-          }
-        })
+              ]),
+          {
+            search: anilistSearch,
+            rows: sectionRows(
+              Provider.AniList,
+              reading ? 'Manga & light novels' : 'Anime & Manga',
+              anilistSearch,
+              titleRow,
+            ),
+          },
+        ]
       : scope.value === 'people'
         ? [
             ...(tmdbAvailable
@@ -519,7 +512,7 @@ function SearchScreen() {
 
   function setScope(next: SearchScope) {
     setSelectedScope(next);
-    router.setParams({ scope: next === 'titles' ? undefined : next, format: undefined });
+    router.setParams({ scope: next === 'titles' ? undefined : next });
   }
 
   function openDetails(item: NormalizedMediaItem) {
@@ -547,7 +540,7 @@ function SearchScreen() {
         style={{ paddingTop: insets.top + 8 }}
       >
         <SearchField
-          accessibilityLabel={`Search ${scope.label.toLowerCase()}`}
+          accessibilityLabel={scope.placeholder}
           // Android's tab-focus request owns the keyboard; autofocus races it.
           autoFocus={process.env.EXPO_OS !== 'android' && !hasCoarsePointer()}
           className="flex-1"
@@ -623,20 +616,16 @@ function SearchScreen() {
                 <CenteredNotice className="-mt-16">
                   <CenteredNotice.Icon name="search-outline" />
                   <CenteredNotice.Title>No results</CenteredNotice.Title>
-                  {scope.value === 'reading' ? (
-                    <>
-                      <CenteredNotice.Body>
-                        Nothing matched “{query.trim()}” in Reading.
-                      </CenteredNotice.Body>
-                      <CenteredNotice.Action
-                        icon={<Button.Icon name="search-outline" />}
-                        label="Search movies & TV"
-                        onPress={() => setScope('titles')}
-                      />
-                    </>
-                  ) : (
-                    <CenteredNotice.Body>Nothing matched “{query.trim()}”.</CenteredNotice.Body>
-                  )}
+                  <CenteredNotice.Body>
+                    Nothing matched “{query.trim()}”{reading ? ' in manga & light novels' : ''}.
+                  </CenteredNotice.Body>
+                  {reading ? (
+                    <CenteredNotice.Action
+                      icon={<Button.Icon name="search-outline" />}
+                      label="Search movies & TV"
+                      onPress={() => setScope('titles')}
+                    />
+                  ) : null}
                 </CenteredNotice>
               ) : (
                 // While a newer query is in flight the previous results stay visible
