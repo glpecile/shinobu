@@ -1,18 +1,28 @@
-# Disclosure lists need a pool sized for their short rows
+# Disclosure list allocation needs a consistent render buffer
 
-Legend List warned that all 14 pooled containers were occupied and two more
-were needed. It preallocates from `estimatedItemSize`; a list of tall disclosure
-headers can become a viewport full of shorter children when expanded.
+Legend List 3.6.0 sizes its initial container pool with a draw distance capped
+at 50px. Once ready, its default draw distance grows to 250px. A collapsed
+Details list can contain only a season header and its footer, so the initial
+pool has no spare containers. Expanding a long season then needs more cells
+for the larger buffer. `findAvailableContainers` warns before its caller grows
+the pool.
 
-Diary already inserts each expanded log as its own flat virtualized row. Its
-66px initial estimate matched poster rows but under-provisioned the pool for
-36px episode-log children. Use 36px for that initial estimate. Details uses 72px:
-its phone episode rows measure 78-100px because the meta line wraps beside the
-mark button, and a 56px guess overlapped the first opened season's rows until
-they were measured. Item types
-still learn their own averages and layout still measures actual row heights;
-these are not fixed sizes and do not clip scaled text.
+Set `drawDistance={50}` on `DetailsList` to keep the initial and expanded
+buffers consistent. Keep its 44px estimate and measured row heights; changing
+the estimate alone did not eliminate the warning. Moving the footer out of
+the data reduced demand by one cell but also did not eliminate it. The published
+3.7.1 package retains this allocation mechanism, so an upgrade is not the fix.
 
-Do not silence Legend List's warning, mount the whole expanded body or add
-recycling to stateful detail cells. Pool growth can still happen for unusual
-data or viewport changes; these estimates target the normal expansion case.
+On iPhone 17 Pro, a fresh Details list replayed 291 public TMDB episodes as one
+season, with long episode titles. The original configuration warned on first
+expansion (23 pooled containers, 25 needed). With the 50px buffer, first
+expansion, three subsequent collapse/expand cycles, and fast scrolling to the
+footer and back through the episodes produced no pool warnings. Inspected
+screens contained the expected episode rows and footer. This was a native UI
+replay, not a live AniList transport or provider-write test. AniList requests
+timed out or returned a non-JSON response during this check.
+
+Diary keeps its own 36px initial estimate for short episode-log children. Do
+not silence warnings, mount an entire expanded body, or enable recycling for
+stateful rows to hide a pool shortage. Preserve flat virtualization and inspect
+the actual allocation path before changing an estimate.
