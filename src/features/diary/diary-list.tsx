@@ -1,4 +1,4 @@
-import { useReducer, useRef, useState, useTransition } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
@@ -8,7 +8,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';
@@ -20,6 +19,7 @@ import {
   SCROLL_TO_TOP_THRESHOLD,
   ScrollToTopFab,
 } from '@/components/scroll-to-top-fab';
+import { RefreshControl } from '@/components/refresh-control';
 import { SectionEnter } from '@/components/section-enter';
 import { SmallPoster } from '@/components/small-poster';
 import { ProviderIcon } from '@/components/provider-icon';
@@ -29,7 +29,6 @@ import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
-import { useTabDoubleTap } from '@/lib/navigation/tab-double-tap';
 import { useWakeAt } from '@/lib/time/use-wake-at';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -744,7 +743,6 @@ export function DiaryList({
   onItemActions,
 }: DiaryListProps) {
   const reduceMotion = useReducedMotion();
-  const [refreshing, startRefresh] = useTransition();
   const listRef = useRef<LegendListRef>(null);
   // Whether the list is far enough down that "back to top" earns its pixels.
   // Flipped only on threshold crossings, so scrolling doesn't re-render.
@@ -775,18 +773,6 @@ export function DiaryList({
     visible: false,
   });
   const [visibleMonth, setVisibleMonth] = useState<string | null>(null);
-  function refresh() {
-    startRefresh(async () => {
-      await onRefresh();
-    });
-  }
-
-  // Double-tapping the Diary tab runs the same refresh the pull gesture does,
-  // spinner included (`app/(tabs)/_layout.tsx` emits the press). The tab name
-  // is fixed here rather than passed in because this list *is* that tab's
-  // surface — it renders nowhere else.
-  useTabDoubleTap('diary', refresh);
-
   // State, not an ambient `new Date()`, which React Compiler would cache until
   // `timeZone` changes. It rolls over at local midnight and on foreground.
   const [now, refreshNow] = useReducer(newDate, undefined, newDate);
@@ -960,7 +946,8 @@ export function DiaryList({
           // ponytail: revisit if hover ever drives anything but that button.
           recycleItems
           refreshControl={
-            <RefreshControl onRefresh={refresh} refreshing={refreshing} />
+            // A fixed tab: this list *is* the Diary tab's surface.
+            <RefreshControl onRefresh={onRefresh} tab="diary" />
           }
         />
         <DiaryStickyDate activity={activity} day={sticky.day} today={today} visible={sticky.visible} />

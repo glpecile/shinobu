@@ -1,12 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 
 import { List } from '@/components/List';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterFace } from '@/components/poster-face';
 import { PresstableScale } from '@/components/presstable';
+import { RefreshControl } from '@/components/refresh-control';
 import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
 import { usePreloadRoute } from '@/lib/navigation';
@@ -191,7 +191,6 @@ export function PosterWall({
   entries,
   onItemPress,
   onItemActions,
-  refreshing,
   onRefresh,
   onEndReached,
   footer,
@@ -231,7 +230,7 @@ export function PosterWall({
       // web hover flag, which `PosterCell` resets when its item changes.
       recycleItems
       refreshControl={
-        <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
+        <RefreshControl onRefresh={onRefresh} />
       }
       // No `entering` on cells: a virtualized list mounts them again every
       // time they scroll back into view, so a mount animation replays on every

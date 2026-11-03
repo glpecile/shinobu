@@ -1,12 +1,11 @@
 import { useWindowDimensions, View } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
-import { useTransition } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
 import { List } from '@/components/List';
 import { LoadMoreFooter } from '@/components/load-more-footer';
+import { RefreshControl } from '@/components/refresh-control';
 import { staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -64,18 +63,12 @@ export function ListsIndex({
   emptyBody: string;
 }) {
   const pushRoute = usePushRoute();
-  const [refreshing, startRefresh] = useTransition();
   const insets = useSafeAreaInsets();
   const { columns, rowHeight } = useGrid();
   const { openList, sheetProps } = useListSheet();
   const loaded = [...new Map(lists.map((list) => [list.id, list])).values()];
   const pages = visibleByIds(loaded, useHiddenLists(), (list) => [list.href]);
   const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
-  function refresh() {
-    startRefresh(async () => {
-      await refetch();
-    });
-  }
   return (
     <>
       {loaded.length === 0 ? (
@@ -113,7 +106,7 @@ export function ListsIndex({
           // an exit-and-re-enter scroll; 0.3 re-arms on the landed page itself
           // (docs/solutions/legend-list-threshold-vs-short-pages.md).
           onEndReachedThreshold={0.3}
-          refreshControl={<RefreshControl onRefresh={refresh} refreshing={refreshing} />}
+          refreshControl={<RefreshControl onRefresh={refetch} />}
           renderItem={({ item }) => (
             <View className="px-2 pb-6">
               {'title' in item

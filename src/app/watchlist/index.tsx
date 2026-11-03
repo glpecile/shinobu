@@ -4,7 +4,7 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { Suspense, useState, useTransition } from 'react';
+import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -115,7 +115,6 @@ function WatchlistGrid({
   const pushRoute = usePushRoute();
   const queryClient = useQueryClient();
   const { openActions, sheetProps } = useCardActions();
-  const [refreshing, startRefresh] = useTransition();
   // The row the sheet was opened from, held in state rather than looked up out
   // of `entries` on every render (plan 0031 U16). That is the difference between
   // a removal you can read the result of and one you cannot: a successful
@@ -147,9 +146,7 @@ function WatchlistGrid({
   const shown = sortMediaEntries(filterWatchlistEntries(enriched, provider), sort);
 
   function refresh() {
-    startRefresh(async () => {
-      await refreshWatchlistInputs(queryClient);
-    });
+    return refreshWatchlistInputs(queryClient);
   }
 
   async function loadMore() {
@@ -175,7 +172,7 @@ function WatchlistGrid({
         <CenteredNotice.Action
           icon={<Button.Icon name="refresh" />}
           label="Try again"
-          onPress={refresh}
+          onPress={() => void refresh()}
         />
       </CenteredNotice>
     );
@@ -230,7 +227,6 @@ function WatchlistGrid({
         }}
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
         onRefresh={refresh}
-        refreshing={refreshing}
       />
     );
 
@@ -247,7 +243,7 @@ function WatchlistGrid({
         sort={sort}
         view={view}
       />
-      <LegFailureNotice failures={errors} onRetry={refresh} />
+      <LegFailureNotice failures={errors} onRetry={() => void refresh()} />
       {layout}
       {/* The one surface that offers the removal (R35): only a `WatchlistEntry`
           knows which providers actually hold the item, and only this screen has

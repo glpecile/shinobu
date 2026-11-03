@@ -4,7 +4,7 @@ import {
   useRouter,
   type ErrorBoundaryProps,
 } from 'expo-router';
-import { Suspense, startTransition, useEffect, useState, useTransition } from 'react';
+import { Suspense, startTransition, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { ErrorBoundary as QueryErrorBoundary } from 'react-error-boundary';
@@ -88,7 +88,6 @@ function SeasonWall({
     pages.data.pages[0]?.items ?? [],
     columns * 3,
   );
-  const [refreshing, startRefresh] = useTransition();
   // AniList's popularity sort is not stable across pages, so a title can sit
   // on the tail of one page and the head of the next; the list needs unique
   // keys, so the first occurrence wins.
@@ -96,12 +95,6 @@ function SeasonWall({
   const view = useWatchlistView();
   const reduceMotion = useReducedMotion();
   const Layout = view === 'grid' ? PosterWall : WatchlistRows;
-
-  function refresh() {
-    startRefresh(async () => {
-      await pages.refetch();
-    });
-  }
 
   if (items.length === 0) {
     return (
@@ -154,8 +147,7 @@ function SeasonWall({
         }
         onItemActions={onItemActions}
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
-        onRefresh={refresh}
-        refreshing={refreshing}
+        onRefresh={pages.refetch}
       />
     </AnimatedView>
   );

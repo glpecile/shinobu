@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { List } from '@/components/List';
 import { ProviderIcon } from '@/components/provider-icon';
+import { RefreshControl } from '@/components/refresh-control';
 import { SmallPoster } from '@/components/small-poster';
 import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
@@ -125,7 +125,6 @@ export function WatchlistRows({
   entries,
   onItemPress,
   onItemActions,
-  refreshing,
   onRefresh,
   onEndReached,
   footer,
@@ -152,7 +151,7 @@ export function WatchlistRows({
       // stale-hover residual applies.
       recycleItems
       refreshControl={
-        <RefreshControl onRefresh={onRefresh} refreshing={refreshing} />
+        <RefreshControl onRefresh={onRefresh} />
       }
       // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (

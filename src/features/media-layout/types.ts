@@ -14,8 +14,7 @@ export interface MediaLayoutProps {
   entries: readonly WatchlistEntry[];
   onItemPress: (item: NormalizedMediaItem) => void;
   onItemActions: (item: NormalizedMediaItem) => void;
-  refreshing: boolean;
-  onRefresh: () => void;
+  onRefresh: () => Promise<unknown>;
   /** Undefined when there is no further page to request. */
   onEndReached?: (() => void) | undefined;
   /** The screen's loading/retry footer — rendered at the end of the list. */

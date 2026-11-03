@@ -1,7 +1,6 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
 import { useState } from 'react';
 import { Platform, Text, useWindowDimensions, View } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { CenteredNotice } from '@/components/centered-notice';
@@ -9,6 +8,7 @@ import Head from '@/components/head';
 import { Image } from '@/components/image';
 import { List } from '@/components/List';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
+import { RefreshControl } from '@/components/refresh-control';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { WatchedMark } from '@/components/watched-mark';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
@@ -70,7 +70,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
         itemLayoutAnimation={Platform.OS === 'web' || reducedMotion ? undefined : membershipLayout}
         contentContainerStyle={{ paddingBottom: target != null ? 96 : undefined }}
         keyExtractor={(entry) => entry.id}
-        refreshControl={<RefreshControl onRefresh={() => void query.refetch()} refreshing={query.isRefetching} />}
+        refreshControl={<RefreshControl onRefresh={query.refetch} />}
         renderItem={({ item: entry }) => (
           <ActionableRow
             accessibility={{ accessibilityLabel: `${entry.item.title}. ${entry.subtitle}`, accessibilityRole: 'button' }}
