@@ -41,6 +41,8 @@ const MIN_COLUMNS = 3;
 const CAPTION_SCRIM_HEIGHT = 96;
 /** Past this the artwork is too small to recognize, however wide the display. */
 const MAX_COLUMNS = 8;
+/** The web sidebar from `md` (768px) up: the app shell's expanded `md:w-60` plus its border. */
+const WEB_SIDEBAR_WIDTH = 241;
 
 /** Exported for the explorer's skeleton, so it lays out the same columns the wall will. */
 export function useWallMetrics(): { columns: number; rowHeight: number } {
@@ -51,9 +53,12 @@ export function useWallMetrics(): { columns: number; rowHeight: number } {
     Math.max(MIN_COLUMNS, Math.floor(usable / TARGET_COLUMN_PITCH)),
   );
   // Only feeds `estimatedItemSize`: the real cells are percentage-width (see
-  // PosterCell), so on web the sidebar makes this run a little tall — fine for
-  // an estimate the list corrects on first measure, wrong as a layout input.
-  const posterWidth = (usable - GAP * (columns - 1)) / columns;
+  // PosterCell) of the area beside the web sidebar. An estimate taller than
+  // the real rows leaves Legend List short of containers, so this takes the
+  // expanded sidebar off; a collapsed one only adds spare containers.
+  const contentWidth =
+    process.env.EXPO_OS === 'web' && width >= 768 ? usable - WEB_SIDEBAR_WIDTH : usable;
+  const posterWidth = (contentWidth - GAP * (columns - 1)) / columns;
   return { columns, rowHeight: posterWidth / POSTER_ASPECT + GAP };
 }
 
