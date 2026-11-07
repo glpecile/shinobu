@@ -18,9 +18,9 @@ Serializd and Trakt were never targets and showed no skip.
 ## Fix
 
 `getSeriesNeighbours` returns `prequel: 'none'` only when AniList returns every
-relation in full and the entry relates to other TV or ONA series only as their
-prequel. A later cour can be `OTHER` instead of `SEQUEL` (Cyberpunk:
-Edgerunners 2), so any other series relation leaves the answer unknown. Then,
+relation in full and each anime relation is a `SEQUEL`. A later cour can be
+`OTHER` instead of `PREQUEL` (Cyberpunk: Edgerunners 2), so any other anime
+relation leaves the answer unknown. Then,
 if ani.zip answered with an empty table, `entryEpisodeMap` maps entry episode n
 to S1En (absolute n), and `placeInLayout` still checks every row against the
 tracker's seasons. An unknown prequel or a failed ani.zip read still skips.

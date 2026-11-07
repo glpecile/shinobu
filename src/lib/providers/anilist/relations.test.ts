@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import * as Effect from 'effect/Effect';
 
 import type { HttpFetch } from '@/lib/http/types';
+import { getSeriesNeighbours } from './reads';
 import { getAnimeRelations } from './relations';
 
 function mockFetch(response: unknown): HttpFetch {
@@ -87,5 +88,20 @@ describe('getAnimeRelations', () => {
       ['Side story', 'anilist-2', 'ANIME'],
       ['Source', 'anilist-3', 'MANGA'],
     ]);
+  });
+});
+
+describe('getSeriesNeighbours', () => {
+  const tv = (id: number, episodes: number | null = 12) => ({ id, type: 'ANIME', format: 'TV', episodes });
+  test.each([
+    { name: 'no relations', edges: [], prequel: 'none' },
+    { name: 'only sequels and manga', edges: [{ relationType: 'SEQUEL', node: tv(2) }, { relationType: 'SOURCE', node: { id: 3, type: 'MANGA', format: 'MANGA', episodes: null } }], prequel: 'none' },
+    { name: 'a later cour labelled OTHER', edges: [{ relationType: 'OTHER', node: tv(1) }], prequel: null },
+    { name: 'a hidden node', edges: [{ relationType: 'PREQUEL', node: null }], prequel: null },
+    { name: 'one prequel', edges: [{ relationType: 'PREQUEL', node: tv(1) }], prequel: { id: 1, episodes: 12 } },
+  ])('$name', async ({ edges, prequel }) => {
+    const deps = { ...DEPS, fetch: mockFetch({ data: { Media: { relations: { edges } } } }) };
+    const result = await Effect.runPromise(getSeriesNeighbours(deps, { mediaId: 9 }));
+    expect(result.prequel).toEqual(prequel);
   });
 });
