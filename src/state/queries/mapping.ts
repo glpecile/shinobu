@@ -642,13 +642,16 @@ export async function cachedSimklAnimeIds(
   queryClient: QueryClient,
   params: SimklLookupParams,
 ): Promise<NormalizedMediaItem['externalIds'] | null> {
-  const match = await queryClient.fetchQuery(simklLookupQuery(params)).catch(nullUnlessCancelled);
+  // Not forever here: a premiere-day miss must not outlive Simkl linking the show.
+  const match = await queryClient
+    .fetchQuery({ ...simklLookupQuery(params), staleTime: EPISODE_MAP_STALE_MS })
+    .catch(nullUnlessCancelled);
   const simklId = match?.type === 'ANIME' ? match.externalIds.simkl : undefined;
   if (simklId == null) return null;
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.simklAnimeIds(simklId),
     queryFn: ({ signal }) => Effect.runPromise(getSimklAnimeIds(simklDeps(), { simklId }), { signal }),
-    // Not forever: Simkl fills a new release's ids in over its first days.
+    // Simkl fills a new release's ids in over its first days.
     staleTime: EPISODE_MAP_STALE_MS,
     gcTime: EPISODE_MAP_STALE_MS,
   }).catch(nullUnlessCancelled);
