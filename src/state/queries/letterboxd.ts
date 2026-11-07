@@ -131,7 +131,9 @@ export const letterboxdQueryKeys = {
   filmWatchesRoot: () => [...letterboxdQueryKeys.all, 'film-watch'] as const,
   diaryRoot: () => [...letterboxdQueryKeys.all, 'diary'] as const,
   diary: (username: string) => [...letterboxdQueryKeys.diaryRoot(), username] as const,
-  filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? null : null] as const,
+  // An item with neither id never fetches, but its own id keeps a list of them
+  // (an AniList season) from sharing one key in `useQueries`.
+  filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? item.id : null] as const,
   poster: (slug: string) => [...letterboxdQueryKeys.all, 'poster', slug] as const,
   watchlist: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist', username] as const,

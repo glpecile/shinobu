@@ -27,7 +27,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
-import { DURATION, EASE_IN_OUT, EASE_OUT } from '@/lib/motion';
+import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useWakeAt } from '@/lib/time/use-wake-at';
 import { PROVIDERS } from '@/lib/providers/registry';
@@ -92,31 +92,9 @@ function DiaryStickyDate({
   today: string;
   visible: boolean;
 }) {
-  const reduceMotion = useReducedMotion();
   const summary = day == null ? undefined : activity.get(day);
   if (day == null || summary == null) return null;
-  return (
-    <AnimatedView
-      accessibilityElementsHidden={!visible}
-      accessibilityRole="header"
-      className="absolute top-0 left-0 right-0 flex-row items-baseline px-6 py-2 bg-background border-b border-border"
-      importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
-      style={{
-        pointerEvents: 'none',
-        opacity: visible ? 1 : 0,
-        // Drops in from under the Diary header as the day head scrolls up into it.
-        transform: [{ translateY: visible ? 0 : -6 }],
-        transitionProperty: ['opacity', 'transform'],
-        transitionDuration: reduceMotion ? 0 : visible ? DURATION.enter : DURATION.exit,
-        transitionTimingFunction: EASE_OUT,
-      }}
-    >
-      <Text className="font-display text-base text-foreground">{formatDayDate(day, today)}</Text>
-      <Text className="ml-3 shrink text-muted font-sans text-xs" numberOfLines={1}>
-        {summary.label}
-      </Text>
-    </AnimatedView>
-  );
+  return <RailHead.Pinned count={summary.label} title={formatDayDate(day, today)} visible={visible} />;
 }
 
 /**

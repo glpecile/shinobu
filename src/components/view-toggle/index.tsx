@@ -6,7 +6,11 @@ import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import type { WatchlistView } from '@/state/prefs/watchlist-view';
 
-/** Grid ⇄ list for web. Native platforms use their own controls. */
+/**
+ * Grid ⇄ list for web, on `SegmentedControl`'s `md` frame (a `p-0.5` pill,
+ * 44pt touch targets. Native
+ * platforms use their own controls.
+ */
 export function ViewToggle({
   view,
   onChange,
@@ -18,7 +22,7 @@ export function ViewToggle({
   const muted = useThemeColor('--color-muted');
 
   return (
-    <View className="flex-row rounded-md border border-border overflow-hidden">
+    <View className="flex-row rounded-full border border-border p-0.5">
       {(
         [
           { id: 'grid', icon: 'grid', label: 'Poster grid' },
@@ -29,11 +33,11 @@ export function ViewToggle({
           accessibilityLabel={label}
           accessibilityRole="button"
           accessibilityState={{ selected: view === id }}
-          className={cn('w-9 h-7 items-center justify-center', view === id && 'bg-accent-tonal')}
+          className={cn('w-11 h-11 items-center justify-center rounded-full', view === id && 'bg-accent-tonal')}
           key={id}
           onPress={() => onChange(id)}
         >
-          <Ionicons color={view === id ? selected : muted} name={icon} size={15} />
+          <Ionicons color={view === id ? selected : muted} name={icon} size={16} />
         </PresstableOpacity>
       ))}
     </View>
