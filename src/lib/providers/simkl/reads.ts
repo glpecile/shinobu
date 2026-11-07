@@ -8,6 +8,7 @@ import { SIMKL_CDN_BASE_URL } from './config';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
 import {
+  externalIdsFrom,
   normalizeActivities,
   normalizeAllItems,
   normalizeCalendarFile,
@@ -22,6 +23,7 @@ import {
   type SimklCalendarFile,
   type SimklLibrary,
   type SimklLibraryBucket,
+  type SimklIds,
   type SimklRatingsRaw,
   type SimklSearchIdMatch,
   type SimklTrendingItem,
@@ -288,4 +290,18 @@ export function lookupByExternalId(
       .map((match) => normalizeSearchIdMatch(match, nowIso))
       .filter((item): item is NormalizedMediaItem => item != null);
   });
+}
+
+/**
+ * `/anime/{id}`: every id Simkl links to one of its anime records. Public,
+ * client params only. The log path bridges through it when ani.zip hasn't
+ * mapped a new release yet.
+ */
+export function getAnimeIds(
+  deps: SimklDeps,
+  params: { simklId: number },
+): Effect.Effect<NormalizedMediaItem['externalIds'], ProviderError> {
+  return simklHttp<{ ids?: SimklIds } | null>(deps, `/anime/${params.simklId}`).pipe(
+    Effect.map((raw) => externalIdsFrom(raw?.ids)),
+  );
 }

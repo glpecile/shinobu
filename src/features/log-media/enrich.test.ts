@@ -15,6 +15,7 @@ let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
 let anizipBridge: { tvdb: number; tmdb: number } | null = null;
 let tmdbByTvdb: number | null = null;
+let simklIds: NormalizedMediaItem['externalIds'] | null = null;
 
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: (_client: unknown, lookup: unknown) => {
@@ -24,6 +25,7 @@ mock.module('@/state/queries/mapping', () => ({
     );
   },
   cachedTmdbTvIdByTvdb: () => Promise.resolve(tmdbByTvdb),
+  cachedSimklAnimeIds: () => Promise.resolve(simklIds),
   cachedAniListFilmId: (_client: unknown, params: { title: string; year?: number }) => {
     calls.push(`anilist-film:${params.title}:${params.year ?? 'any'}`);
     return Promise.resolve(anilistFilmId);
@@ -191,5 +193,22 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
     anizipBridge = null;
     tmdbByTvdb = null;
     expect(enriched.externalIds.tmdb).toBe(105248);
+  });
+});
+
+// Demons' Crest (2026-11-06): a day after its premiere, ani.zip had no TVDB or
+// TMDB id for AniList 203275, while Simkl linked TVDB 471128 and TMDB 328010.
+describe('enrichExternalIds — a new release ani.zip has not mapped yet', () => {
+  beforeEach(() => {
+    simklIds = { simkl: 2953770, anilist: 203275, tvdb: 471128, tmdb: 328010 };
+  });
+
+  test('an AniList anime takes its TV ids from Simkl', async () => {
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-203275', type: 'ANIME', externalIds: { anilist: 203275 } }),
+      ['serializd'],
+    );
+    expect(enriched.externalIds).toMatchObject({ tvdb: 471128, tmdb: 328010 });
   });
 });

@@ -50,7 +50,7 @@ mock.module('expo-crypto', () => ({
 
 let episodeMap: AniZipEpisodeMap | null = null;
 let seasonLayout: SeasonLayout | null = null;
-let prequel: { id: number; episodes: number } | null = null;
+let prequel: { id: number; episodes: number } | 'none' | null = null;
 let prequelIds: AniZipIds | null = null;
 let prequelMap: AniZipEpisodeMap | null = null;
 let prequelTmdb: number | null = null;
@@ -71,13 +71,14 @@ mock.module('@/state/queries/mapping', () => ({
   cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
   cachedAniZipEpisodeMap: (_client: unknown, anilistId: number) => {
     mappingCalls.push(`episode-map:${anilistId}`);
-    return Promise.resolve(courMaps.get(anilistId) ?? (anilistId === prequel?.id ? prequelMap : episodeMap));
+    return Promise.resolve(courMaps.get(anilistId) ?? (prequel !== 'none' && anilistId === prequel?.id ? prequelMap : episodeMap));
   },
   cachedSeasonLayout: (_client: unknown, ids: Record<string, number>) => {
     mappingCalls.push(`season-layout:${JSON.stringify(ids)}`);
     return Promise.resolve(seasonLayout);
   },
   cachedAniListPrequel: () => Promise.resolve(prequel),
+  cachedSimklAnimeIds: () => Promise.resolve(null),
   cachedAniListLaterCours: (_client: unknown, anilistId: number) =>
     Promise.resolve(laterCours.get(anilistId) ?? []),
   cachedTmdbTvIdByTvdb: () => Promise.resolve(prequelTmdb),
@@ -270,6 +271,20 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     const item = animeSeries({ externalIds: { anilist: 185660, tvdb: targetTvdb, tmdb: 240411 } });
     const plan = await planLogWrite(client(), { item, entryEpisodes: [3] }, ['serializd']);
     expect(plan.variables.episodes).toEqual(maps ? [{ season: 1, number: 15 }] : undefined);
+    expect(plan.mappingSkips.has('serializd')).toBe(!maps);
+  });
+
+  test.each([
+    { name: 'an empty ani.zip table', map: new Map() as AniZipEpisodeMap, maps: true },
+    { name: 'a failed ani.zip read', map: null, maps: false },
+  ])('a first series counts from S1E1 only after $name', async ({ map, maps }) => {
+    episodeMap = map;
+    prequel = 'none';
+    const item = animeSeries({ externalIds: { anilist: 203275, tmdb: 328010 } });
+    const plan = await planLogWrite(client(), { item, entryEpisodes: [1, 2] }, ['serializd']);
+    expect(plan.variables.episodes).toEqual(
+      maps ? [{ season: 1, number: 1 }, { season: 1, number: 2 }] : undefined,
+    );
     expect(plan.mappingSkips.has('serializd')).toBe(!maps);
   });
 

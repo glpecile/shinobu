@@ -669,15 +669,16 @@ interface SeriesRelationsResponse {
 
 /**
  * The TV or ONA series around a split-cour entry: its single prequel with a
- * known episode count (null when there is none or more than one), and every
- * other related series. AniList doesn't always label a later cour `SEQUEL`, as
- * Cyberpunk: Edgerunners 2 is `OTHER`, so `later` takes any non-prequel series.
+ * known episode count (`'none'` when the entry is the first series, null when
+ * it can't be used), and every other related series. AniList doesn't always
+ * label a later cour `SEQUEL`, as Cyberpunk: Edgerunners 2 is `OTHER`, so
+ * `later` takes any non-prequel series.
  */
 export function getSeriesNeighbours(
   deps: AniListDeps,
   params: { mediaId: number },
 ): Effect.Effect<
-  { prequel: { id: number; episodes: number } | null; later: number[] },
+  { prequel: { id: number; episodes: number } | 'none' | null; later: number[] },
   ProviderError
 > {
   return anilistRequest<SeriesRelationsResponse>(
@@ -690,7 +691,8 @@ export function getSeriesNeighbours(
     { variables: { id: params.mediaId } },
   ).pipe(
     Effect.map((data) => {
-      const series = (data.Media?.relations?.edges ?? []).flatMap((edge) =>
+      const edges = data.Media?.relations?.edges;
+      const series = (edges ?? []).flatMap((edge) =>
         edge?.node != null && edge.node.type === 'ANIME' &&
         (edge.node.format === 'TV' || edge.node.format === 'ONA')
           ? [{ relation: edge.relationType, id: edge.node.id, episodes: edge.node.episodes }]
@@ -701,8 +703,13 @@ export function getSeriesNeighbours(
           ? [{ id: node.id, episodes: node.episodes }]
           : [],
       );
+      // A later cour can be OTHER, so only an entry whose every anime relation
+      // is a SEQUEL counts as first. Any missing field leaves it unknown.
+      const isFirstSeries =
+        edges != null &&
+        edges.every((edge) => edge?.node?.type === 'MANGA' || edge?.relationType === 'SEQUEL');
       return {
-        prequel: prequels.length === 1 ? prequels[0] : null,
+        prequel: isFirstSeries ? 'none' : prequels.length === 1 ? prequels[0] : null,
         later: series.filter((node) => node.relation !== 'PREQUEL').map((node) => node.id),
       };
     }),

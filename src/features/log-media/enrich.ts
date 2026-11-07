@@ -5,6 +5,7 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   cachedAniListFilmId,
   cachedAniZipIds,
+  cachedSimklAnimeIds,
   cachedTmdbTvIdByTvdb,
   cachedTraktLookup,
   cachedTraktTextSearch,
@@ -80,9 +81,15 @@ export async function enrichExternalIds(
       connected.includes(Provider.Serializd) ||
       connected.includes(Provider.Simkl))
   ) {
-    const mapped = await cachedAniZipIds(queryClient, {
+    const anizip = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,
     });
+    // ani.zip lags a new release by days, and Simkl often links it already.
+    const simkl =
+      anizip?.tvdb != null || anizip?.tmdb != null
+        ? null
+        : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
+    const mapped = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
     if (mapped != null) {
       // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
       // sequel cour's own id), so a series takes TVDB → TMDB like the details
