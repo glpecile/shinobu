@@ -669,8 +669,8 @@ interface SeriesRelationsResponse {
 
 /**
  * The TV or ONA series around a split-cour entry: its single prequel with a
- * known episode count (`'none'` when AniList lists no anime prequel at all,
- * null when it can't be used), and every other related series. AniList doesn't always label a later cour `SEQUEL`, as
+ * known episode count (`'none'` when the entry is the first series, null when
+ * it can't be used), and every other related series. AniList doesn't always label a later cour `SEQUEL`, as
  * Cyberpunk: Edgerunners 2 is `OTHER`, so `later` takes any non-prequel series.
  */
 export function getSeriesNeighbours(
@@ -702,12 +702,22 @@ export function getSeriesNeighbours(
           ? [{ id: node.id, episodes: node.episodes }]
           : [],
       );
-      // Missing relations, or a prequel edge with a null node, is unknown, not 'none'.
-      const hasPrequel =
-        edges == null ||
-        edges.some((edge) => edge?.relationType === 'PREQUEL' && edge.node?.type !== 'MANGA');
+      // A first series relates to other series only as their prequel; a later
+      // cour can be OTHER. Any missing field leaves the answer unknown.
+      const isFirstSeries =
+        edges != null &&
+        edges.every(
+          (edge) =>
+            edge?.node != null &&
+            edge.relationType != null &&
+            (edge.node.type === 'MANGA' ||
+              edge.relationType === 'SEQUEL' ||
+              (edge.relationType !== 'PREQUEL' &&
+                edge.node.format !== 'TV' &&
+                edge.node.format !== 'ONA')),
+        );
       return {
-        prequel: !hasPrequel ? 'none' : prequels.length === 1 ? prequels[0] : null,
+        prequel: isFirstSeries ? 'none' : prequels.length === 1 ? prequels[0] : null,
         later: series.filter((node) => node.relation !== 'PREQUEL').map((node) => node.id),
       };
     }),
