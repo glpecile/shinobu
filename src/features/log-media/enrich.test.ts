@@ -15,6 +15,8 @@ let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
 let anizipBridge: { tvdb: number; tmdb: number } | null = null;
 let tmdbByTvdb: number | null = null;
+let simklIds: NormalizedMediaItem['externalIds'] | null = null;
+let prequel: { id: number; episodes: number } | 'none' | null = null;
 
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: (_client: unknown, lookup: unknown) => {
@@ -24,6 +26,11 @@ mock.module('@/state/queries/mapping', () => ({
     );
   },
   cachedTmdbTvIdByTvdb: () => Promise.resolve(tmdbByTvdb),
+  cachedSimklAnimeIds: (_client: unknown, params: unknown) => {
+    calls.push(`simkl-ids:${JSON.stringify(params)}`);
+    return Promise.resolve(simklIds);
+  },
+  cachedAniListPrequel: () => Promise.resolve(prequel),
   cachedAniListFilmId: (_client: unknown, params: { title: string; year?: number }) => {
     calls.push(`anilist-film:${params.title}:${params.year ?? 'any'}`);
     return Promise.resolve(anilistFilmId);
@@ -191,5 +198,38 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
     anizipBridge = null;
     tmdbByTvdb = null;
     expect(enriched.externalIds.tmdb).toBe(105248);
+  });
+});
+
+// Demons' Crest (2026-11-06): a day after its premiere, ani.zip had no TVDB or
+// TMDB id for AniList 203275, while Simkl linked TVDB 471128 and TMDB 328010.
+describe('enrichExternalIds — a new release ani.zip has not mapped yet', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    simklIds = { simkl: 2953770, anilist: 203275, tvdb: 471128, tmdb: 328010 };
+    prequel = null;
+  });
+
+  test('an AniList anime takes its TV ids from Simkl', async () => {
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-203275', type: 'ANIME', externalIds: { anilist: 203275 } }),
+      ['serializd'],
+    );
+    expect(enriched.externalIds).toMatchObject({ tvdb: 471128, tmdb: 328010 });
+  });
+
+  test.each([
+    { name: 'a first series', found: 'none' as const, anilist: 203275 },
+    { name: 'a later cour', found: { id: 1, episodes: 12 }, anilist: undefined },
+  ])('a TMDB anime show takes Simkl’s AniList id only for $name', async ({ found, anilist }) => {
+    prequel = found;
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'tmdb-328010', type: 'TV', genres: ['Animation'], externalIds: { tmdb: 328010 } }),
+      ['anilist'],
+    );
+    expect(calls).toContain('simkl-ids:{"tmdb":328010,"type":"show"}');
+    expect(enriched.externalIds.anilist).toBe(anilist);
   });
 });

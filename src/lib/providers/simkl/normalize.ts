@@ -360,7 +360,7 @@ export function parseSimklItemId(id: string): number | null {
 }
 
 /** mal/simkl join tmdb/tvdb/imdb as bridge ids (plan 0034 KTD-6). */
-function externalIdsFrom(ids: SimklIds | undefined): NormalizedMediaItem['externalIds'] {
+export function externalIdsFrom(ids: SimklIds | undefined): NormalizedMediaItem['externalIds'] {
   const simkl = simklIdFrom(ids);
   const tmdb = numericId(ids?.tmdb);
   const tvdb = numericId(ids?.tvdb);

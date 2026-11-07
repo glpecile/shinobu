@@ -669,15 +669,15 @@ interface SeriesRelationsResponse {
 
 /**
  * The TV or ONA series around a split-cour entry: its single prequel with a
- * known episode count (null when there is none or more than one), and every
- * other related series. AniList doesn't always label a later cour `SEQUEL`, as
+ * known episode count (`'none'` when AniList lists no anime prequel at all,
+ * null when it can't be used), and every other related series. AniList doesn't always label a later cour `SEQUEL`, as
  * Cyberpunk: Edgerunners 2 is `OTHER`, so `later` takes any non-prequel series.
  */
 export function getSeriesNeighbours(
   deps: AniListDeps,
   params: { mediaId: number },
 ): Effect.Effect<
-  { prequel: { id: number; episodes: number } | null; later: number[] },
+  { prequel: { id: number; episodes: number } | 'none' | null; later: number[] },
   ProviderError
 > {
   return anilistRequest<SeriesRelationsResponse>(
@@ -690,7 +690,8 @@ export function getSeriesNeighbours(
     { variables: { id: params.mediaId } },
   ).pipe(
     Effect.map((data) => {
-      const series = (data.Media?.relations?.edges ?? []).flatMap((edge) =>
+      const edges = data.Media?.relations?.edges ?? [];
+      const series = edges.flatMap((edge) =>
         edge?.node != null && edge.node.type === 'ANIME' &&
         (edge.node.format === 'TV' || edge.node.format === 'ONA')
           ? [{ relation: edge.relationType, id: edge.node.id, episodes: edge.node.episodes }]
@@ -701,8 +702,11 @@ export function getSeriesNeighbours(
           ? [{ id: node.id, episodes: node.episodes }]
           : [],
       );
+      const hasPrequel = edges.some(
+        (edge) => edge?.relationType === 'PREQUEL' && edge.node?.type === 'ANIME',
+      );
       return {
-        prequel: prequels.length === 1 ? prequels[0] : null,
+        prequel: !hasPrequel ? 'none' : prequels.length === 1 ? prequels[0] : null,
         later: series.filter((node) => node.relation !== 'PREQUEL').map((node) => node.id),
       };
     }),

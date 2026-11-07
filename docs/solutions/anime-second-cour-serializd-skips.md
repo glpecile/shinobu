@@ -83,3 +83,26 @@ pressed.
 If the later cour cannot be mapped, or has no cour-specific MAL id, Simkl
 returns a reasoned skip. It must not fall back to the first cour's Simkl id or
 the whole show's TMDB/IMDb ids for that later cour.
+
+## A first season premiered before ani.zip mapped it (2026-11-07)
+
+*Demons' Crest* (AniList 203275) premiered on 2026-11-06. Episodes 1 and 2
+skipped Serializd with "ani.zip has no episode mapping for this entry yet".
+ani.zip had the entry, but with no TVDB or TMDB id and an empty `episodes`
+block. Simkl already knew TMDB 328010, which has one season with 3 episodes.
+The prequel fallback did not apply, because the show has no prequel.
+
+`getSeriesNeighbours` now returns `prequel: 'none'` when AniList lists no anime
+`PREQUEL` relation at all. In that case `entryEpisodeMap` maps entry episode n
+to S1En (absolute n), and `placeInLayout` still checks every row against the
+tracker's seasons. If the prequel is unknown (an AniList failure, an unknown
+episode count, or several prequels), the entry still skips.
+
+ani.zip's missing TV ids broke two more paths. An AniList-origin log had no
+TMDB id, so Serializd and Trakt were never targets and showed no skip. A
+TMDB-origin log had no AniList id, so AniList was never a target. Both now
+bridge through Simkl's public `/search/id` and `/anime/{id}` (CORS `*`,
+checked 2026-11-07) when ani.zip has no answer (`cachedSimklAnimeIds`,
+`enrich.ts`). Simkl keeps one record per cour, and every cour carries the
+show's TMDB id. A TMDB-origin log therefore takes Simkl's AniList id only when
+that entry has no prequel.

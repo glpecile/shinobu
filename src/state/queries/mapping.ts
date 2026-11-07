@@ -18,6 +18,7 @@ import {
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
 import { watchedKeysInLayout } from '@/lib/providers/mapping/season-layout';
 import {
+  getAnimeIds as getSimklAnimeIds,
   lookupByExternalId as lookupSimklByExternalId,
   type SimklLookupParams,
 } from '@/lib/providers/simkl/reads';
@@ -160,6 +161,7 @@ export const mappingQueryKeys = {
     ['mapping', 'tmdb-movie-search', title, year ?? 'any', via] as const,
   /** Public Simkl `/search/id` by any foreign (or Simkl's own) id — via-less, no session. */
   simklLookup: (params: SimklLookupParams) => ['mapping', 'simkl-lookup', params] as const,
+  simklAnimeIds: (simklId: number) => ['mapping', 'simkl-anime-ids', simklId] as const,
   /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
@@ -632,13 +634,35 @@ function cachedAniListNeighbours(queryClient: QueryClient, anilistId: number) {
 }
 
 /**
+ * The ids Simkl links to the anime that `params` names, or null when Simkl has
+ * no anime record for it. ani.zip lags a new release by days, and Simkl often
+ * has its TVDB, TMDB and AniList ids already. Write actions only.
+ */
+export async function cachedSimklAnimeIds(
+  queryClient: QueryClient,
+  params: SimklLookupParams,
+): Promise<NormalizedMediaItem['externalIds'] | null> {
+  const match = await queryClient.fetchQuery(simklLookupQuery(params)).catch(nullUnlessCancelled);
+  const simklId = match?.type === 'ANIME' ? match.externalIds.simkl : undefined;
+  if (simklId == null) return null;
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.simklAnimeIds(simklId),
+    queryFn: ({ signal }) => Effect.runPromise(getSimklAnimeIds(simklDeps(), { simklId }), { signal }),
+    // Not forever: Simkl fills a new release's ids in over its first days.
+    staleTime: EPISODE_MAP_STALE_MS,
+    gcTime: EPISODE_MAP_STALE_MS,
+  }).catch(nullUnlessCancelled);
+}
+
+/**
  * A split-cour sequel's prequel, for continuing its ani.zip table when ani.zip
- * hasn't mapped the sequel yet. Write actions only.
+ * hasn't mapped the sequel yet. `'none'` means AniList lists no anime prequel;
+ * null means unknown. Write actions only.
  */
 export async function cachedAniListPrequel(
   queryClient: QueryClient,
   anilistId: number,
-): Promise<{ id: number; episodes: number } | null> {
+): Promise<{ id: number; episodes: number } | 'none' | null> {
   const neighbours = await cachedAniListNeighbours(queryClient, anilistId).catch(nullUnlessCancelled);
   return neighbours?.prequel ?? null;
 }

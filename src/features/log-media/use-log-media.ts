@@ -352,8 +352,9 @@ interface LogPlan {
 }
 
 /**
- * The entry's ani.zip table, or for a second cour ani.zip hasn't mapped yet,
- * its prequel's table continued over `entryNumbers`.
+ * The entry's ani.zip table. When ani.zip hasn't mapped the entry yet, a first
+ * series counts from S1E1, and a second cour continues its prequel's table
+ * over `entryNumbers`.
  */
 async function entryEpisodeMap(
   queryClient: QueryClient,
@@ -365,6 +366,11 @@ async function entryEpisodeMap(
   const own = await cachedAniZipEpisodeMap(queryClient, anilistId);
   if (own != null && own.size > 0) return own;
   const prequel = await cachedAniListPrequel(queryClient, anilistId);
+  // A just-premiered show waits days for ani.zip. With no prequel, entry
+  // episode n can only be the show's nth, and `placeInLayout` still checks it.
+  if (prequel === 'none') {
+    return new Map(entryNumbers.map((n) => [n, { season: 1, number: n, absolute: n }]));
+  }
   if (prequel == null) return own;
   // AniList also links prequels that trackers keep as separate shows, such as
   // Naruto and Shippuden. A relation cannot vouch for shared numbering.

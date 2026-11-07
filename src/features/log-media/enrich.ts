@@ -4,7 +4,9 @@ import type { AniZipLookup } from '@/lib/providers/mapping/anizip';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   cachedAniListFilmId,
+  cachedAniListPrequel,
   cachedAniZipIds,
+  cachedSimklAnimeIds,
   cachedTmdbTvIdByTvdb,
   cachedTraktLookup,
   cachedTraktTextSearch,
@@ -80,9 +82,14 @@ export async function enrichExternalIds(
       connected.includes(Provider.Serializd) ||
       connected.includes(Provider.Simkl))
   ) {
-    const mapped = await cachedAniZipIds(queryClient, {
+    const anizip = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,
     });
+    // ani.zip lags a new release by days, and Simkl often links it already.
+    const mapped =
+      anizip?.tvdb != null || anizip?.tmdb != null
+        ? anizip
+        : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
     if (mapped != null) {
       // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
       // sequel cour's own id), so a series takes TVDB → TMDB like the details
@@ -133,12 +140,13 @@ export async function enrichExternalIds(
         : item.type === 'MOVIE' && externalIds.tmdb != null
           ? { tmdbId: externalIds.tmdb }
           : null;
-    if (lookup != null) {
-      const mapped = await cachedAniZipIds(queryClient, lookup);
-      if (mapped?.anilist != null) {
-        externalIds = { ...externalIds, anilist: mapped.anilist };
-      }
-    }
+    const mapped = lookup == null ? null : await cachedAniZipIds(queryClient, lookup);
+    const anilist =
+      mapped?.anilist ??
+      (item.type === 'TV' && item.genres?.some((genre) => /anim/i.test(genre)) === true
+        ? await newSeriesAniListId(queryClient, externalIds)
+        : undefined);
+    if (anilist != null) externalIds = { ...externalIds, anilist };
   }
 
   // ani.zip's TMDB index is TV-oriented and misses many anime *films* (ChaO,
@@ -164,4 +172,25 @@ export async function enrichExternalIds(
   }
 
   return { ...item, externalIds };
+}
+
+/**
+ * The AniList entry Simkl links to an anime show ani.zip hasn't mapped yet.
+ * Simkl keeps one record per cour, and every cour carries the show's TMDB id,
+ * so only an entry with no prequel can be the show's start.
+ */
+async function newSeriesAniListId(
+  queryClient: QueryClient,
+  ids: NormalizedMediaItem['externalIds'],
+): Promise<number | undefined> {
+  const params =
+    ids.tvdb != null
+      ? { tvdb: ids.tvdb }
+      : ids.tmdb != null
+        ? { tmdb: ids.tmdb, type: 'show' as const }
+        : null;
+  if (params == null) return undefined;
+  const anilist = (await cachedSimklAnimeIds(queryClient, params))?.anilist;
+  if (anilist == null) return undefined;
+  return (await cachedAniListPrequel(queryClient, anilist)) === 'none' ? anilist : undefined;
 }
