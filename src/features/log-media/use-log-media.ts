@@ -366,12 +366,13 @@ async function entryEpisodeMap(
   const own = await cachedAniZipEpisodeMap(queryClient, anilistId);
   if (own != null && own.size > 0) return own;
   const prequel = await cachedAniListPrequel(queryClient, anilistId);
-  // A just-premiered show waits days for ani.zip. With no prequel, entry
-  // episode n can only be the show's nth, and `placeInLayout` still checks it.
-  if (prequel === 'none') {
+  // A just-premiered show waits days for ani.zip, which lists it with an empty
+  // table. With no prequel, entry episode n can only be the show's nth, and
+  // `placeInLayout` still checks it. A failed ani.zip read (null) still skips.
+  if (prequel === 'none' && own != null) {
     return new Map(entryNumbers.map((n) => [n, { season: 1, number: n, absolute: n }]));
   }
-  if (prequel == null) return own;
+  if (prequel == null || prequel === 'none') return own;
   // AniList also links prequels that trackers keep as separate shows, such as
   // Naruto and Shippuden. A relation cannot vouch for shared numbering.
   const ids = await cachedAniZipIds(queryClient, { anilistId: prequel.id });

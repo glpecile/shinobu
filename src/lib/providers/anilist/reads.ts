@@ -690,8 +690,8 @@ export function getSeriesNeighbours(
     { variables: { id: params.mediaId } },
   ).pipe(
     Effect.map((data) => {
-      const edges = data.Media?.relations?.edges ?? [];
-      const series = edges.flatMap((edge) =>
+      const edges = data.Media?.relations?.edges;
+      const series = (edges ?? []).flatMap((edge) =>
         edge?.node != null && edge.node.type === 'ANIME' &&
         (edge.node.format === 'TV' || edge.node.format === 'ONA')
           ? [{ relation: edge.relationType, id: edge.node.id, episodes: edge.node.episodes }]
@@ -702,9 +702,10 @@ export function getSeriesNeighbours(
           ? [{ id: node.id, episodes: node.episodes }]
           : [],
       );
-      const hasPrequel = edges.some(
-        (edge) => edge?.relationType === 'PREQUEL' && edge.node?.type === 'ANIME',
-      );
+      // Missing relations, or a prequel edge with a null node, is unknown, not 'none'.
+      const hasPrequel =
+        edges == null ||
+        edges.some((edge) => edge?.relationType === 'PREQUEL' && edge.node?.type !== 'MANGA');
       return {
         prequel: !hasPrequel ? 'none' : prequels.length === 1 ? prequels[0] : null,
         later: series.filter((node) => node.relation !== 'PREQUEL').map((node) => node.id),
