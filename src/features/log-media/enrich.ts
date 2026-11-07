@@ -89,7 +89,7 @@ export async function enrichExternalIds(
     const mapped =
       anizip?.tvdb != null || anizip?.tmdb != null
         ? anizip
-        : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
+        : ((await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist })) ?? anizip);
     if (mapped != null) {
       // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
       // sequel cour's own id), so a series takes TVDB → TMDB like the details
