@@ -25,10 +25,7 @@ mock.module('@/state/queries/mapping', () => ({
     );
   },
   cachedTmdbTvIdByTvdb: () => Promise.resolve(tmdbByTvdb),
-  cachedSimklAnimeIds: (_client: unknown, params: unknown) => {
-    calls.push(`simkl-ids:${JSON.stringify(params)}`);
-    return Promise.resolve(simklIds);
-  },
+  cachedSimklAnimeIds: () => Promise.resolve(simklIds),
   cachedAniListFilmId: (_client: unknown, params: { title: string; year?: number }) => {
     calls.push(`anilist-film:${params.title}:${params.year ?? 'any'}`);
     return Promise.resolve(anilistFilmId);
@@ -203,7 +200,6 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
 // TMDB id for AniList 203275, while Simkl linked TVDB 471128 and TMDB 328010.
 describe('enrichExternalIds — a new release ani.zip has not mapped yet', () => {
   beforeEach(() => {
-    calls.length = 0;
     simklIds = { simkl: 2953770, anilist: 203275, tvdb: 471128, tmdb: 328010 };
   });
 

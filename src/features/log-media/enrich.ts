@@ -85,10 +85,11 @@ export async function enrichExternalIds(
       anilistId: externalIds.anilist,
     });
     // ani.zip lags a new release by days, and Simkl often links it already.
-    const mapped =
+    const simkl =
       anizip?.tvdb != null || anizip?.tmdb != null
-        ? anizip
-        : ((await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist })) ?? anizip);
+        ? null
+        : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
+    const mapped = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
     if (mapped != null) {
       // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
       // sequel cour's own id), so a series takes TVDB → TMDB like the details
