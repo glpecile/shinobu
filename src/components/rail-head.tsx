@@ -1,11 +1,14 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
+import { AnimatedView } from '@/components/animated-view';
 import { DisclosureChevron } from '@/components/disclosure-chevron';
 import { PresstableOpacity } from '@/components/presstable';
 import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 import { useThemeColor } from '@/lib/theme-color';
 
 /**
@@ -24,6 +27,8 @@ const RULE = 'flex-1 h-px bg-border';
 const LEAD_LINE = cn('absolute w-px bg-border bottom-0', RAIL_LINE);
 
 const OpenContext = createContext(true);
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /**
  * The head of a run of rail rows — a diary day, a filmography year. One
@@ -121,7 +126,7 @@ function RailHeadTitle({ children, muted = false, showRail = true }: { children:
  * rather than date (the Settings sections). `pb-3` matches the trailing block,
  * so the count centres on the title.
  */
-function RailHeadIcon({ name, children }: { name: ComponentProps<typeof Ionicons>['name']; children: ReactNode }) {
+function RailHeadIcon({ name, children, showRail = true }: { name: IconName; children: ReactNode; showRail?: boolean }) {
   const open = useContext(OpenContext);
   const muted = useThemeColor('--color-muted');
   return (
@@ -132,7 +137,7 @@ function RailHeadIcon({ name, children }: { name: ComponentProps<typeof Ionicons
         </View>
       </View>
       <Text className="font-display text-xl leading-none text-foreground pr-2">{children}</Text>
-      {open && <View className={cn(LEAD_LINE, 'top-8')} />}
+      {open && showRail && <View className={cn(LEAD_LINE, 'top-8')} />}
     </View>
   );
 }
@@ -149,29 +154,85 @@ function RailHeadCount({ children }: { children: ReactNode }) {
   );
 }
 
-/** The head's bars on the head's geometry, so the resolve moves nothing. */
-function RailHeadSkeleton({ lead, showRail = true }: { lead: 'date' | 'title'; showRail?: boolean }) {
+/**
+ * The head's bars on the head's geometry, so the resolve moves nothing.
+ * `animated` is off for a page held offscreen, as `Skeleton`'s is.
+ */
+function RailHeadSkeleton({
+  lead,
+  showRail = true,
+  animated = true,
+}: {
+  lead: 'date' | 'title' | 'icon';
+  showRail?: boolean;
+  animated?: boolean;
+}) {
   return (
     <View className={ROW}>
       {lead === 'date' ? (
         <View className={cn(RAIL_W, 'items-center relative')}>
           {/* 24px tall: `font-display text-2xl leading-none`. */}
-          <Skeleton className="w-7 h-6 rounded" />
-          <Skeleton className="w-6 h-3 rounded mt-1" />
+          <Skeleton animated={animated} className="w-7 h-6 rounded" />
+          <Skeleton animated={animated} className="w-6 h-3 rounded mt-1" />
           {showRail && <View className={cn(LEAD_LINE, 'top-11')} />}
+        </View>
+      ) : lead === 'icon' ? (
+        <View className="relative flex-row items-center pb-3">
+          <View className={cn(RAIL_W, 'items-center')}>
+            <Skeleton animated={animated} className="w-8 h-8 rounded-full" />
+          </View>
+          <Skeleton animated={animated} className="w-24 h-5 rounded mr-2" />
+          {showRail && <View className={cn(LEAD_LINE, 'top-8')} />}
         </View>
       ) : (
         <View className="relative pl-6 pr-2 pb-3">
           {/* 20px tall: `font-display text-xl leading-none`. */}
-          <Skeleton className="w-10 h-5 rounded" />
+          <Skeleton animated={animated} className="w-10 h-5 rounded" />
           {showRail && <View className={cn(LEAD_LINE, 'top-5')} />}
         </View>
       )}
       <View className={TRAILING}>
-        <Skeleton className="h-2.5 w-16 rounded mr-3" />
+        <Skeleton animated={animated} className="h-2.5 w-16 rounded mr-3" />
         <View className={RULE} />
       </View>
     </View>
+  );
+}
+
+/**
+ * The head of the run in view, pinned over the list's top edge once the run's
+ * own head has scrolled away. Place it after the list in a shared parent; the
+ * list reports which run is on top (`onViewableItemsChanged`). Decoration to
+ * touch: the rows under it stay pressable.
+ */
+function RailHeadPinned({ title, count, visible, icon }: { title: string; count: string; visible: boolean; icon?: IconName }) {
+  const reduceMotion = useReducedMotion();
+  const muted = useThemeColor('--color-muted');
+  return (
+    <AnimatedView
+      accessibilityElementsHidden={!visible}
+      accessibilityRole="header"
+      className={cn(
+        'absolute top-0 left-0 right-0 flex-row items-baseline px-6 py-2 bg-background border-b border-border',
+        icon != null && 'items-center gap-2',
+      )}
+      importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
+      style={{
+        pointerEvents: 'none',
+        opacity: visible ? 1 : 0,
+        // Drops in from under the screen header as the run's head scrolls up into it.
+        transform: [{ translateY: visible ? 0 : -6 }],
+        transitionProperty: ['opacity', 'transform'],
+        transitionDuration: reduceMotion ? 0 : visible ? DURATION.enter : DURATION.exit,
+        transitionTimingFunction: EASE_OUT,
+      }}
+    >
+      {icon != null && <Ionicons color={muted} name={icon} size={16} />}
+      <Text className="font-display text-base text-foreground">{title}</Text>
+      <Text className={cn('ml-3 shrink text-muted font-sans text-xs', icon != null && 'ml-1')} numberOfLines={1}>
+        {count}
+      </Text>
+    </AnimatedView>
   );
 }
 
@@ -180,3 +241,4 @@ RailHead.Title = RailHeadTitle;
 RailHead.Icon = RailHeadIcon;
 RailHead.Count = RailHeadCount;
 RailHead.Skeleton = RailHeadSkeleton;
+RailHead.Pinned = RailHeadPinned;

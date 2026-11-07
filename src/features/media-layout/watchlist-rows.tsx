@@ -69,18 +69,21 @@ function ProviderCluster({ providers }: { providers: readonly ProviderId[] }) {
   );
 }
 
-function WatchlistRow({
+export function WatchlistRow({
   entry,
   onPress,
   onActions,
   watched,
   showActions,
+  note,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   watched?: MediaProgress;
   showActions?: boolean;
+  /** Replaces the year and kind line, e.g. with when the next episode airs. */
+  note?: string;
 }) {
   const preloadRoute = usePreloadRoute();
   return (
@@ -99,7 +102,7 @@ function WatchlistRow({
               {entry.item.title}
             </Text>
             <Text className="text-muted font-sans text-xs mt-1">
-              {watchlistRowDetail(entry.item)}
+              {note ?? watchlistRowDetail(entry.item)}
             </Text>
           </View>
         </>
@@ -119,7 +122,7 @@ function WatchlistRow({
 }
 
 /** Row height incl. padding — feeds `estimatedItemSize` only. */
-const ROW_HEIGHT = 92;
+export const ROW_HEIGHT = 92;
 
 export function WatchlistRows({
   entries,

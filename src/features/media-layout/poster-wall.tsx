@@ -39,6 +39,8 @@ const TARGET_COLUMN_PITCH = 132;
 const MIN_COLUMNS = 3;
 /** Tall enough that the caption's fade starts well above its first line. */
 const CAPTION_SCRIM_HEIGHT = 96;
+/** One line of `note` text with room for the fade to start above it. */
+const NOTE_SCRIM_HEIGHT = 48;
 /** Past this the artwork is too small to recognize, however wide the display. */
 const MAX_COLUMNS = 8;
 /** The web sidebar from `md` (768px) up: the app shell's expanded `md:w-60` plus its border. */
@@ -69,18 +71,21 @@ export function useWallMetrics(): { columns: number; rowHeight: number } {
  * everywhere and a hover caption on web. The provider marks are the one piece
  * of chrome that *is* always on — see `PosterMarks`.
  */
-function PosterCell({
+export function PosterCell({
   entry,
   onPress,
   onActions,
   watched,
   showActions,
+  note,
 }: {
   entry: WatchlistEntry;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   watched?: MediaProgress;
   showActions?: boolean;
+  /** One always-on line at the poster's foot, e.g. when the next episode airs. Takes the progress pill's place. */
+  note?: string;
 }) {
   const item = entry.item;
   const prefetchDetails = usePrefetchMediaDetails();
@@ -99,7 +104,7 @@ function PosterCell({
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
   const providers = entry.sources.map((id) => PROVIDERS[id].label).join(', ');
-  const accessibilityLabel = providers === '' ? label : `${label}. On ${providers}`;
+  const accessibilityLabel = [label, providers === '' ? null : `On ${providers}`, note].filter(Boolean).join('. ');
 
   // A gradient, not a solid bar: the caption only exists while the
   // pointer is on the poster, so it should fade out of the artwork rather than
@@ -134,6 +139,19 @@ function PosterCell({
         )}
       </View>
     </View>
+  ) : note != null ? (
+    <View className="absolute bottom-0 left-0 right-0">
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.85)']}
+        style={{ bottom: 0, height: NOTE_SCRIM_HEIGHT, left: 0, position: 'absolute', right: 0 }}
+      />
+      <Text
+        className="text-accent-foreground font-sans-semibold text-xs px-2 pb-1.5"
+        numberOfLines={1}
+      >
+        {note}
+      </Text>
+    </View>
   ) : undefined;
 
   return (
@@ -167,7 +185,7 @@ function PosterCell({
             uri={item.coverImage}
           />
         </PresstableScale>
-        {watched != null && <WatchedMark item={item} poster showProgress state={watched} />}
+        {watched != null && <WatchedMark item={item} poster showProgress={note == null} state={watched} />}
         {/* Sibling, not child: nesting two gesture-handler buttons would let a
             ⋯ press bubble into the poster press. Long-press covers native. */}
         {(process.env.EXPO_OS === 'web' || showActions) && (

@@ -154,7 +154,10 @@ export function findLibraryEntry(
   const exact = simklId == null
     ? undefined
     : buckets.find((entry) => entry.item.externalIds.simkl === simklId);
-  return exact ?? (tmdbId == null
+  const anime = item.type === 'ANIME' ? buckets.find((entry) =>
+    (item.externalIds.anilist != null && entry.item.externalIds.anilist === item.externalIds.anilist)
+    || (item.externalIds.mal != null && entry.item.externalIds.mal === item.externalIds.mal)) : undefined;
+  return exact ?? anime ?? (tmdbId == null
     ? null
     : buckets.find((entry) => entry.item.externalIds.tmdb === tmdbId) ?? null);
 }

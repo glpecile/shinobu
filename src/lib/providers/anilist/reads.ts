@@ -268,6 +268,11 @@ interface TrendingResponse {
 export interface SeasonalAnimePage {
   items: NormalizedMediaItem[];
   hasNextPage: boolean;
+  /**
+   * Each airing item's next episode by item id, `airingAt` an ISO instant.
+   * Optional: persisted pages from before the field restore without it.
+   */
+  nextAiring?: Record<string, { episode: number; airingAt: string }>;
 }
 
 /**
@@ -302,7 +307,7 @@ export function getSeasonalAnime(
       `query ($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int, $format: MediaFormat, $formatNot: MediaFormat) {
         Page(page: $page, perPage: $perPage) {
           pageInfo { hasNextPage }
-          media(type: ANIME, isAdult: false, season: $season, seasonYear: $seasonYear, format: $format, format_not: $formatNot, sort: POPULARITY_DESC) { ${CARD_FIELDS} }
+          media(type: ANIME, isAdult: false, season: $season, seasonYear: $seasonYear, format: $format, format_not: $formatNot, sort: POPULARITY_DESC) { ${CARD_FIELDS} nextAiringEpisode { episode airingAt } }
         }
       }`,
       {
@@ -318,11 +323,19 @@ export function getSeasonalAnime(
     );
     const now = yield* Clock.currentTimeMillis;
     const nowIso = new Date(now).toISOString();
-    return { items: (data.Page?.media ?? [])
-      .filter((media): media is AniListMedia => media != null)
-      .map((media) => normalizeAniListMedia(media, nowIso)),
-      hasNextPage: data.Page?.pageInfo?.hasNextPage === true,
-    };
+    const media = (data.Page?.media ?? []).filter((entry): entry is AniListMedia => entry != null);
+    const items = media.map((entry) => normalizeAniListMedia(entry, nowIso));
+    const nextAiring: NonNullable<SeasonalAnimePage['nextAiring']> = {};
+    media.forEach((entry, index) => {
+      const airing = entry.nextAiringEpisode;
+      if (airing != null) {
+        nextAiring[items[index].id] = {
+          episode: airing.episode,
+          airingAt: new Date(airing.airingAt * 1000).toISOString(),
+        };
+      }
+    });
+    return { items, hasNextPage: data.Page?.pageInfo?.hasNextPage === true, nextAiring };
   });
 }
 

@@ -60,7 +60,7 @@ describe('simklDeps (plan 0034 U5)', () => {
 const item = (
   id: string,
   type: 'MOVIE' | 'TV' | 'ANIME',
-  ids: { simkl?: number; tmdb?: number },
+  ids: { simkl?: number; tmdb?: number; mal?: number; anilist?: number },
   extra: Record<string, unknown> = {},
 ) =>
   ({
@@ -77,7 +77,7 @@ const item = (
 const entry = (
   id: string,
   type: 'MOVIE' | 'TV' | 'ANIME',
-  ids: { simkl?: number; tmdb?: number },
+  ids: { simkl?: number; tmdb?: number; mal?: number; anilist?: number },
   extra: Record<string, unknown> = {},
 ) =>
   ({
@@ -133,6 +133,13 @@ describe('findLibraryEntry', () => {
     expect(findLibraryEntry(seasons, item('s3', 'ANIME', { simkl: 3, tmdb: 42 }))).toBeNull();
     expect(findLibraryEntry(seasons, item('s3', 'ANIME', { tmdb: 42 }))).toBeNull();
     expect(findLibraryEntry(seasons, item('s2', 'ANIME', { simkl: 2, tmdb: 42 }))?.item.id).toBe('simkl-2');
+  });
+
+  test('an anime season matches its AniList or MAL id', () => {
+    const season = entry('simkl-2', 'ANIME', { simkl: 2, anilist: 20, mal: 30 });
+    const seasons = library({ anime: [season] });
+    expect(findLibraryEntry(seasons, item('a', 'ANIME', { anilist: 20 }))).toBe(season);
+    expect(findLibraryEntry(seasons, item('m', 'ANIME', { mal: 30 }))).toBe(season);
   });
 
   test('ordinary shows prefer an exact ID before TMDB fallback and keep completed aired marks', () => {

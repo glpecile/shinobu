@@ -21,11 +21,10 @@ import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { Pager } from '@/components/pager';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
+import { SeasonList, SeasonSkeleton } from '@/features/anime-seasons/season-list';
 import { SeasonPicker } from '@/features/anime-seasons/season-picker';
 import { wallEntering } from '@/features/anime-seasons/wall-entrance';
-import { WallSkeleton } from '@/features/anime-seasons/wall-skeleton';
-import { PosterWall, useWallMetrics } from '@/features/media-layout/poster-wall';
-import { WatchlistRows } from '@/features/media-layout/watchlist-rows';
+import { useWallMetrics } from '@/features/media-layout/poster-wall';
 import { MediaToolbar } from '@/features/media-layout/media-toolbar';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
@@ -62,20 +61,19 @@ const FORMAT_OPTIONS = [
  * The AniList seasons explorer: the home feed's seasonal row, widened to any
  * cour of any year and narrowable by format. Same query and cache entry as the
  * row for the unfiltered current season, so opening it costs no request.
- *
- * Catalogue, not watchlist — the wall and the row list are borrowed for their
- * geometry, and `sources: []` keeps the provider marks off (they answer "which
- * of my trackers hold this", a question a public catalogue can't). Grid ⇄ list
- * rides the watchlist's device preference: it is the same taste on both
- * surfaces, not a per-screen setting.
+ * Signed in, the user's own titles fold above the catalogue (`SeasonList`).
+ * Grid ⇄ list rides the watchlist's device preference: it is the same taste
+ * on both surfaces, not a per-screen setting.
  */
 function SeasonWall({
   window,
   format,
+  active,
   onItemActions,
 }: {
   window: AnimeSeasonWindow;
   format: AnimeFormatFilter;
+  active: boolean;
   onItemActions: (item: NormalizedMediaItem) => void;
 }) {
   const pushRoute = usePushRoute();
@@ -92,9 +90,8 @@ function SeasonWall({
   // on the tail of one page and the head of the next; the list needs unique
   // keys, so the first occurrence wins.
   const items = useVisibleItems(uniqueById(pages.data.pages.flatMap((page) => page.items)));
-  const view = useWatchlistView();
+  const nextAiring = Object.assign({}, ...pages.data.pages.map((page) => page.nextAiring ?? {}));
   const reduceMotion = useReducedMotion();
-  const Layout = view === 'grid' ? PosterWall : WatchlistRows;
 
   if (items.length === 0) {
     return (
@@ -130,8 +127,8 @@ function SeasonWall({
             }
       }
     >
-      <Layout
-        entries={items.map((item) => ({ id: item.id, item, sources: [], sourceIds: [item.id] }))}
+      <SeasonList
+        animated={active}
         footer={
           <LoadMoreFooter
             failed={pages.isError}
@@ -140,6 +137,8 @@ function SeasonWall({
             onRetry={() => void pages.fetchNextPage()}
           />
         }
+        items={items}
+        nextAiring={nextAiring}
         onEndReached={
           pages.hasNextPage && !pages.isFetchingNextPage
             ? () => void pages.fetchNextPage()
@@ -188,8 +187,8 @@ function WallBoundary({
       onReset={reset}
       resetKeys={[window.season, window.year, format]}
     >
-      <Suspense fallback={<WallSkeleton animated={active} />}>
-        <SeasonWall format={format} onItemActions={onItemActions} window={window} />
+      <Suspense fallback={<SeasonSkeleton animated={active} />}>
+        <SeasonWall active={active} format={format} onItemActions={onItemActions} window={window} />
       </Suspense>
     </QueryErrorBoundary>
   );
