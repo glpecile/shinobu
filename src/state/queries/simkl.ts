@@ -2,6 +2,7 @@ import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
+import { firstRow, indexLibrary, rowsWith, type LibraryIndex } from '@/lib/media-progress';
 import { exchangeSimklCode as exchangeSimklCodeForSession } from '@/lib/providers/simkl/auth';
 import type { SimklDeps } from '@/lib/providers/simkl/deps';
 import { simklEpisodeState } from '@/lib/providers/simkl/episode-state';
@@ -128,57 +129,68 @@ export function simklWatchingLibraryQuery() {
 }
 
 /**
- * Locate one item in a library snapshot. The buckets searched are chosen by
- * the item's own type rather than scanning all three: TMDB numbers movies and
- * TV in **separate id spaces**, so a movie and a show can legitimately share
- * an id, and a flat scan would cross-match them.
+ * The snapshot split into the buckets `findLibraryEntry` searches, each indexed
+ * once. TMDB numbers movies and TV in **separate id spaces**, so a movie and a
+ * show can legitimately share an id; the buckets keep them apart.
  */
+export interface SimklLibraryIndex {
+  films: LibraryIndex<SimklLibraryEntry>;
+  shows: LibraryIndex<SimklLibraryEntry>;
+  animeShows: LibraryIndex<SimklLibraryEntry>;
+}
+
+const entryItem = (entry: SimklLibraryEntry) => entry.item;
+
+export function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
+  // Anime is in both lists: Simkl files anime films under its anime catalog,
+  // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
+  const animeShows = library.anime.filter((entry) => entry.item.isFilm !== true);
+  return {
+    films: indexLibrary([...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)], entryItem),
+    shows: indexLibrary([...library.shows, ...animeShows], entryItem),
+    animeShows: indexLibrary(animeShows, entryItem),
+  };
+}
+
+const indexed = (library: SimklLibrary | SimklLibraryIndex) => ('films' in library ? library : indexSimklLibrary(library));
+
+/** Locate one item in a library snapshot. Pass an index when matching many items. */
 export function findLibraryEntry(
-  library: SimklLibrary,
+  library: SimklLibrary | SimklLibraryIndex,
   item: NormalizedMediaItem,
 ): SimklLibraryEntry | null {
   const filmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
-  const simklId = item.externalIds.simkl;
+  const bucket = filmLike ? indexed(library).films : indexed(library).shows;
   // Every season of an anime shares the show's TMDB id. Only a Simkl id
   // identifies the same cour; otherwise a sibling's progress leaks through.
-  const tmdbId =
-    item.type === 'ANIME' && !filmLike
-      ? undefined
-      : item.externalIds.tmdb;
-  // Anime is in both lists: Simkl files anime films under its anime catalog,
-  // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
-  const buckets = filmLike
-    ? [...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)]
-    : [...library.shows, ...library.anime.filter((entry) => entry.item.isFilm !== true)];
-  const exact = simklId == null
-    ? undefined
-    : buckets.find((entry) => entry.item.externalIds.simkl === simklId);
-  const anime = item.type === 'ANIME' ? buckets.find((entry) =>
-    (item.externalIds.anilist != null && entry.item.externalIds.anilist === item.externalIds.anilist)
-    || (item.externalIds.mal != null && entry.item.externalIds.mal === item.externalIds.mal)) : undefined;
-  return exact ?? anime ?? (tmdbId == null
-    ? null
-    : buckets.find((entry) => entry.item.externalIds.tmdb === tmdbId) ?? null);
+  const byTmdb = !(item.type === 'ANIME' && !filmLike);
+  // oxlint-disable-next-line shinobu/no-provider-literals -- externalIds keys, not provider ids.
+  return firstRow(bucket, item, ['simkl'])
+    // oxlint-disable-next-line shinobu/no-provider-literals -- externalIds keys, not provider ids.
+    ?? (item.type === 'ANIME' ? firstRow(bucket, item, ['anilist', 'mal']) : undefined)
+    ?? (byTmdb ? firstRow(bucket, item, ['tmdb']) : undefined)
+    ?? null;
 }
 
 /** TV layouts span cours; ANIME items still resolve only their exact entry. */
-function libraryEpisodeEntries(library: SimklLibrary, item: NormalizedMediaItem) {
-  const exact = findLibraryEntry(library, item);
+function libraryEpisodeEntries(library: SimklLibrary | SimklLibraryIndex, item: NormalizedMediaItem) {
+  const index = indexed(library);
+  const exact = findLibraryEntry(index, item);
   const tmdbId = item.externalIds.tmdb;
   const anime = item.type === 'TV' && tmdbId != null
-    ? library.anime.filter((entry) => entry.item.isFilm !== true && entry.item.externalIds.tmdb === tmdbId)
+    ? [...rowsWith(index.animeShows, 'tmdb', tmdbId)].map((row) => index.animeShows.rows[row])
     : [];
   return [...(exact == null || anime.includes(exact) ? [] : [exact]), ...anime];
 }
 
-export function findLibraryEpisodeState(library: SimklLibrary, item: NormalizedMediaItem) {
+export function findLibraryEpisodeState(library: SimklLibrary | SimklLibraryIndex, item: NormalizedMediaItem) {
   const entries = libraryEpisodeEntries(library, item);
   return entries.length === 0 ? null : simklEpisodeState(entries);
 }
 
 /** Count both cours on a TV page, without counting a parallel TV entry twice. */
-export function findLibraryProgress(library: SimklLibrary, item: NormalizedMediaItem): number | null {
+export function findLibraryProgress(library: SimklLibrary | SimklLibraryIndex, item: NormalizedMediaItem): number | null {
   const entries = libraryEpisodeEntries(library, item);
   if (entries.length === 0) return null;
   const animeProgress = entries
