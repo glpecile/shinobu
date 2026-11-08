@@ -187,9 +187,11 @@ export function SeasonList({
         onEndReached={onEndReached}
         onEndReachedThreshold={0.6}
         onViewableItemsChanged={handleViewableItemsChanged}
-        // Rows are prop-derived; a poster row's cells are keyed by title, so
-        // only list view gains from reuse (as in the filmography).
-        recycleItems={view === 'list'}
+        // Recycled like the poster wall: mounting a screenful of fresh cells
+        // is what blanks a fling (docs/solutions/diary-scroll-jank-is-row-mount-cost.md).
+        // Rows are prop-derived, and poster cells are keyed by column so a
+        // recycled row reuses them instead of remounting.
+        recycleItems
         ListHeaderComponent={failedLibraries.length > 0 ? (
           <View className="items-center mt-3 mb-4">
             <Button icon={<Button.Icon name="refresh" />} label="Couldn’t load your library" onPress={() => { void Promise.all(failedLibraries.map((query) => query.refetch())); }} size="sm" variant="quiet" />
@@ -212,8 +214,8 @@ export function SeasonList({
             case 'posters':
               return (
                 <View className="flex-row px-2">
-                  {row.items.map((item) => (
-                    <View className="flex-1 min-w-0" key={item.id}>
+                  {row.items.map((item, column) => (
+                    <View className="flex-1 min-w-0" key={column}>
                       <PosterCell
                         item={item}
                         note={airingNote(nextAiring[item.id], now)}

@@ -67,7 +67,11 @@ export function SerializdListItems({ username, id, url }: { username: string | n
       <List
         className="flex-1"
         data={sortMediaEntries(entries, sort)}
+        // Four rows ahead and recycled, as `WatchlistRows`: mounting fresh rows
+        // mid-fling is what blanks the list (docs/solutions/diary-scroll-jank-is-row-mount-cost.md).
+        drawDistance={92 * 4}
         estimatedItemSize={92}
+        recycleItems
         itemLayoutAnimation={Platform.OS === 'web' || reducedMotion ? undefined : membershipLayout}
         contentContainerStyle={{ paddingBottom: target != null ? 96 : undefined }}
         keyExtractor={(entry) => entry.id}
@@ -81,7 +85,7 @@ export function SerializdListItems({ username, id, url }: { username: string | n
             showActions={target != null}
             leading={
               <>
-                {entry.item.coverImage === '' ? <PosterPlaceholder className="w-12 h-18 rounded" /> : <Image className="w-12 h-18 rounded" contentFit="cover" source={{ uri: entry.item.coverImage }} />}
+                {entry.item.coverImage === '' ? <PosterPlaceholder className="w-12 h-18 rounded" /> : <Image className="w-12 h-18 rounded" contentFit="cover" recyclingKey={entry.id} source={{ uri: entry.item.coverImage }} />}
                 <View className="shrink ml-4">
                   <Text className="font-sans-semibold text-foreground text-base" numberOfLines={2}>{entry.item.title}</Text>
                   <Text className="font-sans text-muted text-xs mt-1" numberOfLines={2}>{entry.subtitle}</Text>
