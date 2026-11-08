@@ -1,7 +1,7 @@
 import { useReducer, useState, type ReactElement } from 'react';
 import { View } from 'react-native';
 
-import { List } from '@/components/List';
+import { List, type ListProps } from '@/components/List';
 import { RailHead } from '@/components/rail-head';
 import { Button } from '@/components/button';
 import { RefreshControl } from '@/components/refresh-control';
@@ -126,7 +126,6 @@ export function SeasonList({
   if (useSectionCollapsed('anime-seasons-planned')) folded.add('planned');
   if (useSectionCollapsed('anime-seasons-seen')) folded.add('seen');
   if (useSectionCollapsed('anime-seasons-rest')) folded.add('rest');
-  const [pinned, setPinned] = useState<{ shelf: SeasonShelf | null; visible: boolean }>({ shelf: null, visible: false });
   // State, not an ambient `new Date()`, which React Compiler would cache. It
   // wakes at the soonest airing, so that title drops its note, and at midnight.
   const [now, refreshNow] = useReducer(newDate, undefined, newDate);
@@ -152,13 +151,102 @@ export function SeasonList({
     nextAiring,
     { folded, now, ...(view === 'grid' ? { columns } : {}) },
   );
-  const heads = new Map(rows.flatMap((row) => (row.kind === 'head' ? [[row.key, row] as const] : [])));
-  const pinnedHead = pinned.shelf == null ? undefined : heads.get(pinned.shelf);
+
+  return (
+    <ShelfList
+      // Remount on a view switch: containers sized for poster rows run
+      // short for list rows, as two separate lists never did.
+      key={view}
+      className="flex-1"
+      contentContainerStyle={{ paddingTop: 4 }}
+      data={rows}
+      now={now}
+      // Two rows ahead, as on the poster wall: a fast fling outran the default.
+      drawDistance={view === 'grid' ? rowHeight * 2 : ROW_HEIGHT * 4}
+      estimatedItemSize={view === 'grid' ? rowHeight : ROW_HEIGHT}
+      // Exact for heads, so a screen of short heads doesn't outrun the
+      // containers a poster-row estimate allotted.
+      getFixedItemSize={(row) => (row.kind === 'head' ? HEAD_HEIGHT : undefined)}
+      getItemType={(row) => row.kind}
+      keyExtractor={(row) => row.key}
+      ListFooterComponent={footer}
+      onEndReached={onEndReached}
+      onEndReachedThreshold={0.6}
+      // Recycled like the poster wall: mounting a screenful of fresh cells
+      // is what blanks a fling (docs/solutions/diary-scroll-jank-is-row-mount-cost.md).
+      // Rows are prop-derived, and poster cells are keyed by column so a
+      // recycled row reuses them instead of remounting.
+      recycleItems
+      ListHeaderComponent={failedLibraries.length > 0 ? (
+        <View className="items-center mt-3 mb-4">
+          <Button icon={<Button.Icon name="refresh" />} label="Couldn’t load your library" onPress={() => { void Promise.all(failedLibraries.map((query) => query.refetch())); }} size="sm" variant="quiet" />
+        </View>
+      ) : undefined}
+      refreshControl={<RefreshControl onRefresh={() => Promise.all([onRefresh(), ...[libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled).map((query) => query.refetch())])} />}
+      renderItem={({ item: row }) => {
+        switch (row.kind) {
+          case 'head':
+            return (
+              <RailHead
+                label={`${SHELF_TITLE[row.key]}, ${row.count} ${row.count === 1 ? 'title' : 'titles'}`}
+                onToggle={() => setSectionCollapsed(`anime-seasons-${row.key}`, row.open)}
+                open={row.open}
+              >
+                <RailHead.Icon name={SHELF_ICON[row.key]} showRail={false}>{SHELF_TITLE[row.key]}</RailHead.Icon>
+                <RailHead.Count>{countLabel(row, now)}</RailHead.Count>
+              </RailHead>
+            );
+          case 'posters':
+            return (
+              <View className="flex-row px-2">
+                {row.items.map((item, column) => (
+                  <View className="flex-1 min-w-0" key={column}>
+                    <PosterCell
+                      item={item}
+                      note={airingNote(nextAiring[item.id], now)}
+                      onActions={onItemActions}
+                      onPress={onItemPress}
+                      watched={progressById.get(item.id)}
+                    />
+                  </View>
+                ))}
+                {Array.from({ length: columns - row.items.length }, (_, index) => (
+                  <View className="flex-1" key={`empty-${index}`} />
+                ))}
+              </View>
+            );
+          case 'entry':
+            return (
+              <WatchlistRow
+                item={row.item}
+                note={airingNote(nextAiring[row.item.id], now)}
+                onActions={onItemActions}
+                onPress={onItemPress}
+                watched={progressById.get(row.item.id)}
+              />
+            );
+        }
+      }}
+    />
+  );
+}
+
+/**
+ * The season's list and the shelf head pinned over it. A fling moves the pin
+ * across shelves, so its state lives here, below the progress reads of every
+ * title: a pin change re-renders only this and keeps the list's rows.
+ */
+function ShelfList({ data, now, ...props }: Omit<ListProps<SeasonRow>, 'data' | 'onViewableItemsChanged'> & { data: readonly SeasonRow[]; now: Date }) {
+  const [pinned, setPinned] = useState<{ shelf: SeasonShelf | null; visible: boolean }>({ shelf: null, visible: false });
+  const shelved = data.some((row) => row.kind === 'head');
+  // A find, not a lookup Map: React Compiler would tie the Map, and with it the
+  // list's viewability handler, to the pin, and hand the list a new handler per pin.
+  const pinnedHead = data.find((row): row is Extract<SeasonRow, { kind: 'head' }> => row.kind === 'head' && row.key === pinned.shelf);
 
   function handleViewableItemsChanged({ viewableItems }: { viewableItems: Array<{ index: number; item: SeasonRow }> }) {
     let top = viewableItems[0];
     for (const token of viewableItems) if (token.index < top.index) top = token;
-    const shelf = top == null || top.item.kind === 'head' || heads.size === 0 ? null : top.item.shelf;
+    const shelf = top == null || top.item.kind === 'head' || !shelved ? null : top.item.shelf;
     // Hiding keeps the last shelf so the bar fades out with its title.
     setPinned((previous) => {
       if (shelf == null) return previous.visible ? { ...previous, visible: false } : previous;
@@ -168,81 +256,7 @@ export function SeasonList({
 
   return (
     <View className="flex-1">
-      <List
-        // Remount on a view switch: containers sized for poster rows run
-        // short for list rows, as two separate lists never did.
-        key={view}
-        className="flex-1"
-        contentContainerStyle={{ paddingTop: 4 }}
-        data={rows}
-        // Two rows ahead, as on the poster wall: a fast fling outran the default.
-        drawDistance={view === 'grid' ? rowHeight * 2 : ROW_HEIGHT * 4}
-        estimatedItemSize={view === 'grid' ? rowHeight : ROW_HEIGHT}
-        // Exact for heads, so a screen of short heads doesn't outrun the
-        // containers a poster-row estimate allotted.
-        getFixedItemSize={(row) => (row.kind === 'head' ? HEAD_HEIGHT : undefined)}
-        getItemType={(row) => row.kind}
-        keyExtractor={(row) => row.key}
-        ListFooterComponent={footer}
-        onEndReached={onEndReached}
-        onEndReachedThreshold={0.6}
-        onViewableItemsChanged={handleViewableItemsChanged}
-        // Recycled like the poster wall: mounting a screenful of fresh cells
-        // is what blanks a fling (docs/solutions/diary-scroll-jank-is-row-mount-cost.md).
-        // Rows are prop-derived, and poster cells are keyed by column so a
-        // recycled row reuses them instead of remounting.
-        recycleItems
-        ListHeaderComponent={failedLibraries.length > 0 ? (
-          <View className="items-center mt-3 mb-4">
-            <Button icon={<Button.Icon name="refresh" />} label="Couldn’t load your library" onPress={() => { void Promise.all(failedLibraries.map((query) => query.refetch())); }} size="sm" variant="quiet" />
-          </View>
-        ) : undefined}
-        refreshControl={<RefreshControl onRefresh={() => Promise.all([onRefresh(), ...[libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled).map((query) => query.refetch())])} />}
-        renderItem={({ item: row }) => {
-          switch (row.kind) {
-            case 'head':
-              return (
-                <RailHead
-                  label={`${SHELF_TITLE[row.key]}, ${row.count} ${row.count === 1 ? 'title' : 'titles'}`}
-                  onToggle={() => setSectionCollapsed(`anime-seasons-${row.key}`, row.open)}
-                  open={row.open}
-                >
-                  <RailHead.Icon name={SHELF_ICON[row.key]} showRail={false}>{SHELF_TITLE[row.key]}</RailHead.Icon>
-                  <RailHead.Count>{countLabel(row, now)}</RailHead.Count>
-                </RailHead>
-              );
-            case 'posters':
-              return (
-                <View className="flex-row px-2">
-                  {row.items.map((item, column) => (
-                    <View className="flex-1 min-w-0" key={column}>
-                      <PosterCell
-                        item={item}
-                        note={airingNote(nextAiring[item.id], now)}
-                        onActions={onItemActions}
-                        onPress={onItemPress}
-                        watched={progressById.get(item.id)}
-                      />
-                    </View>
-                  ))}
-                  {Array.from({ length: columns - row.items.length }, (_, index) => (
-                    <View className="flex-1" key={`empty-${index}`} />
-                  ))}
-                </View>
-              );
-            case 'entry':
-              return (
-                <WatchlistRow
-                  item={row.item}
-                  note={airingNote(nextAiring[row.item.id], now)}
-                  onActions={onItemActions}
-                  onPress={onItemPress}
-                  watched={progressById.get(row.item.id)}
-                />
-              );
-          }
-        }}
-      />
+      <List {...props} data={data} onViewableItemsChanged={handleViewableItemsChanged} />
       {pinnedHead != null && (
         <RailHead.Pinned
           count={countLabel(pinnedHead, now)}
