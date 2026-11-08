@@ -143,15 +143,23 @@ export const getSerializdList = Effect.fn('serializd.getList')(function* (
   };
 });
 
+const EditorItem = Schema.Struct({
+  showId: Id,
+  seasonId: Schema.optional(Schema.NullOr(Id)),
+  episode: Schema.optional(Schema.NullOr(Schema.Struct({ episode_number: Schema.Int }))),
+  description: Schema.optional(Schema.NullOr(Schema.String)),
+});
 const Editor = Schema.Struct({
   listName: Schema.String, listDescription: Schema.String,
-  listItems: Schema.Array(Schema.Unknown), listCollaborators: Schema.Array(Schema.Unknown),
+  listItems: Schema.Array(EditorItem), listCollaborators: Schema.Array(Schema.Struct({ username: Schema.String })),
   isPrivate: Schema.Boolean, isRanked: Schema.Boolean, allowsComments: Schema.Boolean, bannerImagePath: Schema.NullOr(Schema.String),
 });
 
 /**
  * Saves through `/list/edit`, which replaces the whole list: every setting and
  * entry (with its note) comes from a fresh, complete read, overridden by `edit`.
+ * Entries and collaborators go out in the editor's write shape, not the read
+ * shape; the read shape answers 500 (docs/solutions/list-membership-write-endpoints.md).
  */
 const saveSerializdEditor = Effect.fn('serializd.saveEditor')(function* (
   deps: SerializdDeps,
@@ -163,7 +171,12 @@ const saveSerializdEditor = Effect.fn('serializd.saveEditor')(function* (
   const editor = { ...current, ...edit(current) };
   yield* serializdHttp(deps, '/list/edit', { method: 'POST', auth: true, body: {
     list_id: listId, list_name: editor.listName, list_description: editor.listDescription,
-    list_items: editor.listItems, list_collaborators: editor.listCollaborators, is_private: editor.isPrivate,
+    list_items: editor.listItems.map((item, position) => ({
+      show_id: item.showId, season_id: item.seasonId ?? null, position,
+      ...(item.episode == null ? {} : { episode_number: item.episode.episode_number }),
+      description: item.description ?? '',
+    })),
+    list_collaborators: editor.listCollaborators.map((collaborator) => collaborator.username), is_private: editor.isPrivate,
     is_ranked: editor.isRanked, allows_comments: editor.allowsComments, banner_image_path: editor.bannerImagePath,
   } });
 });

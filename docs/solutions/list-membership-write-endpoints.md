@@ -30,6 +30,10 @@ by saving `/list/edit`. The read includes editor fields `listDescription`,
 `listCollaborators`, `isPrivate`, `isRanked`, `allowsComments`, `bannerImagePath`,
 and per-entry `description`. Preserve these fields, and refuse incomplete lists.
 A show, season, and episode share a showId: removing by showId alone is wrong.
+`/list/edit` takes entries in the editor's write shape, not the read shape:
+`{ show_id, season_id, position, episode_number?, description }` per entry and
+collaborators as usernames, as the shipped `pages/list/edit/[listId]` chunk
+maps them. Sending the read objects answers 500; verified live on 2026-11-08.
 An incomplete list also cannot prove an unseen show is absent, so do not add
 a show in that state and risk a duplicate. No authenticated Serializd session was available for the initial investigation.
 

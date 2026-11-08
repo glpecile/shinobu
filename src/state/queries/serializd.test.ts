@@ -123,7 +123,8 @@ test('a membership edit waits for a pending rename and preserves both changes', 
     if (String(input).endsWith('/list/edit')) {
       saving.resolve();
       await release.promise;
-      current = { ...current, listName: body.list_name, listItems: body.list_items, numberOfItems: body.list_items.length };
+      const listItems = (body.list_items as { show_id: number }[]).map((item) => current.listItems.find((entry) => entry.showId === item.show_id)!);
+      current = { ...current, listName: body.list_name, listItems, numberOfItems: listItems.length };
     } else {
       current = { ...current, listItems: [...current.listItems, { showId: body.show_id, showName: 'The Wire' }], numberOfItems: current.numberOfItems + 1 };
     }
