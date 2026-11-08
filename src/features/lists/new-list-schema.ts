@@ -17,8 +17,9 @@ export function fitsProvider(provider: ListProvider, item: NormalizedMediaItem) 
 /**
  * The editor's rules, from what each provider's own editor enforces (plan 0097)
  * and the caps the Letterboxd userscript checks before it opens a tab: a name,
- * Serializd's 1–500 shows, Letterboxd's lowercased, de-duplicated tags. One flat
- * form covers both providers; `provider` decides which rules apply and what
+ * Serializd's 1–500 shows, a first film for a public Letterboxd list,
+ * Letterboxd's lowercased, de-duplicated tags. One flat form covers both
+ * providers; `provider` decides which rules apply and what
  * the parsed value carries.
  */
 export const newListSchema = z.object({
@@ -42,6 +43,7 @@ export const newListSchema = z.object({
     case Provider.Letterboxd:
       if (form.tags.length > 100) ctx.addIssue({ code: 'custom', path: ['tags'], message: 'Use up to 100 tags.' });
       if (form.tags.some((tag) => tag.length > 200)) ctx.addIssue({ code: 'custom', path: ['tags'], message: 'Keep each tag under 200 characters.' });
+      if (form.sharing === 'Public' && items.length === 0) ctx.addIssue({ code: 'custom', path: ['items'], message: 'Public Letterboxd lists start with at least one film.' });
       if (items.length > MAX_NEW_LIST_FILMS) ctx.addIssue({ code: 'custom', path: ['items'], message: `Start with up to ${MAX_NEW_LIST_FILMS} films, then add the rest from the list.` });
       return;
     case Provider.Serializd:

@@ -229,7 +229,7 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
             <Button disabled={busy} icon={<Button.Icon name="add" />} label={`Add ${noun}s`} onPress={() => setSearching(true)} size="sm" variant="quiet" />
           </View>
           {items.length === 0 ? (
-            <Text className="text-muted font-sans text-sm">{provider === Provider.Letterboxd ? 'Optional. Add films now or from the list later.' : 'Add the first show to start the list.'}</Text>
+            <Text className="text-muted font-sans text-sm">{provider === Provider.Serializd ? 'Add the first show to start the list.' : sharing === 'Public' ? 'Add the first film to start the list.' : 'Optional. Add films now or from the list later.'}</Text>
           ) : (
             <View style={{ height: Math.min(items.length, 5) * 70 }}>
               <List
