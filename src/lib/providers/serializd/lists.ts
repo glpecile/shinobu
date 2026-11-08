@@ -3,6 +3,7 @@ import * as Effect from 'effect/Effect';
 import * as Schema from 'effect/Schema';
 
 import { ProviderAuthError, ProviderDecodeError } from '@/lib/providers/errors';
+import { animeEffectiveMovieTvType } from '@/lib/providers/routing';
 import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
@@ -198,6 +199,11 @@ export interface SerializdListDraft {
 }
 
 /** Mirrors the web editor's rules: a name, 1–500 shows, and its defaults for the rest. */
+/** Serializd lists hold shows, which includes an anime series. */
+function isShow(item: NormalizedMediaItem) {
+  return item.type === 'TV' || (item.type === 'ANIME' && animeEffectiveMovieTvType(item) === 'TV');
+}
+
 export const createSerializdList = Effect.fn('serializd.createList')(function* (
   deps: SerializdDeps,
   params: SerializdListDraft & { username: string },
@@ -206,7 +212,7 @@ export const createSerializdList = Effect.fn('serializd.createList')(function* (
   const name = params.name.trim();
   if (name === '') return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Give the list a name.' });
   if (params.items.length === 0 || params.items.length > MAX_SERIALIZD_LIST_ITEMS) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Serializd lists need between 1 and 500 shows.' });
-  const showIds = params.items.map((item) => item.type === 'TV' ? item.externalIds.tmdb : undefined);
+  const showIds = params.items.map((item) => isShow(item) ? item.externalIds.tmdb : undefined);
   if (!showIds.every((id) => Schema.is(Id)(id))) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Only shows can be added to a Serializd list.' });
   const raw = yield* serializdHttp<unknown>(deps, '/list/create', { method: 'POST', auth: true, body: {
     list_name: name, list_description: params.description.trim(),
@@ -228,7 +234,7 @@ export const setSerializdListMembership = Effect.fn('serializd.setListMembership
   params: { id: string; username: string; item: NormalizedMediaItem; present: boolean; entryId?: string },
 ) {
   if (!deps.session || deps.session.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderAuthError({ provider: Provider.Serializd, refreshFailed: true });
-  if (serializdListUrl(params.id) == null || params.item.type !== 'TV' || !Schema.is(Id)(params.item.externalIds.tmdb)) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Choose a show to edit this list.' });
+  if (serializdListUrl(params.id) == null || !isShow(params.item) || !Schema.is(Id)(params.item.externalIds.tmdb)) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Choose a show to edit this list.' });
   const raw = yield* serializdHttp<unknown>(deps, `/list/${params.id}`, { auth: true });
   const list = yield* Schema.decodeUnknownEffect(RawList)(raw).pipe(Effect.mapError(() => new ProviderDecodeError({ provider: Provider.Serializd, detail: 'Could not read the list before editing.' })));
   if (String(list.listId) !== params.id || list.owner.username.toLowerCase() !== params.username.toLowerCase()) return yield* new ProviderDecodeError({ provider: Provider.Serializd, detail: 'You can only edit your own lists.' });

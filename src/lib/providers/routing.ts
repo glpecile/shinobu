@@ -106,6 +106,23 @@ export function providersForRatings(
   });
 }
 
+/** The provider whose custom lists can hold `item`: Letterboxd takes films, Serializd takes shows. */
+export function listProviderFor(
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm'>,
+  connected: readonly ProviderId[],
+): typeof Provider.Letterboxd | typeof Provider.Serializd | null {
+  switch (item.type) {
+    case 'MOVIE':
+      return connected.includes(Provider.Letterboxd) ? Provider.Letterboxd : null;
+    case 'ANIME':
+      return listProviderFor({ type: animeEffectiveMovieTvType(item) }, connected);
+    case 'TV':
+      return connected.includes(Provider.Serializd) ? Provider.Serializd : null;
+    case 'MANGA':
+      return null;
+  }
+}
+
 /**
  * Which providers `useUnifiedFeed` aggregates: connected and read-capable.
  */

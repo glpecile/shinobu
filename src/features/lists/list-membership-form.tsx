@@ -80,7 +80,7 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
             });
           }}
         />}
-        <Button disabled={mutation.isPending} icon={<Button.Icon name="arrow-back" />} label={present ? 'Back to search' : 'Cancel'} onPress={onBack} variant="ghost" />
+        <Button disabled={mutation.isPending} icon={<Button.Icon name="arrow-back" />} label={present ? 'Back' : 'Cancel'} onPress={onBack} variant="ghost" />
         {(!writable || mutation.isError) && <ListRecovery target={target} />}
       </WriteSheet.Actions>
     </WriteSheet.Step>

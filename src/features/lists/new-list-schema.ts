@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { parseTags } from '@/features/log-media/parse-tags';
 import { MAX_NEW_LIST_FILMS } from '@/lib/providers/letterboxd/lists';
 import { MAX_SERIALIZD_LIST_ITEMS } from '@/lib/providers/serializd/lists';
+import { listProviderFor } from '@/lib/providers/routing';
 import { Provider } from '@/lib/providers/types';
 import type { NewList } from '@/state/queries/list-membership';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -10,7 +11,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 export type ListProvider = NewList['provider'];
 
 export function fitsProvider(provider: ListProvider, item: NormalizedMediaItem) {
-  return provider === Provider.Letterboxd ? item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true) : item.type === 'TV';
+  return listProviderFor(item, [provider]) === provider;
 }
 
 /**

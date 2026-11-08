@@ -103,15 +103,16 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
  * show (anything but Public) ends on a confirmation instead of a page Shinobu
  * can't read.
  */
-export function NewListForm({ providers, initialProvider }: {
+export function NewListForm({ providers, initialProvider, initialItems }: {
   /** Connected list providers and their accounts, at least one. */
   providers: readonly { provider: ListProvider; username: string }[];
   initialProvider: ListProvider;
+  initialItems: NormalizedMediaItem[];
 }) {
   const router = useRouter();
   const { control, handleSubmit, getValues, setValue, formState: { errors, isSubmitted } } = useForm<NewListFormValues, unknown, NewList>({
     // Every pick stays across a provider switch; each provider takes what fits it.
-    defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: [] },
+    defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: initialItems },
     resolver: zodResolver(newListSchema),
   });
   const [provider, sharing, isPrivate, ranked, name, picked] = useWatch({ control, name: ['provider', 'sharing', 'isPrivate', 'ranked', 'name', 'items'] });
@@ -285,7 +286,12 @@ export function NewListForm({ providers, initialProvider }: {
 }
 
 /** The editor's frame: header and document title over the form, or a way to connect. */
-export function NewListScreen({ providers, initialProvider }: { providers: readonly { provider: ListProvider; username: string }[]; initialProvider: ListProvider | null }) {
+export function NewListScreen({ providers, initialProvider, initialItems = [] }: {
+  providers: readonly { provider: ListProvider; username: string }[];
+  initialProvider: ListProvider | null;
+  /** The title the editor was opened for, such as from a details screen's Add to list. */
+  initialItems?: NormalizedMediaItem[];
+}) {
   const pushRoute = usePushRoute();
   const first = providers[0];
   return (
@@ -302,7 +308,7 @@ export function NewListScreen({ providers, initialProvider }: { providers: reado
         </CenteredNotice>
         </>
       ) : (
-        <NewListForm initialProvider={providers.some((entry) => entry.provider === initialProvider) ? initialProvider! : first.provider} providers={providers} />
+        <NewListForm initialItems={initialItems} initialProvider={providers.some((entry) => entry.provider === initialProvider) ? initialProvider! : first.provider} providers={providers} />
       )}
     </View>
   );
