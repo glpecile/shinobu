@@ -1,9 +1,8 @@
 import { type ComponentProps, type ReactNode, useTransition } from 'react';
-import { type StyleProp, View, type ViewStyle } from 'react-native';
 import {
   GestureDetector,
+  GestureStateManager,
   type RefreshControl as GestureRefreshControl,
-  type NativeGesture,
   usePanGesture,
 } from 'react-native-gesture-handler';
 import { scrollTo, useAnimatedStyle, useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -28,11 +27,9 @@ const FRICTION = 0.5;
 const settle = { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT };
 
 /**
- * Android has no top overscroll, so this replaces SwipeRefreshLayout: RN's
- * ScrollView wraps itself in its `refreshControl` here and passes the outer
- * `style`, and gesture-handler's passes its scroll gesture as `block`. A pan
- * beside that gesture slides the scroll view down from the top and opens a
- * gap for the 忍 mark.
+ * Android has no top overscroll. GestureScrollView places this around the
+ * scroll view, rather than in RN's refreshControl slot, so gesture-handler
+ * attaches its native scroll gesture to the scroll view itself.
  */
 export function RefreshControl({
   onRefresh,
@@ -40,9 +37,8 @@ export function RefreshControl({
   progressViewOffset = 0,
   ...native
 }: RefreshControlProps) {
-  // Props RN and gesture-handler add when they render this element.
-  const { children, style, block } = native as { children?: ReactNode; style?: StyleProp<ViewStyle>; block?: NativeGesture };
-  const { offset, scrollRef } = usePullScroll();
+  const { children, style } = native as { children?: ReactNode; style?: ComponentProps<typeof AnimatedView>['style'] };
+  const { offset, scrollRef, scrollGesture } = usePullScroll();
   const [refreshing, startRefresh] = useTransition();
   const pull = useSharedValue(0);
   const dragged = useSharedValue(0);
@@ -64,9 +60,13 @@ export function RefreshControl({
   useTabDoubleTap(tab, refresh);
 
   const pan = usePanGesture({
-    simultaneousWith: block,
-    activeOffsetY: [-8, 8],
-    failOffsetX: [-16, 16],
+    simultaneousWith: scrollGesture ?? undefined,
+    activeOffsetY: 8,
+    failOffsetY: -8,
+    failOffsetX: [-8, 8],
+    onTouchesDown: (event) => {
+      if (refreshing || offset.get() > 0) GestureStateManager.fail(event.handlerTag);
+    },
     onUpdate: (event) => {
       if (refreshing) return;
       // Only a drag that starts pulling at the top, or is already pulling.
@@ -86,7 +86,7 @@ export function RefreshControl({
 
   return (
     <GestureDetector gesture={pan}>
-      <View style={[style, { overflow: 'hidden' }]}>
+      <AnimatedView style={[{ flexGrow: 1, flexShrink: 1 }, style, { overflow: 'hidden' }]}>
         <AnimatedView
           className="pointer-events-none absolute inset-x-0 top-0 items-center justify-center"
           style={[{ height: MARK_BOX }, position]}
@@ -96,7 +96,7 @@ export function RefreshControl({
         <AnimatedView className="flex-1" style={content}>
           {children}
         </AnimatedView>
-      </View>
+      </AnimatedView>
     </GestureDetector>
   );
 }

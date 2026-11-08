@@ -1,6 +1,6 @@
-import type { ComponentProps, Ref } from 'react';
+import { cloneElement, isValidElement, type ComponentProps, type ReactNode, type Ref, useState } from 'react';
 import { TextInput } from 'react-native';
-import { ScrollView as GestureHandlerScrollView } from 'react-native-gesture-handler';
+import { ScrollView as GestureHandlerScrollView, type NativeGesture } from 'react-native-gesture-handler';
 import Animated, { useAnimatedRef, useScrollOffset } from 'react-native-reanimated';
 
 import { PullScrollContext } from '@/components/refresh-control/pull-scroll';
@@ -40,22 +40,42 @@ type GestureScrollViewProps = ComponentProps<typeof ScrollView>;
  * Hands its `refreshControl` the scroll offset the pull is drawn from. Android
  * has no top overscroll: the refresh control moves the content itself.
  */
-function PullScrollView({ ref, overScrollMode = 'never', ...props }: GestureScrollViewProps) {
+const PullScrollView = withUniwind(function PullScrollView({
+  ref,
+  overScrollMode = 'never',
+  refreshControl,
+  className: _className,
+  contentContainerClassName: _contentContainerClassName,
+  style,
+  ...props
+}: GestureScrollViewProps) {
   const scrollRef = useAnimatedRef();
   const offset = useScrollOffset(scrollRef);
+  const [scrollGesture, setScrollGesture] = useState<NativeGesture | null>(null);
+  const android = process.env.EXPO_OS === 'android';
+  const scroll = (
+    <ScrollView
+      {...props}
+      overScrollMode={overScrollMode}
+      refreshControl={android ? undefined : refreshControl}
+      style={android ? { flex: 1 } : style}
+      onGestureUpdate_CAN_CAUSE_INFINITE_RERENDER={android ? (gesture) => {
+        setScrollGesture((current) => current?.handlerTag === gesture.handlerTag ? current : gesture);
+      } : undefined}
+      ref={(node: Parameters<typeof scrollRef>[0]) => {
+        scrollRef(node);
+        assignRef(ref as Ref<typeof node> | undefined, node);
+      }}
+    />
+  );
   return (
-    <PullScrollContext value={{ offset, scrollRef }}>
-      <ScrollView
-        {...props}
-        overScrollMode={overScrollMode}
-        ref={(node: Parameters<typeof scrollRef>[0]) => {
-          scrollRef(node);
-          assignRef(ref as Ref<typeof node> | undefined, node);
-        }}
-      />
+    <PullScrollContext value={{ offset, scrollRef, scrollGesture }}>
+      {android && isValidElement<{ style?: ComponentProps<typeof AnimatedView>['style']; children?: ReactNode }>(refreshControl)
+        ? cloneElement(refreshControl, { style }, scroll)
+        : scroll}
     </PullScrollContext>
   );
-}
+});
 
 function assignRef<T>(ref: Ref<T> | undefined, node: T) {
   if (typeof ref === 'function') ref(node);
