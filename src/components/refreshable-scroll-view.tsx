@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GestureScrollView } from '@/components/animated-view';
 import { RefreshControl } from '@/components/refresh-control';
-import { useThemeColor } from '@/lib/theme-color';
 
 interface RefreshableScrollViewProps extends ScrollViewProps {
   ref?: Ref<ScrollViewInstance>;
@@ -17,17 +16,17 @@ interface RefreshableScrollViewProps extends ScrollViewProps {
   onRefresh: () => Promise<unknown>;
   /**
    * Opt in on screens whose content runs full-bleed under the status bar (the
-   * details screen's backdrop). Android draws the refresh spinner at the
-   * scroll view's top edge, which on those screens is *behind the notch* —
-   * `progressViewOffset` pushes it below the inset (plan 0024 R9). iOS ignores
-   * the prop entirely (its spinner tracks the pull), so this is Android-only
-   * in effect; header-padded screens don't need it.
+   * details screen's backdrop). Android opens the refresh gap at the scroll
+   * view's top edge, which on those screens is *behind the notch* —
+   * `progressViewOffset` moves the mark below the inset (plan 0024 R9). iOS
+   * ignores it (the mark tracks the overscroll), so this is Android-only in
+   * effect; header-padded screens don't need it.
    */
   spinnerBelowStatusBar?: boolean;
   /**
    * The route name of the tab this scroll surface belongs to (`index`,
    * `diary`, `connect`). Double-tapping that tab then runs the same
-   * `onRefresh` the pull gesture does, spinner and all — the bottom-bar idiom
+   * `onRefresh` the pull gesture does, mark and all — the bottom-bar idiom
    * every native app has. Omitted on screens that aren't a tab root (details,
    * watchlist): they have no trigger to double-tap.
    */
@@ -35,7 +34,7 @@ interface RefreshableScrollViewProps extends ScrollViewProps {
 }
 
 /**
- * ScrollView with a theme-tinted pull-to-refresh, used by every screen-level
+ * ScrollView with the 忍 pull-to-refresh, used by every screen-level
  * scroll surface. On web react-native-web's RefreshControl is a no-op
  * pass-through (there is no pull gesture on desktop), so this stays universal
  * with no platform fork.
@@ -47,7 +46,6 @@ export function RefreshableScrollView({
   children,
   ...rest
 }: RefreshableScrollViewProps) {
-  const accent = useThemeColor('--color-accent');
   // Context comes from the navigation stack's provider; the hook is safe on
   // web too (zero insets), so no platform fork is needed here.
   const insets = useSafeAreaInsets();
@@ -59,13 +57,11 @@ export function RefreshableScrollView({
       {...rest}
       refreshControl={
         <RefreshControl
-          colors={accent != null ? [accent] : undefined}
           onRefresh={onRefresh}
           progressViewOffset={
             spinnerBelowStatusBar === true ? insets.top : undefined
           }
           tab={tab}
-          tintColor={accent}
         />
       }
     >
