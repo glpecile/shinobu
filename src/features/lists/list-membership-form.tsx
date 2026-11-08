@@ -15,10 +15,10 @@ import { SmallPoster } from '@/components/small-poster';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
+import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
 import { Provider } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
 import { useListMembership, useSuspenseListSearchQuery, type ListEditTarget } from '@/state/queries/list-membership';
@@ -49,6 +49,7 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
   const mutation = useListMembership(target);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-membership');
+  const scriptUntrusted = useLetterboxdUserscriptUntrusted();
   const needsScript = process.env.EXPO_OS === 'web' && target.provider === Provider.Letterboxd && !hasScript;
   const writable = target.provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasScript : hasSession);
   const verb = present ? 'Add to list' : 'Remove from list';
@@ -63,10 +64,10 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
         </View>
       </View>
       <WriteSheet.Description>{present ? `Add to "${target.title}"?` : `Remove from "${target.title}"? Your watched history will stay the same.`}</WriteSheet.Description>
-      {!writable && <WriteSheet.Description>{needsScript ? 'Install or update the Letterboxd script, then reload this tab to edit this list here.' : 'Reconnect Letterboxd with a signed-in session to edit lists here.'}</WriteSheet.Description>}
+      {!writable && <WriteSheet.Description>{needsScript ? letterboxdScriptHint(scriptUntrusted, 'edit this list here') : 'Reconnect Letterboxd with a signed-in session to edit lists here.'}</WriteSheet.Description>}
       {mutation.isError && <WriteSheet.Error>{mutation.error.message}</WriteSheet.Error>}
       <WriteSheet.Actions>
-        {needsScript && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
+        {needsScript && !scriptUntrusted && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
         {writable && <Button
           icon={<Button.Icon name={present ? 'add' : 'trash-outline'} />}
           label={mutation.isError ? 'Try again' : verb}

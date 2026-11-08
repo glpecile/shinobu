@@ -8,6 +8,10 @@ export function useLetterboxdUserscript(_capability: 'log' | 'watchlist' | 'watc
   return false;
 }
 
+export function useLetterboxdUserscriptUntrusted(): boolean {
+  return false;
+}
+
 export function getLetterboxdUserscriptFetch(_username: string | null): LetterboxdWebFetch | undefined {
   return undefined;
 }

@@ -7,12 +7,13 @@ import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { TAMPERMONKEY_URL } from '@/lib/providers/external-urls';
 import { LETTERBOXD_SIGN_IN_URL } from '@/lib/providers/letterboxd/config';
-import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
 
 export function LetterboxdAdvancedSetup() {
   const detected = useLetterboxdUserscript();
   const watchlistDetected = useLetterboxdUserscript('watchlist');
   const removalDetected = useLetterboxdUserscript('watchlist-remove');
+  const untrusted = useLetterboxdUserscriptUntrusted();
 
   return (
     <View className="mt-5">
@@ -24,7 +25,7 @@ export function LetterboxdAdvancedSetup() {
             Letterboxd. This is not an official API integration.
           </Text>
           <Text accessibilityLiveRegion="polite" className="text-foreground font-sans-semibold text-sm">
-            {removalDetected ? 'Script detected: logs and watchlist changes' : watchlistDetected ? 'Older script detected: update for watchlist removals' : detected ? 'Older script detected: update for watchlist changes' : 'Script not detected in this tab'}
+            {removalDetected ? 'Script detected: logs and watchlist changes' : untrusted ? 'Script detected: set shinobu-trust-localhost to true in its Tampermonkey Storage tab for this dev server' : watchlistDetected ? 'Older script detected: update for watchlist removals' : detected ? 'Older script detected: update for watchlist changes' : 'Script not detected in this tab'}
           </Text>
           <Steps>
             <Steps.Item>

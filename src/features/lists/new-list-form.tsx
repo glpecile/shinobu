@@ -17,12 +17,12 @@ import { SmallPoster } from '@/components/small-poster';
 import { TextField } from '@/components/text-field';
 import { TagPicker } from '@/features/log-media/tag-picker';
 import { haptics } from '@/lib/haptics';
-import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
+import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
 import type { LetterboxdListSharing } from '@/lib/providers/letterboxd/deps';
 import { letterboxdListUrl } from '@/lib/providers/letterboxd/lists';
-import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -125,6 +125,7 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   const label = PROVIDERS[provider].label;
   const noun = provider === Provider.Letterboxd ? 'film' : 'show';
   const items = picked.filter((item) => fitsProvider(provider, item));
+  const scriptUntrusted = useLetterboxdUserscriptUntrusted();
   const needsScript = process.env.EXPO_OS === 'web' && provider === Provider.Letterboxd && !hasLetterboxdScript;
   const writable = provider === Provider.Serializd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
@@ -256,9 +257,9 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
           {errors.items?.message != null && <FieldError>{errors.items.message}</FieldError>}
         </View>
         <View className="gap-3">
-          {!writable && <Text className="text-muted font-sans text-sm">{needsScript ? 'Install or update the Letterboxd script, then reload this tab to create lists here.' : 'Reconnect Letterboxd with a signed-in session to create lists here.'}</Text>}
+          {!writable && <Text className="text-muted font-sans text-sm">{needsScript ? letterboxdScriptHint(scriptUntrusted, 'create lists here') : 'Reconnect Letterboxd with a signed-in session to create lists here.'}</Text>}
           {mutation.isError && <SectionEnter><Text className="text-accent font-sans text-sm" role="alert">{mutation.error.message}</Text></SectionEnter>}
-          {needsScript && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
+          {needsScript && !scriptUntrusted && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
           {writable && <Button
             icon={<Button.Icon name="add" />}
             label={mutation.isError ? 'Try again' : 'Create list'}

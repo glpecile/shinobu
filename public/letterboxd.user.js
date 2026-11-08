@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shinobu Letterboxd bridge
 // @namespace    https://shinobu.glpecile.xyz/
-// @version      0.10.0
+// @version      0.10.1
 // @description  Send Shinobu film logs, watchlist changes, new lists and custom list changes through your signed-in Letterboxd tab.
 // @match        https://shinobu.glpecile.xyz/*
 // @match        http://localhost/*
@@ -97,6 +97,13 @@
       }
     });
     page.document.documentElement.setAttribute('data-shinobu-letterboxd-bridge', '11');
+    return;
+  }
+
+  // Grants nothing: it lets the app ask for the opt-in instead of a reinstall,
+  // which resets Tampermonkey's storage and with it the opt-in.
+  if (devOrigin) {
+    page.document.documentElement.setAttribute('data-shinobu-letterboxd-untrusted', '');
     return;
   }
 
