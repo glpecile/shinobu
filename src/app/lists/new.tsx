@@ -1,5 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
+import { View } from 'react-native';
 
+import { Skeleton } from '@/components/skeleton';
+import { ListsHeader } from '@/features/lists/list-header';
 import { NewListScreen, type ListProvider } from '@/features/lists/new-list-form';
 import { Provider } from '@/lib/providers/types';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
@@ -14,9 +17,16 @@ type Props = { providers: { provider: ListProvider; username: string }[]; initia
 
 /** Starts the list with the title it was opened for. */
 function NewListWithItem({ id, type, ...props }: Props & { id: string; type: MediaType | undefined }) {
-  const { item } = useResolvedMediaItem(id, type);
-  // Remounts the form once a cold item resolves, so its defaults include it.
-  return <NewListScreen {...props} initialItems={item == null ? [] : [item]} key={item?.id ?? 'pending'} />;
+  const { item, isLoading } = useResolvedMediaItem(id, type);
+  if (item == null && isLoading) return <View className="flex-1 bg-background">
+    <ListsHeader provider={props.initialProvider ?? props.providers[0]?.provider ?? Provider.Letterboxd} title="New list" />
+    <View accessibilityLabel="Loading starting title" className="w-full max-w-2xl self-center px-6 gap-6">
+      {props.providers.length > 1 && <Skeleton className="h-8 w-72 rounded-full self-center" />}
+      <View className="gap-2"><Skeleton className="h-4 w-12 rounded" /><Skeleton className="h-10 w-full rounded-full" /></View>
+      <View className="gap-2"><Skeleton className="h-4 w-24 rounded" /><Skeleton className="h-22 w-full rounded-2xl" /></View>
+    </View>
+  </View>;
+  return <NewListScreen {...props} initialItems={item == null ? [] : [item]} />;
 }
 
 export default function NewListRoute() {
