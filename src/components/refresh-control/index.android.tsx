@@ -54,6 +54,7 @@ export function RefreshControl({
   }));
 
   function refresh() {
+    if (refreshing) return;
     pull.set(withTiming(HOLD + progressViewOffset, settle));
     startRefresh(async () => {
       await onRefresh().catch(() => undefined);
@@ -75,10 +76,10 @@ export function RefreshControl({
       // The list would scroll up under a finger pushing the pull back.
       scrollTo(scrollRef, 0, 0, false);
     },
-    onFinalize: () => {
+    onFinalize: (event) => {
       if (dragged.get() === 0) return;
       dragged.set(0);
-      if (gap.get() >= PULL_TRIGGER) scheduleOnRN(refresh);
+      if (!event.canceled && gap.get() >= PULL_TRIGGER) scheduleOnRN(refresh);
       else pull.set(withTiming(0, settle));
     },
   });
