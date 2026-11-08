@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import * as Effect from 'effect/Effect';
 
-import { getFilmPoster, getFilmItem } from './film';
+import { getFilmItem } from './film';
 
 const metadata = '<script type="application/ld+json">{"@type":"Movie","name":"Beast Boy: Lone Wolf","dateCreated":"2024-10-28"}</script>';
 
@@ -69,26 +69,28 @@ describe('incoming Letterboxd film lookup', () => {
 describe('Letterboxd poster recovery', () => {
   test('uses the canonical portrait upload, not the landscape social image or guessed filename', async () => {
     const poster = 'https://a.ltrbxd.com/resized/sm/upload/3x/qu/ti/2g/nITg6iRWo3CVWJEnhV4AiD3ukfx-0-600-0-900-crop.jpg?v=d394e337a5';
-    const result = await Effect.runPromise(getFilmPoster({
+    const result = await Effect.runPromise(getFilmItem({
+      tmdb: null,
       fetch: async (url) => {
         expect(String(url)).toBe('https://letterboxd.com/film/onibaba/');
         return new Response(`<meta property="og:image" content="https://a.ltrbxd.com/landscape.jpg">
           <script type="application/ld+json">{"@type":"WebSite","image":"https://a.ltrbxd.com/logo.jpg"}</script>
           <script type="application/ld+json">
           /* <![CDATA[ */
-          {"image":"${poster}","@type":"Movie"}
+          {"image":"${poster}","@type":"Movie","name":"Onibaba"}
           /* ]]> */
           </script>`);
       },
     }, 'onibaba'));
-    expect(result).toBe(poster);
+    expect(result?.coverImage).toBe(poster);
   });
 
   test.each([
     '<html>No poster</html>',
     '<script type="application/ld+json">not JSON</script>',
-    '<script type="application/ld+json">{"@type":"Movie","image":"https://evil.test/poster.jpg"}</script>',
+    '<script type="application/ld+json">{"@type":"Movie","name":"Onibaba","image":"https://evil.test/poster.jpg"}</script>',
   ])('unavailable or untrusted poster metadata is a recovery miss', async (html) => {
-    expect(await Effect.runPromise(getFilmPoster({ fetch: async () => new Response(html) }, 'onibaba'))).toBeNull();
+    const item = await Effect.runPromise(getFilmItem({ tmdb: null, fetch: async () => new Response(html) }, 'onibaba').pipe(Effect.orElseSucceed(() => null)));
+    expect(item?.coverImage || null).toBeNull();
   });
 });

@@ -27,7 +27,7 @@ import {
   LETTERBOXD_WEB_PROXY_BASE_URL,
 } from '@/lib/providers/letterboxd/config';
 import type { LetterboxdDeps } from '@/lib/providers/letterboxd/deps';
-import { getFilmPoster, getFilmItem } from '@/lib/providers/letterboxd/film';
+import { getFilmItem } from '@/lib/providers/letterboxd/film';
 import { getLetterboxdFilmWatch, resolveFilmSlug } from '@/lib/providers/letterboxd/watched';
 import {
   getListsPage,
@@ -134,7 +134,6 @@ export const letterboxdQueryKeys = {
   // An item with neither id never fetches, but its own id keeps a list of them
   // (an AniList season) from sharing one key in `useQueries`.
   filmWatch: (username: string, item: NormalizedMediaItem) => [...letterboxdQueryKeys.filmWatchesRoot(), username, item.externalIds.letterboxd ?? null, item.externalIds.letterboxd == null ? item.externalIds.tmdb ?? item.id : null] as const,
-  poster: (slug: string) => [...letterboxdQueryKeys.all, 'poster', slug] as const,
   watchlist: (username: string) =>
     [...letterboxdQueryKeys.all, 'watchlist', username] as const,
   /** The paginated "View all" grid — a separate entry from the feed row's
@@ -156,18 +155,17 @@ export const letterboxdQueryKeys = {
     [...letterboxdQueryKeys.listFilmsRoot(), owner, slug] as const,
 };
 
-/** Only failed constructed CDN URLs need a film-page lookup; never retry artwork. */
+/**
+ * A failed constructed CDN URL recovers its poster from the film identity read,
+ * which a list's progress already makes, so the film page downloads once.
+ */
 export function useLetterboxdPosterQuery(uri: string | null, failed: boolean) {
   const slug = uri?.match(/^https:\/\/a\.ltrbxd\.com\/resized\/film-poster\/(?:\d\/)+\d+-([a-z0-9]+(?:-[a-z0-9]+)*)-0-\d+-0-\d+-crop\.jpg(?:\?[^#]*)?$/)?.[1];
   return useQuery({
-    queryKey: letterboxdQueryKeys.poster(slug ?? ''),
-    queryFn: slug == null ? skipToken : ({ signal }) =>
-      Effect.runPromise(getFilmPoster(letterboxdDeps(), slug), { signal }),
+    ...letterboxdFilmQuery(slug ?? null, useTmdbToken() !== ''),
     enabled: failed && slug != null,
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
+    select: (film) => (film == null || film.coverImage === '' ? null : film.coverImage),
     retryOnMount: false,
-    throwOnError: false,
   });
 }
 
