@@ -439,7 +439,7 @@ test('cold film identities and watches share a bounded queue that drains and can
   try {
     subscribe('complete');
     await Bun.sleep(0);
-    expect(started).toBe(4);
+    expect(started).toBe(8);
     while (pending.length > 0) {
       const request = pending.shift()!;
       const tmdb = /\/tmdb\/([0-9]+)\//.exec(request.url)?.[1];
@@ -456,15 +456,15 @@ test('cold film identities and watches share a bounded queue that drains and can
     }
     await Promise.all(client.getQueryCache().getAll().map((query) => query.promise));
     expect(started).toBe(100);
-    expect(peak).toBe(4);
+    expect(peak).toBe(8);
     expect(client.getQueryCache().getAll().every((query) => query.state.status === 'success')).toBe(true);
     subscribe('cancel');
     await Bun.sleep(0);
-    expect(started).toBe(104);
+    expect(started).toBe(108);
     unsubscribes.forEach((unsubscribe) => unsubscribe());
     await Bun.sleep(0);
-    expect(aborted).toBe(4);
-    expect(started).toBe(104);
+    expect(aborted).toBe(8);
+    expect(started).toBe(108);
     expect(active).toBe(0);
     pending.length = 0;
     const sharedItem = { ...film('shared', 'Shared'), externalIds: { tmdb: 2001 } };
@@ -473,13 +473,13 @@ test('cold film identities and watches share a bounded queue that drains and can
     const unsubscribeFirst = first.subscribe(() => {});
     unsubscribes.push(unsubscribeFirst, second.subscribe(() => {}));
     await Bun.sleep(0);
-    expect(started).toBe(105);
+    expect(started).toBe(109);
     unsubscribeFirst();
     await Bun.sleep(0);
-    expect(aborted).toBe(4);
+    expect(aborted).toBe(8);
     pending.shift()!.resolve(new Response(null, { status: 302, headers: { location: '/film/shared/' } }));
     await Bun.sleep(0);
-    expect(started).toBe(106);
+    expect(started).toBe(110);
     expect(pending[0].url).toBe('https://letterboxd.com/other/film/shared/');
     pending.shift()!.resolve(new Response('<body data-owner="other"><section class="film-viewing-info-wrapper"><a href="/film/shared/">Shared</a></section>'));
     await Bun.sleep(0);
