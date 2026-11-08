@@ -1,10 +1,12 @@
 import { createContext, use } from 'react';
+import type { NativeGesture } from 'react-native-gesture-handler';
 import type { AnimatedRef, SharedValue } from 'react-native-reanimated';
 
 type PullScroll = {
   /** The scroll view's vertical offset; negative while iOS overscrolls the top. */
   offset: SharedValue<number>;
   scrollRef: AnimatedRef;
+  scrollGesture: NativeGesture | null;
 };
 
 /**
