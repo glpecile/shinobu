@@ -18,8 +18,14 @@ import { isPersistedQueryKey, persistOptions } from './persist';
  */
 const RESTORES_SYNC = process.env.EXPO_OS !== 'web';
 
-/** Bound snapshot work to the same two-second window as disk writes. */
-const THROTTLE_MS = 2_000;
+/**
+ * A snapshot waits for two quiet seconds, and at most ten. A list's per-film
+ * reads settle one by one for several seconds; each dehydrates and stringifies
+ * the whole persisted cache (about 40 ms on a Pixel 8 Pro), so one write per
+ * burst replaces one every two seconds.
+ */
+const QUIET_MS = 2_000;
+const MAX_WAIT_MS = 10_000;
 
 /** `persistQueryClientRestore` without its `await`, for the synchronous MMKV persister. */
 function restoreNow(client: QueryClient, persister: Persister) {
@@ -62,8 +68,10 @@ export function PersistQueryClientProvider({
     let unsubscribe: (() => void) | undefined;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let firstChange: number | undefined;
     const flush = () => {
       timer = undefined;
+      firstChange = undefined;
       void persistQueryClientSave(options);
     };
     // Restore already discards a corrupt snapshot; recovery must also consume its rejection.
@@ -78,7 +86,9 @@ export function PersistQueryClientProvider({
           !(event.type === 'updated' && event.action.type === 'fetch') &&
           isPersistedQueryKey(event.query.queryKey)
         ) {
-          if (timer === undefined) timer = setTimeout(flush, THROTTLE_MS);
+          if (firstChange === undefined) firstChange = Date.now();
+          clearTimeout(timer);
+          timer = setTimeout(flush, Math.min(QUIET_MS, firstChange + MAX_WAIT_MS - Date.now()));
         }
       });
     });

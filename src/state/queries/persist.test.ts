@@ -136,9 +136,11 @@ test('batches completed refetches into one current snapshot and flushes pending 
       keys.map((_, index) => `fresh-${index}`),
     );
 
+    // Each change restarts the quiet window.
     act(() => client.setQueryData(keys[0]!, 'latest'));
     act(() => jest.advanceTimersByTime(1_999));
     act(() => client.removeQueries({ queryKey: keys[1], exact: true }));
+    act(() => jest.advanceTimersByTime(1_999));
     expect(persistClient).toHaveBeenCalledTimes(1);
     act(() => jest.advanceTimersByTime(1));
     const saved = persistClient.mock.calls[1]?.[0].clientState.queries;
@@ -146,12 +148,22 @@ test('batches completed refetches into one current snapshot and flushes pending 
     expect(saved?.[0]?.state.data).toBe('latest');
     expect(saved?.some((query) => JSON.stringify(query.queryKey) === JSON.stringify(keys[1]))).toBe(false);
 
+    // A steady trickle still writes once its first change is ten seconds old.
+    for (let tick = 0; tick < 5; tick += 1) {
+      act(() => client.setQueryData(keys[2]!, `trickle-${tick}`));
+      act(() => jest.advanceTimersByTime(1_999));
+    }
+    expect(persistClient).toHaveBeenCalledTimes(2);
+    act(() => client.setQueryData(keys[2]!, 'trickle-5'));
+    act(() => jest.advanceTimersByTime(5));
+    expect(persistClient).toHaveBeenCalledTimes(3);
+
     act(() => client.removeQueries({ queryKey: ['trakt'], exact: false }));
     read.unmount();
-    expect(persistClient).toHaveBeenCalledTimes(3);
-    expect(persistClient.mock.calls[2]?.[0].clientState.queries).toEqual([]);
+    expect(persistClient).toHaveBeenCalledTimes(4);
+    expect(persistClient.mock.calls[3]?.[0].clientState.queries).toEqual([]);
     act(() => jest.advanceTimersByTime(2_000));
-    expect(persistClient).toHaveBeenCalledTimes(3);
+    expect(persistClient).toHaveBeenCalledTimes(4);
     expect(deserialize(store.get('shinobu.query-cache')!).clientState.queries).toEqual([]);
   } finally {
     responses.forEach((response) => response.resolve('cleanup'));
