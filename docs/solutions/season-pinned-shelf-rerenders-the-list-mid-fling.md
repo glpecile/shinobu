@@ -22,7 +22,28 @@ Legend List re-rendered its scroll view (53 ms). Derive from `data` with
 `find`/`some` so the handler depends only on the rows. To check a scope,
 compile the file with `babel-plugin-react-compiler` and read the `$[n]` guards.
 
-**Still open.** The first fling out of the shelves still mounts about six full
-poster rows (266–433 ms blank in dev). Legend List reuses containers across
-item types, so the head containers turn into poster rows. No prop disables
-that.
+**Cold poster pool.** Isolating the pin did not eliminate first-fling blanking.
+A subsequent 70 ms fling from the loaded shelf view still produced 28
+consecutive blank frames (0.93 s at 30 fps) in the central/lower list region.
+React profiling attributed the largest batches (110–129 ms in dev) to poster
+cells mounting or rebinding, not another render of the progress owner.
+
+The selected grid now draws eight poster rows ahead instead of two, so full
+poster rows are ready before the fling leaves the short shelves. Neighboring
+seasons retain two rows: the pager mounts them too, and warming every page
+at once creates unnecessary startup work. A four-row buffer
+still blanked. Keeping headers mounted with Legend's `alwaysRender` reduced
+cold conversions but did not eliminate blanking, and was unnecessary with
+the eight-row buffer, so it was removed. List view keeps its four-row buffer.
+
+Two independent cold-start recordings established the eight-row threshold.
+With the selected-page-only buffer, the original iOS shelf fixture had zero
+blank frames across 162 recorded frames; the first fling after selecting the
+already-mounted neighboring season also had zero across 178 frames. A clean
+local Android emulator run had zero across 545 frames. The check counts frames
+with less than 1% dark pixels in x=5–95%, y=42–87%, and the recordings were also
+inspected visually. Pagination can still expose individual poster placeholders
+while newly fetched images load; that is distinct from the empty viewport. The
+tradeoff is more offscreen poster cells mounted at startup; this is a bounded
+buffer, not rendering the entire season. These are simulator development-build
+observations, not production-device timing guarantees.

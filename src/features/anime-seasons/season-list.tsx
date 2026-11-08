@@ -99,7 +99,7 @@ function newDate(): Date {
 export function SeasonList({
   items,
   nextAiring,
-  animated,
+  active,
   footer,
   onEndReached,
   onItemActions,
@@ -108,8 +108,8 @@ export function SeasonList({
 }: {
   items: readonly NormalizedMediaItem[];
   nextAiring: Readonly<Record<string, NextAiring>>;
-  /** The skeleton's shimmer, off for a page the pager holds offscreen. */
-  animated: boolean;
+  /** Whether this is the pager's selected season. */
+  active: boolean;
   footer: ReactElement;
   onEndReached: (() => void) | undefined;
   onItemActions: (item: NormalizedMediaItem) => void;
@@ -138,7 +138,7 @@ export function SeasonList({
   // Only the libraries that can shelve a title; Trakt's watched films never
   // match an AniList film, so waiting on them would only delay the wall.
   const settling = [libraries.queries.anilist, libraries.queries.simkl].some((query) => query.isEnabled && query.isPending);
-  if (settling) return <SeasonSkeleton animated={animated} />;
+  if (settling) return <SeasonSkeleton animated={active} />;
   const failedLibraries = [libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled && query.isError);
 
   const progressById = new Map(progress.items.map((item, index) => [item.id, progress.progress[index]]));
@@ -161,8 +161,8 @@ export function SeasonList({
       contentContainerStyle={{ paddingTop: 4 }}
       data={rows}
       now={now}
-      // Two rows ahead, as on the poster wall: a fast fling outran the default.
-      drawDistance={view === 'grid' ? rowHeight * 2 : ROW_HEIGHT * 4}
+      // Warm the selected grid for a cold fling; neighboring seasons keep a small buffer.
+      drawDistance={view === 'grid' ? rowHeight * (active ? 8 : 2) : ROW_HEIGHT * 4}
       estimatedItemSize={view === 'grid' ? rowHeight : ROW_HEIGHT}
       // Exact for heads, so a screen of short heads doesn't outrun the
       // containers a poster-row estimate allotted.
