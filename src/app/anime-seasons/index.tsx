@@ -128,7 +128,7 @@ function SeasonWall({
       }
     >
       <SeasonList
-        animated={active}
+        active={active}
         footer={
           <LoadMoreFooter
             failed={pages.isError}

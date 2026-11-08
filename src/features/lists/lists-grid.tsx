@@ -97,8 +97,14 @@ export function ListsIndex({
           // starves its container pool (the web "creating one on demand"
           // warning) and skews the scroll extent.
           estimatedItemSize={rowHeight}
+          // Two rows ahead and recycled, as the poster wall: a card is a
+          // pressable over a stack of images, too costly to mount mid-fling.
+          // `PosterStack` keys its images for reuse.
+          drawDistance={rowHeight * 2}
+          getItemType={(item) => ('title' in item ? 'list' : 'new')}
           keyExtractor={(item) => item.id}
           numColumns={columns}
+          recycleItems
           onEndReached={hasNextPage && !isFetchingNextPage && !isFetchNextPageError ? () => void fetchNextPage() : undefined}
           // 0.3, deliberately below the poster's 0.6: the end latch only
           // re-arms past 1.3× the band, and one 12-list page is three rows.

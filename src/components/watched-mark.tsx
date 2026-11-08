@@ -15,6 +15,8 @@ export function WatchedMark({ item, state, poster = false, showProgress = false 
   const accent = useThemeColor('--color-accent');
   const watched = state.watched;
   const unit = state.unit === 'chapter' ? 'ch' : state.unit === 'season' ? 'seasons' : 'ep';
+  // The count already says it was watched, so the eye only marks titles without one.
+  const inProgress = showProgress && state.current > 0 && !state.completed;
   const label = `${state.current}${state.total != null && state.total > 0 ? ` / ${state.total}` : ''} ${unit}`;
   const style = useAnimatedStyle(() => {
     const timing = { duration: DURATION.swap, easing: KEYFRAME_EASE_OUT };
@@ -25,7 +27,7 @@ export function WatchedMark({ item, state, poster = false, showProgress = false 
   });
   return (
     <>
-    <AnimatedView
+    {!inProgress && <AnimatedView
       // A parent row reads its children's labels even through aria-hidden.
       accessibilityLabel={!watched ? undefined : item.type === 'TV' ? 'Series watch history' : 'Watched'}
       aria-hidden={!watched}
@@ -33,8 +35,8 @@ export function WatchedMark({ item, state, poster = false, showProgress = false 
       style={[style, { pointerEvents: 'none' }]}
     >
       <Ionicons color={accent} name="eye" size={14} />
-    </AnimatedView>
-    {showProgress && state.current > 0 && !state.completed && (
+    </AnimatedView>}
+    {inProgress && (
       <View className={cn('flex-row items-center gap-1.5', poster && 'absolute bottom-2 left-2 rounded bg-surface/95 p-1.5')} style={{ pointerEvents: 'none' }}>
         {state.total != null && state.total > 0 && <ProgressRing label={label} max={state.total} value={state.current} />}
         <Text className="font-sans text-xs text-foreground">{label}</Text>
