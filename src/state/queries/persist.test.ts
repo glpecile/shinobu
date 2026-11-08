@@ -1,9 +1,10 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
-import { describe, expect, jest, mock, spyOn, test } from 'bun:test';
+import { afterAll, describe, expect, jest, mock, spyOn, test } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { QueryClient, useQuery } = await import('@tanstack/react-query');
 const { act, renderHook, waitFor } = await import('@testing-library/react');
 

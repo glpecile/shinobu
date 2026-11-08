@@ -1,8 +1,9 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { expect, mock, spyOn, test } from 'bun:test';
+import { afterAll, expect, mock, spyOn, test } from 'bun:test';
 import { useLayoutEffect, type ReactNode } from 'react';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { act, render } = await import('@testing-library/react');
 
 mock.module('react-native', () => ({ View: ({ children }: { children: ReactNode }) => <div>{children}</div> }));

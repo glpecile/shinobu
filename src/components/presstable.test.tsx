@@ -1,8 +1,9 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { expect, mock, spyOn, test } from 'bun:test';
+import { afterAll, expect, mock, spyOn, test } from 'bun:test';
 import { createElement, type ComponentProps } from 'react';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { fireEvent, render } = await import('@testing-library/react');
 
 let reduceMotion = false;

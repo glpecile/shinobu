@@ -1,8 +1,9 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { expect, mock, test } from 'bun:test';
+import { afterAll, expect, mock, test } from 'bun:test';
 import type { ReactNode } from 'react';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { fireEvent, render, waitFor } = await import('@testing-library/react');
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
 let requestPermission = async (): Promise<{ granted: boolean }> => { throw new Error('Permission request failed'); };
