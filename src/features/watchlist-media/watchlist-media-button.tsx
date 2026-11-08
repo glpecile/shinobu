@@ -8,6 +8,7 @@ import {
   type WatchlistRemovalTarget,
 } from '@/features/watchlist/find-watchlist-removal';
 import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { Provider } from '@/lib/providers/types';
 import { useAniListEntryStateQuery } from '@/state/queries/anilist';
@@ -79,8 +80,10 @@ import {
 export function WatchlistMediaButton({
   item,
   onOpenPicker,
+  className,
 }: {
   item: NormalizedMediaItem;
+  className?: string;
   /**
    * Supplied by a host that is *already a sheet* (the card-actions sheet): the
    * press hands the picker to the host to render in place of its own content,
@@ -168,7 +171,7 @@ export function WatchlistMediaButton({
   }
 
   return (
-    <View className="mb-6">
+    <View className={cn('mb-6', className)}>
       {/* morphLabel: "Add to watchlist" → "On your watchlist" is a label that
           changes in place from user state, which is exactly what MorphText is
           for. The settled state now opens the remove picker instead of locking

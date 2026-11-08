@@ -6,6 +6,7 @@ import noHardcodedRoutes from './rules/no-hardcoded-routes.ts';
 import logColorOnly from './rules/log-color-only.ts';
 import reactCompilerBailout from './rules/react-compiler-bailout.ts';
 import reanimatedNoDeps from './rules/reanimated-no-deps.ts';
+import viewToggleProps from './rules/view-toggle-props.ts';
 import webSafeEasing from './rules/web-safe-easing.ts';
 import noPointerEventsProp from './rules/no-pointer-events-prop.ts';
 import noProviderLiterals from './rules/no-provider-literals.ts';
@@ -22,6 +23,7 @@ export default definePlugin({
     'no-hardcoded-routes': noHardcodedRoutes,
     'log-color-only': logColorOnly,
     'reanimated-no-deps': reanimatedNoDeps,
+    'view-toggle-props': viewToggleProps,
     'web-safe-easing': webSafeEasing,
     'no-pointer-events-prop': noPointerEventsProp,
     'no-provider-literals': noProviderLiterals,

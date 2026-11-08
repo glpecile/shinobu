@@ -24,7 +24,7 @@ export function MediaToolbar({ children, view, notice }: {
             <View className="flex-row items-center gap-2 pe-8">{children}</View>
           </Rail>
         </View>
-        {view != null && <View className="shrink-0"><ViewToggle onChange={setWatchlistView} view={view} /></View>}
+        {view != null && <View className="shrink-0"><ViewToggle size="sm" onChange={setWatchlistView} view={view} /></View>}
       </View>
       {notice}
     </View>

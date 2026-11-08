@@ -1,16 +1,10 @@
 import { Button } from '@/components/button';
 import { haptics } from '@/lib/haptics';
 
-import type { WatchlistView } from '@/state/prefs/watchlist-view';
+import type { ViewToggleProps } from './props';
 
 /** A compact native action showing the layout it switches to. */
-export function ViewToggle({
-  view,
-  onChange,
-}: {
-  view: WatchlistView;
-  onChange: (view: WatchlistView) => void;
-}) {
+export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
   const next = view === 'grid' ? 'list' : 'grid';
 
   return (
@@ -22,7 +16,7 @@ export function ViewToggle({
         haptics.selection();
         onChange(next);
       }}
-      size="sm"
+      size={size}
       variant="quiet"
     />
   );
