@@ -1,7 +1,8 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { expect, mock, test } from 'bun:test';
+import { afterAll, expect, mock, test } from 'bun:test';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { fireEvent, render } = await import('@testing-library/react');
 let focused = true;
 let accepted = false;

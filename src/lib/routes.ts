@@ -67,9 +67,14 @@ export const routes = {
    */
   watchlist: (provider?: ProviderId) =>
     provider == null ? '/watchlist' : (`/watchlist?provider=${provider}` as const),
-  /** The list editor; `provider` preselects where it saves. */
-  newList: (provider?: typeof Provider.Letterboxd | typeof Provider.Serializd) =>
-    provider == null ? '/lists/new' : (`/lists/new?provider=${provider}` as const),
+  /** The list editor; `provider` preselects where it saves, and `item` starts the list. */
+  newList: (provider?: typeof Provider.Letterboxd | typeof Provider.Serializd, item?: { id: string; type: MediaType }) => {
+    const query = [
+      provider == null ? null : `provider=${provider}`,
+      item == null ? null : `item=${encodeURIComponent(item.id)}&type=${item.type}`,
+    ].filter((part) => part != null).join('&');
+    return query === '' ? '/lists/new' : (`/lists/new?${query}` as const);
+  },
   letterboxdLists: (kind: 'created' | 'liked') => `/lists/letterboxd?kind=${kind}` as const,
   letterboxdList: (owner: string, slug: string) =>
     `/lists/letterboxd/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}` as const,

@@ -1,11 +1,12 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { expect, mock, test } from 'bun:test';
+import { afterAll, expect, mock, test } from 'bun:test';
 import { Suspense, type ReactNode } from 'react';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { render, waitFor } = await import('@testing-library/react');
 const item: NormalizedMediaItem = {
   id: 'tmdb-tv-209867', title: 'Frieren: Beyond Journey’s End', type: 'TV',

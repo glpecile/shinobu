@@ -88,15 +88,15 @@ test('membership removal preserves editor settings and the other entries of the 
   d.fetch = async (url, init) => {
     if (init?.method === 'POST') {
       expect(String(url)).toBe('https://api.test/list/edit');
-      expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, list_name: 'Pilots', list_description: 'My favourites', list_items: [show, season], list_collaborators: [{ username: 'friend' }], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: '/banner.jpg' });
-      current = { ...original, numberOfItems: 2, listItems: [show, season] };
+      expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, list_name: 'Pilots', list_description: 'My favourites', list_items: [{ show_id: 1396, season_id: null, position: 0, description: '' }, { show_id: 1396, season_id: 3572, position: 1, episode_number: 1, description: 'Keep this note' }], list_collaborators: ['friend'], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: '/banner.jpg' });
+      current = { ...original, numberOfItems: 2, listItems: [show, episode] };
       return Response.json({});
     }
     return Response.json(current);
   };
   const item = (await Effect.runPromise(getSerializdList(d, '42'))).entries[0].item;
-  const result = await Effect.runPromise(setSerializdListMembership(d, { id: '42', username: 'gian', item, entryId: '1396/3572/1', present: false }));
-  expect(result.entries.map((entry) => entry.id)).toEqual(['1396//', '1396/3572/']);
+  const result = await Effect.runPromise(setSerializdListMembership(d, { id: '42', username: 'gian', item, entryId: '1396/3572/', present: false }));
+  expect(result.entries.map((entry) => entry.id)).toEqual(['1396//', '1396/3572/1']);
 });
 
 test('membership refuses other owners and uncertain membership before submitting', async () => {
@@ -167,7 +167,7 @@ test('rename keeps every editor setting and entry, and refuses a partial list', 
       if (init?.method !== 'POST') return Response.json(current);
       writes += 1;
       expect(String(url)).toBe('https://api.test/list/edit');
-      expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, list_name: 'Pilots, ranked', list_description: 'My favourites', list_items: [show, season], list_collaborators: [], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: null });
+      expect(JSON.parse(String(init.body))).toEqual({ list_id: 42, list_name: 'Pilots, ranked', list_description: 'My favourites', list_items: [{ show_id: 1396, season_id: null, position: 0, description: '' }, { show_id: 1396, season_id: 3572, position: 1, description: 'Keep this note' }], list_collaborators: [], is_private: true, is_ranked: false, allows_comments: true, banner_image_path: null });
       current = { ...current, listName: 'Pilots, ranked' };
       return Response.json({});
     };

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery, type InfiniteData } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
+import { enrichExternalIds } from '@/features/log-media/enrich';
 import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import { searchMedia } from '@/lib/providers/trakt/reads';
 import { createList, renameList, setListMembership, type LetterboxdListDraft, type LetterboxdListFilmsPage } from '@/lib/providers/letterboxd/lists';
@@ -26,15 +27,17 @@ export function useListMembership(target: ListEditTarget) {
     mutationKey: ['list-membership', target.provider, target.username, target.url],
     scope: { id: `list-membership/${target.provider}/${target.username}/${target.url}` },
     retry: false,
-    mutationFn: async (params: { item: NormalizedMediaItem; present: boolean; entryId?: string }) => {
+    mutationFn: async ({ item: listed, ...params }: { item: NormalizedMediaItem; present: boolean; entryId?: string }) => {
+      // An AniList entry carries no TMDB id until ani.zip maps one.
+      const item = await enrichExternalIds(client, listed, [target.provider]);
       switch (target.provider) {
         case Provider.Letterboxd: {
           if (getLetterboxdUsername()?.toLowerCase() !== target.username.toLowerCase()) throw new Error('Your Letterboxd account changed. Reopen the list.');
-          const receipt = await Effect.runPromise(setListMembership(letterboxdDeps(), { ...target, ...params }));
+          const receipt = await Effect.runPromise(setListMembership(letterboxdDeps(), { ...target, ...params, item }));
           return { provider: Provider.Letterboxd, receipt };
         }
         case Provider.Serializd:
-          return { provider: Provider.Serializd, list: await Effect.runPromise(setSerializdListMembership(serializdDeps(target.username), { ...target, ...params })) };
+          return { provider: Provider.Serializd, list: await Effect.runPromise(setSerializdListMembership(serializdDeps(target.username), { ...target, ...params, item })) };
       }
     },
     onSuccess: async (result, params) => {
@@ -119,12 +122,14 @@ export function useCreateList(username: string) {
     mutationKey: ['list-create', username],
     retry: false,
     mutationFn: async (list: NewList) => {
+      // AniList titles carry no TMDB id until ani.zip maps one.
+      const items = await Promise.all(list.draft.items.map((item) => enrichExternalIds(client, item, [list.provider])));
       switch (list.provider) {
         case Provider.Letterboxd:
           if (getLetterboxdUsername()?.toLowerCase() !== username.toLowerCase()) throw new Error('Your Letterboxd account changed. Reopen this screen.');
-          return { provider: Provider.Letterboxd, ...await Effect.runPromise(createList(letterboxdDeps(), list.draft)) };
+          return { provider: Provider.Letterboxd, ...await Effect.runPromise(createList(letterboxdDeps(), { ...list.draft, items })) };
         case Provider.Serializd: {
-          const created = await Effect.runPromise(createSerializdList(serializdDeps(username), { ...list.draft, username }));
+          const created = await Effect.runPromise(createSerializdList(serializdDeps(username), { ...list.draft, items, username }));
           client.setQueryData(serializdQueryKeys.list(username, created.id), created);
           return { provider: Provider.Serializd, id: created.id };
         }

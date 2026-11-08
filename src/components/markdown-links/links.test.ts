@@ -1,8 +1,9 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { expect, test } from 'bun:test';
+import { afterAll, expect, test } from 'bun:test';
 import { createElement } from 'react';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { render, waitFor } = await import('@testing-library/react');
 const { MarkdownLinks } = await import('./index.web');
 

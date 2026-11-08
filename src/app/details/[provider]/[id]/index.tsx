@@ -42,6 +42,7 @@ import {
   watchlistCtaIsPrimary,
 } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import { AddToListCapsule } from '@/features/lists/add-to-list-capsule';
 import {
   PeopleSection,
   PeopleSectionsSkeleton,
@@ -808,7 +809,9 @@ function DetailsScreen() {
             log button and gets the CTA beneath it. */}
         {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
         <LetterboxdCompletionButton item={shown} />
-        <WatchlistMediaButton item={shown} />
+        <AddToListCapsule item={shown}>
+          <WatchlistMediaButton item={shown} />
+        </AddToListCapsule>
 
         {display === 'hidden' ? null : display === 'countdown' ? (
           <View className="flex-row gap-4">

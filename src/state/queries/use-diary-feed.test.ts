@@ -1,11 +1,12 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { beforeEach, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, expect, mock, test } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedDiaryEntry, NormalizedMediaItem } from '@/types/media';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
 const { act, renderHook, waitFor } = await import('@testing-library/react');
 const store = new Map<string, string>();

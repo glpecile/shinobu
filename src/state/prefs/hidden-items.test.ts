@@ -1,7 +1,8 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { describe, expect, mock, test } from 'bun:test';
+import { afterAll, describe, expect, mock, test } from 'bun:test';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { act, renderHook } = await import('@testing-library/react');
 
 // Native MMKV cannot load under bun; preserve its key-change notifications.

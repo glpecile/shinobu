@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { useCatchUpControls, useQuickLogBusy } from '@/features/log-media/session/state';
@@ -110,10 +110,8 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
         : `Log ${seriesLabel}`;
   // The series analogue of `filmReleaseStatus` (plan 0035 R18). A show with
   // zero aired episodes shares Trakt's `next_episode: null` with a *finished*
-  // show, and used to be rendered as one: "🎉 You've watched every aired
-  // episode" over a "Log rewatch" button, for something nobody has seen. The
-  // 🎉 line and the rewatch copy below both gate on `rewatch`, which stays
-  // false here, so they disappear on their own.
+  // show; the rewatch copy below gates on `rewatch`, which stays false here,
+  // so an unaired show never offers a rewatch.
   const seriesUnaired = seriesNext?.unaired === true;
 
   const anilistStatus = anilistEntry.data?.entry?.status;
@@ -292,15 +290,6 @@ export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaI
           openLog(request);
         }}
       />
-      {/* The finished-show state earns a line of its own: the button below
-          reads "Log rewatch", and this is what makes that make sense. */}
-      {canLog &&
-        ((seriesNext?.rewatch === true && upcoming == null) || entryRepeat) &&
-        !busy && (
-          <Text className="text-muted font-sans text-sm mt-2 text-center">
-            {isManga ? '🎉 You’ve read every chapter.' : '🎉 You’ve watched every aired episode.'}
-          </Text>
-        )}
     </View>
   );
 }

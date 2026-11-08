@@ -1,10 +1,11 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { expect, mock, test } from 'bun:test';
+import { afterAll, expect, mock, test } from 'bun:test';
 import { createElement, type ReactNode } from 'react';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
 const { act, renderHook, waitFor } = await import('@testing-library/react');
 

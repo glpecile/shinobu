@@ -1,11 +1,12 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import { describe, expect, mock, test } from 'bun:test';
+import { afterAll, describe, expect, mock, test } from 'bun:test';
 import { createElement, Suspense, type ReactNode } from 'react';
 
 import { computeUpNext } from '@/features/up-next/compute';
 import type { AniListCurrentEntry } from '@/lib/providers/anilist/normalize';
 
 GlobalRegistrator.register();
+afterAll(() => GlobalRegistrator.unregister());
 const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
 const { act, renderHook, waitFor } = await import('@testing-library/react');
 

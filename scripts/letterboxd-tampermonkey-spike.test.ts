@@ -48,6 +48,7 @@ test('attaches on a localhost dev port only after the trust-localhost opt-in', a
   try {
     await run({ getValue: async () => false }, page);
     expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBeNull();
+    expect(dev.document.documentElement.hasAttribute('data-shinobu-letterboxd-untrusted')).toBe(true);
     await run({ getValue: async () => true }, page);
     expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBe('11');
   } finally {

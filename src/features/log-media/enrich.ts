@@ -79,7 +79,8 @@ export async function enrichExternalIds(
     externalIds.tvdb == null &&
     (connected.includes(Provider.Trakt) ||
       connected.includes(Provider.Serializd) ||
-      connected.includes(Provider.Simkl))
+      connected.includes(Provider.Simkl) ||
+      (item.isFilm === true && connected.includes(Provider.Letterboxd)))
   ) {
     const anizip = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,

@@ -8,9 +8,9 @@ import { TextField } from '@/components/text-field';
 import { Tooltip } from '@/components/tooltip';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { haptics } from '@/lib/haptics';
-import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
+import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
-import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -25,6 +25,7 @@ function RenameForm({ target, onDone }: { target: ListEditTarget; onDone: () => 
   const mutation = useRenameList(target);
   const hasSession = useHasLetterboxdWriteSession();
   const hasScript = useLetterboxdUserscript('list-rename');
+  const scriptUntrusted = useLetterboxdUserscriptUntrusted();
   const needsScript = process.env.EXPO_OS === 'web' && target.provider === Provider.Letterboxd && !hasScript;
   const writable = target.provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasScript : hasSession);
   const unchanged = name.trim() === '' || name.trim() === target.title;
@@ -46,10 +47,10 @@ function RenameForm({ target, onDone }: { target: ListEditTarget; onDone: () => 
       <View className="mt-5">
         <TextField accessibilityLabel="Name" autoCapitalize="sentences" autoCorrect autoFocus editable={!mutation.isPending} onChangeText={setName} onSubmitEditing={() => { if (writable && !unchanged) save(); }} returnKeyType="done" value={name} />
       </View>
-      {!writable && <WriteSheet.Description>{needsScript ? 'Install or update the Letterboxd script, then reload this tab to rename lists here.' : 'Reconnect Letterboxd with a signed-in session to rename lists here.'}</WriteSheet.Description>}
+      {!writable && <WriteSheet.Description>{needsScript ? letterboxdScriptHint(scriptUntrusted, 'rename lists here') : 'Reconnect Letterboxd with a signed-in session to rename lists here.'}</WriteSheet.Description>}
       {mutation.isError && <WriteSheet.Error>{mutation.error.message}</WriteSheet.Error>}
       <WriteSheet.Actions>
-        {needsScript && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
+        {needsScript && !scriptUntrusted && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
         {writable && <Button disabled={unchanged} icon={<Button.Icon name="checkmark" />} label={mutation.isError ? 'Try again' : 'Save name'} loading={mutation.isPending} loadingLabel="Saving…" onPress={save} />}
         {(!writable || mutation.isError) && <Button icon={<Button.Icon name="open-outline" />} label={`Open on ${PROVIDERS[target.provider].label}`} onPress={() => void openExternalUrl(target.url)} variant="quiet" />}
       </WriteSheet.Actions>

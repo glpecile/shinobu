@@ -4,6 +4,7 @@ import type { MediaType } from '@/types/media';
 import { PROVIDERS } from './registry';
 import type { ProviderId } from './types';
 import {
+  listProviderFor,
   providersForFeed,
   providersForWrite,
   resolveWriteTargets,
@@ -375,5 +376,16 @@ describe('resolveWriteTargets', () => {
         platform: 'ios',
       }),
     ).toEqual([]);
+  });
+});
+
+describe('listProviderFor', () => {
+  it('sends films to Letterboxd and shows to Serializd, only when connected', () => {
+    expect(listProviderFor({ type: 'MOVIE' }, ALL4)).toBe('letterboxd');
+    expect(listProviderFor({ type: 'ANIME', isFilm: true }, ALL4)).toBe('letterboxd');
+    expect(listProviderFor({ type: 'ANIME' }, ALL4)).toBe('serializd');
+    expect(listProviderFor({ type: 'TV' }, ALL4)).toBe('serializd');
+    expect(listProviderFor({ type: 'TV' }, ALL)).toBeNull();
+    expect(listProviderFor({ type: 'MANGA' }, ALL4)).toBeNull();
   });
 });

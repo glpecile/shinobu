@@ -64,6 +64,10 @@ The app's public-read proxy is not used to resolve the film LID for this write.
 - On `localhost` dev ports the script stays inert unless
   `shinobu-trust-localhost` is `true` in Tampermonkey's storage for the
   script. Set it only on a machine where those ports serve Shinobu.
+  Tampermonkey's Reinstall resets that storage, so the opt-in must be set
+  again after every reinstall. From 0.10.1 an untrusted script marks the page
+  with `data-shinobu-letterboxd-untrusted`, and the app asks for the opt-in
+  instead of offering a reinstall.
 - Film logs and watchlist additions and removals are enabled with version 0.5.0.
 - The script refuses an account or film mismatch. Requests expire and are
   consumed before sending; there is no automatic retry.

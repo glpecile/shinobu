@@ -17,12 +17,12 @@ import { SmallPoster } from '@/components/small-poster';
 import { TextField } from '@/components/text-field';
 import { TagPicker } from '@/features/log-media/tag-picker';
 import { haptics } from '@/lib/haptics';
-import { installLetterboxdScript } from '@/lib/install-letterboxd-script';
+import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
 import type { LetterboxdListSharing } from '@/lib/providers/letterboxd/deps';
 import { letterboxdListUrl } from '@/lib/providers/letterboxd/lists';
-import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -103,15 +103,16 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
  * show (anything but Public) ends on a confirmation instead of a page Shinobu
  * can't read.
  */
-export function NewListForm({ providers, initialProvider }: {
+export function NewListForm({ providers, initialProvider, initialItems }: {
   /** Connected list providers and their accounts, at least one. */
   providers: readonly { provider: ListProvider; username: string }[];
   initialProvider: ListProvider;
+  initialItems: NormalizedMediaItem[];
 }) {
   const router = useRouter();
   const { control, handleSubmit, getValues, setValue, formState: { errors, isSubmitted } } = useForm<NewListFormValues, unknown, NewList>({
     // Every pick stays across a provider switch; each provider takes what fits it.
-    defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: [] },
+    defaultValues: { provider: initialProvider, name: '', description: '', tags: 'shinobu, ', sharing: 'Public', isPrivate: false, ranked: false, allowsComments: false, items: initialItems },
     resolver: zodResolver(newListSchema),
   });
   const [provider, sharing, isPrivate, ranked, name, picked] = useWatch({ control, name: ['provider', 'sharing', 'isPrivate', 'ranked', 'name', 'items'] });
@@ -124,6 +125,7 @@ export function NewListForm({ providers, initialProvider }: {
   const label = PROVIDERS[provider].label;
   const noun = provider === Provider.Letterboxd ? 'film' : 'show';
   const items = picked.filter((item) => fitsProvider(provider, item));
+  const scriptUntrusted = useLetterboxdUserscriptUntrusted();
   const needsScript = process.env.EXPO_OS === 'web' && provider === Provider.Letterboxd && !hasLetterboxdScript;
   const writable = provider === Provider.Serializd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
@@ -228,7 +230,7 @@ export function NewListForm({ providers, initialProvider }: {
             <Button disabled={busy} icon={<Button.Icon name="add" />} label={`Add ${noun}s`} onPress={() => setSearching(true)} size="sm" variant="quiet" />
           </View>
           {items.length === 0 ? (
-            <Text className="text-muted font-sans text-sm">{provider === Provider.Letterboxd ? 'Optional. Add films now or from the list later.' : 'Add the first show to start the list.'}</Text>
+            <Text className="text-muted font-sans text-sm">{provider === Provider.Serializd ? 'Add the first show to start the list.' : sharing === 'Public' ? 'Add the first film to start the list.' : 'Optional. Add films now or from the list later.'}</Text>
           ) : (
             <View style={{ height: Math.min(items.length, 5) * 70 }}>
               <List
@@ -255,9 +257,9 @@ export function NewListForm({ providers, initialProvider }: {
           {errors.items?.message != null && <FieldError>{errors.items.message}</FieldError>}
         </View>
         <View className="gap-3">
-          {!writable && <Text className="text-muted font-sans text-sm">{needsScript ? 'Install or update the Letterboxd script, then reload this tab to create lists here.' : 'Reconnect Letterboxd with a signed-in session to create lists here.'}</Text>}
+          {!writable && <Text className="text-muted font-sans text-sm">{needsScript ? letterboxdScriptHint(scriptUntrusted, 'create lists here') : 'Reconnect Letterboxd with a signed-in session to create lists here.'}</Text>}
           {mutation.isError && <SectionEnter><Text className="text-accent font-sans text-sm" role="alert">{mutation.error.message}</Text></SectionEnter>}
-          {needsScript && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
+          {needsScript && !scriptUntrusted && <Button icon={<Button.Icon name="open-outline" />} label="Install Letterboxd script" onPress={installLetterboxdScript} />}
           {writable && <Button
             icon={<Button.Icon name="add" />}
             label={mutation.isError ? 'Try again' : 'Create list'}
@@ -285,7 +287,12 @@ export function NewListForm({ providers, initialProvider }: {
 }
 
 /** The editor's frame: header and document title over the form, or a way to connect. */
-export function NewListScreen({ providers, initialProvider }: { providers: readonly { provider: ListProvider; username: string }[]; initialProvider: ListProvider | null }) {
+export function NewListScreen({ providers, initialProvider, initialItems = [] }: {
+  providers: readonly { provider: ListProvider; username: string }[];
+  initialProvider: ListProvider | null;
+  /** The title the editor was opened for, such as from a details screen's Add to list. */
+  initialItems?: NormalizedMediaItem[];
+}) {
   const pushRoute = usePushRoute();
   const first = providers[0];
   return (
@@ -302,7 +309,7 @@ export function NewListScreen({ providers, initialProvider }: { providers: reado
         </CenteredNotice>
         </>
       ) : (
-        <NewListForm initialProvider={providers.some((entry) => entry.provider === initialProvider) ? initialProvider! : first.provider} providers={providers} />
+        <NewListForm initialItems={initialItems} initialProvider={providers.some((entry) => entry.provider === initialProvider) ? initialProvider! : first.provider} providers={providers} />
       )}
     </View>
   );

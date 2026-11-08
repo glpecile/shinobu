@@ -42,8 +42,8 @@ while `lib/providers/simkl/reads.test.ts` exists.
   test` / `bun test` (via the script) is green. **Bare `bun test` invoked
   directly (bypassing the npm script) does not pick this up** — bun has no
   `bunfig.toml` key or env var for it in this version (both tried and
-  confirmed inert). Anyone running the raw CLI needs `bun test --isolate`
-  explicitly; CI and `bun run test` are already covered.
+  confirmed inert). Since bun 1.4.3 a bare multi-file `bun test` stops at the
+  guard below instead of reporting leaked failures.
 - **Prefer HTTP-boundary fakes over `mock.module`-replacing a shared read
   module** wherever a dedicated `reads.test.ts` already exists for that
   provider (see `state/queries/mapping.test.ts` and
@@ -61,6 +61,33 @@ while `lib/providers/simkl/reads.test.ts` exists.
   is a genuine new transitive dependency per file, not a cross-file leak,
   and `--isolate` does not exempt a file from needing a mock its own import
   graph now requires.
+
+## Bun 1.4.3: isolation is the only fix, and bare runs are guarded
+
+Rechecked on 2026-11-07 with bun 1.4.3. Pairing every failing file with
+every mocking file showed about 40 culprits, and most leaks are module
+*state*, not mocks: a module such as `@/state/session/tokens` loads once per
+process and keeps the MMKV store from the first file's stub, so later files
+share stores, caches and singletons even when nothing is mocked. Rewriting
+mocks cannot fix that.
+
+- `mock.restore()` does not undo `mock.module`, from the file or from a
+  preload. Deleting `require.cache` does not either.
+- Re-registering a fresh real copy (`import('<path>?restore')`) in
+  `afterAll` loads the module under the mocking file's stubs, fails where
+  that file stubs less (real `react-native` doesn't parse under bun), and
+  doubles the failures because the fresh copy has its own state.
+- `bunfig.toml` has no key for isolation: `[test] isolate` and
+  `[test] parallel` are both ignored. Only the `--isolate` (or `--parallel`)
+  flag isolates.
+
+`bunfig.toml` preloads `scripts/test-isolation-guard.ts`. `Bun.main` changes
+per file, and `--isolate` loads the preload again for each file, so the guard
+sees a second file only in a shared process. It then stops the run with one
+message to use `bun run test`. A single file still runs bare.
+
+Happy DOM suites unregister their globals in `afterAll`: a stray `window`
+turned later SSR-shaped tests ("web server rendering…") into browser ones.
 
 ## Rule of thumb
 

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { LetterboxdListCreateFetch, LetterboxdListCreateRequest, LetterboxdListRenameFetch, LetterboxdListRenameRequest, LetterboxdListMembershipFetch, LetterboxdListLikeWebFetch, LetterboxdListMembershipRequest, LetterboxdListLikeWebRequest, LetterboxdWatchlistWebFetch, LetterboxdWatchlistWebRequest, LetterboxdWebFetch, LetterboxdWebRequest, LetterboxdWebResponse } from '@/lib/providers/letterboxd/deps';
 
 const READY_ATTRIBUTE = 'data-shinobu-letterboxd-bridge';
+const UNTRUSTED_ATTRIBUTE = 'data-shinobu-letterboxd-untrusted';
 
 export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename' = 'log'): boolean {
   const version = typeof document !== 'undefined' ? document.documentElement.getAttribute(READY_ATTRIBUTE) : null;
@@ -19,7 +20,7 @@ export function hasLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watch
 
 function subscribe(listener: () => void) {
   const observer = new MutationObserver(listener);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: [READY_ATTRIBUTE] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: [READY_ATTRIBUTE, UNTRUSTED_ATTRIBUTE] });
   return () => observer.disconnect();
 }
 
@@ -27,6 +28,11 @@ function serverSnapshot() { return false; }
 
 export function useLetterboxdUserscript(capability: 'log' | 'watchlist' | 'watchlist-remove' | 'like' | 'list-like' | 'list-membership' | 'list-create' | 'list-rename' = 'log'): boolean {
   return useSyncExternalStore(subscribe, () => hasLetterboxdUserscript(capability), serverSnapshot);
+}
+
+/** The script is installed, but this dev server lacks its `shinobu-trust-localhost` opt-in. */
+export function useLetterboxdUserscriptUntrusted(): boolean {
+  return useSyncExternalStore(subscribe, () => document.documentElement.hasAttribute(UNTRUSTED_ATTRIBUTE), serverSnapshot);
 }
 
 /** The userscript owns the cross-tab handoff. Cookies never enter Shinobu. */
