@@ -4,25 +4,19 @@ import { View } from 'react-native';
 import { PresstableOpacity } from '@/components/presstable';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
-import type { WatchlistView } from '@/state/prefs/watchlist-view';
+import type { ViewToggleProps } from './props';
 
-/**
- * Grid ⇄ list for web, on `SegmentedControl`'s `md` frame (a `p-0.5` pill,
- * 44pt touch targets. Native
- * platforms use their own controls.
- */
-export function ViewToggle({
-  view,
-  onChange,
-}: {
-  view: WatchlistView;
-  onChange: (view: WatchlistView) => void;
-}) {
+/** Compact and regular visual frames retain 44pt targets on both segments. */
+export function ViewToggle({ view, onChange, size }: ViewToggleProps) {
   const selected = useThemeColor('--color-accent-on-tonal');
   const muted = useThemeColor('--color-muted');
 
   return (
-    <View className="flex-row rounded-full border border-border p-0.5">
+    <View className="h-11 flex-row items-center px-0.5">
+      <View
+        className={cn('absolute inset-x-0 rounded-full border border-border', size === 'sm' ? 'top-0.75 h-9.5' : 'inset-y-0')}
+        style={{ pointerEvents: 'none' }}
+      />
       {(
         [
           { id: 'grid', icon: 'grid', label: 'Poster grid' },
@@ -33,11 +27,13 @@ export function ViewToggle({
           accessibilityLabel={label}
           accessibilityRole="button"
           accessibilityState={{ selected: view === id }}
-          className={cn('w-11 h-11 items-center justify-center rounded-full', view === id && 'bg-accent-tonal')}
+          className="w-11 h-11 items-center justify-center rounded-full"
           key={id}
           onPress={() => onChange(id)}
         >
-          <Ionicons color={view === id ? selected : muted} name={icon} size={16} />
+          <View className={cn('w-10 items-center justify-center rounded-full', size === 'sm' ? 'h-8' : 'h-9.5', view === id && 'bg-accent-tonal')}>
+            <Ionicons color={view === id ? selected : muted} name={icon} size={size === 'sm' ? 14 : 18} />
+          </View>
         </PresstableOpacity>
       ))}
     </View>

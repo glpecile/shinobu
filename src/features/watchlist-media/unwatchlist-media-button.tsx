@@ -4,6 +4,7 @@ import { Button } from '@/components/button';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import type { ProviderId } from '@/lib/providers/types';
@@ -44,8 +45,10 @@ export function UnwatchlistMediaButton({
   errors = [],
   incomplete = [],
   onOpenPicker,
+  className,
 }: {
   entry: WatchlistEntry;
+  className?: string;
   /** The gather's failed legs (R29) — R35 reads them to tell unknown from absent. */
   errors?: readonly ProviderFailure[];
   /**
@@ -103,7 +106,7 @@ export function UnwatchlistMediaButton({
   }
 
   return (
-    <View className="mb-6">
+    <View className={cn('mb-6', className)}>
       {/* morphLabel: "Remove from watchlist" → "Removed" changes in place from
           user state. `quiet` for the same reason the add uses it — the other
           thing you can do here, not a second accent-weight decision. */}

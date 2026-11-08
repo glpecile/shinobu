@@ -11,6 +11,7 @@ import { ShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { alternateTitles, CopyTitleOptions } from '@/features/copy-title/copy-title';
+import { AddToListCapsule, AddToListPicker } from '@/features/lists/add-to-list-capsule';
 import { ListMembershipForm } from '@/features/lists/list-membership-form';
 import type { ListEditTarget } from '@/state/queries/list-membership';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
@@ -190,7 +191,7 @@ export function CardActionsSheet({
   // Remembers which opening chose the mode, so reopening or a new item falls
   // back to the rows.
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove';
+    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove' | 'list-add';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
@@ -250,6 +251,9 @@ export function CardActionsSheet({
 
   return (
     <Sheet onClose={onClose} open={open && item != null}>
+      {item != null && mode === 'list-add' && (
+        <AddToListPicker item={item} onBack={() => setMode('actions')} onClose={onClose} />
+      )}
       {item != null && mode === 'list-remove' && listRemoval != null && (
         <ListMembershipForm entryId={listRemoval.entryId} item={sourceItem ?? item} key={`list-remove-${listRemoval.entryId ?? item.id}`} onBack={() => setMode('actions')} onDone={onClose} present={false} subtitle={listRemoval.subtitle} target={listRemoval.target} />
       )}
@@ -372,29 +376,35 @@ export function CardActionsSheet({
                 0032 U3). The picker stays mounted through the write — a toast
                 can't carry a link, so a Trakt 420, an expired session or a
                 manual row lands there; only a clean report closes the sheet. */}
-            {watchlistVerb === 'add' && (
-              <WatchlistMediaButton
-                item={item}
-                key={`watchlist-${item.id}`}
-                onOpenPicker={() => setMode('watchlist-add')}
-              />
-            )}
-            {/* The removal, wherever the gather can evidence who holds the item
-                (R35 — see the prop's docblock). Its picker stays mounted
-                through the write for the same reason the add's does — and one
-                more: the row it removes leaves the grid when the invalidation
-                lands, so the picker is the only place its partial-failure
-                report, its AniList refusal or its unknown-membership rows can
-                still be read. */}
-            {watchlistVerb === 'remove' && removal != null && (
-              <UnwatchlistMediaButton
-                entry={removal.entry}
-                errors={removal.errors}
-                incomplete={removal.incomplete}
-                key={`unwatchlist-${item.id}`}
-                onOpenPicker={() => setMode('watchlist-remove')}
-              />
-            )}
+            <View className="mb-3">
+              <AddToListCapsule item={item} onOpenPicker={() => setMode('list-add')}>
+                {watchlistVerb === 'add' && (
+                  <WatchlistMediaButton
+                    className="mb-0"
+                    item={item}
+                    key={`watchlist-${item.id}`}
+                    onOpenPicker={() => setMode('watchlist-add')}
+                  />
+                )}
+                {/* The removal, wherever the gather can evidence who holds the item
+                    (R35 — see the prop's docblock). Its picker stays mounted
+                    through the write for the same reason the add's does — and one
+                    more: the row it removes leaves the grid when the invalidation
+                    lands, so the picker is the only place its partial-failure
+                    report, its AniList refusal or its unknown-membership rows can
+                    still be read. */}
+                {watchlistVerb === 'remove' && removal != null && (
+                  <UnwatchlistMediaButton
+                    className="mb-0"
+                    entry={removal.entry}
+                    errors={removal.errors}
+                    incomplete={removal.incomplete}
+                    key={`unwatchlist-${item.id}`}
+                    onOpenPicker={() => setMode('watchlist-remove')}
+                  />
+                )}
+              </AddToListCapsule>
+            </View>
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.

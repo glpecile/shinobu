@@ -110,7 +110,7 @@ export default function UpNextDemo() {
             <View className="flex-row items-center mx-4">
               <Button icon={<Button.Icon name="open-outline" />} iconOnly label="External link preview" onPress={() => setNotice('External link pressed')} variant="ghost" />
               <LikeButton label="Like preview" liked={liked} onChange={setLiked} loading={state === 'loading'} size="sm" />
-              <View className="ml-2"><ViewToggle onChange={setView} view={view} /></View>
+              <View className="ml-2"><ViewToggle size="sm" onChange={setView} view={view} /></View>
             </View>
             <Text accessibilityLiveRegion="polite" className="text-muted font-sans text-sm mx-4">{notice}</Text>
           </View>

@@ -162,17 +162,33 @@ function ListPicker({ provider, username, onSelect, onCreate, onClose }: PickerP
   </WriteSheet.Step>;
 }
 
+/** Shared picker content for a detail sheet or the card-actions sheet. */
+export function AddToListPicker({ item, onClose, onBack = onClose }: { item: NormalizedMediaItem; onClose: () => void; onBack?: () => void }) {
+  const pushRoute = usePushRoute();
+  const provider = listProviderFor(item, useConnectedProviders());
+  const [target, setTarget] = useState<ListEditTarget | null>(null);
+  const username = provider == null ? null : listUsername(provider);
+  if (provider == null || username == null) return null;
+  return target == null
+    ? <ListPicker
+        onClose={onBack}
+        onCreate={() => { onClose(); pushRoute(routes.newList(provider, item)); }}
+        onSelect={(list) => setTarget(editTarget(list, username))}
+        provider={provider}
+        username={username}
+      />
+    : <ListMembershipForm item={item} onBack={() => setTarget(null)} onDone={onClose} present target={target} />;
+}
+
 /**
  * A title's main action with "Add to list" capsuled beside it, as `ShareButton.Capsule` lays out Share.
  * Renders only `children` when no connected provider keeps lists for the item.
  */
-export function AddToListCapsule({ item, children }: { item: NormalizedMediaItem; children: ReactNode }) {
-  const pushRoute = usePushRoute();
+export function AddToListCapsule({ item, children, onOpenPicker }: { item: NormalizedMediaItem; children: ReactNode; onOpenPicker?: () => void }) {
   const provider = listProviderFor(item, useConnectedProviders());
   const [open, setOpen] = useState(false);
   // Remounts the picker per open, so it starts on the lists, not the last confirmation.
   const [session, setSession] = useState(0);
-  const [target, setTarget] = useState<ListEditTarget | null>(null);
   const username = provider == null ? null : listUsername(provider);
   if (provider == null || username == null) return children;
   return <>
@@ -185,23 +201,19 @@ export function AddToListCapsule({ item, children }: { item: NormalizedMediaItem
             icon={<Button.Icon name="add" />}
             iconOnly
             label="Add to list"
-            onPress={() => { haptics.selection(); setTarget(null); setSession(session + 1); setOpen(true); }}
+            onPress={() => {
+              haptics.selection();
+              if (onOpenPicker != null) { onOpenPicker(); return; }
+              setSession(session + 1);
+              setOpen(true);
+            }}
             variant="ghost"
           />
         </Tooltip>
       </Button.Capsule>
     </View>
-    <Sheet onClose={() => setOpen(false)} open={open}>
-      {session > 0 && (target == null
-        ? <ListPicker
-            key={`pick-${session}`}
-            onClose={() => setOpen(false)}
-            onCreate={() => { setOpen(false); pushRoute(routes.newList(provider, item)); }}
-            onSelect={(list) => setTarget(editTarget(list, username))}
-            provider={provider}
-            username={username}
-          />
-        : <ListMembershipForm item={item} key="confirm" onBack={() => setTarget(null)} onDone={() => setOpen(false)} present target={target} />)}
-    </Sheet>
+    {onOpenPicker == null && <Sheet onClose={() => setOpen(false)} open={open}>
+      {session > 0 && <AddToListPicker item={item} key={session} onClose={() => setOpen(false)} />}
+    </Sheet>}
   </>;
 }
