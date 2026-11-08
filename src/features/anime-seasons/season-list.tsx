@@ -50,11 +50,11 @@ const HEAD_HEIGHT = 64;
 
 /** What the user's libraries say about a title beyond its progress. */
 function libraryStatus(item: NormalizedMediaItem, libraries: ProgressLibraries): LibraryStatus {
-  const anilist = libraries.connected.includes(Provider.AniList) && libraries.anilist.data != null
-    ? findAniListProgress(item, libraries.anilist.data)?.status
+  const anilist = libraries.connected.includes(Provider.AniList) && libraries.indexes.anilist != null
+    ? findAniListProgress(item, libraries.indexes.anilist)?.status
     : undefined;
-  const simkl = libraries.connected.includes(Provider.Simkl) && libraries.simkl.data != null
-    ? findLibraryEntry(libraries.simkl.data, item)?.status
+  const simkl = libraries.connected.includes(Provider.Simkl) && libraries.indexes.simkl != null
+    ? findLibraryEntry(libraries.indexes.simkl, item)?.status
     : undefined;
   if (anilist === 'CURRENT' || anilist === 'REPEATING' || simkl === 'watching') return 'watching';
   if (anilist === 'PLANNING' || simkl === 'plantowatch') return 'planned';
@@ -138,9 +138,9 @@ export function SeasonList({
 
   // Only the libraries that can shelve a title; Trakt's watched films never
   // match an AniList film, so waiting on them would only delay the wall.
-  const settling = [libraries.anilist, libraries.simkl].some((query) => query.isEnabled && query.isPending);
+  const settling = [libraries.queries.anilist, libraries.queries.simkl].some((query) => query.isEnabled && query.isPending);
   if (settling) return <SeasonSkeleton animated={animated} />;
-  const failedLibraries = [libraries.anilist, libraries.simkl].filter((query) => query.isEnabled && query.isError);
+  const failedLibraries = [libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled && query.isError);
 
   const progressById = new Map(progress.items.map((item, index) => [item.id, progress.progress[index]]));
   const rows = seasonRows(
@@ -195,7 +195,7 @@ export function SeasonList({
             <Button icon={<Button.Icon name="refresh" />} label="Couldn’t load your library" onPress={() => { void Promise.all(failedLibraries.map((query) => query.refetch())); }} size="sm" variant="quiet" />
           </View>
         ) : undefined}
-        refreshControl={<RefreshControl onRefresh={() => Promise.all([onRefresh(), ...[libraries.anilist, libraries.simkl].filter((query) => query.isEnabled).map((query) => query.refetch())])} />}
+        refreshControl={<RefreshControl onRefresh={() => Promise.all([onRefresh(), ...[libraries.queries.anilist, libraries.queries.simkl].filter((query) => query.isEnabled).map((query) => query.refetch())])} />}
         renderItem={({ item: row }) => {
           switch (row.kind) {
             case 'head':
@@ -215,7 +215,7 @@ export function SeasonList({
                   {row.items.map((item) => (
                     <View className="flex-1 min-w-0" key={item.id}>
                       <PosterCell
-                        entry={{ id: item.id, item, sources: [], sourceIds: [item.id] }}
+                        item={item}
                         note={airingNote(nextAiring[item.id], now)}
                         onActions={onItemActions}
                         onPress={onItemPress}
@@ -231,7 +231,7 @@ export function SeasonList({
             case 'entry':
               return (
                 <WatchlistRow
-                  entry={{ id: row.item.id, item: row.item, sources: [], sourceIds: [row.item.id] }}
+                  item={row.item}
                   note={airingNote(nextAiring[row.item.id], now)}
                   onActions={onItemActions}
                   onPress={onItemPress}

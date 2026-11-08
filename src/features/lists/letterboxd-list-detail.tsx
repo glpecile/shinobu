@@ -14,13 +14,14 @@ import { MediaSortControl, SortingLoadedNotice } from '@/features/media-layout/m
 import { MediaToolbar, MediaToolbarSkeleton } from '@/features/media-layout/media-toolbar';
 import { DURATION } from '@/lib/motion';
 import { sortMediaEntries } from '@/lib/media-sort';
-import { Provider } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useMediaSort } from '@/state/prefs/media-sort';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useSuspenseLetterboxdListFilmsQuery } from '@/state/queries/letterboxd';
 import { useMediaProgress } from '@/state/queries/media-progress';
+import type { NormalizedMediaItem } from '@/types/media';
 import { ListsHeader, ProviderListLink, ToolbarIcon } from './list-header';
 import { AddToList } from './list-membership-form';
 import { RenameList } from './rename-list';
@@ -29,6 +30,8 @@ import { ListProgress } from './list-progress';
 import { ListsLoadError } from './lists-page';
 
 const membershipLayout = LinearTransition.duration(DURATION.swap);
+/** Shared, so a film's cell keeps the same props until its own data changes. */
+const NO_SOURCES: ProviderId[] = [];
 
 export function LetterboxdListFilms({ username, owner, slug, url }: { username: string | null; owner: string; slug: string; url: string }) {
   const pages = useSuspenseLetterboxdListFilmsQuery(owner, slug);
@@ -46,6 +49,11 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
   const progressById = new Map(items.map((item, index) => [item.id, progress.progress[index]]));
   const shareHref = routes.letterboxdList(owner, slug);
   if (pages.data == null) return <ListsLoadError onRetry={() => pages.refetch()} provider={Provider.Letterboxd} shareHref={shareHref} url={url} />;
+  // Outside the JSX below, which depends on `pages` (a new tracked result every
+  // render): here React Compiler keeps them stable, so cells skip re-rendering.
+  const entries = sortMediaEntries(items.map((item) => ({ id: item.id, item, sources: NO_SOURCES, sourceIds: [item.id] })), sort);
+  const watched = (item: NormalizedMediaItem) => progressById.get(item.id);
+  const onItemPress = (item: NormalizedMediaItem) => pushRoute(routes.details(item.id, item.type));
   const title = pages.data.pages[0].title;
   const target = username != null && username.toLowerCase() === owner.toLowerCase()
     ? { provider: Provider.Letterboxd, username, owner, slug, title, url } : null;
@@ -74,12 +82,12 @@ export function LetterboxdListFilms({ username, owner, slug, url }: { username: 
         <Layout
           showActions={target != null}
           itemLayoutAnimation={Platform.OS === 'web' || reducedMotion ? undefined : membershipLayout}
-          watched={(item) => progressById.get(item.id)}
-          entries={sortMediaEntries(items.map((item) => ({ id: item.id, item, sources: [], sourceIds: [item.id] })), sort)}
+          watched={watched}
+          entries={entries}
           footer={<LoadMoreFooter failed={pages.isFetchNextPageError} loading={pages.isFetchingNextPage} noun="films" onRetry={() => void pages.fetchNextPage()} />}
           onEndReached={pages.hasNextPage && !pages.isFetchingNextPage && !pages.isFetchNextPageError ? () => void pages.fetchNextPage() : undefined}
           onItemActions={openActions}
-          onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
+          onItemPress={onItemPress}
           onRefresh={pages.refetch}
         />
       )}
