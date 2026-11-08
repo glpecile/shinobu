@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { findAniListProgress, mergeMediaProgress, sameProgressItem, type MediaProgress } from './media-progress';
+import { findAniListProgress, findProgressRow, indexLibrary, mergeMediaProgress, sameProgressItem, type MediaProgress } from './media-progress';
 import type { NormalizedMediaItem } from '@/types/media';
 
 const film: NormalizedMediaItem = { id: 'letterboxd-vampire-hunter-d', title: 'Vampire Hunter D', year: 1985, coverImage: '', type: 'MOVIE', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { letterboxd: 'vampire-hunter-d' } };
@@ -26,6 +26,15 @@ test('movie/TV ID collisions and sibling anime cours never share progress', () =
   const tv = { ...film, type: 'TV' as const, externalIds: { tmdb: 9463 } };
   expect(sameProgressItem({ ...film, externalIds: { tmdb: 9463 } }, tv)).toBe(false);
   expect(sameProgressItem({ ...anime, isFilm: false, externalIds: { anilist: 1, tmdb: 42 } }, { ...anime, isFilm: false, externalIds: { anilist: 2, tmdb: 42 } })).toBe(false);
+});
+
+test('an indexed lookup returns the earliest matching row, as a scan would', () => {
+  const byTrakt = { ...film, id: 'trakt-row', externalIds: { trakt: 2 } };
+  const byTmdb = { ...film, id: 'tmdb-row', externalIds: { tmdb: 1 } };
+  const tv = { ...film, id: 'tv-row', type: 'TV' as const, externalIds: { trakt: 2 } };
+  const index = indexLibrary([tv, byTmdb, byTrakt], (row) => row);
+  expect(findProgressRow(index, { ...film, externalIds: { tmdb: 1, trakt: 2 } })?.id).toBe('tmdb-row');
+  expect(findProgressRow(indexLibrary([byTrakt, byTmdb], (row) => row), { ...film, externalIds: { tmdb: 1, trakt: 2 } })?.id).toBe('trakt-row');
 });
 
 test('provider progress takes the furthest count, not the sum, and a begun series is incomplete', () => {

@@ -110,26 +110,3 @@ export const getFilmItem = Effect.fnUntraced(function* (
   const shows = matches(yield* searchTitles(deps.tmdb, { query: item.title }).pipe(Effect.catch(() => Effect.succeed([]))), 'TV');
   return shows.length === 1 ? { ...item, tmdbTvVariant: shows[0].externalIds.tmdb } : item;
 });
-
-const FilmPoster = Schema.fromJsonString(Schema.Struct({
-  '@type': Schema.Literal('Movie'),
-  image: Schema.String.check(Schema.isPattern(/^https:\/\/a\.ltrbxd\.com\/resized\/[^\s]+$/)),
-}));
-
-/** Exact portrait art; og:image is a landscape social preview, not a poster. */
-export const getFilmPoster = Effect.fnUntraced(function* (
-  deps: { fetch: HttpFetch },
-  slug: string,
-): Effect.fn.Return<string | null, ProviderError> {
-  const html = yield* getFilmHtml(deps, slug);
-  if (html == null) return null;
-  for (const script of html.matchAll(/<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
-    // Letterboxd wraps its JSON-LD in JavaScript CDATA comments.
-    const json = script[1].trim().replace(/^\/\*\s*<!\[CDATA\[\s*\*\//, '').replace(/\/\*\s*\]\]>\s*\*\/$/, '');
-    const film = yield* Schema.decodeUnknownEffect(FilmPoster)(json).pipe(
-      Effect.catch(() => Effect.succeed(null)),
-    );
-    if (film != null) return film.image;
-  }
-  return null;
-});

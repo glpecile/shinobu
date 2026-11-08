@@ -16,9 +16,10 @@ mock.module('./anilist', () => ({ useAniListLibraryQuery: disabled }));
 mock.module('./trakt', () => ({ useWatchedMoviesQuery: disabled, useWatchedShowsQuery: disabled }));
 mock.module('./serializd', () => ({ useSerializdWatchedShowsQuery: disabled }));
 mock.module('./letterboxd', () => ({ letterboxdFilmWatchQuery: () => ({ queryKey: ['unused-watch'], enabled: false }) }));
-mock.module('./media-metadata', () => ({ useMediaMetadata: (items: unknown[]) => ({ items, queries: [] }) }));
+mock.module('./media-metadata', () => ({ useMediaMetadata: (items: unknown[]) => ({ items, loading: false, failed: false, refetches: [] }) }));
 mock.module('./simkl', () => ({
   simklLibraryQuery: () => ({ queryKey: ['progress-library'], queryFn: () => readLibrary() }),
+  indexSimklLibrary: () => ({}),
   findLibraryEntry: () => null,
   findLibraryProgress: () => null,
 }));

@@ -7,7 +7,6 @@ import { RefreshControl } from '@/components/refresh-control';
 import { SmallPoster } from '@/components/small-poster';
 import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
-import type { WatchlistEntry } from '@/features/watchlist/types';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { usePreloadRoute } from '@/lib/navigation';
@@ -54,6 +53,9 @@ function RowPoster({ item }: { item: NormalizedMediaItem }) {
   return <SmallPoster uri={coverImage} recyclingKey={item.id} size="md" />;
 }
 
+/** Shared, so a row without provenance keeps the same props across renders. */
+const NO_SOURCES: readonly ProviderId[] = [];
+
 /** The provider marks holding this row, with a wrapping a11y label — like the
  *  diary's, no adjacent text names them. */
 function ProviderCluster({ providers }: { providers: readonly ProviderId[] }) {
@@ -70,14 +72,17 @@ function ProviderCluster({ providers }: { providers: readonly ProviderId[] }) {
 }
 
 export function WatchlistRow({
-  entry,
+  item,
+  sources = NO_SOURCES,
   onPress,
   onActions,
   watched,
   showActions,
   note,
 }: {
-  entry: WatchlistEntry;
+  item: NormalizedMediaItem;
+  /** The providers holding it; a catalogue list (the seasons explorer) has none. */
+  sources?: readonly ProviderId[];
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   watched?: MediaProgress;
@@ -89,32 +94,32 @@ export function WatchlistRow({
   return (
     <ActionableRow
       className="px-6 py-2.5"
-      href={routes.details(entry.item.id, entry.item.type)}
-      item={entry.item}
+      href={routes.details(item.id, item.type)}
+      item={item}
       leading={
         <>
-          <RowPoster item={entry.item} />
+          <RowPoster item={item} />
           <View className="shrink ml-4">
             <Text
               className="text-foreground font-sans-semibold text-base"
               numberOfLines={1}
             >
-              {entry.item.title}
+              {item.title}
             </Text>
             <Text className="text-muted font-sans text-xs mt-1">
-              {note ?? watchlistRowDetail(entry.item)}
+              {note ?? watchlistRowDetail(item)}
             </Text>
           </View>
         </>
       }
       onActions={onActions}
       showActions={showActions}
-      onPress={() => onPress(entry.item)}
-      onPressIn={() => preloadRoute(routes.details(entry.item.id, entry.item.type))}
+      onPress={() => onPress(item)}
+      onPressIn={() => preloadRoute(routes.details(item.id, item.type))}
       trailing={
         <View className="flex-row items-center gap-2">
-          {watched != null && <WatchedMark item={entry.item} showProgress state={watched} />}
-          <ProviderCluster providers={entry.sources} />
+          {watched != null && <WatchedMark item={item} showProgress state={watched} />}
+          <ProviderCluster providers={sources} />
         </View>
       }
     />
@@ -158,7 +163,7 @@ export function WatchlistRows({
       }
       // No `entering` on rows — see poster-wall.tsx.
       renderItem={({ item: entry }) => (
-        <WatchlistRow entry={entry} onActions={onItemActions} onPress={onItemPress} showActions={showActions} watched={watched?.(entry.item)} />
+        <WatchlistRow item={entry.item} sources={entry.sources} onActions={onItemActions} onPress={onItemPress} showActions={showActions} watched={watched?.(entry.item)} />
       )}
       ListFooterComponent={footer}
     />

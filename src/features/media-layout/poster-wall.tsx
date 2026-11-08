@@ -11,11 +11,10 @@ import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
 import { usePreloadRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
+import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
-
-import type { WatchlistEntry } from '@/features/watchlist/types';
 
 import type { MediaLayoutProps } from './types';
 
@@ -43,6 +42,8 @@ const CAPTION_SCRIM_HEIGHT = 96;
 const NOTE_SCRIM_HEIGHT = 48;
 /** Past this the artwork is too small to recognize, however wide the display. */
 const MAX_COLUMNS = 8;
+/** Shared, so a cell without provenance keeps the same props across renders. */
+const NO_SOURCES: readonly ProviderId[] = [];
 /** The web sidebar from `md` (768px) up: the app shell's expanded `md:w-60` plus its border. */
 const WEB_SIDEBAR_WIDTH = 241;
 
@@ -72,14 +73,17 @@ export function useWallMetrics(): { columns: number; rowHeight: number } {
  * of chrome that *is* always on — see `PosterMarks`.
  */
 export function PosterCell({
-  entry,
+  item,
+  sources = NO_SOURCES,
   onPress,
   onActions,
   watched,
   showActions,
   note,
 }: {
-  entry: WatchlistEntry;
+  item: NormalizedMediaItem;
+  /** The providers holding it; a catalogue list (the seasons explorer) has none. */
+  sources?: readonly ProviderId[];
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
   watched?: MediaProgress;
@@ -87,7 +91,6 @@ export function PosterCell({
   /** One always-on line at the poster's foot, e.g. when the next episode airs. Takes the progress pill's place. */
   note?: string;
 }) {
-  const item = entry.item;
   const prefetchDetails = usePrefetchMediaDetails();
   const preloadRoute = usePreloadRoute();
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
@@ -103,7 +106,7 @@ export function PosterCell({
   }
   const showChrome = process.env.EXPO_OS === 'web' && hovered;
   const label = item.year == null ? item.title : `${item.title} (${item.year})`;
-  const providers = entry.sources.map((id) => PROVIDERS[id].label).join(', ');
+  const providers = sources.map((id) => PROVIDERS[id].label).join(', ');
   const accessibilityLabel = [label, providers === '' ? null : `On ${providers}`, note].filter(Boolean).join('. ');
 
   // A gradient, not a solid bar: the caption only exists while the
@@ -180,7 +183,7 @@ export function PosterCell({
             // "only on Letterboxd" is the question this surface answers, and
             // a filtered row keeps all its marks.
             caption={caption}
-            marks={entry.sources}
+            marks={sources}
             recyclingKey={item.id}
             uri={item.coverImage}
           />
@@ -260,7 +263,8 @@ export function PosterWall({
       // fast scroll (docs/solutions/entering-animation-on-virtualized-cells-replays.md).
       renderItem={({ item: entry }) => (
         <PosterCell
-          entry={entry}
+          item={entry.item}
+          sources={entry.sources}
           onActions={onItemActions}
           onPress={onItemPress}
           watched={watched?.(entry.item)}

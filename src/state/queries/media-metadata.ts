@@ -16,22 +16,40 @@ export function useMediaMetadata(items: readonly NormalizedMediaItem[], resolveL
     if (slug != null) needsIdentity.set(slug, needsIdentity.get(slug) === true || item.externalIds.tmdb == null);
   }
   const slugs = [...needsIdentity.keys()];
-  const films = useQueries({ queries: slugs.map((slug) => ({
-    ...letterboxdFilmQuery(slug, hasTmdb),
-    enabled: resolveLetterboxd && needsIdentity.get(slug) === true,
-  })) });
-  const bySlug = new Map(slugs.map((slug, index) => [slug, films[index].data]));
+  const films = useQueries({
+    queries: slugs.map((slug) => ({
+      ...letterboxdFilmQuery(slug, hasTmdb),
+      enabled: resolveLetterboxd && needsIdentity.get(slug) === true,
+    })),
+    // A summary, not each film's result: a read starting or finishing without
+    // new identity re-renders nothing.
+    combine: (results) => {
+      const enabled = results.filter((result) => result.isEnabled);
+      return {
+        data: results.map((result) => result.data),
+        loading: enabled.some((result) => result.isPending || result.isFetching),
+        failed: enabled.some((result) => result.isError),
+        refetches: enabled.map((result) => result.refetch),
+      };
+    },
+  });
+  const bySlug = new Map(slugs.map((slug, index) => [slug, films.data[index]]));
   const identified = items.map((item) => {
     const film = bySlug.get(item.externalIds.letterboxd ?? '');
     return film != null ? mergeCatalogueMetadata(item, film) : item;
   });
   // Keep the real fetcher: a disabled observer must not replace an active
   // detail screen's query options with skipToken.
-  const details = useQueries({ queries: identified.map((item) => ({
-    ...mediaDetailsQuery(queryClient, item), enabled: false,
-  })) });
+  // Structurally shared, so an item keeps its object until its own metadata
+  // changes and a list redraws only that cell.
+  const resolved = useQueries({
+    queries: identified.map((item) => ({ ...mediaDetailsQuery(queryClient, item), enabled: false })),
+    combine: (results) => identified.map((item, index) => applyPrimaryMetadata(item, results[index].data?.catalogue)),
+  });
   return {
-    items: identified.map((item, index) => applyPrimaryMetadata(item, details[index].data?.catalogue)),
-    queries: films,
+    items: resolved,
+    loading: films.loading,
+    failed: films.failed,
+    refetches: films.refetches,
   };
 }

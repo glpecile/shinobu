@@ -37,6 +37,7 @@ import { routes } from '@/lib/routes';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
 import { useLetterboxdWatchlistPagesQuery } from '@/state/queries/letterboxd';
 import { useMediaMetadata } from '@/state/queries/media-metadata';
+import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderFailure } from '@/state/queries/settle';
 import {
   refreshWatchlistInputs,
@@ -144,6 +145,13 @@ function WatchlistGrid({
   // options as you used it could never be widened back on evidence.
   const enriched = entries.map((entry, index) => ({ ...entry, item: metadata.items[index] }));
   const shown = sortMediaEntries(filterWatchlistEntries(enriched, provider), sort);
+  // Outside the layout's JSX, which also depends on paging flags: here React
+  // Compiler keeps the cells' callbacks stable while a page loads.
+  const onItemActions = (item: NormalizedMediaItem) => {
+    setActiveEntry(entries.find((entry) => entry.item.id === item.id) ?? null);
+    openActions(item);
+  };
+  const onItemPress = (item: NormalizedMediaItem) => pushRoute(routes.details(item.id, item.type));
 
   function refresh() {
     return refreshWatchlistInputs(queryClient);
@@ -221,11 +229,8 @@ function WatchlistGrid({
             ? () => void loadMore()
             : undefined
         }
-        onItemActions={(item) => {
-          setActiveEntry(entries.find((entry) => entry.item.id === item.id) ?? null);
-          openActions(item);
-        }}
-        onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
+        onItemActions={onItemActions}
+        onItemPress={onItemPress}
         onRefresh={refresh}
       />
     );
