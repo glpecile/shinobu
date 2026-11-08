@@ -65,6 +65,7 @@ function ListRows({ provider, lists, hasNextPage, isFetchingNextPage, fetchNextP
       estimatedItemSize={70}
       keyExtractor={(list) => list.id}
       scrollEnabled={false}
+      style={{ minHeight: 70 }}
       renderItem={({ item: list }) => (
         <PresstableOpacity
           accessibilityLabel={list.count === '' ? list.title : `${list.title}, ${list.count}`}
