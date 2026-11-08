@@ -110,4 +110,3 @@ export const getFilmItem = Effect.fnUntraced(function* (
   const shows = matches(yield* searchTitles(deps.tmdb, { query: item.title }).pipe(Effect.catch(() => Effect.succeed([]))), 'TV');
   return shows.length === 1 ? { ...item, tmdbTvVariant: shows[0].externalIds.tmdb } : item;
 });
-
