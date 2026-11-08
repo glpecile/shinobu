@@ -32,7 +32,9 @@ export function WatchedAtField({ value, onChange, children }: WatchedAtFieldProp
         <Text className="text-muted font-sans text-sm">Watched on</Text>
         <input
           aria-label="Watched on"
-          className="bg-surface text-foreground font-sans text-sm border border-border rounded-full px-2 py-1"
+          // The field row already draws the pill. `appearance-none` drops
+          // Safari's own rounded fill on iPadOS.
+          className="appearance-none bg-transparent text-foreground font-sans text-sm"
           max={today}
           // The browser paints the calendar-picker glyph from `color-scheme`, not
           // from `color`: without this it stays the light-scheme black on the
