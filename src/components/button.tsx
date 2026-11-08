@@ -30,7 +30,7 @@ const CONTAINER: Record<ButtonVariant, { on: string; off: string }> = {
   outline: { on: 'border border-accent', off: 'border border-accent/40' },
   quiet: { on: 'border border-border web:hover:bg-border/40', off: 'border border-border opacity-60' },
   'quiet-accent': { on: 'border border-border', off: 'border border-border opacity-60' },
-  ghost: { on: '', off: 'opacity-60' },
+  ghost: { on: 'web:hover:bg-border/40', off: 'opacity-60' },
   'accent-ghost': { on: '', off: 'opacity-60' },
 };
 
