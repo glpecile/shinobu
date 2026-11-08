@@ -40,12 +40,14 @@ export function useMediaMetadata(items: readonly NormalizedMediaItem[], resolveL
   });
   // Keep the real fetcher: a disabled observer must not replace an active
   // detail screen's query options with skipToken.
-  const catalogues = useQueries({
+  // Structurally shared, so an item keeps its object until its own metadata
+  // changes and a list redraws only that cell.
+  const resolved = useQueries({
     queries: identified.map((item) => ({ ...mediaDetailsQuery(queryClient, item), enabled: false })),
-    combine: (results) => results.map((result) => result.data?.catalogue),
+    combine: (results) => identified.map((item, index) => applyPrimaryMetadata(item, results[index].data?.catalogue)),
   });
   return {
-    items: identified.map((item, index) => applyPrimaryMetadata(item, catalogues[index])),
+    items: resolved,
     loading: films.loading,
     failed: films.failed,
     refetches: films.refetches,
