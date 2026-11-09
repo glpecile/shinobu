@@ -5,6 +5,7 @@ import type { SharedValue } from 'react-native-reanimated';
 
 import { PresstableOpacity } from '@/components/presstable';
 import { NativePickerMenu } from '@/components/native-picker-menu';
+import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
 import {
   ANIME_SEASONS,
@@ -28,19 +29,18 @@ const SEASON_OPTIONS = ANIME_SEASONS.map((season) => ({
 }));
 
 /**
- * The seasons explorer's inputs: a year row (‹ › steps one year, the year
- * itself opens the year picker) over the four cours as a segmented control.
- * Every format is cour-scoped, films included, so the strip is unconditional.
+ * The explorer's year, for the screen header: ‹ › step one year, and the year
+ * itself opens the year picker.
  */
-export function SeasonPicker({
+export function YearStepper({
   window,
   onChange,
-  progress,
+  className,
 }: {
   window: AnimeSeasonWindow;
   onChange: (next: AnimeSeasonWindow) => void;
-  /** The pager's position for the web season indicator. */
-  progress: SharedValue<number>;
+  /** Layout only. */
+  className?: string;
 }) {
   const foreground = useThemeColor('--color-foreground');
   const muted = useThemeColor('--color-muted');
@@ -51,56 +51,47 @@ export function SeasonPicker({
   const canGoForward = window.year < maxYear;
 
   return (
-    <View className="px-6 pb-3 gap-3">
-      <View className="flex-row items-center justify-center gap-1">
+    <View className={cn('flex-row items-center', className)}>
+      <PresstableOpacity
+        accessibilityLabel="Previous year"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canGoBack }}
+        className="size-11 items-center justify-center rounded-full"
+        disabled={!canGoBack}
+        onPress={() => onChange({ ...window, year: window.year - 1 })}
+      >
+        <Ionicons color={tint(canGoBack)} name="chevron-back" size={20} />
+      </PresstableOpacity>
+      <NativePickerMenu
+        onSelect={(year) => onChange({ ...window, year })}
+        options={Array.from({ length: maxYear - MIN_ANIME_YEAR + 1 }, (_, index) => ({
+          value: maxYear - index,
+          label: String(maxYear - index),
+        }))}
+        title="Jump to year"
+        value={window.year}
+      >
         <PresstableOpacity
-          accessibilityLabel="Previous year"
+          accessibilityHint="Opens a list of years"
+          accessibilityLabel={`Year: ${window.year}`}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !canGoBack }}
-          className="w-9 h-9 items-center justify-center rounded-full"
-          disabled={!canGoBack}
-          onPress={() => onChange({ ...window, year: window.year - 1 })}
+          className="h-11 flex-row items-center gap-1 px-2 rounded-full"
+          onPress={() => setSheetOpen(true)}
         >
-          <Ionicons color={tint(canGoBack)} name="chevron-back" size={20} />
+          <Text className="text-xl font-display text-foreground">{window.year}</Text>
+          <Ionicons color={tint(false)} name="chevron-down" size={14} />
         </PresstableOpacity>
-        <NativePickerMenu
-          onSelect={(year) => onChange({ ...window, year })}
-          options={Array.from({ length: maxYear - MIN_ANIME_YEAR + 1 }, (_, index) => ({
-            value: maxYear - index,
-            label: String(maxYear - index),
-          }))}
-          title="Jump to year"
-          value={window.year}
-        >
-          <PresstableOpacity
-            accessibilityHint="Opens a list of years"
-            accessibilityLabel={`Year: ${window.year}`}
-            accessibilityRole="button"
-            className="flex-row items-center gap-1 px-3 py-1 rounded-full"
-            onPress={() => setSheetOpen(true)}
-          >
-            <Text className="text-xl font-display text-foreground">{window.year}</Text>
-            <Ionicons color={tint(false)} name="chevron-down" size={14} />
-          </PresstableOpacity>
-        </NativePickerMenu>
-        <PresstableOpacity
-          accessibilityLabel="Next year"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canGoForward }}
-          className="w-9 h-9 items-center justify-center rounded-full"
-          disabled={!canGoForward}
-          onPress={() => onChange({ ...window, year: window.year + 1 })}
-        >
-          <Ionicons color={tint(canGoForward)} name="chevron-forward" size={20} />
-        </PresstableOpacity>
-      </View>
-      <NativeSegmentedControl
-        accessibilityLabel="Season"
-        onChange={(season) => onChange({ ...window, season })}
-        options={SEASON_OPTIONS}
-        progress={progress}
-        value={window.season}
-      />
+      </NativePickerMenu>
+      <PresstableOpacity
+        accessibilityLabel="Next year"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canGoForward }}
+        className="size-11 items-center justify-center rounded-full"
+        disabled={!canGoForward}
+        onPress={() => onChange({ ...window, year: window.year + 1 })}
+      >
+        <Ionicons color={tint(canGoForward)} name="chevron-forward" size={20} />
+      </PresstableOpacity>
       {Platform.OS === 'web' && (
         <YearSheet
           max={maxYear}
@@ -115,5 +106,31 @@ export function SeasonPicker({
         />
       )}
     </View>
+  );
+}
+
+/** The four cours. Every format is cour-scoped, films included, so it is unconditional. */
+export function SeasonStrip({
+  window,
+  onChange,
+  progress,
+  className,
+}: {
+  window: AnimeSeasonWindow;
+  onChange: (next: AnimeSeasonWindow) => void;
+  /** The pager's position for the web season indicator. */
+  progress: SharedValue<number>;
+  /** Layout only. */
+  className?: string;
+}) {
+  return (
+    <NativeSegmentedControl
+      accessibilityLabel="Season"
+      className={className}
+      onChange={(season) => onChange({ ...window, season })}
+      options={SEASON_OPTIONS}
+      progress={progress}
+      value={window.season}
+    />
   );
 }
