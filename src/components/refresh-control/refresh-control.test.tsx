@@ -8,7 +8,7 @@ const { act, render } = await import('@testing-library/react');
 
 let pan: {
   onTouchesDown: (event: { handlerTag: number }) => void;
-  onUpdate: (event: { changeY: number }) => void;
+  onUpdate: (event: { changeY: number; velocityY: number }) => void;
   onFinalize: (event: { canceled: boolean }) => void;
   activeOffsetY: number;
   failOffsetX: number[];
@@ -32,9 +32,12 @@ mock.module('react-native-reanimated', () => ({
   useSharedValue: (initial: number) => useState(() => shared(initial))[0],
   useDerivedValue: (get: () => number) => ({ get }),
   useAnimatedStyle: () => ({}),
+  useAnimatedReaction: () => {},
+  withSpring: (value: number) => value,
   withTiming: (value: number) => value,
   scrollTo: () => {},
 }));
+mock.module('@/lib/haptics', () => ({ haptics: { selection: () => {} } }));
 mock.module('react-native-worklets', () => ({ scheduleOnRN: (fn: () => void) => fn() }));
 mock.module('@/components/animated-view', () => ({ AnimatedView: View }));
 mock.module('@/lib/navigation/tab-double-tap', () => ({
@@ -75,17 +78,17 @@ test('cancelled and short pulls do not refresh; a released pull refreshes once u
   const view = render(<RefreshControl onRefresh={onRefresh} tab="index" />);
   try {
     act(() => {
-      pan.onUpdate({ changeY: 200 });
+      pan.onUpdate({ changeY: 200, velocityY: 0 });
       pan.onFinalize({ canceled: true });
     });
     expect(onRefresh).toHaveBeenCalledTimes(0);
     act(() => {
-      pan.onUpdate({ changeY: 20 });
+      pan.onUpdate({ changeY: 20, velocityY: 0 });
       pan.onFinalize({ canceled: false });
     });
     expect(onRefresh).toHaveBeenCalledTimes(0);
     act(() => {
-      pan.onUpdate({ changeY: 200 });
+      pan.onUpdate({ changeY: 200, velocityY: 0 });
       pan.onFinalize({ canceled: false });
     });
     expect(view.getByRole('status').textContent).toBe('Refreshing');
