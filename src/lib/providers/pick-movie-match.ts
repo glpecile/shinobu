@@ -95,31 +95,50 @@ export function pickAnimeFilmMatch(
   );
 }
 
-/**
- * The TMDB record behind an AniList anime that ani.zip doesn't map, often a
- * new or obscure donghua. There is no corroborating id, so only an exact
- * match counts: the same year, a TMDB title or original title equal to one of
- * the entry's names (AniList appends "(2026)" to disambiguate remakes), and
- * exactly one candidate. A film matches a movie and a series a show. A
- * single-episode entry also matches a movie, because TMDB often files one as
- * a film (Undetectable Box, AniList ONA 165933, TMDB movie 901323).
- */
-export function pickAnimeTmdbMatch(
-  results: readonly NormalizedMediaItem[],
-  item: Pick<NormalizedMediaItem, 'title' | 'titles' | 'year' | 'isFilm' | 'totalEpisodes'>,
-): NormalizedMediaItem | null {
-  if (item.year == null) return null;
-  const names = new Set(
+type AnimeNames = Pick<NormalizedMediaItem, 'title' | 'titles'>;
+
+function nameKeys(item: AnimeNames): Set<string> {
+  return new Set(
     [item.title, ...Object.values(item.titles ?? {})]
       .map((name) => titleKey(name.replace(/\s*\(\d{4}\)$/, '')))
       .filter((name) => name !== ''),
   );
-  const types = item.isFilm === true ? ['MOVIE'] : item.totalEpisodes === 1 ? ['TV', 'MOVIE'] : ['TV'];
-  const matches = results.filter(
-    (result) =>
-      types.includes(result.type) &&
-      result.year === item.year &&
-      [result.title, result.titles?.native].some((name) => name != null && names.has(titleKey(name))),
-  );
+}
+
+/**
+ * Whether an AniList entry and a TMDB record are one title when ani.zip maps
+ * neither, often a new or obscure donghua. There is no corroborating id, so
+ * only an exact match counts: the same year and a shared name (AniList
+ * appends "(2026)" to disambiguate remakes). A film matches a movie and a
+ * series a show. A single-episode entry also matches a movie, because TMDB
+ * often files one as a film (Undetectable Box, AniList ONA 165933, TMDB
+ * movie 901323).
+ */
+function isSameAnime(
+  entry: AnimeNames & Pick<NormalizedMediaItem, 'year' | 'isFilm' | 'totalEpisodes'>,
+  record: AnimeNames & Pick<NormalizedMediaItem, 'year' | 'type'>,
+): boolean {
+  if (entry.year == null || record.year !== entry.year) return false;
+  const types = entry.isFilm === true ? ['MOVIE'] : entry.totalEpisodes === 1 ? ['TV', 'MOVIE'] : ['TV'];
+  if (!types.includes(record.type)) return false;
+  const names = nameKeys(entry);
+  return [...nameKeys(record)].some((name) => names.has(name));
+}
+
+/** The one TMDB record that `isSameAnime` pairs with an AniList entry, or null. */
+export function pickAnimeTmdbMatch(
+  results: readonly NormalizedMediaItem[],
+  entry: AnimeNames & Pick<NormalizedMediaItem, 'year' | 'isFilm' | 'totalEpisodes'>,
+): NormalizedMediaItem | null {
+  const matches = results.filter((result) => isSameAnime(entry, result));
+  return matches.length === 1 ? (matches[0] ?? null) : null;
+}
+
+/** The one AniList entry that `isSameAnime` pairs with a TMDB record, or null. */
+export function pickAniListMatch(
+  results: readonly NormalizedMediaItem[],
+  record: AnimeNames & Pick<NormalizedMediaItem, 'year' | 'type'>,
+): NormalizedMediaItem | null {
+  const matches = results.filter((result) => result.type === 'ANIME' && isSameAnime(result, record));
   return matches.length === 1 ? (matches[0] ?? null) : null;
 }

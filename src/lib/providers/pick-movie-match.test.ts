@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { pickAnimeTmdbMatch, pickMovieMatch } from './pick-movie-match';
+import { pickAniListMatch, pickAnimeTmdbMatch, pickMovieMatch } from './pick-movie-match';
 
 function movie(id: string, title: string, year?: number): NormalizedMediaItem {
   return {
@@ -98,5 +98,12 @@ describe('pickAnimeTmdbMatch', () => {
     const entry = { title: 'Hei He', titles: { english: 'Undetectable Box' }, year: 2019 };
     expect(pickAnimeTmdbMatch([box], { ...entry, totalEpisodes: 1 })).toBe(box);
     expect(pickAnimeTmdbMatch([box], { ...entry, totalEpisodes: 2 })).toBeNull();
+  });
+
+  test('finds the AniList entry behind a TMDB record, the same rule reversed', () => {
+    const entry = { ...movie('141953', 'False Memory (2026)', 2026), type: 'ANIME' as const, totalEpisodes: 7 };
+    const film = { ...entry, title: 'False Memory', year: 2020, isFilm: true };
+    expect(pickAniListMatch([entry, film], show)).toBe(entry);
+    expect(pickAniListMatch([entry, film], original)).toBe(film);
   });
 });

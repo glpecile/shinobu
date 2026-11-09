@@ -64,6 +64,7 @@ mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: (_client: unknown, lookup: { anilistId?: number }) =>
     Promise.resolve(courIds.get(lookup.anilistId ?? -1) ?? prequelIds),
   cachedAniListFilmId: () => Promise.resolve(null),
+  cachedAniListIdByTitle: () => Promise.resolve(null),
   cachedTraktLookup: () => Promise.resolve(null),
   cachedTraktTextSearch: () => Promise.resolve(null),
   // Unreachable from the log path, but `mock.module` is process-wide and Up

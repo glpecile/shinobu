@@ -10,8 +10,9 @@ import {
   type AniZipEpisodeMap,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
-import { getSeriesNeighbours, searchAnimeFilms } from '@/lib/providers/anilist/reads';
+import { getSeriesNeighbours, searchAnimeFilms, searchMedia as searchAniList } from '@/lib/providers/anilist/reads';
 import {
+  pickAniListMatch,
   pickAnimeFilmMatch,
   pickAnimeTmdbMatch,
   pickMovieMatch,
@@ -170,6 +171,9 @@ export const mappingQueryKeys = {
   /** Title+year → AniList id, the anime-film fallback when ani.zip misses. */
   anilistFilmSearch: (title: string, year: number | undefined) =>
     ['mapping', 'anilist-film-search', title, year ?? 'any'] as const,
+  /** An animated TMDB title → AniList id by title and year, when ani.zip has no mapping. */
+  anilistTitleSearch: (type: string, title: string, year: number | undefined) =>
+    ['mapping', 'anilist-title-search', type, title, year ?? 'any'] as const,
   anilistNeighbours: (anilistId: number) => ['mapping', 'anilist-neighbours', anilistId] as const,
 };
 
@@ -191,27 +195,66 @@ export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) 
   }).catch(() => null);
 }
 
+/** Whether a TMDB-keyed title is animated, the gate on every AniList lookup for one. */
+function isAnimated(item: NormalizedMediaItem): boolean {
+  return (
+    (item.type === 'MOVIE' || item.type === 'TV') &&
+    item.genres?.some((genre) => /anim/i.test(genre)) === true
+  );
+}
+
+function aniListByTitleQuery(item: NormalizedMediaItem) {
+  return {
+    queryKey: mappingQueryKeys.anilistTitleSearch(item.type, item.title, item.year),
+    queryFn: ({ signal }: { signal: AbortSignal }): Promise<number | null> =>
+      Effect.runPromise(searchAniList(anilistDeps(), { query: item.title }), { signal })
+        .then((results) => pickAniListMatch(results, item)?.externalIds.anilist ?? null)
+        .catch((error) => mappingMiss(error, signal)),
+    ...FOREVER,
+  };
+}
+
 /**
- * A TMDB-keyed anime's AniList id, for the details variants row. Only for an
- * animated title: ani.zip documents run to ~1 MB, and every live-action show
- * would spend a request on a guaranteed miss. TMDB's movie and TV ids share a
- * number space, so ani.zip's `type` has to agree with the item's.
+ * The AniList id of an animated TMDB title that ani.zip doesn't map, by title
+ * and year (`pickAniListMatch`). Forever-cached, misses included, so a title
+ * costs one AniList request ever. Null without a year or the Animation genre.
+ */
+export function cachedAniListIdByTitle(
+  queryClient: QueryClient,
+  item: NormalizedMediaItem,
+): Promise<number | null> {
+  if (item.year == null || item.title === '' || !isAnimated(item)) return Promise.resolve(null);
+  return queryClient.fetchQuery(aniListByTitleQuery(item)).catch(nullUnlessCancelled);
+}
+
+/**
+ * A TMDB-keyed anime's AniList id, for the details variants row and the
+ * discussion lookup: ani.zip first, then a title match when ani.zip has none.
+ * Only for an animated title: ani.zip documents run to ~1 MB, and every
+ * live-action show would spend a request on a guaranteed miss. TMDB's movie
+ * and TV ids share a number space, so ani.zip's `type` has to agree with the
+ * item's.
  */
 export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
   const { tmdb, anilist } = item.externalIds;
   const lookup = { tmdbId: tmdb ?? 0 };
   const isMovie = item.type === 'MOVIE';
-  return useQuery({
+  const mapped = useQuery({
     queryKey: mappingQueryKeys.anizip(lookup),
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
-    enabled:
-      tmdb != null &&
-      anilist == null &&
-      (isMovie || item.type === 'TV') &&
-      item.genres?.some((genre) => /anim/i.test(genre)) === true,
+    enabled: tmdb != null && anilist == null && isAnimated(item),
     select: (ids) => (ids?.anilist != null && (ids.type === 'MOVIE') === isMovie ? ids.anilist : null),
   });
+  // `null` only once ani.zip has answered without a usable id.
+  const byTitle = useQuery({
+    ...aniListByTitleQuery(item),
+    enabled: mapped.data === null && item.year != null && item.title !== '',
+  });
+  return {
+    data: mapped.data ?? byTitle.data,
+    isLoading: mapped.isLoading || byTitle.isLoading,
+  };
 }
 
 function simklLookupQuery(params: SimklLookupParams) {

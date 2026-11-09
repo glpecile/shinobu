@@ -4,6 +4,7 @@ import type { AniZipLookup } from '@/lib/providers/mapping/anizip';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   cachedAniListFilmId,
+  cachedAniListIdByTitle,
   cachedAniZipIds,
   cachedSimklAnimeIds,
   cachedTmdbTvIdByTvdb,
@@ -168,6 +169,17 @@ export async function enrichExternalIds(
       title: item.title,
       year: item.year,
     });
+    if (anilistId != null) externalIds = { ...externalIds, anilist: anilistId };
+  }
+
+  // ani.zip and the film search both miss an anime that AniList files as a
+  // series, ONA or special, often a new or obscure donghua.
+  if (
+    isMovieTv &&
+    externalIds.anilist == null &&
+    (connected.includes(Provider.AniList) || connected.includes(Provider.Simkl))
+  ) {
+    const anilistId = await cachedAniListIdByTitle(queryClient, item);
     if (anilistId != null) externalIds = { ...externalIds, anilist: anilistId };
   }
 
