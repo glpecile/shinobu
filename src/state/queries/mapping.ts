@@ -239,17 +239,18 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
   const { tmdb, anilist } = item.externalIds;
   const lookup = { tmdbId: tmdb ?? 0 };
   const isMovie = item.type === 'MOVIE';
+  const enabled = tmdb != null && anilist == null && isAnimated(item);
   const mapped = useQuery({
     queryKey: mappingQueryKeys.anizip(lookup),
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
-    enabled: tmdb != null && anilist == null && isAnimated(item),
+    enabled,
     select: (ids) => (ids?.anilist != null && (ids.type === 'MOVIE') === isMovie ? ids.anilist : null),
   });
   // `null` only once ani.zip has answered without a usable id.
   const byTitle = useQuery({
     ...aniListByTitleQuery(item),
-    enabled: mapped.data === null && item.year != null && item.title !== '',
+    enabled: enabled && mapped.data === null && item.year != null && item.title !== '',
   });
   return {
     data: mapped.data ?? byTitle.data,

@@ -98,6 +98,8 @@ const {
   cachedTraktLookup,
   cachedTraktTextSearch,
   useSimklLookupQuery,
+  useAniListIdByTmdbQuery,
+  mappingQueryKeys,
   useTraktIdentityQuery,
 } = await import('./mapping');
 const { setProviderClientId, clearProviderClientId } = await import(
@@ -464,5 +466,31 @@ describe('connecting a provider mid-session is a cache miss, not a stale record'
     expect(
       await cachedTmdbMovieIdByTitle(client, { title: 'Heat', year: 1995 }),
     ).toBe(949);
+  });
+});
+
+describe('useAniListIdByTmdbQuery', () => {
+  test('a cached ani.zip miss does not search AniList for live-action details', () => {
+    const client = freshClient();
+    client.setQueryData(mappingQueryKeys.anizip({ tmdbId: 949 }), null);
+    const item: NormalizedMediaItem = {
+      id: 'tmdb-movie-949', title: 'Heat', type: 'MOVIE', year: 1995, genres: ['Crime'],
+      coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 949 },
+    };
+    function Read() {
+      useAniListIdByTmdbQuery(item);
+      return null;
+    }
+    renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
+    const query = client.getQueryCache().getAll().at(-1)!;
+    const observer = new QueryObserver(client, { ...query.options, queryKey: query.queryKey });
+    const unsubscribe = observer.subscribe(() => {});
+    try {
+      expect(observer.getCurrentResult().fetchStatus).toBe('idle');
+      expect(requestedUrls).toHaveLength(0);
+    } finally {
+      unsubscribe();
+      client.clear();
+    }
   });
 });
