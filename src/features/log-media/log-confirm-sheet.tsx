@@ -375,7 +375,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   }
 
   function send(entryEpisodes: number[] | undefined) {
-    haptics.confirm();
+    haptics.log();
     const parsedTags = parseTags(tags);
     const write = logMedia.mutateAsync({
       item,

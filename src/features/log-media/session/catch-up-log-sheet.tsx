@@ -368,7 +368,7 @@ function CatchUpForm({
 
   function confirm() {
     if (awaiting || queue == null || selectedProviders.length === 0) return;
-    haptics.confirm();
+    haptics.log();
     const plan = queue ?? [current];
     if (frozen == null) setFrozen(plan);
     const episode = plan[index] ?? current;
@@ -382,7 +382,7 @@ function CatchUpForm({
   // Every failed row re-fires at once: the Simkl legs coalesce into one POST
   // (simkl-write-lock.ts), so N retries cost the same lock wait as one.
   function retry() {
-    haptics.confirm();
+    haptics.log();
     for (const row of ledger) {
       const providers = retryProviders(row, selectedProviders);
       if (providers == null) continue;
