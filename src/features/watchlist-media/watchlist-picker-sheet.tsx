@@ -404,7 +404,7 @@ export function WatchlistRemovePicker({
 
   function write(providers: ProviderId[]) {
     if (pending || providers.length === 0) return;
-    haptics.confirm();
+    haptics.destructive();
     remove.mutate(
       { providers, ...(warning != null ? { allowDestructive: true } : {}) },
       step.callbacks,

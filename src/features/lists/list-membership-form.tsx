@@ -74,7 +74,8 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
           loading={mutation.isPending}
           loadingLabel={present ? 'Adding…' : 'Removing…'}
           onPress={() => {
-            haptics.confirm();
+            if (present) haptics.confirm();
+            else haptics.destructive();
             mutation.mutate({ item, present, entryId }, {
               onSuccess: () => { toast.success(present ? 'Added to list' : 'Removed from list', item.title); onDone(); },
               onError: () => haptics.error(),
