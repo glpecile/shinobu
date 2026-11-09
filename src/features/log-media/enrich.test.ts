@@ -13,6 +13,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 const calls: string[] = [];
 let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
+let anilistTitleId: number | null = null;
 let anizipBridge: { tvdb: number; tmdb: number } | null = null;
 let tmdbByTvdb: number | null = null;
 let simklIds: NormalizedMediaItem['externalIds'] | null = null;
@@ -29,6 +30,10 @@ mock.module('@/state/queries/mapping', () => ({
   cachedAniListFilmId: (_client: unknown, params: { title: string; year?: number }) => {
     calls.push(`anilist-film:${params.title}:${params.year ?? 'any'}`);
     return Promise.resolve(anilistFilmId);
+  },
+  cachedAniListIdByTitle: (_client: unknown, item: NormalizedMediaItem) => {
+    calls.push(`anilist-title:${item.title}`);
+    return Promise.resolve(anilistTitleId);
   },
   cachedTraktLookup: () => {
     calls.push('trakt-lookup');
@@ -87,6 +92,7 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     calls.length = 0;
     anizipAnilistId = null;
     anilistFilmId = null;
+    anilistTitleId = null;
   });
 
   test('adopts the AniList id when ani.zip misses and the search matches', async () => {
@@ -99,6 +105,15 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     expect(calls).toContain('anilist-film:ChaO:2025');
   });
 
+  test('falls back to the title match for an anime AniList files as a series or ONA', async () => {
+    anilistTitleId = 165933;
+
+    const enriched = await enrichExternalIds(client, chao({ title: 'Undetectable Box' }), ALL);
+
+    expect(enriched.externalIds.anilist).toBe(165933);
+    expect(calls).toEqual(['anizip:{"tmdbId":1234}', 'anilist-film:Undetectable Box:2025', 'anilist-title:Undetectable Box']);
+  });
+
   test('never runs the search when AniList is not connected', async () => {
     anilistFilmId = 5678;
 
@@ -107,7 +122,7 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
       'letterboxd',
     ]);
 
-    expect(calls.some((call) => call.startsWith('anilist-film:'))).toBe(false);
+    expect(calls.some((call) => call.startsWith('anilist-'))).toBe(false);
     expect(enriched.externalIds.anilist).toBeUndefined();
   });
 

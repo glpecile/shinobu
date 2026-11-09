@@ -55,6 +55,7 @@ mock.module('expo-crypto', () => ({
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: () => Promise.resolve(null),
   cachedAniListFilmId: () => Promise.resolve(null),
+  cachedAniListIdByTitle: () => Promise.resolve(null),
   cachedTraktLookup: () => Promise.resolve(null),
   cachedTraktTextSearch: () => Promise.resolve(null),
   cachedTmdbMovieIdByTitle: () => Promise.resolve(null),
