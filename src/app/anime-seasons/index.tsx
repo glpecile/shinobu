@@ -271,22 +271,19 @@ export default function AnimeSeasonsScreen() {
       <Head>
         <title>{`${animeSeasonLabel(window)} Anime — Shinobu`}</title>
       </Head>
-      {/* Below `sm` the stepper takes its own centered row; from there it
-          sits beside the title and the season strip joins the toolbar row. */}
+      {/* "Anime", not "Anime Seasons": the season strip says the rest, and the
+          short title leaves a phone room for the year beside it. From `sm`
+          the season strip joins the toolbar row. */}
       <View
         className={cn(
-          'flex-row flex-wrap items-center gap-x-3 px-6',
+          'flex-row items-center gap-3 px-6',
           screenHeaderTopPadding,
           'pb-2',
         )}
       >
         <BackButton className="-ml-2" onPress={goBack} />
-        <Text className="text-2xl font-display text-foreground">Anime Seasons</Text>
-        <YearStepper
-          className="w-full justify-center sm:w-auto sm:ml-auto sm:-mr-3"
-          onChange={setWindow}
-          window={window}
-        />
+        <Text className="text-2xl font-display text-foreground">Anime</Text>
+        <YearStepper className="ml-auto -mr-3" onChange={setWindow} window={window} />
       </View>
       <View className="sm:flex-row sm:items-center">
         <View className="px-6 pb-3 sm:pe-0">
