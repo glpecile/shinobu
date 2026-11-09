@@ -87,7 +87,7 @@ function ProviderSheetContent({
           <Button
             label="Disconnect"
             onPress={() => {
-              haptics.confirm();
+              haptics.destructive();
               disconnect(id);
               onDone();
             }}

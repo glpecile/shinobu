@@ -9,8 +9,10 @@ import { Presets } from 'react-native-pulsar';
  * Vibration API anyway.
  */
 export const haptics = {
-  /** A press that commits something (confirm buttons). */
-  confirm: () => Presets.System.impactMedium(),
+  /** A press that commits something (confirm buttons, logging). */
+  confirm: () => Presets.System.impactLight(),
+  /** A press that removes something: disconnect, remove, hide. */
+  destructive: () => Presets.System.impactMedium(),
   /** The committed action succeeded. */
   success: () => Presets.System.notificationSuccess(),
   /** The committed action failed (fully or partially). */

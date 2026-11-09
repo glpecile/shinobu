@@ -19,6 +19,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { anilistDeps, anilistRelationsQuery } from './anilist';
 import {
   cachedAniZipIds,
+  cachedTmdbAnimeMatch,
   cachedTmdbMovieIdByTitle,
   cachedTmdbTvIdByTvdb,
 } from './mapping';
@@ -63,13 +64,15 @@ const DETAILS_STALE_TIME_MS = 60 * 60 * 1000;
 /**
  * The TMDB id the composer should use. TV anime arrive with only an AniList
  * id — bridge ani.zip → TVDB → TMDB `/find` (both legs forever-cached).
- * Anime films map straight through ani.zip's own TMDB (movie) id.
+ * Anime films map straight through ani.zip's own TMDB (movie) id. When
+ * ani.zip has neither, a strict title match can find it, and `isFilm` says
+ * TMDB filed it as a movie.
  */
 async function resolveTmdbId(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
-): Promise<number | undefined> {
-  if (item.externalIds.tmdb != null) return item.externalIds.tmdb;
+): Promise<{ tmdbId: number; isFilm?: boolean } | undefined> {
+  if (item.externalIds.tmdb != null) return { tmdbId: item.externalIds.tmdb };
   if (item.tmdbTvVariant != null) return undefined;
   if (tmdbToken() === '') return undefined;
 
@@ -81,23 +84,24 @@ async function resolveTmdbId(
     item.externalIds.trakt == null &&
     item.title !== ''
   ) {
-    return (
-      (await cachedTmdbMovieIdByTitle(queryClient, {
-        title: item.title,
-        year: item.year,
-      })) ?? undefined
-    );
+    const tmdbId = await cachedTmdbMovieIdByTitle(queryClient, {
+      title: item.title,
+      year: item.year,
+    });
+    return tmdbId == null ? undefined : { tmdbId };
   }
 
   if (item.type !== 'ANIME' || item.externalIds.anilist == null) return undefined;
 
   const ids = await cachedAniZipIds(queryClient, {
     anilistId: item.externalIds.anilist,
-  }).catch(() => null);
-  if (ids == null) return undefined;
-  if (item.isFilm === true) return ids.tmdb ?? undefined;
-  if (ids.tvdb == null) return undefined;
-  return (await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb)) ?? undefined;
+  });
+  if (item.isFilm === true && ids?.tmdb != null) return { tmdbId: ids.tmdb };
+  if (item.isFilm !== true && ids?.tvdb != null) {
+    const tmdbId = await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb);
+    if (tmdbId != null) return { tmdbId };
+  }
+  return (await cachedTmdbAnimeMatch(queryClient, item)) ?? undefined;
 }
 
 /**
@@ -125,15 +129,16 @@ export function mediaDetailsQuery(
     queryKey: mediaDetailsQueryKeys.details(item),
     queryFn: async ({ signal }: { signal: AbortSignal }): Promise<MediaDetails> => {
       if (item == null) throw new Error('media-details query ran without an item');
-      const tmdbId = await resolveTmdbId(queryClient, item);
+      const tmdb = await resolveTmdbId(queryClient, item);
+      const isFilm = tmdb?.isFilm === true ? true : item.isFilm;
       return Effect.runPromise(
         getMediaDetails(
           buildMediaDetailsDeps(),
           {
             type: item.type,
             ...(item.tmdbTvVariant != null ? { tmdbTvVariant: item.tmdbTvVariant } : {}),
-            ...(item.isFilm != null ? { isFilm: item.isFilm } : {}),
-            ...(tmdbId != null ? { tmdbId } : {}),
+            ...(isFilm != null ? { isFilm } : {}),
+            ...(tmdb != null ? { tmdbId: tmdb.tmdbId } : {}),
             ...(item.externalIds.trakt != null
               ? { traktId: item.externalIds.trakt }
               : {}),

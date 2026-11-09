@@ -65,7 +65,7 @@ export function ListSheet({ list, open, onClose }: { list: ListSummary | null; o
               icon={<Button.Icon name="eye-off-outline" />}
               label="Hide list"
               onPress={() => {
-                haptics.confirm();
+                haptics.destructive();
                 hideList({ id: list.href, title: list.title });
                 onClose();
               }}

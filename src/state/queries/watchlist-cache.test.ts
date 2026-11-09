@@ -42,6 +42,7 @@ describe('findInWatchlistCache (plan 0031 U14)', () => {
     const entry = { ...film('letterboxd-beast-boy-lone-wolf', show.title), year: 2024, externalIds: { letterboxd: 'beast-boy-lone-wolf' } };
     client.setQueryData(['letterboxd', 'list-films', 'user', 'animation'], { pages: [{ items: [entry] }] });
     expect(findLetterboxdTwinInCache(client, show)?.id).toBe(entry.id);
+    expect(findLetterboxdTwinInCache(client, { ...show, type: 'ANIME' })?.id).toBe(entry.id);
     expect(findLetterboxdTwinInCache(client, { ...show, year: 2023 })).toBeUndefined();
     client.setQueryData(['letterboxd', 'list-films', 'user', 'animation'], { pages: [{ items: [{ ...entry, externalIds: { ...entry.externalIds, tmdb: 8 } }] }] });
     expect(findLetterboxdTwinInCache(client, show)).toBeUndefined();

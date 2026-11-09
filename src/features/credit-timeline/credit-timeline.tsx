@@ -201,7 +201,7 @@ function TimelineEntry({
 function TimelineScrollToTop({ scrollY, onPress }: { scrollY: SharedValue<number>; onPress: () => void }) {
   const [visible, setVisible] = useState(false);
   useAnimatedReaction(
-    () => scrollY.value > SCROLL_TO_TOP_THRESHOLD,
+    () => scrollY.get() > SCROLL_TO_TOP_THRESHOLD,
     (past, wasPast) => {
       if (past !== wasPast) scheduleOnRN(setVisible, past);
     },
@@ -251,13 +251,13 @@ export function CreditTimeline({
   const reduceMotion = useReducedMotion();
   const settle = useSharedValue(1);
   const settleStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(settle.value, [0, 1], [SETTLE_FROM, 1]),
+    opacity: interpolate(settle.get(), [0, 1], [SETTLE_FROM, 1]),
     ...(SETTLE_BLUR > 0 && !reduceMotion
       ? // A CSS string, which is what react-native-web paints; RN's typed
         // filter array is the native shape this never takes.
         {
           filter:
-            `blur(${((1 - settle.value) * SETTLE_BLUR).toFixed(1)}px)` as unknown as ViewStyle['filter'],
+            `blur(${((1 - settle.get()) * SETTLE_BLUR).toFixed(1)}px)` as unknown as ViewStyle['filter'],
         }
       : {}),
   }));

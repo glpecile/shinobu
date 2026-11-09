@@ -444,7 +444,7 @@ export function CardActionsSheet({
               icon={<Button.Icon name="eye-off-outline" />}
               label={hideLabel}
               onPress={() => {
-                haptics.confirm();
+                haptics.destructive();
                 hideItem({ id: item.id, title: item.title, type: item.type });
                 onClose();
               }}

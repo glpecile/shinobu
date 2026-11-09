@@ -6,6 +6,7 @@
  */
 export const haptics = {
   confirm: () => {},
+  destructive: () => {},
   success: () => {},
   error: () => {},
   selection: () => {},

@@ -94,3 +94,32 @@ export function pickAnimeFilmMatch(
     films.find((film) => titleKey(film.title) === wanted) ?? films[0] ?? null
   );
 }
+
+/**
+ * The TMDB record behind an AniList anime that ani.zip doesn't map, often a
+ * new or obscure donghua. There is no corroborating id, so only an exact
+ * match counts: the same year, a TMDB title or original title equal to one of
+ * the entry's names (AniList appends "(2026)" to disambiguate remakes), and
+ * exactly one candidate. A film matches a movie and a series a show. A
+ * single-episode entry also matches a movie, because TMDB often files one as
+ * a film (Undetectable Box, AniList ONA 165933, TMDB movie 901323).
+ */
+export function pickAnimeTmdbMatch(
+  results: readonly NormalizedMediaItem[],
+  item: Pick<NormalizedMediaItem, 'title' | 'titles' | 'year' | 'isFilm' | 'totalEpisodes'>,
+): NormalizedMediaItem | null {
+  if (item.year == null) return null;
+  const names = new Set(
+    [item.title, ...Object.values(item.titles ?? {})]
+      .map((name) => titleKey(name.replace(/\s*\(\d{4}\)$/, '')))
+      .filter((name) => name !== ''),
+  );
+  const types = item.isFilm === true ? ['MOVIE'] : item.totalEpisodes === 1 ? ['TV', 'MOVIE'] : ['TV'];
+  const matches = results.filter(
+    (result) =>
+      types.includes(result.type) &&
+      result.year === item.year &&
+      [result.title, result.titles?.native].some((name) => name != null && names.has(titleKey(name))),
+  );
+  return matches.length === 1 ? (matches[0] ?? null) : null;
+}

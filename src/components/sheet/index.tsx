@@ -38,7 +38,7 @@ export interface SheetProps {
 export function Sheet({ open, onClose, children }: SheetProps) {
   // Negative while the keyboard is up, tracked per frame on the UI thread.
   const keyboard = useReanimatedKeyboardAnimation();
-  const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.value : 0 }));
+  const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.get() : 0 }));
   // A focused field outlives the sheet, which stays mounted while closed, so
   // its keyboard would stay up over the screen beneath.
   function close() {
