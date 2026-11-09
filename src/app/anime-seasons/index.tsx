@@ -22,7 +22,7 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { Pager } from '@/components/pager';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { SeasonList, SeasonSkeleton } from '@/features/anime-seasons/season-list';
-import { SeasonPicker } from '@/features/anime-seasons/season-picker';
+import { SeasonStrip, YearStepper } from '@/features/anime-seasons/season-picker';
 import { wallEntering } from '@/features/anime-seasons/wall-entrance';
 import { useWallMetrics } from '@/features/media-layout/poster-wall';
 import { MediaToolbar } from '@/features/media-layout/media-toolbar';
@@ -271,27 +271,37 @@ export default function AnimeSeasonsScreen() {
       <Head>
         <title>{`${animeSeasonLabel(window)} Anime — Shinobu`}</title>
       </Head>
+      {/* "Anime", not "Anime Seasons": the season strip says the rest, and the
+          short title leaves a phone room for the year beside it. From `sm`
+          the season strip joins the toolbar row. */}
       <View
         className={cn(
           'flex-row items-center gap-3 px-6',
           screenHeaderTopPadding,
-          'pb-4',
+          'pb-2',
         )}
       >
         <BackButton className="-ml-2" onPress={goBack} />
-        <Text className="text-2xl font-display text-foreground">Anime Seasons</Text>
+        <Text className="text-2xl font-display text-foreground">Anime</Text>
+        <YearStepper className="ml-auto -mr-3" onChange={setWindow} window={window} />
       </View>
-      <SeasonPicker onChange={setWindow} progress={progress} window={window} />
-      <MediaToolbar view={view}>
-        <NativeSegmentedControl
-          accessibilityLabel="Format"
-          className="w-64 shrink-0"
-          onChange={setFormat}
-          options={FORMAT_OPTIONS}
-          size="md"
-          value={format}
-        />
-      </MediaToolbar>
+      <View className="sm:flex-row sm:items-center">
+        <View className="px-6 pb-3 sm:pe-0">
+          <SeasonStrip className="sm:w-96" onChange={setWindow} progress={progress} window={window} />
+        </View>
+        <View className="sm:flex-1">
+          <MediaToolbar view={view}>
+            <NativeSegmentedControl
+              accessibilityLabel="Format"
+              className="w-64 shrink-0"
+              onChange={setFormat}
+              options={FORMAT_OPTIONS}
+              size="md"
+              value={format}
+            />
+          </MediaToolbar>
+        </View>
+      </View>
       {/* Every format is cour-scoped, films included: the pager is the only
           wall host. The controls stay outside the boundaries — an AniList
           outage on one season must not take them with it. */}
