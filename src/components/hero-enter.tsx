@@ -12,11 +12,20 @@ import { PROVIDERS } from '@/lib/providers/registry';
 export const COPY_STAGGER = 60;
 const HERO_ENTER_DURATION = 450;
 
-/** Blur clears as the copy rises; iOS ignores `filter` and keeps the fade and rise. */
-const heroEntering = {
-  '0%': { opacity: 0, filter: 'blur(4px)', transform: [{ translateY: 8 }] },
-  '100%': { opacity: 1, filter: 'blur(0px)', transform: [{ translateY: 0 }] },
-};
+/**
+ * Blur clears as the copy rises, on web only: a native `filter` re-rasterizes
+ * the view every frame it animates
+ * (docs/solutions/season-switch-jank-remount-and-blur-on-native.md).
+ */
+const heroEntering = process.env.EXPO_OS === 'web'
+  ? {
+      '0%': { opacity: 0, filter: 'blur(4px)', transform: [{ translateY: 8 }] },
+      '100%': { opacity: 1, filter: 'blur(0px)', transform: [{ translateY: 0 }] },
+    }
+  : {
+      '0%': { opacity: 0, transform: [{ translateY: 8 }] },
+      '100%': { opacity: 1, transform: [{ translateY: 0 }] },
+    };
 
 /**
  * The staggered entrance of a first-run screen's copy (Home, Diary): longer
