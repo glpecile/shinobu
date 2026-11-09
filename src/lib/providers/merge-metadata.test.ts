@@ -180,6 +180,9 @@ describe('applyPrimaryMetadata', () => {
     expect(merged.releaseDate).toBeUndefined();
     expect(merged.currentProgress).toBe(0);
     expect(merged.externalIds).toEqual({ anilist: 3, tmdb: 1 });
+    expect(merged.isFilm).toBeUndefined();
+    // A movie record makes the entry a film, so its id never reaches a show write.
+    expect(applyPrimaryMetadata(cour, { ...item, type: 'MOVIE', externalIds: { tmdb: 901323 } }).isFilm).toBe(true);
   });
 
   test('titles merge per key with the item winning', () => {

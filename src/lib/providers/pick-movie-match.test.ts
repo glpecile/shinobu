@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { pickMovieMatch } from './pick-movie-match';
+import { pickAnimeTmdbMatch, pickMovieMatch } from './pick-movie-match';
 
 function movie(id: string, title: string, year?: number): NormalizedMediaItem {
   return {
@@ -79,5 +79,24 @@ describe('pickMovieMatch', () => {
       const partial = movie('19', 'Motor City Blues', 2026);
       expect(pickMovieMatch([partial, exact], 2025, 'Motor City')).toBe(exact);
     });
+  });
+});
+
+describe('pickAnimeTmdbMatch', () => {
+  // TMDB's names for AniList 141953 and 165933, which ani.zip doesn't map.
+  const show = { ...movie('280564', 'False Memory', 2026), type: 'TV' as const, titles: { native: '记忆管理局' } };
+  const original = { ...movie('874235', 'False Memory', 2020), titles: { native: '记忆管理局' } };
+  const box = movie('901323', 'Undetectable Box', 2019);
+
+  test('matches a series to its show, past the year suffix and the same-name film', () => {
+    const entry = { title: 'False Memory (2026)', titles: { native: '记忆管理局 (2026)' }, year: 2026, totalEpisodes: 7 };
+    expect(pickAnimeTmdbMatch([show, original], entry)).toBe(show);
+    expect(pickAnimeTmdbMatch([original], { ...entry, year: 2020 })).toBeNull();
+  });
+
+  test('lets a single-episode entry match a movie', () => {
+    const entry = { title: 'Hei He', titles: { english: 'Undetectable Box' }, year: 2019 };
+    expect(pickAnimeTmdbMatch([box], { ...entry, totalEpisodes: 1 })).toBe(box);
+    expect(pickAnimeTmdbMatch([box], { ...entry, totalEpisodes: 2 })).toBeNull();
   });
 });

@@ -122,7 +122,7 @@ export function Pager<T extends string>({
   }
 
   useAnimatedReaction(
-    () => driven.value,
+    () => driven.get(),
     (x, previous) => {
       if (isWeb && previous != null && x !== previous) scheduleOnRN(setScrollLeft, x);
     },

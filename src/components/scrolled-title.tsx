@@ -89,7 +89,7 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
       // A screen parked under a pushed one lays out at zero (web hides it with
       // `display: none`); keep the real frame so the bar doesn't exit and re-enter.
       if (height === 0) return;
-      anchor.set({ y: y + scrollY.value, height });
+      anchor.set({ y: y + scrollY.get(), height });
     });
   }
 
@@ -97,7 +97,7 @@ export function ScrolledTitle({ children }: { children: ReactNode }) {
   // line landing under a bottom-aligned title lifts it), so each scroll that
   // leaves the top measures again, well before the title nears the bar.
   useAnimatedReaction(
-    () => scrollY.value > 0,
+    () => scrollY.get() > 0,
     (scrolled, wasScrolled) => {
       if (scrolled && wasScrolled === false) scheduleOnRN(measure);
     },
@@ -152,7 +152,7 @@ function useCovered(
   const { scrollY, anchor } = useScrolledTitleContext('ScrolledTitle.Bar');
   const progress = useSharedValue(0);
   useAnimatedReaction(
-    () => covered(scrollY.value, anchor.value, whole, barHeight),
+    () => covered(scrollY.get(), anchor.get(), whole, barHeight),
     (isCovered, wasCovered) => {
       if (isCovered === wasCovered) return;
       progress.set(withTiming(
@@ -178,12 +178,12 @@ function Bar({ title, trailingAction = false }: { title: string; trailingAction?
   const barHeight = rowTop + FLOATING_BACK_BUTTON_SIZE + FLOATING_BACK_BUTTON_GAP;
   const shown = useCovered(false, DURATION.enter, barHeight);
   const risen = useCovered(true, DURATION.toggle, barHeight);
-  const barStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
+  const barStyle = useAnimatedStyle(() => ({ opacity: shown.get() }));
   // Reduced motion keeps the second crossing as a fade, with no travel.
   const titleStyle = useAnimatedStyle(() =>
     reduceMotion
-      ? { opacity: risen.value }
-      : { transform: [{ translateY: (1 - risen.value) * rowTop }] },
+      ? { opacity: risen.get() }
+      : { transform: [{ translateY: (1 - risen.get()) * rowTop }] },
   );
   return (
     <AnimatedView

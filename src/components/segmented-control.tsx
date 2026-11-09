@@ -63,10 +63,10 @@ function SelectionPill<T extends string>({
   const reduceMotion = useReducedMotion();
   const index = Math.max(0, options.findIndex((option) => option.value === value));
   const pillFollow = useAnimatedStyle(() =>
-    progress ? { transform: [{ translateX: `${progress.value * 100}%` }] } : {},
+    progress ? { transform: [{ translateX: `${progress.get() * 100}%` }] } : {},
   );
   const copyFollow = useAnimatedStyle(() =>
-    progress ? { transform: [{ translateX: `${-progress.value * 100 / options.length}%` }] } : {},
+    progress ? { transform: [{ translateX: `${-progress.get() * 100 / options.length}%` }] } : {},
   );
   const slide = (offset: `${number}%`) => ({
     transform: [{ translateX: offset }],

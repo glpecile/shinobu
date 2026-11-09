@@ -13,6 +13,7 @@ import {
 import { getSeriesNeighbours, searchAnimeFilms } from '@/lib/providers/anilist/reads';
 import {
   pickAnimeFilmMatch,
+  pickAnimeTmdbMatch,
   pickMovieMatch,
 } from '@/lib/providers/pick-movie-match';
 import type { SeasonLayout } from '@/lib/providers/mapping/season-layout';
@@ -26,6 +27,7 @@ import {
   findByTvdbId,
   getTvSeasonLayout,
   searchMovie,
+  searchTitles,
 } from '@/lib/providers/tmdb/reads';
 import {
   getShowSeasonLayout,
@@ -159,6 +161,9 @@ export const mappingQueryKeys = {
   /** Title+year → TMDB movie id, for id-less films (Letterboxd). */
   tmdbMovieSearch: (title: string, year: number | undefined, via: TmdbVia) =>
     ['mapping', 'tmdb-movie-search', title, year ?? 'any', via] as const,
+  /** AniList id → TMDB record by title and year, when ani.zip has no mapping. */
+  tmdbAnimeSearch: (anilistId: number, via: TmdbVia) =>
+    ['mapping', 'tmdb-anime-search', anilistId, via] as const,
   /** Public Simkl `/search/id` by any foreign (or Simkl's own) id — via-less, no session. */
   simklLookup: (params: SimklLookupParams) => ['mapping', 'simkl-lookup', params] as const,
   simklAnimeIds: (simklId: number) => ['mapping', 'simkl-anime-ids', simklId] as const,
@@ -554,6 +559,32 @@ export function cachedTmdbMovieIdByTitle(
     queryKey: mappingQueryKeys.tmdbMovieSearch(params.title, params.year, tmdbVia()),
     queryFn: ({ signal }): Promise<number | null> =>
       searchTmdbMovieId(params, signal)
+        .catch((error) => mappingMiss(error, signal)),
+    ...FOREVER,
+  }).catch(nullUnlessCancelled);
+}
+
+/**
+ * The TMDB record of an AniList anime that ani.zip doesn't map, by title and
+ * year (`pickAnimeTmdbMatch`). `isFilm` says TMDB filed it as a movie.
+ * Forever-cached, misses included, like the other title lookups here.
+ */
+export function cachedTmdbAnimeMatch(
+  queryClient: QueryClient,
+  item: NormalizedMediaItem,
+): Promise<{ tmdbId: number; isFilm: boolean } | null> {
+  const anilistId = item.externalIds.anilist;
+  if (anilistId == null || tmdbToken() === '') return Promise.resolve(null);
+  const query = (item.titles?.english ?? item.title).replace(/\s*\(\d{4}\)$/, '');
+  return queryClient.fetchQuery({
+    queryKey: mappingQueryKeys.tmdbAnimeSearch(anilistId, tmdbVia()),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchTitles(tmdbDeps(), { query }), { signal })
+        .then((results) => {
+          const match = pickAnimeTmdbMatch(results, item);
+          const tmdbId = match?.externalIds.tmdb;
+          return tmdbId == null ? null : { tmdbId, isFilm: match?.type === 'MOVIE' };
+        })
         .catch((error) => mappingMiss(error, signal)),
     ...FOREVER,
   }).catch(nullUnlessCancelled);

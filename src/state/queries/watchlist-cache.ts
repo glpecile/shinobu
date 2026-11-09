@@ -89,7 +89,7 @@ export function findLetterboxdTwinInCache(
     ...queryClient.getQueriesData<NormalizedMediaItem | null>({ queryKey: [Provider.Letterboxd, 'film'] })
       .flatMap(([, data]) => data == null ? [] : [data]),
   ];
-  if (item.type === 'TV') {
+  if (item.type === 'TV' || (item.type === 'ANIME' && item.isFilm !== true)) {
     // The film-page result comes last and supersedes its id-less list copies.
     const twins = new Map(candidates.filter((twin) => twin?.externalIds?.letterboxd != null)
       .map((twin) => [twin.externalIds.letterboxd, twin]));

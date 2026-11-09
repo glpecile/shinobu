@@ -90,7 +90,10 @@ export function applyPrimaryMetadata(
   // AniList's TV entries are individual cours; TMDB's match is the entire
   // series. Its year, dates, synopsis and episode count do not describe this
   // entry, but its identity and missing artwork still help the detail page.
-  const isAnimeCour = item.type === 'ANIME' && item.isFilm !== true;
+  // A single-episode entry that TMDB files as a movie logs as a film, so its
+  // TMDB movie id never reaches a show write.
+  const isFilm = item.type === 'ANIME' && (item.isFilm === true || primary.type === 'MOVIE');
+  const isAnimeCour = item.type === 'ANIME' && !isFilm;
 
   const hasBackdrop = item.backdropImage != null && item.backdropImage !== '';
   const primaryBackdrop =
@@ -100,6 +103,7 @@ export function applyPrimaryMetadata(
 
   return {
     ...item,
+    ...(isFilm ? { isFilm: true } : {}),
     coverImage: item.coverImage !== '' ? item.coverImage : primary.coverImage,
     ...(!hasBackdrop && primaryBackdrop != null
       ? { backdropImage: primaryBackdrop }
