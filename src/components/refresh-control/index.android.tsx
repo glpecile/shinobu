@@ -35,7 +35,10 @@ const HOLD = 64;
 const FRICTION = 0.5;
 const settle = { duration: DURATION.toggle, easing: TIMING_EASE_IN_OUT };
 /** A release carries the finger's speed into the settle, so a flick doesn't stall. */
-const release = (velocity: number) => ({ duration: 400, dampingRatio: 0.8, overshootClamping: true, velocity });
+function release(velocity: number) {
+  'worklet';
+  return { duration: 400, dampingRatio: 0.8, overshootClamping: true, velocity };
+}
 
 /**
  * Android has no top overscroll. GestureScrollView places this around the
@@ -63,6 +66,7 @@ export function RefreshControl({
   }));
 
   function run() {
+    if (refreshing) return;
     startRefresh(async () => {
       await onRefresh().catch(() => undefined);
       pull.set(withTiming(0, settle));

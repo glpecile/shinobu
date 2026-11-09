@@ -16,6 +16,7 @@ let pan: {
 };
 let doubleTap: () => void;
 const offset = shared(0);
+const withTiming = mock((value: number) => value);
 const failGesture = mock((_tag: number) => {});
 function View({ children }: PropsWithChildren) { return <div>{children}</div>; }
 function shared(initial: number) {
@@ -34,7 +35,7 @@ mock.module('react-native-reanimated', () => ({
   useAnimatedStyle: () => ({}),
   useAnimatedReaction: () => {},
   withSpring: (value: number) => value,
-  withTiming: (value: number) => value,
+  withTiming,
   scrollTo: () => {},
 }));
 mock.module('@/lib/haptics', () => ({ haptics: { selection: () => {} } }));
@@ -98,6 +99,23 @@ test('cancelled and short pulls do not refresh; a released pull refreshes once u
     expect(onRefresh).toHaveBeenCalledTimes(1);
     await act(async () => { pending.resolve(); });
     expect(view.getByRole('status').textContent).toBe('Idle');
+  } finally {
+    await act(async () => { pending.resolve(); });
+    view.unmount();
+  }
+});
+
+test('an active pull cannot start another refresh after a tab double-tap', async () => {
+  const pending = Promise.withResolvers<void>();
+  const onRefresh = mock(() => pending.promise);
+  const view = render(<RefreshControl onRefresh={onRefresh} tab="index" />);
+  try {
+    act(() => pan.onUpdate({ changeY: 200, velocityY: 0 }));
+    // The hold animation is still above the trigger when the finger lifts.
+    withTiming.mockImplementationOnce(() => 100);
+    act(() => doubleTap());
+    act(() => pan.onFinalize({ canceled: false }));
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   } finally {
     await act(async () => { pending.resolve(); });
     view.unmount();
