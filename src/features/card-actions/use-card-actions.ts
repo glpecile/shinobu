@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Keyboard } from 'react-native';
 
 import type { PersonCredit } from '@/features/person';
 import { haptics } from '@/lib/haptics';
+import { dismissKeyboardNow } from '@/lib/keyboard';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /** What `CardActionsSheet`'s credit line needs — see its `credit` prop. */
@@ -33,8 +33,8 @@ export function useCardActions() {
    */
   function openActions(next: NormalizedMediaItem, nextCredit?: CardCredit) {
     haptics.selection();
-    // A native sheet presents under the keyboard (long-press on a search result).
-    Keyboard.dismiss();
+    // Long-press on a search result can come with the keyboard up.
+    dismissKeyboardNow();
     setItem(next);
     setCredit(nextCredit ?? null);
     setOpen(true);

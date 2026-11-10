@@ -40,6 +40,7 @@ import { PosterWall } from '@/features/feed/poster-wall';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { DURATION, EASE_OUT } from '@/lib/motion';
+import { dismissKeyboardNow } from '@/lib/keyboard';
 import { hasCoarsePointer } from '@/lib/pointer';
 import { usePushRoute } from '@/lib/navigation';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
@@ -682,8 +683,7 @@ function SearchScreen() {
               icon={scope.icon}
               label={`Searching ${scope.label}`}
               onPress={() => {
-                // The picker sheet would otherwise open behind the keyboard.
-                Keyboard.dismiss();
+                dismissKeyboardNow();
                 setScopeOpen(true);
               }}
             />
