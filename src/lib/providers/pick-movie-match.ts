@@ -1,18 +1,31 @@
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
+ * Progress matching keys every list title against every library on each pass,
+ * and Hermes runs the Unicode normalize and regexes slowly.
+ * ponytail: unbounded, one entry per distinct title seen this session; cap it
+ * if memory ever shows it.
+ */
+const titleKeys = new Map<string, string>();
+
+/**
  * Case- and diacritic-insensitive title key. Punctuation and separators
  * collapse to single spaces so "WALL·E" and "Wall-E" compare equal, while
  * genuinely different titles ("The Odyssey" vs "2001: A Space Odyssey") stay
  * apart.
  */
 export function titleKey(title: string): string {
-  return title
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
+  let key = titleKeys.get(title);
+  if (key == null) {
+    key = title
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+    titleKeys.set(title, key);
+  }
+  return key;
 }
 
 /**
