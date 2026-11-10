@@ -52,8 +52,6 @@ export interface ActionableRowProps {
   /** ⌘/Ctrl+click target on web. */
   href: string;
   onPress: () => void;
-  /** Preloads the destination of a row whose press always navigates. */
-  onPressIn?: () => void;
   pressBehavior?: ComponentProps<typeof PresstableScale>['pressBehavior'];
   onActions: (item: NormalizedMediaItem) => void;
   /** Poster and text; fills the available width when actions stay visible. */
@@ -83,7 +81,6 @@ export function ActionableRow({
   item,
   href,
   onPress,
-  onPressIn,
   pressBehavior,
   onActions,
   leading,
@@ -98,7 +95,6 @@ export function ActionableRow({
   const pressProps = {
     ...accessibility,
     pressBehavior,
-    onPressIn,
     onLongPress: () => onActions(item),
     onPress: () => {
       if (newTab.opened()) return;

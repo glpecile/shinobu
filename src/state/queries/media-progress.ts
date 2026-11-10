@@ -61,36 +61,40 @@ export function useItemProgress(items: readonly NormalizedMediaItem[], libraries
   const { movies, shows, simkl, anilist, serializd } = libraries.indexes;
   const metadata = useMediaMetadata(items, connected.length > 0);
   const resolved = metadata.items;
+  // Library matches don't depend on the per-film watch reads, so they stay out
+  // of `combine`, which reruns over the whole list each time one read settles.
+  const librarySources = resolved.map((item) => {
+    const sources: MediaProgress[] = [];
+    const add = (current: number, total: number | undefined, completed = false) => sources.push({ watched: current > 0 || completed, current, total, completed, unit: item.progressUnit });
+    const trakt = filmLike(item) ? movies : shows;
+    if (connected.includes(Provider.Trakt) && trakt != null) {
+      const match = findProgressRow(trakt, item);
+      if (match != null) add(match.currentProgress, match.totalEpisodes);
+    }
+    if (connected.includes(Provider.Simkl) && simkl != null) {
+      const entry = findLibraryEntry(simkl, item);
+      if (entry != null) add(findLibraryProgress(simkl, item) ?? 0, item.type === 'TV' && entry.item.type === 'ANIME' ? undefined : entry.item.totalEpisodes,
+        filmLike(item) ? entry.status === 'completed' : item.type !== 'TV' && entry.status === 'completed');
+    }
+    if (connected.includes(Provider.AniList) && anilist != null) {
+      const entry = findAniListProgress(item, anilist);
+      if (entry != null) add(entry.item.currentProgress, item.type === 'TV' ? undefined : entry.item.totalEpisodes, item.type !== 'TV' && (entry.status === 'COMPLETED' || entry.status === 'REPEATING'));
+    }
+    if (serializdUsername != null && item.type === 'TV' && serializd != null) {
+      const show = findProgressRow(serializd, item);
+      if (show != null) sources.push({ watched: true, completed: false, current: show.watchedSeasons, total: show.totalSeasons, unit: 'season' });
+    }
+    return sources;
+  });
   const matched = useQueries({
     queries: resolved.map((item) => letterboxdFilmWatchQuery(letterboxdUsername, item)),
     // TanStack structurally shares what `combine` returns: a watch that
     // settles without changing progress re-renders nothing, and unchanged
     // rows keep their objects, so a list redraws only the cells that moved.
     combine: (watches) => {
-      const progress = resolved.map((item, index) => {
-        const sources: MediaProgress[] = [];
-        const add = (current: number, total: number | undefined, completed = false) => sources.push({ watched: current > 0 || completed, current, total, completed, unit: item.progressUnit });
-        const trakt = filmLike(item) ? movies : shows;
-        if (connected.includes(Provider.Trakt) && trakt != null) {
-          const match = findProgressRow(trakt, item);
-          if (match != null) add(match.currentProgress, match.totalEpisodes);
-        }
-        if (connected.includes(Provider.Simkl) && simkl != null) {
-          const entry = findLibraryEntry(simkl, item);
-          if (entry != null) add(findLibraryProgress(simkl, item) ?? 0, item.type === 'TV' && entry.item.type === 'ANIME' ? undefined : entry.item.totalEpisodes,
-            filmLike(item) ? entry.status === 'completed' : item.type !== 'TV' && entry.status === 'completed');
-        }
-        if (connected.includes(Provider.AniList) && anilist != null) {
-          const entry = findAniListProgress(item, anilist);
-          if (entry != null) add(entry.item.currentProgress, item.type === 'TV' ? undefined : entry.item.totalEpisodes, item.type !== 'TV' && (entry.status === 'COMPLETED' || entry.status === 'REPEATING'));
-        }
-        if (letterboxdUsername != null && watches[index].data != null) add(1, 1, true);
-        if (serializdUsername != null && item.type === 'TV' && serializd != null) {
-          const show = findProgressRow(serializd, item);
-          if (show != null) sources.push({ watched: true, completed: false, current: show.watchedSeasons, total: show.totalSeasons, unit: 'season' });
-        }
-        return mergeMediaProgress(item, sources);
-      });
+      const progress = resolved.map((item, index) => mergeMediaProgress(item, letterboxdUsername != null && watches[index].data != null
+        ? [...librarySources[index], { watched: true, current: 1, total: 1, completed: true, unit: item.progressUnit }]
+        : librarySources[index]));
       const enabled = watches.filter((query) => query.isEnabled);
       return {
         items: resolved,

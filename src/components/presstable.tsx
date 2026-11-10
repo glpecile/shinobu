@@ -17,11 +17,14 @@ const PRESS_DEBOUNCE_MS = 500;
 
 export type PressBehavior = 'immediate' | 'prevent-repeat';
 
+/**
+ * Neither wrapper takes `onPressIn`: pressto 0.7 fires it from gesture-handler
+ * 2's `onBegan`, which gesture-handler 3's button renamed to `onBegin`, so it
+ * would never run.
+ */
 type PressBehaviorProps = {
   /** `immediate` accepts every press; `prevent-repeat` (default) drops repeats within 500 ms. */
   pressBehavior?: PressBehavior;
-  /** Fires as the finger lands, before the press is known to be a tap. */
-  onPressIn?: () => void;
 };
 
 /**
@@ -68,15 +71,6 @@ const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
-/**
- * pressto 0.7 fires its own `onPressIn` from gesture-handler 2's `onBegan`,
- * which gesture-handler 3's button renamed to `onBegin`, so it never runs.
- * Remove once pressto listens for `onBegin`.
- */
-function pressInProps(onPressIn: (() => void) | undefined) {
-  return onPressIn == null ? null : { onBegin: () => onPressIn() };
-}
-
 function usePressHandler<Args extends unknown[]>(
   onPress: ((...args: Args) => void) | undefined,
   pressBehavior: PressBehavior,
@@ -101,7 +95,6 @@ function usePressHandler<Args extends unknown[]>(
 export function PresstableScale({
   minScale,
   onPress,
-  onPressIn,
   pressBehavior = 'prevent-repeat',
   ...rest
 }: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn'> & PressBehaviorProps & {
@@ -115,7 +108,6 @@ export function PresstableScale({
       rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...rest}
-      {...pressInProps(onPressIn)}
       metadata={{ minScale, reduceMotion }}
       onPress={handlePress}
     />
@@ -125,7 +117,6 @@ export function PresstableScale({
 /** Dims while pressed — buttons, icon taps, inline text actions. */
 export function PresstableOpacity({
   onPress,
-  onPressIn,
   pressBehavior = 'prevent-repeat',
   ...rest
 }: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn'> & PressBehaviorProps & {
@@ -138,7 +129,6 @@ export function PresstableOpacity({
       rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
       {...rest}
-      {...pressInProps(onPressIn)}
       onPress={handlePress}
     />
   );

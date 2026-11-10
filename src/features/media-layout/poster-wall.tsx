@@ -9,10 +9,8 @@ import { PresstableScale } from '@/components/presstable';
 import { RefreshControl } from '@/components/refresh-control';
 import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
-import { usePreloadRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
-import { routes } from '@/lib/routes';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -92,7 +90,6 @@ export function PosterCell({
   note?: string;
 }) {
   const prefetchDetails = usePrefetchMediaDetails();
-  const preloadRoute = usePreloadRoute();
   // JS hover state, not CSS: uniwind has no `group-hover:`, so the web-only
   // reveal rides on RN-web's pointer events (same approach as MediaCard).
   const [hovered, setHovered] = useState(false);
@@ -172,7 +169,6 @@ export function PosterCell({
           accessibilityLabel={accessibilityLabel}
           className="w-full h-full rounded-md overflow-hidden border border-border/40 bg-surface"
           onLongPress={() => onActions(item)}
-          onPressIn={() => preloadRoute(routes.details(item.id, item.type))}
           onPress={() => {
             prefetchDetails(item);
             onPress(item);
