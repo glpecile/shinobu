@@ -28,7 +28,7 @@ test('a filtered activity page retains AniList pagination', async () => {
 });
 
 test.each([
-  ['ALL', 'media(search: $search, sort: SEARCH_MATCH)'],
+  ['ANIME', 'media(search: $search, type: ANIME, sort: SEARCH_MATCH)'],
   ['MANGA', 'media(search: $search, type: MANGA, sort: SEARCH_MATCH)'],
 ] as const)('a %s title search asks AniList for that type alone', async (type, media) => {
   const bodies: string[] = [];

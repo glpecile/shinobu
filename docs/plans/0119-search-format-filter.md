@@ -17,7 +17,7 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
 - **KTD-1. Reading is one search scope.** The existing FAB opens Movies & TV
   (`?scope=titles`, the default), Reading, Cast & crew, and Studios (with a
   TMDB token). Reading is the one option for everything read (plan 0117
-  KTD-10); Movies & TV keeps the combined movie, TV, anime, and manga search.
+  KTD-10); Movies & TV searches movies, TV, and anime.
   No segmented control or separate Movies and TV options.
 - **KTD-2. The scope rides the URL as `?scope=reading`.** The FAB icon,
   accessible label, selected picker row, and field placeholder reflect Reading.
@@ -30,7 +30,7 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
 
   | Scope | TMDB | Trakt (fallback) | AniList `media(...)` |
   | --- | --- | --- | --- |
-  | Movies & TV | `/search/multi` | `/search/movie,show` | no type filter |
+  | Movies & TV | `/search/multi` | `/search/movie,show` | `type: ANIME` |
   | Reading | none | none | `type: MANGA` (light novels and one-shots included) |
 
 - **KTD-5. Movies & TV and Reading are separate AniList entries, never stale.**
@@ -47,11 +47,11 @@ wants this instead of, or before, the diary's Reading filter (plan 0117 M4).
 
   | Scope | Movies & TV section | AniList section |
   | --- | --- | --- |
-  | Movies & TV | Movies & TV | Anime & Manga |
+  | Movies & TV | Movies & TV | Anime |
   | Reading | — | Manga & light novels |
 
   "Manga & light novels" still reads right beside a future "Books" section.
-  Movies & TV keeps the combined AniList label, because its page really is mixed.
+  Movies & TV asks AniList for anime alone, since manga belongs to Reading.
 - **KTD-7. Empty and failed states keep the screen's rows.** A section with
   nothing disappears and a failed one shows its row. A Reading search with no
   results says so and offers "Search movies & TV". The total-failure notice is
