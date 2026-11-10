@@ -1,4 +1,4 @@
-import { router as imperativeRouter, useNavigation, useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 
 import { openedInNewTab } from './new-tab';
 import { createPushGuard } from './push-guard';
@@ -12,46 +12,9 @@ export { PUSH_GUARD_MS, createPushGuard, type PushGuard } from './push-guard';
  */
 const pushGuard = createPushGuard();
 
-/**
- * The stack promotes any hidden screen of the pushed route's name and swaps in
- * the new params, so a press-in on one card followed by a tap on another
- * flashed the first card's page. Detail routes have no `getId` on purpose:
- * with one, every press-in during a scroll would keep its own hidden screen.
- */
-let preloadedHref: string | null = null;
-
-/**
- * Link navigation shares the imperative push guard, keyed by its public route.
- * An allowed push replaces a hidden screen preloaded for a different href.
- */
+/** Link navigation shares the imperative push guard, keyed by its public route. */
 export function allowRoutePush(href: string): boolean {
-  if (!pushGuard.allow(href)) return false;
-  if (preloadedHref != null && href !== preloadedHref) {
-    imperativeRouter.prefetch(href as Parameters<typeof imperativeRouter.prefetch>[0]);
-    preloadedHref = href;
-  }
-  return true;
-}
-
-/**
- * Renders `href` hidden in the stack so the push that follows lands on a
- * mounted screen. Call it on press-in of a press that always navigates. The
- * stack keeps one preloaded screen per route, so a press-in that turns into a
- * scroll costs one hidden render. Native only: on web the hidden screen's
- * `<Head>` would retitle the tab.
- *
- * Urgent, not in a transition: a pending preload let the tap's push promote
- * an older hidden screen, then swapped in the new one, so Android slid the
- * page in twice (docs/solutions/stale-detail-preload.md).
- */
-export function usePreloadRoute(): (href: string) => void {
-  const router = useRouter();
-  const navigation = useNavigation();
-  return (href: string) => {
-    if (process.env.EXPO_OS === 'web' || !navigation.isFocused()) return;
-    router.prefetch(href as Parameters<typeof router.prefetch>[0], { inTransition: false });
-    preloadedHref = href;
-  };
+  return pushGuard.allow(href);
 }
 
 /**

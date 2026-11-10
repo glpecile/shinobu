@@ -13,7 +13,7 @@ import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
-import { allowRoutePush, usePreloadRoute, usePushRoute } from '@/lib/navigation';
+import { allowRoutePush, usePushRoute } from '@/lib/navigation';
 import { sourceProviderOf } from '@/lib/providers/provider-links';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { routes } from '@/lib/routes';
@@ -49,7 +49,6 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   // Uniwind has no group-hover support.
   const [hovered, setHovered] = useState(false);
   const pushRoute = usePushRoute();
-  const preloadRoute = usePreloadRoute();
   const reduceMotion = useReducedMotion();
   const [displayedUri, setDisplayedUri] = useState<string | null>(null);
   const zoom = process.env.EXPO_OS === 'ios' && !reduceMotion && coverImage !== '' && displayedUri === coverImage;
@@ -112,7 +111,6 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
   const pressProps = {
     accessibilityLabel: [item.title, item.type, progress, subtitle, sourceLabel].filter(Boolean).join(' · '),
     onLongPress: () => onActionsPress(item),
-    onPressIn: () => preloadRoute(href),
     className: 'w-full h-full',
   };
 

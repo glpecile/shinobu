@@ -9,7 +9,6 @@ import { WatchedMark } from '@/components/watched-mark';
 import type { MediaProgress } from '@/lib/media-progress';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
-import { usePreloadRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -90,7 +89,6 @@ export function WatchlistRow({
   /** Replaces the year and kind line, e.g. with when the next episode airs. */
   note?: string;
 }) {
-  const preloadRoute = usePreloadRoute();
   return (
     <ActionableRow
       className="px-6 py-2.5"
@@ -115,7 +113,6 @@ export function WatchlistRow({
       onActions={onActions}
       showActions={showActions}
       onPress={() => onPress(item)}
-      onPressIn={() => preloadRoute(routes.details(item.id, item.type))}
       trailing={
         <View className="flex-row items-center gap-2">
           {watched != null && <WatchedMark item={item} showProgress state={watched} />}

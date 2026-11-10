@@ -96,11 +96,11 @@ Both guards read `Date.now()` when the JS handler runs, not when the finger
 touched. Rendering the first push's details screen can block the JS thread for
 seconds on Android, and the second tap's press-in and press queue behind it.
 Logging the root stack on an emulator showed the first push at 1.5 s, the
-second tap's press-in preload at 2.3 s, and its push promoting that preload to
-a second details route at 3.5 s. Each step was past both windows. On device it
+second tap's press-in at 2.3 s, and its push opening a second details route
+at 3.5 s. Each step was past both windows. On device it
 read as the page sliding in twice with a gray frame between.
 
-`usePushRoute` and `usePreloadRoute` now do nothing when the calling screen is
+`usePushRoute` now does nothing when the calling screen is
 no longer focused (`navigation.isFocused()`). By the time a queued tap runs, the
 first push has committed and its card's screen is covered. The time guard still
 covers the gap before that commit. Focus is read imperatively, so cards don't

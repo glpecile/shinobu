@@ -41,7 +41,7 @@ import { PersonAvatar } from '@/features/person/person-avatar';
 import { onSearchFocusRequest } from '@/features/search/focus-signal';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { hasCoarsePointer } from '@/lib/pointer';
-import { usePreloadRoute, usePushRoute } from '@/lib/navigation';
+import { usePushRoute } from '@/lib/navigation';
 import { animeSeasonAt } from '@/lib/providers/anilist/season';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
@@ -117,7 +117,6 @@ function SearchResultRow({
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const preloadRoute = usePreloadRoute();
   return (
     <ActionableRow
       accessibility={{
@@ -155,7 +154,6 @@ function SearchResultRow({
       }
       onActions={onActions}
       onPress={() => onPress(item)}
-      onPressIn={() => preloadRoute(routes.details(item.id, item.type))}
     />
   );
 }
