@@ -608,15 +608,14 @@ export function getAniListStaff(
 }
 
 /**
- * Public text search. `ALL` has no type filter, so one request covers
- * everything AniList can log (registry: ANIME + MANGA). `MANGA` asks for
- * AniList's MANGA type alone, light novels (`NOVEL`) and one-shots included.
- * Same no-session contract as trending;
+ * Public text search. Without a `type`, one request covers everything AniList
+ * can log (registry: ANIME + MANGA). `MANGA` includes light novels (`NOVEL`)
+ * and one-shots. Same no-session contract as trending;
  * SEARCH_MATCH keeps exact-title hits above popularity noise.
  */
 export function searchMedia(
   deps: AniListDeps,
-  params: { query: string; limit?: number; type?: 'ALL' | 'MANGA' },
+  params: { query: string; limit?: number; type?: 'ANIME' | 'MANGA' },
 ): Effect.Effect<NormalizedMediaItem[], ProviderError> {
   const limit = params.limit ?? 20;
   return Effect.gen(function* () {
@@ -624,7 +623,7 @@ export function searchMedia(
       deps,
       `query ($search: String, $perPage: Int) {
         Page(page: 1, perPage: $perPage) {
-          media(search: $search, ${params.type === 'MANGA' ? 'type: MANGA, ' : ''}sort: SEARCH_MATCH) { ${CARD_FIELDS} }
+          media(search: $search, ${params.type ? `type: ${params.type}, ` : ''}sort: SEARCH_MATCH) { ${CARD_FIELDS} }
         }
       }`,
       { variables: { search: params.query, perPage: limit } },

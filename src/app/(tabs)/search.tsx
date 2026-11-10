@@ -414,7 +414,7 @@ function SearchScreen() {
   const moviesTvSearch = moviesTvSource === 'tmdb' ? tmdbSearch : traktSearch;
   const anilistSearch = useAniListSearchQuery({
     query,
-    type: reading ? 'MANGA' : 'ALL',
+    type: reading ? 'MANGA' : 'ANIME',
     enabled: titleSearch,
   });
   const personSearch = useTmdbPersonSearchQuery({
@@ -447,7 +447,7 @@ function SearchScreen() {
             search: anilistSearch,
             rows: sectionRows(
               Provider.AniList,
-              reading ? 'Manga & light novels' : 'Anime & Manga',
+              reading ? 'Manga & light novels' : 'Anime',
               anilistSearch,
               titleRow,
             ),
