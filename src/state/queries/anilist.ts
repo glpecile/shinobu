@@ -10,6 +10,7 @@ import * as Effect from 'effect/Effect';
 import { useSyncExternalStore } from 'react';
 
 import { httpFetch } from '@/lib/http/client';
+import { searchFuzzy } from '@/lib/providers/fuzzy-search';
 import { Provider } from '@/lib/providers/types';
 import { SEARCH_QUERY_ROOTS } from '@/state/queries/search-cache';
 import { sessionFromImplicitRedirect } from '@/lib/providers/anilist/auth';
@@ -425,7 +426,7 @@ export function useAniListViewerQuery(options: { enabled?: boolean } = {}) {
 }
 
 /**
- * Public title search, `ANIME` for Movies & TV and `MANGA` for the
+ * Typo-tolerant title search, `ANIME` for Movies & TV and `MANGA` for the
  * Reading scope — the AniList half of the sectioned search screen. Same enable contract as `useTraktSearchQuery`
  * (the shared minimum-length constant lives there). Never stale: each type is
  * its own entry, and flipping between Titles and Reading must read the cache,
@@ -445,7 +446,10 @@ export function useAniListSearchQuery(params: {
   return useQuery({
     queryKey: anilistQueryKeys.search(query, limit, type),
     queryFn: ({ signal }) =>
-      Effect.runPromise(searchMedia(anilistDeps(), { query, limit, type }), { signal }),
+      Effect.runPromise(
+        searchFuzzy(query, (search) => searchMedia(anilistDeps(), { query: search, limit, type })),
+        { signal },
+      ),
     enabled:
       params.enabled !== false && query.length >= SEARCH_MIN_QUERY_LENGTH,
     // A new query string keeps the last results up while it loads; a new type

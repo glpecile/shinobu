@@ -12,7 +12,7 @@ Observed with read-only `/search/multi` calls on 2026-10-14 (#255):
   *Star Wars*. Literal titles must remain ahead of spelling suggestions;
   the application cannot assume every unusual spelling is a typo.
 
-`lib/providers/tmdb/fuzzy-search.ts` therefore ranks direct results, and when
+`lib/providers/fuzzy-search.ts` therefore ranks direct results, and when
 there are fewer than five, requests at most two informative words or one
 shortened single-word prefix. Supplemental results must match the complete
 query within the edit budget, not just the word used to fetch them. Optional
@@ -33,8 +33,9 @@ all fetched pages can still produce no suggestion. Broad queries with five or
 more direct titles do not trigger more traffic. No spelling-variant request
 fan-out, catalogue download, extra provider, proxy, or backend is introduced.
 
-Only the search tab calls the fuzzy read. `searchTitles` and `searchMovie`
-retain strict retrieval for identity lookups, including Letterboxd enrichment.
+Only the search tab calls the fuzzy read, for TMDB and AniList titles.
+On AniList a sparse result spends up to two more requests of its 30/min
+budget. `searchTitles` and `searchMovie` retain strict retrieval for identity lookups, including Letterboxd enrichment.
 Keep the year/title guards described in
 `trakt-text-search-wrong-movie-match.md`: a discovery suggestion is not evidence
 that two provider records represent the same work.
