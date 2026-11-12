@@ -208,9 +208,7 @@ function CatchUpForm({
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   const { trackBusy } = useCatchUpControls();
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
-    item,
-  );
+  const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
 
   // The user's opt-outs, not a copy of the targets: the id lookup can add a
   // target after the sheet opens, and that target starts selected.
@@ -457,6 +455,7 @@ function CatchUpForm({
             <LogFormFields
               item={item}
               manualTargets={manualTargets}
+              unmatchedTargets={unmatchedTargets}
               onClose={onClose}
               onDismiss={onDismiss}
               onSelectedProvidersChange={setSelectedProviders}

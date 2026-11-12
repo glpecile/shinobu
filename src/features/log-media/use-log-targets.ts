@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { splitWriteTargets } from '@/lib/providers/routing';
+import { splitWriteTargets, unmatchedWriteTargets } from '@/lib/providers/routing';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
@@ -10,6 +10,8 @@ import { enrichExternalIds } from './enrich';
 interface LogTargetsSplit {
   writable: ProviderId[];
   manual: ProviderId[];
+  /** Connected providers no id reaches for this anime. Empty until the id lookup has answered. */
+  unmatched: ProviderId[];
 }
 
 /** `process.env.EXPO_OS` is always one of these at runtime; '' never matches a platform flag. */
@@ -23,7 +25,8 @@ export function currentPlatform(): string {
  * platform and what can only be logged manually (plan 0022 R1/R2, e.g.
  * Letterboxd on web). Falls back to the unenriched split while the mapping
  * loads (it only ever widens). The mutation runs the same enrichment through
- * the same cache, so confirming doesn't refetch.
+ * the same cache, so confirming doesn't refetch. Unmatched providers come only
+ * from the enriched answer, because before it every anime looks unmatched.
  */
 export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const connected = useConnectedProviders();
@@ -33,15 +36,14 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
 
   const { data } = useQuery({
     queryKey: ['log-targets', item.id, item.tmdbTvVariant ?? null, ...connected, platform, letterboxdUserscript],
-    queryFn: async () =>
-      splitWriteTargets(
-        await enrichExternalIds(queryClient, item, connected),
-        connected,
-        platform,
-        'log',
-        letterboxdUserscript,
-      ),
+    queryFn: async () => {
+      const enriched = await enrichExternalIds(queryClient, item, connected);
+      return {
+        ...splitWriteTargets(enriched, connected, platform, 'log', letterboxdUserscript),
+        unmatched: unmatchedWriteTargets(enriched, connected, 'log'),
+      };
+    },
   });
 
-  return data ?? splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript);
+  return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [] };
 }

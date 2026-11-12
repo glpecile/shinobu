@@ -91,6 +91,28 @@ export function providersForWrite(
 }
 
 /**
+ * Connected providers that take this anime's movie or TV side but that no id
+ * reaches, so `providersForWrite` leaves them out. The log sheet lists them
+ * as manual rows; they are never write targets. Call it on the enriched item.
+ */
+export function unmatchedWriteTargets(
+  item: RoutableItem,
+  connected: readonly ProviderId[],
+  capability: WriteCapability,
+): ProviderId[] {
+  if (item.type !== 'ANIME' || item.tmdbTvVariant != null || hasMovieTvIds(item)) return [];
+  const type = animeEffectiveMovieTvType(item);
+  return connected.filter((id) => {
+    const provider = PROVIDERS[id];
+    return (
+      writeSupport(provider, capability) !== 'none' &&
+      provider.mediaTypes.includes(type) &&
+      !provider.mediaTypes.includes('ANIME')
+    );
+  });
+}
+
+/**
  * Whose community scores the details Ratings section reads for `item`:
  * connected (usable), publishing a score, and applicable to the item's
  * (effective) type, so Letterboxd only scores films and AniList only anime.

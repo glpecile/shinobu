@@ -82,6 +82,8 @@ export interface LogFormFieldsProps {
    * never part of `targets`/`selectedProviders`.
    */
   manualTargets?: readonly ProviderId[];
+  /** Connected providers with no match for this item — a manual row with the reason, never a toggle. */
+  unmatchedTargets?: readonly ProviderId[];
   /** Which of `targets` are actually selected — defaults to all targets. */
   selectedProviders: ProviderId[];
   onSelectedProvidersChange: (ids: ProviderId[]) => void;
@@ -111,6 +113,7 @@ export function LogFormFields({
   onDismiss,
   targets,
   manualTargets = [],
+  unmatchedTargets = [],
   selectedProviders,
   onSelectedProvidersChange,
   watchedAt,
@@ -177,6 +180,11 @@ export function LogFormFields({
           item={item}
           manual={manualTargets}
           reasons={process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : undefined}
+        />
+        <ManualWriteRows
+          item={item}
+          manual={unmatchedTargets}
+          reasons={Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match found for this title']))}
         />
         {/* The like rides in this row, but a diary provider is never undated. */}
         {showDateField && (
@@ -349,7 +357,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const title = span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
+  const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   // The user's opt-outs, not a copy of the targets: the id lookup can add a
@@ -503,6 +511,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           <LogFormFields
             item={item}
             manualTargets={manualTargets}
+            unmatchedTargets={unmatchedTargets}
             onClose={onClose}
             onDismiss={onDismiss}
             onSelectedProvidersChange={setSelectedProviders}
