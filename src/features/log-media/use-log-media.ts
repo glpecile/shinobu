@@ -466,21 +466,22 @@ async function resolveLogPlan(
 
   const targets = resolveWriteTargets(item, connected, {
     capability: 'log',
-    // Only a *canonical*-domain batch can drop AniList (plan 0011 / R6): that
-    // guard exists because a canonical season 2 has no place on a season-1
-    // AniList entry. An entry-domain batch is already in AniList's own
-    // numbering, so it stays a target whatever season it maps to.
-    nonSeasonOneEpisodes:
-      cour == null &&
-      entryInput == null &&
-      canonicalInput != null &&
-      canonicalInput.some((episode) => episode.season !== 1),
     onlyProviders: variables.providers,
     platform: currentPlatform(),
     letterboxdUserscript: hasLetterboxdUserscript(),
   });
 
   const mappingSkips = new Map<ProviderId, string>();
+  // A later canonical season has no place on the show's AniList entry, which
+  // is its first cour. With no cour found, the only safe move is not to write.
+  if (
+    targets.includes(Provider.AniList) &&
+    cour == null &&
+    entryInput == null &&
+    canonicalInput?.some((episode) => episode.season !== 1) === true
+  ) {
+    mappingSkips.set(Provider.AniList, 'Could not find the AniList entry for this season');
+  }
   if (
     targets.includes(Provider.Simkl) &&
     entryInput == null &&
@@ -498,8 +499,8 @@ async function resolveLogPlan(
         canonical: canonicalInput,
         // A canonical season-1 batch *is* the entry's own numbering (plan
         // 0011). A season-2+ batch outside a resolved cour has **no**
-        // entry-domain reading: AniList never receives it (the
-        // nonSeasonOneEpisodes guard above), and Simkl (plan 0034 U6) must
+        // entry-domain reading: AniList never receives it (its
+        // mapping skip above), and Simkl (plan 0034 U6) must
         // reverse-map it through the ani.zip table in its adapter rather than
         // trust a raw episode number as an AniDB one — deriving `entry` here
         // would hand it S02E03 as "entry episode 3", the wrong-identity write

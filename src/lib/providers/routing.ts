@@ -174,19 +174,6 @@ export function splitWriteTargets(
 export interface WriteTargetOptions {
   /** Which write verb's declarations to resolve against (plan 0031 KTD-1/KTD-15). */
   capability: WriteCapability;
-  /**
-   * A **canonical**-domain batch (the Trakt seasons UI) touching season 2+
-   * stays off AniList when `useLogMedia` found no AniList cour holding it, so
-   * the only safe move is not to write.
-   *
-   * This is *not* the anime case any more. An AniList-origin log arrives in the
-   * entry's own 1..n numbering, and `useLogMedia` translates it to a canonical
-   * season for Trakt/Serializd before routing — so a sequel entry keeps AniList
-   * as a target whatever season it maps to, and this flag stays false for it.
-   * Routing itself remains pure and network-free (plan 0011 decision 6): it
-   * only ever sees the already-translated result.
-   */
-  nonSeasonOneEpisodes?: boolean;
   /** Caller opt-out — narrows to this subset of the routed targets (the confirm sheet's picker). */
   onlyProviders?: readonly ProviderId[];
   /** `process.env.EXPO_OS` — excludes anything manual-only on this platform (plan 0022 R2/KTD-3). */
@@ -197,8 +184,7 @@ export interface WriteTargetOptions {
 
 /**
  * The full target-resolution pipeline behind a confirmed write: routed targets
- * for `options.capability`, minus AniList for a non-season-1 *canonical* batch,
- * minus caller opt-outs, minus anything manual (declared or platform-banned).
+ * for `options.capability`, minus caller opt-outs, minus anything manual (declared or platform-banned).
  * Extracted out of `useLogMedia` so the defensive manual-exclusion — the second
  * line of defense against ever writing to a banned target, e.g. Letterboxd on
  * web — is unit-testable without mocking the mutation's QueryClient/adapters.
@@ -209,9 +195,6 @@ export function resolveWriteTargets(
   options: WriteTargetOptions,
 ): ProviderId[] {
   let targets = providersForWrite(item, connected, options.capability);
-  if (options.nonSeasonOneEpisodes === true) {
-    targets = targets.filter((provider) => provider !== Provider.AniList);
-  }
   if (options.onlyProviders != null && options.onlyProviders.length > 0) {
     const only = options.onlyProviders;
     targets = targets.filter((provider) => only.includes(provider));
