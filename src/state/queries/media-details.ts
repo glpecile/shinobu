@@ -11,6 +11,7 @@ import {
   type MediaDetailsDeps,
   type MediaDetails,
 } from '@/lib/providers/media-details';
+import { aniZipTmdbKind } from '@/lib/providers/mapping/anizip';
 import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { tmdbToken } from '@/state/session/tmdb-token';
@@ -64,7 +65,8 @@ const DETAILS_STALE_TIME_MS = 60 * 60 * 1000;
 /**
  * The TMDB id the composer should use. TV anime arrive with only an AniList
  * id — bridge ani.zip → TVDB → TMDB `/find` (both legs forever-cached).
- * Anime films map straight through ani.zip's own TMDB (movie) id. When
+ * Anime films map straight through ani.zip's own TMDB (movie) id, unless the
+ * record has a TVDB id (then it is a show's id). When
  * ani.zip has neither, a strict title match can find it, and `isFilm` says
  * TMDB filed it as a movie.
  */
@@ -96,7 +98,7 @@ async function resolveTmdbId(
   const ids = await cachedAniZipIds(queryClient, {
     anilistId: item.externalIds.anilist,
   });
-  if (item.isFilm === true && ids?.tmdb != null) return { tmdbId: ids.tmdb };
+  if (item.isFilm === true && ids?.tmdb != null && aniZipTmdbKind(ids) === 'movie') return { tmdbId: ids.tmdb };
   if (item.isFilm !== true && ids?.tvdb != null) {
     const tmdbId = await cachedTmdbTvIdByTvdb(queryClient, ids.tvdb);
     if (tmdbId != null) return { tmdbId };

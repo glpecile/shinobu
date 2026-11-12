@@ -439,9 +439,12 @@ async function resolveLogPlan(
 ): Promise<LogPlan> {
   let item = await enrichExternalIds(queryClient, variables.item, connected);
 
-  const canonicalInput = intendedEpisodes(variables);
+  // A one-episode entry the enrichment filed as a film arrives as an episode
+  // log; a film has no episodes.
+  const film = item.isFilm === true;
+  const canonicalInput = film ? null : intendedEpisodes(variables);
   const entryInput =
-    variables.entryEpisodes != null && variables.entryEpisodes.length > 0
+    !film && variables.entryEpisodes != null && variables.entryEpisodes.length > 0
       ? variables.entryEpisodes
       : null;
 
