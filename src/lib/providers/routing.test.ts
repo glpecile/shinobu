@@ -393,20 +393,13 @@ describe('listProviderFor', () => {
 
 describe('unmatchedWriteTargets', () => {
   it('lists the movie trackers for an anime film no id reaches', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL5, 'log')).toEqual([
+    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL5)).toEqual([
       'trakt',
       'letterboxd',
     ]);
   });
 
-  it('lists the TV trackers for an anime series no id reaches', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', ...ids({ anilist: 1 }) }, ALL5, 'log')).toEqual([
-      'trakt',
-      'serializd',
-    ]);
-  });
-
   it('is empty once a movie or TV id is known', () => {
-    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5, 'log')).toEqual([]);
+    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5)).toEqual([]);
   });
 });

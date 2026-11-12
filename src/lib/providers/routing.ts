@@ -98,14 +98,13 @@ export function providersForWrite(
 export function unmatchedWriteTargets(
   item: RoutableItem,
   connected: readonly ProviderId[],
-  capability: WriteCapability,
 ): ProviderId[] {
   if (item.type !== 'ANIME' || item.tmdbTvVariant != null || hasMovieTvIds(item)) return [];
   const type = animeEffectiveMovieTvType(item);
   return connected.filter((id) => {
     const provider = PROVIDERS[id];
     return (
-      writeSupport(provider, capability) !== 'none' &&
+      writeSupport(provider, 'log') !== 'none' &&
       provider.mediaTypes.includes(type) &&
       !provider.mediaTypes.includes('ANIME')
     );
