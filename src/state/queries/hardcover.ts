@@ -7,7 +7,7 @@ import {
   revokeHardcoverSession,
 } from '@/lib/providers/hardcover/auth';
 import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
-import { getViewer } from '@/lib/providers/hardcover/reads';
+import { getBookEntry, getViewer } from '@/lib/providers/hardcover/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
 import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
@@ -69,7 +69,27 @@ export function revokeHardcover(): void {
 export const hardcoverQueryKeys = {
   all: [Provider.Hardcover] as const,
   viewer: () => [...hardcoverQueryKeys.all, 'viewer'] as const,
+  /** Every read of the viewer's library. A log or a reading-list write invalidates this prefix. */
+  libraryRoot: () => [...hardcoverQueryKeys.all, 'library'] as const,
+  bookEntry: (bookId: number) => [...hardcoverQueryKeys.libraryRoot(), 'entry', bookId] as const,
 };
+
+/** The viewer's library entry for one book: its status, the read in progress and the page count. */
+export function hardcoverBookEntryQuery(bookId: number) {
+  return {
+    queryKey: hardcoverQueryKeys.bookEntry(bookId),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getBookEntry(hardcoverDeps(), bookId), { signal }),
+  };
+}
+
+export function useHardcoverBookEntryQuery(params: { bookId: number | undefined; enabled?: boolean }) {
+  const { bookId, enabled = true } = params;
+  return useQuery({
+    ...hardcoverBookEntryQuery(bookId ?? 0),
+    enabled: enabled && bookId != null,
+  });
+}
 
 /**
  * The connected member's username for Manage Trackers. Cached forever, like

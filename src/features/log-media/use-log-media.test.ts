@@ -780,3 +780,79 @@ describe('planLogWrite — a retry reads fresh watch state (plan 014)', () => {
     expect(plan.variables.rewatch).toBe(true);
   });
 });
+
+/** A one-book library: `entry` answers the entry read, and each mutation is recorded. */
+async function connectHardcover(onMutation: (variables: Record<string, unknown>) => Response) {
+  const { setProviderSession } = await import('@/state/session/tokens');
+  setProviderSession('hardcover', { accessToken: 'tok' });
+  const library: { entry: unknown } = { entry: null };
+  httpHandler = async (_input, init) => {
+    const body = JSON.parse(String(init?.body)) as { query: string; variables: Record<string, unknown> };
+    if (body.query.startsWith('query BookEntry')) {
+      return Response.json({ data: { me: [{ user_books: library.entry == null ? [] : [library.entry] }] } });
+    }
+    return onMutation(body.variables);
+  };
+  return library;
+}
+
+describe('the Hardcover leg of the log fan-out (plan 0117 B3)', () => {
+  const book: NormalizedMediaItem = {
+    id: 'hardcover-427578', title: 'No Longer Human', coverImage: '', type: 'BOOK',
+    currentProgress: 0, progressUnit: 'page', lastUpdated: '', externalIds: { hardcover: 427578 },
+  };
+  const everyProvider: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd', 'simkl', 'hardcover'];
+
+  test('a book finished late in the evening goes to Hardcover alone, on the reader’s day', async () => {
+    const zone = process.env.TZ;
+    process.env.TZ = 'America/Argentina/Buenos_Aires';
+    const sent: Record<string, unknown>[] = [];
+    await connectHardcover((variables) => {
+      sent.push(variables);
+      return Response.json({ data: { insert_user_book: { id: 900 } } });
+    });
+    const queryClient = client();
+
+    // 22:30 on 31 October in Buenos Aires is already 1 November in UTC.
+    const plan = await planLogWrite(
+      queryClient,
+      { item: book, reading: { finished: true }, watchedAt: '2026-11-01T01:30:00.000Z' },
+      everyProvider,
+    );
+    const report = await fanOutLog(logAdapters(queryClient), plan.writeTargets, plan.variables);
+    process.env.TZ = zone;
+
+    expect(plan.targets).toEqual(['hardcover']);
+    expect(report.succeeded).toEqual(['hardcover']);
+    expect(sent).toEqual([
+      { object: { book_id: 427578, status_id: 3, user_date: '2026-10-31', action_at: '2026-11-01T01:30:00.000Z' } },
+    ]);
+  });
+
+  test('a finish that landed but reported failure is not sent again, and the next log is a reread', async () => {
+    let mutations = 0;
+    const library = await connectHardcover(() => {
+      mutations += 1;
+      // The server commits the finish, then the response times out.
+      library.entry = { id: 456, status_id: 3, user_book_reads: [{ id: 12, finished_at: '2026-11-12' }] };
+      return new Response('', { status: 504 });
+    });
+    const queryClient = client();
+
+    const first = await planLogWrite(queryClient, { item: book, reading: { finished: true } }, ['hardcover']);
+    const report = await fanOutLog(logAdapters(queryClient), first.writeTargets, first.variables);
+    invalidateAfterLog(queryClient, first.item, report.succeeded, first.skipped);
+    const retry = await planLogWrite(
+      queryClient,
+      { item: book, reading: { finished: true }, providers: report.failed, retryOf: { rewatch: first.rewatch } },
+      ['hardcover'],
+    );
+    const later = await planLogWrite(client(), { item: book, reading: { finished: true } }, ['hardcover']);
+
+    expect(report.failed).toEqual(['hardcover']);
+    expect(manualLinkForOutcome(report.outcomes[0], book)).toBe('https://hardcover.app/id/book/427578');
+    expect(retry.skipped).toEqual(['hardcover']);
+    expect(mutations).toBe(1);
+    expect(later.variables.rewatch).toBe(true);
+  });
+});

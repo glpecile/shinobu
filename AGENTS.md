@@ -167,7 +167,8 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
 - `useLogMedia` writes in parallel to every connected provider that handles the
   item's type. Movies go to Trakt, Letterboxd, and Simkl. TV, including
   TMDB-enriched anime series, goes to Trakt, Serializd, and Simkl. Anime goes to AniList and Simkl, remapped to AniDB
-  episode numbers through ani.zip. Manga goes to AniList. Anime films carry
+  episode numbers through ani.zip. Manga goes to AniList. Books go to Hardcover,
+  counted in pages. Anime films carry
   `isFilm` and go to the movie targets plus AniList and Simkl.
 - A book routes to Hardcover and a manga to AniList only when the item carries
   that provider's own id. Reading has no id bridge
@@ -183,6 +184,10 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
   Adding a provider widens the unions and the registry, nothing else.
 - A failed write reaches the caller as that provider's result, never a boolean
   or a throw.
+- Every Hardcover write lands on a member's real account. Only a person makes
+  one, in the app. No agent, script, test or probe sends a Hardcover mutation,
+  and none sends one to check that a mutation works. Hardcover writes its own
+  journal entries, so the adapter never does (`lib/providers/hardcover/writes.ts`).
 - Never a dead-end error. A write the platform can't do
   (`unsupportedWritePlatforms`), a failure, or a skip links to the item on that
   provider through `providerItemUrl` (`lib/providers/external-urls.ts`).

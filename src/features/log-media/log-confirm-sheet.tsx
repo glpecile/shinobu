@@ -29,6 +29,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
+import { isFinished, ReadingProgressField, readingTitle } from './reading-progress-field';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
@@ -186,7 +187,11 @@ export function LogFormFields({
         />
         {/* The like rides in this row, but a diary provider is never undated. */}
         {showDateField && (
-          <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
+          <WatchedAtField
+            label={isReadIntent(item) ? 'Read on' : 'Watched on'}
+            onChange={onWatchedAtChange}
+            value={watchedAt}
+          >
             {diaryProviders.length > 0 && (
               <LikeButton
                 disabled={pending || needsScriptUpdate}
@@ -351,8 +356,15 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const through = Number(useWatch({ control, name: 'through' }));
   // One chapter keeps the request's copy; a range is named in the title and
   // toast.
-  const span = range != null && through > range.from ? `chapters ${range.from}–${through}` : undefined;
-  const title = span == null ? request.title : `Log ${span}`;
+  const [reading, setReading] = useState(request.reading);
+  const span =
+    range != null && through > range.from
+      ? `chapters ${range.from}–${through}`
+      : reading != null && !isFinished(reading) && reading.page > 0
+        ? `page ${reading.page}`
+        : undefined;
+  const title =
+    reading != null ? readingTitle(reading) : span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
@@ -396,6 +408,9 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       entryEpisodes,
       providers: selectedProviders,
       liked,
+      ...(reading != null
+        ? { reading: isFinished(reading) ? { finished: true } : { finished: false, page: reading.page } }
+        : {}),
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
       ...(retryOf != null ? { retryOf } : {}),
@@ -501,6 +516,9 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
               total={range.total}
             />
           )}
+          {reading != null && (
+            <ReadingProgressField onChange={setReading} pending={pending} value={reading} />
+          )}
           <LogFormFields
             item={item}
             manualTargets={manualTargets}
@@ -526,7 +544,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
               label={title}
               loading={pending}
               loadingLabel="Logging…"
-              morphLabel={range != null && fontScale <= 1}
+              morphLabel={(range != null || reading != null) && fontScale <= 1}
               onPress={confirm}
             />
           </WriteSheet.Actions>

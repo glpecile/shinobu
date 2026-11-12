@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { anilistQueryKeys } from '@/state/queries/anilist';
+import { hardcoverQueryKeys } from '@/state/queries/hardcover';
 import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdQueryKeys } from '@/state/queries/serializd';
 import { simklQueryKeys } from '@/state/queries/simkl';
@@ -96,6 +97,9 @@ export function invalidateAfterWatchlist(
   // Then, and only then, the gatherer. Invalidating it alone would re-serve the
   // provider payloads above from cache for up to 15 minutes; invalidating the
   // provider keys alone would leave the agenda computed from a stale gather.
+  if (succeeded.includes(Provider.Hardcover)) {
+    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() });
+  }
   if (succeeded.length > 0) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
     // And the surface the add was built to land on (plan 0031 U14). Registered

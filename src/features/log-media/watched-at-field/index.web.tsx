@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 export interface WatchedAtFieldProps {
   value: Date | null;
   onChange: (value: Date | null) => void;
+  label?: string;
   children?: ReactNode;
 }
 
@@ -24,14 +25,14 @@ function toInputValue(date: Date): string {
  * current time-of-day so the stored instant lands inside the chosen local
  * date, not on a midnight boundary that can shift a day when converted to UTC.
  */
-export function WatchedAtField({ value, onChange, children }: WatchedAtFieldProps) {
+export function WatchedAtField({ value, onChange, label = 'Watched on', children }: WatchedAtFieldProps) {
   const today = toInputValue(new Date());
   return (
     <View className="mt-4 flex-row items-center gap-2">
       <View className="h-11 flex-1 flex-row items-center justify-between border border-border rounded-full px-4">
-        <Text className="text-muted font-sans text-sm">Watched on</Text>
+        <Text className="text-muted font-sans text-sm">{label}</Text>
         <input
-          aria-label="Watched on"
+          aria-label={label}
           // The field row already draws the pill. `appearance-none` drops
           // Safari's own rounded fill. `self-stretch` keeps the row's full
           // height tappable.

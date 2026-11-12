@@ -20,12 +20,14 @@ import {
 import { planOnAniList } from '@/lib/providers/anilist/writes';
 import { addToLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
 import { addToSerializdWatchlist } from '@/lib/providers/serializd/writes';
+import { addToHardcoverReadingList } from '@/lib/providers/hardcover/writes';
 import { addToSimklWatchlist } from '@/lib/providers/simkl/writes';
 import { addToTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { letterboxdDeps } from '@/state/queries/letterboxd';
 import { serializdDeps } from '@/state/queries/serializd';
+import { hardcoverDeps } from '@/state/queries/hardcover';
 import { simklDeps } from '@/state/queries/simkl';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
@@ -72,6 +74,8 @@ export const WATCHLIST_ADAPTERS: Partial<
   serializd: ({ item }) =>
     Effect.runPromise(addToSerializdWatchlist(serializdDeps(), item)),
   simkl: ({ item }) => Effect.runPromise(addToSimklWatchlist(simklDeps(), item)),
+  hardcover: ({ item }) =>
+    Effect.runPromise(addToHardcoverReadingList(hardcoverDeps(), item)),
 };
 
 /** The watchlist add's report — the shared core's, plus this verb's own fields. */
