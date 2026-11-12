@@ -101,8 +101,9 @@
     return;
   }
 
-  // Grants nothing: it lets the app ask for the opt-in instead of a reinstall,
-  // which resets Tampermonkey's storage and with it the opt-in.
+  // The marker grants nothing: it lets the app ask for the opt-in instead of a
+  // reinstall, which resets Tampermonkey's storage and with it the opt-in.
+  // Only the menu command grants it, and only a click in Tampermonkey runs it.
   if (devOrigin) {
     page.document.documentElement.setAttribute('data-shinobu-letterboxd-untrusted', '');
     GM_registerMenuCommand('Trust this Shinobu dev server', async () => {
