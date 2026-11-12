@@ -84,7 +84,7 @@ export const hardcoverQueryKeys = {
   /** Every read of the viewer's library. A log or a reading-list write invalidates this prefix. */
   libraryRoot: () => [...hardcoverQueryKeys.all, 'library'] as const,
   bookEntry: (bookId: number) => [...hardcoverQueryKeys.libraryRoot(), 'entry', bookId] as const,
-  /** Want to Read, Currently Reading and Read, with progress. */
+  /** Want to Read and Currently Reading, with progress. */
   shelves: () => [...hardcoverQueryKeys.libraryRoot(), 'shelves'] as const,
   /** Continue Reading's settled slice of `shelves`. */
   reading: () => [...hardcoverQueryKeys.libraryRoot(), 'reading'] as const,

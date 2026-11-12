@@ -201,13 +201,15 @@ const LIBRARY = `query Library($statuses: [Int!]!) {
 }`;
 
 /**
- * The viewer's Want to Read, Currently Reading and Read books, with progress.
- * Continue Reading, the reading list and the details screen read slices of it.
+ * The viewer's Want to Read and Currently Reading books, with progress.
+ * Continue Reading, the reading list and the details screen read slices of
+ * it. Read books are left out: no surface lists them, and a long-time
+ * reader's finished shelf would ride along on every refresh.
  */
 export function getLibrary(deps: HardcoverDeps): Effect.Effect<HardcoverLibraryEntry[], ProviderError> {
   return hardcoverRequest<unknown>(deps, LIBRARY, {
     variables: {
-      statuses: [HardcoverStatus.WantToRead, HardcoverStatus.Reading, HardcoverStatus.Read],
+      statuses: [HardcoverStatus.WantToRead, HardcoverStatus.Reading],
     },
   }).pipe(
     Effect.flatMap(decode(libraryData, 'invalid library response')),
