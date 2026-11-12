@@ -17,6 +17,7 @@ let anilistTitleId: number | null = null;
 let anizipBridge: { tvdb: number; tmdb: number } | null = null;
 let tmdbByTvdb: number | null = null;
 let simklIds: NormalizedMediaItem['externalIds'] | null = null;
+let tmdbAnimeMatch: { tmdbId: number; isFilm: boolean } | null = null;
 
 mock.module('@/state/queries/mapping', () => ({
   cachedAniZipIds: (_client: unknown, lookup: unknown) => {
@@ -27,6 +28,7 @@ mock.module('@/state/queries/mapping', () => ({
   },
   cachedTmdbTvIdByTvdb: () => Promise.resolve(tmdbByTvdb),
   cachedSimklAnimeIds: () => Promise.resolve(simklIds),
+  cachedTmdbAnimeMatch: () => Promise.resolve(tmdbAnimeMatch),
   cachedAniListFilmId: (_client: unknown, params: { title: string; year?: number }) => {
     calls.push(`anilist-film:${params.title}:${params.year ?? 'any'}`);
     return Promise.resolve(anilistFilmId);
@@ -225,5 +227,21 @@ describe('enrichExternalIds — a new release ani.zip has not mapped yet', () =>
       ['serializd'],
     );
     expect(enriched.externalIds).toMatchObject({ tvdb: 471128, tmdb: 328010 });
+  });
+});
+
+// The Last Blossom (2025): neither ani.zip nor Simkl link AniList 177686 to
+// TMDB, so the film never reached Letterboxd.
+describe('enrichExternalIds — an anime film no bridge maps', () => {
+  test('takes the TMDB title match of the same kind', async () => {
+    simklIds = null;
+    tmdbAnimeMatch = { tmdbId: 1294972, isFilm: true };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-177686', type: 'ANIME', isFilm: true, externalIds: { anilist: 177686 } }),
+      ['letterboxd'],
+    );
+    tmdbAnimeMatch = null;
+    expect(enriched.externalIds.tmdb).toBe(1294972);
   });
 });

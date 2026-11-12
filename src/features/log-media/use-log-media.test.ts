@@ -80,6 +80,7 @@ mock.module('@/state/queries/mapping', () => ({
   },
   cachedAniListPrequel: () => Promise.resolve(prequel),
   cachedSimklAnimeIds: () => Promise.resolve(null),
+  cachedTmdbAnimeMatch: () => Promise.resolve(null),
   cachedAniListLaterCours: (_client: unknown, anilistId: number) =>
     Promise.resolve(laterCours.get(anilistId) ?? []),
   cachedTmdbTvIdByTvdb: () => Promise.resolve(prequelTmdb),

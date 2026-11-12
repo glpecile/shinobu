@@ -7,6 +7,7 @@ import {
   cachedAniListIdByTitle,
   cachedAniZipIds,
   cachedSimklAnimeIds,
+  cachedTmdbAnimeMatch,
   cachedTmdbTvIdByTvdb,
   cachedTraktLookup,
   cachedTraktTextSearch,
@@ -91,7 +92,15 @@ export async function enrichExternalIds(
       anizip?.tvdb != null || anizip?.tmdb != null
         ? null
         : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
-    const mapped = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
+    const bridged = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
+    // Neither maps some new films (The Last Blossom, 2025), so take the
+    // details read's TMDB title match when TMDB files it as the same kind.
+    const match =
+      bridged?.tvdb == null && bridged?.tmdb == null
+        ? await cachedTmdbAnimeMatch(queryClient, item)
+        : null;
+    const mapped =
+      match != null && match.isFilm === (item.isFilm === true) ? { tmdb: match.tmdbId } : bridged;
     if (mapped != null) {
       // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
       // sequel cour's own id), so a series takes TVDB → TMDB like the details
