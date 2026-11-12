@@ -352,7 +352,12 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+  // The user's opt-outs, not a copy of the targets: the id lookup can add a
+  // target after the sheet opens, and that target starts selected.
+  const [deselected, setDeselected] = useState<ProviderId[]>([]);
+  const selectedProviders = targets.filter((id) => !deselected.includes(id));
+  const setSelectedProviders = (next: readonly ProviderId[]) =>
+    setDeselected(targets.filter((id) => !next.includes(id)));
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);

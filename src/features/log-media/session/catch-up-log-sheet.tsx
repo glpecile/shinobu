@@ -212,7 +212,12 @@ function CatchUpForm({
     item,
   );
 
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+  // The user's opt-outs, not a copy of the targets: the id lookup can add a
+  // target after the sheet opens, and that target starts selected.
+  const [deselected, setDeselected] = useState<ProviderId[]>([]);
+  const selectedProviders = targets.filter((id) => !deselected.includes(id));
+  const setSelectedProviders = (next: readonly ProviderId[]) =>
+    setDeselected(targets.filter((id) => !next.includes(id)));
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
