@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ProviderId } from '@/lib/providers/types';
+import type { AniZipIds } from '@/lib/providers/mapping/anizip';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -14,7 +15,7 @@ const calls: string[] = [];
 let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
 let anilistTitleId: number | null = null;
-let anizipBridge: { tvdb: number; tmdb: number } | null = null;
+let anizipBridge: AniZipIds | null = null;
 let tmdbByTvdb: number | null = null;
 let simklIds: NormalizedMediaItem['externalIds'] | null = null;
 let tmdbAnimeMatch: { tmdbId: number; isFilm: boolean } | null = null;
@@ -105,6 +106,16 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     expect(enriched.externalIds.anilist).toBe(5678);
     expect(calls).toContain('anizip:{"tmdbId":1234}');
     expect(calls).toContain('anilist-film:ChaO:2025');
+  });
+
+  // TMDB movie 1429 shares its number with Attack on Titan's TV id.
+  test('ignores an ani.zip record whose TMDB id is a TV id', async () => {
+    anizipBridge = { anilist: 16498, tvdb: 267440, tmdb: 1429 };
+
+    const enriched = await enrichExternalIds(client, chao({ externalIds: { trakt: 1, tmdb: 1429 } }), ALL);
+    anizipBridge = null;
+
+    expect(enriched.externalIds.anilist).toBeUndefined();
   });
 
   test('falls back to the title match for an anime AniList files as a series or ONA', async () => {

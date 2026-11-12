@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { AniZipLookup } from '@/lib/providers/mapping/anizip';
+import { aniZipTmdbKind, type AniZipLookup } from '@/lib/providers/mapping/anizip';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   cachedAniListFilmId,
@@ -153,7 +153,8 @@ export async function enrichExternalIds(
           : null;
     if (lookup != null) {
       const mapped = await cachedAniZipIds(queryClient, lookup);
-      if (mapped?.anilist != null) {
+      // A TMDB lookup also answers for a TV anime that has the movie's number.
+      if (mapped?.anilist != null && (item.type !== 'MOVIE' || aniZipTmdbKind(mapped) === 'movie')) {
         externalIds = { ...externalIds, anilist: mapped.anilist };
       }
     }

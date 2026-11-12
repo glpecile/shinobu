@@ -18,6 +18,17 @@ export interface AniZipIds {
   type?: string;
 }
 
+/**
+ * Which TMDB id space a record's `tmdb` is in. ani.zip keeps one TMDB id per
+ * anime without its kind, and movie and TV ids share numbers. A record tied
+ * to a TVDB show carries that show's TV id, a film filed as its special
+ * included; a record without one carries a movie id
+ * (docs/solutions/anizip-tmdb-id-has-no-kind.md).
+ */
+export function aniZipTmdbKind(ids: { tvdb?: number | undefined }): 'movie' | 'tv' {
+  return ids.tvdb != null ? 'tv' : 'movie';
+}
+
 export type AniZipLookup =
   | { anilistId: number }
   | { tvdbId: number }
