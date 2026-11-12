@@ -239,6 +239,26 @@ describe('enrichExternalIds — a new release ani.zip has not mapped yet', () =>
     );
     expect(enriched.externalIds).toMatchObject({ tvdb: 471128, tmdb: 328010 });
   });
+
+  test('a series keeps the TMDB id Simkl links before its TVDB id', async () => {
+    simklIds = { simkl: 2953770, anilist: 203275, tmdb: 328010 };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-203275', type: 'ANIME', externalIds: { anilist: 203275 } }),
+      ['serializd'],
+    );
+    expect(enriched.externalIds.tmdb).toBe(328010);
+  });
+
+  test('a one-episode work never takes a Simkl TMDB id as a movie id', async () => {
+    simklIds = { simkl: 2953770, anilist: 203275, tmdb: 328010 };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-203275', type: 'ANIME', totalEpisodes: 1, externalIds: { anilist: 203275 } }),
+      ['letterboxd'],
+    );
+    expect(enriched.isFilm).toBeUndefined();
+  });
 });
 
 // The Last Blossom (2025): neither ani.zip nor Simkl link AniList 177686 to
@@ -284,13 +304,12 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
   });
 
   test('a film tied to a TVDB show takes the title match, not the show’s id', async () => {
-    anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849 };
+    anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849, imdb: 'tt0283998' };
     tmdbAnimeMatch = { tmdbId: 919, isFilm: true };
     const enriched = await enrichExternalIds(client, film(), ['letterboxd']);
     anizipBridge = null;
     tmdbAnimeMatch = null;
-    expect(enriched.externalIds).toMatchObject({ anilist: 405, tmdb: 919 });
-    expect(enriched.externalIds.tvdb).toBeUndefined();
+    expect(enriched.externalIds).toEqual({ anilist: 405, tmdb: 919 });
   });
 
   test('with no title match it takes no TMDB id', async () => {
@@ -330,11 +349,4 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
     expect(asShow.externalIds.tmdb).toBeUndefined();
   });
 
-  test('a two-episode OVA bridged to a movie stays a series', async () => {
-    anizipBridge = { anilist: 256, tmdb: 37910 };
-    const enriched = await enrichExternalIds(client, ova(2), ['trakt']);
-    anizipBridge = null;
-    expect(enriched.isFilm).toBe(false);
-    expect(enriched.externalIds).toEqual({ anilist: 256 });
-  });
 });

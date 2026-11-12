@@ -98,9 +98,12 @@ export async function enrichExternalIds(
     // AniList files many single works as a one-episode OVA, ONA or special;
     // TMDB and Letterboxd file them as movies.
     const single = !isFilm && item.totalEpisodes === 1;
+    // aniZipTmdbKind reads ani.zip's records only; Simkl links a new show's
+    // TMDB id before its TVDB id, and a single work's Simkl id isn't a movie's.
+    const fromAniZip = bridged != null && bridged === anizip;
     const singleMovieId = !single
       ? undefined
-      : bridged?.tmdb != null && aniZipTmdbKind(bridged) === 'movie'
+      : fromAniZip && bridged.tmdb != null && aniZipTmdbKind(bridged) === 'movie'
         ? bridged.tmdb
         : bridged?.tvdb == null && bridged?.tmdb == null
           ? await cachedTmdbAnimeMatch(queryClient, item).then((found) =>
@@ -110,7 +113,7 @@ export async function enrichExternalIds(
     // The bridge gives one TMDB id without its kind (aniZipTmdbKind): a film
     // filed as a show's special carries the show's TV id.
     const bridgedTmdb =
-      bridged != null && aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv') ? bridged.tmdb : undefined;
+      !fromAniZip || aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv') ? bridged?.tmdb : undefined;
     // A film with no movie id takes the details read's TMDB title match
     // (The Last Blossom, 2025). A series doesn't: a wrong show would get
     // Trakt and Serializd writes with no ani.zip episode table.
@@ -123,8 +126,9 @@ export async function enrichExternalIds(
     const tmdb =
       match?.tmdbId ??
       (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
-    // A non-film without a TVDB id is bridged to a movie: none of its ids is a show's.
-    const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
+    // A record's IMDb id names the same work as its TVDB id: a film's only
+    // without one, a series' only with one.
+    const imdb = (isFilm ? bridged?.tvdb == null : tvdb != null) ? bridged?.imdb : undefined;
     if (singleMovieId != null) {
       filedAsFilm = true;
       externalIds = {
