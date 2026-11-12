@@ -1,4 +1,5 @@
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
+import { nameKeys } from '@/lib/providers/pick-movie-match';
 import type { ProviderId } from '@/lib/providers/types';
 import { parseLocalInstant } from '@/lib/time/has-aired';
 import type {
@@ -132,7 +133,7 @@ export function watermarkProviders(
 // ---- Grouping (day buckets + cross-provider collapse) ----
 
 /** The title+year identity of last resort, normalized for casing/whitespace. */
-function titleYearKey(item: Pick<NormalizedMediaItem, 'title' | 'year'>): string {
+function titleYearKey(item: NormalizedDiaryEntry['item']): string {
   const title = item.title.trim().toLowerCase().replace(/\s+/g, ' ');
   return `ty:${title}:${item.year ?? '?'}`;
 }
@@ -271,17 +272,16 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
 }
 
 /**
- * A film's display, English, and romaji names as title+year keys. AniList and
- * Simkl file an anime film without a TMDB id, and ani.zip often lacks one too,
- * so a Letterboxd or Trakt log of the same film shares only its English name
- * (Housenka / The Last Blossom).
+ * A film's names as year-scoped keys, the rule the log uses to pair an anime
+ * film with its TMDB record (`isSameAnime`). AniList and Simkl file an anime
+ * film without a TMDB id, so a Letterboxd or Trakt log of it shares only a
+ * name (Housenka / The Last Blossom).
  */
 function filmNameKeys(entry: NormalizedDiaryEntry): string[] {
   const { item } = entry;
-  if ((entry.episodes?.length ?? 0) > 0 || (item.type !== 'MOVIE' && item.isFilm !== true)) return [];
-  return [item.title, item.titles?.english, item.titles?.romaji].flatMap((title) =>
-    title != null && title !== '' ? [titleYearKey({ title, year: item.year })] : [],
-  );
+  const film = item.type === 'MOVIE' || item.isFilm === true;
+  if (!film || item.year == null || (entry.episodes?.length ?? 0) > 0) return [];
+  return [...nameKeys(item)].map((name) => `name:${name}:${item.year}`);
 }
 
 /** Some id namespace both items carry names a different title. */
@@ -409,7 +409,7 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
         if (
           (match === -1 || index < match) &&
           !buckets[index].providers.has(entry.provider) &&
-          !(identity.startsWith('ty:') && buckets[index].entries.some((other) => idsDisagree(entry.item, other.item)))
+          !(identity.startsWith('name:') && buckets[index].entries.some((other) => idsDisagree(entry.item, other.item)))
         ) {
           match = index;
         }
