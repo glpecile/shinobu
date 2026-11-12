@@ -12,6 +12,7 @@ import {
   cachedTraktLookup,
   cachedTraktTextSearch,
 } from '@/state/queries/mapping';
+import { cachedLetterboxdFilm } from '@/state/queries/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -35,6 +36,21 @@ export async function enrichExternalIds(
 
   const isAnime = item.type === 'ANIME';
   const isMovieTv = item.type === 'MOVIE' || item.type === 'TV';
+
+  // Letterboxd's film page states the film's exact TMDB id, and whether the
+  // "film" is a TV series, which has no movie identity elsewhere.
+  if (
+    item.type === 'MOVIE' &&
+    externalIds.letterboxd != null &&
+    externalIds.trakt == null &&
+    externalIds.tmdb == null &&
+    externalIds.imdb == null &&
+    connected.some((id) => id !== Provider.Letterboxd)
+  ) {
+    const film = await cachedLetterboxdFilm(queryClient, externalIds.letterboxd);
+    if (film?.tmdbTvVariant != null) return { ...item, tmdbTvVariant: film.tmdbTvVariant };
+    if (film?.externalIds.tmdb != null) externalIds = { ...externalIds, tmdb: film.externalIds.tmdb };
+  }
 
   // A movie carrying no movie-side id at all (a Letterboxd watchlist film is
   // just a slug + title + year) → resolve Trakt/TMDB/IMDB by text search, so a
