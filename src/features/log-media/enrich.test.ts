@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ProviderId } from '@/lib/providers/types';
+import type { AniZipIds } from '@/lib/providers/mapping/anizip';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -14,7 +15,7 @@ const calls: string[] = [];
 let anizipAnilistId: number | null = null;
 let anilistFilmId: number | null = null;
 let anilistTitleId: number | null = null;
-let anizipBridge: { tvdb: number; tmdb: number } | null = null;
+let anizipBridge: AniZipIds | null = null;
 let tmdbByTvdb: number | null = null;
 let simklIds: NormalizedMediaItem['externalIds'] | null = null;
 let tmdbAnimeMatch: { tmdbId: number; isFilm: boolean } | null = null;
@@ -64,6 +65,15 @@ mock.module('@/state/queries/mapping', () => ({
   },
 }));
 
+let letterboxdFilm: Partial<NormalizedMediaItem> | null = null;
+
+mock.module('@/state/queries/letterboxd', () => ({
+  cachedLetterboxdFilm: () => {
+    calls.push('letterboxd-film');
+    return Promise.resolve(letterboxdFilm);
+  },
+}));
+
 const { enrichExternalIds } = await import('./enrich');
 
 // ChaO (2025): a TMDB-first anime film. ani.zip's themoviedb_id index is
@@ -105,6 +115,16 @@ describe('enrichExternalIds — anime film AniList fallback', () => {
     expect(enriched.externalIds.anilist).toBe(5678);
     expect(calls).toContain('anizip:{"tmdbId":1234}');
     expect(calls).toContain('anilist-film:ChaO:2025');
+  });
+
+  // TMDB movie 1429 shares its number with Attack on Titan's TV id.
+  test('ignores an ani.zip record whose TMDB id is a TV id', async () => {
+    anizipBridge = { anilist: 16498, tvdb: 267440, tmdb: 1429 };
+
+    const enriched = await enrichExternalIds(client, chao({ externalIds: { trakt: 1, tmdb: 1429 } }), ALL);
+    anizipBridge = null;
+
+    expect(enriched.externalIds.anilist).toBeUndefined();
   });
 
   test('falls back to the title match for an anime AniList files as a series or ONA', async () => {
@@ -213,6 +233,34 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
   });
 });
 
+const slugOnly = (): NormalizedMediaItem => ({ ...idlessFilm(), externalIds: { letterboxd: 'hokum' } });
+
+describe('enrichExternalIds — a Letterboxd film asks its own page first', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    letterboxdFilm = null;
+  });
+
+  test('takes the page’s TMDB id and skips the text search', async () => {
+    letterboxdFilm = { externalIds: { letterboxd: 'hokum', tmdb: 4242 } };
+    const enriched = await enrichExternalIds(client, slugOnly(), ['simkl', 'letterboxd']);
+    expect(enriched.externalIds.tmdb).toBe(4242);
+    expect(calls).not.toContain('trakt-search');
+  });
+
+  test('a page that is a TV series keeps the log on Letterboxd', async () => {
+    letterboxdFilm = { externalIds: { letterboxd: 'hokum' }, tmdbTvVariant: 228880 };
+    const enriched = await enrichExternalIds(client, slugOnly(), ['simkl', 'letterboxd']);
+    expect(enriched.tmdbTvVariant).toBe(228880);
+    expect(calls).toEqual(['letterboxd-film']);
+  });
+
+  test('falls back to the text search when the page read fails', async () => {
+    await enrichExternalIds(client, slugOnly(), ['simkl', 'letterboxd']);
+    expect(calls.slice(0, 2)).toEqual(['letterboxd-film', 'trakt-search']);
+  });
+});
+
 // Demons' Crest (2026-11-06): a day after its premiere, ani.zip had no TVDB or
 // TMDB id for AniList 203275, while Simkl linked TVDB 471128 and TMDB 328010.
 describe('enrichExternalIds — a new release ani.zip has not mapped yet', () => {
@@ -227,6 +275,26 @@ describe('enrichExternalIds — a new release ani.zip has not mapped yet', () =>
       ['serializd'],
     );
     expect(enriched.externalIds).toMatchObject({ tvdb: 471128, tmdb: 328010 });
+  });
+
+  test('a series keeps the TMDB id Simkl links before its TVDB id', async () => {
+    simklIds = { simkl: 2953770, anilist: 203275, tmdb: 328010 };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-203275', type: 'ANIME', externalIds: { anilist: 203275 } }),
+      ['serializd'],
+    );
+    expect(enriched.externalIds.tmdb).toBe(328010);
+  });
+
+  test('a one-episode work never takes a Simkl TMDB id as a movie id', async () => {
+    simklIds = { simkl: 2953770, anilist: 203275, tmdb: 328010 };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-203275', type: 'ANIME', totalEpisodes: 1, externalIds: { anilist: 203275 } }),
+      ['letterboxd'],
+    );
+    expect(enriched.isFilm).toBeUndefined();
   });
 });
 
@@ -255,4 +323,67 @@ describe('enrichExternalIds — an anime film no bridge maps', () => {
     );
     expect(enriched.externalIds.tmdb).toBeUndefined();
   });
+});
+
+// Blood: The Last Vampire (AniList 405): ani.zip's 19849 is the TMDB *TV* id
+// of the show the film is a special of. Voices of a Distant Star (AniList
+// 256, an OVA): its 37910 is a TMDB *movie* id.
+const film = () => chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
+
+const ova = (totalEpisodes: number) =>
+  chao({ id: 'anilist-256', type: 'ANIME', isFilm: false, totalEpisodes, externalIds: { anilist: 256 } });
+
+describe('enrichExternalIds — a bridge id of the other kind', () => {
+  beforeEach(() => {
+    simklIds = null;
+    tmdbAnimeMatch = null;
+    tmdbByTvdb = null;
+  });
+
+  test('a film tied to a TVDB show takes the title match, not the show’s id', async () => {
+    anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849, imdb: 'tt0283998' };
+    tmdbAnimeMatch = { tmdbId: 919, isFilm: true };
+    const enriched = await enrichExternalIds(client, film(), ['letterboxd']);
+    anizipBridge = null;
+    tmdbAnimeMatch = null;
+    expect(enriched.externalIds).toEqual({ anilist: 405, tmdb: 919 });
+  });
+
+  test('with no title match it takes no TMDB id', async () => {
+    anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849 };
+    const enriched = await enrichExternalIds(client, film(), ['letterboxd']);
+    anizipBridge = null;
+    expect(enriched.externalIds.tmdb).toBeUndefined();
+  });
+
+  test('an OVA with no TVDB id never uses a movie id as a show id', async () => {
+    anizipBridge = { anilist: 256, tmdb: 37910, imdb: 'tt0370754' };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-256', type: 'ANIME', isFilm: false, externalIds: { anilist: 256 } }),
+      ['trakt', 'serializd'],
+    );
+    anizipBridge = null;
+    expect(enriched.externalIds).toEqual({ anilist: 256 });
+  });
+
+  test('a one-episode OVA bridged to a movie becomes a film', async () => {
+    anizipBridge = { anilist: 256, tmdb: 37910, imdb: 'tt0370754' };
+    const enriched = await enrichExternalIds(client, ova(1), ['letterboxd']);
+    anizipBridge = null;
+    expect(enriched.isFilm).toBe(true);
+    expect(enriched.externalIds).toEqual({ anilist: 256, tmdb: 37910, imdb: 'tt0370754' });
+  });
+
+  test('an unmapped one-episode ONA takes a TMDB movie match, never a show match', async () => {
+    tmdbAnimeMatch = { tmdbId: 901323, isFilm: true };
+    const asFilm = await enrichExternalIds(client, ova(1), ['letterboxd']);
+    tmdbAnimeMatch = { tmdbId: 5, isFilm: false };
+    const asShow = await enrichExternalIds(client, ova(1), ['letterboxd']);
+    tmdbAnimeMatch = null;
+    expect(asFilm).toMatchObject({ isFilm: true, externalIds: { tmdb: 901323 } });
+    expect(asShow.isFilm).toBe(false);
+    expect(asShow.externalIds.tmdb).toBeUndefined();
+  });
+
 });
