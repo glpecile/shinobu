@@ -563,7 +563,7 @@ function SearchScreen() {
                 day, so each one cuts. */}
             <View className="flex-1">
               {state === 'idle' ? (
-                titleSearch ? (
+                scope.value === 'titles' ? (
                   <CollapsibleSection.Scroll
                     className="flex-1"
                     contentContainerClassName="pb-28"
