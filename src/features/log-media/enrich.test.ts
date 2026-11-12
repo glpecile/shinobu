@@ -267,3 +267,44 @@ describe('enrichExternalIds — an anime film no bridge maps', () => {
     expect(enriched.externalIds.tmdb).toBeUndefined();
   });
 });
+
+// Blood: The Last Vampire (AniList 405): ani.zip's 19849 is the TMDB *TV* id
+// of the show the film is a special of. Voices of a Distant Star (AniList
+// 256, an OVA): its 37910 is a TMDB *movie* id.
+const film = () => chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
+
+describe('enrichExternalIds — a bridge id of the other kind', () => {
+  beforeEach(() => {
+    simklIds = null;
+    tmdbAnimeMatch = null;
+    tmdbByTvdb = null;
+  });
+
+  test('a film tied to a TVDB show takes the title match, not the show’s id', async () => {
+    anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849 };
+    tmdbAnimeMatch = { tmdbId: 919, isFilm: true };
+    const enriched = await enrichExternalIds(client, film(), ['letterboxd']);
+    anizipBridge = null;
+    tmdbAnimeMatch = null;
+    expect(enriched.externalIds).toMatchObject({ anilist: 405, tmdb: 919 });
+    expect(enriched.externalIds.tvdb).toBeUndefined();
+  });
+
+  test('with no title match it takes no TMDB id', async () => {
+    anizipBridge = { anilist: 405, tvdb: 78960, tmdb: 19849 };
+    const enriched = await enrichExternalIds(client, film(), ['letterboxd']);
+    anizipBridge = null;
+    expect(enriched.externalIds.tmdb).toBeUndefined();
+  });
+
+  test('an OVA with no TVDB id never uses a movie id as a show id', async () => {
+    anizipBridge = { anilist: 256, tmdb: 37910, imdb: 'tt0370754' };
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-256', type: 'ANIME', isFilm: false, externalIds: { anilist: 256 } }),
+      ['trakt', 'serializd'],
+    );
+    anizipBridge = null;
+    expect(enriched.externalIds).toEqual({ anilist: 256 });
+  });
+});

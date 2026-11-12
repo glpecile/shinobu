@@ -27,3 +27,13 @@ id carries a TV id (96.5%), one without carries a movie id (99.3%). Every
 reader of an ani.zip `tmdb` must ask it. The 253 real movie ids on a record
 with a TVDB id (Mugen Train) count as unknown. They fall to the AniList film
 search by title and exact year.
+
+## The other direction
+
+An AniList-origin log reads the same id by the item's kind. Blood: The Last
+Vampire (AniList 405) is a film whose `themoviedb_id` 19849 is the TMDB TV id
+of its parent show, so a Letterboxd or Trakt write hit the wrong film. Voices of
+a Distant Star (AniList 256) is an OVA with no TVDB id; its 37910 is a movie id,
+and a show lookup read the wrong series. `enrich.ts` and `media-details.ts` now
+adopt the id only when `aniZipTmdbKind` matches the item. A film that misses
+falls to the TMDB title match, or takes no TMDB id.

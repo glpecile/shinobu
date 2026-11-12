@@ -93,29 +93,31 @@ export async function enrichExternalIds(
         ? null
         : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
     const bridged = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
-    // Neither maps some new films (The Last Blossom, 2025), so a film takes
-    // the details read's TMDB title match. A series doesn't: a wrong show
-    // would get Trakt and Serializd writes with no ani.zip episode table.
-    const match =
-      item.isFilm === true && bridged?.tvdb == null && bridged?.tmdb == null
-        ? await cachedTmdbAnimeMatch(queryClient, item)
-        : null;
-    const mapped = match != null ? { ...bridged, tmdb: match.tmdbId } : bridged;
-    if (mapped != null) {
-      // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
-      // sequel cour's own id), so a series takes TVDB → TMDB like the details
-      // read does, and keeps ani.zip's only when that misses.
-      const tmdb =
-        item.isFilm !== true && mapped.tvdb != null
-          ? ((await cachedTmdbTvIdByTvdb(queryClient, mapped.tvdb)) ?? mapped.tmdb)
-          : mapped.tmdb;
-      externalIds = {
-        ...externalIds,
-        ...(mapped.tvdb != null ? { tvdb: mapped.tvdb } : {}),
-        ...(tmdb != null ? { tmdb } : {}),
-        ...(mapped.imdb != null ? { imdb: mapped.imdb } : {}),
-      };
-    }
+    const isFilm = item.isFilm === true;
+    // The bridge gives one TMDB id without its kind (aniZipTmdbKind): a film
+    // filed as a show's special carries the show's TV id.
+    const bridgedTmdb =
+      bridged != null && aniZipTmdbKind(bridged) === (isFilm ? 'movie' : 'tv') ? bridged.tmdb : undefined;
+    // A film with no movie id takes the details read's TMDB title match
+    // (The Last Blossom, 2025). A series doesn't: a wrong show would get
+    // Trakt and Serializd writes with no ani.zip episode table.
+    const match = isFilm && bridgedTmdb == null ? await cachedTmdbAnimeMatch(queryClient, item) : null;
+    // A film's TVDB id names its parent show, never the film.
+    const tvdb = isFilm ? undefined : bridged?.tvdb;
+    // ani.zip's `themoviedb_id` can name a TMDB id that doesn't exist (a
+    // sequel cour's own id), so a series takes TVDB → TMDB like the details
+    // read does, and keeps ani.zip's only when that misses.
+    const tmdb =
+      match?.tmdbId ??
+      (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
+    // A non-film without a TVDB id is bridged to a movie: none of its ids is a show's.
+    const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
+    externalIds = {
+      ...externalIds,
+      ...(tvdb != null ? { tvdb } : {}),
+      ...(tmdb != null ? { tmdb } : {}),
+      ...(imdb != null ? { imdb } : {}),
+    };
   }
 
   // Bridge ids → a real Trakt id (progress reads and cache invalidation key
