@@ -659,7 +659,27 @@ describe('Simkl diary in the unified merge', () => {
     expect(rows[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
   });
 
-  test('id-bearing items never fall back to a title+year join', () => {
+  test('an anime film joins a Letterboxd log of it through its English title', () => {
+    // Live data: neither Simkl, AniList, nor ani.zip has a TMDB id for Housenka.
+    const simkl = entry('simkl', 'm2', '2026-11-11T22:04:00.000Z', {
+      item: item({ id: 'simkl-2473992', title: 'Housenka', year: 2025, type: 'ANIME', isFilm: true, externalIds: { simkl: 2473992, mal: 58915, anilist: 177686 } }),
+    });
+    const anilist = entry('anilist', 'a2', '2026-11-11T22:04:00.000Z', {
+      item: item({ id: 'anilist-177686', title: 'Housenka', titles: { romaji: 'Housenka', english: 'The Last Blossom' }, year: 2025, type: 'ANIME', isFilm: true, externalIds: { anilist: 177686, mal: 58915 } }),
+    });
+    const letterboxd = entry('letterboxd', 'l2', '2026-11-11', {
+      dateOnly: true,
+      item: item({ id: 'letterboxd-the-last-blossom-2025', title: 'The Last Blossom', year: 2025, externalIds: { letterboxd: 'the-last-blossom-2025', tmdb: 1294972 } }),
+    });
+
+    const days = groupDiaryEntries(
+      mergeDiaryEntries([state('simkl', [simkl]), state('anilist', [anilist]), state('letterboxd', [letterboxd])]),
+      'UTC',
+    );
+    expect(days[0].entries.map((row) => row.providers)).toEqual([['simkl', 'anilist', 'letterboxd']]);
+  });
+
+  test('a title match never joins items whose ids disagree', () => {
     const day = '2026-07-31T18:00:00.000Z';
     const simkl = entry('simkl', 'm1', day, {
       item: item({

@@ -110,7 +110,8 @@ export function pickAnimeFilmMatch(
 
 type AnimeNames = Pick<NormalizedMediaItem, 'title' | 'titles'>;
 
-function nameKeys(item: AnimeNames): Set<string> {
+/** Every name a title goes by, as `titleKey`s, without AniList's "(2026)" disambiguator. */
+export function nameKeys(item: AnimeNames): Set<string> {
   return new Set(
     [item.title, ...Object.values(item.titles ?? {})]
       .map((name) => titleKey(name.replace(/\s*\(\d{4}\)$/, '')))
