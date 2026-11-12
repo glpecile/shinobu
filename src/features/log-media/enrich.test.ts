@@ -233,15 +233,26 @@ describe('enrichExternalIds — a new release ani.zip has not mapped yet', () =>
 // The Last Blossom (2025): neither ani.zip nor Simkl link AniList 177686 to
 // TMDB, so the film never reached Letterboxd.
 describe('enrichExternalIds — an anime film no bridge maps', () => {
-  test('takes the TMDB title match of the same kind', async () => {
+  beforeEach(() => {
     simklIds = null;
     tmdbAnimeMatch = { tmdbId: 1294972, isFilm: true };
+  });
+
+  test('takes the TMDB title match', async () => {
     const enriched = await enrichExternalIds(
       client,
       chao({ id: 'anilist-177686', type: 'ANIME', isFilm: true, externalIds: { anilist: 177686 } }),
       ['letterboxd'],
     );
-    tmdbAnimeMatch = null;
     expect(enriched.externalIds.tmdb).toBe(1294972);
+  });
+
+  test('a series ignores it', async () => {
+    const enriched = await enrichExternalIds(
+      client,
+      chao({ id: 'anilist-177686', type: 'ANIME', externalIds: { anilist: 177686 } }),
+      ['serializd'],
+    );
+    expect(enriched.externalIds.tmdb).toBeUndefined();
   });
 });
