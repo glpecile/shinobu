@@ -335,30 +335,6 @@ describe('resolveWriteTargets', () => {
     ).toEqual(['letterboxd']);
   });
 
-  it('drops AniList for a non-season-1 canonical episode batch', () => {
-    expect(
-      resolveWriteTargets(
-        { type: 'TV', ...ids({ trakt: 1, anilist: 2 }) },
-        ['trakt', 'anilist'],
-        { capability: 'log', nonSeasonOneEpisodes: true, platform: 'ios' },
-      ),
-    ).toEqual(['trakt']);
-  });
-
-  // Plan 0027 R6/KTD2: an AniList-origin log reaches routing already
-  // translated, so `useLogMedia` leaves the flag false and AniList survives
-  // even when the batch maps to canonical season 2. Routing stays pure — it
-  // never learns which domain the caller started in.
-  it('keeps AniList when the caller does not raise the canonical-season flag', () => {
-    expect(
-      resolveWriteTargets(
-        { type: 'ANIME', ...ids({ trakt: 1, tvdb: 9, anilist: 2 }) },
-        ['trakt', 'anilist'],
-        { capability: 'log', platform: 'ios' },
-      ),
-    ).toEqual(['trakt', 'anilist']);
-  });
-
   // A declared-manual provider has no adapter behind it, so it must never
   // reach the fan-out on any platform — including native, where the platform
   // filter alone would let it through. Serializd's *remove* is the standing

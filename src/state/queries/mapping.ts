@@ -9,6 +9,7 @@ import {
   aniZipTmdbKind,
   fetchAniZipIds,
   type AniZipEpisodeMap,
+  type AniZipIds,
   type AniZipLookup,
 } from '@/lib/providers/mapping/anizip';
 import { getSeriesNeighbours, searchAnimeFilms, searchMedia as searchAniList } from '@/lib/providers/anilist/reads';
@@ -183,17 +184,26 @@ const FOREVER = {
   gcTime: Number.POSITIVE_INFINITY,
 };
 
+// ani.zip maps a new release within days; a day matches the persisted snapshot's age.
+const UNMAPPED_STALE_MS = 24 * 60 * 60_000;
+
 /**
- * Resolves null on failure without caching it, so the next call retries. No
- * query retries: callers await these in sequence.
+ * Resolves null on failure without caching it, so the next call retries, or
+ * the stale record it had. No query retries: callers await these in sequence.
+ * An AniList-keyed answer with no TVDB or TMDB id is a new release ani.zip
+ * has not mapped yet, so it goes stale; every other answer never churns.
  */
 export function cachedAniZipIds(queryClient: QueryClient, lookup: AniZipLookup) {
   return queryClient.fetchQuery({
     queryKey: mappingQueryKeys.anizip(lookup),
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
+    staleTime: ({ state }) =>
+      'anilistId' in lookup && state.data?.tvdb == null && state.data?.tmdb == null
+        ? UNMAPPED_STALE_MS
+        : Number.POSITIVE_INFINITY,
     retry: false,
-  }).catch(() => null);
+  }).catch(() => queryClient.getQueryData<AniZipIds | null>(mappingQueryKeys.anizip(lookup)) ?? null);
 }
 
 /** Whether a TMDB-keyed title is animated, the gate on every AniList lookup for one. */
@@ -306,9 +316,7 @@ export function simklLookupParamsFor(
  * ani.zip read whose *content* changes — a just-aired episode lands in the
  * dataset hours after it airs, and a forever-cached miss would keep skipping
  * Trakt/Serializd for the rest of the session (plan 0027 KTD4). One flat window
- * for hits and misses alike — deliberately not a content-dependent
- * hit-long/miss-short scheme, which no query in this app has — is what
- * self-heals that lag on the next log action.
+ * for hits and misses alike self-heals that lag on the next log action.
  */
 const EPISODE_MAP_STALE_MS = 60 * 60_000;
 

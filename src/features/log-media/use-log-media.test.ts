@@ -408,7 +408,7 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     expect(plan.variables.episodes).toBeUndefined();
   });
 
-  test('a canonical-domain TV log with an AniList id still drops AniList (R6)', async () => {
+  test('a canonical later season with no AniList cour skips AniList with a reason', async () => {
     const queryClient = client();
     const item: NormalizedMediaItem = {
       id: 'trakt-42',
@@ -428,7 +428,8 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
       ['trakt', 'anilist'],
     );
 
-    expect(plan.targets).toEqual(['trakt']);
+    expect(plan.targets).toEqual(['trakt', 'anilist']);
+    expect(plan.mappingSkips.get('anilist')).toBe('Could not find the AniList entry for this season');
     expect(mappingCalls).toEqual([]);
     expect(plan.variables.episodes).toEqual([{ season: 2, number: 3 }]);
   });

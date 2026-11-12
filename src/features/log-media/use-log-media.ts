@@ -448,13 +448,15 @@ async function resolveLogPlan(
       ? variables.entryEpisodes
       : null;
 
+  const laterSeason = canonicalInput?.some((episode) => episode.season !== 1) === true;
+
   // A later season logged from a TMDB/Trakt show logs to that cour's own
   // AniList and Simkl entry, as the cour's AniList page would.
   const cour =
     entryInput == null &&
     item.isFilm !== true &&
     item.externalIds.anilist != null &&
-    canonicalInput?.some((episode) => episode.season !== 1) === true
+    laterSeason
       ? await canonicalCourEntry(queryClient, item.externalIds.anilist, canonicalInput)
       : null;
   if (cour != null) {
@@ -469,26 +471,27 @@ async function resolveLogPlan(
 
   const targets = resolveWriteTargets(item, connected, {
     capability: 'log',
-    // Only a *canonical*-domain batch can drop AniList (plan 0011 / R6): that
-    // guard exists because a canonical season 2 has no place on a season-1
-    // AniList entry. An entry-domain batch is already in AniList's own
-    // numbering, so it stays a target whatever season it maps to.
-    nonSeasonOneEpisodes:
-      cour == null &&
-      entryInput == null &&
-      canonicalInput != null &&
-      canonicalInput.some((episode) => episode.season !== 1),
     onlyProviders: variables.providers,
     platform: currentPlatform(),
     letterboxdUserscript: hasLetterboxdUserscript(),
   });
 
   const mappingSkips = new Map<ProviderId, string>();
+  // A later canonical season has no place on the show's AniList entry, which
+  // is its first cour. With no cour found, the only safe move is not to write.
+  if (
+    targets.includes(Provider.AniList) &&
+    cour == null &&
+    entryInput == null &&
+    laterSeason
+  ) {
+    mappingSkips.set(Provider.AniList, 'Could not find the AniList entry for this season');
+  }
   if (
     targets.includes(Provider.Simkl) &&
     entryInput == null &&
     item.externalIds.anilist != null &&
-    canonicalInput?.some((episode) => episode.season !== 1) === true &&
+    laterSeason &&
     ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
   ) {
     mappingSkips.set(Provider.Simkl, 'Could not resolve a cour-specific Simkl identity for these episodes');
@@ -501,8 +504,8 @@ async function resolveLogPlan(
         canonical: canonicalInput,
         // A canonical season-1 batch *is* the entry's own numbering (plan
         // 0011). A season-2+ batch outside a resolved cour has **no**
-        // entry-domain reading: AniList never receives it (the
-        // nonSeasonOneEpisodes guard above), and Simkl (plan 0034 U6) must
+        // entry-domain reading: AniList never receives it (its
+        // mapping skip above), and Simkl (plan 0034 U6) must
         // reverse-map it through the ani.zip table in its adapter rather than
         // trust a raw episode number as an AniDB one — deriving `entry` here
         // would hand it S02E03 as "entry episode 3", the wrong-identity write
