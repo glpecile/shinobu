@@ -47,12 +47,12 @@ test('attaches on a localhost dev port only after the trust-localhost opt-in', a
   let reloaded = false;
   const page = { location: { origin: dev.location.origin, reload: () => { reloaded = true; } }, document: dev.document, addEventListener() {} };
   const stored: Record<string, unknown> = {};
-  let trust = async () => {};
+  let trust: (() => Promise<void>) | undefined;
   try {
     await run({ getValue: async () => false, setValue: async (key: string, value: unknown) => { stored[key] = value; } }, page, (_name: string, callback: () => Promise<void>) => { trust = callback; });
     expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBeNull();
     expect(dev.document.documentElement.hasAttribute('data-shinobu-letterboxd-untrusted')).toBe(true);
-    await trust();
+    await trust?.();
     expect(stored['shinobu-trust-localhost']).toBe(true);
     expect(reloaded).toBe(true);
     await run({ getValue: async () => true }, page);
