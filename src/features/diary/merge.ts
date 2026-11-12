@@ -277,10 +277,8 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
  * film without a TMDB id, so a Letterboxd or Trakt log of it shares only a
  * name (Housenka / The Last Blossom).
  */
-function filmNameKeys(entry: NormalizedDiaryEntry): string[] {
-  const { item } = entry;
-  const film = item.type === 'MOVIE' || item.isFilm === true;
-  if (!film || item.year == null || (entry.episodes?.length ?? 0) > 0) return [];
+function filmNameKeys(item: NormalizedMediaItem): string[] {
+  if ((item.type !== 'MOVIE' && item.isFilm !== true) || item.year == null) return [];
   return [...nameKeys(item)].map((name) => `name:${name}:${item.year}`);
 }
 
@@ -393,7 +391,7 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
     }
   };
   for (const entry of entries) {
-    const identities = [...new Set([...identityKeys(entry.item), ...filmNameKeys(entry)])];
+    const identities = [...identityKeys(entry.item), ...filmNameKeys(entry.item)];
     const key = episodesKey(entry.episodes);
     // Merge only with a *different* provider's entry of the same item + episode
     // set — two same-provider logs (binge day / rewatch) never collapse (R2/AE6),
@@ -402,7 +400,6 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
     // are processed newest-first deterministically and a bridge contributor
     // extends the bucket's reach.
     // The earliest-created matching bucket wins, as a front-to-back scan would.
-    // A name match also needs every id both sides carry to agree.
     let match = -1;
     for (const identity of identities) {
       for (const index of byIdentity.get(`${key}\u0000${identity}`) ?? []) {

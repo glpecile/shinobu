@@ -679,7 +679,7 @@ describe('Simkl diary in the unified merge', () => {
     expect(days[0].entries.map((row) => row.providers)).toEqual([['simkl', 'anilist', 'letterboxd']]);
   });
 
-  test('id-bearing items never fall back to a title+year join', () => {
+  test('a title match never joins items whose ids disagree', () => {
     const day = '2026-07-31T18:00:00.000Z';
     const simkl = entry('simkl', 'm1', day, {
       item: item({
