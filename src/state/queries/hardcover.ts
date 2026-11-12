@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type QueryClient } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -7,7 +7,13 @@ import {
   revokeHardcoverSession,
 } from '@/lib/providers/hardcover/auth';
 import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
-import { getBookEntry, getViewer } from '@/lib/providers/hardcover/reads';
+import {
+  getBookEntry,
+  getBookIdBySlug,
+  getViewer,
+  searchBooks,
+  type HardcoverBookHit,
+} from '@/lib/providers/hardcover/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
 import { Provider } from '@/lib/providers/types';
 import { getClientIdForProvider } from '@/state/session/provider-config';
@@ -16,7 +22,10 @@ import {
   getProviderSession,
   setProviderSession,
 } from '@/state/session/tokens';
+import type { NormalizedMediaItem } from '@/types/media';
 import type { ProviderSession } from '@/types/session';
+
+import { SEARCH_MIN_QUERY_LENGTH } from './trakt';
 
 // One store object for the app: the refresh single-flight is keyed by its identity.
 const tokenStore: TokenStore = {
@@ -72,6 +81,9 @@ export const hardcoverQueryKeys = {
   /** Every read of the viewer's library. A log or a reading-list write invalidates this prefix. */
   libraryRoot: () => [...hardcoverQueryKeys.all, 'library'] as const,
   bookEntry: (bookId: number) => [...hardcoverQueryKeys.libraryRoot(), 'entry', bookId] as const,
+  searchRoot: () => [...hardcoverQueryKeys.all, 'search'] as const,
+  search: (query: string) => [...hardcoverQueryKeys.searchRoot(), query] as const,
+  bookSlug: (slug: string) => [...hardcoverQueryKeys.all, 'book-slug', slug] as const,
 };
 
 /** The viewer's library entry for one book: its status, the read in progress and the page count. */
@@ -103,5 +115,47 @@ export function useHardcoverUsernameQuery(options: { enabled?: boolean } = {}) {
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
     select: (viewer) => viewer.username,
+  });
+}
+
+/**
+ * Books by title for the search tab's Books section. The caller enables it
+ * only while Hardcover is connected. Every request counts against the
+ * per-token budget, so a query string is never refetched in a session.
+ */
+export function useHardcoverBookSearchQuery(params: { query: string; enabled: boolean }) {
+  const query = params.query.trim();
+  return useQuery({
+    queryKey: hardcoverQueryKeys.search(query),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchBooks(hardcoverDeps(), { query, perPage: 20 }), { signal }),
+    enabled: params.enabled && query.length >= SEARCH_MIN_QUERY_LENGTH,
+    placeholderData: keepPreviousData,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+/** A Books search result's item, for the details screen's cache-only resolution chain. */
+export function findInHardcoverSearchCache(
+  queryClient: QueryClient,
+  id: string,
+): NormalizedMediaItem | undefined {
+  for (const [, hits] of queryClient.getQueriesData<HardcoverBookHit[]>({
+    queryKey: hardcoverQueryKeys.searchRoot(),
+  })) {
+    const found = Array.isArray(hits) ? hits.find((hit) => hit?.item?.id === id) : undefined;
+    if (found != null) return found.item;
+  }
+  return undefined;
+}
+
+/** The book id behind an incoming `hardcover.app/books/{slug}` link; null when no book has it. */
+export function useHardcoverBookIdBySlugQuery(slug: string | null) {
+  return useQuery({
+    queryKey: hardcoverQueryKeys.bookSlug(slug ?? ''),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getBookIdBySlug(hardcoverDeps(), slug ?? ''), { signal }),
+    enabled: slug != null,
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }

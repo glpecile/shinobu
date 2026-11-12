@@ -24,6 +24,10 @@ export function mediaLinkRoute(path: string): string | null {
       if (id == null || !Number.isSafeInteger(Number(id))) return null;
       return routes.details(`anilist-${id}`, url.pathname.startsWith('/manga/') ? 'MANGA' : undefined);
     }
+    if (host === 'hardcover.app') {
+      const slug = /^\/books\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/.exec(url.pathname)?.[1];
+      return slug == null ? null : routes.details(`hardcover-books-${slug}`);
+    }
     return null;
   } catch {
     return null;
@@ -38,6 +42,10 @@ export function mediaLinkUrl(id: string, mediaType?: string): string | null {
   if (imdb != null) return `https://www.imdb.com/title/${imdb}/`;
   const serializd = /^serializd-([1-9][0-9]*)$/.exec(id)?.[1];
   if (serializd != null) return `https://serializd.com/show/${serializd}`;
+  const hardcoverSlug = /^hardcover-books-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1];
+  if (hardcoverSlug != null) return `https://hardcover.app/books/${hardcoverSlug}`;
+  const hardcover = /^hardcover-([1-9][0-9]*)$/.exec(id)?.[1];
+  if (hardcover != null) return `https://hardcover.app/id/book/${hardcover}`;
   const anilist = /^anilist-([1-9][0-9]*)$/.exec(id)?.[1];
   return anilist == null ? null : `https://anilist.co/${mediaType === 'MANGA' ? 'manga' : 'anime'}/${anilist}`;
 }

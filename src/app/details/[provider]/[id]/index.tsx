@@ -361,6 +361,17 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   );
 }
 
+/** Display-only cards: a character has no person page to open. */
+function characterCredits(characters: NormalizedCharacter[]): PersonCredit[] {
+  return characters.map((character) => ({
+    id: character.id,
+    name: character.name,
+    role: character.role,
+    kind: 'cast',
+    headshot: character.image,
+  }));
+}
+
 /**
  * Characters + Cast + Crew + Studios rails, with the long-press credit sheet
  * they share. Source-agnostic: the two wrappers below decide where credits
@@ -393,16 +404,7 @@ function CreditRails({
   return (
     <>
       {/* No `onCreditActions`: a character isn't a person, so its card opens nothing. */}
-      <PeopleSection
-        title="Characters"
-        people={characters.map((character) => ({
-          id: `anilist-character-${character.anilistId}`,
-          name: character.name,
-          role: character.role,
-          kind: 'cast' as const,
-          headshot: character.image,
-        }))}
-      />
+      <PeopleSection title="Characters" people={characterCredits(characters)} />
       <PeopleSection
         onCreditActions={openCredit}
         title="Cast"
@@ -461,6 +463,30 @@ function MangaCreditsSections({ mediaId }: { mediaId: number }) {
   const { data } = useSuspenseAniListRelationsQuery({ mediaId, type: 'MANGA' });
   return (
     <CreditRails characters={data.characters} crew={data.staff} crewTitle="Staff" />
+  );
+}
+
+/**
+ * A book's authors and characters, from the same Hardcover read as its
+ * header. Both rails are display-only: a Hardcover author has no TMDB or
+ * AniList id, and a name lookup could open a namesake.
+ */
+function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
+  const { data } = useSuspenseMediaDetailsQuery(item);
+  return (
+    <>
+      <PeopleSection
+        title="Authors"
+        people={data.crew.map((member) => ({
+          id: member.id,
+          name: member.name,
+          role: member.job,
+          kind: 'crew' as const,
+          headshot: member.headshot,
+        }))}
+      />
+      <PeopleSection title="Characters" people={characterCredits(data.characters ?? [])} />
+    </>
   );
 }
 
@@ -630,6 +656,7 @@ function DetailsScreen() {
       );
     }
     const externalUrl = mediaLinkUrl(id, mediaType);
+    const needsHardcover = provider === Provider.Hardcover && !connected.includes(Provider.Hardcover);
     return (
       <View className="flex-1 bg-background items-center justify-center px-8">
         <Head>
@@ -641,7 +668,9 @@ function DetailsScreen() {
         <Text className="text-muted font-sans text-center mb-6">
           {provider === Provider.Trakt
             ? 'This linked item could not be loaded. Trakt links require your own client credentials in Settings.'
-            : 'This linked item could not be loaded.'}
+            : needsHardcover
+              ? 'This book could not be loaded. Book links open once Hardcover is connected in Settings.'
+              : 'This linked item could not be loaded.'}
         </Text>
         {externalUrl != null && (
           <Button
@@ -651,7 +680,7 @@ function DetailsScreen() {
             onPress={() => openExternalUrl(externalUrl)}
           />
         )}
-        {provider === Provider.Trakt && (
+        {(provider === Provider.Trakt || needsHardcover) && (
           <Button
             icon={<Button.Icon name="link-outline" />}
             label="Open Settings"
@@ -669,8 +698,12 @@ function DetailsScreen() {
   const overview = shown.overview != null ? <ExpandableText text={shown.overview} /> : null;
   // "0 / 1 episodes" on a film (anime films included) is noise — only show
   // progress where it means something (series, manga, or a film already logged).
+  // A book has no read leg yet, so its 0 would be a guess; the page count sits
+  // in the meta line instead.
   const showProgress =
-    (shown.type !== 'MOVIE' && shown.isFilm !== true) || shown.currentProgress > 0;
+    (shown.type !== 'MOVIE' && shown.type !== 'BOOK' && shown.isFilm !== true) ||
+    shown.currentProgress > 0;
+  const bookSeries = mediaDetails.data?.series;
   // AniList progress belongs to this cour, not the whole TMDB series.
   const displayedProgress =
     shown.type === 'ANIME' && shown.isFilm !== true
@@ -779,6 +812,14 @@ function DetailsScreen() {
                 shown.genres != null && shown.genres.length > 0 && (
                   <MetaLine.Part icon="pricetags-outline">{shown.genres.slice(0, 3).join(', ')}</MetaLine.Part>
                 ),
+                shown.progressUnit === 'page' && shown.totalEpisodes != null && (
+                  <MetaLine.Part icon="book-outline">{`${shown.totalEpisodes} pages`}</MetaLine.Part>
+                ),
+                bookSeries != null && (
+                  <MetaLine.Part icon="library-outline">
+                    {bookSeries.position != null ? `${bookSeries.name} #${bookSeries.position}` : bookSeries.name}
+                  </MetaLine.Part>
+                ),
               ]}
             />
             <WatchedLine item={shown} />
@@ -836,11 +877,9 @@ function DetailsScreen() {
                     />
                   )
                 }
-                // Manga counts chapters here (AniList's `chapters` lands in
-                // the same field) — the label must follow the unit.
-                caption={
-                  shown.progressUnit === 'chapter' ? 'chapters' : 'episodes'
-                }
+                // Manga counts chapters and books count pages in the same
+                // field, so the label follows the unit.
+                caption={`${shown.progressUnit}s`}
               />
               {shown.type === 'TV' && <SeriesRuntimeTile item={shown} />}
               {shown.type === 'ANIME' && shown.isFilm !== true &&
@@ -866,13 +905,15 @@ function DetailsScreen() {
         fallback={
           <>
             <PeopleSectionsSkeleton />
-            <StudiosSkeleton />
+            {shown.type !== 'BOOK' && <StudiosSkeleton />}
           </>
         }
         resetKey={refreshCount}
       >
         {shown.type === 'MANGA' && anilistId != null ? (
           <MangaCreditsSections mediaId={anilistId} />
+        ) : shown.type === 'BOOK' ? (
+          <BookCreditsSections item={item} />
         ) : (
           <CreditsSections item={item} />
         )}
@@ -882,7 +923,8 @@ function DetailsScreen() {
 
       <ReleaseTimeline item={shown} />
 
-      {shown.type !== 'MANGA' && <DiscussionSection item={shown} />}
+      {/* The boards and subreddits cover anime, film and TV, not print. */}
+      {shown.type !== 'MANGA' && shown.type !== 'BOOK' && <DiscussionSection item={shown} />}
 
       <RatingsSection item={shown} resetKey={refreshCount} />
 

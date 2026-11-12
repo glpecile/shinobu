@@ -3,6 +3,8 @@ import * as Effect from 'effect/Effect';
 import type { AniListDeps } from '@/lib/providers/anilist/deps';
 import { getAnimeCredits } from '@/lib/providers/anilist/credits';
 import type { ProviderError } from '@/lib/providers/errors';
+import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
+import { getBook, type HardcoverBookSeries } from '@/lib/providers/hardcover/reads';
 import { getMediaCatalogue } from '@/lib/providers/tmdb/reads';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import type { TmdbKind } from '@/lib/providers/tmdb/normalize';
@@ -15,6 +17,7 @@ import { Provider } from '@/lib/providers/types';
 import type {
   MediaType,
   NormalizedCastMember,
+  NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedMediaItem,
   NormalizedStudio,
@@ -39,6 +42,7 @@ export interface MediaDetailsDeps {
    */
   trakt: TraktDeps | null;
   anilist: AniListDeps;
+  hardcover: HardcoverDeps;
 }
 
 export interface MediaDetails {
@@ -50,7 +54,11 @@ export interface MediaDetails {
   cast: NormalizedCastMember[];
   crew: NormalizedCrewMember[];
   studios: NormalizedStudio[];
-  source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | 'none';
+  /** A book's characters. */
+  characters?: NormalizedCharacter[];
+  /** The series a book belongs to, and its place in it. */
+  series?: HardcoverBookSeries;
+  source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | typeof Provider.Hardcover | 'none';
 }
 
 export interface MediaDetailsParams {
@@ -60,6 +68,7 @@ export interface MediaDetailsParams {
   tmdbTvVariant?: number;
   traktId?: number;
   anilistId?: number;
+  hardcoverId?: number;
 }
 
 /** MediaType → TMDB URL kind, same `isFilm` reasoning as routing.ts. */
@@ -67,7 +76,7 @@ export function tmdbKindFor(type: MediaType, isFilm?: boolean): TmdbKind | null 
   if (type === 'MOVIE') return 'movie';
   if (type === 'TV') return 'tv';
   if (type === 'ANIME') return isFilm === true ? 'movie' : 'tv';
-  return null; // MANGA has no TMDB representation
+  return null; // MANGA and BOOK have no TMDB representation
 }
 
 const EMPTY: MediaDetails = {
@@ -82,6 +91,21 @@ function providerFallback(
   deps: MediaDetailsDeps,
   params: MediaDetailsParams,
 ): Effect.Effect<MediaDetails, ProviderError> {
+  // Hardcover is a book's only source: its record is the catalogue.
+  if (params.type === 'BOOK') {
+    if (params.hardcoverId == null) return Effect.succeed(EMPTY);
+    return getBook(deps.hardcover, params.hardcoverId).pipe(
+      Effect.map((book) => ({
+        catalogue: book.item,
+        cast: [],
+        crew: book.authors,
+        studios: [],
+        characters: book.characters,
+        ...(book.series != null ? { series: book.series } : {}),
+        source: Provider.Hardcover,
+      })),
+    );
+  }
   if (params.type === 'ANIME' && params.anilistId != null) {
     return getAnimeCredits(deps.anilist, { mediaId: params.anilistId }).pipe(
       Effect.map((credits) => ({

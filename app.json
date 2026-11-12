@@ -151,6 +151,17 @@
               "pathPrefix": "/manga/"
             }
           ]
+        },
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "hardcover.app",
+              "pathPrefix": "/books/"
+            }
+          ]
         }
       ],
       "versionCode": 41,

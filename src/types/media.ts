@@ -180,9 +180,10 @@ export interface NormalizedCrewMember {
   anilistId?: number;
 }
 
-/** An AniList character — a manga's cast, since print has no voice actors to credit. */
+/** A character in print (AniList manga, Hardcover books), which has no voice actors to credit. */
 export interface NormalizedCharacter {
-  anilistId: number;
+  /** Unique combined identifier: `${providerId}-character-${nativeId}`. */
+  id: string;
   name: string;
   /** "Main", "Supporting", "Background"; '' when omitted. */
   role: string;

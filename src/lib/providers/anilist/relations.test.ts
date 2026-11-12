@@ -80,7 +80,7 @@ describe('getAnimeRelations', () => {
       getAnimeRelations({ ...DEPS, fetch }, { mediaId: 1, withCredits: true }),
     );
 
-    expect(characters).toEqual([{ anilistId: 10, name: 'Makio', role: 'Main', image: '' }]);
+    expect(characters).toEqual([{ id: 'anilist-character-10', name: 'Makio', role: 'Main', image: '' }]);
     expect(staff.map((member) => [member.anilistId, member.job])).toEqual([[20, 'Story & Art']]);
     expect(tags).toEqual(['Family Life']);
     expect(recommendations.map((item) => item.id)).toEqual(['anilist-4']);
