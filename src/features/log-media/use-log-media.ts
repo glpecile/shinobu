@@ -445,13 +445,15 @@ async function resolveLogPlan(
       ? variables.entryEpisodes
       : null;
 
+  const laterSeason = canonicalInput?.some((episode) => episode.season !== 1) === true;
+
   // A later season logged from a TMDB/Trakt show logs to that cour's own
   // AniList and Simkl entry, as the cour's AniList page would.
   const cour =
     entryInput == null &&
     item.isFilm !== true &&
     item.externalIds.anilist != null &&
-    canonicalInput?.some((episode) => episode.season !== 1) === true
+    laterSeason
       ? await canonicalCourEntry(queryClient, item.externalIds.anilist, canonicalInput)
       : null;
   if (cour != null) {
@@ -478,7 +480,7 @@ async function resolveLogPlan(
     targets.includes(Provider.AniList) &&
     cour == null &&
     entryInput == null &&
-    canonicalInput?.some((episode) => episode.season !== 1) === true
+    laterSeason
   ) {
     mappingSkips.set(Provider.AniList, 'Could not find the AniList entry for this season');
   }
@@ -486,7 +488,7 @@ async function resolveLogPlan(
     targets.includes(Provider.Simkl) &&
     entryInput == null &&
     item.externalIds.anilist != null &&
-    canonicalInput?.some((episode) => episode.season !== 1) === true &&
+    laterSeason &&
     ((item.type === 'TV' && cour == null) || (cour != null && cour.mal == null))
   ) {
     mappingSkips.set(Provider.Simkl, 'Could not resolve a cour-specific Simkl identity for these episodes');
