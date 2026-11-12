@@ -77,6 +77,40 @@ const POSTERS = [
   '/npdB6eFzizki0WaZ1OvKcJrWe97.jpg', // Chainsaw Man (2022)
 ].map((path) => tmdbImageUrl(path, 'w342'));
 
+/** Manga covers from AniList's CDN, for the Reading scope on Search. */
+const MANGA = [
+  'bx30002-Cul4OeN7bYtn.jpg', // Berserk (1989)
+  'bx30013-BeslEMqiPhlk.jpg', // One Piece (1997)
+  'bx53390-1RsuABC34P9D.jpg', // Attack on Titan (2009)
+  'bx34632-5xMDkx3pXsEh.png', // Goodnight Punpun (2007)
+  'bx30656-9mW113O7rDnA.png', // Vagabond (1998)
+  'bx30642-0mjRDkf4THpo.jpg', // Vinland Saga (2005)
+  'bx30026-uCvXMudMzmwI.jpg', // Hunter x Hunter (1998)
+  'bx30003-E84fwIh22LAQ.jpg', // 20th Century Boys (1999)
+  'bx30001-Knby7l1jevE7.jpg', // Monster (1994)
+  'bx31706-lRncu9VbcBB7.png', // JoJo's Bizarre Adventure: Steel Ball Run (2004)
+  'bx30021-FE6kmrfpuKyb.jpg', // Death Note (2003)
+  'nx30011-9yUF1dXWgDOx.jpg', // Naruto (1999)
+  'bx85135-11OOnyaqV71k.png', // A Silent Voice (2013)
+  'bx31133-Jx6map3Oidz1.png', // Dorohedoro (2000)
+  'bx30436-Opk9ZubMPuDU.jpg', // Uzumaki (1998)
+  'bx118586-CXKgWikBFQgS.jpg', // Frieren (2020)
+  'bx98263-kIeaTXrAbGkj.jpg', // Witch Hat Atelier (2016)
+  'bx74489-5HtDCFfut8Be.jpg', // Land of the Lustrous (2012)
+  'bx30025-mpPVpCKFTowt.png', // Fullmetal Alchemist (2001)
+  'bx105778-euxXZEIfDY2u.png', // Chainsaw Man (2018)
+  'bx101517-H3TdM3g5ZUe9.jpg', // Jujutsu Kaisen (2018)
+  'bx87216-c9bSNVD10UuD.png', // Demon Slayer (2016)
+  'bx74347-sZpmNJ5xLwRK.jpg', // One-Punch Man (2012)
+  'bx108556-NHjkz0BNJhLx.jpg', // Spy x Family (2019)
+  'bx87423-gPNtu8QbGped.jpg', // The Promised Neverland (2016)
+  'bx86635-EdaLQmsn86Fy.png', // Kaguya-sama: Love is War (2015)
+  'bx132029-prGF4gePdSKv.jpg', // Dandadan (2021)
+  'bx87170-nyuwcN7rU4pc.jpg', // Fire Punch (2016)
+  'bx65243-mR4MnJFmfaOF.png', // Haikyu!! (2012)
+  'bx30012-1epmVfTSv2rr.png', // Bleach (2001)
+].map((file) => `https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/${file}`);
+
 /** Directors, actors, composers, and crew behind the titles above. */
 const PEOPLE = [
   '/ouhjt9KugzhWtdEyBPipihB3ic8.jpg', // Hayao Miyazaki
@@ -169,7 +203,7 @@ const STUDIOS = [
   '/stBqzj4Nr7l49ww6xiSRWjbpHkn.png', // Walt Disney Animation
 ].map((path) => tmdbImageUrl(path, 'w300'));
 
-const WALLS = { titles: POSTERS, people: PEOPLE, studios: STUDIOS };
+const WALLS = { titles: POSTERS, reading: MANGA, people: PEOPLE, studios: STUDIOS };
 type WallSubject = keyof typeof WALLS;
 
 function subscribeNever() {
@@ -251,7 +285,7 @@ const COLUMN_RHYTHM = [
 
 /**
  * A drifting, tilted wall behind a first-run or idle screen: titles on Home,
- * people or studio logos on Search. Fixed picks of classic film and anime keep
+ * manga, people, or studio logos on Search. Fixed picks of classic film and anime keep
  * it out of release-week trends; each mount deals them in a new order.
  */
 export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
