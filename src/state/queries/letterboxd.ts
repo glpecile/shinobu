@@ -278,6 +278,12 @@ export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
   };
 }
 
+/** A film's page identity for the log path: null on any failure, so the caller falls back. */
+export function cachedLetterboxdFilm(queryClient: QueryClient, slug: string) {
+  const { queryKey, queryFn, staleTime, retry } = letterboxdFilmQuery(slug, tmdbToken() !== '');
+  return queryClient.fetchQuery({ queryKey, queryFn, staleTime, retry }).catch(() => null);
+}
+
 export function useLetterboxdFilmQuery(slug: string | null) {
   return useQuery(letterboxdFilmQuery(slug, useTmdbToken() !== ''));
 }
