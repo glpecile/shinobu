@@ -1,12 +1,6 @@
 import * as Effect from 'effect/Effect';
-import {
-  CryptoDigestAlgorithm,
-  CryptoEncoding,
-  digestStringAsync,
-  getRandomBytes,
-} from 'expo-crypto';
-
 import { ProviderAuthError, type ProviderError } from '@/lib/providers/errors';
+import { createPkcePair, randomUnreserved } from '@/lib/providers/pkce';
 import { Provider } from '@/lib/providers/types';
 import type { ProviderSession } from '@/types/session';
 import {
@@ -29,46 +23,13 @@ const provider = Provider.Simkl;
 
 // --- PKCE (plan 0034 KTD-1) -------------------------------------------------
 
-/**
- * 64 chars of the RFC 7636 "unreserved" set, deliberately sized at exactly 64
- * so `byte & 0x3f` indexes it without modulo bias.
- */
-const VERIFIER_ALPHABET =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-/** RFC 7636 allows 43-128; 64 gives 384 bits of entropy. */
-const VERIFIER_LENGTH = 64;
 const STATE_LENGTH = 32;
 
-function randomUnreserved(length: number): string {
-  const bytes = getRandomBytes(length);
-  let out = '';
-  for (const byte of bytes) {
-    out += VERIFIER_ALPHABET[byte & 0x3f];
-  }
-  return out;
-}
-
-function base64ToBase64Url(base64: string): string {
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-export interface SimklPkcePair {
-  verifier: string;
-  challenge: string;
-}
-
-/** S256: challenge = base64url(sha256(ascii(verifier))). */
-export async function deriveSimklCodeChallenge(verifier: string): Promise<string> {
-  const base64 = await digestStringAsync(CryptoDigestAlgorithm.SHA256, verifier, {
-    encoding: CryptoEncoding.BASE64,
-  });
-  return base64ToBase64Url(base64);
-}
-
-export async function createSimklPkcePair(): Promise<SimklPkcePair> {
-  const verifier = randomUnreserved(VERIFIER_LENGTH);
-  return { verifier, challenge: await deriveSimklCodeChallenge(verifier) };
-}
+export {
+  createPkcePair as createSimklPkcePair,
+  deriveCodeChallenge as deriveSimklCodeChallenge,
+  type PkcePair as SimklPkcePair,
+} from '@/lib/providers/pkce';
 
 // --- Authorize URL ----------------------------------------------------------
 
@@ -107,7 +68,7 @@ export async function beginSimklAuthFlow(params: {
   clientId: string;
   redirectUri: string;
 }): Promise<string> {
-  const { verifier, challenge } = await createSimklPkcePair();
+  const { verifier, challenge } = await createPkcePair();
   const state = randomUnreserved(STATE_LENGTH);
   saveSimklAuthFlow({ verifier, state });
   return buildSimklAuthorizeUrl({

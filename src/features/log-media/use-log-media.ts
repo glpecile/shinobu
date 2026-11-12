@@ -680,6 +680,7 @@ async function providerHasWatch(
       // wrong-domain compare recreates the false in-sync skip plan 0027
       // removed. Deferred to follow-up (plan 0034 Scope Boundaries).
       case Provider.Simkl:
+      case Provider.Hardcover:
         return null;
     }
   } catch {

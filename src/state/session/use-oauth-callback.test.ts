@@ -27,6 +27,7 @@ mock.module('react-native', () => ({
 const traktExchangeCalls: unknown[] = [];
 const simklExchangeCalls: unknown[] = [];
 const anilistRedirectCalls: string[] = [];
+const hardcoverExchangeCalls: unknown[] = [];
 mock.module('@/state/queries/trakt', () => ({
   exchangeTraktCode: (params: unknown) => {
     traktExchangeCalls.push(params);
@@ -37,6 +38,12 @@ mock.module('@/state/queries/simkl', () => ({
   exchangeSimklCode: (params: unknown) => {
     simklExchangeCalls.push(params);
     return Promise.resolve({ accessToken: 'simkl-token' });
+  },
+}));
+mock.module('@/state/queries/hardcover', () => ({
+  exchangeHardcoverCode: (params: unknown) => {
+    hardcoverExchangeCalls.push(params);
+    return Promise.resolve({ accessToken: 'hardcover-token' });
   },
 }));
 mock.module('@/state/queries/anilist', () => ({
@@ -77,6 +84,7 @@ beforeEach(() => {
   traktExchangeCalls.length = 0;
   simklExchangeCalls.length = 0;
   anilistRedirectCalls.length = 0;
+  hardcoverExchangeCalls.length = 0;
   replacedUrls.length = 0;
   process.env.EXPO_PUBLIC_SIMKL_CLIENT_ID = ORIGINAL_SIMKL_ENV;
 });
@@ -185,6 +193,30 @@ describe('handleOAuthReturn — Simkl marker routing (plan 0034 U5)', () => {
     expect(simklExchangeCalls).toHaveLength(0);
     expect(traktExchangeCalls).toHaveLength(0);
     expect(statuses).toEqual([]);
+  });
+});
+
+describe('handleOAuthReturn — Hardcover marker routing', () => {
+  test('a ?oauth=hardcover return exchanges on Hardcover with its iss, never on Trakt or Simkl', async () => {
+    stubWindow(
+      'https://shinobu.glpecile.xyz/?oauth=hardcover&code=hc-code&state=st-9&iss=https%3A%2F%2Fapi.hardcover.app',
+    );
+    const { statuses, setStatus } = recordStatuses();
+
+    await handleOAuthReturn(setStatus);
+
+    expect(hardcoverExchangeCalls).toEqual([
+      {
+        code: 'hc-code',
+        state: 'st-9',
+        iss: 'https://api.hardcover.app',
+        redirectUri: 'https://shinobu.glpecile.xyz/?oauth=hardcover',
+      },
+    ]);
+    expect(traktExchangeCalls).toHaveLength(0);
+    expect(simklExchangeCalls).toHaveLength(0);
+    expect(statuses).toEqual(['exchanging', 'idle']);
+    expect(replacedUrls).toEqual(['https://shinobu.glpecile.xyz/']);
   });
 });
 

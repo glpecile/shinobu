@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
 import {
+  getHardcoverRedirectUri,
+  HARDCOVER_OAUTH_MARKER_VALUE,
+} from '@/lib/providers/hardcover/redirect-uri';
+import {
   getSimklRedirectUri,
   SIMKL_OAUTH_MARKER_PARAM,
   SIMKL_OAUTH_MARKER_VALUE,
@@ -9,6 +13,7 @@ import {
 import { getTraktRedirectUri } from '@/lib/providers/trakt/redirect-uri';
 import { Provider } from '@/lib/providers/types';
 import { connectAniListFromRedirect } from '@/state/queries/anilist';
+import { exchangeHardcoverCode } from '@/state/queries/hardcover';
 import { exchangeSimklCode } from '@/state/queries/simkl';
 import { exchangeTraktCode } from '@/state/queries/trakt';
 
@@ -53,42 +58,44 @@ function consumeTraktReturnParams(): {
 }
 
 /**
- * Reads Simkl's OAuth return params — and only Simkl's. Trakt and Simkl both
- * redirect to the site origin with `?code=…`, so Simkl's registered redirect
- * URI carries the static `?oauth=simkl` marker (plan 0034 U5,
- * `simkl/redirect-uri.ts`): no marker → `null`, and the caller falls through
- * to Trakt exactly as before. On consumption the code, its `state` echo and
- * the marker itself are stripped from history in the same step, for the same
- * single-use-code reason as Trakt's consumer above.
+ * Reads a marked OAuth return: Simkl's `?oauth=simkl` or Hardcover's
+ * `?oauth=hardcover`. Every code-flow provider redirects to the site origin
+ * with `?code=…`, so these two carry a static marker in their registered
+ * redirect URI (`simkl/redirect-uri.ts`, `hardcover/redirect-uri.ts`). No
+ * such marker returns `null`, and the caller falls through to Trakt. On
+ * consumption the code, `state`, `iss` and the marker are stripped from
+ * history in the same step, for the same single-use-code reason as Trakt's
+ * consumer above.
  */
-function consumeSimklReturnParams(): {
+function consumeMarkedReturnParams(marker: string): {
   code: string | null;
   state: string | null;
+  iss: string | null;
   denied: boolean;
 } | null {
   const params = new URLSearchParams(window.location.search);
-  if (params.get(SIMKL_OAUTH_MARKER_PARAM) !== SIMKL_OAUTH_MARKER_VALUE) {
+  if (params.get(SIMKL_OAUTH_MARKER_PARAM) !== marker) {
     return null;
   }
 
   const code = params.get('code');
   const state = params.get('state');
+  const iss = params.get('iss');
   const denied = params.get('error') != null;
 
   if (code == null && !denied) {
     // A bare marked visit (e.g. someone opened the registered redirect URI by
-    // hand) — Simkl territory, but nothing to consume or exchange.
-    return { code: null, state: null, denied: false };
+    // hand): this provider's territory, but nothing to consume or exchange.
+    return { code: null, state: null, iss: null, denied: false };
   }
 
   const url = new URL(window.location.href);
-  url.searchParams.delete('code');
-  url.searchParams.delete('error');
-  url.searchParams.delete('state');
-  url.searchParams.delete(SIMKL_OAUTH_MARKER_PARAM);
+  for (const name of ['code', 'error', 'error_description', 'state', 'iss', SIMKL_OAUTH_MARKER_PARAM]) {
+    url.searchParams.delete(name);
+  }
   window.history.replaceState(null, '', url.toString());
 
-  return { code, state, denied };
+  return { code, state, iss, denied };
 }
 
 /**
@@ -113,8 +120,8 @@ function consumeAniListReturnFragment(): string | null {
 /**
  * The whole return-leg decision, extracted from the hook so the routing is
  * testable without React: AniList's fragment first (no network, can't collide
- * with a query-param return), then Simkl's *marked* `?code=` (the
- * `?oauth=simkl` marker branches before the code is consumed), then Trakt for
+ * with a query-param return), then Simkl's and Hardcover's *marked* `?code=`
+ * (the `?oauth=` marker branches before the code is consumed), then Trakt for
  * every unmarked `?code=`. AniList and Trakt complete only when this browser
  * started that connect: a pending flow (`oauth-flow.ts`) is consumed once and
  * its `state` must match the echoed one. Expects `window` to exist; the hook
@@ -143,7 +150,7 @@ export async function handleOAuthReturn(
     return;
   }
 
-  const simklReturn = consumeSimklReturnParams();
+  const simklReturn = consumeMarkedReturnParams(SIMKL_OAUTH_MARKER_VALUE);
   if (simklReturn != null) {
     if (simklReturn.denied) {
       setStatus('error');
@@ -176,6 +183,34 @@ export async function handleOAuthReturn(
       // Expected for replayed/expired codes or a state mismatch; the home
       // screen surfaces the failure, so don't escalate to console.error.
       console.warn('Simkl OAuth code exchange failed', error);
+      setStatus('error');
+    }
+    return;
+  }
+
+  const hardcoverReturn = consumeMarkedReturnParams(HARDCOVER_OAUTH_MARKER_VALUE);
+  if (hardcoverReturn != null) {
+    if (hardcoverReturn.denied) {
+      setStatus('error');
+      return;
+    }
+    if (hardcoverReturn.code == null) return;
+
+    setStatus('exchanging');
+    try {
+      // The exchange checks `state` against the pending PKCE flow and `iss`
+      // against Hardcover's issuer, and rejects before any POST. A stray or
+      // replayed link finds no pending flow. A reconnect overwrites a session
+      // Hardcover ended, so a stored session does not stop the exchange.
+      await exchangeHardcoverCode({
+        code: hardcoverReturn.code,
+        state: hardcoverReturn.state ?? '',
+        iss: hardcoverReturn.iss,
+        redirectUri: getHardcoverRedirectUri(),
+      });
+      setStatus('idle');
+    } catch (error) {
+      console.warn('Hardcover OAuth code exchange failed', error);
       setStatus('error');
     }
     return;
@@ -221,9 +256,9 @@ export async function handleOAuthReturn(
 
 /**
  * Web-only return leg of every provider's OAuth flow, mounted on the home
- * route (all three web redirect URIs point at the site origin). Trakt comes
+ * route (every web redirect URI points at the site origin). Trakt comes
  * back as `?code=…` needing an async exchange; Simkl as `?oauth=simkl&code=…`
- * (its PKCE exchange, plan 0034 U5); AniList as `#access_token=…` where
+ * and Hardcover as `?oauth=hardcover&code=…` (their PKCE exchanges); AniList as `#access_token=…` where
  * "exchange" is just parsing the fragment (plan 0011). Success persists the
  * session, which flips `useConnectedProviders` and swaps the home screen to
  * the feed; no explicit navigation is needed.

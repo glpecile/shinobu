@@ -14,6 +14,7 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import {
   SERVER_CONNECTED_PROVIDERS,
   useConnectedProviders,
+  useHardcoverNeedsReconnect,
   useTraktNeedsCredentials,
 } from '@/state/session';
 
@@ -29,6 +30,7 @@ import {
 export function ProviderCardsSection() {
   const connectedIds = useConnectedProviders();
   const traktNeedsCredentials = useTraktNeedsCredentials();
+  const hardcoverNeedsReconnect = useHardcoverNeedsReconnect();
   const { connected, disconnected } = splitProviders(connectedIds);
   const [shownIds, setShownIds] = useState(connectedIds);
   const [movedIds, setMovedIds] = useState<ProviderId[]>([]);
@@ -85,7 +87,10 @@ export function ProviderCardsSection() {
               connected={connected.includes(id)}
               id={id}
               onOpenSheet={() => openSheet(id)}
-              reconnect={id === Provider.Trakt && traktNeedsCredentials}
+              reconnect={
+                (id === Provider.Trakt && traktNeedsCredentials) ||
+                (id === Provider.Hardcover && hardcoverNeedsReconnect)
+              }
             />
           </MovedCard>
         ))}

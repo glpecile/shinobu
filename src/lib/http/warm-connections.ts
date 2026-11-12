@@ -41,6 +41,8 @@ const HOST_ROOTS: Record<ProviderId, string | null> = {
   // instead and stays unwarmed — one throwaway request per provider, aimed at
   // the host the waterfall races against first.
   simkl: `${SIMKL_API_BASE_URL}/`,
+  // No Up Next leg reads Hardcover.
+  hardcover: null,
 };
 
 // TMDB backs every detail screen the user taps into from the feed, so warming

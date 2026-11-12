@@ -45,6 +45,22 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
 }
 
 /**
+ * Reading has no id bridge like ani.zip (plan 0117 KTD-4), so a reading item
+ * reaches a provider only when it carries that provider's own id: a book
+ * needs `externalIds.hardcover` and a manga needs `externalIds.anilist`.
+ */
+function carriesReadingId(item: RoutableItem, id: ProviderId): boolean {
+  switch (item.type) {
+    case 'BOOK':
+      return id === Provider.Hardcover && item.externalIds.hardcover != null;
+    case 'MANGA':
+      return id === Provider.AniList && item.externalIds.anilist != null;
+    default:
+      return true;
+  }
+}
+
+/**
  * The write verbs routing can resolve targets for (plan 0031 KTD-1/KTD-15).
  * Every one of them shares `effectiveTypes` above — an anime film must not
  * reach Letterboxd through two different type rules — and differs only in
@@ -85,7 +101,8 @@ export function providersForWrite(
     const provider = PROVIDERS[id];
     return (
       writeSupport(provider, capability) !== 'none' &&
-      types.some((type) => provider.mediaTypes.includes(type))
+      types.some((type) => provider.mediaTypes.includes(type)) &&
+      carriesReadingId(item, id)
     );
   });
 }
@@ -140,6 +157,7 @@ export function listProviderFor(
     case 'TV':
       return connected.includes(Provider.Serializd) ? Provider.Serializd : null;
     case 'MANGA':
+    case 'BOOK':
       return null;
   }
 }

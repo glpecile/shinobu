@@ -26,6 +26,7 @@ const KIND_ICON: Record<Kind, ComponentProps<typeof Ionicons>['name']> = {
   TV: 'tv-outline',
   ANIME: 'tv-outline',
   MANGA: 'book-outline',
+  BOOK: 'book-outline',
   LIST: 'list-outline',
   LEGACY: 'albums-outline',
 };
@@ -41,6 +42,7 @@ const KIND_LABEL: Record<Kind, string> = {
   TV: 'TV show',
   ANIME: 'Anime',
   MANGA: 'Manga',
+  BOOK: 'Book',
   LIST: 'List',
   LEGACY: 'Hidden item',
 };

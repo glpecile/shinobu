@@ -46,6 +46,7 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   serializd: 2,
   anilist: 3,
   letterboxd: 4,
+  hardcover: 5,
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */

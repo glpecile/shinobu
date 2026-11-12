@@ -37,6 +37,7 @@ const ITEM_PRECEDENCE: Record<ProviderId, number> = {
   trakt: 2,
   serializd: 3,
   letterboxd: 4,
+  hardcover: 5,
 };
 
 /**

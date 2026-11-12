@@ -136,4 +136,18 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // `/ratings` also carries the IMDb (movies, TV) or MAL (anime) score.
     communityScore: true,
   },
+  // Hardcover (plan 0117), the book provider. A book routes here only when
+  // it carries a Hardcover id (`routing.ts`). The read and watchlist flags
+  // turn on with the units that ship those legs, as Simkl's did.
+  [Provider.Hardcover]: {
+    id: Provider.Hardcover,
+    label: 'Hardcover',
+    mediaTypes: ['BOOK'],
+    canRead: false,
+    canWrite: true,
+    watchlistWrite: 'none',
+    watchlistRemove: 'none',
+    // A book's average rating, out of 5.
+    communityScore: true,
+  },
 };

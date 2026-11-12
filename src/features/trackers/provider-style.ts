@@ -7,6 +7,7 @@ const MEDIA_TYPE_LABEL: Record<MediaType, string> = {
   TV: 'TV',
   ANIME: 'Anime',
   MANGA: 'Manga',
+  BOOK: 'Books',
 };
 
 /**

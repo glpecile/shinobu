@@ -59,6 +59,23 @@ describe("providersForWrite('log')", () => {
   });
 });
 
+// Plan 0117 KTD-4: reading has no id bridge, so only a provider's own id routes.
+describe('reading items route by the id they carry', () => {
+  const connected: readonly ProviderId[] = [...ALL5, 'hardcover'];
+
+  it('a book with a Hardcover id routes to Hardcover only', () => {
+    expect(providersForWrite({ type: 'BOOK', ...ids({ hardcover: 1 }) }, connected, 'log')).toEqual(['hardcover']);
+  });
+
+  it('a book without a Hardcover id routes nowhere', () => {
+    expect(providersForWrite({ type: 'BOOK', ...ids() }, connected, 'log')).toEqual([]);
+  });
+
+  it('a manga without an AniList id routes nowhere', () => {
+    expect(providersForWrite({ type: 'MANGA', ...ids() }, connected, 'log')).toEqual([]);
+  });
+});
+
 // Plan 0022: Letterboxd's diary write needs the native sign-in WebView
 // session, so its write is unsupported on web (registry
 // unsupportedWritePlatforms) — routing splits it into a manual target there,

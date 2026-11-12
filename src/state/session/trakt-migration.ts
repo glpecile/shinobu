@@ -28,7 +28,17 @@ import { connectedProviderIds, getProviderSession } from './tokens';
  */
 export function providerIsUsable(id: ProviderId): boolean {
   if (id === Provider.Trakt) return getClientIdForProvider(Provider.Trakt) !== '';
+  if (id === Provider.Hardcover) return !hardcoverNeedsReconnect();
   return true;
+}
+
+/**
+ * True when Hardcover refused the refresh token for good
+ * (`hardcover/auth.ts`). The session stays stored and unusable, and the
+ * trackers screen shows the reconnect banner.
+ */
+export function hardcoverNeedsReconnect(): boolean {
+  return getProviderSession(Provider.Hardcover)?.reconnectNeeded === true;
 }
 
 /** `connectedProviderIds()` minus providers in the MigrationNeeded state. */

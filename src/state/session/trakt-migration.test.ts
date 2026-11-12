@@ -98,6 +98,16 @@ describe('MigrationNeeded: token stored, no user creds (R13)', () => {
   });
 });
 
+describe('Hardcover ended the session', () => {
+  test('a session marked reconnectNeeded is kept and gated out of the usable set', () => {
+    setProviderSession('hardcover', { accessToken: 'at', refreshToken: 'rt', reconnectNeeded: true });
+
+    expect(providerIsUsable('hardcover')).toBe(false);
+    expect(usableProviderIds()).not.toContain('hardcover');
+    expect(store.get('session.hardcover')).toBeDefined();
+  });
+});
+
 describe('Connected: token + user creds (regression)', () => {
   test('stored credentials keep Trakt fully usable, no banner state', () => {
     setProviderSession('trakt', { accessToken: 'tok' });

@@ -1,4 +1,6 @@
 import anilistIcon from '@/assets/providers/anilist.svg';
+// Hardcover's own mark, the favicon its docs site ships.
+import hardcoverIcon from '@/assets/providers/hardcover.svg';
 // IMDb, MyAnimeList, Rotten Tomatoes and Metacritic are score sources, not
 // providers (#318). Each mark is the site's own favicon, like Simkl's below.
 import imdbIcon from '@/assets/providers/imdb.png';
@@ -43,6 +45,7 @@ const ICONS: Record<IconSourceId, number> = {
   // keeps it visible on both themes, per the note above.
   serializd: serializdIcon,
   simkl: simklIcon,
+  hardcover: hardcoverIcon,
   tmdb: tmdbIcon,
   imdb: imdbIcon,
   mal: myanimelistIcon,

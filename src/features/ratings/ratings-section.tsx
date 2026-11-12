@@ -25,6 +25,7 @@ const SOURCE_NAMES: Record<RatingSource, string> = {
   mal: 'MyAnimeList',
   anilist: 'AniList',
   letterboxd: 'Letterboxd',
+  hardcover: 'Hardcover',
   rottenTomatoes: 'Rotten Tomatoes',
   metacritic: 'Metacritic',
 };
@@ -162,6 +163,9 @@ function ProviderRating({ provider, url, item, resetKey }: {
         ? <LetterboxdFilmScore item={item} slug={letterboxd} url={url} />
         : tmdb != null ? <LetterboxdScore item={item} tmdbId={tmdb} url={url} /> : null;
       break;
+    // A book's average rating arrives on the item itself, with its details.
+    case Provider.Hardcover:
+      return <ProviderScore item={item} provider={provider} ratings={item.ratings} url={url} />;
     case Provider.Trakt:
     case Provider.Serializd:
       score = null;
