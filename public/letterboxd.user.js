@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shinobu Letterboxd bridge
 // @namespace    https://shinobu.glpecile.xyz/
-// @version      0.10.1
+// @version      0.10.2
 // @description  Send Shinobu film logs, watchlist changes, new lists and custom list changes through your signed-in Letterboxd tab.
 // @match        https://shinobu.glpecile.xyz/*
 // @match        http://localhost/*
@@ -15,6 +15,7 @@
 // @grant        GM.addValueChangeListener
 // @grant        GM.removeValueChangeListener
 // @grant        GM.openInTab
+// @grant        GM_registerMenuCommand
 // @grant        unsafeWindow
 // ==/UserScript==
 
@@ -26,8 +27,8 @@
   const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
   const devOrigin = /^http:\/\/(localhost|127\.0\.0\.1):(8081|8082|19006)$/.test(origin);
   // Local dev servers on these ports are not necessarily Shinobu (8081 is
-  // every Expo project's Metro). Developers opt in per install by setting
-  // `shinobu-trust-localhost` to true in Tampermonkey's storage tab.
+  // every Expo project's Metro). Developers opt in per install through the
+  // script's Tampermonkey menu command, which a page can't trigger.
   const appOrigin = origin === 'https://shinobu.glpecile.xyz' ||
     (devOrigin && await GM.getValue('shinobu-trust-localhost', false) === true);
 
@@ -104,6 +105,10 @@
   // which resets Tampermonkey's storage and with it the opt-in.
   if (devOrigin) {
     page.document.documentElement.setAttribute('data-shinobu-letterboxd-untrusted', '');
+    GM_registerMenuCommand('Trust this Shinobu dev server', async () => {
+      await GM.setValue('shinobu-trust-localhost', true);
+      page.location.reload();
+    });
     return;
   }
 
