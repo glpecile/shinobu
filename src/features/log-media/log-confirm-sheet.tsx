@@ -31,7 +31,7 @@ import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
-import { useLogTargetsSplit } from './use-log-targets';
+import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 import { LetterboxdCompletionOffer } from './letterboxd-completion-offer';
@@ -82,6 +82,8 @@ export interface LogFormFieldsProps {
    * never part of `targets`/`selectedProviders`.
    */
   manualTargets?: readonly ProviderId[];
+  /** Connected providers with no match for this item — a manual row with the reason, never a toggle. */
+  unmatchedTargets?: readonly ProviderId[];
   /** Which of `targets` are actually selected — defaults to all targets. */
   selectedProviders: ProviderId[];
   onSelectedProvidersChange: (ids: ProviderId[]) => void;
@@ -111,6 +113,7 @@ export function LogFormFields({
   onDismiss,
   targets,
   manualTargets = [],
+  unmatchedTargets = [],
   selectedProviders,
   onSelectedProvidersChange,
   watchedAt,
@@ -175,8 +178,11 @@ export function LogFormFields({
         {/* On web, Letterboxd is manual only while the script can't log. */}
         <ManualWriteRows
           item={item}
-          manual={manualTargets}
-          reasons={process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : undefined}
+          manual={[...manualTargets, ...unmatchedTargets]}
+          reasons={{
+            ...(process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : {}),
+            ...Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match for this title'])),
+          }}
         />
         {/* The like rides in this row, but a diary provider is never undated. */}
         {showDateField && (
@@ -349,10 +355,10 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const title = span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const logMedia = useLogMedia();
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(item);
+  const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+  const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
@@ -498,6 +504,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
           <LogFormFields
             item={item}
             manualTargets={manualTargets}
+            unmatchedTargets={unmatchedTargets}
             onClose={onClose}
             onDismiss={onDismiss}
             onSelectedProvidersChange={setSelectedProviders}

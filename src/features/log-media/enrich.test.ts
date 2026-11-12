@@ -65,6 +65,15 @@ mock.module('@/state/queries/mapping', () => ({
   },
 }));
 
+let letterboxdFilm: Partial<NormalizedMediaItem> | null = null;
+
+mock.module('@/state/queries/letterboxd', () => ({
+  cachedLetterboxdFilm: () => {
+    calls.push('letterboxd-film');
+    return Promise.resolve(letterboxdFilm);
+  },
+}));
+
 const { enrichExternalIds } = await import('./enrich');
 
 // ChaO (2025): a TMDB-first anime film. ani.zip's themoviedb_id index is
@@ -221,6 +230,34 @@ describe('enrichExternalIds — Simkl needs the same bridges Trakt does', () => 
     anizipBridge = null;
     tmdbByTvdb = null;
     expect(enriched.externalIds.tmdb).toBe(105248);
+  });
+});
+
+const slugOnly = (): NormalizedMediaItem => ({ ...idlessFilm(), externalIds: { letterboxd: 'hokum' } });
+
+describe('enrichExternalIds — a Letterboxd film asks its own page first', () => {
+  beforeEach(() => {
+    calls.length = 0;
+    letterboxdFilm = null;
+  });
+
+  test('takes the page’s TMDB id and skips the text search', async () => {
+    letterboxdFilm = { externalIds: { letterboxd: 'hokum', tmdb: 4242 } };
+    const enriched = await enrichExternalIds(client, slugOnly(), ['simkl', 'letterboxd']);
+    expect(enriched.externalIds.tmdb).toBe(4242);
+    expect(calls).not.toContain('trakt-search');
+  });
+
+  test('a page that is a TV series keeps the log on Letterboxd', async () => {
+    letterboxdFilm = { externalIds: { letterboxd: 'hokum' }, tmdbTvVariant: 228880 };
+    const enriched = await enrichExternalIds(client, slugOnly(), ['simkl', 'letterboxd']);
+    expect(enriched.tmdbTvVariant).toBe(228880);
+    expect(calls).toEqual(['letterboxd-film']);
+  });
+
+  test('falls back to the text search when the page read fails', async () => {
+    await enrichExternalIds(client, slugOnly(), ['simkl', 'letterboxd']);
+    expect(calls.slice(0, 2)).toEqual(['letterboxd-film', 'trakt-search']);
   });
 });
 
