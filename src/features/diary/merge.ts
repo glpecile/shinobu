@@ -132,7 +132,7 @@ export function watermarkProviders(
 // ---- Grouping (day buckets + cross-provider collapse) ----
 
 /** The title+year identity of last resort, normalized for casing/whitespace. */
-function titleYearKey(item: NormalizedDiaryEntry['item']): string {
+function titleYearKey(item: Pick<NormalizedMediaItem, 'title' | 'year'>): string {
   const title = item.title.trim().toLowerCase().replace(/\s+/g, ' ');
   return `ty:${title}:${item.year ?? '?'}`;
 }
@@ -254,10 +254,9 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
  * is not enough (the up-next lesson, plan 0034 U9.5): an AniList log states
  * anilist/mal but rarely tmdb, Serializd states only tmdb — and a Simkl
  * all-items row states most of them at once, bridging the two. The join
- * therefore matches on *any* shared namespaced id; the title+year fallback
- * applies only when an item carries no usable id at all, so an id-bearing
- * item never collapses with a same-titled different id (the pre-existing
- * fallback contract, unchanged).
+ * therefore matches on *any* shared namespaced id. The title+year key applies
+ * when an item carries no usable id at all; films add their names through
+ * `filmNameKeys`. A title match never joins items whose ids disagree.
  */
 function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   const ids = item.externalIds;
@@ -269,6 +268,28 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
   if (keys.length === 0) keys.push(titleYearKey(item));
   return keys;
+}
+
+/**
+ * A film's display, English, and romaji names as title+year keys. AniList and
+ * Simkl file an anime film without a TMDB id, and ani.zip often lacks one too,
+ * so a Letterboxd or Trakt log of the same film shares only its English name
+ * (Housenka / The Last Blossom).
+ */
+function filmNameKeys(entry: NormalizedDiaryEntry): string[] {
+  const { item } = entry;
+  if ((entry.episodes?.length ?? 0) > 0 || (item.type !== 'MOVIE' && item.isFilm !== true)) return [];
+  return [item.title, item.titles?.english, item.titles?.romaji].flatMap((title) =>
+    title != null && title !== '' ? [titleYearKey({ title, year: item.year })] : [],
+  );
+}
+
+/** Some id namespace both items carry names a different title. */
+function idsDisagree(a: NormalizedMediaItem, b: NormalizedMediaItem): boolean {
+  return Object.entries(a.externalIds).some(([namespace, id]) => {
+    const other = b.externalIds[namespace as keyof NormalizedMediaItem['externalIds']];
+    return id != null && other != null && other !== id;
+  });
 }
 
 /** The episode/chapter set signature; movies collapse on "no episodes". */
@@ -372,7 +393,7 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
     }
   };
   for (const entry of entries) {
-    const identities = identityKeys(entry.item);
+    const identities = [...new Set([...identityKeys(entry.item), ...filmNameKeys(entry)])];
     const key = episodesKey(entry.episodes);
     // Merge only with a *different* provider's entry of the same item + episode
     // set — two same-provider logs (binge day / rewatch) never collapse (R2/AE6),
@@ -381,10 +402,15 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
     // are processed newest-first deterministically and a bridge contributor
     // extends the bucket's reach.
     // The earliest-created matching bucket wins, as a front-to-back scan would.
+    // A name match also needs every id both sides carry to agree.
     let match = -1;
     for (const identity of identities) {
       for (const index of byIdentity.get(`${key}\u0000${identity}`) ?? []) {
-        if ((match === -1 || index < match) && !buckets[index].providers.has(entry.provider)) {
+        if (
+          (match === -1 || index < match) &&
+          !buckets[index].providers.has(entry.provider) &&
+          !(identity.startsWith('ty:') && buckets[index].entries.some((other) => idsDisagree(entry.item, other.item)))
+        ) {
           match = index;
         }
       }
