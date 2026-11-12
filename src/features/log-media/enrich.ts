@@ -31,6 +31,7 @@ export async function enrichExternalIds(
   // A TV metadata variant cannot supply identities for a whole-entry movie log.
   if (item.tmdbTvVariant != null) return item;
   let externalIds = { ...item.externalIds };
+  let filedAsFilm = false;
 
   const isAnime = item.type === 'ANIME';
   const isMovieTv = item.type === 'MOVIE' || item.type === 'TV';
@@ -82,7 +83,7 @@ export async function enrichExternalIds(
     (connected.includes(Provider.Trakt) ||
       connected.includes(Provider.Serializd) ||
       connected.includes(Provider.Simkl) ||
-      (item.isFilm === true && connected.includes(Provider.Letterboxd)))
+      ((item.isFilm === true || item.totalEpisodes === 1) && connected.includes(Provider.Letterboxd)))
   ) {
     const anizip = await cachedAniZipIds(queryClient, {
       anilistId: externalIds.anilist,
@@ -94,6 +95,18 @@ export async function enrichExternalIds(
         : await cachedSimklAnimeIds(queryClient, { anilist: externalIds.anilist });
     const bridged = simkl?.tvdb != null || simkl?.tmdb != null ? simkl : anizip;
     const isFilm = item.isFilm === true;
+    // AniList files many single works as a one-episode OVA, ONA or special;
+    // TMDB and Letterboxd file them as movies.
+    const single = !isFilm && item.totalEpisodes === 1;
+    const singleMovieId = !single
+      ? undefined
+      : bridged?.tmdb != null && aniZipTmdbKind(bridged) === 'movie'
+        ? bridged.tmdb
+        : bridged?.tvdb == null && bridged?.tmdb == null
+          ? await cachedTmdbAnimeMatch(queryClient, item).then((found) =>
+              found?.isFilm === true ? found.tmdbId : undefined,
+            )
+          : undefined;
     // The bridge gives one TMDB id without its kind (aniZipTmdbKind): a film
     // filed as a show's special carries the show's TV id.
     const bridgedTmdb =
@@ -112,18 +125,27 @@ export async function enrichExternalIds(
       (tvdb != null ? ((await cachedTmdbTvIdByTvdb(queryClient, tvdb)) ?? bridgedTmdb) : bridgedTmdb);
     // A non-film without a TVDB id is bridged to a movie: none of its ids is a show's.
     const imdb = isFilm || tvdb != null ? bridged?.imdb : undefined;
-    externalIds = {
-      ...externalIds,
-      ...(tvdb != null ? { tvdb } : {}),
-      ...(tmdb != null ? { tmdb } : {}),
-      ...(imdb != null ? { imdb } : {}),
-    };
+    if (singleMovieId != null) {
+      filedAsFilm = true;
+      externalIds = {
+        ...externalIds,
+        tmdb: singleMovieId,
+        ...(bridged?.imdb != null ? { imdb: bridged.imdb } : {}),
+      };
+    } else {
+      externalIds = {
+        ...externalIds,
+        ...(tvdb != null ? { tvdb } : {}),
+        ...(tmdb != null ? { tmdb } : {}),
+        ...(imdb != null ? { imdb } : {}),
+      };
+    }
   }
 
   // Bridge ids → a real Trakt id (progress reads and cache invalidation key
   // on it; /sync/history alone could live off tvdb/tmdb).
   if (isAnime && externalIds.trakt == null && connected.includes(Provider.Trakt)) {
-    const kind = item.isFilm === true ? 'movie' : 'show';
+    const kind = item.isFilm === true || filedAsFilm ? 'movie' : 'show';
     const lookup =
       kind === 'show' && externalIds.tvdb != null
         ? { source: 'tvdb' as const, id: externalIds.tvdb }
@@ -195,5 +217,5 @@ export async function enrichExternalIds(
     if (anilistId != null) externalIds = { ...externalIds, anilist: anilistId };
   }
 
-  return { ...item, externalIds };
+  return { ...item, externalIds, ...(filedAsFilm ? { isFilm: true } : {}) };
 }

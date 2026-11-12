@@ -273,6 +273,9 @@ describe('enrichExternalIds — an anime film no bridge maps', () => {
 // 256, an OVA): its 37910 is a TMDB *movie* id.
 const film = () => chao({ id: 'anilist-405', type: 'ANIME', isFilm: true, externalIds: { anilist: 405 } });
 
+const ova = (totalEpisodes: number) =>
+  chao({ id: 'anilist-256', type: 'ANIME', isFilm: false, totalEpisodes, externalIds: { anilist: 256 } });
+
 describe('enrichExternalIds — a bridge id of the other kind', () => {
   beforeEach(() => {
     simklIds = null;
@@ -305,6 +308,33 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
       ['trakt', 'serializd'],
     );
     anizipBridge = null;
+    expect(enriched.externalIds).toEqual({ anilist: 256 });
+  });
+
+  test('a one-episode OVA bridged to a movie becomes a film', async () => {
+    anizipBridge = { anilist: 256, tmdb: 37910, imdb: 'tt0370754' };
+    const enriched = await enrichExternalIds(client, ova(1), ['letterboxd']);
+    anizipBridge = null;
+    expect(enriched.isFilm).toBe(true);
+    expect(enriched.externalIds).toEqual({ anilist: 256, tmdb: 37910, imdb: 'tt0370754' });
+  });
+
+  test('an unmapped one-episode ONA takes a TMDB movie match, never a show match', async () => {
+    tmdbAnimeMatch = { tmdbId: 901323, isFilm: true };
+    const asFilm = await enrichExternalIds(client, ova(1), ['letterboxd']);
+    tmdbAnimeMatch = { tmdbId: 5, isFilm: false };
+    const asShow = await enrichExternalIds(client, ova(1), ['letterboxd']);
+    tmdbAnimeMatch = null;
+    expect(asFilm).toMatchObject({ isFilm: true, externalIds: { tmdb: 901323 } });
+    expect(asShow.isFilm).toBe(false);
+    expect(asShow.externalIds.tmdb).toBeUndefined();
+  });
+
+  test('a two-episode OVA bridged to a movie stays a series', async () => {
+    anizipBridge = { anilist: 256, tmdb: 37910 };
+    const enriched = await enrichExternalIds(client, ova(2), ['trakt']);
+    anizipBridge = null;
+    expect(enriched.isFilm).toBe(false);
     expect(enriched.externalIds).toEqual({ anilist: 256 });
   });
 });
