@@ -1,5 +1,6 @@
 import {
   infiniteQueryOptions,
+  isCancelledError,
   QueryObserver,
   skipToken,
   useInfiniteQuery,
@@ -278,10 +279,13 @@ export function letterboxdFilmQuery(slug: string | null, hasTmdb: boolean) {
   };
 }
 
-/** A film's page identity for the log path: null on any failure, so the caller falls back. */
+/** A film's page identity for the log path: null on any failure but a cancel, so the caller falls back. */
 export function cachedLetterboxdFilm(queryClient: QueryClient, slug: string) {
   const { queryKey, queryFn, staleTime, retry } = letterboxdFilmQuery(slug, tmdbToken() !== '');
-  return queryClient.fetchQuery({ queryKey, queryFn, staleTime, retry }).catch(() => null);
+  return queryClient.fetchQuery({ queryKey, queryFn, staleTime, retry }).catch((error: unknown) => {
+    if (isCancelledError(error)) throw error;
+    return null;
+  });
 }
 
 export function useLetterboxdFilmQuery(slug: string | null) {
