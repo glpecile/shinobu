@@ -77,7 +77,10 @@ const POSTERS = [
   '/npdB6eFzizki0WaZ1OvKcJrWe97.jpg', // Chainsaw Man (2022)
 ].map((path) => tmdbImageUrl(path, 'w342'));
 
-/** Manga covers from AniList's CDN, for the Reading scope on Search. */
+/**
+ * Manga covers from AniList's CDN, for the Reading scope on Search. `medium` is
+ * 230 px wide; `large` is 460 px and weighs 3x more, mostly in its PNGs.
+ */
 const MANGA = [
   'bx30002-Cul4OeN7bYtn.jpg', // Berserk (1989)
   'bx30013-BeslEMqiPhlk.jpg', // One Piece (1997)
@@ -109,7 +112,7 @@ const MANGA = [
   'bx87170-nyuwcN7rU4pc.jpg', // Fire Punch (2016)
   'bx65243-mR4MnJFmfaOF.png', // Haikyu!! (2012)
   'bx30012-1epmVfTSv2rr.png', // Bleach (2001)
-].map((file) => `https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/${file}`);
+].map((file) => `https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/${file}`);
 
 /** Directors, actors, composers, and crew behind the titles above. */
 const PEOPLE = [
@@ -285,8 +288,9 @@ const COLUMN_RHYTHM = [
 
 /**
  * A drifting, tilted wall behind a first-run or idle screen: titles on Home,
- * manga, people, or studio logos on Search. Fixed picks of classic film and anime keep
- * it out of release-week trends; each mount deals them in a new order.
+ * manga, people, or studio logos on Search. Fixed picks of classic film, anime,
+ * and manga keep it out of release-week trends; each mount deals them in a new
+ * order.
  */
 export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
   const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
