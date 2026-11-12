@@ -12,7 +12,7 @@ import { isEpisodeLog, type LogRequest } from '@/features/log-media/log-request'
 import { parseTags } from '@/features/log-media/parse-tags';
 import { episodeNoticeToastCopy, logToastCopy } from '@/features/log-media/toast-copy';
 import { useLogMedia } from '@/features/log-media/use-log-media';
-import { useLogTargetsSplit } from '@/features/log-media/use-log-targets';
+import { useLogTargetsSplit, useTargetSelection } from '@/features/log-media/use-log-targets';
 import { useLetterboxdCompletion } from '@/features/log-media/use-letterboxd-completion';
 import { LetterboxdCompletionOffer } from '@/features/log-media/letterboxd-completion-offer';
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
@@ -208,11 +208,8 @@ function CatchUpForm({
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
   const { trackBusy } = useCatchUpControls();
-  const { writable: targets, manual: manualTargets } = useLogTargetsSplit(
-    item,
-  );
-
-  const [selectedProviders, setSelectedProviders] = useState(targets);
+  const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
+  const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [tags, setTags] = useState(DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(false);
   const [watchedAt, setWatchedAt] = useState<Date | null>(null);
@@ -452,6 +449,7 @@ function CatchUpForm({
             <LogFormFields
               item={item}
               manualTargets={manualTargets}
+              unmatchedTargets={unmatchedTargets}
               onClose={onClose}
               onDismiss={onDismiss}
               onSelectedProvidersChange={setSelectedProviders}

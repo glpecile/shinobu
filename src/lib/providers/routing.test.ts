@@ -9,6 +9,7 @@ import {
   providersForWrite,
   resolveWriteTargets,
   splitWriteTargets,
+  unmatchedWriteTargets,
   type WriteCapability,
 } from './routing';
 
@@ -387,5 +388,18 @@ describe('listProviderFor', () => {
     expect(listProviderFor({ type: 'TV' }, ALL4)).toBe('serializd');
     expect(listProviderFor({ type: 'TV' }, ALL)).toBeNull();
     expect(listProviderFor({ type: 'MANGA' }, ALL4)).toBeNull();
+  });
+});
+
+describe('unmatchedWriteTargets', () => {
+  it('lists the movie trackers for an anime film no id reaches', () => {
+    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1 }) }, ALL5)).toEqual([
+      'trakt',
+      'letterboxd',
+    ]);
+  });
+
+  it('is empty once a movie or TV id is known', () => {
+    expect(unmatchedWriteTargets({ type: 'ANIME', isFilm: true, ...ids({ anilist: 1, tmdb: 2 }) }, ALL5)).toEqual([]);
   });
 });
