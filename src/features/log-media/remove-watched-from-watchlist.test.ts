@@ -49,6 +49,7 @@ mock.module('@/state/queries/mapping', () => ({
   cachedSeasonLayout: () => Promise.resolve(null),
   cachedAniListPrequel: () => Promise.resolve(null),
   cachedSimklAnimeIds: () => Promise.resolve(null),
+  cachedTmdbAnimeMatch: () => Promise.resolve(null),
   cachedAniListLaterCours: () => Promise.resolve([]),
   cachedTmdbTvIdByTvdb: () => Promise.resolve(null),
 }));

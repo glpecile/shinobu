@@ -3,7 +3,7 @@ import { Window } from 'happy-dom';
 import { getLetterboxdUserscriptFetch, hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge/index.web';
 
 const script = await Bun.file(new URL('../public/letterboxd.user.js', import.meta.url)).text();
-const run = new Function('GM', 'unsafeWindow', `return ${script.slice(script.indexOf('(async ()'))}`);
+const run = new Function('GM', 'unsafeWindow', 'GM_registerMenuCommand', `return ${script.slice(script.indexOf('(async ()'))}`);
 const id = '12345678-1234-1234-1234-123456789abc';
 
 test('keeps unsupported old-script writes blocked and detects installed-script capabilities', async () => {
@@ -44,11 +44,17 @@ test('keeps unsupported old-script writes blocked and detects installed-script c
 
 test('attaches on a localhost dev port only after the trust-localhost opt-in', async () => {
   const dev = new Window({ url: 'http://localhost:8081/' });
-  const page = { location: dev.location, document: dev.document, addEventListener() {} };
+  let reloaded = false;
+  const page = { location: { origin: dev.location.origin, reload: () => { reloaded = true; } }, document: dev.document, addEventListener() {} };
+  const stored: Record<string, unknown> = {};
+  let trust: (() => Promise<void>) | undefined;
   try {
-    await run({ getValue: async () => false }, page);
+    await run({ getValue: async () => false, setValue: async (key: string, value: unknown) => { stored[key] = value; } }, page, (_name: string, callback: () => Promise<void>) => { trust = callback; });
     expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBeNull();
     expect(dev.document.documentElement.hasAttribute('data-shinobu-letterboxd-untrusted')).toBe(true);
+    await trust?.();
+    expect(stored['shinobu-trust-localhost']).toBe(true);
+    expect(reloaded).toBe(true);
     await run({ getValue: async () => true }, page);
     expect(dev.document.documentElement.getAttribute('data-shinobu-letterboxd-bridge')).toBe('11');
   } finally {

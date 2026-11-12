@@ -10,7 +10,8 @@ import { LikeButton } from '@/components/like-button';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
-import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
+import { letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { usePushRoute } from '@/lib/navigation';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
 import { useCatchUpControls } from '@/features/log-media/session/state';
@@ -123,6 +124,7 @@ export function LogFormFields({
   const tagsInput = useRef<TextInputInstance>(null);
   const pushRoute = usePushRoute();
   const userscriptLikes = useLetterboxdUserscript('like');
+  const scriptUntrusted = useLetterboxdUserscriptUntrusted();
   const diaryProviders = DIARY_PROVIDERS.filter((id) =>
     selectedProviders.includes(id),
   );
@@ -170,7 +172,12 @@ export function LogFormFields({
           selectedProviders={selectedProviders}
           targets={targets}
         />
-        <ManualWriteRows item={item} manual={manualTargets} />
+        {/* On web, Letterboxd is manual only while the script can't log. */}
+        <ManualWriteRows
+          item={item}
+          manual={manualTargets}
+          reasons={process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : undefined}
+        />
         {/* The like rides in this row, but a diary provider is never undated. */}
         {showDateField && (
           <WatchedAtField onChange={onWatchedAtChange} value={watchedAt}>
