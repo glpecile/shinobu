@@ -18,6 +18,7 @@ import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistQueryKeys, fetchWatchlistAnime, fetchWatchlistManga } from './anilist';
+import { fetchHardcoverWantToRead, hardcoverQueryKeys } from './hardcover';
 import { letterboxdQueryKeys, letterboxdWatchlistPagesOptions } from './letterboxd';
 import { none, settle, streamLegs } from './settle';
 import { simklDeps, simklQueryKeys } from './simkl';
@@ -82,12 +83,15 @@ export type { WatchlistInput, WatchlistInputs };
  * against a real account in U3 (the normalized `SimklLibraryEntry`/
  * `normalizeAllItems` fixtures) — the same live-verification bar Serializd is
  * still held to above before it can join this list.
+ *
+ * Hardcover's leg is its Want to Read shelf (plan 0117 B2).
  */
 const WATCHLIST_READ_PROVIDERS: readonly ProviderId[] = [
   Provider.Trakt,
   Provider.AniList,
   Provider.Letterboxd,
   Provider.Simkl,
+  Provider.Hardcover,
 ];
 
 /**
@@ -239,6 +243,16 @@ async function simklInputs(queryClient: QueryClient): Promise<WatchlistInput[]> 
 }
 
 /**
+ * Hardcover's leg: Want to Read books, a slice of the library read that
+ * Continue Reading also reads. `created_at` is when the book entered the
+ * library, which for a Want to Read book is when it was added to the list.
+ */
+async function hardcoverInputs(queryClient: QueryClient): Promise<WatchlistInput[]> {
+  const entries = await fetchHardcoverWantToRead(queryClient);
+  return entries.map((entry) => ({ item: entry.item, source: Provider.Hardcover, addedAt: entry.addedAt }));
+}
+
+/**
  * Every connected provider's watchlist, gathered in parallel and settled
  * per-leg. **No Serializd leg** (R32): its endpoint is known and cheap, but its
  * `items[]` element shape is unverified against a real account and writing a
@@ -271,9 +285,12 @@ function streamWatchlistInputs(
       feedProviders.includes(Provider.Simkl)
         ? settle(Provider.Simkl, () => simklInputs(queryClient))
         : none<WatchlistInput>(),
+      feedProviders.includes(Provider.Hardcover)
+        ? settle(Provider.Hardcover, () => hardcoverInputs(queryClient))
+        : none<WatchlistInput>(),
     ],
     (legs) => {
-      const [trakt, anilist, letterboxd, simkl] = legs.map(
+      const [trakt, anilist, letterboxd, simkl, hardcover] = legs.map(
         (leg) => leg ?? none<WatchlistInput>(),
       );
       // A leg still streaming in is *incomplete*, as is a Letterboxd leg with
@@ -288,8 +305,20 @@ function streamWatchlistInputs(
             !letterboxdLegIsComplete(queryClient))),
       );
       return {
-        inputs: [...trakt.inputs, ...anilist.inputs, ...letterboxd.inputs, ...simkl.inputs],
-        errors: [...trakt.errors, ...anilist.errors, ...letterboxd.errors, ...simkl.errors],
+        inputs: [
+          ...trakt.inputs,
+          ...anilist.inputs,
+          ...letterboxd.inputs,
+          ...simkl.inputs,
+          ...hardcover.inputs,
+        ],
+        errors: [
+          ...trakt.errors,
+          ...anilist.errors,
+          ...letterboxd.errors,
+          ...simkl.errors,
+          ...hardcover.errors,
+        ],
         incomplete,
       };
     },
@@ -359,6 +388,8 @@ export async function refreshWatchlistInputs(
     // here, so every cached all-items filter is marked stale together, same
     // as `invalidateAfterLog`'s Simkl branch.
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() }),
+    // Also refreshes Continue Reading's books, which read the same library.
+    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() }),
     ...(username == null
       ? []
       : [

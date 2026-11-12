@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, mock, test } from 'bun:test';
 
 import type { AniListCurrentEntry, AniListMangaEntry } from '@/lib/providers/anilist/normalize';
+import type { HardcoverLibraryEntry } from '@/lib/providers/hardcover/normalize';
 import type { NormalizedMediaItem } from '@/types/media';
 
 // Import-time stubs only: MMKV, the native fetch client and react-native's
@@ -127,6 +128,14 @@ function plannedManga(anilistId: number): AniListMangaEntry {
   };
 }
 
+function book(id: number, statusId: number): HardcoverLibraryEntry {
+  return {
+    statusId,
+    addedAt: `2026-11-0${id}T00:00:00.000Z`,
+    item: { ...film(`hardcover-${id}`, `Book ${id}`, 2020), type: 'BOOK', progressUnit: 'page', externalIds: { hardcover: id } },
+  };
+}
+
 interface Scenario {
   trakt?: NormalizedMediaItem[];
   /** The widened AniList list read's payload — CURRENT *and* PLANNING. */
@@ -137,6 +146,8 @@ interface Scenario {
   letterboxdPages?: NormalizedMediaItem[][];
   /** `/sync/all-items?status=plantowatch` — bucket doesn't matter to the leg. */
   simkl?: Array<{ item: NormalizedMediaItem; addedToWatchlistAt?: string }>;
+  /** Every Want to Read, Currently Reading and Read book. */
+  hardcover?: HardcoverLibraryEntry[];
   failing?: Array<'trakt' | 'anilist' | 'letterboxd' | 'simkl'>;
 }
 
@@ -158,6 +169,7 @@ function fakeClient(scenario: Scenario) {
       if (scenario.failing?.includes('simkl') === true) throw new Error('simkl down');
       return { shows: scenario.simkl ?? [], movies: [], anime: [] };
     }
+    if (root === 'hardcover' && kind === 'library') return scenario.hardcover ?? [];
     throw new Error(`unexpected query: ${queryKey.join('/')}`);
   };
   const fetchInfiniteQuery = async ({ queryKey }: { queryKey: readonly unknown[] }) => {
@@ -298,6 +310,16 @@ describe('fetchWatchlistInputs', () => {
     expect(requested).toEqual(['simkl/all-items/all/plantowatch']);
   });
 
+  test('the Hardcover leg is the Want to Read shelf, dated by when each book was added', async () => {
+    const { client } = fakeClient({ hardcover: [book(1, 1), book(2, 2), book(3, 3)] });
+
+    const inputs = await fetchWatchlistInputs(client, ['hardcover']);
+
+    expect(inputs.inputs).toEqual([
+      { item: expect.objectContaining({ id: 'hardcover-1' }), source: 'hardcover', addedAt: '2026-11-01T00:00:00.000Z' },
+    ]);
+  });
+
   test('a full last Letterboxd page marks the leg incomplete (R35)', async () => {
     // 28 films is exactly `WATCHLIST_PAGE_SIZE`, so `getNextPageParam` handed
     // out another cursor: there are films this gather has not seen, and a film
@@ -369,6 +391,7 @@ describe('refreshWatchlistInputs', () => {
       'invalidate:anilist/current-anime-entries',
       'invalidate:anilist/current-manga-entries',
       'invalidate:simkl/all-items',
+      'invalidate:hardcover/library',
       'invalidate:letterboxd/watchlist/gian',
       'invalidate:letterboxd/watchlist-pages/gian',
       'refetch:watchlist/inputs',

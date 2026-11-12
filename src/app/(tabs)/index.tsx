@@ -201,7 +201,7 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {/* What the user is partway through reading, after what they mean to watch. */}
-        {feedProviders.includes(Provider.AniList) && (
+        {(feedProviders.includes(Provider.AniList) || feedProviders.includes(Provider.Hardcover)) && (
           <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
             <ContinueReadingRow onItemActions={openActions} />
           </SuspenseSection>

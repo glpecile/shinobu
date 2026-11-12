@@ -13,7 +13,7 @@ import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
-import { useSuspenseReadingMangaQuery } from '@/state/queries/anilist';
+import { useSuspenseContinueReadingQuery } from '@/state/queries/continue-reading';
 import { capFeedRow } from './row-cap';
 import {
   useSuspenseAnimeMoviesQuery,
@@ -80,13 +80,13 @@ export function YourWatchlistRow({
 }
 
 /**
- * The manga the user is reading or rereading on AniList, most recently updated
- * first (plan 0117 M3). Cards read "Ch 12 / 59" from the entry's progress, and
- * the row is capped like the other personal rows.
+ * The manga the user is reading or rereading on AniList and the books they are
+ * reading on Hardcover, most recently updated first (plan 0117 M3, B2). Cards
+ * read "Ch 12 / 59" or "p. 142 / 380" from the entry's progress, and the row
+ * is capped like the other personal rows.
  */
 export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
-  const { data } = useSuspenseReadingMangaQuery();
-  const items = capFeedRow(useVisibleItems(data));
+  const items = capFeedRow(useVisibleItems(useSuspenseContinueReadingQuery()));
   return (
     <MediaCarousel
       collapseKey="continue-reading"

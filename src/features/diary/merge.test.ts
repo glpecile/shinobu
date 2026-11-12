@@ -321,6 +321,9 @@ describe('formatEpisodeDetail', () => {
   test('a movie has no detail line', () => {
     expect(formatEpisodeDetail({ type: 'MOVIE', episodes: [] })).toBe('');
   });
+  test('a book names its reading event', () => {
+    expect(formatEpisodeDetail({ type: 'BOOK', episodes: [], readingEvent: 'finished' })).toBe('Finished');
+  });
 });
 
 describe('formatDayParts', () => {
@@ -404,13 +407,17 @@ function ep(id: string, season: number, episode: number): MergedDiaryEntry {
 }
 
 describe('summarizeDay', () => {
-  test('counts films, anime films, ranges, and chapters in their own units', () => {
+  test('counts films, anime films, ranges, chapters and books in their own units', () => {
+    const book = item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 } });
     expect(summarizeDay([
       mergedEntry({ id: 'film', item: item({ id: 'movie' }) }),
       mergedEntry({ id: 'anime-film', item: item({ id: 'anime-film', type: 'ANIME', isFilm: true }), episodes: [1] }),
       ep('s1', 1, 1), ep('s2', 2, 1),
       mergedEntry({ id: 'manga', item: item({ id: 'manga', type: 'MANGA' }), episodes: [1, 2, 3] }),
-    ])).toEqual({ label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga', units: 7 });
+      // Started and finished on one day: one book.
+      mergedEntry({ id: 'started', item: book, readingEvent: 'started' }),
+      mergedEntry({ id: 'finished', item: book, readingEvent: 'finished' }),
+    ])).toEqual({ label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga · 1 book', units: 8 });
   });
 
   test('a shared-ID bridge joins translated shows and overlapping provider ranges', () => {

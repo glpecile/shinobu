@@ -10,7 +10,11 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 import { anilistQueryKeys, findInCurrentMangaCache, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
-import { findInHardcoverSearchCache, useHardcoverBookIdBySlugQuery } from './hardcover';
+import {
+  findInHardcoverLibraryCache,
+  findInHardcoverSearchCache,
+  useHardcoverBookIdBySlugQuery,
+} from './hardcover';
 import { useMediaDetailsQuery } from './media-details';
 import { findInLetterboxdListsCache, useLetterboxdFilmQuery } from './letterboxd';
 import { findInSerializdListsCache, findInSerializdUpcomingCache } from './serializd';
@@ -122,9 +126,10 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     // surfaces); those rows are gone, so the gather that produced the card is
     // now what answers for it. Cache-only, like every step here.
     findInUpNextCache(queryClient, id) ??
-    // Continue Reading cards, from the manga read behind the rail; its copy
-    // carries the reader's chapter progress.
+    // Continue Reading cards, from the list reads behind the rail; their
+    // copies carry the reader's chapter or page progress.
     findInCurrentMangaCache(queryClient, id) ??
+    findInHardcoverLibraryCache(queryClient, id) ??
     // Search results belong to no feed slot (plan 0009), and a manga that is
     // neither being read nor on the reading list resolves only here.
     findInSearchCache(queryClient, id) ??

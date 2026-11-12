@@ -12,11 +12,21 @@ import { Provider } from '@/lib/providers/types';
 import type {
   NormalizedCharacter,
   NormalizedCrewMember,
+  NormalizedDiaryEntry,
   NormalizedMediaItem,
 } from '@/types/media';
 import type { HardcoverDeps } from './deps';
 import { hardcoverRequest } from './http';
-import { hardcoverBookFields, normalizeHardcoverBook } from './normalize';
+import {
+  HARDCOVER_READING_EVENTS,
+  hardcoverBookFields,
+  HardcoverJournalRow,
+  HardcoverLibraryRow,
+  normalizeHardcoverBook,
+  normalizeHardcoverJournal,
+  normalizeHardcoverLibraryRow,
+  type HardcoverLibraryEntry,
+} from './normalize';
 
 const provider = Provider.Hardcover;
 
@@ -163,6 +173,87 @@ export function getBookEntry(
           (row.private_notes ?? '').trim() === '',
       };
     }),
+  );
+}
+
+const libraryData = Schema.Struct({
+  me: Schema.Array(Schema.Struct({ user_books: Schema.Array(HardcoverLibraryRow) })),
+});
+
+// One top-level field (KTD-9). Nested reads are only the one in progress, so
+// a large finished library adds no `user_book_reads` rows.
+const LIBRARY = `query Library($statuses: [Int!]!) {
+  me {
+    user_books(where: { status_id: { _in: $statuses } }) {
+      id
+      status_id
+      created_at
+      updated_at
+      edition { pages }
+      book { id title description pages release_year rating ratings_count image { url } }
+      user_book_reads(where: { finished_at: { _is_null: true } }, order_by: { id: desc }, limit: 1) {
+        progress_pages
+        progress_seconds
+        edition { pages }
+      }
+    }
+  }
+}`;
+
+/**
+ * The viewer's Want to Read, Currently Reading and Read books, with progress.
+ * Continue Reading, the reading list and the details screen read slices of it.
+ */
+export function getLibrary(deps: HardcoverDeps): Effect.Effect<HardcoverLibraryEntry[], ProviderError> {
+  return hardcoverRequest<unknown>(deps, LIBRARY, {
+    variables: {
+      statuses: [HardcoverStatus.WantToRead, HardcoverStatus.Reading, HardcoverStatus.Read],
+    },
+  }).pipe(
+    Effect.flatMap(decode(libraryData, 'invalid library response')),
+    Effect.map((data) => (data.me[0]?.user_books ?? []).flatMap((row) => normalizeHardcoverLibraryRow(row) ?? [])),
+  );
+}
+
+const journalData = Schema.Struct({ reading_journals: Schema.Array(HardcoverJournalRow) });
+
+/**
+ * One page of the viewer's reading journal, newest first: starts, progress
+ * and finishes. One top-level field. `reading_journals` hangs off no `me`
+ * relationship, so it filters on the viewer's id.
+ */
+export function getReadingJournal(
+  deps: HardcoverDeps,
+  params: { userId: number; page: number; perPage: number },
+): Effect.Effect<{ entries: NormalizedDiaryEntry[]; hasNextPage: boolean }, ProviderError> {
+  return hardcoverRequest<unknown>(
+    deps,
+    `query ReadingJournal($userId: Int!, $events: [String!]!, $limit: Int!, $offset: Int!) {
+      reading_journals(
+        where: { user_id: { _eq: $userId }, event: { _in: $events } }
+        order_by: [{ action_at: desc }, { id: desc }]
+        limit: $limit
+        offset: $offset
+      ) {
+        id event action_at journal_date
+        book { id title description pages release_year rating ratings_count image { url } }
+      }
+    }`,
+    {
+      variables: {
+        userId: params.userId,
+        events: HARDCOVER_READING_EVENTS,
+        limit: params.perPage,
+        offset: (params.page - 1) * params.perPage,
+      },
+    },
+  ).pipe(
+    Effect.flatMap(decode(journalData, 'invalid reading journal response')),
+    Effect.map(({ reading_journals: rows }) => ({
+      entries: rows.flatMap((row) => normalizeHardcoverJournal(row) ?? []),
+      // Counted on the rows, so an entry the normalizer drops never ends the diary early.
+      hasNextPage: rows.length === params.perPage,
+    })),
   );
 }
 

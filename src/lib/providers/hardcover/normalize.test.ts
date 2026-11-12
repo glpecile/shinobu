@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
-import { normalizeHardcoverBook } from './normalize';
+import { localDayKey } from '@/features/diary/merge';
+
+import {
+  normalizeHardcoverBook,
+  normalizeHardcoverJournal,
+  normalizeHardcoverLibraryRow,
+} from './normalize';
 
 const NOW = '2026-11-12T12:00:00.000Z';
 
@@ -45,5 +51,86 @@ describe('normalizeHardcoverBook', () => {
 
     expect(item.coverImage).toBe('');
     expect(item).not.toContainKeys(['overview', 'totalEpisodes', 'ratings', 'year']);
+  });
+});
+
+describe('normalizeHardcoverLibraryRow', () => {
+  const row = {
+    id: 9,
+    status_id: 2,
+    created_at: '2026-11-01T10:00:00.123456+00:00',
+    updated_at: '2026-11-10T21:30:00.654321+00:00',
+    book: { id: 61, title: 'No Longer Human', pages: 176 },
+  };
+
+  test('a read in progress carries its pages and its edition total', () => {
+    const entry = normalizeHardcoverLibraryRow({
+      ...row,
+      edition: { pages: 200 },
+      user_book_reads: [{ progress_pages: 142, edition: { pages: 380 } }],
+    });
+
+    expect(entry).toMatchObject({
+      statusId: 2,
+      addedAt: '2026-11-01T10:00:00.123Z',
+      item: { currentProgress: 142, totalEpisodes: 380, lastUpdated: '2026-11-10T21:30:00.654Z' },
+    });
+  });
+
+  test('an audiobook read shows no page progress and no page total', () => {
+    const entry = normalizeHardcoverLibraryRow({
+      ...row,
+      user_book_reads: [{ progress_seconds: 5400, edition: {} }],
+    });
+
+    expect(entry?.item.currentProgress).toBe(0);
+    expect(entry?.item).not.toContainKey('totalEpisodes');
+  });
+
+  test('a Want to Read book takes the entry edition total', () => {
+    const entry = normalizeHardcoverLibraryRow({
+      ...row,
+      status_id: 1,
+      updated_at: undefined,
+      edition: { pages: 200 },
+      user_book_reads: [],
+    });
+
+    expect(entry).toMatchObject({
+      statusId: 1,
+      item: { currentProgress: 0, totalEpisodes: 200, lastUpdated: '2026-11-01T10:00:00.123Z' },
+    });
+  });
+});
+
+describe('normalizeHardcoverJournal', () => {
+  const book = { id: 61, title: 'No Longer Human' };
+
+  // Midnight UTC on 9 March is still the 8th in Buenos Aires. The reader's day is the 9th.
+  test('a journal date stays the reader day in every time zone', () => {
+    const entry = normalizeHardcoverJournal({
+      id: '501',
+      event: 'status_read',
+      action_at: '2026-03-09T00:00:00+00:00',
+      journal_date: '2026-03-09',
+      book,
+    });
+
+    expect(entry).toMatchObject({ id: 'hardcover-501', dateOnly: true, readingEvent: 'finished' });
+    for (const zone of ['America/Argentina/Buenos_Aires', 'Asia/Tokyo']) {
+      expect(localDayKey(entry!, zone)).toBe('2026-03-09');
+    }
+  });
+
+  test('without a journal date the event instant places the entry', () => {
+    const entry = normalizeHardcoverJournal({
+      id: 502,
+      event: 'status_currently_reading',
+      action_at: '2026-03-09T00:00:00+00:00',
+      book,
+    });
+
+    expect(entry).toMatchObject({ watchedAt: '2026-03-09T00:00:00.000Z', readingEvent: 'started' });
+    expect(entry).not.toContainKey('dateOnly');
   });
 });

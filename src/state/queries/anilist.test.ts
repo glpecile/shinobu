@@ -29,8 +29,9 @@ let failureStatus: number | undefined;
 let progressOverride: number | undefined;
 let mangaList: unknown[] | undefined;
 mock.module('@/lib/http/client', () => ({
-  httpFetch: async (_url: string, init: RequestInit) => {
+  httpFetch: async (url: string, init: RequestInit) => {
     requests++;
+    if (url.includes('hardcover')) return new Response('{}', { status: 500 });
     if (failureStatus != null) return new Response('{}', { status: failureStatus });
     if (mangaList != null && JSON.parse(String(init.body)).query.includes('MediaListCollection')) {
       return Response.json({ data: { MediaListCollection: { lists: [{ entries: mangaList }] } } });
@@ -53,7 +54,8 @@ mock.module('react-native', () => ({
   Platform: { OS: 'web', select: (spec: Record<string, unknown>) => spec.web },
 }));
 
-const { anilistQueryKeys, fetchWatchlistAnime, fetchWatchlistManga, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseReadingMangaQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
+const { anilistQueryKeys, fetchWatchlistAnime, fetchWatchlistManga, useAniListEpisodesQuery, useSuspenseAniListRelationsQuery, useAnimeByIdQuery, useAniListEntryStateQuery, useSuspenseSeasonalAnimePagesQuery } = await import('./anilist');
+const { useSuspenseContinueReadingQuery } = await import('./continue-reading');
 const { setProviderSession, clearProviderSession } = await import('@/state/session/tokens');
 const { createQueryClient } = await import('./query-client');
 
@@ -200,8 +202,10 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     expect(upNext.calendar).toEqual([]);
   });
 
-  test('one manga read feeds both surfaces, and PLANNING reaches only the reading list', async () => {
+  test('one manga read feeds both surfaces, PLANNING reaches only the reading list, and a Hardcover outage keeps the manga cards', async () => {
     setProviderSession('anilist', { accessToken: 'first' });
+    // Hardcover is down: Continue Reading keeps AniList's cards.
+    setProviderSession('hardcover', { accessToken: 'hc' });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     client.setQueryData(anilistQueryKeys.viewer(), { id: 1, name: 'Reader' });
     mangaList = [
@@ -213,16 +217,18 @@ describe('the PLANNING gate (anilist-shared-list-query-status-gate.md)', () => {
     const wrapper = ({ children }: { children: ReactNode }) => createElement(
       QueryClientProvider, { client }, createElement(Suspense, { fallback: null }, children),
     );
-    const rail = renderHook(() => useSuspenseReadingMangaQuery().data, { wrapper });
+    const rail = renderHook(() => useSuspenseContinueReadingQuery(), { wrapper });
 
     // Newest update first. The planned manga is the newest update and still
     // stays off a rail that means "you are partway through this".
     await waitFor(() => expect(rail.result.current?.map((item) => item.id)).toEqual(['anilist-2', 'anilist-1']));
     expect((await fetchWatchlistManga(client)).map((planned) => planned.item.id)).toEqual(['anilist-3']);
-    expect(requests).toBe(1);
+    // One AniList read and the failed Hardcover one.
+    expect(requests).toBe(2);
     rail.unmount();
     client.clear();
     clearProviderSession('anilist');
+    clearProviderSession('hardcover');
     mangaList = undefined;
   });
 });
