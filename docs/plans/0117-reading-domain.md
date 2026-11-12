@@ -21,7 +21,7 @@ decisions and the units, one sub-issue of #209 each.
 - **KTD-2. Goodreads is not a provider.** It has had no API since 2020, and its
   shelf RSS is read-only and capped at 100 items. Settings and copy point
   Goodreads readers at Hardcover's Goodreads import. No scraping, and no
-  proxy (AGENTS.md allows only the three existing Workers).
+  proxy (AGENTS.md allows only the four existing Workers).
 - **KTD-3. Units are never converted.** Manga counts chapters on an AniList
   series entry. A book counts pages on a Hardcover read. A comic issue is read
   or unread. A manga log never writes Hardcover pages and a Hardcover volume
@@ -45,11 +45,12 @@ decisions and the units, one sub-issue of #209 each.
   books. An AniList series and its Hardcover volumes are different items and
   never merge (KTD-3). Light novels keep arriving as AniList `MANGA` with
   format `NOVEL`.
-- **KTD-7. Web access is probed before it is built.** Hardcover's docs say
-  CORS is open; a browser-origin probe must confirm both the GraphQL endpoint
-  and the token endpoint, which AniList blocks, before any web read or write.
-  A failure makes Hardcover native-only on web. Metron sends no CORS headers
-  in its server config, so it is expected to be native-only on web.
+- **KTD-7. Web access is probed before it is built.** Hardcover passed on
+  2026-11-12: the GraphQL, token and revoke endpoints all answer a browser
+  origin (`docs/solutions/web-cors-hardcover.md`), so web connects, reads and
+  writes like native. The token and revoke endpoints expose no headers, so a
+  refresh on web can't read `Retry-After`. Metron sends no CORS headers in its
+  server config, so it is expected to be native-only on web.
 - **KTD-8. Rotating refresh tokens are refreshed once.** Hardcover rotates the
   refresh token on every use and revokes the whole chain on replay, which
   forces a reconnect. Refresh is single-flight, like Trakt's
@@ -126,17 +127,23 @@ format options if M4 ships.
 
 ### B0. Register Hardcover OAuth apps and probe browser access
 
-Owner action plus probes, recorded in `docs/solutions/web-cors-hardcover.md`:
+Owner action plus probes, recorded in `docs/solutions/web-cors-hardcover.md`.
+The unauthenticated probes are done; the rest needs the registered app.
 
 - Register Shinobu's public app(s) with only the scopes B1–B4 need:
-  `read:me`, `read:library`, `write:library`, `read:catalog:search`,
-  `read:journal`. Device grant stays off.
-- Find out whether one public registration accepts both `shinobu://` and the
-  web origin's `https` redirect, or whether web needs an SPA registration and
-  native a "mobile" one, which means a platform-selected client id.
-- Run a browser-origin preflight and request against
-  `https://api.hardcover.app/v1/graphql` and `/oauth2/token`, and record the
-  `RateLimit` headers.
+  `read:me:content`, `read:library`, `write:library`, `read:catalog:search`,
+  `read:journal`. `read:me` would also grant the member's email. Device grant
+  stays off.
+- Register no loopback redirect on the production app. Anyone holding the
+  public client id could catch a code on localhost in Shinobu's name, the same
+  risk as the device grant. Local web dev uses a separate dev registration
+  through `EXPO_PUBLIC_HARDCOVER_CLIENT_ID`.
+- Done: one "Mobile, desktop, or CLI" registration holds both
+  `shinobu://redirect` and `https://shinobu.glpecile.xyz/?oauth=hardcover`,
+  so native and web share one client id.
+- With the client id, run one real connect and record whether the token
+  response has a `refresh_token` without the `offline_access` scope, the
+  redirect's `iss`, and the live `RateLimit` values.
 
 ### B1. Connect Hardcover
 
