@@ -507,6 +507,16 @@ describe('cachedAniZipIds', () => {
     expect(await cachedAniZipIds(client, { anilistId: 177686 })).toMatchObject({ tmdb: 1294972 });
   });
 
+  test('a failed refetch keeps the stale record', async () => {
+    const client = freshClient();
+    client.setQueryData(mappingQueryKeys.anizip({ anilistId: 177686 }), { anilist: 177686, imdb: 'tt1' }, {
+      updatedAt: Date.now() - 25 * 60 * 60_000,
+    });
+    routes = [['anilist_id=177686', {}, 500]];
+
+    expect(await cachedAniZipIds(client, { anilistId: 177686 })).toEqual({ anilist: 177686, imdb: 'tt1' });
+  });
+
   test('a mapped record is never asked again', async () => {
     const client = freshClient();
     client.setQueryData(mappingQueryKeys.anizip({ anilistId: 16498 }), { anilist: 16498, tvdb: 267440 }, {
