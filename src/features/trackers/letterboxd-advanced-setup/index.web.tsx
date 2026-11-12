@@ -25,7 +25,7 @@ export function LetterboxdAdvancedSetup() {
             Letterboxd. This is not an official API integration.
           </Text>
           <Text accessibilityLiveRegion="polite" className="text-foreground font-sans-semibold text-sm">
-            {removalDetected ? 'Script detected: logs and watchlist changes' : untrusted ? 'Script detected: set shinobu-trust-localhost to true in its Tampermonkey Storage tab for this dev server' : watchlistDetected ? 'Older script detected: update for watchlist removals' : detected ? 'Older script detected: update for watchlist changes' : 'Script not detected in this tab'}
+            {removalDetected ? 'Script detected: logs and watchlist changes' : untrusted ? 'Script detected: set Tampermonkey’s Config mode to Advanced, then set shinobu-trust-localhost to true in the script’s Storage tab for this dev server' : watchlistDetected ? 'Older script detected: update for watchlist removals' : detected ? 'Older script detected: update for watchlist changes' : 'Script not detected in this tab'}
           </Text>
           <Steps>
             <Steps.Item>
