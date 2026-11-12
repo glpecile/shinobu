@@ -6,6 +6,7 @@ import { httpFetch } from '@/lib/http/client';
 import { ProviderNetworkError, ProviderRateLimitError } from '@/lib/providers/errors';
 import {
   fetchAniZipEpisodeMap,
+  aniZipTmdbKind,
   fetchAniZipIds,
   type AniZipEpisodeMap,
   type AniZipIds,
@@ -242,8 +243,7 @@ export function cachedAniListIdByTitle(
  * discussion lookup: ani.zip first, then a title match when ani.zip has none.
  * Only for an animated title: ani.zip documents run to ~1 MB, and every
  * live-action show would spend a request on a guaranteed miss. TMDB's movie
- * and TV ids share a number space, so ani.zip's `type` has to agree with the
- * item's.
+ * and TV ids share a number space, so the kind comes from `aniZipTmdbKind`.
  */
 export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
   const { tmdb, anilist } = item.externalIds;
@@ -255,7 +255,7 @@ export function useAniListIdByTmdbQuery(item: NormalizedMediaItem) {
     queryFn: () => fetchAniZipIds(httpFetch, lookup),
     ...FOREVER,
     enabled,
-    select: (ids) => (ids?.anilist != null && (ids.type === 'MOVIE') === isMovie ? ids.anilist : null),
+    select: (ids) => (ids?.anilist != null && aniZipTmdbKind(ids) === (isMovie ? 'movie' : 'tv') ? ids.anilist : null),
   });
   // `null` only once ani.zip has answered without a usable id.
   const byTitle = useQuery({

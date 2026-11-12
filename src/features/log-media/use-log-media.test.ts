@@ -391,6 +391,23 @@ describe('planLogWrite — entry → canonical translation (plan 0027 U3)', () =
     expect(plan.variables.entryEpisodes).toBeUndefined();
   });
 
+  test('a one-episode entry filed as a TMDB movie plans a film log', async () => {
+    courIds = new Map([[256, { anilist: 256, tmdb: 37910 }]]);
+    const queryClient = client();
+    const item: NormalizedMediaItem = {
+      id: 'anilist-256', title: 'Voices of a Distant Star', coverImage: '', type: 'ANIME',
+      totalEpisodes: 1, currentProgress: 0, progressUnit: 'episode', lastUpdated: '',
+      externalIds: { anilist: 256 },
+    };
+
+    const plan = await planLogWrite(queryClient, { item, entryEpisodes: [1] }, ['anilist', 'letterboxd']);
+
+    expect(plan.targets).toEqual(['anilist', 'letterboxd']);
+    expect(plan.variables.item.isFilm).toBe(true);
+    expect(plan.variables.entryEpisodes).toBeUndefined();
+    expect(plan.variables.episodes).toBeUndefined();
+  });
+
   test('a canonical later season with no AniList cour skips AniList with a reason', async () => {
     const queryClient = client();
     const item: NormalizedMediaItem = {
