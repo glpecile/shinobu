@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { splitWriteTargets, unmatchedWriteTargets } from '@/lib/providers/routing';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
@@ -40,10 +41,22 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
       const enriched = await enrichExternalIds(queryClient, item, connected);
       return {
         ...splitWriteTargets(enriched, connected, platform, 'log', letterboxdUserscript),
-        unmatched: unmatchedWriteTargets(enriched, connected, 'log'),
+        unmatched: unmatchedWriteTargets(enriched, connected),
       };
     },
   });
 
   return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [] };
+}
+
+/**
+ * A log sheet's provider selection over `targets`. It keeps the user's
+ * opt-outs, not a copy of the targets, so a target the id lookup adds after
+ * the sheet opens starts selected.
+ */
+export function useTargetSelection(targets: readonly ProviderId[]) {
+  const [deselected, setDeselected] = useState<readonly ProviderId[]>([]);
+  const selected = targets.filter((id) => !deselected.includes(id));
+  const setSelected = (next: readonly ProviderId[]) => setDeselected(targets.filter((id) => !next.includes(id)));
+  return [selected, setSelected] as const;
 }

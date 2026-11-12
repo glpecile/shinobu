@@ -31,7 +31,7 @@ import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
-import { useLogTargetsSplit } from './use-log-targets';
+import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
 import { WatchedAtField } from './watched-at-field';
 import { useLetterboxdCompletion } from './use-letterboxd-completion';
 import { LetterboxdCompletionOffer } from './letterboxd-completion-offer';
@@ -178,13 +178,11 @@ export function LogFormFields({
         {/* On web, Letterboxd is manual only while the script can't log. */}
         <ManualWriteRows
           item={item}
-          manual={manualTargets}
-          reasons={process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : undefined}
-        />
-        <ManualWriteRows
-          item={item}
-          manual={unmatchedTargets}
-          reasons={Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match found for this title']))}
+          manual={[...manualTargets, ...unmatchedTargets]}
+          reasons={{
+            ...(process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : {}),
+            ...Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match for this title'])),
+          }}
         />
         {/* The like rides in this row, but a diary provider is never undated. */}
         {showDateField && (
@@ -360,12 +358,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
   const [completionOffer, setCompletionOffer] = useState<LogRequest | null>(null);
-  // The user's opt-outs, not a copy of the targets: the id lookup can add a
-  // target after the sheet opens, and that target starts selected.
-  const [deselected, setDeselected] = useState<ProviderId[]>([]);
-  const selectedProviders = targets.filter((id) => !deselected.includes(id));
-  const setSelectedProviders = (next: readonly ProviderId[]) =>
-    setDeselected(targets.filter((id) => !next.includes(id)));
+  const [selectedProviders, setSelectedProviders] = useTargetSelection(targets);
   const [watchedAt, setWatchedAt] = useState<Date | null>(() => request.watchedAt == null ? null : new Date(request.watchedAt));
   const [tags, setTags] = useState(request.tags?.join(', ') ?? DEFAULT_LOG_TAGS);
   const [liked, setLiked] = useState(request.liked ?? false);
