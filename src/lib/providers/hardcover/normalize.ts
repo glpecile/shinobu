@@ -15,10 +15,10 @@ export const hardcoverBookFields = {
   id: numeric,
   title: optionalNullable(Schema.String),
   description: optionalNullable(Schema.String),
-  pages: optionalNullable(Schema.Number),
-  release_year: optionalNullable(Schema.Number),
+  pages: optionalNullable(numeric),
+  release_year: optionalNullable(numeric),
   rating: optionalNullable(numeric),
-  ratings_count: optionalNullable(Schema.Number),
+  ratings_count: optionalNullable(numeric),
   image: optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) })),
 };
 
