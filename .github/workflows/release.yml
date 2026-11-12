@@ -91,12 +91,13 @@ jobs:
       - name: Write provider credentials
         env:
           EXPO_PUBLIC_SIMKL_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_SIMKL_CLIENT_ID }}
+          EXPO_PUBLIC_HARDCOVER_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_HARDCOVER_CLIENT_ID }}
           EXPO_PUBLIC_ANILIST_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_CLIENT_ID }}
           EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID }}
           EXPO_PUBLIC_TMDB_TOKEN: ${{ secrets.EXPO_PUBLIC_TMDB_TOKEN }}
         run: |
           : > .env.local
-          for name in EXPO_PUBLIC_SIMKL_CLIENT_ID EXPO_PUBLIC_ANILIST_CLIENT_ID EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID EXPO_PUBLIC_TMDB_TOKEN; do
+          for name in EXPO_PUBLIC_SIMKL_CLIENT_ID EXPO_PUBLIC_HARDCOVER_CLIENT_ID EXPO_PUBLIC_ANILIST_CLIENT_ID EXPO_PUBLIC_ANILIST_NATIVE_CLIENT_ID EXPO_PUBLIC_TMDB_TOKEN; do
             if [ -n "${!name}" ]; then printf '%s=%s\n' "$name" "${!name}" >> .env.local; fi
           done
 
