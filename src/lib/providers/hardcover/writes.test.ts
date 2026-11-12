@@ -122,13 +122,18 @@ describe('logToHardcover — finished', () => {
       user_book_reads: [{ id: 12, finished_at: '2020-01-01', progress_pages: 300 }],
     };
     const repeated = library(read);
+    const sameDay = library(read);
     const reread = library(read);
 
     const skipped = await run(logToHardcover(repeated.deps, BOOK, { reading: { finished: true }, ...PAST }));
+    const sentBefore = await run(
+      logToHardcover(sameDay.deps, BOOK, { reading: { finished: true }, date: '2020-01-01', reread: true }),
+    );
     await run(logToHardcover(reread.deps, BOOK, { reading: { finished: true }, ...PAST, reread: true }));
 
     expect(skipped).toMatchObject({ success: { status: 'skipped' } });
-    expect(repeated.mutations).toEqual([]);
+    expect(sentBefore).toMatchObject({ success: { status: 'skipped' } });
+    expect([...repeated.mutations, ...sameDay.mutations]).toEqual([]);
     expect(reread.mutations).toEqual([
       {
         name: 'insert_user_book_read',

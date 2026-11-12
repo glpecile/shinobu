@@ -103,8 +103,8 @@ export interface HardcoverLogOptions {
  * step that landed.
  *
  * - Finished: status Read on `date`. On a book that is already Read, a
- *   reread adds a finished read and anything else is a skip, so a repeated
- *   request never records a second read.
+ *   reread adds a finished read, unless a read already ended on `date`.
+ *   Anything else is a skip, so a repeated request never records a second read.
  * - Page reached: status Currently Reading when the book has no read in
  *   progress (on a Read book this opens a reread), then the page on that read.
  */
@@ -132,7 +132,9 @@ export function logToHardcover(
         yield* setStatus(HardcoverStatus.Read);
         return { status: 'ok' };
       }
-      if (options.reread !== true) {
+      // A read that ended on this day is this log, sent before: a retry
+      // after an answer that never arrived must not add the read twice.
+      if (options.reread !== true || entry.finishedOn.includes(options.date)) {
         return { status: 'skipped', reason: 'already marked as read on Hardcover' };
       }
       yield* mutate(deps, ADD_READ, {

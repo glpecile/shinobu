@@ -78,6 +78,8 @@ export interface HardcoverBookEntry {
   statusId: number;
   /** The read that is started and not finished. Progress goes on it. */
   openRead: { id: number; progressPages: number } | null;
+  /** The day each finished read ended, `YYYY-MM-DD`. */
+  finishedOn: string[];
   /** The page count of the edition being read, else the entry's, else the book's. */
   pages: number | null;
   /**
@@ -132,6 +134,7 @@ export function getBookEntry(
         id: row.id,
         statusId: row.status_id,
         openRead: open == null ? null : { id: open.id, progressPages: open.progress_pages ?? 0 },
+        finishedOn: row.user_book_reads.flatMap((read) => read.finished_at ?? []),
         pages: open?.edition?.pages ?? row.edition?.pages ?? row.book?.pages ?? null,
         bare:
           row.user_book_reads.length === 0 &&
