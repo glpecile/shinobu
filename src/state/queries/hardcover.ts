@@ -121,7 +121,7 @@ export function useHardcoverUsernameQuery(options: { enabled?: boolean } = {}) {
 /**
  * Books by title for the search tab's Books section. The caller enables it
  * only while Hardcover is connected. Every request counts against the
- * per-token budget, so a query string is never refetched in a session.
+ * per-token budget, so a cached query string is never refetched.
  */
 export function useHardcoverBookSearchQuery(params: { query: string; enabled: boolean }) {
   const query = params.query.trim();
