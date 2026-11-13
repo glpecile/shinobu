@@ -20,12 +20,14 @@ import {
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { deleteAniListEntry } from '@/lib/providers/anilist/writes';
 import { removeFromLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchlist-writes';
+import { removeFromHardcoverReadingList } from '@/lib/providers/hardcover/writes';
 import { removeFromSimklWatchlist } from '@/lib/providers/simkl/writes';
 import { removeFromTraktWatchlist } from '@/lib/providers/trakt/writes';
 import type { ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { letterboxdDeps } from '@/state/queries/letterboxd';
 import type { ProviderFailure } from '@/state/queries/settle';
+import { hardcoverDeps } from '@/state/queries/hardcover';
 import { simklDeps } from '@/state/queries/simkl';
 import { traktDeps } from '@/state/queries/trakt';
 import { useConnectedProviders } from '@/state/session';
@@ -85,6 +87,9 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
         allowDestructive === true ? { allowDestructive: true } : {},
       ),
     ),
+  // Never destructive: the adapter deletes only a bare Want to Read entry.
+  hardcover: ({ item }) =>
+    Effect.runPromise(removeFromHardcoverReadingList(hardcoverDeps(), item)),
   anilist: ({ item, allowDestructive }) => {
     const mediaId = item.externalIds.anilist;
     // Reachable only for an entry AniList's own leg produced, so this is

@@ -11,6 +11,8 @@ export interface WatchedAtFieldProps {
   /** null = "just now" — the mutation omits watchedAt and Trakt records now. */
   value: Date | null;
   onChange: (value: Date | null) => void;
+  /** The row's name. Read-intent items say "Read on". */
+  label?: string;
   children?: ReactNode;
 }
 
@@ -28,14 +30,14 @@ function formatDate(date: Date): string {
  * Android presents its dialog). Backdating only — future watches make no
  * sense, so `maximumDate` is now.
  */
-export function WatchedAtField({ value, onChange, children }: WatchedAtFieldProps) {
+export function WatchedAtField({ value, onChange, label = 'Watched on', children }: WatchedAtFieldProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <View className="mt-4">
       <View className="flex-row items-center gap-2">
         <View className="h-11 flex-1 flex-row items-center justify-between border border-border rounded-full px-4">
-          <Text className="text-muted font-sans text-sm">Watched on</Text>
+          <Text className="text-muted font-sans text-sm">{label}</Text>
           <View className="flex-row items-center gap-2">
             {value != null && (
               <PresstableOpacity

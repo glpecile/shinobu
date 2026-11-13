@@ -1,5 +1,6 @@
 import type { UpNextEpisodeEntry } from '@/features/up-next/types';
 import type { LogMediaVariables } from './fan-out';
+import type { ReadingProgress } from './reading-progress-field';
 
 /** The trigger supplies intent; the app-level session owns the form and write. */
 export type LogRequest = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpisodes' | 'watchedAt' | 'tags' | 'liked'> & {
@@ -14,6 +15,8 @@ export type LogRequest = Pick<LogMediaVariables, 'item' | 'episodes' | 'entryEpi
    * field's cap; an ongoing manga has none.
    */
   chapterRange?: { from: number; total?: number };
+  /** A book log's starting form state (plan 0117 B3). The form owns the edits. */
+  reading?: ReadingProgress;
 };
 
 /**

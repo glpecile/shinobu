@@ -23,7 +23,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 
 /** Read-intent items say "reading list"; everything else says "watchlist". */
 export function isReadIntent(item: Pick<NormalizedMediaItem, 'type'>): boolean {
-  return item.type === 'MANGA';
+  return item.type === 'MANGA' || item.type === 'BOOK';
 }
 
 export interface WatchlistCtaCopy {

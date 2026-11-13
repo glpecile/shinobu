@@ -5,6 +5,8 @@ import { logToAniList } from '@/lib/providers/anilist/writes';
 import { logToLetterboxd } from '@/lib/providers/letterboxd/writes';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { logToSerializd } from '@/lib/providers/serializd/writes';
+import { HardcoverStatus } from '@/lib/providers/hardcover/reads';
+import { logToHardcover } from '@/lib/providers/hardcover/writes';
 import {
   logToSimkl,
   simklEntryDropReason,
@@ -22,6 +24,11 @@ import { recordRecentTags } from '@/state/prefs/recent-tags';
 import { DIARY_QUERY_ROOT, cachedDiaryEntries } from '@/state/queries/diary-pages';
 import { letterboxdDeps, letterboxdFilmWatchQuery, letterboxdQueryKeys } from '@/state/queries/letterboxd';
 import { serializdDeps, serializdQueryKeys } from '@/state/queries/serializd';
+import {
+  hardcoverBookEntryQuery,
+  hardcoverDeps,
+  hardcoverQueryKeys,
+} from '@/state/queries/hardcover';
 import { simklDeps, simklQueryKeys } from '@/state/queries/simkl';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
@@ -56,6 +63,7 @@ import { enrichExternalIds } from './enrich';
 import { removeWatchedFromWatchlist } from './remove-watched-from-watchlist';
 import { currentPlatform } from './use-log-targets';
 import { createAniListWriteQueue } from './anilist-write-queue';
+import { dayKeyForInstant } from '@/features/diary/merge';
 import { createSimklLogQueue } from './simkl-write-lock';
 import {
   anilistHasEpisodes,
@@ -165,6 +173,22 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
     ).then(okResult),
+  // A book's day is the reader's calendar day, so it is taken in the device
+  // time zone. `watchedAt` is present only on a backdated log.
+  hardcover: ({ item, reading, watchedAt, rewatch }) =>
+    reading == null
+      ? Promise.resolve({ status: 'skipped', reason: 'needs a page or a finished book to log' })
+      : Effect.runPromise(
+          logToHardcover(hardcoverDeps(), item, {
+            reading,
+            date: dayKeyForInstant(
+              watchedAt != null ? new Date(watchedAt) : new Date(),
+              Intl.DateTimeFormat().resolvedOptions().timeZone,
+            ),
+            ...(watchedAt != null ? { at: watchedAt } : {}),
+            ...(rewatch === true ? { reread: true } : {}),
+          }),
+        ),
   // Serializd (plan 0017 R8): logToSerializd already resolves a ProviderWriteResult
   // (ok | skipped) that maps straight through the fan-out contract — a season
   // that can't be resolved or an item with no tmdb becomes a `skipped` outcome
@@ -680,8 +704,17 @@ async function providerHasWatch(
       // wrong-domain compare recreates the false in-sync skip plan 0027
       // removed. Deferred to follow-up (plan 0034 Scope Boundaries).
       case Provider.Simkl:
-      case Provider.Hardcover:
         return null;
+      // A Read book already holds this log. Another one is a reread.
+      case Provider.Hardcover: {
+        const bookId = item.externalIds.hardcover;
+        if (bookId == null) return false;
+        const entry = await queryClient.fetchQuery({
+          ...hardcoverBookEntryQuery(bookId),
+          ...freshness,
+        });
+        return entry?.statusId === HardcoverStatus.Read;
+      }
     }
   } catch {
     return fresh ? null : false;
@@ -765,6 +798,9 @@ export function invalidateAfterLog(
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }
+  if (succeeded.includes(Provider.Hardcover)) {
+    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() });
+  }
   if (succeeded.includes(Provider.Serializd)) {
     // The write moved progress — refresh it so the next reconcile sees it.
     const username = getSerializdUsername();
@@ -807,7 +843,8 @@ export function invalidateAfterLog(
   if (
     succeeded.includes(Provider.Trakt) ||
     succeeded.includes(Provider.AniList) ||
-    succeeded.includes(Provider.Simkl)
+    succeeded.includes(Provider.Simkl) ||
+    succeeded.includes(Provider.Hardcover)
   ) {
     queryClient.invalidateQueries({ queryKey: watchlistQueryKeys.inputs() });
   }

@@ -29,6 +29,11 @@ export interface LogMediaVariables {
   /** ISO instant; omitted = providers record "now". */
   watchedAt?: string;
   /**
+   * A book log (plan 0117 B3): the whole book, or the page reached. Pages are
+   * their own unit and never ride in `entryEpisodes` (KTD-3).
+   */
+  reading?: { finished: true } | { finished: false; page: number };
+  /**
    * Diary tags, consumed by Letterboxd and Serializd.
    */
   tags?: string[];

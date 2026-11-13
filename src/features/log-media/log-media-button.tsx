@@ -18,6 +18,7 @@ import { useWatchedInfo } from '@/state/queries/watched-info';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 import { filmReleaseStatus, hasStartedAiring, unreleasedFilmLabel } from './release-gate';
+import { LogBookButton } from './log-book-button';
 import type { LogRequest } from './log-request';
 import { useLogTargetsSplit } from './use-log-targets';
 import {
@@ -30,7 +31,7 @@ import { useSeriesNextEpisode } from './use-series-next-episode';
 
 /**
  * Resolves the next log and its release gate, then opens the app-level logging
- * session. Films and manga chapters confirm once; series share the Continue
+ * session. A book takes `LogBookButton`. Films and manga chapters confirm once; series share the Continue
  * Watching catch-up chain. When no next episode can be named, the season
  * picker takes over.
  *
@@ -41,7 +42,11 @@ import { useSeriesNextEpisode } from './use-series-next-episode';
  * immediately closes the session again, so the tap reads as dead — while web
  * Modals stack.
  */
-export function LogMediaButton({ item, onOpenRequest }: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
+export function LogMediaButton(props: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
+  return props.item.type === 'BOOK' ? <LogBookButton {...props} /> : <LogWatchButton {...props} />;
+}
+
+function LogWatchButton({ item, onOpenRequest }: { item: NormalizedMediaItem; onOpenRequest?: (request: LogRequest) => void }) {
   const connected = useConnectedProviders();
   const { openLog } = useCatchUpControls();
   const busy = useQuickLogBusy(item.id);

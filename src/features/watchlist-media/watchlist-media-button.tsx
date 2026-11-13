@@ -10,8 +10,10 @@ import {
 import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
+import { HardcoverStatus } from '@/lib/providers/hardcover/reads';
 import { Provider } from '@/lib/providers/types';
 import { useAniListEntryStateQuery } from '@/state/queries/anilist';
+import { useHardcoverBookEntryQuery } from '@/state/queries/hardcover';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -125,6 +127,15 @@ export function WatchlistMediaButton({
     isReadIntent(item) &&
     anilistEntry.data?.entry != null &&
     anilistEntry.data.entry.status !== 'PLANNING';
+  // A book's only add target is Hardcover, which writes Want to Read only on
+  // a book not in the library. The details screen's `LogBookButton` makes
+  // the same read, so there the two share one request.
+  const hardcoverEntry = useHardcoverBookEntryQuery({
+    bookId: item.externalIds.hardcover,
+    enabled: connected.includes(Provider.Hardcover),
+  });
+  const trackedBook =
+    hardcoverEntry.data != null && hardcoverEntry.data.statusId !== HardcoverStatus.WantToRead;
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
@@ -136,7 +147,7 @@ export function WatchlistMediaButton({
 
   // Nothing connected can take this item — the same silence `LogMediaButton`
   // keeps rather than offering an action that can only fail.
-  if ((writable.length === 0 && manual.length === 0) || trackedManga) return null;
+  if ((writable.length === 0 && manual.length === 0) || trackedManga || trackedBook) return null;
 
   function openRemovePicker() {
     // `settled` implies the gathered cache holds a matching input (that is what
