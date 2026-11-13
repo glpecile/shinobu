@@ -290,9 +290,7 @@ function streamWatchlistInputs(
         : none<WatchlistInput>(),
     ],
     (legs) => {
-      const [trakt, anilist, letterboxd, simkl, hardcover] = legs.map(
-        (leg) => leg ?? none<WatchlistInput>(),
-      );
+      const settled = legs.map((leg) => leg ?? none<WatchlistInput>());
       // A leg still streaming in is *incomplete*, as is a Letterboxd leg with
       // unread pages. A failed one is already `errors`, and R35 treats both as
       // unknown membership, so reporting it twice would only make the two lists
@@ -301,24 +299,12 @@ function streamWatchlistInputs(
         feedProviders.includes(provider) &&
         (legs[index] == null ||
           (provider === Provider.Letterboxd &&
-            letterboxd.errors.length === 0 &&
+            settled[index].errors.length === 0 &&
             !letterboxdLegIsComplete(queryClient))),
       );
       return {
-        inputs: [
-          ...trakt.inputs,
-          ...anilist.inputs,
-          ...letterboxd.inputs,
-          ...simkl.inputs,
-          ...hardcover.inputs,
-        ],
-        errors: [
-          ...trakt.errors,
-          ...anilist.errors,
-          ...letterboxd.errors,
-          ...simkl.errors,
-          ...hardcover.errors,
-        ],
+        inputs: settled.flatMap((leg) => leg.inputs),
+        errors: settled.flatMap((leg) => leg.errors),
         incomplete,
       };
     },
