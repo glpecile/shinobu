@@ -16,7 +16,7 @@ import type {
 } from '@/types/media';
 import type { HardcoverDeps } from './deps';
 import { hardcoverRequest } from './http';
-import { hardcoverBookFields, normalizeHardcoverBook } from './normalize';
+import { hardcoverBookFields, normalizeHardcoverBook, numeric } from './normalize';
 
 const provider = Provider.Hardcover;
 
@@ -223,8 +223,6 @@ export const searchBooks = Effect.fnUntraced(function* (
   });
 });
 
-const image = optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) }));
-
 const bookData = Schema.Struct({
   books_by_pk: optionalNullable(Schema.Struct({
     ...hardcoverBookFields,
@@ -233,17 +231,17 @@ const bookData = Schema.Struct({
       author: optionalNullable(Schema.Struct({
         id: Schema.Number,
         name: Schema.String,
-        image,
+        image: hardcoverBookFields.image,
       })),
     }))),
     featured_book_series: optionalNullable(Schema.Struct({
-      position: optionalNullable(Schema.Number),
+      position: optionalNullable(numeric),
       series: optionalNullable(Schema.Struct({ name: Schema.String })),
     })),
     book_characters: optionalNullable(Schema.Array(Schema.Struct({
       only_mentioned: optionalNullable(Schema.Boolean),
       character: optionalNullable(Schema.Struct({
-        id: Schema.Union([Schema.Number, Schema.FiniteFromString]),
+        id: numeric,
         name: Schema.String,
       })),
     }))),
@@ -302,12 +300,14 @@ export const getBook = Effect.fnUntraced(function* (
   const authors = new Map<number, NormalizedCrewMember>();
   for (const { author, contribution } of book.contributions ?? []) {
     if (author == null) continue;
-    // An empty role is the book's author.
-    const job = contribution ?? 'Author';
+    // An empty role is the book's author. A person can be listed twice in one role.
+    const job = contribution || 'Author';
     const existing = authors.get(author.id);
-    authors.set(author.id, existing == null
-      ? { id: `hardcover-person-${author.id}`, name: author.name, job, headshot: author.image?.url ?? '' }
-      : { ...existing, job: `${existing.job}, ${job}` });
+    if (existing == null) {
+      authors.set(author.id, { id: `hardcover-person-${author.id}`, name: author.name, job, headshot: author.image?.url ?? '' });
+    } else if (!existing.job.split(', ').includes(job)) {
+      authors.set(author.id, { ...existing, job: `${existing.job}, ${job}` });
+    }
   }
   const series = book.featured_book_series;
   const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();

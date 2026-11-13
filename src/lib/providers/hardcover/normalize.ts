@@ -5,7 +5,7 @@ import { Provider } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 // Typesense sends ids as strings, and Hasura may stringify `numeric`.
-const numeric = Schema.Union([Schema.Number, Schema.FiniteFromString]);
+export const numeric = Schema.Union([Schema.Number, Schema.FiniteFromString]);
 
 /**
  * The book fields Shinobu reads. A `books` row and a Typesense search
