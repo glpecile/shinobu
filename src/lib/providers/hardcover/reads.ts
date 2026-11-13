@@ -166,14 +166,10 @@ export function getBookEntry(
   );
 }
 
-/**
- * `results` is Typesense's raw response; each hit's `document` is one book.
- * `ids` lists the same books' ids in hit order.
- */
+/** `results` is Typesense's raw response; each hit's `document` is one book. */
 const searchData = Schema.Struct({
   search: optionalNullable(Schema.Struct({
     error: optionalNullable(Schema.String),
-    ids: optionalNullable(Schema.Array(Schema.NullOr(Schema.Number))),
     results: optionalNullable(Schema.Struct({
       hits: optionalNullable(Schema.Array(Schema.Struct({
         document: Schema.Struct({
@@ -204,7 +200,7 @@ export const searchBooks = Effect.fnUntraced(function* (
   const data = yield* hardcoverRequest<unknown>(
     deps,
     `query SearchBooks($query: String!, $perPage: Int!) {
-      search(query: $query, query_type: "book", per_page: $perPage, page: 1) { error ids results }
+      search(query: $query, query_type: "book", per_page: $perPage, page: 1) { error results }
     }`,
     { variables: { query: params.query, perPage: params.perPage } },
   ).pipe(Effect.flatMap(decode(searchData, 'invalid search response')));
@@ -214,13 +210,11 @@ export const searchBooks = Effect.fnUntraced(function* (
     return yield* new ProviderNetworkError({ provider, retryable: false, cause: new Error(error) });
   }
   const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
-  const ids = data.search?.ids ?? [];
-  return (data.search?.results?.hits ?? []).flatMap(({ document }, index) => {
-    const id = document.id ?? ids[index];
-    return id == null
+  return (data.search?.results?.hits ?? []).flatMap(({ document: { id, ...document } }) =>
+    id == null
       ? []
-      : [{ item: normalizeHardcoverBook({ ...document, id }, nowIso), authors: document.author_names ?? [] }];
-  });
+      : [{ item: normalizeHardcoverBook({ ...document, id }, nowIso), authors: document.author_names ?? [] }],
+  );
 });
 
 const bookData = Schema.Struct({
