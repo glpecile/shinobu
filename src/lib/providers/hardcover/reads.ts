@@ -222,7 +222,9 @@ const journalData = Schema.Struct({ reading_journals: Schema.Array(HardcoverJour
 /**
  * One page of the viewer's reading journal, newest first: starts, progress
  * and finishes. One top-level field. `reading_journals` hangs off no `me`
- * relationship, so it filters on the viewer's id.
+ * relationship, so it filters on the viewer's id. Rows sort on
+ * `journal_date` first, the day each entry is dated by, so the diary's
+ * watermark reads the pages in the order it places their entries.
  */
 export function getReadingJournal(
   deps: HardcoverDeps,
@@ -233,7 +235,7 @@ export function getReadingJournal(
     `query ReadingJournal($userId: Int!, $events: [String!]!, $limit: Int!, $offset: Int!) {
       reading_journals(
         where: { user_id: { _eq: $userId }, event: { _in: $events } }
-        order_by: [{ action_at: desc }, { id: desc }]
+        order_by: [{ journal_date: desc_nulls_last }, { action_at: desc }, { id: desc }]
         limit: $limit
         offset: $offset
       ) {
