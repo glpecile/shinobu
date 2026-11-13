@@ -35,17 +35,24 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   // A search card knows nothing of the library. Without the entry, a log
   // could start a second read of a book that is in progress.
   const known = entry.data !== undefined;
+  const failed = !known && entry.isError;
 
   return (
     <View className="mb-3">
       <Button
         variant="log"
-        disabled={!known}
-        icon={<Button.Icon name={reread ? 'eye' : 'eye-outline'} />}
-        label={!known && entry.isError ? 'Couldn’t load your progress' : action}
+        disabled={!known && !failed}
+        icon={<Button.Icon name={failed ? 'refresh' : reread ? 'eye' : 'eye-outline'} />}
+        label={failed ? 'Couldn’t load your progress' : action}
+        // Also through a refetch: until it lands, the cached entry can name a
+        // page or status that the last log changed.
         loading={entry.isFetching || busy}
         morphLabel
         onPress={() => {
+          if (failed) {
+            void entry.refetch();
+            return;
+          }
           const request: LogRequest = {
             item,
             title: action,
