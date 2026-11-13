@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
-import { Collapse } from '@/components/collapse';
 import { NativeSwitch } from '@/components/native-switch';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
@@ -56,7 +55,7 @@ export function ReadingProgressField({ value, onChange, pending }: {
           value={value.finished}
         />
       </View>
-      <Collapse open={!value.finished}>
+      {!value.finished && (
         <View className="gap-2 pt-3">
           <Text
             className="text-foreground font-sans-semibold text-sm"
@@ -80,7 +79,7 @@ export function ReadingProgressField({ value, onChange, pending }: {
           />
           {bounds != null && <Text className="text-muted font-sans text-xs">{bounds}</Text>}
         </View>
-      </Collapse>
+      )}
     </View>
   );
 }
