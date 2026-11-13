@@ -476,7 +476,11 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             />
           )}
           {reading != null && (
-            <ReadingProgressField onChange={setReading} pending={pending} value={reading} />
+            <ReadingProgressField
+              onChange={(update) => setReading((current) => current && update(current))}
+              pending={pending}
+              value={reading}
+            />
           )}
           <LogFormFields
             item={item}

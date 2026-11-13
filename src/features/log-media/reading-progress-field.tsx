@@ -32,12 +32,14 @@ const LAST_PAGE = 99999;
  */
 export function ReadingProgressField({ value, onChange, pending }: {
   value: ReadingProgress;
-  onChange: (value: ReadingProgress) => void;
+  /** Takes an updater, so a second press that lands before a re-render steps from the first. */
+  onChange: (update: (reading: ReadingProgress) => ReadingProgress) => void;
   pending: boolean;
 }) {
   const last = value.total ?? LAST_PAGE;
-  const setFinished = (finished: boolean) => onChange({ ...value, finished });
-  const setPage = (page: number) => onChange({ ...value, page: Math.min(last, Math.max(0, page)) });
+  const setFinished = (finished: boolean) => onChange((reading) => ({ ...reading, finished }));
+  const setPage = (next: (page: number) => number) =>
+    onChange((reading) => ({ ...reading, page: Math.min(last, Math.max(0, next(reading.page))) }));
 
   return (
     <View className="mt-5">
@@ -67,8 +69,8 @@ export function ReadingProgressField({ value, onChange, pending }: {
           forwardLabel="Next page"
           label="Page"
           note={value.total == null ? undefined : `Of ${value.total} pages.`}
-          onChangeText={(text) => setPage(Number(text.replace(/\D/g, '')))}
-          onStep={(by) => setPage(value.page + by)}
+          onChangeText={(text) => setPage(() => Number(text.replace(/\D/g, '')))}
+          onStep={(by) => setPage((page) => page + by)}
           pending={pending}
           value={String(value.page)}
         />
