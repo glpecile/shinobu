@@ -6,26 +6,27 @@ import { SettingsRail } from '@/features/settings/settings-rail';
 import { useProviderUsername } from '@/features/trackers/use-provider-username';
 import { useThemeColor } from '@/lib/theme-color';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { Provider, type ProviderId } from '@/lib/providers/types';
+import type { ProviderId } from '@/lib/providers/types';
 
 /**
  * One provider's row on the Trackers rail. Pressing it opens the provider's
  * sheet, which connects or disconnects, so every row ends in a chevron.
  *
  * The caller owns the connected/disconnected decision (`splitProviders`).
- * `reconnect` is a stored session the provider no longer accepts, gated out
- * of connected, so the row says why: Trakt holding a token without the user's
- * own credentials (plan 0034 U9), or Hardcover having ended the session.
+ * `reconnectReason` marks a stored session the provider no longer accepts,
+ * gated out of connected, and says why: Trakt holding a token without the
+ * user's own credentials (plan 0034 U9), or a Hardcover session that can't
+ * refresh again.
  */
 export function ProviderCard({
   id,
   connected,
-  reconnect = false,
+  reconnectReason,
   onOpenSheet,
 }: {
   id: ProviderId;
   connected: boolean;
-  reconnect?: boolean;
+  reconnectReason?: string;
   onOpenSheet: () => void;
 }) {
   const username = useProviderUsername(id, connected);
@@ -42,12 +43,10 @@ export function ProviderCard({
         </View>
       </View>
     );
-  } else if (reconnect) {
+  } else if (reconnectReason != null) {
     status = (
       <SettingsRail.Subtitle lines={2}>
-        {id === Provider.Trakt
-          ? `${label} now needs your own API app. Reconnect to resume syncing.`
-          : `${label} ended this session. Reconnect to resume syncing.`}
+        {`${reconnectReason} Reconnect to resume syncing.`}
       </SettingsRail.Subtitle>
     );
   } else {
