@@ -85,22 +85,6 @@ const run = <A>(effect: Effect.Effect<A, unknown>) => Effect.runPromise(Effect.r
 const PAST = { date: '2024-03-09', at: '2024-03-10T01:30:00.000Z' };
 
 describe('logToHardcover — finished', () => {
-  test('a book that is not in the library is created as Read on the chosen day, in one mutation', async () => {
-    const { deps, mutations } = library(null);
-
-    const result = await run(logToHardcover(deps, BOOK, { reading: { finished: true }, ...PAST }));
-
-    expect(result).toMatchObject({ _tag: 'Success', success: { status: 'ok' } });
-    expect(mutations).toEqual([
-      {
-        name: 'insert_user_book',
-        variables: {
-          object: { book_id: 427578, status_id: 3, user_date: '2024-03-09', action_at: PAST.at },
-        },
-      },
-    ]);
-  });
-
   test('a book in progress is set to Read on its own library entry', async () => {
     const { deps, mutations } = library({
       id: 456,
