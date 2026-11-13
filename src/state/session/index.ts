@@ -138,19 +138,23 @@ export function purgeProviderQueries(queryClient: QueryClient, id: ProviderId): 
  * testable without React (plan 0034 U5 added the Simkl leg).
  */
 export function disconnectProvider(queryClient: QueryClient, id: ProviderId): void {
-  if (id === Provider.Hardcover) {
-    // Hardcover lists each app's sessions to the member, so end this one
-    // there too. It needs the token, so it runs before the clear.
-    revokeHardcover();
-    clearHardcoverAuthFlow();
+  // A pending PKCE verifier/state pair is scoped to a connect attempt, not a
+  // session, but disconnecting mid-flow must not leave material around that
+  // would validate some future stray code (plan 0034 U5).
+  switch (id) {
+    case Provider.Hardcover:
+      // Hardcover lists each app's sessions to the member, so end this one
+      // there too. It needs the token, so it runs before the clear.
+      revokeHardcover();
+      clearHardcoverAuthFlow();
+      break;
+    case Provider.Simkl:
+      clearSimklAuthFlow();
+      break;
+    default:
+      break;
   }
   clearProviderSession(id);
-  if (id === Provider.Simkl) {
-    // A pending PKCE verifier/state pair is scoped to a connect attempt, not
-    // a session — but disconnecting mid-flow must not leave material around
-    // that would validate some future stray code (plan 0034 U5).
-    clearSimklAuthFlow();
-  }
   purgeProviderQueries(queryClient, id);
 }
 

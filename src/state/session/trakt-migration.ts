@@ -27,9 +27,14 @@ import { connectedProviderIds, getProviderSession } from './tokens';
  * build — a stored session for any of them is usable by construction.
  */
 export function providerIsUsable(id: ProviderId): boolean {
-  if (id === Provider.Trakt) return getClientIdForProvider(Provider.Trakt) !== '';
-  if (id === Provider.Hardcover) return !hardcoverNeedsReconnect();
-  return true;
+  switch (id) {
+    case Provider.Trakt:
+      return getClientIdForProvider(Provider.Trakt) !== '';
+    case Provider.Hardcover:
+      return !hardcoverNeedsReconnect();
+    default:
+      return true;
+  }
 }
 
 /**
