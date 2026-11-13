@@ -29,7 +29,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
-import { isFinished, ReadingProgressField, readingTitle } from './reading-progress-field';
+import { ReadingProgressField, readingTitle } from './reading-progress-field';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
@@ -360,7 +360,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const span =
     range != null && through > range.from
       ? `chapters ${range.from}–${through}`
-      : reading != null && !isFinished(reading) && reading.page > 0
+      : reading != null && !reading.finished && reading.page > 0
         ? `page ${reading.page}`
         : undefined;
   const title =
@@ -409,7 +409,7 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       providers: selectedProviders,
       liked,
       ...(reading != null
-        ? { reading: isFinished(reading) ? { finished: true } : { finished: false, page: reading.page } }
+        ? { reading: reading.finished ? { finished: true } : { finished: false, page: reading.page } }
         : {}),
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),

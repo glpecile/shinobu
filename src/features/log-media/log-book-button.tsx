@@ -55,7 +55,8 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
             reading: {
               finished: openRead == null,
               page: openRead?.progressPages ?? 0,
-              ...(total != null ? { total } : {}),
+              // An edition with 0 pages has no known count, not a cap of 0.
+              ...(total != null && total > 0 ? { total } : {}),
               ...(reread ? { reread: true } : {}),
             },
           };

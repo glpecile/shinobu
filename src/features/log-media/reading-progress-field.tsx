@@ -16,14 +16,9 @@ export interface ReadingProgress {
   reread?: boolean;
 }
 
-/** A page that reaches a known total is the whole book. */
-export function isFinished(reading: ReadingProgress): boolean {
-  return reading.finished || (reading.total != null && reading.page >= reading.total);
-}
-
-/** The one string the book form speaks: its title, confirm label and toast. */
+/** The one string the book form speaks: its title and confirm label. */
 export function readingTitle(reading: ReadingProgress): string {
-  if (isFinished(reading)) return reading.reread === true ? 'Log reread' : 'Mark as read';
+  if (reading.finished) return reading.reread === true ? 'Log reread' : 'Mark as read';
   if (reading.page > 0) return `Log page ${reading.page}`;
   return reading.reread === true ? 'Start reread' : 'Start reading';
 }
