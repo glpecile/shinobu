@@ -119,7 +119,7 @@ export function normalizeCharacters(
     edge?.node == null
       ? []
       : [{
-          anilistId: edge.node.id,
+          id: `anilist-character-${edge.node.id}`,
           name: edge.node.name?.full ?? '',
           role: edge.role == null ? '' : humanizeEnum(edge.role),
           image: anilistImage(edge.node.image),

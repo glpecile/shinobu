@@ -1,6 +1,8 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
+import { parseHardcoverSlugItemId } from '@/lib/media-link';
 import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
+import { normalizeHardcoverBook, parseHardcoverItemId } from '@/lib/providers/hardcover/normalize';
 import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { parseSimklItemId } from '@/lib/providers/simkl/normalize';
@@ -9,6 +11,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 import { anilistQueryKeys, findInCurrentMangaCache, useAnimeByIdQuery } from './anilist';
 import { findInDiaryCache } from './diary-pages';
+import { findInHardcoverSearchCache, useHardcoverBookIdBySlugQuery } from './hardcover';
 import { useMediaDetailsQuery } from './media-details';
 import { findInLetterboxdListsCache, useLetterboxdFilmQuery } from './letterboxd';
 import { findInSerializdListsCache, findInSerializdUpcomingCache } from './serializd';
@@ -90,7 +93,9 @@ function findInSeasonalPagesCache(
  * Cold TMDB, AniList, Simkl and typed Trakt links fetch public records by ID. Incoming
  * IMDb links use Simkl's ID lookup; Letterboxd film links first resolve their
  * public film metadata without changing their log identity. Serializd IDs resolve
- * as TMDB TV IDs through Simkl's public lookup.
+ * as TMDB TV IDs through Simkl's public lookup. Hardcover book ids and
+ * `hardcover-books-<slug>` links fetch the book with the Hardcover session,
+ * and resolve to nothing without one.
  *
  * `undefined` while the feed or that fetch is still loading — the caller
  * tells "loading" and "not found" apart with `isLoading`.
@@ -124,6 +129,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
     // Search results belong to no feed slot (plan 0009), and a manga that is
     // neither being read nor on the reading list resolves only here.
     findInSearchCache(queryClient, id) ??
+    findInHardcoverSearchCache(queryClient, id) ??
     // Diary rows live in no feed slot and no search — resolve them from the
     // cached diary pages the viewer just scrolled (plan 0016 KTD7/R6).
     findInDiaryCache(queryClient, id) ??
@@ -146,8 +152,13 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   // Public ID reads are independent of Home. Cached personal data still wins
   // above when it arrives, without making a cold detail wait for every feed row.
   const deepLink = resolvedItem == null ? parseTmdbItemId(id) : null;
+  // A Hardcover book rides the same query: its record is the book's catalogue.
+  // A `hardcover.app/books/{slug}` link resolves its id first.
+  const hardcoverSlug = resolvedItem == null ? parseHardcoverSlugItemId(id) : null;
+  const hardcoverSlugId = useHardcoverBookIdBySlugQuery(hardcoverSlug);
+  const hardcoverBook = resolvedItem == null ? parseHardcoverItemId(id) ?? hardcoverSlugId.data ?? null : null;
   const deepLinkDetails = useMediaDetailsQuery(
-    deepLink != null ? tmdbStub(id, deepLink) : undefined,
+    deepLink != null ? tmdbStub(id, deepLink) : hardcoverBook != null ? normalizeHardcoverBook({ id: hardcoverBook }, new Date(0).toISOString()) : undefined,
   );
   // The AniList twin: an AniList-minted id is public data too, and the seasons
   // explorer is reachable signed out, so its links must survive a refresh.
@@ -200,7 +211,8 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
         : cachedOrFetched,
     isLoading:
       feed.isLoading ||
-      (deepLink != null && deepLinkDetails.isPending) ||
+      ((deepLink != null || hardcoverBook != null) && deepLinkDetails.isPending) ||
+      (hardcoverSlug != null && hardcoverSlugId.isPending) ||
       (anilistDeepLink != null && resolvedItem == null && anilistDeepLinkItem.isPending) ||
       (letterboxd != null && resolvedItem == null && film.isPending) ||
       ((imdb != null || serializd != null) && externalItem.isPending) ||

@@ -51,6 +51,7 @@ import {
   useAniListSearchQuery,
   useAniListStaffSearchQuery,
 } from '@/state/queries/anilist';
+import { useHardcoverBookSearchQuery } from '@/state/queries/hardcover';
 import {
   useTmdbPersonSearchQuery,
   useTmdbSearchQuery,
@@ -61,6 +62,7 @@ import {
   useTraktSearchQuery,
 } from '@/state/queries/trakt';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
+import { useConnectedProviders } from '@/state/session';
 import { getClientIdForProvider } from '@/state/session/provider-config';
 import { useTmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -111,17 +113,20 @@ function resultMeta(item: NormalizedMediaItem): string {
  */
 function SearchResultRow({
   item,
+  byline,
   onPress,
   onActions,
 }: {
   item: NormalizedMediaItem;
+  /** Who made it, for results whose title alone is ambiguous (books). */
+  byline?: string;
   onPress: (item: NormalizedMediaItem) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
   return (
     <ActionableRow
       accessibility={{
-        accessibilityLabel: `${item.title}, ${resultMeta(item)}`,
+        accessibilityLabel: [item.title, byline, resultMeta(item)].filter((part) => part != null && part !== '').join(', '),
         accessibilityRole: 'button',
       }}
       className="px-6 py-2.5"
@@ -147,6 +152,11 @@ function SearchResultRow({
             >
               {item.title}
             </Text>
+            {byline != null && byline !== '' && (
+              <Text className="text-muted font-sans text-sm mt-0.5" numberOfLines={1}>
+                {byline}
+              </Text>
+            )}
             <Text className="text-muted font-sans text-xs mt-1 uppercase tracking-wider">
               {resultMeta(item)}
             </Text>
@@ -246,7 +256,7 @@ function SectionHeader({
  */
 type SearchRow =
   | { kind: 'header'; key: string; provider: IconSourceId; label: string }
-  | { kind: 'result'; key: string; item: NormalizedMediaItem }
+  | { kind: 'result'; key: string; item: NormalizedMediaItem; byline?: string }
   | {
       kind: 'entity';
       key: string;
@@ -425,11 +435,20 @@ function SearchScreen() {
     query,
     enabled: scope.value === 'people',
   });
+  // Books join both title scopes (plan 0119 KTD-3), only with a Hardcover
+  // session: every Hardcover read needs one.
+  const booksSearchable = useConnectedProviders().includes(Provider.Hardcover);
+  const bookSearch = useHardcoverBookSearchQuery({
+    query,
+    enabled: titleSearch && booksSearchable,
+  });
   const studioSearch = useTmdbStudioSearchQuery({
     query,
     enabled: scope.value === 'studios',
   });
 
+  const readingLabel = booksSearchable ? 'manga, light novels & books' : 'manga & light novels';
+  const placeholder = reading ? `Search ${readingLabel}` : scope.placeholder;
   const searchable = query.trim().length >= SEARCH_MIN_QUERY_LENGTH;
   const animeSeason = animeSeasonAt(new Date());
   const sections =
@@ -452,6 +471,19 @@ function SearchScreen() {
               titleRow,
             ),
           },
+          ...(booksSearchable
+            ? [
+                {
+                  search: bookSearch,
+                  rows: sectionRows(Provider.Hardcover, 'Books', bookSearch, (hit): SearchRow => ({
+                    kind: 'result',
+                    key: hit.item.id,
+                    item: hit.item,
+                    byline: hit.authors.slice(0, 2).join(', '),
+                  })),
+                },
+              ]
+            : []),
         ]
       : scope.value === 'people'
         ? [
@@ -539,14 +571,14 @@ function SearchScreen() {
         style={{ paddingTop: insets.top + 8 }}
       >
         <SearchField
-          accessibilityLabel={scope.placeholder}
+          accessibilityLabel={placeholder}
           // Android's tab-focus request owns the keyboard; autofocus races it.
           autoFocus={process.env.EXPO_OS !== 'android' && !hasCoarsePointer()}
           className="flex-1"
           loading={fetching}
           onChangeText={setInput}
           onClear={clearSearch}
-          placeholder={scope.placeholder}
+          placeholder={placeholder}
           ref={inputRef}
           value={input}
         />
@@ -616,7 +648,7 @@ function SearchScreen() {
                   <CenteredNotice.Icon name="search-outline" />
                   <CenteredNotice.Title>No results</CenteredNotice.Title>
                   <CenteredNotice.Body>
-                    Nothing matched “{query.trim()}”{reading ? ' in manga & light novels' : ''}.
+                    Nothing matched “{query.trim()}”{reading ? ` in ${readingLabel}` : ''}.
                   </CenteredNotice.Body>
                   {reading ? (
                     <CenteredNotice.Action
@@ -659,6 +691,7 @@ function SearchScreen() {
                         <SectionHeader label={row.label} provider={row.provider} />
                       ) : row.kind === 'result' ? (
                         <SearchResultRow
+                          byline={row.byline}
                           item={row.item}
                           onActions={openActions}
                           onPress={openDetails}

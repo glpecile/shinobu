@@ -315,7 +315,7 @@ export function CardActionsSheet({
                   .filter((part) => part != null)
                   .join(' · ')}
               </SheetHeader.Subtitle>
-              {item.type !== 'MANGA' && <AnimatedView
+              {item.type !== 'MANGA' && item.type !== 'BOOK' && <AnimatedView
                 accessible={runtimeLabel !== ''}
                 accessibilityLabel={runtimeLabel}
                 key={`${item.id}-${runtimeLabel}`}

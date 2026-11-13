@@ -2,7 +2,7 @@
 
 ## Platform constraints
 
-Android filters for Letterboxd, IMDb and AniList are unverified. Shinobu does
+Android filters for Letterboxd, IMDb, AniList and Hardcover are unverified. Shinobu does
 not own their domains or their `assetlinks.json`. On Android 12+, users need
 to enable supported domains under Settings, Apps, Shinobu, Open by default.
 Do not add `autoVerify` or iOS associated domains for sites we do not control.
@@ -27,6 +27,15 @@ The same live probe resolved both IMDb `tt0078748` and TMDB movie `348` to
 Simkl `53624`, Alien. Simkl's response only included its own ID, so retain
 the incoming IMDb ID and the scraped TMDB ID when merging the resolved item.
 Otherwise View on and exact metadata lookups lose the identity we already know.
+
+## Hardcover book links
+
+`hardcover.app/books/{slug}` routes to the details id
+`hardcover-books-{slug}`, never `hardcover-{slug}`: a slug can be all digits
+(a book titled "1984"), and `hardcover-{digits}` is a book id. The details
+screen resolves the slug with one equality-filtered `books` read, then loads
+the book by id. Every Hardcover read needs a session, so without one the link
+shows "Not found", the Settings button, and the original page.
 
 ## Avoid link loops
 

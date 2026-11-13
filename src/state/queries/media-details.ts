@@ -18,6 +18,7 @@ import { tmdbToken } from '@/state/session/tmdb-token';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import { anilistDeps, anilistRelationsQuery } from './anilist';
+import { hardcoverDeps } from './hardcover';
 import {
   cachedAniZipIds,
   cachedTmdbAnimeMatch,
@@ -119,6 +120,7 @@ export function buildMediaDetailsDeps(): MediaDetailsDeps {
     tmdb: tmdbToken() !== '' ? tmdbDeps() : null,
     trakt: getClientIdForProvider(Provider.Trakt) !== '' ? traktDeps() : null,
     anilist: anilistDeps(),
+    hardcover: hardcoverDeps(),
   };
 }
 
@@ -146,6 +148,9 @@ export function mediaDetailsQuery(
               : {}),
             ...(item.externalIds.anilist != null
               ? { anilistId: item.externalIds.anilist }
+              : {}),
+            ...(item.externalIds.hardcover != null
+              ? { hardcoverId: item.externalIds.hardcover }
               : {}),
           },
         ),

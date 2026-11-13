@@ -1,14 +1,18 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 import * as Effect from 'effect/Effect';
 
 import type { TokenStore } from '@/lib/providers/token-store';
-import {
-  getMediaDetails,
-  tmdbKindFor,
-  type MediaDetailsDeps,
-} from './media-details';
+import type { MediaDetailsDeps } from './media-details';
+
+// The Hardcover leg's auth module keeps its PKCE flow in MMKV.
+mock.module('react-native-mmkv', () => ({
+  createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
+}));
+
+const { getMediaDetails, tmdbKindFor } = await import('./media-details');
 
 const tokens: TokenStore = { get: () => null, set: () => {}, clear: () => {} };
+const hardcoverTokens: TokenStore = { get: () => ({ accessToken: 'at' }), set: () => {}, clear: () => {} };
 
 /** Routes each request by URL substring; unmatched URLs 404. */
 function fakeFetch(routes: Array<[match: string, body: unknown, status?: number]>) {
@@ -37,6 +41,7 @@ function deps(
         ? null
         : { fetch, tokens, clientId: 'cid', clientSecret: 'secret' },
     anilist: { fetch, tokens },
+    hardcover: { fetch, tokens: hardcoverTokens, clientId: 'cid', refreshLock: (run) => run() },
   };
 }
 
@@ -191,6 +196,7 @@ describe('getMediaDetails', () => {
           tmdb: { fetch: trackingFetch, token: 'test-token' },
           trakt: { fetch: trackingFetch, tokens, clientId: 'cid', clientSecret: 's' },
           anilist: { fetch: trackingFetch, tokens },
+          hardcover: { fetch: trackingFetch, tokens, clientId: 'cid', refreshLock: (run) => run() },
         },
         { type: 'MANGA', anilistId: 42, tmdbId: 603 },
       ),
@@ -199,5 +205,55 @@ describe('getMediaDetails', () => {
     expect(requested.some((url) => url.includes('themoviedb'))).toBe(false);
     expect(result.source).toBe('none');
     expect(result.catalogue).toBeNull();
+  });
+
+  test('a book reads its Hardcover record and performs no TMDB request', async () => {
+    const requested: string[] = [];
+    const book = fakeFetch([[
+      'api.hardcover.app',
+      {
+        data: {
+          books_by_pk: {
+            id: 4521,
+            title: 'Hard-Boiled Wonderland and the End of the World',
+            pages: 400,
+            release_year: 1985,
+            image: { url: 'https://assets.hardcover.app/hbw.jpg' },
+            contributions: [
+              { contribution: null, author: { id: 7, name: 'Haruki Murakami', image: null } },
+              { contribution: 'Translator', author: { id: 8, name: 'Alfred Birnbaum', image: null } },
+            ],
+            featured_book_series: null,
+            book_characters: [{ only_mentioned: false, character: { id: 90, name: 'The Calcutec' } }],
+          },
+        },
+      },
+    ]]);
+    const fetch = (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return book(input);
+    };
+
+    const result = await Effect.runPromise(
+      getMediaDetails(
+        {
+          tmdb: { fetch, token: 'test-token' },
+          trakt: null,
+          anilist: { fetch, tokens },
+          hardcover: { fetch, tokens: hardcoverTokens, clientId: 'cid', refreshLock: (run) => run() },
+        },
+        { type: 'BOOK', hardcoverId: 4521, tmdbId: 603 },
+      ),
+    );
+
+    expect(requested.some((url) => url.includes('themoviedb'))).toBe(false);
+    expect(result.source).toBe('hardcover');
+    expect(result.catalogue?.totalEpisodes).toBe(400);
+    expect(result.crew.map((member) => [member.name, member.job])).toEqual([
+      ['Haruki Murakami', 'Author'],
+      ['Alfred Birnbaum', 'Translator'],
+    ]);
+    expect(result.characters?.map((character) => character.id)).toEqual(['hardcover-character-90']);
+    expect(result.series).toBeUndefined();
   });
 });
