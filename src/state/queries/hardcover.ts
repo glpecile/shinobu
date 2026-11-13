@@ -145,6 +145,9 @@ function fetchHardcoverShelves(queryClient: QueryClient): Promise<HardcoverLibra
     queryKey: hardcoverQueryKeys.shelves(),
     queryFn: ({ signal }) => Effect.runPromise(getLibrary(hardcoverDeps()), { signal }),
     staleTime: LIBRARY_STALE_MS,
+    // Read through `fetchQuery` only, so no observer keeps it alive. Disconnect
+    // purges the `['hardcover']` root.
+    gcTime: Number.POSITIVE_INFINITY,
   });
 }
 

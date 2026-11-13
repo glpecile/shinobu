@@ -5,6 +5,7 @@ import { createMMKV, type MMKV } from 'react-native-mmkv';
 
 import { anilistQueryKeys } from './anilist';
 import { diaryQueryKeys } from './diary-pages';
+import { hardcoverQueryKeys } from './hardcover';
 import { letterboxdQueryKeys } from './letterboxd';
 import { serializdQueryKeys } from './serializd';
 import { simklQueryKeys } from './simkl';
@@ -192,6 +193,8 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   anilistQueryKeys.currentAnimeEntries(),
   // Continue Reading and the reading list's manga read.
   anilistQueryKeys.currentMangaEntries(),
+  // Continue Reading's books, so the rail restores with its manga.
+  hardcoverQueryKeys.reading(),
   // Identity mappings never churn (they're already `Infinity`-cached in
   // memory), and Up Next fans one per anime for cross-provider dedupe.
   // Literals, not `mappingQueryKeys`: importing `./mapping` here would drag
