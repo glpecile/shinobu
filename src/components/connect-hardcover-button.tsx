@@ -17,7 +17,7 @@ import { exchangeHardcoverCode } from '@/state/queries/hardcover';
  * button, which exchanges the code. On web the window goes to Hardcover and
  * comes back to the home route as `?oauth=hardcover&code=…`, where
  * `useOAuthCallback` exchanges it. Also the reconnect path: a new session
- * overwrites one that Hardcover ended.
+ * overwrites one that can't refresh again.
  */
 export function ConnectHardcoverButton() {
   const clientId = hardcoverClientId();
