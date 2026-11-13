@@ -29,6 +29,13 @@ function newestFirst(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem
     .sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
 }
 
+/** The connected providers that feed Continue Reading. */
+export function continueReadingProviders(connected: readonly ProviderId[]): ProviderId[] {
+  return providersForFeed(connected).filter(
+    (provider) => provider === Provider.AniList || provider === Provider.Hardcover,
+  );
+}
+
 /**
  * Home's Continue Reading rail (plan 0117 M3, B2): manga being read or reread
  * on AniList and Currently Reading books on Hardcover, newest update first
@@ -36,7 +43,7 @@ function newestFirst(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem
  */
 export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   const queryClient = useQueryClient();
-  const providers = providersForFeed(useConnectedProviders());
+  const providers = continueReadingProviders(useConnectedProviders());
   return useSuspenseQueries({
     queries: [
       ...(providers.includes(Provider.AniList)
