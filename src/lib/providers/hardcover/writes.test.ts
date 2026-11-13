@@ -177,11 +177,14 @@ describe('logToHardcover — page reached', () => {
     ]);
   });
 
-  test('page 0 on a Read book opens a reread and sets no page', async () => {
+  test('page 0 on a Read book opens a reread and sets no page, past an imported read with no end date', async () => {
     const { deps, mutations } = library({
       id: 456,
       status_id: 3,
-      user_book_reads: [{ id: 12, finished_at: '2020-01-01', progress_pages: 300 }],
+      user_book_reads: [
+        { id: 12, finished_at: '2020-01-01', progress_pages: 300 },
+        { id: 11, finished_at: null, progress_pages: null },
+      ],
     });
 
     await run(logToHardcover(deps, BOOK, { reading: { finished: false, page: 0 }, date: '2026-11-12' }));

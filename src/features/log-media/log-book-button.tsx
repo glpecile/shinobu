@@ -26,8 +26,10 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   });
   if (targets.length === 0 && manualTargets.length === 0) return null;
 
-  const openRead = entry.data?.statusId === HardcoverStatus.Reading ? entry.data.openRead : null;
+  // A Paused or Did Not Finish book resumes at its page. A Read book's open
+  // read is an import with no end date, not a read in progress.
   const reread = entry.data?.statusId === HardcoverStatus.Read;
+  const openRead = reread ? null : (entry.data?.openRead ?? null);
   const total = entry.data?.pages ?? item.totalEpisodes;
   const action = openRead != null ? 'Log progress' : reread ? 'Reread' : 'Mark as read';
   // A search card knows nothing of the library. Without the entry, a log
