@@ -128,7 +128,8 @@ export function WatchlistMediaButton({
     anilistEntry.data?.entry != null &&
     anilistEntry.data.entry.status !== 'PLANNING';
   // A book's only add target is Hardcover, which writes Want to Read only on
-  // a book not in the library. `LogBookButton` already holds this read.
+  // a book not in the library. The details screen's `LogBookButton` makes
+  // the same read, so there the two share one request.
   const hardcoverEntry = useHardcoverBookEntryQuery({
     bookId: item.externalIds.hardcover,
     enabled: connected.includes(Provider.Hardcover),
