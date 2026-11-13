@@ -137,13 +137,14 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     communityScore: true,
   },
   // Hardcover (plan 0117), the book provider. A book routes here only when
-  // it carries a Hardcover id (`routing.ts`). The read flag turns on with the
-  // unit that ships the library read, as Simkl's did.
+  // it carries a Hardcover id (`routing.ts`). It reads the library into
+  // Continue Reading and the reading list, and the reading journal into the
+  // diary.
   [Provider.Hardcover]: {
     id: Provider.Hardcover,
     label: 'Hardcover',
     mediaTypes: ['BOOK'],
-    canRead: false,
+    canRead: true,
     canWrite: true,
     // Want to Read, status 1. The add writes only when the book is not in the
     // library, and the removal deletes only a bare Want to Read entry

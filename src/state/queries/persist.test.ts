@@ -39,6 +39,7 @@ mock.module('expo-crypto', () => ({
 
 const { anilistQueryKeys } = await import('./anilist');
 const { diaryQueryKeys } = await import('./diary-pages');
+const { hardcoverQueryKeys } = await import('./hardcover');
 const { letterboxdQueryKeys } = await import('./letterboxd');
 const { createQueryPersister, deserialize, isPersistedQueryKey, serialize, shouldPersistQuery } = await import('./persist');
 const { PersistQueryClientProvider } = await import('./persist-provider');
@@ -255,6 +256,7 @@ describe('isPersistedQueryKey', () => {
     expect(isPersistedQueryKey(traktQueryKeys.watchedShows())).toBe(true);
     expect(isPersistedQueryKey(traktQueryKeys.showProgress(1234))).toBe(true);
     expect(isPersistedQueryKey(anilistQueryKeys.currentAnimeEntries())).toBe(true);
+    expect(isPersistedQueryKey(hardcoverQueryKeys.reading())).toBe(true);
     expect(isPersistedQueryKey(anilistQueryKeys.viewer())).toBe(true);
     expect(
       isPersistedQueryKey(anilistQueryKeys.seasonalAnime({ season: 'SUMMER', year: 2026 })),

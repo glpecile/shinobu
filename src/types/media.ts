@@ -21,6 +21,9 @@ export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA' | 'BOOK';
 // an episode index.
 export type ProgressUnit = 'episode' | 'chapter' | 'page';
 
+/** What a book's diary entry records: a read started, progress on it, or its end. */
+export type ReadingEvent = 'started' | 'progressed' | 'finished';
+
 /**
  * When a film became available, by how you'd watch it — each the earliest
  * **worldwide** date TMDB knows, as a bare `YYYY-MM-DD`, absent when no region
@@ -337,6 +340,8 @@ export interface NormalizedDiaryEntry {
   episodes?: number[];
   /** Season number for a TV episode log (Trakt), for the "S2E5" detail line. */
   season?: number;
+  /** A book's journal event (Hardcover), for the detail line. */
+  readingEvent?: ReadingEvent;
 }
 
 /**
@@ -362,6 +367,8 @@ export interface MergedDiaryEntry {
   dateOnly: boolean;
   /** True when any contributing log is liked. */
   liked?: boolean;
+  /** The book's journal event, when the row is a book's. */
+  readingEvent?: ReadingEvent;
 }
 
 /** One day bucket in the diary, newest-first, under a `YYYY-MM-DD` local key. */

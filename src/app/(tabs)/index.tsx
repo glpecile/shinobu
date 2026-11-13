@@ -47,6 +47,7 @@ import {
   hasUpNextSources,
   useRefetchUnifiedFeed,
 } from '@/state/queries/use-unified-feed';
+import { continueReadingProviders } from '@/state/queries/continue-reading';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -201,7 +202,7 @@ function FeedScreen() {
           </SuspenseSection>
         )}
         {/* What the user is partway through reading, after what they mean to watch. */}
-        {feedProviders.includes(Provider.AniList) && (
+        {continueReadingProviders(connected).length > 0 && (
           <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
             <ContinueReadingRow onItemActions={openActions} />
           </SuspenseSection>

@@ -7,6 +7,7 @@ import {
 import * as Effect from 'effect/Effect';
 
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
+import { getReadingJournal } from '@/lib/providers/hardcover/reads';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
 import {
   getSerializdDiary,
@@ -22,6 +23,7 @@ import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import { anilistDeps, anilistQueryKeys } from './anilist';
+import { hardcoverDeps, hardcoverViewerQuery } from './hardcover';
 import {
   diaryQueryKeys,
   diaryStates,
@@ -127,8 +129,16 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
     entries: simklDiaryEntries(await queryClient.fetchQuery(simklLibraryQuery())),
     next: undefined,
   }),
-  // Not a diary source: its registry entry has `canRead` off.
-  hardcover: async () => ({ entries: [], next: undefined }),
+  // Reading journal starts, progress and finishes. The viewer id is cached
+  // forever, so steady-state paging spends one request.
+  hardcover: async (queryClient, page, signal) => {
+    const viewer = await queryClient.fetchQuery(hardcoverViewerQuery());
+    const { entries, hasNextPage } = await Effect.runPromise(
+      getReadingJournal(hardcoverDeps(), { userId: viewer.id, page, perPage: PAGE_SIZE }),
+      { signal },
+    );
+    return { entries, next: hasNextPage ? page + 1 : undefined };
+  },
 };
 
 /**

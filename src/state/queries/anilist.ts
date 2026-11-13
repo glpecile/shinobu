@@ -114,6 +114,8 @@ export const anilistQueryKeys = {
    */
   currentMangaEntries: () =>
     [...anilistQueryKeys.all, 'current-manga-entries'] as const,
+  /** Continue Reading's settled slice of `currentMangaEntries`. */
+  reading: () => [...anilistQueryKeys.currentMangaEntries(), 'reading'] as const,
   /**
    * Popular anime of one cour — keyed by season so a boundary crossing
    * refetches, and by format so the explorer's narrowing gets its own entry.
@@ -269,22 +271,17 @@ export async function fetchWatchlistManga(
   );
 }
 
-// Module scope, so the selected rail keeps its identity between renders.
-function readingManga(entries: AniListMangaEntry[]): NormalizedMediaItem[] {
+/**
+ * Continue Reading's manga: CURRENT and REPEATING, newest update first. Never
+ * PLANNING, which may reach the reading list but no surface that means "you
+ * are partway through this"
+ * (`docs/solutions/anilist-shared-list-query-status-gate.md`).
+ */
+export async function fetchReadingManga(queryClient: QueryClient): Promise<NormalizedMediaItem[]> {
+  const entries = await queryClient.fetchQuery(currentMangaEntriesOptions(queryClient));
   return entries
     .filter((entry) => entry.status === 'CURRENT' || entry.status === 'REPEATING')
     .map((entry) => entry.item);
-}
-
-/**
- * Home's Continue Reading rail: CURRENT and REPEATING manga, newest update
- * first. Never PLANNING, which may reach the reading list but no surface that
- * means "you are partway through this"
- * (`docs/solutions/anilist-shared-list-query-status-gate.md`).
- */
-export function useSuspenseReadingMangaQuery() {
-  const queryClient = useQueryClient();
-  return useSuspenseQuery({ ...currentMangaEntriesOptions(queryClient), select: readingManga });
 }
 
 /** A Continue Reading card's item, for the details screen's cache-only resolution chain. */

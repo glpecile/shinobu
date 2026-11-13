@@ -125,10 +125,10 @@ cached under `currentMangaEntries()`. It is the same hazard one type over:
 a planned manga has `progress: 0`, and if PLANNING reached Continue Reading,
 every manga the user ever meant to read would show up as one they are reading.
 `AniListMangaEntry` keeps all three statuses, and each consumer selects its
-own: Continue Reading (`useSuspenseReadingMangaQuery`) takes CURRENT and
+own: Continue Reading (`fetchReadingManga`) takes CURRENT and
 REPEATING, and the reading list (`fetchWatchlistManga`) takes PLANNING. The
 gate test in `state/queries/anilist.test.ts` has a second case that runs the
-real read and checks both slices and the single request.
+real read and checks both slices and the single AniList request.
 
 ## Rule of thumb
 

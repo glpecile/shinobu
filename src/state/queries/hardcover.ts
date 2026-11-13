@@ -7,10 +7,13 @@ import {
   revokeHardcoverSession,
 } from '@/lib/providers/hardcover/auth';
 import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
+import type { HardcoverLibraryEntry } from '@/lib/providers/hardcover/normalize';
 import {
   getBookEntry,
   getBookIdBySlug,
+  getLibrary,
   getViewer,
+  HardcoverStatus,
   searchBooks,
   type HardcoverBookHit,
 } from '@/lib/providers/hardcover/reads';
@@ -81,6 +84,10 @@ export const hardcoverQueryKeys = {
   /** Every read of the viewer's library. A log or a reading-list write invalidates this prefix. */
   libraryRoot: () => [...hardcoverQueryKeys.all, 'library'] as const,
   bookEntry: (bookId: number) => [...hardcoverQueryKeys.libraryRoot(), 'entry', bookId] as const,
+  /** Want to Read and Currently Reading, with progress. */
+  shelves: () => [...hardcoverQueryKeys.libraryRoot(), 'shelves'] as const,
+  /** Continue Reading's settled slice of `shelves`. */
+  reading: () => [...hardcoverQueryKeys.libraryRoot(), 'reading'] as const,
   searchRoot: () => [...hardcoverQueryKeys.all, 'search'] as const,
   search: (query: string) => [...hardcoverQueryKeys.searchRoot(), query] as const,
   bookSlug: (slug: string) => [...hardcoverQueryKeys.all, 'book-slug', slug] as const,
@@ -104,18 +111,68 @@ export function useHardcoverBookEntryQuery(params: { bookId: number | undefined;
 }
 
 /**
- * The connected member's username for Manage Trackers. Cached forever, like
- * the other providers' viewer reads: disconnect purges the `['hardcover']` root.
+ * The connected member. Cached forever, like the other providers' viewer
+ * reads: disconnect purges the `['hardcover']` root.
  */
-export function useHardcoverUsernameQuery(options: { enabled?: boolean } = {}) {
-  return useQuery({
+export function hardcoverViewerQuery() {
+  return {
     queryKey: hardcoverQueryKeys.viewer(),
-    queryFn: ({ signal }) => Effect.runPromise(getViewer(hardcoverDeps()), { signal }),
-    enabled: options.enabled,
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getViewer(hardcoverDeps()), { signal }),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
+  };
+}
+
+/** The connected member's username for Manage Trackers. */
+export function useHardcoverUsernameQuery(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    ...hardcoverViewerQuery(),
+    enabled: options.enabled,
     select: (viewer) => viewer.username,
   });
+}
+
+/**
+ * A library changes when the reader changes it, and Shinobu's own writes
+ * invalidate `libraryRoot`, so this covers edits on hardcover.app.
+ */
+const LIBRARY_STALE_MS = 15 * 60_000;
+
+/** The one library read behind Continue Reading, the reading list and details. */
+function fetchHardcoverShelves(queryClient: QueryClient): Promise<HardcoverLibraryEntry[]> {
+  return queryClient.fetchQuery({
+    queryKey: hardcoverQueryKeys.shelves(),
+    queryFn: ({ signal }) => Effect.runPromise(getLibrary(hardcoverDeps()), { signal }),
+    staleTime: LIBRARY_STALE_MS,
+    // Read through `fetchQuery` only, so no observer keeps it alive. Disconnect
+    // purges the `['hardcover']` root.
+    gcTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+/** Currently Reading books for Continue Reading. */
+export async function fetchHardcoverReading(queryClient: QueryClient): Promise<NormalizedMediaItem[]> {
+  const entries = await fetchHardcoverShelves(queryClient);
+  return entries.flatMap((entry) => (entry.statusId === HardcoverStatus.Reading ? [entry.item] : []));
+}
+
+/** Want to Read books for the reading list. Read and Currently Reading books are not on it. */
+export async function fetchHardcoverWantToRead(
+  queryClient: QueryClient,
+): Promise<HardcoverLibraryEntry[]> {
+  const entries = await fetchHardcoverShelves(queryClient);
+  return entries.filter((entry) => entry.statusId === HardcoverStatus.WantToRead);
+}
+
+/** A library book's item, with its progress, for the details screen's cache-only resolution chain. */
+export function findInHardcoverLibraryCache(
+  queryClient: QueryClient,
+  id: string,
+): NormalizedMediaItem | undefined {
+  return queryClient
+    .getQueryData<HardcoverLibraryEntry[]>(hardcoverQueryKeys.shelves())
+    ?.find((entry) => entry.item.id === id)?.item;
 }
 
 /**

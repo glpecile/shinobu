@@ -8,6 +8,7 @@ import type {
   MergedDiaryEntry,
   NormalizedDiaryEntry,
   NormalizedMediaItem,
+  ReadingEvent,
 } from '@/types/media';
 
 /**
@@ -166,6 +167,8 @@ export interface DaySummary {
 
 export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   let films = 0;
+  // A book started and finished on one day is one book.
+  const books = new Set<string>();
   const anilistByMal = new Map<string, number>();
   for (const { item } of entries) {
     const { anilist, mal } = item.externalIds;
@@ -183,6 +186,10 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
     const { item } = entry;
     if (item.type === 'MOVIE' || item.isFilm) {
       films++;
+      continue;
+    }
+    if (item.type === 'BOOK') {
+      books.add(item.id);
       continue;
     }
     // Anime and TV can describe the same show; manga IDs occupy a separate namespace.
@@ -226,7 +233,7 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
   let episodes = 0;
   let manga = 0;
   let chapters = 0;
-  let units = films;
+  let units = films + books.size;
   for (const group of series) {
     const count = Math.max(group.seasoned.size, group.unseasoned.size);
     units += Math.max(count, 1);
@@ -248,6 +255,7 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
     const titles = counted(manga, 'manga', 'manga');
     parts.push(chapters > 0 ? `${counted(chapters, 'chapter')} of ${titles}` : titles);
   }
+  if (books.size > 0) parts.push(counted(books.size, 'book'));
   return { label: parts.join(' · '), units };
 }
 
@@ -268,6 +276,8 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
   if (ids.mal != null) keys.push(`mal:${ids.mal}`);
   if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
+  // A book never meets a film or a manga by title (KTD-6).
+  if (ids.hardcover != null) keys.push(`hardcover:${ids.hardcover}`);
   if (keys.length === 0) keys.push(titleYearKey(item));
   return keys;
 }
@@ -363,6 +373,7 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
     watchedAt: newest.watchedAt,
     dateOnly: contributors.every((entry) => entry.dateOnly === true),
     ...(contributors.some((entry) => entry.liked === true) ? { liked: true } : {}),
+    ...(primary.readingEvent != null ? { readingEvent: primary.readingEvent } : {}),
   };
 }
 
@@ -557,12 +568,20 @@ function formatEpisodeRange(episodes: number[]): string {
   return parts.join(', ');
 }
 
-/** The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41"; '' for a movie. */
+const READING_EVENT_DETAIL: Record<ReadingEvent, string> = {
+  started: 'Started',
+  progressed: 'Updated progress',
+  finished: 'Finished',
+};
+
+/** The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Finished"; '' for a movie. */
 export function formatEpisodeDetail(params: {
   type: MediaType;
   season?: number;
   episodes: number[];
+  readingEvent?: ReadingEvent;
 }): string {
+  if (params.readingEvent != null) return READING_EVENT_DETAIL[params.readingEvent];
   if (params.episodes.length === 0) return '';
   const range = formatEpisodeRange(params.episodes);
   if (params.type === 'MANGA') return `Ch ${range}`;
