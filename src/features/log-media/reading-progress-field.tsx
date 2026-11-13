@@ -16,14 +16,9 @@ export interface ReadingProgress {
   reread?: boolean;
 }
 
-/** A page that reaches a known total is the whole book. */
-export function isFinished(reading: ReadingProgress): boolean {
-  return reading.finished || (reading.total != null && reading.page >= reading.total);
-}
-
-/** The one string the book form speaks: its title, confirm label and toast. */
+/** The one string the book form speaks: its title and confirm label. */
 export function readingTitle(reading: ReadingProgress): string {
-  if (isFinished(reading)) return reading.reread === true ? 'Log reread' : 'Mark as read';
+  if (reading.finished) return reading.reread === true ? 'Log reread' : 'Mark as read';
   if (reading.page > 0) return `Log page ${reading.page}`;
   return reading.reread === true ? 'Start reread' : 'Start reading';
 }
@@ -40,21 +35,30 @@ export function ReadingProgressField({ value, onChange, pending }: {
   pending: boolean;
 }) {
   const input = useRef<TextInputInstance>(null);
-  const bounds = value.total == null ? 'The page you reached.' : `Page 0 to ${value.total}.`;
+  const bounds = value.total == null ? undefined : `Of ${value.total} pages.`;
+  const setFinished = (finished: boolean) => onChange({ ...value, finished });
 
   return (
-    <View className={cn('mt-5 gap-3', pending && 'opacity-50')}>
+    <View className={cn('mt-5', pending && 'opacity-50')}>
       <View className="flex-row items-center justify-between">
-        <Text className="text-foreground font-sans-semibold text-sm">Finished the book</Text>
+        {/* The switch carries the label for screen readers. */}
+        <Text
+          accessible={false}
+          className="text-foreground font-sans-semibold text-sm"
+          disabled={pending}
+          onPress={() => setFinished(!value.finished)}
+        >
+          Finished the book
+        </Text>
         <NativeSwitch
           accessibilityLabel="Finished the book"
           disabled={pending}
-          onValueChange={(finished) => onChange({ ...value, finished })}
+          onValueChange={setFinished}
           value={value.finished}
         />
       </View>
       {!value.finished && (
-        <View className="gap-2">
+        <View className="gap-2 pt-3">
           <Text
             className="text-foreground font-sans-semibold text-sm"
             onPress={() => input.current?.focus()}
@@ -75,7 +79,7 @@ export function ReadingProgressField({ value, onChange, pending }: {
             selectTextOnFocus
             value={value.page === 0 ? '' : String(value.page)}
           />
-          <Text className="text-muted font-sans text-xs">{bounds}</Text>
+          {bounds != null && <Text className="text-muted font-sans text-xs">{bounds}</Text>}
         </View>
       )}
     </View>

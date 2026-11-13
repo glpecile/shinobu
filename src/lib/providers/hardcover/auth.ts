@@ -154,17 +154,18 @@ const refreshCooldowns = new WeakMap<TokenStore, number>();
  * - 429: the request did not run. Refreshes stay off for the cooldown and
  *   fail without a request.
  * - Anything else (no answer, 5xx, a body that does not decode): the outcome
- *   is unknown and the token may be spent. The session stays as it is and
- *   nothing here tries again.
+ *   is unknown and the token may be spent, so it is never sent again. The
+ *   session is marked `reconnectNeeded` as for a refusal, and the call fails
+ *   with the original error.
  */
 function refreshSession(deps: HardcoverDeps): Effect.Effect<ProviderSession, ProviderError> {
   return Effect.gen(function* () {
     const dead = new ProviderAuthError({ provider, refreshFailed: true });
     const session = deps.tokens.get();
     if (session == null || session.reconnectNeeded === true) return yield* dead;
-    const markDead = Effect.sync(() => deps.tokens.set({ ...session, reconnectNeeded: true }));
+    const markDead = () => deps.tokens.set({ ...session, reconnectNeeded: true });
     if (session.refreshToken == null) {
-      yield* markDead;
+      markDead();
       return yield* dead;
     }
 
@@ -179,14 +180,16 @@ function refreshSession(deps: HardcoverDeps): Effect.Effect<ProviderSession, Pro
       refresh_token: session.refreshToken,
       client_id: deps.clientId,
     }).pipe(
-      Effect.catchTag('ProviderAuthError', () => markDead.pipe(Effect.andThen(Effect.fail(dead)))),
       Effect.tapError((error) =>
         Effect.sync(() => {
           if (error._tag === 'ProviderRateLimitError') {
             refreshCooldowns.set(deps.tokens, now + (error.retryAfterMs ?? REFRESH_BACKOFF_MS));
+          } else {
+            markDead();
           }
         }),
       ),
+      Effect.catchTag('ProviderAuthError', () => Effect.fail(dead)),
     );
   });
 }

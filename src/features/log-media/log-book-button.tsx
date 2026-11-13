@@ -26,24 +26,33 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   });
   if (targets.length === 0 && manualTargets.length === 0) return null;
 
-  const openRead = entry.data?.statusId === HardcoverStatus.Reading ? entry.data.openRead : null;
+  // A Paused or Did Not Finish book resumes at its page. A Read book's open
+  // read is an import with no end date, not a read in progress.
   const reread = entry.data?.statusId === HardcoverStatus.Read;
-  const total = entry.data?.pages ?? item.totalEpisodes;
+  const openRead = reread ? null : (entry.data?.openRead ?? null);
+  // 0 pages is an unknown count, not a cap of 0.
+  const total = entry.data?.pages || item.totalEpisodes || undefined;
   const action = openRead != null ? 'Log progress' : reread ? 'Reread' : 'Mark as read';
   // A search card knows nothing of the library. Without the entry, a log
   // could start a second read of a book that is in progress.
   const known = entry.data !== undefined;
+  const failed = !known && entry.isError;
 
   return (
     <View className="mb-3">
       <Button
         variant="log"
-        disabled={!known}
-        icon={<Button.Icon name={reread ? 'eye' : 'eye-outline'} />}
-        label={!known && entry.isError ? 'Couldn’t load your progress' : action}
-        loading={entry.isFetching || busy}
-        morphLabel
+        disabled={!known && !failed}
+        icon={<Button.Icon name={failed ? 'refresh' : reread ? 'eye' : 'eye-outline'} />}
+        label={failed ? 'Couldn’t load your progress' : action}
+        // A background refetch keeps the label. `busy` covers the refetch a
+        // log starts, which the confirm sheet tracks with the write.
+        loading={(!known && entry.isFetching) || busy}
         onPress={() => {
+          if (failed) {
+            void entry.refetch();
+            return;
+          }
           const request: LogRequest = {
             item,
             title: action,

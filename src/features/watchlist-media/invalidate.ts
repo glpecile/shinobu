@@ -94,12 +94,12 @@ export function invalidateAfterWatchlist(
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.allItemsRoot() });
     queryClient.invalidateQueries({ queryKey: simklQueryKeys.activities() });
   }
-  // Then, and only then, the gatherer. Invalidating it alone would re-serve the
-  // provider payloads above from cache for up to 15 minutes; invalidating the
-  // provider keys alone would leave the agenda computed from a stale gather.
   if (succeeded.includes(Provider.Hardcover)) {
     queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() });
   }
+  // Then, and only then, the gatherer. Invalidating it alone would re-serve the
+  // provider payloads above from cache for up to 15 minutes; invalidating the
+  // provider keys alone would leave the agenda computed from a stale gather.
   if (succeeded.length > 0) {
     queryClient.invalidateQueries({ queryKey: upNextQueryKeys.inputs() });
     // And the surface the add was built to land on (plan 0031 U14). Registered
