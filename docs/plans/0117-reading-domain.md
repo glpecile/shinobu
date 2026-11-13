@@ -41,6 +41,8 @@ decisions and the units, one sub-issue of #209 each.
   other one, as ani.zip does for anime. `routing.ts` states the rule once,
   beside the anime rule. Revised 2026-11-13: the first version routed a book
   to Hardcover only, which left a light novel on one of the reader's two lists.
+  The revision takes effect when B5 lands. Until then `routing.ts` and
+  `AGENTS.md` hold the first version, and they cite this KTD for it.
 - **KTD-5. New union members arrive with their provider.** `MediaType` gains
   `'BOOK'` and `ProgressUnit` gains `'page'` in B1, when Hardcover's registry
   entry needs them, not before. Comics either stay `BOOK` with a category or
