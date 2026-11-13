@@ -1,7 +1,8 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
+import { parseHardcoverSlugItemId } from '@/lib/media-link';
 import { parseAniListItemId } from '@/lib/providers/anilist/normalize';
-import { parseHardcoverItemId } from '@/lib/providers/hardcover/normalize';
+import { normalizeHardcoverBook, parseHardcoverItemId } from '@/lib/providers/hardcover/normalize';
 import type { SeasonalAnimePage } from '@/lib/providers/anilist/reads';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { parseSimklItemId } from '@/lib/providers/simkl/normalize';
@@ -153,11 +154,11 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   const deepLink = resolvedItem == null ? parseTmdbItemId(id) : null;
   // A Hardcover book rides the same query: its record is the book's catalogue.
   // A `hardcover.app/books/{slug}` link resolves its id first.
-  const hardcoverSlug = resolvedItem == null ? /^hardcover-books-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1] : undefined;
-  const hardcoverSlugId = useHardcoverBookIdBySlugQuery(hardcoverSlug ?? null);
+  const hardcoverSlug = resolvedItem == null ? parseHardcoverSlugItemId(id) : null;
+  const hardcoverSlugId = useHardcoverBookIdBySlugQuery(hardcoverSlug);
   const hardcoverBook = resolvedItem == null ? parseHardcoverItemId(id) ?? hardcoverSlugId.data ?? null : null;
   const deepLinkDetails = useMediaDetailsQuery(
-    deepLink != null ? tmdbStub(id, deepLink) : hardcoverBook != null ? hardcoverStub(hardcoverBook) : undefined,
+    deepLink != null ? tmdbStub(id, deepLink) : hardcoverBook != null ? normalizeHardcoverBook({ id: hardcoverBook }, new Date(0).toISOString()) : undefined,
   );
   // The AniList twin: an AniList-minted id is public data too, and the seasons
   // explorer is reachable signed out, so its links must survive a refresh.
@@ -247,18 +248,5 @@ function tmdbStub(
     progressUnit: 'episode',
     lastUpdated: new Date(0).toISOString(),
     externalIds: { tmdb: parsed.tmdbId },
-  };
-}
-
-function hardcoverStub(bookId: number): NormalizedMediaItem {
-  return {
-    id: `hardcover-${bookId}`,
-    title: '',
-    coverImage: '',
-    type: 'BOOK',
-    currentProgress: 0,
-    progressUnit: 'page',
-    lastUpdated: new Date(0).toISOString(),
-    externalIds: { hardcover: bookId },
   };
 }
