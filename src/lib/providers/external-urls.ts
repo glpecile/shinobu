@@ -23,6 +23,9 @@ export const ANILIST_CREATE_CLIENT_URL = 'https://anilist.co/settings/developer'
 /** Where a user creates their own Simkl app (BYO client id — PKCE, no secret). */
 export const SIMKL_CREATE_APP_URL = 'https://simkl.com/settings/developer/';
 
+/** Where a Goodreads reader imports a library export into Hardcover (plan 0117 KTD-2). */
+export const HARDCOVER_GOODREADS_IMPORT_URL = 'https://hardcover.app/account/imports';
+
 /** AniList implicit-grant authorize endpoint (re-exported by anilist/config). */
 export const ANILIST_AUTHORIZE_URL = 'https://anilist.co/api/v2/oauth/authorize';
 
@@ -126,6 +129,12 @@ function simklUrl(item: UrlItem): string | null {
   return null;
 }
 
+/** `/id/book/{id}` redirects to the book's current slug. */
+function hardcoverUrl(item: UrlItem): string | null {
+  const id = item.externalIds.hardcover;
+  return id == null ? null : `https://hardcover.app/id/book/${id}`;
+}
+
 /**
  * TMDB's own page for `item`, or null without a TMDB id (or for MANGA, which
  * TMDB doesn't carry). Deliberately *not* a `providerItemUrl` case: TMDB is a
@@ -168,6 +177,8 @@ export function providerItemUrl(
       return serializdUrl(item);
     case Provider.Simkl:
       return simklUrl(item);
+    case Provider.Hardcover:
+      return hardcoverUrl(item);
   }
 }
 
@@ -192,6 +203,7 @@ export function ratingUrl(
     case Provider.Simkl:
     case Provider.AniList:
     case Provider.Letterboxd:
+    case Provider.Hardcover:
       return providerItemUrl(rating.source, item, episode);
     case 'imdb':
       return item.externalIds.imdb == null ? null : `https://www.imdb.com/title/${item.externalIds.imdb}/`;
@@ -332,6 +344,7 @@ export function providerPersonUrl(
     case Provider.Trakt:
     case Provider.Serializd:
     case Provider.Simkl:
+    case Provider.Hardcover:
       return null;
   }
 }
@@ -361,6 +374,7 @@ export function providerStudioUrl(
     case Provider.Trakt:
     case Provider.Serializd:
     case Provider.Simkl:
+    case Provider.Hardcover:
       return null;
   }
 }
@@ -371,6 +385,7 @@ const PROVIDER_HOME_URLS: Record<ProviderId, string> = {
   letterboxd: 'https://letterboxd.com',
   serializd: 'https://serializd.com',
   simkl: 'https://simkl.com',
+  hardcover: 'https://hardcover.app',
 };
 
 /**

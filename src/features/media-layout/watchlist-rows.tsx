@@ -27,6 +27,7 @@ const TYPE_LABEL: Record<NormalizedMediaItem['type'], string> = {
   TV: 'Series',
   ANIME: 'Anime',
   MANGA: 'Manga',
+  BOOK: 'Book',
 };
 
 /**

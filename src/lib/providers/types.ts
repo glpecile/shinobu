@@ -9,6 +9,7 @@ export const Provider = {
   Letterboxd: 'letterboxd',
   Serializd: 'serializd',
   Simkl: 'simkl',
+  Hardcover: 'hardcover',
 } as const;
 export type ProviderId = (typeof Provider)[keyof typeof Provider];
 

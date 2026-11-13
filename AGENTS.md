@@ -1,7 +1,7 @@
 # Shinobu agent conventions
 
 Shinobu (忍) is a DB-less, cross-platform media tracker. Simkl, Trakt, AniList,
-Letterboxd, and Serializd are symmetric, opt-in providers. A log writes to every
+Letterboxd, Serializd, and Hardcover are symmetric, opt-in providers. A log writes to every
 connected provider it applies to, and reads merge them into one feed. There is
 no Shinobu account, backend, or database. A provider's token is its session.
 
@@ -153,15 +153,25 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
 - Each provider signs in on its own. Simkl uses PKCE with ~5-year tokens and no
   refresh, so a 401 means reconnect. Trakt uses auth-code on the user's
   credentials, AniList the implicit grant, and Serializd WebView token capture
-  on mobile or email and password on web.
+  on mobile or email and password on web. Hardcover uses PKCE on a bundled
+  public client id, the same on web and native.
+- Hardcover rotates its refresh token on every use and revokes the whole chain
+  when one is replayed. One refresh runs at a time, across web tabs too, and a
+  refresh with an unknown outcome is never sent again
+  (`lib/providers/hardcover/auth.ts`). A refused refresh marks the session
+  `reconnectNeeded`. It is never cleared.
 - `providerIsUsable` (`state/session/trakt-migration.ts`) gates every read and
-  write. A Trakt session without credentials is connected but unusable, shows
-  the reconnect banner, and is never cleared silently.
+  write. A Trakt session without credentials, or a Hardcover session marked
+  `reconnectNeeded`, is connected but unusable, shows the reconnect banner,
+  and is never cleared silently.
 - `useLogMedia` writes in parallel to every connected provider that handles the
   item's type. Movies go to Trakt, Letterboxd, and Simkl. TV, including
   TMDB-enriched anime series, goes to Trakt, Serializd, and Simkl. Anime goes to AniList and Simkl, remapped to AniDB
   episode numbers through ani.zip. Manga goes to AniList. Anime films carry
   `isFilm` and go to the movie targets plus AniList and Simkl.
+- A book routes to Hardcover and a manga to AniList only when the item carries
+  that provider's own id. Reading has no id bridge
+  (`docs/plans/0117-reading-domain.md` KTD-4).
 - All routing lives in `src/lib/providers/routing.ts`. Never branch on type or
   provider at a call site.
 - Spell a provider id as `Provider.Trakt` and so on (`lib/providers/types.ts`),

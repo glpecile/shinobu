@@ -24,6 +24,12 @@ describe('providerItemUrl', () => {
     ).toBe('https://trakt.tv/search/tmdb/456?id_type=show');
   });
 
+  it('builds a Hardcover book URL from the book id', () => {
+    expect(
+      providerItemUrl('hardcover', { type: 'BOOK', ...ids({ hardcover: 42 }) }),
+    ).toBe('https://hardcover.app/id/book/42');
+  });
+
   it('builds an AniList manga URL', () => {
     expect(
       providerItemUrl('anilist', { type: 'MANGA', ...ids({ anilist: 789 }) }),

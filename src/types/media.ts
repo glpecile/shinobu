@@ -14,12 +14,12 @@ import type { Provider, ProviderId } from '@/lib/providers/types';
 // Extension point for future domains (e.g. 'GAME' | 'BOOK' | 'ALBUM').
 // Widen this union + the provider registry (lib/providers/registry.ts) only —
 // never branch on new types inline in hooks or components.
-export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA';
+export type MediaType = 'TV' | 'MOVIE' | 'ANIME' | 'MANGA' | 'BOOK';
 
 // What `currentProgress` counts. Future domains bring their own units
 // (e.g. 'page' | 'minute' | 'listen'), so progress is never assumed to be
 // an episode index.
-export type ProgressUnit = 'episode' | 'chapter';
+export type ProgressUnit = 'episode' | 'chapter' | 'page';
 
 /**
  * When a film became available, by how you'd watch it — each the earliest
@@ -36,7 +36,7 @@ export interface ReleaseCalendar {
   physical?: string;
 }
 
-/** Where a community score comes from. Only Simkl, AniList and Letterboxd are providers. */
+/** Where a community score comes from. Only Simkl, AniList, Letterboxd and Hardcover are providers. */
 export type RatingSource =
   | 'tmdb'
   | typeof Provider.Simkl
@@ -44,6 +44,7 @@ export type RatingSource =
   | 'mal'
   | typeof Provider.AniList
   | typeof Provider.Letterboxd
+  | typeof Provider.Hardcover
   | 'rottenTomatoes'
   | 'metacritic';
 
@@ -137,6 +138,8 @@ export interface NormalizedMediaItem {
     mal?: number;
     /** Simkl's own numeric id (plan 0034). */
     simkl?: number;
+    /** Hardcover's book id. */
+    hardcover?: number;
   };
 }
 

@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 
 import { ConnectAniListButton } from '@/components/connect-anilist-button';
+import { ConnectHardcoverButton } from '@/components/connect-hardcover-button';
 import { ConnectLetterboxdButton } from '@/components/connect-letterboxd-button';
 import { ConnectSerializdButton } from '@/components/connect-serializd-button';
 import { ConnectSimklButton } from '@/components/connect-simkl-button';
@@ -17,6 +18,7 @@ import type { ProviderId } from '@/lib/providers/types';
  *   one-time client-id form when it doesn't.
  * - Serializd is a WebView token capture on native, email/password on web.
  * - Simkl is one-tap PKCE with the bundled client id — no wizard (plan 0034).
+ * - Hardcover is one-tap PKCE with the bundled client id (plan 0117).
  *
  * They range from one button to a multi-step form, which is exactly why they
  * live in the sheet rather than inline on a row (`provider-sheet.tsx`).
@@ -27,4 +29,5 @@ export const CONNECT_BUTTONS: Record<ProviderId, ComponentType> = {
   letterboxd: ConnectLetterboxdButton,
   serializd: ConnectSerializdButton,
   simkl: ConnectSimklButton,
+  hardcover: ConnectHardcoverButton,
 };

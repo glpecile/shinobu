@@ -123,6 +123,18 @@ describe('disconnectProvider — Simkl (plan 0034 U5)', () => {
   });
 });
 
+describe('disconnectProvider — Hardcover', () => {
+  test('revokes the refresh token on Hardcover and clears the session', async () => {
+    setProviderSession('hardcover', { accessToken: 'at-1', refreshToken: 'rt-1' });
+
+    disconnectProvider(new QueryClient(), 'hardcover');
+    await Promise.resolve();
+
+    expect(requested).toEqual(['https://api.hardcover.app/oauth2/revoke']);
+    expect(getProviderSession('hardcover')).toBeNull();
+  });
+});
+
 describe('syncQueryCacheWithSessions', () => {
   test('a session cleared outside Disconnect purges like one', () => {
     setProviderSession('anilist', { accessToken: 'a' });

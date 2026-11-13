@@ -127,6 +127,8 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
     entries: simklDiaryEntries(await queryClient.fetchQuery(simklLibraryQuery())),
     next: undefined,
   }),
+  // Not a diary source: its registry entry has `canRead` off.
+  hardcover: async () => ({ entries: [], next: undefined }),
 };
 
 /**

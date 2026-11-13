@@ -1,4 +1,5 @@
 import { anilistClientId } from '@/lib/providers/anilist/config';
+import { hardcoverClientId } from '@/lib/providers/hardcover/config';
 import { simklClientId } from '@/lib/providers/simkl/config';
 import { traktClientId, traktClientSecret } from '@/lib/providers/trakt/config';
 import { Provider, type ProviderId } from '@/lib/providers/types';
@@ -29,6 +30,9 @@ export const providerClientIds: Record<ProviderId, () => string> = {
   // App-owned public PKCE client id (plan 0034 KTD-1 — no secret exists).
   // Trakt-style precedence: an in-app override wins, else the bundled env id.
   simkl: () => getProviderClientId(Provider.Simkl) ?? simklClientId(),
+  // Bundled public PKCE client id. No in-app override: the registration's
+  // redirects are fixed, so another id could not complete a connect.
+  hardcover: hardcoverClientId,
 };
 
 export function getClientIdForProvider(id: ProviderId): string {
@@ -52,6 +56,7 @@ export const providerClientSecrets: Record<ProviderId, () => string> = {
   // Permanently '' by design: Simkl uses PKCE (plan 0034 KTD-1), which has no
   // client secret — like AniList's implicit grant above.
   simkl: () => '',
+  hardcover: () => '',
 };
 
 export function getClientSecretForProvider(id: ProviderId): string {

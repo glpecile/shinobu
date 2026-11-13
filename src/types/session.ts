@@ -37,4 +37,11 @@ export interface ProviderSession {
    * sent verbatim on writes (docs/solutions/letterboxd-no-api-fallback.md).
    */
   userAgent?: string;
+  /**
+   * Set when Hardcover's refresh token can't be sent again: Hardcover refused
+   * it, or a refresh got no clear answer and may have spent it. The session is
+   * kept as the evidence behind the reconnect banner and is unusable until a
+   * new connect overwrites it.
+   */
+  reconnectNeeded?: boolean;
 }

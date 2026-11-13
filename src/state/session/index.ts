@@ -1,9 +1,11 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 
+import { clearHardcoverAuthFlow } from '@/lib/providers/hardcover/auth-flow';
 import { clearSimklAuthFlow } from '@/lib/providers/simkl/auth-flow';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { DIARY_QUERY_ROOT } from '@/state/queries/diary-pages';
+import { revokeHardcover } from '@/state/queries/hardcover';
 import { UP_NEXT_QUERY_ROOT } from '@/state/queries/up-next-cache';
 import { WATCHLIST_QUERY_ROOT } from '@/state/queries/watchlist-cache';
 import {
@@ -13,7 +15,7 @@ import {
   onSessionChange,
   PROVIDER_KEY_PATTERN,
 } from './tokens';
-import { traktNeedsCredentials, usableProviderIds } from './trakt-migration';
+import { hardcoverNeedsReconnect, traktNeedsCredentials, usableProviderIds } from './trakt-migration';
 
 export {
   providerIsUsable,
@@ -86,6 +88,19 @@ export function useTraktNeedsCredentials(): boolean {
 }
 
 /**
+ * Reactive: the stored Hardcover session can't refresh again
+ * (`hardcoverNeedsReconnect`). Drives the trackers-screen reconnect banner and
+ * turns off when a new connect overwrites the session.
+ */
+export function useHardcoverNeedsReconnect(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => !isServer() && hardcoverNeedsReconnect(),
+    () => false,
+  );
+}
+
+/**
  * The usable providers at call time, for a fetch. A connect invalidates the
  * active gathers (`syncQueryCacheWithSessions`) before React re-renders them,
  * so a list captured at render would refetch without the new provider.
@@ -123,13 +138,23 @@ export function purgeProviderQueries(queryClient: QueryClient, id: ProviderId): 
  * testable without React (plan 0034 U5 added the Simkl leg).
  */
 export function disconnectProvider(queryClient: QueryClient, id: ProviderId): void {
-  clearProviderSession(id);
-  if (id === Provider.Simkl) {
-    // A pending PKCE verifier/state pair is scoped to a connect attempt, not
-    // a session — but disconnecting mid-flow must not leave material around
-    // that would validate some future stray code (plan 0034 U5).
-    clearSimklAuthFlow();
+  // A pending PKCE verifier/state pair is scoped to a connect attempt, not a
+  // session, but disconnecting mid-flow must not leave material around that
+  // would validate some future stray code (plan 0034 U5).
+  switch (id) {
+    case Provider.Hardcover:
+      // Hardcover lists each app's sessions to the member, so end this one
+      // there too. It needs the token, so it runs before the clear.
+      revokeHardcover();
+      clearHardcoverAuthFlow();
+      break;
+    case Provider.Simkl:
+      clearSimklAuthFlow();
+      break;
+    default:
+      break;
   }
+  clearProviderSession(id);
   purgeProviderQueries(queryClient, id);
 }
 
