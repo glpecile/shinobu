@@ -25,6 +25,7 @@ import {
   normalizeHardcoverBook,
   normalizeHardcoverJournal,
   normalizeHardcoverLibraryRow,
+  numeric,
   type HardcoverLibraryEntry,
 } from './normalize';
 
@@ -163,7 +164,8 @@ export function getBookEntry(
         statusId: row.status_id,
         openRead: open == null ? null : { id: open.id, progressPages: open.progress_pages ?? 0 },
         finishedOn: row.user_book_reads.flatMap((read) => read.finished_at ?? []),
-        pages: open?.edition?.pages ?? row.edition?.pages ?? row.book?.pages ?? null,
+        // 0 pages is an unknown count, so the next source answers.
+        pages: open?.edition?.pages || row.edition?.pages || row.book?.pages || null,
         bare:
           row.user_book_reads.length === 0 &&
           row.rating == null &&
@@ -260,14 +262,10 @@ export function getReadingJournal(
   );
 }
 
-/**
- * `results` is Typesense's raw response; each hit's `document` is one book.
- * `ids` lists the same books' ids in hit order.
- */
+/** `results` is Typesense's raw response; each hit's `document` is one book. */
 const searchData = Schema.Struct({
   search: optionalNullable(Schema.Struct({
     error: optionalNullable(Schema.String),
-    ids: optionalNullable(Schema.Array(Schema.NullOr(Schema.Number))),
     results: optionalNullable(Schema.Struct({
       hits: optionalNullable(Schema.Array(Schema.Struct({
         document: Schema.Struct({
@@ -298,7 +296,7 @@ export const searchBooks = Effect.fnUntraced(function* (
   const data = yield* hardcoverRequest<unknown>(
     deps,
     `query SearchBooks($query: String!, $perPage: Int!) {
-      search(query: $query, query_type: "book", per_page: $perPage, page: 1) { error ids results }
+      search(query: $query, query_type: "book", per_page: $perPage, page: 1) { error results }
     }`,
     { variables: { query: params.query, perPage: params.perPage } },
   ).pipe(Effect.flatMap(decode(searchData, 'invalid search response')));
@@ -308,16 +306,12 @@ export const searchBooks = Effect.fnUntraced(function* (
     return yield* new ProviderNetworkError({ provider, retryable: false, cause: new Error(error) });
   }
   const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
-  const ids = data.search?.ids ?? [];
-  return (data.search?.results?.hits ?? []).flatMap(({ document }, index) => {
-    const id = document.id ?? ids[index];
-    return id == null
+  return (data.search?.results?.hits ?? []).flatMap(({ document: { id, ...document } }) =>
+    id == null
       ? []
-      : [{ item: normalizeHardcoverBook({ ...document, id }, nowIso), authors: document.author_names ?? [] }];
-  });
+      : [{ item: normalizeHardcoverBook({ ...document, id }, nowIso), authors: document.author_names ?? [] }],
+  );
 });
-
-const image = optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) }));
 
 const bookData = Schema.Struct({
   books_by_pk: optionalNullable(Schema.Struct({
@@ -327,17 +321,17 @@ const bookData = Schema.Struct({
       author: optionalNullable(Schema.Struct({
         id: Schema.Number,
         name: Schema.String,
-        image,
+        image: hardcoverBookFields.image,
       })),
     }))),
     featured_book_series: optionalNullable(Schema.Struct({
-      position: optionalNullable(Schema.Number),
+      position: optionalNullable(numeric),
       series: optionalNullable(Schema.Struct({ name: Schema.String })),
     })),
     book_characters: optionalNullable(Schema.Array(Schema.Struct({
       only_mentioned: optionalNullable(Schema.Boolean),
       character: optionalNullable(Schema.Struct({
-        id: Schema.Union([Schema.Number, Schema.FiniteFromString]),
+        id: numeric,
         name: Schema.String,
       })),
     }))),
@@ -396,12 +390,14 @@ export const getBook = Effect.fnUntraced(function* (
   const authors = new Map<number, NormalizedCrewMember>();
   for (const { author, contribution } of book.contributions ?? []) {
     if (author == null) continue;
-    // An empty role is the book's author.
-    const job = contribution ?? 'Author';
+    // An empty role is the book's author. A person can be listed twice in one role.
+    const job = contribution || 'Author';
     const existing = authors.get(author.id);
-    authors.set(author.id, existing == null
-      ? { id: `hardcover-person-${author.id}`, name: author.name, job, headshot: author.image?.url ?? '' }
-      : { ...existing, job: `${existing.job}, ${job}` });
+    if (existing == null) {
+      authors.set(author.id, { id: `hardcover-person-${author.id}`, name: author.name, job, headshot: author.image?.url ?? '' });
+    } else if (!existing.job.split(', ').includes(job)) {
+      authors.set(author.id, { ...existing, job: `${existing.job}, ${job}` });
+    }
   }
   const series = book.featured_book_series;
   const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();

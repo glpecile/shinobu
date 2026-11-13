@@ -105,8 +105,10 @@ export interface HardcoverLogOptions {
  * - Finished: status Read on `date`. On a book that is already Read, a
  *   reread adds a finished read, unless a read already ended on `date`.
  *   Anything else is a skip, so a repeated request never records a second read.
- * - Page reached: status Currently Reading when the book has no read in
- *   progress (on a Read book this opens a reread), then the page on that read.
+ * - Page reached: status Currently Reading when the book is not Currently
+ *   Reading (on a Read book this opens a reread), then the page on its read
+ *   in progress. A Read book can hold an imported read with no end date, so
+ *   only a Currently Reading entry's open read takes the page as it is.
  */
 export function logToHardcover(
   deps: HardcoverDeps,
@@ -144,7 +146,7 @@ export function logToHardcover(
       return { status: 'ok' };
     }
 
-    let read = entry?.openRead ?? null;
+    let read = entry?.statusId === HardcoverStatus.Reading ? entry.openRead : null;
     if (read == null) yield* setStatus(HardcoverStatus.Reading);
     const { page } = options.reading;
     if (page <= 0) return { status: 'ok' };

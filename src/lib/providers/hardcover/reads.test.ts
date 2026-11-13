@@ -8,7 +8,7 @@ mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
 }));
 
-const { searchBooks } = await import('./reads');
+const { getBook, searchBooks } = await import('./reads');
 
 function deps(data: unknown): HardcoverDeps {
   return {
@@ -38,5 +38,29 @@ describe('searchBooks', () => {
       ['hardcover-61', 1948, ['Osamu Dazai']],
       ['hardcover-902', 2019, ['Junji Ito', 'Osamu Dazai']],
     ]);
+  });
+});
+
+describe('getBook', () => {
+  test('each author lists each role once, and a string series position decodes', async () => {
+    const book = await Effect.runPromise(getBook(deps({
+      books_by_pk: {
+        id: 902,
+        title: 'No Longer Human',
+        contributions: [
+          { contribution: null, author: { id: 1, name: 'Junji Ito' } },
+          { contribution: '', author: { id: 1, name: 'Junji Ito' } },
+          { contribution: 'Illustrator', author: { id: 1, name: 'Junji Ito' } },
+          { contribution: 'Translator', author: { id: 2, name: 'Jocelyne Allen' } },
+        ],
+        featured_book_series: { position: '1.5', series: { name: 'No Longer Human' } },
+      },
+    }), 902));
+
+    expect(book.authors.map(({ name, job }) => [name, job])).toEqual([
+      ['Junji Ito', 'Author, Illustrator'],
+      ['Jocelyne Allen', 'Translator'],
+    ]);
+    expect(book.series).toEqual({ name: 'No Longer Human', position: 1.5 });
   });
 });

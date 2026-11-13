@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useRef, useState } from 'react';
 import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
@@ -24,12 +25,13 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
+import { hardcoverQueryKeys } from '@/state/queries/hardcover';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
-import { isFinished, ReadingProgressField, readingTitle } from './reading-progress-field';
+import { ReadingProgressField, readingTitle } from './reading-progress-field';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
@@ -360,12 +362,13 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const span =
     range != null && through > range.from
       ? `chapters ${range.from}–${through}`
-      : reading != null && !isFinished(reading) && reading.page > 0
+      : reading != null && !reading.finished && reading.page > 0
         ? `page ${reading.page}`
         : undefined;
   const title =
     reading != null ? readingTitle(reading) : span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
+  const queryClient = useQueryClient();
   const logMedia = useLogMedia();
   const { writable: targets, manual: manualTargets, unmatched: unmatchedTargets } = useLogTargetsSplit(item);
   const completion = useLetterboxdCompletion(item);
@@ -409,13 +412,26 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       providers: selectedProviders,
       liked,
       ...(reading != null
-        ? { reading: isFinished(reading) ? { finished: true } : { finished: false, page: reading.page } }
+        ? { reading: reading.finished ? { finished: true } : { finished: false, page: reading.page } }
         : {}),
       ...(watchedAt != null ? { watchedAt: watchedAt.toISOString() } : {}),
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
       ...(retryOf != null ? { retryOf } : {}),
     });
-    trackBusy(item.id, write);
+    // A book's button stays busy until its library entry is read again, so a
+    // second log never opens on the page or status this one changed.
+    const bookId = item.externalIds.hardcover;
+    trackBusy(
+      item.id,
+      reading == null || bookId == null
+        ? write
+        : write.then(() =>
+            queryClient.invalidateQueries(
+              { queryKey: hardcoverQueryKeys.bookEntry(bookId) },
+              { cancelRefetch: false },
+            ),
+          ),
+    );
     void write.then(
       (outcome) => {
         // A retired inline session must not close a newer host flow.

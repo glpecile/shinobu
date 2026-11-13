@@ -34,6 +34,11 @@ export function mediaLinkRoute(path: string): string | null {
   }
 }
 
+/** The slug behind a `hardcover-books-<slug>` id that `mediaLinkRoute` mints, or null. */
+export function parseHardcoverSlugItemId(id: string): string | null {
+  return /^hardcover-books-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1] ?? null;
+}
+
 /** A failed incoming lookup stays escapable without redispatching an OS intent. */
 export function mediaLinkUrl(id: string, mediaType?: string): string | null {
   const slug = /^letterboxd-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1];
@@ -42,7 +47,7 @@ export function mediaLinkUrl(id: string, mediaType?: string): string | null {
   if (imdb != null) return `https://www.imdb.com/title/${imdb}/`;
   const serializd = /^serializd-([1-9][0-9]*)$/.exec(id)?.[1];
   if (serializd != null) return `https://serializd.com/show/${serializd}`;
-  const hardcoverSlug = /^hardcover-books-([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(id)?.[1];
+  const hardcoverSlug = parseHardcoverSlugItemId(id);
   if (hardcoverSlug != null) return `https://hardcover.app/books/${hardcoverSlug}`;
   const hardcover = /^hardcover-([1-9][0-9]*)$/.exec(id)?.[1];
   if (hardcover != null) return `https://hardcover.app/id/book/${hardcover}`;

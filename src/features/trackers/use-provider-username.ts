@@ -10,8 +10,8 @@ import { getProviderSession } from '@/state/session/tokens';
  *
  * The providers answer this two different ways, and the card shouldn't
  * care which: Letterboxd and Serializd capture a username at sign-in and keep
- * it on the session, while Trakt, AniList, Simkl and Hardcover hand back only an OAuth
- * token, so their handle has to be read back from the provider. The remote
+ * it on the session, while Trakt, AniList, Simkl and Hardcover hand back only
+ * an OAuth token, so their handle has to be read back from the provider. The remote
  * reads are cached forever under their provider's query root (which disconnect
  * purges), so this costs at most one request per provider per session — and
  * usually zero, since AniList's viewer read is the same one the list feeds
@@ -25,7 +25,7 @@ export function useProviderUsername(
   id: ProviderId,
   connected: boolean,
 ): string | undefined {
-  // Every hook runs unconditionally (fixed hook count) and are gated by
+  // Every hook runs unconditionally (fixed hook count) and is gated by
   // `enabled` — the same shape `useDiaryFeed` uses for its per-provider reads.
   const trakt = useTraktViewerQuery({ enabled: connected && id === Provider.Trakt });
   const anilist = useAniListViewerQuery({ enabled: connected && id === Provider.AniList });

@@ -480,7 +480,8 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
         people={data.crew.map((member) => ({
           id: member.id,
           name: member.name,
-          role: member.job,
+          // The rail's title already says "Authors"; only other roles show.
+          role: member.job === 'Author' ? '' : member.job,
           kind: 'crew' as const,
           headshot: member.headshot,
         }))}
@@ -812,7 +813,8 @@ function DetailsScreen() {
                 shown.genres != null && shown.genres.length > 0 && (
                   <MetaLine.Part icon="pricetags-outline">{shown.genres.slice(0, 3).join(', ')}</MetaLine.Part>
                 ),
-                shown.progressUnit === 'page' && shown.totalEpisodes != null && (
+                // The Progress tile shows the total once there is progress.
+                !showProgress && shown.progressUnit === 'page' && shown.totalEpisodes != null && (
                   <MetaLine.Part icon="book-outline">{`${shown.totalEpisodes} pages`}</MetaLine.Part>
                 ),
                 bookSeries != null && (

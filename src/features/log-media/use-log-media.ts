@@ -173,11 +173,6 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
         ...(rewatch === true ? { rewatch: true } : {}),
       }),
     ).then(okResult),
-  // Serializd (plan 0017 R8): logToSerializd already resolves a ProviderWriteResult
-  // (ok | skipped) that maps straight through the fan-out contract — a season
-  // that can't be resolved or an item with no tmdb becomes a `skipped` outcome
-  // (R9), not a thrown error. A partial write (episode watched, diary failed)
-  // fails loudly so reconcile re-attempts the diary entry (R12).
   // A book's day is the reader's calendar day, so it is taken in the device
   // time zone. `watchedAt` is present only on a backdated log.
   hardcover: ({ item, reading, watchedAt, rewatch }) =>
@@ -194,6 +189,11 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
             ...(rewatch === true ? { reread: true } : {}),
           }),
         ),
+  // Serializd (plan 0017 R8): logToSerializd already resolves a ProviderWriteResult
+  // (ok | skipped) that maps straight through the fan-out contract — a season
+  // that can't be resolved or an item with no tmdb becomes a `skipped` outcome
+  // (R9), not a thrown error. A partial write (episode watched, diary failed)
+  // fails loudly so reconcile re-attempts the diary entry (R12).
   serializd: ({ item, episode, episodes, watchedAt, tags, rewatch, liked }) =>
     Effect.runPromise(
       logToSerializd(serializdDeps(), item, {
