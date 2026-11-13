@@ -22,29 +22,35 @@ decisions and the units, one sub-issue of #209 each.
   shelf RSS is read-only and capped at 100 items. Settings and copy point
   Goodreads readers at Hardcover's Goodreads import. No scraping, and no
   proxy (AGENTS.md allows only the four existing Workers).
-- **KTD-3. Units are never converted.** Manga counts chapters on an AniList
-  series entry. A book counts pages on a Hardcover read. A comic issue is read
-  or unread. A manga log never writes Hardcover pages and a Hardcover volume
-  never writes AniList chapters.
+- **KTD-3. A unit converts only where both sides count the same thing.**
+  Manga counts chapters on an AniList series entry. A book counts pages on a
+  Hardcover read. A comic issue is read or unread. A finished Hardcover volume
+  is one AniList volume, so it writes `progressVolumes`. Pages and chapters are
+  never estimated from each other: a page log writes no AniList chapter, and a
+  chapter log writes no Hardcover page.
 - **KTD-10. Reading is one category.** Manga, light novels, books and comics
   are all "reading" wherever the user picks or sees a grouping: one filter
   option, one rail (Continue Reading), one reading list. The UI never offers
   separate Manga, Books or Comics choices. The grouping is only what the user
-  sees; units still never convert (KTD-3). Numbered last so the decisions
-  below keep their numbers.
-- **KTD-4. Reading items route only to providers whose id they carry.**
-  Reading has no ani.zip equivalent. Until a verified mapping exists, a book
-  routes to Hardcover only with `externalIds.hardcover`, and a manga to AniList
-  only with `externalIds.anilist`. `routing.ts` states the rule once, beside
-  the anime rule.
+  sees; it changes no unit (KTD-3). Numbered last so the decisions below keep
+  their numbers.
+- **KTD-4. A reading item routes to every connected provider that has the
+  work.** This is the rule for every other type, and reading follows it. A
+  provider has the work when the item carries that provider's id. An item
+  arrives with its own provider's id, and the reading bridge (B5) finds the
+  other one, as ani.zip does for anime. `routing.ts` states the rule once,
+  beside the anime rule. Revised 2026-11-13: the first version routed a book
+  to Hardcover only, which left a light novel on one of the reader's two lists.
 - **KTD-5. New union members arrive with their provider.** `MediaType` gains
   `'BOOK'` and `ProgressUnit` gains `'page'` in B1, when Hardcover's registry
   entry needs them, not before. Comics either stay `BOOK` with a category or
   become `'COMIC'`, decided in C0 against the chosen tracker's item model.
-- **KTD-6. Manga stays on AniList.** Hardcover tracks manga **volumes** as
-  books. An AniList series and its Hardcover volumes are different items and
-  never merge (KTD-3). Light novels keep arriving as AniList `MANGA` with
-  format `NOVEL`.
+- **KTD-6. A Hardcover volume and its AniList series are one work.**
+  Hardcover tracks a manga or light novel as one book per volume. AniList
+  tracks it as one series entry with a chapter count and a volume count. A
+  matched book is volume N of that entry. Its log writes both providers, in
+  the unit KTD-3 allows, and feeds show the work once (B6). Light novels still
+  arrive from AniList as `MANGA` with format `NOVEL`.
 - **KTD-7. Web access is probed before it is built.** Hardcover passed on
   2026-11-12: the GraphQL, token and revoke endpoints all answer a browser
   origin (`docs/solutions/web-cors-hardcover.md`), so web connects, reads and
@@ -78,6 +84,8 @@ parallel; M3 owns the one new AniList read that the reading list also uses.
 | B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3 (M4 if it ships) |
 | B3 | #399 | Log page progress, finishes and want-to-read to Hardcover | B1 |
 | B4 | #400 | Find books in search and open book details | B1 |
+| B5 | — | Bridge Hardcover volumes to AniList entries | B3, M1 |
+| B6 | — | Show a bridged work once | B5, B2, M3 |
 | C0 | #401 | Choose a comics tracker | owner answer |
 
 ### M1. Log the next chapter
@@ -187,6 +195,56 @@ description and Hardcover rating. There is no TMDB for books, so
 `getMediaDetails` returns provider data, as it does for manga. Characters come
 from `book_characters` when present.
 
+### B5. Bridge Hardcover volumes to AniList entries
+
+Nothing publishes a Hardcover-to-AniList mapping, so the bridge matches at log
+time and caches the answer, in `enrichExternalIds` beside the ani.zip lookup.
+"NISEMONOGATARI, Part 1: Fake Tale (Light Novel)" is the test case: AniList
+has it as the novel "Nisemonogatari", 35 chapters in 2 volumes.
+
+- **Match.** Take the book title without its volume marker, subtitle and
+  format tag ("Nisemonogatari"), and the Hardcover series name. Search AniList
+  `MANGA` for each. A result matches only when one of its titles or synonyms
+  equals the candidate, and one of its staff is a Hardcover author. Both
+  compares fold case, punctuation, name order and long-vowel spelling
+  ("Eiichiro", "Eiichirou"). Anything less is no match, because a wrong match
+  writes to the wrong entry on a real list.
+- **Volume.** N is the number in the title's marker ("Part 1", "Vol. 3",
+  "Volume 3"), else the series position when the series name made the match,
+  else 1 when AniList lists one volume.
+- A matched book with a volume number carries `externalIds.anilist` and routes
+  to AniList. AniList starts selected in "Write to", and the reader can clear
+  it.
+- **Finish** writes `progressVolumes` as the higher of N and the entry's
+  count. When N is AniList's last volume the entry completes, as the last
+  chapter does in M1. A reread of the last volume follows M1's reread.
+- **Start and page logs** make the AniList entry Reading and write no number
+  (KTD-3). Want-to-read writes Planning under the AniList KTD-2 rule.
+- **The form starts from what AniList knows.** When the entry's volume count
+  has reached N, the form opens on "Finished the book". Otherwise it opens on
+  the Hardcover page and shows the AniList progress as a note ("AniList:
+  chapter 12 of 35"). It never turns chapters into a page (KTD-3).
+- A matched book with no volume number gets AniList as a manual row that opens
+  the entry. A book with no match gets no AniList row: most books are not on
+  AniList.
+- A chapter log from an AniList entry stays on AniList. No source says which
+  volume holds a chapter.
+
+Probed on 2026-11-13: `SaveMediaListEntry` takes `progressVolumes`, and one
+`Page.media(search:, type: MANGA)` request returns titles, synonyms, `volumes`
+and staff for one point of AniList's 30 a minute. Still to check before
+building: which volume markers the titles in the owner's Hardcover library
+use.
+
+### B6. Show a bridged work once
+
+Continue Reading, the reading list and the diary show one card for a bridged
+work. The open Hardcover volume is the card, because it holds the finer
+progress ("p. 120 / 306"), and it carries the AniList id. The AniList entry
+shows alone when none of its volumes is in the Hardcover library. The match
+runs against the reader's own AniList list, which M3 already loads, so it
+costs no request.
+
 ### C0. Choose a comics tracker
 
 The owner's old comics account decides. Metron is the API-capable candidate:
@@ -200,11 +258,10 @@ Whichever tracker wins, its search joins search's Reading scope as a section
 ## Out of scope
 
 Goodreads RSS, Google Books, MyAnimeList, MangaUpdates, Kitsu and Literal
-(see the spike), audiobook seconds, reading goals, personal ratings, and
-AniList volume progress (`progressVolumes`) beyond display.
+(see the spike), audiobook seconds, reading goals and personal ratings.
 
 ## Build
 
-M1–M4 and B1–B4 are JS only and hot reload. B1's OAuth return on native uses
+M1–M4 and B1–B6 are JS only and hot reload. B1's OAuth return on native uses
 the existing `shinobu://` scheme, so no prebuild is expected unless B0 needs a
 second scheme.
