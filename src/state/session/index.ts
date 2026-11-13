@@ -88,9 +88,9 @@ export function useTraktNeedsCredentials(): boolean {
 }
 
 /**
- * Reactive: Hardcover ended the stored session (a revoked or replayed refresh
- * chain). Drives the trackers-screen reconnect banner and turns off when a new
- * connect overwrites the session.
+ * Reactive: the stored Hardcover session can't refresh again
+ * (`hardcoverNeedsReconnect`). Drives the trackers-screen reconnect banner and
+ * turns off when a new connect overwrites the session.
  */
 export function useHardcoverNeedsReconnect(): boolean {
   return useSyncExternalStore(

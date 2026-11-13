@@ -198,20 +198,25 @@ describe('token refresh', () => {
     expect(calls).toHaveLength(callsAfterFirst);
   });
 
-  test('a refresh with no answer is sent once, keeps the session and is not retryable', async () => {
+  test('a refresh with no answer is never sent again and marks the session', async () => {
     const { deps, tokenCalls, slot } = makeDeps((call) => {
       if (call.url === HARDCOVER_TOKEN_URL) throw new TypeError('Network request failed');
       return Response.json({ error: 'invalid_token' }, { status: 401 });
     });
 
-    const result = await Effect.runPromise(Effect.result(hardcoverRequest(deps, 'query A { a }')));
+    const first = await Effect.runPromise(Effect.result(hardcoverRequest(deps, 'query A { a }')));
+    const second = await Effect.runPromise(Effect.result(hardcoverRequest(deps, 'query A { a }')));
 
-    expect(result).toMatchObject({
+    expect(first).toMatchObject({
       _tag: 'Failure',
       failure: { _tag: 'ProviderNetworkError', retryable: false },
     });
+    expect(second).toMatchObject({
+      _tag: 'Failure',
+      failure: { _tag: 'ProviderAuthError', refreshFailed: true },
+    });
     expect(tokenCalls()).toHaveLength(1);
-    expect(slot.session).toEqual(STORED);
+    expect(slot.session).toEqual({ ...STORED, reconnectNeeded: true });
   });
 
   test('a 429 with no readable Retry-After holds later refreshes off the network', async () => {

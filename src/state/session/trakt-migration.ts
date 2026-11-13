@@ -33,7 +33,7 @@ export function providerIsUsable(id: ProviderId): boolean {
 }
 
 /**
- * True when Hardcover refused the refresh token for good
+ * True when Hardcover's refresh token can't be sent again
  * (`hardcover/auth.ts`). The session stays stored and unusable, and the
  * trackers screen shows the reconnect banner.
  */
