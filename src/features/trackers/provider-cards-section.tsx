@@ -72,6 +72,18 @@ export function ProviderCardsSection() {
     if (autoClose) setSheetOpen(false);
   }, [autoClose]);
 
+  // Why a stored session the provider no longer accepts needs a reconnect.
+  function reconnectReason(id: ProviderId): string | undefined {
+    switch (id) {
+      case Provider.Trakt:
+        return traktNeedsCredentials ? 'Trakt now needs your own API app.' : undefined;
+      case Provider.Hardcover:
+        return hardcoverNeedsReconnect ? 'Hardcover needs you to sign in again.' : undefined;
+      default:
+        return undefined;
+    }
+  }
+
   const count = `${connected.length} of ${connected.length + disconnected.length} connected`;
 
   return (
@@ -87,10 +99,7 @@ export function ProviderCardsSection() {
               connected={connected.includes(id)}
               id={id}
               onOpenSheet={() => openSheet(id)}
-              reconnect={
-                (id === Provider.Trakt && traktNeedsCredentials) ||
-                (id === Provider.Hardcover && hardcoverNeedsReconnect)
-              }
+              reconnectReason={reconnectReason(id)}
             />
           </MovedCard>
         ))}
