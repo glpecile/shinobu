@@ -79,7 +79,6 @@ const editionPages = optionalNullable(Schema.Struct({ pages: optionalNullable(Sc
 
 /** One `user_books` row of the library read, with the read in progress nested. */
 export const HardcoverLibraryRow = Schema.Struct({
-  id: Schema.Number,
   status_id: Schema.Number,
   created_at: Schema.String,
   updated_at: optionalNullable(Schema.String),

@@ -185,7 +185,6 @@ const libraryData = Schema.Struct({
 const LIBRARY = `query Library($statuses: [Int!]!) {
   me {
     user_books(where: { status_id: { _in: $statuses } }) {
-      id
       status_id
       created_at
       updated_at

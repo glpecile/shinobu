@@ -56,7 +56,6 @@ describe('normalizeHardcoverBook', () => {
 
 describe('normalizeHardcoverLibraryRow', () => {
   const row = {
-    id: 9,
     status_id: 2,
     created_at: '2026-11-01T10:00:00.123456+00:00',
     updated_at: '2026-11-10T21:30:00.654321+00:00',
