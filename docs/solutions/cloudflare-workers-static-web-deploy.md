@@ -169,7 +169,7 @@ caching or migrating deployment to another CI service.
 The `EXPO_PUBLIC_*` vars the web build inlines at export time
 (`EXPO_PUBLIC_TMDB_TOKEN`, `EXPO_PUBLIC_TRAKT_CLIENT_ID`,
 `EXPO_PUBLIC_TRAKT_CLIENT_SECRET`, `EXPO_PUBLIC_ANILIST_CLIENT_ID`,
-`EXPO_PUBLIC_SIMKL_CLIENT_ID` — v0.2.0 shipped without the Simkl id on both
+`EXPO_PUBLIC_HARDCOVER_CLIENT_ID`, `EXPO_PUBLIC_SIMKL_CLIENT_ID` — v0.2.0 shipped without the Simkl id on both
 web and the release APKs because it was missing here *and* from release.yml's
 `.env.local` heredoc; every new bundled credential must be added in both
 places) live in

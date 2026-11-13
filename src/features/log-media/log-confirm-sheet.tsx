@@ -1,6 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useEffect, useRef, useState } from 'react';
 import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
@@ -23,7 +22,6 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
 import { hardcoverQueryKeys } from '@/state/queries/hardcover';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
@@ -32,6 +30,7 @@ import { TagPicker } from './tag-picker';
 import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
 import { ReadingProgressField, readingTitle } from './reading-progress-field';
+import { StepperField } from './stepper-field';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
 import { useLogTargetsSplit, useTargetSelection } from './use-log-targets';
@@ -248,82 +247,26 @@ function ThroughChapterField({ control, getValues, from, total, pending }: {
   total?: number;
   pending: boolean;
 }) {
-  const input = useRef<TextInputInstance>(null);
   const { field, fieldState } = useController({ control, name: 'through' });
-  const muted = useThemeColor('--color-muted');
-  const accent = useThemeColor('--color-accent');
-  const bounds = total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`;
-  const error = fieldState.error?.message;
-
-  // Steps from the form's live value: two quick presses can both land before
-  // a re-render, and the rendered `field.value` would drop the second.
-  function step(by: 1 | -1) {
-    haptics.selection();
-    field.onChange(stepThroughChapter(getValues('through'), by, from, total));
-  }
 
   return (
-    <View className={cn('mt-5 gap-2', pending && 'opacity-50')}>
-      <Text
-        className="text-foreground font-sans-semibold text-sm"
-        onPress={() => input.current?.focus()}
-      >
-        Through chapter
-      </Text>
-      <View className="flex-row items-center gap-3">
-        <Button
-          disabled={pending || Number(field.value) <= from}
-          icon={<Button.Icon name="chevron-back" />}
-          iconOnly
-          label="Previous chapter"
-          onPress={() => step(-1)}
-          pressBehavior="immediate"
-          variant="quiet"
-        />
-        <View className="flex-1">
-          <TextField
-            ref={input}
-            accessibilityHint={bounds}
-            accessibilityLabel="Through chapter"
-            editable={!pending}
-            inputMode="numeric"
-            onBlur={field.onBlur}
-            onChangeText={(text) => field.onChange(throughChapterText(text, from, total))}
-            returnKeyType="done"
-            selectTextOnFocus
-            textAlign="center"
-            value={field.value}
-          />
-        </View>
-        <Button
-          disabled={pending || stepThroughChapter(field.value, 1, from, total) === field.value}
-          icon={<Button.Icon name="chevron-forward" />}
-          iconOnly
-          label="Next chapter"
-          onPress={() => step(1)}
-          pressBehavior="immediate"
-          variant="quiet"
-        />
-      </View>
-      {/* Keyed so an error mounts as a new alert, which a screen reader
-          announces; flipping the role on a mounted note may not be. */}
-      <View key={error == null ? 'note' : 'error'} className="flex-row items-center gap-1.5">
-        <Ionicons
-          accessibilityElementsHidden
-          aria-hidden
-          importantForAccessibility="no"
-          color={error == null ? muted : accent}
-          name={error == null ? 'information-circle-outline' : 'alert-circle-outline'}
-          size={16}
-        />
-        <Text
-          className={cn('flex-1 font-sans text-xs', error == null ? 'text-muted' : 'text-accent')}
-          role={error == null ? undefined : 'alert'}
-        >
-          {error ?? bounds}
-        </Text>
-      </View>
-    </View>
+    <StepperField
+      backLabel="Previous chapter"
+      canStepBack={Number(field.value) > from}
+      canStepForward={stepThroughChapter(field.value, 1, from, total) !== field.value}
+      className="mt-5"
+      error={fieldState.error?.message}
+      forwardLabel="Next chapter"
+      label="Through chapter"
+      note={total == null ? `Chapter ${from} or later.` : `Chapter ${from} to ${total}.`}
+      onBlur={field.onBlur}
+      onChangeText={(text) => field.onChange(throughChapterText(text, from, total))}
+      // Steps from the form's live value: two quick presses can both land
+      // before a re-render, and the rendered `field.value` would drop the second.
+      onStep={(by) => field.onChange(stepThroughChapter(getValues('through'), by, from, total))}
+      pending={pending}
+      value={field.value}
+    />
   );
 }
 
@@ -533,7 +476,11 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
             />
           )}
           {reading != null && (
-            <ReadingProgressField onChange={setReading} pending={pending} value={reading} />
+            <ReadingProgressField
+              onChange={(update) => setReading((current) => current && update(current))}
+              pending={pending}
+              value={reading}
+            />
           )}
           <LogFormFields
             item={item}

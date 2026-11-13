@@ -1,10 +1,8 @@
-import { useRef } from 'react';
-import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
 import { NativeSwitch } from '@/components/native-switch';
-import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
+import { StepperField } from './stepper-field';
 
 /** A book log's form state: the page reached, or the whole book. */
 export interface ReadingProgress {
@@ -23,24 +21,29 @@ export function readingTitle(reading: ReadingProgress): string {
   return reading.reread === true ? 'Start reread' : 'Start reading';
 }
 
+/** The page field's cap when Hardcover has no page count. */
+const LAST_PAGE = 99999;
+
 /**
  * The book log form's progress fields (plan 0117 B3): a Finished switch, and
- * the page reached while it is off. Pages are their own unit (KTD-3). Typed
- * text keeps only digits and stops at the page count, so the form never holds
- * a page the book does not have.
+ * the page reached while it is off. Pages are their own unit (KTD-3). A typed
+ * or stepped page stays between 0, which only starts the read, and the page
+ * count, so the form never holds a page the book does not have.
  */
 export function ReadingProgressField({ value, onChange, pending }: {
   value: ReadingProgress;
-  onChange: (value: ReadingProgress) => void;
+  /** Takes an updater, so a second press that lands before a re-render steps from the first. */
+  onChange: (update: (reading: ReadingProgress) => ReadingProgress) => void;
   pending: boolean;
 }) {
-  const input = useRef<TextInputInstance>(null);
-  const bounds = value.total == null ? undefined : `Of ${value.total} pages.`;
-  const setFinished = (finished: boolean) => onChange({ ...value, finished });
+  const last = value.total ?? LAST_PAGE;
+  const setFinished = (finished: boolean) => onChange((reading) => ({ ...reading, finished }));
+  const setPage = (next: (page: number) => number) =>
+    onChange((reading) => ({ ...reading, page: Math.min(last, Math.max(0, next(reading.page))) }));
 
   return (
-    <View className={cn('mt-5', pending && 'opacity-50')}>
-      <View className="flex-row items-center justify-between">
+    <View className="mt-5">
+      <View className={cn('flex-row items-center justify-between', pending && 'opacity-50')}>
         {/* The switch carries the label for screen readers. */}
         <Text
           accessible={false}
@@ -58,29 +61,19 @@ export function ReadingProgressField({ value, onChange, pending }: {
         />
       </View>
       {!value.finished && (
-        <View className="gap-2 pt-3">
-          <Text
-            className="text-foreground font-sans-semibold text-sm"
-            onPress={() => input.current?.focus()}
-          >
-            Page
-          </Text>
-          <TextField
-            ref={input}
-            accessibilityHint={bounds}
-            accessibilityLabel="Page"
-            editable={!pending}
-            inputMode="numeric"
-            onChangeText={(text) => {
-              const page = Number(text.replace(/\D/g, '').slice(0, 5));
-              onChange({ ...value, page: Math.min(page, value.total ?? page) });
-            }}
-            returnKeyType="done"
-            selectTextOnFocus
-            value={value.page === 0 ? '' : String(value.page)}
-          />
-          {bounds != null && <Text className="text-muted font-sans text-xs">{bounds}</Text>}
-        </View>
+        <StepperField
+          backLabel="Previous page"
+          canStepBack={value.page > 0}
+          canStepForward={value.page < last}
+          className="pt-3"
+          forwardLabel="Next page"
+          label="Page"
+          note={value.total == null ? undefined : `Of ${value.total} pages.`}
+          onChangeText={(text) => setPage(() => Number(text.replace(/\D/g, '')))}
+          onStep={(by) => setPage((page) => page + by)}
+          pending={pending}
+          value={String(value.page)}
+        />
       )}
     </View>
   );
