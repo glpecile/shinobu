@@ -30,7 +30,8 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   // read is an import with no end date, not a read in progress.
   const reread = entry.data?.statusId === HardcoverStatus.Read;
   const openRead = reread ? null : (entry.data?.openRead ?? null);
-  const total = entry.data?.pages ?? item.totalEpisodes;
+  // 0 pages is an unknown count, not a cap of 0.
+  const total = entry.data?.pages || item.totalEpisodes || undefined;
   const action = openRead != null ? 'Log progress' : reread ? 'Reread' : 'Mark as read';
   // A search card knows nothing of the library. Without the entry, a log
   // could start a second read of a book that is in progress.
@@ -61,8 +62,7 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
             reading: {
               finished: openRead == null,
               page: openRead?.progressPages ?? 0,
-              // An edition with 0 pages has no known count, not a cap of 0.
-              ...(total != null && total > 0 ? { total } : {}),
+              ...(total != null ? { total } : {}),
               ...(reread ? { reread: true } : {}),
             },
           };

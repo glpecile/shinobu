@@ -135,7 +135,8 @@ export function getBookEntry(
         statusId: row.status_id,
         openRead: open == null ? null : { id: open.id, progressPages: open.progress_pages ?? 0 },
         finishedOn: row.user_book_reads.flatMap((read) => read.finished_at ?? []),
-        pages: open?.edition?.pages ?? row.edition?.pages ?? row.book?.pages ?? null,
+        // 0 pages is an unknown count, so the next source answers.
+        pages: open?.edition?.pages || row.edition?.pages || row.book?.pages || null,
         bare:
           row.user_book_reads.length === 0 &&
           row.rating == null &&
