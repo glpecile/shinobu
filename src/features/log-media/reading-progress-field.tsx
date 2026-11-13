@@ -41,7 +41,9 @@ export function ReadingProgressField({ value, onChange, pending }: {
   return (
     <View className={cn('mt-5', pending && 'opacity-50')}>
       <View className="flex-row items-center justify-between">
+        {/* The switch carries the label for screen readers. */}
         <Text
+          accessible={false}
           className="text-foreground font-sans-semibold text-sm"
           disabled={pending}
           onPress={() => setFinished(!value.finished)}
