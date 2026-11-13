@@ -21,7 +21,7 @@ export function readingTitle(reading: ReadingProgress): string {
   return reading.reread === true ? 'Start reread' : 'Start reading';
 }
 
-/** The page field's cap when Hardcover has no page count: the five digits it accepts. */
+/** The page field's cap when Hardcover has no page count. */
 const LAST_PAGE = 99999;
 
 /**
@@ -67,7 +67,7 @@ export function ReadingProgressField({ value, onChange, pending }: {
           forwardLabel="Next page"
           label="Page"
           note={value.total == null ? undefined : `Of ${value.total} pages.`}
-          onChangeText={(text) => setPage(Number(text.replace(/\D/g, '').slice(0, 5)))}
+          onChangeText={(text) => setPage(Number(text.replace(/\D/g, '')))}
           onStep={(by) => setPage(value.page + by)}
           pending={pending}
           value={String(value.page)}
