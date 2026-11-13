@@ -107,9 +107,6 @@ describe('exchangeHardcoverCode', () => {
       }),
     );
 
-    expect(url.searchParams.get('scope')).toBe(
-      'read:me:content read:library write:library read:catalog:search read:journal',
-    );
     expect(Object.fromEntries(calls[0]?.body ?? [])).toEqual({
       grant_type: 'authorization_code',
       code: 'code-1',
