@@ -44,10 +44,9 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
         disabled={!known && !failed}
         icon={<Button.Icon name={failed ? 'refresh' : reread ? 'eye' : 'eye-outline'} />}
         label={failed ? 'Couldn’t load your progress' : action}
-        // Also through a refetch: until it lands, the cached entry can name a
-        // page or status that the last log changed.
-        loading={entry.isFetching || busy}
-        morphLabel
+        // A background refetch keeps the label. `busy` covers the refetch a
+        // log starts, which the confirm sheet tracks with the write.
+        loading={(!known && entry.isFetching) || busy}
         onPress={() => {
           if (failed) {
             void entry.refetch();
