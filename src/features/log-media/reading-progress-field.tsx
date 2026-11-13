@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
+import { Collapse } from '@/components/collapse';
 import { NativeSwitch } from '@/components/native-switch';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
@@ -35,21 +36,28 @@ export function ReadingProgressField({ value, onChange, pending }: {
   pending: boolean;
 }) {
   const input = useRef<TextInputInstance>(null);
-  const bounds = value.total == null ? 'The page you reached.' : `Page 0 to ${value.total}.`;
+  const bounds = value.total == null ? undefined : `Of ${value.total} pages.`;
+  const setFinished = (finished: boolean) => onChange({ ...value, finished });
 
   return (
-    <View className={cn('mt-5 gap-3', pending && 'opacity-50')}>
+    <View className={cn('mt-5', pending && 'opacity-50')}>
       <View className="flex-row items-center justify-between">
-        <Text className="text-foreground font-sans-semibold text-sm">Finished the book</Text>
+        <Text
+          className="text-foreground font-sans-semibold text-sm"
+          disabled={pending}
+          onPress={() => setFinished(!value.finished)}
+        >
+          Finished the book
+        </Text>
         <NativeSwitch
           accessibilityLabel="Finished the book"
           disabled={pending}
-          onValueChange={(finished) => onChange({ ...value, finished })}
+          onValueChange={setFinished}
           value={value.finished}
         />
       </View>
-      {!value.finished && (
-        <View className="gap-2">
+      <Collapse open={!value.finished}>
+        <View className="gap-2 pt-3">
           <Text
             className="text-foreground font-sans-semibold text-sm"
             onPress={() => input.current?.focus()}
@@ -70,9 +78,9 @@ export function ReadingProgressField({ value, onChange, pending }: {
             selectTextOnFocus
             value={value.page === 0 ? '' : String(value.page)}
           />
-          <Text className="text-muted font-sans text-xs">{bounds}</Text>
+          {bounds != null && <Text className="text-muted font-sans text-xs">{bounds}</Text>}
         </View>
-      )}
+      </Collapse>
     </View>
   );
 }
