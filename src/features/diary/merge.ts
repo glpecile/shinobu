@@ -359,7 +359,11 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
   const episodes = [
     ...new Set(contributors.flatMap((entry) => entry.episodes ?? [])),
   ].sort((a, b) => a - b);
-  const season = contributors.find((entry) => entry.season != null)?.season;
+  // A season numbers the primary's show only when their ids agree: a bridged
+  // Serializd S2E3 is not season 2 of the cour Simkl files as its own show.
+  const season = contributors.find(
+    (entry) => entry.season != null && !idsDisagree(primary.item, entry.item),
+  )?.season;
   const newest = contributors.reduce((a, b) => (entryMs(b) > entryMs(a) ? b : a));
 
   return {

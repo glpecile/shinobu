@@ -690,6 +690,8 @@ describe('Simkl diary in the unified merge', () => {
 
     expect(day.entries).toHaveLength(1);
     expect(day.entries[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
+    // Serializd's season 2 would send the row to S2E3 of Simkl's own show.
+    expect(day.entries[0].season).toBeUndefined();
     expect(summarizeDay(day.entries).label).toBe('1 episode of 1 show');
   });
 
