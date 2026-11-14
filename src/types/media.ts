@@ -181,6 +181,8 @@ export interface NormalizedCrewMember {
   tmdbId?: number;
   /** See NormalizedCastMember.anilistId. */
   anilistId?: number;
+  /** Hardcover author id, for a book's credits. */
+  hardcoverId?: number;
 }
 
 /** A character in print (AniList manga, Hardcover books), which has no voice actors to credit. */
@@ -203,6 +205,9 @@ export interface NormalizedCharacter {
 export interface NormalizedPerson {
   tmdbId?: number;
   anilistId?: number;
+  hardcoverId?: number;
+  /** The author's page on hardcover.app is keyed by slug. */
+  hardcoverSlug?: string;
   name: string;
   /** Display headshot URL; '' when unavailable — render an initials fallback. */
   headshot: string;

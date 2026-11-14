@@ -8,12 +8,14 @@ import {
   type ProviderError,
 } from '@/lib/providers/errors';
 import { optionalNullable } from '@/lib/providers/schema';
+import type { NormalizedPersonDetails } from '@/lib/providers/tmdb/normalize';
 import { Provider } from '@/lib/providers/types';
 import type {
   NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedDiaryEntry,
   NormalizedMediaItem,
+  PersonCreditRow,
 } from '@/types/media';
 import type { HardcoverDeps } from './deps';
 import { hardcoverRequest } from './http';
@@ -394,7 +396,13 @@ export const getBook = Effect.fnUntraced(function* (
     const job = contribution || 'Author';
     const existing = authors.get(author.id);
     if (existing == null) {
-      authors.set(author.id, { id: `hardcover-person-${author.id}`, name: author.name, job, headshot: author.image?.url ?? '' });
+      authors.set(author.id, {
+        id: `hardcover-person-${author.id}`,
+        name: author.name,
+        job,
+        headshot: author.image?.url ?? '',
+        hardcoverId: author.id,
+      });
     } else if (!existing.job.split(', ').includes(job)) {
       authors.set(author.id, { ...existing, job: `${existing.job}, ${job}` });
     }
@@ -417,6 +425,95 @@ export const getBook = Effect.fnUntraced(function* (
     ...(series?.series != null
       ? { series: { name: series.series.name, ...(series.position != null ? { position: series.position } : {}) } }
       : {}),
+  };
+});
+
+/** Hasura sends `date` as `YYYY-MM-DD`. */
+const calendarDate = optionalNullable(Schema.String);
+
+const authorData = Schema.Struct({
+  authors_by_pk: optionalNullable(Schema.Struct({
+    id: Schema.Number,
+    name: Schema.String,
+    slug: optionalNullable(Schema.String),
+    bio: optionalNullable(Schema.String),
+    born_date: calendarDate,
+    death_date: calendarDate,
+    location: optionalNullable(Schema.String),
+    image: hardcoverBookFields.image,
+  })),
+  books: Schema.Array(Schema.Struct({
+    ...hardcoverBookFields,
+    contributions: Schema.Array(Schema.Struct({ contribution: optionalNullable(Schema.String) })),
+  })),
+});
+
+/** Enough for a long bibliography; a prolific author's tail is on hardcover.app. */
+const AUTHOR_BOOKS_LIMIT = 100;
+
+/**
+ * One author and their books, for `/person/hardcover/<id>`. Two top-level
+ * fields. Books are most read first, one row per role ("Author",
+ * "Narrator"), with the author's own row leading.
+ */
+export const getAuthor = Effect.fnUntraced(function* (
+  deps: HardcoverDeps,
+  authorId: number,
+): Effect.fn.Return<NormalizedPersonDetails, ProviderError> {
+  const data = yield* hardcoverRequest<unknown>(
+    deps,
+    `query Author($id: Int!, $limit: Int!) {
+      authors_by_pk(id: $id) { id name slug bio born_date death_date location image { url } }
+      books(
+        where: { book_status_id: { _eq: 1 }, contributions: { author_id: { _eq: $id } } }
+        order_by: [{ users_count: desc }, { id: asc }]
+        limit: $limit
+      ) {
+        id title description pages release_year rating ratings_count image { url }
+        contributions(where: { author_id: { _eq: $id } }) { contribution }
+      }
+    }`,
+    { variables: { id: authorId, limit: AUTHOR_BOOKS_LIMIT } },
+  ).pipe(Effect.flatMap(decode(authorData, 'invalid author response')));
+  const author = data.authors_by_pk;
+  if (author == null) {
+    return yield* new ProviderNetworkError({
+      provider,
+      status: 404,
+      retryable: false,
+      cause: new Error(`Hardcover has no author ${authorId}`),
+    });
+  }
+
+  const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
+  const rows = new Map<string, PersonCreditRow>([['Author', { role: 'Author', items: [], details: {}, roles: {} }]]);
+  for (const { contributions, ...book } of data.books) {
+    const item = normalizeHardcoverBook(book, nowIso);
+    // An empty role is the book's author, as on the book page.
+    for (const role of new Set(contributions.map(({ contribution }) => contribution || 'Author'))) {
+      let row = rows.get(role);
+      if (row == null) {
+        row = { role, items: [], details: {}, roles: {} };
+        rows.set(role, row);
+      }
+      row.items.push(item);
+    }
+  }
+  const image = author.image?.url ?? '';
+  const bio = author.bio?.trim() ?? '';
+  return {
+    person: {
+      hardcoverId: author.id,
+      ...(author.slug != null ? { hardcoverSlug: author.slug } : {}),
+      name: author.name,
+      headshot: image,
+      headshotFull: image,
+      ...(bio !== '' ? { biography: bio } : {}),
+      ...(author.born_date != null ? { birthday: author.born_date } : {}),
+      ...(author.death_date != null ? { deathday: author.death_date } : {}),
+      ...(author.location != null && author.location !== '' ? { birthplace: author.location } : {}),
+    },
+    rows: [...rows.values()].filter((row) => row.items.length > 0),
   };
 });
 

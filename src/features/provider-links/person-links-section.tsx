@@ -50,12 +50,18 @@ export function PersonLinksSection({
   // unconnected AniList renders no pill, so resolving its id would buy nothing.
   const staffId = useAniListStaffIdQuery({
     name: person.name,
-    enabled: enabled && connected.includes(Provider.AniList) && person.anilistId == null,
+    enabled:
+      enabled &&
+      connected.includes(Provider.AniList) &&
+      person.anilistId == null &&
+      person.hardcoverSlug == null,
   });
   const anilistId = person.anilistId ?? staffId.data ?? undefined;
 
+  // A Hardcover author is known by id, so a name-keyed link could open a namesake.
+  const providers = person.hardcoverSlug == null ? connected : [Provider.Hardcover];
   const links: ProviderLink[] = [];
-  for (const provider of connected) {
+  for (const provider of providers) {
     const url = providerPersonUrl(provider, {
       ...person,
       ...(anilistId != null ? { anilistId } : {}),

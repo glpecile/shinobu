@@ -94,6 +94,8 @@ export const routes = {
    * never lands on a namesake TMDB person.
    */
   anilistPerson: (anilistId: number) => `/person/anilist/${anilistId}` as const,
+  /** A Hardcover author by their own id, from a book's credits. */
+  hardcoverAuthor: (hardcoverId: number) => `/person/${Provider.Hardcover}/${hardcoverId}` as const,
   /** For credits without a TMDB or AniList person id: resolve by name. */
   personLookup: (name: string) =>
     `/person/lookup/${encodeURIComponent(name)}` as const,

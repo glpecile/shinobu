@@ -283,6 +283,10 @@ export function CreditTimeline({
     setFolded(next);
   };
 
+  // Print has no Movies or TV to narrow to, so an all-print page drops the format control.
+  const print = filmography.credits.every(
+    (credit) => credit.item.type === 'MANGA' || credit.item.type === 'BOOK',
+  );
   const counts = roleCounts(filmography, format);
   // A role the new format emptied falls back to every role, rather than
   // showing nothing under a chip that is no longer there.
@@ -345,7 +349,7 @@ export function CreditTimeline({
               <Section className="mt-2 mx-6">
                 <Section.Header>
                   <Section.Title>
-                    {filmography.credits.some((credit) => credit.item.type === 'MANGA')
+                    {filmography.credits.some((credit) => credit.item.type === 'MANGA' || credit.item.type === 'BOOK')
                       ? 'Works'
                       : 'Filmography'}
                   </Section.Title>
@@ -355,17 +359,19 @@ export function CreditTimeline({
                 </Section.Header>
               </Section>
               <MediaToolbar view={view}>
-                <NativeSegmentedControl
-                  accessibilityLabel="Format"
-                  className="w-64 shrink-0"
-                  onChange={(next) => {
-                    refocus();
-                    setFormat(next);
-                  }}
-                  options={FORMAT_OPTIONS}
-                  size="md"
-                  value={format}
-                />
+                {!print && (
+                  <NativeSegmentedControl
+                    accessibilityLabel="Format"
+                    className="w-64 shrink-0"
+                    onChange={(next) => {
+                      refocus();
+                      setFormat(next);
+                    }}
+                    options={FORMAT_OPTIONS}
+                    size="md"
+                    value={format}
+                  />
+                )}
                 {/* One role needs no picker. */}
                 {counts.length > 1 && (
                   <NativePickerMenu

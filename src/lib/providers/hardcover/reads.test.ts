@@ -8,7 +8,7 @@ mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
 }));
 
-const { getBook, searchBooks } = await import('./reads');
+const { getAuthor, getBook, searchBooks } = await import('./reads');
 
 function deps(data: unknown): HardcoverDeps {
   return {
@@ -62,5 +62,22 @@ describe('getBook', () => {
       ['Jocelyne Allen', 'Translator'],
     ]);
     expect(book.series).toEqual({ name: 'No Longer Human', position: 1.5 });
+  });
+});
+
+describe('getAuthor', () => {
+  test('books group by role with the author row first, and a book sits on a role once', async () => {
+    const author = await Effect.runPromise(getAuthor(deps({
+      authors_by_pk: { id: 1, name: 'Junji Ito', slug: 'junji-ito' },
+      books: [
+        { id: 10, title: 'Narrated', contributions: [{ contribution: 'Narrator' }] },
+        { id: 11, title: 'Written', contributions: [{ contribution: null }, { contribution: '' }] },
+      ],
+    }), 1));
+
+    expect(author.rows.map(({ role, items }) => [role, items.map((item) => item.id)])).toEqual([
+      ['Author', ['hardcover-11']],
+      ['Narrator', ['hardcover-10']],
+    ]);
   });
 });

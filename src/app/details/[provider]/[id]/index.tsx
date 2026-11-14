@@ -468,8 +468,8 @@ function MangaCreditsSections({ mediaId }: { mediaId: number }) {
 
 /**
  * A book's authors and characters, from the same Hardcover read as its
- * header. Both rails are display-only: a Hardcover author has no TMDB or
- * AniList id, and a name lookup could open a namesake.
+ * header. An author opens their Hardcover page by id, never a name lookup,
+ * which could open a namesake. Characters are display-only.
  */
 function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
@@ -484,6 +484,7 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
           role: member.job === 'Author' ? '' : member.job,
           kind: 'crew' as const,
           headshot: member.headshot,
+          ...(member.hardcoverId != null ? { hardcoverId: member.hardcoverId } : {}),
         }))}
       />
       <PeopleSection title="Characters" people={characterCredits(data.characters ?? [])} />

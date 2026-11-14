@@ -15,8 +15,10 @@ import {
 } from '@/features/person';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useSuspenseHardcoverAuthorQuery } from '@/state/queries/hardcover';
 import { useSuspenseAniListStaffQuery } from '@/state/queries/person-details';
 import { useSuspenseTmdbPersonQuery } from '@/state/queries/tmdb';
+import { SERVER_CONNECTED_PROVIDERS, useConnectedProviders } from '@/state/session';
 
 function PersonContent({ tmdbId }: { tmdbId: number }) {
   const { data } = useSuspenseTmdbPersonQuery({ tmdbId });
@@ -26,6 +28,48 @@ function PersonContent({ tmdbId }: { tmdbId: number }) {
 function AniListPersonContent({ anilistId }: { anilistId: number }) {
   const { data } = useSuspenseAniListStaffQuery({ id: anilistId });
   return <PersonDetailsView {...data} />;
+}
+
+function HardcoverAuthorDetails({ authorId }: { authorId: number }) {
+  const { data } = useSuspenseHardcoverAuthorQuery(authorId);
+  return <PersonDetailsView {...data} />;
+}
+
+/** Every Hardcover read needs the member's session, which the web prerender doesn't have. */
+function HardcoverAuthorContent({ authorId, onGoBack }: { authorId: number; onGoBack: () => void }) {
+  const connected = useConnectedProviders();
+  if (connected === SERVER_CONNECTED_PROVIDERS) return <PersonSkeleton />;
+  if (!connected.includes(Provider.Hardcover)) {
+    return (
+      <PersonNotFound
+        detail="Author pages open once Hardcover is connected in Settings."
+        onGoBack={onGoBack}
+      />
+    );
+  }
+  return <HardcoverAuthorDetails authorId={authorId} />;
+}
+
+function ProviderPersonContent({ provider, personId, onGoBack }: { provider: string; personId: number; onGoBack: () => void }) {
+  switch (provider) {
+    case Provider.AniList:
+      return <AniListPersonContent anilistId={personId} />;
+    case Provider.Hardcover:
+      return <HardcoverAuthorContent authorId={personId} onGoBack={onGoBack} />;
+    default:
+      return <PersonContent tmdbId={personId} />;
+  }
+}
+
+function personRoute(provider: string, personId: number) {
+  switch (provider) {
+    case Provider.AniList:
+      return routes.anilistPerson(personId);
+    case Provider.Hardcover:
+      return routes.hardcoverAuthor(personId);
+    default:
+      return routes.person(personId);
+  }
 }
 
 export default function PersonScreen() {
@@ -41,7 +85,11 @@ export default function PersonScreen() {
     }
   }
 
-  if ((provider !== 'tmdb' && provider !== Provider.AniList) || !Number.isSafeInteger(personId) || personId <= 0) {
+  if (
+    (provider !== 'tmdb' && provider !== Provider.AniList && provider !== Provider.Hardcover) ||
+    !Number.isSafeInteger(personId) ||
+    personId <= 0
+  ) {
     return (
       <PersonNotFound detail="This person page doesn't exist." onGoBack={goBack} />
     );
@@ -49,12 +97,8 @@ export default function PersonScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={provider === Provider.AniList ? routes.anilistPerson(personId) : routes.person(personId)} /></>}>
-        {provider === Provider.AniList ? (
-          <AniListPersonContent anilistId={personId} />
-        ) : (
-          <PersonContent tmdbId={personId} />
-        )}
+      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={personRoute(provider, personId)} /></>}>
+        <ProviderPersonContent onGoBack={goBack} personId={personId} provider={provider} />
       </Suspense>
       <FloatingBackButton onPress={goBack} />
     </ScrolledTitle>
