@@ -365,13 +365,18 @@ export function findByTvdbId(
   ).pipe(Effect.map((response) => response.tv_results?.[0]?.id ?? null));
 }
 
-/** IMDb `nm` id → TMDB person id, for an incoming `imdb.com/name/` link. Null when TMDB has no match. */
-export function findPersonByImdbId(
+/** The TMDB person behind an incoming `imdb.com/name/` link, or null when TMDB has no match. */
+export function getPersonByImdbId(
   deps: TmdbDeps,
   params: { imdbId: string },
-): Effect.Effect<number | null, ProviderError> {
+): Effect.Effect<NormalizedPersonDetails | null, ProviderError> {
   return tmdbRequest<TmdbFindResponse>(
     deps,
     `/find/${encodeURIComponent(params.imdbId)}?external_source=imdb_id`,
-  ).pipe(Effect.map((response) => response.person_results?.[0]?.id ?? null));
+  ).pipe(
+    Effect.flatMap((response) => {
+      const tmdbId = response.person_results?.[0]?.id;
+      return tmdbId == null ? Effect.succeed(null) : getPerson(deps, { tmdbId });
+    }),
+  );
 }
