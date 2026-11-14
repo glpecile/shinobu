@@ -222,7 +222,7 @@ export function ratingUrl(
  * resolved staff id (plan 0035 R12), supplied by the caller because resolving
  * it is a network read and this module is pure.
  */
-export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment'> & {
+export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment' | 'hardcoverId' | 'hardcoverSlug'> & {
   anilistId?: number;
 };
 
@@ -326,7 +326,8 @@ export function letterboxdStudioUrl(name: string): string | null {
  *
  * AniList needs `anilistId` on the person (plan 0035 R13) and returns null
  * without it — the resolution is a query, upstream of here, and a person nobody
- * could resolve gets **no pill**, never a search link.
+ * could resolve gets **no pill**, never a search link. Hardcover needs the
+ * author's slug.
  *
  * Same purity contract as `providerItemUrl` — pure string building, no
  * react-native import, so `scripts/check-external-urls.ts` keeps loading this
@@ -341,10 +342,13 @@ export function providerPersonUrl(
       return letterboxdPersonUrl(person);
     case Provider.AniList:
       return person.anilistId == null ? null : anilistStaffUrl(person.anilistId);
+    case Provider.Hardcover:
+      return person.hardcoverSlug == null
+        ? null
+        : `https://hardcover.app/authors/${encodeURIComponent(person.hardcoverSlug)}`;
     case Provider.Trakt:
     case Provider.Serializd:
     case Provider.Simkl:
-    case Provider.Hardcover:
       return null;
   }
 }

@@ -12,7 +12,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
-import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingBackButton, useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
@@ -32,6 +32,7 @@ import { DetailVariantsSection } from '@/features/detail-variants/detail-variant
 import { DiscussionSection } from '@/features/discussions/discussion-section';
 import {
   RecommendationsAndTagsSection,
+  SimilarBooksSection,
   RelationsSection,
 } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
@@ -468,8 +469,8 @@ function MangaCreditsSections({ mediaId }: { mediaId: number }) {
 
 /**
  * A book's authors and characters, from the same Hardcover read as its
- * header. Both rails are display-only: a Hardcover author has no TMDB or
- * AniList id, and a name lookup could open a namesake.
+ * header. An author opens their Hardcover page by id, never a name lookup,
+ * which could open a namesake. Characters are display-only.
  */
 function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
   const { data } = useSuspenseMediaDetailsQuery(item);
@@ -484,6 +485,7 @@ function BookCreditsSections({ item }: { item: NormalizedMediaItem }) {
           role: member.job === 'Author' ? '' : member.job,
           kind: 'crew' as const,
           headshot: member.headshot,
+          ...(member.hardcoverId != null ? { hardcoverId: member.hardcoverId } : {}),
         }))}
       />
       <PeopleSection title="Characters" people={characterCredits(data.characters ?? [])} />
@@ -509,12 +511,17 @@ function StudiosSkeleton() {
  * top-down (backdrop → poster → title → overview), so the screen reads as
  * filling in from the hero rather than flashing as one rectangle.
  */
-function DetailsSkeleton({ zoomPoster }: { zoomPoster?: string }) {
+function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdrop: boolean }) {
+  const backButtonClearance = useFloatingBackButtonClearance();
   return (
     <>
-      <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
+      {backdrop ? (
+        <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
+      ) : (
+        <View style={{ height: backButtonClearance }} />
+      )}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
+        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', !backdrop && 'mt-0')}>
           <View className="flex-1">
             <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
@@ -577,6 +584,7 @@ function DetailsScreen() {
   const backgroundVariable = useCSSVariable('--color-background');
   const background =
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
+  const backButtonClearance = useFloatingBackButtonClearance();
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
@@ -634,7 +642,8 @@ function DetailsScreen() {
   if (isLoading && item == null) {
     return (
       <>
-        <DetailsSkeleton zoomPoster={zoomPoster} />
+        {/* Only a book is known to have no backdrop before it loads. */}
+        <DetailsSkeleton backdrop={provider !== Provider.Hardcover} zoomPoster={zoomPoster} />
         <FloatingBackButton onPress={goBack} />
         {id !== '' && <FloatingShareButton href={routes.details(id, mediaType)} />}
       </>
@@ -759,37 +768,41 @@ function DetailsScreen() {
     );
   }
 
+  // A cover stretched to a backdrop crops to a blur of its title, so a book shows none.
+  const backdrop =
+    shown.type === 'BOOK'
+      ? null
+      : shown.backdropImage || artwork.backdropImage || shown.coverImage || artwork.coverImage;
+
   const header = (
     <>
-      <View className="h-80 relative">
-        <Image
-          source={{
-            uri:
-              shown.backdropImage ||
-              artwork.backdropImage ||
-              shown.coverImage ||
-              artwork.coverImage,
-          }}
-          className="w-full h-full"
-          contentFit="cover"
-        />
-        {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
-            fading from transparent-black to white passes through gray. */}
-        <LinearGradient
-          colors={[`${background}00`, background]}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 220,
-          }}
-        />
-      </View>
+      {backdrop == null ? (
+        <View style={{ height: backButtonClearance }} />
+      ) : (
+        <View className="h-80 relative">
+          <Image
+            source={{ uri: backdrop }}
+            className="w-full h-full"
+            contentFit="cover"
+          />
+          {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
+              fading from transparent-black to white passes through gray. */}
+          <LinearGradient
+            colors={[`${background}00`, background]}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 220,
+            }}
+          />
+        </View>
+      )}
 
       {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
+        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', backdrop == null && 'mt-0')}>
           <View className="flex-1">
             <Eyebrow>{shown.type}</Eyebrow>
             <ScrolledTitle.Anchor className="mt-1">
@@ -922,6 +935,7 @@ function DetailsScreen() {
       </SuspenseSection>
 
       <RecommendationsAndTagsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
+      <SimilarBooksSection item={item} onItemActions={openActions} resetKey={refreshCount} />
 
       <ReleaseTimeline item={shown} />
 

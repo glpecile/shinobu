@@ -98,8 +98,9 @@ function PersonCard({
 }
 
 /**
- * A rail of credit cards. Without `onCreditActions` the cards are display-only:
- * AniList characters, which have no person behind them to open.
+ * A rail of credit cards. Without `onCreditActions` there is no long-press
+ * sheet: a book's author opens their Hardcover page,
+ * and a character, which has no person behind it, is display-only.
  */
 export function PeopleSection({
   title,
@@ -132,9 +133,21 @@ export function PeopleSection({
           nestedScrollEnabled
           renderItem={({ item: credit }) =>
             onCreditActions == null ? (
-              <View className="w-24 mr-4 items-center">
-                <PersonCardContent credit={credit} />
-              </View>
+              credit.hardcoverId == null ? (
+                <View className="w-24 mr-4 items-center">
+                  <PersonCardContent credit={credit} />
+                </View>
+              ) : (
+                <View className="w-24 mr-4">
+                  <PresstableScale
+                    accessibilityLabel={credit.role === '' ? credit.name : `${credit.name} / ${credit.role}`}
+                    className="items-center"
+                    onPress={() => pushRoute(creditRoute(credit))}
+                  >
+                    <PersonCardContent credit={credit} />
+                  </PresstableScale>
+                </View>
+              )
             ) : (
               <PersonCard
                 credit={credit}

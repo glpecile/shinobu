@@ -37,6 +37,18 @@ screen resolves the slug with one equality-filtered `books` read, then loads
 the book by id. Every Hardcover read needs a session, so without one the link
 shows "Not found", the Settings button, and the original page.
 
+## Person links
+
+`hardcover.app/authors/{slug}` routes to `/person/hardcover/authors-{slug}`,
+with the same prefix as `books-{slug}`, because a slug can be all digits. The
+author read filters `authors` and the books' `contributions` on the slug, so
+it needs no separate id lookup. It needs a session too. On web, the prerender
+has none, so the page waits for hydration before it reads.
+
+`imdb.com/name/{nm id}` routes to `/person/imdb/{nm id}`. TMDB
+`/find?external_source=imdb_id` gives the person id, and the TMDB person page
+renders in place. Without a TMDB token, the link shows "Not found".
+
 ## Avoid link loops
 
 Inbound links go through `+native-intent`. Outbound View on buttons and the

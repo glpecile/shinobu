@@ -24,10 +24,11 @@ export function creditRoleLine(credit: {
   return credit.kind === 'cast' ? `as ${credit.role}` : credit.role;
 }
 
-/** Where a credit opens: TMDB's person, else AniList's, else a name search. */
-export function creditRoute(credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anilistId'>) {
+/** Where a credit opens: TMDB's person, else AniList's, else Hardcover's author, else a name search. */
+export function creditRoute(credit: Pick<PersonCredit, 'name' | 'tmdbId' | 'anilistId' | 'hardcoverId'>) {
   if (credit.tmdbId != null) return routes.person(credit.tmdbId);
   if (credit.anilistId != null) return routes.anilistPerson(credit.anilistId);
+  if (credit.hardcoverId != null) return routes.hardcoverAuthor(credit.hardcoverId);
   return routes.personLookup(credit.name);
 }
 
@@ -48,6 +49,8 @@ export interface PersonCredit {
   tmdbId?: number;
   /** AniList staff id, for AniList people. */
   anilistId?: number;
+  /** Hardcover author id, for a book's authors. */
+  hardcoverId?: number;
 }
 
 /**

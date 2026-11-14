@@ -7,6 +7,8 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SuspenseSection } from '@/components/suspense-section';
 import { Provider } from '@/lib/providers/types';
 import { useSuspenseAniListRelationsQuery } from '@/state/queries/anilist';
+import { useSuspenseHardcoverBooksQuery } from '@/state/queries/hardcover';
+import { useSuspenseMediaDetailsQuery } from '@/state/queries/media-details';
 import type { MediaType, NormalizedMediaItem } from '@/types/media';
 
 /** Pulls the carousel's own `px-4` header and 16px card gutter out to the column's `px-6`. */
@@ -64,6 +66,32 @@ function RecommendationsAndTags({ mediaId, type, onItemActions }: { mediaId: num
   );
 }
 
+/** Hardcover ranks up to 100; the rail shows the closest. */
+const SIMILAR_BOOKS_LIMIT = 20;
+
+function SimilarBooksCarousel({ ids, onItemActions }: { ids: readonly number[]; onItemActions: (item: NormalizedMediaItem) => void }) {
+  const { data } = useSuspenseHardcoverBooksQuery(ids);
+  if (data.length === 0) return null;
+  return (
+    <View className={ALIGN_TO_COLUMN}>
+      <MediaCarousel
+        collapseKey="details-similar-books"
+        items={data}
+        onItemActions={onItemActions}
+        leading={<ProviderIcon id={Provider.Hardcover} size={16} />}
+        title="Similar books"
+      />
+    </View>
+  );
+}
+
+function SimilarBooks({ item, onItemActions }: { item: NormalizedMediaItem; onItemActions: (item: NormalizedMediaItem) => void }) {
+  const { data } = useSuspenseMediaDetailsQuery(item);
+  const ids = data.similarBookIds?.slice(0, SIMILAR_BOOKS_LIMIT) ?? [];
+  if (ids.length === 0) return null;
+  return <SimilarBooksCarousel ids={ids} onItemActions={onItemActions} />;
+}
+
 function CarouselSkeleton() {
   return (
     <View className="mt-8">
@@ -117,6 +145,27 @@ export function RecommendationsAndTagsSection({
   return (
     <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
       <RecommendationsAndTags mediaId={item.externalIds.anilist} onItemActions={onItemActions} type={item.type} />
+    </SuspenseSection>
+  );
+}
+
+/**
+ * Hardcover's "Similar books" for a book. The ids ride the book read the
+ * credits already make, so the rail costs one request for the books.
+ */
+export function SimilarBooksSection({
+  item,
+  resetKey,
+  onItemActions,
+}: {
+  item: NormalizedMediaItem;
+  resetKey?: unknown;
+  onItemActions: (item: NormalizedMediaItem) => void;
+}) {
+  if (item.externalIds.hardcover == null) return null;
+  return (
+    <SuspenseSection fallback={<CarouselSkeleton />} resetKey={resetKey}>
+      <SimilarBooks item={item} onItemActions={onItemActions} />
     </SuspenseSection>
   );
 }

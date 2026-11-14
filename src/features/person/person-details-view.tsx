@@ -22,6 +22,7 @@ import type { NormalizedPersonDetails } from '@/lib/providers/tmdb/normalize';
 import { routes } from '@/lib/routes';
 
 import { personMetaLine } from './meta-line';
+import { creditRoute } from './person-credit-sheet';
 
 // Identity, biography, then controls. Only the static header staggers, not virtualized credits.
 const personEntering = [0, 40, 80].map((delay) =>
@@ -117,9 +118,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
       />
       <ScrolledTitle.Bar title={person.name} trailingAction />
-      <FloatingShareButton href={person.anilistId != null
-        ? routes.anilistPerson(person.anilistId)
-        : person.tmdbId != null ? routes.person(person.tmdbId) : routes.personLookup(person.name)} />
+      <FloatingShareButton href={creditRoute(person)} />
       <CardActionsSheet {...sheetProps} />
     </>
   );

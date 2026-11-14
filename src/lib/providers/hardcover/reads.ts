@@ -8,17 +8,20 @@ import {
   type ProviderError,
 } from '@/lib/providers/errors';
 import { optionalNullable } from '@/lib/providers/schema';
+import type { NormalizedPersonDetails } from '@/lib/providers/tmdb/normalize';
 import { Provider } from '@/lib/providers/types';
 import type {
   NormalizedCharacter,
   NormalizedCrewMember,
   NormalizedDiaryEntry,
   NormalizedMediaItem,
+  PersonCreditRow,
 } from '@/types/media';
 import type { HardcoverDeps } from './deps';
 import { hardcoverRequest } from './http';
 import {
   HARDCOVER_READING_EVENTS,
+  HardcoverBook,
   hardcoverBookFields,
   HardcoverJournalRow,
   HardcoverLibraryRow,
@@ -335,6 +338,7 @@ const bookData = Schema.Struct({
         name: Schema.String,
       })),
     }))),
+    cached_similar_book_ids: optionalNullable(Schema.Array(numeric)),
   })),
 });
 
@@ -350,6 +354,8 @@ export interface HardcoverBookDetails {
   authors: NormalizedCrewMember[];
   characters: NormalizedCharacter[];
   series?: HardcoverBookSeries;
+  /** Hardcover's "Similar books", most similar first. Empty until hardcover.app builds the list. */
+  similarBookIds: readonly number[];
 }
 
 /**
@@ -373,6 +379,7 @@ export const getBook = Effect.fnUntraced(function* (
           only_mentioned
           character { id name }
         }
+        cached_similar_book_ids
       }
     }`,
     { variables: { id: bookId } },
@@ -394,7 +401,13 @@ export const getBook = Effect.fnUntraced(function* (
     const job = contribution || 'Author';
     const existing = authors.get(author.id);
     if (existing == null) {
-      authors.set(author.id, { id: `hardcover-person-${author.id}`, name: author.name, job, headshot: author.image?.url ?? '' });
+      authors.set(author.id, {
+        id: `hardcover-person-${author.id}`,
+        name: author.name,
+        job,
+        headshot: author.image?.url ?? '',
+        hardcoverId: author.id,
+      });
     } else if (!existing.job.split(', ').includes(job)) {
       authors.set(author.id, { ...existing, job: `${existing.job}, ${job}` });
     }
@@ -417,6 +430,123 @@ export const getBook = Effect.fnUntraced(function* (
     ...(series?.series != null
       ? { series: { name: series.series.name, ...(series.position != null ? { position: series.position } : {}) } }
       : {}),
+    similarBookIds: book.cached_similar_book_ids ?? [],
+  };
+});
+
+const booksData = Schema.Struct({ books: Schema.Array(HardcoverBook) });
+
+/** Canonical books by id (status 1, as on an author page), in the order of `ids`. Any other id is skipped. One top-level field. */
+export const getBooks = Effect.fnUntraced(function* (
+  deps: HardcoverDeps,
+  ids: readonly number[],
+): Effect.fn.Return<NormalizedMediaItem[], ProviderError> {
+  const data = yield* hardcoverRequest<unknown>(
+    deps,
+    `query Books($ids: [Int!]!) {
+      books(where: { id: { _in: $ids }, book_status_id: { _eq: 1 } }) {
+        id title description pages release_year rating ratings_count image { url }
+      }
+    }`,
+    { variables: { ids } },
+  ).pipe(Effect.flatMap(decode(booksData, 'invalid books response')));
+  const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
+  const byId = new Map(data.books.map((book) => [book.id, book]));
+  return ids.flatMap((id) => {
+    const book = byId.get(id);
+    return book == null ? [] : [normalizeHardcoverBook(book, nowIso)];
+  });
+});
+
+const authorData = Schema.Struct({
+  authors: Schema.Array(Schema.Struct({
+    id: Schema.Number,
+    name: Schema.String,
+    slug: optionalNullable(Schema.String),
+    bio: optionalNullable(Schema.String),
+    born_date: optionalNullable(Schema.String),
+    death_date: optionalNullable(Schema.String),
+    location: optionalNullable(Schema.String),
+    image: hardcoverBookFields.image,
+  })),
+  books: Schema.Array(Schema.Struct({
+    ...hardcoverBookFields,
+    contributions: Schema.Array(Schema.Struct({ contribution: optionalNullable(Schema.String) })),
+  })),
+});
+
+/** Enough for a long bibliography; a prolific author's tail is on hardcover.app. */
+const AUTHOR_BOOKS_LIMIT = 100;
+
+/** An author by id, or by the slug in a `hardcover.app/authors/{slug}` link. */
+export type HardcoverAuthorKey = { id: number } | { slug: string };
+
+/**
+ * One author and their books, for `/person/hardcover/<id>`. Two top-level
+ * fields. Books are most read first, one row per role ("Author",
+ * "Narrator"), with the author's own row leading.
+ */
+export const getAuthor = Effect.fnUntraced(function* (
+  deps: HardcoverDeps,
+  key: HardcoverAuthorKey,
+): Effect.fn.Return<NormalizedPersonDetails, ProviderError> {
+  const data = yield* hardcoverRequest<unknown>(
+    deps,
+    `query Author($author: authors_bool_exp!, $limit: Int!) {
+      authors(where: $author, limit: 1) { id name slug bio born_date death_date location image { url } }
+      books(
+        where: { book_status_id: { _eq: 1 }, contributions: { author: $author } }
+        order_by: [{ users_count: desc }, { id: asc }]
+        limit: $limit
+      ) {
+        id title description pages release_year rating ratings_count image { url }
+        contributions(where: { author: $author }) { contribution }
+      }
+    }`,
+    {
+      variables: {
+        // Slugs are unique, so either filter matches one author.
+        author: 'id' in key ? { id: { _eq: key.id } } : { slug: { _eq: key.slug } },
+        limit: AUTHOR_BOOKS_LIMIT,
+      },
+    },
+  ).pipe(Effect.flatMap(decode(authorData, 'invalid author response')));
+  const author = data.authors[0];
+  if (author == null) {
+    return yield* new ProviderNetworkError({
+      provider,
+      status: 404,
+      retryable: false,
+      cause: new Error(`Hardcover has no author ${'id' in key ? key.id : key.slug}`),
+    });
+  }
+
+  const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
+  const rows = new Map<string, PersonCreditRow>([['Author', { role: 'Author', items: [], details: {}, roles: {} }]]);
+  for (const { contributions, ...book } of data.books) {
+    const item = normalizeHardcoverBook(book, nowIso);
+    // An empty role is the book's author, as on the book page.
+    for (const role of new Set(contributions.map(({ contribution }) => contribution || 'Author'))) {
+      const row = rows.get(role) ?? { role, items: [], details: {}, roles: {} };
+      row.items.push(item);
+      rows.set(role, row);
+    }
+  }
+  const image = author.image?.url ?? '';
+  const bio = author.bio?.trim() ?? '';
+  return {
+    person: {
+      hardcoverId: author.id,
+      ...(author.slug != null ? { hardcoverSlug: author.slug } : {}),
+      name: author.name,
+      headshot: image,
+      headshotFull: image,
+      ...(bio !== '' ? { biography: bio } : {}),
+      ...(author.born_date != null ? { birthday: author.born_date } : {}),
+      ...(author.death_date != null ? { deathday: author.death_date } : {}),
+      ...(author.location != null && author.location !== '' ? { birthplace: author.location } : {}),
+    },
+    rows: [...rows.values()].filter((row) => row.items.length > 0),
   };
 });
 

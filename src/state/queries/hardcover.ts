@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, type QueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -9,12 +9,15 @@ import {
 import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
 import type { HardcoverLibraryEntry } from '@/lib/providers/hardcover/normalize';
 import {
+  getAuthor,
   getBookEntry,
   getBookIdBySlug,
+  getBooks,
   getLibrary,
   getViewer,
   HardcoverStatus,
   searchBooks,
+  type HardcoverAuthorKey,
   type HardcoverBookHit,
 } from '@/lib/providers/hardcover/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -91,7 +94,32 @@ export const hardcoverQueryKeys = {
   searchRoot: () => [...hardcoverQueryKeys.all, 'search'] as const,
   search: (query: string) => [...hardcoverQueryKeys.searchRoot(), query] as const,
   bookSlug: (slug: string) => [...hardcoverQueryKeys.all, 'book-slug', slug] as const,
+  books: (ids: readonly number[]) => [...hardcoverQueryKeys.all, 'books', ids] as const,
+  author: (key: HardcoverAuthorKey) => [...hardcoverQueryKeys.all, 'author', key] as const,
 };
+
+/** Catalog records change rarely, and each read costs the per-token budget. */
+const CATALOG_STALE_MS = 24 * 60 * 60_000;
+
+/** Books by id, in the order given. */
+export function useSuspenseHardcoverBooksQuery(ids: readonly number[]) {
+  return useSuspenseQuery({
+    queryKey: hardcoverQueryKeys.books(ids),
+    queryFn: ({ signal }) => Effect.runPromise(getBooks(hardcoverDeps(), ids), { signal }),
+    staleTime: CATALOG_STALE_MS,
+    gcTime: CATALOG_STALE_MS,
+  });
+}
+
+/** `/person/hardcover/<id>`: an author and their books. */
+export function useSuspenseHardcoverAuthorQuery(key: HardcoverAuthorKey) {
+  return useSuspenseQuery({
+    queryKey: hardcoverQueryKeys.author(key),
+    queryFn: ({ signal }) => Effect.runPromise(getAuthor(hardcoverDeps(), key), { signal }),
+    staleTime: CATALOG_STALE_MS,
+    gcTime: CATALOG_STALE_MS,
+  });
+}
 
 /** The viewer's library entry for one book: its status, the read in progress and the page count. */
 export function hardcoverBookEntryQuery(bookId: number) {

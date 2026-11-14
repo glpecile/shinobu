@@ -1,6 +1,6 @@
 import { routes } from '@/lib/routes';
 
-/** Only media pages, never provider sign-in, profiles, reviews or list pages. */
+/** Only media and person pages, never provider sign-in, profiles, reviews or list pages. */
 export function mediaLinkRoute(path: string): string | null {
   try {
     let url = new URL(path);
@@ -16,6 +16,8 @@ export function mediaLinkRoute(path: string): string | null {
       return slug == null ? null : routes.details(`letterboxd-${slug}`);
     }
     if (host === 'imdb.com' || host === 'm.imdb.com') {
+      const person = /^\/name\/(nm[0-9]+)\/?$/.exec(url.pathname)?.[1];
+      if (person != null) return routes.imdbPerson(person);
       const imdb = /^\/title\/(tt[0-9]+)\/?$/.exec(url.pathname)?.[1];
       return imdb == null ? null : routes.details(`imdb-${imdb}`);
     }
@@ -25,6 +27,8 @@ export function mediaLinkRoute(path: string): string | null {
       return routes.details(`anilist-${id}`, url.pathname.startsWith('/manga/') ? 'MANGA' : undefined);
     }
     if (host === 'hardcover.app') {
+      const author = /^\/authors\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/.exec(url.pathname)?.[1];
+      if (author != null) return routes.hardcoverAuthorBySlug(author);
       const slug = /^\/books\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/.exec(url.pathname)?.[1];
       return slug == null ? null : routes.details(`hardcover-books-${slug}`);
     }
