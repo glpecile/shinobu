@@ -666,6 +666,35 @@ describe('Simkl diary in the unified merge', () => {
     expect(rows[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
   });
 
+  test('an AniList cour with its show TMDB id folds a Simkl row and a Serializd row seated before it', () => {
+    // Live ids: Simkl files Edgerunners II under its own TMDB id, Serializd
+    // under the show's, and ani.zip gives the AniList cour the show's.
+    const simkl = entry('simkl', '2830474-s1e3', '2026-11-14T04:05:02.000Z', {
+      episodes: [3],
+      item: item({ id: 'simkl-2830474', title: 'Cyberpunk: Edgerunners II', type: 'ANIME', externalIds: { simkl: 2830474, tmdb: 326788, anilist: 195539 } }),
+    });
+    const serializd = entry('serializd', 's3', '2026-11-14T04:05:01.000Z', {
+      episodes: [3],
+      season: 2,
+      item: item({ id: 'serializd-105248', title: 'Cyberpunk: Edgerunners', type: 'TV', externalIds: { tmdb: 105248 } }),
+    });
+    const anilist = entry('anilist', 'a3', '2026-11-14T04:05:00.000Z', {
+      episodes: [3],
+      item: item({ id: 'anilist-195539', title: 'Cyberpunk: Edgerunners 2', type: 'ANIME', externalIds: { anilist: 195539, tmdb: 105248 } }),
+    });
+
+    const [day] = groupDiaryEntries(
+      mergeDiaryEntries([state('simkl', [simkl]), state('serializd', [serializd]), state('anilist', [anilist])]),
+      TZ_MINUS_5,
+    );
+
+    expect(day.entries).toHaveLength(1);
+    expect(day.entries[0].providers).toEqual(['simkl', 'serializd', 'anilist']);
+    // Serializd's season 2 would send the row to S2E3 of Simkl's own show.
+    expect(day.entries[0].season).toBeUndefined();
+    expect(summarizeDay(day.entries).label).toBe('1 episode of 1 show');
+  });
+
   test('an anime film joins a Letterboxd log of it through its English title', () => {
     // Live data: neither Simkl, AniList, nor ani.zip has a TMDB id for Housenka.
     const simkl = entry('simkl', 'm2', '2026-11-11T22:04:00.000Z', {

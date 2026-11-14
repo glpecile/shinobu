@@ -359,7 +359,11 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
   const episodes = [
     ...new Set(contributors.flatMap((entry) => entry.episodes ?? [])),
   ].sort((a, b) => a - b);
-  const season = contributors.find((entry) => entry.season != null)?.season;
+  // A season numbers the primary's show only when their ids agree: a bridged
+  // Serializd S2E3 is not season 2 of the cour Simkl files as its own show.
+  const season = contributors.find(
+    (entry) => entry.season != null && !idsDisagree(primary.item, entry.item),
+  )?.season;
   const newest = contributors.reduce((a, b) => (entryMs(b) > entryMs(a) ? b : a));
 
   return {
@@ -389,7 +393,7 @@ function sortMergedDesc(merged: MergedDiaryEntry[]): MergedDiaryEntry[] {
 }
 
 function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
-  const buckets: CollapseBucket[] = [];
+  const buckets: Array<CollapseBucket | null> = [];
   // `episodesKey + identity` → indices of the buckets holding that identity.
   // A joining entry indexes all its keys, so an id-rich contributor (Simkl)
   // bridges id-poor ones; candidates are looked up, not scanned bucket by bucket.
@@ -412,28 +416,42 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
     // are processed newest-first deterministically and a bridge contributor
     // extends the bucket's reach.
     // The earliest-created matching bucket wins, as a front-to-back scan would.
-    let match = -1;
+    const matches = new Set<number>();
     for (const identity of identities) {
       for (const index of byIdentity.get(`${key}\u0000${identity}`) ?? []) {
+        const bucket = buckets[index];
         if (
-          (match === -1 || index < match) &&
-          !buckets[index].providers.has(entry.provider) &&
-          !(identity.startsWith('name:') && buckets[index].entries.some((other) => idsDisagree(entry.item, other.item)))
+          bucket != null &&
+          !bucket.providers.has(entry.provider) &&
+          !(identity.startsWith('name:') && bucket.entries.some((other) => idsDisagree(entry.item, other.item)))
         ) {
-          match = index;
+          matches.add(index);
         }
       }
     }
-    if (match !== -1) {
-      buckets[match].entries.push(entry);
-      buckets[match].providers.add(entry.provider);
+    const [match, ...bridged] = [...matches].sort((a, b) => a - b);
+    const target = match == null ? undefined : buckets[match];
+    if (match != null && target != null) {
+      target.entries.push(entry);
+      target.providers.add(entry.provider);
       indexBucket(match, key, identities);
+      // An id-rich entry can bridge two buckets that share no id (an AniList
+      // cour carries the TMDB show id Serializd logs under, and the AniList id
+      // Simkl logs under). They fold when no provider logged into both.
+      for (const index of bridged) {
+        const other = buckets[index];
+        if (other == null || [...other.providers].some((provider) => target.providers.has(provider))) continue;
+        target.entries.push(...other.entries);
+        for (const provider of other.providers) target.providers.add(provider);
+        indexBucket(match, key, other.entries.flatMap((joined) => [...identityKeys(joined.item), ...filmNameKeys(joined.item)]));
+        buckets[index] = null;
+      }
     } else {
       buckets.push({ providers: new Set([entry.provider]), entries: [entry] });
       indexBucket(buckets.length - 1, key, identities);
     }
   }
-  return sortMergedDesc(buckets.map(toMerged));
+  return sortMergedDesc(buckets.filter((bucket) => bucket != null).map(toMerged));
 }
 
 /**

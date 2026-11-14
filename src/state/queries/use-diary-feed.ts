@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -9,6 +10,7 @@ import * as Effect from 'effect/Effect';
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
 import { getReadingJournal } from '@/lib/providers/hardcover/reads';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
+import { aniZipTmdbKind } from '@/lib/providers/mapping/anizip';
 import {
   getSerializdDiary,
   serializdNextPage,
@@ -33,6 +35,7 @@ import {
   type DiarySlice,
 } from './diary-pages';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
+import { cachedAniZipIds } from './mapping';
 import { serializdDeps } from './serializd';
 import type { ProviderFailure } from './settle';
 import { simklLibraryQuery, simklQueryKeys } from './simkl';
@@ -85,6 +88,59 @@ async function fetchAniListActivityPage(
     getListActivity(deps, { viewerId: viewer.id, page, perPage: PAGE_SIZE, mediaId }),
     { signal },
   );
+}
+
+/** ani.zip lookups are cached forever, so this only bounds the cold burst. */
+const MAPPING_CONCURRENCY = 4;
+
+/**
+ * The AniList ids of the series logs that state no TMDB id. AniList files a
+ * sequel cour as its own entry, so without its show's TMDB id the cour's
+ * "Ep 3" never collapses with the Serializd or Trakt log of S2E3.
+ */
+function unbridgedAniListIds(entries: readonly NormalizedDiaryEntry[]): number[] {
+  const ids = new Set<number>();
+  for (const { provider, item } of entries) {
+    const { anilist, tmdb } = item.externalIds;
+    if (provider === Provider.AniList && item.type === 'ANIME' && item.isFilm !== true && tmdb == null && anilist != null) {
+      ids.add(anilist);
+    }
+  }
+  return [...ids].sort((a, b) => a - b);
+}
+
+/** AniList id → its show's TMDB id, from ani.zip, for ids that state a TV id. */
+async function showTmdbIds(
+  queryClient: QueryClient,
+  anilistIds: readonly number[],
+): Promise<Record<number, number>> {
+  const found: Record<number, number> = {};
+  await Effect.runPromise(
+    Effect.forEach(
+      anilistIds,
+      (anilistId) =>
+        Effect.promise(async () => {
+          const ids = await cachedAniZipIds(queryClient, { anilistId });
+          if (ids?.tmdb != null && aniZipTmdbKind(ids) === 'tv') found[anilistId] = ids.tmdb;
+        }),
+      { concurrency: MAPPING_CONCURRENCY, discard: true },
+    ),
+  );
+  return found;
+}
+
+function withShowTmdbIds(
+  entries: NormalizedDiaryEntry[],
+  tmdbByAniList: Record<number, number> | undefined,
+): NormalizedDiaryEntry[] {
+  if (tmdbByAniList == null) return entries;
+  return entries.map((entry) => {
+    const { anilist, tmdb } = entry.item.externalIds;
+    const showTmdb = anilist == null || tmdb != null ? undefined : tmdbByAniList[anilist];
+    return showTmdb == null
+      ? entry
+      : { ...entry, item: { ...entry.item, externalIds: { ...entry.item.externalIds, tmdb: showTmdb } } };
+  });
 }
 
 type FetchSlice = (
@@ -212,9 +268,19 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
 
   const states = diaryStates(query.data?.pages ?? []);
   const merged = mergeDiaryEntries(states);
+  // Runs after the feed renders: the rows collapse once ani.zip answers.
+  const anilistIds = unbridgedAniListIds(merged);
+  const { data: tmdbByAniList } = useQuery({
+    queryKey: diaryQueryKeys.showTmdbIds(anilistIds),
+    queryFn: () => showTmdbIds(queryClient, anilistIds),
+    enabled: anilistIds.length > 0,
+    staleTime: DIARY_STALE_MS,
+    // A new page adds ids; the rows already collapsed stay collapsed meanwhile.
+    placeholderData: keepPreviousData,
+  });
 
   return {
-    days: groupDiaryEntries(merged, timeZone),
+    days: groupDiaryEntries(withShowTmdbIds(merged, tmdbByAniList), timeZone),
     timeZone,
     activeProviders: active,
     entryCount: merged.length,
