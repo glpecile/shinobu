@@ -14,6 +14,7 @@ import {
   PersonNotFound,
   PersonSkeleton,
 } from '@/features/person';
+import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import type { HardcoverAuthorKey } from '@/lib/providers/hardcover/reads';
@@ -43,12 +44,14 @@ function HardcoverAuthorDetails({ author }: { author: HardcoverAuthorKey }) {
 /** Every Hardcover read needs the member's session, which the web prerender doesn't have. */
 function HardcoverAuthorContent({ author, onGoBack }: { author: HardcoverAuthorKey; onGoBack: () => void }) {
   const connected = useConnectedProviders();
-  if (connected === SERVER_CONNECTED_PROVIDERS) return <PersonSkeleton />;
+  const pushRoute = usePushRoute();
+  if (connected === SERVER_CONNECTED_PROVIDERS) return <PersonSkeleton print />;
   if (!connected.includes(Provider.Hardcover)) {
     return (
       <PersonNotFound
         detail="Author pages open once Hardcover is connected in Settings."
         onGoBack={onGoBack}
+        onOpenSettings={() => pushRoute(routes.settings)}
       />
     );
   }
@@ -121,7 +124,14 @@ export default function PersonScreen() {
 
   return (
     <ScrolledTitle>
-      <Suspense fallback={<><PersonSkeleton /><FloatingShareButton href={page.href} /></>}>
+      <Suspense
+        fallback={
+          <>
+            <PersonSkeleton print={provider === Provider.Hardcover} />
+            <FloatingShareButton href={page.href} />
+          </>
+        }
+      >
         {page.content}
       </Suspense>
       <FloatingBackButton onPress={goBack} />

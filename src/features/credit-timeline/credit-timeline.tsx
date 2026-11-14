@@ -283,10 +283,9 @@ export function CreditTimeline({
     setFolded(next);
   };
 
-  // Print has no Movies or TV to narrow to, so an all-print page drops the format control.
-  const print = filmography.credits.every(
-    (credit) => credit.item.type === 'MANGA' || credit.item.type === 'BOOK',
-  );
+  // A Hardcover author's books have no Movies or TV to narrow to, so the page drops the
+  // format control. Only that page has books, and only it passes `print` to the skeleton.
+  const print = filmography.credits.some((credit) => credit.item.type === 'BOOK');
   const counts = roleCounts(filmography, format);
   // A role the new format emptied falls back to every role, rather than
   // showing nothing under a chip that is no longer there.
@@ -493,9 +492,12 @@ function SkeletonRow({ index, last }: { index: number; last: boolean }) {
  */
 export function CreditTimelineSkeleton({
   header,
+  print = false,
   roles = false,
 }: {
   header: ReactNode;
+  /** A Hardcover author's books: titled "Works", with no format control. */
+  print?: boolean;
   /** A studio's timeline has no role picker. */
   roles?: boolean;
 }) {
@@ -506,19 +508,21 @@ export function CreditTimelineSkeleton({
       {header}
       <Section className="mt-2 mx-6">
         <Section.Header>
-          <Section.Title>Filmography</Section.Title>
+          <Section.Title>{print ? 'Works' : 'Filmography'}</Section.Title>
           <Skeleton className="h-3 w-12 rounded" />
         </Section.Header>
       </Section>
       <MediaToolbar view={view}>
-        <NativeSegmentedControl
-          accessibilityLabel="Format"
-          className="w-64 shrink-0"
-          onChange={() => {}}
-          options={FORMAT_OPTIONS}
-          size="md"
-          value="ALL"
-        />
+        {!print && (
+          <NativeSegmentedControl
+            accessibilityLabel="Format"
+            className="w-64 shrink-0"
+            onChange={() => {}}
+            options={FORMAT_OPTIONS}
+            size="md"
+            value="ALL"
+          />
+        )}
         {roles && (
           <Button
             className="shrink-0"
