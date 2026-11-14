@@ -17,6 +17,7 @@ import {
   getViewer,
   HardcoverStatus,
   searchBooks,
+  type HardcoverAuthorKey,
   type HardcoverBookHit,
 } from '@/lib/providers/hardcover/reads';
 import type { TokenStore } from '@/lib/providers/token-store';
@@ -94,7 +95,7 @@ export const hardcoverQueryKeys = {
   search: (query: string) => [...hardcoverQueryKeys.searchRoot(), query] as const,
   bookSlug: (slug: string) => [...hardcoverQueryKeys.all, 'book-slug', slug] as const,
   books: (ids: readonly number[]) => [...hardcoverQueryKeys.all, 'books', ids] as const,
-  author: (authorId: number) => [...hardcoverQueryKeys.all, 'author', authorId] as const,
+  author: (key: HardcoverAuthorKey) => [...hardcoverQueryKeys.all, 'author', key] as const,
 };
 
 /** Catalog records change rarely, and each read costs the per-token budget. */
@@ -111,10 +112,10 @@ export function useSuspenseHardcoverBooksQuery(ids: readonly number[]) {
 }
 
 /** `/person/hardcover/<id>`: an author and their books. */
-export function useSuspenseHardcoverAuthorQuery(authorId: number) {
+export function useSuspenseHardcoverAuthorQuery(key: HardcoverAuthorKey) {
   return useSuspenseQuery({
-    queryKey: hardcoverQueryKeys.author(authorId),
-    queryFn: ({ signal }) => Effect.runPromise(getAuthor(hardcoverDeps(), authorId), { signal }),
+    queryKey: hardcoverQueryKeys.author(key),
+    queryFn: ({ signal }) => Effect.runPromise(getAuthor(hardcoverDeps(), key), { signal }),
     staleTime: CATALOG_STALE_MS,
     gcTime: CATALOG_STALE_MS,
   });

@@ -462,7 +462,7 @@ export const getBooks = Effect.fnUntraced(function* (
 const calendarDate = optionalNullable(Schema.String);
 
 const authorData = Schema.Struct({
-  authors_by_pk: optionalNullable(Schema.Struct({
+  authors: Schema.Array(Schema.Struct({
     id: Schema.Number,
     name: Schema.String,
     slug: optionalNullable(Schema.String),
@@ -481,6 +481,9 @@ const authorData = Schema.Struct({
 /** Enough for a long bibliography; a prolific author's tail is on hardcover.app. */
 const AUTHOR_BOOKS_LIMIT = 100;
 
+/** An author by id, or by the slug in a `hardcover.app/authors/{slug}` link. */
+export type HardcoverAuthorKey = { id: number } | { slug: string };
+
 /**
  * One author and their books, for `/person/hardcover/<id>`. Two top-level
  * fields. Books are most read first, one row per role ("Author",
@@ -488,30 +491,36 @@ const AUTHOR_BOOKS_LIMIT = 100;
  */
 export const getAuthor = Effect.fnUntraced(function* (
   deps: HardcoverDeps,
-  authorId: number,
+  key: HardcoverAuthorKey,
 ): Effect.fn.Return<NormalizedPersonDetails, ProviderError> {
   const data = yield* hardcoverRequest<unknown>(
     deps,
-    `query Author($id: Int!, $limit: Int!) {
-      authors_by_pk(id: $id) { id name slug bio born_date death_date location image { url } }
+    `query Author($author: authors_bool_exp!, $limit: Int!) {
+      authors(where: $author, limit: 1) { id name slug bio born_date death_date location image { url } }
       books(
-        where: { book_status_id: { _eq: 1 }, contributions: { author_id: { _eq: $id } } }
+        where: { book_status_id: { _eq: 1 }, contributions: { author: $author } }
         order_by: [{ users_count: desc }, { id: asc }]
         limit: $limit
       ) {
         id title description pages release_year rating ratings_count image { url }
-        contributions(where: { author_id: { _eq: $id } }) { contribution }
+        contributions(where: { author: $author }) { contribution }
       }
     }`,
-    { variables: { id: authorId, limit: AUTHOR_BOOKS_LIMIT } },
+    {
+      variables: {
+        // Slugs are unique, so either filter matches one author.
+        author: 'id' in key ? { id: { _eq: key.id } } : { slug: { _eq: key.slug } },
+        limit: AUTHOR_BOOKS_LIMIT,
+      },
+    },
   ).pipe(Effect.flatMap(decode(authorData, 'invalid author response')));
-  const author = data.authors_by_pk;
+  const author = data.authors[0];
   if (author == null) {
     return yield* new ProviderNetworkError({
       provider,
       status: 404,
       retryable: false,
-      cause: new Error(`Hardcover has no author ${authorId}`),
+      cause: new Error(`Hardcover has no author ${'id' in key ? key.id : key.slug}`),
     });
   }
 

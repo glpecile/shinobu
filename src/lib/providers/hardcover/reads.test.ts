@@ -68,12 +68,12 @@ describe('getBook', () => {
 describe('getAuthor', () => {
   test('books group by role with the author row first, and a book sits on a role once', async () => {
     const author = await Effect.runPromise(getAuthor(deps({
-      authors_by_pk: { id: 1, name: 'Junji Ito', slug: 'junji-ito' },
+      authors: [{ id: 1, name: 'Junji Ito', slug: 'junji-ito' }],
       books: [
         { id: 10, title: 'Narrated', contributions: [{ contribution: 'Narrator' }] },
         { id: 11, title: 'Written', contributions: [{ contribution: null }, { contribution: '' }] },
       ],
-    }), 1));
+    }), { id: 1 }));
 
     expect(author.rows.map(({ role, items }) => [role, items.map((item) => item.id)])).toEqual([
       ['Author', ['hardcover-11']],

@@ -126,13 +126,28 @@
             },
             {
               "scheme": "https",
+              "host": "imdb.com",
+              "pathPrefix": "/name/"
+            },
+            {
+              "scheme": "https",
               "host": "www.imdb.com",
               "pathPrefix": "/title/"
             },
             {
               "scheme": "https",
+              "host": "www.imdb.com",
+              "pathPrefix": "/name/"
+            },
+            {
+              "scheme": "https",
               "host": "m.imdb.com",
               "pathPrefix": "/title/"
+            },
+            {
+              "scheme": "https",
+              "host": "m.imdb.com",
+              "pathPrefix": "/name/"
             }
           ]
         },
@@ -160,6 +175,11 @@
               "scheme": "https",
               "host": "hardcover.app",
               "pathPrefix": "/books/"
+            },
+            {
+              "scheme": "https",
+              "host": "hardcover.app",
+              "pathPrefix": "/authors/"
             }
           ]
         }

@@ -3,6 +3,7 @@ import * as Effect from 'effect/Effect';
 
 import { getAniListStaff } from '@/lib/providers/anilist/reads';
 import { getPersonByName } from '@/lib/providers/person-details';
+import { findPersonByImdbId, getPerson } from '@/lib/providers/tmdb/reads';
 import { anilistDeps, anilistQueryKeys } from '@/state/queries/anilist';
 import { tmdbDeps } from '@/state/queries/tmdb';
 import { tmdbToken } from '@/state/session/tmdb-token';
@@ -37,6 +38,28 @@ export function useSuspenseAniListStaffQuery(params: { id: number }) {
   return useSuspenseQuery({
     queryKey: anilistQueryKeys.staff(params.id),
     queryFn: ({ signal }) => Effect.runPromise(getAniListStaff(anilistDeps(), { id: params.id }), { signal }),
+    staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
+  });
+}
+
+/**
+ * `/person/imdb/<nm id>`: the TMDB person behind an IMDb link, or null when
+ * TMDB has no match or no token is set. One query, so the route suspends once.
+ */
+export function useSuspenseImdbPersonQuery(params: { imdbId: string }) {
+  return useSuspenseQuery({
+    queryKey: ['person-by-imdb', params.imdbId],
+    queryFn: ({ signal }) => {
+      if (tmdbToken() === '') return null;
+      const deps = tmdbDeps();
+      return Effect.runPromise(
+        findPersonByImdbId(deps, params).pipe(
+          Effect.flatMap((tmdbId) => (tmdbId == null ? Effect.succeed(null) : getPerson(deps, { tmdbId }))),
+        ),
+        { signal },
+      );
+    },
     staleTime: PERSON_STALE_TIME_MS,
     gcTime: PERSON_STALE_TIME_MS,
   });

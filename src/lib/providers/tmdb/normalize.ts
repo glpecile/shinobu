@@ -976,4 +976,5 @@ export function normalizeMultiSearch(
 
 export interface TmdbFindResponse {
   tv_results?: Array<{ id: number }>;
+  person_results?: Array<{ id: number }>;
 }

@@ -96,6 +96,13 @@ export const routes = {
   anilistPerson: (anilistId: number) => `/person/anilist/${anilistId}` as const,
   /** A Hardcover author by their own id, from a book's credits. */
   hardcoverAuthor: (hardcoverId: number) => `/person/${Provider.Hardcover}/${hardcoverId}` as const,
+  /**
+   * A Hardcover author by slug, from a `hardcover.app/authors/{slug}` link.
+   * Prefixed like `hardcover-books-{slug}`: a slug can be all digits.
+   */
+  hardcoverAuthorBySlug: (slug: string) => `/person/${Provider.Hardcover}/authors-${slug}` as const,
+  /** A person by IMDb `nm` id, from an `imdb.com/name/` link; TMDB resolves it. */
+  imdbPerson: (imdbId: string) => `/person/imdb/${imdbId}` as const,
   /** For credits without a TMDB or AniList person id: resolve by name. */
   personLookup: (name: string) =>
     `/person/lookup/${encodeURIComponent(name)}` as const,

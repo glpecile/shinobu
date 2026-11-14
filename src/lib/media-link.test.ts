@@ -10,6 +10,8 @@ describe('incoming media links', () => {
     ['https://anilist.co/anime/1/Cowboy-Bebop/', '/details/anilist/1'],
     ['https://anilist.co/manga/30002', '/details/anilist/30002/manga'],
     ['https://hardcover.app/books/no-longer-human', '/details/hardcover/books-no-longer-human'],
+    ['https://hardcover.app/authors/osamu-dazai', '/person/hardcover/authors-osamu-dazai'],
+    ['https://www.imdb.com/name/nm0000001/?ref_=share', '/person/imdb/nm0000001'],
     ['shinobu://open?url=https%3A%2F%2Fletterboxd.com%2Ffilm%2Falien%2F', '/details/letterboxd/alien'],
   ])('%s opens its exact media item', (path, expected) => {
     for (const initial of [true, false]) {
@@ -23,10 +25,8 @@ describe('incoming media links', () => {
     'https://evil.example@letterboxd.com/film/alien/',
     'https://letterboxd.com/film/alien/json/',
     'https://letterboxd.com/gian/film/alien/',
-    'https://imdb.com/name/nm0000001/',
     'https://anilist.co/user/1/',
     'https://anilist.co/anime/9007199254740993',
-    'https://hardcover.app/authors/osamu-dazai',
     'shinobu://open?url=javascript%3Aalert(1)',
     'shinobu://open?url=not-a-url',
   ])('rejects unsupported or unsafe input %s', (path) => {
