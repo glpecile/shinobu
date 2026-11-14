@@ -436,7 +436,7 @@ export const getBook = Effect.fnUntraced(function* (
 
 const booksData = Schema.Struct({ books: Schema.Array(HardcoverBook) });
 
-/** Books by id, in the order of `ids`. An id with no book is skipped. One top-level field. */
+/** Canonical books by id (status 1, as on an author page), in the order of `ids`. Any other id is skipped. One top-level field. */
 export const getBooks = Effect.fnUntraced(function* (
   deps: HardcoverDeps,
   ids: readonly number[],
@@ -444,7 +444,7 @@ export const getBooks = Effect.fnUntraced(function* (
   const data = yield* hardcoverRequest<unknown>(
     deps,
     `query Books($ids: [Int!]!) {
-      books(where: { id: { _in: $ids } }) {
+      books(where: { id: { _in: $ids }, book_status_id: { _eq: 1 } }) {
         id title description pages release_year rating ratings_count image { url }
       }
     }`,
