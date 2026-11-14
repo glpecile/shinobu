@@ -9,6 +9,7 @@ import * as Effect from 'effect/Effect';
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
 import { getReadingJournal } from '@/lib/providers/hardcover/reads';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
+import { aniZipTmdbKind } from '@/lib/providers/mapping/anizip';
 import {
   getSerializdDiary,
   serializdNextPage,
@@ -33,6 +34,7 @@ import {
   type DiarySlice,
 } from './diary-pages';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
+import { cachedAniZipIds } from './mapping';
 import { serializdDeps } from './serializd';
 import type { ProviderFailure } from './settle';
 import { simklLibraryQuery, simklQueryKeys } from './simkl';
@@ -87,6 +89,43 @@ async function fetchAniListActivityPage(
   );
 }
 
+/** ani.zip lookups are cached forever, so this only bounds the cold burst. */
+const MAPPING_CONCURRENCY = 4;
+
+/**
+ * Gives AniList series logs their TMDB show's id from ani.zip. AniList files a
+ * sequel cour as its own entry with no TMDB id, so without it the cour's
+ * "Ep 3" never collapses with the Serializd or Trakt log of S2E3.
+ */
+async function withShowTmdbIds(
+  queryClient: QueryClient,
+  entries: NormalizedDiaryEntry[],
+): Promise<NormalizedDiaryEntry[]> {
+  const anilistIds = new Set<number>();
+  for (const { item } of entries) {
+    const { anilist, tmdb } = item.externalIds;
+    if (item.type === 'ANIME' && item.isFilm !== true && tmdb == null && anilist != null) anilistIds.add(anilist);
+  }
+  const tmdbByAniList = new Map<number, number>();
+  await Effect.runPromise(
+    Effect.forEach(
+      anilistIds,
+      (anilistId) =>
+        Effect.promise(async () => {
+          const ids = await cachedAniZipIds(queryClient, { anilistId });
+          if (ids?.tmdb != null && aniZipTmdbKind(ids) === 'tv') tmdbByAniList.set(anilistId, ids.tmdb);
+        }),
+      { concurrency: MAPPING_CONCURRENCY, discard: true },
+    ),
+  );
+  return entries.map((entry) => {
+    const tmdb = tmdbByAniList.get(entry.item.externalIds.anilist ?? -1);
+    return tmdb == null
+      ? entry
+      : { ...entry, item: { ...entry.item, externalIds: { ...entry.item.externalIds, tmdb } } };
+  });
+}
+
 type FetchSlice = (
   queryClient: QueryClient,
   page: number,
@@ -101,7 +140,7 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   },
   anilist: async (queryClient, page, signal) => {
     const { entries, hasNextPage, readTo } = await fetchAniListActivityPage(queryClient, page, undefined, signal);
-    return { entries, next: hasNextPage ? page + 1 : undefined, readTo };
+    return { entries: await withShowTmdbIds(queryClient, entries), next: hasNextPage ? page + 1 : undefined, readTo };
   },
   // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
   // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
