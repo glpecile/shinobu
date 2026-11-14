@@ -222,7 +222,7 @@ export function ratingUrl(
  * resolved staff id (plan 0035 R12), supplied by the caller because resolving
  * it is a network read and this module is pure.
  */
-export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment' | 'hardcoverSlug'> & {
+export type UrlPerson = Pick<NormalizedPerson, 'name' | 'knownForDepartment' | 'hardcoverId' | 'hardcoverSlug'> & {
   anilistId?: number;
 };
 

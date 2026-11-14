@@ -54,12 +54,12 @@ export function PersonLinksSection({
       enabled &&
       connected.includes(Provider.AniList) &&
       person.anilistId == null &&
-      person.hardcoverSlug == null,
+      person.hardcoverId == null,
   });
   const anilistId = person.anilistId ?? staffId.data ?? undefined;
 
   // A Hardcover author is known by id, so a name-keyed link could open a namesake.
-  const providers = person.hardcoverSlug == null ? connected : [Provider.Hardcover];
+  const providers = person.hardcoverId == null ? connected : [Provider.Hardcover];
   const links: ProviderLink[] = [];
   for (const provider of providers) {
     const url = providerPersonUrl(provider, {
