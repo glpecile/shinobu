@@ -770,13 +770,13 @@ function DetailsScreen() {
 
   // A cover stretched to a backdrop crops to a blur of its title, so a book shows none.
   const backdrop =
-    shown.backdropImage ||
-    artwork.backdropImage ||
-    (shown.type === 'BOOK' ? '' : shown.coverImage || artwork.coverImage);
+    shown.type === 'BOOK'
+      ? null
+      : shown.backdropImage || artwork.backdropImage || shown.coverImage || artwork.coverImage;
 
   const header = (
     <>
-      {backdrop === '' ? (
+      {backdrop == null ? (
         <View style={{ height: backButtonClearance }} />
       ) : (
         <View className="h-80 relative">
@@ -802,7 +802,7 @@ function DetailsScreen() {
 
       {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', backdrop === '' && 'mt-0')}>
+        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', backdrop == null && 'mt-0')}>
           <View className="flex-1">
             <Eyebrow>{shown.type}</Eyebrow>
             <ScrolledTitle.Anchor className="mt-1">
