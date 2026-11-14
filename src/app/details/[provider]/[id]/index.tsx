@@ -12,7 +12,7 @@ import { useCSSVariable } from 'uniwind';
 
 import { Button } from '@/components/button';
 import { ExpandableText } from '@/components/expandable-text';
-import { FloatingBackButton } from '@/components/floating-back-button';
+import { FloatingBackButton, useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { Image } from '@/components/image';
 import { LinkPill } from '@/components/link-pill';
@@ -509,12 +509,17 @@ function StudiosSkeleton() {
  * top-down (backdrop → poster → title → overview), so the screen reads as
  * filling in from the hero rather than flashing as one rectangle.
  */
-function DetailsSkeleton({ zoomPoster }: { zoomPoster?: string }) {
+function DetailsSkeleton({ zoomPoster, backdrop }: { zoomPoster?: string; backdrop: boolean }) {
+  const backButtonClearance = useFloatingBackButtonClearance();
   return (
     <>
-      <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
+      {backdrop ? (
+        <Skeleton className="h-80 w-full" delay={staggerDelay(0)} />
+      ) : (
+        <View style={{ height: backButtonClearance }} />
+      )}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
+        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', !backdrop && 'mt-0')}>
           <View className="flex-1">
             <Skeleton className="h-3 w-16 rounded" delay={staggerDelay(2)} />
             <Skeleton className="h-8 w-48 rounded mt-2" delay={staggerDelay(2)} />
@@ -577,6 +582,7 @@ function DetailsScreen() {
   const backgroundVariable = useCSSVariable('--color-background');
   const background =
     typeof backgroundVariable === 'string' ? backgroundVariable : '#0a0a0a';
+  const backButtonClearance = useFloatingBackButtonClearance();
   // Bumped on pull-to-refresh so failed (unmounted) sections re-attempt.
   const [refreshCount, setRefreshCount] = useState(0);
 
@@ -634,7 +640,8 @@ function DetailsScreen() {
   if (isLoading && item == null) {
     return (
       <>
-        <DetailsSkeleton zoomPoster={zoomPoster} />
+        {/* Only a book is known to have no backdrop before it loads. */}
+        <DetailsSkeleton backdrop={provider !== Provider.Hardcover} zoomPoster={zoomPoster} />
         <FloatingBackButton onPress={goBack} />
         {id !== '' && <FloatingShareButton href={routes.details(id, mediaType)} />}
       </>
@@ -759,37 +766,41 @@ function DetailsScreen() {
     );
   }
 
+  // A cover stretched to a backdrop crops to a blur of its title, so a book shows none.
+  const backdrop =
+    shown.backdropImage ||
+    artwork.backdropImage ||
+    (shown.type === 'BOOK' ? '' : shown.coverImage || artwork.coverImage);
+
   const header = (
     <>
-      <View className="h-80 relative">
-        <Image
-          source={{
-            uri:
-              shown.backdropImage ||
-              artwork.backdropImage ||
-              shown.coverImage ||
-              artwork.coverImage,
-          }}
-          className="w-full h-full"
-          contentFit="cover"
-        />
-        {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
-            fading from transparent-black to white passes through gray. */}
-        <LinearGradient
-          colors={[`${background}00`, background]}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 220,
-          }}
-        />
-      </View>
+      {backdrop === '' ? (
+        <View style={{ height: backButtonClearance }} />
+      ) : (
+        <View className="h-80 relative">
+          <Image
+            source={{ uri: backdrop }}
+            className="w-full h-full"
+            contentFit="cover"
+          />
+          {/* Same-hue transparent start (`#rrggbb00`), not 'transparent':
+              fading from transparent-black to white passes through gray. */}
+          <LinearGradient
+            colors={[`${background}00`, background]}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 220,
+            }}
+          />
+        </View>
+      )}
 
       {/* max-w keeps wide (web) viewports readable; on phones it's inert. */}
       <View className="w-full max-w-4xl self-center px-6">
-        <View className="flex-row items-end md:items-start gap-4 -mt-24 mb-6">
+        <View className={cn('flex-row items-end md:items-start gap-4 -mt-24 mb-6', backdrop === '' && 'mt-0')}>
           <View className="flex-1">
             <Eyebrow>{shown.type}</Eyebrow>
             <ScrolledTitle.Anchor className="mt-1">
