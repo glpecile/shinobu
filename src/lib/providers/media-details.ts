@@ -58,6 +58,8 @@ export interface MediaDetails {
   characters?: NormalizedCharacter[];
   /** The series a book belongs to, and its place in it. */
   series?: HardcoverBookSeries;
+  /** A book's similar books on Hardcover, most similar first. */
+  similarBookIds?: number[];
   source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | typeof Provider.Hardcover | 'none';
 }
 
@@ -102,6 +104,7 @@ function providerFallback(
         studios: [],
         characters: book.characters,
         ...(book.series != null ? { series: book.series } : {}),
+        similarBookIds: book.similarBookIds,
         source: Provider.Hardcover,
       })),
     );

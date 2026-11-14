@@ -32,6 +32,7 @@ import { DetailVariantsSection } from '@/features/detail-variants/detail-variant
 import { DiscussionSection } from '@/features/discussions/discussion-section';
 import {
   RecommendationsAndTagsSection,
+  SimilarBooksSection,
   RelationsSection,
 } from '@/features/details-relations/relations-section';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
@@ -934,6 +935,7 @@ function DetailsScreen() {
       </SuspenseSection>
 
       <RecommendationsAndTagsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
+      <SimilarBooksSection item={item} onItemActions={openActions} resetKey={refreshCount} />
 
       <ReleaseTimeline item={shown} />
 

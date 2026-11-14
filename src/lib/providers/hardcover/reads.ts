@@ -21,6 +21,7 @@ import type { HardcoverDeps } from './deps';
 import { hardcoverRequest } from './http';
 import {
   HARDCOVER_READING_EVENTS,
+  HardcoverBook,
   hardcoverBookFields,
   HardcoverJournalRow,
   HardcoverLibraryRow,
@@ -337,6 +338,7 @@ const bookData = Schema.Struct({
         name: Schema.String,
       })),
     }))),
+    cached_similar_book_ids: optionalNullable(Schema.Array(numeric)),
   })),
 });
 
@@ -352,6 +354,8 @@ export interface HardcoverBookDetails {
   authors: NormalizedCrewMember[];
   characters: NormalizedCharacter[];
   series?: HardcoverBookSeries;
+  /** Hardcover's "Similar books", most similar first. Empty until hardcover.app builds the list. */
+  similarBookIds: number[];
 }
 
 /**
@@ -375,6 +379,7 @@ export const getBook = Effect.fnUntraced(function* (
           only_mentioned
           character { id name }
         }
+        cached_similar_book_ids
       }
     }`,
     { variables: { id: bookId } },
@@ -425,7 +430,32 @@ export const getBook = Effect.fnUntraced(function* (
     ...(series?.series != null
       ? { series: { name: series.series.name, ...(series.position != null ? { position: series.position } : {}) } }
       : {}),
+    similarBookIds: [...(book.cached_similar_book_ids ?? [])],
   };
+});
+
+const booksData = Schema.Struct({ books: Schema.Array(HardcoverBook) });
+
+/** Books by id, in the order of `ids`. An id with no book is skipped. One top-level field. */
+export const getBooks = Effect.fnUntraced(function* (
+  deps: HardcoverDeps,
+  ids: readonly number[],
+): Effect.fn.Return<NormalizedMediaItem[], ProviderError> {
+  const data = yield* hardcoverRequest<unknown>(
+    deps,
+    `query Books($ids: [Int!]!) {
+      books(where: { id: { _in: $ids } }) {
+        id title description pages release_year rating ratings_count image { url }
+      }
+    }`,
+    { variables: { ids } },
+  ).pipe(Effect.flatMap(decode(booksData, 'invalid books response')));
+  const nowIso = new Date(yield* Clock.currentTimeMillis).toISOString();
+  const byId = new Map(data.books.map((book) => [book.id, book]));
+  return ids.flatMap((id) => {
+    const book = byId.get(id);
+    return book == null ? [] : [normalizeHardcoverBook(book, nowIso)];
+  });
 });
 
 /** Hasura sends `date` as `YYYY-MM-DD`. */

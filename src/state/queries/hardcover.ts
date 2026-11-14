@@ -12,6 +12,7 @@ import {
   getAuthor,
   getBookEntry,
   getBookIdBySlug,
+  getBooks,
   getLibrary,
   getViewer,
   HardcoverStatus,
@@ -92,11 +93,22 @@ export const hardcoverQueryKeys = {
   searchRoot: () => [...hardcoverQueryKeys.all, 'search'] as const,
   search: (query: string) => [...hardcoverQueryKeys.searchRoot(), query] as const,
   bookSlug: (slug: string) => [...hardcoverQueryKeys.all, 'book-slug', slug] as const,
+  books: (ids: readonly number[]) => [...hardcoverQueryKeys.all, 'books', ids] as const,
   author: (authorId: number) => [...hardcoverQueryKeys.all, 'author', authorId] as const,
 };
 
 /** Catalog records change rarely, and each read costs the per-token budget. */
 const CATALOG_STALE_MS = 24 * 60 * 60_000;
+
+/** Books by id, in the order given. */
+export function useSuspenseHardcoverBooksQuery(ids: readonly number[]) {
+  return useSuspenseQuery({
+    queryKey: hardcoverQueryKeys.books(ids),
+    queryFn: ({ signal }) => Effect.runPromise(getBooks(hardcoverDeps(), ids), { signal }),
+    staleTime: CATALOG_STALE_MS,
+    gcTime: CATALOG_STALE_MS,
+  });
+}
 
 /** `/person/hardcover/<id>`: an author and their books. */
 export function useSuspenseHardcoverAuthorQuery(authorId: number) {
