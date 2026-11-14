@@ -1,3 +1,4 @@
+import { useQueryErrorResetBoundary } from '@tanstack/react-query';
 import {
   useLocalSearchParams,
   useRouter,
@@ -135,13 +136,18 @@ export default function PersonScreen() {
  */
 export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   const router = useRouter();
+  // A remount alone rethrows the cached query error, so clear it first.
+  const { reset } = useQueryErrorResetBoundary();
   return (
     <PersonNotFound
       detail="This person couldn't be loaded."
       onGoBack={() =>
         router.canGoBack() ? router.back() : router.replace(routes.home)
       }
-      onRetry={retry}
+      onRetry={() => {
+        reset();
+        void retry();
+      }}
     />
   );
 }
