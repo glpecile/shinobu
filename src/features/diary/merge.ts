@@ -343,8 +343,6 @@ export function dayKeyForInstant(instant: Date, timeZone: string): string {
 interface CollapseBucket {
   providers: Set<ProviderId>;
   entries: NormalizedDiaryEntry[];
-  /** Every identity key indexed for this bucket, carried over when it folds. */
-  identities: Set<string>;
 }
 
 function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
@@ -398,7 +396,6 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
   const byIdentity = new Map<string, number[]>();
   const indexBucket = (bucket: number, key: string, identities: Iterable<string>) => {
     for (const identity of identities) {
-      buckets[bucket]?.identities.add(identity);
       const slot = `${key}\u0000${identity}`;
       const indices = byIdentity.get(slot);
       if (indices == null) byIdentity.set(slot, [bucket]);
@@ -442,11 +439,11 @@ function collapseDay(entries: NormalizedDiaryEntry[]): MergedDiaryEntry[] {
         if (other == null || [...other.providers].some((provider) => target.providers.has(provider))) continue;
         target.entries.push(...other.entries);
         for (const provider of other.providers) target.providers.add(provider);
-        indexBucket(match, key, [...other.identities]);
+        indexBucket(match, key, other.entries.flatMap((joined) => [...identityKeys(joined.item), ...filmNameKeys(joined.item)]));
         buckets[index] = null;
       }
     } else {
-      buckets.push({ providers: new Set([entry.provider]), entries: [entry], identities: new Set() });
+      buckets.push({ providers: new Set([entry.provider]), entries: [entry] });
       indexBucket(buckets.length - 1, key, identities);
     }
   }
