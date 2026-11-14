@@ -8,11 +8,14 @@ export function PersonNotFound({
   detail,
   onGoBack,
   onRetry,
+  onOpenSettings,
 }: {
   detail: string;
   onGoBack: () => void;
   /** Route-error variant: offer a retry alongside the escape hatch. */
   onRetry?: () => void;
+  /** The page needs a provider connected in Settings first. */
+  onOpenSettings?: () => void;
 }) {
   return (
     <View className="flex-1 bg-background items-center justify-center px-8">
@@ -33,6 +36,14 @@ export function PersonNotFound({
             icon={<Button.Icon name="refresh" />}
             label="Try again"
             onPress={onRetry}
+            variant="quiet"
+          />
+        )}
+        {onOpenSettings != null && (
+          <Button
+            icon={<Button.Icon name="link-outline" />}
+            label="Open Settings"
+            onPress={onOpenSettings}
             variant="quiet"
           />
         )}
