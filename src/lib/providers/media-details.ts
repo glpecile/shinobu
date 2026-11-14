@@ -59,7 +59,7 @@ export interface MediaDetails {
   /** The series a book belongs to, and its place in it. */
   series?: HardcoverBookSeries;
   /** A book's similar books on Hardcover, most similar first. */
-  similarBookIds?: number[];
+  similarBookIds?: readonly number[];
   source: 'tmdb' | typeof Provider.Trakt | typeof Provider.AniList | typeof Provider.Hardcover | 'none';
 }
 

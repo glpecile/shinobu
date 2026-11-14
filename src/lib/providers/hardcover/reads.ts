@@ -355,7 +355,7 @@ export interface HardcoverBookDetails {
   characters: NormalizedCharacter[];
   series?: HardcoverBookSeries;
   /** Hardcover's "Similar books", most similar first. Empty until hardcover.app builds the list. */
-  similarBookIds: number[];
+  similarBookIds: readonly number[];
 }
 
 /**
@@ -430,7 +430,7 @@ export const getBook = Effect.fnUntraced(function* (
     ...(series?.series != null
       ? { series: { name: series.series.name, ...(series.position != null ? { position: series.position } : {}) } }
       : {}),
-    similarBookIds: [...(book.cached_similar_book_ids ?? [])],
+    similarBookIds: book.cached_similar_book_ids ?? [],
   };
 });
 
@@ -458,17 +458,14 @@ export const getBooks = Effect.fnUntraced(function* (
   });
 });
 
-/** Hasura sends `date` as `YYYY-MM-DD`. */
-const calendarDate = optionalNullable(Schema.String);
-
 const authorData = Schema.Struct({
   authors: Schema.Array(Schema.Struct({
     id: Schema.Number,
     name: Schema.String,
     slug: optionalNullable(Schema.String),
     bio: optionalNullable(Schema.String),
-    born_date: calendarDate,
-    death_date: calendarDate,
+    born_date: optionalNullable(Schema.String),
+    death_date: optionalNullable(Schema.String),
     location: optionalNullable(Schema.String),
     image: hardcoverBookFields.image,
   })),
@@ -530,12 +527,9 @@ export const getAuthor = Effect.fnUntraced(function* (
     const item = normalizeHardcoverBook(book, nowIso);
     // An empty role is the book's author, as on the book page.
     for (const role of new Set(contributions.map(({ contribution }) => contribution || 'Author'))) {
-      let row = rows.get(role);
-      if (row == null) {
-        row = { role, items: [], details: {}, roles: {} };
-        rows.set(role, row);
-      }
+      const row = rows.get(role) ?? { role, items: [], details: {}, roles: {} };
       row.items.push(item);
+      rows.set(role, row);
     }
   }
   const image = author.image?.url ?? '';
