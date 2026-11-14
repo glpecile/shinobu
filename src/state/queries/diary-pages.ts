@@ -44,6 +44,9 @@ export const diaryQueryKeys = {
   /** One film's dated plays (`useFilmPlaysQuery`) — under the root, so a log refreshes it. */
   filmPlays: (providers: readonly ProviderId[], ids: NormalizedMediaItem['externalIds']) =>
     [...DIARY_QUERY_ROOT, 'film-plays', providers.join(','), ids] as const,
+  /** The TMDB show ids of the loaded AniList series logs (`showTmdbIds`). */
+  showTmdbIds: (anilistIds: readonly number[]) =>
+    [...DIARY_QUERY_ROOT, 'show-tmdb-ids', anilistIds.join(',')] as const,
 };
 
 /** The page param: which page each *advancing* provider fetches next. */

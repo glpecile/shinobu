@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -93,36 +94,52 @@ async function fetchAniListActivityPage(
 const MAPPING_CONCURRENCY = 4;
 
 /**
- * Gives AniList series logs their TMDB show's id from ani.zip. AniList files a
- * sequel cour as its own entry with no TMDB id, so without it the cour's
+ * The AniList ids of the series logs that state no TMDB id. AniList files a
+ * sequel cour as its own entry, so without its show's TMDB id the cour's
  * "Ep 3" never collapses with the Serializd or Trakt log of S2E3.
  */
-async function withShowTmdbIds(
-  queryClient: QueryClient,
-  entries: NormalizedDiaryEntry[],
-): Promise<NormalizedDiaryEntry[]> {
-  const anilistIds = new Set<number>();
-  for (const { item } of entries) {
+function unbridgedAniListIds(entries: readonly NormalizedDiaryEntry[]): number[] {
+  const ids = new Set<number>();
+  for (const { provider, item } of entries) {
     const { anilist, tmdb } = item.externalIds;
-    if (item.type === 'ANIME' && item.isFilm !== true && tmdb == null && anilist != null) anilistIds.add(anilist);
+    if (provider === Provider.AniList && item.type === 'ANIME' && item.isFilm !== true && tmdb == null && anilist != null) {
+      ids.add(anilist);
+    }
   }
-  const tmdbByAniList = new Map<number, number>();
+  return [...ids].sort((a, b) => a - b);
+}
+
+/** AniList id → its show's TMDB id, from ani.zip, for ids that state a TV id. */
+async function showTmdbIds(
+  queryClient: QueryClient,
+  anilistIds: readonly number[],
+): Promise<Record<number, number>> {
+  const found: Record<number, number> = {};
   await Effect.runPromise(
     Effect.forEach(
       anilistIds,
       (anilistId) =>
         Effect.promise(async () => {
           const ids = await cachedAniZipIds(queryClient, { anilistId });
-          if (ids?.tmdb != null && aniZipTmdbKind(ids) === 'tv') tmdbByAniList.set(anilistId, ids.tmdb);
+          if (ids?.tmdb != null && aniZipTmdbKind(ids) === 'tv') found[anilistId] = ids.tmdb;
         }),
       { concurrency: MAPPING_CONCURRENCY, discard: true },
     ),
   );
+  return found;
+}
+
+function withShowTmdbIds(
+  entries: NormalizedDiaryEntry[],
+  tmdbByAniList: Record<number, number> | undefined,
+): NormalizedDiaryEntry[] {
+  if (tmdbByAniList == null) return entries;
   return entries.map((entry) => {
-    const tmdb = tmdbByAniList.get(entry.item.externalIds.anilist ?? -1);
-    return tmdb == null
+    const { anilist, tmdb } = entry.item.externalIds;
+    const showTmdb = anilist == null || tmdb != null ? undefined : tmdbByAniList[anilist];
+    return showTmdb == null
       ? entry
-      : { ...entry, item: { ...entry.item, externalIds: { ...entry.item.externalIds, tmdb } } };
+      : { ...entry, item: { ...entry.item, externalIds: { ...entry.item.externalIds, tmdb: showTmdb } } };
   });
 }
 
@@ -140,7 +157,7 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
   },
   anilist: async (queryClient, page, signal) => {
     const { entries, hasNextPage, readTo } = await fetchAniListActivityPage(queryClient, page, undefined, signal);
-    return { entries: await withShowTmdbIds(queryClient, entries), next: hasNextPage ? page + 1 : undefined, readTo };
+    return { entries, next: hasNextPage ? page + 1 : undefined, readTo };
   },
   // RSS is a single recent window — deeper HTML pages are Cloudflare-walled
   // (docs/solutions/letterboxd-diary-html-cloudflare-walled.md), so the diary
@@ -251,9 +268,19 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
 
   const states = diaryStates(query.data?.pages ?? []);
   const merged = mergeDiaryEntries(states);
+  // Runs after the feed renders: the rows collapse once ani.zip answers.
+  const anilistIds = unbridgedAniListIds(merged);
+  const { data: tmdbByAniList } = useQuery({
+    queryKey: diaryQueryKeys.showTmdbIds(anilistIds),
+    queryFn: () => showTmdbIds(queryClient, anilistIds),
+    enabled: anilistIds.length > 0,
+    staleTime: DIARY_STALE_MS,
+    // A new page adds ids; the rows already collapsed stay collapsed meanwhile.
+    placeholderData: keepPreviousData,
+  });
 
   return {
-    days: groupDiaryEntries(merged, timeZone),
+    days: groupDiaryEntries(withShowTmdbIds(merged, tmdbByAniList), timeZone),
     timeZone,
     activeProviders: active,
     entryCount: merged.length,
