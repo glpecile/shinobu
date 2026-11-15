@@ -158,6 +158,18 @@ describe('watermarkProviders', () => {
     expect(watermarkProviders(states)).toEqual(['anilist']);
   });
 
+  test('a backdated entry older than its readTo holds without lowering the cut', () => {
+    const states = [
+      state('trakt', [entry('trakt', '1', '2026-07-08T00:00:00.000Z')], { hasMore: true }),
+      state('serializd', [entry('serializd', '1', '2026-07-01T00:00:00.000Z')], {
+        hasMore: true,
+        readTo: '2026-07-10T00:00:00.000Z',
+      }),
+    ];
+    expect(mergeDiaryEntries(states)).toEqual([]);
+    expect(watermarkProviders(states)).toEqual(['serializd']);
+  });
+
   test('cold-start providers with nothing loaded yet all advance', () => {
     const providers = watermarkProviders([
       state('trakt', [], { hasMore: true }),
