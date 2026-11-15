@@ -9,6 +9,8 @@ honor its STOP conditions, and update your row when done.
   covering correctness, security, performance, tests, tech debt, DX, docs and direction.
 - Round 3: 2026-11-02 against commit `1994ac9` (plan 031), a device-profiled
   performance review of the five slowest spots.
+- Round 4: 2026-11-12 against commit `04643c8` (plans 032–039), a focused audit
+  of log routing and identity matching. See the section at the end of this file.
 
 Status values: TODO | IN PROGRESS | DONE | NEEDS REVISION (review finding) | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -255,3 +257,88 @@ Round 2:
 | Plan | Title | Category | Priority | Effort | Risk | Status |
 |------|-------|----------|----------|--------|------|--------|
 | [031](031-performance-review-2026-11.md) | The five slowest spots from a device profile | perf | P3 | S | LOW | IN PROGRESS (diary leaves and the compiler lint done in #411; follow-ups A–B open) |
+
+## Round 4: log routing and identity matching (2026-11-12)
+
+Owner request: find the edge cases where a log misses a provider or reaches
+the wrong title, such as an AniList film that never logs to Letterboxd. The
+owner chose every finding. Work top to bottom unless a dependency says otherwise.
+
+| Rank | Plan | Title | Category | Priority | Effort | Risk | Depends on | Status |
+|-----:|------|-------|----------|----------|--------|------|------------|--------|
+| 1 | [032](032-movie-never-takes-a-tv-anime-anilist-id.md) | A movie never takes a TV anime's AniList id from ani.zip | bug (wrong write) | P1 | S | LOW | — | DONE (PR #441) |
+| 2 | [033](033-late-log-targets-start-selected.md) | A log target that appears after the sheet opens starts selected | bug | P1 | S | LOW | — | DONE (PR #440) |
+| 3 | [034](034-anime-takes-a-tmdb-id-of-its-own-kind.md) | An AniList anime takes a TMDB id only when the id is of its own kind | bug (wrong write) | P1 | M | MED | 032 | DONE (PR #441) |
+| 4 | [035](035-anilist-unplaced-season-is-a-reasoned-skip.md) | A later-season log that finds no AniList entry reports a reasoned AniList skip | bug | P2 | S | LOW | — | DONE (PR #439) |
+| 5 | [036](036-unmapped-anizip-records-refresh.md) | An ani.zip record with no bridge ids is asked again after a day | bug | P2 | S | LOW | — | DONE (PR #439) |
+| 6 | [038](038-one-episode-anime-filed-as-a-movie-logs-as-a-film.md) | A one-episode anime that TMDB files as a movie logs as a film | feature | P2 | M | MED | 034 | DONE (PR #441) |
+| 7 | [037](037-letterboxd-film-takes-its-tmdb-id-from-its-page.md) | A Letterboxd film with only a slug takes its TMDB id from its film page | bug | P3 | S | LOW | — (after 032, 034 to avoid a rebase) | DONE (PR #442, stacked on #441) |
+| 8 | [039](039-unmatched-provider-gets-a-manual-row.md) | A connected provider with no match for an anime gets a manual row in the log sheet | bug (no dead end) | P3 | M | LOW | 034, 038 (recommended) | DONE (PR #440) |
+
+### The shared root cause (plans 032, 034, 038)
+
+ani.zip serves the anime-lists dataset and flattens its TMDB id. The dataset
+knows the kind (`{"tv": N}` or `{"movie": [N]}`); ani.zip returns one number.
+TMDB movie and TV ids share a number space. Counted on 2026-11-12, for entries
+with an AniList id and a TMDB id:
+
+| ani.zip record | TMDB id is a TV id | TMDB id is a movie id |
+|----------------|-------------------:|----------------------:|
+| has `thetvdb_id` | 6,953 | 253 |
+| has no `thetvdb_id` | 8 | 1,066 |
+
+`mappings.type` does not tell the kind: 675 `MOVIE` records carry a TV id.
+Plan 032 adds the rule as `aniZipTmdbKind`; 034 and 038 build on it.
+
+### Dependency notes (round 4)
+
+- **032 → 034 → 038**: same block of `enrich.ts`, and 034 needs the helper 032 adds.
+- **032, 034, 037, 038** all edit `enrich.ts` and `enrich.test.ts`. Run them in
+  series, not in parallel worktrees.
+- **035 and 038** both edit `resolveLogPlan` in `use-log-media.ts`, in different
+  lines. Whichever lands second rebases.
+- **033 and 039** both edit the two log sheets. 033 changes the selection
+  state; 039 adds a prop. Whichever lands second rebases.
+- **036** touches only `mapping.ts` and its test. 032 changes one other line there.
+- All eight plans are JS only and hot reload. None needs `bun ios:clean` or `bun android:clean`.
+
+### Verification baseline (round 4)
+
+`node_modules` was present. The advisor did not run `bun typecheck`, `bun lint`
+or `bun run test` this round; every plan starts from those gates. Findings come
+from reading code, from live `api.ani.zip` probes, and from the public
+anime-lists dataset. No provider write was made and no account was used.
+
+### Not audited in round 4
+
+- The watchlist verbs, manga logs, Serializd season resolution, the sheet
+  components beyond their target and selection state, and the native WebView scripts.
+- What Letterboxd answers for a `/tmdb/{id}/` path whose id is a TV id.
+  Cloudflare blocks an unauthenticated probe. Plan 034 does not depend on the answer.
+- Runtime behaviour on a device. Plans 033, 038 and 039 carry an optional device check.
+
+### Findings not yet planned (round 4)
+
+- **`imdb` ids from ani.zip on a film tied to a TVDB show** may be the show's.
+  Plan 034 keeps adopting them. Trakt then answers "not found", never a wrong
+  title. Revisit only if such errors are reported.
+- **Letterboxd by IMDb id**: a film with an IMDb id and no TMDB id or slug is
+  routed to Letterboxd and fails there. Letterboxd may redirect `/imdb/{id}/`
+  like `/tmdb/{id}/`; that needs a spike first.
+- **A TMDB anime with no AniList match** shows no AniList row. Left out of
+  plan 039 on purpose: every western animated film would show it.
+
+### Considered and rejected (round 4)
+
+- **`pickAnimeFilmMatch` accepts the top exact-year AniList film when no title
+  matches**, so a live-action film could take an anime's id. Probed on
+  2026-11-12 with 12 live-action titles from 2023–2025: no same-year result
+  for any. The rule is documented (plan 0024 KTD3). Not worth a plan.
+- **A title match for an unmapped anime series** (to reach Trakt and Serializd):
+  the code records the decision not to, because a wrong show would get writes
+  with no episode table.
+- **Simkl reconcile always answers "unknown"**: documented and deferred in plan 0034.
+- **A film with no year takes the top text-search hit**: documented in
+  `pick-movie-match.ts`; plan 037 removes the Letterboxd case of it.
+- **`useLogTargetsSplit`'s query key uses only `item.id`**: the default 60 s
+  stale time bounds it, and the mutation re-runs the enrichment.
