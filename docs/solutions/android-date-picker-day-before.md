@@ -13,11 +13,12 @@ user's zone) shows the day before. Emulators default to `UTC`, hiding it. The
 `value` prop has the mirror problem: a local instant is read as UTC millis, so
 late evening in a UTC+N zone highlights tomorrow.
 
-**Fix:** `features/log-media/watched-at-field/android-utc-day.ts` converts
-both directions on Android only (`toPickerValue` / `fromPickerValue`, keeping
-the current time-of-day like the web field). iOS's UIDatePicker returns local
-instants and is untouched.
+**Fix:** `@expo/ui` 58.0.26 converts both directions inside the community
+picker (`localDateToUtcDayISOString` / `utcDayToLocalDate`), so pass local
+dates and read local dates. The app had its own converter
+(`android-utc-day.ts`) from before that release. Stacked on the library's, it
+moved every pick one day **forward** west of UTC: tapping yesterday logged
+today. Don't convert again in the app.
 
 **Repro on the emulator:** set the AVD timezone away from UTC (e.g.
-`adb shell service call alarm 3 s16 America/Argentina/Buenos_Aires`), or run
-the unit test under `TZ=America/Argentina/Buenos_Aires bun test`.
+`adb shell service call alarm 3 s16 America/Argentina/Buenos_Aires`).
