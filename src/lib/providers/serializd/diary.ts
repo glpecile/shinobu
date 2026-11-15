@@ -13,6 +13,8 @@ const provider = Provider.Serializd;
 export interface SerializdDiaryPage {
   entries: NormalizedDiaryEntry[];
   totalPages: number;
+  /** The page's oldest `dateAdded`: the order the server pages by (KTD8). */
+  readTo?: string;
 }
 
 interface RawDiaryResponse {
@@ -55,11 +57,12 @@ export function getSerializdDiary(
       `/user/${encodeURIComponent(username)}/diary?page=${params.page}`,
     );
     const fetchedAt = new Date().toISOString();
+    const reviews = raw.reviews ?? [];
+    const oldest = Math.min(...reviews.map((review) => Date.parse(review.dateAdded)));
     return {
-      entries: (raw.reviews ?? []).map((review) =>
-        normalizeDiaryReview(review, fetchedAt),
-      ),
+      entries: reviews.map((review) => normalizeDiaryReview(review, fetchedAt)),
       totalPages: raw.totalPages ?? params.page,
+      readTo: Number.isFinite(oldest) ? new Date(oldest).toISOString() : undefined,
     };
   });
 }

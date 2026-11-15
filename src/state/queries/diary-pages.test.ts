@@ -77,6 +77,14 @@ describe('diaryStates', () => {
     ]);
     expect(state).toMatchObject({ failed: false, hasMore: true, readTo: '2026-07-10T00:00:00.000Z' });
   });
+
+  test('readTo keeps the oldest across pages', () => {
+    const [state] = diaryStates([
+      { slices: { anilist: { entries: [], next: 2, readTo: '2026-07-10T00:00:00.000Z' } } },
+      { slices: { anilist: { entries: [], next: 3, readTo: '2026-07-12T00:00:00.000Z' } } },
+    ]);
+    expect(state.readTo).toBe('2026-07-10T00:00:00.000Z');
+  });
 });
 
 function cache(entries: unknown[]): QueryClient {

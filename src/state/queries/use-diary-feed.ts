@@ -167,14 +167,17 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
     entries: await queryClient.fetchQuery(letterboxdDiaryQuery()),
     next: undefined,
   }),
-  // A real paginated read: the page carries `{ entries, totalPages }`.
-  // Watermark ordering keys on `dateAdded` (KTD8), already `watchedAt`.
+  // A real paginated read; `readTo` carries the server's page order (KTD8).
   serializd: async (_queryClient, page, signal) => {
     const result = await Effect.runPromise(
       getSerializdDiary(serializdDeps(), { page }),
       { signal },
     );
-    return { entries: result.entries, next: serializdNextPage(result, page) };
+    return {
+      entries: result.entries,
+      next: serializdNextPage(result, page),
+      readTo: result.readTo,
+    };
   },
   // Simkl has no history endpoint — the diary is a projection of the one
   // `/sync/all-items` snapshot (per-episode watched instants), so like

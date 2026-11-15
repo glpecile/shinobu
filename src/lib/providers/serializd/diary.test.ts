@@ -20,7 +20,7 @@ const review = (over: Partial<SerializdDiaryReview> = {}): SerializdDiaryReview 
   seasonName: 'Season 1',
   episodeNumber: 5,
   dateAdded: '2026-07-15T20:00:00.000Z',
-  backdate: '2026-07-15T20:00:00.000Z',
+  backdate: '2026-07-14T20:00:00.000Z',
   showName: 'Breaking Bad',
   ...over,
 });
@@ -39,6 +39,7 @@ describe('getSerializdDiary', () => {
       })], totalPages: 3 }), { page: 1 }),
     );
     expect(page.totalPages).toBe(3);
+    expect(page.readTo).toBe('2026-07-15T20:00:00.000Z');
     expect(page.entries).toHaveLength(1);
     const [entry] = page.entries;
     expect(entry.id).toBe('serializd-1');
@@ -47,8 +48,7 @@ describe('getSerializdDiary', () => {
     expect(entry.item.externalIds.tmdb).toBe(1396);
     expect(entry.item.type).toBe('TV');
     expect(entry.item.coverImage).toBe('https://image.tmdb.org/t/p/w342/season.jpg');
-    // KTD8: ordering/grouping keys on dateAdded, so watchedAt carries it.
-    expect(entry.watchedAt).toBe('2026-07-15T20:00:00.000Z');
+    expect(entry.watchedAt).toBe('2026-07-14T20:00:00.000Z');
     expect(entry.episodes).toEqual([5]);
     expect(entry.season).toBe(1);
   });

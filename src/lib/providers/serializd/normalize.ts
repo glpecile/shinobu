@@ -56,10 +56,10 @@ export function parseSeasonNumber(seasonName?: string): number | undefined {
  * A raw diary review → a `NormalizedDiaryEntry`. The id is the response's review
  * id when present, else a synthesized `serializd:{showId}:{seasonId}:{episode}:
  * {dateAdded}` (Appendix / U2) — stable and unique enough that two same-day logs
- * don't collide. `watchedAt` is `dateAdded` (KTD8: the diary isn't guaranteed
- * sorted by `backdate`, so the shared watermark/grouping — which key on
- * `watchedAt` — must key on the server's page order). Season-level entries carry
- * no `episodes`.
+ * don't collide. `watchedAt` is the user's `backdate`, so a backdated log sits
+ * on the day picked. The server pages by `dateAdded`, so `getSerializdDiary`
+ * reports that as the page's `readTo` for the watermark (KTD8). Season-level
+ * entries carry no `episodes`.
  */
 export function normalizeDiaryReview(
   raw: SerializdDiaryReview,
@@ -77,9 +77,7 @@ export function normalizeDiaryReview(
   return {
     id,
     provider: Provider.Serializd,
-    // KTD8: order/group by the server's page field, not the (possibly
-    // backdated, non-monotone) watch instant.
-    watchedAt: raw.dateAdded,
+    watchedAt: raw.backdate ?? raw.dateAdded,
     liked: raw.like === true,
     ...(raw.episodeNumber != null ? { episodes: [raw.episodeNumber] } : {}),
     ...(season != null ? { season } : {}),

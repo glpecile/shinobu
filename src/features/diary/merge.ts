@@ -24,7 +24,7 @@ export interface DiaryProviderState {
   provider: ProviderId;
   /** Every entry loaded across pages so far (order irrelevant — sorted here). */
   entries: NormalizedDiaryEntry[];
-  /** The oldest instant read when it passes the oldest entry (see `DiarySlice`). */
+  /** How far back the provider's page order has read; wins over the entries (see `DiarySlice`). */
   readTo?: string;
   /** More pages remain to fetch (false when exhausted OR failed). */
   hasMore: boolean;
@@ -90,9 +90,10 @@ export function mergeDiaryEntries(
 }
 
 /**
- * How far back each provider with more pages has read (epoch ms): its oldest
- * entry, or its `readTo` when the page read past entries it dropped. Providers
- * with nothing loaded yet are left out.
+ * How far back each provider with more pages has read (epoch ms): its `readTo`
+ * when it reports one (AniList reads past entries it drops; Serializd pages by
+ * log time while its entries sit on backdates), else its oldest entry.
+ * Providers with nothing loaded yet are left out.
  */
 function readFrontiers(
   states: readonly DiaryProviderState[],
@@ -101,7 +102,7 @@ function readFrontiers(
     .filter((state) => state.hasMore && !state.failed)
     .flatMap((state) => {
       const readTo = state.readTo != null ? parseLocalInstant(state.readTo)?.getTime() : undefined;
-      const min = Math.min(...state.entries.map(entryMs), readTo ?? Infinity);
+      const min = readTo ?? Math.min(...state.entries.map(entryMs));
       return Number.isFinite(min) ? [{ provider: state.provider, min }] : [];
     });
 }
