@@ -29,7 +29,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import { TagPicker } from './tag-picker';
 import type { LogRequest } from './log-request';
 import { parseTags } from './parse-tags';
-import { ReadingProgressField, readingTitle } from './reading-progress-field';
+import { ReadingProgressField, readingSpan, readingTitle } from './reading-progress-field';
 import { StepperField } from './stepper-field';
 import { logToastCopy } from './toast-copy';
 import { useLogMedia } from './use-log-media';
@@ -305,8 +305,8 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   const span =
     range != null && through > range.from
       ? `chapters ${range.from}–${through}`
-      : reading != null && !reading.finished && reading.page > 0
-        ? `page ${reading.page}`
+      : reading != null
+        ? readingSpan(reading)
         : undefined;
   const title =
     reading != null ? readingTitle(reading) : span == null ? request.title : `Log ${span}`;
@@ -507,7 +507,8 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
               label={title}
               loading={pending}
               loadingLabel="Logging…"
-              morphLabel={(range != null || reading != null) && fontScale <= 1}
+              // A scrubber drag changes a book's percent label every frame.
+              morphLabel={(range != null || (reading != null && reading.total == null)) && fontScale <= 1}
               onPress={confirm}
             />
           </WriteSheet.Actions>
