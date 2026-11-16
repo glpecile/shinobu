@@ -1,0 +1,94 @@
+import { useRef } from 'react';
+import { View } from 'react-native';
+import {
+  GestureDetector,
+  useCompetingGestures,
+  usePanGesture,
+  useTapGesture,
+} from 'react-native-gesture-handler';
+
+import { cn } from '@/lib/cn';
+import { haptics } from '@/lib/haptics';
+import { pageAt, percentRead } from './reading-share';
+
+/** Quarter marks drawn on the track. A drag also lands on 0 and the end. */
+const MARKS = [25, 50, 75];
+/** How near a mark, in percent, a drag lands on it. */
+const SNAP = 2;
+
+/**
+ * The book log's drag bar: tap or drag to set the page reached, read as a
+ * share of the book. A drag snaps to the quarter marks and to the last page,
+ * so a rough drag says "half" or "finished" without typing. The typed field
+ * beside it covers exact pages.
+ */
+export function ProgressScrubber({ page, total, onChange, disabled }: {
+  page: number;
+  total: number;
+  onChange: (page: number) => void;
+  disabled: boolean;
+}) {
+  const width = useRef(0);
+  const snapped = useRef<number | null>(null);
+  const share = (page / total) * 100;
+  const percent = percentRead(page, total);
+
+  function seek(x: number) {
+    if (width.current === 0) return;
+    const at = Math.min(100, Math.max(0, (x / width.current) * 100));
+    const mark = [0, ...MARKS, 100].find((m) => Math.abs(at - m) < SNAP) ?? null;
+    if (mark != null && mark !== snapped.current) haptics.selection();
+    snapped.current = mark;
+    onChange(pageAt(mark ?? at, total));
+  }
+
+  // On the JS thread: each move re-renders the field and the confirm label anyway.
+  const tap = useTapGesture({ runOnJS: true, enabled: !disabled, onActivate: (event) => seek(event.x) });
+  const pan = usePanGesture({
+    runOnJS: true,
+    enabled: !disabled,
+    // Horizontal only, so a vertical drag still moves the sheet.
+    activeOffsetX: [-4, 4],
+    failOffsetY: [-12, 12],
+    hitSlop: { horizontal: 12 },
+    onUpdate: (event) => seek(event.x),
+    onFinalize: () => {
+      snapped.current = null;
+    },
+  });
+  const gesture = useCompetingGestures(pan, tap);
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <View
+        accessible
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        accessibilityLabel="Progress"
+        accessibilityRole="adjustable"
+        accessibilityState={{ disabled }}
+        accessibilityValue={{ min: 0, max: 100, now: percent, text: `${percent}%, page ${page} of ${total}` }}
+        className="h-11 justify-center"
+        onAccessibilityAction={(event) => {
+          if (disabled) return;
+          // One percent a swipe, so each swipe changes the number spoken. On a
+          // book under 100 pages a percent can round back to the same page.
+          const up = event.nativeEvent.actionName === 'increment';
+          const at = pageAt(percent + (up ? 1 : -1), total);
+          const next = up ? Math.max(page + 1, at) : Math.min(page - 1, at);
+          onChange(Math.min(total, Math.max(0, next)));
+        }}
+        onLayout={(event) => {
+          width.current = event.nativeEvent.layout.width;
+        }}
+      >
+        <View className="h-1.5 rounded-full bg-border overflow-hidden">
+          <View className={cn('h-full', page >= total ? 'bg-success' : 'bg-foreground')} style={{ width: `${share}%` }} />
+        </View>
+        {MARKS.map((mark) => (
+          <View key={mark} className="absolute h-2 w-0.5 -ml-px bg-surface" style={{ left: `${mark}%` }} />
+        ))}
+        <View className="absolute size-6 -ml-3 rounded-full bg-foreground shadow-md" style={{ left: `${share}%` }} />
+      </View>
+    </GestureDetector>
+  );
+}

@@ -9,8 +9,13 @@ import { useThemeColor } from '@/lib/theme-color';
 /**
  * The app's pill text input, with the search field's accent border on focus.
  * Takes every `TextInput` prop but `className`; `multiline` rounds it into a box.
+ * `size="sm"` matches a `size="sm"` segmented control beside it: 36 tall, and
+ * 32 on iOS, where SwiftUI draws the native control at 32 at the top of its box.
  */
-export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref<TextInputInstance> }) {
+export function TextField({ size = 'md', ...props }: Omit<TextInputProps, 'className'> & {
+  ref?: Ref<TextInputInstance>;
+  size?: 'sm' | 'md';
+}) {
   const [focused, setFocused] = useState(false);
   const muted = useThemeColor('--color-muted');
   const accent = useThemeColor('--color-accent');
@@ -26,7 +31,7 @@ export function TextField(props: Omit<TextInputProps, 'className'> & { ref?: Ref
       textAlignVertical={props.multiline ? 'top' : undefined}
       {...props}
       // react-native-web ignores the `textAlign` prop, so centring rides as a class too.
-      className={cn('border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent', props.multiline && 'rounded-2xl min-h-24', props.textAlign === 'center' && 'text-center')}
+      className={cn('border bg-surface text-foreground px-4 py-3 rounded-full font-sans outline-none caret-accent', props.multiline && 'rounded-2xl min-h-24', size === 'sm' && 'h-9 ios:h-8 px-3 py-0 web:text-sm', props.textAlign === 'center' && 'text-center')}
       onBlur={(event) => {
         setFocused(false);
         props.onBlur?.(event);

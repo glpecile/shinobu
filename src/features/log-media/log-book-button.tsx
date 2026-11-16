@@ -60,7 +60,8 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
               ? `You’ve read “${item.title}” — this logs another read.`
               : `“${item.title}”`,
             reading: {
-              finished: openRead == null,
+              // An open read past the page count shows as finished, so it logs as one.
+              finished: openRead == null || (total != null && openRead.progressPages >= total),
               page: openRead?.progressPages ?? 0,
               ...(total != null ? { total } : {}),
               ...(reread ? { reread: true } : {}),
