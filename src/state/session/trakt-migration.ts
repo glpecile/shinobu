@@ -57,6 +57,16 @@ export function hardcoverListsGranted(): boolean {
   return scopes != null && HARDCOVER_LIST_SCOPES.every((scope) => scopes.includes(scope));
 }
 
+/**
+ * True when a connect made since lists shipped still lacks the list scopes.
+ * Hardcover caps a grant at what the app registration allows, so another
+ * connect changes nothing until the registration allows them
+ * (docs/solutions/hardcover-list-scopes.md).
+ */
+export function hardcoverListsRefused(): boolean {
+  return getProviderSession(Provider.Hardcover)?.scopes != null && !hardcoverListsGranted();
+}
+
 /** `connectedProviderIds()` minus providers in the MigrationNeeded state. */
 export function usableProviderIds(): ProviderId[] {
   return connectedProviderIds().filter(providerIsUsable);

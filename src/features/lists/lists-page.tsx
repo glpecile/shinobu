@@ -11,6 +11,7 @@ import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useHardcoverListsPrompt } from './hardcover-lists-prompt';
 import { ListsHeader, ProviderListLink } from './list-header';
 import type { ListSummary } from './list-summary';
 
@@ -71,6 +72,7 @@ export function ListsPage({ provider, title = 'List', url, shareHref, index = fa
   const { reset } = useQueryErrorResetBoundary();
   const pushRoute = usePushRoute();
   const label = PROVIDERS[provider].label;
+  const prompt = useHardcoverListsPrompt();
   return (
     <View className="flex-1 bg-background">
       {!embedded && <Head><title>{`${title} — Shinobu`}</title></Head>}
@@ -81,8 +83,8 @@ export function ListsPage({ provider, title = 'List', url, shareHref, index = fa
           {unavailable === 'reconnect' ? (
             <CenteredNotice>
               <CenteredNotice.Icon name="list-outline" />
-              <CenteredNotice.Title>{`Reconnect ${label}`}</CenteredNotice.Title>
-              <CenteredNotice.Body>{`${label} lists need a new permission. Reconnect to see them here. Your library and logging keep working.`}</CenteredNotice.Body>
+              <CenteredNotice.Title>{prompt.title}</CenteredNotice.Title>
+              <CenteredNotice.Body>{prompt.body}</CenteredNotice.Body>
               <View className="mt-6 w-full max-w-xs"><ConnectHardcoverButton /></View>
             </CenteredNotice>
           ) : <CenteredNotice>

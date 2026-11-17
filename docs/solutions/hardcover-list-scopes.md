@@ -39,11 +39,18 @@ sent to Hardcover for this note.
   `reconnectNeeded`. `useHardcoverListsGranted` is false for it, and list
   surfaces show a reconnect prompt. A new connect grants the list scopes.
 
+- **The registration is a cap, not a check.** Hardcover intersects the
+  requested scopes with the registration's allowed scopes at consent time
+  (`OAuth.mdx`, "Scopes"). A connect with a registration that lacks the list
+  scopes succeeds and grants none of them. Such a session has `scopes` without
+  the list scopes (`hardcoverListsRefused`), and the prompt names the
+  registration, because another connect changes nothing. Each registration has
+  its own cap: the localhost dev app and the deployed app are separate.
+
 ## Before this ships
 
 The owner must add `read:lists` and `write:lists` to the app registration on
-hardcover.app. Until then the authorize request asks for scopes the
-registration does not allow.
+hardcover.app. Until then every connect succeeds without list access.
 
 ## Still open, needs the first real connect
 

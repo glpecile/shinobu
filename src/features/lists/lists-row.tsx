@@ -16,6 +16,7 @@ import { useSuspenseHardcoverListsQuery } from '@/state/queries/hardcover';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
+import { useHardcoverListsPrompt } from './hardcover-lists-prompt';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
 import { ListSheet, useListSheet } from './list-sheet';
 import { hardcoverListSummary, letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
@@ -67,10 +68,11 @@ export function HardcoverListsRow({ kind }: { kind: HardcoverListKind }) {
 /** For a Hardcover session without the list scopes: no list read, and the index holds the reconnect. */
 export function HardcoverListsReconnectRow() {
   const pushRoute = usePushRoute();
+  const prompt = useHardcoverListsPrompt();
   return (
     <CollapsibleSection collapseKey={`${Provider.Hardcover}-created-lists`} leading={<ProviderIcon id={Provider.Hardcover} size={16} />} title={listsTitle('created')}>
       <View className="px-4 gap-3 items-start">
-        <Text className="text-muted font-sans text-sm">Hardcover lists need a new permission. Reconnect to see them here. Your library and logging keep working.</Text>
+        <Text className="text-muted font-sans text-sm">{prompt.body}</Text>
         <Button icon={<Button.Icon name="link-outline" />} label="Reconnect Hardcover" onPress={() => pushRoute(routes.hardcoverLists('created'))} size="sm" variant="quiet" />
       </View>
     </CollapsibleSection>
