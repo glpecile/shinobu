@@ -5,16 +5,29 @@ import { View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
+import { ConnectHardcoverButton } from '@/components/connect-hardcover-button';
 import Head from '@/components/head';
 import { usePushRoute } from '@/lib/navigation';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { ListsHeader, ProviderListLink } from './list-header';
+import type { ListSummary } from './list-summary';
+
+function loadErrorBody(provider: ListSummary['provider']) {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.';
+    case Provider.Serializd:
+      return 'The list may be private, unavailable, or your Serializd session may need reconnecting.';
+    case Provider.Hardcover:
+      return 'The list may be private or deleted, or Hardcover may be unavailable. Try again later.';
+  }
+}
 
 /** Request failures and render failures share the same retry and provider escape hatch. */
 export function ListsLoadError({ provider, url, index = false, title = 'List', shareHref, onRetry }: {
-  provider: typeof Provider.Letterboxd | typeof Provider.Serializd;
+  provider: ListSummary['provider'];
   url: string;
   index?: boolean;
   title?: string;
@@ -26,7 +39,7 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
     <CenteredNotice>
       <CenteredNotice.Icon name="list-outline" />
       <CenteredNotice.Title>Couldn’t load {index ? 'your lists' : 'this list'}</CenteredNotice.Title>
-      <CenteredNotice.Body>{provider === Provider.Letterboxd ? 'Letterboxd may be blocking this page. Try again later or open it on Letterboxd. Private or deleted lists aren’t available here.' : 'The list may be private, unavailable, or your Serializd session may need reconnecting.'}</CenteredNotice.Body>
+      <CenteredNotice.Body>{loadErrorBody(provider)}</CenteredNotice.Body>
       <View className="mt-6 items-center gap-3">
         <Button icon={<Button.Icon name="refresh" />} label="Try again" onPress={() => void onRetry()} />
         {!index && <ProviderListLink provider={provider} url={url} />}
@@ -37,7 +50,7 @@ export function ListsLoadError({ provider, url, index = false, title = 'List', s
 
 /** Shared recovery and loading frame; resource pages own their query and identity. */
 export function ListsPage({ provider, title = 'List', url, shareHref, index = false, embedded = false, unavailable = 'invalid', children, fallback, contentKey }: {
-  provider: typeof Provider.Letterboxd | typeof Provider.Serializd;
+  provider: ListSummary['provider'];
   title?: string;
   url: string | null;
   /** Keeps a detail page's Share in its header when the list fails to load. */
@@ -45,7 +58,8 @@ export function ListsPage({ provider, title = 'List', url, shareHref, index = fa
   index?: boolean;
   /** A pager owns the shared header and document title; this page owns recovery. */
   embedded?: boolean;
-  unavailable?: 'invalid' | 'connect';
+  /** `reconnect`: a Hardcover session from before lists, without the list scopes. */
+  unavailable?: 'invalid' | 'connect' | 'reconnect';
   children?: ReactNode;
   fallback?: ReactNode;
   /**
@@ -64,12 +78,19 @@ export function ListsPage({ provider, title = 'List', url, shareHref, index = fa
       {url == null ? (
         <>
           {!index && <ListsHeader provider={provider} title={title} />}
-          <CenteredNotice>
+          {unavailable === 'reconnect' ? (
+            <CenteredNotice>
+              <CenteredNotice.Icon name="list-outline" />
+              <CenteredNotice.Title>{`Reconnect ${label}`}</CenteredNotice.Title>
+              <CenteredNotice.Body>{`${label} lists need a new permission. Reconnect to see them here. Your library and logging keep working.`}</CenteredNotice.Body>
+              <View className="mt-6 w-full max-w-xs"><ConnectHardcoverButton /></View>
+            </CenteredNotice>
+          ) : <CenteredNotice>
             <CenteredNotice.Icon name="list-outline" />
             <CenteredNotice.Title>{unavailable === 'connect' ? `Connect ${label}` : 'Invalid list link'}</CenteredNotice.Title>
             <CenteredNotice.Body>{unavailable === 'connect' ? `Connect ${label} to browse your created and liked lists.` : `This link doesn’t identify a ${label} list page.`}</CenteredNotice.Body>
             <CenteredNotice.Action icon={<Button.Icon name={unavailable === 'connect' ? 'link-outline' : 'home-outline'} />} label={unavailable === 'connect' ? `Connect ${label}` : 'Go home'} onPress={() => pushRoute(unavailable === 'connect' ? routes.settings : routes.home)} />
-          </CenteredNotice>
+          </CenteredNotice>}
         </>
       ) : (
         <ErrorBoundary key={contentKey ?? url} onReset={reset} fallbackRender={({ resetErrorBoundary }) => (

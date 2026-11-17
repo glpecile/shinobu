@@ -1,4 +1,10 @@
-import { keepPreviousData, useQuery, useSuspenseQuery, type QueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  useSuspenseInfiniteQuery,
+  useSuspenseQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { httpFetch } from '@/lib/http/client';
@@ -7,6 +13,12 @@ import {
   revokeHardcoverSession,
 } from '@/lib/providers/hardcover/auth';
 import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
+import {
+  getHardcoverBookLists,
+  getHardcoverList,
+  getHardcoverLists,
+  type HardcoverListKind,
+} from '@/lib/providers/hardcover/lists';
 import type { HardcoverLibraryEntry } from '@/lib/providers/hardcover/normalize';
 import {
   getAuthor,
@@ -96,6 +108,12 @@ export const hardcoverQueryKeys = {
   bookSlug: (slug: string) => [...hardcoverQueryKeys.all, 'book-slug', slug] as const,
   books: (ids: readonly number[]) => [...hardcoverQueryKeys.all, 'books', ids] as const,
   author: (key: HardcoverAuthorKey) => [...hardcoverQueryKeys.all, 'author', key] as const,
+  /** Every list index read. A list write invalidates this prefix. */
+  listsRoot: () => [...hardcoverQueryKeys.all, 'lists'] as const,
+  lists: (kind: HardcoverListKind) => [...hardcoverQueryKeys.listsRoot(), kind] as const,
+  listRoot: () => [...hardcoverQueryKeys.all, 'list'] as const,
+  list: (id: number) => [...hardcoverQueryKeys.listRoot(), id] as const,
+  bookLists: (bookId: number) => [...hardcoverQueryKeys.all, 'book-lists', bookId] as const,
 };
 
 /** Catalog records change rarely, and each read costs the per-token budget. */
@@ -242,5 +260,43 @@ export function useHardcoverBookIdBySlugQuery(slug: string | null) {
       Effect.runPromise(getBookIdBySlug(hardcoverDeps(), slug ?? ''), { signal }),
     enabled: slug != null,
     staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+/** Covers edits on hardcover.app. Shinobu's own list writes invalidate the list keys. */
+const LISTS_STALE_MS = 15 * 60_000;
+
+/** The member's own or liked lists. Home and View all share this. */
+export function useSuspenseHardcoverListsQuery(kind: HardcoverListKind) {
+  return useSuspenseQuery({
+    queryKey: hardcoverQueryKeys.lists(kind),
+    queryFn: ({ signal }) => Effect.runPromise(getHardcoverLists(hardcoverDeps(), kind), { signal }),
+    staleTime: LISTS_STALE_MS,
+  });
+}
+
+/** One list's books, 100 a page, each with the viewer's status for it. */
+export function useSuspenseHardcoverListQuery(id: number) {
+  return useSuspenseInfiniteQuery({
+    queryKey: hardcoverQueryKeys.list(id),
+    queryFn: async ({ client, pageParam, signal }) => {
+      const viewer = await client.fetchQuery(hardcoverViewerQuery());
+      return Effect.runPromise(
+        getHardcoverList(hardcoverDeps(), { id, viewerId: viewer.id, page: pageParam }),
+        { signal },
+      );
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, page) => (lastPage.hasNextPage ? page + 1 : undefined),
+    staleTime: LISTS_STALE_MS,
+  });
+}
+
+/** The most-liked public lists that include a book. */
+export function useSuspenseHardcoverBookListsQuery(bookId: number) {
+  return useSuspenseQuery({
+    queryKey: hardcoverQueryKeys.bookLists(bookId),
+    queryFn: ({ signal }) => Effect.runPromise(getHardcoverBookLists(hardcoverDeps(), bookId), { signal }),
+    staleTime: CATALOG_STALE_MS,
   });
 }

@@ -1,4 +1,5 @@
 import { formatCount } from '@/lib/format-count';
+import { hardcoverListUrl, hardcoverListsUrl, type HardcoverList } from '@/lib/providers/hardcover/lists';
 import { letterboxdListUrl, type LetterboxdList } from '@/lib/providers/letterboxd/lists';
 import { serializdListUrl, type SerializdList } from '@/lib/providers/serializd/lists';
 import { Provider } from '@/lib/providers/types';
@@ -15,7 +16,7 @@ export type ListSummary = {
   count: string;
   href: string;
   url: string;
-} & ({ provider: typeof Provider.Letterboxd; slug: string } | { provider: typeof Provider.Serializd });
+} & ({ provider: typeof Provider.Letterboxd; slug: string } | { provider: typeof Provider.Serializd } | { provider: typeof Provider.Hardcover });
 
 function countLabel(count: number | undefined, noun: string) {
   return count == null ? '' : `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
@@ -34,6 +35,14 @@ export function serializdListSummary(list: SerializdList): ListSummary {
     ...list, provider: Provider.Serializd, count: countLabel(list.itemCount, 'item'),
     href: routes.serializdList(list.id),
     url: serializdListUrl(list.id) ?? '',
+  };
+}
+
+export function hardcoverListSummary(list: HardcoverList): ListSummary {
+  return {
+    ...list, provider: Provider.Hardcover, count: countLabel(list.bookCount, 'book'),
+    href: routes.hardcoverList(list.id),
+    url: hardcoverListUrl(list.owner, list.slug) ?? hardcoverListsUrl(list.owner),
   };
 }
 
