@@ -17,10 +17,12 @@ import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { openExternalUrl } from '@/lib/open-external-url';
+import { providerItemUrl } from '@/lib/providers/external-urls';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
 import { Provider } from '@/lib/providers/types';
 import { toast } from '@/lib/toast';
+import { hardcoverQueryKeys, useSuspenseHardcoverBookSearchQuery } from '@/state/queries/hardcover';
 import { useListMembership, useSuspenseListSearchQuery, type ListEditTarget } from '@/state/queries/list-membership';
 import { useHasLetterboxdWriteSession } from '@/state/session/letterboxd';
 import { getClientIdForProvider } from '@/state/session/provider-config';
@@ -32,8 +34,21 @@ import type { NormalizedMediaItem } from '@/types/media';
 /** What search and recovery need of a list, which a list being created also has. */
 type ListSearchTarget = Pick<ListEditTarget, 'provider' | 'title' | 'url'>;
 
-function ListRecovery({ target }: { target: ListSearchTarget }) {
-  return <Button icon={<Button.Icon name="open-outline" />} label={`Open on ${PROVIDERS[target.provider].label}`} onPress={() => void openExternalUrl(target.url)} variant="quiet" />;
+/** Opens the list on its provider. A failed Hardcover write passes `item`, and opens the book instead. */
+function ListRecovery({ target, item }: { target: ListSearchTarget; item?: NormalizedMediaItem }) {
+  const itemUrl = target.provider === Provider.Hardcover && item != null ? providerItemUrl(target.provider, item) : null;
+  return <Button icon={<Button.Icon name="open-outline" />} label={`Open on ${PROVIDERS[target.provider].label}`} onPress={() => void openExternalUrl(itemUrl ?? target.url)} variant="quiet" />;
+}
+
+function copy(provider: ListSearchTarget['provider']) {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return { noun: 'films', add: 'Add a film', find: 'Find a film', fab: 'Add a film to this list', kept: 'Your watched history will stay the same.' };
+    case Provider.Serializd:
+      return { noun: 'shows', add: 'Add a show', find: 'Find a show', fab: 'Add a show to this list', kept: 'Your watched history will stay the same.' };
+    case Provider.Hardcover:
+      return { noun: 'books', add: 'Add a book', find: 'Find a book', fab: 'Add a book to this list', kept: 'Your reading history will stay the same.' };
+  }
 }
 
 /** Shared inline confirmation for add search and the per-entry actions sheet. */
@@ -63,7 +78,7 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
           <Text className="text-muted font-sans text-sm">{subtitle ?? item.year}</Text>
         </View>
       </View>
-      <WriteSheet.Description>{present ? `Add to "${target.title}"?` : `Remove from "${target.title}"? Your watched history will stay the same.`}</WriteSheet.Description>
+      <WriteSheet.Description>{present ? `Add to "${target.title}"?` : `Remove from "${target.title}"? ${copy(target.provider).kept}`}</WriteSheet.Description>
       {!writable && <WriteSheet.Description>{needsScript ? letterboxdScriptHint(scriptUntrusted, 'edit this list here') : 'Reconnect Letterboxd with a signed-in session to edit lists here.'}</WriteSheet.Description>}
       {mutation.isError && <WriteSheet.Error>{mutation.error.message}</WriteSheet.Error>}
       <WriteSheet.Actions>
@@ -83,21 +98,25 @@ export function ListMembershipForm({ target, item, present, entryId, subtitle, o
           }}
         />}
         <Button disabled={mutation.isPending} icon={<Button.Icon name="arrow-back" />} label={present ? 'Back' : 'Cancel'} onPress={onBack} variant="ghost" />
-        {(!writable || mutation.isError) && <ListRecovery target={target} />}
+        {(!writable || mutation.isError) && <ListRecovery item={item} target={target} />}
       </WriteSheet.Actions>
     </WriteSheet.Step>
   );
 }
 
-function SearchResults({ query, source, target, items, onSelect }: {
-  query: string;
-  source: 'tmdb' | typeof Provider.Trakt;
-  target: ListSearchTarget;
-  items: readonly NormalizedMediaItem[];
-  onSelect: (item: NormalizedMediaItem) => void;
-}) {
-  const { data } = useSuspenseListSearchQuery(query, source);
-  const results = data.filter((item) => target.provider === Provider.Letterboxd ? item.type === 'MOVIE' : item.type === 'TV');
+type ResultsProps = { query: string; items: readonly NormalizedMediaItem[]; onSelect: (item: NormalizedMediaItem) => void };
+
+function SearchResults({ source, type, ...props }: ResultsProps & { source: 'tmdb' | typeof Provider.Trakt; type: 'MOVIE' | 'TV' }) {
+  const { data } = useSuspenseListSearchQuery(props.query, source);
+  return <ResultRows {...props} results={data.filter((item) => item.type === type)} />;
+}
+
+function BookSearchResults(props: ResultsProps) {
+  const { data } = useSuspenseHardcoverBookSearchQuery(props.query);
+  return <ResultRows {...props} results={data} />;
+}
+
+function ResultRows({ query, results, items, onSelect }: ResultsProps & { results: readonly NormalizedMediaItem[] }) {
   return <List
     data={results}
     estimatedItemSize={76}
@@ -107,7 +126,7 @@ function SearchResults({ query, source, target, items, onSelect }: {
     keyboardShouldPersistTaps="handled"
     scrollEnabled={false}
     renderItem={({ item }) => {
-      const listed = items.some((entry) => entry.id === item.id || (entry.externalIds.tmdb != null && entry.externalIds.tmdb === item.externalIds.tmdb));
+      const listed = items.some((entry) => entry.id === item.id || (entry.externalIds.tmdb != null && entry.externalIds.tmdb === item.externalIds.tmdb) || (entry.externalIds.hardcover != null && entry.externalIds.hardcover === item.externalIds.hardcover));
       return <PresstableOpacity
         accessibilityLabel={`${item.title}${item.year == null ? '' : `, ${item.year}`}${listed ? ', already in list' : ''}`}
         accessibilityRole="button"
@@ -133,7 +152,7 @@ function SearchResults({ query, source, target, items, onSelect }: {
   />;
 }
 
-/** Search films or shows for a list; `items` marks what it already holds. */
+/** Search films, shows or books for a list; `items` marks what it already holds. */
 export function ListSearch({ target, items, onSelect, onClose }: {
   target: ListSearchTarget;
   items: readonly NormalizedMediaItem[];
@@ -144,22 +163,24 @@ export function ListSearch({ target, items, onSelect, onClose }: {
   const query = useDeferredValue(text.trim());
   const token = useTmdbToken();
   const source = token != null && token !== '' ? 'tmdb' : getClientIdForProvider(Provider.Trakt) ? Provider.Trakt : null;
-  const fetching = useIsFetching({ queryKey: source === Provider.Trakt ? traktQueryKeys.search(query, 20) : tmdbQueryKeys.search(query), exact: true }) > 0;
-  const noun = target.provider === Provider.Letterboxd ? 'films' : 'shows';
+  // Hardcover searches its own catalogue, so books need neither source.
+  const books = target.provider === Provider.Hardcover;
+  const fetching = useIsFetching({ queryKey: books ? hardcoverQueryKeys.search(query) : source === Provider.Trakt ? traktQueryKeys.search(query, 20) : tmdbQueryKeys.search(query), exact: true }) > 0;
+  const { noun, add, find } = copy(target.provider);
   return <WriteSheet.Step>
-    <WriteSheet.Header onClose={onClose}><WriteSheet.Title>{target.provider === Provider.Letterboxd ? 'Add a film' : 'Add a show'}</WriteSheet.Title></WriteSheet.Header>
+    <WriteSheet.Header onClose={onClose}><WriteSheet.Title>{add}</WriteSheet.Title></WriteSheet.Header>
     <WriteSheet.Description>{target.title}</WriteSheet.Description>
     <View className="mt-4">
       <SearchField
         accessibilityLabel={`Search ${noun}`}
-        loading={source != null && text.trim().length >= 2 && (fetching || query !== text.trim())}
+        loading={(books || source != null) && text.trim().length >= 2 && (fetching || query !== text.trim())}
         onChangeText={setText}
         placeholder={`Search ${noun}`}
         value={text}
       />
     </View>
     <View className="min-h-80">
-      {source == null ? (
+      {!books && source == null ? (
         <CenteredNotice className="min-h-80">
           <CenteredNotice.Icon name="search-outline" />
           <CenteredNotice.Title>Search unavailable</CenteredNotice.Title>
@@ -169,7 +190,7 @@ export function ListSearch({ target, items, onSelect, onClose }: {
       ) : text.trim().length < 2 || query.length < 2 ? (
         <CenteredNotice className="min-h-80">
           <CenteredNotice.Glyph>忍</CenteredNotice.Glyph>
-          <CenteredNotice.Title>{target.provider === Provider.Letterboxd ? 'Find a film' : 'Find a show'}</CenteredNotice.Title>
+          <CenteredNotice.Title>{find}</CenteredNotice.Title>
           <CenteredNotice.Body>{`Search ${noun} to add to this list. Enter at least two characters to begin.`}</CenteredNotice.Body>
         </CenteredNotice>
       ) : (
@@ -200,7 +221,9 @@ export function ListSearch({ target, items, onSelect, onClose }: {
                 ))}
               </View>
             }>
-              <SearchResults items={items} onSelect={onSelect} query={query} source={source} target={target} />
+              {books
+                ? <BookSearchResults items={items} onSelect={onSelect} query={query} />
+                : source != null && <SearchResults items={items} onSelect={onSelect} query={query} source={source} type={target.provider === Provider.Letterboxd ? 'MOVIE' : 'TV'} />}
             </Suspense>
           </ErrorBoundary>}
         </QueryErrorResetBoundary>
@@ -214,7 +237,7 @@ export function AddToList({ target, items }: { target: ListEditTarget; items: re
   const [session, setSession] = useState(0);
   const [selected, setSelected] = useState<NormalizedMediaItem | null>(null);
   return <>
-    <Fab className="absolute bottom-6 end-6" icon="add" label={target.provider === Provider.Letterboxd ? 'Add a film to this list' : 'Add a show to this list'} onPress={() => { setSelected(null); setSession(session + 1); setOpen(true); }} />
+    <Fab className="absolute bottom-6 end-6" icon="add" label={copy(target.provider).fab} onPress={() => { setSelected(null); setSession(session + 1); setOpen(true); }} />
     <Sheet onClose={() => setOpen(false)} open={open}>
       {session > 0 && (selected == null
         ? <ListSearch items={items} key={`search-${session}`} onClose={() => setOpen(false)} onSelect={setSelected} target={target} />

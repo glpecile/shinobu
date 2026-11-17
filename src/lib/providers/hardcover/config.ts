@@ -32,3 +32,6 @@ export const HARDCOVER_SCOPES = [
 export function hardcoverClientId(): string {
   return process.env.EXPO_PUBLIC_HARDCOVER_CLIENT_ID ?? '';
 }
+
+/** A new list's first books. One create spends 1 + books requests against a burst of 10. */
+export const MAX_NEW_HARDCOVER_LIST_BOOKS = 8;

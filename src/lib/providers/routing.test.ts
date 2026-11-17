@@ -382,6 +382,12 @@ describe('listProviderFor', () => {
     expect(listProviderFor({ type: 'TV' }, ALL)).toBeNull();
     expect(listProviderFor({ type: 'MANGA' }, ALL4)).toBeNull();
   });
+
+  it('sends a book to Hardcover only when it carries a Hardcover id', () => {
+    expect(listProviderFor({ type: 'BOOK', ...ids({ hardcover: 1 }) }, ['hardcover'])).toBe('hardcover');
+    expect(listProviderFor({ type: 'BOOK', ...ids({}) }, ['hardcover'])).toBeNull();
+    expect(listProviderFor({ type: 'BOOK', ...ids({ hardcover: 1 }) }, ALL4)).toBeNull();
+  });
 });
 
 describe('unmatchedWriteTargets', () => {
