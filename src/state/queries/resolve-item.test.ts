@@ -37,6 +37,7 @@ mock.module('@/lib/http/client', () => ({ httpFetch: (url: string) => {
 
 const { useResolvedMediaItem } = await import('./resolve-item');
 const { UP_NEXT_QUERY_ROOT } = await import('./up-next-cache');
+const { anilistRelationsQuery } = await import('./anilist');
 const { setProviderClientId } = await import('@/state/session/tokens');
 const { clearTmdbToken, saveTmdbToken } = await import('@/state/session/tmdb-token');
 
@@ -64,6 +65,20 @@ test('a card cached by Up Next resolves without a request', () => {
   expect(result.current.item?.id).toBe('trakt-42');
   expect(result.current.isLoading).toBe(false);
   expect(urls).toEqual([]);
+});
+
+test('a cached Simkl anime takes its synopsis and other titles from its AniList record', () => {
+  const { client, wrapper } = setup();
+  const anime: NormalizedMediaItem = { ...show, id: 'simkl-7', title: 'Seitokai', type: 'ANIME',
+    externalIds: { simkl: 7, anilist: 9 } };
+  client.setQueryData([...UP_NEXT_QUERY_ROOT, 'inputs'], { progress: [{ item: anime }] });
+  client.setQueryData(anilistRelationsQuery(client, { mediaId: 9, type: 'ANIME' }).queryKey, { item: { ...anime, id: 'anilist-9',
+    title: 'Student Council', titles: { english: 'Student Council' }, overview: 'A council.', isFilm: true } });
+  const { result } = renderHook(() => useResolvedMediaItem('simkl-7'), { wrapper });
+  expect(result.current.item).toMatchObject({ id: 'simkl-7', title: 'Seitokai',
+    titles: { english: 'Student Council' }, overview: 'A council.' });
+  // The tracker's film flag routes writes, so AniList's never replaces it.
+  expect(result.current.item?.isFilm).toBeUndefined();
 });
 
 test('a cached item of another type does not resolve', () => {

@@ -19,7 +19,12 @@ import {
 import { useMediaDetailsQuery } from './media-details';
 import { findInLetterboxdListsCache, useLetterboxdFilmQuery } from './letterboxd';
 import { findInSerializdListsCache, findInSerializdUpcomingCache } from './serializd';
-import { useMovieCatalogueQuery, useSimklLookupQuery, useTraktIdentityQuery } from './mapping';
+import {
+  useMovieCatalogueQuery,
+  useSimklAnimeIdsQuery,
+  useSimklLookupQuery,
+  useTraktIdentityQuery,
+} from './mapping';
 import { findInSearchCache } from './search-cache';
 import { tmdbQueryKeys } from './tmdb';
 import { useTraktItemQuery } from './trakt';
@@ -171,9 +176,30 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   const anilistDeepLinkItem = useAnimeByIdQuery(anilistDeepLink, mediaType ?? resolvedItem?.type);
   // And the Simkl one: a variant poster or a shared link to a Simkl-minted id.
   const simklDeepLink = resolvedItem == null ? parseSimklItemId(id) : null;
-  const simklDeepLinkItem = useSimklLookupQuery(
+  const simklLookup = useSimklLookupQuery(
     simklDeepLink != null ? { simkl: simklDeepLink } : null,
   );
+  const simklAnimeIds = useSimklAnimeIdsQuery(
+    simklLookup.data?.type === 'ANIME' ? simklDeepLink : null,
+  );
+  const simklDeepLinkItem = simklLookup.data != null && simklAnimeIds.data != null
+    ? { ...simklLookup.data, externalIds: { ...simklAnimeIds.data, ...simklLookup.data.externalIds } }
+    : simklLookup.data ?? undefined;
+  // A tracker's anime (a Simkl library row) carries art and ids, no synopsis,
+  // genres or other titles. Its AniList record describes the same cour, which
+  // TMDB's whole-series record does not. `isFilm` stays the tracker's: it routes writes.
+  const trackedAnime = resolvedItem ?? simklDeepLinkItem;
+  const courRecord = useAnimeByIdQuery(
+    anilistDeepLink == null && trackedAnime?.type === 'ANIME'
+      ? trackedAnime.externalIds.anilist ?? null
+      : null,
+  ).data;
+  const withCourRecord = trackedAnime != null && courRecord != null
+    ? mergeCatalogueMetadata(
+        { ...trackedAnime, titles: { ...courRecord.titles, ...trackedAnime.titles } },
+        courRecord,
+      )
+    : undefined;
   const traktDeepLink = resolvedItem == null ? /^trakt-([1-9][0-9]*)$/.exec(id)?.[1] : undefined;
   const traktDeepLinkItem = useTraktItemQuery(traktDeepLink == null ? null : Number(traktDeepLink), mediaType);
   const imdb = resolvedItem == null ? /^imdb-(tt[0-9]+)$/.exec(id)?.[1] : undefined;
@@ -198,11 +224,11 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
       ? { ...mergeCatalogueMetadata(resolvedItem, film.data), tmdbTvVariant: film.data.tmdbTvVariant }
       : resolvedItem != null && anilistDeepLinkItem.data != null
         ? mergeCatalogueMetadata({ ...anilistDeepLinkItem.data, ...resolvedItem }, anilistDeepLinkItem.data)
-        : resolvedItem) ??
+        : withCourRecord ?? resolvedItem) ??
     film.data ??
     deepLinkDetails.data?.catalogue ??
     anilistDeepLinkItem.data ??
-    simklDeepLinkItem.data ??
+    simklDeepLinkItem ??
     traktDeepLinkItem.data ??
     external ??
     undefined;
@@ -222,7 +248,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
       (letterboxd != null && resolvedItem == null && film.isPending) ||
       ((imdb != null || serializd != null) && externalItem.isPending) ||
       (traktDeepLinkItem.isEnabled && traktDeepLinkItem.isPending) ||
-      (simklDeepLink != null && simklDeepLinkItem.isPending),
+      (simklDeepLink != null && simklLookup.isPending),
   };
 }
 

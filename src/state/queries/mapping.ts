@@ -731,13 +731,27 @@ export async function cachedSimklAnimeIds(
     .catch(nullUnlessCancelled);
   const simklId = match?.type === 'ANIME' ? match.externalIds.simkl : undefined;
   if (simklId == null) return null;
-  return queryClient.fetchQuery({
+  return queryClient.fetchQuery(simklAnimeIdsQuery(simklId)).catch(nullUnlessCancelled);
+}
+
+function simklAnimeIdsQuery(simklId: number) {
+  return {
     queryKey: mappingQueryKeys.simklAnimeIds(simklId),
-    queryFn: ({ signal }) => Effect.runPromise(getSimklAnimeIds(simklDeps(), { simklId }), { signal }),
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      Effect.runPromise(getSimklAnimeIds(simklDeps(), { simklId }), { signal }),
     // Simkl fills a new release's ids in over its first days.
     staleTime: EPISODE_MAP_STALE_MS,
     gcTime: EPISODE_MAP_STALE_MS,
-  }).catch(nullUnlessCancelled);
+  };
+}
+
+/**
+ * Every id Simkl links to one of its anime records. `/search/id` by Simkl id
+ * returns none of them, so a cold Simkl anime link reads them here. `null`
+ * disables it.
+ */
+export function useSimklAnimeIdsQuery(simklId: number | null) {
+  return useQuery({ ...simklAnimeIdsQuery(simklId ?? 0), enabled: simklId != null });
 }
 
 /**
