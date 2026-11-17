@@ -1,3 +1,4 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { Suspense, useState, type ReactNode } from 'react';
 import { Text, View } from 'react-native';
@@ -5,6 +6,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 import { Button } from '@/components/button';
 import { CenteredNotice } from '@/components/centered-notice';
+import { ConnectHardcoverButton } from '@/components/connect-hardcover-button';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
 import { Sheet } from '@/components/sheet';
@@ -19,48 +21,68 @@ import { PROVIDERS } from '@/lib/providers/registry';
 import { listProviderFor } from '@/lib/providers/routing';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
+import { useSuspenseHardcoverListMembershipQuery } from '@/state/queries/hardcover';
 import type { ListEditTarget } from '@/state/queries/list-membership';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
-import { useConnectedProviders } from '@/state/session';
+import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
+import { useHardcoverListsPrompt } from './hardcover-lists-prompt';
 import { ListMembershipForm } from './list-membership-form';
 import { ListsLoadError } from './lists-page';
-import { letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
+import { hardcoverListSummary, letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
 
-type ListProvider = typeof Provider.Letterboxd | typeof Provider.Serializd;
+type ListProvider = ListSummary['provider'];
 
-function editTarget(list: ListSummary, username: string): ListEditTarget | null {
+function editTarget(list: ListSummary, username: string): ListEditTarget {
   switch (list.provider) {
     case Provider.Letterboxd:
       return { provider: list.provider, username, owner: list.owner, slug: list.slug, title: list.title, url: list.url };
     case Provider.Serializd:
       return { provider: list.provider, username, id: list.id, title: list.title, url: list.url };
     case Provider.Hardcover:
-      return null;
+      return { provider: list.provider, username: list.owner, id: list.id, title: list.title, url: list.url };
   }
 }
 
+/** The account whose lists the picker reads, null when there is none. Hardcover reads by its token, so it names no one. */
 function listUsername(provider: ListProvider) {
   switch (provider) {
     case Provider.Letterboxd:
       return getLetterboxdUsername();
     case Provider.Serializd:
       return getSerializdUsername();
+    case Provider.Hardcover:
+      return '';
   }
 }
 
-function ListRows({ provider, lists, hasNextPage, isFetchingNextPage, fetchNextPage, onSelect, onCreate }: {
+function emptyBody(provider: ListProvider) {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return 'Start one here, or on Letterboxd. Private lists aren’t available in Shinobu.';
+    case Provider.Serializd:
+      return 'Start one here, or on Serializd.';
+    case Provider.Hardcover:
+      return 'Start one here, or on Hardcover.';
+  }
+}
+
+/** `entryIds` maps each list that already holds the item to its entry there. */
+function ListRows({ provider, lists, entryIds, hasNextPage = false, isFetchingNextPage = false, fetchNextPage, onSelect, onCreate }: {
   provider: ListProvider;
   lists: readonly ListSummary[];
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  fetchNextPage: () => void;
-  onSelect: (list: ListSummary) => void;
+  entryIds?: ReadonlyMap<string, string>;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  fetchNextPage?: () => void;
+  onSelect: (list: ListSummary, entryId?: string) => void;
   onCreate: () => void;
 }) {
+  const accent = useThemeColor('--color-accent');
   return <>
     <List
       data={lists}
@@ -68,34 +90,40 @@ function ListRows({ provider, lists, hasNextPage, isFetchingNextPage, fetchNextP
       keyExtractor={(list) => list.id}
       scrollEnabled={false}
       style={{ minHeight: 70 }}
-      renderItem={({ item: list }) => (
-        <PresstableOpacity
-          accessibilityLabel={list.count === '' ? list.title : `${list.title}, ${list.count}`}
-          accessibilityRole="button"
-          className="flex-row items-center gap-3 py-2"
-          onPress={() => { haptics.selection(); onSelect(list); }}
-        >
-          <SmallPoster recyclingKey={list.id} size="sm" uri={list.previews[0]?.coverImage ?? ''} />
-          <View className="flex-1 min-w-0">
-            <Text className="text-foreground font-sans-semibold text-sm" numberOfLines={2}>{list.title}</Text>
-            {list.count !== '' && <Text className="text-muted font-sans text-xs mt-1">{list.count}</Text>}
-          </View>
-        </PresstableOpacity>
-      )}
+      renderItem={({ item: list }) => {
+        const entryId = entryIds?.get(list.id);
+        const meta = [entryId == null ? null : 'In this list', list.count === '' ? null : list.count].filter((part) => part != null).join(' · ');
+        return (
+          <PresstableOpacity
+            accessibilityHint={entryId == null ? undefined : 'Opens the option to remove it'}
+            accessibilityLabel={meta === '' ? list.title : `${list.title}, ${meta}`}
+            accessibilityRole="button"
+            className="flex-row items-center gap-3 py-2"
+            onPress={() => { haptics.selection(); onSelect(list, entryId); }}
+          >
+            <SmallPoster recyclingKey={list.id} size="sm" uri={list.previews[0]?.coverImage ?? ''} />
+            <View className="flex-1 min-w-0">
+              <Text className="text-foreground font-sans-semibold text-sm" numberOfLines={2}>{list.title}</Text>
+              {meta !== '' && <Text className="text-muted font-sans text-xs mt-1">{meta}</Text>}
+            </View>
+            {entryId != null && <Ionicons accessible={false} color={accent} name="checkmark-circle" size={20} />}
+          </PresstableOpacity>
+        );
+      }}
       ListEmptyComponent={
         <CenteredNotice className="min-h-60">
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
-          <CenteredNotice.Body>{provider === Provider.Letterboxd ? 'Start one here, or on Letterboxd. Private lists aren’t available in Shinobu.' : 'Start one here, or on Serializd.'}</CenteredNotice.Body>
+          <CenteredNotice.Body>{emptyBody(provider)}</CenteredNotice.Body>
         </CenteredNotice>
       }
     />
-    {hasNextPage && <Button className="mt-2" icon={<Button.Icon name="chevron-down" />} label="More lists" loading={isFetchingNextPage} loadingLabel="Loading…" onPress={fetchNextPage} variant="ghost" />}
+    {hasNextPage && fetchNextPage != null && <Button className="mt-2" icon={<Button.Icon name="chevron-down" />} label="More lists" loading={isFetchingNextPage} loadingLabel="Loading…" onPress={fetchNextPage} variant="ghost" />}
     <Button className="mt-4" icon={<Button.Icon name="add" />} label="New list" onPress={onCreate} variant="quiet" />
   </>;
 }
 
-type PickerProps = { username: string; onSelect: (list: ListSummary) => void; onCreate: () => void };
+type PickerProps = { username: string; onSelect: (list: ListSummary, entryId?: string) => void; onCreate: () => void };
 
 function LetterboxdListRows({ username, onSelect, onCreate }: PickerProps) {
   const pages = useSuspenseLetterboxdListsQuery(username, 'created');
@@ -124,12 +152,46 @@ function SerializdListRows({ username, onSelect, onCreate }: PickerProps) {
   />;
 }
 
-function ListPicker({ provider, username, onSelect, onCreate, onClose }: PickerProps & { provider: ListProvider; onClose: () => void }) {
+/** The member's own lists, each marked when it already holds the book. */
+function HardcoverListRows({ bookId, onSelect, onCreate }: Omit<PickerProps, 'username'> & { bookId: number }) {
+  const { data } = useSuspenseHardcoverListMembershipQuery(bookId);
+  return <ListRows
+    entryIds={new Map(data.flatMap((list) => list.entryId == null ? [] : [[list.id, list.entryId]]))}
+    lists={data.map(hardcoverListSummary)}
+    onCreate={onCreate}
+    onSelect={onSelect}
+    provider={Provider.Hardcover}
+  />;
+}
+
+function ProviderListRows({ provider, item, ...props }: PickerProps & { provider: ListProvider; item: NormalizedMediaItem }) {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return <LetterboxdListRows {...props} />;
+    case Provider.Serializd:
+      return <SerializdListRows {...props} />;
+    case Provider.Hardcover:
+      // `listProviderFor` names Hardcover only for a book that carries its id.
+      return item.externalIds.hardcover == null ? null : <HardcoverListRows bookId={item.externalIds.hardcover} onCreate={props.onCreate} onSelect={props.onSelect} />;
+  }
+}
+
+function ListPicker({ provider, item, username, onSelect, onCreate, onClose }: PickerProps & { provider: ListProvider; item: NormalizedMediaItem; onClose: () => void }) {
+  const label = PROVIDERS[provider].label;
+  const granted = useHardcoverListsGranted();
+  const prompt = useHardcoverListsPrompt();
   return <WriteSheet.Step>
     <WriteSheet.Header onClose={onClose}><WriteSheet.Title>Add to list</WriteSheet.Title></WriteSheet.Header>
-    <WriteSheet.Description>{`Your ${PROVIDERS[provider].label} lists`}</WriteSheet.Description>
+    <WriteSheet.Description>{`Your ${label} lists`}</WriteSheet.Description>
     <View className="mt-4">
-      <QueryErrorResetBoundary>
+      {provider === Provider.Hardcover && !granted ? (
+        <CenteredNotice className="min-h-60">
+          <CenteredNotice.Icon name="list-outline" />
+          <CenteredNotice.Title>{prompt.title}</CenteredNotice.Title>
+          <CenteredNotice.Body>{prompt.body}</CenteredNotice.Body>
+          <View className="mt-6 w-full max-w-xs"><ConnectHardcoverButton /></View>
+        </CenteredNotice>
+      ) : <QueryErrorResetBoundary>
         {({ reset }) => <ErrorBoundary
           onReset={reset}
           fallbackRender={({ resetErrorBoundary }) => (
@@ -154,12 +216,10 @@ function ListPicker({ provider, username, onSelect, onCreate, onClose }: PickerP
               ))}
             </View>
           }>
-            {provider === Provider.Letterboxd
-              ? <LetterboxdListRows onCreate={onCreate} onSelect={onSelect} username={username} />
-              : <SerializdListRows onCreate={onCreate} onSelect={onSelect} username={username} />}
+            <ProviderListRows item={item} onCreate={onCreate} onSelect={onSelect} provider={provider} username={username} />
           </Suspense>
         </ErrorBoundary>}
-      </QueryErrorResetBoundary>
+      </QueryErrorResetBoundary>}
     </View>
   </WriteSheet.Step>;
 }
@@ -168,18 +228,20 @@ function ListPicker({ provider, username, onSelect, onCreate, onClose }: PickerP
 export function AddToListPicker({ item, onClose, onBack = onClose }: { item: NormalizedMediaItem; onClose: () => void; onBack?: () => void }) {
   const pushRoute = usePushRoute();
   const provider = listProviderFor(item, useConnectedProviders());
-  const [target, setTarget] = useState<ListEditTarget | null>(null);
+  // `entryId` is set when the chosen list already holds the item, which makes the choice a removal.
+  const [selected, setSelected] = useState<{ target: ListEditTarget; entryId?: string } | null>(null);
   const username = provider == null ? null : listUsername(provider);
   if (provider == null || username == null) return null;
-  return target == null
+  return selected == null
     ? <ListPicker
+        item={item}
         onClose={onBack}
         onCreate={() => { onClose(); pushRoute(routes.newList(provider, item)); }}
-        onSelect={(list) => setTarget(editTarget(list, username))}
+        onSelect={(list, entryId) => setSelected({ target: editTarget(list, username), entryId })}
         provider={provider}
         username={username}
       />
-    : <ListMembershipForm item={item} onBack={() => setTarget(null)} onDone={onClose} present target={target} />;
+    : <ListMembershipForm entryId={selected.entryId} item={item} onBack={() => setSelected(null)} onDone={onClose} present={selected.entryId == null} target={selected.target} />;
 }
 
 /**

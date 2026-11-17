@@ -68,7 +68,7 @@ export const routes = {
   watchlist: (provider?: ProviderId) =>
     provider == null ? '/watchlist' : (`/watchlist?provider=${provider}` as const),
   /** The list editor; `provider` preselects where it saves, and `item` starts the list. */
-  newList: (provider?: typeof Provider.Letterboxd | typeof Provider.Serializd, item?: { id: string; type: MediaType }) => {
+  newList: (provider?: typeof Provider.Letterboxd | typeof Provider.Serializd | typeof Provider.Hardcover, item?: { id: string; type: MediaType }) => {
     const query = [
       provider == null ? null : `provider=${provider}`,
       item == null ? null : `item=${encodeURIComponent(item.id)}&type=${item.type}`,

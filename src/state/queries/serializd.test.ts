@@ -133,12 +133,12 @@ test('a membership edit waits for a pending rename and preserves both changes', 
   setProviderSession('serializd', { accessToken: 'tok', username: 'gian' });
   try {
     renderToString(createElement(QueryClientProvider, { client }, createElement(Read)));
-    const renamed = rename.mutateAsync('Favourites');
+    const renamed = rename.mutateAsync({ name: 'Favourites' });
     pending.push(renamed);
     await saving.promise;
     const added = membership.mutateAsync({ present: true, item: { id: 'tmdb-tv-1438', title: 'The Wire', type: 'TV', coverImage: '', currentProgress: 0, progressUnit: 'episode', lastUpdated: '', externalIds: { tmdb: 1438 } } });
     pending.push(added);
-    expect(client.getMutationCache().getAll().find((mutation) => mutation.state.variables !== 'Favourites')?.state.isPaused).toBe(true);
+    expect(client.getMutationCache().getAll().find((mutation) => mutation.options.mutationKey?.[0] === 'list-membership')?.state.isPaused).toBe(true);
     release.resolve();
     await Promise.all([renamed, added]);
     expect(current.listName).toBe('Favourites');

@@ -144,11 +144,14 @@ export function providersForRatings(
   });
 }
 
-/** The provider whose custom lists can hold `item`: Letterboxd takes films, Serializd takes shows. */
+/**
+ * The provider whose custom lists can hold `item`: Letterboxd takes films,
+ * Serializd takes shows, and Hardcover takes a book that carries its id.
+ */
 export function listProviderFor(
-  item: Pick<NormalizedMediaItem, 'type' | 'isFilm'>,
+  item: Pick<NormalizedMediaItem, 'type' | 'isFilm'> & Partial<Pick<NormalizedMediaItem, 'externalIds'>>,
   connected: readonly ProviderId[],
-): typeof Provider.Letterboxd | typeof Provider.Serializd | null {
+): typeof Provider.Letterboxd | typeof Provider.Serializd | typeof Provider.Hardcover | null {
   switch (item.type) {
     case 'MOVIE':
       return connected.includes(Provider.Letterboxd) ? Provider.Letterboxd : null;
@@ -156,8 +159,11 @@ export function listProviderFor(
       return listProviderFor({ type: animeEffectiveMovieTvType(item) }, connected);
     case 'TV':
       return connected.includes(Provider.Serializd) ? Provider.Serializd : null;
-    case 'MANGA':
     case 'BOOK':
+      return connected.includes(Provider.Hardcover) && item.externalIds?.hardcover != null
+        ? Provider.Hardcover
+        : null;
+    case 'MANGA':
       return null;
   }
 }

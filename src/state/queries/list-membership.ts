@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient, useSuspenseQuery, type InfiniteData } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useSuspenseQuery, type InfiniteData, type QueryClient } from '@tanstack/react-query';
 import * as Effect from 'effect/Effect';
 
 import { enrichExternalIds } from '@/features/log-media/enrich';
+import { addBookToHardcoverList, createHardcoverList, deleteHardcoverList, removeBookFromHardcoverList, updateHardcoverList, type HardcoverListDraft } from '@/lib/providers/hardcover/list-writes';
 import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import { searchMedia } from '@/lib/providers/trakt/reads';
 import { createList, renameList, setListMembership, type LetterboxdListDraft, type LetterboxdListFilmsPage } from '@/lib/providers/letterboxd/lists';
@@ -9,6 +10,7 @@ import { createSerializdList, renameSerializdList, setSerializdListMembership, t
 import { Provider } from '@/lib/providers/types';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import type { NormalizedMediaItem } from '@/types/media';
+import { hardcoverDeps, hardcoverQueryKeys } from './hardcover';
 import { letterboxdDeps, letterboxdQueryKeys } from './letterboxd';
 import { serializdDeps, serializdQueryKeys } from './serializd';
 import { tmdbDeps, tmdbQueryKeys } from './tmdb';
@@ -18,7 +20,7 @@ export type ListEditTarget = {
   username: string;
   title: string;
   url: string;
-} & ({ provider: typeof Provider.Letterboxd; owner: string; slug: string } | { provider: typeof Provider.Serializd; id: string });
+} & ({ provider: typeof Provider.Letterboxd; owner: string; slug: string } | { provider: typeof Provider.Serializd; id: string } | { provider: typeof Provider.Hardcover; id: string });
 
 /** Confirm upstream first, update mounted pages, then reconcile detail and index reads. */
 export function useListMembership(target: ListEditTarget) {
@@ -38,6 +40,15 @@ export function useListMembership(target: ListEditTarget) {
         }
         case Provider.Serializd:
           return { provider: Provider.Serializd, list: await Effect.runPromise(setSerializdListMembership(serializdDeps(target.username), { ...target, ...params, item })) };
+        case Provider.Hardcover:
+          if (params.present) {
+            await Effect.runPromise(addBookToHardcoverList(hardcoverDeps(), { listId: Number(target.id), item }));
+          } else {
+            // A removal names the `list_books` row, which only a list read knows.
+            if (params.entryId == null) throw new Error('Reopen the list to remove this book.');
+            await Effect.runPromise(removeBookFromHardcoverList(hardcoverDeps(), Number(params.entryId)));
+          }
+          return { provider: Provider.Hardcover };
       }
     },
     onSuccess: async (result, params) => {
@@ -71,21 +82,36 @@ export function useListMembership(target: ListEditTarget) {
             client.invalidateQueries({ queryKey: key }),
             client.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() }),
           ]);
+          return;
         }
+        case Provider.Hardcover:
+          await invalidateHardcoverList(client, target.id);
       }
     },
   });
 }
 
-/** A Letterboxd rename can move the list to a new slug; callers follow `slug`. */
+function invalidateHardcoverList(client: QueryClient, id: string) {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: hardcoverQueryKeys.list(Number(id)) }),
+    client.invalidateQueries({ queryKey: hardcoverQueryKeys.listsRoot() }),
+  ]);
+}
+
+/**
+ * A Letterboxd rename can move the list to a new slug; callers follow `slug`.
+ * `description` is saved only on Hardcover, and left as it is when absent.
+ */
 export function useRenameList(target: ListEditTarget) {
   const client = useQueryClient();
   return useMutation({
     mutationKey: ['list-rename', target.provider, target.username, target.url],
     scope: { id: `list-membership/${target.provider}/${target.username}/${target.url}` },
     retry: false,
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       switch (target.provider) {
+        case Provider.Hardcover:
+          return { provider: Provider.Hardcover, ...await Effect.runPromise(updateHardcoverList(hardcoverDeps(), { id: Number(target.id), name, description })) };
         case Provider.Letterboxd:
           if (getLetterboxdUsername()?.toLowerCase() !== target.username.toLowerCase()) throw new Error('Your Letterboxd account changed. Reopen the list.');
           return { provider: Provider.Letterboxd, ...await Effect.runPromise(renameList(letterboxdDeps(), { owner: target.owner, slug: target.slug, name })) };
@@ -106,14 +132,33 @@ export function useRenameList(target: ListEditTarget) {
           return;
         case Provider.Serializd:
           await client.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() });
+          return;
+        case Provider.Hardcover:
+          if (target.provider === Provider.Hardcover) await invalidateHardcoverList(client, target.id);
       }
+    },
+  });
+}
+
+/** Deleting is Hardcover's only: the other providers' lists are deleted on their sites. */
+export function useDeleteHardcoverList(id: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationKey: ['list-delete', Provider.Hardcover, id],
+    retry: false,
+    mutationFn: () => Effect.runPromise(deleteHardcoverList(hardcoverDeps(), Number(id))),
+    onSuccess: () => {
+      // Removed, not invalidated: a refetch of a deleted list is a 404.
+      client.removeQueries({ queryKey: hardcoverQueryKeys.list(Number(id)) });
+      return client.invalidateQueries({ queryKey: hardcoverQueryKeys.listsRoot() });
     },
   });
 }
 
 export type NewList =
   | { provider: typeof Provider.Letterboxd; draft: LetterboxdListDraft }
-  | { provider: typeof Provider.Serializd; draft: SerializdListDraft };
+  | { provider: typeof Provider.Serializd; draft: SerializdListDraft }
+  | { provider: typeof Provider.Hardcover; draft: HardcoverListDraft };
 
 /** Never retried: an unconfirmed create may still have saved upstream. */
 export function useCreateList(username: string) {
@@ -133,9 +178,21 @@ export function useCreateList(username: string) {
           client.setQueryData(serializdQueryKeys.list(username, created.id), created);
           return { provider: Provider.Serializd, id: created.id };
         }
+        case Provider.Hardcover:
+          // `failed` names the books Hardcover did not take; the list itself was created.
+          return { provider: Provider.Hardcover, ...await Effect.runPromise(createHardcoverList(hardcoverDeps(), { ...list.draft, items })) };
       }
     },
-    onSuccess: (result) => client.invalidateQueries({ queryKey: result.provider === Provider.Letterboxd ? letterboxdQueryKeys.listsRoot() : serializdQueryKeys.listsRoot() }),
+    onSuccess: (result) => {
+      switch (result.provider) {
+        case Provider.Letterboxd:
+          return client.invalidateQueries({ queryKey: letterboxdQueryKeys.listsRoot() });
+        case Provider.Serializd:
+          return client.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() });
+        case Provider.Hardcover:
+          return client.invalidateQueries({ queryKey: hardcoverQueryKeys.listsRoot() });
+      }
+    },
   });
 }
 

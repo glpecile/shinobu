@@ -13,6 +13,7 @@ import {
   revokeHardcoverSession,
 } from '@/lib/providers/hardcover/auth';
 import type { HardcoverDeps } from '@/lib/providers/hardcover/deps';
+import { getHardcoverListMembership } from '@/lib/providers/hardcover/list-writes';
 import {
   getHardcoverBookLists,
   getHardcoverList,
@@ -298,5 +299,26 @@ export function useSuspenseHardcoverBookListsQuery(bookId: number) {
     queryKey: hardcoverQueryKeys.bookLists(bookId),
     queryFn: ({ signal }) => Effect.runPromise(getHardcoverBookLists(hardcoverDeps(), bookId), { signal }),
     staleTime: CATALOG_STALE_MS,
+  });
+}
+
+/** The member's own lists, each with the row that holds `bookId`, for the add and remove toggle. */
+export function useSuspenseHardcoverListMembershipQuery(bookId: number) {
+  return useSuspenseQuery({
+    queryKey: [...hardcoverQueryKeys.listsRoot(), 'membership', bookId] as const,
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getHardcoverListMembership(hardcoverDeps(), bookId), { signal }),
+    staleTime: LIBRARY_STALE_MS,
+  });
+}
+
+/** Books by title for a list's add search. Shares the search tab's cache. */
+export function useSuspenseHardcoverBookSearchQuery(query: string) {
+  return useSuspenseQuery({
+    queryKey: hardcoverQueryKeys.search(query),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(searchBooks(hardcoverDeps(), { query, perPage: 20 }), { signal }),
+    staleTime: Number.POSITIVE_INFINITY,
+    select: (hits) => hits.map((hit) => hit.item),
   });
 }
