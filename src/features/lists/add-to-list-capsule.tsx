@@ -30,6 +30,7 @@ import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
 import type { NormalizedMediaItem } from '@/types/media';
+import { useHardcoverListsPrompt } from './hardcover-lists-prompt';
 import { ListMembershipForm } from './list-membership-form';
 import { ListsLoadError } from './lists-page';
 import { hardcoverListSummary, letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
@@ -178,6 +179,7 @@ function ProviderListRows({ provider, item, ...props }: PickerProps & { provider
 function ListPicker({ provider, item, username, onSelect, onCreate, onClose }: PickerProps & { provider: ListProvider; item: NormalizedMediaItem; onClose: () => void }) {
   const label = PROVIDERS[provider].label;
   const granted = useHardcoverListsGranted();
+  const prompt = useHardcoverListsPrompt();
   return <WriteSheet.Step>
     <WriteSheet.Header onClose={onClose}><WriteSheet.Title>Add to list</WriteSheet.Title></WriteSheet.Header>
     <WriteSheet.Description>{`Your ${label} lists`}</WriteSheet.Description>
@@ -185,8 +187,8 @@ function ListPicker({ provider, item, username, onSelect, onCreate, onClose }: P
       {provider === Provider.Hardcover && !granted ? (
         <CenteredNotice className="min-h-60">
           <CenteredNotice.Icon name="list-outline" />
-          <CenteredNotice.Title>{`Reconnect ${label}`}</CenteredNotice.Title>
-          <CenteredNotice.Body>{`${label} lists need a new permission. Reconnect to see them here. Your library and logging keep working.`}</CenteredNotice.Body>
+          <CenteredNotice.Title>{prompt.title}</CenteredNotice.Title>
+          <CenteredNotice.Body>{prompt.body}</CenteredNotice.Body>
           <View className="mt-6 w-full max-w-xs"><ConnectHardcoverButton /></View>
         </CenteredNotice>
       ) : <QueryErrorResetBoundary>
