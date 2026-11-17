@@ -435,12 +435,12 @@ function SearchScreen() {
     query,
     enabled: scope.value === 'people',
   });
-  // Books join both title scopes (plan 0119 KTD-3), only with a Hardcover
+  // Books join the Reading scope (plan 0119 KTD-3), only with a Hardcover
   // session: every Hardcover read needs one.
   const booksSearchable = useConnectedProviders().includes(Provider.Hardcover);
   const bookSearch = useHardcoverBookSearchQuery({
     query,
-    enabled: titleSearch && booksSearchable,
+    enabled: reading && booksSearchable,
   });
   const studioSearch = useTmdbStudioSearchQuery({
     query,
@@ -471,7 +471,7 @@ function SearchScreen() {
               titleRow,
             ),
           },
-          ...(booksSearchable
+          ...(reading && booksSearchable
             ? [
                 {
                   search: bookSearch,
