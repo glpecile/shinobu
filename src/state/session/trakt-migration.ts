@@ -1,3 +1,4 @@
+import { HARDCOVER_LIST_SCOPES } from '@/lib/providers/hardcover/config';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 
 import { getClientIdForProvider } from './provider-config';
@@ -44,6 +45,16 @@ export function providerIsUsable(id: ProviderId): boolean {
  */
 export function hardcoverNeedsReconnect(): boolean {
   return getProviderSession(Provider.Hardcover)?.reconnectNeeded === true;
+}
+
+/**
+ * True when the Hardcover session holds both list scopes. A session from
+ * before lists holds none: its library and logging keep working, and list
+ * surfaces ask for a reconnect.
+ */
+export function hardcoverListsGranted(): boolean {
+  const scopes = getProviderSession(Provider.Hardcover)?.scopes;
+  return scopes != null && HARDCOVER_LIST_SCOPES.every((scope) => scopes.includes(scope));
 }
 
 /** `connectedProviderIds()` minus providers in the MigrationNeeded state. */

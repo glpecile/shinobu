@@ -44,4 +44,10 @@ export interface ProviderSession {
    * new connect overwrites it.
    */
   reconnectNeeded?: boolean;
+  /**
+   * Hardcover's granted OAuth scopes. Absent on a session from before lists,
+   * which therefore has no list scopes
+   * (docs/solutions/hardcover-list-scopes.md).
+   */
+  scopes?: string[];
 }

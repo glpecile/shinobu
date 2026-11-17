@@ -16,7 +16,7 @@ import {
 import { optionalNullable } from '@/lib/providers/schema';
 import { Provider } from '@/lib/providers/types';
 import { coalescedRefreshSession } from './auth';
-import { HARDCOVER_GRAPHQL_URL } from './config';
+import { HARDCOVER_GRAPHQL_URL, HARDCOVER_LIST_SCOPES } from './config';
 import type { HardcoverDeps } from './deps';
 
 const provider = Provider.Hardcover;
@@ -31,6 +31,33 @@ const graphQLResponse = Schema.Struct({
     Schema.Array(Schema.Struct({ message: optionalNullable(Schema.String) })),
   ),
 });
+
+const forbiddenBody = Schema.Struct({
+  error: optionalNullable(Schema.String),
+  /** Space separated: the scopes the token lacks. */
+  scope: optionalNullable(Schema.String),
+});
+
+/**
+ * Takes the scopes a 403 `insufficient_scope` names out of the stored
+ * session, so list surfaces ask for a reconnect
+ * (docs/solutions/hardcover-list-scopes.md). The session stays usable: the
+ * library and logging need none of them. Any other 403 changes nothing.
+ */
+function dropRefusedScopes(deps: HardcoverDeps, response: Response): Effect.Effect<void> {
+  return Effect.tryPromise(() => response.json()).pipe(
+    Effect.flatMap(Schema.decodeUnknownEffect(forbiddenBody)),
+    Effect.map((body) => {
+      if (body.error !== 'insufficient_scope') return;
+      const session = deps.tokens.get();
+      if (session?.scopes == null) return;
+      const refused: readonly string[] = body.scope?.split(' ') ?? HARDCOVER_LIST_SCOPES;
+      const scopes = session.scopes.filter((scope) => !refused.includes(scope));
+      if (scopes.length !== session.scopes.length) deps.tokens.set({ ...session, scopes });
+    }),
+    Effect.ignore,
+  );
+}
 
 /** Seconds from a `Retry-After` header, in ms. Absent when unreadable. */
 export function retryAfterMs(headers: Headers): number | undefined {
@@ -75,6 +102,7 @@ function hardcoverGraphQL<A>(
       });
     }
     if (!response.ok) {
+      if (response.status === 403) yield* dropRefusedScopes(deps, response);
       return yield* new ProviderNetworkError({
         provider,
         status: response.status,

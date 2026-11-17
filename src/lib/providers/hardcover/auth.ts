@@ -15,7 +15,12 @@ import type { TokenStore } from '@/lib/providers/token-store';
 import { Provider } from '@/lib/providers/types';
 import type { ProviderSession } from '@/types/session';
 import { clearHardcoverAuthFlow, getHardcoverAuthFlow } from './auth-flow';
-import { HARDCOVER_ISSUER, HARDCOVER_REVOKE_URL, HARDCOVER_TOKEN_URL } from './config';
+import {
+  HARDCOVER_ISSUER,
+  HARDCOVER_REVOKE_URL,
+  HARDCOVER_SCOPES,
+  HARDCOVER_TOKEN_URL,
+} from './config';
 import type { HardcoverDeps } from './deps';
 
 const provider = Provider.Hardcover;
@@ -33,6 +38,8 @@ const tokenResponse = Schema.Struct({
   refresh_token: optionalNullable(Schema.String),
   /** Seconds. */
   expires_in: optionalNullable(Schema.Number),
+  /** Space separated. Optional when it equals the requested scope (RFC 6749 5.1). */
+  scope: optionalNullable(Schema.String),
 });
 const oauthError = Schema.Struct({ error: optionalNullable(Schema.String) });
 
@@ -90,9 +97,11 @@ function oauthPost(
   });
 }
 
+/** `assumedScopes` is what the session holds when the response names no `scope`. */
 function tokenGrant(
   deps: HardcoverDeps,
   body: Record<string, string>,
+  assumedScopes: readonly string[] | undefined,
 ): Effect.Effect<ProviderSession, ProviderError> {
   return Effect.gen(function* () {
     const response = yield* oauthPost(deps, HARDCOVER_TOKEN_URL, body);
@@ -106,10 +115,12 @@ function tokenGrant(
       ),
     );
     const now = yield* Clock.currentTimeMillis;
+    const scopes = token.scope != null ? token.scope.split(' ').filter(Boolean) : assumedScopes;
     const session: ProviderSession = {
       accessToken: token.access_token,
       ...(token.refresh_token != null ? { refreshToken: token.refresh_token } : {}),
       ...(token.expires_in != null ? { expiresAt: now + token.expires_in * 1000 } : {}),
+      ...(scopes != null ? { scopes: [...scopes] } : {}),
     };
     deps.tokens.set(session);
     return session;
@@ -131,13 +142,17 @@ export function exchangeHardcoverCode(
     if (flow == null || flow.state !== params.state || params.iss !== HARDCOVER_ISSUER) {
       return yield* new ProviderAuthError({ provider, refreshFailed: false });
     }
-    return yield* tokenGrant(deps, {
-      grant_type: 'authorization_code',
-      code: params.code,
-      redirect_uri: params.redirectUri,
-      client_id: deps.clientId,
-      code_verifier: flow.verifier,
-    });
+    return yield* tokenGrant(
+      deps,
+      {
+        grant_type: 'authorization_code',
+        code: params.code,
+        redirect_uri: params.redirectUri,
+        client_id: deps.clientId,
+        code_verifier: flow.verifier,
+      },
+      HARDCOVER_SCOPES,
+    );
   }).pipe(Effect.ensuring(Effect.sync(() => clearHardcoverAuthFlow())));
 }
 
@@ -175,11 +190,16 @@ function refreshSession(deps: HardcoverDeps): Effect.Effect<ProviderSession, Pro
       return yield* new ProviderRateLimitError({ provider, retryAfterMs: remaining });
     }
 
-    return yield* tokenGrant(deps, {
-      grant_type: 'refresh_token',
-      refresh_token: session.refreshToken,
-      client_id: deps.clientId,
-    }).pipe(
+    return yield* tokenGrant(
+      deps,
+      {
+        grant_type: 'refresh_token',
+        refresh_token: session.refreshToken,
+        client_id: deps.clientId,
+      },
+      // A refresh grants nothing new: a session from before lists stays without them.
+      session.scopes,
+    ).pipe(
       Effect.tapError((error) =>
         Effect.sync(() => {
           if (error._tag === 'ProviderRateLimitError') {
