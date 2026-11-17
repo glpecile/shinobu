@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import { parseTags } from '@/features/log-media/parse-tags';
+import { MAX_NEW_HARDCOVER_LIST_BOOKS } from '@/lib/providers/hardcover/config';
+import type { HardcoverListDraft } from '@/lib/providers/hardcover/list-writes';
 import { MAX_NEW_LIST_FILMS } from '@/lib/providers/letterboxd/lists';
 import { MAX_SERIALIZD_LIST_ITEMS } from '@/lib/providers/serializd/lists';
 import { listProviderFor } from '@/lib/providers/routing';
@@ -14,16 +16,21 @@ export function fitsProvider(provider: ListProvider, item: NormalizedMediaItem) 
   return listProviderFor(item, [provider]) === provider;
 }
 
+/** Hardcover's `privacy_setting_id` for each choice. It has no link-only lists, so `Anyone` has none. */
+const HARDCOVER_PRIVACY = { Public: 1, Friends: 2, You: 3 } as const satisfies Record<string, HardcoverListDraft['privacy']>;
+
 /**
  * The editor's rules, from what each provider's own editor enforces (plan 0097)
  * and the caps the Letterboxd userscript checks before it opens a tab: a name,
  * Serializd's 1–500 shows, a first film for a public Letterboxd list,
- * Letterboxd's lowercased, de-duplicated tags. One flat form covers both
- * providers; `provider` decides which rules apply and what
- * the parsed value carries.
+ * Letterboxd's lowercased, de-duplicated tags, and the first books one
+ * Hardcover create can afford. One flat form covers every provider; `provider`
+ * decides which rules apply and what the parsed value carries. `sharing` is
+ * Letterboxd's and Hardcover's privacy, where `Friends` means followers on
+ * Hardcover.
  */
 export const newListSchema = z.object({
-  provider: z.enum([Provider.Letterboxd, Provider.Serializd]),
+  provider: z.enum([Provider.Letterboxd, Provider.Serializd, Provider.Hardcover]),
   name: z.string().trim(),
   description: z.string().trim(),
   tags: z.string().transform((input) => [...new Set(parseTags(input).map((tag) => tag.toLowerCase()))]),
@@ -49,6 +56,10 @@ export const newListSchema = z.object({
     case Provider.Serializd:
       if (items.length === 0) ctx.addIssue({ code: 'custom', path: ['items'], message: 'Serializd lists start with at least one show.' });
       if (items.length > MAX_SERIALIZD_LIST_ITEMS) ctx.addIssue({ code: 'custom', path: ['items'], message: `Serializd lists hold up to ${MAX_SERIALIZD_LIST_ITEMS} shows.` });
+      return;
+    case Provider.Hardcover:
+      if (form.sharing === 'Anyone') ctx.addIssue({ code: 'custom', path: ['sharing'], message: 'Hardcover has no link-only lists. Pick another.' });
+      if (items.length > MAX_NEW_HARDCOVER_LIST_BOOKS) ctx.addIssue({ code: 'custom', path: ['items'], message: `Start with up to ${MAX_NEW_HARDCOVER_LIST_BOOKS} books, then add the rest from the list.` });
   }
 }).transform((form): NewList => {
   const items = form.items.filter((item) => fitsProvider(form.provider, item));
@@ -57,6 +68,9 @@ export const newListSchema = z.object({
       return { provider: Provider.Letterboxd, draft: { name: form.name, description: form.description, tags: form.tags, sharing: form.sharing, ranked: form.ranked, items } };
     case Provider.Serializd:
       return { provider: Provider.Serializd, draft: { name: form.name, description: form.description, isPrivate: form.isPrivate, isRanked: form.ranked, allowsComments: form.allowsComments, items } };
+    case Provider.Hardcover:
+      // The refinement rejects `Anyone` before this runs.
+      return { provider: Provider.Hardcover, draft: { name: form.name, description: form.description, privacy: form.sharing === 'Anyone' ? HARDCOVER_PRIVACY.Public : HARDCOVER_PRIVACY[form.sharing], ranked: form.ranked, items } };
   }
 });
 

@@ -15,7 +15,8 @@ mock.module('react-native', () => ({ View: ({ children }: { children: ReactNode 
 mock.module('@/components/skeleton', () => ({ Skeleton: () => <div /> }));
 mock.module('@/features/lists/list-header', () => ({ ListsHeader: () => <h1>New list</h1> }));
 mock.module('@/state/queries/resolve-item', () => ({ useResolvedMediaItem: () => resolved }));
-mock.module('@/state/session', () => ({ useConnectedProviders: () => ['serializd'] }));
+mock.module('@/state/queries/hardcover', () => ({ useHardcoverUsernameQuery: () => ({ data: undefined }) }));
+mock.module('@/state/session', () => ({ useConnectedProviders: () => ['serializd'], useHardcoverListsGranted: () => false }));
 mock.module('@/state/session/letterboxd', () => ({ getLetterboxdUsername: () => null }));
 mock.module('@/state/session/serializd', () => ({ getSerializdUsername: () => 'viewer' }));
 function Editor({ initialItems = [] }: { initialItems?: NormalizedMediaItem[] }) {

@@ -20,6 +20,7 @@ import { haptics } from '@/lib/haptics';
 import { installLetterboxdScript, letterboxdScriptHint } from '@/lib/install-letterboxd-script';
 import { usePushRoute } from '@/lib/navigation';
 import { openExternalUrl } from '@/lib/open-external-url';
+import { hardcoverListsUrl } from '@/lib/providers/hardcover/lists';
 import type { LetterboxdListSharing } from '@/lib/providers/letterboxd/deps';
 import { letterboxdListUrl } from '@/lib/providers/letterboxd/lists';
 import { useLetterboxdUserscript, useLetterboxdUserscriptUntrusted } from '@/lib/providers/letterboxd/userscript-bridge';
@@ -37,10 +38,22 @@ import { fitsProvider, newListSchema, type ListProvider, type NewListForm as New
 
 export type { ListProvider };
 
-/** Where each provider's own editor lives: the recovery when Shinobu can't save. */
-const EDITOR_URL: Record<ListProvider, string> = {
-  letterboxd: 'https://letterboxd.com/list/new/',
-  serializd: 'https://www.serializd.com/list/create',
+/** Where each provider's own editor lives: the recovery when Shinobu can't save. Hardcover's is the member's lists page. */
+function editorUrl(provider: ListProvider, username: string) {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return 'https://letterboxd.com/list/new/';
+    case Provider.Serializd:
+      return 'https://www.serializd.com/list/create';
+    case Provider.Hardcover:
+      return username === '' ? 'https://hardcover.app' : hardcoverListsUrl(username);
+  }
+}
+
+const COPY: Record<ListProvider, { noun: string; heading: string; namePlaceholder: string }> = {
+  letterboxd: { noun: 'film', heading: 'Films', namePlaceholder: 'e.g. Best of the decade' },
+  serializd: { noun: 'show', heading: 'Shows', namePlaceholder: 'e.g. Comfort rewatches' },
+  hardcover: { noun: 'book', heading: 'Books', namePlaceholder: 'e.g. Books that stayed with me' },
 };
 
 const SHARING_OPTIONS: readonly { value: LetterboxdListSharing; label: string }[] = [
@@ -55,6 +68,20 @@ const SHARING_NOTE: Record<LetterboxdListSharing, string> = {
   Public: 'Anyone, and it appears on your profile.',
   Anyone: 'Anyone with the share link.',
   Friends: 'Friends (people you follow) with the share link.',
+  You: 'Only you.',
+};
+
+const HARDCOVER_SHARING_OPTIONS: readonly { value: LetterboxdListSharing; label: string }[] = [
+  { value: 'Public', label: 'Public' },
+  { value: 'Friends', label: 'Followers' },
+  { value: 'You', label: 'Private' },
+];
+
+/** `Anyone` is a choice carried over from Letterboxd, which the schema rejects for Hardcover. */
+const HARDCOVER_SHARING_NOTE: Record<LetterboxdListSharing, string> = {
+  Public: 'Anyone, and it appears on your profile.',
+  Anyone: 'Hardcover has no link-only lists. Pick another.',
+  Friends: 'Only people who follow you.',
   You: 'Only you.',
 };
 
@@ -98,7 +125,8 @@ function SwitchRow({ label, note, value, onChange, disabled }: { label: string; 
 
 /**
  * Letterboxd's list editor, for whichever list provider is connected: details,
- * who sees it, ranking, and the first titles. `newListSchema` holds the rules;
+ * who sees it, ranking, and the first titles. `sharing` holds Letterboxd's and
+ * Hardcover's privacy, `isPrivate` Serializd's. `newListSchema` holds the rules;
  * errors appear on submit and then follow each edit. A list only Letterboxd can
  * show (anything but Public) ends on a confirmation instead of a page Shinobu
  * can't read.
@@ -123,16 +151,51 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
   const hasLetterboxdSession = useHasLetterboxdWriteSession();
   const hasLetterboxdScript = useLetterboxdUserscript('list-create');
   const label = PROVIDERS[provider].label;
-  const noun = provider === Provider.Letterboxd ? 'film' : 'show';
+  const { noun, heading, namePlaceholder } = COPY[provider];
+  const recoveryUrl = editorUrl(provider, username);
   const items = picked.filter((item) => fitsProvider(provider, item));
   const scriptUntrusted = useLetterboxdUserscriptUntrusted();
   const needsScript = process.env.EXPO_OS === 'web' && provider === Provider.Letterboxd && !hasLetterboxdScript;
-  const writable = provider === Provider.Serializd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
+  const writable = provider !== Provider.Letterboxd || (process.env.EXPO_OS === 'web' ? hasLetterboxdScript : hasLetterboxdSession);
   const busy = mutation.isPending;
 
   // Read through getValues: recycled search rows can hold an older render's callback.
   function setItems(next: (current: NormalizedMediaItem[]) => NormalizedMediaItem[]) {
     setValue('items', next(getValues('items')), { shouldValidate: isSubmitted });
+  }
+
+  function sharingField() {
+    switch (provider) {
+      case Provider.Letterboxd:
+        return (
+          <Field label="Who can see it" note={SHARING_NOTE[sharing]}>
+            <Controller control={control} name="sharing" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-md" onChange={field.onChange} options={SHARING_OPTIONS} size="sm" value={field.value} />} />
+          </Field>
+        );
+      case Provider.Serializd:
+        return (
+          <Field label="Who can see it" note={isPrivate ? 'Only you can see it.' : 'Anyone can find it on your profile.'}>
+            <Controller control={control} name="isPrivate" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-72" onChange={(value) => field.onChange(value === 'private')} options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]} size="sm" value={field.value ? 'private' : 'public'} />} />
+          </Field>
+        );
+      case Provider.Hardcover:
+        return (
+          <Field error={errors.sharing?.message} label="Who can see it" note={HARDCOVER_SHARING_NOTE[sharing]}>
+            <Controller control={control} name="sharing" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-md" onChange={field.onChange} options={HARDCOVER_SHARING_OPTIONS} size="sm" value={field.value} />} />
+          </Field>
+        );
+    }
+  }
+
+  function emptyNote() {
+    switch (provider) {
+      case Provider.Letterboxd:
+        return sharing === 'Public' ? 'Add the first film to start the list.' : 'Optional. Add films now or from the list later.';
+      case Provider.Serializd:
+        return 'Add the first show to start the list.';
+      case Provider.Hardcover:
+        return 'Optional. Add books now or from the list later.';
+    }
   }
 
   if (unlisted != null) {
@@ -156,7 +219,10 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
     haptics.confirm();
     mutation.mutate(list, {
       onSuccess: (result) => {
-        toast.success('List created', list.draft.name);
+        // The list exists either way; Hardcover names the books it did not take.
+        const failed = result.provider === Provider.Hardcover ? result.failed : [];
+        if (failed.length > 0) toast.error('List created, but some books were not added', failed.join(', '));
+        else toast.success('List created', list.draft.name);
         switch (result.provider) {
           case Provider.Letterboxd:
             if (list.provider === Provider.Letterboxd && list.draft.sharing !== 'Public') {
@@ -167,6 +233,9 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
             return;
           case Provider.Serializd:
             router.replace(routes.serializdList(result.id));
+            return;
+          case Provider.Hardcover:
+            router.replace(routes.hardcoverList(result.id));
         }
       },
       onError: () => haptics.error(),
@@ -191,7 +260,7 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
         )}
         <Field error={errors.name?.message} label="Name">
           <Controller control={control} name="name" render={({ field }) => (
-            <TextField accessibilityLabel="Name" autoCapitalize="sentences" autoCorrect editable={!busy} onBlur={field.onBlur} onChangeText={field.onChange} placeholder={provider === Provider.Letterboxd ? 'e.g. Best of the decade' : 'e.g. Comfort rewatches'} returnKeyType="next" value={field.value} />
+            <TextField accessibilityLabel="Name" autoCapitalize="sentences" autoCorrect editable={!busy} onBlur={field.onBlur} onChangeText={field.onChange} placeholder={namePlaceholder} returnKeyType="next" value={field.value} />
           )} />
         </Field>
         <Field error={errors.description?.message} label="Description">
@@ -209,11 +278,7 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
             )} />
           </Field>
         )}
-        <Field label="Who can see it" note={provider === Provider.Letterboxd ? SHARING_NOTE[sharing] : isPrivate ? 'Only you can see it.' : 'Anyone can find it on your profile.'}>
-          {provider === Provider.Letterboxd
-            ? <Controller control={control} name="sharing" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-md" onChange={field.onChange} options={SHARING_OPTIONS} size="sm" value={field.value} />} />
-            : <Controller control={control} name="isPrivate" render={({ field }) => <NativeSegmentedControl accessibilityLabel="Who can see it" className="max-w-72" onChange={(value) => field.onChange(value === 'private')} options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]} size="sm" value={field.value ? 'private' : 'public'} />} />}
-        </Field>
+        {sharingField()}
         <GroupedList>
           <GroupedList.Item>
             <Controller control={control} name="ranked" render={({ field }) => <SwitchRow disabled={busy} label="Ranked" note={`Number each ${noun} by its position.`} onChange={field.onChange} value={field.value} />} />
@@ -226,11 +291,11 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
         </GroupedList>
         <View className="gap-3">
           <View className="flex-row items-center gap-3">
-            <Text className="text-foreground font-display text-lg flex-1">{provider === Provider.Letterboxd ? 'Films' : 'Shows'}{items.length > 0 && <Text className="text-muted font-sans text-sm">{`  ${items.length}`}</Text>}</Text>
+            <Text className="text-foreground font-display text-lg flex-1">{heading}{items.length > 0 && <Text className="text-muted font-sans text-sm">{`  ${items.length}`}</Text>}</Text>
             <Button disabled={busy} icon={<Button.Icon name="add" />} label={`Add ${noun}s`} onPress={() => setSearching(true)} size="sm" variant="quiet" />
           </View>
           {items.length === 0 ? (
-            <Text className="text-muted font-sans text-sm">{provider === Provider.Serializd ? 'Add the first show to start the list.' : sharing === 'Public' ? 'Add the first film to start the list.' : 'Optional. Add films now or from the list later.'}</Text>
+            <Text className="text-muted font-sans text-sm">{emptyNote()}</Text>
           ) : (
             <View style={{ height: Math.min(items.length, 5) * 70 }}>
               <List
@@ -268,7 +333,7 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
             onPress={() => void create()}
           />}
           {(!writable || mutation.isError) && (
-            <Button icon={<Button.Icon name="open-outline" />} label={`Create on ${label}`} onPress={() => void openExternalUrl(EDITOR_URL[provider])} variant="quiet" />
+            <Button icon={<Button.Icon name="open-outline" />} label={`Create on ${label}`} onPress={() => void openExternalUrl(recoveryUrl)} variant="quiet" />
           )}
         </View>
       </KeyboardAwareScrollView>
@@ -278,7 +343,7 @@ export function NewListForm({ providers, initialProvider, initialItems }: {
             items={items}
             onClose={() => setSearching(false)}
             onSelect={(item) => setItems((current) => current.some((entry) => entry.id === item.id) ? current : [...current, item])}
-            target={{ provider, title: name.trim() || 'New list', url: EDITOR_URL[provider] }}
+            target={{ provider, title: name.trim() || 'New list', url: recoveryUrl }}
           />
         )}
       </Sheet>
@@ -304,7 +369,7 @@ export function NewListScreen({ providers, initialProvider, initialItems = [] }:
         <CenteredNotice>
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>Connect a list provider</CenteredNotice.Title>
-          <CenteredNotice.Body>Connect Letterboxd for film lists or Serializd for show lists.</CenteredNotice.Body>
+          <CenteredNotice.Body>Connect Letterboxd for film lists, Serializd for show lists, or Hardcover for book lists.</CenteredNotice.Body>
           <CenteredNotice.Action icon={<Button.Icon name="link-outline" />} label="Open settings" onPress={() => pushRoute(routes.settings)} />
         </CenteredNotice>
         </>

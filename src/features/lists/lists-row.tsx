@@ -92,10 +92,8 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   const title = listsTitle(kind);
   const lists = visibleByIds(allLists, useHiddenLists(), (list) => [list.href]);
   // Gate on the unfiltered page: hiding page one must not cut off View all.
-  // Hardcover lists are read-only until list creation ships for it.
-  const newListProvider = kind === 'created' && provider !== Provider.Hardcover ? provider : null;
-  if (allLists.length === 0 && newListProvider == null) return null;
-  const items: RailItem[] = newListProvider != null ? [{ id: 'new' }, ...lists] : lists;
+  if (allLists.length === 0 && kind === 'liked') return null;
+  const items: RailItem[] = kind === 'created' ? [{ id: 'new' }, ...lists] : lists;
   return (
     <CollapsibleSection
       action={allLists.length > 0 ? <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} /> : undefined}
@@ -115,7 +113,7 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
           <View className="w-60 mr-4">
             {'title' in item
               ? <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
-              : newListProvider != null && <NewListCard onPress={() => pushRoute(routes.newList(newListProvider))} provider={newListProvider} />}
+              : <NewListCard onPress={() => pushRoute(routes.newList(provider))} provider={provider} />}
           </View>
         )}
         style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}
