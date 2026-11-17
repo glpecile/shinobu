@@ -40,6 +40,7 @@ mock.module('expo-crypto', () => ({
 const { invalidateAfterLog } = await import('./use-log-media');
 const { watchlistQueryKeys } = await import('@/state/queries/watchlist');
 const { letterboxdQueryKeys } = await import('@/state/queries/letterboxd');
+const { hardcoverQueryKeys } = await import('@/state/queries/hardcover');
 
 const ITEM: NormalizedMediaItem = {
   id: 'trakt-1',
@@ -134,6 +135,15 @@ describe('invalidateAfterLog (plan 0019 U4)', () => {
     for (const queryKey of keys) {
       expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
     }
+    client.clear();
+  });
+
+  test('a successful book log refreshes the read status on cached lists', () => {
+    const client = new QueryClient();
+    const key = hardcoverQueryKeys.list(42);
+    client.setQueryData(key, {});
+    invalidateAfterLog(client, { ...ITEM, type: 'BOOK' }, ['hardcover']);
+    expect(client.getQueryState(key)?.isInvalidated).toBe(true);
     client.clear();
   });
 

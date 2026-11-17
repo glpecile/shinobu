@@ -5,7 +5,7 @@ export function useHardcoverListsPrompt(): { title: string; body: string } {
   return useHardcoverListsRefused()
     ? {
         title: 'Hardcover gave no list access',
-        body: 'Hardcover connected, but without the list permission. The app registration on hardcover.app must allow read:lists and write:lists. Add them there, then connect again. Your library and logging keep working.',
+        body: 'Hardcover connected without list access. If reconnecting does not help, open the GitHub link in Settings to report the problem. Your library and logging keep working.',
       }
     : {
         title: 'Reconnect Hardcover',
