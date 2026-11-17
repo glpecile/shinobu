@@ -32,12 +32,14 @@ import { letterboxdListSummary, serializdListSummary, type ListSummary } from '.
 
 type ListProvider = typeof Provider.Letterboxd | typeof Provider.Serializd;
 
-function editTarget(list: ListSummary, username: string): ListEditTarget {
+function editTarget(list: ListSummary, username: string): ListEditTarget | null {
   switch (list.provider) {
     case Provider.Letterboxd:
       return { provider: list.provider, username, owner: list.owner, slug: list.slug, title: list.title, url: list.url };
     case Provider.Serializd:
       return { provider: list.provider, username, id: list.id, title: list.title, url: list.url };
+    case Provider.Hardcover:
+      return null;
   }
 }
 

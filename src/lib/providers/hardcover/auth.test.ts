@@ -22,7 +22,8 @@ mock.module('expo-crypto', () => ({
 const { coalescedRefreshSession, exchangeHardcoverCode } = await import('./auth');
 const { beginHardcoverAuthFlow } = await import('./authorize');
 const { getHardcoverAuthFlow } = await import('./auth-flow');
-const { HARDCOVER_GRAPHQL_URL, HARDCOVER_ISSUER, HARDCOVER_TOKEN_URL } = await import('./config');
+const { HARDCOVER_GRAPHQL_URL, HARDCOVER_ISSUER, HARDCOVER_SCOPES, HARDCOVER_TOKEN_URL } =
+  await import('./config');
 const { hardcoverRequest } = await import('./http');
 type HardcoverDeps = import('./deps').HardcoverDeps;
 
@@ -93,7 +94,7 @@ function rotatingServer() {
 beforeEach(() => flowStore.clear());
 
 describe('exchangeHardcoverCode', () => {
-  test('exchanges the code with the PKCE verifier and stores both tokens', async () => {
+  test('exchanges the code with the PKCE verifier and stores both tokens and the requested scopes', async () => {
     const { deps, calls, slot } = makeDeps(() => rotated(2), { session: null });
     const url = new URL(await beginHardcoverAuthFlow({ clientId: 'cid', redirectUri: REDIRECT }));
     const flow = getHardcoverAuthFlow();
@@ -114,7 +115,11 @@ describe('exchangeHardcoverCode', () => {
       client_id: 'cid',
       code_verifier: flow?.verifier ?? '',
     });
-    expect(slot.session).toMatchObject({ accessToken: 'at-2', refreshToken: 'rt-2' });
+    expect(slot.session).toMatchObject({
+      accessToken: 'at-2',
+      refreshToken: 'rt-2',
+      scopes: [...HARDCOVER_SCOPES],
+    });
     expect(getHardcoverAuthFlow()).toBeNull();
   });
 
@@ -140,7 +145,9 @@ describe('exchangeHardcoverCode', () => {
 
 describe('token refresh', () => {
   test('two concurrent 401s refresh once and both run again with the new token', async () => {
-    const { deps, tokenCalls, slot } = makeDeps(rotatingServer());
+    const { deps, tokenCalls, slot } = makeDeps(rotatingServer(), {
+      session: { ...STORED, scopes: ['read:library'] },
+    });
 
     const results = await Promise.all([
       Effect.runPromise(hardcoverRequest(deps, 'query A { a }')),
@@ -150,7 +157,11 @@ describe('token refresh', () => {
     expect(results).toEqual([{ ok: true }, { ok: true }]);
     expect(tokenCalls()).toHaveLength(1);
     expect(tokenCalls()[0]?.body.get('refresh_token')).toBe('rt-1');
-    expect(slot.session).toMatchObject({ accessToken: 'at-2', refreshToken: 'rt-2' });
+    expect(slot.session).toMatchObject({
+      accessToken: 'at-2',
+      refreshToken: 'rt-2',
+      scopes: ['read:library'],
+    });
   });
 
   test('two tabs sharing storage and the lock spend one refresh token', async () => {
@@ -226,5 +237,24 @@ describe('token refresh', () => {
     expect(second).toMatchObject({ _tag: 'Failure', failure: { _tag: 'ProviderRateLimitError' } });
     expect(tokenCalls()).toHaveLength(1);
     expect(slot.session).toEqual(STORED);
+  });
+});
+
+describe('a refused scope', () => {
+  test('a 403 insufficient_scope drops the named scope, keeps the session and refreshes nothing', async () => {
+    const { deps, tokenCalls, slot } = makeDeps(
+      () =>
+        Response.json({ error: 'insufficient_scope', scope: 'write:lists' }, { status: 403 }),
+      { session: { ...STORED, scopes: ['read:library', 'read:lists', 'write:lists'] } },
+    );
+
+    const result = await Effect.runPromise(Effect.result(hardcoverRequest(deps, 'query A { a }')));
+
+    expect(result).toMatchObject({
+      _tag: 'Failure',
+      failure: { _tag: 'ProviderNetworkError', status: 403, retryable: false },
+    });
+    expect(slot.session).toEqual({ ...STORED, scopes: ['read:library', 'read:lists'] });
+    expect(tokenCalls()).toHaveLength(0);
   });
 });

@@ -8,6 +8,7 @@ import { LoadMoreFooter } from '@/components/load-more-footer';
 import { RefreshControl } from '@/components/refresh-control';
 import { staggerDelay } from '@/components/skeleton';
 import { usePushRoute } from '@/lib/navigation';
+import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
@@ -68,7 +69,9 @@ export function ListsIndex({
   const { openList, sheetProps } = useListSheet();
   const loaded = [...new Map(lists.map((list) => [list.id, list])).values()];
   const pages = visibleByIds(loaded, useHiddenLists(), (list) => [list.href]);
-  const items: GridItem[] = kind === 'created' ? [{ id: 'new' }, ...pages] : pages;
+  // Hardcover lists are read-only until list creation ships for it.
+  const newListProvider = kind === 'created' && provider !== Provider.Hardcover ? provider : null;
+  const items: GridItem[] = newListProvider != null ? [{ id: 'new' }, ...pages] : pages;
   return (
     <>
       {loaded.length === 0 ? (
@@ -76,7 +79,7 @@ export function ListsIndex({
           <CenteredNotice.Icon name="list-outline" />
           <CenteredNotice.Title>No lists yet</CenteredNotice.Title>
           <CenteredNotice.Body>{emptyBody}</CenteredNotice.Body>
-          {kind === 'created' && <CenteredNotice.Action icon={<Button.Icon name="add" />} label="New list" onPress={() => pushRoute(routes.newList(provider))} />}
+          {newListProvider != null && <CenteredNotice.Action icon={<Button.Icon name="add" />} label="New list" onPress={() => pushRoute(routes.newList(newListProvider))} />}
         </CenteredNotice>
       ) : items.length === 0 ? (
         <CenteredNotice>
@@ -117,7 +120,7 @@ export function ListsIndex({
             <View className="px-2 pb-6">
               {'title' in item
                 ? <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
-                : <NewListCard onPress={() => pushRoute(routes.newList(provider))} provider={provider} />}
+                : newListProvider != null && <NewListCard onPress={() => pushRoute(routes.newList(newListProvider))} provider={newListProvider} />}
             </View>
           )}
           ListFooterComponent={

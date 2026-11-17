@@ -36,7 +36,7 @@ import {
 import { PosterWall } from '@/features/feed/poster-wall';
 import { UpNextSection } from '@/features/up-next/up-next-section';
 import { ComingSoonRow } from '@/features/up-next/coming-soon-row';
-import { LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
+import { HardcoverListsReconnectRow, HardcoverListsRow, LetterboxdListsRow, SerializdListsRow, ListsRowSkeleton } from '@/features/lists/lists-row';
 import { cn } from '@/lib/cn';
 import { warmProviderConnections } from '@/lib/http/warm-connections';
 import { providersForFeed } from '@/lib/providers/routing';
@@ -52,7 +52,7 @@ import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { useConnectedProviders } from '@/state/session';
+import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session';
 import { useOAuthCallback } from '@/state/session/use-oauth-callback';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -136,6 +136,7 @@ function FeedScreen() {
     ? getLetterboxdUsername()
     : null;
   const serializdUsername = feedProviders.includes(Provider.Serializd) ? getSerializdUsername() : null;
+  const hardcoverListsGranted = useHardcoverListsGranted();
   // Up Next is computed from Trakt shows, Simkl's library and AniList anime —
   // with none connected there is nothing to compute, so the sections never
   // mount. The predicate lives with the gather it gates (`use-unified-feed.ts`)
@@ -251,6 +252,16 @@ function FeedScreen() {
             </SuspenseSection>
           </>
         )}
+        {connected.includes(Provider.Hardcover) && (hardcoverListsGranted ? (
+          <>
+            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <HardcoverListsRow kind="created" />
+            </SuspenseSection>
+            <SuspenseSection fallback={<ListsRowSkeleton />} resetKey={refreshCount}>
+              <HardcoverListsRow kind="liked" />
+            </SuspenseSection>
+          </>
+        ) : <HardcoverListsReconnectRow />)}
         <FeedEnd
           onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion })}
         />

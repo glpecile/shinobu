@@ -15,7 +15,13 @@ import {
   onSessionChange,
   PROVIDER_KEY_PATTERN,
 } from './tokens';
-import { hardcoverNeedsReconnect, traktNeedsCredentials, usableProviderIds } from './trakt-migration';
+import {
+  hardcoverListsGranted,
+  hardcoverListsRefused,
+  hardcoverNeedsReconnect,
+  traktNeedsCredentials,
+  usableProviderIds,
+} from './trakt-migration';
 
 export {
   providerIsUsable,
@@ -96,6 +102,28 @@ export function useHardcoverNeedsReconnect(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => !isServer() && hardcoverNeedsReconnect(),
+    () => false,
+  );
+}
+
+/**
+ * Reactive: the Hardcover session may read and edit lists
+ * (`hardcoverListsGranted`). List surfaces show a reconnect prompt while it
+ * is false.
+ */
+export function useHardcoverListsGranted(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => !isServer() && hardcoverListsGranted(),
+    () => false,
+  );
+}
+
+/** Reactive `hardcoverListsRefused`: the prompt names the registration, not a reconnect. */
+export function useHardcoverListsRefused(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => !isServer() && hardcoverListsRefused(),
     () => false,
   );
 }

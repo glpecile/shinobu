@@ -800,6 +800,7 @@ export function invalidateAfterLog(
   }
   if (succeeded.includes(Provider.Hardcover)) {
     queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.libraryRoot() });
+    queryClient.invalidateQueries({ queryKey: hardcoverQueryKeys.listRoot() });
   }
   if (succeeded.includes(Provider.Serializd)) {
     // The write moved progress — refresh it so the next reconcile sees it.

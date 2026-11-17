@@ -44,6 +44,7 @@ import {
 } from '@/features/log-media/release-gate';
 import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import { AddToListCapsule } from '@/features/lists/add-to-list-capsule';
+import { BookListsSection } from '@/features/lists/book-lists-section';
 import {
   PeopleSection,
   PeopleSectionsSkeleton,
@@ -936,6 +937,7 @@ function DetailsScreen() {
 
       <RecommendationsAndTagsSection item={shown} onItemActions={openActions} resetKey={refreshCount} />
       <SimilarBooksSection item={item} onItemActions={openActions} resetKey={refreshCount} />
+      <BookListsSection item={item} resetKey={refreshCount} />
 
       <ReleaseTimeline item={shown} />
 

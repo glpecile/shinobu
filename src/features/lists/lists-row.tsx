@@ -1,21 +1,25 @@
 import { Text, useWindowDimensions, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Rail, VirtualizedRail } from '@/components/rail';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { ViewAllLink } from '@/components/view-all-link';
 import { usePushRoute } from '@/lib/navigation';
+import type { HardcoverListKind } from '@/lib/providers/hardcover/lists';
 import type { LetterboxdListKind } from '@/lib/providers/letterboxd/lists';
 import type { SerializdListKind } from '@/lib/providers/serializd/lists';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useSuspenseHardcoverListsQuery } from '@/state/queries/hardcover';
 import { useSuspenseLetterboxdListsQuery } from '@/state/queries/letterboxd';
 import { useSuspenseSerializdListsQuery } from '@/state/queries/serializd';
 import { useHiddenLists, visibleByIds } from '@/state/prefs/hidden-items';
+import { useHardcoverListsPrompt } from './hardcover-lists-prompt';
 import { LIST_CARD_TEXT_HEIGHT, ListCard, NewListCard } from './list-card';
 import { ListSheet, useListSheet } from './list-sheet';
-import { letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
+import { hardcoverListSummary, letterboxdListSummary, serializdListSummary, type ListSummary } from './list-summary';
 import { POSTER_STACK_RATIO } from './poster-stack';
 
 const CARD_WIDTH = 240;
@@ -56,6 +60,25 @@ export function SerializdListsRow({ username, kind }: { username: string; kind: 
   return <ListsRail indexHref={routes.serializdLists(kind)} kind={kind} lists={pages.data.pages[0].lists.map(serializdListSummary)} provider={Provider.Serializd} />;
 }
 
+export function HardcoverListsRow({ kind }: { kind: HardcoverListKind }) {
+  const lists = useSuspenseHardcoverListsQuery(kind);
+  return <ListsRail indexHref={routes.hardcoverLists(kind)} kind={kind} lists={lists.data.map(hardcoverListSummary)} provider={Provider.Hardcover} />;
+}
+
+/** For a Hardcover session without the list scopes: no list read, and the index holds the reconnect. */
+export function HardcoverListsReconnectRow() {
+  const pushRoute = usePushRoute();
+  const prompt = useHardcoverListsPrompt();
+  return (
+    <CollapsibleSection collapseKey={`${Provider.Hardcover}-created-lists`} leading={<ProviderIcon id={Provider.Hardcover} size={16} />} title={listsTitle('created')}>
+      <View className="px-4 gap-3 items-start">
+        <Text className="text-muted font-sans text-sm">{prompt.body}</Text>
+        <Button icon={<Button.Icon name="link-outline" />} label="Reconnect Hardcover" onPress={() => pushRoute(routes.hardcoverLists('created'))} size="sm" variant="quiet" />
+      </View>
+    </CollapsibleSection>
+  );
+}
+
 type RailItem = ListSummary | { id: 'new' };
 
 /** Your Lists leads with New list, so a member without lists still has the editor one tap away. */
@@ -71,8 +94,10 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
   const title = listsTitle(kind);
   const lists = visibleByIds(allLists, useHiddenLists(), (list) => [list.href]);
   // Gate on the unfiltered page: hiding page one must not cut off View all.
-  if (allLists.length === 0 && kind === 'liked') return null;
-  const items: RailItem[] = kind === 'created' ? [{ id: 'new' }, ...lists] : lists;
+  // Hardcover lists are read-only until list creation ships for it.
+  const newListProvider = kind === 'created' && provider !== Provider.Hardcover ? provider : null;
+  if (allLists.length === 0 && newListProvider == null) return null;
+  const items: RailItem[] = newListProvider != null ? [{ id: 'new' }, ...lists] : lists;
   return (
     <CollapsibleSection
       action={allLists.length > 0 ? <ViewAllLink onPress={() => pushRoute(indexHref)} title={title} /> : undefined}
@@ -92,7 +117,7 @@ function ListsRail({ lists: allLists, provider, kind, indexHref }: {
           <View className="w-60 mr-4">
             {'title' in item
               ? <ListCard list={item} onActions={openList} onPress={() => pushRoute(item.href)} />
-              : <NewListCard onPress={() => pushRoute(routes.newList(provider))} provider={provider} />}
+              : newListProvider != null && <NewListCard onPress={() => pushRoute(routes.newList(newListProvider))} provider={newListProvider} />}
           </View>
         )}
         style={{ height: CARD_WIDTH / POSTER_STACK_RATIO + LIST_CARD_TEXT_HEIGHT * fontScale }}

@@ -12,6 +12,9 @@ export const HARDCOVER_TOKEN_URL = `${HARDCOVER_ISSUER}/oauth2/token`;
 export const HARDCOVER_REVOKE_URL = `${HARDCOVER_ISSUER}/oauth2/revoke`;
 export const HARDCOVER_GRAPHQL_URL = `${HARDCOVER_ISSUER}/v1/graphql`;
 
+/** A list read needs the first and a list write the second (docs/solutions/hardcover-list-scopes.md). */
+export const HARDCOVER_LIST_SCOPES = ['read:lists', 'write:lists'] as const;
+
 /**
  * Exactly what the app registration allows. `read:me:content` and not
  * `read:me`, which also grants the member's email.
@@ -22,6 +25,7 @@ export const HARDCOVER_SCOPES = [
   'write:library',
   'read:catalog:search',
   'read:journal',
+  ...HARDCOVER_LIST_SCOPES,
 ] as const;
 
 /** App-owned public client id. PKCE proves the client, so no secret exists. */

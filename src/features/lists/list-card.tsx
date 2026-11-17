@@ -53,6 +53,17 @@ export function ListCard({ list, onPress, onActions }: {
   );
 }
 
+function newListNote(provider: ListSummary['provider']) {
+  switch (provider) {
+    case Provider.Letterboxd:
+      return 'Films, ranked or not';
+    case Provider.Serializd:
+      return 'Shows, ranked or not';
+    case Provider.Hardcover:
+      return 'Books, ranked or not';
+  }
+}
+
 /** The created index's and rail's first card: an empty stack that opens the editor. */
 export function NewListCard({ provider, onPress }: { provider: ListSummary['provider']; onPress: () => void }) {
   const muted = useThemeColor('--color-muted');
@@ -65,7 +76,7 @@ export function NewListCard({ provider, onPress }: { provider: ListSummary['prov
       </PosterStack>
       <Text className="text-foreground font-sans-semibold text-sm mt-2.5" numberOfLines={1}>New list</Text>
       <View className="flex-row items-center gap-2 mt-1">
-        <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>{provider === Provider.Letterboxd ? 'Films, ranked or not' : 'Shows, ranked or not'}</Text>
+        <Text className="text-muted font-sans text-xs flex-1" numberOfLines={1}>{newListNote(provider)}</Text>
         <ProviderIcon id={provider} size={12} />
       </View>
     </PresstableScale>
