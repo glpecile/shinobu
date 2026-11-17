@@ -38,8 +38,11 @@ const tokenResponse = Schema.Struct({
   refresh_token: optionalNullable(Schema.String),
   /** Seconds. */
   expires_in: optionalNullable(Schema.Number),
-  /** Space separated. Optional when it equals the requested scope (RFC 6749 5.1). */
-  scope: optionalNullable(Schema.String),
+  /**
+   * Space separated. Optional when it equals the requested scope (RFC 6749
+   * 5.1). Unknown, so an unexpected shape never fails a connect.
+   */
+  scope: optionalNullable(Schema.Unknown),
 });
 const oauthError = Schema.Struct({ error: optionalNullable(Schema.String) });
 
@@ -115,7 +118,8 @@ function tokenGrant(
       ),
     );
     const now = yield* Clock.currentTimeMillis;
-    const scopes = token.scope != null ? token.scope.split(' ').filter(Boolean) : assumedScopes;
+    const granted = Array.isArray(token.scope) ? token.scope.join(' ') : token.scope;
+    const scopes = typeof granted === 'string' ? granted.split(/[\s,]+/).filter(Boolean) : assumedScopes;
     const session: ProviderSession = {
       accessToken: token.access_token,
       ...(token.refresh_token != null ? { refreshToken: token.refresh_token } : {}),

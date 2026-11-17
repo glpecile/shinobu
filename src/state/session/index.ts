@@ -17,6 +17,7 @@ import {
 } from './tokens';
 import {
   hardcoverListsGranted,
+  hardcoverListsRefused,
   hardcoverNeedsReconnect,
   traktNeedsCredentials,
   usableProviderIds,
@@ -114,6 +115,15 @@ export function useHardcoverListsGranted(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => !isServer() && hardcoverListsGranted(),
+    () => false,
+  );
+}
+
+/** Reactive `hardcoverListsRefused`: the prompt names the registration, not a reconnect. */
+export function useHardcoverListsRefused(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => !isServer() && hardcoverListsRefused(),
     () => false,
   );
 }
