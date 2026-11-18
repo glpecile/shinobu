@@ -23,11 +23,10 @@ function leg(provider: ProviderId, queryKey: QueryKey, read: () => Promise<Norma
   return { queryKey, queryFn: (): Promise<Leg> => settle(provider, read) };
 }
 
-// Module scope keeps the combined rail's identity between renders.
-function newestFirst(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem[] {
-  return showBridgedOnce(
-    results.flatMap((result) => result.data.inputs).sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated)),
-  );
+// Module scope, and only the legs' data: `combine` runs again on every
+// observer change, and its result keeps its identity while the data does.
+function legInputs(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem[][] {
+  return results.map((result) => result.data.inputs);
 }
 
 /** The connected providers that feed Continue Reading. */
@@ -46,7 +45,7 @@ export function continueReadingProviders(connected: readonly ProviderId[]): Prov
 export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   const queryClient = useQueryClient();
   const providers = continueReadingProviders(useConnectedProviders());
-  return useSuspenseQueries({
+  const legs = useSuspenseQueries({
     queries: [
       ...(providers.includes(Provider.AniList)
         ? [leg(Provider.AniList, anilistQueryKeys.reading(), () => fetchReadingManga(queryClient))]
@@ -55,6 +54,7 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
         ? [leg(Provider.Hardcover, hardcoverQueryKeys.reading(), () => fetchHardcoverReading(queryClient))]
         : []),
     ],
-    combine: newestFirst,
+    combine: legInputs,
   });
+  return showBridgedOnce(legs.flat().sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated)));
 }
