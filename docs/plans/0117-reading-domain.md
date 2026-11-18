@@ -292,6 +292,22 @@ shows alone when none of its volumes is in the Hardcover library. The match
 runs against the reader's own AniList list, which M3 already loads, so it
 costs no request.
 
+Built (#471). The M3 manga list read now asks for each entry's staff,
+synonyms and volumes, and the Hardcover library and journal reads ask for
+each book's authors and series. These are nested fields, so neither read
+gains a request (KTD-9). Each item carries them as `readingCredits`, and
+`bridgeBooks` (`lib/providers/reading-bridge.ts`) runs the B5 matcher over
+the two lists.
+
+- Continue Reading drops an AniList entry that a Currently Reading volume
+  covers (`showBridgedOnce`).
+- The reading list gives a planned AniList entry its want-to-read volume's
+  item, so the two merge into one card that lists both sources.
+- The diary gives a journal book the AniList id from the cached manga list,
+  and a same-day row that holds both leads with the book. Whether AniList
+  writes a list activity for a volume-only update, and with which progress,
+  is unverified until the owner's first live log.
+
 ### C0. Choose a comics tracker — dropped
 
 The owner decided on 2026-11-18 that Shinobu does not track comics. #401
