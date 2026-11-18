@@ -2,7 +2,8 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume'>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'> &
+  Partial<Pick<NormalizedMediaItem, 'anilistVolume'>>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -50,16 +51,18 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
  * 0117 KTD-4): one whose own id it carries. A manga carries
  * `externalIds.anilist`. A book carries `externalIds.hardcover`, and the
  * reading bridge (`enrichExternalIds`) adds the AniList id of the series it
- * is a volume of. AniList takes the book only with its volume number.
+ * is a volume of. AniList takes the book only with its volume number, and
+ * never its removal: one volume leaving want-to-read can't delete the
+ * series entry.
  */
-function carriesReadingId(item: RoutableItem, id: ProviderId): boolean {
+function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteCapability): boolean {
   switch (item.type) {
     case 'BOOK':
       switch (id) {
         case Provider.Hardcover:
           return item.externalIds.hardcover != null;
         case Provider.AniList:
-          return item.externalIds.anilist != null && item.anilistVolume != null;
+          return item.externalIds.anilist != null && item.anilistVolume != null && capability !== 'watchlist-remove';
         default:
           return false;
       }
@@ -120,7 +123,7 @@ export function providersForWrite(
     return (
       writeSupport(provider, capability) !== 'none' &&
       types.some((type) => provider.mediaTypes.includes(type)) &&
-      carriesReadingId(item, id)
+      carriesReadingId(item, id, capability)
     );
   });
 }
