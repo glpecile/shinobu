@@ -46,10 +46,11 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   // could start a second read of a book that is in progress.
   // The form opens on what both trackers know, so it waits for the AniList
   // bridge too. A failed AniList read only loses the note.
-  const bridgeKnown = !connected.includes(Provider.AniList) || enriched !== undefined;
+  const bridgeKnown = enriched !== undefined;
   const hardcoverKnown = !connected.includes(Provider.Hardcover) || entry.data !== undefined;
   const known = hardcoverKnown && bridgeKnown && (volume == null || anilist.data !== undefined || anilist.isError);
   const failed = entry.data === undefined && entry.isError;
+  const waiting = !known && !failed;
   const anilistEntry = anilist.data?.entry ?? null;
   const anilistHasVolume = volume != null && anilistEntry != null && anilistEntry.progressVolumes >= volume;
   const anilistTotal = anilist.data?.total;
@@ -62,12 +63,12 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
     <View className="mb-3">
       <Button
         variant="log"
-        disabled={!known && !failed}
+        disabled={waiting}
         icon={<Button.Icon name={failed ? 'refresh' : reread ? 'eye' : 'eye-outline'} />}
         label={failed ? 'Couldn’t load your progress' : action}
         // A background refetch keeps the label. `busy` covers the refetch a
         // log starts, which the confirm sheet tracks with the write.
-        loading={(!known && !failed && (entry.isFetching || anilist.isFetching || !bridgeKnown)) || busy}
+        loading={(failed ? entry.isFetching : waiting) || busy}
         onPress={() => {
           if (failed) {
             void entry.refetch();
