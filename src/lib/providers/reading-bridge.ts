@@ -99,9 +99,8 @@ function nameKeys(text: string): string[] {
 export function bridgeQueries(book: BridgeBook): string[] {
   const parsed = parseBookTitle(book.title);
   if (parsed.volume == null && parsed.format == null) return [];
-  const names = parsed.names;
   const series = book.series?.name.replace(FORMAT_TAG, '').trim();
-  const queries = series == null || series === '' ? names : [...names, series];
+  const queries = series == null || series === '' ? parsed.names : [...parsed.names, series];
   return queries.filter((query, index) => queries.findIndex((other) => titleKey(other) === titleKey(query)) === index);
 }
 
