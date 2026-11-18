@@ -156,6 +156,11 @@ export function unmatchedWriteTargets(
   });
 }
 
+/** Why the log sheet lists an unmatched target as a manual row. */
+export function unmatchedWriteReason(item: Pick<NormalizedMediaItem, 'type'>): string {
+  return item.type === 'BOOK' ? 'AniList can’t tell which volume this is' : 'No match for this title';
+}
+
 /**
  * Whose community scores the details Ratings section reads for `item`:
  * connected (usable), publishing a score, and applicable to the item's
