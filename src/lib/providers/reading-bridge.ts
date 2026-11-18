@@ -113,19 +113,33 @@ export function bridgeQueries(book: BridgeBook): string[] {
  * member, in the format the book's tag names; two that do are no match.
  */
 export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandidate[]): BridgeMatch | null {
+  return matchFolded(book, results.map(foldCandidate));
+}
+
+/** A candidate's names folded once, so a list of books compares without refolding them. */
+interface FoldedCandidate {
+  candidate: BridgeCandidate;
+  titles: string[];
+  staff: Set<string>;
+}
+
+function foldCandidate(candidate: BridgeCandidate): FoldedCandidate {
+  return { candidate, titles: candidate.titles.map(titleKey), staff: new Set(candidate.staff.flatMap(nameKeys)) };
+}
+
+function matchFolded(book: BridgeBook, folded: readonly FoldedCandidate[]): BridgeMatch | null {
   const parsed = parseBookTitle(book.title);
   const titleNames = new Set(parsed.names.map(titleKey));
   const seriesName = book.series == null ? null : titleKey(book.series.name.replace(FORMAT_TAG, ''));
-  const authors = new Set(book.authors.flatMap(nameKeys));
+  const authors = book.authors.flatMap(nameKeys);
 
   const matches = new Map<number, { candidate: BridgeCandidate; viaTitle: boolean }>();
-  for (const candidate of results) {
+  for (const { candidate, titles, staff } of folded) {
     if (parsed.format === 'novel' && candidate.format !== 'NOVEL') continue;
     if (parsed.format === 'manga' && candidate.format === 'NOVEL') continue;
-    if (!candidate.staff.some((name) => nameKeys(name).some((key) => authors.has(key)))) continue;
-    const keys = candidate.titles.map(titleKey);
-    const viaTitle = keys.some((key) => titleNames.has(key));
-    if (viaTitle || (seriesName != null && keys.includes(seriesName))) matches.set(candidate.id, { candidate, viaTitle });
+    if (!authors.some((key) => staff.has(key))) continue;
+    const viaTitle = titles.some((key) => titleNames.has(key));
+    if (viaTitle || (seriesName != null && titles.includes(seriesName))) matches.set(candidate.id, { candidate, viaTitle });
   }
   if (matches.size !== 1) return null;
 
@@ -167,12 +181,15 @@ export function bridgeBooks(
   books: readonly NormalizedMediaItem[],
   entries: readonly NormalizedMediaItem[],
 ): Map<string, NormalizedMediaItem> {
-  const candidates = entries.flatMap((entry) => candidateOf(entry) ?? []);
+  const folded = entries.flatMap((entry) => {
+    const candidate = candidateOf(entry);
+    return candidate == null ? [] : [foldCandidate(candidate)];
+  });
   const bridged = new Map<string, NormalizedMediaItem>();
-  if (candidates.length === 0) return bridged;
+  if (folded.length === 0) return bridged;
   for (const item of books) {
     const book = bookOf(item);
-    const match = book == null || item.externalIds.anilist != null ? null : pickBridgeMatch(book, candidates);
+    const match = book == null || item.externalIds.anilist != null ? null : matchFolded(book, folded);
     if (match == null) continue;
     bridged.set(item.id, {
       ...item,
