@@ -238,6 +238,24 @@ describe('logToAniList series', () => {
     expect(captured.variables).toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2 });
   });
 
+  test('a bridged reread runs REPEATING until its last volume, which counts it', async () => {
+    const reread = async (entry: EntryFixture, number: number) => {
+      const captured = { variables: null as unknown };
+      await Effect.runPromise(
+        logToAniList(
+          capturingDeps(captured, { entry, episodes: null, media: { type: 'MANGA', volumes: 2 } }),
+          { ...BOOK },
+          { volume: { number, finished: true }, rewatch: true },
+        ),
+      );
+      return captured.variables;
+    };
+    expect(await reread({ status: 'COMPLETED', progress: 35, repeat: 0 }, 1))
+      .toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
+    expect(await reread({ status: 'REPEATING', progress: 35, repeat: 0 }, 2))
+      .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
+  });
+
   test('a bridged page log makes the entry Reading and writes no number (KTD-3)', async () => {
     const captured = { variables: null as unknown };
     await Effect.runPromise(
