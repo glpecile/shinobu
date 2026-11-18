@@ -204,6 +204,8 @@ const PERSISTED_PREFIXES: readonly (readonly unknown[])[] = [
   // `mappingQueryKeys` writes these bare too — keep the two in step.
   ['mapping', 'anizip'],
   ['mapping', 'anizip-episodes'],
+  // The reading bridge's AniList searches (`readingBridgeQueryKeys`).
+  ['mapping', 'anilist-reading-search'],
   // The remaining home rows, so the whole feed restores together rather than
   // Up Next popping in ahead of a screen of skeletons.
   traktQueryKeys.watchedMovies(),
