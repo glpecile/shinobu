@@ -33,6 +33,8 @@ export interface DiaryMonthProps {
   /** Empty once the feed has no older page, so every day is known. */
   oldest: string;
   today: string;
+  /** Counts chapters and books apart instead of one sum (KTD-3). */
+  reading?: boolean;
   /** Stack stats vertically for a side column with height to spare. */
   stacked?: boolean;
   /** Pressing a day with logs; the list scrolls to it. */
@@ -103,6 +105,8 @@ function dayUnits(key: string, props: DiaryMonthProps): number | null {
 /** The month's logged units, its active days, and its longest run of them (first and last day). */
 function monthStats(keys: readonly string[], props: DiaryMonthProps) {
   let units = 0;
+  let chapters = 0;
+  let books = 0;
   let days = 0;
   let longest = { length: 0, from: '', to: '' };
   let run = 0;
@@ -112,8 +116,12 @@ function monthStats(keys: readonly string[], props: DiaryMonthProps) {
     if (run > longest.length) longest = { length: run, from: keys[index - run + 1], to: key };
     if (value > 0) days++;
     units += value;
+    if (key >= props.oldest && key <= props.today) {
+      chapters += props.activity.get(key)?.chapters ?? 0;
+      books += props.activity.get(key)?.books ?? 0;
+    }
   }
-  return { units, days, longest };
+  return { units, chapters, books, days, longest };
 }
 
 /**
@@ -322,14 +330,41 @@ export function DiaryMonth({
               }
               value={loading ? null : longest.length}
             />
-            <Stat
-              stacked={stacked}
-              atLeast={partial}
-              icon="play-circle"
-              label={`logged in ${name}`}
-              tooltip={`Across ${stats.days} ${stats.days === 1 ? 'day' : 'days'}`}
-              value={loading ? null : stats.units}
-            />
+            {props.reading === true ? (
+              <>
+                {/* Chapters and pages never add up (KTD-3), so books get their
+                    own stat, shown once one is logged. */}
+                {(stats.chapters > 0 || stats.books === 0) && (
+                  <Stat
+                    stacked={stacked}
+                    atLeast={partial}
+                    icon="book"
+                    label={stats.chapters === 1 ? 'chapter' : 'chapters'}
+                    tooltip={`In ${name}`}
+                    value={loading ? null : stats.chapters}
+                  />
+                )}
+                {stats.books > 0 && (
+                  <Stat
+                    stacked={stacked}
+                    atLeast={partial}
+                    icon="library"
+                    label={stats.books === 1 ? 'book' : 'books'}
+                    tooltip={`In ${name}`}
+                    value={loading ? null : stats.books}
+                  />
+                )}
+              </>
+            ) : (
+              <Stat
+                stacked={stacked}
+                atLeast={partial}
+                icon="play-circle"
+                label={`logged in ${name}`}
+                tooltip={`Across ${stats.days} ${stats.days === 1 ? 'day' : 'days'}`}
+                value={loading ? null : stats.units}
+              />
+            )}
           </View>
           {props.onLoadMore != null && (
             // Web collapses the space once the month is complete. Keep the

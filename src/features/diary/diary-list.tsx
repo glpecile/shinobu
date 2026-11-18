@@ -37,7 +37,6 @@ import {
   setDiaryDayCollapsed,
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
-import { matchesFormat, type FormatFilter } from '@/features/credit-timeline/group';
 import { useHiddenItems, type HiddenItem } from '@/state/prefs/hidden-items';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
@@ -53,8 +52,10 @@ import {
   formatLogTime,
   shortClusterCount,
   summarizeCluster,
+  matchesDiaryFormat,
   summarizeDay,
   type DaySummary,
+  type DiaryFormat,
   type DiaryCluster,
   type DiaryDayParts,
 } from './merge';
@@ -181,13 +182,13 @@ function flattenDays(
   expanded: ReadonlySet<string>,
   collapsedDays: ReadonlySet<string>,
   hidden: readonly HiddenItem[],
-  format: FormatFilter,
+  format: DiaryFormat,
   inlineMonths: boolean,
 ): { items: DiaryListItem[]; activity: Map<string, DaySummary> } {
   // Hiding is one global set (feed, watchlist, Up Next, diary).
   const hiddenIds = new Set(hidden.map((item) => item.id));
   const keep = (entry: MergedDiaryEntry) =>
-    !hiddenIds.has(entry.item.id) && matchesFormat(entry.item, format);
+    !hiddenIds.has(entry.item.id) && matchesDiaryFormat(entry.item, format);
   const items: DiaryListItem[] = [];
   const activity = new Map<string, DaySummary>();
   let month = '';
@@ -689,8 +690,8 @@ export function DiaryListSkeleton() {
 
 export interface DiaryListProps {
   days: DiaryDay[];
-  /** Narrows rows, the calendar, and its stats; manga shows only under All. */
-  format: FormatFilter;
+  /** Narrows rows, the calendar, and its stats. */
+  format: DiaryFormat;
   timeZone: string;
   failedProviders: ProviderId[];
   hasNextPage: boolean;
@@ -747,6 +748,10 @@ export function DiaryList({
       emptyIcon = 'tv-outline';
       emptyTitle = hasNextPage ? 'No TV shows in loaded history' : 'No TV shows logged yet';
       break;
+    case 'READING':
+      emptyIcon = 'book-outline';
+      emptyTitle = hasNextPage ? 'No reading in loaded history' : 'No reading logged yet';
+      break;
   }
   const [sticky, setSticky] = useState<{ day: string | null; visible: boolean }>({
     day: null,
@@ -781,6 +786,7 @@ export function DiaryList({
     today,
     loadingMore: isFetchingNextPage,
     onLoadMore: onEndReached,
+    reading: format === 'READING',
     onSelectDay: (dayKey: string) => {
       const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
       if (index !== -1) void listRef.current?.scrollToIndex({ index, animated: !reduceMotion });
