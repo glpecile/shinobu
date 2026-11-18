@@ -13,8 +13,8 @@ interface LogTargetsSplit {
   manual: ProviderId[];
   /** Connected providers no id reaches for this anime. Empty until the id lookup has answered. */
   unmatched: ProviderId[];
-  /** The item with the ids enrichment found, or as passed until the lookup answers. */
-  enriched: NormalizedMediaItem;
+  /** The item with the ids enrichment found. Undefined until the lookup answers. */
+  enriched: NormalizedMediaItem | undefined;
 }
 
 /** `process.env.EXPO_OS` is always one of these at runtime; '' never matches a platform flag. */
@@ -49,7 +49,7 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
     },
   });
 
-  return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [], enriched: item };
+  return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [], enriched: undefined };
 }
 
 /**
