@@ -77,7 +77,15 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
  * the id of its manga or light novel entry (plan 0117 B5).
  */
 export function anilistMediaKind(item: Pick<NormalizedMediaItem, 'type'>): 'ANIME' | 'MANGA' {
-  return item.type === 'MANGA' || item.type === 'BOOK' ? 'MANGA' : 'ANIME';
+  switch (item.type) {
+    case 'MANGA':
+    case 'BOOK':
+      return 'MANGA';
+    case 'ANIME':
+    case 'MOVIE':
+    case 'TV':
+      return 'ANIME';
+  }
 }
 
 /**
