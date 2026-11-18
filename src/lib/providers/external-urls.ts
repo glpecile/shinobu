@@ -10,7 +10,7 @@
 // `providerItemUrl` and `providerPersonUrl` only pull in type-only imports
 // (erased at build), so they don't break that constraint.
 
-import { animeEffectiveMovieTvType } from './routing';
+import { anilistMediaKind, animeEffectiveMovieTvType } from './routing';
 import { Provider, type ProviderId } from './types';
 import type { NormalizedMediaItem, NormalizedPerson, NormalizedRating } from '@/types/media';
 
@@ -83,8 +83,7 @@ function traktUrl(item: UrlItem, episode?: UrlEpisode): string | null {
 function anilistUrl(item: UrlItem): string | null {
   const id = item.externalIds.anilist;
   if (id == null) return null;
-  // A bridged book carries the id of its AniList manga or novel entry.
-  return `https://anilist.co/${item.type === 'MANGA' || item.type === 'BOOK' ? 'manga' : 'anime'}/${id}`;
+  return `https://anilist.co/${anilistMediaKind(item) === 'MANGA' ? 'manga' : 'anime'}/${id}`;
 }
 
 /** Letterboxd only has film pages — movies and anime films, never TV. */

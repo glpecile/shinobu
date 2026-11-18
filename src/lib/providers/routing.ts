@@ -71,6 +71,14 @@ function carriesReadingId(item: RoutableItem, id: ProviderId): boolean {
 }
 
 /**
+ * Which AniList catalogue an item's AniList id names. A bridged book carries
+ * the id of its manga or light novel entry (plan 0117 B5).
+ */
+export function anilistMediaKind(item: Pick<NormalizedMediaItem, 'type'>): 'ANIME' | 'MANGA' {
+  return item.type === 'MANGA' || item.type === 'BOOK' ? 'MANGA' : 'ANIME';
+}
+
+/**
  * The write verbs routing can resolve targets for (plan 0031 KTD-1/KTD-15).
  * Every one of them shares `effectiveTypes` above — an anime film must not
  * reach Letterboxd through two different type rules — and differs only in

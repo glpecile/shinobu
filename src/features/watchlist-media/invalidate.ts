@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 
 import { hasAired, parseLocalInstant } from '@/lib/time/has-aired';
 import { Provider, type ProviderId } from '@/lib/providers/types';
+import { anilistMediaKind } from '@/lib/providers/routing';
 import { anilistQueryKeys } from '@/state/queries/anilist';
 import { hardcoverQueryKeys } from '@/state/queries/hardcover';
 import { letterboxdQueryKeys } from '@/state/queries/letterboxd';
@@ -47,8 +48,7 @@ export function invalidateAfterWatchlist(
   if (succeeded.includes(Provider.AniList)) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({
-      // A bridged book plans its AniList manga or novel entry.
-      queryKey: item.type === 'MANGA' || item.type === 'BOOK'
+      queryKey: anilistMediaKind(item) === 'MANGA'
         ? anilistQueryKeys.currentMangaEntries()
         : anilistQueryKeys.currentAnimeEntries(),
     });
