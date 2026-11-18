@@ -1,6 +1,7 @@
 import { PROVIDERS } from '@/lib/providers/registry';
 import { mediaSortValue } from '@/lib/media-sort';
 import { animeEffectiveMovieTvType } from '@/lib/providers/routing';
+import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -90,7 +91,29 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
   if (imdb != null && imdb !== '') keys.push(`imdb:${imdb}`);
   const title = titleKey(item);
   if (title != null) keys.push(title);
+  // A Hardcover book, and the AniList entry the reading bridge folded into it.
+  if (item.externalIds.hardcover != null) keys.push(`hardcover:${item.externalIds.hardcover}`);
   return keys;
+}
+
+/**
+ * The reading bridge's one-card rule (plan 0117 B6): a want-to-read book that
+ * is a volume of a planned AniList entry carries the entry's id, and that
+ * AniList row takes the book's item so the two merge under the book.
+ */
+function bridgeReadingInputs(inputs: readonly WatchlistInput[]): readonly WatchlistInput[] {
+  const bridged = bridgeBooks(
+    inputs.map((input) => input.item),
+    inputs.map((input) => input.item),
+  );
+  if (bridged.size === 0) return inputs;
+  const byAniList = new Map([...bridged.values()].map((book) => [book.externalIds.anilist, book]));
+  return inputs.map((input) => {
+    const book =
+      bridged.get(input.item.id) ??
+      (input.item.type === 'MANGA' ? byAniList.get(input.item.externalIds.anilist) : undefined);
+    return book == null ? input : { ...input, item: book };
+  });
 }
 
 interface MergedEntry {
@@ -146,11 +169,11 @@ function byAddedAtDesc(a: WatchlistEntry, b: WatchlistEntry): number {
   return b.addedAt.localeCompare(a.addedAt);
 }
 
-export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEntry[] {
+export function computeWatchlist(gathered: readonly WatchlistInput[]): WatchlistEntry[] {
   const merged: MergedEntry[] = [];
   const byKey = new Map<string, MergedEntry>();
 
-  for (const input of inputs) {
+  for (const input of bridgeReadingInputs(gathered)) {
     const keys = watchlistMergeKeys(input.item);
     // First key that already names an entry wins — the keys are generated in
     // R27's precedence order, so a TMDB match is preferred over an IMDb one and

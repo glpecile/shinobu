@@ -66,6 +66,27 @@ describe('computeWatchlist', () => {
     expect(computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item.runtime).toBeUndefined();
   });
 
+  test('a want-to-read volume and its planned AniList entry merge under the book (plan 0117 B6)', () => {
+    const planned: WatchlistInput = {
+      source: 'anilist', anilistStatus: 'PLANNING',
+      item: item({
+        id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
+        readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
+      }),
+    };
+    const volume: WatchlistInput = {
+      source: 'hardcover',
+      item: item({
+        id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', type: 'BOOK',
+        externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN'] },
+      }),
+    };
+    const [entry, ...rest] = computeWatchlist([planned, volume]);
+    expect(rest).toEqual([]);
+    expect(entry).toMatchObject({ id: 'hardcover-61', sources: ['anilist', 'hardcover'], anilistStatus: 'PLANNING' });
+    expect(entry.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+  });
+
   test('the same film from Trakt and Letterboxd merges into one entry', () => {
     const entries = computeWatchlist([
       traktRow({ id: 'trakt-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949 } }),
