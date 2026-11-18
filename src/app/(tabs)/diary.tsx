@@ -18,10 +18,12 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
 import { DiaryWelcome } from '@/features/diary/diary-welcome';
 import { DiaryFormatFilter } from '@/features/diary/format-filter';
-import type { DiaryFormat } from '@/features/diary/merge';
+import { DIARY_FORMAT_OPTIONS, type DiaryFormat } from '@/features/diary/merge';
+import { FORMAT_OPTIONS } from '@/features/credit-timeline/group';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { useThemeColor } from '@/lib/theme-color';
+import { continueReadingProviders } from '@/state/queries/continue-reading';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
 import { useConnectedProviders } from '@/state/session';
 
@@ -97,8 +99,11 @@ function DiaryScreen() {
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
-  const [format, setFormat] = useState<DiaryFormat>('ALL');
-  const formatControl = <DiaryFormatFilter onChange={setFormat} value={format} />;
+  const [picked, setFormat] = useState<DiaryFormat>('ALL');
+  // Reading earns its option only while a reading tracker is connected.
+  const options = continueReadingProviders(connected).length > 0 ? DIARY_FORMAT_OPTIONS : FORMAT_OPTIONS;
+  const format = options.some((option) => option.value === picked) ? picked : 'ALL';
+  const formatControl = <DiaryFormatFilter onChange={setFormat} options={options} value={format} />;
   let filter: React.ReactNode = null;
 
   let content: React.ReactNode;
