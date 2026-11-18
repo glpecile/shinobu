@@ -16,7 +16,7 @@ export interface BridgeBook {
   title: string;
   /** Every credited person, translators included. */
   authors: readonly string[];
-  series?: { name: string; position?: number };
+  series?: { name: string };
 }
 
 /** An AniList `MANGA` search result, as the bridge reads it. */
@@ -39,9 +39,11 @@ export interface BridgeMatch {
 }
 
 const FORMAT_TAG = /\s*\((light novels?|novel|manga)\)/gi;
-const MARKER = /(?:,\s*|\s+)(?:vol\.?|volume|part)\s*(\d+)\b/i;
-// An omnibus numbers its own volumes, which aren't AniList's.
-const EDITION = /\b(deluxe|omnibus|collector'?s|box set|\d+-in-\d+)\b/i;
+const VOLUME_MARKER = /(?:,\s*|\s+)(?:vol\.?|volume)\s*(\d+)\b/i;
+// "Part 3--Stardust Crusaders, Vol. 1" is volume 1 of Part 3, so Vol wins.
+const PART_MARKER = /(?:,\s*|\s+)part\s*(\d+)\b/i;
+// An omnibus or a special edition numbers its own volumes, which aren't AniList's.
+const EDITION = /\b(edition|omnibus|kanzenban|box set|\d+\s*-?\s*in\s*-?\s*\d+)\b/i;
 
 interface ParsedTitle {
   /** The work's names: the title before its marker, and that before its subtitle. */
@@ -54,7 +56,7 @@ interface ParsedTitle {
 export function parseBookTitle(title: string): ParsedTitle {
   const tag = [...title.matchAll(FORMAT_TAG)][0]?.[1];
   const rest = title.replace(FORMAT_TAG, ' ').replace(/\s+/g, ' ').trim();
-  const marker = MARKER.exec(rest);
+  const marker = VOLUME_MARKER.exec(rest) ?? PART_MARKER.exec(rest);
   const base = (marker == null ? rest : rest.slice(0, marker.index)).trim();
   // ": " only, so "Re:ZERO" keeps its name.
   const names = [base, base.split(': ')[0].trim()].filter((name, index, all) => name !== '' && all.indexOf(name) === index);
@@ -89,9 +91,15 @@ function nameKeys(text: string): string[] {
   return [words.join(''), [...words].sort().join('')];
 }
 
-/** What to search AniList for: the work's names, then the series name. */
+/**
+ * What to search AniList for: the work's names, then the series name. Only a
+ * title with a volume marker or a format tag reads as a manga or light novel
+ * volume, so any other book costs no AniList request.
+ */
 export function bridgeQueries(book: BridgeBook): string[] {
-  const names = parseBookTitle(book.title).names;
+  const parsed = parseBookTitle(book.title);
+  if (parsed.volume == null && parsed.format == null) return [];
+  const names = parsed.names;
   const series = book.series?.name.replace(FORMAT_TAG, '').trim();
   const queries = series == null || series === '' ? names : [...names, series];
   return queries.filter((query, index) => queries.findIndex((other) => titleKey(other) === titleKey(query)) === index);
@@ -115,20 +123,15 @@ export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandid
     if (!candidate.staff.some((name) => nameKeys(name).some((key) => authors.has(key)))) continue;
     const keys = candidate.titles.map(titleKey);
     const viaTitle = keys.some((key) => titleNames.has(key));
-    if (!viaTitle && (seriesName == null || !keys.includes(seriesName))) continue;
-    const seen = matches.get(candidate.id);
-    matches.set(candidate.id, { candidate, viaTitle: viaTitle || seen?.viaTitle === true });
+    if (viaTitle || (seriesName != null && keys.includes(seriesName))) matches.set(candidate.id, { candidate, viaTitle });
   }
   if (matches.size !== 1) return null;
 
   const [{ candidate, viaTitle }] = matches.values();
-  const position = book.series?.position;
-  const volume = parsed.edition
-    ? null
-    : (parsed.volume ??
-      (!viaTitle && position != null && Number.isInteger(position) ? position : null) ??
-      (candidate.volumes === 1 ? 1 : null));
-  // A number past the entry's known count names some other numbering.
-  const known = volume != null && (candidate.volumes == null || volume <= candidate.volumes);
+  // A match by series name alone can't say which volume: a spin-off or a
+  // franchise numbers its own books.
+  const volume = viaTitle && !parsed.edition ? (parsed.volume ?? (candidate.volumes === 1 ? 1 : null)) : null;
+  // A number past the entry's known count, or a volume 0, names some other numbering.
+  const known = volume != null && volume >= 1 && (candidate.volumes == null || volume <= candidate.volumes);
   return { anilistId: candidate.id, volume: known ? volume : null };
 }
