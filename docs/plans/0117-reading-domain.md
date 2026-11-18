@@ -41,8 +41,7 @@ decisions and the units, one sub-issue of #209 each.
   other one, as ani.zip does for anime. `routing.ts` states the rule once,
   beside the anime rule. Revised 2026-11-13: the first version routed a book
   to Hardcover only, which left a light novel on one of the reader's two lists.
-  The revision takes effect when B5 lands. Until then `routing.ts` and
-  `AGENTS.md` hold the first version, and they cite this KTD for it.
+  The revision took effect with B5 (#470).
 - **KTD-5. New union members arrive with their provider.** `MediaType` gains
   `'BOOK'` and `ProgressUnit` gains `'page'` in B1, when Hardcover's registry
   entry needs them, not before.
@@ -246,9 +245,28 @@ has it as the novel "Nisemonogatari", 35 chapters in 2 volumes.
 
 Probed on 2026-11-13: `SaveMediaListEntry` takes `progressVolumes`, and one
 `Page.media(search:, type: MANGA)` request returns titles, synonyms, `volumes`
-and staff for one point of AniList's 30 a minute. Still to check before
-building: which volume markers the titles in the owner's Hardcover library
-use.
+and staff for one point of AniList's 30 a minute.
+
+Built (#470). The owner's Hardcover test account held no books, so the marker
+check read Hardcover's catalogue instead: 167 titles across 12 manga and
+light-novel series, searched on 2026-11-18. Markers seen: ", Vol. N" (with or
+without a subtitle after it, sometimes without the comma), ", Part N" before
+or after the subtitle, the tags "(Light Novel)" and "(Manga)", and omnibus
+titles such as "Berserk Deluxe Edition Volume 1". The matcher
+(`lib/providers/reading-bridge.ts`) adds three rules the probe forced:
+
+- The format tag picks the AniList format: "(Light Novel)" matches only
+  `NOVEL`, "(Manga)" never matches `NOVEL`. "Mushoku Tensei: Jobless
+  Reincarnation" names a manga and a novel entry with the same titles and
+  author.
+- Two entries that both match are no match.
+- An omnibus or deluxe edition gets no volume number, and neither does a
+  number past the entry's known volume count.
+
+A bridged book never routes AniList for want-to-read removal: one volume
+leaving the list can't delete the series entry. The reconcile leaves AniList
+out of the catch-up and reread decision, because the write takes the higher
+volume count and can't duplicate.
 
 ### B6. Show a bridged work once
 

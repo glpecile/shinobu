@@ -1,0 +1,134 @@
+/**
+ * The Hardcover → AniList reading bridge (plan 0117 B5). Hardcover tracks a
+ * manga or light novel as one book per volume, and AniList as one series
+ * entry. Nothing publishes a mapping, so a book matches an AniList entry only
+ * when a title and a staff member agree. Anything less is no match, because a
+ * wrong match writes to the wrong entry on a real list.
+ *
+ * The title shapes come from Hardcover's catalogue (probed 2026-11-18):
+ * "One Piece, Vol. 1: Romance Dawn", "NISEMONOGATARI, Part 1: Fake Tale
+ * (Light Novel)", "NISEMONOGATARI: Fake Tale, Part 2", "Mushoku Tensei: …
+ * (Light Novel) Vol. 8" and "Berserk Deluxe Edition Volume 1".
+ */
+
+/** A Hardcover book, as the bridge reads it. */
+export interface BridgeBook {
+  title: string;
+  /** Every credited person, translators included. */
+  authors: readonly string[];
+  series?: { name: string; position?: number };
+}
+
+/** An AniList `MANGA` search result, as the bridge reads it. */
+export interface BridgeCandidate {
+  id: number;
+  /** AniList's format: `MANGA`, `NOVEL`, `ONE_SHOT`. */
+  format: string | null;
+  /** Null while AniList doesn't know the count. */
+  volumes: number | null;
+  /** Romaji, English, native and synonyms. */
+  titles: readonly string[];
+  /** Each staff member's full, native and alternative names. */
+  staff: readonly string[];
+}
+
+export interface BridgeMatch {
+  anilistId: number;
+  /** The AniList volume this book is, or null when the book doesn't say. */
+  volume: number | null;
+}
+
+const FORMAT_TAG = /\s*\((light novels?|novel|manga)\)/gi;
+const MARKER = /(?:,\s*|\s+)(?:vol\.?|volume|part)\s*(\d+)\b/i;
+// An omnibus numbers its own volumes, which aren't AniList's.
+const EDITION = /\b(deluxe|omnibus|collector'?s|box set|\d+-in-\d+)\b/i;
+
+interface ParsedTitle {
+  /** The work's names: the title before its marker, and that before its subtitle. */
+  names: string[];
+  volume: number | null;
+  format: 'novel' | 'manga' | null;
+  edition: boolean;
+}
+
+export function parseBookTitle(title: string): ParsedTitle {
+  const tag = [...title.matchAll(FORMAT_TAG)][0]?.[1];
+  const rest = title.replace(FORMAT_TAG, ' ').replace(/\s+/g, ' ').trim();
+  const marker = MARKER.exec(rest);
+  const base = (marker == null ? rest : rest.slice(0, marker.index)).trim();
+  // ": " only, so "Re:ZERO" keeps its name.
+  const names = [base, base.split(': ')[0].trim()].filter((name, index, all) => name !== '' && all.indexOf(name) === index);
+  return {
+    names,
+    volume: marker == null ? null : Number(marker[1]),
+    format: tag == null ? null : /manga/i.test(tag) ? 'manga' : 'novel',
+    edition: EDITION.test(title),
+  };
+}
+
+/** Case, accents, punctuation and long vowels ("Eiichirou", "Eiichiro") folded away. */
+function foldWords(text: string): string[] {
+  return text
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/ou/g, 'o')
+    .replace(/uu/g, 'u')
+    .replace(/oo/g, 'o')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word !== '');
+}
+
+function titleKey(text: string): string {
+  return foldWords(text).join('');
+}
+
+/** Both orders of a name: "Ishin Nishio" is "Nishio Ishin", and "Nisio Isin" is "NISIOISIN". */
+function nameKeys(text: string): string[] {
+  const words = foldWords(text);
+  return [words.join(''), [...words].sort().join('')];
+}
+
+/** What to search AniList for: the work's names, then the series name. */
+export function bridgeQueries(book: BridgeBook): string[] {
+  const names = parseBookTitle(book.title).names;
+  const series = book.series?.name.replace(FORMAT_TAG, '').trim();
+  const queries = series == null || series === '' ? names : [...names, series];
+  return queries.filter((query, index) => queries.findIndex((other) => titleKey(other) === titleKey(query)) === index);
+}
+
+/**
+ * The AniList entry `book` is a volume of, from every result its
+ * `bridgeQueries` returned. One entry must match both a title and a staff
+ * member, in the format the book's tag names; two that do are no match.
+ */
+export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandidate[]): BridgeMatch | null {
+  const parsed = parseBookTitle(book.title);
+  const titleNames = new Set(parsed.names.map(titleKey));
+  const seriesName = book.series == null ? null : titleKey(book.series.name.replace(FORMAT_TAG, ''));
+  const authors = new Set(book.authors.flatMap(nameKeys));
+
+  const matches = new Map<number, { candidate: BridgeCandidate; viaTitle: boolean }>();
+  for (const candidate of results) {
+    if (parsed.format === 'novel' && candidate.format !== 'NOVEL') continue;
+    if (parsed.format === 'manga' && candidate.format === 'NOVEL') continue;
+    if (!candidate.staff.some((name) => nameKeys(name).some((key) => authors.has(key)))) continue;
+    const keys = candidate.titles.map(titleKey);
+    const viaTitle = keys.some((key) => titleNames.has(key));
+    if (!viaTitle && (seriesName == null || !keys.includes(seriesName))) continue;
+    const seen = matches.get(candidate.id);
+    matches.set(candidate.id, { candidate, viaTitle: viaTitle || seen?.viaTitle === true });
+  }
+  if (matches.size !== 1) return null;
+
+  const [{ candidate, viaTitle }] = matches.values();
+  const position = book.series?.position;
+  const volume = parsed.edition
+    ? null
+    : (parsed.volume ??
+      (!viaTitle && position != null && Number.isInteger(position) ? position : null) ??
+      (candidate.volumes === 1 ? 1 : null));
+  // A number past the entry's known count names some other numbering.
+  const known = volume != null && (candidate.volumes == null || volume <= candidate.volumes);
+  return { anilistId: candidate.id, volume: known ? volume : null };
+}

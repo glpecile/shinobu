@@ -170,9 +170,11 @@ never `pod update` (`docs/solutions/pod-install-stale-podfile-lock.md`).
   episode numbers through ani.zip. Manga goes to AniList. Books go to Hardcover,
   counted in pages. Anime films carry
   `isFilm` and go to the movie targets plus AniList and Simkl.
-- A book routes to Hardcover and a manga to AniList only when the item carries
-  that provider's own id. Reading has no id bridge
-  (`docs/plans/0117-reading-domain.md` KTD-4).
+- A reading item routes to every connected provider whose own id it carries.
+  A manga carries AniList's. A book carries Hardcover's, and the reading
+  bridge in `enrichExternalIds` adds AniList's when the book is a volume of an
+  AniList manga or light novel (`docs/plans/0117-reading-domain.md` KTD-4, B5).
+  The bridged AniList write counts volumes, never pages.
 - All routing lives in `src/lib/providers/routing.ts`. Never branch on type or
   provider at a call site.
 - Spell a provider id as `Provider.Trakt` and so on (`lib/providers/types.ts`),

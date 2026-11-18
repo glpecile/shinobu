@@ -27,6 +27,12 @@ export interface AniListLogOptions {
    * `progress`.
    */
   rewatch?: boolean;
+  /**
+   * A Hardcover book bridged to this entry (plan 0117 B5): volume `number`,
+   * and whether this log finishes it. Pages and chapters never convert
+   * (KTD-3), so only a finish writes a number, as `progressVolumes`.
+   */
+  volume?: { number: number; finished: boolean };
 }
 
 interface SaveMediaListEntryResponse {
@@ -44,8 +50,8 @@ interface DeleteMediaListEntryResponse {
  * where no entry exists, so there is nothing stored for an omitted field to
  * null.
  */
-const SAVE_MEDIA_LIST_ENTRY = `mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int, $repeat: Int) {
-        SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress, repeat: $repeat) {
+const SAVE_MEDIA_LIST_ENTRY = `mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int, $progressVolumes: Int, $repeat: Int) {
+        SaveMediaListEntry(mediaId: $mediaId, status: $status, progress: $progress, progressVolumes: $progressVolumes, repeat: $repeat) {
           id
         }
       }`;
@@ -79,7 +85,28 @@ export function logToAniList(
     const state = yield* getEntryState(deps, { mediaId });
 
     let variables: Record<string, unknown>;
-    if (filmLike) {
+    if (options.volume != null) {
+      const status = state.entry?.status ?? null;
+      if (!options.volume.finished) {
+        // A start or a page makes the entry Reading. Never a downgrade.
+        if (status === 'CURRENT' || status === 'REPEATING' || status === 'COMPLETED') return;
+        variables = { mediaId, status: 'CURRENT' };
+      } else {
+        const last = state.volumes != null && options.volume.number >= state.volumes;
+        // The last volume completes the entry, as the last chapter does (M1).
+        const next =
+          (options.rewatch === true && last) || (status === 'REPEATING' && !last)
+            ? 'REPEATING'
+            : last || status === 'COMPLETED'
+              ? 'COMPLETED'
+              : 'CURRENT';
+        variables = {
+          mediaId,
+          status: next,
+          progressVolumes: Math.max(options.volume.number, state.entry?.progressVolumes ?? 0),
+        };
+      }
+    } else if (filmLike) {
       variables = {
         mediaId,
         status: 'COMPLETED',

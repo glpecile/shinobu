@@ -791,6 +791,8 @@ async function connectHardcover(onMutation: (variables: Record<string, unknown>)
     if (body.query.startsWith('query BookEntry')) {
       return Response.json({ data: { me: [{ user_books: library.entry == null ? [] : [library.entry] }] } });
     }
+    // The reading bridge's book read: a book it can't read bridges nowhere.
+    if (!body.query.trimStart().startsWith('mutation')) return Response.json({ data: { books_by_pk: null } });
     return onMutation(body.variables);
   };
   return library;

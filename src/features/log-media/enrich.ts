@@ -13,6 +13,7 @@ import {
   cachedTraktTextSearch,
 } from '@/state/queries/mapping';
 import { cachedLetterboxdFilm } from '@/state/queries/letterboxd';
+import { cachedReadingBridge } from '@/state/queries/reading-bridge';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /**
@@ -31,6 +32,25 @@ export async function enrichExternalIds(
 ): Promise<NormalizedMediaItem> {
   // A TV metadata variant cannot supply identities for a whole-entry movie log.
   if (item.tmdbTvVariant != null) return item;
+
+  // A Hardcover volume of a manga or light novel is one AniList entry's
+  // volume (plan 0117 B5, KTD-6). Without a volume number the AniList id
+  // still rides along, so the log sheet can link the entry.
+  if (
+    item.type === 'BOOK' &&
+    item.externalIds.hardcover != null &&
+    item.externalIds.anilist == null &&
+    connected.includes(Provider.AniList)
+  ) {
+    const bridge = await cachedReadingBridge(queryClient, item);
+    if (bridge == null) return item;
+    return {
+      ...item,
+      externalIds: { ...item.externalIds, anilist: bridge.anilistId },
+      ...(bridge.volume != null ? { anilistVolume: bridge.volume } : {}),
+    };
+  }
+
   let externalIds = { ...item.externalIds };
   let filedAsFilm = false;
 

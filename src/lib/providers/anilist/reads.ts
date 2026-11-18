@@ -7,6 +7,7 @@ import type {
   NormalizedMediaItem,
   PersonCreditRow,
 } from '@/types/media';
+import type { BridgeCandidate } from '@/lib/providers/reading-bridge';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import {
   ACTING_ROLE,
@@ -44,6 +45,7 @@ export const CARD_FIELDS = `
   averageScore
   episodes
   chapters
+  volumes
 `;
 
 export const MEDIA_FIELDS = `${CARD_FIELDS}
@@ -636,6 +638,67 @@ export function searchMedia(
   });
 }
 
+interface ReadingWorksResponse {
+  Page: {
+    media: Array<{
+      id: number;
+      format: string | null;
+      volumes: number | null;
+      title: { romaji: string | null; english: string | null; native: string | null } | null;
+      synonyms: Array<string | null> | null;
+      staff: {
+        nodes: Array<{
+          name: { full: string | null; native: string | null; alternative: Array<string | null> | null } | null;
+        } | null> | null;
+      } | null;
+    } | null> | null;
+  } | null;
+}
+
+/**
+ * `MANGA` entries (light novels included) by title, with what the reading
+ * bridge compares: every title and staff name, and the volume count (plan
+ * 0117 B5). One request for one point of the 30 a minute.
+ */
+export function searchReadingWorks(
+  deps: AniListDeps,
+  params: { query: string },
+): Effect.Effect<BridgeCandidate[], ProviderError> {
+  return anilistRequest<ReadingWorksResponse>(
+    deps,
+    `query ($search: String) {
+      Page(page: 1, perPage: 10) {
+        media(search: $search, type: MANGA, sort: SEARCH_MATCH) {
+          id format volumes
+          title { romaji english native }
+          synonyms
+          staff(perPage: 25) { nodes { name { full native alternative } } }
+        }
+      }
+    }`,
+    { variables: { search: params.query } },
+  ).pipe(
+    Effect.map((data) =>
+      (data.Page?.media ?? []).flatMap((media) => {
+        if (media == null) return [];
+        const titles = [media.title?.romaji, media.title?.english, media.title?.native, ...(media.synonyms ?? [])];
+        const staff = (media.staff?.nodes ?? []).flatMap((node) => [
+          node?.name?.full,
+          node?.name?.native,
+          ...(node?.name?.alternative ?? []),
+        ]);
+        return [{
+          id: media.id,
+          format: media.format,
+          volumes: media.volumes,
+          titles: titles.filter((title): title is string => title != null && title !== ''),
+          staff: staff.filter((name): name is string => name != null && name !== ''),
+        }];
+      }),
+    ),
+  );
+}
+
 /**
  * Anime *films* by title — the discovery fallback for an anime movie that
  * arrived from TMDB/Trakt with no AniList id (plan 0024 KTD3). ani.zip's
@@ -743,6 +806,8 @@ export interface AniListEntryState {
     id: number | null;
     status: string | null;
     progress: number;
+    /** Manga only: the volumes read, which a bridged Hardcover book writes (plan 0117 B5). */
+    progressVolumes: number;
     repeat: number;
     /**
      * The four fields below exist for one caller: `deleteAniListEntry`
@@ -770,6 +835,8 @@ export interface AniListEntryState {
    * Null while AniList doesn't know it (an airing show, a releasing manga).
    */
   total: number | null;
+  /** A manga's volume count. Null for anime and while AniList doesn't know it. */
+  volumes: number | null;
 }
 
 export interface MediaEntryResponse {
@@ -778,10 +845,12 @@ export interface MediaEntryResponse {
     episodes: number | null;
     // Manga carries its total here; `episodes` is always null for it.
     chapters: number | null;
+    volumes?: number | null;
     mediaListEntry: {
       id: number | null;
       status: string | null;
       progress: number | null;
+      progressVolumes?: number | null;
       repeat: number | null;
       score: number | null;
       notes: string | null;
@@ -801,16 +870,18 @@ export interface MediaEntryResponse {
   } | null;
 }
 
-export const ENTRY_FIELDS = 'id status progress repeat score notes startedAt { year month day } customLists';
+export const ENTRY_FIELDS = 'id status progress progressVolumes repeat score notes startedAt { year month day } customLists';
 
 export function normalizeEntryState(media: Partial<NonNullable<MediaEntryResponse['Media']>> | null): AniListEntryState {
   const raw = media?.mediaListEntry ?? null;
   return {
     total: (media?.type === 'MANGA' ? media.chapters : media?.episodes) ?? null,
+    volumes: media?.volumes ?? null,
     entry: raw == null ? null : {
       id: raw.id ?? null,
       status: raw.status,
       progress: raw.progress ?? 0,
+      progressVolumes: raw.progressVolumes ?? 0,
       repeat: raw.repeat ?? 0,
       score: raw.score ?? 0,
       notes: raw.notes ?? null,
@@ -857,6 +928,7 @@ export function getEntryState(
         type
         episodes
         chapters
+        volumes
         mediaListEntry { ${ENTRY_FIELDS} }
       }
     }`,

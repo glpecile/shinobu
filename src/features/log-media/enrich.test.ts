@@ -74,6 +74,15 @@ mock.module('@/state/queries/letterboxd', () => ({
   },
 }));
 
+let readingBridge: { anilistId: number; volume: number | null } | null = null;
+
+mock.module('@/state/queries/reading-bridge', () => ({
+  cachedReadingBridge: () => {
+    calls.push('reading-bridge');
+    return Promise.resolve(readingBridge);
+  },
+}));
+
 const { enrichExternalIds } = await import('./enrich');
 
 // ChaO (2025): a TMDB-first anime film. ani.zip's themoviedb_id index is
@@ -386,4 +395,30 @@ describe('enrichExternalIds — a bridge id of the other kind', () => {
     expect(asShow.externalIds.tmdb).toBeUndefined();
   });
 
+});
+
+// Plan 0117 B5: a Hardcover volume carries its AniList entry's id and volume.
+describe('enrichExternalIds — a Hardcover book bridged to AniList', () => {
+  const book: NormalizedMediaItem = {
+    id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', coverImage: '', type: 'BOOK',
+    currentProgress: 0, progressUnit: 'page', lastUpdated: '', externalIds: { hardcover: 61 },
+  };
+
+  beforeEach(() => {
+    calls.length = 0;
+    readingBridge = null;
+  });
+
+  test('a match adds the AniList id and the volume', async () => {
+    readingBridge = { anilistId: 143703, volume: 1 };
+    expect(await enrichExternalIds(client, book, ['hardcover', 'anilist'])).toMatchObject({
+      externalIds: { hardcover: 61, anilist: 143703 },
+      anilistVolume: 1,
+    });
+  });
+
+  test('never looks without AniList connected', async () => {
+    expect(await enrichExternalIds(client, book, ['hardcover'])).toEqual(book);
+    expect(calls).toEqual([]);
+  });
 });

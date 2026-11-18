@@ -47,7 +47,8 @@ export function invalidateAfterWatchlist(
   if (succeeded.includes(Provider.AniList)) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({
-      queryKey: item.type === 'MANGA'
+      // A bridged book plans its AniList manga or novel entry.
+      queryKey: item.type === 'MANGA' || item.type === 'BOOK'
         ? anilistQueryKeys.currentMangaEntries()
         : anilistQueryKeys.currentAnimeEntries(),
     });

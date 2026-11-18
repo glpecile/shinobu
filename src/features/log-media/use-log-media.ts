@@ -138,7 +138,21 @@ const LOG_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<LogMediaVariables>>>
   // reads `entryEpisodes` — the entry's own 1..n numbering — and never the
   // canonical `episodes` the ani.zip translation produced for Trakt/Serializd.
   // A sequel entry's episode 3 is `progress: 3` here while Trakt gets S02E03.
-  anilist: ({ item, episode, episodes, entryEpisodes, rewatch }) => {
+  anilist: ({ item, episode, episodes, entryEpisodes, rewatch, reading }) => {
+    // A bridged Hardcover book writes its volume, never its page (plan 0117 B5).
+    if (item.type === 'BOOK') {
+      const volume = item.anilistVolume;
+      return volume == null || reading == null
+        ? Promise.resolve({ status: 'skipped', reason: 'needs the book’s AniList volume' })
+        : anilistWriteQueue.submit(null, 0, () =>
+            Effect.runPromise(
+              logToAniList(anilistDeps(), item, {
+                volume: { number: volume, finished: reading.finished },
+                ...(rewatch === true ? { rewatch: true } : {}),
+              }),
+            ).then(okResult),
+          );
+    }
     const progress = anilistProgress({ episode, episodes, entryEpisodes });
     const mediaId = item.externalIds.anilist;
     return anilistWriteQueue.submit(
@@ -643,6 +657,9 @@ async function providerHasWatch(
       case Provider.AniList: {
         const mediaId = item.externalIds.anilist;
         if (mediaId == null) return false;
+        // A volume log never duplicates on AniList: the write takes the
+        // higher volume count. Hardcover alone decides a reread.
+        if (item.type === 'BOOK') return null;
         const state = await queryClient.fetchQuery({
           queryKey: anilistQueryKeys.entryState(mediaId),
           queryFn: () =>
@@ -774,10 +791,11 @@ export function invalidateAfterLog(
   if (succeeded.includes(Provider.AniList)) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
-    // The one list read this log can change: manga feeds Continue Reading and
-    // the reading list, anime feeds Up Next and the watchlist.
+    // The one list read this log can change: manga (and a bridged book)
+    // feeds Continue Reading and the reading list, anime feeds Up Next and
+    // the watchlist.
     queryClient.invalidateQueries({
-      queryKey: item.type === 'MANGA'
+      queryKey: item.type === 'MANGA' || item.type === 'BOOK'
         ? anilistQueryKeys.currentMangaEntries()
         : anilistQueryKeys.currentAnimeEntries(),
     });
