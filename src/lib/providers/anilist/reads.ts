@@ -184,7 +184,8 @@ export function getCurrentManga(
                 ${CARD_FIELDS}
                 volumes
                 synonyms
-                staff(perPage: 25) { nodes { name { full native alternative } } }
+                # The authors lead by relevance. The list is persisted, so it stays small.
+                staff(perPage: 6, sort: RELEVANCE) { nodes { name { full native alternative } } }
               }
             }
           }
