@@ -1,6 +1,6 @@
 import { PROVIDERS } from '@/lib/providers/registry';
 import { mediaSortValue } from '@/lib/media-sort';
-import { animeEffectiveMovieTvType } from '@/lib/providers/routing';
+import { anilistMediaKind, animeEffectiveMovieTvType } from '@/lib/providers/routing';
 import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -91,29 +91,33 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
   if (imdb != null && imdb !== '') keys.push(`imdb:${imdb}`);
   const title = titleKey(item);
   if (title != null) keys.push(title);
-  // A Hardcover book, and the AniList entry the reading bridge folded into it.
-  if (item.externalIds.hardcover != null) keys.push(`hardcover:${item.externalIds.hardcover}`);
+  // A reading work: an AniList manga or novel, and every Hardcover volume the
+  // reading bridge matched to it (plan 0117 B6).
+  if (anilistMediaKind(item) === 'MANGA' && item.externalIds.anilist != null) {
+    keys.push(`anilist-manga:${item.externalIds.anilist}`);
+  }
   return keys;
+}
+
+/** A bridged volume leads its work's card: it holds the finer progress (plan 0117 B6). */
+function itemPrecedence(input: WatchlistInput): number {
+  return input.item.type === 'BOOK' ? -1 : ITEM_PRECEDENCE[input.source];
 }
 
 /**
  * The reading bridge's one-card rule (plan 0117 B6): a want-to-read book that
- * is a volume of a planned AniList entry carries the entry's id, and that
- * AniList row takes the book's item so the two merge under the book.
+ * is a volume of a planned AniList entry carries the entry's id, so the two
+ * meet on its `anilist-manga` key.
  */
 function bridgeReadingInputs(inputs: readonly WatchlistInput[]): readonly WatchlistInput[] {
-  const bridged = bridgeBooks(
-    inputs.map((input) => input.item),
-    inputs.map((input) => input.item),
-  );
-  if (bridged.size === 0) return inputs;
-  const byAniList = new Map([...bridged.values()].map((book) => [book.externalIds.anilist, book]));
-  return inputs.map((input) => {
-    const book =
-      bridged.get(input.item.id) ??
-      (input.item.type === 'MANGA' ? byAniList.get(input.item.externalIds.anilist) : undefined);
-    return book == null ? input : { ...input, item: book };
-  });
+  const items = inputs.map((input) => input.item);
+  const bridged = bridgeBooks(items, items);
+  return bridged.size === 0
+    ? inputs
+    : inputs.map((input) => {
+        const book = bridged.get(input.item.id);
+        return book == null ? input : { ...input, item: book };
+      });
 }
 
 interface MergedEntry {
@@ -127,7 +131,7 @@ interface MergedEntry {
 }
 
 function absorb(entry: MergedEntry, input: WatchlistInput): void {
-  const precedence = ITEM_PRECEDENCE[input.source];
+  const precedence = itemPrecedence(input);
   const previous = entry.item;
   if (precedence < entry.precedence) {
     entry.item = input.item;
@@ -185,7 +189,7 @@ export function computeWatchlist(gathered: readonly WatchlistInput[]): Watchlist
     if (entry == null) {
       entry = {
         item: input.item,
-        precedence: ITEM_PRECEDENCE[input.source],
+        precedence: itemPrecedence(input),
         sources: new Set([input.source]),
         sourceIds: [input.item.id],
         ...(input.addedAt != null ? { addedAt: input.addedAt } : {}),

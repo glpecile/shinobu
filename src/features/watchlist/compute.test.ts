@@ -66,7 +66,7 @@ describe('computeWatchlist', () => {
     expect(computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item.runtime).toBeUndefined();
   });
 
-  test('a want-to-read volume and its planned AniList entry merge under the book (plan 0117 B6)', () => {
+  test('want-to-read volumes and their planned AniList entry merge into one card under a book (plan 0117 B6)', () => {
     const planned: WatchlistInput = {
       source: 'anilist', anilistStatus: 'PLANNING',
       item: item({
@@ -81,9 +81,21 @@ describe('computeWatchlist', () => {
         externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN'] },
       }),
     };
-    const [entry, ...rest] = computeWatchlist([planned, volume]);
+    const second: WatchlistInput = {
+      source: 'hardcover',
+      item: item({
+        id: 'hardcover-62', title: 'NISEMONOGATARI, Part 2: Fake Tale (Light Novel)', type: 'BOOK',
+        externalIds: { hardcover: 62 }, readingCredits: { people: ['NISIOISIN'] },
+      }),
+    };
+    const [entry, ...rest] = computeWatchlist([planned, volume, second]);
     expect(rest).toEqual([]);
-    expect(entry).toMatchObject({ id: 'hardcover-61', sources: ['anilist', 'hardcover'], anilistStatus: 'PLANNING' });
+    expect(entry).toMatchObject({
+      id: 'hardcover-61',
+      sources: ['anilist', 'hardcover'],
+      sourceIds: ['anilist-143703', 'hardcover-61', 'hardcover-62'],
+      anilistStatus: 'PLANNING',
+    });
     expect(entry.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
   });
 
