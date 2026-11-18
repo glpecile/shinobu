@@ -22,11 +22,12 @@ export const hardcoverBookFields = {
   ratings_count: optionalNullable(numeric),
   image: optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) })),
   // The library and journal reads ask for these, for the reading bridge (plan 0117 B6).
+  // A null name drops that name, never the whole read.
   contributions: optionalNullable(Schema.Array(Schema.Struct({
-    author: optionalNullable(Schema.Struct({ name: Schema.String })),
+    author: optionalNullable(Schema.Struct({ name: optionalNullable(Schema.String) })),
   }))),
   featured_book_series: optionalNullable(Schema.Struct({
-    series: optionalNullable(Schema.Struct({ name: Schema.String })),
+    series: optionalNullable(Schema.Struct({ name: optionalNullable(Schema.String) })),
   })),
 };
 
@@ -73,7 +74,7 @@ export function normalizeHardcoverBook(book: HardcoverBook, nowIso: string): Nor
       ? {
           readingCredits: {
             people: book.contributions.flatMap((credit) => credit.author?.name ?? []),
-            ...(book.featured_book_series?.series != null ? { series: book.featured_book_series.series.name } : {}),
+            ...(book.featured_book_series?.series?.name != null ? { series: book.featured_book_series.series.name } : {}),
           },
         }
       : {}),
