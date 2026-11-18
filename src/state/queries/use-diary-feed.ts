@@ -26,7 +26,7 @@ import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { anilistDeps, anilistQueryKeys } from './anilist';
+import { anilistDeps, anilistQueryKeys, currentMangaEntriesOptions } from './anilist';
 import { hardcoverDeps, hardcoverViewerQuery } from './hardcover';
 import {
   diaryQueryKeys,
@@ -131,6 +131,20 @@ async function showTmdbIds(
   return found;
 }
 
+/**
+ * A journal book that is a volume of a work on the AniList list carries the
+ * entry's id, so the day can show the work once (plan 0117 B6). It runs on
+ * render, so a list that loads after the journal still bridges.
+ */
+function withBridgedBooks(
+  entries: NormalizedDiaryEntry[],
+  list: readonly AniListMangaEntry[] | undefined,
+): NormalizedDiaryEntry[] {
+  if (list == null) return entries;
+  const bridged = bridgeBooks(entries.map((entry) => entry.item), list.map((entry) => entry.item));
+  return bridged.size === 0 ? entries : entries.map((entry) => ({ ...entry, item: bridged.get(entry.item.id) ?? entry.item }));
+}
+
 function withShowTmdbIds(
   entries: NormalizedDiaryEntry[],
   tmdbByAniList: Record<number, number> | undefined,
@@ -198,14 +212,7 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
       getReadingJournal(hardcoverDeps(), { userId: viewer.id, page, perPage: PAGE_SIZE }),
       { signal },
     );
-    // A volume of a work on the AniList list carries its id, so the day can
-    // show the work once (plan 0117 B6). Only the cached list: no request.
-    const list = queryClient.getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries()) ?? [];
-    const bridged = bridgeBooks(entries.map((entry) => entry.item), list.map((entry) => entry.item));
-    return {
-      entries: entries.map((entry) => ({ ...entry, item: bridged.get(entry.item.id) ?? entry.item })),
-      next: hasNextPage ? page + 1 : undefined,
-    };
+    return { entries, next: hasNextPage ? page + 1 : undefined };
   },
 };
 
@@ -291,8 +298,14 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     placeholderData: keepPreviousData,
   });
 
+  // The manga list Continue Reading already loads; it adds no request.
+  const { data: mangaList } = useQuery({
+    ...currentMangaEntriesOptions(queryClient),
+    enabled: active.includes(Provider.AniList) && active.includes(Provider.Hardcover),
+  });
+
   return {
-    days: groupDiaryEntries(withShowTmdbIds(merged, tmdbByAniList), timeZone),
+    days: groupDiaryEntries(withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList), timeZone),
     timeZone,
     activeProviders: active,
     entryCount: merged.length,

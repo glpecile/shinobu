@@ -242,11 +242,11 @@ export async function fetchWatchlistAnime(
 }
 
 /**
- * The manga list read behind Continue Reading and the reading list. The rail's
- * observer and the watchlist gather's fetch both use these options, so they
- * share one cache entry and one request.
+ * The manga list read behind Continue Reading, the reading list and the
+ * diary's reading bridge. They all use these options, so they share one cache
+ * entry and one request.
  */
-function currentMangaEntriesOptions(queryClient: QueryClient) {
+export function currentMangaEntriesOptions(queryClient: QueryClient) {
   return {
     queryKey: anilistQueryKeys.currentMangaEntries(),
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
