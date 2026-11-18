@@ -2,8 +2,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'> &
-  Partial<Pick<NormalizedMediaItem, 'anilistVolume'>>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume'>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
