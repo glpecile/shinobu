@@ -27,6 +27,8 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { useThemeColor } from '@/lib/theme-color';
+import { feedReadsType } from '@/lib/providers/routing';
+import { useConnectedProviders } from '@/state/session';
 import { DURATION, EASE_IN_OUT } from '@/lib/motion';
 import { useListDisclosure } from '@/lib/use-list-disclosure';
 import { useWakeAt } from '@/lib/time/use-wake-at';
@@ -732,6 +734,7 @@ export function DiaryList({
   const collapsedDays = useCollapsedDiaryDays();
   const hiddenItems = useHiddenItems();
   const muted = useThemeColor('--color-muted');
+  const connected = useConnectedProviders();
   const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
   let emptyIcon: React.ComponentProps<typeof Ionicons>['name'];
   let emptyTitle: string;
@@ -786,7 +789,9 @@ export function DiaryList({
     today,
     loadingMore: isFetchingNextPage,
     onLoadMore: onEndReached,
-    reading: format === 'READING',
+    ...(format === 'READING'
+      ? { reading: { chapters: feedReadsType(connected, 'MANGA'), books: feedReadsType(connected, 'BOOK') } }
+      : {}),
     onSelectDay: (dayKey: string) => {
       const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
       if (index !== -1) void listRef.current?.scrollToIndex({ index, animated: !reduceMotion });

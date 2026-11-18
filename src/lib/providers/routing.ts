@@ -208,6 +208,11 @@ export function providersForFeed(connected: readonly ProviderId[]): ProviderId[]
   return connected.filter((id) => PROVIDERS[id].canRead);
 }
 
+/** Whether a connected provider reads `type` back, e.g. AniList for manga. */
+export function feedReadsType(connected: readonly ProviderId[], type: MediaType): boolean {
+  return providersForFeed(connected).some((id) => PROVIDERS[id].mediaTypes.includes(type));
+}
+
 /** Whether `provider`'s write is structurally unsupported on `platform` (plan 0022 KTD-1). */
 export function isManualWriteTarget(
   provider: ProviderId,
