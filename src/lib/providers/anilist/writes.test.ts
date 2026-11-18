@@ -84,6 +84,19 @@ const BOOK: NormalizedMediaItem = {
   externalIds: { hardcover: 61, anilist: 143703 },
 };
 
+/** The variables a finished reread of `BOOK`'s volume `number` sends, against a two-volume entry. */
+async function rereadVolume(entry: EntryFixture, number: number) {
+  const captured = { variables: null as unknown };
+  await Effect.runPromise(
+    logToAniList(
+      capturingDeps(captured, { entry, episodes: null, media: { type: 'MANGA', volumes: 2 } }),
+      { ...BOOK },
+      { volume: { number, finished: true }, rewatch: true },
+    ),
+  );
+  return captured.variables;
+}
+
 const SERIES: NormalizedMediaItem = {
   id: 'anilist-104578',
   title: 'Attack on Titan Final Season',
@@ -239,20 +252,9 @@ describe('logToAniList series', () => {
   });
 
   test('a bridged reread runs REPEATING until its last volume, which counts it', async () => {
-    const reread = async (entry: EntryFixture, number: number) => {
-      const captured = { variables: null as unknown };
-      await Effect.runPromise(
-        logToAniList(
-          capturingDeps(captured, { entry, episodes: null, media: { type: 'MANGA', volumes: 2 } }),
-          { ...BOOK },
-          { volume: { number, finished: true }, rewatch: true },
-        ),
-      );
-      return captured.variables;
-    };
-    expect(await reread({ status: 'COMPLETED', progress: 35, repeat: 0 }, 1))
+    expect(await rereadVolume({ status: 'COMPLETED', progress: 35, repeat: 0 }, 1))
       .toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
-    expect(await reread({ status: 'REPEATING', progress: 35, repeat: 0 }, 2))
+    expect(await rereadVolume({ status: 'REPEATING', progress: 35, repeat: 0 }, 2))
       .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
   });
 
