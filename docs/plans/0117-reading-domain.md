@@ -264,16 +264,20 @@ titles such as "Berserk Deluxe Edition Volume 1". The matcher
 - Two entries that both match are no match.
 - An edition or omnibus gets no volume number, and neither does volume 0 or
   a number past the entry's known volume count.
-- "Vol. N" wins over "Part N" ("Part 3: Stardust Crusaders, Vol. 1").
+- "Vol. N" wins over "Part N" ("Part 3: Stardust Crusaders, Vol. 1"), and
+  only ", Part N" numbers a book: "Adventure Part 3: …" names an arc.
 - A match by series name alone gets no volume number: a spin-off or a
   franchise numbers its own books. That replaces the plan's series-position
   rule.
 - Only a title with a volume marker or a format tag searches AniList, so an
-  ordinary book costs no AniList request. The searches persist across
-  launches and expire after a week.
+  ordinary book costs no AniList request. The searches stay cached for the
+  session; they are not persisted, because the persist allowlist keeps out
+  unbounded search caches.
 
-A reread runs the entry REPEATING from its own volume until its last
-volume, which completes it and adds one to `repeat`. Want-to-read removal
+A reread of a completed entry runs it REPEATING from its own volume until
+its last volume, which completes it and adds one to `repeat`. Hardcover's
+reread flag covers one volume, so it never starts a reread on an entry that
+isn't completed. Want-to-read removal
 never routes AniList: the Planning entry is the series, and one volume
 leaving the list can't decide it. The reconcile
 leaves AniList out of the catch-up and reread decision, because the write
