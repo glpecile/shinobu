@@ -25,12 +25,12 @@ const mushokuNovel: BridgeCandidate = {
   staff: ['Rifujin na Magonote', 'Sirotaka', 'Shirotaka (シロタカ)'],
 };
 const mushokuManga: BridgeCandidate = { ...mushokuNovel, id: 85564, format: 'MANGA', volumes: null };
-const berserk: BridgeCandidate = {
-  id: 30002,
-  format: 'MANGA',
-  volumes: null,
-  titles: ['Berserk'],
-  staff: ['Kentarou Miura', 'Kentaro Miura'],
+const swordArtOnline: BridgeCandidate = {
+  id: 86367,
+  format: 'NOVEL',
+  volumes: 27,
+  titles: ['Sword Art Online'],
+  staff: ['Reki Kawahara'],
 };
 
 describe('pickBridgeMatch', () => {
@@ -69,17 +69,44 @@ describe('pickBridgeMatch', () => {
     expect(pickBridgeMatch(book, [mushokuManga, mushokuNovel])).toBeNull();
   });
 
-  test('an omnibus matches with no volume number', () => {
+  test('a match by series name alone has no volume number', () => {
     const book = {
-      title: 'Berserk Deluxe Edition Volume 1',
-      authors: ['Kentaro Miura'],
-      series: { name: 'Berserk', position: 1 },
+      title: 'Sword Art Online Progressive, Vol. 1',
+      authors: ['Reki Kawahara'],
+      series: { name: 'Sword Art Online' },
     };
-    expect(pickBridgeMatch(book, [berserk])).toEqual({ anilistId: 30002, volume: null });
+    expect(pickBridgeMatch(book, [swordArtOnline])).toEqual({ anilistId: 86367, volume: null });
   });
 
-  test('a volume past the entry’s known count has no volume number', () => {
-    expect(pickBridgeMatch({ title: 'NISEMONOGATARI, Part 3 (Light Novel)', authors: ['NISIOISIN'] }, [nisemonogatari]))
-      .toEqual({ anilistId: 143703, volume: null });
+  test('a special edition matches by title with no volume number', () => {
+    const fullmetal = { id: 25, format: 'MANGA', volumes: 27, titles: ['Fullmetal Alchemist'], staff: ['Hiromu Arakawa'] };
+    expect(pickBridgeMatch({ title: 'Fullmetal Alchemist: Fullmetal Edition, Vol. 1', authors: ['Hiromu Arakawa'] }, [fullmetal]))
+      .toEqual({ anilistId: 25, volume: null });
+  });
+
+  test('a volume marker wins over a part marker', () => {
+    const jojo = {
+      id: 3006,
+      format: 'MANGA',
+      volumes: 16,
+      titles: ['JoJo’s Bizarre Adventure Part 3: Stardust Crusaders'],
+      staff: ['Hirohiko Araki'],
+    };
+    const book = { title: 'JoJo’s Bizarre Adventure Part 3: Stardust Crusaders, Vol. 1', authors: ['Hirohiko Araki'] };
+    expect(pickBridgeMatch(book, [jojo])).toEqual({ anilistId: 3006, volume: 1 });
+    // Without a volume marker, the arc number is no volume.
+    expect(bridgeQueries({ title: 'JoJo’s Bizarre Adventure Part 3: Stardust Crusaders', authors: ['Hirohiko Araki'] }))
+      .toEqual([]);
+  });
+
+  test('a volume 0 or past the entry’s known count has no volume number', () => {
+    for (const part of [0, 3]) {
+      expect(pickBridgeMatch({ title: `NISEMONOGATARI, Part ${part} (Light Novel)`, authors: ['NISIOISIN'] }, [nisemonogatari]))
+        .toEqual({ anilistId: 143703, volume: null });
+    }
+  });
+
+  test('a book with no volume marker or format tag searches nothing', () => {
+    expect(bridgeQueries({ title: 'Piranesi', authors: ['Susanna Clarke'] })).toEqual([]);
   });
 });

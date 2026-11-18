@@ -94,16 +94,25 @@ export function logToAniList(
       } else {
         const last = state.volumes != null && options.volume.number >= state.volumes;
         // The last volume completes the entry, as the last chapter does (M1).
-        const next =
-          (options.rewatch === true && last) || (status === 'REPEATING' && !last)
+        // A reread of a completed entry runs REPEATING from its own volume
+        // until then, and finishing it counts it. `rewatch` comes from
+        // Hardcover's one volume, so it never starts a reread on its own.
+        const rereading = status === 'REPEATING' || (options.rewatch === true && status === 'COMPLETED');
+        const next = last
+          ? 'COMPLETED'
+          : rereading
             ? 'REPEATING'
-            : last || status === 'COMPLETED'
+            : status === 'COMPLETED'
               ? 'COMPLETED'
               : 'CURRENT';
         variables = {
           mediaId,
           status: next,
-          progressVolumes: Math.max(options.volume.number, state.entry?.progressVolumes ?? 0),
+          progressVolumes:
+            next === 'REPEATING' && status !== 'REPEATING'
+              ? options.volume.number
+              : Math.max(options.volume.number, state.entry?.progressVolumes ?? 0),
+          ...(last && rereading ? { repeat: (state.entry?.repeat ?? 0) + 1 } : {}),
         };
       }
     } else if (filmLike) {

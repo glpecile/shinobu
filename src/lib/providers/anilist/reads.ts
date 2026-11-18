@@ -45,10 +45,10 @@ export const CARD_FIELDS = `
   averageScore
   episodes
   chapters
-  volumes
 `;
 
 export const MEDIA_FIELDS = `${CARD_FIELDS}
+  volumes
   synonyms
   description(asHtml: false)
   bannerImage

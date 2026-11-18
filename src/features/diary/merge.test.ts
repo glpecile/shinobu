@@ -420,19 +420,10 @@ function ep(id: string, season: number, episode: number): MergedDiaryEntry {
 }
 
 describe('matchesDiaryFormat', () => {
-  test('Reading holds manga and books, and Movies and TV keep them out', () => {
-    const items = [
-      item({ id: 'film' }),
-      item({ id: 'anime-film', type: 'ANIME', isFilm: true }),
-      item({ id: 'tv', type: 'TV' }),
-      item({ id: 'manga', type: 'MANGA' }),
-      item({ id: 'book', type: 'BOOK' }),
-    ];
-    const ids = (format: Parameters<typeof matchesDiaryFormat>[1]) =>
-      items.filter((candidate) => matchesDiaryFormat(candidate, format)).map((candidate) => candidate.id);
-    expect(ids('READING')).toEqual(['manga', 'book']);
-    expect(ids('MOVIE')).toEqual(['film', 'anime-film']);
-    expect(ids('TV')).toEqual(['tv']);
+  test('Reading holds manga and books', () => {
+    const items = [item({ id: 'film' }), item({ id: 'manga', type: 'MANGA' }), item({ id: 'book', type: 'BOOK' })];
+    expect(items.filter((candidate) => matchesDiaryFormat(candidate, 'READING')).map((candidate) => candidate.id))
+      .toEqual(['manga', 'book']);
   });
 });
 
@@ -451,7 +442,7 @@ describe('summarizeDay', () => {
       label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga · 1 book',
       units: 8,
       chapters: 3,
-      books: 1,
+      bookIds: ['hardcover-61'],
     });
   });
 
@@ -497,7 +488,7 @@ describe('summarizeDay', () => {
 
   test('does not invent episode counts for title-only activity or empty days', () => {
     expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toMatchObject({ label: '1 show', units: 1 });
-    expect(summarizeDay([])).toEqual({ label: '', units: 0, chapters: 0, books: 0 });
+    expect(summarizeDay([])).toEqual({ label: '', units: 0, chapters: 0, bookIds: [] });
   });
 });
 

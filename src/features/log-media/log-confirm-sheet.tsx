@@ -20,6 +20,7 @@ import { ProviderPicker } from '@/features/write-sheet/provider-picker';
 import { isCleanWriteReport } from '@/features/write-sheet/is-clean-report';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { PROVIDERS } from '@/lib/providers/registry';
+import { unmatchedWriteReason } from '@/lib/providers/routing';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
@@ -183,7 +184,7 @@ export function LogFormFields({
           manual={[...manualTargets, ...unmatchedTargets]}
           reasons={{
             ...(process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : {}),
-            ...Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match for this title'])),
+            ...Object.fromEntries(unmatchedTargets.map((id) => [id, unmatchedWriteReason(item)])),
           }}
         />
         {/* The like rides in this row, but a diary provider is never undated. */}

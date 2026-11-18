@@ -18,8 +18,9 @@ import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
 import { DiaryWelcome } from '@/features/diary/diary-welcome';
 import { DiaryFormatFilter } from '@/features/diary/format-filter';
-import type { DiaryFormat } from '@/features/diary/merge';
+import { DIARY_FORMAT_OPTIONS, type DiaryFormat } from '@/features/diary/merge';
 import { cn } from '@/lib/cn';
+import { feedReadsType } from '@/lib/providers/routing';
 import { usePushRoute } from '@/lib/navigation';
 import { useThemeColor } from '@/lib/theme-color';
 import { useDiaryFeedQuery } from '@/state/queries/use-diary-feed';
@@ -97,8 +98,12 @@ function DiaryScreen() {
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
-  const [format, setFormat] = useState<DiaryFormat>('ALL');
-  const formatControl = <DiaryFormatFilter onChange={setFormat} value={format} />;
+  const [picked, setPicked] = useState<DiaryFormat>('ALL');
+  // Reading earns its option only while a reading tracker is connected.
+  const reading = { chapters: feedReadsType(connected, 'MANGA'), books: feedReadsType(connected, 'BOOK') };
+  const options = DIARY_FORMAT_OPTIONS.filter((option) => option.value !== 'READING' || reading.chapters || reading.books);
+  const format = options.some((option) => option.value === picked) ? picked : 'ALL';
+  const formatControl = <DiaryFormatFilter onChange={setPicked} options={options} value={format} />;
   let filter: React.ReactNode = null;
 
   let content: React.ReactNode;
@@ -158,6 +163,7 @@ function DiaryScreen() {
       <DiaryList
         days={diary.days}
         format={format}
+        reading={reading}
         failedProviders={diary.errors.map((entry) => entry.provider)}
         hasNextPage={diary.hasNextPage}
         isFetchingNextPage={diary.isFetchingNextPage}

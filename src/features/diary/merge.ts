@@ -36,7 +36,9 @@ export function matchesDiaryFormat(item: NormalizedMediaItem, format: DiaryForma
   switch (format) {
     case 'READING':
       return item.type === 'MANGA' || item.type === 'BOOK';
-    default:
+    case 'ALL':
+    case 'MOVIE':
+    case 'TV':
       return matchesFormat(item, format);
   }
 }
@@ -182,14 +184,14 @@ function counted(value: number, singular: string, plural = `${singular}s`): stri
  * Counts visible logs, joining provider identities and overlapping episode
  * ranges. `label` is the day head's text; `units` (films + episodes + chapters,
  * a title-only log counting once) is the day's weight in the activity graph.
- * `chapters` and `books` stay apart for the Reading stats, which never add
- * them (KTD-3).
+ * `chapters` and `bookIds` stay apart for the Reading stats, which never
+ * add them (KTD-3).
  */
 export interface DaySummary {
   label: string;
   units: number;
   chapters: number;
-  books: number;
+  bookIds: string[];
 }
 
 export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
@@ -283,7 +285,7 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
     parts.push(chapters > 0 ? `${counted(chapters, 'chapter')} of ${titles}` : titles);
   }
   if (books.size > 0) parts.push(counted(books.size, 'book'));
-  return { label: parts.join(' · '), units, chapters, books: books.size };
+  return { label: parts.join(' · '), units, chapters, bookIds: [...books] };
 }
 
 /**

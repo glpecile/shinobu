@@ -13,8 +13,8 @@ interface LogTargetsSplit {
   manual: ProviderId[];
   /** Connected providers no id reaches for this anime. Empty until the id lookup has answered. */
   unmatched: ProviderId[];
-  /** The item with the ids enrichment found, or as passed until the lookup answers. */
-  enriched: NormalizedMediaItem;
+  /** The item with the ids enrichment found. Undefined until the lookup settles. */
+  enriched: NormalizedMediaItem | undefined;
 }
 
 /** `process.env.EXPO_OS` is always one of these at runtime; '' never matches a platform flag. */
@@ -37,7 +37,7 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
   const platform = currentPlatform();
   const letterboxdUserscript = useLetterboxdUserscript();
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ['log-targets', item.id, item.tmdbTvVariant ?? null, ...connected, platform, letterboxdUserscript],
     queryFn: async () => {
       const enriched = await enrichExternalIds(queryClient, item, connected);
@@ -49,7 +49,8 @@ export function useLogTargetsSplit(item: NormalizedMediaItem): LogTargetsSplit {
     },
   });
 
-  return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [], enriched: item };
+  // A failed lookup settles on the item as passed, so nothing waits on it forever.
+  return data ?? { ...splitWriteTargets(item, connected, platform, 'log', letterboxdUserscript), unmatched: [], enriched: isError ? item : undefined };
 }
 
 /**

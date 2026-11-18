@@ -2,8 +2,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'> &
-  Partial<Pick<NormalizedMediaItem, 'anilistVolume'>>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume'>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -70,6 +69,22 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
       return id === Provider.AniList && item.externalIds.anilist != null;
     default:
       return true;
+  }
+}
+
+/**
+ * Which AniList catalogue an item's AniList id names. A bridged book carries
+ * the id of its manga or light novel entry (plan 0117 B5).
+ */
+export function anilistMediaKind(item: Pick<NormalizedMediaItem, 'type'>): 'ANIME' | 'MANGA' {
+  switch (item.type) {
+    case 'MANGA':
+    case 'BOOK':
+      return 'MANGA';
+    case 'ANIME':
+    case 'MOVIE':
+    case 'TV':
+      return 'ANIME';
   }
 }
 
@@ -149,6 +164,11 @@ export function unmatchedWriteTargets(
   });
 }
 
+/** Why the log sheet lists an unmatched target as a manual row. */
+export function unmatchedWriteReason(item: Pick<NormalizedMediaItem, 'type'>): string {
+  return item.type === 'BOOK' ? 'AniList can’t tell which volume this is' : 'No match for this title';
+}
+
 /**
  * Whose community scores the details Ratings section reads for `item`:
  * connected (usable), publishing a score, and applicable to the item's
@@ -194,6 +214,11 @@ export function listProviderFor(
  */
 export function providersForFeed(connected: readonly ProviderId[]): ProviderId[] {
   return connected.filter((id) => PROVIDERS[id].canRead);
+}
+
+/** Whether a connected provider reads `type` back, e.g. AniList for manga. */
+export function feedReadsType(connected: readonly ProviderId[], type: MediaType): boolean {
+  return providersForFeed(connected).some((id) => PROVIDERS[id].mediaTypes.includes(type));
 }
 
 /** Whether `provider`'s write is structurally unsupported on `platform` (plan 0022 KTD-1). */

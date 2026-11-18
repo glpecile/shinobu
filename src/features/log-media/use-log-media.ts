@@ -46,7 +46,7 @@ import {
   cachedTmdbTvIdByTvdb,
 } from '@/state/queries/mapping';
 import { PROVIDERS } from '@/lib/providers/registry';
-import { resolveWriteTargets } from '@/lib/providers/routing';
+import { anilistMediaKind, resolveWriteTargets } from '@/lib/providers/routing';
 import { getShowWatchedProgress, getWatchedMovies } from '@/lib/providers/trakt/reads';
 import type { TraktShowProgressResult } from '@/lib/providers/trakt/normalize';
 import { logToTrakt } from '@/lib/providers/trakt/writes';
@@ -657,8 +657,9 @@ async function providerHasWatch(
       case Provider.AniList: {
         const mediaId = item.externalIds.anilist;
         if (mediaId == null) return false;
-        // A volume log never duplicates on AniList: the write takes the
-        // higher volume count. Hardcover alone decides a reread.
+        // A repeated volume log changes nothing on AniList: the write keeps
+        // the higher volume count, and a reread starts only from a completed
+        // entry. Hardcover alone decides a reread.
         if (item.type === 'BOOK') return null;
         const state = await queryClient.fetchQuery({
           queryKey: anilistQueryKeys.entryState(mediaId),
@@ -791,11 +792,10 @@ export function invalidateAfterLog(
   if (succeeded.includes(Provider.AniList)) {
     if (item.externalIds.anilist != null) queryClient.invalidateQueries({ queryKey: anilistQueryKeys.relations(item.externalIds.anilist) });
     queryClient.invalidateQueries({ queryKey: anilistQueryKeys.library() });
-    // The one list read this log can change: manga (and a bridged book)
-    // feeds Continue Reading and the reading list, anime feeds Up Next and
-    // the watchlist.
+    // The one list read this log can change: manga feeds Continue Reading and
+    // the reading list, anime feeds Up Next and the watchlist.
     queryClient.invalidateQueries({
-      queryKey: item.type === 'MANGA' || item.type === 'BOOK'
+      queryKey: anilistMediaKind(item) === 'MANGA'
         ? anilistQueryKeys.currentMangaEntries()
         : anilistQueryKeys.currentAnimeEntries(),
     });

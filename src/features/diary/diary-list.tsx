@@ -692,6 +692,8 @@ export interface DiaryListProps {
   days: DiaryDay[];
   /** Narrows rows, the calendar, and its stats. */
   format: DiaryFormat;
+  /** Which Reading counts the connected trackers keep (`DiaryMonth`). */
+  reading?: { chapters: boolean; books: boolean };
   timeZone: string;
   failedProviders: ProviderId[];
   hasNextPage: boolean;
@@ -713,6 +715,7 @@ export interface DiaryListProps {
 export function DiaryList({
   days,
   format,
+  reading,
   timeZone,
   failedProviders,
   hasNextPage,
@@ -786,7 +789,7 @@ export function DiaryList({
     today,
     loadingMore: isFetchingNextPage,
     onLoadMore: onEndReached,
-    reading: format === 'READING',
+    reading: format === 'READING' ? reading : undefined,
     onSelectDay: (dayKey: string) => {
       const index = items.findIndex((item) => item.kind === 'header' && item.dayKey === dayKey);
       if (index !== -1) void listRef.current?.scrollToIndex({ index, animated: !reduceMotion });

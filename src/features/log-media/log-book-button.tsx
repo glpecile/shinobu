@@ -27,9 +27,9 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
     bookId: item.externalIds.hardcover,
     enabled: connected.includes(Provider.Hardcover),
   });
-  const volume = enriched.anilistVolume;
+  const volume = enriched?.anilistVolume;
   const anilist = useAniListEntryStateQuery({
-    mediaId: volume == null ? undefined : enriched.externalIds.anilist,
+    mediaId: volume == null ? undefined : enriched?.externalIds.anilist,
     type: 'MANGA',
     enabled: connected.includes(Provider.AniList),
   });
@@ -44,9 +44,13 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
   const action = openRead != null ? 'Log progress' : reread ? 'Reread' : 'Mark as read';
   // A search card knows nothing of the library. Without the entry, a log
   // could start a second read of a book that is in progress.
-  // A failed AniList read only loses the note; Hardcover still decides.
-  const known = entry.data !== undefined && (volume == null || anilist.data !== undefined || anilist.isError);
+  // The form opens on what both trackers know, so it waits for the AniList
+  // bridge too. A failed AniList read only loses the note.
+  const bridgeKnown = enriched !== undefined;
+  const hardcoverKnown = !connected.includes(Provider.Hardcover) || entry.data !== undefined;
+  const known = hardcoverKnown && bridgeKnown && (volume == null || anilist.data !== undefined || anilist.isError);
   const failed = entry.data === undefined && entry.isError;
+  const waiting = !known && !failed;
   const anilistEntry = anilist.data?.entry ?? null;
   const anilistHasVolume = volume != null && anilistEntry != null && anilistEntry.progressVolumes >= volume;
   const anilistTotal = anilist.data?.total;
@@ -59,12 +63,12 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
     <View className="mb-3">
       <Button
         variant="log"
-        disabled={!known && !failed}
+        disabled={waiting}
         icon={<Button.Icon name={failed ? 'refresh' : reread ? 'eye' : 'eye-outline'} />}
         label={failed ? 'Couldn’t load your progress' : action}
         // A background refetch keeps the label. `busy` covers the refetch a
         // log starts, which the confirm sheet tracks with the write.
-        loading={(!known && (entry.isFetching || anilist.isFetching)) || busy}
+        loading={(failed ? entry.isFetching : waiting) || busy}
         onPress={() => {
           if (failed) {
             void entry.refetch();

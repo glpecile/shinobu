@@ -21,8 +21,8 @@ export const readingBridgeQueryKeys = {
 /**
  * The AniList entry a Hardcover book is a volume of (plan 0117 B5), or null.
  * Reads the book's title, authors and series from the details cache, then
- * searches AniList for each of `bridgeQueries`. Each search is cached
- * forever, misses included, so a title costs one AniList request ever.
+ * searches AniList for each of `bridgeQueries`. Each search is cached for
+ * the session, misses included.
  */
 export async function cachedReadingBridge(
   queryClient: QueryClient,

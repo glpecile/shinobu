@@ -137,12 +137,14 @@ All, Movies, TV, since a filmography rarely holds a reading credit.
   title when it can't sit beside it. Web keeps the segmented control with
   four segments, which shrinks to fit a narrow window.
 - **Stats.** Under Reading, the month's "logged" count splits in two:
-  chapters (AniList manga) and books (Hardcover journal entries, one per book
-  per day, as the day head counts them). They are never added (KTD-3). The
-  books stat shows once a book is logged, and the chapters stat shows unless
-  only books are. Books count as books, not pages: a journal entry carries
-  no page delta. The calendar shading still weighs a day by its summed
-  units, since a shade is no count.
+  chapters (AniList manga) and books (Hardcover journal entries, each book
+  once a month). They are never added (KTD-3). Each stat shows while a
+  tracker that counts it is connected, not when data arrives, so the row
+  keeps its frame as older pages load. Books count as books, not pages:
+  a journal entry carries no page delta. The calendar shading still weighs a
+  day by its summed units, since a shade is no count.
+- Reading is offered only while a tracker that reads manga or books (AniList
+  or Hardcover) is connected.
 - The empty state uses the book icon: "No reading logged yet", or "No
   reading in loaded history" while older pages remain.
 
@@ -253,20 +255,33 @@ light-novel series, searched on 2026-11-18. Markers seen: ", Vol. N" (with or
 without a subtitle after it, sometimes without the comma), ", Part N" before
 or after the subtitle, the tags "(Light Novel)" and "(Manga)", and omnibus
 titles such as "Berserk Deluxe Edition Volume 1". The matcher
-(`lib/providers/reading-bridge.ts`) adds three rules the probe forced:
+(`lib/providers/reading-bridge.ts`) adds rules the probe and review forced:
 
 - The format tag picks the AniList format: "(Light Novel)" matches only
   `NOVEL`, "(Manga)" never matches `NOVEL`. "Mushoku Tensei: Jobless
   Reincarnation" names a manga and a novel entry with the same titles and
   author.
 - Two entries that both match are no match.
-- An omnibus or deluxe edition gets no volume number, and neither does a
-  number past the entry's known volume count.
+- An edition or omnibus gets no volume number, and neither does volume 0 or
+  a number past the entry's known volume count.
+- "Vol. N" wins over "Part N" ("Part 3: Stardust Crusaders, Vol. 1"), and
+  only ", Part N" numbers a book: "Adventure Part 3: …" names an arc.
+- A match by series name alone gets no volume number: a spin-off or a
+  franchise numbers its own books. That replaces the plan's series-position
+  rule.
+- Only a title with a volume marker or a format tag searches AniList, so an
+  ordinary book costs no AniList request. The searches stay cached for the
+  session; they are not persisted, because the persist allowlist keeps out
+  unbounded search caches.
 
-A bridged book never routes AniList for want-to-read removal: one volume
-leaving the list can't delete the series entry. The reconcile leaves AniList
-out of the catch-up and reread decision, because the write takes the higher
-volume count and can't duplicate.
+A reread of a completed entry runs it REPEATING from its own volume until
+its last volume, which completes it and adds one to `repeat`. Hardcover's
+reread flag covers one volume, so it never starts a reread on an entry that
+isn't completed. Want-to-read removal
+never routes AniList: the Planning entry is the series, and one volume
+leaving the list can't decide it. The reconcile
+leaves AniList out of the catch-up and reread decision, because the write
+takes the higher volume count and can't duplicate.
 
 ### B6. Show a bridged work once
 

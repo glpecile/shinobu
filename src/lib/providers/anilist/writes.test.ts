@@ -18,6 +18,7 @@ interface EntryFixture {
   id?: number;
   status: string | null;
   progress: number;
+  progressVolumes?: number;
   repeat: number;
   /**
    * The four fields the removal guard also has to see (R36.2) — omitted by every
@@ -83,6 +84,19 @@ const BOOK: NormalizedMediaItem = {
   lastUpdated: '2026-11-18T00:00:00Z',
   externalIds: { hardcover: 61, anilist: 143703 },
 };
+
+/** The variables a finished reread of `BOOK`'s volume `number` sends, against a two-volume entry. */
+async function rereadVolume(entry: EntryFixture, number: number) {
+  const captured = { variables: null as unknown };
+  await Effect.runPromise(
+    logToAniList(
+      capturingDeps(captured, { entry, episodes: null, media: { type: 'MANGA', volumes: 2 } }),
+      { ...BOOK },
+      { volume: { number, finished: true }, rewatch: true },
+    ),
+  );
+  return captured.variables;
+}
 
 const SERIES: NormalizedMediaItem = {
   id: 'anilist-104578',
@@ -236,6 +250,19 @@ describe('logToAniList series', () => {
       ),
     );
     expect(captured.variables).toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2 });
+  });
+
+  test('a bridged reread runs REPEATING until its last volume, which counts it', async () => {
+    expect(await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 0 }, 1))
+      .toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
+    expect(await rereadVolume({ status: 'REPEATING', progress: 35, progressVolumes: 1, repeat: 0 }, 2))
+      .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
+    // A first read in progress is no reread, whatever Hardcover says.
+    expect(await rereadVolume({ status: 'CURRENT', progress: 12, progressVolumes: 3, repeat: 0 }, 1))
+      .toEqual({ mediaId: 143703, status: 'CURRENT', progressVolumes: 3 });
+    // Rereading only the last volume still counts the reread.
+    expect(await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 1 }, 2))
+      .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 2 });
   });
 
   test('a bridged page log makes the entry Reading and writes no number (KTD-3)', async () => {
