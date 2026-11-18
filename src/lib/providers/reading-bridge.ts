@@ -171,6 +171,20 @@ function candidateOf(item: NormalizedMediaItem): BridgeCandidate | null {
   };
 }
 
+// Folding runs NFKD and regexes, which Hermes runs slowly. A cached list
+// keeps its items' identity, so each entry folds once per fetch.
+const foldedEntries = new WeakMap<NormalizedMediaItem, FoldedCandidate | null>();
+
+function foldedOf(entry: NormalizedMediaItem): FoldedCandidate | null {
+  let folded = foldedEntries.get(entry);
+  if (folded === undefined) {
+    const candidate = candidateOf(entry);
+    folded = candidate == null ? null : foldCandidate(candidate);
+    foldedEntries.set(entry, folded);
+  }
+  return folded;
+}
+
 /**
  * Each Hardcover book in `books` that is a volume of an AniList entry in
  * `entries` (plan 0117 B6), keyed by the book's item id and carrying the
@@ -181,10 +195,7 @@ export function bridgeBooks(
   books: readonly NormalizedMediaItem[],
   entries: readonly NormalizedMediaItem[],
 ): Map<string, NormalizedMediaItem> {
-  const folded = entries.flatMap((entry) => {
-    const candidate = candidateOf(entry);
-    return candidate == null ? [] : [foldCandidate(candidate)];
-  });
+  const folded = entries.flatMap((entry) => foldedOf(entry) ?? []);
   const bridged = new Map<string, NormalizedMediaItem>();
   if (folded.length === 0) return bridged;
   for (const item of books) {
