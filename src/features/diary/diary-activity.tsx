@@ -106,22 +106,23 @@ function dayUnits(key: string, props: DiaryMonthProps): number | null {
 function monthStats(keys: readonly string[], props: DiaryMonthProps) {
   let units = 0;
   let chapters = 0;
-  let books = 0;
+  // A book read on several days is one book.
+  const books = new Set<string>();
   let days = 0;
   let longest = { length: 0, from: '', to: '' };
   let run = 0;
   for (const [index, key] of keys.entries()) {
-    const value = dayUnits(key, props) ?? 0;
+    const known = dayUnits(key, props);
+    const value = known ?? 0;
     run = value > 0 ? run + 1 : 0;
     if (run > longest.length) longest = { length: run, from: keys[index - run + 1], to: key };
     if (value > 0) days++;
     units += value;
-    if (key >= props.oldest && key <= props.today) {
-      chapters += props.activity.get(key)?.chapters ?? 0;
-      books += props.activity.get(key)?.books ?? 0;
-    }
+    const day = known == null ? undefined : props.activity.get(key);
+    chapters += day?.chapters ?? 0;
+    for (const id of day?.bookIds ?? []) books.add(id);
   }
-  return { units, chapters, books, days, longest };
+  return { units, chapters, books: books.size, days, longest };
 }
 
 /**
@@ -332,28 +333,25 @@ export function DiaryMonth({
             />
             {props.reading === true ? (
               <>
-                {/* Chapters and pages never add up (KTD-3), so books get their
-                    own stat, shown once one is logged. */}
-                {(stats.chapters > 0 || stats.books === 0) && (
-                  <Stat
-                    stacked={stacked}
-                    atLeast={partial}
-                    icon="book"
-                    label={stats.chapters === 1 ? 'chapter' : 'chapters'}
-                    tooltip={`In ${name}`}
-                    value={loading ? null : stats.chapters}
-                  />
-                )}
-                {stats.books > 0 && (
-                  <Stat
-                    stacked={stacked}
-                    atLeast={partial}
-                    icon="library"
-                    label={stats.books === 1 ? 'book' : 'books'}
-                    tooltip={`In ${name}`}
-                    value={loading ? null : stats.books}
-                  />
-                )}
+                {/* Chapters and pages never add up (KTD-3), so books get
+                    their own stat. Both always show, so the row keeps its
+                    frame as older pages load. */}
+                <Stat
+                  stacked={stacked}
+                  atLeast={partial}
+                  icon="book"
+                  label={stats.chapters === 1 ? 'chapter' : 'chapters'}
+                  tooltip={`Across ${stats.days} ${stats.days === 1 ? 'day' : 'days'}`}
+                  value={loading ? null : stats.chapters}
+                />
+                <Stat
+                  stacked={stacked}
+                  atLeast={partial}
+                  icon="library"
+                  label={stats.books === 1 ? 'book' : 'books'}
+                  tooltip={`Across ${stats.days} ${stats.days === 1 ? 'day' : 'days'}`}
+                  value={loading ? null : stats.books}
+                />
               </>
             ) : (
               <Stat
