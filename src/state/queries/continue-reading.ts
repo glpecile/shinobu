@@ -1,5 +1,6 @@
 import { useQueryClient, useSuspenseQueries, type QueryKey } from '@tanstack/react-query';
 
+import { showBridgedOnce } from '@/lib/providers/reading-bridge';
 import { providersForFeed } from '@/lib/providers/routing';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
@@ -24,9 +25,9 @@ function leg(provider: ProviderId, queryKey: QueryKey, read: () => Promise<Norma
 
 // Module scope keeps the combined rail's identity between renders.
 function newestFirst(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem[] {
-  return results
-    .flatMap((result) => result.data.inputs)
-    .sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+  return showBridgedOnce(
+    results.flatMap((result) => result.data.inputs).sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated)),
+  );
 }
 
 /** The connected providers that feed Continue Reading. */
@@ -40,6 +41,7 @@ export function continueReadingProviders(connected: readonly ProviderId[]): Prov
  * Home's Continue Reading rail (plan 0117 M3, B2): manga being read or reread
  * on AniList and Currently Reading books on Hardcover, newest update first
  * across both. Units never convert (KTD-3): manga count chapters, books pages.
+ * A bridged work shows once, as its Hardcover volume (B6).
  */
 export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   const queryClient = useQueryClient();

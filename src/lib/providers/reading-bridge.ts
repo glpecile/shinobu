@@ -11,6 +11,8 @@
  * (Light Novel) Vol. 8" and "Berserk Deluxe Edition Volume 1".
  */
 
+import type { NormalizedMediaItem } from '@/types/media';
+
 /** A Hardcover book, as the bridge reads it. */
 export interface BridgeBook {
   title: string;
@@ -134,4 +136,62 @@ export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandid
   // A number past the entry's known count, or a volume 0, names some other numbering.
   const known = volume != null && volume >= 1 && (candidate.volumes == null || volume <= candidate.volumes);
   return { anilistId: candidate.id, volume: known ? volume : null };
+}
+
+function bookOf(item: NormalizedMediaItem): BridgeBook | null {
+  const credits = item.readingCredits;
+  if (item.type !== 'BOOK' || credits == null) return null;
+  return { title: item.title, authors: credits.people, ...(credits.series != null ? { series: { name: credits.series } } : {}) };
+}
+
+function candidateOf(item: NormalizedMediaItem): BridgeCandidate | null {
+  const id = item.externalIds.anilist;
+  const credits = item.readingCredits;
+  if (item.type !== 'MANGA' || id == null || credits == null) return null;
+  return {
+    id,
+    format: credits.format ?? null,
+    volumes: credits.volumes ?? null,
+    titles: [item.title, ...Object.values(item.titles ?? {}), ...(item.titleAliases ?? [])],
+    staff: credits.people,
+  };
+}
+
+/**
+ * Each Hardcover book in `books` that is a volume of an AniList entry in
+ * `entries` (plan 0117 B6), keyed by the book's item id and carrying the
+ * entry's id and its volume. It compares only what the two lists loaded, so
+ * it costs no request.
+ */
+export function bridgeBooks(
+  books: readonly NormalizedMediaItem[],
+  entries: readonly NormalizedMediaItem[],
+): Map<string, NormalizedMediaItem> {
+  const candidates = entries.flatMap((entry) => candidateOf(entry) ?? []);
+  const bridged = new Map<string, NormalizedMediaItem>();
+  if (candidates.length === 0) return bridged;
+  for (const item of books) {
+    const book = bookOf(item);
+    const match = book == null || item.externalIds.anilist != null ? null : pickBridgeMatch(book, candidates);
+    if (match == null) continue;
+    bridged.set(item.id, {
+      ...item,
+      externalIds: { ...item.externalIds, anilist: match.anilistId },
+      ...(match.volume != null ? { anilistVolume: match.volume } : {}),
+    });
+  }
+  return bridged;
+}
+
+/**
+ * One card per bridged work (plan 0117 B6): the Hardcover volume, which holds
+ * the finer progress, carries the AniList id, and the AniList entry it
+ * covers drops out. An entry with no volume in `items` stays.
+ */
+export function showBridgedOnce(items: readonly NormalizedMediaItem[]): NormalizedMediaItem[] {
+  const bridged = bridgeBooks(items, items);
+  const covered = new Set([...bridged.values()].map((book) => book.externalIds.anilist));
+  return items.flatMap((item) =>
+    item.type === 'MANGA' && covered.has(item.externalIds.anilist) ? [] : [bridged.get(item.id) ?? item],
+  );
 }
