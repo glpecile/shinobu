@@ -8,7 +8,9 @@ import {
 import * as Effect from 'effect/Effect';
 
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
+import type { AniListMangaEntry } from '@/lib/providers/anilist/normalize';
 import { getReadingJournal } from '@/lib/providers/hardcover/reads';
+import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
 import { aniZipTmdbKind } from '@/lib/providers/mapping/anizip';
 import {
@@ -196,7 +198,14 @@ const FETCH_SLICE: Record<ProviderId, FetchSlice> = {
       getReadingJournal(hardcoverDeps(), { userId: viewer.id, page, perPage: PAGE_SIZE }),
       { signal },
     );
-    return { entries, next: hasNextPage ? page + 1 : undefined };
+    // A volume of a work on the AniList list carries its id, so the day can
+    // show the work once (plan 0117 B6). Only the cached list: no request.
+    const list = queryClient.getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries()) ?? [];
+    const bridged = bridgeBooks(entries.map((entry) => entry.item), list.map((entry) => entry.item));
+    return {
+      entries: entries.map((entry) => ({ ...entry, item: bridged.get(entry.item.id) ?? entry.item })),
+      next: hasNextPage ? page + 1 : undefined,
+    };
   },
 };
 

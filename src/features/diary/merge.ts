@@ -374,10 +374,13 @@ interface CollapseBucket {
   entries: NormalizedDiaryEntry[];
 }
 
+/** A bridged Hardcover volume leads its AniList entry's row: it is the finer record (plan 0117 B6). */
+function contributorRank(entry: NormalizedDiaryEntry): number {
+  return entry.item.type === 'BOOK' ? -1 : PROVIDER_PRIORITY[entry.provider];
+}
+
 function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
-  const contributors = [...bucket.entries].sort(
-    (a, b) => PROVIDER_PRIORITY[a.provider] - PROVIDER_PRIORITY[b.provider],
-  );
+  const contributors = [...bucket.entries].sort((a, b) => contributorRank(a) - contributorRank(b));
   const primary = contributors[0];
   // Fill-only fold from the richest contributor down — merge-metadata precedence
   // (plan 0016 KTD4): the primary's fields win, poorer contributors fill gaps

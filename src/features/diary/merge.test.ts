@@ -427,6 +427,22 @@ describe('matchesDiaryFormat', () => {
   });
 });
 
+describe('groupDiaryEntries — a bridged Hardcover volume (plan 0117 B6)', () => {
+  test('shares its AniList entry’s row, and the volume is the card', () => {
+    const days = groupDiaryEntries([
+      entry('anilist', 'set', '2026-11-17T12:00:00Z', {
+        item: item({ id: 'anilist-143703', type: 'MANGA', externalIds: { anilist: 143703 } }),
+      }),
+      entry('hardcover', 'read', '2026-11-17T12:05:00Z', {
+        item: item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61, anilist: 143703 }, anilistVolume: 1 }),
+        readingEvent: 'finished',
+      }),
+    ], 'UTC');
+    expect(days[0].entries).toHaveLength(1);
+    expect(days[0].entries[0]).toMatchObject({ providers: ['anilist', 'hardcover'], item: { id: 'hardcover-61', type: 'BOOK' } });
+  });
+});
+
 describe('summarizeDay', () => {
   test('counts films, anime films, ranges, chapters and books in their own units', () => {
     const book = item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 } });
