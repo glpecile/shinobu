@@ -138,8 +138,9 @@ All, Movies, TV, since a filmography rarely holds a reading credit.
   four segments, which shrinks to fit a narrow window.
 - **Stats.** Under Reading, the month's "logged" count splits in two:
   chapters (AniList manga) and books (Hardcover journal entries, each book
-  once a month). They are never added (KTD-3), and both always show, so the
-  row keeps its frame as older pages load. Books count as books, not pages:
+  once a month). They are never added (KTD-3). Each stat shows while a
+  tracker that counts it is connected, not when data arrives, so the row
+  keeps its frame as older pages load. Books count as books, not pages:
   a journal entry carries no page delta. The calendar shading still weighs a
   day by its summed units, since a shade is no count.
 - Reading is offered only while a tracker that reads manga or books (AniList
@@ -269,11 +270,12 @@ titles such as "Berserk Deluxe Edition Volume 1". The matcher
   rule.
 - Only a title with a volume marker or a format tag searches AniList, so an
   ordinary book costs no AniList request. The searches persist across
-  launches.
+  launches and expire after a week.
 
-A reread runs the entry REPEATING until its last volume, which completes it
-and adds one to `repeat`. Want-to-read removal reaches AniList through its
-guarded delete, which removes only a bare Planning entry. The reconcile
+A reread runs the entry REPEATING from its own volume until its last
+volume, which completes it and adds one to `repeat`. Want-to-read removal
+never routes AniList: the Planning entry is the series, and one volume
+leaving the list can't decide it. The reconcile
 leaves AniList out of the catch-up and reread decision, because the write
 takes the higher volume count and can't duplicate.
 
