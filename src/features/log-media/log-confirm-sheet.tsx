@@ -183,7 +183,8 @@ export function LogFormFields({
           manual={[...manualTargets, ...unmatchedTargets]}
           reasons={{
             ...(process.env.EXPO_OS === 'web' ? { [Provider.Letterboxd]: letterboxdScriptHint(scriptUntrusted, 'log here') } : {}),
-            ...Object.fromEntries(unmatchedTargets.map((id) => [id, 'No match for this title'])),
+            // A bridged book without a volume number did match AniList.
+            ...Object.fromEntries(unmatchedTargets.map((id) => [id, item.type === 'BOOK' ? 'No volume number in the title' : 'No match for this title'])),
           }}
         />
         {/* The like rides in this row, but a diary provider is never undated. */}
