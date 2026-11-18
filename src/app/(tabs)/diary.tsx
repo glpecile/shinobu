@@ -8,17 +8,17 @@ import { CenteredNotice } from '@/components/centered-notice';
 import { DeferredTab } from '@/components/deferred-tab';
 import Head from '@/components/head';
 import { EmptyStateTile } from '@/components/empty-state-tile';
-import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import {
   homeHeaderClassName,
   homeHeaderTitleSize,
 } from '@/components/screen-header-spacing';
 import { SectionEnter } from '@/components/section-enter';
-import { FORMAT_OPTIONS, type FormatFilter } from '@/features/credit-timeline/group';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { DiaryList, DiaryListSkeleton } from '@/features/diary/diary-list';
 import { DiaryWelcome } from '@/features/diary/diary-welcome';
+import { DiaryFormatFilter } from '@/features/diary/format-filter';
+import type { DiaryFormat } from '@/features/diary/merge';
 import { cn } from '@/lib/cn';
 import { usePushRoute } from '@/lib/navigation';
 import { useThemeColor } from '@/lib/theme-color';
@@ -48,7 +48,8 @@ function DiaryHeader({ children }: { children?: React.ReactNode }) {
   // Same brand-header treatment as Home (spacing + title size) so top-level
   // destinations share one header rhythm.
   return (
-    <View className={homeHeaderClassName}>
+    // Native wraps so the filter drops below the title at large text sizes.
+    <View className={cn(homeHeaderClassName, 'ios:flex-wrap android:flex-wrap gap-x-4 gap-y-2')}>
       <Text
         className={cn(
           homeHeaderTitleSize,
@@ -96,17 +97,8 @@ function DiaryScreen() {
   const connected = useConnectedProviders();
   const diary = useDiaryFeedQuery();
   const { openActions, sheetProps } = useCardActions();
-  const [format, setFormat] = useState<FormatFilter>('ALL');
-  const formatControl = (
-    <NativeSegmentedControl
-      accessibilityLabel="Format"
-      className="w-52"
-      onChange={setFormat}
-      options={FORMAT_OPTIONS}
-      size="sm"
-      value={format}
-    />
-  );
+  const [format, setFormat] = useState<DiaryFormat>('ALL');
+  const formatControl = <DiaryFormatFilter onChange={setFormat} value={format} />;
   let filter: React.ReactNode = null;
 
   let content: React.ReactNode;

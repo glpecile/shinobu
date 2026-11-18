@@ -1,3 +1,4 @@
+import { FORMAT_OPTIONS, matchesFormat, type FormatFilter } from '@/features/credit-timeline/group';
 import { mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
 import { nameKeys } from '@/lib/providers/pick-movie-match';
 import type { ProviderId } from '@/lib/providers/types';
@@ -18,6 +19,27 @@ import type {
  * gapless stream feeds `groupDiaryEntries` (day buckets + cross-provider
  * collapse). No Effect, no React — the hook is thin plumbing around this.
  */
+
+/**
+ * The diary's format filter. It adds Reading to the filmography's options,
+ * because a filmography rarely holds a reading credit (plan 0117 M4).
+ */
+export type DiaryFormat = FormatFilter | 'READING';
+
+export const DIARY_FORMAT_OPTIONS = [
+  ...FORMAT_OPTIONS,
+  { value: 'READING', label: 'Reading' },
+] as const satisfies readonly { value: DiaryFormat; label: string }[];
+
+/** Reading holds manga and books (KTD-10); Movies and TV follow the filmography. */
+export function matchesDiaryFormat(item: NormalizedMediaItem, format: DiaryFormat): boolean {
+  switch (format) {
+    case 'READING':
+      return item.type === 'MANGA' || item.type === 'BOOK';
+    default:
+      return matchesFormat(item, format);
+  }
+}
 
 /** One provider's loaded-so-far slice of the diary and its pagination state. */
 export interface DiaryProviderState {
@@ -160,10 +182,14 @@ function counted(value: number, singular: string, plural = `${singular}s`): stri
  * Counts visible logs, joining provider identities and overlapping episode
  * ranges. `label` is the day head's text; `units` (films + episodes + chapters,
  * a title-only log counting once) is the day's weight in the activity graph.
+ * `chapters` and `books` stay apart for the Reading stats, which never add
+ * them (KTD-3).
  */
 export interface DaySummary {
   label: string;
   units: number;
+  chapters: number;
+  books: number;
 }
 
 export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
@@ -257,7 +283,7 @@ export function summarizeDay(entries: readonly MergedDiaryEntry[]): DaySummary {
     parts.push(chapters > 0 ? `${counted(chapters, 'chapter')} of ${titles}` : titles);
   }
   if (books.size > 0) parts.push(counted(books.size, 'book'));
-  return { label: parts.join(' · '), units };
+  return { label: parts.join(' · '), units, chapters, books: books.size };
 }
 
 /**

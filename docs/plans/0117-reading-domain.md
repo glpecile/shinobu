@@ -78,7 +78,7 @@ parallel; M3 owns the one new AniList read that the reading list also uses.
 | M1 | #392 | Log the next chapter from details and the card sheet | — |
 | M2 | #393 | Log several chapters in one write | M1 |
 | M3 | #394 | Continue reading rail and manga want-to-read read-back | — |
-| M4 | #395 | Diary Reading filter (optional) | — |
+| M4 | #395 | Diary Reading filter | — |
 | B0 | #396 | Register Hardcover OAuth apps and probe browser access | owner: Hardcover account |
 | B1 | #397 | Connect Hardcover as the book provider | B0 |
 | B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3 (M4 if it ships) |
@@ -122,16 +122,30 @@ window on the 30/min budget (`docs/solutions/anilist-rate-limit-retry-storm.md`)
   stops reporting AniList as unknown for manga. That closes plan 0031 OQ-4b.
 - Logs and watchlist writes invalidate the new key.
 
-### M4. Diary Reading filter (optional)
+### M4. Diary Reading filter
 
-The diary format filter adds a Reading option for manga, and later books,
-replacing plan 0095's "manga shows only under All". The month stats count
-chapters for it.
+The diary format filter adds a Reading option for manga and books, replacing
+plan 0095's "manga shows only under All". It narrows the rows, the calendar
+shading and the month stats. The diary has its own option list
+(`DIARY_FORMAT_OPTIONS` in `features/diary/merge.ts`); the filmography keeps
+All, Movies, TV, since a filmography rarely holds a reading credit.
 
-Optional: it can land in either phase or stay undone. The owner preferred a
-search filter first, which shipped as plan 0119's Reading search scope.
-Search exposes Reading in its FAB scope picker; the diary keeps its own
-format options if M4 ships.
+- **Control.** iOS and Android use the anchored `NativePickerMenu`, as the
+  filmography Role menu does. Checked 2026-11-18 at the largest text size
+  (iOS AX5 on a 402 pt iPhone 17 Pro, Android font scale 2.0 at 360 dp): the
+  title alone takes two thirds of the row, so even three segments overflowed,
+  and four can't fit. The header wraps on native, so the pill drops under the
+  title when it can't sit beside it. Web keeps the segmented control with
+  four segments, which shrinks to fit a narrow window.
+- **Stats.** Under Reading, the month's "logged" count splits in two:
+  chapters (AniList manga) and books (Hardcover journal entries, one per book
+  per day, as the day head counts them). They are never added (KTD-3). The
+  books stat shows once a book is logged, and the chapters stat shows unless
+  only books are. Books count as books, not pages: a journal entry carries
+  no page delta. The calendar shading still weighs a day by its summed
+  units, since a shade is no count.
+- The empty state uses the book icon: "No reading logged yet", or "No
+  reading in loaded history" while older pages remain.
 
 ### B0. Register Hardcover OAuth apps and probe browser access
 
@@ -169,8 +183,8 @@ One `user_books` query by status (KTD-9) normalizes into
 `NormalizedMediaItem` with `type: 'BOOK'`, `progressUnit: 'page'`, the current
 read's `progress_pages`, and the edition's `pages` as the total. Currently
 Reading joins M3's rail, Want to Read joins the watchlist gather, and reading
-journal entries (started, progressed, finished) join the diary, under M4's
-Reading filter if it has shipped and under All otherwise.
+journal entries (started, progressed, finished) join the diary, under All
+and M4's Reading filter.
 
 ### B3. Log to Hardcover
 

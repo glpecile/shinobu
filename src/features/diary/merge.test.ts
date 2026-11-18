@@ -13,6 +13,7 @@ import {
   formatEpisodeDetail,
   formatLogTime,
   groupDiaryEntries,
+  matchesDiaryFormat,
   mergeDiaryEntries,
   shortClusterCount,
   summarizeCluster,
@@ -418,6 +419,23 @@ function ep(id: string, season: number, episode: number): MergedDiaryEntry {
   });
 }
 
+describe('matchesDiaryFormat', () => {
+  test('Reading holds manga and books, and Movies and TV keep them out', () => {
+    const items = [
+      item({ id: 'film' }),
+      item({ id: 'anime-film', type: 'ANIME', isFilm: true }),
+      item({ id: 'tv', type: 'TV' }),
+      item({ id: 'manga', type: 'MANGA' }),
+      item({ id: 'book', type: 'BOOK' }),
+    ];
+    const ids = (format: Parameters<typeof matchesDiaryFormat>[1]) =>
+      items.filter((candidate) => matchesDiaryFormat(candidate, format)).map((candidate) => candidate.id);
+    expect(ids('READING')).toEqual(['manga', 'book']);
+    expect(ids('MOVIE')).toEqual(['film', 'anime-film']);
+    expect(ids('TV')).toEqual(['tv']);
+  });
+});
+
 describe('summarizeDay', () => {
   test('counts films, anime films, ranges, chapters and books in their own units', () => {
     const book = item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 } });
@@ -429,7 +447,12 @@ describe('summarizeDay', () => {
       // Started and finished on one day: one book.
       mergedEntry({ id: 'started', item: book, readingEvent: 'started' }),
       mergedEntry({ id: 'finished', item: book, readingEvent: 'finished' }),
-    ])).toEqual({ label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga · 1 book', units: 8 });
+    ])).toEqual({
+      label: '2 films · 2 episodes of 1 show · 3 chapters of 1 manga · 1 book',
+      units: 8,
+      chapters: 3,
+      books: 1,
+    });
   });
 
   test('a shared-ID bridge joins translated shows and overlapping provider ranges', () => {
@@ -469,12 +492,12 @@ describe('summarizeDay', () => {
       }),
     ], 'UTC');
     expect(days[0].entries).toHaveLength(2);
-    expect(summarizeDay(days[0].entries)).toEqual({ label: '1 episode of 1 show', units: 1 });
+    expect(summarizeDay(days[0].entries)).toMatchObject({ label: '1 episode of 1 show', units: 1 });
   });
 
   test('does not invent episode counts for title-only activity or empty days', () => {
-    expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toEqual({ label: '1 show', units: 1 });
-    expect(summarizeDay([])).toEqual({ label: '', units: 0 });
+    expect(summarizeDay([mergedEntry({ id: 'unknown' })])).toMatchObject({ label: '1 show', units: 1 });
+    expect(summarizeDay([])).toEqual({ label: '', units: 0, chapters: 0, books: 0 });
   });
 });
 
