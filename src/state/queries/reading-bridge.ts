@@ -21,8 +21,8 @@ export const readingBridgeQueryKeys = {
 /**
  * The AniList entry a Hardcover book is a volume of (plan 0117 B5), or null.
  * Reads the book's title, authors and series from the details cache, then
- * searches AniList for each of `bridgeQueries`. Each search is cached for a
- * week across launches, misses included.
+ * searches AniList for each of `bridgeQueries`. Each search is cached for
+ * the session, misses included.
  */
 export async function cachedReadingBridge(
   queryClient: QueryClient,
@@ -42,8 +42,7 @@ export async function cachedReadingBridge(
         ...(await queryClient.fetchQuery({
           queryKey: readingBridgeQueryKeys.search(query),
           queryFn: ({ signal }) => Effect.runPromise(searchReadingWorks(anilistDeps(), { query }), { signal }),
-          // Persisted, so a miss for a work AniList adds later must expire.
-          staleTime: 7 * 24 * 60 * 60_000,
+          staleTime: Number.POSITIVE_INFINITY,
           gcTime: Number.POSITIVE_INFINITY,
           retry: false,
         })),
