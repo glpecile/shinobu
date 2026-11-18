@@ -94,6 +94,9 @@ describe('pickBridgeMatch', () => {
     };
     const book = { title: 'JoJo’s Bizarre Adventure Part 3: Stardust Crusaders, Vol. 1', authors: ['Hirohiko Araki'] };
     expect(pickBridgeMatch(book, [jojo])).toEqual({ anilistId: 3006, volume: 1 });
+    // Without a volume marker, the arc number is no volume.
+    expect(bridgeQueries({ title: 'JoJo’s Bizarre Adventure Part 3: Stardust Crusaders', authors: ['Hirohiko Araki'] }))
+      .toEqual([]);
   });
 
   test('a volume 0 or past the entry’s known count has no volume number', () => {

@@ -41,7 +41,8 @@ export interface BridgeMatch {
 const FORMAT_TAG = /\s*\((light novels?|novel|manga)\)/gi;
 const VOLUME_MARKER = /(?:,\s*|\s+)(?:vol\.?|volume)\s*(\d+)\b/i;
 // "Part 3--Stardust Crusaders, Vol. 1" is volume 1 of Part 3, so Vol wins.
-const PART_MARKER = /(?:,\s*|\s+)part\s*(\d+)\b/i;
+// Only ", Part N" numbers a book; "Adventure Part 3: …" names an arc.
+const PART_MARKER = /,\s*part\s*(\d+)\b/i;
 // An omnibus or a special edition numbers its own volumes, which aren't AniList's.
 const EDITION = /\b(edition|omnibus|kanzenban|box set|\d+\s*-?\s*in\s*-?\s*\d+)\b/i;
 
