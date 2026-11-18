@@ -194,7 +194,7 @@ const LIBRARY = `query Library($statuses: [Int!]!) {
       created_at
       updated_at
       edition { pages }
-      book { id title description pages release_year rating ratings_count image { url } }
+      book { id title description pages release_year rating ratings_count image { url } contributions { author { name } } featured_book_series { series { name } } }
       user_book_reads(where: { finished_at: { _is_null: true } }, order_by: { id: desc }, limit: 1) {
         progress_pages
         progress_seconds
@@ -244,7 +244,7 @@ export function getReadingJournal(
         offset: $offset
       ) {
         id event action_at journal_date
-        book { id title description pages release_year rating ratings_count image { url } }
+        book { id title description pages release_year rating ratings_count image { url } contributions { author { name } } featured_book_series { series { name } } }
       }
     }`,
     {

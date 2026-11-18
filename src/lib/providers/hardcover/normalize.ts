@@ -21,6 +21,13 @@ export const hardcoverBookFields = {
   rating: optionalNullable(numeric),
   ratings_count: optionalNullable(numeric),
   image: optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) })),
+  // The library and journal reads ask for these, for the reading bridge (plan 0117 B6).
+  contributions: optionalNullable(Schema.Array(Schema.Struct({
+    author: optionalNullable(Schema.Struct({ name: Schema.String })),
+  }))),
+  featured_book_series: optionalNullable(Schema.Struct({
+    series: optionalNullable(Schema.Struct({ name: Schema.String })),
+  })),
 };
 
 export const HardcoverBook = Schema.Struct(hardcoverBookFields);
@@ -62,6 +69,14 @@ export function normalizeHardcoverBook(book: HardcoverBook, nowIso: string): Nor
     ...(book.pages != null && book.pages > 0 ? { totalEpisodes: book.pages } : {}),
     lastUpdated: nowIso,
     externalIds: { hardcover: book.id },
+    ...(book.contributions != null
+      ? {
+          readingCredits: {
+            people: book.contributions.flatMap((credit) => credit.author?.name ?? []),
+            ...(book.featured_book_series?.series != null ? { series: book.featured_book_series.series.name } : {}),
+          },
+        }
+      : {}),
   };
 }
 

@@ -180,7 +180,12 @@ export function getCurrentManga(
               status
               progress
               updatedAt
-              media { ${CARD_FIELDS} }
+              media {
+                ${CARD_FIELDS}
+                volumes
+                synonyms
+                staff(perPage: 25) { nodes { name { full native alternative } } }
+              }
             }
           }
         }

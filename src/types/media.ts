@@ -128,6 +128,12 @@ export interface NormalizedMediaItem {
    * (`externalIds.anilist`): which volume of that entry it is (plan 0117 B5).
    */
   anilistVolume?: number;
+  /**
+   * What the reading bridge compares, from the read that loaded the item
+   * (plan 0117 B6): credited people, an AniList entry's format and volume
+   * count, and a Hardcover book's series.
+   */
+  readingCredits?: { people: string[]; format?: string; volumes?: number; series?: string };
   /** ISO 8601 instant (with offset/Z) — never a bare date string. */
   lastUpdated: string;
   externalIds: {
