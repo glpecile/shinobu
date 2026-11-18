@@ -40,12 +40,13 @@ interface NavItem {
 // glyph is much wider and optically heavier than its home/search/settings
 // siblings at size 22, and `journal-outline` collapsed into a featureless slab
 // (owner call 2026-09-08). Native's tab bar keeps `book`/`book.fill` — this is a
-// web-rail-only optical fix.
+// web-rail-only optical fix. Search comes last to match the native tab bar,
+// where iOS pins the search-role tab to the end.
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: routes.home, icon: 'home-outline' },
   { label: 'Diary', href: routes.diary, icon: 'reader-outline' },
-  { label: 'Search', href: routes.search, icon: 'search-outline' },
   { label: 'Settings', href: routes.settings, icon: 'settings-outline' },
+  { label: 'Search', href: routes.search, icon: 'search-outline' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
