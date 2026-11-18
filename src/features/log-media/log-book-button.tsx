@@ -67,7 +67,7 @@ export function LogBookButton({ item, onOpenRequest }: { item: NormalizedMediaIt
         label={failed ? 'Couldn’t load your progress' : action}
         // A background refetch keeps the label. `busy` covers the refetch a
         // log starts, which the confirm sheet tracks with the write.
-        loading={(!known && (entry.isFetching || anilist.isFetching || !bridgeKnown)) || busy}
+        loading={(!known && !failed && (entry.isFetching || anilist.isFetching || !bridgeKnown)) || busy}
         onPress={() => {
           if (failed) {
             void entry.refetch();
