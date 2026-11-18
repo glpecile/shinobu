@@ -4,7 +4,7 @@ date: 2026-11-01
 issue: 209
 ---
 
-# 0117 — Reading: finish manga, then Hardcover books, then comics
+# 0117 — Reading: finish manga, then Hardcover books
 
 Issue #209 asked for a feasibility spike and a scoped plan before any reading
 provider is chosen. The evidence is in
@@ -24,14 +24,14 @@ decisions and the units, one sub-issue of #209 each.
   proxy (AGENTS.md allows only the four existing Workers).
 - **KTD-3. A unit converts only where both sides count the same thing.**
   Manga counts chapters on an AniList series entry. A book counts pages on a
-  Hardcover read. A comic issue is read or unread. A finished Hardcover volume
+  Hardcover read. A finished Hardcover volume
   is one AniList volume, so it writes `progressVolumes`. Pages and chapters are
   never estimated from each other: a page log writes no AniList chapter, and a
   chapter log writes no Hardcover page.
-- **KTD-10. Reading is one category.** Manga, light novels, books and comics
-  are all "reading" wherever the user picks or sees a grouping: one filter
+- **KTD-10. Reading is one category.** Manga, light novels and books are
+  all "reading" wherever the user picks or sees a grouping: one filter
   option, one rail (Continue Reading), one reading list. The UI never offers
-  separate Manga, Books or Comics choices. The grouping is only what the user
+  separate Manga or Books choices. The grouping is only what the user
   sees; it changes no unit (KTD-3). Numbered last so the decisions below keep
   their numbers.
 - **KTD-4. A reading item routes to every connected provider that has the
@@ -45,8 +45,7 @@ decisions and the units, one sub-issue of #209 each.
   `AGENTS.md` hold the first version, and they cite this KTD for it.
 - **KTD-5. New union members arrive with their provider.** `MediaType` gains
   `'BOOK'` and `ProgressUnit` gains `'page'` in B1, when Hardcover's registry
-  entry needs them, not before. Comics either stay `BOOK` with a category or
-  become `'COMIC'`, decided in C0 against the chosen tracker's item model.
+  entry needs them, not before.
 - **KTD-6. A Hardcover volume and its AniList series are one work.**
   Hardcover tracks a manga or light novel as one book per volume. AniList
   tracks it as one series entry with a chapter count and a volume count. A
@@ -57,8 +56,7 @@ decisions and the units, one sub-issue of #209 each.
   2026-11-12: the GraphQL, token and revoke endpoints all answer a browser
   origin (`docs/solutions/web-cors-hardcover.md`), so web connects, reads and
   writes like native. The token and revoke endpoints expose no headers, so a
-  refresh on web can't read `Retry-After`. Metron sends no CORS headers in its
-  server config, so it is expected to be native-only on web.
+  refresh on web can't read `Retry-After`.
 - **KTD-8. Rotating refresh tokens are refreshed once.** Hardcover rotates the
   refresh token on every use and revokes the whole chain on replay, which
   forces a reconnect. Refresh is single-flight, like Trakt's
@@ -86,9 +84,9 @@ parallel; M3 owns the one new AniList read that the reading list also uses.
 | B2 | #398 | Read the Hardcover library into rails, reading list and diary | B1, M3 (M4 if it ships) |
 | B3 | #399 | Log page progress, finishes and want-to-read to Hardcover | B1 |
 | B4 | #400 | Find books in search and open book details | B1 |
-| B5 | — | Bridge Hardcover volumes to AniList entries | B3, M1 |
-| B6 | — | Show a bridged work once | B5, B2, M3 |
-| C0 | #401 | Choose a comics tracker | owner answer |
+| B5 | #470 | Bridge Hardcover volumes to AniList entries | B3, M1 |
+| B6 | #471 | Show a bridged work once | B5, B2, M3 |
+| C0 | #401 | Choose a comics tracker (dropped) | — |
 
 ### M1. Log the next chapter
 
@@ -247,20 +245,16 @@ shows alone when none of its volumes is in the Hardcover library. The match
 runs against the reader's own AniList list, which M3 already loads, so it
 costs no request.
 
-### C0. Choose a comics tracker
+### C0. Choose a comics tracker — dropped
 
-The owner's old comics account decides. Metron is the API-capable candidate:
-a bearer token from the account page, scrobble writes and collection reads.
-It is native-only on web, and scrobbling an unowned issue adds it as a digital
-copy. Hardcover's comics coverage is the zero-new-provider alternative. League
-of Comic Geeks has no API. C0 also settles KTD-5's comics `MediaType`.
-Whichever tracker wins, its search joins search's Reading scope as a section
-(plan 0119 KTD-3), never a Comics scope (KTD-10).
+The owner decided on 2026-11-18 that Shinobu does not track comics. #401
+closed as not planned.
 
 ## Out of scope
 
 Goodreads RSS, Google Books, MyAnimeList, MangaUpdates, Kitsu and Literal
-(see the spike), audiobook seconds, reading goals and personal ratings.
+(see the spike), comics (C0), audiobook seconds, reading goals and personal
+ratings.
 
 ## Build
 
