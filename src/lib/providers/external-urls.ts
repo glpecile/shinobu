@@ -83,7 +83,8 @@ function traktUrl(item: UrlItem, episode?: UrlEpisode): string | null {
 function anilistUrl(item: UrlItem): string | null {
   const id = item.externalIds.anilist;
   if (id == null) return null;
-  return `https://anilist.co/${item.type === 'MANGA' ? 'manga' : 'anime'}/${id}`;
+  // A bridged book carries the id of its AniList manga or novel entry.
+  return `https://anilist.co/${item.type === 'MANGA' || item.type === 'BOOK' ? 'manga' : 'anime'}/${id}`;
 }
 
 /** Letterboxd only has film pages — movies and anime films, never TV. */

@@ -123,6 +123,11 @@ export interface NormalizedMediaItem {
   currentProgress: number;
   progressUnit: ProgressUnit;
   totalEpisodes?: number;
+  /**
+   * A Hardcover book that the reading bridge matched to an AniList entry
+   * (`externalIds.anilist`): which volume of that entry it is (plan 0117 B5).
+   */
+  anilistVolume?: number;
   /** ISO 8601 instant (with offset/Z) — never a bare date string. */
   lastUpdated: string;
   externalIds: {

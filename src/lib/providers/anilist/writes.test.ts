@@ -73,6 +73,17 @@ const FILM: NormalizedMediaItem = {
   externalIds: { anilist: 199 },
 };
 
+const BOOK: NormalizedMediaItem = {
+  id: 'hardcover-61',
+  title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)',
+  coverImage: '',
+  type: 'BOOK',
+  currentProgress: 0,
+  progressUnit: 'page',
+  lastUpdated: '2026-11-18T00:00:00Z',
+  externalIds: { hardcover: 61, anilist: 143703 },
+};
+
 const SERIES: NormalizedMediaItem = {
   id: 'anilist-104578',
   title: 'Attack on Titan Final Season',
@@ -209,6 +220,50 @@ describe('logToAniList series', () => {
       status: 'COMPLETED',
       progress: 59,
     });
+  });
+
+  test('a bridged book finishing the last volume completes the entry in volumes', async () => {
+    const captured = { variables: null as unknown };
+    await Effect.runPromise(
+      logToAniList(
+        capturingDeps(captured, {
+          entry: { status: 'CURRENT', progress: 12, repeat: 0 },
+          episodes: null,
+          media: { type: 'MANGA', chapters: 35, volumes: 2 },
+        }),
+        { ...BOOK },
+        { volume: { number: 2, finished: true } },
+      ),
+    );
+    expect(captured.variables).toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2 });
+  });
+
+  test('a bridged page log makes the entry Reading and writes no number (KTD-3)', async () => {
+    const captured = { variables: null as unknown };
+    await Effect.runPromise(
+      logToAniList(
+        capturingDeps(captured, { entry: null, episodes: null, media: { type: 'MANGA', volumes: 2 } }),
+        { ...BOOK },
+        { volume: { number: 1, finished: false } },
+      ),
+    );
+    expect(captured.variables).toEqual({ mediaId: 143703, status: 'CURRENT' });
+  });
+
+  test('a bridged page log never moves a completed entry back', async () => {
+    const captured = { variables: null as unknown };
+    await Effect.runPromise(
+      logToAniList(
+        capturingDeps(captured, {
+          entry: { status: 'COMPLETED', progress: 35, repeat: 0 },
+          episodes: null,
+          media: { type: 'MANGA', volumes: 2 },
+        }),
+        { ...BOOK },
+        { volume: { number: 1, finished: false } },
+      ),
+    );
+    expect(captured.variables).toBeNull();
   });
 
   test('a series log without progress fails loudly', async () => {
@@ -422,6 +477,7 @@ describe('getEntryState carries the MediaList entry id', () => {
       id: 88_215,
       status: 'PLANNING',
       progress: 0,
+      progressVolumes: 0,
       repeat: 0,
       score: 8.5,
       notes: 'recommended by a friend',

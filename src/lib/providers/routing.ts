@@ -2,7 +2,8 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant'> &
+  Partial<Pick<NormalizedMediaItem, 'anilistVolume'>>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -41,18 +42,30 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
   if ((item.type === 'TV' || item.type === 'MOVIE') && item.externalIds.anilist != null) {
     return [item.type, 'ANIME'];
   }
+  if (item.type === 'BOOK' && item.externalIds.anilist != null) return ['BOOK', 'MANGA'];
   return [item.type];
 }
 
 /**
- * Reading has no id bridge like ani.zip (plan 0117 KTD-4), so a reading item
- * reaches a provider only when it carries that provider's own id: a book
- * needs `externalIds.hardcover` and a manga needs `externalIds.anilist`.
+ * A reading item reaches every connected provider that has the work (plan
+ * 0117 KTD-4): one whose own id it carries. A manga carries
+ * `externalIds.anilist`. A book carries `externalIds.hardcover`, and the
+ * reading bridge (`enrichExternalIds`) adds the AniList id of the series it
+ * is a volume of. AniList takes the book only with its volume number, and
+ * never its removal: one volume leaving want-to-read can't delete the
+ * series entry.
  */
-function carriesReadingId(item: RoutableItem, id: ProviderId): boolean {
+function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteCapability): boolean {
   switch (item.type) {
     case 'BOOK':
-      return id === Provider.Hardcover && item.externalIds.hardcover != null;
+      switch (id) {
+        case Provider.Hardcover:
+          return item.externalIds.hardcover != null;
+        case Provider.AniList:
+          return item.externalIds.anilist != null && item.anilistVolume != null && capability !== 'watchlist-remove';
+        default:
+          return false;
+      }
     case 'MANGA':
       return id === Provider.AniList && item.externalIds.anilist != null;
     default:
@@ -102,20 +115,28 @@ export function providersForWrite(
     return (
       writeSupport(provider, capability) !== 'none' &&
       types.some((type) => provider.mediaTypes.includes(type)) &&
-      carriesReadingId(item, id)
+      carriesReadingId(item, id, capability)
     );
   });
 }
 
 /**
  * Connected providers that take this anime's movie or TV side but that no id
- * reaches, so `providersForWrite` leaves them out. The log sheet lists them
+ * reaches, or AniList for a bridged book with no volume number, so
+ * `providersForWrite` leaves them out. The log sheet lists them
  * as manual rows; they are never write targets. Call it on the enriched item.
  */
 export function unmatchedWriteTargets(
   item: RoutableItem,
   connected: readonly ProviderId[],
 ): ProviderId[] {
+  // A bridged book with no volume number has no AniList write to make, but
+  // the reader can open the entry (plan 0117 B5).
+  if (item.type === 'BOOK') {
+    return item.externalIds.anilist != null && item.anilistVolume == null && connected.includes(Provider.AniList)
+      ? [Provider.AniList]
+      : [];
+  }
   if (item.type !== 'ANIME' || item.tmdbTvVariant != null || hasMovieTvIds(item)) return [];
   const type = animeEffectiveMovieTvType(item);
   return connected.filter((id) => {
