@@ -657,8 +657,9 @@ async function providerHasWatch(
       case Provider.AniList: {
         const mediaId = item.externalIds.anilist;
         if (mediaId == null) return false;
-        // A volume log never duplicates on AniList: the write takes the
-        // higher volume count. Hardcover alone decides a reread.
+        // A repeated volume log changes nothing on AniList: the write keeps
+        // the higher volume count, and a reread starts only from a completed
+        // entry. Hardcover alone decides a reread.
         if (item.type === 'BOOK') return null;
         const state = await queryClient.fetchQuery({
           queryKey: anilistQueryKeys.entryState(mediaId),

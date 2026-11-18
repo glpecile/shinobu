@@ -94,9 +94,10 @@ export function logToAniList(
       } else {
         const last = state.volumes != null && options.volume.number >= state.volumes;
         // The last volume completes the entry, as the last chapter does (M1).
-        // A reread runs REPEATING from its own volume until then, and
-        // finishing it counts it.
-        const rereading = options.rewatch === true || status === 'REPEATING';
+        // A reread of a completed entry runs REPEATING from its own volume
+        // until then, and finishing it counts it. `rewatch` comes from
+        // Hardcover's one volume, so it never starts a reread on its own.
+        const rereading = status === 'REPEATING' || (options.rewatch === true && status === 'COMPLETED');
         const next = last
           ? 'COMPLETED'
           : rereading

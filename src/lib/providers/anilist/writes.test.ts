@@ -257,6 +257,9 @@ describe('logToAniList series', () => {
       .toEqual({ mediaId: 143703, status: 'REPEATING', progressVolumes: 1 });
     expect(await rereadVolume({ status: 'REPEATING', progress: 35, progressVolumes: 1, repeat: 0 }, 2))
       .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 1 });
+    // A first read in progress is no reread, whatever Hardcover says.
+    expect(await rereadVolume({ status: 'CURRENT', progress: 12, progressVolumes: 3, repeat: 0 }, 1))
+      .toEqual({ mediaId: 143703, status: 'CURRENT', progressVolumes: 3 });
     // Rereading only the last volume still counts the reread.
     expect(await rereadVolume({ status: 'COMPLETED', progress: 35, progressVolumes: 2, repeat: 1 }, 2))
       .toEqual({ mediaId: 143703, status: 'COMPLETED', progressVolumes: 2, repeat: 2 });
