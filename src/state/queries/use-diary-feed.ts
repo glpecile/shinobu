@@ -298,7 +298,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     placeholderData: keepPreviousData,
   });
 
-  // The manga list Continue Reading already loads; it adds no request.
+  // Shares Continue Reading's manga list read and its cache entry.
   const { data: mangaList } = useQuery({
     ...currentMangaEntriesOptions(queryClient),
     enabled: active.includes(Provider.AniList) && active.includes(Provider.Hardcover),
