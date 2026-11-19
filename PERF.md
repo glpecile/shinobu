@@ -15,7 +15,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 
 - Persist the Home critical path to MMKV through an allowlist (`PERSISTED_PREFIXES` in `state/queries/persist.ts`). Do not persist the whole cache. (#37)
 - On native, hydrate the cache synchronously before the first render. Suspense queries ignore `isRestoring` and go to the network. On web, hydrate asynchronously, so the first render matches the prerendered HTML. (#296)
-- A persisted query needs a `gcTime` at least as long as the persister `maxAge`. The snapshot does not include a query that the cache collected. `retainPersistedQueries` sets this `gcTime` for each allowlisted prefix. A `gcTime` on the query itself overrides it. (#37)
+- A persisted query needs a `gcTime` at least as long as the persister `maxAge`. The snapshot does not include a query that the cache garbage-collected. `retainPersistedQueries` sets this `gcTime` for each allowlisted prefix. A `gcTime` on the query itself overrides it. (#37)
 - `JSON.stringify(new Set())` gives `{}`. Tag `Set` and `Map` in the codec before you persist a key. (#37)
 - Persist only the first page of an infinite query. A restored query refetches every page it holds. (#298)
 - Keep large payloads off the web allowlist. `localStorage` holds only a few MB. (#37, #298)
@@ -76,7 +76,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Keep cell props out of JSX that depends on `pages`. TanStack returns `pages` as a new tracked result on every render. React Compiler then builds JSX that depends on `pages` again each time. (#423)
 - Compute `useQueries` results in `combine`, so values that did not change keep their identity. (#423)
 - Keep heavy matching out of `combine`. It runs again each time a read settles. (#433)
-- Let rows read one list-wide snapshot. Do not subscribe every row to every library. (#287)
+- Read the watched libraries once per list and pass the result to each row. Do not subscribe every row to every library. (#287)
 - Search collections in order. Do not flatten them all to find one item. (#302)
 
 ## Render cost
@@ -89,7 +89,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 These rules are for CPU work in a loop over many rows. First prove that the loop is hot. Most waits in this app are network waits.
 
 - In a hot loop, speed comes from CPU cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block. (#423)
-- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that the app had in November 2026. (plan 031)
+- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that the app had on 2026-11-02. (plan 031)
 - If work does not depend on the item, do it once in the producer, not once per lookup. Hermes runs Unicode `normalize` and regex work slowly. (plan 031, follow-up A, #433)
 - In a hot loop, replace a `Map` or `Set` lookup with a sorted flat array and a binary search. A scan cost 38 ms per pass on a phone. In bun, `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
