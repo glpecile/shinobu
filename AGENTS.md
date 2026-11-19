@@ -314,8 +314,8 @@ list or its cells (Lists), a loop over library or diary rows (Data layout),
 provider code (Effect), and motion (Animation). Fix what breaks a rule, or name the rule and the reason in
 your summary.
 
-A perf change says what was measured, on which build and device, and what was
-not. Without a measurement it claims less work, not more speed. A new lesson
+A perf change says what you measured, on which build and device, and what you
+did not measure. Without a measurement it claims less work, not more speed. A new lesson
 is one bullet in `PERF.md` with its PR number.
 
 ## Up Next and timezones

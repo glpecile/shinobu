@@ -1,6 +1,6 @@
-# Performance tips
+# Performance rules
 
-Lessons from this app's `perf` PRs, `plans/031-performance-review-2026-11.md` and the Effect guide. Each tip names its source. Longer write-ups are in `docs/solutions/`.
+Lessons from this app's `perf` PRs, `plans/031-performance-review-2026-11.md` and the Effect guide. Each rule names its source. Longer write-ups are in `docs/solutions/`.
 
 ## Measure first
 
@@ -68,10 +68,10 @@ Lessons from this app's `perf` PRs, `plans/031-performance-review-2026-11.md` an
 ## Lists
 
 - Virtualize rails with `components/List`. Mounted credit cards went from 35 to 14. (#184, #187)
-- On a virtualized list, scroll jank comes from the cost to mount rows. `recycleItems` is off by default. Turn it on only for a list that measurably needs it. Then derive cell state from props. (#37, #427)
+- On a virtualized list, scroll jank comes from the cost to mount rows. `recycleItems` is off by default. Turn it on only for a list that measurably needs it. When it is on, derive cell state from props. (#37, #427)
 - When recycling is on, key cells by column. Set `getItemType` when cells differ in kind. Give images a `recyclingKey`. (#427)
 - Tune `drawDistance` for each list. Grid view uses 8 rows on the active page and 2 rows on neighbor pages. Details uses 50 px to match the first pool of Legend List. (#411, #427)
-- Keep state that changes during a scroll out of the cells, such as the pinned shelf, the sticky date and the scroll-to-top button. The diary keeps this state in `DiaryList`, which owns the list, and keeps the list's props memoized. (#276, #411, #427)
+- Keep state that changes during a scroll out of the cells. Examples are the pinned shelf, the sticky date and the scroll-to-top button. The diary keeps this state in `DiaryList`, which owns the list. `DiaryList` also keeps the list's props memoized. (#276, #411, #427)
 - Pass a cell its `item` and stable callbacks. Do not pass a wrapper object that each render builds again. (#423)
 - Keep cell props out of JSX that depends on `pages`. TanStack's tracked result builds that JSX again on every render. (#423)
 - Compute `useQueries` results in `combine`, so values that did not change keep their identity. (#423)
@@ -86,20 +86,18 @@ Lessons from this app's `perf` PRs, `plans/031-performance-review-2026-11.md` an
 
 ## Data layout
 
-These tips are for CPU work in a loop over many rows. First prove that the loop is hot. Most waits in this app are network waits.
+These rules are for CPU work in a loop over many rows. First prove that the loop is hot. Most waits in this app are network waits. In a hot loop, speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block.
 
-- Speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block.
-- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that existed when it was written.
+- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that existed when the plan was written. (plan 031)
 - Do work that does not depend on the item once, in the producer. Do not do it once per lookup. Hermes runs Unicode `normalize` and regex work slowly. (plan 031, follow-up A, #433)
 - In a hot loop, replace a `Map` or `Set` lookup with a sorted flat array and a binary search. A scan cost 38 ms per pass on the phone. In bun, `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
 - When the loop reads one or two fields, use a structure of arrays, with one column per field. `LibraryIndex.columns` is one. Its `rows` are an `Int32Array`, and its `values` are a plain array. (#423)
-- Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags. A `Uint32Array` holds more. The app has no bitmask yet. Plan 031 follow-up B proposes one, after a Hermes timing.
-- JS cannot allocate on the stack. Instead, allocate nothing per row. Reuse one buffer that you make outside the loop. Avoid spread, `map().filter()` chains and a new closure per row.
+- Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags. A `Uint32Array` holds more. The app has no bitmask yet. Plan 031 follow-up B proposes one. A Hermes timing must justify it first. (plan 031)
 
 ## Effect
 
-The vendored `effect-ts` skill covers only setup. These tips come from `node_modules/effect/AGENTS.md` and the PRs.
+The vendored `effect-ts` skill covers only setup. These rules come from `node_modules/effect/AGENTS.md` and the PRs.
 
 - Import by subpath (`effect/Effect`). The barrel evaluates all of Effect at launch. Lint enforces this. (#346)
 - Use `Effect.fnUntraced` for a function that runs once per row. On each call, `Effect.fn("name")` adds a tracing span and captures a stack frame. Keep the name on top-level reads, where the stack trace helps. (Effect guide)

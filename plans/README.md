@@ -348,8 +348,8 @@ anime-lists dataset. No provider write was made and no account was used.
 Owner request: check `PERF.md` against the codebase and hand the fixes to
 executor agents in the same run. Written against commit `9f1b1b1`. Four
 read-only auditors covered every `PERF.md` section, and the advisor opened
-each cited file before a finding counted. Six findings were confirmed in
-code, small, and checkable without a device. All six shipped in #478, one
+each cited file before a finding counted. Five findings were confirmed in
+code, small, and checkable without a device. All five shipped in #478, one
 commit each, so they have no plan file.
 
 | Fix | `PERF.md` section |
@@ -359,7 +359,6 @@ commit each, so they have no plan file.
 | Three detail reads set `gcTime` equal to `staleTime` | Requests |
 | The shared list row and the credit timeline row prefetch details on press | Prefetch |
 | A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout |
-| The per-film Letterboxd read is untraced | Effect |
 
 Evidence: typecheck and lint exit 0 and 1,766 tests pass on the PR branch.
 The Simkl test failed before its fix. On a Pixel 8 Pro dev build, Home pull
@@ -437,6 +436,9 @@ decision before a plan is honest.
 
 ### Considered and rejected (round 5)
 
+- **The per-film Letterboxd read drops its tracing span**: it is a query's
+  top-level read, and the page it downloads dwarfs the cost of one span. #478
+  shipped this change and then reverted it.
 - **Details pull-to-refresh narrows the Trakt library to the item's type**:
   #330 already narrowed this list on purpose and kept both Trakt keys, and
   `type: 'active'` bounds the cost. The advisor did not prove that nothing on
