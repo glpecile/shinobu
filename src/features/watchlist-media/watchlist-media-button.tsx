@@ -218,7 +218,7 @@ export function WatchlistMediaButton({
           entry={removal.entry}
           errors={removal.errors}
           incomplete={removal.incomplete}
-          key={`remove-${removal.entry.id}-${openNonce}`}
+          key={`remove-${openNonce}`}
           onClose={() => setRemoveOpen(false)}
           open={removeOpen}
         />
