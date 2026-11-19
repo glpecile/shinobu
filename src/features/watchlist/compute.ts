@@ -135,11 +135,10 @@ function bridgeReadingInputs(
   // One volume per entry: each card keeps one item that a removal acts on.
   const joined = new Set<number>();
   return inputs.map((input) => {
-    const book = bridged.get(input.item.id);
-    const id = book?.bridgedAniList?.id;
-    if (book == null || id == null || joined.has(id)) return input;
-    joined.add(id);
-    return { ...input, item: book };
+    const grouping = bridged.get(input.item.id);
+    if (grouping == null || joined.has(grouping.id)) return input;
+    joined.add(grouping.id);
+    return { ...input, item: { ...input.item, bridgedAniList: grouping } };
   });
 }
 

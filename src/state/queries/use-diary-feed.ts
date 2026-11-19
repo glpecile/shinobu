@@ -140,7 +140,11 @@ function withBridgedBooks(
   list: readonly NormalizedMediaItem[],
 ): NormalizedDiaryEntry[] {
   const bridged = bridgeBooks(entries.map((entry) => entry.item), list);
-  return bridged.size === 0 ? entries : entries.map((entry) => ({ ...entry, item: bridged.get(entry.item.id) ?? entry.item }));
+  if (bridged.size === 0) return entries;
+  return entries.map((entry) => {
+    const grouping = bridged.get(entry.item.id);
+    return grouping == null ? entry : { ...entry, item: { ...entry.item, bridgedAniList: grouping } };
+  });
 }
 
 function withShowTmdbIds(

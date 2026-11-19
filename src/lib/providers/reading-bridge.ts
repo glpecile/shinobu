@@ -213,18 +213,20 @@ function foldedOf(entry: NormalizedMediaItem): FoldedCandidate | null {
   return folded;
 }
 
+type Grouping = NonNullable<NormalizedMediaItem['bridgedAniList']>;
+
 /**
- * Each Hardcover book in `books` that is a volume of an AniList entry in
- * `entries` (plan 0117 B6), keyed by the book's item id and carrying that
- * entry as `bridgedAniList`. It compares only what the two lists loaded, so
- * it costs no request. A log never reads it; a removal reads it only through
- * a merged card's AniList source (`removalItem`).
+ * The AniList entry each Hardcover book in `books` is a volume of, among
+ * `entries` (plan 0117 B6), keyed by the book's item id. Callers set it as
+ * `bridgedAniList` on their own item. It compares only what the two lists
+ * loaded, so it costs no request. A log never reads it; a removal reads it
+ * only through a merged card's AniList source (`removalItem`).
  */
 export function bridgeBooks(
   books: readonly NormalizedMediaItem[],
   entries: readonly NormalizedMediaItem[],
-): Map<string, NormalizedMediaItem> {
-  const bridged = new Map<string, NormalizedMediaItem>();
+): Map<string, Grouping> {
+  const bridged = new Map<string, Grouping>();
   if (!books.some((item) => item.type === 'BOOK')) return bridged;
   const folded = entries.flatMap((entry) => foldedOf(entry) ?? []);
   if (folded.length === 0) return bridged;
@@ -232,7 +234,7 @@ export function bridgeBooks(
     const book = foldedBookOf(item);
     const match = book == null ? null : matchFolded(book, folded);
     if (match == null) continue;
-    bridged.set(item.id, { ...item, bridgedAniList: { id: match.anilistId, title: match.title } });
+    bridged.set(item.id, { id: match.anilistId, title: match.title });
   }
   return bridged;
 }
@@ -250,17 +252,18 @@ export function showBridgedOnce(
 ): NormalizedMediaItem[] {
   const bridged = bridgeBooks(items, entries);
   if (bridged.size === 0) return [...items];
-  const covering = new Set([...bridged.values()].map((book) => book.bridgedAniList?.id));
+  const covering = new Set([...bridged.values()].map((grouping) => grouping.id));
   const latest = new Map<number, string>();
   for (const item of items) {
     const id = item.externalIds.anilist;
     if (item.type === 'MANGA' && id != null && covering.has(id)) latest.set(id, item.lastUpdated);
   }
   return items.flatMap((item) => {
-    if (item.type === 'MANGA' && covering.has(item.externalIds.anilist)) return [];
-    const book = bridged.get(item.id);
-    if (book == null) return [item];
-    const entryUpdate = book.bridgedAniList == null ? undefined : latest.get(book.bridgedAniList.id);
-    return [entryUpdate != null && entryUpdate > book.lastUpdated ? { ...book, lastUpdated: entryUpdate } : book];
+    if (item.type === 'MANGA' && item.externalIds.anilist != null && covering.has(item.externalIds.anilist)) return [];
+    const grouping = bridged.get(item.id);
+    if (grouping == null) return [item];
+    const entryUpdate = latest.get(grouping.id);
+    const lastUpdated = entryUpdate != null && entryUpdate > item.lastUpdated ? entryUpdate : item.lastUpdated;
+    return [{ ...item, bridgedAniList: grouping, lastUpdated }];
   });
 }
