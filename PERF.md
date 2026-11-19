@@ -73,7 +73,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Tune `drawDistance` for each list. Grid view uses 8 rows on the active page and 2 rows on neighbor pages. Details uses 50 px to match the first pool of Legend List. (#411, #427)
 - Keep state that changes during a scroll out of the cells. Examples are the pinned shelf, the sticky date and the scroll-to-top button. The diary keeps this state in `DiaryList`, which owns the list. `DiaryList` also keeps the list's props memoized. (#276, #411, #427)
 - Pass a cell its `item` and stable callbacks. Do not pass a wrapper object that each render builds again. (#423)
-- Keep cell props out of JSX that depends on `pages`. `pages` is a new TanStack tracked result on every render, so JSX that depends on it is built again each time. (#423)
+- Keep cell props out of JSX that depends on `pages`. TanStack returns `pages` as a new tracked result on every render. React Compiler then builds JSX that depends on `pages` again each time. (#423)
 - Compute `useQueries` results in `combine`, so values that did not change keep their identity. (#423)
 - Keep heavy matching out of `combine`. It runs again each time a read settles. (#433)
 - Let rows read one list-wide snapshot. Do not subscribe every row to every library. (#287)
@@ -88,8 +88,8 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 
 These rules are for CPU work in a loop over many rows. First prove that the loop is hot. Most waits in this app are network waits.
 
-- In a hot loop, speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block. (#423)
-- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that existed when the plan was written. (plan 031)
+- In a hot loop, speed comes from CPU cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block. (#423)
+- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that the app had in November 2026. (plan 031)
 - If work does not depend on the item, do it once in the producer, not once per lookup. Hermes runs Unicode `normalize` and regex work slowly. (plan 031, follow-up A, #433)
 - In a hot loop, replace a `Map` or `Set` lookup with a sorted flat array and a binary search. A scan cost 38 ms per pass on a phone. In bun, `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
