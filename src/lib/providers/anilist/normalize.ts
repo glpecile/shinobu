@@ -119,6 +119,19 @@ export function parseAniListItemId(id: string): number | null {
  * entries (trending) carry no personal timestamp, so the read effect supplies
  * the instant from Effect's Clock (same contract as trakt/normalize.ts).
  */
+/** Every name AniList lists for each staff member, for the reading bridge. */
+export function staffNames(
+  nodes: ReadonlyArray<{
+    name?: { full?: string | null; native?: string | null; alternative?: ReadonlyArray<string | null> | null } | null;
+  } | null> | null | undefined,
+): string[] {
+  return (nodes ?? []).flatMap((node) =>
+    [node?.name?.full, node?.name?.native, ...(node?.name?.alternative ?? [])].filter(
+      (name): name is string => name != null && name !== '',
+    ),
+  );
+}
+
 export function normalizeAniListMedia(
   media: AniListMedia,
   nowIso: string,
@@ -128,11 +141,7 @@ export function normalizeAniListMedia(
   const year = media.seasonYear ?? media.startDate?.year;
   const genres = media.genres?.filter((genre): genre is string => genre != null);
   const aliases = media.synonyms?.filter((alias): alias is string => alias != null && alias.trim() !== '');
-  const people = media.staff?.nodes?.flatMap((node) =>
-    [node?.name?.full, node?.name?.native, ...(node?.name?.alternative ?? [])].filter(
-      (name): name is string => name != null && name !== '',
-    ),
-  );
+  const people = media.staff == null ? undefined : staffNames(media.staff.nodes);
   const titles = {
     ...(media.title?.romaji != null ? { romaji: media.title.romaji } : {}),
     ...(media.title?.english != null ? { english: media.title.english } : {}),
