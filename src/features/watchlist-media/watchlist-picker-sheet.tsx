@@ -383,8 +383,10 @@ export function WatchlistRemovePicker({
   // stacked sheet: the first press shows, one line per selected provider,
   // what goes — AniList's whole entry when it's CURRENT, Simkl's watch
   // history (plan 0036) — and only the press on that step writes. Seeing the
-  // loss spelled out is what earns `allowDestructive`.
+  // loss spelled out is what earns the `destructive` opt-in. Back returns to
+  // the selection with it intact.
   const [confirming, setConfirming] = useState(false);
+  const foreground = useThemeColor('--color-foreground');
   const warned = destructiveProviders(selected, entry);
   const destructive = warned.length > 0;
 
@@ -427,16 +429,52 @@ export function WatchlistRemovePicker({
   if (confirming) {
     return (
       <WriteSheet.Step key="confirm">
-        <RemoveConfirm
-          destructive={destructive}
-          entry={entry}
-          onBack={() => setConfirming(false)}
-          onCancel={onCancel}
-          onRemove={() => write(selected)}
-          pending={pending}
-          pendingLabel={copy.pending}
-          selected={selected}
-        />
+        <WriteSheet.Header onClose={onCancel}>
+          <View className="size-12 rounded-2xl border border-border bg-background items-center justify-center mb-4">
+            <Ionicons
+              accessibilityElementsHidden
+              color={foreground}
+              importantForAccessibility="no"
+              name={destructive ? 'trash-outline' : 'bookmark-outline'}
+              size={24}
+            />
+          </View>
+          <WriteSheet.Title>{`Remove “${entry.item.title}”?`}</WriteSheet.Title>
+        </WriteSheet.Header>
+        <View className="mt-4 gap-3">
+          {selected.map((provider) => {
+            const line = removalLine(provider, entry);
+            return (
+              <View className="flex-row items-start gap-3" key={provider}>
+                {/* Centred on the text's first line. */}
+                <View className="mt-0.5">
+                  <ProviderIcon id={provider} size={20} />
+                </View>
+                <Text className={cn('flex-1 font-sans text-sm leading-relaxed', line.destructive ? 'text-accent' : 'text-foreground')}>
+                  <Text className="font-sans-semibold">{PROVIDERS[provider].label}</Text>
+                  {` · ${line.text}`}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        <WriteSheet.Actions>
+          <Button
+            disabled={selected.length === 0}
+            icon={<Button.Icon name={destructive ? 'trash-outline' : 'bookmark-outline'} />}
+            label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, selected.length)}
+            loading={pending}
+            loadingLabel={copy.pending}
+            onPress={() => write(selected)}
+          />
+          <Button
+            disabled={pending}
+            icon={<Button.Icon name="chevron-back" />}
+            label="Back"
+            onPress={() => setConfirming(false)}
+            variant="quiet"
+          />
+        </WriteSheet.Actions>
       </WriteSheet.Step>
     );
   }
@@ -501,82 +539,6 @@ export function WatchlistRemovePicker({
         />
       </WriteSheet.Actions>
     </WriteSheet.Step>
-  );
-}
-
-/**
- * The removal's confirm step, in the same drawer: what goes from each selected
- * provider, then the write. Back returns to the selection with it intact.
- */
-function RemoveConfirm({
-  entry,
-  selected,
-  destructive,
-  pending,
-  pendingLabel,
-  onRemove,
-  onBack,
-  onCancel,
-}: {
-  entry: WatchlistEntry;
-  selected: readonly ProviderId[];
-  destructive: boolean;
-  pending: boolean;
-  pendingLabel: string;
-  onRemove: () => void;
-  onBack: () => void;
-  onCancel: () => void;
-}) {
-  const foreground = useThemeColor('--color-foreground');
-  return (
-    <>
-      <WriteSheet.Header onClose={onCancel}>
-        <View className="size-12 rounded-2xl border border-border bg-background items-center justify-center mb-4">
-          <Ionicons
-            accessibilityElementsHidden
-            color={foreground}
-            importantForAccessibility="no"
-            name={destructive ? 'trash-outline' : 'bookmark-outline'}
-            size={24}
-          />
-        </View>
-        <WriteSheet.Title>{`Remove “${entry.item.title}”?`}</WriteSheet.Title>
-      </WriteSheet.Header>
-      <View className="mt-4 gap-3">
-        {selected.map((provider) => {
-          const line = removalLine(provider, entry);
-          return (
-            <View className="flex-row items-start gap-3" key={provider}>
-              {/* Centred on the text's first line. */}
-              <View className="mt-0.5">
-                <ProviderIcon id={provider} size={20} />
-              </View>
-              <Text className={cn('flex-1 font-sans text-sm leading-relaxed', line.destructive ? 'text-accent' : 'text-foreground')}>
-                <Text className="font-sans-semibold">{PROVIDERS[provider].label}</Text>
-                {` · ${line.text}`}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-      <WriteSheet.Actions>
-        <Button
-          disabled={selected.length === 0}
-          icon={<Button.Icon name={destructive ? 'trash-outline' : 'bookmark-outline'} />}
-          label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, selected.length)}
-          loading={pending}
-          loadingLabel={pendingLabel}
-          onPress={onRemove}
-        />
-        <Button
-          disabled={pending}
-          icon={<Button.Icon name="chevron-back" />}
-          label="Back"
-          onPress={onBack}
-          variant="quiet"
-        />
-      </WriteSheet.Actions>
-    </>
   );
 }
 
