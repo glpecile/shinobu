@@ -33,7 +33,7 @@ export interface AniListMedia {
   episodes?: number | null;
   chapters?: number | null;
   volumes?: number | null;
-  /** Only requested by the reading list read, for the reading bridge. */
+  /** Only requested by the manga list read (Continue Reading, the reading list, the diary), for the reading bridge. */
   staff?: {
     nodes?: Array<{
       name?: { full?: string | null; native?: string | null; alternative?: Array<string | null> | null } | null;
