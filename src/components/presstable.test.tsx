@@ -8,8 +8,22 @@ const { fireEvent, render } = await import('@testing-library/react');
 
 let reduceMotion = false;
 
-function NativePressable({ onPress }: { onPress?: () => void }) {
-  return <button onClick={onPress}>Press</button>;
+type AccessibilityActionProps = {
+  accessibilityActions?: { name: string; label?: string }[];
+  onAccessibilityAction?: (event: { nativeEvent: { actionName: string } }) => void;
+};
+
+function NativePressable({ onPress, accessibilityActions, onAccessibilityAction }: { onPress?: () => void } & AccessibilityActionProps) {
+  return (
+    <>
+      <button onClick={onPress}>Press</button>
+      {accessibilityActions?.map((action) => (
+        <button key={action.name} onClick={() => onAccessibilityAction?.({ nativeEvent: { actionName: action.name } })}>
+          {action.label}
+        </button>
+      ))}
+    </>
+  );
 }
 mock.module('pressto', () => ({
   createAnimatedPressable: (animate: (progress: number, options: object) => { opacity?: number; transform?: { scale: number }[] }) =>
@@ -66,6 +80,17 @@ test('card presses keep feedback without scaling under reduced motion', () => {
     expect(button.style.opacity).toBe('0.6');
   } finally {
     reduceMotion = false;
+    view.unmount();
+  }
+});
+
+test('a long press is offered to screen readers as an action', () => {
+  const onLongPress = mock(() => {});
+  const view = render(<PresstableOpacity onLongPress={onLongPress} />);
+  try {
+    fireEvent.click(view.getByRole('button', { name: 'Show options' }));
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+  } finally {
     view.unmount();
   }
 });

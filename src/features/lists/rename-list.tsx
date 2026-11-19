@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { Button } from '@/components/button';
 import { Sheet } from '@/components/sheet';

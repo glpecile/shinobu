@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import type { CSSTransitionProperties } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';

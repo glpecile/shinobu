@@ -1,5 +1,6 @@
 import { LinearTransition, useReducedMotion } from 'react-native-reanimated';
-import { Platform, useWindowDimensions, View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { CenteredNotice } from '@/components/centered-notice';
 import Head from '@/components/head';

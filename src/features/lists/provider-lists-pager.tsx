@@ -1,4 +1,4 @@
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { Provider } from '@/lib/providers/types';
 import { ProviderListLink } from './list-header';

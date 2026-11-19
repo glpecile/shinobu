@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { VirtualizedRail } from '@/components/rail';
 import type { CardBadge } from '@/features/up-next/badges';

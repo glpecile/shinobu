@@ -127,7 +127,13 @@ const timed = (url: string) => fetch(url, { signal: AbortSignal.timeout(5_000) }
 /** The 1200×630 PNG for a card; an image that fails to load is left out rather than failing the card. */
 async function renderCard(card: Card, loadBrand: () => Promise<string | null>): Promise<Uint8Array> {
   // The Worker caches finished cards. Avoid retaining decoded posters across requests.
-  ready ??= initWasm({ module_or_path: renderWasm }).then(() => new Renderer({ cacheMaxBytes: 0 }));
+  // A failed init is not kept, so the next request on this isolate tries again.
+  ready ??= initWasm({ module_or_path: renderWasm })
+    .then(() => new Renderer({ cacheMaxBytes: 0 }))
+    .catch((error: unknown) => {
+      ready = undefined;
+      throw error;
+    });
   const [renderer, brand, backdrop, ...posters] = await Promise.all([
     ready,
     loadBrand(),

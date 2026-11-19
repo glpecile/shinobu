@@ -30,9 +30,9 @@
     // etc. (no trailing slash in the route), matching how Expo Router's
     // own Link/router generate hrefs.
     "html_handling": "drop-trailing-slash",
-    // Paired with the `cp dist/+not-found.html dist/404.html` step in the
-    // deploy script below — Cloudflare's 404-page handling looks for
-    // `404.html`, not Expo's `+not-found.html` naming.
+    // Paired with the `dist/404.html` step in `build:web`: Cloudflare's
+    // 404-page handling looks for `404.html`, not Expo's `+not-found.html`.
+    // That step also turns off the hydrate flag (docs/solutions/web-hydration-error-418.md).
     "not_found_handling": "404-page"
   },
   // The link-preview card renderer (worker/og-image.tsx) imports its fonts.

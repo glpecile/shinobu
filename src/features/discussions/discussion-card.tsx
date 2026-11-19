@@ -1,6 +1,7 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { Spinner } from '@/components/spinner';
 
 import { Image } from '@/components/image';

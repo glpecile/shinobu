@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useController, useForm, useWatch, type Control, type UseFormGetValues } from 'react-hook-form';
 import type { TextInputInstance } from 'react-native';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { Button } from '@/components/button';
 import { LikeButton } from '@/components/like-button';

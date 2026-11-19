@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { List } from '@/components/List';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';

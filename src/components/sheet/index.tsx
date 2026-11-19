@@ -6,11 +6,11 @@ import { useState, type ReactNode } from 'react';
 import {
   Keyboard,
   ScrollView,
-  useWindowDimensions,
   View,
   type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { useKeyboardState, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { createAnimatedComponent, useAnimatedStyle } from 'react-native-reanimated';
 

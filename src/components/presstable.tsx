@@ -1,5 +1,6 @@
 import { createAnimatedPressable, PressableOpacity } from 'pressto';
 import { useRef, type ComponentProps, type MouseEventHandler } from 'react';
+import type { AccessibilityActionEvent } from 'react-native';
 import { interpolate, useReducedMotion } from 'react-native-reanimated';
 import { withUniwind } from '@/lib/with-uniwind';
 
@@ -88,6 +89,21 @@ function usePressHandler<Args extends unknown[]>(
 }
 
 /**
+ * Screen readers have no long-press gesture, so a pressable with `onLongPress`
+ * lists it as an accessibility action. VoiceOver and TalkBack offer it in
+ * their actions menu. Spread the result on any pressable.
+ */
+export function longPressAction(onLongPress: (() => void) | undefined) {
+  if (onLongPress == null) return {};
+  return {
+    accessibilityActions: [{ name: 'longpress', label: 'Show options' }],
+    onAccessibilityAction: (event: AccessibilityActionEvent) => {
+      if (event.nativeEvent.actionName === 'longpress') onLongPress();
+    },
+  };
+}
+
+/**
  * Scales down while pressed — media cards, poster-like surfaces. `minScale`
  * softens the shrink for a wide surface, where the default 0.96 reads as a
  * lurch.
@@ -95,10 +111,12 @@ function usePressHandler<Args extends unknown[]>(
 export function PresstableScale({
   minScale,
   onPress,
+  onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn'> & PressBehaviorProps & {
+}: Omit<ComponentProps<typeof UniwindPressableScale>, 'metadata' | 'onPressIn' | 'onLongPress'> & PressBehaviorProps & {
   minScale?: number;
+  onLongPress?: () => void;
 }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
   const reduceMotion = useReducedMotion();
@@ -107,7 +125,9 @@ export function PresstableScale({
     <UniwindPressableScale
       rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
+      {...longPressAction(onLongPress)}
       {...rest}
+      onLongPress={onLongPress}
       metadata={{ minScale, reduceMotion }}
       onPress={handlePress}
     />
@@ -117,9 +137,11 @@ export function PresstableScale({
 /** Dims while pressed — buttons, icon taps, inline text actions. */
 export function PresstableOpacity({
   onPress,
+  onLongPress,
   pressBehavior = 'prevent-repeat',
   ...rest
-}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn'> & PressBehaviorProps & {
+}: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> & PressBehaviorProps & {
+  onLongPress?: () => void;
   /** Web-only DOM handler, forwarded by pressto but omitted from its prop types. */
   onMouseDown?: MouseEventHandler<HTMLElement>;
 }) {
@@ -128,7 +150,9 @@ export function PresstableOpacity({
     <UniwindPressableOpacity
       rippleColor={RIPPLE_COLOR}
       shouldCancelWhenOutside
+      {...longPressAction(onLongPress)}
       {...rest}
+      onLongPress={onLongPress}
       onPress={handlePress}
     />
   );

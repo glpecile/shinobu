@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDeferredValue, useRef, useState } from 'react';
-import { Platform, type ScrollViewInstance, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, type ScrollViewInstance, Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.

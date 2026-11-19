@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { Modal, ScrollView, useWindowDimensions, View, type ViewInstance } from 'react-native';
+import { Modal, ScrollView, View, type ViewInstance } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import {
   FadeIn,
   FadeInDown,

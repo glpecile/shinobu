@@ -1,7 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
-import { useState, useSyncExternalStore } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { View } from 'react-native';
+import { useHydrated } from '@/lib/hydrated';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { css, useReducedMotion } from 'react-native-reanimated';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
@@ -209,10 +211,6 @@ const STUDIOS = [
 const WALLS = { titles: POSTERS, reading: MANGA, people: PEOPLE, studios: STUDIOS };
 type WallSubject = keyof typeof WALLS;
 
-function subscribeNever() {
-  return () => {};
-}
-
 /**
  * Each column repeats its set three times and drifts by one set's height, so
  * the loop is seamless and a tall window never sees the column's end. Logo
@@ -293,7 +291,7 @@ const COLUMN_RHYTHM = [
  * order.
  */
 export function PosterWall({ subject = 'titles' }: { subject?: WallSubject }) {
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const hydrated = useHydrated();
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
   const reduceMotion = useReducedMotion();
