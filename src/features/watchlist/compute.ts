@@ -38,7 +38,9 @@ const ITEM_PRECEDENCE: Record<ProviderId, number> = {
   trakt: 2,
   serializd: 3,
   letterboxd: 4,
-  hardcover: 5,
+  // Only a bridged volume merges with another provider's row, and it leads
+  // that card: it holds the finer progress (plan 0117 B6).
+  hardcover: -1,
 };
 
 /**
@@ -91,17 +93,18 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
   if (imdb != null && imdb !== '') keys.push(`imdb:${imdb}`);
   const title = titleKey(item);
   if (title != null) keys.push(title);
-  // A reading work: an AniList manga or novel, and every Hardcover volume the
-  // reading bridge matched to it (plan 0117 B6).
-  if (anilistMediaKind(item) === 'MANGA' && item.externalIds.anilist != null) {
-    keys.push(`anilist-manga:${item.externalIds.anilist}`);
-  }
   return keys;
 }
 
-/** A bridged volume leads its work's card: it holds the finer progress (plan 0117 B6). */
-function itemPrecedence(input: WatchlistInput): number {
-  return input.item.type === 'BOOK' ? -1 : ITEM_PRECEDENCE[input.source];
+/**
+ * The reading work a row belongs to: an AniList manga or novel, or the one
+ * Hardcover volume the reading bridge matched to it (plan 0117 B6). Only the
+ * merge uses it, so it never makes a volume read as the series elsewhere.
+ */
+function readingWorkKey(item: NormalizedMediaItem): string[] {
+  return anilistMediaKind(item) === 'MANGA' && item.externalIds.anilist != null
+    ? [`anilist-manga:${item.externalIds.anilist}`]
+    : [];
 }
 
 /**
@@ -112,12 +115,16 @@ function itemPrecedence(input: WatchlistInput): number {
 function bridgeReadingInputs(inputs: readonly WatchlistInput[]): readonly WatchlistInput[] {
   const items = inputs.map((input) => input.item);
   const bridged = bridgeBooks(items, items);
-  return bridged.size === 0
-    ? inputs
-    : inputs.map((input) => {
-        const book = bridged.get(input.item.id);
-        return book == null ? input : { ...input, item: book };
-      });
+  if (bridged.size === 0) return inputs;
+  // One volume per entry: each card keeps one item that a removal acts on.
+  const joined = new Set<number>();
+  return inputs.map((input) => {
+    const book = bridged.get(input.item.id);
+    const id = book?.externalIds.anilist;
+    if (book == null || id == null || joined.has(id)) return input;
+    joined.add(id);
+    return { ...input, item: book };
+  });
 }
 
 interface MergedEntry {
@@ -131,7 +138,7 @@ interface MergedEntry {
 }
 
 function absorb(entry: MergedEntry, input: WatchlistInput): void {
-  const precedence = itemPrecedence(input);
+  const precedence = ITEM_PRECEDENCE[input.source];
   const previous = entry.item;
   if (precedence < entry.precedence) {
     entry.item = input.item;
@@ -173,12 +180,12 @@ function byAddedAtDesc(a: WatchlistEntry, b: WatchlistEntry): number {
   return b.addedAt.localeCompare(a.addedAt);
 }
 
-export function computeWatchlist(gathered: readonly WatchlistInput[]): WatchlistEntry[] {
+export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEntry[] {
   const merged: MergedEntry[] = [];
   const byKey = new Map<string, MergedEntry>();
 
-  for (const input of bridgeReadingInputs(gathered)) {
-    const keys = watchlistMergeKeys(input.item);
+  for (const input of bridgeReadingInputs(inputs)) {
+    const keys = [...watchlistMergeKeys(input.item), ...readingWorkKey(input.item)];
     // First key that already names an entry wins — the keys are generated in
     // R27's precedence order, so a TMDB match is preferred over an IMDb one and
     // an IMDb match over a title+year one.
@@ -189,7 +196,7 @@ export function computeWatchlist(gathered: readonly WatchlistInput[]): Watchlist
     if (entry == null) {
       entry = {
         item: input.item,
-        precedence: itemPrecedence(input),
+        precedence: ITEM_PRECEDENCE[input.source],
         sources: new Set([input.source]),
         sourceIds: [input.item.id],
         ...(input.addedAt != null ? { addedAt: input.addedAt } : {}),

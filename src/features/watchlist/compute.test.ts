@@ -66,7 +66,7 @@ describe('computeWatchlist', () => {
     expect(computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item.runtime).toBeUndefined();
   });
 
-  test('want-to-read volumes and their planned AniList entry merge into one card under a book (plan 0117 B6)', () => {
+  test('a want-to-read volume and its planned AniList entry merge under the book; a second volume keeps its own card (plan 0117 B6)', () => {
     const planned: WatchlistInput = {
       source: 'anilist', anilistStatus: 'PLANNING',
       item: item({
@@ -88,15 +88,15 @@ describe('computeWatchlist', () => {
         externalIds: { hardcover: 62 }, readingCredits: { people: ['NISIOISIN'] },
       }),
     };
-    const [entry, ...rest] = computeWatchlist([planned, volume, second]);
-    expect(rest).toEqual([]);
+    const [entry, own] = computeWatchlist([planned, volume, second]);
     expect(entry).toMatchObject({
       id: 'hardcover-61',
       sources: ['anilist', 'hardcover'],
-      sourceIds: ['anilist-143703', 'hardcover-61', 'hardcover-62'],
+      sourceIds: ['anilist-143703', 'hardcover-61'],
       anilistStatus: 'PLANNING',
     });
     expect(entry.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+    expect(own).toMatchObject({ id: 'hardcover-62', sources: ['hardcover'] });
   });
 
   test('the same film from Trakt and Letterboxd merges into one entry', () => {

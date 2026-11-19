@@ -65,4 +65,18 @@ describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
       ),
     ).toBeNull();
   });
+
+  test('removing from the AniList entry’s own screen removes that entry, not the merged volume (plan 0117 B6)', () => {
+    const manga = film({
+      id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
+      readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
+    });
+    const book = film({
+      id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1 (Light Novel)', type: 'BOOK', externalIds: { hardcover: 61 },
+      readingCredits: { people: ['NISIOISIN'] },
+    });
+    const data = inputs({ inputs: [{ item: manga, source: 'anilist' }, { item: book, source: 'hardcover' }] });
+    expect(findWatchlistRemoval(data, manga)?.entry).toMatchObject({ item: { id: 'anilist-143703' }, sources: ['anilist'] });
+    expect(findWatchlistRemoval(data, book)?.entry).toMatchObject({ item: { id: 'hardcover-61' }, sources: ['anilist', 'hardcover'] });
+  });
 });

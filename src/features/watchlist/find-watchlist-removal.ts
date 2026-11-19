@@ -38,10 +38,16 @@ export function findWatchlistRemoval(
   );
   if (match == null) return null;
 
-  const entry = computeWatchlist(data.inputs).find((candidate) =>
+  const merged = computeWatchlist(data.inputs).find((candidate) =>
     candidate.sourceIds.includes(match.item.id),
   );
-  if (entry == null) return null;
+  if (merged == null) return null;
+  // A merged reading card leads with the volume (plan 0117 B6). Removing from
+  // the AniList entry's own screen removes that entry, not the volume.
+  const entry: WatchlistEntry =
+    merged.item.type === match.item.type
+      ? merged
+      : { ...merged, id: match.item.id, item: match.item, sources: [match.source], sourceIds: [match.item.id] };
 
   return { entry, errors: data.errors, incomplete: data.incomplete };
 }
