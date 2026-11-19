@@ -44,6 +44,7 @@ function normalize(value: string): string {
 }
 
 const EPISODE_MARKERS = /\bs(\d+)\s*e(\d+)\b|\b(?:episode|ep|e)\.?\s*#?\s*(\d+)\b/gi;
+const DISCUSSION_CONTEXT = new RegExp(`${EPISODE_MARKERS.source}|\\b(?:discussion|general|thread)\\b`, 'i');
 
 /** A catalog thread with the fields the matcher reads, computed once per fetch. */
 export function indexThread(thread: { id: number; subject: string; opening: string; image?: string }) {
@@ -56,7 +57,7 @@ export function indexThread(thread: { id: number; subject: string; opening: stri
     text: ` ${normalize(raw)} `,
     subjectText: ` ${subject} `,
     subjectLower: thread.subject.toLowerCase(),
-    subjectHasContext: /\b(?:episode|ep|e)\.?\s*#?\s*\d+\b|\bs\d+\s*e\d+\b|\b(?:discussion|general|thread)\b/i.test(thread.subject),
+    subjectHasContext: DISCUSSION_CONTEXT.test(thread.subject),
     horrorGeneral: /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(subject),
     markers: [...raw.matchAll(EPISODE_MARKERS)].map((marker) =>
       marker[3] != null
