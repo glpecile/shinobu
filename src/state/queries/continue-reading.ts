@@ -56,9 +56,9 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
     ],
     combine: legInputs,
   });
-  // The whole list the AniList leg already read, so a book matches the same
-  // entry here as on the reading list and the diary.
-  const list = useMangaListQuery({ fetch: providers.includes(Provider.AniList) && providers.includes(Provider.Hardcover) });
+  // The whole list the AniList leg just read, so a book matches the same entry
+  // here as on the reading list and the diary. The leg owns the fetch.
+  const list = useMangaListQuery({ fetch: false });
   return showBridgedOnce(legs.flat(), list).sort((a, b) =>
     b.lastUpdated.localeCompare(a.lastUpdated),
   );
