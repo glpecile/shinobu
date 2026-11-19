@@ -351,10 +351,6 @@
           {
             "patterns": [
               {
-                "regex": "^effect$",
-                "message": "Import Effect modules by subpath (`import * as Effect from 'effect/Effect'`); the barrel evaluates all of Effect at launch."
-              },
-              {
                 "group": [
                   "../*",
                   "../**"
@@ -380,10 +376,6 @@
           {
             "patterns": [
               {
-                "regex": "^effect$",
-                "message": "Import Effect modules by subpath (`import * as Effect from 'effect/Effect'`); the barrel evaluates all of Effect at launch."
-              },
-              {
                 "group": [
                   "../*",
                   "../**"
@@ -404,10 +396,6 @@
           "error",
           {
             "patterns": [
-              {
-                "regex": "^effect$",
-                "message": "Import Effect modules by subpath (`import * as Effect from 'effect/Effect'`); the barrel evaluates all of Effect at launch."
-              },
               {
                 "group": [
                   "../*",
