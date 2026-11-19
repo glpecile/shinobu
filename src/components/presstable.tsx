@@ -91,12 +91,12 @@ function usePressHandler<Args extends unknown[]>(
 /**
  * Screen readers have no long-press gesture, so a pressable with `onLongPress`
  * lists it as an accessibility action. VoiceOver and TalkBack offer it in
- * their actions menu. pressto passes these props through to RNGH's button.
+ * their actions menu. Spread the result on any pressable.
  */
-function longPressAction(onLongPress: (() => void) | undefined) {
+export function longPressAction(onLongPress: (() => void) | undefined) {
   if (onLongPress == null) return {};
   return {
-    accessibilityActions: [{ name: 'longpress', label: 'More options' }],
+    accessibilityActions: [{ name: 'longpress', label: 'Show options' }],
     onAccessibilityAction: (event: AccessibilityActionEvent) => {
       if (event.nativeEvent.actionName === 'longpress') onLongPress();
     },

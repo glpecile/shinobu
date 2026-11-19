@@ -9,7 +9,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { Image } from '@/components/image';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
-import { PresstableScale } from '@/components/presstable';
+import { longPressAction, PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { useNewTabPress } from '@/components/use-new-tab-press';
 import { cn } from '@/lib/cn';
@@ -138,6 +138,7 @@ export function MediaCard({ item, className, subtitle, onActionsPress }: MediaCa
         >
           <Pressable
             {...pressProps}
+            {...longPressAction(pressProps.onLongPress)}
             accessibilityRole="link"
             style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
           >

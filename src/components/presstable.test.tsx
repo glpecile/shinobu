@@ -88,7 +88,7 @@ test('a long press is offered to screen readers as an action', () => {
   const onLongPress = mock(() => {});
   const view = render(<PresstableOpacity onLongPress={onLongPress} />);
   try {
-    fireEvent.click(view.getByRole('button', { name: 'More options' }));
+    fireEvent.click(view.getByRole('button', { name: 'Show options' }));
     expect(onLongPress).toHaveBeenCalledTimes(1);
   } finally {
     view.unmount();
