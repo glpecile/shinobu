@@ -43,6 +43,26 @@ function normalize(value: string): string {
     .replace(/['’]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
+const EPISODE_MARKERS = /\bs(\d+)\s*e(\d+)\b|\b(?:episode|ep|e)\.?\s*#?\s*(\d+)\b/gi;
+
+/** A catalog thread with the fields the matcher reads, computed once per fetch. */
+export function indexThread(thread: { id: number; subject: string; opening: string; image?: string }) {
+  const raw = `${thread.subject} ${thread.opening}`;
+  return {
+    id: thread.id,
+    subject: thread.subject,
+    image: thread.image ?? '',
+    text: ` ${normalize(raw)} `,
+    subjectText: ` ${normalize(thread.subject)} `,
+    markers: [...raw.matchAll(EPISODE_MARKERS)].map((marker) =>
+      marker[3] != null
+        ? { number: Number(marker[3]) }
+        : { season: Number(marker[1]), number: Number(marker[2]) }),
+  };
+}
+
+export type DiscussionThread = ReturnType<typeof indexThread>;
+
 export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
   fetch: HttpFetch,
   board: DiscussionBoard,
@@ -57,7 +77,7 @@ export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
     catch: (cause) => new Error('Could not load discussion catalog', { cause }),
   });
   const pages = yield* Schema.decodeUnknownEffect(catalogSchema)(body);
-  return pages.flatMap((page) => page.threads).map((thread) => ({
+  return pages.flatMap((page) => page.threads).map((thread) => indexThread({
     id: thread.no,
     subject: plainText(thread.sub ?? ''),
     opening: plainText(thread.com ?? ''),
@@ -68,7 +88,7 @@ export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
 
 /** Alias matches; inferred initials need discussion context in the subject to avoid incidental mentions. */
 export function matchDiscussionThreads(
-  catalog: { id: number; subject: string; opening: string; image?: string }[],
+  catalog: readonly DiscussionThread[],
   item: NormalizedMediaItem,
   season?: number,
   number?: number,
@@ -81,24 +101,21 @@ export function matchDiscussionThreads(
   const horror = item.genres?.some((genre) => normalize(genre) === 'horror') === true;
   return catalog.flatMap((thread) => {
     if (thread.id <= 0) return [];
-    const text = ` ${normalize(`${thread.subject} ${thread.opening}`)} `;
-    const markers = [...`${thread.subject} ${thread.opening}`.matchAll(/\bs(\d+)\s*e(\d+)\b|\b(?:episode|ep|e)\.?\s*#?\s*(\d+)\b/gi)];
-    const subject = ` ${normalize(thread.subject)} `;
-    const horrorGeneral = horror && /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(subject.trim());
-    const abbreviated = initials.some((alias) => subject.includes(` ${alias} `) && (
+    const horrorGeneral = horror && /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(thread.subjectText.trim());
+    const abbreviated = initials.some((alias) => thread.subjectText.includes(` ${alias} `) && (
       /\b(?:episode|ep|e)\.?\s*#?\s*\d+\b|\bs\d+\s*e\d+\b|\b(?:discussion|general|thread)\b/i.test(thread.subject) ||
       thread.subject.toLowerCase().includes(`/${alias}/`)
     ));
-    if (!titles.some((title) => text.includes(` ${title} `)) && !abbreviated && !horrorGeneral) return [];
-    if (!horrorGeneral && number != null && markers.length > 0 && !markers.some((marker) =>
-      marker[3] != null ? Number(marker[3]) === number
-        : Number(marker[1]) === season && Number(marker[2]) === number,
+    if (!titles.some((title) => thread.text.includes(` ${title} `)) && !abbreviated && !horrorGeneral) return [];
+    if (!horrorGeneral && number != null && thread.markers.length > 0 && !thread.markers.some((marker) =>
+      marker.season == null ? marker.number === number
+        : marker.season === season && marker.number === number,
     )) return [];
     return [{
       id: thread.id,
       title: thread.subject.trim() || item.title,
-      image: thread.image ?? '',
-      episodeSpecific: !horrorGeneral && number != null && markers.length > 0,
+      image: thread.image,
+      episodeSpecific: !horrorGeneral && number != null && thread.markers.length > 0,
     }];
   }).sort((a, b) => b.id - a.id);
 }

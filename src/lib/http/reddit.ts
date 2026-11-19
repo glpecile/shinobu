@@ -1,6 +1,6 @@
 import * as Effect from 'effect/Effect';
 
-import { plainText } from '@/lib/http/fourchan';
+import { indexThread, plainText } from '@/lib/http/fourchan';
 import type { HttpFetch } from '@/lib/http/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -51,6 +51,6 @@ export const getSubredditSearch = Effect.fn('getSubredditSearch')(function*(
   return [...feed.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].flatMap(([, entry]) => {
     const id = /<id>t3_([a-z0-9]+)<\/id>/.exec(entry)?.[1];
     const title = /<title>([\s\S]*?)<\/title>/.exec(entry)?.[1];
-    return id == null || title == null ? [] : [{ id: parseInt(id, 36), subject: plainText(title), opening: '' }];
+    return id == null || title == null ? [] : [indexThread({ id: parseInt(id, 36), subject: plainText(title), opening: '' })];
   });
 });
