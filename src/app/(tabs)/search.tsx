@@ -78,12 +78,6 @@ const SCOPES = [
     placeholder: 'Search movies & TV',
   },
   {
-    value: 'reading',
-    label: 'Reading',
-    icon: 'library-outline',
-    placeholder: 'Search manga & light novels',
-  },
-  {
     value: 'people',
     label: 'Cast & crew',
     icon: 'people-outline',
@@ -94,6 +88,12 @@ const SCOPES = [
     label: 'Studios',
     icon: 'business-outline',
     placeholder: 'Search studios',
+  },
+  {
+    value: 'reading',
+    label: 'Reading',
+    icon: 'library-outline',
+    placeholder: 'Search manga & light novels',
   },
 ] as const;
 
