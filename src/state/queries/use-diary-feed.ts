@@ -300,8 +300,11 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     placeholderData: keepPreviousData,
   });
 
-  // Shares Continue Reading's manga list read and its cache entry.
-  const mangaList = useMangaListQuery({ fetch: active.includes(Provider.AniList) && active.includes(Provider.Hardcover) });
+  // Shares Continue Reading's manga list read and its cache entry, and fetches
+  // it only once a loaded page holds a book to bridge.
+  const mangaList = useMangaListQuery({
+    fetch: active.includes(Provider.AniList) && merged.some((entry) => entry.item.type === 'BOOK'),
+  });
 
   return {
     days: groupDiaryEntries(withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList), timeZone),

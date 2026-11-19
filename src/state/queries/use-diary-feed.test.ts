@@ -168,3 +168,28 @@ test('film plays keep their fetch when the catalogue merge adds an IMDb id', asy
     expect(requests).toBe(1);
   } finally { read.unmount(); client.clear(); }
 });
+
+function page(item: NormalizedMediaItem, provider: ProviderId) {
+  return {
+    pages: [{ slices: { [provider]: { entries: [{ ...entry, id: item.id, provider, item }], next: undefined } } }],
+    pageParams: [{ anilist: 1, hardcover: 1 }],
+  };
+}
+
+test('the manga list loads only once a diary page holds a book', async () => {
+  providers = ['anilist', 'hardcover'];
+  setProviderSession('anilist', { accessToken: 'test' });
+  setProviderSession('hardcover', { accessToken: 'test' });
+  let requests = 0;
+  transport = async () => { requests++; return Response.json({ data: null }); };
+  const { client, wrapper } = setup();
+  const manga = { ...film, id: 'anilist-30013', type: 'MANGA' as const, externalIds: { anilist: 30013 } };
+  const book = { ...film, id: 'hardcover-1', type: 'BOOK' as const, externalIds: { hardcover: 1 } };
+  client.setQueryData(diaryQueryKeys.feed(['anilist', 'hardcover'], '', ''), page(manga, 'anilist'));
+  const read = renderHook(() => useDiaryFeedQuery(), { wrapper });
+  try {
+    expect(requests).toBe(0);
+    act(() => { client.setQueryData(diaryQueryKeys.feed(['anilist', 'hardcover'], '', ''), page(book, 'hardcover')); });
+    await waitFor(() => expect(requests).toBeGreaterThan(0));
+  } finally { read.unmount(); client.clear(); }
+});
