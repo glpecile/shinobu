@@ -44,7 +44,7 @@ export const resolveFilmSlug = Effect.fnUntraced(function* (deps: Pick<Letterbox
 }, letterboxdPublicReads.withPermit);
 
 /** Public viewings supply positive evidence; a missing page does not prove unwatched. Needs the item's slug. */
-export const getLetterboxdFilmWatch = Effect.fnUntraced(function* (deps: LetterboxdDeps, item: NormalizedMediaItem) {
+export const getLetterboxdFilmWatch = Effect.fn('letterboxd.getFilmWatch')(function* (deps: LetterboxdDeps, item: NormalizedMediaItem) {
   if (!Schema.is(Username)(deps.username)) return yield* new ProviderAuthError({ provider: Provider.Letterboxd, refreshFailed: true });
   const slug = item.externalIds.letterboxd;
   if (slug == null) return null;
