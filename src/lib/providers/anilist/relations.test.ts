@@ -91,8 +91,9 @@ describe('getAnimeRelations', () => {
   });
 });
 
+const tv = (id: number, episodes: number | null = 12) => ({ id, type: 'ANIME', format: 'TV', episodes });
+
 describe('getSeriesNeighbours', () => {
-  const tv = (id: number, episodes: number | null = 12) => ({ id, type: 'ANIME', format: 'TV', episodes });
   test.each([
     { name: 'no relations', edges: [], prequel: 'none' },
     { name: 'only sequels and manga', edges: [{ relationType: 'SEQUEL', node: tv(2) }, { relationType: 'SOURCE', node: { id: 3, type: 'MANGA', format: 'MANGA', episodes: null } }], prequel: 'none' },
