@@ -383,11 +383,12 @@ export function WatchlistRemovePicker({
   // stacked sheet: the first press shows, one line per selected provider,
   // what goes — AniList's whole entry when it's CURRENT, Simkl's watch
   // history (plan 0036) — and only the press on that step writes. Seeing the
-  // loss spelled out is what earns the `destructive` opt-in. Back returns to
-  // the selection with it intact.
-  const [confirming, setConfirming] = useState(false);
+  // loss spelled out is what earns the `destructive` opt-in. The step holds
+  // the providers the user reviewed, so a leg that lands meanwhile can't join
+  // the write. Back returns to the selection with it intact.
+  const [reviewed, setReviewed] = useState<ProviderId[] | null>(null);
   const foreground = useThemeColor('--color-foreground');
-  const warned = destructiveProviders(selected, entry);
+  const warned = destructiveProviders(reviewed ?? [], entry);
   const destructive = warned.length > 0;
 
   function write(providers: ProviderId[]) {
@@ -403,7 +404,7 @@ export function WatchlistRemovePicker({
   function review() {
     if (pending || selected.length === 0) return;
     haptics.selection();
-    setConfirming(true);
+    setReviewed(selected);
   }
 
   if (step.reported) {
@@ -414,7 +415,7 @@ export function WatchlistRemovePicker({
           item={entry.item}
           onDone={onCleanClose}
           onRetry={() =>
-            write(step.thrown ? selected : [...(step.report?.failed ?? [])])
+            write(step.thrown ? (reviewed ?? []) : [...(step.report?.failed ?? [])])
           }
           pending={pending}
           pendingLabel={copy.pending}
@@ -426,7 +427,7 @@ export function WatchlistRemovePicker({
     );
   }
 
-  if (confirming) {
+  if (reviewed != null) {
     return (
       <WriteSheet.Step key="confirm">
         <WriteSheet.Header onClose={onCancel}>
@@ -442,7 +443,7 @@ export function WatchlistRemovePicker({
           <WriteSheet.Title>{`Remove “${entry.item.title}”?`}</WriteSheet.Title>
         </WriteSheet.Header>
         <View className="mt-4 gap-3">
-          {selected.map((provider) => {
+          {reviewed.map((provider) => {
             const line = removalLine(provider, entry);
             return (
               <View className="flex-row items-start gap-3" key={provider}>
@@ -460,18 +461,17 @@ export function WatchlistRemovePicker({
         </View>
         <WriteSheet.Actions>
           <Button
-            disabled={selected.length === 0}
             icon={<Button.Icon name={destructive ? 'trash-outline' : 'bookmark-outline'} />}
-            label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, selected.length)}
+            label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, reviewed.length)}
             loading={pending}
             loadingLabel={copy.pending}
-            onPress={() => write(selected)}
+            onPress={() => write(reviewed)}
           />
           <Button
             disabled={pending}
             icon={<Button.Icon name="chevron-back" />}
             label="Back"
-            onPress={() => setConfirming(false)}
+            onPress={() => setReviewed(null)}
             variant="quiet"
           />
         </WriteSheet.Actions>
