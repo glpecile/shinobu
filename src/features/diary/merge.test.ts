@@ -439,7 +439,7 @@ describe('groupDiaryEntries — a bridged Hardcover volume (plan 0117 B6)', () =
       }),
     ], 'UTC');
     expect(days[0].entries).toHaveLength(1);
-    expect(days[0].entries[0]).toMatchObject({ providers: ['anilist', 'hardcover'], item: { id: 'hardcover-61', type: 'BOOK' } });
+    expect(days[0].entries[0]).toMatchObject({ providers: ['hardcover', 'anilist'], item: { id: 'hardcover-61', type: 'BOOK' } });
   });
 });
 

@@ -71,7 +71,9 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   serializd: 2,
   anilist: 3,
   letterboxd: 4,
-  hardcover: 5,
+  // Only a bridged volume shares a row with another provider, and it leads
+  // that row: it is the finer record (plan 0117 B6).
+  hardcover: -1,
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */
@@ -374,13 +376,10 @@ interface CollapseBucket {
   entries: NormalizedDiaryEntry[];
 }
 
-/** A bridged Hardcover volume leads its AniList entry's row: it is the finer record (plan 0117 B6). */
-function contributorRank(entry: NormalizedDiaryEntry): number {
-  return entry.item.type === 'BOOK' ? -1 : PROVIDER_PRIORITY[entry.provider];
-}
-
 function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
-  const contributors = [...bucket.entries].sort((a, b) => contributorRank(a) - contributorRank(b));
+  const contributors = [...bucket.entries].sort(
+    (a, b) => PROVIDER_PRIORITY[a.provider] - PROVIDER_PRIORITY[b.provider],
+  );
   const primary = contributors[0];
   // Fill-only fold from the richest contributor down — merge-metadata precedence
   // (plan 0016 KTD4): the primary's fields win, poorer contributors fill gaps
