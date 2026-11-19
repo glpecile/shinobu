@@ -307,16 +307,16 @@ it's on. Posters go through
 ## Performance
 
 `PERF.md` holds the rules from this app's perf PRs, one bullet each, with its
-source. Before you report a change done, review your diff against the sections
-it touches: a query or its key (Requests), a write or refresh (Invalidation), a
-press handler (Prefetch), a persisted key (Cold start, Cache snapshot writes), a
-list or its cells (Lists), a loop over library or diary rows (Data layout),
-provider code (Effect), and motion (Animation). Fix what breaks a rule, or name the rule and the reason in
-your summary.
+source. Before you report a change as done, review your diff against the
+sections it touches: a query or its key (Requests), a write or refresh
+(Invalidation), a press handler (Prefetch), a persisted key (Cold start, Cache
+snapshot writes), a list or its cells (Lists), a loop over library or diary rows
+(Data layout), provider code (Effect), and motion (Animation). Fix what breaks a
+rule, or name the rule and the reason in your summary.
 
 A perf change says what you measured, on which build and device, and what you
-did not measure. Without a measurement it claims less work, not more speed. A new lesson
-is one bullet in `PERF.md` with its PR number.
+did not measure. Without a measurement it claims less work, not more speed. A
+new rule is one bullet in `PERF.md` with its PR number.
 
 ## Up Next and timezones
 
