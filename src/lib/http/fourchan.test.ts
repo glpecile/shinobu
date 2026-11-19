@@ -4,7 +4,7 @@ import * as Effect from 'effect/Effect';
 import type { HttpFetch } from '@/lib/http/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { getDiscussionCatalog, matchDiscussionThreads } from './fourchan';
+import { getDiscussionCatalog, indexThread, matchDiscussionThreads } from './fourchan';
 
 const item: NormalizedMediaItem = {
   id: 'anilist-1', title: "The World's Strongest Witch", type: 'ANIME',
@@ -41,7 +41,7 @@ test('filters explicit episode/season mismatches and title substrings but keeps 
     { id: 4, subject: 'Arcane ep. 4', opening: '' },
     { id: 5, subject: 'Arcanely unrelated episode 3', opening: '' },
     { id: 6, subject: 'General', opening: '<b>ARCANE</b> discussion' },
-  ], show, 2, 3)).toEqual([
+  ].map(indexThread), show, 2, 3)).toEqual([
     { id: 6, title: 'General', image: '', episodeSpecific: false },
     { id: 2, title: 'Arcane episode 03', image: '', episodeSpecific: true },
     { id: 1, title: 'Arcane S02E03', image: '', episodeSpecific: true },
@@ -87,7 +87,7 @@ test('matches known aliases and contextual initials, not incidental acronyms', (
     { id: 6, subject: 'Attack on Titan general', opening: '' },
     { id: 7, subject: 'Shingeki no Kyojin discussion', opening: '' },
     { id: 8, subject: '/aot/ thread', opening: '' },
-  ];
+  ].map(indexThread);
   expect(matchDiscussionThreads(catalog, show, 1, 1).map((thread) => thread.id)).toEqual([8, 7, 6, 2, 1]);
   expect(matchDiscussionThreads(catalog, { ...show, type: 'MOVIE' }).map((thread) => thread.id)).toEqual([8, 7, 6, 3, 2, 1]);
 });
@@ -100,7 +100,7 @@ test('includes horror generals only for horror media without applying episode fi
     { id: 4, subject: 'Other discussion', opening: 'Horror general' },
     { id: 5, subject: 'Alien horror thread', opening: '' },
     { id: 6, subject: 'Test series episode 9', opening: '' },
-  ];
+  ].map(indexThread);
   const show = { ...item, title: 'Test series', titles: {}, type: 'TV' as const, genres: ['horror'] };
   expect(matchDiscussionThreads(catalog, show, 1, 2).map(({ id, episodeSpecific }) => ({ id, episodeSpecific })))
     .toEqual([3, 2, 1].map((id) => ({ id, episodeSpecific: false })));

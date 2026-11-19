@@ -133,7 +133,7 @@ export function simklWatchingLibraryQuery() {
  * once. TMDB numbers movies and TV in **separate id spaces**, so a movie and a
  * show can legitimately share an id; the buckets keep them apart.
  */
-export interface SimklLibraryIndex {
+interface SimklLibraryIndex {
   films: LibraryIndex<SimklLibraryEntry>;
   shows: LibraryIndex<SimklLibraryEntry>;
   animeShows: LibraryIndex<SimklLibraryEntry>;
@@ -141,27 +141,35 @@ export interface SimklLibraryIndex {
 
 const entryItem = (entry: SimklLibraryEntry) => entry.item;
 
-export function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
+// One index per snapshot: every single-item `select` on a details screen reads the same one.
+// Never mutate a cached snapshot in place: the index would go stale. A refetch or
+// `setQueryData` must give a new object.
+const indexes = new WeakMap<SimklLibrary, SimklLibraryIndex>();
+
+function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
+  const known = indexes.get(library);
+  if (known != null) return known;
   // Anime is in both lists: Simkl files anime films under its anime catalog,
   // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
   const animeShows = library.anime.filter((entry) => entry.item.isFilm !== true);
-  return {
+  const index = {
     films: indexLibrary([...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)], entryItem),
     shows: indexLibrary([...library.shows, ...animeShows], entryItem),
     animeShows: indexLibrary(animeShows, entryItem),
   };
+  indexes.set(library, index);
+  return index;
 }
 
-const indexed = (library: SimklLibrary | SimklLibraryIndex) => ('films' in library ? library : indexSimklLibrary(library));
+/** Locate one item in a library snapshot. */
+export function findLibraryEntry(library: SimklLibrary, item: NormalizedMediaItem): SimklLibraryEntry | null {
+  return findIndexedEntry(indexSimklLibrary(library), item);
+}
 
-/** Locate one item in a library snapshot. Pass an index when matching many items. */
-export function findLibraryEntry(
-  library: SimklLibrary | SimklLibraryIndex,
-  item: NormalizedMediaItem,
-): SimklLibraryEntry | null {
+function findIndexedEntry(index: SimklLibraryIndex, item: NormalizedMediaItem): SimklLibraryEntry | null {
   const filmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
-  const bucket = filmLike ? indexed(library).films : indexed(library).shows;
+  const bucket = filmLike ? index.films : index.shows;
   // Every season of an anime shares the show's TMDB id. Only a Simkl id
   // identifies the same cour; otherwise a sibling's progress leaks through.
   const byTmdb = !(item.type === 'ANIME' && !filmLike);
@@ -174,9 +182,9 @@ export function findLibraryEntry(
 }
 
 /** TV layouts span cours; ANIME items still resolve only their exact entry. */
-function libraryEpisodeEntries(library: SimklLibrary | SimklLibraryIndex, item: NormalizedMediaItem) {
-  const index = indexed(library);
-  const exact = findLibraryEntry(index, item);
+function libraryEpisodeEntries(library: SimklLibrary, item: NormalizedMediaItem) {
+  const index = indexSimklLibrary(library);
+  const exact = findIndexedEntry(index, item);
   const tmdbId = item.externalIds.tmdb;
   const anime = item.type === 'TV' && tmdbId != null
     ? [...rowsWith(index.animeShows, 'tmdb', tmdbId)].map((row) => index.animeShows.rows[row])
@@ -184,13 +192,13 @@ function libraryEpisodeEntries(library: SimklLibrary | SimklLibraryIndex, item: 
   return [...(exact == null || anime.includes(exact) ? [] : [exact]), ...anime];
 }
 
-export function findLibraryEpisodeState(library: SimklLibrary | SimklLibraryIndex, item: NormalizedMediaItem) {
+export function findLibraryEpisodeState(library: SimklLibrary, item: NormalizedMediaItem) {
   const entries = libraryEpisodeEntries(library, item);
   return entries.length === 0 ? null : simklEpisodeState(entries);
 }
 
 /** Count both cours on a TV page, without counting a parallel TV entry twice. */
-export function findLibraryProgress(library: SimklLibrary | SimklLibraryIndex, item: NormalizedMediaItem): number | null {
+export function findLibraryProgress(library: SimklLibrary, item: NormalizedMediaItem): number | null {
   const entries = libraryEpisodeEntries(library, item);
   if (entries.length === 0) return null;
   const animeProgress = entries
@@ -340,6 +348,8 @@ export function useSimklUsernameQuery(options: { enabled?: boolean } = {}) {
   });
 }
 
+const RATINGS_STALE_MS = 24 * 60 * 60_000;
+
 /**
  * Simkl's score and the IMDb or MAL one beside it, for the details Ratings
  * section. Scores move slowly and Simkl caches `/ratings` for two days, so a
@@ -351,6 +361,7 @@ export function useSuspenseSimklRatingsQuery(item: NormalizedMediaItem) {
     queryKey: simklQueryKeys.ratings(lookup),
     queryFn: ({ signal }) =>
       lookup == null ? [] : Effect.runPromise(getRatings(simklDeps(), lookup), { signal }),
-    staleTime: 24 * 60 * 60_000,
+    staleTime: RATINGS_STALE_MS,
+    gcTime: RATINGS_STALE_MS,
   });
 }

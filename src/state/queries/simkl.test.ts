@@ -92,6 +92,15 @@ const library = (over: Record<string, unknown>) =>
   ({ shows: [], movies: [], anime: [], ...over }) as never;
 
 describe('findLibraryEntry', () => {
+  test('two lookups on one snapshot build one index', () => {
+    let reads = 0;
+    const movies = [entry('simkl-1', 'MOVIE', { simkl: 1, tmdb: 42 })];
+    const snapshot = { shows: [], anime: [], get movies() { reads++; return movies; } } as never;
+    findLibraryEntry(snapshot, item('a', 'MOVIE', { tmdb: 42 }));
+    findLibraryEntry(snapshot, item('b', 'MOVIE', { tmdb: 43 }));
+    expect(reads).toBe(1);
+  });
+
   test('a movie is found in the movies bucket', () => {
     const found = findLibraryEntry(
       library({ movies: [entry('simkl-1', 'MOVIE', { simkl: 1, tmdb: 42 })] }),
@@ -169,11 +178,12 @@ describe('canonical Simkl episode state', () => {
     expect(findLibraryProgress(snapshot, item('show', 'TV', { simkl: 1, tmdb: 42 }))).toBe(24);
     expect(findLibraryProgress(snapshot, item('cour', 'ANIME', { simkl: 1, tmdb: 42 }))).toBe(12);
     expect(findLibraryProgress(snapshot, item('unknown', 'TV', { tmdb: 99 }))).toBeNull();
-    snapshot.shows.push(normalizeAllItems({ shows: [
+    // A new snapshot, as a refetch gives: the index is cached per snapshot object.
+    const withParallel = { ...snapshot, shows: [...snapshot.shows, normalizeAllItems({ shows: [
       { status: 'completed', watched_episodes_count: 24,
         show: { title: 'Parallel TV entry', ids: { simkl: 4, tmdb: 42 } } },
-    ] }, '2026-09-30T00:00:00Z').shows[0]!);
-    expect(findLibraryProgress(snapshot, item('show', 'TV', { tmdb: 42 }))).toBe(24);
+    ] }, '2026-09-30T00:00:00Z').shows[0]!] };
+    expect(findLibraryProgress(withParallel, item('show', 'TV', { tmdb: 42 }))).toBe(24);
   });
 
   test('Saga of Tanya the Evil S2E11 stays unwatched when only season 1 is complete', () => {

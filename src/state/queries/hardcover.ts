@@ -299,6 +299,7 @@ export function useSuspenseHardcoverBookListsQuery(bookId: number) {
     queryKey: hardcoverQueryKeys.bookLists(bookId),
     queryFn: ({ signal }) => Effect.runPromise(getHardcoverBookLists(hardcoverDeps(), bookId), { signal }),
     staleTime: CATALOG_STALE_MS,
+    gcTime: CATALOG_STALE_MS,
   });
 }
 

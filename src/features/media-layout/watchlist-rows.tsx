@@ -10,6 +10,7 @@ import type { MediaProgress } from '@/lib/media-progress';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -90,6 +91,7 @@ export function WatchlistRow({
   /** Replaces the year and kind line, e.g. with when the next episode airs. */
   note?: string;
 }) {
+  const prefetchDetails = usePrefetchMediaDetails();
   return (
     <ActionableRow
       className="px-6 py-2.5"
@@ -113,7 +115,10 @@ export function WatchlistRow({
       }
       onActions={onActions}
       showActions={showActions}
-      onPress={() => onPress(item)}
+      onPress={() => {
+        prefetchDetails(item);
+        onPress(item);
+      }}
       trailing={
         <View className="flex-row items-center gap-2">
           {watched != null && <WatchedMark item={item} showProgress state={watched} />}

@@ -45,6 +45,7 @@ import { usePageEnterStyle } from '@/lib/page-transition';
 import { routes } from '@/lib/routes';
 import { useThemeColor } from '@/lib/theme-color';
 import { useWatchlistView } from '@/state/prefs/watchlist-view';
+import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import { useItemProgress, useProgressLibraries, type ProgressLibraries } from '@/state/queries/media-progress';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -159,6 +160,7 @@ function TimelineEntry({
   onActions: (credit: Credit, roles: string) => void;
 }) {
   const { item } = credit;
+  const prefetchDetails = usePrefetchMediaDetails();
   const detail = [mediaKindLabel(item), roles].filter((part) => part !== '').join(' · ');
   return (
     <View className="flex-row">
@@ -190,7 +192,10 @@ function TimelineEntry({
           </>
         }
         onActions={() => onActions(credit, roles)}
-        onPress={() => onPress(item)}
+        onPress={() => {
+          prefetchDetails(item);
+          onPress(item);
+        }}
         trailing={<CreditWatchedMark item={item} libraries={libraries} />}
       />
     </View>
