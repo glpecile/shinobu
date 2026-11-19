@@ -499,7 +499,7 @@ function StudiosSkeleton() {
   return (
     <View className="mt-8">
       <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row gap-4">
+      <View className="flex-row gap-4 web:pt-1">
         {[1, 2, 3].map((index) => (
           <StudioCardSkeleton index={index} key={index} />
         ))}
