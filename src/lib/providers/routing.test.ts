@@ -67,16 +67,16 @@ describe('reading items route by the id they carry', () => {
     expect(providersForWrite({ type: 'BOOK', ...ids({ hardcover: 1 }) }, connected, 'log')).toEqual(['hardcover']);
   });
 
-  it('a bridged book with its volume number also routes to AniList, but never its removal', () => {
+  it('a bridged book with its volume number also routes to AniList', () => {
     const book = { type: 'BOOK' as const, ...ids({ hardcover: 1, anilist: 2 }), anilistVolume: 1 };
     expect(providersForWrite(book, connected, 'log')).toEqual(['anilist', 'hardcover']);
-    expect(providersForWrite(book, connected, 'watchlist-remove')).toEqual(['hardcover']);
   });
 
-  it('a bridged book without a volume number offers AniList as a manual row', () => {
+  it('a bridged book without a volume number offers AniList as a manual row, and still reaches it to remove', () => {
     const book = { type: 'BOOK' as const, ...ids({ hardcover: 1, anilist: 2 }) };
     expect(providersForWrite(book, connected, 'log')).toEqual(['hardcover']);
     expect(unmatchedWriteTargets(book, connected)).toEqual(['anilist']);
+    expect(providersForWrite(book, connected, 'watchlist-remove')).toEqual(['anilist', 'hardcover']);
   });
 
   it('a book without a Hardcover id routes nowhere', () => {

@@ -50,9 +50,9 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
  * 0117 KTD-4): one whose own id it carries. A manga carries
  * `externalIds.anilist`. A book carries `externalIds.hardcover`, and the
  * reading bridge (`enrichExternalIds`) adds the AniList id of the series it
- * is a volume of. AniList takes the book only with its volume number, and
- * never its removal: one volume leaving want-to-read can't delete the
- * series entry.
+ * is a volume of. AniList takes a log or a want-to-read only with the
+ * volume number. A removal needs only the id: the remove sheet lists AniList
+ * beside Hardcover, and the reader confirms what goes.
  */
 function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteCapability): boolean {
   switch (item.type) {
@@ -61,7 +61,7 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
         case Provider.Hardcover:
           return item.externalIds.hardcover != null;
         case Provider.AniList:
-          return item.externalIds.anilist != null && item.anilistVolume != null && capability !== 'watchlist-remove';
+          return item.externalIds.anilist != null && (item.anilistVolume != null || capability === 'watchlist-remove');
         default:
           return false;
       }
