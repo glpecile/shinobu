@@ -1,7 +1,8 @@
 import { plugin } from 'bun';
 import { expect, test } from 'bun:test';
 
-test('repeated uncached card renders stabilize WASM memory', async () => {
+test('the renderer recovers from a failed init, and repeated uncached renders stabilize WASM memory', async () => {
+  let failInit = true;
   let memory: WebAssembly.Memory | undefined;
   const instantiate = WebAssembly.instantiate;
   const cacheDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'caches');
@@ -13,6 +14,10 @@ test('repeated uncached card renders stabilize WASM memory', async () => {
     });
   } });
   WebAssembly.instantiate = (async (module: BufferSource | WebAssembly.Module, imports?: WebAssembly.Imports) => {
+    if (failInit) {
+      failInit = false;
+      throw new Error('transient instantiate failure');
+    }
     const result: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource = await Reflect.apply(instantiate, WebAssembly, [module, imports]);
     const instance = ('instance' in result ? result.instance : result) as WebAssembly.Instance;
     if (Object.hasOwn(instance.exports, 'renderer_render')) memory = instance.exports.memory as WebAssembly.Memory;
@@ -32,6 +37,7 @@ test('repeated uncached card renders stabilize WASM memory', async () => {
       const bytes = new Uint8Array(await response.arrayBuffer());
       expect(bytes.slice(0, 8)).toEqual(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));
     };
+    await expect(render()).rejects.toThrow('transient instantiate failure');
     for (let i = 0; i < 5; i++) await render();
     if (!memory) throw new Error('renderer WASM memory was not observed');
     const before = memory.buffer.byteLength;
