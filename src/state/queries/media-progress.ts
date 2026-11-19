@@ -10,7 +10,7 @@ import { useAniListLibraryQuery } from './anilist';
 import { letterboxdFilmWatchQuery } from './letterboxd';
 import { useMediaMetadata } from './media-metadata';
 import { useSerializdWatchedShowsQuery } from './serializd';
-import { findLibraryEntry, findLibraryProgress, indexSimklLibrary, simklLibraryQuery } from './simkl';
+import { findLibraryEntry, findLibraryProgress, simklLibraryQuery } from './simkl';
 import { useWatchedMoviesQuery, useWatchedShowsQuery } from './trakt';
 
 const filmLike = (item: NormalizedMediaItem) => item.type === 'MOVIE' || item.isFilm === true;
@@ -41,7 +41,7 @@ export function useProgressLibraries(items: readonly NormalizedMediaItem[]) {
     indexes: {
       movies: movies.data == null ? null : indexLibrary(movies.data, self),
       shows: shows.data == null ? null : indexLibrary(shows.data, self),
-      simkl: simkl.data == null ? null : indexSimklLibrary(simkl.data),
+      simkl: simkl.data ?? null,
       anilist: anilist.data == null ? null : indexLibrary(anilist.data, entryItem),
       serializd: serializd.data == null ? null : indexLibrary(serializd.data, entryItem),
     },
