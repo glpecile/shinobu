@@ -115,11 +115,7 @@ export function parseAniListItemId(id: string): number | null {
 }
 
 /** Every name AniList lists for each staff member, for the reading bridge. */
-export function staffNames(
-  nodes: ReadonlyArray<{
-    name?: { full?: string | null; native?: string | null; alternative?: ReadonlyArray<string | null> | null } | null;
-  } | null> | null | undefined,
-): string[] {
+export function staffNames(nodes: NonNullable<AniListMedia['staff']>['nodes']): string[] {
   return (nodes ?? []).flatMap((node) =>
     [node?.name?.full, node?.name?.native, ...(node?.name?.alternative ?? [])].filter(
       (name): name is string => name != null && name !== '',
