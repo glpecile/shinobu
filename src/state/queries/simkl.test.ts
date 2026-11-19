@@ -178,11 +178,12 @@ describe('canonical Simkl episode state', () => {
     expect(findLibraryProgress(snapshot, item('show', 'TV', { simkl: 1, tmdb: 42 }))).toBe(24);
     expect(findLibraryProgress(snapshot, item('cour', 'ANIME', { simkl: 1, tmdb: 42 }))).toBe(12);
     expect(findLibraryProgress(snapshot, item('unknown', 'TV', { tmdb: 99 }))).toBeNull();
-    snapshot.shows.push(normalizeAllItems({ shows: [
+    // A new snapshot, as a refetch gives: the index is cached per snapshot object.
+    const withParallel = { ...snapshot, shows: [...snapshot.shows, normalizeAllItems({ shows: [
       { status: 'completed', watched_episodes_count: 24,
         show: { title: 'Parallel TV entry', ids: { simkl: 4, tmdb: 42 } } },
-    ] }, '2026-09-30T00:00:00Z').shows[0]!);
-    expect(findLibraryProgress(snapshot, item('show', 'TV', { tmdb: 42 }))).toBe(24);
+    ] }, '2026-09-30T00:00:00Z').shows[0]!] };
+    expect(findLibraryProgress(withParallel, item('show', 'TV', { tmdb: 42 }))).toBe(24);
   });
 
   test('Saga of Tanya the Evil S2E11 stays unwatched when only season 1 is complete', () => {
