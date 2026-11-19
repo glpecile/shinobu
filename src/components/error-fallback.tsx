@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 import type { FallbackProps } from "react-error-boundary";
 
+import { Button } from "@/components/button";
 import { isStaleBundleError } from "@/lib/stale-bundle";
 
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
@@ -18,12 +19,11 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       <Text className="text-base font-sans text-muted text-center mb-8 max-w-sm">
         {message}
       </Text>
-      <Text
-        className="text-accent font-sans-semibold text-base"
+      <Button
+        icon={<Button.Icon name="refresh" />}
+        label={stale ? "Reload" : "Try again"}
         onPress={stale ? () => window.location.reload() : resetErrorBoundary}
-      >
-        {stale ? "Reload" : "Try again"}
-      </Text>
+      />
     </View>
   );
 }
