@@ -162,13 +162,13 @@ function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
 }
 
 /** Locate one item in a library snapshot. */
-export function findLibraryEntry(
-  library: SimklLibrary,
-  item: NormalizedMediaItem,
-): SimklLibraryEntry | null {
+export function findLibraryEntry(library: SimklLibrary, item: NormalizedMediaItem): SimklLibraryEntry | null {
+  return findIndexedEntry(indexSimklLibrary(library), item);
+}
+
+function findIndexedEntry(index: SimklLibraryIndex, item: NormalizedMediaItem): SimklLibraryEntry | null {
   const filmLike =
     item.type === 'MOVIE' || (item.type === 'ANIME' && item.isFilm === true);
-  const index = indexSimklLibrary(library);
   const bucket = filmLike ? index.films : index.shows;
   // Every season of an anime shares the show's TMDB id. Only a Simkl id
   // identifies the same cour; otherwise a sibling's progress leaks through.
@@ -184,7 +184,7 @@ export function findLibraryEntry(
 /** TV layouts span cours; ANIME items still resolve only their exact entry. */
 function libraryEpisodeEntries(library: SimklLibrary, item: NormalizedMediaItem) {
   const index = indexSimklLibrary(library);
-  const exact = findLibraryEntry(library, item);
+  const exact = findIndexedEntry(index, item);
   const tmdbId = item.externalIds.tmdb;
   const anime = item.type === 'TV' && tmdbId != null
     ? [...rowsWith(index.animeShows, 'tmdb', tmdbId)].map((row) => index.animeShows.rows[row])
