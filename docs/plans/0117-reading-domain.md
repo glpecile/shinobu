@@ -297,8 +297,9 @@ synonyms and volumes, and the Hardcover library and journal reads ask for
 each book's authors and series. These are nested fields, so neither read
 gains a request (KTD-9). Each item carries them as `readingCredits`, and
 `bridgeBooks` (`lib/providers/reading-bridge.ts`) runs the B5 matcher over
-the two lists. A match sets `bridgedAniList`, a display-only field: it
-groups cards and no write reads it. A log asks the B5 bridge as before.
+the two lists. A match sets `bridgedAniList`, which groups cards. A
+removal reads it only through a merged card's AniList source
+(`removalItem`). A log never reads it and asks the B5 bridge as before.
 
 - Continue Reading drops an AniList entry that a Currently Reading volume
   covers (`showBridgedOnce`).
@@ -314,8 +315,8 @@ groups cards and no write reads it. A log asks the B5 bridge as before.
   search, and its confirm line names that entry.
 - The screens group cards against the whole AniList list, and only titled
   volumes (B5's gate).
-- The diary gives a journal book the AniList id from the cached manga list,
-  and a same-day row that holds both leads with the book. Whether AniList
+- The diary groups a journal book under its AniList entry from the manga
+  list, which it loads once a page holds a book, and a same-day row that holds both leads with the book. Whether AniList
   writes a list activity for a volume-only update, and with which progress,
   is unverified until the owner's first live log.
 

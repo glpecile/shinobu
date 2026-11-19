@@ -24,7 +24,8 @@ import type { WatchlistEntry, WatchlistInput } from './types';
 const PROVIDER_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 
 /**
- * Which provider's copy of a merged item wins. AniList first because it holds
+ * Which provider's copy of a merged item wins. A bridged Hardcover volume
+ * leads its card, and among the rest AniList comes first because it holds
  * the user's anime state and airing schedule (the same rationale
  * `dedupeByTmdb` uses), then Simkl (plan 0034 KTD-10/R10 — the calendar/
  * yourShows precedence carries over here rather than inventing a second

@@ -229,8 +229,8 @@ describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
  * Plan 0035 R3/R4. The warning is the price of letting a CURRENT entry be
  * removed at all: the delete destroys progress, score and notes, so a removal
  * that fires without this text on screen is data loss the user never agreed to.
- * R4's other half matters just as much — a bare PLANNING removal only leaves
- * the list. Every removal confirms (owner decision 2026-11-18), and the
+ * R4's other half matters just as much — a bare PLANNING removal loses
+ * nothing, so it carries no warning. Every removal confirms (owner decision 2026-11-18), and the
  * confirm step names what each provider loses.
  */
 describe('removalLine (the remove sheet’s confirm step)', () => {
