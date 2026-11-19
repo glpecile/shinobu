@@ -9,7 +9,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - A smaller mounted tree is not a speedup. Do not merge a speed claim without a repeatable timing. (#186, closed)
 - If you have no device, count the work in a test. Count requests, snapshots, cache visits or renders. (#302, #310)
 - A dev build runs about 3 times slower than a release build. Compare ratios, not milliseconds. (plan 031)
-- Time a pure function in the app's Hermes runtime with `debugger-evaluate`, not in bun. One matcher took 0.5 ms on JSC and 3 to 6 ms on Hermes. (plan 031)
+- Time a pure function in the app's Hermes runtime with `debugger-evaluate`, not in bun. One matcher took 0.5 ms in bun (JSC) and 3 to 6 ms on Hermes. (plan 031)
 
 ## Cold start
 
@@ -30,7 +30,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 
 ## Cache snapshot writes
 
-- Save only when an allowlisted query changes. (#276)
+- Write the snapshot only when an allowlisted query changes. (#276)
 - Ignore fetch-start events. They doubled the snapshots during a refetch. (#302)
 - Debounce the write. Wait for 2 s of quiet, and never more than 10 s (`QUIET_MS` and `MAX_WAIT_MS` in `persist-provider.tsx`). One write costs about 40 ms on a Pixel 8 Pro. (#310, #423)
 
@@ -42,7 +42,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Ask for more in one request. TMDB `append_to_response` loads the show and 20 seasons in one call. (#298)
 - When page 1 gives the page count, load the other pages in parallel. (#298)
 - To get a redirect URL, read the `Location` header. Do not download the page. (#337)
-- Raise a concurrency limit only when numbers support it. Letterboxd reads went from 4 to 8 permits. Up to 12 permits, latency stayed flat and no 429 came back. (#423)
+- Raise a concurrency limit only when a measurement supports it. Letterboxd reads went from 4 to 8 permits. Up to 12 permits, latency stayed flat and no 429 came back. (#423)
 - Do not download a page a second time for one more field. (#423)
 - Mount a per-item query only on the items that need it. (#296)
 - When `onEndReached` fires again, reuse the pending page. (#329)
@@ -73,7 +73,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - Tune `drawDistance` for each list. Grid view uses 8 rows on the active page and 2 rows on neighbor pages. Details uses 50 px to match the first pool of Legend List. (#411, #427)
 - Keep state that changes during a scroll out of the cells. Examples are the pinned shelf, the sticky date and the scroll-to-top button. The diary keeps this state in `DiaryList`, which owns the list. `DiaryList` also keeps the list's props memoized. (#276, #411, #427)
 - Pass a cell its `item` and stable callbacks. Do not pass a wrapper object that each render builds again. (#423)
-- Keep cell props out of JSX that depends on `pages`. TanStack's tracked result builds that JSX again on every render. (#423)
+- Keep cell props out of JSX that depends on `pages`. `pages` is a new TanStack tracked result on every render, so JSX that depends on it is built again each time. (#423)
 - Compute `useQueries` results in `combine`, so values that did not change keep their identity. (#423)
 - Keep heavy matching out of `combine`. It runs again each time a read settles. (#433)
 - Let rows read one list-wide snapshot. Do not subscribe every row to every library. (#287)
@@ -91,7 +91,7 @@ These rules are for CPU work in a loop over many rows. First prove that the loop
 - In a hot loop, speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block. (#423)
 - A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 gives a verdict on each cache that existed when the plan was written. (plan 031)
 - If work does not depend on the item, do it once in the producer, not once per lookup. Hermes runs Unicode `normalize` and regex work slowly. (plan 031, follow-up A, #433)
-- In a hot loop, replace a `Map` or `Set` lookup with a sorted flat array and a binary search. A scan cost 38 ms per pass on the phone. In bun, `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass. (#423)
+- In a hot loop, replace a `Map` or `Set` lookup with a sorted flat array and a binary search. A scan cost 38 ms per pass on a phone. In bun, `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
 - When the loop reads one or two fields, use a structure of arrays, with one column per field. `LibraryIndex.columns` is one. Its `rows` are an `Int32Array`, and its `values` are a plain array. (#423)
 - Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags. A `Uint32Array` holds more. The app has no bitmask yet. Plan 031 follow-up B proposes one. A Hermes timing must justify it first. (plan 031)
