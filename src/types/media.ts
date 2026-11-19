@@ -292,6 +292,8 @@ export interface NormalizedStudio {
    * search against the 30 req/min budget.
    */
   anilistId?: number;
+  /** TMDB logo URL. Absent when the source has no logo (AniList, Trakt). */
+  logo?: string;
 }
 
 /**

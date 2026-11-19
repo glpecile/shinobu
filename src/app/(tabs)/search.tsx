@@ -192,9 +192,9 @@ function EntityResultRow({
           textClassName="text-sm"
         />
       ) : row.image !== '' ? (
-        // Same treatment as the studio page's logo: contain, on a surface tile.
+        // Same treatment as the studio page's logo: contain, on the logo tile.
         <Image
-          className="w-12 h-12 rounded bg-surface border border-border/50 p-1"
+          className="w-12 h-12 rounded bg-logo-tile p-1"
           contentFit="contain"
           source={{ uri: row.image }}
         />

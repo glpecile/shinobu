@@ -15,7 +15,6 @@ import { ExpandableText } from '@/components/expandable-text';
 import { FloatingBackButton, useFloatingBackButtonClearance } from '@/components/floating-back-button';
 import { FloatingShareButton } from '@/components/floating-share-button';
 import { Image } from '@/components/image';
-import { LinkPill } from '@/components/link-pill';
 import { MetaLine } from '@/components/meta-line';
 import { MorphText } from '@/components/morph-text';
 import { Rail } from '@/components/rail';
@@ -53,6 +52,7 @@ import {
 } from '@/features/person';
 import { RatingsSection } from '@/features/ratings/ratings-section';
 import { ReleaseTimeline } from '@/features/release-timeline/release-timeline';
+import { StudioCard, StudioCardSkeleton } from '@/features/studio/studio-card';
 import { StudioSheet } from '@/features/studio/studio-sheet';
 import {
   formatRuntime,
@@ -299,17 +299,10 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
   );
 }
 
-/** One "Studios" pill list — every metadata source renders through this. */
 /**
- * Studio pills. Plain press navigates, as it always has; **long-press opens the
- * studio sheet** (plan 0035 R8) — the affordance credit cards have had since
- * plan 0028, which reversed that plan's "studio pills: nothing to expand"
- * boundary once the provider links turned out to be the thing to expand.
- *
- * One pressable per pill, with both handlers on it: nesting a second
- * gesture-handler button inside would let its press bubble into the pill's
- * (0028 KTD1). Without a TMDB token there is no route to navigate to, so the
- * pill's only job is the sheet and a plain press opens it.
+ * Studio cards. Plain press opens the studio page; long-press opens the studio
+ * sheet (plan 0035 R8). Without a TMDB token there is no page to open, so a
+ * plain press opens the sheet.
  */
 function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   const pushRoute = usePushRoute();
@@ -331,14 +324,13 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
       <Section.Header>
         <Section.Title>Studios</Section.Title>
       </Section.Header>
-      {/* The web-only ⋯ straddles each pill's top corner, so this rail
-          carries web top padding to keep it from clipping. */}
-      <Rail contentContainerClassName="gap-2 web:pt-3">
+      {/* Web top padding keeps the hover ⋯ inside the rail's clip. */}
+      <Rail contentContainerClassName="gap-4 web:pt-1">
         {studios.map((entry) => (
-          <LinkPill
+          <StudioCard
             key={entry.id}
-            label={entry.name}
-            onLongPress={canOpenStudios ? () => openStudio(entry) : undefined}
+            studio={entry}
+            onActions={canOpenStudios ? () => openStudio(entry) : undefined}
             onPress={
               canOpenStudios
                 ? () =>
@@ -498,10 +490,10 @@ function StudiosSkeleton() {
   return (
     <View className="mt-8">
       <Skeleton className="h-6 w-24 rounded mb-4" />
-      <View className="flex-row gap-2">
-        <Skeleton className="h-9 w-28 rounded-full" delay={staggerDelay(1)} />
-        <Skeleton className="h-9 w-36 rounded-full" delay={staggerDelay(2)} />
-        <Skeleton className="h-9 w-24 rounded-full" delay={staggerDelay(3)} />
+      <View className="flex-row gap-4">
+        {[1, 2, 3].map((index) => (
+          <StudioCardSkeleton index={index} key={index} />
+        ))}
       </View>
     </View>
   );

@@ -363,7 +363,7 @@ describe('normalizeMovieCatalogue', () => {
         vote_average: 8.2,
         genres: [{ id: 1, name: 'Action' }, { id: 2, name: '' }],
         production_companies: [
-          { id: 79, name: 'Village Roadshow Pictures' },
+          { id: 79, name: 'Village Roadshow Pictures', logo_path: '/vr.png' },
           { id: 80, name: '' },
         ],
         credits: {
@@ -434,7 +434,12 @@ describe('normalizeMovieCatalogue', () => {
       ['Grip Person', 'Grip'],
     ]);
     expect(result?.studios).toEqual([
-      { id: 'tmdb-studio-79', name: 'Village Roadshow Pictures', tmdbId: 79 },
+      {
+        id: 'tmdb-studio-79',
+        name: 'Village Roadshow Pictures',
+        tmdbId: 79,
+        logo: 'https://image.tmdb.org/t/p/w185/vr.png',
+      },
     ]);
   });
 

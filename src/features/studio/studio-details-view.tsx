@@ -44,13 +44,13 @@ export function StudioDetailsView({ company, rows }: NormalizedStudioDetails) {
           <View className="px-6 pb-6" style={{ paddingTop: headerTop }}>
             <View className="flex-row items-center gap-5">
               {company.logo !== '' ? (
-                // Logos are wide transparent PNGs — contain, on a surface tile
-                // so white-on-transparent marks stay visible in dark mode. Not
+                // Logos are wide transparent PNGs: contain, on the light logo
+                // tile so dark marks stay visible in dark mode. Not
                 // zoomable: blowing a small vector-ish logo up full-screen looks
                 // broken, unlike posters/headshots.
                 <Image
                   source={{ uri: company.logo }}
-                  className="w-28 h-28 rounded-lg bg-surface border border-border p-2"
+                  className="w-28 h-28 rounded-lg bg-logo-tile p-2"
                   contentFit="contain"
                 />
               ) : (
