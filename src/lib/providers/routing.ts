@@ -51,8 +51,8 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
  * `externalIds.anilist`. A book carries `externalIds.hardcover`, and the
  * reading bridge (`enrichExternalIds`) adds the AniList id of the series it
  * is a volume of. AniList takes a log or a want-to-read only with the
- * volume number. A removal needs only the id: the remove sheet lists AniList
- * beside Hardcover, and the reader confirms what goes.
+ * volume number. A removal takes only the entry a merged card proves
+ * (`removalItem` sets the id to the card's `bridgedAniList`).
  */
 function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteCapability): boolean {
   switch (item.type) {

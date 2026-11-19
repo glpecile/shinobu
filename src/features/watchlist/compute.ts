@@ -119,9 +119,10 @@ function readingWorkKey(item: NormalizedMediaItem): string | null {
 }
 
 /**
- * The reading bridge's one-card rule (plan 0117 B6): a want-to-read book that
- * is a volume of a planned AniList entry carries the entry's id, so the two
- * meet on its `anilist-manga` key.
+ * The reading bridge's one-card rule (plan 0117 B6): a want-to-read book
+ * grouped under an entry of the whole AniList list carries it as
+ * `bridgedAniList`, and meets that entry's row, when it's planned, on the
+ * `anilist-manga` key.
  */
 function bridgeReadingInputs(
   inputs: readonly WatchlistInput[],
