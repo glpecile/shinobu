@@ -89,6 +89,8 @@ describe('computeWatchlist', () => {
       }),
     };
     const [entry, own] = computeWatchlist([planned, volume, second], [planned.item]);
+    // Hardcover's list order isn't fixed, and the merged volume doesn't follow it.
+    expect(computeWatchlist([planned, second, volume], [planned.item]).map((card) => card.id)).toEqual(['hardcover-61', 'hardcover-62']);
     expect(entry).toMatchObject({
       id: 'hardcover-61',
       sources: ['anilist', 'hardcover'],

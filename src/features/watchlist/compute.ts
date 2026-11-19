@@ -132,12 +132,16 @@ function bridgeReadingInputs(
   // groups under the same entry on every screen.
   const bridged = bridgeBooks(inputs.map((input) => input.item), mangaList);
   if (bridged.size === 0) return inputs;
-  // One volume per entry: each card keeps one item that a removal acts on.
-  const joined = new Set<number>();
+  // One volume per entry, so each card keeps one item that a removal acts on.
+  // The lowest id, because Hardcover returns the list in no fixed order.
+  const joined = new Map<number, string>();
+  for (const [itemId, grouping] of bridged) {
+    const held = joined.get(grouping.id);
+    if (held == null || itemId < held) joined.set(grouping.id, itemId);
+  }
   return inputs.map((input) => {
     const grouping = bridged.get(input.item.id);
-    if (grouping == null || joined.has(grouping.id)) return input;
-    joined.add(grouping.id);
+    if (grouping == null || joined.get(grouping.id) !== input.item.id) return input;
     return { ...input, item: { ...input.item, bridgedAniList: grouping } };
   });
 }
