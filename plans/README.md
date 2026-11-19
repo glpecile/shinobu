@@ -352,18 +352,19 @@ each cited file before a finding counted. Six findings were confirmed in
 code, small, and checkable without a device. All six shipped in #478, one
 commit each, so they have no plan file.
 
-| Fix | `PERF.md` section | Status |
-|-----|-------------------|--------|
-| The Simkl library is indexed once per snapshot, not once per lookup | Lists | DONE (#478) |
-| Home pull-to-refresh stops downloading list indexes that no screen shows | Invalidation | DONE (#478) |
-| Four detail reads set `gcTime` equal to `staleTime` | Requests | DONE (#478) |
-| The shared list row and the credit timeline row prefetch details on press | Prefetch | DONE (#478) |
-| A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout | DONE (#478) |
-| The Effect barrel ban covers every lint override; the per-film Letterboxd read is untraced | Effect | DONE (#478) |
+| Fix | `PERF.md` section |
+|-----|-------------------|
+| The Simkl library is indexed once per snapshot, not once per lookup | Lists |
+| Home pull-to-refresh stops downloading list indexes that no screen shows | Invalidation |
+| Four detail reads set `gcTime` equal to `staleTime` | Requests |
+| The shared list row and the credit timeline row prefetch details on press | Prefetch |
+| A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout |
+| The per-film Letterboxd read is untraced | Effect |
 
 Evidence: typecheck and lint exit 0 and 1,766 tests pass on the PR branch.
-The Simkl test failed before its fix. Nothing was timed, and nothing ran on a
-device, in a browser, or against a provider. Each fix claims less work, not
+The Simkl test failed before its fix. On a Pixel 8 Pro dev build, Home pull
+to refresh, a watchlist list-view row, and a credit timeline row worked.
+Nothing was timed, and nothing ran in a browser. Each fix claims less work, not
 more speed. One constraint to keep: the Simkl index is keyed by the snapshot
 object, so a cached `SimklLibrary` must never be mutated in place.
 

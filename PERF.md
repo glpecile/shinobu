@@ -15,7 +15,7 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 
 - Persist the Home critical path to MMKV through an allowlist (`PERSISTED_PREFIXES` in `state/queries/persist.ts`), not the whole cache. (#37)
 - On native, hydrate the cache synchronously before the first render. Suspense queries ignore `isRestoring` and go to the network. Web stays async to match the prerendered HTML. (#296)
-- A persisted query needs a `gcTime` as long as the persister `maxAge`. A collected query is not in the snapshot. `retainPersistedQueries` sets it for every allowlisted prefix. (#37)
+- A persisted query needs a `gcTime` as long as the persister `maxAge`. A collected query is not in the snapshot. `retainPersistedQueries` sets it for every allowlisted prefix, unless the query sets its own `gcTime`. (#37)
 - `JSON.stringify(new Set())` is `{}`. Tag `Set` and `Map` in the codec before you persist a key. (#37)
 - Persist only the first page of an infinite query. A restored query refetches every page it holds. (#298)
 - Keep large payloads off the web allowlist. `localStorage` has a few MB. (#37, #298)
@@ -83,7 +83,6 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 
 - React Compiler skips a component without a warning. `shinobu/react-compiler-bailout` fails lint on it. (#411)
 - Create `Intl` formatters once. Hermes builds a new one on each `toLocaleDateString` call. (#296)
-- Cache the result of Unicode `normalize` and regex work. Hermes runs them slowly. (#433)
 
 ## Data layout
 
@@ -91,7 +90,7 @@ For CPU work in a loop over many rows. Prove the loop is hot first: most waits i
 
 - The speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block.
 - A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 has the verdict on each cache that existed when it was written.
-- Do item-independent work once in the producer, not once per lookup. (plan 031, follow-up A)
+- Do item-independent work once in the producer, not once per lookup. Hermes runs Unicode `normalize` and regex work slowly. (plan 031, follow-up A, #433)
 - Replace a `Map` or `Set` lookup in a hot loop with a sorted flat array and a binary search. A scan cost 38 ms per pass on the phone. `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass, timed in bun. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
 - Use a structure of arrays when the loop reads one or two fields: one column per field. `LibraryIndex.columns` is one: its `rows` are an `Int32Array`, its `values` a plain array. (#423)
