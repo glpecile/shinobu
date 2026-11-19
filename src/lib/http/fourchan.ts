@@ -61,8 +61,6 @@ export function indexThread(thread: { id: number; subject: string; opening: stri
   };
 }
 
-export type DiscussionThread = ReturnType<typeof indexThread>;
-
 export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
   fetch: HttpFetch,
   board: DiscussionBoard,
@@ -88,7 +86,7 @@ export const getDiscussionCatalog = Effect.fn('getDiscussionCatalog')(function*(
 
 /** Alias matches; inferred initials need discussion context in the subject to avoid incidental mentions. */
 export function matchDiscussionThreads(
-  catalog: readonly DiscussionThread[],
+  catalog: readonly ReturnType<typeof indexThread>[],
   item: NormalizedMediaItem,
   season?: number,
   number?: number,
