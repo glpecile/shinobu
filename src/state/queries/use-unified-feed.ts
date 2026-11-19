@@ -233,11 +233,11 @@ export function useRefetchUnifiedFeed() {
       // Also refreshes Letterboxd's own row, which reads the gather's page 1.
       ...(feedProviders.length > 0 ? [refreshWatchlistInputs(queryClient)] : []),
       ...(feedProviders.includes(Provider.Letterboxd)
-        ? [queryClient.refetchQueries({ queryKey: letterboxdQueryKeys.listsRoot() })]
+        ? [queryClient.invalidateQueries({ queryKey: letterboxdQueryKeys.listsRoot() })]
         : []),
       ...(feedProviders.includes(Provider.Serializd)
         ? [
-            queryClient.refetchQueries({ queryKey: serializdQueryKeys.listsRoot() }),
+            queryClient.invalidateQueries({ queryKey: serializdQueryKeys.listsRoot() }),
             queryClient.refetchQueries({ queryKey: [...serializdQueryKeys.all, 'upcoming'], type: 'active' }),
           ]
         : []),
