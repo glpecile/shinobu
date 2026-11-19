@@ -171,7 +171,12 @@ export function hardcoverViewerQuery() {
   };
 }
 
-/** The connected member's username for Manage Trackers. */
+/** The connected member's username and avatar for Manage Trackers. */
+export function useHardcoverViewerQuery(options: { enabled?: boolean } = {}) {
+  return useQuery({ ...hardcoverViewerQuery(), enabled: options.enabled });
+}
+
+/** The connected member's username, for list pages. */
 export function useHardcoverUsernameQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     ...hardcoverViewerQuery(),

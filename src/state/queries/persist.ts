@@ -59,7 +59,9 @@ const PERSIST_KEY = 'shinobu.query-cache';
 // v7: ani.zip id lookups no longer cache transient failures as `null`; drop the
 // forever-cached misses written before that.
 // v8: Serializd diary rows moved from `dateAdded` to the user's `backdate`.
-const BUSTER = 'v8';
+// v9: the persisted AniList viewer gained `avatar`, which the forever-cached
+// snapshot would otherwise never fetch.
+const BUSTER = 'v9';
 
 /** Older than this and the whole snapshot is dropped rather than restored. */
 const MAX_AGE_MS = 24 * 60 * 60_000;

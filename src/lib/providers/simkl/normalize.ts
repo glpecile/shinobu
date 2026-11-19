@@ -723,7 +723,7 @@ export function normalizeActivities(raw: SimklActivitiesRaw): SimklActivities {
 /**
  * Null username rather than a failure when the payload doesn't carry one —
  * the caller degrades to a plain "Connected" line (the Trakt
- * `getViewerUsername` contract).
+ * `getViewer` contract).
  */
 export function normalizeUserSettings(raw: SimklUserSettingsRaw): SimklUserSettings {
   const avatar = raw.user?.avatar;

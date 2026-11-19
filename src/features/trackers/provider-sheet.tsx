@@ -1,16 +1,14 @@
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { PersonAvatar } from '@/features/person/person-avatar';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
 import { LetterboxdAdvancedSetup } from '@/features/trackers/letterboxd-advanced-setup';
-import {
-  capabilityLabels,
-  statusLine,
-} from '@/features/trackers/provider-style';
-import { useProviderUsername } from '@/features/trackers/use-provider-username';
+import { capabilityLabels } from '@/features/trackers/provider-style';
+import { useProviderAccount } from '@/features/trackers/use-provider-account';
 import { haptics } from '@/lib/haptics';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider, type ProviderId } from '@/lib/providers/types';
@@ -58,8 +56,10 @@ function ProviderSheetContent({
   onDone: () => void;
 }) {
   const disconnect = useDisconnectProvider();
-  const username = useProviderUsername(id, connected);
+  const account = useProviderAccount(id, connected);
   const ConnectButton = CONNECT_BUTTONS[id];
+  const { label } = PROVIDERS[id];
+  const name = account.username ?? `${label} account`;
 
   return (
     <>
@@ -68,21 +68,37 @@ function ProviderSheetContent({
           <ProviderIcon id={id} size={22} />
         </View>
         <SheetHeader.Content>
-          <SheetHeader.Title>{PROVIDERS[id].label}</SheetHeader.Title>
-          <SheetHeader.Subtitle>
-            {connected
-              ? statusLine(connected, username)
-              : capabilityLabels(id).join(' · ')}
-          </SheetHeader.Subtitle>
+          <SheetHeader.Title>{label}</SheetHeader.Title>
+          <SheetHeader.Subtitle>{capabilityLabels(id).join(' · ')}</SheetHeader.Subtitle>
         </SheetHeader.Content>
       </SheetHeader>
 
       {connected ? (
-        <View className="mt-5 gap-5">
+        <View className="mt-5 gap-4">
+          <View
+            accessible
+            accessibilityLabel={`Connected as ${name}`}
+            className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3"
+          >
+            <PersonAvatar
+              className="w-11 h-11"
+              headshot={account.avatar ?? ''}
+              name={name}
+              textClassName="text-sm"
+            />
+            <View className="flex-1 min-w-0">
+              <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
+                {name}
+              </Text>
+              <View className="flex-row items-center gap-1.5 mt-0.5">
+                <View className="w-1.5 h-1.5 rounded-full bg-success" />
+                <Text className="text-muted font-sans text-sm">Connected</Text>
+              </View>
+            </View>
+          </View>
           <Text className="text-muted font-sans text-sm">
-            Shinobu forgets this {PROVIDERS[id].label} session on this device.
-            Nothing on {PROVIDERS[id].label} is deleted, and you can reconnect
-            any time.
+            Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
+            account and its data do not change.
           </Text>
           <Button
             label="Disconnect"

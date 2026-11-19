@@ -43,20 +43,32 @@ function decode<S extends Schema.Constraint>(schema: S, detail: string) {
 
 /** `me` answers with a one-row list. `read:me:content` covers these fields. */
 const viewerData = Schema.Struct({
-  me: Schema.Array(Schema.Struct({ id: Schema.Number, username: Schema.String })),
+  me: Schema.Array(
+    Schema.Struct({
+      id: Schema.Number,
+      username: Schema.String,
+      image: optionalNullable(Schema.Struct({ url: optionalNullable(Schema.String) })),
+    }),
+  ),
 });
 
 export interface HardcoverViewer {
   id: number;
   username: string;
+  avatar?: string;
 }
 
 /** The connected member. */
 export function getViewer(deps: HardcoverDeps): Effect.Effect<HardcoverViewer, ProviderError> {
-  return hardcoverRequest<unknown>(deps, 'query Viewer { me { id username } }').pipe(
+  return hardcoverRequest<unknown>(deps, 'query Viewer { me { id username image { url } } }').pipe(
     Effect.flatMap((data) =>
       Schema.decodeUnknownEffect(viewerData)(data).pipe(
         Effect.flatMap((decoded) => Effect.fromNullishOr(decoded.me[0])),
+        Effect.map(({ id, username, image }) => ({
+          id,
+          username,
+          ...(image?.url != null && image.url !== '' ? { avatar: image.url } : {}),
+        })),
         Effect.mapError(() => new ProviderDecodeError({ provider, detail: 'invalid viewer response' })),
       ),
     ),

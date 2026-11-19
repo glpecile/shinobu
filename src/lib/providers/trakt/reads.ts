@@ -191,11 +191,19 @@ function getPagedSync<Raw>(
 }
 
 interface TraktSettingsResponse {
-  user?: { username?: string | null } | null;
+  user?: {
+    username?: string | null;
+    images?: { avatar?: { full?: string | null } | null } | null;
+  } | null;
+}
+
+export interface TraktViewer {
+  username: string | null;
+  avatar?: string;
 }
 
 /**
- * The connected account's Trakt username, for "connected as who" on Manage
+ * The connected account's Trakt username and avatar, for "connected as who" on Manage
  * Trackers. A Trakt session is an OAuth token and carries no handle of its own,
  * and `/users/settings` is the only authenticated endpoint that names the
  * account behind the token.
@@ -204,11 +212,17 @@ interface TraktSettingsResponse {
  * the caller degrades to a plain "Connected" line, and a settings-shape change
  * must never take the card down with it.
  */
-export function getViewerUsername(
+export function getViewer(
   deps: TraktDeps,
-): Effect.Effect<string | null, ProviderError> {
+): Effect.Effect<TraktViewer, ProviderError> {
   return traktAuthedRequest<TraktSettingsResponse>(deps, '/users/settings').pipe(
-    Effect.map((data) => data.user?.username ?? null),
+    Effect.map((data) => {
+      const avatar = data.user?.images?.avatar?.full;
+      return {
+        username: data.user?.username ?? null,
+        ...(avatar != null && avatar !== '' ? { avatar } : {}),
+      };
+    }),
   );
 }
 
