@@ -32,9 +32,7 @@
     "html_handling": "drop-trailing-slash",
     // Paired with the `dist/404.html` step in `build:web`: Cloudflare's
     // 404-page handling looks for `404.html`, not Expo's `+not-found.html`.
-    // Dynamic routes (`/details/...`) are served this page, so the step turns
-    // off Expo's hydrate flag and the client renders the route instead of
-    // hydrating not-found markup (React error #418).
+    // That step also turns off the hydrate flag (docs/solutions/web-hydration-error-418.md).
     "not_found_handling": "404-page"
   },
   // The link-preview card renderer (worker/og-image.tsx) imports its fonts.
