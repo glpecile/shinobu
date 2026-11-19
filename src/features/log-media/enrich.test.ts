@@ -421,4 +421,10 @@ describe('enrichExternalIds — a Hardcover book bridged to AniList', () => {
     expect(await enrichExternalIds(client, book, ['hardcover'])).toEqual(book);
     expect(calls).toEqual([]);
   });
+
+  test('asks the bridge again over an id a screen stamped to group its cards', async () => {
+    const shown = { ...book, externalIds: { hardcover: 61, anilist: 999 }, anilistVolume: 3 };
+    expect(await enrichExternalIds(client, shown, ['hardcover', 'anilist'])).toEqual(book);
+    expect(calls).toEqual(['reading-bridge']);
+  });
 });

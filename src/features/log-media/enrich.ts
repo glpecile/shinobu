@@ -35,18 +35,19 @@ export async function enrichExternalIds(
 
   // A Hardcover volume of a manga or light novel is one AniList entry's
   // volume (plan 0117 B5, KTD-6). Without a volume number the AniList id
-  // still rides along, so the log sheet can link the entry.
-  if (
-    item.type === 'BOOK' &&
-    item.externalIds.hardcover != null &&
-    item.externalIds.anilist == null &&
-    connected.includes(Provider.AniList)
-  ) {
-    const bridge = await cachedReadingBridge(queryClient, item);
-    if (bridge == null) return item;
+  // still rides along, so the log sheet can link the entry. A write always
+  // asks the B5 bridge itself: an id a screen stamped to group its cards
+  // (B6) matched only that screen's list.
+  if (item.type === 'BOOK' && item.externalIds.hardcover != null) {
+    const { anilist: _shown, ...ids } = item.externalIds;
+    const { anilistVolume: _shownVolume, ...book } = item;
+    const own = { ...book, externalIds: ids };
+    if (!connected.includes(Provider.AniList)) return own;
+    const bridge = await cachedReadingBridge(queryClient, own);
+    if (bridge == null) return own;
     return {
-      ...item,
-      externalIds: { ...item.externalIds, anilist: bridge.anilistId },
+      ...own,
+      externalIds: { ...ids, anilist: bridge.anilistId },
       ...(bridge.volume != null ? { anilistVolume: bridge.volume } : {}),
     };
   }
