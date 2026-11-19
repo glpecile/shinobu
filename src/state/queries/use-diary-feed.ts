@@ -25,7 +25,7 @@ import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { anilistDeps, anilistQueryKeys, useCachedMangaList } from './anilist';
+import { anilistDeps, anilistQueryKeys, useCachedMangaListQuery } from './anilist';
 import { hardcoverDeps, hardcoverViewerQuery } from './hardcover';
 import {
   diaryQueryKeys,
@@ -297,8 +297,7 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   });
 
   // Shares Continue Reading's manga list read and its cache entry.
-  const mangaList = useCachedMangaList(active.includes(Provider.AniList) && active.includes(Provider.Hardcover));
-
+  const mangaList = useCachedMangaListQuery(active.includes(Provider.AniList) && active.includes(Provider.Hardcover));
 
   return {
     days: groupDiaryEntries(withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList), timeZone),

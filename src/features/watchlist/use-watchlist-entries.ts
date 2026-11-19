@@ -3,7 +3,7 @@ import {
   useSuspenseWatchlistInputsQuery,
   type WatchlistInputs,
 } from '@/state/queries/watchlist';
-import { useCachedMangaList } from '@/state/queries/anilist';
+import { useCachedMangaListQuery } from '@/state/queries/anilist';
 
 import { computeWatchlist } from './compute';
 import type { WatchlistEntry } from './types';
@@ -39,7 +39,7 @@ export function useSuspenseWatchlistQuery(): WatchlistResult {
   const data = useSuspenseWatchlistInputsQuery();
   // The manga list the gather already read: reading cards group against all
   // of it (plan 0117 B6), with no request of its own.
-  const mangaList = useCachedMangaList(false);
+  const mangaList = useCachedMangaListQuery(false);
   return {
     entries: useVisibleWatchlistEntries(computeWatchlist(data.inputs, mangaList)),
     errors: data.errors,
