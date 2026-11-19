@@ -114,11 +114,6 @@ export function parseAniListItemId(id: string): number | null {
   return match == null ? null : Number(match[1]);
 }
 
-/**
- * AniList Media → NormalizedMediaItem. `nowIso` keeps this pure — catalogue
- * entries (trending) carry no personal timestamp, so the read effect supplies
- * the instant from Effect's Clock (same contract as trakt/normalize.ts).
- */
 /** Every name AniList lists for each staff member, for the reading bridge. */
 export function staffNames(
   nodes: ReadonlyArray<{
@@ -132,6 +127,11 @@ export function staffNames(
   );
 }
 
+/**
+ * AniList Media → NormalizedMediaItem. `nowIso` keeps this pure — catalogue
+ * entries (trending) carry no personal timestamp, so the read effect supplies
+ * the instant from Effect's Clock (same contract as trakt/normalize.ts).
+ */
 export function normalizeAniListMedia(
   media: AniListMedia,
   nowIso: string,
