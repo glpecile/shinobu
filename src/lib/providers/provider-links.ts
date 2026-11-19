@@ -1,6 +1,6 @@
 import { providerItemUrl, type UrlEpisode } from './external-urls';
 import { PROVIDERS } from './registry';
-import { Provider, type ProviderId } from './types';
+import type { ProviderId } from './types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 const PROVIDER_IDS = new Set(Object.keys(PROVIDERS));
@@ -27,40 +27,12 @@ type LinkItem = Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalId
   Partial<Pick<NormalizedMediaItem, 'bridgedAniList'>>;
 
 /**
- * The source provider's own link, or undefined when the source is unknown or
- * its URL isn't buildable — never a substitute from another connected
- * provider. The card-actions sheet's "View on {SourceProvider}" row (plan
- * 0023 R1) is specifically about the *source*, so this encodes that as its
- * own contract instead of the sheet reverse-engineering it from
- * `providerLinksFor`'s general-purpose ordering.
- */
-export function sourceLinkFor(item: LinkItem): ProviderLink | undefined {
-  const source = sourceProviderOf(item);
-  if (source == null) return undefined;
-  const url = providerItemUrl(source, item);
-  return url != null ? { provider: source, url } : undefined;
-}
-
-/**
- * A card's own links: its source, and for a book grouped under an AniList
- * entry, that entry too. The entry's own card dropped out of the screen
- * (plan 0117 B6), so this card is the way to reach it.
- */
-export function sourceLinksFor(item: LinkItem): ProviderLink[] {
-  const source = sourceLinkFor(item);
-  const grouped = item.bridgedAniList == null ? null : providerItemUrl(Provider.AniList, item);
-  return [
-    ...(source != null ? [source] : []),
-    ...(grouped != null && source?.provider !== Provider.AniList ? [{ provider: Provider.AniList, url: grouped }] : []),
-  ];
-}
-
-/**
  * The provider links for `item` (plan 0023 R3/KTD-3): the source provider
  * first — linked even if currently disconnected, since it's where the item
  * came from — then every other connected provider, deduped, filtered to
- * buildable URLs. Shared by the card-actions sheet (takes `[0]`) and the
- * details Ratings section (renders all).
+ * buildable URLs. The card-actions sheet passes no connected provider, or
+ * AniList alone for a book grouped under an AniList entry, whose own card
+ * dropped out of the screen (plan 0117 B6).
  */
 export function providerLinksFor(
   item: LinkItem,
