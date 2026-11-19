@@ -21,10 +21,12 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { removalItem } from '@/lib/providers/routing';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
+import { cachedMangaList } from '@/state/queries/anilist';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
@@ -44,7 +46,7 @@ import {
   watchlistConfirmLabel,
   watchlistCtaCopy,
 } from './copy';
-import { removalItem, splitWatchlistRemoveTargets } from './remove-targets';
+import { splitWatchlistRemoveTargets } from './remove-targets';
 import { useWatchlistTargetsSplit } from './targets';
 import {
   useIsUnwatchlistPending,
@@ -205,7 +207,7 @@ export function WatchlistAddPicker({
     );
     return {
       held: data == null ? [] : watchlistSourcesFor(data.inputs, item),
-      removal: data == null ? null : findWatchlistRemoval(data, item),
+      removal: data == null ? null : findWatchlistRemoval(data, item, cachedMangaList(queryClient)),
     };
   });
   const [removing, setRemoving] = useState(false);
@@ -489,11 +491,10 @@ export function WatchlistRemovePicker({
       <WriteSheet.Actions>
         <Button
           disabled={selected.length === 0}
-          icon={<Button.Icon name="bookmark-outline" />}
-          label={unwatchlistConfirmLabel(entry.item, selected.length)}
+          icon={<Button.Icon name="chevron-forward" />}
+          label="Continue"
           loading={pending}
           loadingLabel={copy.pending}
-          morphLabel
           onPress={review}
         />
       </WriteSheet.Actions>
