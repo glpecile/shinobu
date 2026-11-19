@@ -197,7 +197,8 @@ function foldedBookOf(item: NormalizedMediaItem): FoldedBook | null {
   let folded = foldedBooks.get(item);
   if (folded === undefined) {
     const book = bookOf(item);
-    folded = book == null || bridgeQueries(book).length === 0 ? null : foldBook(book);
+    const next = book == null ? null : foldBook(book);
+    folded = next != null && (next.parsed.volume != null || next.parsed.format != null) ? next : null;
     foldedBooks.set(item, folded);
   }
   return folded;
