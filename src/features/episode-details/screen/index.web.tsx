@@ -1,6 +1,7 @@
 import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { FadeOut } from 'react-native-reanimated';
 
 import { AnimatedView } from '@/components/animated-view';

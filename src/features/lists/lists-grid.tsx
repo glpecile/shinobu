@@ -1,4 +1,5 @@
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';

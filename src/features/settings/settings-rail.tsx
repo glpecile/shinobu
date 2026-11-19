@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { Text, useWindowDimensions, View, type ScrollViewInstance } from 'react-native';
+import { Text, View, type ScrollViewInstance } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import {
   makeMutable,
   useAnimatedReaction,

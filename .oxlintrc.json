@@ -142,6 +142,11 @@
             "message": "Import Spinner from @/components/spinner instead of using ActivityIndicator directly."
           },
           {
+            "name": "react-native",
+            "importNames": ["useWindowDimensions"],
+            "message": "Import useWindowDimensions from @/lib/window-dimensions. It hydrates at the web prerender's 0 × 0, so a width branch can't throw React's hydration error #418."
+          },
+          {
             "name": "cn",
             "message": "Import { cn } from @/lib/cn \u2014 the wrapper is the one swap point for the class-name composer (AGENTS.md: Class Names)."
           },

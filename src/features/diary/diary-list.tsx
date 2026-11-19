@@ -3,11 +3,11 @@ import { useReducedMotion } from 'react-native-reanimated';
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import {
   Text,
-  useWindowDimensions,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { ActionableRow } from '@/components/actionable-row';
 import { AnimatedView } from '@/components/animated-view';

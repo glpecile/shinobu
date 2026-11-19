@@ -1,4 +1,5 @@
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { ProviderIcon } from '@/components/provider-icon';

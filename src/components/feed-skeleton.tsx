@@ -1,4 +1,5 @@
-import { View, useWindowDimensions } from 'react-native';
+import { View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { Rail } from '@/components/rail';
 import { ProviderIcon } from '@/components/provider-icon';

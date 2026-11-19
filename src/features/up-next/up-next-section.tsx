@@ -1,5 +1,6 @@
 import { Fragment, useReducer, useState } from 'react';
-import { Platform, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import {
   FadeIn,
   Keyframe,

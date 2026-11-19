@@ -70,10 +70,11 @@ build step. See `docs/solutions/web-cors-serializd.md` for the proxy contract.
   slash) and how Expo Router's own `Link`/router generate hrefs.
 - `not_found_handling: "404-page"` needs a literal `404.html` at the
   asset root — Cloudflare's asset router doesn't know about Expo's
-  `+not-found.html` convention. `package.json`'s `deploy:web` script copies
-  `dist/+not-found.html` → `dist/404.html` after export, before deploying,
-  so Expo's real not-found screen (not a generic Cloudflare 404) is what
-  users see.
+  `+not-found.html` convention. `package.json`'s `build:web` script writes
+  `dist/+not-found.html` to `dist/404.html` after export, so Expo's real
+  not-found screen (not a generic Cloudflare 404) is what users see. It also
+  turns off Expo's hydrate flag in that copy, because every dynamic route
+  is served this page (docs/solutions/web-hydration-error-418.md).
 - `main` was originally absent (a pure-assets Worker) — `main` is optional at
   the wrangler config schema level specifically for that case. Since plan 0017
   it points at `worker/index.ts` (the Serializd proxy above), and `assets`
@@ -85,7 +86,7 @@ build step. See `docs/solutions/web-cors-serializd.md` for the proxy contract.
 ```sh
 bun run deploy:web
 # = bun run build:web && wrangler deploy
-# build:web = expo export --platform web --clear --max-workers 2 && cp 'dist/+not-found.html' dist/404.html
+# build:web = expo export, then dist/404.html from dist/+not-found.html with the hydrate flag off
 ```
 
 Auth is `wrangler login`'s OAuth token (already set up locally); no secrets

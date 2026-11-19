@@ -6,7 +6,8 @@ import { useState } from 'react';
 
 import { Eyebrow } from '@/components/eyebrow';
 import Head from '@/components/head';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';
 

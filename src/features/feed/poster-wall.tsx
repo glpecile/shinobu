@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
 import { useState, useSyncExternalStore } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { css, useReducedMotion } from 'react-native-reanimated';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the call site.
 import { useCSSVariable } from 'uniwind';

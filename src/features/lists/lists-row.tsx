@@ -1,4 +1,5 @@
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 
 import { Button } from '@/components/button';
 import { CollapsibleSection } from '@/components/collapsible-section';
