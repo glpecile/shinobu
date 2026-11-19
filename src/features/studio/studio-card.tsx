@@ -76,7 +76,7 @@ export function StudioCardSkeleton({ index }: { index: number }) {
   return (
     <View className="w-32 items-center">
       <Skeleton className="h-20 w-32 rounded-lg" delay={staggerDelay(index)} />
-      <Skeleton className="h-3 w-20 rounded mt-2" delay={staggerDelay(index)} />
+      <Skeleton className="h-4 w-20 rounded mt-2" delay={staggerDelay(index)} />
     </View>
   );
 }

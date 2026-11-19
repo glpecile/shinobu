@@ -306,7 +306,6 @@ function WatchedLine({ item }: { item: NormalizedMediaItem }) {
  */
 function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   const pushRoute = usePushRoute();
-  // No TMDB token, no studio pages — a pill then opens the sheet on press.
   const canOpenStudios = useTmdbToken() !== '';
   const [studio, setStudio] = useState<NormalizedStudio | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -324,7 +323,7 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
       <Section.Header>
         <Section.Title>Studios</Section.Title>
       </Section.Header>
-      {/* Web top padding keeps the hover ⋯ inside the rail's clip. */}
+      {/* Web top padding keeps the ⋯ focus ring inside the rail's clip. */}
       <Rail contentContainerClassName="gap-4 web:pt-1">
         {studios.map((entry) => (
           <StudioCard
