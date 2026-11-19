@@ -32,18 +32,18 @@ export interface UnwatchlistMediaVariables {
    */
   providers?: ProviderId[];
   /**
-   * The user saw the destructive warning and pressed again (plan 0035 R3).
-   * Passed straight to `deleteAniListEntry`, where it lifts the refusal guard
-   * and nothing else — the fresh-read/fresh-id invariants (R5) are untouched.
-   * Never defaulted on: without an explicit confirm this stays absent.
+   * The providers whose destructive line the user saw on the confirm step and
+   * removed anyway (plan 0035 R3). Each adapter lifts its refusal guard only
+   * when it is named here, and nothing else — the fresh-read/fresh-id
+   * invariants (R5) are untouched. Never defaulted on.
    */
-  allowDestructive?: boolean;
+  destructive?: ProviderId[];
 }
 
 /** What every removal adapter sees — the item, plus the destructive opt-in (KTD-7). */
 export interface WatchlistRemovePayload {
   item: NormalizedMediaItem;
-  allowDestructive?: boolean;
+  destructive?: readonly ProviderId[];
 }
 
 export interface WatchlistRemovePlan {

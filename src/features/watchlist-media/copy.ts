@@ -101,7 +101,7 @@ export function unwatchlistConfirmLabel(
  * What a removal takes from one provider, for the remove sheet's confirm
  * step: one line per selected provider, so the reader sees what goes before
  * it goes (plan 0035 R3/R4). `destructive` marks the lines that delete more
- * than a list status, which is what earns `allowDestructive`.
+ * than a list status; only those providers lift their refusal guard.
  *
  * AniList has no "un-status" that keeps an entry, so removing something the
  * user is watching deletes the whole entry. Simkl has one status per item, so
@@ -135,6 +135,14 @@ export function removalLine(
     case Provider.Serializd:
       return { text: 'Leaves your watchlist.', destructive: false };
   }
+}
+
+/** The selected providers whose confirm line warned: only these lift their refusal guard. */
+export function destructiveProviders(
+  selected: readonly ProviderId[],
+  entry: Parameters<typeof removalLine>[1],
+): ProviderId[] {
+  return selected.filter((provider) => removalLine(provider, entry).destructive);
 }
 
 /** The confirm step's press when a line is destructive. Provider-free, per R38. */

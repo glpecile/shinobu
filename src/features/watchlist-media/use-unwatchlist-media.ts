@@ -23,7 +23,7 @@ import { removeFromLetterboxdWatchlist } from '@/lib/providers/letterboxd/watchl
 import { removeFromHardcoverReadingList } from '@/lib/providers/hardcover/writes';
 import { removeFromSimklWatchlist } from '@/lib/providers/simkl/writes';
 import { removeFromTraktWatchlist } from '@/lib/providers/trakt/writes';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import { anilistDeps } from '@/state/queries/anilist';
 import { letterboxdDeps } from '@/state/queries/letterboxd';
 import type { ProviderFailure } from '@/state/queries/settle';
@@ -79,18 +79,18 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
     Effect.runPromise(removeFromTraktWatchlist(traktDeps(), item)),
   letterboxd: ({ item }) =>
     Effect.runPromise(removeFromLetterboxdWatchlist(letterboxdDeps(), item)),
-  simkl: ({ item, allowDestructive }) =>
+  simkl: ({ item, destructive }) =>
     Effect.runPromise(
       removeFromSimklWatchlist(
         simklDeps(),
         item,
-        allowDestructive === true ? { allowDestructive: true } : {},
+        destructive?.includes(Provider.Simkl) === true ? { allowDestructive: true } : {},
       ),
     ),
   // Never destructive: the adapter deletes only a bare Want to Read entry.
   hardcover: ({ item }) =>
     Effect.runPromise(removeFromHardcoverReadingList(hardcoverDeps(), item)),
-  anilist: ({ item, allowDestructive }) => {
+  anilist: ({ item, destructive }) => {
     const mediaId = item.externalIds.anilist;
     // Reachable only for an entry AniList's own leg produced, so this is
     // defensive rather than expected — and a reasoned skip rather than an error
@@ -109,7 +109,7 @@ export const WATCHLIST_REMOVE_ADAPTERS: Partial<
     return Effect.runPromise(
       deleteAniListEntry(anilistDeps(), {
         mediaId,
-        ...(allowDestructive === true ? { allowDestructive: true } : {}),
+        ...(destructive?.includes(Provider.AniList) === true ? { allowDestructive: true } : {}),
       }),
     );
   },
@@ -227,7 +227,7 @@ export async function runWatchlistRemove(
 
   const report = await runProviderWrites(deps.adapters, plan.targets, {
     item: plan.item,
-    ...(variables.allowDestructive === true ? { allowDestructive: true } : {}),
+    ...(variables.destructive != null ? { destructive: variables.destructive } : {}),
   });
 
   // Inside the mutation, never in `onSuccess` — the sheet this is invoked from

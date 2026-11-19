@@ -6,6 +6,7 @@ import type { NormalizedMediaItem } from '@/types/media';
 import {
   addedToastTitle,
   addedToSentence,
+  destructiveProviders,
   removalLine,
   failedOnSentence,
   isUnwatchlistCtaSettled,
@@ -245,5 +246,12 @@ describe('removalLine (the remove sheet’s confirm step)', () => {
     const show = { item: {} };
     expect(removalLine('simkl', { ...show, simklWatchedCount: 0 })).toEqual({ text: 'Leaves Plan to Watch.', destructive: false });
     expect(removalLine('simkl', { ...show, simklWatchedCount: 12 }).destructive).toBe(true);
+  });
+});
+
+describe('destructiveProviders', () => {
+  test('only the provider whose line warned lifts its guard', () => {
+    const show = { item: {}, anilistStatus: 'PLANNING' as const, simklWatchedCount: 12 };
+    expect(destructiveProviders(['anilist', 'simkl', 'trakt'], show)).toEqual(['simkl']);
   });
 });

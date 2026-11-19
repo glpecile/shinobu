@@ -35,6 +35,7 @@ import {
   addedToastTitle,
   addedToSentence,
   DESTRUCTIVE_REMOVE_CONFIRM_LABEL,
+  destructiveProviders,
   removalLine,
   failedOnSentence,
   providerLabelList,
@@ -384,13 +385,15 @@ export function WatchlistRemovePicker({
   // history (plan 0036) — and only the press on that step writes. Seeing the
   // loss spelled out is what earns `allowDestructive`.
   const [confirming, setConfirming] = useState(false);
-  const destructive = selected.some((provider) => removalLine(provider, entry).destructive);
+  const warned = destructiveProviders(selected, entry);
+  const destructive = warned.length > 0;
 
   function write(providers: ProviderId[]) {
     if (pending || providers.length === 0) return;
     haptics.destructive();
     remove.mutate(
-      { providers, ...(destructive ? { allowDestructive: true } : {}) },
+      // Only the providers whose own line warned lift their guard.
+      { providers, ...(destructive ? { destructive: warned } : {}) },
       step.callbacks,
     );
   }
