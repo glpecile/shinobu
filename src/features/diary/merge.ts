@@ -386,9 +386,11 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
   // Fill-only fold from the richest contributor down — merge-metadata precedence
   // (plan 0016 KTD4): the primary's fields win, poorer contributors fill gaps
   // and union external ids, so the result is order-independent.
+  // A bridged volume's row keeps the book's own record: the AniList entry's
+  // ids and catalogue fields name the series, not this volume (plan 0117 B6).
   const item = contributors
     .slice(1)
-    .reduce((acc, entry) => mergeCatalogueMetadata(acc, entry.item), primary.item);
+    .reduce((acc, entry) => (acc.type === 'BOOK' && entry.item.type !== 'BOOK' ? acc : mergeCatalogueMetadata(acc, entry.item)), primary.item);
   const episodes = [
     ...new Set(contributors.flatMap((entry) => entry.episodes ?? [])),
   ].sort((a, b) => a - b);
