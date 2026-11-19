@@ -33,9 +33,13 @@ Wrangler. Check `/og/site.png` under `wrangler dev` after renderer upgrades.
 [Satori advisory](https://github.com/advisories/GHSA-wx4j-mvgx-mqwp) ·
 [Workers compatibility issue](https://github.com/vercel/satori/issues/878)
 
-## Render cache and memory
+## Render cost
 
-The Cache API stores rendered cards for a week. The shared renderer keeps its
-decoded image cache disabled so it does not retain posters across requests.
-The Worker test checks that repeated uncached cards keep WASM memory stable
-after warm-up.
+On an M-series Mac under bun, Takumi renders a 1200×630 card without images in
+about 5 ms. Satori and resvg took about 166 ms. Cards with posters and Workers
+CPU time were not measured, so keep Workers Paid; the free plan allows 10 ms.
+The Cache API keeps the cost to one render per card per week.
+
+The renderer's resource cache is off (`cacheMaxBytes: 0`, default 64 MiB).
+Otherwise decoded posters stay in the isolate's WASM memory between requests,
+up to that budget.
