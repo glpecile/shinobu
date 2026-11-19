@@ -29,5 +29,5 @@ state.
   route instead. The build fails if the flag string is not found.
 - **Client-only values.** The diary welcome sample is dated by the device's
   clock and time zone, and its fades read a CSS variable. Neither exists in
-  the prerender. They mount after hydration through
-  `useSyncExternalStore(subscribe, () => true, () => false)`.
+  the prerender. They mount after hydration, gated on `useHydrated()`
+  (`@/lib/hydrated`).

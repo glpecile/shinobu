@@ -3,13 +3,13 @@ import {
   Suspense,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
   type RefObject,
 } from 'react';
 import { View } from 'react-native';
 
 import { AnimatedView } from '@/components/animated-view';
+import { useHydrated } from '@/lib/hydrated';
 import { heldKeyframes, SectionEnter, sectionFading } from '@/components/section-enter';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { toast } from '@/lib/toast';
@@ -57,10 +57,6 @@ class SectionErrorBoundary extends Component<BoundaryProps, { failed: boolean }>
   override render() {
     return this.state.failed ? this.props.errorFallback ?? null : this.props.children;
   }
-}
-
-function subscribeNever() {
-  return () => {};
 }
 
 /**
@@ -189,13 +185,8 @@ export function SuspenseSection({
 }) {
   // Static web export awaits every suspended query, so prerendering a section
   // would fetch its provider at build time, and an outage there fails the
-  // build (error boundaries don't run on the server). The server snapshot also
-  // covers hydration, so the client renders the same skeleton first.
-  const hydrated = useSyncExternalStore(
-    subscribeNever,
-    () => true,
-    () => false,
-  );
+  // build (error boundaries don't run on the server).
+  const hydrated = useHydrated();
   // A prerendered skeleton has been on screen since the page loaded, so
   // holding it back would blank it.
   const [served] = useState(() => !hydrated);

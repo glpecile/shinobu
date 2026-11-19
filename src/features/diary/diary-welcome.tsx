@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
+import { useHydrated } from '@/lib/hydrated';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 import { useReducedMotion } from 'react-native-reanimated';
 // oxlint-disable-next-line no-restricted-imports -- one composed colour, see the fade.
@@ -20,8 +21,6 @@ import { dayKeyForInstant } from './merge';
 /** One log lands per beat until the evening is complete, which then holds. */
 const BEAT = 1800;
 
-const subscribeNever = () => () => {};
-
 /**
  * The diary before any tracker is connected: the real list (calendar
  * included), faded and inert, fed sample logs that land one by one as if
@@ -38,10 +37,9 @@ export function DiaryWelcome({ timeZone }: { timeZone: string }) {
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState(0);
   const done = step >= LIVE.length;
-  // The sample is dated by this device's clock and time zone, and the fades
-  // read a CSS variable. The web prerender has neither, so both mount after
-  // hydration (React error #418).
-  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
+  // The sample is dated by the device's clock and time zone, and the fades
+  // read a CSS variable, so both wait for hydration.
+  const hydrated = useHydrated();
 
   useEffect(() => {
     if (!focused || reduceMotion || done) return;
@@ -63,19 +61,21 @@ export function DiaryWelcome({ timeZone }: { timeZone: string }) {
         className="absolute inset-0 opacity-75"
         style={[{ pointerEvents: 'none' }, wide && { left: 'auto', width: '70%', maxWidth: 960 }]}
       >
-        {hydrated && <DiaryList
-          days={sampleDiaryDays(new Date(), timeZone, landed)}
-          failedProviders={[]}
-          format="ALL"
-          hasNextPage={false}
-          isFetchingNextPage={false}
-          onEndReached={() => {}}
-          onItemActions={() => {}}
-          onOpen={() => {}}
-          onRefresh={async () => {}}
-          onRetry={() => {}}
-          timeZone={timeZone}
-        />}
+        {hydrated && (
+          <DiaryList
+            days={sampleDiaryDays(new Date(), timeZone, landed)}
+            failedProviders={[]}
+            format="ALL"
+            hasNextPage={false}
+            isFetchingNextPage={false}
+            onEndReached={() => {}}
+            onItemActions={() => {}}
+            onOpen={() => {}}
+            onRefresh={async () => {}}
+            onRetry={() => {}}
+            timeZone={timeZone}
+          />
+        )}
         {wide && fade != null && (
           <LinearGradient
             colors={[fade, `${fade}00`]}
