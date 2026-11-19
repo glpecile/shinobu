@@ -142,6 +142,8 @@ interface SimklLibraryIndex {
 const entryItem = (entry: SimklLibraryEntry) => entry.item;
 
 // One index per snapshot: every single-item `select` on a details screen reads the same one.
+// Never mutate a cached snapshot in place: the index would go stale. A refetch or
+// `setQueryData` must give a new object.
 const indexes = new WeakMap<SimklLibrary, SimklLibraryIndex>();
 
 function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
