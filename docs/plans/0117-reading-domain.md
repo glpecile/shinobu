@@ -301,8 +301,17 @@ the two lists.
 
 - Continue Reading drops an AniList entry that a Currently Reading volume
   covers (`showBridgedOnce`).
-- The reading list gives a planned AniList entry its want-to-read volume's
-  item, so the two merge into one card that lists both sources.
+- The reading list merges a planned AniList entry with one want-to-read
+  volume into one card that lists both sources. A second volume of the work
+  keeps its own card, so every card has one item a removal acts on.
+- Removing a merged card asks (owner decision 2026-11-18): the remove sheet
+  lists Hardcover and AniList, both selected. Its confirm step, in the same
+  drawer, shows one line per provider ("Deletes the Planning entry.", "Leaves
+  Want to Read.") before anything goes. Every removal now takes this step.
+  Removing from the AniList entry's own screen removes only that entry.
+- The screens group cards against the whole AniList list, and only titled
+  volumes (B5's gate). A write never trusts that grouping: `enrichExternalIds`
+  asks the B5 bridge again for every book.
 - The diary gives a journal book the AniList id from the cached manga list,
   and a same-day row that holds both leads with the book. Whether AniList
   writes a list activity for a volume-only update, and with which progress,
