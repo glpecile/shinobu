@@ -301,6 +301,10 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   // Shares Continue Reading's manga list read and its cache entry.
   const { data: mangaList } = useQuery({
     ...currentMangaEntriesOptions(queryClient),
+    // A reader of the list the reads keep fresh, never a second refresher.
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     enabled: active.includes(Provider.AniList) && active.includes(Provider.Hardcover),
   });
 

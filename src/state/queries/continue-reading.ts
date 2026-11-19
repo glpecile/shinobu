@@ -60,6 +60,10 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   // entry here as on the reading list and the diary.
   const { data: list } = useQuery({
     ...currentMangaEntriesOptions(queryClient),
+    // A reader of the list the reads keep fresh, never a second refresher.
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     enabled: providers.includes(Provider.AniList) && providers.includes(Provider.Hardcover),
   });
   return showBridgedOnce(legs.flat(), list?.map((entry) => entry.item) ?? []).sort((a, b) =>
