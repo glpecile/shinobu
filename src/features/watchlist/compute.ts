@@ -134,7 +134,8 @@ function bridgeReadingInputs(
   const bridged = bridgeBooks(inputs.map((input) => input.item), mangaList);
   if (bridged.size === 0) return inputs;
   // One volume per entry, so each card keeps one item that a removal acts on.
-  // The lowest id, because Hardcover returns the list in no fixed order.
+  // The smallest item id as a string, because Hardcover returns the list in no
+  // fixed order.
   const joined = new Map<number, string>();
   for (const [itemId, grouping] of bridged) {
     const held = joined.get(grouping.id);
