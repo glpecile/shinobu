@@ -44,12 +44,12 @@ export function useProviderAccount(
   // Exhaustive by ProviderId, so a new provider has to declare where its
   // account comes from instead of silently rendering none.
   const remote: Record<ProviderId, ProviderAccount> = {
-    trakt: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar },
-    anilist: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined },
-    letterboxd: {},
-    simkl: { username: simkl.data?.username ?? undefined, avatar: simkl.data?.avatar },
-    serializd: {},
-    hardcover: { username: hardcover.data?.username, avatar: hardcover.data?.avatar },
+    [Provider.Trakt]: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar },
+    [Provider.AniList]: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined },
+    [Provider.Letterboxd]: {},
+    [Provider.Simkl]: { username: simkl.data?.username ?? undefined, avatar: simkl.data?.avatar },
+    [Provider.Serializd]: {},
+    [Provider.Hardcover]: { username: hardcover.data?.username, avatar: hardcover.data?.avatar },
   };
   const stored = getProviderSession(id)?.username;
   return {
