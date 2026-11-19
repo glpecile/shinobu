@@ -330,21 +330,20 @@ export function useSimklWatchedInfo(
 }
 
 /**
- * The connected Simkl account's username, for "connected as who" on Manage
+ * The connected Simkl account's username and avatar, for "connected as who" on Manage
  * Trackers — the same contract as `useTraktViewerQuery`: cached forever (a
  * handle can't change under a live session, and a settings-screen nicety must
  * not cost a request per visit) and disabled until Simkl is connected.
  * `/users/settings` is POST-shaped despite being a read ("historical reasons",
  * api.simkl.org) — `getUserSettings` owns that; nothing here assumes GET.
  */
-export function useSimklUsernameQuery(options: { enabled?: boolean } = {}) {
+export function useSimklUserSettingsQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: simklQueryKeys.userSettings(),
     queryFn: ({ signal }) => Effect.runPromise(getUserSettings(simklDeps()), { signal }),
     enabled: options.enabled,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,
-    select: (settings) => settings.username ?? undefined,
   });
 }
 

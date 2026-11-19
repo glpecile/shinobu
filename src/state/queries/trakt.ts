@@ -10,7 +10,7 @@ import type { TokenStore } from '@/lib/providers/token-store';
 import {
   getMediaImages,
   getShowWatchedProgress,
-  getViewerUsername,
+  getViewer,
   getWatchedMovies,
   getWatchedShows,
   searchMedia,
@@ -212,7 +212,7 @@ export function useTraktShowProgressQuery(params: {
 export function useTraktViewerQuery(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: traktQueryKeys.viewer(),
-    queryFn: ({ signal }) => Effect.runPromise(getViewerUsername(traktDeps()), { signal }),
+    queryFn: ({ signal }) => Effect.runPromise(getViewer(traktDeps()), { signal }),
     enabled: options.enabled,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: Number.POSITIVE_INFINITY,

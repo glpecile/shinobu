@@ -1,5 +1,5 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -24,7 +24,7 @@ import { PersonAvatar } from '@/features/person/person-avatar';
 import { creditRoleLine, type PersonCredit } from '@/features/person/person-credit-sheet';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
-import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import {
   WatchlistAddPicker,
   WatchlistRemovePicker,
@@ -369,39 +369,12 @@ export function CardActionsSheet({
                 }}
               />
             )}
-            {/* Opens the target picker in place of this sheet's rows (plan
-                0032 U3). The picker stays mounted through the write — a toast
-                can't carry a link, so a Trakt 420, an expired session or a
-                manual row lands there; only a clean report closes the sheet. */}
-            <View className="mb-3">
-              <AddToListCapsule item={item} onOpenPicker={() => setMode('list-add')}>
-                {watchlistVerb === 'add' && (
-                  <WatchlistMediaButton
-                    className="mb-0"
-                    item={item}
-                    key={`watchlist-${item.id}`}
-                    onOpenPicker={() => setMode('watchlist-add')}
-                  />
-                )}
-                {/* The removal, wherever the gather can evidence who holds the item
-                    (R35 — see the prop's docblock). Its picker stays mounted
-                    through the write for the same reason the add's does — and one
-                    more: the row it removes leaves the grid when the invalidation
-                    lands, so the picker is the only place its partial-failure
-                    report, its AniList refusal or its unknown-membership rows can
-                    still be read. */}
-                {watchlistVerb === 'remove' && removal != null && (
-                  <UnwatchlistMediaButton
-                    className="mb-0"
-                    entry={removal.entry}
-                    errors={removal.errors}
-                    incomplete={removal.incomplete}
-                    key={`unwatchlist-${item.id}`}
-                    onOpenPicker={() => setMode('watchlist-remove')}
-                  />
-                )}
-              </AddToListCapsule>
-            </View>
+            <WatchlistRow
+              item={item}
+              onOpenMode={setMode}
+              removal={removal}
+              verb={watchlistVerb}
+            />
             {item.type === 'TV' && seriesNext.status === 'unavailable' && (
               <Text className="text-muted font-sans text-sm mb-6">
                 Episodes are logged per season from the details page.
@@ -451,5 +424,77 @@ export function CardActionsSheet({
         </>
       )}
     </Sheet>
+  );
+}
+
+/**
+ * The sheet's watchlist verb with Add to list beside it. Each picker opens in
+ * place of the sheet's rows (plan 0032 U3) and stays mounted through the
+ * write: a toast can't carry a link, so a Trakt 420, an expired session or a
+ * manual row lands there; only a clean report closes the sheet.
+ */
+function WatchlistRow({
+  item,
+  verb,
+  removal,
+  onOpenMode,
+}: {
+  item: NormalizedMediaItem;
+  verb: 'add' | 'remove' | null;
+  removal: CardActionsSheetProps['watchlistRemoval'];
+  onOpenMode: (mode: 'watchlist-add' | 'watchlist-remove' | 'list-add') => void;
+}) {
+  let main: ReactNode = null;
+  switch (verb) {
+    case 'add':
+      return <WatchlistAddRow item={item} onOpenMode={onOpenMode} />;
+    case 'remove':
+      // The removal, wherever the gather can evidence who holds the item (R35,
+      // see `watchlistRemoval`). The row it removes leaves the grid when the
+      // invalidation lands, so the picker is the only place its partial-failure
+      // report, its AniList refusal or its unknown-membership rows can still be read.
+      if (removal != null) {
+        main = (
+          <UnwatchlistMediaButton
+            className="mb-0"
+            entry={removal.entry}
+            errors={removal.errors}
+            incomplete={removal.incomplete}
+            key={`unwatchlist-${item.id}`}
+            onOpenPicker={() => onOpenMode('watchlist-remove')}
+          />
+        );
+      }
+      break;
+    case null:
+      break;
+  }
+  return (
+    <AddToListCapsule className="mb-3" item={item} onOpenPicker={() => onOpenMode('list-add')}>
+      {main}
+    </AddToListCapsule>
+  );
+}
+
+/** The add verb's row. Only it reads the CTA gate, so a removal row costs no gate reads. */
+function WatchlistAddRow({
+  item,
+  onOpenMode,
+}: {
+  item: NormalizedMediaItem;
+  onOpenMode: (mode: 'watchlist-add' | 'list-add') => void;
+}) {
+  const ctaShown = useWatchlistCtaShown(item);
+  return (
+    <AddToListCapsule className="mb-3" item={item} onOpenPicker={() => onOpenMode('list-add')}>
+      {ctaShown ? (
+        <WatchlistMediaButton
+          className="mb-0"
+          item={item}
+          key={`watchlist-${item.id}`}
+          onOpenPicker={() => onOpenMode('watchlist-add')}
+        />
+      ) : null}
+    </AddToListCapsule>
   );
 }

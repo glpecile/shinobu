@@ -18,16 +18,3 @@ const MEDIA_TYPE_LABEL: Record<MediaType, string> = {
 export function capabilityLabels(id: ProviderId): string[] {
   return PROVIDERS[id].mediaTypes.map((type) => MEDIA_TYPE_LABEL[type]);
 }
-
-/**
- * A provider's connection state in one line, for surfaces with room for it
- * (the sheet). `username` is absent while the read that resolves it is in
- * flight, or if it failed — the line degrades to "Connected", never to a gap.
- */
-export function statusLine(
-  connected: boolean,
-  username: string | undefined,
-): string {
-  if (!connected) return 'Not connected';
-  return username != null ? `Connected as ${username}` : 'Connected';
-}

@@ -5,7 +5,7 @@ import { ListsPage } from '@/features/lists/lists-page';
 import { hardcoverListsUrl } from '@/lib/providers/hardcover/lists';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
-import { useHardcoverUsernameQuery } from '@/state/queries/hardcover';
+import { useHardcoverViewerQuery } from '@/state/queries/hardcover';
 import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session';
 
 export default function HardcoverListScreen() {
@@ -14,7 +14,7 @@ export default function HardcoverListScreen() {
   const granted = useHardcoverListsGranted();
   const valid = typeof id === 'string' && /^\d+$/.test(id);
   const ready = valid && connected && granted;
-  const username = useHardcoverUsernameQuery({ enabled: connected && granted }).data;
+  const username = useHardcoverViewerQuery({ enabled: connected && granted }).data?.username;
   const shareHref = valid ? routes.hardcoverList(id) : undefined;
   return (
     <ListsPage

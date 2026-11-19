@@ -4,7 +4,7 @@
 
 <h1 align="center">Shinobu (忍)</h1>
 
-<p align="center">One app for all your media trackers. Log a movie, show, anime, or manga once, and Shinobu writes it to every tracker you've connected.</p>
+<p align="center">One app for all your media trackers. Log a movie, show, anime, manga, or book once, and Shinobu writes it to every tracker you've connected.</p>
 
 <p align="center">
   <img src="./docs/images/screenshot-home.png" alt="Shinobu home with classic film and anime posters, the &quot;One log. Every tracker.&quot; headline, a connect button, and the expanded web sidebar" />
@@ -23,9 +23,10 @@
 
 ## What it does
 
-Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any of them, each through its own sign-in. There is no Shinobu account.
+Shinobu works with Simkl, Trakt, AniList, Letterboxd, Serializd, and Hardcover. Connect any of them, each through its own sign-in. There is no Shinobu account.
 
 - **Log once.** Mark something watched and Shinobu writes it to every connected tracker that handles that kind of media, in parallel. If one write fails, Shinobu tells you which tracker failed.
+- **Books and manga.** Books go to Hardcover, counted in pages. Manga goes to AniList. When a Hardcover book is a volume of an AniList manga or light novel, a log goes to both, and AniList counts it in volumes. Continue Reading on the home screen shows what you are reading on both.
 - **One feed.** Your history from every connected tracker merges into a single timeline. If one tracker is down, you lose its row, not the whole screen.
 - **One diary.** Every watch and read log from every tracker sits in one list, newest first. When two trackers log the same title on the same day, the diary shows one row.
 - **One watchlist.** The watchlist page gathers every tracker's watchlist into one poster wall that you can filter by tracker. When you add a title, the picker shows which trackers already have it.
@@ -33,7 +34,7 @@ Shinobu works with Simkl, Trakt, AniList, Letterboxd, and Serializd. Connect any
 - **Up Next in your timezone.** An episode counts as watchable once it has aired where you are, not where the show airs.
 - **Local release notifications.** iOS and Android schedule reminders for upcoming episodes on the device. There is no push server.
 - **A link when a write can't happen.** If a tracker rejects a write, or can't take one on your platform, you get a link to that title's page on the tracker so you can log it there.
-- **Detail pages.** Metadata comes from TMDB first, with Trakt and AniList as fallbacks. The header sets the title beside the poster, and wide screens fit the overview there too. Pages list cast, crew, seasons, and related titles. AniList titles also show characters, staff, recommendations, and tags. A Variants row links to the same title on TMDB and the trackers, and pressing a title copies it.
+- **Detail pages.** Metadata comes from TMDB first, with Trakt and AniList as fallbacks. Books come from Hardcover, with their authors, series, and the lists that include them. The header sets the title beside the poster, and wide screens fit the overview there too. Pages list cast, crew, seasons, and related titles. AniList titles also show characters, staff, recommendations, and tags. A Variants row links to the same title on TMDB and the trackers, and pressing a title copies it.
 - **Episode pages.** Swipe between episodes. Marking one watched opens the next.
 - **Person and studio pages.** A person's or studio's work sits on one timeline, newest first, filtered by format and role.
 - **Anime seasons.** Browse each season's anime from AniList, split into series and films.

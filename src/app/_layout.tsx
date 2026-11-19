@@ -12,6 +12,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AppShell } from "@/components/app-shell";
 import { BootSplash, dismissBootSplash } from "@/components/boot-splash";
 import { ErrorFallback } from "@/components/error-fallback";
+import { reloadOnStaleBundle } from "@/lib/stale-bundle";
 import { endLaunchReplay } from "@/lib/http/client";
 import { fonts } from "@/lib/fonts";
 import { LetterboxdWriteBridge } from "@/components/letterboxd-write-bridge";
@@ -115,7 +116,7 @@ export default function Layout() {
         persister={persister}
       >
       {appReady && (
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <ErrorBoundary FallbackComponent={ErrorFallback} onError={reloadOnStaleBundle}>
         <KeyboardProvider>
           <SheetProvider>
            <LightboxProvider>

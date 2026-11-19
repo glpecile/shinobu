@@ -394,6 +394,7 @@ interface TmdbGenre {
 interface TmdbCompanyRef {
   id: number;
   name?: string | null;
+  logo_path?: string | null;
 }
 
 interface TmdbPersonRef {
@@ -649,11 +650,15 @@ function normalizeCompanies(
 ): NormalizedStudio[] {
   return (companies ?? [])
     .filter((company) => company.name != null && company.name !== '')
-    .map((company) => ({
-      id: `tmdb-studio-${company.id}`,
-      name: company.name ?? '',
-      tmdbId: company.id,
-    }));
+    .map((company) => {
+      const logo = tmdbImageUrl(company.logo_path, 'w185');
+      return {
+        id: `tmdb-studio-${company.id}`,
+        name: company.name ?? '',
+        tmdbId: company.id,
+        ...(logo !== '' ? { logo } : {}),
+      };
+    });
 }
 
 /** Catalogue-only fields shared by movie and tv detail responses. */

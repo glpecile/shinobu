@@ -56,10 +56,11 @@ export const MEDIA_FIELDS = `${CARD_FIELDS}
   genres
 `;
 
-/** The authenticated account: its id, and the handle to show for it. */
+/** The authenticated account: its id, and the handle and avatar to show for it. */
 export interface AniListViewer {
   id: number;
   name: string;
+  avatar?: { medium?: string | null } | null;
 }
 
 /**
@@ -76,7 +77,7 @@ export function getViewer(
 ): Effect.Effect<AniListViewer, ProviderError> {
   return anilistAuthedRequest<{ Viewer: AniListViewer }>(
     deps,
-    `query { Viewer { id name } }`,
+    `query { Viewer { id name avatar { medium } } }`,
   ).pipe(Effect.map((data) => data.Viewer));
 }
 

@@ -14,6 +14,7 @@ import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SmallPoster } from '@/components/small-poster';
 import { Tooltip } from '@/components/tooltip';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
+import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { usePushRoute } from '@/lib/navigation';
 import { letterboxdListsUrl } from '@/lib/providers/letterboxd/lists';
@@ -246,36 +247,36 @@ export function AddToListPicker({ item, onClose, onBack = onClose }: { item: Nor
 
 /**
  * A title's main action with "Add to list" capsuled beside it, as `ShareButton.Capsule` lays out Share.
+ * Without a main action (`children` null), "Add to list" takes the full width with its label.
  * Renders only `children` when no connected provider keeps lists for the item.
+ * `className` is layout for the row; the main action passes no margin of its own.
  */
-export function AddToListCapsule({ item, children, onOpenPicker }: { item: NormalizedMediaItem; children: ReactNode; onOpenPicker?: () => void }) {
+export function AddToListCapsule({ item, children, onOpenPicker, className }: { item: NormalizedMediaItem; children: ReactNode; onOpenPicker?: () => void; className?: string }) {
   const provider = listProviderFor(item, useConnectedProviders());
   const [open, setOpen] = useState(false);
   // Remounts the picker per open, so it starts on the lists, not the last confirmation.
   const [session, setSession] = useState(0);
   const username = provider == null ? null : listUsername(provider);
-  if (provider == null || username == null) return children;
+  if (provider == null || username == null) return children == null ? null : <View className={className}>{children}</View>;
+  function openPicker() {
+    haptics.selection();
+    if (onOpenPicker != null) { onOpenPicker(); return; }
+    setSession(session + 1);
+    setOpen(true);
+  }
   return <>
-    {/* items-start: the main action carries its own bottom margin. */}
-    <View className="flex-row items-start gap-2">
-      <View className="flex-1">{children}</View>
-      <Button.Capsule>
-        <Tooltip label="Add to list">
-          <Button
-            icon={<Button.Icon name="add" />}
-            iconOnly
-            label="Add to list"
-            onPress={() => {
-              haptics.selection();
-              if (onOpenPicker != null) { onOpenPicker(); return; }
-              setSession(session + 1);
-              setOpen(true);
-            }}
-            variant="ghost"
-          />
-        </Tooltip>
-      </Button.Capsule>
-    </View>
+    {children == null
+      ? <View className={className}>
+          <Button icon={<Button.Icon name="add" />} label="Add to list" onPress={openPicker} variant="quiet" />
+        </View>
+      : <View className={cn('flex-row items-start gap-2', className)}>
+          <View className="flex-1">{children}</View>
+          <Button.Capsule>
+            <Tooltip label="Add to list">
+              <Button icon={<Button.Icon name="add" />} iconOnly label="Add to list" onPress={openPicker} variant="ghost" />
+            </Tooltip>
+          </Button.Capsule>
+        </View>}
     {onOpenPicker == null && <Sheet onClose={() => setOpen(false)} open={open}>
       {session > 0 && <AddToListPicker item={item} key={session} onClose={() => setOpen(false)} />}
     </Sheet>}

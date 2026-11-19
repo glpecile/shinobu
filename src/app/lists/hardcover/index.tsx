@@ -5,7 +5,7 @@ import { listsTitle } from '@/features/lists/lists-row';
 import { ProviderListsPager } from '@/features/lists/provider-lists-pager';
 import { hardcoverListsUrl } from '@/lib/providers/hardcover/lists';
 import { Provider } from '@/lib/providers/types';
-import { useHardcoverUsernameQuery } from '@/state/queries/hardcover';
+import { useHardcoverViewerQuery } from '@/state/queries/hardcover';
 import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session';
 
 export default function HardcoverListsScreen() {
@@ -14,7 +14,7 @@ export default function HardcoverListsScreen() {
   const connected = useConnectedProviders().includes(Provider.Hardcover);
   const granted = useHardcoverListsGranted();
   const validKind = kind === 'created' || kind === 'liked';
-  const username = useHardcoverUsernameQuery({ enabled: connected && granted }).data;
+  const username = useHardcoverViewerQuery({ enabled: connected && granted }).data?.username;
   return (
     <ListsPage
       contentKey={Provider.Hardcover} index provider={Provider.Hardcover} title={validKind ? listsTitle(kind) : 'Lists'}

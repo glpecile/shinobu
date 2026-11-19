@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { ProviderIcon } from '@/components/provider-icon';
 import { SettingsRail } from '@/features/settings/settings-rail';
-import { useProviderUsername } from '@/features/trackers/use-provider-username';
+import { useProviderAccount } from '@/features/trackers/use-provider-account';
 import { useThemeColor } from '@/lib/theme-color';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
@@ -29,7 +29,7 @@ export function ProviderCard({
   reconnectReason?: string;
   onOpenSheet: () => void;
 }) {
-  const username = useProviderUsername(id, connected);
+  const { username } = useProviderAccount(id, connected);
   const { label } = PROVIDERS[id];
   const muted = useThemeColor('--color-muted');
 

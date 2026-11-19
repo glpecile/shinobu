@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/skeleton';
 import { ListsHeader } from '@/features/lists/list-header';
 import { NewListScreen, type ListProvider } from '@/features/lists/new-list-form';
 import { Provider } from '@/lib/providers/types';
-import { useHardcoverUsernameQuery } from '@/state/queries/hardcover';
+import { useHardcoverViewerQuery } from '@/state/queries/hardcover';
 import { useResolvedMediaItem } from '@/state/queries/resolve-item';
 import { useConnectedProviders, useHardcoverListsGranted } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
@@ -40,7 +40,7 @@ export default function NewListRoute() {
   if (serializd != null) providers.push({ provider: Provider.Serializd, username: serializd });
   // Creating needs the list scopes; the username only builds the recovery link.
   const hardcover = useHardcoverListsGranted() && connected.includes(Provider.Hardcover);
-  const hardcoverUsername = useHardcoverUsernameQuery({ enabled: hardcover }).data ?? '';
+  const hardcoverUsername = useHardcoverViewerQuery({ enabled: hardcover }).data?.username ?? '';
   if (hardcover) providers.push({ provider: Provider.Hardcover, username: hardcoverUsername });
   const requested = params.provider === Provider.Letterboxd || params.provider === Provider.Serializd || params.provider === Provider.Hardcover ? params.provider : null;
   if (typeof params.item !== 'string' || params.item === '') return <NewListScreen initialProvider={requested} providers={providers} />;
