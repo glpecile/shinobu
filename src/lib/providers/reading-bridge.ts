@@ -199,9 +199,9 @@ function foldedOf(entry: NormalizedMediaItem): FoldedCandidate | null {
 
 /**
  * Each Hardcover book in `books` that is a volume of an AniList entry in
- * `entries` (plan 0117 B6), keyed by the book's item id and carrying the
- * entry's id and its volume. It compares only what the two lists loaded, so
- * it costs no request.
+ * `entries` (plan 0117 B6), keyed by the book's item id and carrying that
+ * entry as `bridgedAniList`. It compares only what the two lists loaded, so
+ * it costs no request, and it groups cards only: no write reads it.
  */
 export function bridgeBooks(
   books: readonly NormalizedMediaItem[],
@@ -212,20 +212,17 @@ export function bridgeBooks(
   if (folded.length === 0) return bridged;
   for (const item of books) {
     const book = parsedBookOf(item);
-    const match = book == null || item.externalIds.anilist != null ? null : matchFolded(book, folded);
-    if (match == null) continue;
-    bridged.set(item.id, {
-      ...item,
-      externalIds: { ...item.externalIds, anilist: match.anilistId },
-      ...(match.volume != null ? { anilistVolume: match.volume } : {}),
-    });
+    const match = book == null ? null : matchFolded(book, folded);
+    const entry = match == null ? undefined : folded.find(({ candidate }) => candidate.id === match.anilistId);
+    if (match == null || entry == null) continue;
+    bridged.set(item.id, { ...item, bridgedAniList: { id: match.anilistId, title: entry.candidate.titles[0] } });
   }
   return bridged;
 }
 
 /**
  * One card per bridged work (plan 0117 B6): the Hardcover volume, which holds
- * the finer progress, carries the AniList id, and the entry it covers drops
+ * the finer progress, carries its `bridgedAniList`, and the entry it covers drops
  * out of `items`. `entries` is the whole AniList list, so a book matches the
  * same entry on every screen. The card keeps the newer of the two updates,
  * so a stale volume doesn't bury a work read today.
@@ -236,7 +233,7 @@ export function showBridgedOnce(
 ): NormalizedMediaItem[] {
   const bridged = bridgeBooks(items, entries);
   if (bridged.size === 0) return [...items];
-  const covering = new Map([...bridged.values()].map((book) => [book.externalIds.anilist, book]));
+  const covering = new Map([...bridged.values()].map((book) => [book.bridgedAniList?.id, book]));
   const latest = new Map<number, string>();
   for (const item of items) {
     const id = item.externalIds.anilist;
@@ -246,7 +243,7 @@ export function showBridgedOnce(
     if (item.type === 'MANGA' && covering.has(item.externalIds.anilist)) return [];
     const book = bridged.get(item.id);
     if (book == null) return [item];
-    const entryUpdate = latest.get(book.externalIds.anilist!);
+    const entryUpdate = book.bridgedAniList == null ? undefined : latest.get(book.bridgedAniList.id);
     return [entryUpdate != null && entryUpdate > book.lastUpdated ? { ...book, lastUpdated: entryUpdate } : book];
   });
 }

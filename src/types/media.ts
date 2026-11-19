@@ -134,6 +134,13 @@ export interface NormalizedMediaItem {
    * count, and a Hardcover book's series.
    */
   readingCredits?: { people: string[]; format?: string; volumes?: number; series?: string };
+  /**
+   * A screen's grouping of a Hardcover book under the AniList entry it is a
+   * volume of (plan 0117 B6). Display only: a write never reads it. A log
+   * asks the B5 bridge, and a removal takes the entry from the card's AniList
+   * source.
+   */
+  bridgedAniList?: { id: number; title: string };
   /** ISO 8601 instant (with offset/Z) — never a bare date string. */
   lastUpdated: string;
   externalIds: {

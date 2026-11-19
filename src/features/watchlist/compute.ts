@@ -1,6 +1,6 @@
 import { PROVIDERS } from '@/lib/providers/registry';
 import { mediaSortValue } from '@/lib/media-sort';
-import { anilistMediaKind, animeEffectiveMovieTvType } from '@/lib/providers/routing';
+import { animeEffectiveMovieTvType } from '@/lib/providers/routing';
 import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -101,10 +101,9 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
  * Hardcover volume the reading bridge matched to it (plan 0117 B6). Only the
  * merge uses it, so it never makes a volume read as the series elsewhere.
  */
-function readingWorkKey(item: NormalizedMediaItem): string[] {
-  return anilistMediaKind(item) === 'MANGA' && item.externalIds.anilist != null
-    ? [`anilist-manga:${item.externalIds.anilist}`]
-    : [];
+function readingWorkKey(item: NormalizedMediaItem): string | null {
+  const id = item.type === 'BOOK' ? item.bridgedAniList?.id : item.type === 'MANGA' ? item.externalIds.anilist : undefined;
+  return id == null ? null : `anilist-manga:${id}`;
 }
 
 /**
@@ -120,7 +119,7 @@ function bridgeReadingInputs(inputs: readonly WatchlistInput[]): readonly Watchl
   const joined = new Set<number>();
   return inputs.map((input) => {
     const book = bridged.get(input.item.id);
-    const id = book?.externalIds.anilist;
+    const id = book?.bridgedAniList?.id;
     if (book == null || id == null || joined.has(id)) return input;
     joined.add(id);
     return { ...input, item: book };
@@ -185,7 +184,8 @@ export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEn
   const byKey = new Map<string, MergedEntry>();
 
   for (const input of bridgeReadingInputs(inputs)) {
-    const keys = [...watchlistMergeKeys(input.item), ...readingWorkKey(input.item)];
+    const work = readingWorkKey(input.item);
+    const keys = work == null ? watchlistMergeKeys(input.item) : [...watchlistMergeKeys(input.item), work];
     // First key that already names an entry wins — the keys are generated in
     // R27's precedence order, so a TMDB match is preferred over an IMDb one and
     // an IMDb match over a title+year one.

@@ -119,7 +119,7 @@ function card(overrides: Partial<NormalizedMediaItem> & Pick<NormalizedMediaItem
 }
 
 describe('showBridgedOnce', () => {
-  test('the Hardcover volume carries its AniList entry, which drops out; an entry with no volume stays', () => {
+  test('the Hardcover volume carries its AniList entry for grouping, which drops out; an entry with no volume stays', () => {
     const entry = card({
       id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
       readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
@@ -133,7 +133,7 @@ describe('showBridgedOnce', () => {
       externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN', 'VOFAN'] },
     });
     expect(showBridgedOnce([entry, book, other], [entry, other])).toEqual([
-      { ...book, externalIds: { hardcover: 61, anilist: 143703 }, anilistVolume: 1 },
+      { ...book, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } },
       other,
     ]);
   });

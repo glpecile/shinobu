@@ -95,7 +95,8 @@ describe('computeWatchlist', () => {
       sourceIds: ['anilist-143703', 'hardcover-61'],
       anilistStatus: 'PLANNING',
     });
-    expect(entry.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+    // Grouping only: the book's own ids never gain the AniList one.
+    expect(entry.item).toMatchObject({ externalIds: { hardcover: 61 }, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } });
     expect(own).toMatchObject({ id: 'hardcover-62', sources: ['hardcover'] });
   });
 

@@ -434,7 +434,7 @@ describe('groupDiaryEntries — a bridged Hardcover volume (plan 0117 B6)', () =
         item: item({ id: 'anilist-143703', type: 'MANGA', externalIds: { anilist: 143703 } }),
       }),
       entry('hardcover', 'read', '2026-11-17T12:05:00Z', {
-        item: item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61, anilist: 143703 }, anilistVolume: 1 }),
+        item: item({ id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 }, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } }),
         readingEvent: 'finished',
       }),
     ], 'UTC');

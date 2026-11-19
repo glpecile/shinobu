@@ -307,8 +307,10 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
   if (ids.mal != null) keys.push(`mal:${ids.mal}`);
   if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
-  // A book never meets a film or a manga by title (KTD-6).
+  // A book never meets a film or a manga by title (KTD-6), only through the
+  // AniList entry the reading bridge grouped it under (plan 0117 B6).
   if (ids.hardcover != null) keys.push(`hardcover:${ids.hardcover}`);
+  if (item.bridgedAniList != null) keys.push(`anilist:${item.bridgedAniList.id}`);
   if (keys.length === 0) keys.push(titleYearKey(item));
   return keys;
 }
