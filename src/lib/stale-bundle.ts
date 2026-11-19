@@ -11,12 +11,15 @@ export function isStaleBundleError(error: unknown): boolean {
 
 const RELOADED_AT_KEY = 'shinobu.stale-bundle-reload';
 // A chunk still missing after a fresh page load is a broken deploy, not a
-// stale tab: the second failure inside this window shows the fallback.
-const LOOP_GUARD_MS = 10_000;
+// stale tab: the second failure inside this window shows the fallback. The
+// window covers a slow reload and boot; a fresh bundle can't go stale this fast.
+const LOOP_GUARD_MS = 60_000;
 
 /** The root error boundary's `onError`: reloads the page once for a stale chunk. */
 export function reloadOnStaleBundle(error: unknown): void {
-  if (!isStaleBundleError(error)) return;
+  // Offline, the chunk failed on the network: a reload would show the
+  // browser's offline page and drop the app.
+  if (!isStaleBundleError(error) || !navigator.onLine) return;
   const last = Number(window.sessionStorage.getItem(RELOADED_AT_KEY) ?? 0);
   if (Date.now() - last < LOOP_GUARD_MS) return;
   window.sessionStorage.setItem(RELOADED_AT_KEY, String(Date.now()));

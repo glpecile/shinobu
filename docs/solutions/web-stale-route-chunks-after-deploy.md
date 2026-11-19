@@ -19,5 +19,11 @@ must-revalidate`, so a real reload gets the current build.
 
 `reloadOnStaleBundle` (`src/lib/stale-bundle.ts`) is the root
 `ErrorBoundary`'s `onError`. On an `AsyncRequireError` it reloads the page
-once. A second failure within 10 seconds is a broken deploy, not a stale tab,
+once. A second failure within 60 seconds is a broken deploy, not a stale tab,
 so the fallback shows and its button reloads instead of resetting the boundary.
+The window is long because a slow phone can take more than 10 seconds to
+reload, boot and request the chunk again.
+
+Expo throws the same error when the network drops. Offline
+(`navigator.onLine` is false), the boundary does not reload, because the
+browser would replace the app with its offline page.
