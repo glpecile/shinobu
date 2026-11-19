@@ -6,6 +6,7 @@ import {
   watchlistQueryKeys,
   type WatchlistInputs,
 } from '@/state/queries/watchlist';
+import { cachedMangaList } from '@/state/queries/anilist';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -50,5 +51,5 @@ export function useCachedWatchlistRemoval(
   );
 
   if (!enabled || item == null || data == null) return null;
-  return findWatchlistRemoval(data, item);
+  return findWatchlistRemoval(data, item, cachedMangaList(queryClient));
 }

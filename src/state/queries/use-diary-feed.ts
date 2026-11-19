@@ -8,7 +8,6 @@ import {
 import * as Effect from 'effect/Effect';
 
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
-import type { AniListMangaEntry } from '@/lib/providers/anilist/normalize';
 import { getReadingJournal } from '@/lib/providers/hardcover/reads';
 import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
@@ -26,7 +25,7 @@ import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { anilistDeps, anilistQueryKeys, currentMangaEntriesOptions } from './anilist';
+import { anilistDeps, anilistQueryKeys, useCachedMangaList } from './anilist';
 import { hardcoverDeps, hardcoverViewerQuery } from './hardcover';
 import {
   diaryQueryKeys,
@@ -138,10 +137,9 @@ async function showTmdbIds(
  */
 function withBridgedBooks(
   entries: NormalizedDiaryEntry[],
-  list: readonly AniListMangaEntry[] | undefined,
+  list: readonly NormalizedMediaItem[],
 ): NormalizedDiaryEntry[] {
-  if (list == null) return entries;
-  const bridged = bridgeBooks(entries.map((entry) => entry.item), list.map((entry) => entry.item));
+  const bridged = bridgeBooks(entries.map((entry) => entry.item), list);
   return bridged.size === 0 ? entries : entries.map((entry) => ({ ...entry, item: bridged.get(entry.item.id) ?? entry.item }));
 }
 
@@ -299,14 +297,8 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
   });
 
   // Shares Continue Reading's manga list read and its cache entry.
-  const { data: mangaList } = useQuery({
-    ...currentMangaEntriesOptions(queryClient),
-    // A reader of the list the reads keep fresh, never a second refresher.
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    enabled: active.includes(Provider.AniList) && active.includes(Provider.Hardcover),
-  });
+  const mangaList = useCachedMangaList(active.includes(Provider.AniList) && active.includes(Provider.Hardcover));
+
 
   return {
     days: groupDiaryEntries(withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList), timeZone),

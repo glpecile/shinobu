@@ -88,7 +88,7 @@ describe('computeWatchlist', () => {
         externalIds: { hardcover: 62 }, readingCredits: { people: ['NISIOISIN'] },
       }),
     };
-    const [entry, own] = computeWatchlist([planned, volume, second]);
+    const [entry, own] = computeWatchlist([planned, volume, second], [planned.item]);
     expect(entry).toMatchObject({
       id: 'hardcover-61',
       sources: ['anilist', 'hardcover'],

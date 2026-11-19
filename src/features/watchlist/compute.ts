@@ -24,7 +24,9 @@ import type { WatchlistEntry, WatchlistInput } from './types';
 const PROVIDER_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 
 /**
- * Which provider's copy of a merged item wins. AniList first because it holds
+ * Which provider's copy of a merged item wins. Hardcover leads only because
+ * a bridged volume is the one Hardcover row that merges, and it holds the
+ * finer reading progress (plan 0117 B6). Otherwise AniList first because it holds
  * the user's anime state and airing schedule (the same rationale
  * `dedupeByTmdb` uses), then Simkl (plan 0034 KTD-10/R10 — the calendar/
  * yourShows precedence carries over here rather than inventing a second
@@ -102,7 +104,19 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
  * merge uses it, so it never makes a volume read as the series elsewhere.
  */
 function readingWorkKey(item: NormalizedMediaItem): string | null {
-  const id = item.type === 'BOOK' ? item.bridgedAniList?.id : item.type === 'MANGA' ? item.externalIds.anilist : undefined;
+  let id: number | undefined;
+  switch (item.type) {
+    case 'BOOK':
+      id = item.bridgedAniList?.id;
+      break;
+    case 'MANGA':
+      id = item.externalIds.anilist;
+      break;
+    case 'ANIME':
+    case 'MOVIE':
+    case 'TV':
+      break;
+  }
   return id == null ? null : `anilist-manga:${id}`;
 }
 
@@ -111,9 +125,13 @@ function readingWorkKey(item: NormalizedMediaItem): string | null {
  * is a volume of a planned AniList entry carries the entry's id, so the two
  * meet on its `anilist-manga` key.
  */
-function bridgeReadingInputs(inputs: readonly WatchlistInput[]): readonly WatchlistInput[] {
-  const items = inputs.map((input) => input.item);
-  const bridged = bridgeBooks(items, items);
+function bridgeReadingInputs(
+  inputs: readonly WatchlistInput[],
+  mangaList: readonly NormalizedMediaItem[],
+): readonly WatchlistInput[] {
+  // The whole AniList list, as Continue Reading and the diary use, so a book
+  // groups under the same entry on every screen.
+  const bridged = bridgeBooks(inputs.map((input) => input.item), mangaList);
   if (bridged.size === 0) return inputs;
   // One volume per entry: each card keeps one item that a removal acts on.
   const joined = new Set<number>();
@@ -179,11 +197,14 @@ function byAddedAtDesc(a: WatchlistEntry, b: WatchlistEntry): number {
   return b.addedAt.localeCompare(a.addedAt);
 }
 
-export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEntry[] {
+export function computeWatchlist(
+  inputs: readonly WatchlistInput[],
+  mangaList: readonly NormalizedMediaItem[] = [],
+): WatchlistEntry[] {
   const merged: MergedEntry[] = [];
   const byKey = new Map<string, MergedEntry>();
 
-  for (const input of bridgeReadingInputs(inputs)) {
+  for (const input of bridgeReadingInputs(inputs, mangaList)) {
     const work = readingWorkKey(input.item);
     const keys = work == null ? watchlistMergeKeys(input.item) : [...watchlistMergeKeys(input.item), work];
     // First key that already names an entry wins — the keys are generated in

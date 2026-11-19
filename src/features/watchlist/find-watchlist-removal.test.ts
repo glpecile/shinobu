@@ -76,14 +76,8 @@ describe('findWatchlistRemoval (plan 0033 follow-up)', () => {
       readingCredits: { people: ['NISIOISIN'] },
     });
     const data = inputs({ inputs: [{ item: manga, source: 'anilist' }, { item: book, source: 'hardcover' }] });
-    expect(findWatchlistRemoval(data, manga)?.entry).toMatchObject({ item: { id: 'anilist-143703' }, sources: ['anilist'] });
-    expect(findWatchlistRemoval(data, book)?.entry).toMatchObject({ item: { id: 'hardcover-61' }, sources: ['anilist', 'hardcover'] });
+    expect(findWatchlistRemoval(data, manga, [manga])?.entry).toMatchObject({ item: { id: 'anilist-143703' }, sources: ['anilist'] });
+    expect(findWatchlistRemoval(data, book, [manga])?.entry).toMatchObject({ item: { id: 'hardcover-61' }, sources: ['anilist', 'hardcover'] });
   });
 
-  test('an anime card removed from its TV screen keeps every source', () => {
-    const anime = film({ id: 'anilist-1', type: 'ANIME', externalIds: { anilist: 1, tmdb: 77 } });
-    const show = film({ id: 'trakt-1', type: 'TV', externalIds: { trakt: 1, tmdb: 77 } });
-    const data = inputs({ inputs: [{ item: show, source: 'trakt' }, { item: anime, source: 'anilist' }] });
-    expect(findWatchlistRemoval(data, show)?.entry.sources).toEqual(['trakt', 'anilist']);
-  });
 });

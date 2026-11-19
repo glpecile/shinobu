@@ -258,6 +258,33 @@ export function currentMangaEntriesOptions(queryClient: QueryClient) {
   };
 }
 
+const NO_MANGA: readonly NormalizedMediaItem[] = [];
+
+/**
+ * The whole cached manga list, for the reading bridge's grouping (plan 0117
+ * B6). Cache only: it never fetches, so a removal and the grid it came from
+ * group against the same list.
+ */
+export function cachedMangaList(queryClient: QueryClient): readonly NormalizedMediaItem[] {
+  return queryClient.getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries())?.map((entry) => entry.item) ?? NO_MANGA;
+}
+
+/**
+ * The manga list as the reading bridge reads it, for a hook (plan 0117 B6).
+ * `staleTime: 'static'`: this observer never refreshes the list. The reads
+ * that own it (Continue Reading's leg, the watchlist gather) keep it fresh.
+ */
+export function useCachedMangaList(enabled: boolean): readonly NormalizedMediaItem[] {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    ...currentMangaEntriesOptions(queryClient),
+    staleTime: 'static',
+    enabled,
+    select: (entries) => entries.map((entry) => entry.item),
+  });
+  return data ?? NO_MANGA;
+}
+
 /**
  * The reading-list slice: PLANNING manga only. A manga being read or reread
  * is on Continue Reading instead.

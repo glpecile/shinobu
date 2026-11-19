@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient, useSuspenseQueries, type QueryKey } from '@tanstack/react-query';
+import { useQueryClient, useSuspenseQueries, type QueryKey } from '@tanstack/react-query';
 
 import { showBridgedOnce } from '@/lib/providers/reading-bridge';
 import { providersForFeed } from '@/lib/providers/routing';
@@ -6,7 +6,7 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistQueryKeys, currentMangaEntriesOptions, fetchReadingManga } from './anilist';
+import { anilistQueryKeys, fetchReadingManga, useCachedMangaList } from './anilist';
 import { fetchHardcoverReading, hardcoverQueryKeys } from './hardcover';
 import { settle, type ProviderContribution } from './settle';
 
@@ -58,15 +58,8 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   });
   // The whole list the AniList leg already read, so a book matches the same
   // entry here as on the reading list and the diary.
-  const { data: list } = useQuery({
-    ...currentMangaEntriesOptions(queryClient),
-    // A reader of the list the reads keep fresh, never a second refresher.
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    enabled: providers.includes(Provider.AniList) && providers.includes(Provider.Hardcover),
-  });
-  return showBridgedOnce(legs.flat(), list?.map((entry) => entry.item) ?? []).sort((a, b) =>
+  const list = useCachedMangaList(providers.includes(Provider.AniList) && providers.includes(Provider.Hardcover));
+  return showBridgedOnce(legs.flat(), list).sort((a, b) =>
     b.lastUpdated.localeCompare(a.lastUpdated),
   );
 }
