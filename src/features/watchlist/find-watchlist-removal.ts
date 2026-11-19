@@ -45,9 +45,9 @@ export function findWatchlistRemoval(
   // A merged reading card leads with the volume (plan 0117 B6). Removing from
   // the AniList entry's own screen removes that entry, not the volume.
   const entry: WatchlistEntry =
-    merged.item.type === match.item.type
-      ? merged
-      : { ...merged, id: match.item.id, item: match.item, sources: [match.source], sourceIds: [match.item.id] };
+    merged.item.type === 'BOOK' && match.item.type === 'MANGA'
+      ? { ...merged, id: match.item.id, item: match.item, sources: [match.source], sourceIds: [match.item.id] }
+      : merged;
 
   return { entry, errors: data.errors, incomplete: data.incomplete };
 }
