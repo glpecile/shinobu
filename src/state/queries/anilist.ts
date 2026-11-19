@@ -270,16 +270,18 @@ export function cachedMangaList(queryClient: QueryClient): readonly NormalizedMe
 }
 
 /**
- * The manga list as the reading bridge reads it, for a hook (plan 0117 B6).
- * It shares the reads' cache entry and refreshes with it after a log, but
- * not on focus: the list's own reads decide when it goes stale.
+ * The manga list as the reading bridge reads it (plan 0117 B6). It shares the
+ * reads' cache entry: `fetch` lets it load the list and refresh it after a
+ * log, never on focus. `subscribed: false` holds the last answer without
+ * re-rendering, for a surface that's mounted while hidden.
  */
-export function useCachedMangaListQuery(enabled: boolean): readonly NormalizedMediaItem[] {
+export function useMangaListQuery(options: { fetch: boolean; subscribed?: boolean }): readonly NormalizedMediaItem[] {
   const queryClient = useQueryClient();
   const { data } = useQuery({
     ...currentMangaEntriesOptions(queryClient),
     refetchOnWindowFocus: false,
-    enabled,
+    enabled: options.fetch,
+    subscribed: options.subscribed ?? true,
     select: (entries) => entries.map((entry) => entry.item),
   });
   return data ?? NO_MANGA;

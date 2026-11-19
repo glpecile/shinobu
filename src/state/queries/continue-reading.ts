@@ -6,7 +6,7 @@ import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistQueryKeys, fetchReadingManga, useCachedMangaListQuery } from './anilist';
+import { anilistQueryKeys, fetchReadingManga, useMangaListQuery } from './anilist';
 import { fetchHardcoverReading, hardcoverQueryKeys } from './hardcover';
 import { settle, type ProviderContribution } from './settle';
 
@@ -58,7 +58,7 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   });
   // The whole list the AniList leg already read, so a book matches the same
   // entry here as on the reading list and the diary.
-  const list = useCachedMangaListQuery(providers.includes(Provider.AniList) && providers.includes(Provider.Hardcover));
+  const list = useMangaListQuery({ fetch: providers.includes(Provider.AniList) && providers.includes(Provider.Hardcover) });
   return showBridgedOnce(legs.flat(), list).sort((a, b) =>
     b.lastUpdated.localeCompare(a.lastUpdated),
   );

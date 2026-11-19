@@ -6,7 +6,7 @@ import {
   watchlistQueryKeys,
   type WatchlistInputs,
 } from '@/state/queries/watchlist';
-import { useCachedMangaListQuery } from '@/state/queries/anilist';
+import { useMangaListQuery } from '@/state/queries/anilist';
 import type { NormalizedMediaItem } from '@/types/media';
 
 import {
@@ -50,8 +50,8 @@ export function useCachedWatchlistRemoval(
     () => undefined,
   );
 
-  // Subscribed, so the removal groups against the list the grid shows.
-  const mangaList = useCachedMangaListQuery(false);
+  // The list the grid groups with, read live only while the sheet is open.
+  const mangaList = useMangaListQuery({ fetch: false, subscribed: enabled });
 
   if (!enabled || item == null || data == null) return null;
   return findWatchlistRemoval(data, item, mangaList);
