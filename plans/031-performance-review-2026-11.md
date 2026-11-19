@@ -102,6 +102,8 @@ read refs during render, and a sign-in sheet gains nothing from memo.
 
 ### A. Normalize discussion catalogs once, in the producer (P3, S)
 
+**Done in #478**, not re-timed.
+
 Have `getDiscussionCatalog` and `getSubredditSearch` return each thread with
 its item-independent fields precomputed: `text` (normalized subject plus
 opening), `subjectText`, and the parsed episode markers. Then

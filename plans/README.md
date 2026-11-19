@@ -342,3 +342,153 @@ anime-lists dataset. No provider write was made and no account was used.
   `pick-movie-match.ts`; plan 037 removes the Letterboxd case of it.
 - **`useLogTargetsSplit`'s query key uses only `item.id`**: the default 60 s
   stale time bounds it, and the mutation re-runs the enrichment.
+
+## Round 5: PERF.md checked against the code (2026-11-19)
+
+Owner request: check `PERF.md` against the codebase and hand the fixes to
+executor agents in the same run. Written against commit `9f1b1b1`. Four
+read-only auditors covered every `PERF.md` section, and the advisor opened
+each cited file before a finding counted. Six findings were confirmed in
+code, small, and checkable without a device. All six shipped in #478, one
+commit each, so they have no plan file.
+
+| Fix | `PERF.md` section | Status |
+|-----|-------------------|--------|
+| The Simkl library is indexed once per snapshot, not once per lookup | Lists | DONE (#478) |
+| Home pull-to-refresh stops downloading list indexes that no screen shows | Invalidation | DONE (#478) |
+| Four detail reads set `gcTime` equal to `staleTime` | Requests | DONE (#478) |
+| The shared list row and the credit timeline row prefetch details on press | Prefetch | DONE (#478) |
+| A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout | DONE (#478) |
+| The Effect barrel ban covers every lint override; the per-film Letterboxd read is untraced | Effect | DONE (#478) |
+
+Evidence: typecheck and lint exit 0 and 1,766 tests pass on the PR branch.
+The Simkl test failed before its fix. Nothing was timed, and nothing ran on a
+device, in a browser, or against a provider. Each fix claims less work, not
+more speed. One constraint to keep: the Simkl index is keyed by the snapshot
+object, so a cached `SimklLibrary` must never be mutated in place.
+
+### PERF.md corrections (round 5)
+
+The advisor edits only `plans/`. These bullets do not match the code:
+
+- **Data layout, "Use a bitmask… (plan 031, follow-up B)"**: no bitmask exists
+  in `src/`. Follow-up B is still open in plan 031 and needs a Hermes timing
+  first. Say "planned" or drop the bullet.
+- **Data layout, "`indexLibrary` went from 1.45 ms to 0.022 ms per pass (#423)"**:
+  PR #423 says that number is from bun, for lookups only. The "Measure first"
+  section says to time in Hermes. Add "in bun, lookups only".
+- **Data layout, "Plan 031 has the verdict on each cache in the app"**: the
+  table predates `titleKeys` (`lib/providers/pick-movie-match.ts`, #433), the
+  `foldedEntries`/`foldedBooks` WeakMaps (`lib/providers/reading-bridge.ts`,
+  #476), and the Simkl snapshot index from #478. Either add rows to plan 031 or
+  soften the sentence.
+- **Data layout, "A typed array is one contiguous block"** next to
+  `LibraryIndex.columns`: only `rows` is an `Int32Array`; `values` is a plain array.
+- **Lists, "Tune `drawDistance`… 8 rows on the active grid, 2 on neighbor
+  pages"**: true for grid view only. List view keeps 4 rows on every page.
+- **Lists, "Keep state that changes during a scroll below or beside the
+  list… sticky date, scroll-to-top button"**: the diary keeps both in
+  `DiaryList`, the list's owner, and stays fast because the list's props stay
+  memoized. Say that, or the bullet reads as a rule the diary breaks.
+- **Build, "for the 2-vCPU runner"**: no workflow in `.github/workflows` runs
+  `build:web` (plan 025 is blocked). The flag is real; the runner is not.
+- `PERSISTED_PREFIXES`' own comment says "Everything here is on the home
+  screen's critical path". The list now also holds the Diary feed and the
+  per-film Letterboxd reads. That is a code comment, not `PERF.md`.
+
+### Findings not yet planned (round 5)
+
+Confirmed in code, but each needs a measurement, a device, or an owner
+decision before a plan is honest.
+
+- **A failed refetch drops a good entry from the snapshot.**
+  `shouldPersistQuery` (`state/queries/persist.ts`) writes only
+  `status === 'success'`. A refetch that fails keeps its data but has status
+  `error`, and no `onlineManager` is wired, so an offline launch rewrites the
+  snapshot without those keys. The next launch loses the instant Home. The
+  simple fix (persist when `data !== undefined`) restores queries in the error
+  state, which changes what a cold start shows. Needs a design.
+- **A snapshot written during an Up Next or watchlist refetch omits them.**
+  The streaming guard in `shouldPersistQuery` also excludes the complete value
+  held during a `refetchMode: 'replace'` refetch. A kill in that window gives
+  a cold start with skeletons. Needs a way to tell a cold stream from a refetch.
+- **`['mapping', 'anizip-episodes']` is on the allowlist, but its query sets
+  `gcTime` to 1 h**, which overrides the 24 h default from
+  `retainPersistedQueries`. Either the allowlist entry or the 1 h is wrong.
+  Owner decision: the document is about 1 MB.
+- **Per-item persisted entries never age out for a daily user**: hydration
+  restarts each query's 24 h GC timer. An age cut in `shouldPersistQuery`
+  would also evict the forever-cached mappings and the AniList viewer, which
+  slows cold start. Measure the snapshot first (plan 028).
+- **Trakt watched libraries are on the web allowlist** and grow with the
+  user's history. Plan 028 (measure the web snapshot) decides this.
+- **JS-thread scroll handlers**: `components/rail.tsx` `useRailFade`
+  (`setAtEnd` on every scroll event, every rail), `features/diary/diary-list.tsx`
+  `handleScroll`, `features/credit-timeline/credit-timeline.tsx` `onScroll`.
+  #301 fixed the same pattern on Details. Needs device QA on three platforms.
+- **Rows rebuilt on every owner render**: `app/(tabs)/search.tsx` (`sections`
+  built from tracked query results, new on each keystroke),
+  `features/lists/hardcover-list-detail.tsx` (`data` and `renderItem` in JSX
+  that captures `query`), `features/anime-seasons/season-list.tsx` and
+  `credit-timeline.tsx` (`useProgressLibraries` returns a new object each
+  render because it holds tracked results). The auditor read React Compiler's
+  output; confirm with the React profiler before planning.
+- **`localeCompare` with options inside sort comparators** (`lib/media-sort.ts`)
+  and `toLocaleString` per day in `features/diary/merge.ts` `summarizeDay`.
+  Hermes may build a collator per call. Time it with `debugger-evaluate` first.
+- **`PosterStack` keys slots by film id inside a recycled grid**
+  (`features/lists/poster-stack.tsx`), so a recycled card remounts five
+  images; `ListCard` never resets its web hover state.
+- **Cached list pages are flattened to find one item**
+  (`state/queries/letterboxd.ts` and `serializd.ts` cache finders). Once per
+  details open; low.
+- **Press sites without a prefetch** that #478 leaves out:
+  `hardcover-list-detail.tsx`, `serializd-list-detail.tsx`,
+  `app/(tabs)/diary.tsx`, `detail-variants-section.tsx`,
+  `card-actions-sheet.tsx`, `episode-sections.tsx`.
+- **Letterboxd list films and the Reddit search keep the default 5-minute
+  `gcTime`** under a 15- and 10-minute `staleTime`. Both set
+  `retryOnMount: false`, so a longer `gcTime` also keeps a failed read longer.
+- **List edits**: a Serializd membership edit writes the confirmed list into
+  the cache and then refetches it; a Serializd or Letterboxd rename writes the
+  cache without `cancelQueries` (`state/queries/list-membership.ts`).
+- **Trakt sync pages load one after another** (`lib/providers/trakt/reads.ts`
+  `getPagedSync`). Parallel pages need the page-count header exposed and a
+  check against Trakt's rate limit.
+- **Up Next regathers after a manga log or a book watchlist write**, which it
+  never reads. The invalidation is also the quick-log settle signal, so check
+  that first.
+- **List create enriches up to 50 items with an unbounded `Promise.all`**
+  (`state/queries/list-membership.ts`).
+- **Plan 031 follow-up B** stays open, gated on a Hermes timing.
+
+### Considered and rejected (round 5)
+
+- **Details pull-to-refresh narrows the Trakt library to the item's type**:
+  #330 already narrowed this list on purpose and kept both Trakt keys, and
+  `type: 'active'` bounds the cost. The advisor did not prove that nothing on
+  a film's page reads the shows library, so the saving is not worth the risk.
+- **`useTraktItemQuery` `gcTime`**: its `staleTime` is infinite; an infinite
+  `gcTime` never frees memory.
+- **`ListSheet` mounts on Home without `useBootRevealed`**: its content is
+  null while closed. No evidence of cost.
+- **Up Next comparators parse dates per comparison**: tens of entries.
+- **Letterboxd parsers build a `RegExp` per attribute**: dwarfed by the fetch.
+- **Web disclosures and sheets animate height**: one-off, not per row.
+- **TMDB season batches past 20 run in series**: only for shows with more
+  than 40 seasons.
+- **`WatchedMark` and `RailLine` animate when a recycled cell changes item**:
+  visual only; no CPU evidence.
+- **Calendar and Details fetch one TMDB movie under two keys**: the result
+  shapes were not shown to be shareable.
+- **The Letterboxd watch read runs for films another provider already marks
+  complete**: #423 and #433 tuned this path, and the list counter may need
+  every film.
+
+### Not audited in round 5
+
+- Native code, `src/app/dev/*`, `worker/`.
+- Every historical number in `PERF.md` that comes from a PR body or a device
+  (module counts, font sizes, write cost, build times). Only #423 was read.
+- Runtime behaviour. No profiler, no device, no browser. All findings are
+  from reading code and, for React Compiler claims, its compiled output.
