@@ -1,9 +1,8 @@
 import interFile from '@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf';
 import spaceGroteskFile from '@expo-google-fonts/space-grotesk/700Bold/SpaceGrotesk_700Bold.ttf';
-import { initWasm, Resvg } from '@resvg/resvg-wasm';
-import resvgWasm from '@resvg/resvg-wasm/index_bg.wasm';
-import satori, { init as initSatori } from 'satori/standalone';
-import yogaWasm from 'satori/yoga.wasm';
+import { fromJsx } from '@takumi-rs/helpers/jsx';
+import initWasm, { Renderer } from '@takumi-rs/wasm';
+import renderWasm from '@takumi-rs/wasm/takumi_wasm_bg.wasm';
 
 import { cachedCard, parseCardPath, type Card, type OgEnv } from './og';
 
@@ -26,9 +25,8 @@ const SITE_CARD: Card = {
   posters: [],
 };
 
-// Workers refuse to compile WebAssembly from bytes, so both engines get the
-// module wrangler precompiled from the import.
-let ready: Promise<unknown> | undefined;
+// Workers require a precompiled WASM module.
+let ready: Promise<Renderer> | undefined;
 
 /** An image as a data URI, or null when it can't be fetched as PNG or JPEG. */
 async function inline(url: string, load: (url: string) => Promise<Response> = fetch): Promise<string | null> {
@@ -88,7 +86,7 @@ function CardView({ card, posters, backdrop, brand }: { card: Card; posters: str
           }}
         />
       )}
-      <div style={{ display: 'flex', width: '100%', padding: 64, gap: 56 }}>
+      <div style={{ display: 'flex', position: 'relative', width: '100%', padding: 64, gap: 56 }}>
         {posters.length > 0 && <Posters sources={posters} />}
         {leadMark && <img src={leadMark} width={300} height={300} style={{ alignSelf: 'center' }} />}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -128,40 +126,31 @@ const timed = (url: string) => fetch(url, { signal: AbortSignal.timeout(5_000) }
 
 /** The 1200×630 PNG for a card; an image that fails to load is left out rather than failing the card. */
 async function renderCard(card: Card, loadBrand: () => Promise<string | null>): Promise<Uint8Array> {
-  ready ??= Promise.all([initSatori(yogaWasm), initWasm(resvgWasm)]);
-  const [, brand, backdrop, ...posters] = await Promise.all([
+  // The Worker caches finished cards. Avoid retaining decoded posters across requests.
+  ready ??= initWasm({ module_or_path: renderWasm }).then(() => new Renderer({ cacheMaxBytes: 0 }));
+  const [renderer, brand, backdrop, ...posters] = await Promise.all([
     ready,
     loadBrand(),
     card.backdrop ? inline(card.backdrop, timed) : null,
     ...card.posters.map((url) => inline(url, timed)),
   ]);
-  const svg = await satori(
+  const { node, css } = await fromJsx(
     <CardView
       card={card}
       posters={posters.filter((p): p is string => p != null)}
       backdrop={backdrop}
       brand={brand}
     />,
-    {
-      width: WIDTH,
-      height: HEIGHT,
-      fonts: [
-        { name: 'Inter', data: interRegular, weight: 400 },
-        { name: 'Space Grotesk', data: spaceGroteskBold, weight: 700 },
-      ],
-    },
   );
-  const renderer = new Resvg(svg);
-  try {
-    const image = renderer.render();
-    try {
-      return image.asPng();
-    } finally {
-      image.free();
-    }
-  } finally {
-    renderer.free();
-  }
+  return renderer.render(node, {
+    width: WIDTH,
+    height: HEIGHT,
+    css,
+    fonts: [
+      { name: 'Inter', data: interRegular, weight: 400 },
+      { name: 'Space Grotesk', data: spaceGroteskBold, weight: 700 },
+    ],
+  });
 }
 
 export function isOgImageRequest(url: URL): boolean {
