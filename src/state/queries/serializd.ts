@@ -112,6 +112,8 @@ export function useSuspenseSerializdUpcomingQuery(username: string) {
   });
 }
 
+const LISTS_STALE_MS = 15 * 60_000;
+
 /** Home and View all share pages; only View all fetches successors. */
 export function useSuspenseSerializdListsQuery(username: string, kind: SerializdListKind) {
   return useSuspenseInfiniteQuery({
@@ -119,7 +121,7 @@ export function useSuspenseSerializdListsQuery(username: string, kind: Serializd
     queryFn: ({ pageParam, signal }) => Effect.runPromise(getSerializdListsPage(serializdDeps(username), { username, kind, page: pageParam }), { signal }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, page) => lastPage.hasNextPage && page < 9999 ? page + 1 : undefined,
-    staleTime: 15 * 60_000,
+    staleTime: LISTS_STALE_MS,
   });
 }
 
@@ -127,8 +129,8 @@ export function useSuspenseSerializdListQuery(username: string | null, id: strin
   return useSuspenseQuery({
     queryKey: serializdQueryKeys.list(username, id),
     queryFn: ({ signal }) => Effect.runPromise(getSerializdList(serializdDeps(username), id), { signal }),
-    staleTime: 15 * 60_000,
-    gcTime: 15 * 60_000,
+    staleTime: LISTS_STALE_MS,
+    gcTime: LISTS_STALE_MS,
   });
 }
 
