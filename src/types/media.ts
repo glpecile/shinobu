@@ -136,9 +136,9 @@ export interface NormalizedMediaItem {
   readingCredits?: { people: string[]; format?: string; volumes?: number; series?: string };
   /**
    * A screen's grouping of a Hardcover book under the AniList entry it is a
-   * volume of (plan 0117 B6). Display only: a write never reads it. A log
-   * asks the B5 bridge, and a removal takes the entry from the card's AniList
-   * source.
+   * volume of (plan 0117 B6). It groups cards. A log never reads it: it asks
+   * the B5 bridge. A removal reads it only on a merged card whose AniList
+   * source proves the entry (`removalItem`), and names that entry first.
    */
   bridgedAniList?: { id: number; title: string };
   /** ISO 8601 instant (with offset/Z) — never a bare date string. */

@@ -113,7 +113,25 @@ export function bridgeQueries(book: BridgeBook): string[] {
  * member, in the format the book's tag names; two that do are no match.
  */
 export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandidate[]): BridgeMatch | null {
-  return matchFolded(book, results.map(foldCandidate));
+  return matchFolded(foldBook(book), results.map(foldCandidate));
+}
+
+/** A book's title, series and authors folded once. */
+interface FoldedBook {
+  parsed: ParsedTitle;
+  titleNames: Set<string>;
+  seriesName: string | null;
+  authors: string[];
+}
+
+function foldBook(book: BridgeBook): FoldedBook {
+  const parsed = parseBookTitle(book.title);
+  return {
+    parsed,
+    titleNames: new Set(parsed.names.map(titleKey)),
+    seriesName: book.series == null ? null : titleKey(book.series.name.replace(FORMAT_TAG, '')),
+    authors: book.authors.flatMap(nameKeys),
+  };
 }
 
 /** A candidate's names folded once, so a list of books compares without refolding them. */
@@ -127,11 +145,8 @@ function foldCandidate(candidate: BridgeCandidate): FoldedCandidate {
   return { candidate, titles: candidate.titles.map(titleKey), staff: new Set(candidate.staff.flatMap(nameKeys)) };
 }
 
-function matchFolded(book: BridgeBook, folded: readonly FoldedCandidate[]): BridgeMatch | null {
-  const parsed = parseBookTitle(book.title);
-  const titleNames = new Set(parsed.names.map(titleKey));
-  const seriesName = book.series == null ? null : titleKey(book.series.name.replace(FORMAT_TAG, ''));
-  const authors = book.authors.flatMap(nameKeys);
+function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): BridgeMatch | null {
+  const { parsed, titleNames, seriesName, authors } = book;
 
   const matches = new Map<number, { candidate: BridgeCandidate; viaTitle: boolean }>();
   for (const { candidate, titles, staff } of folded) {
@@ -172,19 +187,19 @@ function candidateOf(item: NormalizedMediaItem): BridgeCandidate | null {
 }
 
 // Folding runs NFKD and regexes, which Hermes runs slowly. A cached list
-// keeps its items' identity, so each item folds once per fetch.
+// keeps its items' identity, so each entry and each book folds once per fetch.
 const foldedEntries = new WeakMap<NormalizedMediaItem, FoldedCandidate | null>();
-const parsedBooks = new WeakMap<NormalizedMediaItem, BridgeBook | null>();
+const foldedBooks = new WeakMap<NormalizedMediaItem, FoldedBook | null>();
 
-/** A book's facts, or null when its title reads as no manga or light novel volume (B5's gate). */
-function parsedBookOf(item: NormalizedMediaItem): BridgeBook | null {
-  let book = parsedBooks.get(item);
-  if (book === undefined) {
-    book = bookOf(item);
-    if (book != null && bridgeQueries(book).length === 0) book = null;
-    parsedBooks.set(item, book);
+/** A book folded, or null when its title reads as no manga or light novel volume (B5's gate). */
+function foldedBookOf(item: NormalizedMediaItem): FoldedBook | null {
+  let folded = foldedBooks.get(item);
+  if (folded === undefined) {
+    const book = bookOf(item);
+    folded = book == null || bridgeQueries(book).length === 0 ? null : foldBook(book);
+    foldedBooks.set(item, folded);
   }
-  return book;
+  return folded;
 }
 
 function foldedOf(entry: NormalizedMediaItem): FoldedCandidate | null {
@@ -201,7 +216,8 @@ function foldedOf(entry: NormalizedMediaItem): FoldedCandidate | null {
  * Each Hardcover book in `books` that is a volume of an AniList entry in
  * `entries` (plan 0117 B6), keyed by the book's item id and carrying that
  * entry as `bridgedAniList`. It compares only what the two lists loaded, so
- * it costs no request, and it groups cards only: no write reads it.
+ * it costs no request. A log never reads it; a removal reads it only through
+ * a merged card's AniList source (`removalItem`).
  */
 export function bridgeBooks(
   books: readonly NormalizedMediaItem[],
@@ -211,7 +227,7 @@ export function bridgeBooks(
   const bridged = new Map<string, NormalizedMediaItem>();
   if (folded.length === 0) return bridged;
   for (const item of books) {
-    const book = parsedBookOf(item);
+    const book = foldedBookOf(item);
     const match = book == null ? null : matchFolded(book, folded);
     const entry = match == null ? undefined : folded.find(({ candidate }) => candidate.id === match.anilistId);
     if (match == null || entry == null) continue;
@@ -233,7 +249,7 @@ export function showBridgedOnce(
 ): NormalizedMediaItem[] {
   const bridged = bridgeBooks(items, entries);
   if (bridged.size === 0) return [...items];
-  const covering = new Map([...bridged.values()].map((book) => [book.bridgedAniList?.id, book]));
+  const covering = new Set([...bridged.values()].map((book) => book.bridgedAniList?.id));
   const latest = new Map<number, string>();
   for (const item of items) {
     const id = item.externalIds.anilist;
