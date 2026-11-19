@@ -1,6 +1,6 @@
 import { providerItemUrl, type UrlEpisode } from './external-urls';
 import { PROVIDERS } from './registry';
-import type { ProviderId } from './types';
+import { Provider, type ProviderId } from './types';
 import type { NormalizedMediaItem } from '@/types/media';
 
 const PROVIDER_IDS = new Set(Object.keys(PROVIDERS));
@@ -23,7 +23,8 @@ export interface ProviderLink {
   url: string;
 }
 
-type LinkItem = Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalIds'>;
+type LinkItem = Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalIds'> &
+  Partial<Pick<NormalizedMediaItem, 'bridgedAniList'>>;
 
 /**
  * The source provider's own link, or undefined when the source is unknown or
@@ -38,6 +39,20 @@ export function sourceLinkFor(item: LinkItem): ProviderLink | undefined {
   if (source == null) return undefined;
   const url = providerItemUrl(source, item);
   return url != null ? { provider: source, url } : undefined;
+}
+
+/**
+ * A card's own links: its source, and for a book grouped under an AniList
+ * entry, that entry too. The entry's own card dropped out of the screen
+ * (plan 0117 B6), so this card is the way to reach it.
+ */
+export function sourceLinksFor(item: LinkItem): ProviderLink[] {
+  const source = sourceLinkFor(item);
+  const grouped = item.bridgedAniList == null ? null : providerItemUrl(Provider.AniList, item);
+  return [
+    ...(source != null ? [source] : []),
+    ...(grouped != null && source?.provider !== Provider.AniList ? [{ provider: Provider.AniList, url: grouped }] : []),
+  ];
 }
 
 /**

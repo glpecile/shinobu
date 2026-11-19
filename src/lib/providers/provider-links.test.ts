@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { providerLinksFor, sourceLinkFor } from './provider-links';
+import { providerLinksFor, sourceLinkFor, sourceLinksFor } from './provider-links';
 
 const ids = (externalIds: Record<string, number | string> = {}) => ({ externalIds });
 
@@ -69,5 +69,13 @@ describe('providerLinksFor', () => {
         ['trakt'],
       ),
     ).toEqual([{ provider: 'trakt', url: 'https://trakt.tv/movies/1' }]);
+  });
+});
+
+// Plan 0117 B6: the grouped entry's own card is gone, so the volume links to it.
+describe('sourceLinksFor', () => {
+  it('a book grouped under an AniList entry links to its source and to the entry', () => {
+    const book = { id: 'hardcover-61', type: 'BOOK' as const, ...ids({ hardcover: 61 }), bridgedAniList: { id: 143703, title: 'Nisemonogatari' } };
+    expect(sourceLinksFor(book).map((link) => link.provider)).toEqual(['hardcover', 'anilist']);
   });
 });

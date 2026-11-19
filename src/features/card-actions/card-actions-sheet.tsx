@@ -39,7 +39,7 @@ import { applyPrimaryMetadata, mergeCatalogueMetadata } from '@/lib/providers/me
 import type { ProviderId } from '@/lib/providers/types';
 import {
   providerLinksFor,
-  sourceLinkFor,
+  sourceLinksFor,
 } from '@/lib/providers/provider-links';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
@@ -213,7 +213,7 @@ export function CardActionsSheet({
       ? []
       : providerLinks === 'connected'
         ? providerLinksFor(item, connected)
-        : [sourceLinkFor(item)].filter((link) => link != null);
+        : sourceLinksFor(item);
   // The host's entry when it has one for *this* item, otherwise the gather's —
   // so the removal is offered wherever the app actually has evidence of who
   // holds the item, rather than only on `/watchlist` (see the prop's docblock).
