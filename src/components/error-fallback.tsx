@@ -1,8 +1,13 @@
 import { Text, View } from "react-native";
 import type { FallbackProps } from "react-error-boundary";
 
+import { isStaleBundleError } from "@/lib/stale-bundle";
+
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
-  const message = error instanceof Error ? error.message : "Unknown error";
+  const stale = isStaleBundleError(error);
+  const message = stale
+    ? "Shinobu couldn't load part of the app. Reload the page to get the latest version."
+    : error instanceof Error ? error.message : "Unknown error";
 
   return (
     <View className="flex-1 bg-background items-center justify-center px-8">
@@ -15,9 +20,9 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       </Text>
       <Text
         className="text-accent font-sans-semibold text-base"
-        onPress={resetErrorBoundary}
+        onPress={stale ? () => window.location.reload() : resetErrorBoundary}
       >
-        Try again
+        {stale ? "Reload" : "Try again"}
       </Text>
     </View>
   );
