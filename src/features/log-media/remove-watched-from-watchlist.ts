@@ -7,7 +7,6 @@ import {
 } from '@/features/watchlist-media/use-unwatchlist-media';
 import { findWatchlistRemoval } from '@/features/watchlist/find-watchlist-removal';
 import { Provider, type ProviderId } from '@/lib/providers/types';
-import { cachedMangaList } from '@/state/queries/anilist';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -49,7 +48,7 @@ export async function removeWatchedFromWatchlist(
     watchlistQueryKeys.inputs(),
   );
   if (data == null) return;
-  const removal = findWatchlistRemoval(data, item, cachedMangaList(queryClient));
+  const removal = findWatchlistRemoval(data, item);
   if (removal == null) return;
 
   // **Simkl is excluded by construction** (plan 0036). Its one status per item

@@ -113,7 +113,8 @@ export function bridgeQueries(book: BridgeBook): string[] {
  * member, in the format the book's tag names; two that do are no match.
  */
 export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandidate[]): BridgeMatch | null {
-  return matchFolded(foldBook(book), results.map(foldCandidate));
+  const match = matchFolded(foldBook(book), results.map(foldCandidate));
+  return match == null ? null : { anilistId: match.anilistId, volume: match.volume };
 }
 
 /** A book's title, series and authors folded once. */
@@ -145,7 +146,7 @@ function foldCandidate(candidate: BridgeCandidate): FoldedCandidate {
   return { candidate, titles: candidate.titles.map(titleKey), staff: new Set(candidate.staff.flatMap(nameKeys)) };
 }
 
-function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): BridgeMatch | null {
+function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): (BridgeMatch & { title: string }) | null {
   const { parsed, titleNames, seriesName, authors } = book;
 
   const matches = new Map<number, { candidate: BridgeCandidate; viaTitle: boolean }>();
@@ -164,7 +165,7 @@ function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): Brid
   const volume = viaTitle && !parsed.edition ? (parsed.volume ?? (candidate.volumes === 1 ? 1 : null)) : null;
   // A number past the entry's known count, or a volume 0, names some other numbering.
   const known = volume != null && volume >= 1 && (candidate.volumes == null || volume <= candidate.volumes);
-  return { anilistId: candidate.id, volume: known ? volume : null };
+  return { anilistId: candidate.id, volume: known ? volume : null, title: candidate.titles[0] };
 }
 
 function bookOf(item: NormalizedMediaItem): BridgeBook | null {
@@ -223,15 +224,15 @@ export function bridgeBooks(
   books: readonly NormalizedMediaItem[],
   entries: readonly NormalizedMediaItem[],
 ): Map<string, NormalizedMediaItem> {
-  const folded = entries.flatMap((entry) => foldedOf(entry) ?? []);
   const bridged = new Map<string, NormalizedMediaItem>();
+  if (!books.some((item) => item.type === 'BOOK')) return bridged;
+  const folded = entries.flatMap((entry) => foldedOf(entry) ?? []);
   if (folded.length === 0) return bridged;
   for (const item of books) {
     const book = foldedBookOf(item);
     const match = book == null ? null : matchFolded(book, folded);
-    const entry = match == null ? undefined : folded.find(({ candidate }) => candidate.id === match.anilistId);
-    if (match == null || entry == null) continue;
-    bridged.set(item.id, { ...item, bridgedAniList: { id: match.anilistId, title: entry.candidate.titles[0] } });
+    if (match == null) continue;
+    bridged.set(item.id, { ...item, bridgedAniList: { id: match.anilistId, title: match.title } });
   }
   return bridged;
 }
