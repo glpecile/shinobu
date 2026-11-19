@@ -7,6 +7,7 @@ import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { removalItem } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
@@ -16,7 +17,7 @@ import {
   unwatchlistCtaCopy,
   watchlistResultView,
 } from './copy';
-import { removalItem, splitWatchlistRemoveTargets } from './remove-targets';
+import { splitWatchlistRemoveTargets } from './remove-targets';
 import {
   useIsUnwatchlistPending,
   useLatestUnwatchlistResult,

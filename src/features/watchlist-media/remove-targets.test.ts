@@ -45,10 +45,10 @@ mock.module('expo-crypto', () => ({
 
 const {
   hasWatchlistReadLeg,
-  removalItem,
   shouldOfferWatchlistAdd,
   splitWatchlistRemoveTargets,
 } = await import('./remove-targets');
+const { removalItem } = await import('@/lib/providers/routing');
 
 const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 

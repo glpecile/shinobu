@@ -4,8 +4,8 @@ import { enrichExternalIds } from '@/features/log-media/enrich';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
-import { providersForWrite, splitWriteTargets } from '@/lib/providers/routing';
-import { Provider, type ProviderId } from '@/lib/providers/types';
+import { providersForWrite, removalItem, splitWriteTargets } from '@/lib/providers/routing';
+import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -138,22 +138,6 @@ export function splitWatchlistRemoveTargets(
 }
 
 /**
- * The item a removal routes. A book never removes from AniList through the
- * search bridge's guess: only a merged reading card, whose AniList source
- * proves which entry it holds, reaches AniList, by that entry's id (plan 0117
- * B6).
- */
-export function removalItem(entry: WatchlistEntry, item: NormalizedMediaItem = entry.item): NormalizedMediaItem {
-  if (item.type !== 'BOOK') return item;
-  const { anilist: _searched, ...ids } = item.externalIds;
-  const card = entry.item.bridgedAniList;
-  return {
-    ...item,
-    externalIds: card != null && entry.sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
-  };
-}
-
-/**
  * Enrich → route → intersect with `sources`. Identity enrichment applies here
  * for the same reason it does on the add, and one case makes it load-bearing:
  * a merged anime entry's item is AniList's copy (the precedence winner), which
@@ -168,7 +152,12 @@ export async function planWatchlistRemove(
   variables: UnwatchlistMediaVariables = {},
   incomplete: readonly ProviderId[] = [],
 ): Promise<WatchlistRemovePlan> {
-  const enriched = removalItem(entry, await enrichExternalIds(queryClient, entry.item, connected));
+  // A book gains nothing a removal can use from enrichment: its AniList entry
+  // comes from the card, never from the search bridge.
+  const enriched = removalItem(
+    entry,
+    entry.item.type === 'BOOK' ? entry.item : await enrichExternalIds(queryClient, entry.item, connected),
+  );
   const platform = currentPlatform();
 
   const split = splitWatchlistRemoveTargets(

@@ -2,7 +2,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume'>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume' | 'bridgedAniList'>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -61,7 +61,11 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
         case Provider.Hardcover:
           return item.externalIds.hardcover != null;
         case Provider.AniList:
-          return item.externalIds.anilist != null && (item.anilistVolume != null || capability === 'watchlist-remove');
+          // A removal deletes the entry a card proves it holds (`removalItem`),
+          // never one the search bridge guessed.
+          return capability === 'watchlist-remove'
+            ? item.externalIds.anilist != null && item.externalIds.anilist === item.bridgedAniList?.id
+            : item.externalIds.anilist != null && item.anilistVolume != null;
         default:
           return false;
       }
@@ -70,6 +74,25 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
     default:
       return true;
   }
+}
+
+/**
+ * The item a watchlist removal routes. A book reaches AniList only on a merged
+ * reading card, whose AniList source proves the entry it holds, and by that
+ * entry's id (plan 0117 B6). `item` is the card's item, enriched for the
+ * other providers.
+ */
+export function removalItem(
+  entry: { item: NormalizedMediaItem; sources: readonly ProviderId[] },
+  item: NormalizedMediaItem = entry.item,
+): NormalizedMediaItem {
+  if (item.type !== 'BOOK') return item;
+  const { anilist: _searched, ...ids } = item.externalIds;
+  const card = entry.item.bridgedAniList;
+  return {
+    ...item,
+    externalIds: card != null && entry.sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
+  };
 }
 
 /**
