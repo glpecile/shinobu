@@ -1,5 +1,5 @@
 ---
-status: planned
+status: done
 date: 2026-11-01
 issue: 209
 ---
@@ -10,6 +10,25 @@ Issue #209 asked for a feasibility spike and a scoped plan before any reading
 provider is chosen. The evidence is in
 `docs/brainstorms/2026-11-01-reading-providers-spike.md`. This file holds the
 decisions and the units, one sub-issue of #209 each.
+
+## Shipped
+
+Every unit shipped by 2026-11-19, and #209 closed.
+
+| Unit | Issue | PR |
+| --- | --- | --- |
+| M1. Log the next chapter | #392 | #402 |
+| M2. Log several chapters in one write | #393 | #408 |
+| M3. Continue reading rail and manga want-to-read | #394 | #403 |
+| M4. Diary Reading filter | #395 | #473, fixes in #475 |
+| B0. Register Hardcover OAuth apps | #396 | #444 |
+| B1. Connect Hardcover | #397 | #445 |
+| B2. Read the Hardcover library | #398 | #448 |
+| B3. Log to Hardcover | #399 | #446 |
+| B4. Find books and open book details | #400 | #447 |
+| B5. Bridge Hardcover volumes to AniList entries | #470 | #474, fixes in #475 |
+| B6. Show a bridged work once | #471 | #476 |
+| C0. Choose a comics tracker | #401 | dropped |
 
 ## Decisions
 
@@ -304,21 +323,27 @@ removal reads it only through a merged card's AniList source
 - Continue Reading drops an AniList entry that a Currently Reading volume
   covers (`showBridgedOnce`).
 - The reading list merges a planned AniList entry with one want-to-read
-  volume into one card that lists both sources. A second volume of the work
-  keeps its own card, so every card has one item a removal acts on.
+  volume into one card that lists both sources: the volume with the smallest
+  item id, because Hardcover returns the list in no fixed order. A second
+  volume of the work keeps its own card, so every card has one item a removal
+  acts on. Two Currently Reading volumes of one work show as two cards on
+  Continue Reading for the same reason.
 - Removing a merged card asks (owner decision 2026-11-18): the remove sheet
   lists Hardcover and AniList, both selected. Its confirm step, in the same
   drawer, shows one line per provider ("Deletes the Planning entry.", "Leaves
   Want to Read.") before anything goes. Every removal now takes this step.
+  The step removes only the providers it showed, and only a provider whose
+  own line warned lifts its refusal guard.
   Removing from the AniList entry's own screen removes only that entry. The
   AniList removal uses the entry the card's AniList source proves, never a
   search, and its confirm line names that entry.
 - The screens group cards against the whole AniList list, and only titled
   volumes (B5's gate).
 - The diary groups a journal book under its AniList entry from the manga
-  list, which it loads once a page holds a book, and a same-day row that holds both leads with the book. Whether AniList
-  writes a list activity for a volume-only update, and with which progress,
-  is unverified until the owner's first live log.
+  list, which it loads once a page holds a book. A same-day row that holds
+  both leads with the book. Rows join only when their chapter sets are equal.
+  Whether AniList writes a list activity for a volume-only update, and with
+  which progress, is unverified until the owner's first live log.
 
 ### C0. Choose a comics tracker — dropped
 
