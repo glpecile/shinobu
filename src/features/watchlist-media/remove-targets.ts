@@ -117,7 +117,7 @@ export function splitWatchlistRemoveTargets(
   errors: readonly ProviderFailure[],
   incomplete: readonly ProviderId[] = [],
   letterboxdUserscript = false,
-): { targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
+): { item: NormalizedMediaItem; targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
   const routed = removalItem(item, sources);
   const { writable, manual } = splitWriteTargets(
     routed,
@@ -137,6 +137,7 @@ export function splitWatchlistRemoveTargets(
       !hasWatchlistReadLeg(provider, connected, errors, incomplete),
   );
   return {
+    item: routed,
     targets: writable.filter((provider) => sources.includes(provider)),
     manual: manual.filter((provider) => sources.includes(provider)),
     unknown,
@@ -161,7 +162,6 @@ export async function planWatchlistRemove(
   // A book gains nothing a removal can use from enrichment: its AniList entry
   // comes from the card, never from the search bridge.
   const base = entry.item.type === 'BOOK' ? entry.item : await enrichExternalIds(queryClient, entry.item, connected);
-  const enriched = removalItem(base, entry.sources);
   const platform = currentPlatform();
 
   const split = splitWatchlistRemoveTargets(
@@ -179,7 +179,7 @@ export async function planWatchlistRemove(
       ? split.targets
       : split.targets.filter((provider) => only.includes(provider));
 
-  return { item: enriched, targets, manual: split.manual, unknown: split.unknown };
+  return { item: split.item, targets, manual: split.manual, unknown: split.unknown };
 }
 
 /**

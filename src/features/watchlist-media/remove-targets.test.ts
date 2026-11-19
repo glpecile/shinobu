@@ -48,7 +48,6 @@ const {
   shouldOfferWatchlistAdd,
   splitWatchlistRemoveTargets,
 } = await import('./remove-targets');
-const { removalItem } = await import('@/lib/providers/routing');
 
 const CONNECTED: ProviderId[] = ['trakt', 'anilist', 'letterboxd', 'serializd'];
 
@@ -93,7 +92,8 @@ describe('a grouped book’s removal', () => {
   });
 
   test('a merged card removes the entry it holds, whatever the search said', () => {
-    expect(removalItem(book, ['anilist', 'hardcover']).externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+    const split = splitWatchlistRemoveTargets(book, ['anilist', 'hardcover'], ['anilist', 'hardcover'], 'ios', []);
+    expect(split.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
   });
 
   test('a book alone on Hardcover never reaches AniList, unless AniList’s list couldn’t say', () => {
