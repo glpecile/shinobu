@@ -304,6 +304,20 @@ off unless a list measurably needs it, and derive item state from props when
 it's on. Posters go through
 `components/image`, never React Native's `Image`.
 
+## Performance
+
+`PERF.md` holds the rules from this app's perf PRs, one bullet each, with its
+source. Before you report a change done, review your diff against the sections
+it touches: a query or its key (Requests), a write or refresh (Invalidation), a
+persisted key (Cold start, Cache snapshot writes), a list or its cells (Lists),
+a loop over library or diary rows (Data layout), provider code (Effect), and
+motion (Animation). Fix what breaks a rule, or name the rule and the reason in
+your summary.
+
+A perf change says what was measured, on which build and device, and what was
+not. Without a measurement it claims less work, not more speed. A new lesson
+is one bullet in `PERF.md` with its PR number.
+
 ## Up Next and timezones
 
 An episode is up next only once it has aired in the user's timezone. Parse the
