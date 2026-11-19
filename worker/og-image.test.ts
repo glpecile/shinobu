@@ -1,7 +1,7 @@
 import { plugin } from 'bun';
 import { expect, test } from 'bun:test';
 
-test('uncached card renders release their WASM allocations', async () => {
+test('repeated uncached card renders stabilize WASM memory', async () => {
   let memory: WebAssembly.Memory | undefined;
   const instantiate = WebAssembly.instantiate;
   const cacheDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'caches');
@@ -15,7 +15,7 @@ test('uncached card renders release their WASM allocations', async () => {
   WebAssembly.instantiate = (async (module: BufferSource | WebAssembly.Module, imports?: WebAssembly.Imports) => {
     const result: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource = await Reflect.apply(instantiate, WebAssembly, [module, imports]);
     const instance = ('instance' in result ? result.instance : result) as WebAssembly.Instance;
-    if (Object.hasOwn(instance.exports, '__wbg_resvg_free')) memory = instance.exports.memory as WebAssembly.Memory;
+    if (Object.hasOwn(instance.exports, 'renderer_render')) memory = instance.exports.memory as WebAssembly.Memory;
     return result;
   }) as typeof instantiate;
   Object.defineProperty(globalThis, 'caches', {
@@ -33,7 +33,7 @@ test('uncached card renders release their WASM allocations', async () => {
       expect(bytes.slice(0, 8)).toEqual(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));
     };
     for (let i = 0; i < 5; i++) await render();
-    if (!memory) throw new Error('resvg WASM memory was not observed');
+    if (!memory) throw new Error('renderer WASM memory was not observed');
     const before = memory.buffer.byteLength;
     for (let i = 0; i < 30; i++) await render();
     expect(memory.buffer.byteLength).toBe(before);

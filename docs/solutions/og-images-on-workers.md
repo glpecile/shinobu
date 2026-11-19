@@ -1,4 +1,4 @@
-# Link previews: 404 shells, satori on Workers, and render cost
+# Link previews on Cloudflare Workers
 
 **Found 2026-11-02 (plan 0118).**
 
@@ -22,29 +22,20 @@ Workers Builds variables only reach the build. The metadata reader needs
 `EXPO_PUBLIC_TMDB_TOKEN` and `EXPO_PUBLIC_SIMKL_CLIENT_ID` in the Worker's
 runtime Variables and Secrets too; otherwise those links use the site card.
 
-## satori ≥ 0.33 does not run on Workers
+## Render PNG cards from precompiled WASM
 
-satori 0.33 added HarfBuzz text shaping. Its Emscripten glue reads
-`self.location.href` when `WorkerGlobalScope` exists. Workers have no
-`location`, so the first render throws `Cannot read properties of undefined
-(reading 'href')`. `satori/standalone`'s `init()` loads only the layout wasm,
-not HarfBuzz. `satori` is pinned to **0.32.0**, the last release without
-HarfBuzz (Bluesky's bskyogcard is on 0.26). Retry newer releases only after
-confirming `/og/site.png` renders under `wrangler dev`.
+Satori 0.33 added HarfBuzz text shaping. Its loader assumes `self.location`
+exists and compiles WASM at runtime. Both assumptions fail on Workers. This
+affects 0.33.5, which fixed an SVG escaping flaw, and 0.63.2 as well.
 
-Workers also refuse to compile WebAssembly from bytes, so both `yoga.wasm` and
-resvg's wasm are imported as modules that wrangler precompiles.
+Takumi converts the JSX template to a PNG using a WASM module precompiled by
+Wrangler. Check `/og/site.png` under `wrangler dev` after renderer upgrades.
+[Satori advisory](https://github.com/advisories/GHSA-wx4j-mvgx-mqwp) ·
+[Workers compatibility issue](https://github.com/vercel/satori/issues/878)
 
-## Render cost
+## Render cache and memory
 
-On an M-series Mac, satori takes ~6 ms and resvg ~160 ms per 1200×630 card.
-That is far over the free plan's 10 ms CPU limit, so this needs Workers Paid.
-The Cache API keeps the cost to one render per card per week.
-
-## Free the WASM render objects
-
-Both `Resvg` and its rendered image need `.free()` after `asPng()`, including
-on failure. The installed binding never registers constructed `Resvg` objects
-with its finalizer. Repeated uncached renders otherwise retain WASM allocations
-in the shared isolate. A check through `handleOgImage` grew WASM memory by
-92 MB over 30 identical renders before cleanup; explicit cleanup keeps it flat.
+The Cache API stores rendered cards for a week. The shared renderer keeps its
+decoded image cache disabled so it does not retain posters across requests.
+The Worker test checks that repeated uncached cards keep WASM memory stable
+after warm-up.
