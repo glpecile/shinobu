@@ -396,7 +396,7 @@ export function WatchlistRemovePicker({
     haptics.destructive();
     remove.mutate(
       // Only the providers whose own line warned lift their guard.
-      { providers, ...(destructive ? { destructive: warned } : {}) },
+      { providers, destructive: warned },
       step.callbacks,
     );
   }
