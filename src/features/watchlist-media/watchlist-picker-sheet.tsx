@@ -544,7 +544,10 @@ function RemoveConfirm({
           const line = removalLine(provider, entry);
           return (
             <View className="flex-row items-start gap-3" key={provider}>
-              <ProviderIcon id={provider} size={20} />
+              {/* Centred on the text's first line. */}
+              <View className="mt-0.5">
+                <ProviderIcon id={provider} size={20} />
+              </View>
               <Text className={cn('flex-1 font-sans text-sm leading-relaxed', line.destructive ? 'text-accent' : 'text-foreground')}>
                 <Text className="font-sans-semibold">{PROVIDERS[provider].label}</Text>
                 {` · ${line.text}`}
