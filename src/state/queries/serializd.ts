@@ -128,6 +128,7 @@ export function useSuspenseSerializdListQuery(username: string | null, id: strin
     queryKey: serializdQueryKeys.list(username, id),
     queryFn: ({ signal }) => Effect.runPromise(getSerializdList(serializdDeps(username), id), { signal }),
     staleTime: 15 * 60_000,
+    gcTime: 15 * 60_000,
   });
 }
 

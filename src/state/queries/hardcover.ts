@@ -290,6 +290,7 @@ export function useSuspenseHardcoverListQuery(id: number) {
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, page) => (lastPage.hasNextPage ? page + 1 : undefined),
     staleTime: LISTS_STALE_MS,
+    gcTime: LISTS_STALE_MS,
   });
 }
 
@@ -299,6 +300,7 @@ export function useSuspenseHardcoverBookListsQuery(bookId: number) {
     queryKey: hardcoverQueryKeys.bookLists(bookId),
     queryFn: ({ signal }) => Effect.runPromise(getHardcoverBookLists(hardcoverDeps(), bookId), { signal }),
     staleTime: CATALOG_STALE_MS,
+    gcTime: CATALOG_STALE_MS,
   });
 }
 

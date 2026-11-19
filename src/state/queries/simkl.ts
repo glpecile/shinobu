@@ -340,6 +340,8 @@ export function useSimklUsernameQuery(options: { enabled?: boolean } = {}) {
   });
 }
 
+const RATINGS_STALE_MS = 24 * 60 * 60_000;
+
 /**
  * Simkl's score and the IMDb or MAL one beside it, for the details Ratings
  * section. Scores move slowly and Simkl caches `/ratings` for two days, so a
@@ -351,6 +353,7 @@ export function useSuspenseSimklRatingsQuery(item: NormalizedMediaItem) {
     queryKey: simklQueryKeys.ratings(lookup),
     queryFn: ({ signal }) =>
       lookup == null ? [] : Effect.runPromise(getRatings(simklDeps(), lookup), { signal }),
-    staleTime: 24 * 60 * 60_000,
+    staleTime: RATINGS_STALE_MS,
+    gcTime: RATINGS_STALE_MS,
   });
 }
