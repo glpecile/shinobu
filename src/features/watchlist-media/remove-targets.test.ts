@@ -45,6 +45,7 @@ mock.module('expo-crypto', () => ({
 
 const {
   hasWatchlistReadLeg,
+  removalItem,
   shouldOfferWatchlistAdd,
   splitWatchlistRemoveTargets,
 } = await import('./remove-targets');
@@ -83,6 +84,23 @@ function entryFor(
 ): WatchlistEntry {
   return { id: item.id, item, sources, sourceIds: [item.id] };
 }
+
+// Plan 0117 B6: a book reaches AniList only through the entry its card holds.
+describe('removalItem', () => {
+  const book = film({
+    id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 },
+    bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
+  });
+  const searched = { ...book, externalIds: { hardcover: 61, anilist: 999 } };
+
+  test('a merged card removes the entry it holds, whatever the search said', () => {
+    expect(removalItem(entryFor(book, ['anilist', 'hardcover']), searched).externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+  });
+
+  test('a book alone on Hardcover never reaches AniList', () => {
+    expect(removalItem(entryFor(book, ['hardcover']), searched).externalIds).toEqual({ hardcover: 61 });
+  });
+});
 
 describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
   test('a leg that errored on this gather makes its provider unknown, not absent', () => {
