@@ -119,7 +119,6 @@ function card(overrides: Partial<NormalizedMediaItem> & Pick<NormalizedMediaItem
 }
 
 describe('showBridgedOnce', () => {
-
   test('the Hardcover volume carries its AniList entry, which drops out; an entry with no volume stays', () => {
     const entry = card({
       id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
@@ -133,9 +132,33 @@ describe('showBridgedOnce', () => {
       id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', type: 'BOOK', progressUnit: 'page',
       externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN', 'VOFAN'] },
     });
-    expect(showBridgedOnce([entry, book, other])).toEqual([
+    expect(showBridgedOnce([entry, book, other], [entry, other])).toEqual([
       { ...book, externalIds: { hardcover: 61, anilist: 143703 }, anilistVolume: 1 },
       other,
     ]);
+  });
+
+  test('a book whose title reads as no volume stays apart, as B5 would', () => {
+    const manga = card({
+      id: 'anilist-1', title: 'Battle Royale', type: 'MANGA', externalIds: { anilist: 1 },
+      readingCredits: { people: ['Koushun Takami'], format: 'MANGA' },
+    });
+    const novel = card({
+      id: 'hardcover-9', title: 'Battle Royale', type: 'BOOK', externalIds: { hardcover: 9 },
+      readingCredits: { people: ['Koushun Takami'] },
+    });
+    expect(showBridgedOnce([manga, novel], [manga])).toEqual([manga, novel]);
+  });
+
+  test('the card keeps the newer update of the volume and its entry', () => {
+    const entry = card({
+      id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 }, lastUpdated: '2026-11-18',
+      readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
+    });
+    const book = card({
+      id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1 (Light Novel)', type: 'BOOK', lastUpdated: '2025-01-02',
+      externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN'] },
+    });
+    expect(showBridgedOnce([book, entry], [entry])[0].lastUpdated).toBe('2026-11-18');
   });
 });
