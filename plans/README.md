@@ -365,8 +365,7 @@ Evidence: typecheck and lint exit 0 and 1,766 tests pass on the PR branch.
 The Simkl test failed before its fix. On a Pixel 8 Pro dev build, Home pull
 to refresh, a watchlist list-view row, and a credit timeline row worked.
 Nothing was timed, and nothing ran in a browser. Each fix claims less work, not
-more speed. One constraint to keep: the Simkl index is keyed by the snapshot
-object, so a cached `SimklLibrary` must never be mutated in place.
+more speed.
 
 ### Findings not yet planned (round 5)
 

@@ -38,7 +38,7 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 
 - Give two consumers of the same read one query key. (#298, #301, #328, #329)
 - Keep ids that only feed a fallback out of the query key. A late id refetches and suspends the screen again. (#296, #330)
-- Set `gcTime` equal to `staleTime` on detail reads. The 5-minute default brings the skeleton back. (#296, #298)
+- Set `gcTime` equal to `staleTime` on detail reads. The 5-minute default brings the skeleton back. Not on an infinite query: a stale cached one refetches every page it holds. (#296, #298, #478)
 - Ask for more in one request: TMDB `append_to_response` loads the show and 20 seasons together. (#298)
 - When page 1 gives the page count, load the other pages in parallel. (#298)
 - Read the redirect `Location` header. Do not download the page to get its URL. (#337)
@@ -95,7 +95,6 @@ For CPU work in a loop over many rows. Prove the loop is hot first: most waits i
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
 - Use a structure of arrays when the loop reads one or two fields: one column per field. `LibraryIndex.columns` is one: its `rows` are an `Int32Array`, its `values` a plain array. (#423)
 - Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags, and a `Uint32Array` holds more. The app has none yet: plan 031 follow-up B proposes one, gated on a Hermes timing.
-- Pack a small field into the upper bits of an index when both fit in 32 bits. Bitwise operators work on 32-bit integers.
 - JS has no stack allocation. The equivalent is to allocate nothing per row: reuse one buffer made outside the loop, and avoid spread, `map().filter()` chains and a new closure per row.
 
 ## Effect

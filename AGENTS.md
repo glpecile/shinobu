@@ -309,9 +309,9 @@ it's on. Posters go through
 `PERF.md` holds the rules from this app's perf PRs, one bullet each, with its
 source. Before you report a change done, review your diff against the sections
 it touches: a query or its key (Requests), a write or refresh (Invalidation), a
-persisted key (Cold start, Cache snapshot writes), a list or its cells (Lists),
-a loop over library or diary rows (Data layout), provider code (Effect), and
-motion (Animation). Fix what breaks a rule, or name the rule and the reason in
+press handler (Prefetch), a persisted key (Cold start, Cache snapshot writes), a
+list or its cells (Lists), a loop over library or diary rows (Data layout),
+provider code (Effect), and motion (Animation). Fix what breaks a rule, or name the rule and the reason in
 your summary.
 
 A perf change says what was measured, on which build and device, and what was
