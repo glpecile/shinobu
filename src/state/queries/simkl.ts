@@ -141,15 +141,22 @@ export interface SimklLibraryIndex {
 
 const entryItem = (entry: SimklLibraryEntry) => entry.item;
 
+// One index per snapshot: every single-item `select` on a details screen reads the same one.
+const indexes = new WeakMap<SimklLibrary, SimklLibraryIndex>();
+
 export function indexSimklLibrary(library: SimklLibrary): SimklLibraryIndex {
+  const known = indexes.get(library);
+  if (known != null) return known;
   // Anime is in both lists: Simkl files anime films under its anime catalog,
   // not `movies[]` (the same asymmetry `routing.ts` encodes for writes).
   const animeShows = library.anime.filter((entry) => entry.item.isFilm !== true);
-  return {
+  const index = {
     films: indexLibrary([...library.movies, ...library.anime.filter((entry) => entry.item.isFilm === true)], entryItem),
     shows: indexLibrary([...library.shows, ...animeShows], entryItem),
     animeShows: indexLibrary(animeShows, entryItem),
   };
+  indexes.set(library, index);
+  return index;
 }
 
 const indexed = (library: SimklLibrary | SimklLibraryIndex) => ('films' in library ? library : indexSimklLibrary(library));

@@ -92,6 +92,15 @@ const library = (over: Record<string, unknown>) =>
   ({ shows: [], movies: [], anime: [], ...over }) as never;
 
 describe('findLibraryEntry', () => {
+  test('two lookups on one snapshot build one index', () => {
+    let reads = 0;
+    const movies = [entry('simkl-1', 'MOVIE', { simkl: 1, tmdb: 42 })];
+    const snapshot = { shows: [], anime: [], get movies() { reads++; return movies; } } as never;
+    findLibraryEntry(snapshot, item('a', 'MOVIE', { tmdb: 42 }));
+    findLibraryEntry(snapshot, item('b', 'MOVIE', { tmdb: 43 }));
+    expect(reads).toBe(1);
+  });
+
   test('a movie is found in the movies bucket', () => {
     const found = findLibraryEntry(
       library({ movies: [entry('simkl-1', 'MOVIE', { simkl: 1, tmdb: 42 })] }),
