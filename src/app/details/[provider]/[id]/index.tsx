@@ -41,7 +41,7 @@ import {
   seriesPremiere,
   watchlistCtaIsPrimary,
 } from '@/features/log-media/release-gate';
-import { WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
+import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
 import { AddToListCapsule } from '@/features/lists/add-to-list-capsule';
 import { BookListsSection } from '@/features/lists/book-lists-section';
 import {
@@ -352,6 +352,16 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
         studio={studio}
       />
     </Section>
+  );
+}
+
+/** The want-to-watch CTA with Add to list beside it, or Add to list alone. */
+function WatchlistRow({ item }: { item: NormalizedMediaItem }) {
+  const ctaShown = useWatchlistCtaShown(item);
+  return (
+    <AddToListCapsule className="mb-6" item={item}>
+      {ctaShown ? <WatchlistMediaButton className="mb-0" item={item} /> : null}
+    </AddToListCapsule>
   );
 }
 
@@ -858,9 +868,7 @@ function DetailsScreen() {
             log button and gets the CTA beneath it. */}
         {!watchlistCtaIsPrimary(shown) && <LogMediaButton item={shown} />}
         <LetterboxdCompletionButton item={shown} />
-        <AddToListCapsule item={shown}>
-          <WatchlistMediaButton item={shown} />
-        </AddToListCapsule>
+        <WatchlistRow item={shown} />
 
         {display === 'hidden' ? null : display === 'countdown' ? (
           <View className="flex-row gap-4">

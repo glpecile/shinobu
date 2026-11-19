@@ -97,7 +97,6 @@ export function WatchlistMediaButton({
   const queryClient = useQueryClient();
   const pending = useIsWatchlistWritePending(item.id);
   const result = useLatestWatchlistResult(item.id);
-  const { writable, manual } = useWatchlistTargetsSplit(item);
   const [open, setOpen] = useState(false);
   // Remounts the picker per open so the selection resets to all-selected (R1).
   const [openNonce, setOpenNonce] = useState(0);
@@ -112,30 +111,7 @@ export function WatchlistMediaButton({
   // watchlist but missing from another has an add left to offer (owner report
   // 2026-08-01). False whenever the answer is unknown, so R35 holds.
   const stillOffered = useWatchlistAddStillOffered(item);
-  const connected = useConnectedProviders();
-  // The entry read `LogMediaButton` already holds for this manga, so it costs
-  // no request of its own.
-  const anilistEntry = useAniListEntryStateQuery({
-    type: item.type,
-    mediaId: item.externalIds.anilist,
-    enabled: isReadIntent(item) && connected.includes(Provider.AniList),
-  });
-  // A manga's only add target is AniList, which never writes over an entry it
-  // already has (plan 0031 KTD-2). Once the manga is being read, finished or
-  // shelved there, the add could only be refused.
-  const trackedManga =
-    isReadIntent(item) &&
-    anilistEntry.data?.entry != null &&
-    anilistEntry.data.entry.status !== 'PLANNING';
-  // A book's only add target is Hardcover, which writes Want to Read only on
-  // a book not in the library. The details screen's `LogBookButton` makes
-  // the same read, so there the two share one request.
-  const hardcoverEntry = useHardcoverBookEntryQuery({
-    bookId: item.externalIds.hardcover,
-    enabled: connected.includes(Provider.Hardcover),
-  });
-  const trackedBook =
-    hardcoverEntry.data != null && hardcoverEntry.data.statusId !== HardcoverStatus.WantToRead;
+  const shown = useWatchlistCtaShown(item);
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
@@ -145,9 +121,7 @@ export function WatchlistMediaButton({
   // renderer.
   const settled = isWatchlistCtaSettled(onList, view, stillOffered);
 
-  // Nothing connected can take this item — the same silence `LogMediaButton`
-  // keeps rather than offering an action that can only fail.
-  if ((writable.length === 0 && manual.length === 0) || trackedManga || trackedBook) return null;
+  if (!shown) return null;
 
   function openRemovePicker() {
     // `settled` implies the gathered cache holds a matching input (that is what
@@ -225,4 +199,39 @@ export function WatchlistMediaButton({
       )}
     </View>
   );
+}
+
+/**
+ * Whether `WatchlistMediaButton` renders for this item. A host that lays the
+ * button out beside another control reads this to drop the empty slot.
+ */
+export function useWatchlistCtaShown(item: NormalizedMediaItem): boolean {
+  const { writable, manual } = useWatchlistTargetsSplit(item);
+  const connected = useConnectedProviders();
+  // The entry read `LogMediaButton` already holds for this manga, so it costs
+  // no request of its own.
+  const anilistEntry = useAniListEntryStateQuery({
+    type: item.type,
+    mediaId: item.externalIds.anilist,
+    enabled: isReadIntent(item) && connected.includes(Provider.AniList),
+  });
+  // A manga's only add target is AniList, which never writes over an entry it
+  // already has (plan 0031 KTD-2). Once the manga is being read, finished or
+  // shelved there, the add could only be refused.
+  const trackedManga =
+    isReadIntent(item) &&
+    anilistEntry.data?.entry != null &&
+    anilistEntry.data.entry.status !== 'PLANNING';
+  // A book's only add target is Hardcover, which writes Want to Read only on
+  // a book not in the library. The details screen's `LogBookButton` makes
+  // the same read, so there the two share one request.
+  const hardcoverEntry = useHardcoverBookEntryQuery({
+    bookId: item.externalIds.hardcover,
+    enabled: connected.includes(Provider.Hardcover),
+  });
+  const trackedBook =
+    hardcoverEntry.data != null && hardcoverEntry.data.statusId !== HardcoverStatus.WantToRead;
+  // Nothing connected can take this item — the same silence `LogMediaButton`
+  // keeps rather than offering an action that can only fail.
+  return (writable.length > 0 || manual.length > 0) && !trackedManga && !trackedBook;
 }
