@@ -421,5 +421,4 @@ describe('enrichExternalIds — a Hardcover book bridged to AniList', () => {
     expect(await enrichExternalIds(client, book, ['hardcover'])).toEqual(book);
     expect(calls).toEqual([]);
   });
-
 });
