@@ -106,18 +106,24 @@ export function unwatchlistConfirmLabel(
  * AniList has no "un-status" that keeps an entry, so removing something the
  * user is watching deletes the whole entry. Simkl has one status per item, so
  * its only un-track takes the watch history with it (plan 0036). A bare
- * Planning entry keeps its silent path, and the adapters' refusal guards still
- * stand behind both.
+ * Planning entry only leaves the list, and the adapters' refusal guards still
+ * stand behind both. A merged reading card names the AniList entry it holds,
+ * so a wrong grouping shows before it deletes anything (plan 0117 B6).
  */
 export function removalLine(
   provider: ProviderId,
-  entry: { item: Pick<NormalizedMediaItem, 'type'>; anilistStatus?: 'CURRENT' | 'PLANNING'; simklWatchedCount?: number },
+  entry: { item: Pick<NormalizedMediaItem, 'bridgedAniList'>; anilistStatus?: 'CURRENT' | 'PLANNING'; simklWatchedCount?: number },
 ): { text: string; destructive: boolean } {
   switch (provider) {
     case Provider.AniList:
       return entry.anilistStatus === 'CURRENT'
         ? { text: 'Can’t un-plan something you’re watching, so this deletes the whole entry — progress, score, notes and dates included.', destructive: true }
-        : { text: 'Deletes the Planning entry.', destructive: false };
+        : {
+            text: entry.item.bridgedAniList != null
+              ? `Deletes the Planning entry “${entry.item.bridgedAniList.title}”.`
+              : 'Deletes the Planning entry.',
+            destructive: false,
+          };
     case Provider.Simkl:
       return (entry.simklWatchedCount ?? 0) > 0
         ? { text: 'Can’t drop just the plan-to-watch status, so this deletes the whole entry — watch history and rating included, and the show leaves Continue Watching and This week.', destructive: true }
@@ -127,7 +133,7 @@ export function removalLine(
     case Provider.Trakt:
     case Provider.Letterboxd:
     case Provider.Serializd:
-      return { text: isReadIntent(entry.item) ? 'Leaves your reading list.' : 'Leaves your watchlist.', destructive: false };
+      return { text: 'Leaves your watchlist.', destructive: false };
   }
 }
 

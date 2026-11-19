@@ -44,7 +44,7 @@ import {
   watchlistConfirmLabel,
   watchlistCtaCopy,
 } from './copy';
-import { splitWatchlistRemoveTargets } from './remove-targets';
+import { removalItem, splitWatchlistRemoveTargets } from './remove-targets';
 import { useWatchlistTargetsSplit } from './targets';
 import {
   useIsUnwatchlistPending,
@@ -354,7 +354,7 @@ export function WatchlistRemovePicker({
   const letterboxdUserscript = useLetterboxdUserscript('watchlist-remove');
   const pending = useIsUnwatchlistPending(entry.item.id);
   const split = splitWatchlistRemoveTargets(
-    entry.item,
+    removalItem(entry),
     entry.sources,
     connected,
     currentPlatform(),
@@ -491,6 +491,8 @@ export function WatchlistRemovePicker({
           disabled={selected.length === 0}
           icon={<Button.Icon name="bookmark-outline" />}
           label={unwatchlistConfirmLabel(entry.item, selected.length)}
+          loading={pending}
+          loadingLabel={copy.pending}
           morphLabel
           onPress={review}
         />
@@ -553,6 +555,7 @@ function RemoveConfirm({
       </View>
       <WriteSheet.Actions>
         <Button
+          disabled={selected.length === 0}
           icon={<Button.Icon name={destructive ? 'trash-outline' : 'bookmark-outline'} />}
           label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, selected.length)}
           loading={pending}

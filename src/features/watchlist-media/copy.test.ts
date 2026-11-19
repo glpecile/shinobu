@@ -228,19 +228,21 @@ describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
  * Plan 0035 R3/R4. The warning is the price of letting a CURRENT entry be
  * removed at all: the delete destroys progress, score and notes, so a removal
  * that fires without this text on screen is data loss the user never agreed to.
- * R4's other half matters just as much — a bare PLANNING removal keeps its
- * silent path and gains no new friction.
+ * R4's other half matters just as much — a bare PLANNING removal only leaves
+ * the list. Every removal confirms (owner decision 2026-11-18), and the
+ * confirm step names what each provider loses.
  */
 describe('removalLine (the remove sheet’s confirm step)', () => {
   test('a Planning entry only leaves the list; an entry in progress is deleted whole', () => {
-    const book = { item: { type: 'BOOK' as const } };
+    const book = { item: { bridgedAniList: { id: 143703, title: 'Nisemonogatari' } } };
     expect(removalLine('hardcover', book)).toEqual({ text: 'Leaves Want to Read.', destructive: false });
-    expect(removalLine('anilist', { ...book, anilistStatus: 'PLANNING' })).toEqual({ text: 'Deletes the Planning entry.', destructive: false });
+    expect(removalLine('anilist', { ...book, anilistStatus: 'PLANNING' }))
+      .toEqual({ text: 'Deletes the Planning entry “Nisemonogatari”.', destructive: false });
     expect(removalLine('anilist', { ...book, anilistStatus: 'CURRENT' }).destructive).toBe(true);
   });
 
   test('a Simkl row that still holds watch history is deleted whole', () => {
-    const show = { item: { type: 'TV' as const } };
+    const show = { item: {} };
     expect(removalLine('simkl', { ...show, simklWatchedCount: 0 })).toEqual({ text: 'Leaves Plan to Watch.', destructive: false });
     expect(removalLine('simkl', { ...show, simklWatchedCount: 12 }).destructive).toBe(true);
   });
