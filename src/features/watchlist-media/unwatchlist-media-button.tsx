@@ -72,8 +72,8 @@ export function UnwatchlistMediaButton({
   const onList = useIsWatchlisted(entry.item);
 
   // Pre-tap split, on the **unenriched** entry item: enrichment only ever
-  // widens the applicable set, and the picker re-derives the same split from
-  // the same cache when it opens.
+  // widens the applicable set (a book's AniList entry comes from the card,
+  // never from enrichment), and the picker re-derives the same split.
   const split = splitWatchlistRemoveTargets(
     entry.item,
     entry.sources,

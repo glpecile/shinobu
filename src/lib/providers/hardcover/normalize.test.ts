@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import * as Schema from 'effect/Schema';
 
 import { localDayKey } from '@/features/diary/merge';
 
 import {
+  HardcoverBook,
   normalizeHardcoverBook,
   normalizeHardcoverJournal,
   normalizeHardcoverLibraryRow,
@@ -51,6 +53,18 @@ describe('normalizeHardcoverBook', () => {
 
     expect(item.coverImage).toBe('');
     expect(item).not.toContainKeys(['overview', 'totalEpisodes', 'ratings', 'year']);
+  });
+});
+
+describe('a book’s reading credits (plan 0117 B6)', () => {
+  test('a null author or series name drops that name, not the book', () => {
+    const book = Schema.decodeUnknownSync(HardcoverBook)({
+      id: 61,
+      title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)',
+      contributions: [{ author: { name: null } }, { author: { name: 'NISIOISIN' } }],
+      featured_book_series: { series: { name: null } },
+    });
+    expect(normalizeHardcoverBook(book, NOW).readingCredits).toEqual({ people: ['NISIOISIN'] });
   });
 });
 

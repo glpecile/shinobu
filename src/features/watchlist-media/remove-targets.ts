@@ -4,8 +4,8 @@ import { enrichExternalIds } from '@/features/log-media/enrich';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
-import { providersForWrite, splitWriteTargets } from '@/lib/providers/routing';
-import type { ProviderId } from '@/lib/providers/types';
+import { providersForWrite, removalItem, splitWriteTargets } from '@/lib/providers/routing';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -32,18 +32,18 @@ export interface UnwatchlistMediaVariables {
    */
   providers?: ProviderId[];
   /**
-   * The user saw the destructive warning and pressed again (plan 0035 R3).
-   * Passed straight to `deleteAniListEntry`, where it lifts the refusal guard
-   * and nothing else — the fresh-read/fresh-id invariants (R5) are untouched.
-   * Never defaulted on: without an explicit confirm this stays absent.
+   * The providers whose destructive line the user saw on the confirm step and
+   * removed anyway (plan 0035 R3). Each adapter lifts its refusal guard only
+   * when it is named here, and nothing else — the fresh-read/fresh-id
+   * invariants (R5) are untouched. Never defaulted on.
    */
-  allowDestructive?: boolean;
+  destructive?: ProviderId[];
 }
 
 /** What every removal adapter sees — the item, plus the destructive opt-in (KTD-7). */
 export interface WatchlistRemovePayload {
   item: NormalizedMediaItem;
-  allowDestructive?: boolean;
+  destructive?: readonly ProviderId[];
 }
 
 export interface WatchlistRemovePlan {
@@ -117,20 +117,27 @@ export function splitWatchlistRemoveTargets(
   errors: readonly ProviderFailure[],
   incomplete: readonly ProviderId[] = [],
   letterboxdUserscript = false,
-): { targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
+): { item: NormalizedMediaItem; targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
+  const routed = removalItem(item, sources);
   const { writable, manual } = splitWriteTargets(
-    item,
+    routed,
     connected,
     platform,
     'watchlist-remove',
     letterboxdUserscript,
   );
-  const unknown = providersForWrite(item, connected, 'watchlist-remove').filter(
+  // A grouped book's AniList entry may be on a list whose leg couldn't say.
+  const probe =
+    item.bridgedAniList != null && !hasWatchlistReadLeg(Provider.AniList, connected, errors, incomplete)
+      ? removalItem(item, [...sources, Provider.AniList])
+      : routed;
+  const unknown = providersForWrite(probe, connected, 'watchlist-remove').filter(
     (provider) =>
       !sources.includes(provider) &&
       !hasWatchlistReadLeg(provider, connected, errors, incomplete),
   );
   return {
+    item: routed,
     targets: writable.filter((provider) => sources.includes(provider)),
     manual: manual.filter((provider) => sources.includes(provider)),
     unknown,
@@ -152,11 +159,13 @@ export async function planWatchlistRemove(
   variables: UnwatchlistMediaVariables = {},
   incomplete: readonly ProviderId[] = [],
 ): Promise<WatchlistRemovePlan> {
-  const enriched = await enrichExternalIds(queryClient, entry.item, connected);
+  // A book gains nothing a removal can use from enrichment: its AniList entry
+  // comes from the card, never from the search bridge.
+  const base = entry.item.type === 'BOOK' ? entry.item : await enrichExternalIds(queryClient, entry.item, connected);
   const platform = currentPlatform();
 
   const split = splitWatchlistRemoveTargets(
-    enriched,
+    base,
     entry.sources,
     connected,
     platform,
@@ -170,7 +179,7 @@ export async function planWatchlistRemove(
       ? split.targets
       : split.targets.filter((provider) => only.includes(provider));
 
-  return { item: enriched, targets, manual: split.manual, unknown: split.unknown };
+  return { item: split.item, targets, manual: split.manual, unknown: split.unknown };
 }
 
 /**

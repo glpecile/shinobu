@@ -98,49 +98,54 @@ export function unwatchlistConfirmLabel(
 }
 
 /**
- * The destructive-removal warning (plan 0035 R3/R4, KTD2), or `null` when the
- * removal is the ordinary one.
+ * What a removal takes from one provider, for the remove sheet's confirm
+ * step: one line per selected provider, so the reader sees what goes before
+ * it goes (plan 0035 R3/R4). `destructive` marks the lines that delete more
+ * than a list status; only those providers lift their refusal guard.
  *
  * AniList has no "un-status" that keeps an entry, so removing something the
- * user is *watching* means deleting the whole `MediaList` entry — progress,
- * score, notes, dates, custom lists. The picker shows this and takes a second,
- * explicit press before it passes `allowDestructive` down. A bare `PLANNING`
- * entry keeps its silent path (R4): nothing is lost there, and the adapter's own
- * refusal guard still stands behind it.
- *
- * Names AniList deliberately — the no-provider-names rule is about *CTA labels*
- * (R38); a warning that won't say which tracker it's about is not a warning.
- * Generic about *what* is lost rather than reading the entry's exact contents:
- * that would cost one extra request per picker open against the 30 req/min
- * budget, and the delete's own fresh read is the authority regardless (KTD2).
+ * user is watching deletes the whole entry. Simkl has one status per item, so
+ * its only un-track takes the watch history with it (plan 0036). A bare
+ * Planning entry only leaves the list, and the adapters' refusal guards still
+ * stand behind both. A merged reading card names the AniList entry it holds,
+ * so a wrong grouping shows before it deletes anything (plan 0117 B6).
  */
-export function destructiveRemoveWarning(params: {
-  anilistStatus?: 'CURRENT' | 'PLANNING';
-  simklWatchedCount?: number;
-  targets: readonly ProviderId[];
-}): string | null {
-  const warnings: string[] = [];
-  if (params.anilistStatus === 'CURRENT' && params.targets.includes(Provider.AniList)) {
-    warnings.push(
-      'AniList can’t un-plan something you’re watching, so this deletes your whole AniList entry — progress, score, notes and dates included.',
-    );
+export function removalLine(
+  provider: ProviderId,
+  entry: { item: Pick<NormalizedMediaItem, 'bridgedAniList'>; anilistStatus?: 'CURRENT' | 'PLANNING'; simklWatchedCount?: number },
+): { text: string; destructive: boolean } {
+  switch (provider) {
+    case Provider.AniList:
+      return entry.anilistStatus === 'CURRENT'
+        ? { text: 'Can’t un-plan something you’re watching, so this deletes the whole entry — progress, score, notes and dates included.', destructive: true }
+        : {
+            text: entry.item.bridgedAniList != null
+              ? `Deletes the Planning entry “${entry.item.bridgedAniList.title}”.`
+              : 'Deletes the Planning entry.',
+            destructive: false,
+          };
+    case Provider.Simkl:
+      return (entry.simklWatchedCount ?? 0) > 0
+        ? { text: 'Can’t drop just the plan-to-watch status, so this deletes the whole entry — watch history and rating included, and the show leaves Continue Watching and This week.', destructive: true }
+        : { text: 'Leaves Plan to Watch.', destructive: false };
+    case Provider.Hardcover:
+      return { text: 'Leaves Want to Read.', destructive: false };
+    case Provider.Trakt:
+    case Provider.Letterboxd:
+    case Provider.Serializd:
+      return { text: 'Leaves your watchlist.', destructive: false };
   }
-  // Simkl has one status per item and no status-only removal, so the only
-  // un-track it offers takes the watch history and rating with it (plan 0036).
-  // Normally there is none to take — a watched item isn't plan-to-watch — so
-  // this fires only on a row the user put back on the list by hand.
-  if (
-    (params.simklWatchedCount ?? 0) > 0 &&
-    params.targets.includes(Provider.Simkl)
-  ) {
-    warnings.push(
-      'Simkl can’t drop just the plan-to-watch status, so this deletes the whole Simkl entry — your watch history and rating for it included, and the show leaves Continue Watching and This week with it.',
-    );
-  }
-  return warnings.length > 0 ? warnings.join(' ') : null;
 }
 
-/** The second, explicit press behind that warning. Provider-free, per R38. */
+/** The selected providers whose confirm line warned: only these lift their refusal guard. */
+export function destructiveProviders(
+  selected: readonly ProviderId[],
+  entry: Parameters<typeof removalLine>[1],
+): ProviderId[] {
+  return selected.filter((provider) => removalLine(provider, entry).destructive);
+}
+
+/** The confirm step's press when a line is destructive. Provider-free, per R38. */
 export const DESTRUCTIVE_REMOVE_CONFIRM_LABEL = 'Remove anyway';
 
 /** The clean-report toast's headline (plan 0032 R6) — the message names the providers. */

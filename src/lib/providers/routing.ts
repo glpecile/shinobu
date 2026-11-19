@@ -2,7 +2,7 @@ import type { MediaType, NormalizedMediaItem } from '@/types/media';
 import { PROVIDERS } from './registry';
 import { Provider, type ProviderDescriptor, type ProviderId, type WriteSupport } from './types';
 
-type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume'>;
+type RoutableItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds' | 'tmdbTvVariant' | 'anilistVolume' | 'bridgedAniList'>;
 
 /** An id Trakt/Letterboxd's movie-TV world can resolve. */
 function hasMovieTvIds(item: RoutableItem): boolean {
@@ -50,9 +50,9 @@ function effectiveTypes(item: RoutableItem): readonly MediaType[] {
  * 0117 KTD-4): one whose own id it carries. A manga carries
  * `externalIds.anilist`. A book carries `externalIds.hardcover`, and the
  * reading bridge (`enrichExternalIds`) adds the AniList id of the series it
- * is a volume of. AniList takes the book only with its volume number, and
- * never its removal: one volume leaving want-to-read can't delete the
- * series entry.
+ * is a volume of. AniList takes a log or a want-to-read only with the
+ * volume number. A removal takes only the entry a merged card proves
+ * (`removalItem` sets the id to the card's `bridgedAniList`).
  */
 function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteCapability): boolean {
   switch (item.type) {
@@ -61,7 +61,11 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
         case Provider.Hardcover:
           return item.externalIds.hardcover != null;
         case Provider.AniList:
-          return item.externalIds.anilist != null && item.anilistVolume != null && capability !== 'watchlist-remove';
+          // A removal deletes the entry a card proves it holds (`removalItem`),
+          // never one the search bridge guessed.
+          return capability === 'watchlist-remove'
+            ? item.externalIds.anilist != null && item.externalIds.anilist === item.bridgedAniList?.id
+            : item.externalIds.anilist != null && item.anilistVolume != null;
         default:
           return false;
       }
@@ -70,6 +74,21 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
     default:
       return true;
   }
+}
+
+/**
+ * The item a watchlist removal routes. A book reaches AniList only when
+ * `sources` holds AniList for the entry the book is grouped under, and only by
+ * that entry's id (plan 0117 B6), never by an id the search bridge guessed.
+ */
+export function removalItem(item: NormalizedMediaItem, sources: readonly ProviderId[]): NormalizedMediaItem {
+  if (item.type !== 'BOOK') return item;
+  const { anilist: _searched, ...ids } = item.externalIds;
+  const card = item.bridgedAniList;
+  return {
+    ...item,
+    externalIds: card != null && sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
+  };
 }
 
 /**

@@ -23,29 +23,16 @@ export interface ProviderLink {
   url: string;
 }
 
-type LinkItem = Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalIds'>;
-
-/**
- * The source provider's own link, or undefined when the source is unknown or
- * its URL isn't buildable — never a substitute from another connected
- * provider. The card-actions sheet's "View on {SourceProvider}" row (plan
- * 0023 R1) is specifically about the *source*, so this encodes that as its
- * own contract instead of the sheet reverse-engineering it from
- * `providerLinksFor`'s general-purpose ordering.
- */
-export function sourceLinkFor(item: LinkItem): ProviderLink | undefined {
-  const source = sourceProviderOf(item);
-  if (source == null) return undefined;
-  const url = providerItemUrl(source, item);
-  return url != null ? { provider: source, url } : undefined;
-}
+type LinkItem = Pick<NormalizedMediaItem, 'id' | 'type' | 'isFilm' | 'externalIds'> &
+  Partial<Pick<NormalizedMediaItem, 'bridgedAniList'>>;
 
 /**
  * The provider links for `item` (plan 0023 R3/KTD-3): the source provider
  * first — linked even if currently disconnected, since it's where the item
  * came from — then every other connected provider, deduped, filtered to
- * buildable URLs. Shared by the card-actions sheet (takes `[0]`) and the
- * details Ratings section (renders all).
+ * buildable URLs. The card-actions sheet passes no connected provider, or
+ * AniList alone for a book grouped under an AniList entry, whose own card
+ * dropped out of the screen (plan 0117 B6).
  */
 export function providerLinksFor(
   item: LinkItem,

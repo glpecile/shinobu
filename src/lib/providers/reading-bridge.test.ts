@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
-import { bridgeQueries, pickBridgeMatch, type BridgeCandidate } from './reading-bridge';
+import type { NormalizedMediaItem } from '@/types/media';
+
+import { bridgeQueries, pickBridgeMatch, showBridgedOnce, type BridgeCandidate } from './reading-bridge';
 
 // Shapes from AniList and Hardcover, probed 2026-11-18.
 const nisemonogatari: BridgeCandidate = {
@@ -108,5 +110,55 @@ describe('pickBridgeMatch', () => {
 
   test('a book with no volume marker or format tag searches nothing', () => {
     expect(bridgeQueries({ title: 'Piranesi', authors: ['Susanna Clarke'] })).toEqual([]);
+  });
+});
+
+// Plan 0117 B6: the lists the app already loads, matched with no request.
+function card(overrides: Partial<NormalizedMediaItem> & Pick<NormalizedMediaItem, 'id' | 'title' | 'type'>): NormalizedMediaItem {
+  return { coverImage: '', currentProgress: 0, progressUnit: 'chapter', lastUpdated: '', externalIds: {}, ...overrides };
+}
+
+describe('showBridgedOnce', () => {
+  test('the Hardcover volume carries its AniList entry for grouping, which drops out; an entry with no volume stays', () => {
+    const entry = card({
+      id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
+      readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
+    });
+    const other = card({
+      id: 'anilist-30013', title: 'One Piece', type: 'MANGA', externalIds: { anilist: 30013 },
+      readingCredits: { people: ['Eiichirou Oda'], format: 'MANGA' },
+    });
+    const book = card({
+      id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', type: 'BOOK', progressUnit: 'page',
+      externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN', 'VOFAN'] },
+    });
+    expect(showBridgedOnce([entry, book, other], [entry, other])).toEqual([
+      { ...book, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } },
+      other,
+    ]);
+  });
+
+  test('a book whose title reads as no volume stays apart, as B5 would', () => {
+    const manga = card({
+      id: 'anilist-1', title: 'Battle Royale', type: 'MANGA', externalIds: { anilist: 1 },
+      readingCredits: { people: ['Koushun Takami'], format: 'MANGA' },
+    });
+    const novel = card({
+      id: 'hardcover-9', title: 'Battle Royale', type: 'BOOK', externalIds: { hardcover: 9 },
+      readingCredits: { people: ['Koushun Takami'] },
+    });
+    expect(showBridgedOnce([manga, novel], [manga])).toEqual([manga, novel]);
+  });
+
+  test('the card keeps the newer update of the volume and its entry', () => {
+    const entry = card({
+      id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 }, lastUpdated: '2026-11-18',
+      readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
+    });
+    const book = card({
+      id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1 (Light Novel)', type: 'BOOK', lastUpdated: '2025-01-02',
+      externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN'] },
+    });
+    expect(showBridgedOnce([book, entry], [entry])[0].lastUpdated).toBe('2026-11-18');
   });
 });

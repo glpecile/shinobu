@@ -71,7 +71,9 @@ const PROVIDER_PRIORITY: Record<ProviderId, number> = {
   serializd: 2,
   anilist: 3,
   letterboxd: 4,
-  hardcover: 5,
+  // Only a bridged volume shares a row with another provider, and it leads
+  // that row: it is the finer record (plan 0117 B6).
+  hardcover: -1,
 };
 
 /** A diary entry's ordering key in epoch ms (date-only → local midnight). */
@@ -305,8 +307,10 @@ function identityKeys(item: NormalizedDiaryEntry['item']): string[] {
   if (ids.imdb != null) keys.push(`imdb:${ids.imdb}`);
   if (ids.mal != null) keys.push(`mal:${ids.mal}`);
   if (ids.anilist != null) keys.push(`anilist:${ids.anilist}`);
-  // A book never meets a film or a manga by title (KTD-6).
+  // A book never meets a film or a manga by title (KTD-6), only through the
+  // AniList entry the reading bridge grouped it under (plan 0117 B6).
   if (ids.hardcover != null) keys.push(`hardcover:${ids.hardcover}`);
+  if (item.bridgedAniList != null) keys.push(`anilist:${item.bridgedAniList.id}`);
   if (keys.length === 0) keys.push(titleYearKey(item));
   return keys;
 }
@@ -382,9 +386,11 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
   // Fill-only fold from the richest contributor down — merge-metadata precedence
   // (plan 0016 KTD4): the primary's fields win, poorer contributors fill gaps
   // and union external ids, so the result is order-independent.
+  // A bridged volume's row keeps the book's own record: the AniList entry's
+  // ids and catalogue fields name the series, not this volume (plan 0117 B6).
   const item = contributors
     .slice(1)
-    .reduce((acc, entry) => mergeCatalogueMetadata(acc, entry.item), primary.item);
+    .reduce((acc, entry) => (acc.type === 'BOOK' && entry.item.type !== 'BOOK' ? acc : mergeCatalogueMetadata(acc, entry.item)), primary.item);
   const episodes = [
     ...new Set(contributors.flatMap((entry) => entry.episodes ?? [])),
   ].sort((a, b) => a - b);

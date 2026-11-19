@@ -292,6 +292,34 @@ shows alone when none of its volumes is in the Hardcover library. The match
 runs against the reader's own AniList list, which M3 already loads, so it
 costs no request.
 
+Built (#471). The M3 manga list read now asks for each entry's staff,
+synonyms and volumes, and the Hardcover library and journal reads ask for
+each book's authors and series. These are nested fields, so neither read
+gains a request (KTD-9). Each item carries them as `readingCredits`, and
+`bridgeBooks` (`lib/providers/reading-bridge.ts`) runs the B5 matcher over
+the two lists. A match sets `bridgedAniList`, which groups cards. A
+removal reads it only through a merged card's AniList source
+(`removalItem`). A log never reads it and asks the B5 bridge as before.
+
+- Continue Reading drops an AniList entry that a Currently Reading volume
+  covers (`showBridgedOnce`).
+- The reading list merges a planned AniList entry with one want-to-read
+  volume into one card that lists both sources. A second volume of the work
+  keeps its own card, so every card has one item a removal acts on.
+- Removing a merged card asks (owner decision 2026-11-18): the remove sheet
+  lists Hardcover and AniList, both selected. Its confirm step, in the same
+  drawer, shows one line per provider ("Deletes the Planning entry.", "Leaves
+  Want to Read.") before anything goes. Every removal now takes this step.
+  Removing from the AniList entry's own screen removes only that entry. The
+  AniList removal uses the entry the card's AniList source proves, never a
+  search, and its confirm line names that entry.
+- The screens group cards against the whole AniList list, and only titled
+  volumes (B5's gate).
+- The diary groups a journal book under its AniList entry from the manga
+  list, which it loads once a page holds a book, and a same-day row that holds both leads with the book. Whether AniList
+  writes a list activity for a volume-only update, and with which progress,
+  is unverified until the owner's first live log.
+
 ### C0. Choose a comics tracker — dropped
 
 The owner decided on 2026-11-18 that Shinobu does not track comics. #401

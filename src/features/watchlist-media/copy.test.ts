@@ -6,7 +6,8 @@ import type { NormalizedMediaItem } from '@/types/media';
 import {
   addedToastTitle,
   addedToSentence,
-  destructiveRemoveWarning,
+  destructiveProviders,
+  removalLine,
   failedOnSentence,
   isUnwatchlistCtaSettled,
   isWatchlistCtaSettled,
@@ -228,64 +229,29 @@ describe('picker confirm labels and toast titles (plan 0032 R3)', () => {
  * Plan 0035 R3/R4. The warning is the price of letting a CURRENT entry be
  * removed at all: the delete destroys progress, score and notes, so a removal
  * that fires without this text on screen is data loss the user never agreed to.
- * R4's other half matters just as much — a bare PLANNING removal keeps its
- * silent path and gains no new friction.
+ * R4's other half matters just as much — a bare PLANNING removal loses
+ * nothing, so it carries no warning. Every removal confirms (owner decision 2026-11-18), and the
+ * confirm step names what each provider loses.
  */
-describe('destructiveRemoveWarning (plan 0035 R3/R4)', () => {
-  test('a CURRENT AniList row warns, and names what is lost', () => {
-    const warning = destructiveRemoveWarning({
-      anilistStatus: 'CURRENT',
-      targets: ['trakt', 'anilist'],
-    });
-    expect(warning).toContain('deletes your whole AniList entry');
-    expect(warning).toContain('progress');
+describe('removalLine (the remove sheet’s confirm step)', () => {
+  test('a Planning entry only leaves the list; an entry in progress is deleted whole', () => {
+    const book = { item: { bridgedAniList: { id: 143703, title: 'Nisemonogatari' } } };
+    expect(removalLine('hardcover', book)).toEqual({ text: 'Leaves Want to Read.', destructive: false });
+    expect(removalLine('anilist', { ...book, anilistStatus: 'PLANNING' }))
+      .toEqual({ text: 'Deletes the Planning entry “Nisemonogatari”.', destructive: false });
+    expect(removalLine('anilist', { ...book, anilistStatus: 'CURRENT' }).destructive).toBe(true);
   });
 
-  test('a PLANNING row is the silent path — no warning at all (R4)', () => {
-    expect(
-      destructiveRemoveWarning({ anilistStatus: 'PLANNING', targets: ['anilist'] }),
-    ).toBeNull();
+  test('a Simkl row that still holds watch history is deleted whole', () => {
+    const show = { item: {} };
+    expect(removalLine('simkl', { ...show, simklWatchedCount: 0 })).toEqual({ text: 'Leaves Plan to Watch.', destructive: false });
+    expect(removalLine('simkl', { ...show, simklWatchedCount: 12 }).destructive).toBe(true);
   });
+});
 
-  test('deselecting AniList clears the warning — nothing destructive is left to run', () => {
-    expect(
-      destructiveRemoveWarning({
-        anilistStatus: 'CURRENT',
-        targets: ['trakt', 'letterboxd'],
-      }),
-    ).toBeNull();
-  });
-
-  test('a Simkl row holding watch history warns, and names both losses (plan 0036)', () => {
-    const warning = destructiveRemoveWarning({
-      simklWatchedCount: 12,
-      targets: ['trakt', 'simkl'],
-    });
-    expect(warning).toContain('deletes the whole Simkl entry');
-    // The consequence the owner asked to be spelled out: the show leaves the
-    // surfaces it was visible on, not just the watchlist.
-    expect(warning).toContain('Continue Watching');
-  });
-
-  test('the ordinary Simkl case — a plan-to-watch row with no history — never warns', () => {
-    expect(
-      destructiveRemoveWarning({ simklWatchedCount: 0, targets: ['simkl'] }),
-    ).toBeNull();
-  });
-
-  test('deselecting Simkl clears its warning', () => {
-    expect(
-      destructiveRemoveWarning({ simklWatchedCount: 12, targets: ['trakt'] }),
-    ).toBeNull();
-  });
-
-  test('both destructive providers selected states both losses, not just the first', () => {
-    const warning = destructiveRemoveWarning({
-      anilistStatus: 'CURRENT',
-      simklWatchedCount: 4,
-      targets: ['anilist', 'simkl'],
-    });
-    expect(warning).toContain('AniList entry');
-    expect(warning).toContain('Simkl entry');
+describe('destructiveProviders', () => {
+  test('only the provider whose line warned lifts its guard', () => {
+    const show = { item: {}, anilistStatus: 'PLANNING' as const, simklWatchedCount: 12 };
+    expect(destructiveProviders(['anilist', 'simkl', 'trakt'], show)).toEqual(['simkl']);
   });
 });

@@ -32,6 +32,13 @@ export interface AniListMedia {
   averageScore?: number | null;
   episodes?: number | null;
   chapters?: number | null;
+  volumes?: number | null;
+  /** Only requested by the manga list read (Continue Reading, the reading list, the diary), for the reading bridge. */
+  staff?: {
+    nodes?: Array<{
+      name?: { full?: string | null; native?: string | null; alternative?: Array<string | null> | null } | null;
+    } | null> | null;
+  } | null;
   idMal?: number | null;
   /**
    * Only requested by the currently-watching read (plan 0019 U2) — one scalar
@@ -107,6 +114,15 @@ export function parseAniListItemId(id: string): number | null {
   return match == null ? null : Number(match[1]);
 }
 
+/** Every name AniList lists for each staff member, for the reading bridge. */
+export function staffNames(nodes: NonNullable<AniListMedia['staff']>['nodes']): string[] {
+  return (nodes ?? []).flatMap((node) =>
+    [node?.name?.full, node?.name?.native, ...(node?.name?.alternative ?? [])].filter(
+      (name): name is string => name != null && name !== '',
+    ),
+  );
+}
+
 /**
  * AniList Media → NormalizedMediaItem. `nowIso` keeps this pure — catalogue
  * entries (trending) carry no personal timestamp, so the read effect supplies
@@ -121,6 +137,7 @@ export function normalizeAniListMedia(
   const year = media.seasonYear ?? media.startDate?.year;
   const genres = media.genres?.filter((genre): genre is string => genre != null);
   const aliases = media.synonyms?.filter((alias): alias is string => alias != null && alias.trim() !== '');
+  const people = media.staff == null ? undefined : staffNames(media.staff.nodes);
   const titles = {
     ...(media.title?.romaji != null ? { romaji: media.title.romaji } : {}),
     ...(media.title?.english != null ? { english: media.title.english } : {}),
@@ -149,6 +166,15 @@ export function normalizeAniListMedia(
     progressUnit: type === 'MANGA' ? 'chapter' : 'episode',
     ...(total != null ? { totalEpisodes: total } : {}),
     lastUpdated: nowIso,
+    ...(people != null
+      ? {
+          readingCredits: {
+            people,
+            ...(media.format != null ? { format: media.format } : {}),
+            ...(media.volumes != null ? { volumes: media.volumes } : {}),
+          },
+        }
+      : {}),
     // idMal rides along so Simkl anime writes can key by MAL id (plan 0034
     // KTD-6) instead of falling to the best-effort external-id tier.
     externalIds: { anilist: media.id, ...(media.idMal != null ? { mal: media.idMal } : {}) },

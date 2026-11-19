@@ -1,3 +1,4 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -20,8 +21,11 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
+import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 import { toast } from '@/lib/toast';
+import { cachedMangaList } from '@/state/queries/anilist';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
@@ -31,7 +35,8 @@ import {
   addedToastTitle,
   addedToSentence,
   DESTRUCTIVE_REMOVE_CONFIRM_LABEL,
-  destructiveRemoveWarning,
+  destructiveProviders,
+  removalLine,
   failedOnSentence,
   providerLabelList,
   removedFromSentence,
@@ -202,7 +207,7 @@ export function WatchlistAddPicker({
     );
     return {
       held: data == null ? [] : watchlistSourcesFor(data.inputs, item),
-      removal: data == null ? null : findWatchlistRemoval(data, item),
+      removal: data == null ? null : findWatchlistRemoval(data, item, cachedMangaList(queryClient)),
     };
   });
   const [removing, setRemoving] = useState(false);
@@ -374,49 +379,32 @@ export function WatchlistRemovePicker({
     onCleanClose();
   });
 
-  // R3's explicit confirm, in place rather than as a second stacked sheet: the
-  // warning is on screen from the moment a provider whose removal destroys
-  // something is a selected target — AniList on a CURRENT entry, Simkl on a
-  // row that still holds watch history (plan 0036) — and the first press only
-  // arms the button. Two deliberate presses with the loss spelled out between
-  // them is what earns `allowDestructive`. Deselecting that provider clears
-  // the warning, and with it the arming.
-  const [armed, setArmed] = useState(false);
-  const warning = destructiveRemoveWarning({
-    ...(entry.anilistStatus != null
-      ? { anilistStatus: entry.anilistStatus }
-      : {}),
-    ...(entry.simklWatchedCount != null
-      ? { simklWatchedCount: entry.simklWatchedCount }
-      : {}),
-    targets: selected,
-  });
-
-  // Any change to the selection disarms: otherwise dropping AniList from the
-  // targets and adding it back would leave a still-armed button that deletes
-  // the entry on a single press.
-  function disarmThen<A extends unknown[]>(action: (...args: A) => void) {
-    return (...args: A) => {
-      setArmed(false);
-      action(...args);
-    };
-  }
+  // R3's explicit confirm, as the drawer's next step rather than a second
+  // stacked sheet: the first press shows, one line per selected provider,
+  // what goes — AniList's whole entry when it's CURRENT, Simkl's watch
+  // history (plan 0036) — and only the press on that step writes. Seeing the
+  // loss spelled out is what earns the `destructive` opt-in. The step holds
+  // the providers the user reviewed, so a leg that lands meanwhile can't join
+  // the write. Back returns to the selection with it intact.
+  const [reviewed, setReviewed] = useState<ProviderId[] | null>(null);
+  const foreground = useThemeColor('--color-foreground');
+  const warned = destructiveProviders(reviewed ?? [], entry);
+  const destructive = warned.length > 0;
 
   function write(providers: ProviderId[]) {
     if (pending || providers.length === 0) return;
     haptics.destructive();
     remove.mutate(
-      { providers, ...(warning != null ? { allowDestructive: true } : {}) },
+      // Only the providers whose own line warned lift their guard.
+      { providers, destructive: warned },
       step.callbacks,
     );
   }
 
-  function confirm() {
-    if (warning != null && !armed) {
-      if (!pending && selected.length > 0) setArmed(true);
-      return;
-    }
-    write(selected);
+  function review() {
+    if (pending || selected.length === 0) return;
+    haptics.selection();
+    setReviewed(selected);
   }
 
   if (step.reported) {
@@ -427,7 +415,7 @@ export function WatchlistRemovePicker({
           item={entry.item}
           onDone={onCleanClose}
           onRetry={() =>
-            write(step.thrown ? selected : [...(step.report?.failed ?? [])])
+            write(step.thrown ? (reviewed ?? []) : [...(step.report?.failed ?? [])])
           }
           pending={pending}
           pendingLabel={copy.pending}
@@ -435,6 +423,58 @@ export function WatchlistRemovePicker({
           succeededLine={removedFromSentence}
           verb="Remove on"
         />
+      </WriteSheet.Step>
+    );
+  }
+
+  if (reviewed != null) {
+    return (
+      <WriteSheet.Step key="confirm">
+        <WriteSheet.Header onClose={onCancel}>
+          <View className="size-12 rounded-2xl border border-border bg-background items-center justify-center mb-4">
+            <Ionicons
+              accessibilityElementsHidden
+              color={foreground}
+              importantForAccessibility="no"
+              name={destructive ? 'trash-outline' : 'bookmark-outline'}
+              size={24}
+            />
+          </View>
+          <WriteSheet.Title>{`Remove “${entry.item.title}”?`}</WriteSheet.Title>
+        </WriteSheet.Header>
+        <View className="mt-4 gap-3">
+          {reviewed.map((provider) => {
+            const line = removalLine(provider, entry);
+            return (
+              <View className="flex-row items-start gap-3" key={provider}>
+                {/* Centred on the text's first line. */}
+                <View className="mt-0.5">
+                  <ProviderIcon id={provider} size={20} />
+                </View>
+                <Text className={cn('flex-1 font-sans text-sm leading-relaxed', line.destructive ? 'text-accent' : 'text-foreground')}>
+                  <Text className="font-sans-semibold">{PROVIDERS[provider].label}</Text>
+                  {` · ${line.text}`}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        <WriteSheet.Actions>
+          <Button
+            icon={<Button.Icon name={destructive ? 'trash-outline' : 'bookmark-outline'} />}
+            label={destructive ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL : unwatchlistConfirmLabel(entry.item, reviewed.length)}
+            loading={pending}
+            loadingLabel={copy.pending}
+            onPress={() => write(reviewed)}
+          />
+          <Button
+            disabled={pending}
+            icon={<Button.Icon name="chevron-back" />}
+            label="Back"
+            onPress={() => setReviewed(null)}
+            variant="quiet"
+          />
+        </WriteSheet.Actions>
       </WriteSheet.Step>
     );
   }
@@ -459,9 +499,9 @@ export function WatchlistRemovePicker({
         </Text>
         {split.targets.length > 0 && (
           <ProviderToggleList
-            onSelectAll={disarmThen(selectAll)}
-            onSelectNone={disarmThen(selectNone)}
-            onToggle={disarmThen(toggle)}
+            onSelectAll={selectAll}
+            onSelectNone={selectNone}
+            onToggle={toggle}
             selectedProviders={selected}
             targets={split.targets}
           />
@@ -488,32 +528,14 @@ export function WatchlistRemovePicker({
           </Text>
         )}
       </View>
-      {warning != null && (
-        <Text className="text-accent font-sans text-sm mt-3 leading-relaxed">
-          {warning}
-        </Text>
-      )}
-
-
       <WriteSheet.Actions>
         <Button
           disabled={selected.length === 0}
-          // `trash-outline` only once armed: the second press is the one that
-          // deletes an AniList/Simkl entry outright, and the glyph should say so.
-          icon={
-            <Button.Icon
-              name={warning != null && armed ? 'trash-outline' : 'bookmark-outline'}
-            />
-          }
-          label={
-            warning != null && armed
-              ? DESTRUCTIVE_REMOVE_CONFIRM_LABEL
-              : unwatchlistConfirmLabel(entry.item, selected.length)
-          }
+          icon={<Button.Icon name="chevron-forward" />}
+          label="Continue"
           loading={pending}
           loadingLabel={copy.pending}
-          morphLabel
-          onPress={confirm}
+          onPress={review}
         />
       </WriteSheet.Actions>
     </WriteSheet.Step>

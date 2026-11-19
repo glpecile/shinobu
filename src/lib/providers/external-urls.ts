@@ -35,7 +35,8 @@ export const TMDB_API_SETTINGS_URL = 'https://www.themoviedb.org/settings/api';
 /** Browser extension used by Letterboxd's optional web logging setup. */
 export const TAMPERMONKEY_URL = 'https://www.tampermonkey.net/';
 
-export type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'>;
+export type UrlItem = Pick<NormalizedMediaItem, 'type' | 'isFilm' | 'externalIds'> &
+  Partial<Pick<NormalizedMediaItem, 'bridgedAniList'>>;
 
 /** An episode on the trackers' (TMDB's) season layout, for the builders that can address one. */
 export interface UrlEpisode {
@@ -81,7 +82,9 @@ function traktUrl(item: UrlItem, episode?: UrlEpisode): string | null {
 }
 
 function anilistUrl(item: UrlItem): string | null {
-  const id = item.externalIds.anilist;
+  // A link is a read, so a book grouped under an AniList entry links to it
+  // (plan 0117 B6). Only writes ignore the grouping.
+  const id = item.externalIds.anilist ?? item.bridgedAniList?.id;
   if (id == null) return null;
   return `https://anilist.co/${anilistMediaKind(item) === 'MANGA' ? 'manga' : 'anime'}/${id}`;
 }

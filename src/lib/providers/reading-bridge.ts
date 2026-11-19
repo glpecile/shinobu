@@ -11,6 +11,8 @@
  * (Light Novel) Vol. 8" and "Berserk Deluxe Edition Volume 1".
  */
 
+import type { NormalizedMediaItem } from '@/types/media';
+
 /** A Hardcover book, as the bridge reads it. */
 export interface BridgeBook {
   title: string;
@@ -111,19 +113,49 @@ export function bridgeQueries(book: BridgeBook): string[] {
  * member, in the format the book's tag names; two that do are no match.
  */
 export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandidate[]): BridgeMatch | null {
+  const match = matchFolded(foldBook(book), results.map(foldCandidate));
+  return match == null ? null : { anilistId: match.anilistId, volume: match.volume };
+}
+
+/** A book's title, series and authors folded once. */
+interface FoldedBook {
+  parsed: ParsedTitle;
+  titleNames: Set<string>;
+  seriesName: string | null;
+  authors: string[];
+}
+
+function foldBook(book: BridgeBook): FoldedBook {
   const parsed = parseBookTitle(book.title);
-  const titleNames = new Set(parsed.names.map(titleKey));
-  const seriesName = book.series == null ? null : titleKey(book.series.name.replace(FORMAT_TAG, ''));
-  const authors = new Set(book.authors.flatMap(nameKeys));
+  return {
+    parsed,
+    titleNames: new Set(parsed.names.map(titleKey)),
+    seriesName: book.series == null ? null : titleKey(book.series.name.replace(FORMAT_TAG, '')),
+    authors: book.authors.flatMap(nameKeys),
+  };
+}
+
+/** A candidate's names folded once, so a list of books compares without refolding them. */
+interface FoldedCandidate {
+  candidate: BridgeCandidate;
+  titles: string[];
+  staff: Set<string>;
+}
+
+function foldCandidate(candidate: BridgeCandidate): FoldedCandidate {
+  return { candidate, titles: candidate.titles.map(titleKey), staff: new Set(candidate.staff.flatMap(nameKeys)) };
+}
+
+function matchFolded(book: FoldedBook, folded: readonly FoldedCandidate[]): (BridgeMatch & { title: string }) | null {
+  const { parsed, titleNames, seriesName, authors } = book;
 
   const matches = new Map<number, { candidate: BridgeCandidate; viaTitle: boolean }>();
-  for (const candidate of results) {
+  for (const { candidate, titles, staff } of folded) {
     if (parsed.format === 'novel' && candidate.format !== 'NOVEL') continue;
     if (parsed.format === 'manga' && candidate.format === 'NOVEL') continue;
-    if (!candidate.staff.some((name) => nameKeys(name).some((key) => authors.has(key)))) continue;
-    const keys = candidate.titles.map(titleKey);
-    const viaTitle = keys.some((key) => titleNames.has(key));
-    if (viaTitle || (seriesName != null && keys.includes(seriesName))) matches.set(candidate.id, { candidate, viaTitle });
+    if (!authors.some((key) => staff.has(key))) continue;
+    const viaTitle = titles.some((key) => titleNames.has(key));
+    if (viaTitle || (seriesName != null && titles.includes(seriesName))) matches.set(candidate.id, { candidate, viaTitle });
   }
   if (matches.size !== 1) return null;
 
@@ -133,5 +165,106 @@ export function pickBridgeMatch(book: BridgeBook, results: readonly BridgeCandid
   const volume = viaTitle && !parsed.edition ? (parsed.volume ?? (candidate.volumes === 1 ? 1 : null)) : null;
   // A number past the entry's known count, or a volume 0, names some other numbering.
   const known = volume != null && volume >= 1 && (candidate.volumes == null || volume <= candidate.volumes);
-  return { anilistId: candidate.id, volume: known ? volume : null };
+  return { anilistId: candidate.id, volume: known ? volume : null, title: candidate.titles[0] };
+}
+
+function bookOf(item: NormalizedMediaItem): BridgeBook | null {
+  const credits = item.readingCredits;
+  if (item.type !== 'BOOK' || credits == null) return null;
+  return { title: item.title, authors: credits.people, ...(credits.series != null ? { series: { name: credits.series } } : {}) };
+}
+
+function candidateOf(item: NormalizedMediaItem): BridgeCandidate | null {
+  const id = item.externalIds.anilist;
+  const credits = item.readingCredits;
+  if (item.type !== 'MANGA' || id == null || credits == null) return null;
+  return {
+    id,
+    format: credits.format ?? null,
+    volumes: credits.volumes ?? null,
+    titles: [item.title, ...Object.values(item.titles ?? {}), ...(item.titleAliases ?? [])],
+    staff: credits.people,
+  };
+}
+
+// Folding runs NFKD and regexes, which Hermes runs slowly. A cached list
+// keeps its items' identity, so each entry and each book folds once per fetch.
+const foldedEntries = new WeakMap<NormalizedMediaItem, FoldedCandidate | null>();
+const foldedBooks = new WeakMap<NormalizedMediaItem, FoldedBook | null>();
+
+/** A book folded, or null when its title reads as no manga or light novel volume (B5's gate). */
+function foldedBookOf(item: NormalizedMediaItem): FoldedBook | null {
+  let folded = foldedBooks.get(item);
+  if (folded === undefined) {
+    const book = bookOf(item);
+    const next = book == null ? null : foldBook(book);
+    folded = next != null && (next.parsed.volume != null || next.parsed.format != null) ? next : null;
+    foldedBooks.set(item, folded);
+  }
+  return folded;
+}
+
+function foldedOf(entry: NormalizedMediaItem): FoldedCandidate | null {
+  let folded = foldedEntries.get(entry);
+  if (folded === undefined) {
+    const candidate = candidateOf(entry);
+    folded = candidate == null ? null : foldCandidate(candidate);
+    foldedEntries.set(entry, folded);
+  }
+  return folded;
+}
+
+type Grouping = NonNullable<NormalizedMediaItem['bridgedAniList']>;
+
+/**
+ * The AniList entry each Hardcover book in `books` is a volume of, among
+ * `entries` (plan 0117 B6), keyed by the book's item id. Callers set it as
+ * `bridgedAniList` on their own item. It compares only what the two lists
+ * loaded, so it costs no request. A log never reads it; a removal reads it
+ * only through a merged card's AniList source (`removalItem`).
+ */
+export function bridgeBooks(
+  books: readonly NormalizedMediaItem[],
+  entries: readonly NormalizedMediaItem[],
+): Map<string, Grouping> {
+  const bridged = new Map<string, Grouping>();
+  if (!books.some((item) => item.type === 'BOOK')) return bridged;
+  const folded = entries.flatMap((entry) => foldedOf(entry) ?? []);
+  if (folded.length === 0) return bridged;
+  for (const item of books) {
+    const book = foldedBookOf(item);
+    const match = book == null ? null : matchFolded(book, folded);
+    if (match == null) continue;
+    bridged.set(item.id, { id: match.anilistId, title: match.title });
+  }
+  return bridged;
+}
+
+/**
+ * One card per bridged work (plan 0117 B6): the Hardcover volume, which holds
+ * the finer progress, carries its `bridgedAniList`, and the entry it covers drops
+ * out of `items`. `entries` is the whole AniList list, so a book matches the
+ * same entry on every screen. The card keeps the newer of the two updates,
+ * so a stale volume doesn't bury a work read today.
+ */
+export function showBridgedOnce(
+  items: readonly NormalizedMediaItem[],
+  entries: readonly NormalizedMediaItem[],
+): NormalizedMediaItem[] {
+  const bridged = bridgeBooks(items, entries);
+  if (bridged.size === 0) return [...items];
+  const covering = new Set([...bridged.values()].map((grouping) => grouping.id));
+  const latest = new Map<number, string>();
+  for (const item of items) {
+    const id = item.externalIds.anilist;
+    if (item.type === 'MANGA' && id != null && covering.has(id)) latest.set(id, item.lastUpdated);
+  }
+  return items.flatMap((item) => {
+    if (item.type === 'MANGA' && item.externalIds.anilist != null && covering.has(item.externalIds.anilist)) return [];
+    const grouping = bridged.get(item.id);
+    if (grouping == null) return [item];
+    const entryUpdate = latest.get(grouping.id);
+    const lastUpdated = entryUpdate != null && entryUpdate > item.lastUpdated ? entryUpdate : item.lastUpdated;
+    return [{ ...item, bridgedAniList: grouping, lastUpdated }];
+  });
 }

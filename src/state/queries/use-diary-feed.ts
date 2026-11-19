@@ -9,6 +9,7 @@ import * as Effect from 'effect/Effect';
 
 import { getListActivity, getViewer } from '@/lib/providers/anilist/reads';
 import { getReadingJournal } from '@/lib/providers/hardcover/reads';
+import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import { getDiary } from '@/lib/providers/letterboxd/diary';
 import { aniZipTmdbKind } from '@/lib/providers/mapping/anizip';
 import {
@@ -24,7 +25,7 @@ import { groupDiaryEntries, mergeDiaryEntries } from '@/features/diary/merge';
 import { useConnectedProviders } from '@/state/session';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { getSerializdUsername } from '@/state/session/serializd';
-import { anilistDeps, anilistQueryKeys } from './anilist';
+import { anilistDeps, anilistQueryKeys, useMangaListQuery } from './anilist';
 import { hardcoverDeps, hardcoverViewerQuery } from './hardcover';
 import {
   diaryQueryKeys,
@@ -127,6 +128,23 @@ async function showTmdbIds(
     ),
   );
   return found;
+}
+
+/**
+ * A journal book that is a volume of a work on the AniList list carries the
+ * entry's id, so the day can show the work once (plan 0117 B6). It runs on
+ * render, so a list that loads after the journal still bridges.
+ */
+function withBridgedBooks(
+  entries: NormalizedDiaryEntry[],
+  list: readonly NormalizedMediaItem[],
+): NormalizedDiaryEntry[] {
+  const bridged = bridgeBooks(entries.map((entry) => entry.item), list);
+  if (bridged.size === 0) return entries;
+  return entries.map((entry) => {
+    const grouping = bridged.get(entry.item.id);
+    return grouping == null ? entry : { ...entry, item: { ...entry.item, bridgedAniList: grouping } };
+  });
 }
 
 function withShowTmdbIds(
@@ -282,8 +300,14 @@ export function useDiaryFeedQuery(): DiaryFeedResult {
     placeholderData: keepPreviousData,
   });
 
+  // Shares Continue Reading's manga list read and its cache entry, and fetches
+  // it only once a loaded page holds a book to bridge.
+  const mangaList = useMangaListQuery({
+    fetch: active.includes(Provider.AniList) && merged.some((entry) => entry.item.type === 'BOOK'),
+  });
+
   return {
-    days: groupDiaryEntries(withShowTmdbIds(merged, tmdbByAniList), timeZone),
+    days: groupDiaryEntries(withBridgedBooks(withShowTmdbIds(merged, tmdbByAniList), mangaList), timeZone),
     timeZone,
     activeProviders: active,
     entryCount: merged.length,

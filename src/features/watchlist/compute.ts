@@ -1,6 +1,7 @@
 import { PROVIDERS } from '@/lib/providers/registry';
 import { mediaSortValue } from '@/lib/media-sort';
 import { animeEffectiveMovieTvType } from '@/lib/providers/routing';
+import { bridgeBooks } from '@/lib/providers/reading-bridge';
 import type { ProviderId } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 
@@ -23,7 +24,8 @@ import type { WatchlistEntry, WatchlistInput } from './types';
 const PROVIDER_ORDER = Object.keys(PROVIDERS) as ProviderId[];
 
 /**
- * Which provider's copy of a merged item wins. AniList first because it holds
+ * Which provider's copy of a merged item wins. A bridged Hardcover volume
+ * leads its card, and among the rest AniList comes first because it holds
  * the user's anime state and airing schedule (the same rationale
  * `dedupeByTmdb` uses), then Simkl (plan 0034 KTD-10/R10 — the calendar/
  * yourShows precedence carries over here rather than inventing a second
@@ -37,7 +39,9 @@ const ITEM_PRECEDENCE: Record<ProviderId, number> = {
   trakt: 2,
   serializd: 3,
   letterboxd: 4,
-  hardcover: 5,
+  // Only a bridged volume merges with another provider's row, and it leads
+  // that card: it holds the finer progress (plan 0117 B6).
+  hardcover: -1,
 };
 
 /**
@@ -93,6 +97,57 @@ export function watchlistMergeKeys(item: NormalizedMediaItem): string[] {
   return keys;
 }
 
+/**
+ * The reading work a row belongs to: an AniList manga or novel, or the one
+ * Hardcover volume the reading bridge matched to it (plan 0117 B6). Only the
+ * merge uses it, so it never makes a volume read as the series elsewhere.
+ */
+function readingWorkKey(item: NormalizedMediaItem): string | null {
+  let id: number | undefined;
+  switch (item.type) {
+    case 'BOOK':
+      id = item.bridgedAniList?.id;
+      break;
+    case 'MANGA':
+      id = item.externalIds.anilist;
+      break;
+    case 'ANIME':
+    case 'MOVIE':
+    case 'TV':
+      break;
+  }
+  return id == null ? null : `anilist-manga:${id}`;
+}
+
+/**
+ * The reading bridge's one-card rule (plan 0117 B6): a want-to-read book
+ * grouped under an entry of the whole AniList list carries it as
+ * `bridgedAniList`, and meets that entry's row, when it's planned, on the
+ * `anilist-manga` key.
+ */
+function bridgeReadingInputs(
+  inputs: readonly WatchlistInput[],
+  mangaList: readonly NormalizedMediaItem[],
+): readonly WatchlistInput[] {
+  // The whole AniList list, as Continue Reading and the diary use, so a book
+  // groups under the same entry on every screen.
+  const bridged = bridgeBooks(inputs.map((input) => input.item), mangaList);
+  if (bridged.size === 0) return inputs;
+  // One volume per entry, so each card keeps one item that a removal acts on.
+  // The smallest item id as a string, because Hardcover returns the list in no
+  // fixed order.
+  const joined = new Map<number, string>();
+  for (const [itemId, grouping] of bridged) {
+    const held = joined.get(grouping.id);
+    if (held == null || itemId < held) joined.set(grouping.id, itemId);
+  }
+  return inputs.map((input) => {
+    const grouping = bridged.get(input.item.id);
+    if (grouping == null || joined.get(grouping.id) !== input.item.id) return input;
+    return { ...input, item: { ...input.item, bridgedAniList: grouping } };
+  });
+}
+
 interface MergedEntry {
   item: NormalizedMediaItem;
   precedence: number;
@@ -146,12 +201,16 @@ function byAddedAtDesc(a: WatchlistEntry, b: WatchlistEntry): number {
   return b.addedAt.localeCompare(a.addedAt);
 }
 
-export function computeWatchlist(inputs: readonly WatchlistInput[]): WatchlistEntry[] {
+export function computeWatchlist(
+  inputs: readonly WatchlistInput[],
+  mangaList: readonly NormalizedMediaItem[] = [],
+): WatchlistEntry[] {
   const merged: MergedEntry[] = [];
   const byKey = new Map<string, MergedEntry>();
 
-  for (const input of inputs) {
-    const keys = watchlistMergeKeys(input.item);
+  for (const input of bridgeReadingInputs(inputs, mangaList)) {
+    const work = readingWorkKey(input.item);
+    const keys = work == null ? watchlistMergeKeys(input.item) : [...watchlistMergeKeys(input.item), work];
     // First key that already names an entry wins — the keys are generated in
     // R27's precedence order, so a TMDB match is preferred over an IMDb one and
     // an IMDb match over a title+year one.

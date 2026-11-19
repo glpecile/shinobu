@@ -34,6 +34,10 @@ describe('providerItemUrl', () => {
     expect(
       providerItemUrl('anilist', { type: 'MANGA', ...ids({ anilist: 789 }) }),
     ).toBe('https://anilist.co/manga/789');
+    // A book grouped under its AniList entry links to it (plan 0117 B6).
+    expect(
+      providerItemUrl('anilist', { type: 'BOOK', ...ids({ hardcover: 61 }), bridgedAniList: { id: 143703, title: 'Nisemonogatari' } }),
+    ).toBe('https://anilist.co/manga/143703');
   });
 
   it('builds a Letterboxd URL from a slug', () => {

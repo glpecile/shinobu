@@ -22,6 +22,7 @@ import {
   normalizeCurrentAnimeEntry,
   normalizeCurrentMangaEntry,
   normalizeListActivity,
+  staffNames,
   stripHtml,
   stripHtmlMarkup,
   type AniListCurrentEntry,
@@ -180,7 +181,13 @@ export function getCurrentManga(
               status
               progress
               updatedAt
-              media { ${CARD_FIELDS} }
+              media {
+                ${CARD_FIELDS}
+                volumes
+                synonyms
+                # The authors lead by relevance. The list is persisted, so it stays small.
+                staff(perPage: 6, sort: RELEVANCE) { nodes { name { full native alternative } } }
+              }
             }
           }
         }
@@ -682,17 +689,12 @@ export function searchReadingWorks(
       (data.Page?.media ?? []).flatMap((media) => {
         if (media == null) return [];
         const titles = [media.title?.romaji, media.title?.english, media.title?.native, ...(media.synonyms ?? [])];
-        const staff = (media.staff?.nodes ?? []).flatMap((node) => [
-          node?.name?.full,
-          node?.name?.native,
-          ...(node?.name?.alternative ?? []),
-        ]);
         return [{
           id: media.id,
           format: media.format,
           volumes: media.volumes,
           titles: titles.filter((title): title is string => title != null && title !== ''),
-          staff: staff.filter((name): name is string => name != null && name !== ''),
+          staff: staffNames(media.staff?.nodes),
         }];
       }),
     ),

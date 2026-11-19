@@ -242,9 +242,9 @@ export async function fetchWatchlistAnime(
 }
 
 /**
- * The manga list read behind Continue Reading and the reading list. The rail's
- * observer and the watchlist gather's fetch both use these options, so they
- * share one cache entry and one request.
+ * The manga list read behind Continue Reading, the reading list and the
+ * diary's reading bridge. They all use these options, so they share one cache
+ * entry and one request.
  */
 function currentMangaEntriesOptions(queryClient: QueryClient) {
   return {
@@ -256,6 +256,35 @@ function currentMangaEntriesOptions(queryClient: QueryClient) {
     },
     staleTime: LIST_ENTRIES_STALE_MS,
   };
+}
+
+const NO_MANGA: readonly NormalizedMediaItem[] = [];
+
+/**
+ * The whole cached manga list, for the reading bridge's grouping (plan 0117
+ * B6). Cache only: it never fetches, so a removal and the grid it came from
+ * group against the same list.
+ */
+export function cachedMangaList(queryClient: QueryClient): readonly NormalizedMediaItem[] {
+  return queryClient.getQueryData<AniListMangaEntry[]>(anilistQueryKeys.currentMangaEntries())?.map((entry) => entry.item) ?? NO_MANGA;
+}
+
+/**
+ * The manga list as the reading bridge reads it (plan 0117 B6). It shares the
+ * reads' cache entry: `fetch` lets it load the list and refresh it after a
+ * log, never on focus. `subscribed: false` holds the last answer without
+ * re-rendering, for a surface that's mounted while hidden.
+ */
+export function useMangaListQuery(options: { fetch: boolean; subscribed?: boolean }): readonly NormalizedMediaItem[] {
+  const queryClient = useQueryClient();
+  const { data } = useQuery({
+    ...currentMangaEntriesOptions(queryClient),
+    refetchOnWindowFocus: false,
+    enabled: options.fetch,
+    subscribed: options.subscribed ?? true,
+    select: (entries) => entries.map((entry) => entry.item),
+  });
+  return data ?? NO_MANGA;
 }
 
 /**

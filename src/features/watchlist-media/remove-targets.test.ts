@@ -84,6 +84,26 @@ function entryFor(
   return { id: item.id, item, sources, sourceIds: [item.id] };
 }
 
+// Plan 0117 B6: a book reaches AniList only through the entry its card holds.
+describe('a grouped book’s removal', () => {
+  const book = film({
+    id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61, anilist: 999 },
+    bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
+  });
+
+  test('a merged card removes the entry it holds, whatever the search said', () => {
+    const split = splitWatchlistRemoveTargets(book, ['anilist', 'hardcover'], ['anilist', 'hardcover'], 'ios', []);
+    expect(split.item.externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+  });
+
+  test('a book alone on Hardcover never reaches AniList, unless AniList’s list couldn’t say', () => {
+    const connected: ProviderId[] = ['anilist', 'hardcover'];
+    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [])).toMatchObject({ targets: ['hardcover'], unknown: [] });
+    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [{ provider: 'anilist', message: 'down' }]))
+      .toMatchObject({ targets: ['hardcover'], unknown: ['anilist'] });
+  });
+});
+
 describe('hasWatchlistReadLeg — who can prove absence (R35)', () => {
   test('a leg that errored on this gather makes its provider unknown, not absent', () => {
     expect(hasWatchlistReadLeg('trakt', CONNECTED, [])).toBe(true);

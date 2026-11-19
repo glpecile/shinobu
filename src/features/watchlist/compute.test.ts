@@ -66,6 +66,42 @@ describe('computeWatchlist', () => {
     expect(computeWatchlist([manga, { ...invalid, item: { ...invalid.item, runtime: 24 } }])[0].item.runtime).toBeUndefined();
   });
 
+  test('a want-to-read volume and its planned AniList entry merge under the book; a second volume keeps its own card (plan 0117 B6)', () => {
+    const planned: WatchlistInput = {
+      source: 'anilist', anilistStatus: 'PLANNING',
+      item: item({
+        id: 'anilist-143703', title: 'Nisemonogatari', type: 'MANGA', externalIds: { anilist: 143703 },
+        readingCredits: { people: ['NISIOISIN'], format: 'NOVEL', volumes: 2 },
+      }),
+    };
+    const volume: WatchlistInput = {
+      source: 'hardcover',
+      item: item({
+        id: 'hardcover-61', title: 'NISEMONOGATARI, Part 1: Fake Tale (Light Novel)', type: 'BOOK',
+        externalIds: { hardcover: 61 }, readingCredits: { people: ['NISIOISIN'] },
+      }),
+    };
+    const second: WatchlistInput = {
+      source: 'hardcover',
+      item: item({
+        id: 'hardcover-62', title: 'NISEMONOGATARI, Part 2: Fake Tale (Light Novel)', type: 'BOOK',
+        externalIds: { hardcover: 62 }, readingCredits: { people: ['NISIOISIN'] },
+      }),
+    };
+    const [entry, own] = computeWatchlist([planned, volume, second], [planned.item]);
+    // Hardcover's list order isn't fixed, and the merged volume doesn't follow it.
+    expect(computeWatchlist([planned, second, volume], [planned.item]).map((card) => card.id)).toEqual(['hardcover-61', 'hardcover-62']);
+    expect(entry).toMatchObject({
+      id: 'hardcover-61',
+      sources: ['anilist', 'hardcover'],
+      sourceIds: ['anilist-143703', 'hardcover-61'],
+      anilistStatus: 'PLANNING',
+    });
+    // Grouping only: the book's own ids never gain the AniList one.
+    expect(entry.item).toMatchObject({ externalIds: { hardcover: 61 }, bridgedAniList: { id: 143703, title: 'Nisemonogatari' } });
+    expect(own).toMatchObject({ id: 'hardcover-62', sources: ['hardcover'] });
+  });
+
   test('the same film from Trakt and Letterboxd merges into one entry', () => {
     const entries = computeWatchlist([
       traktRow({ id: 'trakt-1', title: 'Heat', year: 1995, externalIds: { tmdb: 949 } }),

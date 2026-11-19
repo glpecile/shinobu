@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { HardcoverStatus } from '@/lib/providers/hardcover/reads';
 import { Provider } from '@/lib/providers/types';
-import { useAniListEntryStateQuery } from '@/state/queries/anilist';
+import { cachedMangaList, useAniListEntryStateQuery } from '@/state/queries/anilist';
 import { useHardcoverBookEntryQuery } from '@/state/queries/hardcover';
 import { watchlistQueryKeys, type WatchlistInputs } from '@/state/queries/watchlist';
 import { useConnectedProviders } from '@/state/session';
@@ -156,10 +156,13 @@ export function WatchlistMediaButton({
     const data = queryClient.getQueryData<WatchlistInputs>(
       watchlistQueryKeys.inputs(),
     );
-    const target = data == null ? null : findWatchlistRemoval(data, item);
+    const target = data == null ? null : findWatchlistRemoval(data, item, cachedMangaList(queryClient));
     if (target == null) return;
     haptics.selection();
     setRemoval(target);
+    // A new key per open: the native sheet keeps its picker mounted while
+    // closed, so a reopen would land on the last step it showed.
+    setOpenNonce((nonce) => nonce + 1);
     setRemoveOpen(true);
   }
 
@@ -215,7 +218,7 @@ export function WatchlistMediaButton({
           entry={removal.entry}
           errors={removal.errors}
           incomplete={removal.incomplete}
-          key={`remove-${removal.entry.id}`}
+          key={`remove-${openNonce}`}
           onClose={() => setRemoveOpen(false)}
           open={removeOpen}
         />

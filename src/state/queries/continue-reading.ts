@@ -1,11 +1,12 @@
 import { useQueryClient, useSuspenseQueries, type QueryKey } from '@tanstack/react-query';
 
+import { showBridgedOnce } from '@/lib/providers/reading-bridge';
 import { providersForFeed } from '@/lib/providers/routing';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
-import { anilistQueryKeys, fetchReadingManga } from './anilist';
+import { anilistQueryKeys, fetchReadingManga, useMangaListQuery } from './anilist';
 import { fetchHardcoverReading, hardcoverQueryKeys } from './hardcover';
 import { settle, type ProviderContribution } from './settle';
 
@@ -22,11 +23,10 @@ function leg(provider: ProviderId, queryKey: QueryKey, read: () => Promise<Norma
   return { queryKey, queryFn: (): Promise<Leg> => settle(provider, read) };
 }
 
-// Module scope keeps the combined rail's identity between renders.
-function newestFirst(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem[] {
-  return results
-    .flatMap((result) => result.data.inputs)
-    .sort((a, b) => b.lastUpdated.localeCompare(a.lastUpdated));
+// Module scope, and only the legs' data: `combine` runs again on every
+// observer change, and its result keeps its identity while the data does.
+function legInputs(results: ReadonlyArray<{ data: Leg }>): NormalizedMediaItem[][] {
+  return results.map((result) => result.data.inputs);
 }
 
 /** The connected providers that feed Continue Reading. */
@@ -40,11 +40,12 @@ export function continueReadingProviders(connected: readonly ProviderId[]): Prov
  * Home's Continue Reading rail (plan 0117 M3, B2): manga being read or reread
  * on AniList and Currently Reading books on Hardcover, newest update first
  * across both. Units never convert (KTD-3): manga count chapters, books pages.
+ * A bridged work shows once, as its Hardcover volume (B6).
  */
 export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
   const queryClient = useQueryClient();
   const providers = continueReadingProviders(useConnectedProviders());
-  return useSuspenseQueries({
+  const legs = useSuspenseQueries({
     queries: [
       ...(providers.includes(Provider.AniList)
         ? [leg(Provider.AniList, anilistQueryKeys.reading(), () => fetchReadingManga(queryClient))]
@@ -53,6 +54,12 @@ export function useSuspenseContinueReadingQuery(): NormalizedMediaItem[] {
         ? [leg(Provider.Hardcover, hardcoverQueryKeys.reading(), () => fetchHardcoverReading(queryClient))]
         : []),
     ],
-    combine: newestFirst,
+    combine: legInputs,
   });
+  // The whole list the AniList leg just read, so a book matches the same entry
+  // here as on the reading list and the diary. The leg owns the fetch.
+  const list = useMangaListQuery({ fetch: false });
+  return showBridgedOnce(legs.flat(), list).sort((a, b) =>
+    b.lastUpdated.localeCompare(a.lastUpdated),
+  );
 }

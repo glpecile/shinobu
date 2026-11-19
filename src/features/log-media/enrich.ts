@@ -36,12 +36,10 @@ export async function enrichExternalIds(
   // A Hardcover volume of a manga or light novel is one AniList entry's
   // volume (plan 0117 B5, KTD-6). Without a volume number the AniList id
   // still rides along, so the log sheet can link the entry.
-  if (
-    item.type === 'BOOK' &&
-    item.externalIds.hardcover != null &&
-    item.externalIds.anilist == null &&
-    connected.includes(Provider.AniList)
-  ) {
+  if (item.type === 'BOOK') {
+    if (item.externalIds.hardcover == null || item.externalIds.anilist != null || !connected.includes(Provider.AniList)) {
+      return item;
+    }
     const bridge = await cachedReadingBridge(queryClient, item);
     if (bridge == null) return item;
     return {
