@@ -160,6 +160,9 @@ export function WatchlistMediaButton({
     if (target == null) return;
     haptics.selection();
     setRemoval(target);
+    // A new key per open: the native sheet keeps its picker mounted while
+    // closed, so a reopen would land on the last step it showed.
+    setOpenNonce((nonce) => nonce + 1);
     setRemoveOpen(true);
   }
 
@@ -215,7 +218,7 @@ export function WatchlistMediaButton({
           entry={removal.entry}
           errors={removal.errors}
           incomplete={removal.incomplete}
-          key={`remove-${removal.entry.id}`}
+          key={`remove-${removal.entry.id}-${openNonce}`}
           onClose={() => setRemoveOpen(false)}
           open={removeOpen}
         />
