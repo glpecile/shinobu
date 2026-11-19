@@ -356,7 +356,7 @@ commit each, so they have no plan file.
 |-----|-------------------|
 | The Simkl library is indexed once per snapshot, not once per lookup | Lists |
 | Home pull-to-refresh stops downloading list indexes that no screen shows | Invalidation |
-| Four detail reads set `gcTime` equal to `staleTime` | Requests |
+| Three detail reads set `gcTime` equal to `staleTime` | Requests |
 | The shared list row and the credit timeline row prefetch details on press | Prefetch |
 | A discussion catalog is normalized once when it is fetched (plan 031 follow-up A) | Data layout |
 | The per-film Letterboxd read is untraced | Effect |

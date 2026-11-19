@@ -290,7 +290,6 @@ export function useSuspenseHardcoverListQuery(id: number) {
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, page) => (lastPage.hasNextPage ? page + 1 : undefined),
     staleTime: LISTS_STALE_MS,
-    gcTime: LISTS_STALE_MS,
   });
 }
 
