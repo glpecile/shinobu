@@ -431,7 +431,6 @@ decision before a plan is honest.
   that first.
 - **List create enriches up to 50 items with an unbounded `Promise.all`**
   (`state/queries/list-membership.ts`).
-- **Plan 031 follow-up B** stays open, gated on a Hermes timing.
 - **`PERSISTED_PREFIXES`' comment** (`state/queries/persist.ts`) says
   "Everything here is on the home screen's critical path". The list now also
   holds the Diary feed and the per-film Letterboxd reads.

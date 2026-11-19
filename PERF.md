@@ -76,7 +76,6 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 - Keep cell props out of JSX that depends on `pages`. TanStack's tracked result recomputes it on every render. (#423)
 - Compute `useQueries` results in `combine` so unchanged values keep their identity. (#423)
 - Keep heavy matching out of `combine`. It runs again on every settled read. (#433)
-- Index a library once with `indexLibrary` (`lib/media-progress.ts`) and binary-search it. A scan cost 38 ms per pass on the phone. (#423)
 - Let rows read one list-wide snapshot. Do not subscribe every row to every library. (#287)
 - Search collections in order. Do not flatten them all to find one item. (#302)
 
@@ -93,7 +92,7 @@ For CPU work in a loop over many rows. Prove the loop is hot first: most waits i
 - The speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block.
 - A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 has the verdict on each cache that existed when it was written.
 - Do item-independent work once in the producer, not once per lookup. (plan 031, follow-up A)
-- Replace a `Map` or `Set` lookup in a hot loop with a sorted flat array and a binary search. `indexLibrary` lookups went from 1.45 ms to 0.022 ms per pass, timed in bun. (#423)
+- Replace a `Map` or `Set` lookup in a hot loop with a sorted flat array and a binary search. A scan cost 38 ms per pass on the phone. `indexLibrary` (`lib/media-progress.ts`) lookups went from 1.45 ms to 0.022 ms per pass, timed in bun. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
 - Use a structure of arrays when the loop reads one or two fields: one column per field. `LibraryIndex.columns` is one: its `rows` are an `Int32Array`, its `values` a plain array. (#423)
 - Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags, and a `Uint32Array` holds more. The app has none yet: plan 031 follow-up B proposes one, gated on a Hermes timing.
