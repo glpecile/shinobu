@@ -444,21 +444,10 @@ function WatchlistRow({
   removal: CardActionsSheetProps['watchlistRemoval'];
   onOpenMode: (mode: 'watchlist-add' | 'watchlist-remove' | 'list-add') => void;
 }) {
-  const ctaShown = useWatchlistCtaShown(item);
   let main: ReactNode = null;
   switch (verb) {
     case 'add':
-      if (ctaShown) {
-        main = (
-          <WatchlistMediaButton
-            className="mb-0"
-            item={item}
-            key={`watchlist-${item.id}`}
-            onOpenPicker={() => onOpenMode('watchlist-add')}
-          />
-        );
-      }
-      break;
+      return <WatchlistAddRow item={item} onOpenMode={onOpenMode} />;
     case 'remove':
       // The removal, wherever the gather can evidence who holds the item (R35,
       // see `watchlistRemoval`). The row it removes leaves the grid when the
@@ -483,6 +472,29 @@ function WatchlistRow({
   return (
     <AddToListCapsule className="mb-3" item={item} onOpenPicker={() => onOpenMode('list-add')}>
       {main}
+    </AddToListCapsule>
+  );
+}
+
+/** The add verb's row. Only it reads the CTA gate, so a removal row costs no gate reads. */
+function WatchlistAddRow({
+  item,
+  onOpenMode,
+}: {
+  item: NormalizedMediaItem;
+  onOpenMode: (mode: 'watchlist-add' | 'list-add') => void;
+}) {
+  const ctaShown = useWatchlistCtaShown(item);
+  return (
+    <AddToListCapsule className="mb-3" item={item} onOpenPicker={() => onOpenMode('list-add')}>
+      {ctaShown ? (
+        <WatchlistMediaButton
+          className="mb-0"
+          item={item}
+          key={`watchlist-${item.id}`}
+          onOpenPicker={() => onOpenMode('watchlist-add')}
+        />
+      ) : null}
     </AddToListCapsule>
   );
 }

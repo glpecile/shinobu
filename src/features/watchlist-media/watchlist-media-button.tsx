@@ -111,7 +111,6 @@ export function WatchlistMediaButton({
   // watchlist but missing from another has an add left to offer (owner report
   // 2026-08-01). False whenever the answer is unknown, so R35 holds.
   const stillOffered = useWatchlistAddStillOffered(item);
-  const shown = useWatchlistCtaShown(item);
 
   const copy = watchlistCtaCopy(item);
   const view = result == null ? null : watchlistResultView(result, item);
@@ -120,8 +119,6 @@ export function WatchlistMediaButton({
   // retry entry). The rule lives in `copy.ts` so it is testable without a
   // renderer.
   const settled = isWatchlistCtaSettled(onList, view, stillOffered);
-
-  if (!shown) return null;
 
   function openRemovePicker() {
     // `settled` implies the gathered cache holds a matching input (that is what
@@ -202,8 +199,8 @@ export function WatchlistMediaButton({
 }
 
 /**
- * Whether `WatchlistMediaButton` renders for this item. A host that lays the
- * button out beside another control reads this to drop the empty slot.
+ * Whether a host renders `WatchlistMediaButton` for this item. The button
+ * doesn't check it, so a host gates the button and drops the empty slot.
  */
 export function useWatchlistCtaShown(item: NormalizedMediaItem): boolean {
   const { writable, manual } = useWatchlistTargetsSplit(item);
