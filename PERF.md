@@ -1,6 +1,6 @@
 # Performance tips
 
-Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026-11.md` and the Effect guide. Each tip names its source. Longer write-ups are in `docs/solutions/`.
+Lessons from this app's `perf` PRs, `plans/031-performance-review-2026-11.md` and the Effect guide. Each tip names its source. Longer write-ups are in `docs/solutions/`.
 
 ## Measure first
 
@@ -38,7 +38,7 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 
 - Give two consumers of the same read one query key. (#298, #301, #328, #329)
 - Keep ids that only feed a fallback out of the query key. A late id refetches and suspends the screen again. (#296, #330)
-- Set `gcTime` equal to `staleTime` on detail reads. The 5-minute default brings the skeleton back. Not on an infinite query: a stale cached one refetches every page it holds. (#296, #298, #478)
+- Set `gcTime` equal to `staleTime` on detail reads. The 5-minute default brings the skeleton back. Not on an infinite query: a stale cached one refetches every page it holds. Not under a persisted prefix: the query's `gcTime` overrides `retainPersistedQueries`. (#296, #298, #478)
 - Ask for more in one request: TMDB `append_to_response` loads the show and 20 seasons together. (#298)
 - When page 1 gives the page count, load the other pages in parallel. (#298)
 - Read the redirect `Location` header. Do not download the page to get its URL. (#337)
@@ -68,7 +68,7 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 ## Lists
 
 - Virtualize rails with `components/List`. Mounted credit cards fell from 35 to 14. (#184, #187)
-- Scroll jank on a virtualized list is row mount cost. `recycleItems` is off by default. Turn it on for long lists and derive cell state from props. (#37, #427)
+- Scroll jank on a virtualized list is row mount cost. `recycleItems` is off by default. Turn it on only for a list that measurably needs it, and derive cell state from props. (#37, #427)
 - With recycling, key cells by column, set `getItemType` for different cell kinds, and give images a `recyclingKey`. (#427)
 - Tune `drawDistance` per list: in grid view, 8 rows on the active page and 2 on neighbor pages; 50 px on Details to match Legend List's first pool. (#411, #427)
 - Keep state that changes during a scroll out of the cells: pinned shelf, sticky date, scroll-to-top button. The diary holds it in `DiaryList`, the list's owner, and keeps the list's props memoized. (#276, #411, #427)
