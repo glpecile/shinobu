@@ -8,7 +8,6 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 - Profile a release build on a real Android phone. Use Perfetto for JS thread load and the React profiler for commits. (#423, #433)
 - A smaller mounted tree is not a speedup. Without a repeatable timing, do not merge. (#186, closed)
 - Without a device, count the work in a test: requests, snapshots, cache visits, renders. (#302, #310)
-- Write in the PR what you did not measure.
 - A dev build runs about 3 times slower than release. Compare ratios, not milliseconds. (plan 031)
 - Time a pure function in the app's Hermes runtime with `debugger-evaluate`, not in bun. One matcher took 0.5 ms on JSC and 3 to 6 ms on Hermes. (plan 031)
 
@@ -22,7 +21,6 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 - Keep large payloads off the web allowlist. `localStorage` has a few MB. (#37, #298)
 - Do not persist a streamed aggregate before it is complete. (#328)
 - Defer hidden tabs and closed sheets until the splash reveals: `DeferredTab` and `useBootRevealed`. (#346)
-- Import Effect by subpath, not from the barrel. Lint enforces it. (#346)
 - Keep inline requires on in `metro.config.js`. Modules evaluated at Home fell 19 %. (#299)
 - Mount a hidden WebView on first use, not at launch. (#299)
 - Replay allowlisted launch reads through Nitro Fetch before JS starts. Stop the replay after a mutation or a credential change. (#346)
@@ -72,8 +70,8 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 - Virtualize rails with `components/List`. Mounted credit cards fell from 35 to 14. (#184, #187)
 - Scroll jank on a virtualized list is row mount cost. `recycleItems` is off by default. Turn it on for long lists and derive cell state from props. (#37, #427)
 - With recycling, key cells by column, set `getItemType` for different cell kinds, and give images a `recyclingKey`. (#427)
-- Tune `drawDistance` per list: 8 rows on the active grid, 2 on neighbor pages, 50 px on Details to match Legend List's first pool. (#411, #427)
-- Keep state that changes during a scroll below or beside the list: pinned shelf, sticky date, scroll-to-top button. (#276, #411, #427)
+- Tune `drawDistance` per list: in grid view, 8 rows on the active page and 2 on neighbor pages; 50 px on Details to match Legend List's first pool. (#411, #427)
+- Keep state that changes during a scroll out of the cells: pinned shelf, sticky date, scroll-to-top button. The diary holds it in `DiaryList`, the list's owner, and keeps the list's props memoized. (#276, #411, #427)
 - Pass a cell `item` and stable callbacks, not a wrapper object built on each render. (#423)
 - Keep cell props out of JSX that depends on `pages`. TanStack's tracked result recomputes it on every render. (#423)
 - Compute `useQueries` results in `combine` so unchanged values keep their identity. (#423)
@@ -92,13 +90,13 @@ Lessons from the 29 `perf` PRs (#37 to #433), `plans/031-performance-review-2026
 
 For CPU work in a loop over many rows. Prove the loop is hot first: most waits in this app are network.
 
-- The speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array is one contiguous block.
-- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 has the verdict on each cache in the app.
+- The speed comes from cache locality: data that sits together and is read in order. An array of objects, a `Map` and a `Set` follow pointers across the heap. A typed array of numbers is one contiguous block.
+- A cache over compute hides a slow design. Make the derivation run once per data change, then delete the cache. Keep a cache only for network latency or platform cost. Plan 031 has the verdict on each cache that existed when it was written.
 - Do item-independent work once in the producer, not once per lookup. (plan 031, follow-up A)
-- Replace a `Map` or `Set` lookup in a hot loop with a sorted flat array and a binary search. `indexLibrary` went from 1.45 ms to 0.022 ms per pass. (#423)
+- Replace a `Map` or `Set` lookup in a hot loop with a sorted flat array and a binary search. `indexLibrary` lookups went from 1.45 ms to 0.022 ms per pass, timed in bun. (#423)
 - Refer to a row by its index in the array, not by its object. Keep the indexes in an `Int32Array`. (#423)
-- Use a structure of arrays when the loop reads one or two fields: one column per field. `LibraryIndex.columns` is one. (#423)
-- Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags, and a `Uint32Array` holds more. (plan 031, follow-up B)
+- Use a structure of arrays when the loop reads one or two fields: one column per field. `LibraryIndex.columns` is one: its `rows` are an `Int32Array`, its `values` a plain array. (#423)
+- Use a bitmask, not an array of booleans or a `Set` of a small enum. One number holds 32 flags, and a `Uint32Array` holds more. The app has none yet: plan 031 follow-up B proposes one, gated on a Hermes timing.
 - Pack a small field into the upper bits of an index when both fit in 32 bits. Bitwise operators work on 32-bit integers.
 - JS has no stack allocation. The equivalent is to allocate nothing per row: reuse one buffer made outside the loop, and avoid spread, `map().filter()` chains and a new closure per row.
 
@@ -106,7 +104,7 @@ For CPU work in a loop over many rows. Prove the loop is hot first: most waits i
 
 The vendored `effect-ts` skill only covers setup. These tips come from `node_modules/effect/AGENTS.md` and the PRs.
 
-- Import by subpath (`effect/Effect`). The barrel evaluates all of Effect at launch. (#346)
+- Import by subpath (`effect/Effect`). The barrel evaluates all of Effect at launch. Lint enforces it. (#346)
 - Use `Effect.fnUntraced` for a function that runs once per row. `Effect.fn("name")` adds a tracing span and captures a stack frame on each call. Keep the name on top-level reads, where the stack trace helps. (Effect guide)
 - Bound a fan with `concurrency` or a shared `Semaphore`, and take the number from a measurement. (#298, #423)
 - Where an API takes several ids in one call, batch single lookups with `RequestResolver`. The app does not use it yet. (Effect guide)
@@ -122,4 +120,4 @@ The vendored `effect-ts` skill only covers setup. These tips come from `node_mod
 
 ## Build
 
-- Web export uses `--max-workers 2` for the 2-vCPU runner: 91.9 s to 63.0 s locally. Keep `--clear`. (#261)
+- Web export uses `--max-workers 2`, sized for a 2-vCPU runner: 91.9 s to 63.0 s locally. Keep `--clear`. (#261)

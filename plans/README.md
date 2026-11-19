@@ -367,35 +367,6 @@ device, in a browser, or against a provider. Each fix claims less work, not
 more speed. One constraint to keep: the Simkl index is keyed by the snapshot
 object, so a cached `SimklLibrary` must never be mutated in place.
 
-### PERF.md corrections (round 5)
-
-The advisor edits only `plans/`. These bullets do not match the code:
-
-- **Data layout, "Use a bitmask… (plan 031, follow-up B)"**: no bitmask exists
-  in `src/`. Follow-up B is still open in plan 031 and needs a Hermes timing
-  first. Say "planned" or drop the bullet.
-- **Data layout, "`indexLibrary` went from 1.45 ms to 0.022 ms per pass (#423)"**:
-  PR #423 says that number is from bun, for lookups only. The "Measure first"
-  section says to time in Hermes. Add "in bun, lookups only".
-- **Data layout, "Plan 031 has the verdict on each cache in the app"**: the
-  table predates `titleKeys` (`lib/providers/pick-movie-match.ts`, #433), the
-  `foldedEntries`/`foldedBooks` WeakMaps (`lib/providers/reading-bridge.ts`,
-  #476), and the Simkl snapshot index from #478. Either add rows to plan 031 or
-  soften the sentence.
-- **Data layout, "A typed array is one contiguous block"** next to
-  `LibraryIndex.columns`: only `rows` is an `Int32Array`; `values` is a plain array.
-- **Lists, "Tune `drawDistance`… 8 rows on the active grid, 2 on neighbor
-  pages"**: true for grid view only. List view keeps 4 rows on every page.
-- **Lists, "Keep state that changes during a scroll below or beside the
-  list… sticky date, scroll-to-top button"**: the diary keeps both in
-  `DiaryList`, the list's owner, and stays fast because the list's props stay
-  memoized. Say that, or the bullet reads as a rule the diary breaks.
-- **Build, "for the 2-vCPU runner"**: no workflow in `.github/workflows` runs
-  `build:web` (plan 025 is blocked). The flag is real; the runner is not.
-- `PERSISTED_PREFIXES`' own comment says "Everything here is on the home
-  screen's critical path". The list now also holds the Diary feed and the
-  per-film Letterboxd reads. That is a code comment, not `PERF.md`.
-
 ### Findings not yet planned (round 5)
 
 Confirmed in code, but each needs a measurement, a device, or an owner
@@ -461,6 +432,9 @@ decision before a plan is honest.
 - **List create enriches up to 50 items with an unbounded `Promise.all`**
   (`state/queries/list-membership.ts`).
 - **Plan 031 follow-up B** stays open, gated on a Hermes timing.
+- **`PERSISTED_PREFIXES`' comment** (`state/queries/persist.ts`) says
+  "Everything here is on the home screen's critical path". The list now also
+  holds the Diary feed and the per-film Letterboxd reads.
 
 ### Considered and rejected (round 5)
 
