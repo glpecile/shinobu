@@ -5,7 +5,7 @@ import { currentPlatform } from '@/features/log-media/use-log-targets';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { hasLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
 import { providersForWrite, removalItem, splitWriteTargets } from '@/lib/providers/routing';
-import type { ProviderId } from '@/lib/providers/types';
+import { Provider, type ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { watchlistReadProviders } from '@/state/queries/watchlist';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -118,14 +118,20 @@ export function splitWatchlistRemoveTargets(
   incomplete: readonly ProviderId[] = [],
   letterboxdUserscript = false,
 ): { targets: ProviderId[]; manual: ProviderId[]; unknown: ProviderId[] } {
+  const routed = removalItem(item, sources);
   const { writable, manual } = splitWriteTargets(
-    item,
+    routed,
     connected,
     platform,
     'watchlist-remove',
     letterboxdUserscript,
   );
-  const unknown = providersForWrite(item, connected, 'watchlist-remove').filter(
+  // A grouped book's AniList entry may be on a list whose leg couldn't say.
+  const probe =
+    item.bridgedAniList != null && !hasWatchlistReadLeg(Provider.AniList, connected, errors, incomplete)
+      ? removalItem(item, [...sources, Provider.AniList])
+      : routed;
+  const unknown = providersForWrite(probe, connected, 'watchlist-remove').filter(
     (provider) =>
       !sources.includes(provider) &&
       !hasWatchlistReadLeg(provider, connected, errors, incomplete),
@@ -154,14 +160,12 @@ export async function planWatchlistRemove(
 ): Promise<WatchlistRemovePlan> {
   // A book gains nothing a removal can use from enrichment: its AniList entry
   // comes from the card, never from the search bridge.
-  const enriched = removalItem(
-    entry,
-    entry.item.type === 'BOOK' ? entry.item : await enrichExternalIds(queryClient, entry.item, connected),
-  );
+  const base = entry.item.type === 'BOOK' ? entry.item : await enrichExternalIds(queryClient, entry.item, connected);
+  const enriched = removalItem(base, entry.sources);
   const platform = currentPlatform();
 
   const split = splitWatchlistRemoveTargets(
-    enriched,
+    base,
     entry.sources,
     connected,
     platform,

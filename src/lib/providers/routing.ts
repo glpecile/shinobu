@@ -77,21 +77,17 @@ function carriesReadingId(item: RoutableItem, id: ProviderId, capability: WriteC
 }
 
 /**
- * The item a watchlist removal routes. A book reaches AniList only on a merged
- * reading card, whose AniList source proves the entry it holds, and by that
- * entry's id (plan 0117 B6). `item` is the card's item, enriched for the
- * other providers.
+ * The item a watchlist removal routes. A book reaches AniList only when
+ * `sources` holds AniList for the entry the book is grouped under, and only by
+ * that entry's id (plan 0117 B6), never by an id the search bridge guessed.
  */
-export function removalItem(
-  entry: { item: NormalizedMediaItem; sources: readonly ProviderId[] },
-  item: NormalizedMediaItem = entry.item,
-): NormalizedMediaItem {
+export function removalItem(item: NormalizedMediaItem, sources: readonly ProviderId[]): NormalizedMediaItem {
   if (item.type !== 'BOOK') return item;
   const { anilist: _searched, ...ids } = item.externalIds;
-  const card = entry.item.bridgedAniList;
+  const card = item.bridgedAniList;
   return {
     ...item,
-    externalIds: card != null && entry.sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
+    externalIds: card != null && sources.includes(Provider.AniList) ? { ...ids, anilist: card.id } : ids,
   };
 }
 

@@ -7,7 +7,6 @@ import { useIsWatchlisted } from '@/features/watchlist/use-is-watchlisted';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
-import { removalItem } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import type { ProviderFailure } from '@/state/queries/settle';
 import { useConnectedProviders } from '@/state/session';
@@ -76,7 +75,7 @@ export function UnwatchlistMediaButton({
   // widens the applicable set (a book's AniList entry comes from the card,
   // never from enrichment), and the picker re-derives the same split.
   const split = splitWatchlistRemoveTargets(
-    removalItem(entry),
+    entry.item,
     entry.sources,
     connected,
     currentPlatform(),

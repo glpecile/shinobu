@@ -21,7 +21,6 @@ import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
-import { removalItem } from '@/lib/providers/routing';
 import { PROVIDERS } from '@/lib/providers/registry';
 import type { ProviderId } from '@/lib/providers/types';
 import { useThemeColor } from '@/lib/theme-color';
@@ -356,7 +355,7 @@ export function WatchlistRemovePicker({
   const letterboxdUserscript = useLetterboxdUserscript('watchlist-remove');
   const pending = useIsUnwatchlistPending(entry.item.id);
   const split = splitWatchlistRemoveTargets(
-    removalItem(entry),
+    entry.item,
     entry.sources,
     connected,
     currentPlatform(),

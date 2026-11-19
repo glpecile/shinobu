@@ -86,19 +86,21 @@ function entryFor(
 }
 
 // Plan 0117 B6: a book reaches AniList only through the entry its card holds.
-describe('removalItem', () => {
+describe('a grouped book’s removal', () => {
   const book = film({
-    id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61 },
+    id: 'hardcover-61', type: 'BOOK', externalIds: { hardcover: 61, anilist: 999 },
     bridgedAniList: { id: 143703, title: 'Nisemonogatari' },
   });
-  const searched = { ...book, externalIds: { hardcover: 61, anilist: 999 } };
 
   test('a merged card removes the entry it holds, whatever the search said', () => {
-    expect(removalItem(entryFor(book, ['anilist', 'hardcover']), searched).externalIds).toEqual({ hardcover: 61, anilist: 143703 });
+    expect(removalItem(book, ['anilist', 'hardcover']).externalIds).toEqual({ hardcover: 61, anilist: 143703 });
   });
 
-  test('a book alone on Hardcover never reaches AniList', () => {
-    expect(removalItem(entryFor(book, ['hardcover']), searched).externalIds).toEqual({ hardcover: 61 });
+  test('a book alone on Hardcover never reaches AniList, unless AniList’s list couldn’t say', () => {
+    const connected: ProviderId[] = ['anilist', 'hardcover'];
+    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [])).toMatchObject({ targets: ['hardcover'], unknown: [] });
+    expect(splitWatchlistRemoveTargets(book, ['hardcover'], connected, 'ios', [{ provider: 'anilist', message: 'down' }]))
+      .toMatchObject({ targets: ['hardcover'], unknown: ['anilist'] });
   });
 });
 
