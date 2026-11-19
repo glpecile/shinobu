@@ -48,12 +48,16 @@ const EPISODE_MARKERS = /\bs(\d+)\s*e(\d+)\b|\b(?:episode|ep|e)\.?\s*#?\s*(\d+)\
 /** A catalog thread with the fields the matcher reads, computed once per fetch. */
 export function indexThread(thread: { id: number; subject: string; opening: string; image?: string }) {
   const raw = `${thread.subject} ${thread.opening}`;
+  const subject = normalize(thread.subject);
   return {
     id: thread.id,
     subject: thread.subject,
     image: thread.image ?? '',
     text: ` ${normalize(raw)} `,
-    subjectText: ` ${normalize(thread.subject)} `,
+    subjectText: ` ${subject} `,
+    subjectLower: thread.subject.toLowerCase(),
+    subjectHasContext: /\b(?:episode|ep|e)\.?\s*#?\s*\d+\b|\bs\d+\s*e\d+\b|\b(?:discussion|general|thread)\b/i.test(thread.subject),
+    horrorGeneral: /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(subject),
     markers: [...raw.matchAll(EPISODE_MARKERS)].map((marker) =>
       marker[3] != null
         ? { number: Number(marker[3]) }
@@ -99,10 +103,9 @@ export function matchDiscussionThreads(
   const horror = item.genres?.some((genre) => normalize(genre) === 'horror') === true;
   return catalog.flatMap((thread) => {
     if (thread.id <= 0) return [];
-    const horrorGeneral = horror && /^(?:hsg\s+)?horror(?:\s+(?:and\s+)?supernatural)?(?:\s+(?:movies?|films?|shows?|tv))?\s+(?:general|discussion|thread)\b/.test(thread.subjectText.trim());
+    const horrorGeneral = horror && thread.horrorGeneral;
     const abbreviated = initials.some((alias) => thread.subjectText.includes(` ${alias} `) && (
-      /\b(?:episode|ep|e)\.?\s*#?\s*\d+\b|\bs\d+\s*e\d+\b|\b(?:discussion|general|thread)\b/i.test(thread.subject) ||
-      thread.subject.toLowerCase().includes(`/${alias}/`)
+      thread.subjectHasContext || thread.subjectLower.includes(`/${alias}/`)
     ));
     if (!titles.some((title) => thread.text.includes(` ${title} `)) && !abbreviated && !horrorGeneral) return [];
     if (!horrorGeneral && number != null && thread.markers.length > 0 && !thread.markers.some((marker) =>
