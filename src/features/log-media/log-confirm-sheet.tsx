@@ -25,6 +25,7 @@ import { unmatchedWriteReason } from '@/lib/providers/routing';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
+import { anilistQueryKeys } from '@/state/queries/anilist';
 import { hardcoverQueryKeys } from '@/state/queries/hardcover';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -363,18 +364,24 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
       ...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
       ...(retryOf != null ? { retryOf } : {}),
     });
-    // A book's button stays busy until its library entry is read again, so a
-    // second log never opens on the page or status this one changed.
+    // A reading item's button stays busy until its library entry and its
+    // Continue Reading card are read again, so a second log never opens on
+    // the page, chapter or status this one changed.
     const bookId = item.externalIds.hardcover;
+    const settleKeys =
+      reading != null && bookId != null
+        ? [hardcoverQueryKeys.bookEntry(bookId), hardcoverQueryKeys.reading()]
+        : item.type === 'MANGA'
+          ? [anilistQueryKeys.reading()]
+          : [];
     trackBusy(
       item.id,
-      reading == null || bookId == null
+      settleKeys.length === 0
         ? write
         : write.then(() =>
-            queryClient.invalidateQueries(
-              { queryKey: hardcoverQueryKeys.bookEntry(bookId) },
-              { cancelRefetch: false },
-            ),
+            Promise.all(settleKeys.map((queryKey) =>
+              queryClient.invalidateQueries({ queryKey }, { cancelRefetch: false }),
+            )),
           ),
     );
     void write.then(
