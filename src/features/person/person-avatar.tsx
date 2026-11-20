@@ -51,7 +51,8 @@ export function PersonAvatar({
   }
   return (
     <View className={cn('rounded-full bg-background overflow-hidden', className)}>
-      {status == null && <Skeleton className="absolute inset-0" />}
+      {/* Stays under the image so its fade-in covers the pulse, not the bare disc. */}
+      <Skeleton animated={status == null} className="absolute inset-0" />
       <Image
         className="w-full h-full"
         contentFit="cover"
