@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
+import { Skeleton } from '@/components/skeleton';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/initials';
 
@@ -11,6 +13,8 @@ import { initials } from '@/lib/initials';
  * the card-actions sheet). Sizing is the caller's: pass the box classes
  * (`w-20 h-20`) and the initials' type scale, since the same avatar appears at
  * 80px in a sheet header and 40px in a credit line.
+ *
+ * The disc pulses until the image loads, and shows the initials if it fails.
  */
 export function PersonAvatar({
   name,
@@ -24,7 +28,11 @@ export function PersonAvatar({
   className?: string;
   textClassName?: string;
 }) {
-  if (headshot === '') {
+  // Keyed by URI, so a new headshot starts loading again without a reset.
+  const [settled, setSettled] = useState<{ uri: string; failed: boolean } | null>(null);
+  const status = settled?.uri === headshot ? settled : null;
+
+  if (headshot === '' || status?.failed === true) {
     return (
       <View
         className={cn(
@@ -42,10 +50,15 @@ export function PersonAvatar({
     );
   }
   return (
-    <Image
-      source={{ uri: headshot }}
-      className={cn('rounded-full bg-background', className)}
-      contentFit="cover"
-    />
+    <View className={cn('rounded-full bg-background overflow-hidden', className)}>
+      {status == null && <Skeleton className="absolute inset-0" />}
+      <Image
+        className="w-full h-full"
+        contentFit="cover"
+        onError={() => setSettled({ uri: headshot, failed: true })}
+        onLoad={() => setSettled({ uri: headshot, failed: false })}
+        source={{ uri: headshot }}
+      />
+    </View>
   );
 }
