@@ -102,7 +102,7 @@ export function PresstableOpacity({
   ...rest
 }: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> & PressBehaviorProps & {
   onLongPress?: () => void;
-  /** Web-only DOM handler, forwarded by pressto but omitted from its prop types. */
+  /** Web-only DOM handler, typed here because callers type-check against this file. */
   onMouseDown?: MouseEventHandler<HTMLElement>;
 }) {
   const handlePress = usePressHandler(onPress, pressBehavior);

@@ -1,8 +1,7 @@
 # Web pressables skip gesture handler and pressto
 
 Seen 2026-11-20. Firefox for Android felt slow when a sheet opened and when a
-tab changed. The last five PRs (#478 to #484) did not cause it: a signed-out
-build of `9f1b1b1` and one of `origin/main` measured the same.
+tab changed.
 
 ## Cause
 
@@ -16,9 +15,8 @@ renders gesture handler 3's `BaseButton`. On web, each button:
 - starts and stops three Reanimated mappers (`useDerivedValue` twice,
   `useAnimatedStyle`). On web they run in JS on `requestAnimationFrame`.
 
-Gesture handler 3.5.0 still sets the config on each render. pressto 0.8.2
-renders `Touchable` on gesture handler 3, which sets it only when a primitive
-prop changes. But it keeps the mount cost and the mappers.
+Upgrading pressto does not fix it: 0.8.2 stops the config churn but keeps the
+mount cost and the mappers.
 
 ## Fix
 

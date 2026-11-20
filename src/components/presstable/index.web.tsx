@@ -1,5 +1,5 @@
 import type { ComponentProps, MouseEventHandler } from 'react';
-import { Pressable, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { longPressAction, usePressHandler, type PressBehaviorProps } from './press-behavior';
@@ -7,12 +7,8 @@ import { longPressAction, usePressHandler, type PressBehaviorProps } from './pre
 export { longPressAction, type PressBehavior } from './press-behavior';
 
 /*
- * The app's pressables on web: react-native-web's Pressable, not pressto.
- * Every pressto button mounts a gesture handler and three Reanimated mappers,
- * and on web all of them run in JS on the main thread, on each mount, unmount
- * and re-render (docs/solutions/web-pressables-skip-gesture-handler.md). A web
- * button has no native gesture to coordinate with, so the core Pressable does
- * the job. Same props, repeat protection and feedback values as `index.tsx`.
+ * Web: react-native-web's Pressable, not pressto, whose gesture handler and
+ * Reanimated mappers run in JS here (docs/solutions/web-pressables-skip-gesture-handler.md).
  */
 
 // pressto's defaults: activeOpacity, minScale, and its 250 ms timing curve,
@@ -35,9 +31,6 @@ type PresstableProps = Omit<ComponentProps<typeof Pressable>, 'onPress' | 'onLon
     style?: StyleProp<ViewStyle>;
     className?: string;
     onMouseDown?: MouseEventHandler<HTMLElement>;
-    /** Native only: Android's button ripple and gesture-handler's leave rule. */
-    rippleColor?: string;
-    shouldCancelWhenOutside?: boolean;
   };
 
 function WebPresstable({
@@ -46,8 +39,6 @@ function WebPresstable({
   pressBehavior = 'prevent-repeat',
   style,
   pressedStyle,
-  rippleColor: _rippleColor,
-  shouldCancelWhenOutside: _shouldCancelWhenOutside,
   ...rest
 }: PresstableProps & { pressedStyle: ViewStyle }) {
   const handlePress = usePressHandler(onPress, pressBehavior);
@@ -60,7 +51,7 @@ function WebPresstable({
       accessibilityRole="button"
       onLongPress={onLongPress}
       onPress={handlePress}
-      style={({ pressed }: PressableStateCallbackType) => [FEEDBACK, style, pressed && pressedStyle]}
+      style={({ pressed }) => [FEEDBACK, style, pressed && pressedStyle]}
     />
   );
 }
