@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 
 import { Image } from '@/components/image';
 import { progressLabel } from '@/components/media-card';
+import { MorphText } from '@/components/morph-text';
 import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableScale } from '@/components/presstable';
@@ -18,7 +19,8 @@ function readingProgress(item: NormalizedMediaItem): string {
   if (progress != null) return progress;
   const total = item.totalEpisodes;
   if (total == null || total <= 0) return '';
-  return item.progressUnit === 'page' ? `${total} pages` : `${total} chapters`;
+  const unit = item.progressUnit === 'page' ? 'page' : 'chapter';
+  return `${total.toLocaleString()} ${unit}${total === 1 ? '' : 's'}`;
 }
 
 /**
@@ -52,6 +54,8 @@ export function ReadingCard({
           accessibilityLabel={[title, progress].filter(Boolean).join(', ')}
           accessibilityRole="button"
           className="w-32 h-48"
+          // A smaller shrink than the default, so the cover stays under the buttons on it.
+          minScale={0.98}
           onLongPress={() => onActionsPress(item)}
           onPress={() => {
             prefetchDetails(item);
@@ -81,9 +85,9 @@ export function ReadingCard({
       <Text className="text-foreground font-sans-semibold text-sm leading-tight mt-2" numberOfLines={1}>
         {title}
       </Text>
-      <Text className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>
+      <MorphText className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>
         {progress}
-      </Text>
+      </MorphText>
     </View>
   );
 }

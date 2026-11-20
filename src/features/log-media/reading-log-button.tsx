@@ -19,7 +19,9 @@ function readingLogRequest(item: NormalizedMediaItem): LogRequest | null {
       const next = reread ? 1 : item.currentProgress + 1;
       return {
         item,
-        description,
+        description: reread
+          ? `You’ve read every chapter of “${item.title}” — this starts a reread at chapter 1.`
+          : description,
         title: reread ? 'Reread' : `Log chapter ${next}`,
         entryEpisodes: [next],
         ...(!reread && (total == null || total > next) ? { chapterRange: { from: next, total } } : {}),
