@@ -5,11 +5,6 @@ const PRESS_DEBOUNCE_MS = 500;
 
 export type PressBehavior = 'immediate' | 'prevent-repeat';
 
-/**
- * Neither wrapper takes `onPressIn`: pressto 0.7 fires it from gesture-handler
- * 2's `onBegan`, which gesture-handler 3's button renamed to `onBegin`, so it
- * would never run.
- */
 export type PressBehaviorProps = {
   /** `immediate` accepts every press; `prevent-repeat` (default) drops repeats within 500 ms. */
   pressBehavior?: PressBehavior;

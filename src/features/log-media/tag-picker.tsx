@@ -225,9 +225,6 @@ function TagChip({
     <AnimatedView entering={entering}>
       <PresstableOpacity
         accessibilityLabel={selected ? `Remove tag ${tag}` : `Add tag ${tag}`}
-        // Only ever "button" on a pressto pressable — RNGH's web gesture handler
-        // fires presses on nothing else
-        // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
         accessibilityRole="button"
         accessibilityState={{ selected }}
         onPress={onToggle}

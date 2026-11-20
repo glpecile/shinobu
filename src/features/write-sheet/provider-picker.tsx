@@ -46,10 +46,6 @@ function ProviderToggle({
     <PresstableOpacity
       accessibilityLabel={`Write to ${descriptor.label}`}
       accessibilityRole="button"
-      // No accessibilityRole="checkbox" here: RNGH's web NativeViewGestureHandler
-      // only fires presses on elements whose DOM role is "button", so any other
-      // role on a pressto pressable silently kills onPress on web
-      // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
       accessibilityState={{ checked: selected }}
       aria-pressed={selected}
       className="min-h-11 flex-row items-center justify-between px-4 py-3"

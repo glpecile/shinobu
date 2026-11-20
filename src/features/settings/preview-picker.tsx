@@ -59,7 +59,7 @@ function Option({ children, value }: { children: ReactNode; value: string }) {
   const checked = value === group.value;
   return (
     <PresstableScale
-      // RNGH web dispatches presses only for button roles.
+      // The web Presstable is always a button, so aria-pressed carries the state there.
       accessibilityRole={process.env.EXPO_OS === 'web' ? 'button' : 'radio'}
       accessibilityState={{ checked }}
       aria-pressed={process.env.EXPO_OS === 'web' ? checked : undefined}

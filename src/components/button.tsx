@@ -268,10 +268,6 @@ export interface ButtonProps {
  * Width is inherited, not owned: in a stretch container (a sheet, a form
  * column) it fills; in a row it hugs. That's the same behaviour the
  * hand-rolled buttons had, so adopting it never moves a layout.
- *
- * `accessibilityRole="button"` is not optional — RNGH's web gesture handler
- * only dispatches presses on elements whose DOM role is `button`
- * (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
  */
 export function Button({
   label,
@@ -329,10 +325,8 @@ export function Button({
         iconOnly && 'min-w-11 min-h-11 items-center justify-center',
         className,
       )}
-      // `disabled` really does gate the press (pressto → RNGH `enabled`,
-      // verified on web), but it reaches the DOM as nothing at all: neither it
-      // nor `accessibilityState` becomes an ARIA attribute, so a screen reader
-      // hears an ordinary button while a fan-out is in flight. These two say so
+      // `accessibilityState` never becomes ARIA on web, so a screen reader
+      // would hear an idle button while a fan-out is in flight. These say it
       // (docs/solutions/pressto-accessibility-state-not-mapped-on-web.md).
       aria-busy={loading}
       aria-disabled={unavailable}

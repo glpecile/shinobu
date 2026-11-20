@@ -12,9 +12,8 @@ export interface NewTabPress {
 
 /**
  * Web-only ⌘/Ctrl+click → open `href` in a new tab, for rows and cards that
- * navigate but can't *be* anchors: RNGH kills `onPress` for any accessibility
- * role other than "button" (docs/solutions/web-pressto-accessibility-role-
- * kills-onpress.md), and pressto's press callback carries no DOM event. So the
+ * navigate but can't *be* anchors: the web Presstable always renders a
+ * button, and its `onPress` takes no event. So the
  * modifier state is latched on pointer-down (it bubbles up from the pressable)
  * and read back when the press lands.
  *

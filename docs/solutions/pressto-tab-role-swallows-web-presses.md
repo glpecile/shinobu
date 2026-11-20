@@ -1,5 +1,8 @@
 # `accessibilityRole="tab"` on a pressto pressable swallows every press on web
 
+Obsolete on web since #485: the web Presstable no longer uses pressto and
+always renders the `button` role (`docs/solutions/web-pressables-skip-gesture-handler.md`).
+
 **Symptom (2026-09-10).** The new `components/segmented-control` rendered fine
 on web but no segment responded to a click. Playwright's `elementFromPoint`
 put the click squarely on the segment's own `div[role=tab]`; the route never

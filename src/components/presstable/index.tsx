@@ -60,6 +60,11 @@ const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion
     };
   },
 );
+/*
+ * Neither wrapper takes `onPressIn`: pressto 0.7 fires it from gesture-handler
+ * 2's `onBegan`, which gesture-handler 3's button renamed to `onBegin`, so it
+ * would never run.
+ */
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
