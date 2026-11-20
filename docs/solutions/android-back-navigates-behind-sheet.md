@@ -39,3 +39,16 @@ but neither close-request controller, `hasCloseRequestHandler`, nor
 `onCloseRequest`. Updating the JS bundle alone cannot enable Back handling in
 that binary. Run `bun android:clean` before verifying the fix; the overlay prop
 is hot-reloadable only after that native prerequisite is installed.
+
+## 1.1.0: fixed on the portal
+
+`@swmansion/react-native-bottom-sheet` 1.0 routes Back on the portal through the
+activity's back dispatcher ahead of the native stack. On a clean 1.1.0 build
+(Pixel 9 emulator, November 19), Back with the log sheet open on a pushed
+series screen called `onCloseRequest` once and left the screen in place.
+`windowOverlay` (the renamed `nativeOverlay`) stays off.
+
+In 1.x, a supplied `onCloseRequest` also receives scrim taps and screen-reader
+dismissal, and the sheet does not move until `index` changes. Only a drag
+reports through `onIndexChange`, so the shared `Sheet` no longer closes from
+`onSettle`.

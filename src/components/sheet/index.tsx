@@ -4,14 +4,17 @@ import {
 } from '@swmansion/react-native-bottom-sheet';
 import { useState, type ReactNode } from 'react';
 import {
-  Keyboard,
   ScrollView,
   View,
   type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
 import { useWindowDimensions } from '@/lib/window-dimensions';
-import { useKeyboardState, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import {
+  KeyboardController,
+  useKeyboardState,
+  useReanimatedKeyboardAnimation,
+} from 'react-native-keyboard-controller';
 import { createAnimatedComponent, useAnimatedStyle } from 'react-native-reanimated';
 
 import { RailFadeColor } from '@/components/rail';
@@ -22,7 +25,7 @@ import { SheetDismissHeader } from './header';
 
 export interface SheetProps {
   open: boolean;
-  /** Called on Android Back or when the sheet reaches its closed detent. */
+  /** Called once per dismissal: drag, scrim tap, screen-reader dismiss, or Android Back. */
   onClose: () => void;
   children: ReactNode;
   /** Focuses the first text field when the sheet opens. Desktop web only. */
@@ -40,29 +43,26 @@ export function Sheet({ open, onClose, children }: SheetProps) {
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ bottom: open ? -keyboard.height.get() : 0 }));
   // A focused field outlives the sheet, which stays mounted while closed, so
-  // its keyboard would stay up over the screen beneath.
+  // its keyboard would stay up over the screen beneath. On Android a drag to
+  // close left the keyboard up after `Keyboard.dismiss()`; the controller hides
+  // it natively, whether or not a field still holds focus.
   function close() {
-    Keyboard.dismiss();
+    void KeyboardController.dismiss();
     onClose();
   }
   return (
     <ModalBottomSheet
       detents={[0, 'content']}
       index={open ? 1 : 0}
-      // `nativeOverlay` stays off: it reparents the sheet into a window-level
+      // `windowOverlay` stays off: it reparents the sheet into a window-level
       // dialog outside the gesture-handler root, which kills every pressto
       // press inside it on Android (hotfix 0.6.1 — the log sheet went dead).
-      // Back on pushed screens can pop behind an open sheet again; that is the
-      // cheaper bug until a press-safe overlay exists.
+      // Scrim taps, screen-reader dismiss and Android Back only ask; the
+      // sheet moves once `open` flips.
       onCloseRequest={close}
-      // Fires only when a *user* drag commits a detent change…
+      // A drag to the closed detent is the one dismissal that never asks.
       onIndexChange={(index) => {
         if (index === 0) close();
-      }}
-      // …while scrim taps / programmatic moves only settle. Both must sync
-      // the controlled `open`, or the sheet fights its own state.
-      onSettle={(index) => {
-        if (index === 0 && open) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
       // The keyboard draws over the sheet, which is short enough that
