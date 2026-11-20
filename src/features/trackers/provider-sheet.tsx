@@ -126,7 +126,10 @@ function ProviderSheetContent({
             </PresstableOpacity>
           )}
           <View className="flex-row items-start gap-2">
-            <Ionicons className="mt-0.5" color={muted} name="information-circle-outline" size={16} />
+            {/* Uniwind drops className on the raw icon on native, so the offset sits on a View. */}
+            <View accessibilityElementsHidden className="mt-0.5" importantForAccessibility="no-hide-descendants">
+              <Ionicons color={muted} name="information-circle-outline" size={16} />
+            </View>
             <Text className="flex-1 text-muted font-sans text-sm">
               Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
               account and its data do not change.
