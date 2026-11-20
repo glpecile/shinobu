@@ -129,7 +129,7 @@ function ProviderSheetContent({
           )}
           <View className="flex-row items-start gap-2">
             {/* Uniwind drops className on the raw icon on native, so the offset sits on a View. */}
-            <View accessibilityElementsHidden className="mt-0.5" importantForAccessibility="no-hide-descendants">
+            <View aria-hidden className="mt-0.5">
               <Ionicons color={muted} name="information-circle-outline" size={16} />
             </View>
             <Text className="flex-1 text-muted font-sans text-sm">
