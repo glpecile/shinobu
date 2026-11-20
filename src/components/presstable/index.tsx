@@ -69,9 +69,9 @@ const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
 
 /**
- * Scales down while pressed — media cards, poster-like surfaces. `minScale`
- * softens the shrink for a wide surface, where the default 0.96 reads as a
- * lurch.
+ * Scales down while pressed — media cards, poster-like surfaces, FABs.
+ * `minScale` sets the shrink: shallower for a wide surface, where the default
+ * 0.96 reads as a lurch, deeper for a small one.
  */
 export function PresstableScale({
   minScale,
