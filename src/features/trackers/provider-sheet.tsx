@@ -1,17 +1,22 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { PersonAvatar } from '@/features/person/person-avatar';
+import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
+import { Skeleton } from '@/components/skeleton';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
 import { LetterboxdAdvancedSetup } from '@/features/trackers/letterboxd-advanced-setup';
 import { capabilityLabels } from '@/features/trackers/provider-style';
 import { useProviderAccount } from '@/features/trackers/use-provider-account';
 import { haptics } from '@/lib/haptics';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider, type ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 import { useDisconnectProvider } from '@/state/session';
 
 /**
@@ -60,6 +65,37 @@ function ProviderSheetContent({
   const ConnectButton = CONNECT_BUTTONS[id];
   const { label } = PROVIDERS[id];
   const name = account.username ?? `${label} account`;
+  const { profileUrl } = account;
+  const a11yLabel = account.username == null ? `Connected to ${label}` : `Connected as ${account.username}`;
+  const muted = useThemeColor('--color-muted');
+  const accountCard = (
+    <View className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3">
+      {account.loading === true ? (
+        <Skeleton className="w-11 h-11 rounded-full" />
+      ) : (
+        <PersonAvatar
+          className="w-11 h-11"
+          headshot={account.avatar ?? ''}
+          name={name}
+          textClassName="text-sm"
+        />
+      )}
+      <View className="flex-1 min-w-0">
+        {account.loading === true ? (
+          <Skeleton className="h-4 w-24 rounded-sm my-1" />
+        ) : (
+          <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
+            {name}
+          </Text>
+        )}
+        <View className="flex-row items-center gap-1.5 mt-0.5">
+          <View className="w-1.5 h-1.5 rounded-full bg-success" />
+          <Text className="text-muted font-sans text-sm">Connected</Text>
+        </View>
+      </View>
+      {profileUrl != null && <Ionicons color={muted} name="open-outline" size={16} />}
+    </View>
+  );
 
   return (
     <>
@@ -75,31 +111,32 @@ function ProviderSheetContent({
 
       {connected ? (
         <View className="mt-5 gap-4">
-          <View
-            accessible
-            accessibilityLabel={`Connected as ${name}`}
-            className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3"
-          >
-            <PersonAvatar
-              className="w-11 h-11"
-              headshot={account.avatar ?? ''}
-              name={name}
-              textClassName="text-sm"
-            />
-            <View className="flex-1 min-w-0">
-              <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
-                {name}
-              </Text>
-              <View className="flex-row items-center gap-1.5 mt-0.5">
-                <View className="w-1.5 h-1.5 rounded-full bg-success" />
-                <Text className="text-muted font-sans text-sm">Connected</Text>
-              </View>
+          {profileUrl == null ? (
+            <View accessible accessibilityLabel={a11yLabel}>
+              {accountCard}
             </View>
+          ) : (
+            <PresstableScale
+              accessibilityHint={`Opens your ${label} profile`}
+              accessibilityLabel={a11yLabel}
+              accessibilityRole="link"
+              className="rounded-lg"
+              minScale={0.99}
+              onPress={() => openExternalUrl(profileUrl)}
+            >
+              {accountCard}
+            </PresstableScale>
+          )}
+          <View className="flex-row items-start gap-2">
+            {/* Uniwind drops className on the raw icon on native, so the offset sits on a View. */}
+            <View aria-hidden className="mt-0.5">
+              <Ionicons color={muted} name="information-circle-outline" size={16} />
+            </View>
+            <Text className="flex-1 text-muted font-sans text-sm">
+              Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
+              account and its data do not change.
+            </Text>
           </View>
-          <Text className="text-muted font-sans text-sm">
-            Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
-            account and its data do not change.
-          </Text>
           <Button
             label="Disconnect"
             onPress={() => {
