@@ -7,6 +7,7 @@ import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
+import { Skeleton } from '@/components/skeleton';
 import { CONNECT_BUTTONS } from '@/features/trackers/connect-buttons';
 import { LetterboxdAdvancedSetup } from '@/features/trackers/letterboxd-advanced-setup';
 import { capabilityLabels } from '@/features/trackers/provider-style';
@@ -69,16 +70,24 @@ function ProviderSheetContent({
   const muted = useThemeColor('--color-muted');
   const accountCard = (
     <View className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3">
-      <PersonAvatar
-        className="w-11 h-11"
-        headshot={account.avatar ?? ''}
-        name={name}
-        textClassName="text-sm"
-      />
+      {account.loading === true ? (
+        <Skeleton className="w-11 h-11 rounded-full" />
+      ) : (
+        <PersonAvatar
+          className="w-11 h-11"
+          headshot={account.avatar ?? ''}
+          name={name}
+          textClassName="text-sm"
+        />
+      )}
       <View className="flex-1 min-w-0">
-        <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
-          {name}
-        </Text>
+        {account.loading === true ? (
+          <Skeleton className="h-4 w-24 rounded-sm my-1" />
+        ) : (
+          <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
+            {name}
+          </Text>
+        )}
         <View className="flex-row items-center gap-1.5 mt-0.5">
           <View className="w-1.5 h-1.5 rounded-full bg-success" />
           <Text className="text-muted font-sans text-sm">Connected</Text>

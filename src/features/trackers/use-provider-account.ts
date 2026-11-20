@@ -12,6 +12,8 @@ export interface ProviderAccount {
   avatar?: string;
   /** The account's public page, once the provider has named it. */
   profileUrl?: string;
+  /** The provider read behind username and avatar is in flight. */
+  loading?: boolean;
 }
 
 /**
@@ -56,11 +58,13 @@ export function useProviderAccount(
     [Provider.Hardcover]: { username: hardcover.data?.username, avatar: hardcover.data?.avatar, handle: hardcover.data?.username },
   };
   const { handle: remoteHandle, ...account } = remote[id];
+  const loading = trakt.isLoading || anilist.isLoading || simkl.isLoading || hardcover.isLoading;
   const stored = getProviderSession(id)?.username;
   const hasStored = stored != null && stored !== '';
   const handle = hasStored ? stored : remoteHandle;
   return {
     ...account,
+    loading,
     ...(hasStored ? { username: stored } : {}),
     ...(handle != null && handle !== '' ? { profileUrl: providerProfileUrl(id, handle) } : {}),
   };
