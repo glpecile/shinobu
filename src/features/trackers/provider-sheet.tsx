@@ -116,10 +116,13 @@ function ProviderSheetContent({
               {accountCard}
             </PresstableOpacity>
           )}
-          <Text className="text-muted font-sans text-sm">
-            Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
-            account and its data do not change.
-          </Text>
+          <View className="flex-row items-start gap-2">
+            <Ionicons className="mt-0.5" color={muted} name="information-circle-outline" size={16} />
+            <Text className="flex-1 text-muted font-sans text-sm">
+              Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
+              account and its data do not change.
+            </Text>
+          </View>
           <Button
             label="Disconnect"
             onPress={() => {
