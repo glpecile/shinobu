@@ -131,7 +131,7 @@ const ButtonIconContext = createContext<{ token: ThemeColorToken; size: number }
  * | `heart-outline` / `heart` | like — filled when selected |
  * | `swap-vertical-outline` | sort titles |
  * | `chevron-down` | show options or load more |
- * | `add` | add a title, or create a list |
+ * | `add` / `remove` | add a title or create a list; step a number up / down |
  * | `list-outline` | open a list |
  * | `create-outline` | rename or edit in place |
  *
