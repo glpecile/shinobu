@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { PersonAvatar } from '@/features/person/person-avatar';
-import { PresstableOpacity } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
@@ -116,14 +116,16 @@ function ProviderSheetContent({
               {accountCard}
             </View>
           ) : (
-            <PresstableOpacity
+            <PresstableScale
               accessibilityHint={`Opens your ${label} profile`}
               accessibilityLabel={a11yLabel}
               accessibilityRole="link"
+              className="rounded-lg"
+              minScale={0.99}
               onPress={() => openExternalUrl(profileUrl)}
             >
               {accountCard}
-            </PresstableOpacity>
+            </PresstableScale>
           )}
           <View className="flex-row items-start gap-2">
             {/* Uniwind drops className on the raw icon on native, so the offset sits on a View. */}
