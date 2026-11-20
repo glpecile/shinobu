@@ -77,7 +77,9 @@ export function Fab({
       // 3D is 24% alpha, the tab bar's ripple strength. Android only.
       rippleColor={`${color}3D`}
     >
-      <View className={cn(
+      {/* Not flattened: on a card's cover, Fabric mounted the icon under this
+          fill on iOS, leaving a blank red button. */}
+      <View collapsable={false} className={cn(
         'items-center justify-center',
         SIZE[size].box,
         radius,
