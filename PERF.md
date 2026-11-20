@@ -10,6 +10,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 - If you have no device, count the work in a test. Count requests, snapshots, cache visits or renders. (#302, #310)
 - A dev build runs about 3 times slower than a release build. Compare ratios, not milliseconds. (plan 031)
 - Time a pure function in the app's Hermes runtime with `debugger-evaluate`, not in bun. One matcher took 0.5 ms in bun (JSC) and 3 to 6 ms on Hermes. (plan 031)
+- Profile Firefox with the Gecko profiler's `nomarkerstacks` feature. Without it, the profiler captures a stack for each DOM style write, and a 1 µs write looks like the main cost. (#485)
 
 ## Cold start
 
@@ -83,6 +84,7 @@ These rules come from this app's `perf` PRs, `plans/031-performance-review-2026-
 
 - React Compiler can skip a component and give no warning. `shinobu/react-compiler-bailout` makes lint fail when this happens. (#411)
 - Create `Intl` formatters once. Hermes builds a new one on each `toLocaleDateString` call. (#296)
+- On web, render buttons with react-native-web's `Pressable`, not a gesture handler. Each pressto button ran a gesture handler and three Reanimated mappers in JS. App JS on sheet and tab flows went down by 20 % in Firefox. (#485)
 
 ## Data layout
 
