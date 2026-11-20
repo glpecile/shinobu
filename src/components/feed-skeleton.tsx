@@ -88,6 +88,27 @@ export function LandscapeRowSkeleton() {
   );
 }
 
+/** Continue Reading's rail: a `ReadingCard` cover (w-32 h-48) and two text lines. */
+export function ReadingRowSkeleton() {
+  const { width, fontScale } = useWindowDimensions();
+  const cardCount = Math.ceil(width / (128 + CARD_GAP)) + 1;
+  return (
+    <CollapsibleSection collapseKey="continue-reading" leading={<CollapsibleSection.Icon name="book-outline" />} title="Continue Reading">
+      <View style={{ height: episodeCardRailHeight(fontScale, 48) }}>
+        <Rail className="px-4">
+          {Array.from({ length: cardCount }).map((_, index) => (
+            <View className="w-32 mr-3" key={index}>
+              <Skeleton className="w-32 h-48 rounded-lg" delay={staggerDelay(index)} />
+              <Skeleton className="h-4 w-2/3 rounded mt-2" delay={staggerDelay(index)} />
+              <Skeleton className="h-3 w-1/2 rounded mt-1.5" delay={staggerDelay(index)} />
+            </View>
+          ))}
+        </Rail>
+      </View>
+    </CollapsibleSection>
+  );
+}
+
 function SkeletonDayCell({ index }: { index: number }) {
   // Mirrors the real cell's internal stack (weekday · date · dot row) so the
   // strip is the same height here as once it resolves.

@@ -13,6 +13,7 @@ import {
   FeedRowSkeleton,
   FeedSkeleton,
   LandscapeRowSkeleton,
+  ReadingRowSkeleton,
   UpNextSectionSkeleton,
 } from '@/components/feed-skeleton';
 import { useBootRevealed } from '@/components/boot-splash/revealed';
@@ -204,7 +205,7 @@ function FeedScreen() {
         )}
         {/* What the user is partway through reading, after what they mean to watch. */}
         {continueReadingProviders(connected).length > 0 && (
-          <SuspenseSection fallback={<FeedRowSkeleton />} resetKey={refreshCount}>
+          <SuspenseSection fallback={<ReadingRowSkeleton />} resetKey={refreshCount}>
             <ContinueReadingRow onItemActions={openActions} />
           </SuspenseSection>
         )}
