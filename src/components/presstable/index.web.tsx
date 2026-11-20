@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { longPressAction, usePressHandler, type PressBehaviorProps } from './press-behavior';
+import { usePressHandler, type PressBehaviorProps } from './press-behavior';
 
 export { longPressAction, type PressBehavior } from './press-behavior';
 
@@ -42,10 +42,10 @@ function WebPresstable({
   const handlePress = usePressHandler(onPress, pressBehavior);
   return (
     <Pressable
-      {...longPressAction(onLongPress)}
       {...rest}
-      // Always a button, as pressto rendered it: react-native-web skips Enter
-      // on a `link` div and Space on any role but button.
+      // Always a button: react-native-web skips Enter on a `link` div and Space
+      // on any role but button. It also drops `accessibilityActions`, so the
+      // long-press action is native only.
       accessibilityRole="button"
       onLongPress={onLongPress}
       onPress={handlePress}
