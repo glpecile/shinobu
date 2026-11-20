@@ -94,7 +94,7 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
       className={cn('mt-5 gap-1', pending && 'opacity-50')}
       style={{ pointerEvents: pending ? 'none' : 'auto' }}
     >
-      <View className="flex-row items-center gap-2">
+      <View className="mb-2 flex-row items-center gap-2">
         <Text
           className="flex-1 text-foreground font-sans-semibold text-sm"
           onPress={() => input.current?.focus()}

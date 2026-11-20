@@ -2,7 +2,7 @@ import Ionicons from '@react-native-vector-icons/ionicons/static';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
 
-import { PresstableOpacity } from '@/components/presstable';
+import { PresstableScale } from '@/components/presstable';
 import { Spinner } from '@/components/spinner';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
@@ -57,7 +57,7 @@ export function Fab({
   // Ionicons' film frame is shorter than its nominal glyph box.
   const iconSize = SIZE[size].icon + (icon === 'film-outline' ? 4 : 0);
   return (
-    <PresstableOpacity
+    <PresstableScale
       accessibilityHint={hint}
       accessibilityLabel={label}
       accessibilityRole="button"
@@ -65,6 +65,7 @@ export function Fab({
       aria-busy={loading}
       aria-disabled={loading}
       disabled={loading}
+      minScale={0.95}
       className={cn(
         className,
         'self-start grow-0 shrink-0 items-center justify-center web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2',
@@ -87,6 +88,6 @@ export function Fab({
       )}>
         {loading ? <Spinner color={color} /> : <Ionicons color={color} name={icon} size={iconSize} />}
       </View>
-    </PresstableOpacity>
+    </PresstableScale>
   );
 }
