@@ -31,7 +31,7 @@ interface MediaCardProps {
   onActionsPress: (item: NormalizedMediaItem) => void;
 }
 
-function progressLabel(item: NormalizedMediaItem): string | null {
+export function progressLabel(item: NormalizedMediaItem): string | null {
   if (item.currentProgress === 0) return null;
   const hasTotal = item.totalEpisodes != null && item.totalEpisodes > 0;
   switch (item.progressUnit) {

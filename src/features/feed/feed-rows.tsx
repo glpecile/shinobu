@@ -4,6 +4,9 @@ import { Button } from '@/components/button';
 import { CollapsibleSection } from '@/components/collapsible-section';
 import { MediaCarousel } from '@/components/media-carousel';
 import { ProviderIcon } from '@/components/provider-icon';
+import { VirtualizedRail } from '@/components/rail';
+import { SectionEnter, useArrivalHistory } from '@/components/section-enter';
+import { episodeCardRailHeight } from '@/features/up-next/ui/metrics';
 import { haptics } from '@/lib/haptics';
 import {
   animeSeasonLabel,
@@ -12,8 +15,10 @@ import {
 import { usePushRoute } from '@/lib/navigation';
 import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
+import { useWindowDimensions } from '@/lib/window-dimensions';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
 import { useSuspenseContinueReadingQuery } from '@/state/queries/continue-reading';
+import { ReadingCard } from './reading-card';
 import { capFeedRow } from './row-cap';
 import {
   useSuspenseAnimeMoviesQuery,
@@ -82,19 +87,39 @@ export function YourWatchlistRow({
 /**
  * The manga the user is reading or rereading on AniList and the books they are
  * reading on Hardcover, most recently updated first (plan 0117 M3, B2). Cards
- * read "Ch 12 / 59" or "p. 142 / 380" from the entry's progress, and the row
- * is capped like the other personal rows.
+ * follow Continue Watching's layout and read "Ch 12 / 59" or "p. 142 / 380"
+ * under the cover. The row is capped like the other personal rows.
  */
 export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
   const items = capFeedRow(useVisibleItems(useSuspenseContinueReadingQuery()));
+  const arrivalHistory = useArrivalHistory(items.map((item) => item.id));
+  const { fontScale } = useWindowDimensions();
+  if (items.length === 0) return null;
   return (
-    <MediaCarousel
+    <CollapsibleSection
       collapseKey="continue-reading"
-      items={items}
-      onItemActions={onItemActions}
       leading={<CollapsibleSection.Icon name="book-outline" />}
       title="Continue Reading"
-    />
+    >
+      <VirtualizedRail
+        // Legend List drops horizontal padding on web; spacers match px-4
+        // (docs/solutions/legend-list-horizontal-content-padding-web.md).
+        ListHeaderComponent={<View className="w-4" />}
+        ListFooterComponent={<View className="w-1" />}
+        data={items}
+        estimatedItemSize={140}
+        keyExtractor={(item) => item.id}
+        // The cover is 48px taller than the episode art.
+        style={{ height: episodeCardRailHeight(fontScale, 48) }}
+        renderItem={({ item }) => (
+          <View className="mr-3">
+            <SectionEnter arrival={{ id: item.id, seen: arrivalHistory }}>
+              <ReadingCard item={item} onActionsPress={onItemActions} />
+            </SectionEnter>
+          </View>
+        )}
+      />
+    </CollapsibleSection>
   );
 }
 

@@ -2,12 +2,14 @@ import { useRef, useState } from 'react';
 import type { TextInputInstance } from 'react-native';
 import { Text, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { NativeSegmentedControl } from '@/components/native-segmented-control';
 import { NativeSwitch } from '@/components/native-switch';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
+import { haptics } from '@/lib/haptics';
 import { ProgressScrubber } from './progress-scrubber';
-import { pageAt, percentRead } from './reading-share';
+import { pageAt, percentRead, stepPage } from './reading-share';
 import { StepperField } from './stepper-field';
 
 /** A book log's form state: the page reached, or the whole book. */
@@ -77,6 +79,15 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
   const inPages = value.inPages === true;
   const setPage = (next: number) =>
     onChange((reading) => ({ ...reading, page: next, finished: next >= total }));
+  // From the latest state, so a second press before a re-render steps again.
+  const step = (by: 1 | -1) => {
+    setDraft(null);
+    onChange((reading) => {
+      const from = reading.finished ? total : Math.min(reading.page, total);
+      const next = stepPage(from, total, by, reading.inPages === true);
+      return { ...reading, page: next, finished: next >= total };
+    });
+  };
 
   return (
     <View
@@ -124,15 +135,44 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
           />
         </View>
       </View>
-      <ProgressScrubber
-        disabled={pending}
-        onChange={(next) => {
-          setDraft(null);
-          setPage(next);
-        }}
-        page={page}
-        total={total}
-      />
+      <View className="flex-row items-center gap-2">
+        <Button
+          disabled={pending || page <= 0}
+          icon={<Button.Icon name="remove" />}
+          iconOnly
+          label={inPages ? 'Previous page' : 'Down 1%'}
+          onPress={() => {
+            haptics.selection();
+            step(-1);
+          }}
+          pressBehavior="immediate"
+          variant="quiet"
+        />
+        <View className="flex-1 px-3">
+          <ProgressScrubber
+            disabled={pending}
+            onChange={(next) => {
+              setDraft(null);
+              setPage(next);
+            }}
+            onStep={step}
+            page={page}
+            total={total}
+          />
+        </View>
+        <Button
+          disabled={pending || page >= total}
+          icon={<Button.Icon name="add" />}
+          iconOnly
+          label={inPages ? 'Next page' : 'Up 1%'}
+          onPress={() => {
+            haptics.selection();
+            step(1);
+          }}
+          pressBehavior="immediate"
+          variant="quiet"
+        />
+      </View>
       <View className="flex-row justify-between">
         {page >= total ? (
           <Text className="text-success font-sans-semibold text-xs">Finished</Text>

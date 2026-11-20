@@ -14,3 +14,14 @@ export function pageAt(percent: number, total: number): number {
   if (percent >= 100) return total;
   return Math.min(total - 1, Math.max(1, Math.round((percent / 100) * total)));
 }
+
+/**
+ * One step from `page`, in the field's unit: a page, or a percent. A percent
+ * step always moves at least one page, so it never lands where it started on
+ * a book under 100 pages.
+ */
+export function stepPage(page: number, total: number, by: 1 | -1, inPages: boolean): number {
+  const at = inPages ? page + by : pageAt(percentRead(page, total) + by, total);
+  const next = by > 0 ? Math.max(page + 1, at) : Math.min(page - 1, at);
+  return Math.min(total, Math.max(0, next));
+}

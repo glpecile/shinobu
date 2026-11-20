@@ -20,12 +20,14 @@ const SNAP = 2;
  * The book log's drag bar: tap or drag to set the page reached, read as a
  * share of the book. A drag snaps to the quarter marks and to the last page,
  * so a rough drag says "half" or "finished" without typing. The typed field
- * beside it covers exact pages.
+ * beside it covers exact pages. A screen reader swipe and the arrow keys call
+ * `onStep`, which moves one unit of the field; Home and End jump to the ends.
  */
-export function ProgressScrubber({ page, total, onChange, disabled }: {
+export function ProgressScrubber({ page, total, onChange, onStep, disabled }: {
   page: number;
   total: number;
   onChange: (page: number) => void;
+  onStep: (by: 1 | -1) => void;
   disabled: boolean;
 }) {
   const track = useRef({ x: 0, width: 0 });
@@ -69,14 +71,32 @@ export function ProgressScrubber({ page, total, onChange, disabled }: {
         // Padded past the track by half the thumb, so the thumb at either end
         // sits inside the hit area. A child outside its parent gets no touches.
         className="-mx-3 h-11 px-3"
+        focusable={!disabled}
         onAccessibilityAction={(event) => {
+          if (!disabled) onStep(event.nativeEvent.actionName === 'increment' ? 1 : -1);
+        }}
+        onKeyDown={(event) => {
           if (disabled) return;
-          // One percent a swipe, so each swipe changes the number spoken. On a
-          // book under 100 pages a percent can round back to the same page.
-          const up = event.nativeEvent.actionName === 'increment';
-          const at = pageAt(percent + (up ? 1 : -1), total);
-          const next = up ? Math.max(page + 1, at) : Math.min(page - 1, at);
-          onChange(Math.min(total, Math.max(0, next)));
+          switch (event.nativeEvent.key) {
+            case 'ArrowRight':
+            case 'ArrowUp':
+              onStep(1);
+              break;
+            case 'ArrowLeft':
+            case 'ArrowDown':
+              onStep(-1);
+              break;
+            case 'Home':
+              onChange(0);
+              break;
+            case 'End':
+              onChange(total);
+              break;
+            default:
+              return;
+          }
+          // The arrows would also scroll the sheet.
+          event.preventDefault();
         }}
       >
         <View
