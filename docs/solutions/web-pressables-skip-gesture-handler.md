@@ -26,6 +26,10 @@ prop changes. But it keeps the mount cost and the mappers.
 It keeps the props, the repeat protection and pressto's feedback values
 (opacity 0.5, scale 0.96, 250 ms `ease`). Native still uses pressto.
 
+It always renders `accessibilityRole="button"`, as pressto did. React-native-web
+renders a `link` role as a `div` and skips its Enter key, so the keyboard could
+not open the account card in the provider sheet.
+
 ## Measurement
 
 Desktop Firefox (Playwright's Gecko build), production web build, 412 × 860

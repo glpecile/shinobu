@@ -53,9 +53,11 @@ function WebPresstable({
   const handlePress = usePressHandler(onPress, pressBehavior);
   return (
     <Pressable
-      accessibilityRole="button"
       {...longPressAction(onLongPress)}
       {...rest}
+      // Always a button, as pressto rendered it: react-native-web skips Enter
+      // on a `link` div and Space on any role but button.
+      accessibilityRole="button"
       onLongPress={onLongPress}
       onPress={handlePress}
       style={({ pressed }: PressableStateCallbackType) => [FEEDBACK, style, pressed && pressedStyle]}

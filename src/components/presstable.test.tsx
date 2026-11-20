@@ -38,7 +38,9 @@ mock.module('react-native-reanimated', () => ({
   useReducedMotion: () => reduceMotion,
 }));
 mock.module('@/lib/with-uniwind', () => ({ withUniwind: (component: unknown) => component }));
+mock.module('react-native', () => require('react-native-web'));
 const { PresstableOpacity, PresstableScale } = await import('./presstable');
+const web = await import('./presstable/index.web');
 
 for (const Pressable of [PresstableOpacity, PresstableScale]) {
   test(`${Pressable.name} allows immediate repeats and keeps default repeat protection`, () => {
@@ -90,6 +92,16 @@ test('a long press is offered to screen readers as an action', () => {
   try {
     fireEvent.click(view.getByRole('button', { name: 'Show options' }));
     expect(onLongPress).toHaveBeenCalledTimes(1);
+  } finally {
+    view.unmount();
+  }
+});
+
+// A link-role div gets no Enter press from react-native-web; a <button> gets the browser's click.
+test('a web pressable renders as a button whatever role it is given', () => {
+  const view = render(<web.PresstableOpacity accessibilityRole="link" />);
+  try {
+    expect(view.getByRole('button').tagName).toBe('BUTTON');
   } finally {
     view.unmount();
   }
