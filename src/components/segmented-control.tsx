@@ -153,8 +153,8 @@ export function SegmentedControl<T extends string>({
 
   return (
     // Each segment is a `button` with `selected` state, not a `tab` in a
-    // `tablist`: the tab role stops pressto's web pressable from firing at
-    // all (docs/solutions/pressto-tab-role-swallows-web-presses.md).
+    // `tablist`: the web Presstable renders every role as a button
+    // (docs/solutions/web-pressables-skip-gesture-handler.md).
     <View
       accessibilityLabel={accessibilityLabel}
       className={cn(

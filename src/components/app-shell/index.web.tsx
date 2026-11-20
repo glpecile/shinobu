@@ -75,8 +75,7 @@ function onNavItemPress(
   if (!active) pushRoute(item.href);
 }
 
-/** RNGH presses on pointerup, before a touch's compatibility mousedown. That
- * default would focus the search button and blur the just-focused field. */
+/** Keeps a mousedown from focusing the search button; the press focuses the field. */
 function preventMouseFocus(event: MouseEvent<HTMLElement>): void {
   event.preventDefault();
 }

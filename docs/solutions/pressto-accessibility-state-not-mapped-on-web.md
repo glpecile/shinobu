@@ -1,5 +1,9 @@
 # A pressto pressable's `disabled`/`accessibilityState` never reaches the DOM
 
+Since #485 the web Presstable renders react-native-web's `Pressable`, which
+maps `disabled` to `aria-disabled`. It still drops `accessibilityState`, so
+keep `aria-busy` and `aria-pressed` (`docs/solutions/web-pressables-skip-gesture-handler.md`).
+
 **Symptom (2026-07-26).** Building `components/button`, the loading state looked
 right — dimmed fill, spinner, "Connecting…" — but the rendered `<button>` on web
 carried no `aria-busy`, no `aria-disabled` and no `disabled` attribute:

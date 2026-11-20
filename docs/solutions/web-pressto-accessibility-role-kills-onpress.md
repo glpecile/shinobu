@@ -1,5 +1,10 @@
 # Web: any `accessibilityRole` other than `"button"` on a pressto pressable silently kills `onPress`
 
+Obsolete since #485. On web, `components/presstable` now renders
+react-native-web's `Pressable` and always sets the `button` role
+(`docs/solutions/web-pressables-skip-gesture-handler.md`). Native never had
+this bug.
+
 ## Symptom
 
 A `PresstableOpacity`/`PresstableScale` renders fine on web, shows its press

@@ -254,8 +254,6 @@ function SettingsRailScroll({ children, ...props }: ComponentProps<typeof Refres
             {sections.map(([title, { y, icon }]) => (
               <PresstableOpacity
                 accessibilityLabel={`Jump to ${title}`}
-                // Not "link": any role but button kills pressto's onPress on web
-                // (docs/solutions/web-pressto-accessibility-role-kills-onpress.md).
                 accessibilityRole="button"
                 accessibilityState={{ selected: title === active }}
                 className="flex-row items-center gap-3 py-2 min-h-11 web:focus-visible:outline-2 web:focus-visible:outline-foreground web:focus-visible:outline-offset-2"

@@ -1,32 +1,23 @@
 import { createAnimatedPressable, PressableOpacity } from 'pressto';
-import { useRef, type ComponentProps, type MouseEventHandler } from 'react';
-import type { AccessibilityActionEvent } from 'react-native';
+import type { ComponentProps, MouseEventHandler } from 'react';
 import { interpolate, useReducedMotion } from 'react-native-reanimated';
 import { withUniwind } from '@/lib/with-uniwind';
 
-/**
- * The app's pressables — pressto (gesture-handler + reanimated, animated on
- * the UI thread) instead of react-native's core Pressable, with a built-in
- * repeat protection by default: the first press fires immediately, repeats
- * within 500 ms are dropped. Disclosures use `pressBehavior="immediate"` so
- * every press toggles, even during an animation. Both raw imports are
+import { longPressAction, usePressHandler, type PressBehaviorProps } from './press-behavior';
+
+export { longPressAction, type PressBehavior } from './press-behavior';
+
+/*
+ * The app's pressables on native — pressto (gesture-handler + reanimated,
+ * animated on the UI thread) instead of react-native's core Pressable, with a
+ * built-in repeat protection by default: the first press fires immediately,
+ * repeats within 500 ms are dropped. Disclosures use `pressBehavior="immediate"`
+ * so every press toggles, even during an animation. Both raw imports are
  * oxlint-banned; `withUniwind` because className on a raw third-party
  * component is silently dropped on native
- * (docs/solutions/uniwind-classname-third-party-components.md).
+ * (docs/solutions/uniwind-classname-third-party-components.md). Web uses
+ * react-native-web's Pressable instead (`index.web.tsx`).
  */
-const PRESS_DEBOUNCE_MS = 500;
-
-export type PressBehavior = 'immediate' | 'prevent-repeat';
-
-/**
- * Neither wrapper takes `onPressIn`: pressto 0.7 fires it from gesture-handler
- * 2's `onBegan`, which gesture-handler 3's button renamed to `onBegin`, so it
- * would never run.
- */
-type PressBehaviorProps = {
-  /** `immediate` accepts every press; `prevent-repeat` (default) drops repeats within 500 ms. */
-  pressBehavior?: PressBehavior;
-};
 
 /**
  * Android only, and the reason it's here rather than at a call site: pressto
@@ -69,39 +60,13 @@ const PressableScale = createAnimatedPressable<{ minScale?: number; reduceMotion
     };
   },
 );
+/*
+ * Neither wrapper takes `onPressIn`: pressto 0.7 fires it from gesture-handler
+ * 2's `onBegan`, which gesture-handler 3's button renamed to `onBegin`, so it
+ * would never run.
+ */
 const UniwindPressableScale = withUniwind(PressableScale);
 const UniwindPressableOpacity = withUniwind(PressableOpacity);
-
-function usePressHandler<Args extends unknown[]>(
-  onPress: ((...args: Args) => void) | undefined,
-  pressBehavior: PressBehavior,
-): ((...args: Args) => void) | undefined {
-  const lastPressAtRef = useRef(0);
-
-  if (pressBehavior === 'immediate') return onPress;
-
-  return (...args: Args) => {
-    const now = Date.now();
-    if (now - lastPressAtRef.current < PRESS_DEBOUNCE_MS) return;
-    lastPressAtRef.current = now;
-    onPress?.(...args);
-  };
-}
-
-/**
- * Screen readers have no long-press gesture, so a pressable with `onLongPress`
- * lists it as an accessibility action. VoiceOver and TalkBack offer it in
- * their actions menu. Spread the result on any pressable.
- */
-export function longPressAction(onLongPress: (() => void) | undefined) {
-  if (onLongPress == null) return {};
-  return {
-    accessibilityActions: [{ name: 'longpress', label: 'Show options' }],
-    onAccessibilityAction: (event: AccessibilityActionEvent) => {
-      if (event.nativeEvent.actionName === 'longpress') onLongPress();
-    },
-  };
-}
 
 /**
  * Scales down while pressed — media cards, poster-like surfaces. `minScale`
@@ -142,7 +107,7 @@ export function PresstableOpacity({
   ...rest
 }: Omit<ComponentProps<typeof UniwindPressableOpacity>, 'onPressIn' | 'onLongPress'> & PressBehaviorProps & {
   onLongPress?: () => void;
-  /** Web-only DOM handler, forwarded by pressto but omitted from its prop types. */
+  /** Web-only DOM handler, typed here because callers type-check against this file. */
   onMouseDown?: MouseEventHandler<HTMLElement>;
 }) {
   const handlePress = usePressHandler(onPress, pressBehavior);

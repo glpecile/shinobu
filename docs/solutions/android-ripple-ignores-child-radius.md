@@ -31,7 +31,7 @@ each child's radius forever — one default in the wrapper both of them already
 go through:
 
 ```tsx
-// components/presstable.tsx
+// components/presstable/index.tsx
 const RIPPLE_COLOR = 'transparent';
 
 <UniwindPressableOpacity rippleColor={RIPPLE_COLOR} {...rest} … />
