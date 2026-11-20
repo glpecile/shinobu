@@ -396,6 +396,29 @@ const PROVIDER_HOME_URLS: Record<ProviderId, string> = {
 };
 
 /**
+ * The connected account's public profile. `handle` is the segment the provider
+ * keys profiles by: Trakt's slug, Simkl's numeric account id, and the username
+ * everywhere else.
+ */
+export function providerProfileUrl(providerId: ProviderId, handle: string | number): string {
+  const segment = encodeURIComponent(handle);
+  switch (providerId) {
+    case Provider.Trakt:
+      return `https://trakt.tv/users/${segment}`;
+    case Provider.AniList:
+      return `https://anilist.co/user/${segment}`;
+    case Provider.Letterboxd:
+      return `https://letterboxd.com/${segment}/`;
+    case Provider.Serializd:
+      return `https://www.serializd.com/user/${segment}`;
+    case Provider.Simkl:
+      return `https://simkl.com/${segment}/`;
+    case Provider.Hardcover:
+      return `https://hardcover.app/@${segment}`;
+  }
+}
+
+/**
  * The provider's log surface root — the degrade target for the manual-log
  * row (plan 0022 R4) when `providerItemUrl` can't build an item-specific URL.
  * The affordance must never vanish silently.

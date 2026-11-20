@@ -1,7 +1,9 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { Text, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { PersonAvatar } from '@/features/person/person-avatar';
+import { PresstableOpacity } from '@/components/presstable';
 import { ProviderIcon } from '@/components/provider-icon';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
@@ -10,8 +12,10 @@ import { LetterboxdAdvancedSetup } from '@/features/trackers/letterboxd-advanced
 import { capabilityLabels } from '@/features/trackers/provider-style';
 import { useProviderAccount } from '@/features/trackers/use-provider-account';
 import { haptics } from '@/lib/haptics';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { PROVIDERS } from '@/lib/providers/registry';
 import { Provider, type ProviderId } from '@/lib/providers/types';
+import { useThemeColor } from '@/lib/theme-color';
 import { useDisconnectProvider } from '@/state/session';
 
 /**
@@ -60,6 +64,29 @@ function ProviderSheetContent({
   const ConnectButton = CONNECT_BUTTONS[id];
   const { label } = PROVIDERS[id];
   const name = account.username ?? `${label} account`;
+  const { profileUrl } = account;
+  const a11yLabel = account.username == null ? `Connected to ${label}` : `Connected as ${account.username}`;
+  const muted = useThemeColor('--color-muted');
+  const accountCard = (
+    <View className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3">
+      <PersonAvatar
+        className="w-11 h-11"
+        headshot={account.avatar ?? ''}
+        name={name}
+        textClassName="text-sm"
+      />
+      <View className="flex-1 min-w-0">
+        <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
+          {name}
+        </Text>
+        <View className="flex-row items-center gap-1.5 mt-0.5">
+          <View className="w-1.5 h-1.5 rounded-full bg-success" />
+          <Text className="text-muted font-sans text-sm">Connected</Text>
+        </View>
+      </View>
+      {profileUrl != null && <Ionicons color={muted} name="open-outline" size={16} />}
+    </View>
+  );
 
   return (
     <>
@@ -75,27 +102,20 @@ function ProviderSheetContent({
 
       {connected ? (
         <View className="mt-5 gap-4">
-          <View
-            accessible
-            accessibilityLabel={`Connected as ${name}`}
-            className="flex-row items-center gap-3 bg-background border border-border rounded-lg px-4 py-3"
-          >
-            <PersonAvatar
-              className="w-11 h-11"
-              headshot={account.avatar ?? ''}
-              name={name}
-              textClassName="text-sm"
-            />
-            <View className="flex-1 min-w-0">
-              <Text className="text-foreground font-sans-semibold text-base" numberOfLines={1}>
-                {name}
-              </Text>
-              <View className="flex-row items-center gap-1.5 mt-0.5">
-                <View className="w-1.5 h-1.5 rounded-full bg-success" />
-                <Text className="text-muted font-sans text-sm">Connected</Text>
-              </View>
+          {profileUrl == null ? (
+            <View accessible accessibilityLabel={a11yLabel}>
+              {accountCard}
             </View>
-          </View>
+          ) : (
+            <PresstableOpacity
+              accessibilityHint={`Opens your ${label} profile`}
+              accessibilityLabel={a11yLabel}
+              accessibilityRole="link"
+              onPress={() => openExternalUrl(profileUrl)}
+            >
+              {accountCard}
+            </PresstableOpacity>
+          )}
           <Text className="text-muted font-sans text-sm">
             Disconnect signs Shinobu out of {label} on this device. Your {label}{' '}
             account and its data do not change.

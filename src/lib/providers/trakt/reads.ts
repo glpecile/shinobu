@@ -193,12 +193,15 @@ function getPagedSync<Raw>(
 interface TraktSettingsResponse {
   user?: {
     username?: string | null;
+    ids?: { slug?: string | null } | null;
     images?: { avatar?: { full?: string | null } | null } | null;
   } | null;
 }
 
 export interface TraktViewer {
   username: string | null;
+  /** The `/users/{slug}` path segment, which differs from the username when it has spaces or capitals. */
+  slug?: string;
   avatar?: string;
 }
 
@@ -218,8 +221,10 @@ export function getViewer(
   return traktAuthedRequest<TraktSettingsResponse>(deps, '/users/settings').pipe(
     Effect.map((data) => {
       const avatar = data.user?.images?.avatar?.full;
+      const slug = data.user?.ids?.slug;
       return {
         username: data.user?.username ?? null,
+        ...(slug != null && slug !== '' ? { slug } : {}),
         ...(avatar != null && avatar !== '' ? { avatar } : {}),
       };
     }),

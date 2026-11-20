@@ -1,3 +1,4 @@
+import { providerProfileUrl } from '@/lib/providers/external-urls';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { useAniListViewerQuery } from '@/state/queries/anilist';
 import { useHardcoverViewerQuery } from '@/state/queries/hardcover';
@@ -9,6 +10,8 @@ export interface ProviderAccount {
   username?: string;
   /** Profile picture URL. Absent for providers that don't expose one. */
   avatar?: string;
+  /** The account's public page, once the provider has named it. */
+  profileUrl?: string;
 }
 
 /**
@@ -42,18 +45,23 @@ export function useProviderAccount(
   if (!connected) return {};
 
   // Exhaustive by ProviderId, so a new provider has to declare where its
-  // account comes from instead of silently rendering none.
-  const remote: Record<ProviderId, ProviderAccount> = {
-    [Provider.Trakt]: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar },
-    [Provider.AniList]: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined },
+  // account comes from instead of silently rendering none. `handle` is what
+  // `providerProfileUrl` keys the profile by.
+  const remote: Record<ProviderId, ProviderAccount & { handle?: string | number }> = {
+    [Provider.Trakt]: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar, handle: trakt.data?.slug },
+    [Provider.AniList]: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined, handle: anilist.data?.name },
     [Provider.Letterboxd]: {},
-    [Provider.Simkl]: { username: simkl.data?.username ?? undefined, avatar: simkl.data?.avatar },
+    [Provider.Simkl]: { username: simkl.data?.username ?? undefined, avatar: simkl.data?.avatar, handle: simkl.data?.accountId },
     [Provider.Serializd]: {},
-    [Provider.Hardcover]: { username: hardcover.data?.username, avatar: hardcover.data?.avatar },
+    [Provider.Hardcover]: { username: hardcover.data?.username, avatar: hardcover.data?.avatar, handle: hardcover.data?.username },
   };
+  const { handle: remoteHandle, ...account } = remote[id];
   const stored = getProviderSession(id)?.username;
+  const hasStored = stored != null && stored !== '';
+  const handle = hasStored ? stored : remoteHandle;
   return {
-    ...remote[id],
-    ...(stored != null && stored !== '' ? { username: stored } : {}),
+    ...account,
+    ...(hasStored ? { username: stored } : {}),
+    ...(handle != null && handle !== '' ? { profileUrl: providerProfileUrl(id, handle) } : {}),
   };
 }
