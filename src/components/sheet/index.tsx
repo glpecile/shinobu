@@ -65,6 +65,9 @@ export function Sheet({ open, onClose, children }: SheetProps) {
         if (index === 0) close();
       }}
       scrimColor="rgba(0, 0, 0, 0.6)"
+      // The lib's 450 ms default is slow for a sheet opened many times a day.
+      // Before 1.0, Android settled in about 200 ms.
+      settleDuration={300}
       // The keyboard draws over the sheet, which is short enough that
       // its scroller has nowhere to scroll a field to. Shrinking the host lifts
       // the sheet above the keyboard, like `adjustResize`; the host re-anchors
