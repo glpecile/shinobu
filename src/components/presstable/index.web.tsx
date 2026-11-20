@@ -1,4 +1,4 @@
-import type { ComponentProps, MouseEventHandler } from 'react';
+import type { ComponentProps } from 'react';
 import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -29,8 +29,6 @@ type PresstableProps = Omit<ComponentProps<typeof Pressable>, 'onPress' | 'onLon
     onPress?: () => void;
     onLongPress?: () => void;
     style?: StyleProp<ViewStyle>;
-    className?: string;
-    onMouseDown?: MouseEventHandler<HTMLElement>;
   };
 
 function WebPresstable({
