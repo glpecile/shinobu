@@ -28,10 +28,10 @@ export interface ProviderAccount {
  * session — and usually zero, since AniList's viewer read is the same one the
  * list feeds prime.
  *
- * Fields are absent while a remote read is in flight or if it fails: the
- * caller falls back to "Connected" and an initial, never a spinner or an
- * error. A settings label is not worth a Suspense boundary that could blank
- * the card.
+ * `loading` is true while the open provider's read is in flight. If the read
+ * fails, the fields are absent and the caller falls back to "Connected" and an
+ * initial, never an error. A settings label is not worth a Suspense boundary
+ * that could blank the card.
  */
 export function useProviderAccount(
   id: ProviderId,
@@ -50,21 +50,19 @@ export function useProviderAccount(
   // account comes from instead of silently rendering none. `handle` is what
   // `providerProfileUrl` keys the profile by.
   const remote: Record<ProviderId, ProviderAccount & { handle?: string | number }> = {
-    [Provider.Trakt]: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar, handle: trakt.data?.slug },
-    [Provider.AniList]: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined, handle: anilist.data?.name },
+    [Provider.Trakt]: { username: trakt.data?.username ?? undefined, avatar: trakt.data?.avatar, handle: trakt.data?.slug, loading: trakt.isLoading },
+    [Provider.AniList]: { username: anilist.data?.name, avatar: anilist.data?.avatar?.medium ?? undefined, handle: anilist.data?.name, loading: anilist.isLoading },
     [Provider.Letterboxd]: {},
-    [Provider.Simkl]: { username: simkl.data?.username ?? undefined, avatar: simkl.data?.avatar, handle: simkl.data?.accountId },
+    [Provider.Simkl]: { username: simkl.data?.username ?? undefined, avatar: simkl.data?.avatar, handle: simkl.data?.accountId, loading: simkl.isLoading },
     [Provider.Serializd]: {},
-    [Provider.Hardcover]: { username: hardcover.data?.username, avatar: hardcover.data?.avatar, handle: hardcover.data?.username },
+    [Provider.Hardcover]: { username: hardcover.data?.username, avatar: hardcover.data?.avatar, handle: hardcover.data?.username, loading: hardcover.isLoading },
   };
   const { handle: remoteHandle, ...account } = remote[id];
-  const loading = trakt.isLoading || anilist.isLoading || simkl.isLoading || hardcover.isLoading;
   const stored = getProviderSession(id)?.username;
   const hasStored = stored != null && stored !== '';
   const handle = hasStored ? stored : remoteHandle;
   return {
     ...account,
-    loading,
     ...(hasStored ? { username: stored } : {}),
     ...(handle != null && handle !== '' ? { profileUrl: providerProfileUrl(id, handle) } : {}),
   };
