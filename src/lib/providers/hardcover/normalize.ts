@@ -1,6 +1,5 @@
 import * as Schema from 'effect/Schema';
 
-import { percentRead } from '@/features/log-media/reading-share';
 import { optionalNullable } from '@/lib/providers/schema';
 import { Provider } from '@/lib/providers/types';
 import { isDateOnly } from '@/lib/time/has-aired';
@@ -161,6 +160,13 @@ const READING_EVENTS = new Map<string, ReadingEvent>([
 /** What the diary read filters `event` on. */
 export const HARDCOVER_READING_EVENTS = [...READING_EVENTS.keys()];
 
+/** Hardcover's percent rounded as the log sheet's `percentRead`: only 0 is unstarted, only 100 finished. */
+function wholePercent(share: number): number {
+  if (share <= 0) return 0;
+  if (share >= 100) return 100;
+  return Math.min(99, Math.max(1, Math.round(share)));
+}
+
 /**
  * One journal entry → a diary entry. `journal_date` is the reader's own
  * calendar day, so it stays a bare date and no time zone can move it to the
@@ -186,8 +192,7 @@ export function normalizeHardcoverJournal(row: HardcoverJournalRow): NormalizedD
       ? { pages: { from: (progressed?.progress_pages_was ?? 0) + 1, to: toPage } }
       : {}),
     ...(toPercent != null && toPercent > 0
-      ? // Rounded as the log sheet rounds, so an unfinished book never reads 100%.
-        { percent: { from: percentRead(progressed?.progress_was ?? 0, 100), to: percentRead(toPercent, 100) } }
+      ? { percent: { from: wholePercent(progressed?.progress_was ?? 0), to: wholePercent(toPercent) } }
       : {}),
   };
 }
