@@ -17,6 +17,7 @@ import { Provider } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { useWindowDimensions } from '@/lib/window-dimensions';
 import { useVisibleItems } from '@/state/prefs/hidden-items';
+import { useReadingInPages } from '@/state/prefs/reading-unit';
 import { useSuspenseContinueReadingQuery } from '@/state/queries/continue-reading';
 import { ReadingCard } from './reading-card';
 import { capFeedRow } from './row-cap';
@@ -87,13 +88,14 @@ export function YourWatchlistRow({
 /**
  * The manga the user is reading or rereading on AniList and the books they are
  * reading on Hardcover, most recently updated first (plan 0117 M3, B2). Cards
- * follow Continue Watching's layout and read "Ch 12 / 59" or "p. 142 / 380"
- * under the cover. The row is capped like the other personal rows.
+ * follow Continue Watching's layout and read "Ch 12 / 59" under the cover,
+ * or "p. 142 / 380" or "37%" in the reader's unit. The row is capped like the other personal rows.
  */
 export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
   const items = capFeedRow(useVisibleItems(useSuspenseContinueReadingQuery()));
   const arrivalHistory = useArrivalHistory(items.map((item) => item.id));
   const { fontScale } = useWindowDimensions();
+  const inPages = useReadingInPages();
   if (items.length === 0) return null;
   return (
     <CollapsibleSection
@@ -108,13 +110,14 @@ export function ContinueReadingRow({ onItemActions }: FeedRowCallbacks) {
         ListFooterComponent={<View className="w-1" />}
         data={items}
         estimatedItemSize={140}
+        extraData={inPages}
         keyExtractor={(item) => item.id}
         // The cover is 48px taller than the episode art.
         style={{ height: episodeCardRailHeight(fontScale, 48) }}
         renderItem={({ item }) => (
           <View className="mr-3">
             <SectionEnter arrival={{ id: item.id, seen: arrivalHistory }}>
-              <ReadingCard item={item} onActionsPress={onItemActions} />
+              <ReadingCard inPages={inPages} item={item} onActionsPress={onItemActions} />
             </SectionEnter>
           </View>
         )}

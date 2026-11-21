@@ -8,6 +8,7 @@ import { NativeSwitch } from '@/components/native-switch';
 import { TextField } from '@/components/text-field';
 import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
+import { setReadingInPages, useReadingInPages } from '@/state/prefs/reading-unit';
 import { ProgressScrubber } from './progress-scrubber';
 import { pageAt, percentRead, stepPage } from './reading-share';
 import { StepperField } from './stepper-field';
@@ -20,22 +21,24 @@ export interface ReadingProgress {
   total?: number;
   /** The book is already Read, so this log is another read of it. */
   reread?: boolean;
-  /** The reader switched the field to pages. With a page count, it speaks percent otherwise. */
-  inPages?: boolean;
 }
 
-/** What a progress log covers, in the field's unit ("34%", "page 31"). None for a start or a finish. */
-export function readingSpan(reading: ReadingProgress): string | undefined {
+/**
+ * What a progress log covers ("34%", "page 31"), in the reader's unit
+ * (`useReadingInPages`). Without a page count it is always pages. None for a
+ * start or a finish.
+ */
+export function readingSpan(reading: ReadingProgress, inPages: boolean): string | undefined {
   if (reading.finished || reading.page <= 0) return undefined;
-  return reading.total != null && reading.inPages !== true
+  return reading.total != null && !inPages
     ? `${percentRead(reading.page, reading.total)}%`
     : `page ${reading.page}`;
 }
 
 /** The one string the book form speaks: its title and confirm label. */
-export function readingTitle(reading: ReadingProgress): string {
+export function readingTitle(reading: ReadingProgress, inPages: boolean): string {
   if (reading.finished) return reading.reread === true ? 'Log reread' : 'Mark as read';
-  const span = readingSpan(reading);
+  const span = readingSpan(reading, inPages);
   if (span != null) return `Log ${span}`;
   return reading.reread === true ? 'Start reread' : 'Start reading';
 }
@@ -76,7 +79,7 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
   const [draft, setDraft] = useState<string | null>(null);
   const page = value.finished ? total : Math.min(value.page, total);
   const percent = percentRead(page, total);
-  const inPages = value.inPages === true;
+  const inPages = useReadingInPages();
   const setPage = (next: number) =>
     onChange((reading) => ({ ...reading, page: next, finished: next >= total }));
   // From the latest state, so a second press before a re-render steps again.
@@ -84,7 +87,7 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
     setDraft(null);
     onChange((reading) => {
       const from = reading.finished ? total : Math.min(reading.page, total);
-      const next = stepPage(from, total, by, reading.inPages === true);
+      const next = stepPage(from, total, by, inPages);
       return { ...reading, page: next, finished: next >= total };
     });
   };
@@ -127,7 +130,7 @@ function ShareField({ value, onChange, pending, total }: FieldProps & { total: n
             className="h-9 w-24"
             onChange={(unit) => {
               setDraft(null);
-              onChange((reading) => ({ ...reading, inPages: unit === 'pages' }));
+              setReadingInPages(unit === 'pages');
             }}
             options={UNITS}
             size="sm"
