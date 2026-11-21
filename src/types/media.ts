@@ -367,6 +367,8 @@ export interface NormalizedDiaryEntry {
   season?: number;
   /** A book's journal event (Hardcover), for the detail line. */
   readingEvent?: ReadingEvent;
+  /** The pages a progress update covers, for the detail line. */
+  pages?: { from: number; to: number };
 }
 
 /**
@@ -394,6 +396,8 @@ export interface MergedDiaryEntry {
   liked?: boolean;
   /** The book's journal event, when the row is a book's. */
   readingEvent?: ReadingEvent;
+  /** The pages a book's progress update covers. */
+  pages?: { from: number; to: number };
 }
 
 /** One day bucket in the diary, newest-first, under a `YYYY-MM-DD` local key. */

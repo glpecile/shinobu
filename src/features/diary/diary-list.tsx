@@ -414,6 +414,7 @@ function DiaryRow({
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
     ...(entry.readingEvent != null ? { readingEvent: entry.readingEvent } : {}),
+    ...(entry.pages != null ? { pages: entry.pages } : {}),
   });
   const href = entryHref(entry);
 
@@ -535,6 +536,7 @@ function DiaryChildRow({
     ...(entry.season != null ? { season: entry.season } : {}),
     episodes: entry.episodes,
     ...(entry.readingEvent != null ? { readingEvent: entry.readingEvent } : {}),
+    ...(entry.pages != null ? { pages: entry.pages } : {}),
   });
   const href = entryHref(entry);
 
