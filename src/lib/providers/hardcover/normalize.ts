@@ -1,5 +1,6 @@
 import * as Schema from 'effect/Schema';
 
+import { percentRead } from '@/features/log-media/reading-share';
 import { optionalNullable } from '@/lib/providers/schema';
 import { Provider } from '@/lib/providers/types';
 import { isDateOnly } from '@/lib/time/has-aired';
@@ -185,7 +186,8 @@ export function normalizeHardcoverJournal(row: HardcoverJournalRow): NormalizedD
       ? { pages: { from: (progressed?.progress_pages_was ?? 0) + 1, to: toPage } }
       : {}),
     ...(toPercent != null && toPercent > 0
-      ? { percent: { from: Math.round(progressed?.progress_was ?? 0), to: Math.round(toPercent) } }
+      ? // Rounded as the log sheet rounds, so an unfinished book never reads 100%.
+        { percent: { from: percentRead(progressed?.progress_was ?? 0, 100), to: percentRead(toPercent, 100) } }
       : {}),
   };
 }
