@@ -409,13 +409,7 @@ function DiaryRow({
   onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const detail = formatEpisodeDetail({
-    type: entry.item.type,
-    ...(entry.season != null ? { season: entry.season } : {}),
-    episodes: entry.episodes,
-    ...(entry.readingEvent != null ? { readingEvent: entry.readingEvent } : {}),
-    ...(entry.pages != null ? { pages: entry.pages } : {}),
-  });
+  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type });
   const href = entryHref(entry);
 
   return (
@@ -531,13 +525,7 @@ function DiaryChildRow({
   onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const detail = formatEpisodeDetail({
-    type: entry.item.type,
-    ...(entry.season != null ? { season: entry.season } : {}),
-    episodes: entry.episodes,
-    ...(entry.readingEvent != null ? { readingEvent: entry.readingEvent } : {}),
-    ...(entry.pages != null ? { pages: entry.pages } : {}),
-  });
+  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type });
   const href = entryHref(entry);
 
   return (
