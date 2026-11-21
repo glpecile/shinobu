@@ -255,7 +255,7 @@ export function getReadingJournal(
         limit: $limit
         offset: $offset
       ) {
-        id event action_at journal_date
+        id event action_at journal_date metadata
         book { id title description pages release_year rating ratings_count image { url } contributions(order_by: { contribution: asc_nulls_first }, limit: 6) { author { name } } featured_book_series { series { name } } }
       }
     }`,

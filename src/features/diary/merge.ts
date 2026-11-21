@@ -413,6 +413,7 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
     dateOnly: contributors.every((entry) => entry.dateOnly === true),
     ...(contributors.some((entry) => entry.liked === true) ? { liked: true } : {}),
     ...(primary.readingEvent != null ? { readingEvent: primary.readingEvent } : {}),
+    ...(primary.pages != null ? { pages: primary.pages } : {}),
   };
 }
 
@@ -627,13 +628,19 @@ const READING_EVENT_DETAIL: Record<ReadingEvent, string> = {
   finished: 'Finished',
 };
 
-/** The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Finished"; '' for a movie. */
+/** The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Pages 27–51" / "Finished"; '' for a movie. */
 export function formatEpisodeDetail(params: {
   type: MediaType;
   season?: number;
   episodes: number[];
   readingEvent?: ReadingEvent;
+  pages?: MergedDiaryEntry['pages'];
 }): string {
+  if (params.pages != null) {
+    // A reader who moves back lands on a page without covering any.
+    const { from, to } = params.pages;
+    return from < to ? `Pages ${from}–${to}` : `Page ${to}`;
+  }
   if (params.readingEvent != null) return READING_EVENT_DETAIL[params.readingEvent];
   if (params.episodes.length === 0) return '';
   const range = formatEpisodeRange(params.episodes);

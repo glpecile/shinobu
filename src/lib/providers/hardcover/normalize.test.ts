@@ -146,4 +146,16 @@ describe('normalizeHardcoverJournal', () => {
     expect(entry).toMatchObject({ watchedAt: '2026-03-09T00:00:00.000Z', readingEvent: 'started' });
     expect(entry).not.toContainKey('dateOnly');
   });
+
+  test('a first progress update covers the pages from page 1', () => {
+    const entry = normalizeHardcoverJournal({
+      id: 503,
+      event: 'progress_updated',
+      action_at: '2026-11-19T20:09:37+00:00',
+      book,
+      metadata: { progress_pages: 26 },
+    });
+
+    expect(entry).toMatchObject({ readingEvent: 'progressed', pages: { from: 1, to: 26 } });
+  });
 });

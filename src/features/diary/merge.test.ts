@@ -337,6 +337,11 @@ describe('formatEpisodeDetail', () => {
   test('a book names its reading event', () => {
     expect(formatEpisodeDetail({ type: 'BOOK', episodes: [], readingEvent: 'finished' })).toBe('Finished');
   });
+  test('a book progress update names the pages it covers', () => {
+    const progressed = { type: 'BOOK', readingEvent: 'progressed' } as const;
+    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages: { from: 27, to: 51 } })).toBe('Pages 27–51');
+    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages: { from: 52, to: 40 } })).toBe('Page 40');
+  });
 });
 
 describe('formatDayParts', () => {
