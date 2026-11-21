@@ -634,7 +634,7 @@ export function formatEpisodeDetail(params: {
   season?: number;
   episodes: number[];
   readingEvent?: ReadingEvent;
-  pages?: { from: number; to: number };
+  pages?: MergedDiaryEntry['pages'];
 }): string {
   if (params.pages != null) {
     // A reader who moves back lands on a page without covering any.
