@@ -25,6 +25,7 @@ import { unmatchedWriteReason } from '@/lib/providers/routing';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { routes } from '@/lib/routes';
 import { toast } from '@/lib/toast';
+import { useReadingInPages } from '@/state/prefs/reading-unit';
 import { anilistQueryKeys } from '@/state/queries/anilist';
 import { hardcoverQueryKeys } from '@/state/queries/hardcover';
 import { useLogReconcileQuery } from '@/state/queries/log-reconcile';
@@ -305,14 +306,15 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
   // One chapter keeps the request's copy; a range is named in the title and
   // toast.
   const [reading, setReading] = useState(request.reading);
+  const inPages = useReadingInPages();
   const span =
     range != null && through > range.from
       ? `chapters ${range.from}–${through}`
       : reading != null
-        ? readingSpan(reading)
+        ? readingSpan(reading, inPages)
         : undefined;
   const title =
-    reading != null ? readingTitle(reading) : span == null ? request.title : `Log ${span}`;
+    reading != null ? readingTitle(reading, inPages) : span == null ? request.title : `Log ${span}`;
   const { trackBusy } = useCatchUpControls();
   const queryClient = useQueryClient();
   const logMedia = useLogMedia();

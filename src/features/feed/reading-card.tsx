@@ -8,16 +8,23 @@ import { OverlayActionsButton } from '@/components/overlay-actions-button';
 import { PosterPlaceholder } from '@/components/poster-placeholder';
 import { PresstableScale } from '@/components/presstable';
 import { ReadingLogButton } from '@/features/log-media/reading-log-button';
+import { percentRead } from '@/features/log-media/reading-share';
 import { usePushRoute } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { usePrefetchMediaDetails } from '@/state/queries/media-details';
 import type { NormalizedMediaItem } from '@/types/media';
 
-/** "p. 26 / 204", or the length before the first log: a reading row never says "not started". */
-function readingProgress(item: NormalizedMediaItem): string {
+/**
+ * "Ch 12 / 59", a book's "p. 26 / 204" or "13%" in the reader's unit, or the
+ * length before the first log: a reading row never says "not started".
+ */
+function readingProgress(item: NormalizedMediaItem, inPages: boolean): string {
+  const total = item.totalEpisodes;
+  if (item.progressUnit === 'page' && !inPages && item.currentProgress > 0 && total != null && total > 0) {
+    return `${percentRead(item.currentProgress, total)}%`;
+  }
   const progress = progressLabel(item);
   if (progress != null) return progress;
-  const total = item.totalEpisodes;
   if (total == null || total <= 0) return '';
   const unit = item.progressUnit === 'page' ? 'page' : 'chapter';
   return `${total.toLocaleString()} ${unit}${total === 1 ? '' : 's'}`;
@@ -31,13 +38,16 @@ function readingProgress(item: NormalizedMediaItem): string {
  */
 export function ReadingCard({
   item,
+  inPages,
   onActionsPress,
 }: {
   item: NormalizedMediaItem;
+  /** The reader's unit for book progress, read once by the row. */
+  inPages: boolean;
   onActionsPress: (item: NormalizedMediaItem) => void;
 }) {
   const title = item.title.trim() || 'Untitled';
-  const progress = readingProgress(item);
+  const progress = readingProgress(item, inPages);
   const pushRoute = usePushRoute();
   const prefetchDetails = usePrefetchMediaDetails();
   const [hovered, setHovered] = useState(false);

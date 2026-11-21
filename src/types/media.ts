@@ -369,6 +369,8 @@ export interface NormalizedDiaryEntry {
   readingEvent?: ReadingEvent;
   /** The pages a progress update covers, for the detail line. */
   pages?: { from: number; to: number };
+  /** The same update in percent of the book, Hardcover's own figure. */
+  percent?: { from: number; to: number };
 }
 
 /**
@@ -398,6 +400,8 @@ export interface MergedDiaryEntry {
   readingEvent?: ReadingEvent;
   /** The pages a book's progress update covers. */
   pages?: NormalizedDiaryEntry['pages'];
+  /** The same update in percent of the book. */
+  percent?: NormalizedDiaryEntry['percent'];
 }
 
 /** One day bucket in the diary, newest-first, under a `YYYY-MM-DD` local key. */

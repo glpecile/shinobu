@@ -414,6 +414,7 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
     ...(contributors.some((entry) => entry.liked === true) ? { liked: true } : {}),
     ...(primary.readingEvent != null ? { readingEvent: primary.readingEvent } : {}),
     ...(primary.pages != null ? { pages: primary.pages } : {}),
+    ...(primary.percent != null ? { percent: primary.percent } : {}),
   };
 }
 
@@ -628,18 +629,27 @@ const READING_EVENT_DETAIL: Record<ReadingEvent, string> = {
   finished: 'Finished',
 };
 
-/** The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Pages 27–51" / "Finished"; '' for a movie. */
+/**
+ * The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Finished"; '' for a
+ * movie. A book's progress update speaks the reader's unit (`inPages`),
+ * "Pages 27–51" or "12–25%", and the other one when its own is missing.
+ */
 export function formatEpisodeDetail(params: {
   type: MediaType;
   season?: number;
   episodes: number[];
   readingEvent?: ReadingEvent;
   pages?: MergedDiaryEntry['pages'];
+  percent?: MergedDiaryEntry['percent'];
+  inPages?: boolean;
 }): string {
-  if (params.pages != null) {
+  const { pages, percent } = params;
+  if (pages != null && (params.inPages === true || percent == null)) {
     // A reader who moves back lands on a page without covering any.
-    const { from, to } = params.pages;
-    return from < to ? `Pages ${from}–${to}` : `Page ${to}`;
+    return pages.from < pages.to ? `Pages ${pages.from}–${pages.to}` : `Page ${pages.to}`;
+  }
+  if (percent != null) {
+    return percent.from > 0 && percent.from < percent.to ? `${percent.from}–${percent.to}%` : `${percent.to}%`;
   }
   if (params.readingEvent != null) return READING_EVENT_DETAIL[params.readingEvent];
   if (params.episodes.length === 0) return '';

@@ -140,8 +140,10 @@ export const HardcoverJournalRow = Schema.Struct({
   action_at: Schema.String,
   journal_date: optionalNullable(Schema.String),
   book: optionalNullable(HardcoverBook),
-  // A progress update's page before and after. An audiobook read leaves both null.
+  // A progress update's percent and page, before and after. An audiobook read has no pages.
   metadata: optionalNullable(Schema.Struct({
+    progress: optionalNullable(numeric),
+    progress_was: optionalNullable(numeric),
     progress_pages: optionalNullable(numeric),
     progress_pages_was: optionalNullable(numeric),
   })),
@@ -158,6 +160,13 @@ const READING_EVENTS = new Map<string, ReadingEvent>([
 /** What the diary read filters `event` on. */
 export const HARDCOVER_READING_EVENTS = [...READING_EVENTS.keys()];
 
+/** Hardcover's percent rounded as the log sheet's `percentRead`: only 0 is unstarted, only 100 finished. */
+function wholePercent(share: number): number {
+  if (share <= 0) return 0;
+  if (share >= 100) return 100;
+  return Math.min(99, Math.max(1, Math.round(share)));
+}
+
 /**
  * One journal entry → a diary entry. `journal_date` is the reader's own
  * calendar day, so it stays a bare date and no time zone can move it to the
@@ -169,7 +178,9 @@ export function normalizeHardcoverJournal(row: HardcoverJournalRow): NormalizedD
   const at = isoInstant(row.action_at);
   if (readingEvent == null || row.book == null || at == null) return null;
   const day = row.journal_date != null && isDateOnly(row.journal_date) ? row.journal_date : null;
-  const to = row.metadata?.progress_pages;
+  const progressed = readingEvent === 'progressed' ? row.metadata : undefined;
+  const toPage = progressed?.progress_pages;
+  const toPercent = progressed?.progress;
   return {
     id: `hardcover-${row.id}`,
     provider: Provider.Hardcover,
@@ -177,8 +188,11 @@ export function normalizeHardcoverJournal(row: HardcoverJournalRow): NormalizedD
     ...(day != null ? { dateOnly: true } : {}),
     item: normalizeHardcoverBook(row.book, at),
     readingEvent,
-    ...(readingEvent === 'progressed' && to != null && to > 0
-      ? { pages: { from: (row.metadata?.progress_pages_was ?? 0) + 1, to } }
+    ...(toPage != null && toPage > 0
+      ? { pages: { from: (progressed?.progress_pages_was ?? 0) + 1, to: toPage } }
+      : {}),
+    ...(toPercent != null && toPercent > 0
+      ? { percent: { from: wholePercent(progressed?.progress_was ?? 0), to: wholePercent(toPercent) } }
       : {}),
   };
 }

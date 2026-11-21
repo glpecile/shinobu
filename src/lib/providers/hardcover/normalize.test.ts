@@ -147,15 +147,27 @@ describe('normalizeHardcoverJournal', () => {
     expect(entry).not.toContainKey('dateOnly');
   });
 
-  test('a first progress update covers the pages from page 1', () => {
+  test('a first progress update covers the pages from page 1 and the percent from 0', () => {
     const entry = normalizeHardcoverJournal({
       id: 503,
       event: 'progress_updated',
       action_at: '2026-11-19T20:09:37+00:00',
       book,
-      metadata: { progress_pages: 26 },
+      metadata: { progress: 12.4, progress_pages: 26 },
     });
 
-    expect(entry).toMatchObject({ readingEvent: 'progressed', pages: { from: 1, to: 26 } });
+    expect(entry).toMatchObject({ readingEvent: 'progressed', pages: { from: 1, to: 26 }, percent: { from: 0, to: 12 } });
+  });
+
+  test('an unfinished update rounds its percent inside 1–99', () => {
+    const entry = normalizeHardcoverJournal({
+      id: 504,
+      event: 'progress_updated',
+      action_at: '2026-11-19T20:09:37+00:00',
+      book,
+      metadata: { progress: 99.7, progress_was: 0.3 },
+    });
+
+    expect(entry).toMatchObject({ percent: { from: 1, to: 99 } });
   });
 });

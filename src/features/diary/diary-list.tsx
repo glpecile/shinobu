@@ -38,6 +38,7 @@ import {
   useCollapsedDiaryDays,
 } from '@/state/prefs/collapsed-diary-days';
 import { useHiddenItems, type HiddenItem } from '@/state/prefs/hidden-items';
+import { useReadingInPages } from '@/state/prefs/reading-unit';
 import { useMediaDetailsQuery } from '@/state/queries/media-details';
 import { useTraktMediaImages } from '@/state/queries/trakt';
 import type { DiaryDay, MergedDiaryEntry, NormalizedMediaItem } from '@/types/media';
@@ -400,16 +401,19 @@ function DiaryRow({
   entry,
   timeZone,
   last,
+  inPages,
   onOpen,
   onActions,
 }: {
   entry: MergedDiaryEntry;
   timeZone: string;
   last: boolean;
+  /** The reader's unit for book progress, read once by the list. */
+  inPages: boolean;
   onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type });
+  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type, inPages });
   const href = entryHref(entry);
 
   return (
@@ -516,16 +520,18 @@ function DiaryChildRow({
   entry,
   timeZone,
   last,
+  inPages,
   onOpen,
   onActions,
 }: {
   entry: MergedDiaryEntry;
   timeZone: string;
   last: boolean;
+  inPages: boolean;
   onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type });
+  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type, inPages });
   const href = entryHref(entry);
 
   return (
@@ -723,6 +729,7 @@ export function DiaryList({
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { expanded, toggle: toggleCluster } = useListDisclosure();
   const collapsedDays = useCollapsedDiaryDays();
+  const inPages = useReadingInPages();
   const hiddenItems = useHiddenItems();
   const muted = useThemeColor('--color-muted');
   const wide = useWindowDimensions().width >= SIDE_CALENDAR_MIN_WIDTH;
@@ -824,6 +831,7 @@ export function DiaryList({
           ref={listRef}
           onScroll={handleScroll}
           data={items}
+          extraData={inPages}
           keyExtractor={(item) => item.key}
           renderItem={({ item, index }) => {
             switch (item.kind) {
@@ -856,6 +864,7 @@ export function DiaryList({
                 return (
                   <DiaryChildRow
                     entry={item.entry}
+                    inPages={inPages}
                     last={isLastOfDay(index)}
                     onActions={onItemActions}
                     onOpen={onOpen}
@@ -866,6 +875,7 @@ export function DiaryList({
                 return (
                   <DiaryRow
                     entry={item.entry}
+                    inPages={inPages}
                     last={isLastOfDay(index)}
                     onActions={onItemActions}
                     onOpen={onOpen}
