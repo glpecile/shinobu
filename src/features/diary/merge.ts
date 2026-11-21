@@ -644,8 +644,8 @@ export function formatEpisodeDetail(params: {
   inPages?: boolean;
 }): string {
   const { pages, percent } = params;
-  // A reader who moves back lands on a page without covering any.
   if (pages != null && (params.inPages === true || percent == null)) {
+    // A reader who moves back lands on a page without covering any.
     return pages.from < pages.to ? `Pages ${pages.from}–${pages.to}` : `Page ${pages.to}`;
   }
   if (percent != null) {
