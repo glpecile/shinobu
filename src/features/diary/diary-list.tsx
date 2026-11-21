@@ -434,7 +434,7 @@ function DiaryRow({
                 {entry.item.title}
               </Text>
               {detail !== '' && (
-                <Text className="text-muted font-sans text-xs mt-0.5" numberOfLines={1}>{detail}</Text>
+                <Text className="text-muted font-sans text-xs mt-0.5">{detail}</Text>
               )}
             </View>
           </>
