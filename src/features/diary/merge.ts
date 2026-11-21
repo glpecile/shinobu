@@ -632,7 +632,7 @@ const READING_EVENT_DETAIL: Record<ReadingEvent, string> = {
 /**
  * The row's detail line: "S2E5" / "Ep 3–5" / "Ch 41" / "Finished"; '' for a
  * movie. A book's progress update speaks the reader's unit (`inPages`),
- * "Pages 27–51" or "12–25%", and the other one when its own is missing.
+ * "Pages 27–51" or "+13% (12→25)", and the other one when its own is missing.
  */
 export function formatEpisodeDetail(params: {
   type: MediaType;
@@ -649,7 +649,9 @@ export function formatEpisodeDetail(params: {
     return pages.from < pages.to ? `Pages ${pages.from}–${pages.to}` : `Page ${pages.to}`;
   }
   if (percent != null) {
-    return percent.from > 0 && percent.from < percent.to ? `${percent.from}–${percent.to}%` : `${percent.to}%`;
+    const change = percent.to - percent.from;
+    if (change === 0) return `${percent.to}%`;
+    return `${change > 0 ? '+' : '−'}${Math.abs(change)}% (${percent.from}→${percent.to})`;
   }
   if (params.readingEvent != null) return READING_EVENT_DETAIL[params.readingEvent];
   if (params.episodes.length === 0) return '';

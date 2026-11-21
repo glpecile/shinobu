@@ -342,9 +342,9 @@ describe('formatEpisodeDetail', () => {
     const pages = { from: 27, to: 51 };
     const percent = { from: 12, to: 25 };
     expect(formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: true })).toBe('Pages 27–51');
-    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: false })).toBe('12–25%');
+    expect(formatEpisodeDetail({ ...progressed, episodes: [], pages, percent, inPages: false })).toBe('+13% (12→25)');
     expect(formatEpisodeDetail({ ...progressed, episodes: [], pages: { from: 52, to: 40 }, inPages: false })).toBe('Page 40');
-    expect(formatEpisodeDetail({ ...progressed, episodes: [], percent: { from: 0, to: 12 }, inPages: true })).toBe('12%');
+    expect(formatEpisodeDetail({ ...progressed, episodes: [], percent: { from: 30, to: 12 }, inPages: true })).toBe('−18% (30→12)');
   });
 });
 
