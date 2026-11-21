@@ -520,16 +520,18 @@ function DiaryChildRow({
   entry,
   timeZone,
   last,
+  inPages,
   onOpen,
   onActions,
 }: {
   entry: MergedDiaryEntry;
   timeZone: string;
   last: boolean;
+  inPages: boolean;
   onOpen: (href: string) => void;
   onActions: (item: NormalizedMediaItem) => void;
 }) {
-  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type });
+  const detail = formatEpisodeDetail({ ...entry, type: entry.item.type, inPages });
   const href = entryHref(entry);
 
   return (
@@ -862,6 +864,7 @@ export function DiaryList({
                 return (
                   <DiaryChildRow
                     entry={item.entry}
+                    inPages={inPages}
                     last={isLastOfDay(index)}
                     onActions={onItemActions}
                     onOpen={onOpen}
