@@ -26,9 +26,10 @@ export function useUpNextSections(now: Date): UpNextResult {
  * id while an entry's own id carries its episode or release kind. Continue
  * Watching keys cards by item id, so advancing an episode doesn't re-key them.
  * The filter runs over the items and maps back
- * rather than over entry ids. A film therefore loses **both** of its release
- * rows when hidden — they share one item id, and hiding a film means hiding the
- * film, not one of its dates (plan 0030 R8).
+ * rather than over entry ids. A film therefore loses **every** release row
+ * when hidden — the rows share one item id, or carry the copies a collapse
+ * joined in `twinIds`, and hiding a film means hiding the film, not one of its
+ * dates (plan 0030 R8).
  *
  * Returns `entries` itself when nothing was hidden, keeping the identity
  * contract `visibleByIds` documents (plan 0031 KTD-13). Like a merged watchlist
