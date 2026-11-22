@@ -368,15 +368,13 @@ export function LogConfirmForm({ request, open, onClose, onDismiss, onOpenReques
     });
     // A reading item's button stays busy until its library entry and its
     // Continue Reading card are read again, so a second log never opens on
-    // the page, chapter or status this one changed. A manga's details screen
-    // reads its chapter from the AniList entry state.
+    // the page, chapter or status this one changed.
     const bookId = item.externalIds.hardcover;
-    const mangaId = item.type === 'MANGA' ? item.externalIds.anilist : undefined;
     const settleKeys =
       reading != null && bookId != null
         ? [hardcoverQueryKeys.bookEntry(bookId), hardcoverQueryKeys.reading()]
         : item.type === 'MANGA'
-          ? [anilistQueryKeys.reading(), ...(mangaId == null ? [] : [anilistQueryKeys.entryState(mangaId)])]
+          ? [anilistQueryKeys.reading()]
           : [];
     trackBusy(
       item.id,
