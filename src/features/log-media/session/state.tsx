@@ -38,7 +38,15 @@ const ControlContext = createContext<{
   openCatchUp: (entry: UpNextEpisodeEntry) => void;
   openLog: (request: LogRequest) => void;
   closeCatchUp: () => void;
-  /** Hold `itemId` busy until `work` settles (never rejects the caller). */
+  /**
+   * Holds `itemId` busy until `work` settles, and never rejects the caller.
+   * Pass the write, so busy ends when the providers accept it. Chain a
+   * refetch only when the trigger builds its next request from that query:
+   * a reading item's progress, or the next episode from Up Next. Never wait
+   * for the other invalidations or the derived watchlist removal. The sheet
+   * reports and closes on the write alone, so a failed refetch never fails
+   * an accepted write.
+   */
   trackBusy: (itemId: string, work: Promise<unknown>) => void;
 }>({
   openCatchUp: () => {},
