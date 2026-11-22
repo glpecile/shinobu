@@ -447,7 +447,10 @@ function dedupeByTmdb(
  */
 function dedupeReleases(entries: readonly UpNextEntry[]): UpNextEntry[] {
   const winners = new Map<string, UpNextEntry>();
-  const twins = new Map<UpNextEntry, UpNextEntry[]>();
+  // Per TMDB id, the item ids a collapse joined. Every release row of a joined
+  // copy carries the others, so a hide on any of them removes all of the
+  // film's rows (plan 0030 R8), whichever source won each release kind.
+  const joined = new Map<number, Set<string>>();
   const kept = entries.filter((entry) => {
     if (entry.kind !== 'release') return true;
     const tmdbId = entry.item.externalIds.tmdb;
@@ -460,10 +463,16 @@ function dedupeReleases(entries: readonly UpNextEntry[]): UpNextEntry[] {
       winners.set(key, entry);
       return true;
     }
-    twins.set(winner, [...(twins.get(winner) ?? []), entry]);
+    joined.set(tmdbId, (joined.get(tmdbId) ?? new Set()).add(winner.item.id).add(entry.item.id));
     return false;
   });
-  return kept.map((entry) => withTwins(entry, twins.get(entry)));
+  if (joined.size === 0) return kept;
+  return kept.map((entry) => {
+    const tmdbId = entry.kind === 'release' ? entry.item.externalIds.tmdb : undefined;
+    const ids = tmdbId == null ? undefined : joined.get(tmdbId);
+    if (ids == null || !ids.has(entry.item.id)) return entry;
+    return { ...entry, twinIds: [...ids].filter((id) => id !== entry.item.id) };
+  });
 }
 
 /**

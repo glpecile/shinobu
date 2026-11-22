@@ -418,7 +418,12 @@ describe('computeUpNext — film releases (U5/R3)', () => {
     ]);
     // First one in wins, so the row keeps the source that stated it first.
     expect(data.calendar[0].source).toBe('trakt');
-    expect(data.calendar[0].twinIds).toEqual(['letterboxd-film-301']);
+    // The digital row carries the dropped copy too: hiding a film hides every
+    // release row of it (plan 0030 R8).
+    expect(data.calendar.map((entry) => entry.twinIds)).toEqual([
+      ['letterboxd-film-301'],
+      ['letterboxd-film-301'],
+    ]);
   });
 
   test('a film with no TMDB id is never collapsed against another', () => {
