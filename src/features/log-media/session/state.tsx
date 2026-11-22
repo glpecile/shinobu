@@ -38,7 +38,12 @@ const ControlContext = createContext<{
   openCatchUp: (entry: UpNextEpisodeEntry) => void;
   openLog: (request: LogRequest) => void;
   closeCatchUp: () => void;
-  /** Hold `itemId` busy until `work` settles (never rejects the caller). */
+  /**
+   * Holds `itemId` busy until `work` settles, and never rejects the caller.
+   * Pass the write, so busy ends with its report. Chain a refetch only of the
+   * query the trigger builds its next request from, such as a reading item's
+   * progress or Up Next's next episode.
+   */
   trackBusy: (itemId: string, work: Promise<unknown>) => void;
 }>({
   openCatchUp: () => {},
