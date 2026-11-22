@@ -386,6 +386,8 @@ export interface MergedDiaryEntry {
   providers: ProviderId[];
   /** Display item: merge-metadata precedence across contributors. */
   item: NormalizedMediaItem;
+  /** Every contributor's item id. The hide filter checks all of them. */
+  sourceIds: string[];
   /** Union of every contributor's episode numbers, sorted ascending. */
   episodes: number[];
   /** Season number when contributors carry one (TV). */

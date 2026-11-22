@@ -11,8 +11,9 @@ import { isServer, prefsStorage } from './storage';
  * Settings unhide list can name each entry without refetching it. Entries
  * saved before the type was stored are a plain title string and read back
  * without a `type`. Ids are
- * provider-scoped (`trakt-123`, `letterboxd-slug`), so hiding a card hides
- * that provider's copy — which is also the only copy the feed shows.
+ * provider-scoped (`trakt-123`, `letterboxd-slug`). A feed row shows one copy.
+ * A merged row (watchlist, Up Next, diary) hides when any copy it folded is
+ * hidden: its filter checks every contributing item id.
  */
 export interface HiddenItem {
   id: string;

@@ -407,6 +407,7 @@ function toMerged(bucket: CollapseBucket): MergedDiaryEntry {
       (a, b) => PROVIDER_PRIORITY[a] - PROVIDER_PRIORITY[b],
     ),
     item,
+    sourceIds: [...new Set(contributors.map((entry) => entry.item.id))],
     episodes,
     ...(season != null ? { season } : {}),
     watchedAt: newest.watchedAt,

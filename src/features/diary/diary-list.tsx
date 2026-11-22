@@ -189,7 +189,7 @@ function flattenDays(
   // Hiding is one global set (feed, watchlist, Up Next, diary).
   const hiddenIds = new Set(hidden.map((item) => item.id));
   const keep = (entry: MergedDiaryEntry) =>
-    !hiddenIds.has(entry.item.id) && matchesDiaryFormat(entry.item, format);
+    !entry.sourceIds.some((id) => hiddenIds.has(id)) && matchesDiaryFormat(entry.item, format);
   const items: DiaryListItem[] = [];
   const activity = new Map<string, DaySummary>();
   let month = '';

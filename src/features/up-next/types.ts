@@ -67,6 +67,11 @@ interface UpNextEntryBase {
    * produce new data to advance from (R8).
    */
   source: ProviderId;
+  /**
+   * Item ids of the provider copies a dedupe folded into this entry. The hide
+   * filter checks them with `item.id`, so hiding any copy hides the entry.
+   */
+  twinIds?: string[];
 }
 
 /** The next unwatched episode of a tracked show — quick-loggable once aired. */

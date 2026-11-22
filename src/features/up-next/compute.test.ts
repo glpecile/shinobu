@@ -400,13 +400,13 @@ describe('computeUpNext — film releases (U5/R3)', () => {
     const data = computeUpNext(
       inputs({
         releases: [
-          releaseInput(film(301, { externalIds: ids }), 'theatrical', '2026-07-24'),
           releaseInput(
-            film(301, { externalIds: ids, title: 'Film 301 (Letterboxd)' }),
+            film(301, { id: 'letterboxd-film-301', externalIds: ids, title: 'Film 301 (Letterboxd)' }),
             'theatrical',
             '2026-07-24',
             'letterboxd',
           ),
+          releaseInput(film(301, { externalIds: ids }), 'theatrical', '2026-07-24'),
           releaseInput(film(301, { externalIds: ids }), 'digital', '2026-07-27'),
         ],
       }),
@@ -417,7 +417,13 @@ describe('computeUpNext — film releases (U5/R3)', () => {
       'digital',
     ]);
     // First one in wins, so the row keeps the source that stated it first.
-    expect(data.calendar[0].source).toBe('trakt');
+    expect(data.calendar[0].source).toBe('letterboxd');
+    // Each row carries the other joined copy, whichever source won its kind:
+    // hiding a film hides every release row of it (plan 0030 R8).
+    expect(data.calendar.map((entry) => entry.twinIds)).toEqual([
+      ['trakt-301'],
+      ['letterboxd-film-301'],
+    ]);
   });
 
   test('a film with no TMDB id is never collapsed against another', () => {
@@ -818,6 +824,7 @@ describe('computeUpNext — cross-provider dedupe (R5)', () => {
     );
     expect(data.continueWatching).toHaveLength(1);
     expect(data.continueWatching[0].source).toBe('anilist');
+    expect(data.continueWatching[0].twinIds).toEqual(['trakt-20']);
     // Differing progress across providers must not produce two cards.
     expect(episodeOf(data.continueWatching[0]).number).toBe(6);
     // A shared show id doesn't prove the same AniList season entry.
@@ -964,6 +971,7 @@ describe('computeUpNext — cross-tracker dedupe (plan 0034 KTD-10/R10)', () => 
     );
     expect(data.continueWatching).toHaveLength(1);
     expect(data.continueWatching[0].source).toBe('simkl');
+    expect(data.continueWatching[0].twinIds).toEqual(['trakt-80']);
     expect(episodeOf(data.continueWatching[0]).firstAired).toBe(SIMKL_AIRED);
   });
 

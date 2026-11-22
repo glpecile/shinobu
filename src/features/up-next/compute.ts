@@ -341,22 +341,34 @@ function inCalendarWindow(entry: UpNextEntry, now: Date): boolean {
  * duplicate standing — best-effort, the same R5 rule as the AniList dedupe.
  */
 function dedupeTrackerEpisodes(entries: readonly UpNextEntry[]): UpNextEntry[] {
-  const simklKeys = new Set(
-    entries
-      .filter((entry) => entry.kind === 'episode' && entry.source === Provider.Simkl)
-      .flatMap((entry) =>
-        identityKeys(entry.item.externalIds).map(
-          (key) => `${key}:${entry.status}`,
-        ),
-      ),
-  );
-  if (simklKeys.size === 0) return [...entries];
-  return entries.filter((entry) => {
+  const simklByKey = new Map<string, UpNextEntry[]>();
+  for (const entry of entries) {
+    if (entry.kind !== 'episode' || entry.source !== Provider.Simkl) continue;
+    for (const key of identityKeys(entry.item.externalIds)) {
+      const slot = `${key}:${entry.status}`;
+      simklByKey.set(slot, [...(simklByKey.get(slot) ?? []), entry]);
+    }
+  }
+  if (simklByKey.size === 0) return [...entries];
+  const twins = new Map<UpNextEntry, UpNextEntry[]>();
+  const kept = entries.filter((entry) => {
     if (entry.kind !== 'episode' || entry.source === Provider.Simkl) return true;
-    return !identityKeys(entry.item.externalIds).some((key) =>
-      simklKeys.has(`${key}:${entry.status}`),
+    const winners = new Set(
+      identityKeys(entry.item.externalIds).flatMap(
+        (key) => simklByKey.get(`${key}:${entry.status}`) ?? [],
+      ),
     );
+    for (const winner of winners) twins.set(winner, [...(twins.get(winner) ?? []), entry]);
+    return winners.size === 0;
   });
+  return kept.map((entry) => withTwins(entry, twins.get(entry)));
+}
+
+/** `winner` plus the item ids of the copies a dedupe dropped for it (see `twinIds`). */
+function withTwins(winner: UpNextEntry, losers: readonly UpNextEntry[] | undefined): UpNextEntry {
+  if (losers == null) return winner;
+  const twinIds = losers.flatMap((loser) => [loser.item.id, ...(loser.twinIds ?? [])]);
+  return { ...winner, twinIds: [...(winner.twinIds ?? []), ...twinIds] };
 }
 
 /**
@@ -396,8 +408,20 @@ export function identityKeys(
 function dedupeByTmdb(
   anilist: readonly UpNextEntry[],
   others: readonly UpNextEntry[],
-  anilistIdKeys: ReadonlySet<string>,
+  anilistByKey: ReadonlyMap<string, readonly UpNextEntry[]>,
 ): UpNextEntry[] {
+  const twins = new Map<UpNextEntry, UpNextEntry[]>();
+  const kept = others.filter((entry) => {
+    // Only an episode can be an AniList entry's twin: anime *films* never
+    // produce an AniList entry, so a numeric collision between a TMDB movie id
+    // and a TMDB series id must not eat a release row.
+    if (entry.kind !== 'episode') return true;
+    const winners = new Set(
+      identityKeys(entry.item.externalIds).flatMap((key) => anilistByKey.get(key) ?? []),
+    );
+    for (const winner of winners) twins.set(winner, [...(twins.get(winner) ?? []), entry]);
+    return winners.size === 0;
+  });
   const enriched = anilist.map((entry) => {
     const ids = entry.item.externalIds;
     let item = entry.item;
@@ -411,16 +435,7 @@ function dedupeByTmdb(
         item = { ...item, externalIds: { ...otherIds, ...item.externalIds } };
       }
     }
-    return item === entry.item ? entry : { ...entry, item };
-  });
-  const kept = others.filter((entry) => {
-    // Only an episode can be an AniList entry's twin: anime *films* never
-    // produce an AniList entry, so a numeric collision between a TMDB movie id
-    // and a TMDB series id must not eat a release row.
-    if (entry.kind !== 'episode') return true;
-    return !identityKeys(entry.item.externalIds).some((key) =>
-      anilistIdKeys.has(key),
-    );
+    return withTwins(item === entry.item ? entry : { ...entry, item }, twins.get(entry));
   });
   return dedupeReleases([...enriched, ...kept]);
 }
@@ -431,17 +446,32 @@ function dedupeByTmdb(
  * (Continue Watching) and next week's (Calendar), and they share a TMDB id.
  */
 function dedupeReleases(entries: readonly UpNextEntry[]): UpNextEntry[] {
-  const seen = new Set<string>();
-  return entries.filter((entry) => {
+  const winners = new Map<string, UpNextEntry>();
+  // Per TMDB id, the item ids a collapse joined. Every release row of a joined
+  // copy carries the others, so a hide on any of them removes all of the
+  // film's rows (plan 0030 R8), whichever source won each release kind.
+  const joined = new Map<number, Set<string>>();
+  const kept = entries.filter((entry) => {
     if (entry.kind !== 'release') return true;
     const tmdbId = entry.item.externalIds.tmdb;
     // No id is not "same film" — an unmatchable duplicate stands, exactly as it
     // does for shows.
     if (tmdbId == null) return true;
     const key = `${tmdbId}-${entry.release.kind}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    const winner = winners.get(key);
+    if (winner == null) {
+      winners.set(key, entry);
+      return true;
+    }
+    joined.set(tmdbId, (joined.get(tmdbId) ?? new Set()).add(winner.item.id).add(entry.item.id));
+    return false;
+  });
+  if (joined.size === 0) return kept;
+  return kept.map((entry) => {
+    const tmdbId = entry.kind === 'release' ? entry.item.externalIds.tmdb : undefined;
+    const ids = tmdbId == null ? undefined : joined.get(tmdbId);
+    if (ids == null || !ids.has(entry.item.id)) return entry;
+    return { ...entry, twinIds: [...ids].filter((id) => id !== entry.item.id) };
   });
 }
 
@@ -522,19 +552,19 @@ export function computeUpNext(inputs: UpNextInputs, now: Date): UpNextData {
   // Only *surviving* AniList entries suppress their Trakt twin — an AniList
   // entry that classified to nothing (hiatus, caught up) must not silently
   // take the Trakt card down with it.
-  const anilistIdKeys = new Set(
-    anilistPairs.flatMap((pair) =>
-      identityKeys({
-        ...pair.input.item.externalIds,
-        ...(pair.input.tmdbId != null ? { tmdb: pair.input.tmdbId } : {}),
-      }),
-    ),
-  );
+  const anilistByKey = new Map<string, UpNextEntry[]>();
+  for (const pair of anilistPairs) {
+    const keys = identityKeys({
+      ...pair.input.item.externalIds,
+      ...(pair.input.tmdbId != null ? { tmdb: pair.input.tmdbId } : {}),
+    });
+    for (const key of keys) anilistByKey.set(key, [...(anilistByKey.get(key) ?? []), pair.entry]);
+  }
 
   const entries = dedupeByTmdb(
     anilistEntries,
     [...episodeEntries, ...releaseEntries],
-    anilistIdKeys,
+    anilistByKey,
   );
 
   return {
