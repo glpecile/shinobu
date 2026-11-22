@@ -113,9 +113,7 @@ export function useResolvedMediaItem(id: string, mediaType?: MediaType): {
   item: NormalizedMediaItem | undefined;
   isLoading: boolean;
 } {
-  // includeHidden: hidden items must still resolve here — the Manage
-  // Trackers hidden list links straight to the details screen.
-  const feed = useUnifiedFeed({ includeHidden: true });
+  const feed = useUnifiedFeed();
   const queryClient = useQueryClient();
   const cachedItem =
     findItemById(id, [

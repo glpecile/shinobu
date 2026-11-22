@@ -161,9 +161,9 @@ export function visibleByIds<T>(
 }
 
 /**
- * `items` minus the ones the user hid (card actions dialog). The per-row
- * counterpart to `useUnifiedFeed`'s aggregate filter — each suspense-backed
- * feed row applies it to its own query result, so screens never re-filter.
+ * `items` minus the ones the user hid (card actions dialog). Each
+ * suspense-backed feed row applies it to its own query result, so screens
+ * never re-filter.
  */
 export function useVisibleItems<T extends { id: string }>(
   items: readonly T[],

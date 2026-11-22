@@ -18,7 +18,6 @@ import {
   type AnimeFormatFilter,
   type AnimeSeasonWindow,
 } from '@/lib/providers/anilist/season';
-import { useHiddenItems } from '@/state/prefs/hidden-items';
 import { getLetterboxdUsername } from '@/state/session/letterboxd';
 import { anilistQueryKeys, fetchSeasonalAnime } from './anilist';
 import { letterboxdQueryKeys, letterboxdWatchlistOptions } from './letterboxd';
@@ -250,15 +249,10 @@ export function useRefetchUnifiedFeed() {
 /**
  * Observes cached feed rows for item resolution without fetching Home's
  * catalogues on detail or episode navigation. Cold links have their own ID
- * queries; explicit refresh can still refetch these observers.
- *
- * `includeHidden` skips the hidden-items filter — for consumers that resolve
- * an item by id rather than display rows (the details screen must render
- * hidden items: Manage Trackers' hidden list links there).
+ * queries; explicit refresh can still refetch these observers. Rows keep
+ * hidden items, because the details screen resolves them by id.
  */
-export function useUnifiedFeed(
-  options: { includeHidden?: boolean } = {},
-): UnifiedFeedResult {
+export function useUnifiedFeed(): UnifiedFeedResult {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
   const animeSeason = animeSeasonAt(new Date());
@@ -266,23 +260,10 @@ export function useUnifiedFeed(
 
   const results = useQueries({ queries: queries.map((query) => ({ ...query, enabled: false })) });
 
-  // Items the user hid (card actions dialog) drop out of every row here, at
-  // the aggregation boundary — screens never re-filter. Query caches keep the
-  // full lists, so unhiding is instant, no refetch.
-  const hiddenItems = useHiddenItems();
-  const hiddenIds = new Set(
-    options.includeHidden === true
-      ? []
-      : hiddenItems.map((hidden) => hidden.id),
-  );
-
-  const rawSlot = (slot: FeedSlot): NormalizedMediaItem[] => {
+  const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => {
     const index = queries.findIndex((query) => query.slot === slot);
     return (index >= 0 ? results[index]?.data : undefined) ?? [];
   };
-  const filterHidden = (data: NormalizedMediaItem[]): NormalizedMediaItem[] =>
-    hiddenIds.size === 0 ? data : data.filter((item) => !hiddenIds.has(item.id));
-  const bySlot = (slot: FeedSlot): NormalizedMediaItem[] => filterHidden(rawSlot(slot));
 
   const isLoading = results.some((result) => result.isLoading);
   const isError = results.some((result) => result.isError);
@@ -309,9 +290,6 @@ export function useUnifiedFeed(
     seasonalAnime: bySlot('seasonalAnime'),
     animeSeason,
     animeMovies: bySlot('animeMovies'),
-    // Merged first (raw legs), hidden filter applied to the merge result —
-    // the same order the Trakt-only slot used, just with a Simkl leg joined
-    // in first (KTD-10).
     yourWatchlist: bySlot('yourWatchlist'),
     isLoading,
     isError,
