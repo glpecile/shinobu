@@ -158,11 +158,13 @@ const HISTORY: (SampleLog & { daysAgo: number; hour: number })[] = [
 
 function sampleEntry(log: SampleLog, id: string, at: Date): MergedDiaryEntry {
   const kind = log.type === 'MOVIE' ? 'movie' : 'tv';
+  const itemId = `tmdb-${kind}-${log.tmdb}`;
   return {
     id,
     providers: log.providers,
+    sourceIds: [itemId],
     item: {
-      id: `tmdb-${kind}-${log.tmdb}`,
+      id: itemId,
       title: log.title,
       coverImage: tmdbImageUrl(log.poster, 'w342'),
       type: log.type,

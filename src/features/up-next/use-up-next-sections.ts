@@ -31,16 +31,15 @@ export function useUpNextSections(now: Date): UpNextResult {
  * film, not one of its dates (plan 0030 R8).
  *
  * Returns `entries` itself when nothing was hidden, keeping the identity
- * contract `visibleByIds` documents — this is now a one-liner over that shared
- * filter (plan 0031 KTD-13) rather than a third hand-written copy. Up Next is
- * behaviourally unaffected: an entry contributes exactly one id here, where a
- * merged watchlist entry contributes several.
+ * contract `visibleByIds` documents (plan 0031 KTD-13). Like a merged watchlist
+ * entry, an entry is hidden when any provider copy folded into it is: its own
+ * item id or a `twinIds` one.
  */
 export function visibleEntries(
   entries: UpNextEntry[],
   hidden: readonly HiddenItem[],
 ): UpNextEntry[] {
-  return visibleByIds(entries, hidden, (entry) => [entry.item.id]);
+  return visibleByIds(entries, hidden, (entry) => [entry.item.id, ...(entry.twinIds ?? [])]);
 }
 
 function useVisibleEntries(entries: UpNextEntry[]): UpNextEntry[] {

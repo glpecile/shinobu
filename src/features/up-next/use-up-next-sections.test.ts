@@ -113,4 +113,10 @@ describe('visibleEntries', () => {
     // leaving the streaming row standing would be the hide half-applied.
     expect(visible.map((entry) => entry.id)).toEqual(['trakt-severance-s1e1']);
   });
+
+  test('hiding a copy a dedupe folded into an entry hides the entry', () => {
+    const entries = [{ ...episodeEntry('severance'), twinIds: ['simkl-severance'] }];
+
+    expect(visibleEntries(entries, [{ id: 'simkl-severance', title: 'severance' }])).toEqual([]);
+  });
 });

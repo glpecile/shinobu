@@ -207,6 +207,8 @@ describe('groupDiaryEntries — cross-provider collapse', () => {
     expect(row.id).toBe('trakt-100');
     expect(row.item.externalIds.tmdb).toBe(603);
     expect(row.item.externalIds.letterboxd).toBe('fight-club');
+    // Hiding either copy hides the row.
+    expect(row.sourceIds).toEqual(['trakt-603', 'letterboxd-fight-club']);
   });
 
   test('AE6: two same-day Trakt logs of one movie (rewatch) → two rows', () => {
@@ -411,6 +413,7 @@ function mergedEntry(
   return {
     providers: ['trakt'],
     item: item({ id: `${overrides.id}-item`, type: 'TV' }),
+    sourceIds: [`${overrides.id}-item`],
     episodes: [],
     watchedAt: '2026-07-20T12:00:00.000Z',
     dateOnly: false,
