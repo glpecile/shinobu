@@ -106,9 +106,7 @@ export function useWriteTargetsSplit(
   const letterboxdUserscript = useLetterboxdUserscript('watchlist');
 
   const { data: enriched = item } = useQuery({
-    // The enriched item replaces the caller's, so a copy of the same title
-    // with fewer ids must not answer for one with more.
-    queryKey: ['write-targets', item.id, item.externalIds, ...connected],
+    queryKey: ['write-targets', item.id, item.tmdbTvVariant ?? null, ...connected],
     queryFn: () => enrichExternalIds(queryClient, item, connected),
   });
 
