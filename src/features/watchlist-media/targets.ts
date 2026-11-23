@@ -84,20 +84,12 @@ export async function planWatchlistWrite(
 }
 
 /**
- * The providers a watchlist add of `item` would target, split for rendering
- * *before* any tap (R17/plan 0022 R4) — so a manual-only provider is visible as
- * a manual row rather than silently absent.
- */
-export function useWatchlistTargetsSplit(item: NormalizedMediaItem) {
-  return useWriteTargetsSplit(item, 'watchlist');
-}
-
-/**
  * The providers a write of `capability` on `item` would target, split into
- * writable and manual, with the enriched item they were routed on. Falls back
- * to the unenriched split while the mapping loads; enrichment only ever
- * widens, and the mutation runs the same enrichment through the same cache,
- * so confirming refetches nothing.
+ * writable and manual, with the enriched item they were routed on. It renders
+ * *before* any tap (R17/plan 0022 R4), so a manual-only provider shows as a
+ * manual row rather than silently absent. Falls back to the unenriched split
+ * while the mapping loads; enrichment only ever widens, and the mutation runs
+ * the same enrichment through the same cache, so confirming refetches nothing.
  */
 export function useWriteTargetsSplit(
   item: NormalizedMediaItem,
@@ -113,16 +105,10 @@ export function useWriteTargetsSplit(
   // Letterboxd takes no tracking write, so only the watchlist bridge matters.
   const letterboxdUserscript = useLetterboxdUserscript('watchlist');
 
-  const { data } = useQuery({
-    queryKey: ['write-targets', capability, item.id, ...connected, platform, letterboxdUserscript],
-    queryFn: async () => {
-      const enriched = await enrichExternalIds(queryClient, item, connected);
-      return {
-        ...splitWriteTargets(enriched, connected, platform, capability, letterboxdUserscript),
-        item: enriched,
-      };
-    },
+  const { data: enriched = item } = useQuery({
+    queryKey: ['write-targets', item.id, ...connected],
+    queryFn: () => enrichExternalIds(queryClient, item, connected),
   });
 
-  return data ?? { ...splitWriteTargets(item, connected, platform, capability, letterboxdUserscript), item };
+  return { ...splitWriteTargets(enriched, connected, platform, capability, letterboxdUserscript), item: enriched };
 }

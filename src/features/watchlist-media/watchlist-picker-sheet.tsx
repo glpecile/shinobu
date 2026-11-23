@@ -45,7 +45,7 @@ import {
   watchlistCtaCopy,
 } from './copy';
 import { splitWatchlistRemoveTargets } from './remove-targets';
-import { useWatchlistTargetsSplit } from './targets';
+import { useWriteTargetsSplit } from './targets';
 import {
   useIsUnwatchlistPending,
   useUnwatchlistMedia,
@@ -85,7 +85,7 @@ export function WatchlistAddPicker({
   const queryClient = useQueryClient();
   const watchlist = useWatchlistMedia(item);
   const pending = useIsWatchlistWritePending(item.id);
-  const split = useWatchlistTargetsSplit(item);
+  const split = useWriteTargetsSplit(item, 'watchlist');
   // Who already holds it, per the gathered watchlists — read once at open
   // (cache-only, never a fetch), so the write's own invalidation can't shift
   // the rows mid-sheet. A cold cache holds nothing and offers every target.

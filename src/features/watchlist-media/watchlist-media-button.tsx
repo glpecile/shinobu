@@ -24,7 +24,7 @@ import {
   watchlistCtaCopy,
   watchlistResultView,
 } from './copy';
-import { useWatchlistTargetsSplit } from './targets';
+import { useWriteTargetsSplit } from './targets';
 import {
   WatchlistAddPickerSheet,
   WatchlistRemovePickerSheet,
@@ -203,7 +203,7 @@ export function WatchlistMediaButton({
  * doesn't check it, so a host gates the button and drops the empty slot.
  */
 export function useWatchlistCtaShown(item: NormalizedMediaItem): boolean {
-  const { writable, manual } = useWatchlistTargetsSplit(item);
+  const { writable, manual } = useWriteTargetsSplit(item, 'watchlist');
   const connected = useConnectedProviders();
   // The entry read `LogMediaButton` already holds for this manga, so it costs
   // no request of its own.
