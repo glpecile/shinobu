@@ -17,6 +17,10 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // R1/R34).
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    // Trakt has no pause. Its whole-show `POST /users/hidden/dropped` exists,
+    // but its effect on history and progress is undocumented
+    // (docs/solutions/tracking-status-provider-support.md).
+    trackingStatus: 'manual',
     communityScore: false,
   },
   [Provider.AniList]: {
@@ -32,6 +36,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // "unconditional".
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    // `SaveMediaListEntry(status: PAUSED | DROPPED)` changes only the status.
+    trackingStatus: 'write',
     // `averageScore`, a percentage.
     communityScore: true,
   },
@@ -56,6 +62,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // rollback: revert both tokens to 'manual' if the endpoint regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    trackingStatus: 'none',
     // The film page's JSON-LD `aggregateRating`, out of 5.
     communityScore: true,
   },
@@ -94,6 +101,9 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // (KTD-9) if the probe's finding or the read ever regresses.
     watchlistWrite: 'write',
     watchlistRemove: 'manual',
+    // It reads paused and dropped pages, but no status write is verified,
+    // and web would need a new proxy rule.
+    trackingStatus: 'manual',
     // Its API has no average; only the www page shows one (#318).
     communityScore: false,
   },
@@ -133,6 +143,9 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // item model, is very nearly all of them — removes cleanly with nothing to
     // lose. Standing rollback stays a one-token revert to 'manual'.
     watchlistRemove: 'write',
+    // `/sync/add-to-list` with `to: 'hold' | 'dropped'`. A history add
+    // re-files the item on its own, so a new log resumes it.
+    trackingStatus: 'write',
     // `/ratings` also carries the IMDb (movies, TV) or MAL (anime) score.
     communityScore: true,
   },
@@ -151,6 +164,8 @@ export const PROVIDERS: Record<ProviderId, ProviderDescriptor> = {
     // (`hardcover/writes.ts`).
     watchlistWrite: 'write',
     watchlistRemove: 'write',
+    // Paused (4) and Did Not Finish (5) through `update_user_book`.
+    trackingStatus: 'write',
     // A book's average rating, out of 5.
     communityScore: true,
   },

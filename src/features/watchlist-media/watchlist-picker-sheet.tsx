@@ -10,12 +10,10 @@ import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { findWatchlistRemoval } from '@/features/watchlist/find-watchlist-removal';
 import type { WatchlistEntry } from '@/features/watchlist/types';
 import { watchlistSourcesFor } from '@/features/watchlist/use-is-watchlisted';
-import {
-  isCleanWriteReport,
-  type WriteReportLike,
-} from '@/features/write-sheet/is-clean-report';
+import type { WriteReportLike } from '@/features/write-sheet/is-clean-report';
 import { manualWriteReasons } from '@/features/write-sheet/manual-reasons';
 import { ManualWriteRows } from '@/features/write-sheet/manual-write-rows';
+import { PickerReport, useReportStep, useSelectedTargets } from '@/features/write-sheet/picker';
 import { ProviderToggleList } from '@/features/write-sheet/provider-picker';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
 import { cn } from '@/lib/cn';
@@ -70,117 +68,7 @@ import {
  * success toast, from the same predicate, so the sheet can never close on a
  * report the toast then fails to carry (KTD-3). Any other report replaces the
  * form as the drawer's next step (`WriteSheet.Step`), like the catch-up chain.
- *
- * Selection is stored as the *deselected* set: the writable target list can
- * widen while enrichment resolves (`useWatchlistTargetsSplit` falls back to
- * the unenriched split first), and R1 says every applicable provider starts
- * selected — a snapshot of "selected at mount" would silently drop a provider
- * that arrived a frame later.
  */
-
-/** The selected-set state both verbs share. */
-function useSelectedTargets(targets: readonly ProviderId[]) {
-  const [deselected, setDeselected] = useState<readonly ProviderId[]>([]);
-  const selected = targets.filter((id) => !deselected.includes(id));
-
-  return {
-    selected,
-    toggle: (id: ProviderId) =>
-      setDeselected(
-        deselected.includes(id)
-          ? deselected.filter((provider) => provider !== id)
-          : [...deselected, id],
-      ),
-    selectAll: () => setDeselected([]),
-    selectNone: () => setDeselected([...targets]),
-  };
-}
-
-/**
- * The drawer's second step: set from the write's own callbacks, so a retry's
- * pending state doesn't blank the report back to the form.
- */
-function useReportStep<R extends WriteReportLike>(onClean: (report: R) => void) {
-  const [report, setReport] = useState<R | null>(null);
-  const [thrown, setThrown] = useState(false);
-  return {
-    report,
-    thrown,
-    reported: report != null || thrown,
-    callbacks: {
-      onSuccess: (next: R) => {
-        if (isCleanWriteReport(next)) {
-          onClean(next);
-          return;
-        }
-        if (next.failed.length > 0) haptics.error();
-        setThrown(false);
-        setReport(next);
-      },
-      onError: () => {
-        haptics.error();
-        setThrown(true);
-      },
-    },
-  };
-}
-
-/** What landed, what didn't and why, with a retry for anything that failed. */
-function PickerReport({
-  item,
-  step,
-  succeededLine,
-  errorLine,
-  verb,
-  pending,
-  pendingLabel,
-  onRetry,
-  onDone,
-}: {
-  item: NormalizedMediaItem;
-  step: ReturnType<typeof useReportStep>;
-  succeededLine: (succeeded: readonly ProviderId[]) => string;
-  errorLine: string;
-  verb: string;
-  pending: boolean;
-  pendingLabel: string;
-  onRetry: () => void;
-  onDone: () => void;
-}) {
-  const retryable = step.thrown || (step.report?.failed.length ?? 0) > 0;
-  return (
-    <>
-      <WriteSheet.Header done onClose={onDone}>
-        <WriteSheet.Title>{item.title}</WriteSheet.Title>
-      </WriteSheet.Header>
-      <WriteSheet.Report
-        failedHeadline={failedOnSentence}
-        item={item}
-        result={step.report ?? undefined}
-        succeededLine={succeededLine}
-        verb={verb}
-      />
-      {step.thrown && <WriteSheet.Error>{errorLine}</WriteSheet.Error>}
-      <WriteSheet.Actions>
-        {retryable && (
-          <Button
-            icon={<Button.Icon name="refresh" />}
-            label="Try again"
-            loading={pending}
-            loadingLabel={pendingLabel}
-            onPress={onRetry}
-          />
-        )}
-        <Button
-          icon={<Button.Icon name="checkmark" />}
-          label="Done"
-          onPress={onDone}
-          variant="quiet"
-        />
-      </WriteSheet.Actions>
-    </>
-  );
-}
 
 interface PickerHostProps {
   /** Cancel / dismiss — the hosting surface decides what "back" means. */
@@ -247,6 +135,7 @@ export function WatchlistAddPicker({
     return (
       <WriteSheet.Step key="report">
         <PickerReport
+          failedHeadline={failedOnSentence}
           errorLine="Could not add."
           item={item}
           onDone={onCleanClose}
@@ -411,6 +300,7 @@ export function WatchlistRemovePicker({
     return (
       <WriteSheet.Step key="report">
         <PickerReport
+          failedHeadline={failedOnSentence}
           errorLine="Could not remove."
           item={entry.item}
           onDone={onCleanClose}

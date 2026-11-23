@@ -8,7 +8,8 @@ import {
   type ProviderError,
 } from '@/lib/providers/errors';
 import { optionalNullable } from '@/lib/providers/schema';
-import { Provider } from '@/lib/providers/types';
+import { trackingStatusSkip } from '@/lib/providers/tracking-status';
+import { Provider, type TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { HardcoverDeps } from './deps';
 import { hardcoverRequest } from './http';
@@ -232,6 +233,39 @@ export function removeFromHardcoverReadingList(
       };
     }
     yield* mutate(deps, REMOVE_BOOK, { id: entry.id });
+    return { status: 'ok' };
+  });
+}
+
+const HARDCOVER_TRACKING_STATUS = {
+  paused: HardcoverStatus.Paused,
+  dropped: HardcoverStatus.DidNotFinish,
+} as const;
+
+/**
+ * Pause, or Did Not Finish for a drop. It changes only `status_id`, so the
+ * reads, pages, rating, review, notes and lists stay. Never Ignored and never
+ * a delete. A book not in the library, or Want to Read or Read, is a skip.
+ * The next page log sets Currently Reading again (`logToHardcover`).
+ */
+export function setHardcoverTrackingStatus(
+  deps: HardcoverDeps,
+  item: NormalizedMediaItem,
+  status: TrackingStatus,
+): Effect.Effect<ProviderWriteResult, ProviderError> {
+  return Effect.gen(function* () {
+    const bookId = yield* bookIdOf(item);
+    const entry = yield* getBookEntry(deps, bookId);
+    const target = HARDCOVER_TRACKING_STATUS[status];
+    const reason = trackingStatusSkip<number>(
+      provider,
+      entry?.statusId ?? null,
+      target,
+      [HardcoverStatus.Reading, HardcoverStatus.Paused, HardcoverStatus.DidNotFinish],
+      (statusId) => STATUS_NAMES[statusId] ?? 'another status',
+    );
+    if (reason != null || entry == null) return { status: 'skipped', reason: reason ?? '' };
+    yield* mutate(deps, UPDATE_BOOK, { id: entry.id, object: { status_id: target } });
     return { status: 'ok' };
   });
 }

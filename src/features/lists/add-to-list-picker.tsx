@@ -1,6 +1,6 @@
 import Ionicons from '@react-native-vector-icons/ionicons/static';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
-import { Suspense, useState, type ReactNode } from 'react';
+import { Suspense, useState } from 'react';
 import { Text, View } from 'react-native';
 import { ErrorBoundary } from 'react-error-boundary';
 
@@ -9,12 +9,9 @@ import { CenteredNotice } from '@/components/centered-notice';
 import { ConnectHardcoverButton } from '@/components/connect-hardcover-button';
 import { List } from '@/components/List';
 import { PresstableOpacity } from '@/components/presstable';
-import { Sheet } from '@/components/sheet';
 import { Skeleton, staggerDelay } from '@/components/skeleton';
 import { SmallPoster } from '@/components/small-poster';
-import { Tooltip } from '@/components/tooltip';
 import { WriteSheet } from '@/features/write-sheet/write-sheet';
-import { cn } from '@/lib/cn';
 import { haptics } from '@/lib/haptics';
 import { usePushRoute } from '@/lib/navigation';
 import { letterboxdListsUrl } from '@/lib/providers/letterboxd/lists';
@@ -245,40 +242,8 @@ export function AddToListPicker({ item, onClose, onBack = onClose }: { item: Nor
     : <ListMembershipForm entryId={selected.entryId} item={item} onBack={() => setSelected(null)} onDone={onClose} present={selected.entryId == null} target={selected.target} />;
 }
 
-/**
- * A title's main action with "Add to list" capsuled beside it, as `ShareButton.Capsule` lays out Share.
- * Without a main action (`children` null), "Add to list" takes the full width with its label.
- * Renders only `children` when no connected provider keeps lists for the item.
- * `className` is layout for the row; the main action passes no margin of its own.
- */
-export function AddToListCapsule({ item, children, onOpenPicker, className }: { item: NormalizedMediaItem; children: ReactNode; onOpenPicker?: () => void; className?: string }) {
+/** Whether a connected provider keeps lists that can hold `item`. */
+export function useCanAddToList(item: NormalizedMediaItem): boolean {
   const provider = listProviderFor(item, useConnectedProviders());
-  const [open, setOpen] = useState(false);
-  // Remounts the picker per open, so it starts on the lists, not the last confirmation.
-  const [session, setSession] = useState(0);
-  const username = provider == null ? null : listUsername(provider);
-  if (provider == null || username == null) return children == null ? null : <View className={className}>{children}</View>;
-  function openPicker() {
-    haptics.selection();
-    if (onOpenPicker != null) { onOpenPicker(); return; }
-    setSession(session + 1);
-    setOpen(true);
-  }
-  return <>
-    {children == null
-      ? <View className={className}>
-          <Button icon={<Button.Icon name="add" />} label="Add to list" onPress={openPicker} variant="quiet" />
-        </View>
-      : <View className={cn('flex-row items-start gap-2', className)}>
-          <View className="flex-1">{children}</View>
-          <Button.Capsule>
-            <Tooltip label="Add to list">
-              <Button icon={<Button.Icon name="add" />} iconOnly label="Add to list" onPress={openPicker} variant="ghost" />
-            </Tooltip>
-          </Button.Capsule>
-        </View>}
-    {onOpenPicker == null && <Sheet onClose={() => setOpen(false)} open={open}>
-      {session > 0 && <AddToListPicker item={item} key={session} onClose={() => setOpen(false)} />}
-    </Sheet>}
-  </>;
+  return provider != null && listUsername(provider) != null;
 }

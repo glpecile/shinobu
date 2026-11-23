@@ -3,7 +3,7 @@ import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-quer
 import { enrichExternalIds } from '@/features/log-media/enrich';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
 import { hasLetterboxdUserscript, useLetterboxdUserscript } from '@/lib/providers/letterboxd/userscript-bridge';
-import { resolveWriteTargets, splitWriteTargets } from '@/lib/providers/routing';
+import { resolveWriteTargets, splitWriteTargets, type WriteCapability } from '@/lib/providers/routing';
 import type { ProviderId } from '@/lib/providers/types';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
@@ -86,30 +86,43 @@ export async function planWatchlistWrite(
 /**
  * The providers a watchlist add of `item` would target, split for rendering
  * *before* any tap (R17/plan 0022 R4) — so a manual-only provider is visible as
- * a manual row rather than silently absent. Falls back to the unenriched split
- * while the mapping loads; enrichment only ever widens, and the mutation runs
- * the same enrichment through the same cache, so confirming refetches nothing.
+ * a manual row rather than silently absent.
  */
-export function useWatchlistTargetsSplit(item: NormalizedMediaItem): {
+export function useWatchlistTargetsSplit(item: NormalizedMediaItem) {
+  return useWriteTargetsSplit(item, 'watchlist');
+}
+
+/**
+ * The providers a write of `capability` on `item` would target, split into
+ * writable and manual, with the enriched item they were routed on. Falls back
+ * to the unenriched split while the mapping loads; enrichment only ever
+ * widens, and the mutation runs the same enrichment through the same cache,
+ * so confirming refetches nothing.
+ */
+export function useWriteTargetsSplit(
+  item: NormalizedMediaItem,
+  capability: Extract<WriteCapability, 'watchlist' | 'tracking'>,
+): {
   writable: ProviderId[];
   manual: ProviderId[];
+  item: NormalizedMediaItem;
 } {
   const connected = useConnectedProviders();
   const queryClient = useQueryClient();
   const platform = currentPlatform();
+  // Letterboxd takes no tracking write, so only the watchlist bridge matters.
   const letterboxdUserscript = useLetterboxdUserscript('watchlist');
 
   const { data } = useQuery({
-    queryKey: ['watchlist-targets', item.id, ...connected, platform, letterboxdUserscript],
-    queryFn: async () =>
-      splitWriteTargets(
-        await enrichExternalIds(queryClient, item, connected),
-        connected,
-        platform,
-        'watchlist',
-        letterboxdUserscript,
-      ),
+    queryKey: ['write-targets', capability, item.id, ...connected, platform, letterboxdUserscript],
+    queryFn: async () => {
+      const enriched = await enrichExternalIds(queryClient, item, connected);
+      return {
+        ...splitWriteTargets(enriched, connected, platform, capability, letterboxdUserscript),
+        item: enriched,
+      };
+    },
   });
 
-  return data ?? splitWriteTargets(item, connected, platform, 'watchlist', letterboxdUserscript);
+  return data ?? { ...splitWriteTargets(item, connected, platform, capability, letterboxdUserscript), item };
 }

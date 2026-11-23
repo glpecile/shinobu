@@ -1,7 +1,8 @@
 import * as Effect from 'effect/Effect';
 
 import type { ProviderWriteResult } from '@/features/log-media/fan-out';
-import { Provider } from '@/lib/providers/types';
+import { trackingStatusSkip } from '@/lib/providers/tracking-status';
+import { Provider, type TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import { ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
 import type { AniListDeps } from './deps';
@@ -245,6 +246,63 @@ export function planOnAniList(
       deps,
       SAVE_MEDIA_LIST_ENTRY,
       { variables: { mediaId, status: 'PLANNING' } },
+    );
+    if (result.SaveMediaListEntry?.id == null) {
+      return yield* new ProviderDecodeError({
+        provider: Provider.AniList,
+        detail: `AniList did not save a list entry for "${item.title}"`,
+      });
+    }
+    return { status: 'ok' } satisfies ProviderWriteResult;
+  });
+}
+
+const ANILIST_TRACKING_STATUS = { paused: 'PAUSED', dropped: 'DROPPED' } as const;
+
+const ANILIST_STATUS_NAMES: Record<string, string> = {
+  CURRENT: 'current',
+  REPEATING: 'a rewatch',
+  PAUSED: 'paused',
+  DROPPED: 'dropped',
+  COMPLETED: 'completed',
+  PLANNING: 'planning',
+};
+
+/**
+ * Pause or drop. It sends only `mediaId` and `status`, the same partial
+ * update the log sends, so nothing else on the entry is written. A bridged
+ * book changes its manga entry's status and never its volume count. A rewatch is a skip: pausing it
+ * would end the rewatch, and the next log would not count it.
+ */
+export function setAniListTrackingStatus(
+  deps: AniListDeps,
+  item: NormalizedMediaItem,
+  status: TrackingStatus,
+): Effect.Effect<ProviderWriteResult, ProviderError> {
+  const mediaId = item.externalIds.anilist;
+  if (mediaId == null) {
+    return Effect.fail(
+      new ProviderDecodeError({
+        provider: Provider.AniList,
+        detail: `"${item.title}" has no anilist id to ${status === 'paused' ? 'pause' : 'drop'}`,
+      }),
+    );
+  }
+  const target = ANILIST_TRACKING_STATUS[status];
+  return Effect.gen(function* () {
+    const { entry } = yield* getEntryState(deps, { mediaId });
+    const reason = trackingStatusSkip(
+      Provider.AniList,
+      entry?.status ?? null,
+      target,
+      ['CURRENT', 'PAUSED', 'DROPPED'],
+      (name) => ANILIST_STATUS_NAMES[name] ?? name.toLowerCase(),
+    );
+    if (reason != null) return { status: 'skipped', reason } satisfies ProviderWriteResult;
+    const result = yield* anilistAuthedRequest<SaveMediaListEntryResponse>(
+      deps,
+      SAVE_MEDIA_LIST_ENTRY,
+      { variables: { mediaId, status: target } },
     );
     if (result.SaveMediaListEntry?.id == null) {
       return yield* new ProviderDecodeError({

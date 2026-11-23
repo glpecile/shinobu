@@ -9,7 +9,7 @@ mock.module('react-native-mmkv', () => ({
   createMMKV: () => ({ getString: () => undefined, set: () => {}, remove: () => {} }),
 }));
 
-const { addToHardcoverReadingList, logToHardcover, removeFromHardcoverReadingList } =
+const { addToHardcoverReadingList, logToHardcover, removeFromHardcoverReadingList, setHardcoverTrackingStatus } =
   await import('./writes');
 
 const BOOK: NormalizedMediaItem = {
@@ -244,5 +244,29 @@ describe('the reading list', () => {
     expect(keptRating).toMatchObject({ success: { status: 'skipped' } });
     expect(keptRead).toMatchObject({ success: { status: 'skipped', reason: 'Hardcover tracks this as Read' } });
     expect([...rated.mutations, ...read.mutations]).toEqual([]);
+  });
+});
+
+describe('pause and drop', () => {
+  test('a book in progress changes only its status, and a Read book is a skip', async () => {
+    const reading = library({
+      id: 456,
+      status_id: 2,
+      user_book_reads: [{ id: 12, finished_at: null, progress_pages: 140 }],
+    });
+    const read = library({
+      id: 456,
+      status_id: 3,
+      user_book_reads: [{ id: 12, finished_at: '2020-01-01', progress_pages: 300 }],
+    });
+
+    await run(setHardcoverTrackingStatus(reading.deps, BOOK, 'dropped'));
+    const skipped = await run(setHardcoverTrackingStatus(read.deps, BOOK, 'paused'));
+
+    expect(reading.mutations).toEqual([
+      { name: 'update_user_book', variables: { id: 456, object: { status_id: 5 } } },
+    ]);
+    expect(skipped).toMatchObject({ success: { status: 'skipped', reason: 'Hardcover tracks this as Read' } });
+    expect(read.mutations).toEqual([]);
   });
 });

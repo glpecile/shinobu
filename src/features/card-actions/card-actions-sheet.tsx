@@ -11,7 +11,8 @@ import { ShareButton } from '@/components/share-button';
 import { Sheet } from '@/components/sheet';
 import { SheetHeader } from '@/components/sheet-header';
 import { alternateTitles, CopyTitleOptions } from '@/features/copy-title/copy-title';
-import { AddToListCapsule, AddToListPicker } from '@/features/lists/add-to-list-capsule';
+import { MoreActions, MoreActionsCapsule } from './more-actions';
+import { AddToListPicker } from '@/features/lists/add-to-list-picker';
 import { ListMembershipForm } from '@/features/lists/list-membership-form';
 import type { ListEditTarget } from '@/state/queries/list-membership';
 import { LogMediaButton } from '@/features/log-media/log-media-button';
@@ -196,7 +197,7 @@ export function CardActionsSheet({
   // Remembers which opening chose the mode, so reopening or a new item falls
   // back to the rows.
   const [chosen, setChosen] = useState<{
-    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove' | 'list-add';
+    mode: 'actions' | 'copy-title' | 'watchlist-add' | 'watchlist-remove' | 'log' | 'list-remove' | 'list-add' | 'more';
     open: boolean;
     itemId: string | undefined;
   }>({ mode: 'actions', open, itemId });
@@ -258,6 +259,9 @@ export function CardActionsSheet({
     <Sheet onClose={onClose} open={open && item != null}>
       {item != null && mode === 'list-add' && (
         <AddToListPicker item={item} onBack={() => setMode('actions')} onClose={onClose} />
+      )}
+      {item != null && mode === 'more' && (
+        <MoreActions item={item} key={`more-${item.id}`} onBack={() => setMode('actions')} onClose={onClose} />
       )}
       {item != null && mode === 'list-remove' && listRemoval != null && (
         <ListMembershipForm entryId={listRemoval.entryId} item={sourceItem ?? item} key={`list-remove-${listRemoval.entryId ?? item.id}`} onBack={() => setMode('actions')} onDone={onClose} present={false} subtitle={listRemoval.subtitle} target={listRemoval.target} />
@@ -452,7 +456,7 @@ export function CardActionsSheet({
 }
 
 /**
- * The sheet's watchlist verb with Add to list beside it. Each picker opens in
+ * The sheet's watchlist verb with its secondary actions beside it. Each picker opens in
  * place of the sheet's rows (plan 0032 U3) and stays mounted through the
  * write: a toast can't carry a link, so a Trakt 420, an expired session or a
  * manual row lands there; only a clean report closes the sheet.
@@ -466,7 +470,7 @@ function WatchlistRow({
   item: NormalizedMediaItem;
   verb: 'add' | 'remove' | null;
   removal: CardActionsSheetProps['watchlistRemoval'];
-  onOpenMode: (mode: 'watchlist-add' | 'watchlist-remove' | 'list-add') => void;
+  onOpenMode: (mode: 'watchlist-add' | 'watchlist-remove' | 'list-add' | 'more') => void;
 }) {
   let main: ReactNode = null;
   switch (verb) {
@@ -494,9 +498,9 @@ function WatchlistRow({
       break;
   }
   return (
-    <AddToListCapsule className="mb-3" item={item} onOpenPicker={() => onOpenMode('list-add')}>
+    <MoreActionsCapsule className="mb-3" item={item} onOpen={(step) => onOpenMode(step === 'more' ? 'more' : 'list-add')}>
       {main}
-    </AddToListCapsule>
+    </MoreActionsCapsule>
   );
 }
 
@@ -506,11 +510,11 @@ function WatchlistAddRow({
   onOpenMode,
 }: {
   item: NormalizedMediaItem;
-  onOpenMode: (mode: 'watchlist-add' | 'list-add') => void;
+  onOpenMode: (mode: 'watchlist-add' | 'list-add' | 'more') => void;
 }) {
   const ctaShown = useWatchlistCtaShown(item);
   return (
-    <AddToListCapsule className="mb-3" item={item} onOpenPicker={() => onOpenMode('list-add')}>
+    <MoreActionsCapsule className="mb-3" item={item} onOpen={(step) => onOpenMode(step === 'more' ? 'more' : 'list-add')}>
       {ctaShown ? (
         <WatchlistMediaButton
           className="mb-0"
@@ -519,6 +523,6 @@ function WatchlistAddRow({
           onOpenPicker={() => onOpenMode('watchlist-add')}
         />
       ) : null}
-    </AddToListCapsule>
+    </MoreActionsCapsule>
   );
 }

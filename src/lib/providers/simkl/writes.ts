@@ -4,11 +4,12 @@ import type { ProviderWriteResult } from '@/features/log-media/fan-out';
 import type { AniZipEpisodeMap } from '@/lib/providers/mapping/anizip';
 import { entryNumberFor } from '@/lib/providers/mapping/episode-translation';
 import { ProviderAuthError, ProviderDecodeError, type ProviderError } from '@/lib/providers/errors';
-import { Provider } from '@/lib/providers/types';
+import { trackingStatusSkip } from '@/lib/providers/tracking-status';
+import { Provider, type TrackingStatus } from '@/lib/providers/types';
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SimklDeps } from './deps';
 import { simklHttp } from './http';
-import type { SimklLibrary, SimklLibraryEntry } from './normalize';
+import type { SimklLibrary, SimklLibraryEntry, SimklWatchStatus } from './normalize';
 import { getAllItems } from './reads';
 
 const provider = Provider.Simkl;
@@ -439,6 +440,53 @@ export function addToSimklWatchlist(
       categoryFor(item) == null ? unroutableError(item) : noIdsError(item, 'watchlist'),
     );
   }
+
+  return Effect.gen(function* () {
+    const token = yield* accessToken(deps);
+    const response = yield* simklHttp<SimklAddToListResponse>(deps, '/sync/add-to-list', {
+      method: 'POST',
+      body,
+      accessToken: token,
+    });
+    return outcomeFromNotFound(1, response.not_found);
+  });
+}
+
+const SIMKL_TRACKING_STATUS = { paused: 'hold', dropped: 'dropped' } as const;
+
+const SIMKL_STATUS_NAMES: Record<SimklWatchStatus, string> = {
+  watching: 'watching',
+  plantowatch: 'plan to watch',
+  hold: 'on hold',
+  completed: 'completed',
+  dropped: 'dropped',
+};
+
+/**
+ * Pause (`hold`) or drop, on the library row `entry` a fresh read found. The
+ * caller does the read because the row matcher lives with the library query
+ * (`findLibraryEntry`). It sends the row's own ids, so an anime cour changes
+ * only that cour. Only a status moves: watched episodes stay. A history add
+ * re-files the item by itself, so the next log resumes it with no request
+ * from here (api.simkl.org add-to-history).
+ */
+export function setSimklTrackingStatus(
+  deps: SimklDeps,
+  entry: SimklLibraryEntry | null,
+  status: TrackingStatus,
+): Effect.Effect<ProviderWriteResult, ProviderError> {
+  const target = SIMKL_TRACKING_STATUS[status];
+  const reason = trackingStatusSkip(
+    provider,
+    entry?.status ?? null,
+    target,
+    ['watching', 'hold', 'dropped'],
+    (name) => SIMKL_STATUS_NAMES[name],
+  );
+  if (reason != null || entry == null) return Effect.succeed(skip(reason ?? ''));
+  const ids = idsFor(entry.item);
+  const body = ids == null ? null : listBody(entry.item, { to: target, ids });
+  if (body == null) return Effect.fail(noIdsError(entry.item, status === 'paused' ? 'pause' : 'drop'));
 
   return Effect.gen(function* () {
     const token = yield* accessToken(deps);

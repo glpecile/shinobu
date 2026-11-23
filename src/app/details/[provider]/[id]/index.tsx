@@ -26,6 +26,7 @@ import { StatTile } from '@/components/stat-tile';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { AnimeSeasonsSection } from '@/features/anime-seasons/anime-seasons-section';
 import { CardActionsSheet } from '@/features/card-actions/card-actions-sheet';
+import { MoreActionsCapsule } from '@/features/card-actions/more-actions';
 import { useCardActions } from '@/features/card-actions/use-card-actions';
 import { alternateTitles, CopyTitle } from '@/features/copy-title/copy-title';
 import { DetailVariantsSection } from '@/features/detail-variants/detail-variants-section';
@@ -43,7 +44,6 @@ import {
   watchlistCtaIsPrimary,
 } from '@/features/log-media/release-gate';
 import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
-import { AddToListCapsule } from '@/features/lists/add-to-list-capsule';
 import { BookListsSection } from '@/features/lists/book-lists-section';
 import {
   PeopleSection,
@@ -355,13 +355,13 @@ function StudiosList({ studios }: { studios: NormalizedStudio[] }) {
   );
 }
 
-/** The want-to-watch CTA with Add to list beside it, or Add to list alone. */
+/** The want-to-watch CTA with its secondary actions beside it, or those alone. */
 function WatchlistRow({ item }: { item: NormalizedMediaItem }) {
   const ctaShown = useWatchlistCtaShown(item);
   return (
-    <AddToListCapsule className="mb-6" item={item}>
+    <MoreActionsCapsule className="mb-6" item={item}>
       {ctaShown ? <WatchlistMediaButton className="mb-0" item={item} /> : null}
-    </AddToListCapsule>
+    </MoreActionsCapsule>
   );
 }
 
