@@ -46,14 +46,14 @@ const HARDCOVER_STATE: Record<number, MovableState | undefined> = {
 /**
  * Each target's current status, from the reads the details screen already
  * holds, so providers that disagree show it before the write. A target whose
- * read has not landed has no label. `movable[status]` is whether any target
- * holds an entry that a change to `status` would move: one the adapters
+ * read has not landed has no label. `movable[status]` lists the targets
+ * holding an entry that a change to `status` would move: one the adapters
  * accept that is not in that status already.
  */
 export function useTrackingState(
   item: NormalizedMediaItem,
   targets: readonly ProviderId[],
-): { labels: Partial<Record<ProviderId, string>>; movable: Record<TrackingStatus, boolean> } {
+): { labels: Partial<Record<ProviderId, string>>; movable: Record<TrackingStatus, ProviderId[]> } {
   const reading = item.type === 'BOOK';
   // A disabled query still returns cached data, and the details screen caches
   // these reads for items that are not targets, such as a film.
@@ -75,15 +75,14 @@ export function useTrackingState(
   const hardcover = onHardcover ? hardcoverQuery.data : undefined;
 
   const labels: Partial<Record<ProviderId, string>> = {};
-  const current = [
-    ANILIST_STATE[anilist?.entry?.status ?? ''],
-    SIMKL_STATE[simkl?.status ?? ''],
-    HARDCOVER_STATE[hardcover?.statusId ?? 0],
-  ].filter((status) => status != null);
-  const movable = {
-    paused: current.some((status) => status !== 'paused'),
-    dropped: current.some((status) => status !== 'dropped'),
+  const current: Partial<Record<ProviderId, MovableState>> = {
+    [Provider.AniList]: ANILIST_STATE[anilist?.entry?.status ?? ''],
+    [Provider.Simkl]: SIMKL_STATE[simkl?.status ?? ''],
+    [Provider.Hardcover]: HARDCOVER_STATE[hardcover?.statusId ?? 0],
   };
+  const moves = (status: TrackingStatus) =>
+    targets.filter((id) => current[id] != null && current[id] !== status);
+  const movable = { paused: moves('paused'), dropped: moves('dropped') };
   if (anilist != null) {
     const status = anilist.entry?.status;
     labels[Provider.AniList] = status == null

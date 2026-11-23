@@ -45,8 +45,8 @@ export function TrackingStatusPicker({
   const mutation = useTrackingStatus(item);
   const pending = useIsTrackingStatusPending(item.id);
   const { writable, manual, item: enriched } = useWriteTargetsSplit(item, 'tracking');
-  const { labels } = useTrackingState(enriched, writable);
-  const { selected, toggle, selectAll, selectNone } = useSelectedTargets(writable);
+  const { labels, movable } = useTrackingState(enriched, writable);
+  const { selected, toggle, selectAll, selectNone } = useSelectedTargets(writable, movable[status]);
   const step = useReportStep<WriteReportLike>((report) => {
     toast.success(`${copy.done} “${item.title}”`, providerLabelList(report.succeeded));
     onCleanClose();

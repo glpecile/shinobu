@@ -22,7 +22,7 @@ function useMoreActions(item: NormalizedMediaItem) {
   const list = useCanAddToList(item);
   const targets = useWriteTargetsSplit(item, 'tracking');
   const { movable } = useTrackingState(targets.item, targets.writable);
-  return { list, movable, tracking: movable.paused || movable.dropped };
+  return { list, movable, tracking: movable.paused.length > 0 || movable.dropped.length > 0 };
 }
 
 /**
@@ -57,10 +57,10 @@ export function MoreActions({
             {list && (
               <Button icon={<Button.Icon name="add" />} label="Add to list" onPress={() => setStep('list')} variant="quiet" />
             )}
-            {movable.paused && (
+            {movable.paused.length > 0 && (
               <Button icon={<Button.Icon name="pause" />} label="Pause tracking" onPress={() => setStep('paused')} variant="quiet" />
             )}
-            {movable.dropped && (
+            {movable.dropped.length > 0 && (
               <Button icon={<Button.Icon name="close-circle-outline" />} label="Drop" onPress={() => setStep('dropped')} variant="quiet" />
             )}
           </View>

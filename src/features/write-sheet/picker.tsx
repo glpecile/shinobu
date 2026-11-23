@@ -15,12 +15,13 @@ import { WriteSheet } from './write-sheet';
  * Selection is stored as the *deselected* set: the writable target list can
  * widen while enrichment resolves, and every applicable provider starts
  * selected, so a snapshot of "selected at mount" would drop a provider that
- * arrived a frame later.
+ * arrived a frame later. A target outside `preselected` at mount starts
+ * deselected.
  */
-
-/** The selected-set state both verbs share. */
-export function useSelectedTargets(targets: readonly ProviderId[]) {
-  const [deselected, setDeselected] = useState<readonly ProviderId[]>([]);
+export function useSelectedTargets(targets: readonly ProviderId[], preselected: readonly ProviderId[] = targets) {
+  const [deselected, setDeselected] = useState<readonly ProviderId[]>(() =>
+    targets.filter((id) => !preselected.includes(id)),
+  );
   const selected = targets.filter((id) => !deselected.includes(id));
 
   return {
