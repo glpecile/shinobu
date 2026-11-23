@@ -11,6 +11,7 @@ import { tmdbToken } from '@/state/session/tmdb-token';
 import type { TmdbDeps } from '@/lib/providers/tmdb/deps';
 import { searchTitlesFuzzy } from '@/lib/providers/tmdb/fuzzy-search';
 import {
+  getCreditEpisodes,
   getPerson,
   getStudio,
   getTvEpisode,
@@ -51,6 +52,9 @@ export const tmdbQueryKeys = {
    *  leg of `state/queries/show-seasons.ts`. */
   seasons: (tmdbId: number) =>
     [...tmdbQueryKeys.all, 'seasons', tmdbId] as const,
+  /** The episodes one person's TV credit covers (`getCreditEpisodes`). */
+  creditEpisodes: (creditId: string) =>
+    [...tmdbQueryKeys.all, 'credit-episodes', creditId] as const,
   /** One episode's still, rating and credits (`getTvEpisode`). */
   episode: (tmdbId: number, season: number, number: number) =>
     [...tmdbQueryKeys.all, 'episode', tmdbId, season, number] as const,
@@ -89,6 +93,18 @@ export function useTmdbPersonQuery(params: {
     queryFn: ({ signal }) =>
       Effect.runPromise(getPerson(tmdbDeps(), { tmdbId: tmdbId as number }), { signal }),
     enabled: tmdbId != null && params.enabled !== false,
+    staleTime: PERSON_STALE_TIME_MS,
+    gcTime: PERSON_STALE_TIME_MS,
+  });
+}
+
+/** Which episodes a director, writer or guest star worked on, for the filmography's long-press sheet. */
+export function useTmdbCreditEpisodesQuery(params: { creditId: string; enabled: boolean }) {
+  return useQuery({
+    queryKey: tmdbQueryKeys.creditEpisodes(params.creditId),
+    queryFn: ({ signal }) =>
+      Effect.runPromise(getCreditEpisodes(tmdbDeps(), { creditId: params.creditId }), { signal }),
+    enabled: params.enabled,
     staleTime: PERSON_STALE_TIME_MS,
     gcTime: PERSON_STALE_TIME_MS,
   });

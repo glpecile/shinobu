@@ -30,6 +30,10 @@ interface TmdbCreditBase {
   first_air_date?: string | null;
   vote_average?: number | null;
   vote_count?: number | null;
+  /** Keys `/credit/{credit_id}`, which lists a TV credit's episodes. */
+  credit_id?: string | null;
+  /** TV only; null on a Creator credit. */
+  episode_count?: number | null;
 }
 
 export interface TmdbCastCredit extends TmdbCreditBase {
@@ -302,9 +306,21 @@ export function normalizeCreditRows(
   return ordered;
 }
 
+/** One character or job a person holds on a show, and how many episodes it spans. */
+export interface TvCredit {
+  creditId: string;
+  kind: 'cast' | 'crew';
+  /** The character for cast, the job for crew; '' when unknown. */
+  label: string;
+  /** Null when TMDB counts no episodes, as on a Creator credit. */
+  episodeCount: number | null;
+}
+
 export interface NormalizedPersonDetails {
   person: NormalizedPerson;
   rows: PersonCreditRow[];
+  /** TMDB only: a show's item id → the person's credits on it. */
+  tvCredits?: Record<string, TvCredit[]>;
 }
 
 export function normalizePersonDetails(
@@ -314,7 +330,63 @@ export function normalizePersonDetails(
   return {
     person: normalizePerson(raw),
     rows: normalizeCreditRows(raw, nowIso),
+    tvCredits: normalizeTvCredits(raw),
   };
+}
+
+function normalizeTvCredits(raw: TmdbPersonResponse): Record<string, TvCredit[]> {
+  const byShow: Record<string, TvCredit[]> = {};
+  const credits = [
+    ...(raw.combined_credits?.cast ?? []).map((credit) => ({
+      credit,
+      kind: 'cast' as const,
+      label: credit.character ?? '',
+    })),
+    ...(raw.combined_credits?.crew ?? []).map((credit) => ({
+      credit,
+      kind: 'crew' as const,
+      label: credit.job ?? '',
+    })),
+  ];
+  for (const { credit, kind, label } of credits) {
+    if (credit.media_type !== 'tv' || credit.credit_id == null) continue;
+    const id = `tmdb-tv-${credit.id}`;
+    (byShow[id] ??= []).push({
+      creditId: credit.credit_id,
+      kind,
+      label,
+      episodeCount: credit.episode_count != null && credit.episode_count > 0 ? credit.episode_count : null,
+    });
+  }
+  return byShow;
+}
+
+/** `/credit/{credit_id}`: a TV credit and the episodes TMDB ties to it. */
+export interface TmdbCreditResponse {
+  media?: {
+    episodes?: Array<{
+      season_number?: number | null;
+      episode_number?: number | null;
+      name?: string | null;
+    } | null> | null;
+  } | null;
+}
+
+export interface CreditEpisode {
+  season: number;
+  number: number;
+  title: string;
+}
+
+/** Episodes in air order. A series regular's list is often partial, so the caller checks it against the count. */
+export function normalizeCreditEpisodes(raw: TmdbCreditResponse): CreditEpisode[] {
+  return (raw.media?.episodes ?? [])
+    .flatMap((episode) =>
+      episode?.season_number == null || episode.episode_number == null
+        ? []
+        : [{ season: episode.season_number, number: episode.episode_number, title: episode.name ?? '' }],
+    )
+    .sort((a, b) => a.season - b.season || a.number - b.number);
 }
 
 export function normalizePersonSearch(

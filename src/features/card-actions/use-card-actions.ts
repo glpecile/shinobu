@@ -2,11 +2,14 @@ import { useState } from 'react';
 
 import type { PersonCredit } from '@/features/person';
 import { haptics } from '@/lib/haptics';
+import type { TvCredit } from '@/lib/providers/tmdb/normalize';
 import { dismissKeyboardNow } from '@/lib/keyboard';
 import type { NormalizedMediaItem } from '@/types/media';
 
 /** What `CardActionsSheet`'s credit line needs — see its `credit` prop. */
-type CardCredit = Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'>;
+type CardCredit = Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'> & {
+  tvCredits?: readonly TvCredit[];
+};
 
 /**
  * Shared wiring for the per-card actions dialog (quick log / view details /

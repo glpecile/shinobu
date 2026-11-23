@@ -22,6 +22,7 @@ import { useSeriesNextEpisode } from '@/features/log-media/use-series-next-episo
 import { LogSheetContent } from '@/features/log-media/session/catch-up-log-sheet';
 import { PersonAvatar } from '@/features/person/person-avatar';
 import { creditRoleLine, type PersonCredit } from '@/features/person/person-credit-sheet';
+import { TvCreditLines } from '@/features/person/tv-credit-lines';
 import { shouldOfferWatchlistAdd } from '@/features/watchlist-media/remove-targets';
 import { UnwatchlistMediaButton } from '@/features/watchlist-media/unwatchlist-media-button';
 import { useWatchlistCtaShown, WatchlistMediaButton } from '@/features/watchlist-media/watchlist-media-button';
@@ -36,6 +37,7 @@ import { haptics } from '@/lib/haptics';
 import { mediaRuntimeMinutes, mediaSortValue } from '@/lib/media-sort';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { applyPrimaryMetadata, mergeCatalogueMetadata } from '@/lib/providers/merge-metadata';
+import type { TvCredit } from '@/lib/providers/tmdb/normalize';
 import { Provider, type ProviderId } from '@/lib/providers/types';
 import { providerLinksFor } from '@/lib/providers/provider-links';
 import { usePushRoute } from '@/lib/navigation';
@@ -106,8 +108,12 @@ interface CardActionsSheetProps {
    * filmography row it sits in, and their character or job on it (plan 0035
    * R14 put that on the card, clamped to a line — this is where the rest of it
    * lives). Null everywhere else; a feed card has no such context.
+   * `tvCredits` replaces the role with one line per job or character, each
+   * with its episodes.
    */
-  credit?: Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'> | null;
+  credit?: (Pick<PersonCredit, 'name' | 'headshot' | 'role' | 'kind'> & {
+    tvCredits?: readonly TvCredit[];
+  }) | null;
   watchlistRemoval?: {
     entry: WatchlistEntry;
     errors: readonly ProviderFailure[];
@@ -334,21 +340,28 @@ export function CardActionsSheet({
               full character or job goes here — unclamped, with the face beside
               it, the same header shape the credit sheet uses. */}
           {credit != null && (
-            <View className="flex-row items-center gap-3 mt-4">
-              <PersonAvatar
-                className="w-10 h-10 bg-surface"
-                headshot={credit.headshot}
-                name={credit.name}
-                textClassName="text-xs"
-              />
-              <View className="flex-1">
-                <Text className="text-foreground font-sans-semibold text-sm">
-                  {credit.name}
-                </Text>
-                <Text className="text-muted font-sans text-sm">
-                  {creditRoleLine(credit)}
-                </Text>
+            <View className="mt-4">
+              <View className="flex-row items-center gap-3">
+                <PersonAvatar
+                  className="w-10 h-10 bg-surface"
+                  headshot={credit.headshot}
+                  name={credit.name}
+                  textClassName="text-xs"
+                />
+                <View className="flex-1">
+                  <Text className="text-foreground font-sans-semibold text-sm">
+                    {credit.name}
+                  </Text>
+                  {credit.tvCredits == null && (
+                    <Text className="text-muted font-sans text-sm">
+                      {creditRoleLine(credit)}
+                    </Text>
+                  )}
+                </View>
               </View>
+              {credit.tvCredits != null && (
+                <TvCreditLines credits={credit.tvCredits} onNavigate={onClose} show={item} />
+              )}
             </View>
           )}
 

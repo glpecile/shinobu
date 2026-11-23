@@ -12,6 +12,7 @@ import { tmdbRequest } from './api';
 import type { TmdbDeps } from './deps';
 import {
   normalizeCompanySearch,
+  normalizeCreditEpisodes,
   normalizeMovieCatalogue,
   normalizeMultiSearch,
   normalizePersonDetails,
@@ -20,11 +21,13 @@ import {
   normalizeTitleSearch,
   normalizeTvCatalogue,
   normalizeTvEpisode,
+  type CreditEpisode,
   type NormalizedPersonDetails,
   type NormalizedStudioDetails,
   type PersonMatch,
   type TmdbCompanyResponse,
   type TmdbCompanySearchResponse,
+  type TmdbCreditResponse,
   type TmdbDiscoverResponse,
   type TmdbEpisodeDetails,
   type TmdbEpisodeResponse,
@@ -64,6 +67,17 @@ export function getPerson(
       new Date(now).toISOString(),
     );
   });
+}
+
+/** The episodes one TV credit (a job or character on a show) covers. */
+export function getCreditEpisodes(
+  deps: TmdbDeps,
+  params: { creditId: string },
+): Effect.Effect<CreditEpisode[], ProviderError> {
+  return tmdbRequest<TmdbCreditResponse>(
+    deps,
+    `/credit/${encodeURIComponent(params.creditId)}`,
+  ).pipe(Effect.map(normalizeCreditEpisodes));
 }
 
 /**
