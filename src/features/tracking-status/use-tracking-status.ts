@@ -4,7 +4,6 @@ import * as Effect from 'effect/Effect';
 import { enrichExternalIds } from '@/features/log-media/enrich';
 import {
   runProviderWrites,
-  type ProviderWriteReport,
   type WriteAdapter,
 } from '@/features/log-media/fan-out';
 import { currentPlatform } from '@/features/log-media/use-log-targets';
@@ -22,7 +21,7 @@ import { findLibraryEntry, simklDeps } from '@/state/queries/simkl';
 import { useConnectedProviders } from '@/state/session';
 import type { NormalizedMediaItem } from '@/types/media';
 
-export interface TrackingStatusPayload {
+interface TrackingStatusPayload {
   item: NormalizedMediaItem;
   status: TrackingStatus;
 }
@@ -45,15 +44,10 @@ const TRACKING_ADAPTERS: Partial<Record<ProviderId, WriteAdapter<TrackingStatusP
     Effect.runPromise(setHardcoverTrackingStatus(hardcoverDeps(), item, status)),
 };
 
-export type TrackingStatusResult = ProviderWriteReport & {
-  item: NormalizedMediaItem;
-  manual: ProviderId[];
-};
-
-export interface TrackingStatusVariables {
+interface TrackingStatusVariables {
   status: TrackingStatus;
   /** Narrows the routed targets, as the picker's toggles do. */
-  providers?: ProviderId[];
+  providers: ProviderId[];
 }
 
 function trackingMutationKey(itemId: string) {
@@ -74,18 +68,18 @@ export function useIsTrackingStatusPending(itemId: string): boolean {
  * fan out, invalidate, and reschedule notifications so a paused series stops
  * its reminders.
  */
-export async function runTrackingStatusWrite(
+async function runTrackingStatusWrite(
   queryClient: QueryClient,
   item: NormalizedMediaItem,
   connected: readonly ProviderId[],
   { status, providers }: TrackingStatusVariables,
-): Promise<TrackingStatusResult> {
+) {
   const enriched = await enrichExternalIds(queryClient, item, connected);
   const platform = currentPlatform();
   const targets = resolveWriteTargets(enriched, connected, {
     capability: 'tracking',
     platform,
-    ...(providers != null ? { onlyProviders: providers } : {}),
+    onlyProviders: providers,
   });
   const { manual } = splitWriteTargets(enriched, connected, platform, 'tracking');
   if (targets.length === 0 && manual.length === 0) {
