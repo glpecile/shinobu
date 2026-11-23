@@ -1,0 +1,114 @@
+import Ionicons from '@react-native-vector-icons/ionicons/static';
+import { useState } from 'react';
+import { Text, View } from 'react-native';
+
+import { Collapse } from '@/components/collapse';
+import { DisclosureChevron } from '@/components/disclosure-chevron';
+import { PresstableOpacity } from '@/components/presstable';
+import { episodeCode } from '@/features/episode-details/episode-label';
+import { usePushRoute } from '@/lib/navigation';
+import type { CreditEpisode, TvCredit } from '@/lib/providers/tmdb/normalize';
+import { routes } from '@/lib/routes';
+import { useThemeColor } from '@/lib/theme-color';
+import { useDisclosureToggle } from '@/lib/use-disclosure-toggle';
+import { usePrefetchTmdbEpisode, useTmdbCreditEpisodesQuery } from '@/state/queries/tmdb';
+import type { NormalizedMediaItem } from '@/types/media';
+
+import { creditRoleLine } from './person-credit-sheet';
+
+/**
+ * One of a person's credits on a show, with its episode count
+ * ("Director · 5 episodes"). The line opens to its episodes, and each episode
+ * opens its screen. `onNavigate` closes the host sheet before the push.
+ */
+export function TvCreditLine({
+  show,
+  credit,
+  onNavigate,
+}: {
+  show: NormalizedMediaItem;
+  credit: TvCredit;
+  onNavigate: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const toggle = useDisclosureToggle(() => setOpen(!open));
+  const counted = credit.episodeCount != null;
+  const episodes = useTmdbCreditEpisodesQuery({ creditId: credit.creditId, enabled: counted });
+  // TMDB ties a series regular to only a few of their episodes (Cranston:
+  // 3 of 62), so a list is shown only when it accounts for every episode.
+  const listed = episodes.data?.length === credit.episodeCount ? episodes.data : null;
+  const role = creditRoleLine(credit);
+  const label = counted
+    ? `${role} · ${credit.episodeCount} ${credit.episodeCount === 1 ? 'episode' : 'episodes'}`
+    : role;
+
+  if (listed == null) {
+    // Same frame as the disclosure, chevron slot included, so the label
+    // doesn't re-wrap when the list lands.
+    return (
+      <View className="min-h-11 flex-row items-center gap-2">
+        <Text className="flex-1 text-foreground font-sans text-sm">{label}</Text>
+        {counted && <View className="w-4" />}
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <PresstableOpacity
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        className="min-h-11 flex-row items-center gap-2"
+        onPress={toggle}
+        pressBehavior="immediate"
+      >
+        <Text className="flex-1 text-foreground font-sans text-sm">{label}</Text>
+        <DisclosureChevron open={open} size={16} />
+      </PresstableOpacity>
+      <Collapse open={open}>
+        {listed.map((episode) => (
+          <EpisodeLink
+            episode={episode}
+            key={`${episode.season}-${episode.number}`}
+            onNavigate={onNavigate}
+            show={show}
+          />
+        ))}
+      </Collapse>
+    </View>
+  );
+}
+
+function EpisodeLink({
+  show,
+  episode,
+  onNavigate,
+}: {
+  show: NormalizedMediaItem;
+  episode: CreditEpisode;
+  onNavigate: () => void;
+}) {
+  const pushRoute = usePushRoute();
+  const prefetchEpisode = usePrefetchTmdbEpisode();
+  const muted = useThemeColor('--color-muted');
+  const code = episodeCode(episode.season, episode.number);
+  return (
+    <PresstableOpacity
+      accessibilityHint="Opens the episode"
+      accessibilityLabel={episode.title === '' ? code : `${code}, ${episode.title}`}
+      accessibilityRole="button"
+      className="min-h-11 flex-row items-center gap-3 pl-3"
+      onPress={() => {
+        prefetchEpisode({ tmdbId: show.externalIds.tmdb, season: episode.season, number: episode.number });
+        onNavigate();
+        pushRoute(routes.episode(show.id, episode.season, episode.number));
+      }}
+    >
+      <Text className="min-w-14 text-muted font-sans text-sm tabular-nums">{code}</Text>
+      <Text className="flex-1 text-foreground font-sans text-sm" numberOfLines={1}>
+        {episode.title}
+      </Text>
+      <Ionicons accessible={false} color={muted} name="chevron-forward" size={16} />
+    </PresstableOpacity>
+  );
+}

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   earliestReleaseDates,
   namesMatch,
+  normalizeCreditEpisodes,
   normalizeCreditRows,
   normalizePersonDetails,
   normalizePersonSearch,
@@ -91,6 +92,48 @@ describe('normalizePersonDetails', () => {
     expect(person.headshot).toBe('');
     expect(person.headshotFull).toBe('');
     expect(person.biography).toBeUndefined();
+  });
+});
+
+describe('tvCredits', () => {
+  test('keys each show credit by its item id, with no count on a Creator credit', () => {
+    const { tvCredits } = normalizePersonDetails(
+      personResponse({
+        combined_credits: {
+          cast: [movie(1, 'Top Gun', '1986-05-16', { credit_id: 'm1' })],
+          crew: [
+            show(1396, 'Breaking Bad', '2008-01-20', { job: 'Director', department: 'Directing', credit_id: 'd1', episode_count: 5 }),
+            show(1396, 'Breaking Bad', '2008-01-20', { job: 'Creator', department: 'Creator', credit_id: 'c1', episode_count: null }),
+          ],
+        },
+      }),
+      NOW,
+    );
+    expect(tvCredits).toEqual({
+      'tmdb-tv-1396': [
+        { creditId: 'd1', kind: 'crew', role: 'Director', episodeCount: 5 },
+        { creditId: 'c1', kind: 'crew', role: 'Creator', episodeCount: null },
+      ],
+    });
+  });
+});
+
+describe('normalizeCreditEpisodes', () => {
+  test('sorts episodes into air order and drops unnumbered ones', () => {
+    expect(
+      normalizeCreditEpisodes({
+        media: {
+          episodes: [
+            { season_number: 5, episode_number: 16, name: 'Felina' },
+            { season_number: null, episode_number: 2, name: 'Lost' },
+            { season_number: 1, episode_number: 1, name: 'Pilot' },
+          ],
+        },
+      }),
+    ).toEqual([
+      { season: 1, number: 1, title: 'Pilot' },
+      { season: 5, number: 16, title: 'Felina' },
+    ]);
   });
 });
 

@@ -33,7 +33,7 @@ const personEntering = [0, 40, 80].map((delay) =>
  * The person page itself, shared by `/person/[id]` and `/person/lookup` — the
  * two differ only in how the details were fetched.
  */
-export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
+export function PersonDetailsView({ person, rows, tvCredits }: NormalizedPersonDetails) {
   const headerTop = useFloatingBackButtonClearance();
   const reduceMotion = useReducedMotion();
   const pushRoute = usePushRoute();
@@ -113,6 +113,7 @@ export function PersonDetailsView({ person, rows }: NormalizedPersonDetails) {
             headshot: person.headshot,
             role: roles,
             kind: credit.roles.every((entry) => entry.role === ACTING_ROLE) ? 'cast' : 'crew',
+            tvCredits: tvCredits?.[credit.item.id],
           })
         }
         onItemPress={(item) => pushRoute(routes.details(item.id, item.type))}
