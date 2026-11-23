@@ -10,8 +10,6 @@ import type { SerializdDeps } from './deps';
 import { serializdHttp } from './http';
 import { Id, readShowPages } from './watched';
 
-const provider = Provider.Serializd;
-
 const ShowsPage = Schema.Struct({
   items: Schema.Array(Schema.Struct({ showId: Id })),
   totalPages: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 9999 })),
@@ -24,10 +22,10 @@ const LISTS = {
 } as const;
 
 /** TMDB show ids on each of the account's three status lists. */
-export type SerializdTrackingLists = Record<keyof typeof LISTS, number[]>;
+type SerializdTrackingLists = Record<keyof typeof LISTS, number[]>;
 
 /** `watched` is a show with watched seasons that is on none of the lists. */
-export type SerializdTrackingState = keyof typeof LISTS | 'watched';
+type SerializdTrackingState = keyof typeof LISTS | 'watched';
 
 const readList = (deps: SerializdDeps, list: string) =>
   readShowPages(deps, list, ShowsPage).pipe(
@@ -59,7 +57,7 @@ export function serializdTrackingState(
 }
 
 /** The response bodies are not captured, so a 2xx with no JSON still counts. */
-function postShow(deps: SerializdDeps, path: string, tmdbId: number | undefined) {
+function postShow(deps: SerializdDeps, path: string, tmdbId: number) {
   return serializdHttp(deps, path, { method: 'POST', auth: true, body: { show_id: tmdbId } }).pipe(
     Effect.catchTag('ProviderDecodeError', () => Effect.void),
   );
@@ -78,13 +76,6 @@ export const resumeOnSerializd = Effect.fn('serializd.resume')(function* (deps: 
   yield* postShow(deps, `/${list}_shows/remove`, tmdbId);
 });
 
-const STATE_NAMES: Record<SerializdTrackingState, string> = {
-  watching: 'watching',
-  watched: 'watched',
-  paused: 'paused',
-  dropped: 'dropped',
-};
-
 /**
  * Pause or drop the show that `current` describes, from a fresh read by the
  * caller. Adding to a status list leaves watched seasons and the watchlist
@@ -99,15 +90,10 @@ export function setSerializdTrackingStatus(
   status: TrackingStatus,
 ): Effect.Effect<ProviderWriteResult, ProviderError> {
   const tmdbId = item.externalIds.tmdb;
-  const reason = tmdbId == null
-    ? `"${item.title}" has no TMDB id — Serializd needs it as the join key`
-    : trackingStatusSkip<SerializdTrackingState>(
-        provider,
-        current,
-        status,
-        ['watching', 'watched', 'paused', 'dropped'],
-        (name) => STATE_NAMES[name],
-      );
+  if (tmdbId == null) {
+    return Effect.succeed({ status: 'skipped', reason: `"${item.title}" has no TMDB id — Serializd needs it as the join key` });
+  }
+  const reason = trackingStatusSkip<SerializdTrackingState>(Provider.Serializd, current, status, ['watching', 'watched', 'paused', 'dropped'], (name) => name);
   if (reason != null) return Effect.succeed({ status: 'skipped', reason });
 
   const post = (path: string) => postShow(deps, path, tmdbId);
