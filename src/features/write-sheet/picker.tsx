@@ -12,28 +12,20 @@ import { WriteSheet } from './write-sheet';
  * The state and report step a provider-picker sheet shares (watchlist add and
  * remove, pause and drop).
  *
- * Selection is stored as the *deselected* set: the writable target list can
- * widen while enrichment resolves, and every applicable provider starts
- * selected, so a snapshot of "selected at mount" would drop a provider that
- * arrived a frame later. A target outside `preselected` at mount starts
- * deselected.
+ * Only the user's toggles are state. Every other target follows
+ * `preselected`, which is read on each render, so a target that arrives
+ * while enrichment or a status read resolves gets its default then.
  */
 export function useSelectedTargets(targets: readonly ProviderId[], preselected: readonly ProviderId[] = targets) {
-  const [deselected, setDeselected] = useState<readonly ProviderId[]>(() =>
-    targets.filter((id) => !preselected.includes(id)),
-  );
-  const selected = targets.filter((id) => !deselected.includes(id));
+  const [toggles, setToggles] = useState<Partial<Record<ProviderId, boolean>>>({});
+  const selected = targets.filter((id) => toggles[id] ?? preselected.includes(id));
+  const setAll = (value: boolean) => setToggles(Object.fromEntries(targets.map((id) => [id, value])));
 
   return {
     selected,
-    toggle: (id: ProviderId) =>
-      setDeselected(
-        deselected.includes(id)
-          ? deselected.filter((provider) => provider !== id)
-          : [...deselected, id],
-      ),
-    selectAll: () => setDeselected([]),
-    selectNone: () => setDeselected([...targets]),
+    toggle: (id: ProviderId) => setToggles({ ...toggles, [id]: !selected.includes(id) }),
+    selectAll: () => setAll(true),
+    selectNone: () => setAll(false),
   };
 }
 
