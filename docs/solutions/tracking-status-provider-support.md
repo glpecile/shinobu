@@ -53,15 +53,15 @@ moves.
 |---|---|---|
 | `paused_shows`, `dropped_shows` | POST | `{ show_id }` (the TMDB id) |
 | `paused_shows/remove`, `dropped_shows/remove` | POST | `{ show_id }` |
-| `currently_watching/remove` | POST | `{ show_id }` |
+| `currently_watching`, `currently_watching/remove` | POST | `{ show_id }` |
 | `user/{username}/paused_shows_page/{page}` | GET | `?sort_by=date_added_desc` |
 | `user/{username}/dropped_shows_page/{page}` | GET | same |
 | `user/{username}/currently_watching_page/{page}` | GET | same |
 
 - The site bundle has the payloads:
   `e3=A=>{let e="/api/paused_shows";return c.post(e,{show_id:A})}`, and the
-  same shape for the other four POSTs.
-- The Django debug 404 lists all eight routes.
+  same shape for the other five POSTs.
+- The Django debug 404 lists all nine routes.
 - Without a token each POST answers `401 {"message": "You must be logged in"}`,
   a GET on it answers 405, and `paused_shows/nope` answers the HTML 404.
 
@@ -82,12 +82,15 @@ not, and whether the server does is unknown.
 
 Not verified, because no authenticated write was sent:
 
-- the response bodies of the five POSTs. The adapter accepts any 2xx.
+- the response bodies of the six POSTs. The adapter accepts any 2xx.
 - whether `…/remove` on a show that is not on the list is an error. The
   adapter sends a remove only for the list a fresh read found the show on.
-- whether a log moves a paused show back. The site's client sends nothing on a
-  log, and Shinobu does not either, so a paused show stays paused on Serializd
-  until the site moves it.
+- whether the server moves a paused show back on a log. The site's client
+  sends nothing on a log. Its only move back is Add to Currently Watching,
+  after which it removes the show from Paused and Dropped. So after each log
+  the adapter reads the Paused and Dropped pages. If the show is on one, it
+  posts `currently_watching` and then that list's `remove`. A failure here
+  does not fail the log, and the next log tries again.
 
 Rollback: set Serializd's `trackingStatus` to `'manual'` in the registry. The
 proxy rules do nothing without a caller.

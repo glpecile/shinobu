@@ -8,6 +8,7 @@ import { serializdHttp } from './http';
 import { getRawShowProgress } from './progress';
 import { isYearBasedSeason, resolveSeasonId } from './season-id';
 import { getSerializdShow } from './show';
+import { resumeOnSerializd } from './tracking';
 
 export interface SerializdLogOptions {
   /** Single episode watch. Mutually exclusive with `episodes`. */
@@ -166,6 +167,9 @@ export function logToSerializd(
     if (!wroteAny) {
       return skip(firstSkipReason ?? 'Serializd could not resolve any logged season yet');
     }
+    // The log landed, so a failed resume must not report it as failed: a retry
+    // would write a second diary entry. The next log tries the resume again.
+    yield* resumeOnSerializd(deps, tmdbId).pipe(Effect.ignore);
     return { status: 'ok' } satisfies ProviderWriteResult;
   });
 }

@@ -3,7 +3,7 @@ import * as Effect from 'effect/Effect';
 
 import type { NormalizedMediaItem } from '@/types/media';
 import type { SerializdDeps } from './deps';
-import { getSerializdTrackingLists, serializdTrackingState, setSerializdTrackingStatus } from './tracking';
+import { getSerializdTrackingLists, resumeOnSerializd, serializdTrackingState, setSerializdTrackingStatus } from './tracking';
 
 const session = { accessToken: 'tok', username: 'gian' };
 const item = { title: 'Breaking Bad', externalIds: { tmdb: 1396 } } as NormalizedMediaItem;
@@ -52,4 +52,20 @@ test('a status comes from every page of the three lists, then from watched seaso
   expect(serializdTrackingState(lists, 7, true)).toBe('dropped');
   expect(serializdTrackingState(lists, 8, true)).toBe('watched');
   expect(serializdTrackingState(lists, 8, false)).toBeNull();
+});
+
+test('a log moves a paused show to Currently Watching, and sends nothing for a show on neither list', async () => {
+  const posts: string[] = [];
+  const deps: SerializdDeps = {
+    session, baseUrl: 'https://api.test',
+    fetch: async (url, init) => {
+      const { pathname } = new URL(String(url));
+      if (init?.method === 'POST') posts.push(pathname);
+      return Response.json({ totalPages: 1, items: pathname.includes('paused_shows_page') ? [{ showId: 1396 }] : [] });
+    },
+  };
+  await Effect.runPromise(resumeOnSerializd(deps, 1396));
+  await Effect.runPromise(resumeOnSerializd(deps, 8));
+
+  expect(posts).toEqual(['/currently_watching', '/paused_shows/remove']);
 });

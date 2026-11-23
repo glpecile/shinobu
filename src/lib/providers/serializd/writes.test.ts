@@ -82,6 +82,9 @@ describe('logToSerializd', () => {
       'GET /show/1396/season/1',
       'POST /episode_log/add',
       'POST /show/reviews/add',
+      // The resume check: no POST follows, as the show is on neither list.
+      'GET /user/gian/paused_shows_page/1',
+      'GET /user/gian/dropped_shows_page/1',
     ]);
 
     const episodeLog = requests[1].body!;
@@ -215,7 +218,7 @@ describe('logToSerializd', () => {
         episodes: [{ season: 1, number: 5 }],
       }),
     );
-    const paths = requests.map((r) => new URL(r.url).pathname);
+    const paths = requests.slice(0, 3).map((r) => new URL(r.url).pathname);
     expect(paths).toEqual([
       '/show/1396/season/1',
       '/episode_log/add',

@@ -29,35 +29,36 @@ export type SerializdTrackingLists = Record<keyof typeof LISTS, number[]>;
 /** `watched` is a show with watched seasons that is on none of the lists. */
 export type SerializdTrackingState = keyof typeof LISTS | 'watched';
 
+/** Every show id on one status list. `sort_by` is mandatory: without it the API answers 500. */
+const readList = Effect.fnUntraced(function* (deps: SerializdDeps, list: string) {
+  const username = deps.session?.username;
+  if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider, refreshFailed: true });
+  const readPage = (page: number) =>
+    serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/${list}/${page}?sort_by=date_added_desc`, { auth: true }).pipe(
+      Effect.flatMap((raw) => Schema.decodeUnknownEffect(ShowsPage)(raw).pipe(
+        Effect.mapError(() => new ProviderDecodeError({ provider, detail: `unrecognized ${list}` })),
+      )),
+    );
+  const first = yield* readPage(1);
+  const rest = yield* Effect.forEach(
+    Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) => index + 2),
+    readPage,
+    { concurrency: 3 },
+  );
+  return [first, ...rest].flatMap((page) => page.items.map((show) => show.showId));
+});
+
 /**
  * The account's Currently Watching, Paused and Dropped lists. Serializd has
  * no per-show status read, so one show's status needs every page of all three
  * (`docs/solutions/tracking-status-provider-support.md`).
  */
-export const getSerializdTrackingLists = Effect.fn('serializd.getTrackingLists')(function* (deps: SerializdDeps) {
-  const username = deps.session?.username;
-  if (!Schema.is(Username)(username)) return yield* new ProviderAuthError({ provider, refreshFailed: true });
-  const readList = Effect.fnUntraced(function* (list: string) {
-    const readPage = (page: number) =>
-      // `sort_by` is mandatory: without it the API answers 500.
-      serializdHttp<unknown>(deps, `/user/${encodeURIComponent(username)}/${list}/${page}?sort_by=date_added_desc`, { auth: true }).pipe(
-        Effect.flatMap((raw) => Schema.decodeUnknownEffect(ShowsPage)(raw).pipe(
-          Effect.mapError(() => new ProviderDecodeError({ provider, detail: `unrecognized ${list}` })),
-        )),
-      );
-    const first = yield* readPage(1);
-    const rest = yield* Effect.forEach(
-      Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) => index + 2),
-      readPage,
-      { concurrency: 3 },
-    );
-    return [first, ...rest].flatMap((page) => page.items.map((show) => show.showId));
-  });
-  return yield* Effect.all(
-    { watching: readList(LISTS.watching), paused: readList(LISTS.paused), dropped: readList(LISTS.dropped) },
+export function getSerializdTrackingLists(deps: SerializdDeps): Effect.Effect<SerializdTrackingLists, ProviderError> {
+  return Effect.all(
+    { watching: readList(deps, LISTS.watching), paused: readList(deps, LISTS.paused), dropped: readList(deps, LISTS.dropped) },
     { concurrency: 3 },
   );
-});
+}
 
 /** A show's status, or null when Serializd holds nothing for it. */
 export function serializdTrackingState(
@@ -71,6 +72,26 @@ export function serializdTrackingState(
   return watched ? 'watched' : null;
 }
 
+/** The response bodies are not captured, so a 2xx with no JSON still counts. */
+function postShow(deps: SerializdDeps, path: string, tmdbId: number | undefined) {
+  return serializdHttp(deps, path, { method: 'POST', auth: true, body: { show_id: tmdbId } }).pipe(
+    Effect.catchTag('ProviderDecodeError', () => Effect.void),
+  );
+}
+
+/**
+ * A log resumes a paused or dropped show: it moves to Currently Watching, the
+ * only move back that serializd.com's own client makes. A show on neither
+ * list is left as it is.
+ */
+export const resumeOnSerializd = Effect.fn('serializd.resume')(function* (deps: SerializdDeps, tmdbId: number) {
+  const [paused, dropped] = yield* Effect.all([readList(deps, LISTS.paused), readList(deps, LISTS.dropped)], { concurrency: 2 });
+  const list = paused.includes(tmdbId) ? 'paused' : dropped.includes(tmdbId) ? 'dropped' : null;
+  if (list == null) return;
+  yield* postShow(deps, '/currently_watching', tmdbId);
+  yield* postShow(deps, `/${list}_shows/remove`, tmdbId);
+});
+
 const STATE_NAMES: Record<SerializdTrackingState, string> = {
   watching: 'watching',
   watched: 'watched',
@@ -83,7 +104,7 @@ const STATE_NAMES: Record<SerializdTrackingState, string> = {
  * caller. Adding to a status list leaves watched seasons and the watchlist
  * alone. Nothing shows that the server clears the list the show was on, so
  * this removes it there: serializd.com's own client does the same for
- * Currently Watching. A log from Shinobu does not move the show back.
+ * Currently Watching.
  */
 export function setSerializdTrackingStatus(
   deps: SerializdDeps,
@@ -103,11 +124,7 @@ export function setSerializdTrackingStatus(
       );
   if (reason != null) return Effect.succeed({ status: 'skipped', reason });
 
-  // The response bodies are not captured, so a 2xx with no JSON still counts.
-  const post = (path: string) =>
-    serializdHttp(deps, path, { method: 'POST', auth: true, body: { show_id: tmdbId } }).pipe(
-      Effect.catchTag('ProviderDecodeError', () => Effect.void),
-    );
+  const post = (path: string) => postShow(deps, path, tmdbId);
   return Effect.gen(function* () {
     yield* post(`/${status}_shows`);
     switch (current) {

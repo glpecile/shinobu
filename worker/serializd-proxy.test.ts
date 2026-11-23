@@ -53,6 +53,7 @@ describe('allowlist', () => {
       ['/api/serializd/user/gian/paused_shows_page/1?sort_by=date_added_desc', 'GET'],
       ['/api/serializd/paused_shows', 'POST'],
       ['/api/serializd/dropped_shows/remove', 'POST'],
+      ['/api/serializd/currently_watching', 'POST'],
       ['/api/serializd/currently_watching/remove', 'POST'],
       ['/api/serializd/list/42', 'GET'],
       ['/api/serializd/search/upcoming_episodes_v3', 'GET'],

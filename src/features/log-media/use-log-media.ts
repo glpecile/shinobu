@@ -825,6 +825,8 @@ export function invalidateAfterLog(
     const username = getSerializdUsername();
     if (username != null) {
       queryClient.invalidateQueries({ queryKey: serializdQueryKeys.watchedShows(username) });
+      // A log resumes a paused or dropped show.
+      queryClient.invalidateQueries({ queryKey: serializdQueryKeys.trackingLists(username) });
       const tmdbId = item.externalIds.tmdb;
       if (tmdbId != null) {
         queryClient.invalidateQueries({
