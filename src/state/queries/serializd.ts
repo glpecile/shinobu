@@ -101,13 +101,23 @@ function isWatchedOnSerializd(shows: readonly SerializdWatchedShow[], tmdbId: nu
   return shows.some((show) => show.item.externalIds.tmdb === tmdbId);
 }
 
+function trackingListsQuery(username: string | null) {
+  return queryOptions({
+    queryKey: serializdQueryKeys.trackingLists(username ?? ''),
+    queryFn: ({ signal }) => Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)), { signal }),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
 /**
- * The show's status for a pause or drop: the three status lists read fresh,
- * and the watched snapshot from cache only when no list holds the show.
+ * The show's status for a pause or drop: the three status lists read fresh
+ * into their query, and the watched snapshot from cache only when no list
+ * holds the show.
  */
 export async function fetchSerializdTrackingState(queryClient: QueryClient, tmdbId: number) {
   const username = getSerializdUsername();
-  const lists = await Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)));
+  const lists = await queryClient.fetchQuery({ ...trackingListsQuery(username), staleTime: 0 });
   const listed = serializdTrackingState(lists, tmdbId, false);
   if (listed != null) return listed;
   const watched = await queryClient.fetchQuery(watchedShowsQuery(username));
@@ -118,14 +128,9 @@ export async function fetchSerializdTrackingState(queryClient: QueryClient, tmdb
 export function useSerializdTrackingStateQuery({ tmdbId, enabled }: { tmdbId: number | undefined; enabled: boolean }) {
   const username = getSerializdUsername();
   const on = enabled && username != null && tmdbId != null;
-  const lists = useQuery({
-    queryKey: serializdQueryKeys.trackingLists(username ?? ''),
-    queryFn: ({ signal }) => Effect.runPromise(getSerializdTrackingLists(serializdDeps(username)), { signal }),
-    enabled: on,
-    staleTime: 5 * 60_000,
-  });
+  const lists = useQuery({ ...trackingListsQuery(username), enabled: on });
   const watched = useSerializdWatchedShowsQuery(on ? username : null);
-  if (tmdbId == null || lists.data == null || watched.data == null) return undefined;
+  if (!on || lists.data == null || watched.data == null) return undefined;
   return serializdTrackingState(lists.data, tmdbId, isWatchedOnSerializd(watched.data, tmdbId));
 }
 
