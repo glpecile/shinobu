@@ -226,7 +226,7 @@ export interface ButtonProps {
    * Render the label with `MorphText` — for a label that *changes in place*
    * from user state (the details screen's "Mark as watched" → "Log episode 4").
    * Off by default: morphing static text is noise, and first render never
-   * animates anyway (AGENTS.md: Tech Stack → torph).
+   * animates anyway (AGENTS.md: Class names and buttons).
    */
   morphLabel?: boolean;
   /** Truncate a label when the button has a constrained width. */

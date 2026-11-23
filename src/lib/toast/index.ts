@@ -8,7 +8,7 @@ const DURATION_MS = { success: 2000, error: 3500 } as const;
 
 /**
  * The only allowed import of the toast library (oxlint-enforced, the same
- * wrapper rule as `@legendapp/list`, `torph/react` and `cn`). One call
+ * wrapper rule as `@legendapp/list`, `@glpecile/norph` and `cn`). One call
  * surface across web, iOS and Android: sonner-native renders native, web
  * sonner renders web — the split lives in `./sonner`, never at a call site
  * (owner decision 2026-08-03, replacing burnt: its Android leg was an

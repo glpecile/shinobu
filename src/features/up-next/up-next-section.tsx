@@ -208,7 +208,7 @@ export function UpNextSection({
                 <Text className="text-muted/40 text-4xl mb-2">忍</Text>
                 <MorphText
                   className="text-muted font-sans text-sm text-center"
-                  // Native glyph rows cannot wrap at enlarged system text sizes.
+                  // A morph runs on one line, so enlarged system text wraps as plain text.
                   numberOfLines={fontScale > 1 ? 0 : undefined}
                 >
                   {emptyDayCopy(selected.offset, selected.label)}
