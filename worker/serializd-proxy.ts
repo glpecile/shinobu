@@ -55,8 +55,7 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: r
   { match: (p) => p === 'watchlist_v2', method: 'POST' },
   { match: (p) => p === 'watchlist/remove_v2', method: 'POST' },
   // Pause and drop (#227): the status list, and the list the show leaves.
-  { match: exact('(?:paused_shows|dropped_shows)(?:/remove)?'), method: 'POST' },
-  { match: exact('currently_watching(?:/remove)?'), method: 'POST' },
+  { match: exact('(?:paused_shows|dropped_shows|currently_watching)(?:/remove)?'), method: 'POST' },
   { match: (p) => p === 'list/add_item' || p === 'list/edit' || p === 'list/create', method: 'POST' },
   { match: (p) => /^list\/[1-9][0-9]{0,14}$/.test(p), method: 'GET' },
   // Coming Soon (plan 0114). Exact match: `search/` holds user search too.
@@ -67,8 +66,7 @@ const RULES: Array<{ match: (path: string) => boolean; method: Method; query?: r
   { match: exact(`user/${SEGMENT}/diary`), method: 'GET', query: ['page'] },
   { match: exact(`user/${SEGMENT}/(?:lists|liked_lists)`), method: 'GET', query: ['sort_by', 'page'] },
   { match: exact(`user/${SEGMENT}/show/${ID}/progress`), method: 'GET' },
-  { match: exact(`user/${SEGMENT}/watchedpage_v2/${ID}`), method: 'GET', query: ['sort_by'] },
-  { match: exact(`user/${SEGMENT}/(?:currently_watching_page|paused_shows_page|dropped_shows_page)/${ID}`), method: 'GET', query: ['sort_by'] },
+  { match: exact(`user/${SEGMENT}/(?:watchedpage_v2|currently_watching_page|paused_shows_page|dropped_shows_page)/${ID}`), method: 'GET', query: ['sort_by'] },
 ];
 
 /** Reject traversal, protocol-relative, and absolute-URL sub-paths outright. */
